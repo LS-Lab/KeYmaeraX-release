@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
  * Created by ran on 2/4/15.
  * @author Ran Ji
  * @author Stefan Mitsch
+ * @todo adapt to new KeYmaeraXParser
  */
 object ParserFactory {
 

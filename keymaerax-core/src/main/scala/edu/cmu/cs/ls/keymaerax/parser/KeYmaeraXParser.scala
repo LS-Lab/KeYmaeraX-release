@@ -523,6 +523,7 @@ object KeYmaeraXParser extends Parser {
     followsFormula(la) ||
     (if (statementSemicolon) la==SEMI || la==RBRACE || la==AMP
     else la==SEMI || la==CHOICE || la==STAR || la==RBRACE || la==COMMA) || // from T in programs
+    la == COMMA || // from T in ODE systems
     la==PRIME || la==EOF
 
   /** Is la a (binary) operator that only works for terms? */
