@@ -54,7 +54,7 @@ object KeYmaeraXParser extends Parser {
 
   private val immediateError = true
 
-  private val DEBUG = true
+  private val DEBUG = false
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression = parse(KeYmaeraXLexer.inMode(input, ExpressionMode()))
