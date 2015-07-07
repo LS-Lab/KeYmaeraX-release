@@ -374,6 +374,15 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y. [y'=2;]y>0".asFormula
   }
 
+  it should "work in front of a continuous program, even if it is not top-level" in {
+    val s = sucSequent("[y:=*;][z:=2;][t:=0; y'=2*y;]y>0".asFormula)
+    val assignT = locateSucc(boxNDetAssign)
+    val result = helper.runTactic(assignT, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y. [z:=2;][t:=0; y'=2*y;]y>0".asFormula
+  }
+
   "Diamond nondeterministic assignment tactic" should "introduce existential quantifier and rename free variables" in {
     val s = sequent(Nil, "y>0".asFormula :: Nil, "<y:=*;>y>0".asFormula :: Nil)
     val tactic = locateSucc(diamondNDetAssign)

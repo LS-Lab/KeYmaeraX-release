@@ -706,11 +706,10 @@ object HybridProgramTacticsImpl {
         }
 
         node.sequent(p) match {
-          case Box(AssignAny(v: Variable), Box(prg, _))
-            if StaticSemantics(prg).bv.contains(v) => Some(
-            alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
-              boxNDetAssignWithoutAlphaT(p) & v2vAssignT(p.first)
-          )
+          case Box(AssignAny(v: Variable), phi@Box(_, _))
+            if StaticSemantics(phi).bv.contains(v) => Some(
+              alphaRenamingT(v, newV)(p.second) & boxNDetAssignWithoutAlphaT(p) & v2vAssignT(p.first)
+            )
           case _ => Some(boxNDetAssignWithoutAlphaT(p))
         }
       }
