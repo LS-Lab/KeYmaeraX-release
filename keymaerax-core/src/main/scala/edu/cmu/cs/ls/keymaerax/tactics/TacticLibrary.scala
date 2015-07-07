@@ -443,8 +443,8 @@ object TacticLibrary {
             case Forall(vars, _) => applicable = vars.contains(from)
             case Exists(vars, _) => applicable = vars.contains(from)
               //@todo accept DiffSymbol(from) to occur as well
-            case Box(a, _) => applicable = StaticSemantics(a).bv.contains(from)
-            case Diamond(a, _) => applicable = StaticSemantics(a).bv.contains(from)
+            case a@Box(_, _) => applicable = StaticSemantics(a).bv.contains(from)
+            case a@Diamond(_, _) => applicable = StaticSemantics(a).bv.contains(from)
             case _ => applicable = false //@todo is this over-writing when we're already applicable?!
           }
           Left(Some(ExpressionTraversal.stop))

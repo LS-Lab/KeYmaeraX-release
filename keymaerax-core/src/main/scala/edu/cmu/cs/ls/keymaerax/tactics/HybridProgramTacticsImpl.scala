@@ -266,20 +266,27 @@ object HybridProgramTacticsImpl {
         }
 
         node.sequent(p) match {
-          case Box(Assign(v: Variable, _), Box(prg: Loop, _))
-            if allNames(prg).contains(v) && !NameCategorizer.freeVariables(prg).contains(v) => Some(
-            alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p.second) &
-              boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
-          )
-          case Box(Assign(v: Variable, _), Box(prg: DifferentialProgram, _))
-            if allNames(prg).contains(v) && !NameCategorizer.freeVariables(prg).contains(v) => Some(
-            alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p.second) &
-              boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
-          )
+          case Box(Assign(v: Variable, _), phi@Box(_, _))
+            if loopsAndODEsOf(phi).exists(p => StaticSemantics.symbols(p).contains(v) &&
+            !NameCategorizer.freeVariables(p).contains(v)) => Some(
+              alphaRenamingT(v, newV1)(p.second) & boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
+            )
           case _ => Some(boxAssignWithoutAlphaT(newV1)(p))
         }
       }
     }
+  }
+
+  private def loopsAndODEsOf(fml: Formula): List[Program] = {
+    val result: scala.collection.mutable.MutableList[Program] = scala.collection.mutable.MutableList()
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+        case Loop(_) => result += e; Left(None)
+        case ODESystem(_, _) => result += e; Left(None)
+        case _ => Left(None)
+      }
+    }, fml)
+    result.toList
   }
 
   /**
