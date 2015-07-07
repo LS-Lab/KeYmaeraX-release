@@ -104,8 +104,8 @@ object BinaryOpSpec {
  * @author aplatzer
  */
 object OpSpec {
-  /** Whether atomic statements and with a semicolon instead of separating sequential compositions */
-  private[parser] val statementSemicolon = true
+  /** Whether to terminate atomic statements with a semicolon instead of separating sequential compositions by a semicolon. */
+  /*private[parser]*/ val statementSemicolon = true
 
   /** no notation */
   private val none = PSEUDO
@@ -183,10 +183,10 @@ object OpSpec {
   val sAtomicODE    = BinaryOpSpec[Program](EQ,   90/*200*/, AtomicBinaryFormat, bintermprog, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
   val sDifferentialProduct = BinaryOpSpec(COMMA, 95/*210*/, RightAssociative, bindiffprog, DifferentialProduct.apply _)
   val sODESystem    = BinaryOpSpec[Expression](AMP, 150, NonAssociative, diffprogfmlprog, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
-  val sLoop         = UnaryOpSpec(STAR,   220, PostfixFormat, unprog, Loop.apply _)
-  val sCompose      = BinaryOpSpec(SEMI, 230, RightAssociative, binprog, Compose.apply _) //@todo compatibility mode for parser
+  val sLoop         = UnaryOpSpec[Program](STAR,   220, PostfixFormat, unprog, Loop.apply _)
+  val sCompose      = BinaryOpSpec[Program](SEMI, 230, RightAssociative, binprog, Compose.apply _) //@todo compatibility mode for parser
   //valp: Compose     => OpNotation("",    230, RightAssociative)
-  val sChoice       = BinaryOpSpec(CHOICE,  240, RightAssociative, binprog, Choice.apply _)
+  val sChoice       = BinaryOpSpec[Program](CHOICE,  240, RightAssociative, binprog, Choice.apply _)
 
   val sEOF          = UnitOpSpec  (EOF, Int.MaxValue, _ => throw new AssertionError("Cannot construct EOF"))
   val sNone         = UnitOpSpec  (PSEUDO, Int.MaxValue, _ => throw new AssertionError("Cannot construct NONE"))
