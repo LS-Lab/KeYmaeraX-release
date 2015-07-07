@@ -653,12 +653,20 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser.programParser("x'=5") should not be (AtomicODE(DifferentialSymbol(Variable("x")), Number(5)))
   }
 
-  it should "perhaps parse an ODESystem program from [x'=5;]p(x)" in {
-    parser("[x'=5;]p(x)") should be (Box(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True), PredOf(p, Variable("x"))))
+  it should "perhaps parse an ODESystem program from [x'=5;]p(x) if parsed at all" in {
+    try {
+      parser("[x'=5;]p(x)") should be (Box(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True), PredOf(p, Variable("x"))))
+    } catch {
+      case ignore: ParseException =>
+    }
   }
 
-  it should "perhaps parse an ODESystem program from <x'=5;>p(x)" in {
-    parser("<x'=5;>p(x)") should be (Diamond(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True), PredOf(p, Variable("x"))))
+  it should "perhaps parse an ODESystem program from <x'=5;>p(x) if parsed at all" in {
+    try {
+      parser("<x'=5;>p(x)") should be (Diamond(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True), PredOf(p, Variable("x"))))
+    } catch {
+      case ignore: ParseException =>
+    }
   }
 
   it should "parse [{x'=5&x>7}]p(x)" in {
@@ -746,7 +754,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser.programParser("x'=5&x>2") should be (ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), Greater(Variable("x"),Number(2))))
   }
 
-  it should "perhaps ealways parse x'=5,y'=7&x>2 as a program" in {
+  it should "perhaps always parse x'=5,y'=7&x>2 as a program" in {
     parser("x'=5,y'=7&x>2") should be (ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(7))), Greater(Variable("x"),Number(2))))
     parser.programParser("x'=5,y'=7&x>2") should be (ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(7))), Greater(Variable("x"),Number(2))))
   }
