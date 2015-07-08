@@ -718,6 +718,31 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser("[{x'=5,y'=2&x>7|y<8}]p(x)") shouldBe (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Or(Greater(Variable("x"),Number(7)),Less(y,Number(8)))), PredOf(p, Variable("x"))))
   }
 
+  it should "parse !x<5" in {
+    parser("!x<5") shouldBe Not(Less(x,Number(5)))
+  }
+
+  it should "parse !x<=5" in {
+    parser("!x<=5") shouldBe Not(LessEqual(x,Number(5)))
+  }
+
+  it should "parse !x+y<5" in {
+    parser("!x+y<5") shouldBe Not(Less(Plus(x,y),Number(5)))
+  }
+
+  it should "parse !x>=5" in {
+    parser("!x>=5") shouldBe Not(GreaterEqual(x,Number(5)))
+  }
+
+  it should "parse !x>5" in {
+    parser("!x>5") shouldBe Not(Greater(x,Number(5)))
+  }
+
+  it should "parse ?!x>5; as a test of a negation" in {
+    parser("?!x>5;") shouldBe Test(Not(Greater(x,Number(5))))
+    parser.programParser("?!x>5;") shouldBe Test(Not(Greater(x,Number(5))))
+  }
+
   it should "parse long evolution domains [{x'=5,y'=2&!(x>7)}]p(x)" in {
     parser("[{x'=5,y'=2&!(x>7)}]p(x)") shouldBe (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Not(Greater(Variable("x"),Number(7)))), PredOf(p, Variable("x"))))
   }
@@ -769,6 +794,15 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser("[x:=q(??);]f(??)->g(??)") shouldBe (Imply(
       Box(Assign(x, FuncOf(Function("q",None,Real,Real),Anything)), PredOf(Function("f",None,Real,Bool),Anything)),
       PredOf(Function("g",None,Real,Bool),Anything)))
+  }
+
+  it should "parse \\forall x(y()) not as a function application" in {
+    parser("\\forall x(y())") shouldBe Forall(IndexedSeq(x), PredOf(Function("y",None,Unit,Bool),Nothing))
+  }
+
+  it should "parse \\forall x(y()+g()>=5) not as a function application" in {
+    parser("\\forall x(y()+g()>5)") shouldBe Forall(IndexedSeq(x), Greater(Plus(FuncOf(Function("y",None,Unit,Real),Nothing),
+      FuncOf(Function("g",None,Unit,Real),Nothing)), Number(5)))
   }
 
   ignore should "parse an ODESystem program when trying to parse x'=5 as a program" in {
