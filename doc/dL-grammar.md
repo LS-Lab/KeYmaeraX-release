@@ -1,14 +1,14 @@
-Differential Dynamic Logic
+﻿Differential Dynamic Logic
 ==========================
 
 Grammar of Concrete Syntax
 --------------------------
 
-The grammar for the concrete syntax of differential dynamic logic is given below in order of ascending precedence, i.e. operators towards the beginning of the grammar bind stronger than later operators. Unary operators bind stronger than binary operators, which is why unary operators come later. Also ; binds stronger than ++ and & stronger than | stronger than both -> and <->. That is precedence is
+The grammar for the concrete syntax of differential dynamic logic is given below in order of ascending precedence, i.e. operators towards the beginning of the grammar bind stronger than later operators. Unary operators bind stronger than binary operators, which is why unary operators come later. Also ; binds stronger than ++ and & stronger than | stronger than both -> and <->. That is precedence is the following order with stronger precedence listed first and equal precedence delimited by `,`
 
-    ^ < * < / < + < -
-    ! < & < | < -> < <->
-    * < ; < ++
+    '   -   ^   *,/   +,-
+    '   !   &     |   ->,<-,<->
+        *   ;     ++
 
 Associativity is left-associative, i.e. x-y-z is (x-y)-z unless noted otherwise.
 
@@ -24,7 +24,7 @@ with `T^T` right-associative, i.e. x^4^2 is x^(4^2)
         | !F | \forall x F | \exists x F | [P]F | <P>F 
         | F&F | F|F | F->F | F<->F | true | false | (F)' | (F)
 
-with `->` right-associative and no precedence for `->` versus `<->`
+with `->` right-associative, i.e. p()->q()->r() is p()->(q()->r()) and no precedence for `->` versus `<->`
 
 ==Programs==
 
@@ -42,7 +42,7 @@ with the rather visible `;` in P;P right-associative (and `++` being still right
 
     D ::= c | x'=T | D,D
 
-with `D,D` right-associative
+with `D,D` right-associative, i.e. x'=1,y'=2,z'=3 is x'=1,(y'=2,z'=3)
 
 ==Types==
 
