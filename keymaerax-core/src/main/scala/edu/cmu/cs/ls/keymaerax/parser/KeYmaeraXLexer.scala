@@ -179,6 +179,7 @@ object PROGRAM_VARIABLES_BLOCK extends Terminal("ProgramVariables.")
 object VARIABLES_BLOCK extends Terminal("Variables.") //used in axioms file...
 object PROBLEM_BLOCK extends Terminal("Problem.")
 //@todo the following R, B, T, P etc should be lexed as identifiers. Adapt code to make them disappear.
+//@todo the following should all be removed or at most used as val REAL = Terminal("R")
 object REAL extends Terminal("$$$R")
 object BOOL extends Terminal("$$$B")
 //Is there any reason we parse a bunch of stuff just to throw it away? Are these suppose to be in our sort heirarchy...?

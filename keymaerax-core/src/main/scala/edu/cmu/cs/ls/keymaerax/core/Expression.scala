@@ -35,17 +35,17 @@ object FunctionKind extends Kind { override def toString = "Function" }
  */
 sealed abstract class Sort
 /** Unit type of [[edu.cmu.cs.ls.keymaerax.core.Nothing Nothing]] */
-object Unit extends Sort
+object Unit extends Sort { override def toString = "Unit" }
 /** Sort of booleans: [[edu.cmu.cs.ls.keymaerax.core.True True]], [[edu.cmu.cs.ls.keymaerax.core.False False]]. */
-object Bool extends Sort
+object Bool extends Sort { override def toString = "Bool" }
 /** Sort of real numbers: 0, 1, 2.5 */
-object Real extends Sort
+object Real extends Sort { override def toString = "Real" }
 /** Sort of state transformations (i.e. programs) */
-object Trafo extends Sort
+object Trafo extends Sort { override def toString = "Trafo" }
 /** Tuple sort for [[edu.cmu.cs.ls.keymaerax.core.Pair Pair]]. */
-case class Tuple(left: Sort, right: Sort) extends Sort
+case class Tuple(left: Sort, right: Sort) extends Sort { override def toString = "(" + left + "," + right + ")" }
 /** User-defined object sort */
-case class ObjectSort(name : String) extends Sort
+case class ObjectSort(name : String) extends Sort { override def toString = name }
 
 
 /**

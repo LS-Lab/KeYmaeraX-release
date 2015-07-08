@@ -9,8 +9,8 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
  */
 object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
   /**
-   * @todo sort hcecking.
-   * @param s The contents of the axiom file.
+   * @todo sort checking.
+   * @param input The contents of the axiom file.
    * @return A list of named axioms occurring in the file.
    */
   def apply(input: String) : List[(String, Formula)] = {
@@ -20,7 +20,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
       val (decls, axiomTokens) = KeYmaeraXDeclarationsParser(tokens)
       println(decls)
       parseAxioms(axiomTokens)
-    } catch {case e: ParseException => throw e.inContext(input)}
+    } catch {case e: ParseException => throw e.inContext("axiom file"/*input*/)}
   }
 
 

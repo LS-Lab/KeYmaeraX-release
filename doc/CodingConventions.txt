@@ -8,7 +8,9 @@ Soundness-critical core:
 
 3) Pure functional code without mutable data structures and without side effects. Algebraic datatypes via case classes are encouraged as well as value pattern matching such as: val Imply(p,q) = f.
 
-4) Requires preconditions are strictly enforced. Ample use of asserts and ensuring postconditions are encouraged. Their string arguments should state the expected positive outcome. Unlike thrown exceptions, whose strings can talk negatively about what failed. No hidden aspects that are crucial to the understanding of the correctness of the local code is acceptable without documentation or local checking via asserts even if that causes redundant checking.
+4) Requires preconditions are strictly enforced. Ample use of asserts, assumes, and ensuring postconditions are encouraged. Their string arguments should state the expected positive outcome. Unlike thrown exceptions, whose strings can talk negatively about what failed. No hidden aspects that are crucial to the understanding of the correctness of the local code is acceptable without documentation or local checking via asserts even if that causes redundant checking.
+
+  assert, assume, require, ensuring
 
 5) The code should follow the principle of least astonishment, not using  surprising or unconventional Scala features in the core. Preferably not making correctness of code depend on the order that match case are placed in, without an explicit comment indicating that.
 

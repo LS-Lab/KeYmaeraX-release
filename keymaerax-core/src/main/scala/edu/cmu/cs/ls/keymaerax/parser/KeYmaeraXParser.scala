@@ -71,7 +71,7 @@ object KeYmaeraXParser extends Parser {
   def apply(input: String): Expression = {
     val tokenStream = KeYmaeraXLexer.inMode(input, ExpressionMode())
     try { parse(tokenStream) }
-    catch {case e: ParseException => throw if (DEBUG) e.inContext(input + "\nas " + tokenStream) else e.inContext(input)}
+    catch {case e: ParseException => throw if (DEBUG) e.inContext("input:  " + input + "\nas tokens: " + tokenStream) else e.inContext("input:  " + input)}
   }
 
   def printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
@@ -128,7 +128,7 @@ object KeYmaeraXParser extends Parser {
     }
     semanticAnalysis(parse) match {
       case None => parse
-      case Some(error) => throw new ParseException("Semantic analysis error", UnknownLocation, "parsed expression: " + printer.stringify(parse) + "\n" + error)
+      case Some(error) => throw new ParseException("Semantic analysis error", UnknownLocation, "parsed: " + printer.stringify(parse) + "\n" + error)
     }
   }
 
@@ -150,9 +150,9 @@ object KeYmaeraXParser extends Parser {
       val namesList = symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol]))
       val duplicateNames = namesList.diff(namesList.distinct)
       val duplicates = symbols.filter(s => duplicateNames.contains((s.name, s.index, s.isInstanceOf[DifferentialSymbol])))
-      Some("in semantic analysis: Expect unique names_index that identify a unique type." +
-        "\nwith ambiguous names " + duplicates.toList.map(s => s.fullString) +
-        "\namong symbols " + symbols + "\nin " + printer.stringify(e))
+      Some("semantics: Expect unique names_index that identify a unique type." +
+         "\nambiguous: " + duplicates.toList.map(s => s.fullString).mkString(" and ") +
+         "\nsymbols:   " + symbols.mkString(", ") /*+ if (DEBUG) "\nin expression: " + printer.stringify(e)*/)
     }
   }
 
@@ -408,7 +408,7 @@ object KeYmaeraXParser extends Parser {
       case r :+ Expr(t1) :+ (Token(tok:OPERATOR,_)) :+ Expr(t2) if !((t1.kind==ProgramKind||t1.kind==DifferentialProgramKind) && tok==RDIA) && tok!=TEST =>
         // pass t1,t2 kinds so that op/2 can disambiguate based on kinds
         val optok = op(st, tok, List(t1.kind,t2.kind))
-        if (optok==OpSpec.sNoneUnfinished) shift(st)
+        if (optok==OpSpec.sNoneUnfinished && la!=EOF) shift(st)
         else {
           assume(optok.isInstanceOf[BinaryOpSpec[_]], "binary operator expected for " + optok + " since others should have been reduced\nin " + s)
           if (la == LPAREN || !statementSemicolon && la == LBRACE) error(st)
