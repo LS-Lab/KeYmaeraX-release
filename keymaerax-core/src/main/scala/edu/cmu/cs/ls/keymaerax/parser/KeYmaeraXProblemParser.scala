@@ -10,7 +10,8 @@ import scala.annotation.tailrec
  * Created by nfulton on 6/12/15.
  */
 object KeYmaeraXProblemParser {
-  def apply(s : String) = parseProblem(KeYmaeraXLexer.inMode(s, ProblemFileMode()))._2
+  def apply(input : String) = try { parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode()))._2 }
+  catch {case e: ParseException => throw e.inContext(input)}
 
   def parseProblem(tokens: List[Token]) :  (Map[(String, Option[Int]), (Option[Sort], Sort)], Formula) = {
     val (decls, remainingTokens) = KeYmaeraXDeclarationsParser(tokens)
@@ -23,7 +24,7 @@ object KeYmaeraXProblemParser {
 
     val problem : Formula = KeYmaeraXParser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {
       case f : Formula => f
-      case expr : Expression => throw new Exception("Expected problem to parse to a Formula, but found a " + expr)
+      case expr : Expression => throw new ParseException("Expected problem to parse to a Formula, but found " + expr, UnknownLocation, "problem block")
     }
 
     (decls, problem)
@@ -136,7 +137,7 @@ object KeYmaeraXDeclarationsParser {
       (( (variableName, variableIdx) , (None, sort) ), afterName.tail)
     }
     else {
-      throw new Exception("Expected complete declaration but could not find period at position " + afterName.head.loc)
+      throw new ParseException("Expected complete declaration but could not find terminating period", afterName.head.loc, "declaration parse")
     }
   }
 
@@ -184,7 +185,7 @@ object KeYmaeraXDeclarationsParser {
           (parts(0), None) //This is just a name that ends withe a _.
       }
       else (name, None)
-    case _ => throw new Exception("Expected variable name identifier but found " + nameToken + " at " + nameToken.loc)
+    case _ => throw new ParseException("Expected variable name identifier but found " + nameToken, nameToken.loc, "parse name")
   }
 
 
@@ -197,7 +198,7 @@ object KeYmaeraXDeclarationsParser {
     case edu.cmu.cs.ls.keymaerax.parser.CP => edu.cmu.cs.ls.keymaerax.core.Trafo //@todo
     case edu.cmu.cs.ls.keymaerax.parser.MFORMULA => edu.cmu.cs.ls.keymaerax.core.Bool //@todo
     case edu.cmu.cs.ls.keymaerax.parser.TEST => edu.cmu.cs.ls.keymaerax.core.Bool //@todo this is getting stupid
-    case _ => throw new Exception("Expected sort token but found " + sortToken)
+    case _ => throw new ParseException("Expected sort token but found " + sortToken, sortToken.loc, "parse sort")
   }
 
   private def isSort(terminal: Terminal) = terminal match {

@@ -120,6 +120,9 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
     case Some(idx) => name + "_" + idx
   })
 
+  /** Full string with names and full types */
+  def fullString: String = asString + ":" + sort
+
   override def toString: String = asString + "@" + getClass.getSimpleName
 }
 
@@ -155,6 +158,7 @@ sealed case class DifferentialSymbol(x: Variable)
   require(x.sort == Real, "differential symbols expect real sort")
   def name: String = x.name
   def index: Option[Int] = x.index
+  override def asString: String = x.asString + "'"
   override def toString: String =  x.asString + "'" + "@" + getClass.getSimpleName
 }
 
@@ -165,6 +169,8 @@ case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 sealed case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort)
   extends Expression with NamedSymbol {
   def kind: Kind = FunctionKind
+  /** Full string with names and full types */
+  override def fullString: String = asString + ":" + domain + "->" + sort
 }
 
 /** Reserved function symbol \\cdot for substitutions are unlike ordinary function symbols */

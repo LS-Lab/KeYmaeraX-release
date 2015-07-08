@@ -65,11 +65,14 @@ object KeYmaeraXParser extends Parser {
 
   private val parseErrorsAsExceptions = true
 
-  private val DEBUG = false
+  private val DEBUG = true
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
-  def apply(input: String): Expression = try { parse(KeYmaeraXLexer.inMode(input, ExpressionMode())) }
-  catch {case e: ParseException => throw e.inContext(input)}
+  def apply(input: String): Expression = {
+    val tokenStream = KeYmaeraXLexer.inMode(input, ExpressionMode())
+    try { parse(tokenStream) }
+    catch {case e: ParseException => throw if (DEBUG) e.inContext(input + "\nas " + tokenStream) else e.inContext(input)}
+  }
 
   def printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
 
@@ -126,7 +129,7 @@ object KeYmaeraXParser extends Parser {
     }
     semanticAnalysis(parse) match {
       case None => parse
-      case Some(error) => throw new ParseException("Semantic analysis violation\nInput: " + input, UnknownLocation, "Parsed: " + printer.stringify(parse) + "\n" + error)
+      case Some(error) => throw new ParseException("Semantic analysis error", UnknownLocation, "parsed expression: " + printer.stringify(parse) + "\n" + error)
     }
   }
 
@@ -144,7 +147,14 @@ object KeYmaeraXParser extends Parser {
     assert(!DEBUG || (names.size == symbols.size) == (symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).distinct.length == symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).length), "equivalent ways of checking uniqueness via set conversion or list distinctness")
     //@NOTE Stringify avoids infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
     if (names.size == symbols.size) None
-    else Some("Semantic analysis: Unique names_index expected that identify a unique type.\nsymbols " + symbols + "\nin " + printer.stringify(e))
+    else {
+      val namesList = symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol]))
+      val duplicateNames = namesList.diff(namesList.distinct)
+      val duplicates = symbols.filter(s => duplicateNames.contains((s.name, s.index, s.isInstanceOf[DifferentialSymbol])))
+      Some("in semantic analysis: Expect unique names_index that identify a unique type." +
+        "\nwith ambiguous names " + duplicates.toList.map(s => s.fullString) +
+        "\namong symbols " + symbols + "\nin " + printer.stringify(e))
+    }
   }
 
   // elaboration based on expected types
@@ -742,7 +752,7 @@ object KeYmaeraXParser extends Parser {
       case s:NUMBER/*sNumber.op*/ => sNumber
       //case t: FuncOf => sFuncOf
       case sDifferential.op => if (isVariable(st)) sDifferential else if (isFormula(st)) sDifferentialFormula else sDifferential
-      case sPair.op => if (!kinds.isEmpty && (kinds(0)==DifferentialProgramKind || kinds(0)==ProgramKind)) sDifferentialProduct else sPair
+      case sPair.op => if (!kinds.isEmpty && kinds(0)!=TermKind) sDifferentialProduct else sPair
       case sMinus.op => if (kinds==List(TermKind,TermKind)||kinds==List(TermKind,ExpressionKind)) sMinus else if (kinds==List(TermKind)) sNeg
         else if (isNotPrefix(st)) sMinus else sNeg
       case sPower.op => sPower
