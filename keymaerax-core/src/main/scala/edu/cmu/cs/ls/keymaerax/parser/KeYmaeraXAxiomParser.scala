@@ -13,12 +13,14 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
    * @param s The contents of the axiom file.
    * @return A list of named axioms occurring in the file.
    */
-  def apply(s: String) : List[(String, Formula)] = {
-    val tokens = KeYmaeraXLexer.inMode(s, AxiomFileMode())
+  def apply(input: String) : List[(String, Formula)] = {
+    val tokens = KeYmaeraXLexer.inMode(input, AxiomFileMode())
     println("Tokens are: " + tokens)
-    val (decls, axiomTokens) = KeYmaeraXDeclarationsParser(tokens)
-    println(decls)
-    parseAxioms(axiomTokens)
+    try {
+      val (decls, axiomTokens) = KeYmaeraXDeclarationsParser(tokens)
+      println(decls)
+      parseAxioms(axiomTokens)
+    } catch {case e: ParseException => throw e.inContext(input)}
   }
 
 
@@ -49,9 +51,11 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
     val (axiomTokens, remainderTokens) =
       input.tail.tail.span(x => !x.tok.equals(END_BLOCK)) //1st element is AXIOM_BEGIN, 2nd is AXIOM_NAME.
 
-    val axiom = KeYmaeraXParser.formulaTokenParser(axiomTokens :+ Token(EOF, UnknownLocation))
+    try {
+      val axiom = KeYmaeraXParser.formulaTokenParser(axiomTokens :+ Token(EOF, UnknownLocation))
 
-    (name, axiom, remainderTokens.tail)
+      (name, axiom, remainderTokens.tail)
+    } catch {case e: ParseException => throw e.inContext(input.toString)}
   }
 
 }

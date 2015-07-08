@@ -121,7 +121,6 @@ object KeYmaeraXParser extends Parser {
 
   private[parser] def parse(input: TokenStream): Expression = {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
-    if (DEBUG) println("Parsing: " + input)
     val parse = parseLoop(ParseState(Bottom, input)).stack match {
       case Bottom :+ Accept(e) => e
       case context :+ Error(msg, loc, st) => throw new ParseException(msg, loc, st)
