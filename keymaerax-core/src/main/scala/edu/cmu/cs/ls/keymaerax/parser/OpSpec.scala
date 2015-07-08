@@ -174,6 +174,7 @@ object OpSpec {
   private val untermprog = unterm
   private val unfmlprog = (FormulaKind)
   private val diffprogfmlprog = (DifferentialProgramKind,FormulaKind)
+  val sNoneDone     = UnitOpSpec  (PSEUDO, Int.MinValue, _ => throw new AssertionError("Cannot construct NONE"))
   val sProgramConst = UnitOpSpec(none,    0, name => ProgramConst(name))
   val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name))
   val sAssign       = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (x:Term, e:Term) => Assign(x.asInstanceOf[Variable], e.asInstanceOf[Term]))
@@ -189,7 +190,8 @@ object OpSpec {
   val sChoice       = BinaryOpSpec[Program](CHOICE,  240, RightAssociative, binprog, Choice.apply _)
 
   val sEOF          = UnitOpSpec  (EOF, Int.MaxValue, _ => throw new AssertionError("Cannot construct EOF"))
-  val sNone         = UnitOpSpec  (PSEUDO, Int.MaxValue, _ => throw new AssertionError("Cannot construct NONE"))
+  val sNoneUnfinished = UnitOpSpec  (PSEUDO, Int.MaxValue, _ => throw new AssertionError("Cannot construct NONE"))
+  val sNone         = sNoneUnfinished
 
 
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
