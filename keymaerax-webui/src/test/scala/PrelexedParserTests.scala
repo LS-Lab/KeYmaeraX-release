@@ -718,6 +718,14 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser("[{x'=5,y'=2&x>7|y<8}]p(x)") shouldBe (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Or(Greater(Variable("x"),Number(7)),Less(y,Number(8)))), PredOf(p, Variable("x"))))
   }
 
+  it should "parse long evolution domains [{x'=5,y'=2&!(x>7)}]p(x)" in {
+    parser("[{x'=5,y'=2&!(x>7)}]p(x)") shouldBe (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Not(Greater(Variable("x"),Number(7)))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse long evolution domains [{x'=5,y'=2&!x>=7}]p(x)" in {
+    parser("[{x'=5,y'=2&!x>=7}]p(x)") shouldBe (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Not(GreaterEqual(Variable("x"),Number(7)))), PredOf(p, Variable("x"))))
+  }
+
   it should "parse long evolution domains [{x'=5,y'=2&!x>7}]p(x)" in {
     parser("[{x'=5,y'=2&!x>7}]p(x)") shouldBe (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Not(Greater(Variable("x"),Number(7)))), PredOf(p, Variable("x"))))
   }

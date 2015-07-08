@@ -24,6 +24,11 @@ private[parser] case class Expr(expr: Expression) extends Item {
   //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
   override def toString: String = KeYmaeraXPrettyPrinter.stringify(expr)
 }
+/** Parts of expressions that are partially recognized on the parser item stack but not parsed to a proper Expression yet so merely stashed for later. */
+private[parser] case class Recognized(expr: Expression) extends Item {
+  //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
+  override def toString: String = "Rec(" + KeYmaeraXPrettyPrinter.stringify(expr) +")"
+}
 private[parser] trait FinalItem extends Item
 /** Parser items representing expressions that are accepted by the parser. */
 private[parser] case class Accept(expr: Expression) extends FinalItem
@@ -199,29 +204,24 @@ object KeYmaeraXParser extends Parser {
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
       // special quantifier notation
-      case r :+ (tok1@Token(FORALL,_)) :+ Token(IDENT(name,idx),_) :+ Expr(f1:Formula) =>
-        reduce(st, 3, OpSpec.sForall.const(tok1.tok.img, Variable(name,idx,Real), f1), r)
+      case r :+ (tok1@Token(FORALL,_)) :+ Recognized(v1:Variable) :+ Expr(f1:Formula) =>
+        reduce(st, 3, OpSpec.sForall.const(tok1.tok.img, v1, f1), r)
 
-      case r :+ (tok1@Token(EXISTS,_)) :+ Token(IDENT(name,idx),_) :+ Expr(f1:Formula) =>
-        reduce(st, 3, OpSpec.sExists.const(tok1.tok.img, Variable(name,idx,Real), f1), r)
+      case r :+ (tok1@Token(EXISTS,_)) :+ Recognized(v1:Variable) :+ Expr(f1:Formula) =>
+        reduce(st, 3, OpSpec.sExists.const(tok1.tok.img, v1, f1), r)
 
-      // special case to force elaboration of quantifiers at the end
-      case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ (tok@Token(IDENT(_,_),_)) :+ Expr(e1)
+      // special case typing to force elaboration of quantifiers at the end
+      case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ (tok2@Recognized(_:Variable)) :+ Expr(e1)
         if (la==EOF || la==RPAREN || la==RBRACE || formulaBinOp(la)) && e1.kind!=FormulaKind =>
         //@todo assert(!formulaBinOp(la) || quantifier binds stronger than la)
-        reduce(st, 1, elaborate(st, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ tok )
-
-//      case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ Expr(v1:Variable) =>
-//        if (firstFormula(la)) shift(st) else error(st)
-
-      // extra factorization case
-      case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) =>
-        assert(isNoQuantifier(r), "Quantifier stack items handled above")
-        if (firstFormula(la)) shift(st) else error(st)
+        reduce(st, 1, elaborate(st, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ tok2 )
 
       // ordinary identifiers disambiguate quantifiers versus predicate/function/predicational versus variable
-      case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ Token(IDENT(_,_),_) =>
-        if (firstFormula(la)) shift(st) else error(st)
+      case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ Token(IDENT(name,idx),_) =>
+        //@note Recognized(Variable()) instead of IDENT to avoid item overlap IDENT LPAREN with function/predicate symbols
+        //@note Recognized(Variable()) instead of Variable to avoid detecting lookup confusion with Variable PLUS ... too late
+        //@note Recognized should also generalize better to block quantifiers and multi-sorted quantifiers
+        if (firstFormula(la)) shift(reduce(st, 1, Bottom :+ Recognized(Variable(name,idx,Real)), r :+ tok1)) else error(st)
 
       case r :+ (tok1@Token(FORALL|EXISTS,_)) =>
         if (la.isInstanceOf[IDENT]) shift(st) else error(st)
@@ -229,7 +229,7 @@ object KeYmaeraXParser extends Parser {
 
       // special cases for early prime conversion
       case r :+ Token(IDENT(name,idx),_) :+ Token(PRIME,_) =>
-        assert(isNoQuantifier(r), "Quantifier stack items handled above")
+        assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduce(st, 2, OpSpec.sDifferentialSymbol.const(PRIME.img, Variable(name,idx,Real)), r)
 
 //      // special cases for early prime conversion, possibly redundant
@@ -238,27 +238,27 @@ object KeYmaeraXParser extends Parser {
 
       // ordinary identifiers outside quantifiers disambiguate to predicate/function/predicational versus variable
       case r :+ Token(IDENT(name,idx),_) =>
-        assert(isNoQuantifier(r), "Quantifier stack items handled above")
+        assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         if (la==LPAREN || la==LBRACE || la==PRIME) shift(st) else reduce(st, 1, Variable(name,idx,Real), r)
 
       // function/predicate symbols arity 0
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Token(RPAREN,_)  =>
-        assert(isNoQuantifier(r), "Quantifier stack items handled above")
+        assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduceFuncOrPredOf(st, 3, tok, Nothing, r)
 
       // function/predicate symbols of argument ANYTHING
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Token(ANYTHING,_) :+ Token(RPAREN,_)  =>
-        assert(isNoQuantifier(r), "Quantifier stack items handled above")
+        assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduceFuncOrPredOf(st, 4, tok, Anything, r)
 
       // function/predicate symbols arity>0
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_) =>
-        assert(isNoQuantifier(r), "Quantifier stack items handled above")
+        assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduceFuncOrPredOf(st, 4, tok, t1, r)
 
       // function/predicate symbols arity>0: special elaboration case for misclassified t() as formula
       case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Expr(t1:Formula) :+ Token(RPAREN,_) =>
-        assert(isNoQuantifier(r), "Quantifier stack items handled above")
+        assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
         reduceFuncOrPredOf(st, 4, tok, elaborate(st, OpSpec.sFuncOf,TermKind, t1).asInstanceOf[Term], r)
 
       // predicational symbols arity>0
@@ -342,6 +342,7 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 1, elaborate(st, OpSpec.sNone, DifferentialProgramKind, e1), r :+ tok1)
 
       // special case for sCompose in case statementSemicolon
+        //@todo lax accepts optional or possibly even extra SEMI between the two:
       //@todo review
       case r :+ Expr(p1: Program) :+ Expr(p2: Program) if statementSemicolon =>
         if (la==LPAREN || !statementSemicolon&&la==LBRACE) error(st)
@@ -725,7 +726,7 @@ object KeYmaeraXParser extends Parser {
       case sMinus.op => if (kinds==List(TermKind,TermKind)||kinds==List(TermKind,ExpressionKind)) sMinus else if (kinds==List(TermKind)) sNeg
         else if (isNotPrefix(st)) sMinus else sNeg
       case sPower.op => sPower
-      case sTimes.op => if (kinds==List(ProgramKind))/*if (isProgram(st))*/ sLoop else sTimes
+      case sTimes.op => if (kinds==List(ProgramKind) || kinds==List(ExpressionKind))/*if (isProgram(st))*/ sLoop else sTimes
       case sDivide.op => sDivide
       case sPlus.op => sPlus
 
