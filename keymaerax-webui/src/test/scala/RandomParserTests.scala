@@ -27,7 +27,7 @@ class RandomParserTests extends FlatSpec with Matchers {
         "\nInput:      " + input +
         "\nParsed:     " + parse + " @ " + parse.getClass.getSimpleName +
         "\nExpression: " + KeYmaeraXPrettyPrinter.fullPrinter(parse))
-      parse should be(expr)
+      parse shouldBe expr
     }
   }
 
