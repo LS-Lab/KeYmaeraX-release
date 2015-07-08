@@ -112,6 +112,76 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x- -y-z","(x-(-y))-z"),
     ("x*-y*z","(x*(-y))*z"),
     ("x/-y/z","(x/(-y))/z"),
-    ("x^-y^z","x^((-y)^z)")
+    ("x^-y^z","x^((-y)^z)"),
+
+    ("\\forall x p(x)&q(x)", "(\\forall x p(x))&q(x)"),
+    ("\\forall x p(x)|q(x)", "(\\forall x p(x))|q(x)"),
+    ("\\forall x p(x)->q(x)", "(\\forall x p(x))->q(x)"),
+    ("\\forall x p(x)<->q(x)", "(\\forall x p(x))<->q(x)"),
+
+    ("\\exists x p(x)&q(x)", "(\\exists x p(x))&q(x)"),
+    ("\\exists x p(x)|q(x)", "(\\exists x p(x))|q(x)"),
+    ("\\exists x p(x)->q(x)", "(\\exists x p(x))->q(x)"),
+    ("\\exists x p(x)<->q(x)", "(\\exists x p(x))<->q(x)"),
+
+    ("\\forall x x>=0&x<0", "(\\forall x (x>=0))&(x<0)"),
+    ("\\forall x x>=0|x<0", "(\\forall x (x>=0))|(x<0)"),
+    ("\\forall x x>=0->x<0", "(\\forall x (x>=0))->(x<0)"),
+    ("\\forall x x>=0<->x<0", "(\\forall x (x>=0))<->(x<0)"),
+
+    ("\\exists x x>=0&x<0", "(\\exists x (x>=0))&(x<0)"),
+    ("\\exists x x>=0|x<0", "(\\exists x (x>=0))|(x<0)"),
+    ("\\exists x x>=0->x<0", "(\\exists x (x>=0))->(x<0)"),
+    ("\\exists x x>=0<->x<0", "(\\exists x (x>=0))<->(x<0)"),
+    ("\\forall \\forall", unparseable),
+    ("\\exists \\exists", unparseable),
+    ("\\forall \\exists", unparseable),
+    ("\\exists \\forall", unparseable),
+
+    ("[x:=x+1;] p(x)&q(x)", "([x:=x+1;] p(x))&q(x)"),
+    ("[x:=x+1;] p(x)|q(x)", "([x:=x+1;] p(x))|q(x)"),
+    ("[x:=x+1;] p(x)->q(x)", "([x:=x+1;] p(x))->q(x)"),
+    ("[x:=x+1;] p(x)<->q(x)", "([x:=x+1;] p(x))<->q(x)"),
+
+    ("<x:=x+1;> p(x)&q(x)", "(<x:=x+1;> p(x))&q(x)"),
+    ("<x:=x+1;> p(x)|q(x)", "(<x:=x+1;> p(x))|q(x)"),
+    ("<x:=x+1;> p(x)->q(x)", "(<x:=x+1;> p(x))->q(x)"),
+    ("<x:=x+1;> p(x)<->q(x)", "(<x:=x+1;> p(x))<->q(x)"),
+
+    ("[x:=x+1;] x>=0&x<0", "([x:=x+1;] (x>=0))&(x<0)"),
+    ("[x:=x+1;] x>=0|x<0", "([x:=x+1;] (x>=0))|(x<0)"),
+    ("[x:=x+1;] x>=0->x<0", "([x:=x+1;] (x>=0))->(x<0)"),
+    ("[x:=x+1;] x>=0<->x<0", "([x:=x+1;] (x>=0))<->(x<0)"),
+
+    ("<x:=x+1;> x>=0&x<0", "(<x:=x+1;> (x>=0))&(x<0)"),
+    ("<x:=x+1;> x>=0|x<0", "(<x:=x+1;> (x>=0))|(x<0)"),
+    ("<x:=x+1;> x>=0->x<0", "(<x:=x+1;> (x>=0))->(x<0)"),
+    ("<x:=x+1;> x>=0<->x<0", "(<x:=x+1;> (x>=0))<->(x<0)"),
+
+    ("<x:=x+1;>[x:=x+1;]", unparseable),
+
+    ("[{x'=1}] p(x)&q(x)", "([{x'=1}] p(x))&q(x)"),
+    ("[{x'=1}] p(x)|q(x)", "([{x'=1}] p(x))|q(x)"),
+    ("[{x'=1}] p(x)->q(x)", "([{x'=1}] p(x))->q(x)"),
+    ("[{x'=1}] p(x)<->q(x)", "([{x'=1}] p(x))<->q(x)"),
+
+    ("<{x'=1}> p(x)&q(x)", "(<{x'=1}> p(x))&q(x)"),
+    ("<{x'=1}> p(x)|q(x)", "(<{x'=1}> p(x))|q(x)"),
+    ("<{x'=1}> p(x)->q(x)", "(<{x'=1}> p(x))->q(x)"),
+    ("<{x'=1}> p(x)<->q(x)", "(<{x'=1}> p(x))<->q(x)"),
+
+    ("[{x'=1}] x>=0&x<0", "([{x'=1}] (x>=0))&(x<0)"),
+    ("[{x'=1}] x>=0|x<0", "([{x'=1}] (x>=0))|(x<0)"),
+    ("[{x'=1}] x>=0->x<0", "([{x'=1}] (x>=0))->(x<0)"),
+    ("[{x'=1}] x>=0<->x<0", "([{x'=1}] (x>=0))<->(x<0)"),
+
+    ("<{x'=1}> x>=0&x<0", "(<{x'=1}> (x>=0))&(x<0)"),
+    ("<{x'=1}> x>=0|x<0", "(<{x'=1}> (x>=0))|(x<0)"),
+    ("<{x'=1}> x>=0->x<0", "(<{x'=1}> (x>=0))->(x<0)"),
+    ("<{x'=1}> x>=0<->x<0", "(<{x'=1}> (x>=0))<->(x<0)"),
+
+    ("<{x'=1}>[{x'=1}]", unparseable),
+
+    ("\\forall p(x())","\\forall p (x())")   //@todo not a great test on string level
   )
 }

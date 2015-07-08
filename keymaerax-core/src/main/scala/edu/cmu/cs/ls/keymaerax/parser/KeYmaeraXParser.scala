@@ -323,6 +323,7 @@ object KeYmaeraXParser extends Parser {
         //@todo assert(modality binds tight)
         reduce(st, 4, elaborate(st, OpSpec.sBox.op, OpSpec.sBox, p1, f1), r)
 
+        //@todo could turn the first 3 into Recognized to stash for later and disambiguate
       case r :+ Token(LDIA,_) :+ Expr(p1:Program) :+ Token(RDIA,_) :+ Expr(f1:Formula) =>
         //@todo assert(modality binds tight)
         reduce(st, 4, elaborate(st, OpSpec.sDiamond.op, OpSpec.sDiamond, p1, f1), r)
@@ -370,7 +371,8 @@ object KeYmaeraXParser extends Parser {
           val optok = op(st, tok, List(t1.kind,t2.kind))
           //@todo op(st, la) : Potential problem: st is not the right parser state for la
           //@todo if statementSemicolon then the missing SEMI causes incorrect predictions of operator precedence ++ versus ;
-          if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+          if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX
+            || (la==RDIA || la==RDIA) && (t1.kind==ProgramKind||t1.kind==DifferentialProgramKind)
             || la!=LBRACE && (optok < op(st, la, List(t2.kind,ExpressionKind)) || optok <= op(st, la, List(t2.kind,ExpressionKind)) && optok.assoc == LeftAssociative)) {
             //println("\tGOT: " + tok + "\t" + "LA: " + la + "\tAfter: " + s + "\tRemaining: " + input)
             val result = elaborate(st, tok, optok.asInstanceOf[BinaryOpSpec[Expression]], t1, t2)
