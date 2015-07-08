@@ -213,8 +213,9 @@ object TOOL_OUTPUT extends Terminal("output") {
 
 /**
  * The location where a Terminal is located in an input stream.
+ * @note Serializable to make sure sbt test allows Location in ParseException errors.
  */
-sealed abstract class Location
+sealed abstract class Location extends Serializable
 object UnknownLocation extends Location {
   override def toString = "<somewhere>"
 }
