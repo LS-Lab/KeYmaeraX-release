@@ -57,12 +57,13 @@ object KeYmaeraXParser extends Parser {
   /** This default parser. */
   val parser = this
 
-  private val immediateError = true
+  private val parseErrorsAsExceptions = true
 
   private val DEBUG = false
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
-  def apply(input: String): Expression = parse(KeYmaeraXLexer.inMode(input, ExpressionMode()))
+  def apply(input: String): Expression = try { parse(KeYmaeraXLexer.inMode(input, ExpressionMode())) }
+  catch {case e: ParseException => throw e.inContext(input)}
 
   def printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
 
@@ -391,12 +392,13 @@ object KeYmaeraXParser extends Parser {
         if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
           || optok <= op(st, la, List(t1.kind,ExpressionKind))) {
           //|| followsTerm(la))
+          //@note By operator precedence, will only elaborate if need be, i.e. unless lookahead says shifting will get the right type
           val result = elaborate(st, tok, op(st, tok, List(t1.kind)).asInstanceOf[UnaryOpSpec[Expression]], t1)
           if (statementSemicolon && result.isInstanceOf[AtomicProgram]) {
             if (la == SEMI) reduce(shift(st), 3, result, r)
             else error(st)
           } else reduce(st, 2, result, r)
-        } else if (firstExpression(la) && optok > op(st, la, List(t1.kind,ExpressionKind))) shift(st)
+        } else if (optok > op(st, la, List(t1.kind,ExpressionKind))) shift(st)
         else error(st)
 
       case _ :+ Token(tok:OPERATOR,_) if op(st, tok, List(ExpressionKind)).assoc==PrefixFormat || tok==MINUS =>
@@ -640,7 +642,7 @@ object KeYmaeraXParser extends Parser {
   /** Error parsing the next input token la when in parser stack s.*/
   private def error(st: ParseState): ParseState = {
     val ParseState(s, input@(la :: rest)) = st
-    if (immediateError) throw new ParseException("Unexpected token cannot be parsed\nFound: " + la, la.loc, st.toString)
+    if (parseErrorsAsExceptions) throw new ParseException("Unexpected token cannot be parsed\nFound: " + la, la.loc, st.toString)
     else ParseState(s :+ Error("Unexpected token cannot be parsed\nFound: " + la, la.loc, st.toString), input)
   }
 
