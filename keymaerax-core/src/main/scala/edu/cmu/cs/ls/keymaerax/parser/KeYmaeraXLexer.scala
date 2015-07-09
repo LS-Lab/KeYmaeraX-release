@@ -5,6 +5,8 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.core.Anything
+
 import scala.collection.immutable._
 import scala.util.matching.Regex
 
@@ -155,7 +157,8 @@ object DCHOICE  extends OPERATOR("--") {
 object NOTHING extends Terminal("")
 object DOT     extends OPERATOR("•") //(".")
 object PLACE   extends OPERATOR("⎵") //("_")
-object ANYTHING extends OPERATOR("??") {
+object ANYTHING extends OPERATOR(Anything.prettyString()) {
+  assert(Anything.prettyString()=="??")
   override def regexp = """\?\?""".r
 }
 object PSEUDO  extends Terminal("<pseudo>")
