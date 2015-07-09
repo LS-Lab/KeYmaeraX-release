@@ -47,7 +47,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
 
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr) ensuring(
-    r => !checkPrettyPrinter || reparse(expr, r) == expr,
+    r => !checkPrettyPrinter || expr.kind==FunctionKind || reparse(expr, r) == expr,
     "Parse of print is identity." +
       "\nExpression: " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName +
       "\nPrinted:    " + stringify(expr) +
