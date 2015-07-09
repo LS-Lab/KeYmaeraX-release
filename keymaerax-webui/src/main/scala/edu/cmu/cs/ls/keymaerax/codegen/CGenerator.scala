@@ -2,7 +2,7 @@
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
-package edu.cmu.cs.ls.keymaerax.codegeneration
+package edu.cmu.cs.ls.keymaerax.codegen
 import java.io.{FileWriter, File}
 
 import edu.cmu.cs.ls.keymaerax.api.ComponentConfig
