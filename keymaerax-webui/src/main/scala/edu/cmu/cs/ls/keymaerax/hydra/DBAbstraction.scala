@@ -18,9 +18,13 @@ import spray.json.DefaultJsonProtocol._
 object DBAbstractionObj {
   def defaultDatabase = SQLite //this needs to be a def and not a val because DBAbstractionObj is initialized in SQLite.
   val dblocation: String = {
+    new File(
+      System.getProperty("user.home") + File.separator +
+        ".keymaera"
+    ).mkdirs()
+    
     val file = new File(System.getProperty("user.home") + File.separator +
       ".keymaerax" + File.separator + "keymaerax.sqlite")
-    file.mkdirs
     file.getCanonicalPath
   }
   println(dblocation)
