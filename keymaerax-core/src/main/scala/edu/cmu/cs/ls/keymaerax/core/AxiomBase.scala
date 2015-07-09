@@ -1,4 +1,8 @@
 /**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
+/**
  * Axioms of KeYmaera X and axiomatic proof rules of KeYmaera X.
  * resulting from differential dynamic logic
  * @note Soundness-critical: Only adopt sound axioms and sound axiomatic rules.

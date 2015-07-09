@@ -1,3 +1,7 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, RootNode, SuccPosition, SearchTacticsImpl}
 import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext._
 import testHelper.StringConverter._

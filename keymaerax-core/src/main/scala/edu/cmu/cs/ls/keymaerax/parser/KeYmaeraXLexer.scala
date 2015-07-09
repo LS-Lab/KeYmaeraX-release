@@ -1,4 +1,8 @@
 /**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
+/**
  * Differential Dynamic Logic lexer for concrete KeYmaera X notation.
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."

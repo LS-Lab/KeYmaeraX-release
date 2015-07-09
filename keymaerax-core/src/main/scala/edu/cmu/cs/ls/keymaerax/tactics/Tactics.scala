@@ -1,4 +1,8 @@
 /**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
+/**
  * *****************************************************************************
  * Copyright (c) 2014 Jan-David Quesel, Marcus Völp
  *

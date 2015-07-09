@@ -1,4 +1,8 @@
 /**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
+/**
  * HyDRA API Responses
  *  @author Nathan Fulton
  *  @author Stefan Mitsch

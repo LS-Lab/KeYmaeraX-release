@@ -1,3 +1,7 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cohide2T,hideT,kModalModusPonensT,modusPonensT}

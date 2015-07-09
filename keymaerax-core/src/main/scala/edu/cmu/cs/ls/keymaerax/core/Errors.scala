@@ -1,4 +1,8 @@
 /**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
+/**
  * KeYmaera Exception and Error Hierarchy
  * @author aplatzer
  * @note Code Review: 2015-05-01

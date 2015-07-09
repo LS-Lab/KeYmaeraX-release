@@ -1,3 +1,7 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraPrettyPrinter, KeYmaeraParser}
 import org.scalatest.{Matchers, FlatSpec}
 import testHelper.StringConverter._

@@ -1,4 +1,8 @@
 /**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
+/**
  * Obsolete Proof Tree data structures
  * @author Jan-David Quesel
  * @author aplatzer

@@ -1,3 +1,7 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.{InputStreamReader, BufferedReader, File, FileFilter,IOException,EOFException}

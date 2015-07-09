@@ -1,4 +1,8 @@
 /**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
+/**
  * Sequent prover, proof rules, and axioms of KeYmaera X.
  * @note Soundness-critical: Only provide sound proof rule application mechanisms.
  * @author Jan-David Quesel

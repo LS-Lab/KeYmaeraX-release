@@ -1,3 +1,7 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 /*
  * This file contains data structures targeted by the KeYmaera proof parser.
  * This file probably belongs in the parser namespace instead of the core TODO

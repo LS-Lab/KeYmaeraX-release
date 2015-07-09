@@ -1,3 +1,7 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, SearchTacticsImpl, SuccPosition, TacticLibrary, NNFRewrite}
 import edu.cmu.cs.ls.keymaerax.tactics.NNFRewrite._
