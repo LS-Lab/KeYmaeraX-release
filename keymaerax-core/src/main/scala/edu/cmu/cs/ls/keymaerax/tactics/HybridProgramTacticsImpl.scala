@@ -19,6 +19,7 @@ import SearchTacticsImpl.onBranch
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.collection.immutable.{List, Seq}
+import scala.collection.mutable
 import scala.language.postfixOps
 
 
@@ -274,19 +275,19 @@ object HybridProgramTacticsImpl {
           case _ => Some(boxAssignWithoutAlphaT(newV1)(p))
         }
       }
-    }
-  }
 
-  private def loopsAndODEsOf(fml: Formula): List[Program] = {
-    val result: scala.collection.mutable.MutableList[Program] = scala.collection.mutable.MutableList()
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
-        case Loop(_) => result += e; Left(None)
-        case ODESystem(_, _) => result += e; Left(None)
-        case _ => Left(None)
+      private def loopsAndODEsOf(fml: Formula): List[Program] = {
+        val result: mutable.MutableList[Program] = mutable.MutableList()
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+            case Loop(_) => result += e; Left(None)
+            case ODESystem(_, _) => result += e; Left(None)
+            case _ => Left(None)
+          }
+        }, fml)
+        result.toList
       }
-    }, fml)
-    result.toList
+    }
   }
 
   /**
