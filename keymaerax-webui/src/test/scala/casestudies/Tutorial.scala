@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tools.{Z3, Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
-import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.diffSolution
+import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.{diffIntroduceConstantT, diffSolution}
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.wipeContextInductionT
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import testHelper.StringConverter._
@@ -98,7 +98,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
           debugT("Case 2") & ls(boxAssignT),
           debugT("Case 3") & ls(boxAssignT)
           )
-        ) & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolution(None)) & ls(ImplyRightT) & arithmeticT)
+        ) & ls(diffIntroduceConstantT) & ls(diffSolution(None)) & ls(ImplyRightT) & arithmeticT)
     )
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
@@ -192,8 +192,8 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   "Example 5 with simple control" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5_simplectrl.key"))
 
-    val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
-      ls(diffSolution(None)) & ls(ImplyRightT)
+    val plant = debugT("plant") & ls(boxSeqT) & ls(boxAssignT) &
+      ls(diffIntroduceConstantT) & ls(diffSolution(None)) & ls(ImplyRightT)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(wipeContextInductionT(Some("v >= 0 & x+v^2/(2*B) <= S".asFormula))) & onBranch(
@@ -219,8 +219,8 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   "Example 5" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
 
-    val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
-      ls(diffSolution(None)) & ls(ImplyRightT)
+    val plant = debugT("plant") & ls(boxSeqT) & ls(boxAssignT) &
+      ls(diffIntroduceConstantT) & ls(diffSolution(None)) & ls(ImplyRightT)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(wipeContextInductionT(Some("v >= 0 & x+v^2/(2*B) <= S".asFormula))) & onBranch(
@@ -251,8 +251,8 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   "Example 6" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.key"))
-    val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
-      ls(diffSolution(None)) & ls(ImplyRightT)
+    val plant = debugT("plant") & ls(boxSeqT) & ls(boxAssignT) &
+      ls(diffIntroduceConstantT) & ls(diffSolution(None)) & ls(ImplyRightT)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(wipeContextInductionT(Some("v >= 0 & x+v^2/(2*B) <= S".asFormula))) & onBranch(
@@ -284,8 +284,8 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   "Example 7" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.key"))
-    val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
-      ls(diffSolution(None)) & ls(ImplyRightT)
+    val plant = debugT("plant") & ls(boxSeqT) & ls(boxAssignT) &
+      ls(diffIntroduceConstantT) & ls(diffSolution(None)) & ls(ImplyRightT)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(wipeContextInductionT(Some("v >= 0 & x+v^2/(2*b) <= S".asFormula))) & onBranch(
@@ -327,7 +327,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   "Example 9b" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.key"))
 
-    val plant = debugT("Plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & la(AndLeftT) & debugT("Before Cut") &
+    val plant = debugT("Plant") & ls(diffIntroduceConstantT) & debugT("Before Cut") &
       ls(diffCutT("xm() <= x_0".asFormula)) & onBranch(
       (cutShowLbl, debugT("Show cut 1") & ls(diffInvariant)),
       (cutUseLbl, debugT("Use cut 1") & ls(diffCutT("5/4*(x_0-xr())^2 + (x_0-xr())*v/2 + v^2/4 < ((S() - xm())/2)^2".asFormula)) & onBranch(
