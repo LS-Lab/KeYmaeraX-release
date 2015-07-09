@@ -67,6 +67,9 @@ object KeYmaeraXParser extends Parser {
   /** This default parser. */
   val parser = this
 
+  /** Lax mode where the parser is a little flexible about accepting input. */
+  private val LAX = true
+
   private val parseErrorsAsExceptions = true
 
   private val DEBUG = true
@@ -132,7 +135,8 @@ object KeYmaeraXParser extends Parser {
     }
     semanticAnalysis(parse) match {
       case None => parse
-      case Some(error) => throw new ParseException("Semantic analysis error", UnknownLocation, "parsed: " + printer.stringify(parse) + "\n" + error)
+      case Some(error) => if (LAX) {println("WARNING: " + "Semantic analysis error" + "\nin " + "parsed: " + printer.stringify(parse) + "\n" + error); parse}
+      else throw new ParseException("Semantic analysis error", UnknownLocation, "parsed: " + printer.stringify(parse) + "\n" + error)
     }
   }
 
