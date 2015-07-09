@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 
-import TacticLibrary.{alphaRenamingT, globalAlphaRenamingT}
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{TacticHelper, alphaRenamingT, globalAlphaRenamingT}
 import PropositionalTacticsImpl.uniformSubstT
 import AxiomTactic.axiomT
 import edu.cmu.cs.ls.keymaerax.tools.Tool
@@ -25,6 +25,36 @@ import scala.collection.immutable.Seq
  * @author Stefan Mitsch
  */
 object FOQuantifierTacticsImpl {
+
+  def universalClosure(f: Formula): Formula = {
+    val vars = NameCategorizer.freeVariables(f)
+    if(vars.isEmpty) f
+    else {
+      require(vars.forall(_.isInstanceOf[Variable]),
+        "Unable to compute universal closure for formula containing free non-variable symbols: " + f.prettyString)
+      vars.foldRight(f)((v, fml) => Forall(v.asInstanceOf[Variable] :: Nil, fml)) //Forall(vars.toList, f)
+    }
+  }
+
+  def universalClosureT: PositionTactic = new PositionTactic("Universal closure") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel
+
+    override def apply(p: Position): Tactic = new ConstructionTactic("Universal Closure") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        // fetch non-bound variables and parameterless function symbols
+        val varsFns = (StaticSemantics.freeVars(node.sequent(p)).toSet ++ StaticSemantics.signature(node.sequent(p))).
+          filter({ case Variable(_, _, _) => true case Function(_, _, Unit, _) => true case _ => false }).
+          // guarantee stable sorting of quantifiers so that Mathematica behavior is predictable - for now: alphabetically
+          toList.sortBy(_.name).
+          map({ case v@Variable(_, _, _) => v case fn@Function(_, _, Unit, _) => FuncOf(fn, Nothing) case _ => throw new IllegalArgumentException("Should have been filtered") })
+
+        if (varsFns.isEmpty) Some(NilT)
+        else Some(varsFns.map(t => universalGenT(None, t)(p)).reduce(_ & _))
+      }
+    }
+  }
 
   /**
    * Creates a new tactic for the universal/existential duality axiom.
@@ -395,6 +425,50 @@ object FOQuantifierTacticsImpl {
           repeatT(AxiomCloseT | locateAnte(PropositionalLeftT) | locateSucc(PropositionalRightT)) &
             locateAnte(existentialGenT(quantified, t), _ == fToGen) & AxiomCloseT
         }
+      }
+    }
+  }
+
+  /**
+   * Converse of all instantiate.
+   * @param x The universally quantified variable to introduce.
+   * @param t The term to generalize.
+   * @return The position tactic.
+   * @example \forall z \forall x x^2 >= -z^2
+   *          ------------------------------- universalGenT(z, f())
+   *          \forall x x^2 >= -f()^2
+   * @example \forall z \forall x x^2 >= -z^2
+   *          ------------------------------- universalGenT(z, y+5)
+   *          \forall x x^2 >= -(y+5)^2
+   */
+  def universalGenT(x: Option[Variable], t: Term): PositionTactic = new PositionTactic("all generalize") {
+    override def applies(s: Sequent, p: Position): Boolean = x match {
+      case Some(xx) => !StaticSemantics.symbols(s(p)).contains(xx)
+      case None => t match {
+        case Variable(_, _, _) => true
+        case FuncOf(_, _) => true
+        case _ => false
+      }
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic("all generalize") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val quantified: Variable = x match {
+          case Some(xx) => xx
+          case None => t match {
+            case v: Variable => TacticHelper.freshNamedSymbol(v, node.sequent)
+            case FuncOf(fn, _) => val fresh = TacticHelper.freshNamedSymbol(fn, node.sequent); Variable(fresh.name, fresh.index, fresh.sort)
+            case _ => throw new IllegalStateException("Disallowed by applies")
+          }
+        }
+
+        val genFml = Forall(Seq(quantified), SubstitutionHelper.replaceFree(node.sequent(p))(t, quantified))
+        Some(cutT(Some(genFml)) & onBranch(
+          (cutShowLbl, hideT(p)),
+          (cutUseLbl, lastAnte(instantiateT(quantified, t)) & (AxiomCloseT | TacticLibrary.debugT("Universal gen: axiom close failed unexpectedly")))
+        ))
       }
     }
   }

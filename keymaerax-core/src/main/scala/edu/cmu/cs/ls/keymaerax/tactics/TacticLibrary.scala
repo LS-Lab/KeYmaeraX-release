@@ -238,13 +238,15 @@ object TacticLibrary {
    * Use Mathematica
    */
   def arithmeticT = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
+    PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & lastSucc(FOQuantifierTacticsImpl.universalClosureT) & debugT("Handing to Mathematica/Z3") &
     (ArithmeticTacticsImpl.quantifierEliminationT("Mathematica") | ArithmeticTacticsImpl.quantifierEliminationT("Z3"))
 
   /**
    * Alternative arithmeticT
    * @param toolId quantifier elimination tool, could be: Mathematica, Z3, ...
    */
-  def arithmeticT(toolId : String) = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) & 
+  def arithmeticT(toolId : String) = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
+    PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & lastSucc(FOQuantifierTacticsImpl.universalClosureT) & debugT("Handing to " + toolId) &
     ArithmeticTacticsImpl.quantifierEliminationT(toolId)
 
   private def eqThenHideIfChanged: PositionTactic = new PositionTactic("Eq and Hide if Changed") {
@@ -266,16 +268,14 @@ object TacticLibrary {
   /**
    * Quantifier elimination.
    */
-  def quantifierEliminationT(toolId: String) = ArithmeticTacticsImpl.quantifierEliminationT(toolId)
+  def quantifierEliminationT(toolId: String) = PropositionalTacticsImpl.ConsolidateSequentT &
+    FOQuantifierTacticsImpl.universalClosureT(SuccPosition(0)) & ArithmeticTacticsImpl.quantifierEliminationT(toolId)
 
   /*******************************************************************
    * Elementary tactics
    *******************************************************************/
 
-  def universalClosure(f: Formula): Formula = {
-    val vars = NameCategorizer.freeVariables(f)
-    if(vars.isEmpty) f else vars.foldRight(f)((v, fml) => Forall(v.asInstanceOf[Variable] :: Nil, fml)) //Forall(vars.toList, f)
-  }
+  def universalClosure(f: Formula): Formula = FOQuantifierTacticsImpl.universalClosure(f)
 
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
     override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && !p.isAnte && (s(p) match {

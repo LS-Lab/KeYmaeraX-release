@@ -29,7 +29,7 @@ object ArithmeticTacticsImpl {
    * @return The tactic.
    */
   def quantifierEliminationT(toolId: String): Tactic = new Tactic("Quantifier Elimination") {
-    def qeApplicable(s: Sequent): Boolean = (s.ante ++ s.succ).forall(qeApplicable)
+    def qeApplicable(s: Sequent): Boolean = s.ante.isEmpty && s.succ.length == 1 && qeApplicable(s.succ.head)
 
     def qeApplicable(f: Formula): Boolean = {
       var qeAble = true
@@ -76,7 +76,7 @@ object ArithmeticTacticsImpl {
               case qe: QETool =>
                 // TODO make lemma DB configurable
                 val lemmaDB = new FileLemmaDB()
-                val lemma = RCF.proveArithmetic(qe, universalClosure(desequentialization(node.sequent)))
+                val lemma = RCF.proveArithmetic(qe, node.sequent.succ.head)
                 val id = LookupLemma.addLemma(lemmaDB, lemma)
 
                 lemma.fact.conclusion.succ.head match {
@@ -86,23 +86,12 @@ object ArithmeticTacticsImpl {
                       override def applicable(node: ProofNode): Boolean = true
                     }
 
-                    def reInst(f: Formula): Tactic = f match {
-                      case Forall(v, g) =>
-                        val resG = reInst(g)
-                        if (v.isEmpty) resG
-                        else {
-                          val tac = (for (n <- v) yield lastAnte(instantiateT(n, n))).reduce(seqT)
-                          tac & resG
-                        }
-                      case _ => NilT
-                    }
-
                     val closeTactic = (closeT | locateSucc(Propositional) | locateAnte(Propositional)) *
 
                     val tactic = cutT(Some(lemmaFml)) & onBranch(
                       (cutShowLbl, lastSucc(cohideT) & applyLemma),
                       (cutUseLbl, lastAnte(EquivLeftT) & onBranch(
-                        (equivLeftLbl, lastAnte(AndLeftT) & lastAnte(hideT) & reInst(res) & closeTactic),
+                        (equivLeftLbl, lastAnte(AndLeftT) & closeTactic),
                         (equivRightLbl, lastAnte(AndLeftT) & lastAnte(NotLeftT) & closeT)
                       ))
                     )

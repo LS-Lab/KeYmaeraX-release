@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverAxiomT, axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{lastAnte, lastSucc, locateAnte, locateSucc, onBranch}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.Position._
@@ -215,6 +216,34 @@ object PropositionalTacticsImpl {
 
     override def apply(p: Position): Tactic = new ApplyRule(CloseFalse(p)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  def ConsolidateSequentT: Tactic = new ConstructionTactic("Consolidate Sequent") {
+    override def applicable(node: ProofNode): Boolean = true
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+      val s = node.sequent
+      //TODO-nrf Not sure what to do with pref. Matters in non-taut case.
+      if (s.ante.isEmpty && s.succ.isEmpty) Some(NilT)
+      else {
+        val assumption =
+          if (s.ante.isEmpty) True
+          else s.ante.reduce((l, r) => And(l, r))
+
+        val implicant =
+          if (s.succ.isEmpty) Not(assumption)
+          else s.succ.reduce((l, r) => Or(l, r))
+
+        val consolidatedFml =
+          if (s.ante.isEmpty) implicant
+          else Imply(assumption, implicant)
+
+        Some(cutT(Some(consolidatedFml)) & onBranch(
+          (cutUseLbl, (AxiomCloseT | locateAnte(Propositional) | locateSucc(Propositional))*),
+          (cutShowLbl, SearchTacticsImpl.lastSucc(cohideT))
+        ))
+      }
     }
   }
 

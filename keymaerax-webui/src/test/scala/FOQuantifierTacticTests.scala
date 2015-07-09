@@ -497,4 +497,90 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     getProofSequent(tactic, new RootNode(sucSequent("!(\\forall x . (!x>y))".asFormula))) should be (
       sucSequent("\\exists x . x>y".asFormula))
   }
+
+  "Forall gen" should "introduce a new universal quantifier" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalGenT(Some(Variable("z")), FuncOf(Function("f", None, Unit, Real), Nothing)))
+    val result = helper.runTactic(tactic, new RootNode(sucSequent("\\forall x. x^2 >= -f()^2".asFormula)))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\forall z. \\forall x. x^2 >= -z^2".asFormula
+  }
+
+  it should "generalize terms" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalGenT(Some(Variable("z")), "y+5".asTerm))
+    val result = helper.runTactic(tactic, new RootNode(sucSequent("\\forall x. x^2 >= -(y+5)^2".asFormula)))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\forall z. \\forall x. x^2 >= -z^2".asFormula
+  }
+
+  it should "generalize only free occurrences" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalGenT(Some(Variable("z")), "x".asTerm))
+    val result = helper.runTactic(tactic, new RootNode(sucSequent("(\\forall x. x>5) & x<2".asFormula)))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\forall z. ((\\forall x. x>5) & z<2)".asFormula
+  }
+
+  it should "pick a name when generalizing only free occurrences" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalGenT(None, "x".asTerm))
+    val result = helper.runTactic(tactic, new RootNode(sucSequent("(\\forall x. x>5) & x<2".asFormula)))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\forall x_0. ((\\forall x. x>5) & x_0<2)".asFormula
+  }
+
+  "Universal closure" should "work for simple formula" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT)
+    val s = sucSequent("x>5".asFormula)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\forall x_0. x_0>5".asFormula
+  }
+
+  it should "work when indexed names are already there" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT)
+    val s = sucSequent("x_0>0 & x_1>1 & x_2>2".asFormula)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\forall x_5. \\forall x_4. \\forall x_3. (x_3>0 & x_4>1 & x_5>2)".asFormula
+  }
+
+  it should "compute closure for formulas with variables and parameterless function symbols" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT)
+    val s = sucSequent("x>5 & f()<2 & y+3>z".asFormula)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\forall f_0. \\forall z_0. \\forall y_0. \\forall x_0. (x_0>5 & f_0<2 & y_0+3>z_0)".asFormula
+  }
+
+  it should "ignore bound variables in closure" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT)
+    val s = sucSequent("\\forall x. \\forall y. (x>5 & f()<2 & y+3>z)".asFormula)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\forall f_0. \\forall z_0. (\\forall x. \\forall y. (x>5 & f_0<2 & y+3>z_0))".asFormula
+  }
+
+  it should "not ignore variables that are not bound everywhere" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT)
+    val s = sucSequent("(\\forall x. x>5) & x<2".asFormula)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\forall x_0. ((\\forall x. x>5) & x_0<2)".asFormula
+  }
+
+  it should "not do anything if all variables are bound" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT)
+    val s = sucSequent("\\forall x. x>5".asFormula)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\forall x. x>5".asFormula
+  }
 }

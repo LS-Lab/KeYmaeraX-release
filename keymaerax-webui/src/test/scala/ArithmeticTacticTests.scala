@@ -461,7 +461,9 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
   "Quantifier elimination" should "prove x<0 -> x<=0" in {
     val s = sequent(Nil, "x<0".asFormula :: Nil, "x<=0".asFormula :: Nil)
-    val tactic = quantifierEliminationT("Mathematica")
+    val tactic = PropositionalTacticsImpl.ConsolidateSequentT & FOQuantifierTacticsImpl.universalClosureT(SuccPosition(0)) &
+      TacticLibrary.debugT("Foo") &
+      quantifierEliminationT("Mathematica")
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 }
