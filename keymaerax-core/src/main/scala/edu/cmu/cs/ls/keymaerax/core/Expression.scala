@@ -190,6 +190,8 @@ object Nothing extends NamedSymbol with AtomicTerm {
 object Anything extends NamedSymbol with AtomicTerm with RTerm {
   def name: String = "\\anything"
   def index: Option[Int] = None
+  //@note Direct prettyString implementation bypasses pretty printer contracts, which fail since Anything can't be parsed standalone.
+  override def prettyString(): String = "??"
 }
 
 /** Function symbol applied to argument child */
