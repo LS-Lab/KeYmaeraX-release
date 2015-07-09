@@ -8,6 +8,8 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
  * @author nfulton
  */
 object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
+  private val DEBUG = false
+
   /**
    * @todo sort checking.
    * @param input The contents of the axiom file.
@@ -15,7 +17,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
    */
   def apply(input: String) : List[(String, Formula)] = {
     val tokens = KeYmaeraXLexer.inMode(input, AxiomFileMode())
-    println("Tokens are: " + tokens)
+    if (DEBUG) println("Tokens are: " + tokens)
     try {
       val (decls, axiomTokens) = KeYmaeraXDeclarationsParser(tokens)
       println(decls)

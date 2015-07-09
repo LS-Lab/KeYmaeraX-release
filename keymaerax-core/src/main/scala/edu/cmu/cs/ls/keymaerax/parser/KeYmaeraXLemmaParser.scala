@@ -10,6 +10,8 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
 object KeYmaeraXLemmaParser extends (String => (String, Formula, (String, String))) {
   private type Lemma = (String, Formula, (String, String))
 
+  private val DEBUG = false
+
   /**
    * @todo sort hcecking.
    * @param s The contents of the lemma file.
@@ -17,7 +19,7 @@ object KeYmaeraXLemmaParser extends (String => (String, Formula, (String, String
    */
   def apply(s: String) : Lemma = {
     val tokens = KeYmaeraXLexer.inMode(s, LemmaFileMode())
-    println("Tokens are: " + tokens)
+    if (DEBUG) println("Tokens are: " + tokens)
     val (decls, lemmaTokens) = KeYmaeraXDeclarationsParser(tokens)
     println(decls)
     parseLemma(lemmaTokens)
