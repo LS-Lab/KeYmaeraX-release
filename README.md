@@ -237,10 +237,14 @@ Differential game logic.
 August 2014.
 arXiv:1408.1980
 
-Licenses of External Tools
-==========================
+Copyright and Licenses
+======================
 
-KeYmaera X distribution contains external tools. A list of tools and their licenses can be found in
+Copyright (c) 2014-2015 Carnegie Mellon University. See COPYRIGHT.txt for details.
+
+See LICENSE.txt for the conditions of this license.
+
+The KeYmaera X distribution contains external tools. A list of tools and their licenses can be found in
 
     keymaerax-webui/src/main/resources/license/tools_licenses
 
@@ -254,4 +258,3 @@ http://keymaeraX.org/
 http://symbolaris.com/pub/
 
 http://symbolaris.com/info/KeYmaera.html
-
