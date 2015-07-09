@@ -13,17 +13,26 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 /**
  * Pretty-Printer interface for KeYmaera X.
+ * A pretty-printer formats the [[edu.cmu.cs.ls.keymaerax.core.Expression differential dynamic logic expression data structure]]
+ * as human readable concrete syntax.
+ * A pretty-printer is essentially a function from differential dynamic logic [[edu.cmu.cs.ls.keymaerax.core.Expression expressions]] to strings.
+ * {{{
+ *     PrettyPrinter: Expression => String
+ * }}}
  * @author aplatzer
  */
 trait PrettyPrinter extends (Expression => String) {
 
   /**
-   * Pretty-print expression to a string
+   * Pretty-print expression to a string.
    * @ensures parser(\result) == expr
    */
   def apply(expr: Expression): String
 
-  /** The corresponding full-form pretty printer with full parentheses. */
+  /**
+   * The corresponding full-form pretty printer producing full parentheses.
+   * @ensures parser(fullPrinter(expr)) == expr
+   */
   def fullPrinter: (Expression => String)
 
   /** A parser that can read the input that this pretty-printer produces */
