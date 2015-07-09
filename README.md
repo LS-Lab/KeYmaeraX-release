@@ -96,6 +96,8 @@ For development purposes, the Web UI can be run from an IDE by selecting as the 
 
   keymaerax-webui/src/main/scala/edu/cmu/cs/ls/keymaerax/hydra/Boot.scala
 
+Note that using the launcher/Main class won't work in IntelliJ.
+
 Errors related to JLinkNative Library are caused by Java 1.8 in combination with Mathematica 9.
 Either run using Java 1.7, or update to Mathematica 10.
 
