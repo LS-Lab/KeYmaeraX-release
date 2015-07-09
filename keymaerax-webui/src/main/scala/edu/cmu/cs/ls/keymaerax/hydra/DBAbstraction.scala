@@ -20,7 +20,7 @@ object DBAbstractionObj {
   val dblocation: String = {
     new File(
       System.getProperty("user.home") + File.separator +
-        ".keymaera"
+        ".keymaerax"
     ).mkdirs()
     
     val file = new File(System.getProperty("user.home") + File.separator +
