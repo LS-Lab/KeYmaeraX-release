@@ -407,18 +407,18 @@ object KeYmaeraXParser extends Parser {
           shift(st)
         else error(st)
 
-      // lax accepts optional or possibly even extra SEMI between the two programs for sequential composition
-      case r :+ Expr(p1: Program) :+ (tok@Token(SEMI,_)) :+ Expr(p2: Program) if statementSemicolon && LAX =>
-        if (la==LPAREN || !statementSemicolon&&la==LBRACE) error(st)
-        val optok = OpSpec.sCompose
-        assume(optok.assoc==RightAssociative)
-        //@todo op(st, la) : Potential problem: st is not the right parser state for la
-        if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
-          || la!=LBRACE && (optok < op(st, la, List(p2.kind,ExpressionKind)) || optok <= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == LeftAssociative))
-          reduce(st, 3, op(st, tok.tok, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(tok.tok.img, p1, p2), r)
-        else if (statementSemicolon&&la==LBRACE || optok > op(st, la, List(p2.kind,ExpressionKind)) || optok >= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == RightAssociative)
-          shift(st)
-        else error(st)
+//      // lax accepts optional or possibly even extra SEMI between the two programs for sequential composition
+//      case r :+ Expr(p1: Program) :+ (tok@Token(SEMI,_)) :+ Expr(p2: Program) if statementSemicolon && LAX =>
+//        if (la==LPAREN || !statementSemicolon&&la==LBRACE) error(st)
+//        val optok = OpSpec.sCompose
+//        assume(optok.assoc==RightAssociative)
+//        //@todo op(st, la) : Potential problem: st is not the right parser state for la
+//        if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+//          || la!=LBRACE && (optok < op(st, la, List(p2.kind,ExpressionKind)) || optok <= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == LeftAssociative))
+//          reduce(st, 3, op(st, tok.tok, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(tok.tok.img, p1, p2), r)
+//        else if (statementSemicolon&&la==LBRACE || optok > op(st, la, List(p2.kind,ExpressionKind)) || optok >= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == RightAssociative)
+//          shift(st)
+//        else error(st)
 
       // generic operators
 
