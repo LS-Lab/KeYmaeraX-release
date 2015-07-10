@@ -400,7 +400,8 @@ object KeYmaeraXParser extends Parser {
         val optok = OpSpec.sCompose
         assume(optok.assoc==RightAssociative)
         //@todo op(st, la) : Potential problem: st is not the right parser state for la
-        if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+        if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX
+          || (la == RDIA || la == RDIA) && (p1.kind == ProgramKind || p1.kind == DifferentialProgramKind)
           || la!=LBRACE && (optok < op(st, la, List(p2.kind,ExpressionKind)) || optok <= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == LeftAssociative))
           reduce(st, 2, op(st, SEMI, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(SEMI.img, p1, p2), r)
         else if (statementSemicolon&&la==LBRACE || optok > op(st, la, List(p2.kind,ExpressionKind)) || optok >= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == RightAssociative)
@@ -413,7 +414,8 @@ object KeYmaeraXParser extends Parser {
 //        val optok = OpSpec.sCompose
 //        assume(optok.assoc==RightAssociative)
 //        //@todo op(st, la) : Potential problem: st is not the right parser state for la
-//        if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+//        if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX
+//          || (la == RDIA || la == RDIA) && (p1.kind == ProgramKind || p1.kind == DifferentialProgramKind)
 //          || la!=LBRACE && (optok < op(st, la, List(p2.kind,ExpressionKind)) || optok <= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == LeftAssociative))
 //          reduce(st, 3, op(st, tok.tok, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(tok.tok.img, p1, p2), r)
 //        else if (statementSemicolon&&la==LBRACE || optok > op(st, la, List(p2.kind,ExpressionKind)) || optok >= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == RightAssociative)
@@ -456,7 +458,8 @@ object KeYmaeraXParser extends Parser {
       case r :+ Token(tok:OPERATOR,_) :+ Expr(t1) if op(st, tok, List(t1.kind)).assoc==PrefixFormat =>
         assume(op(st, tok, List(t1.kind)).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have prefix format\nin " + s)
         val optok = op(st, tok, List(t1.kind))
-        if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+        if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX
+          || (la == RDIA || la == RDIA) && (t1.kind == ProgramKind || t1.kind == DifferentialProgramKind)
           || optok <= op(st, la, List(t1.kind,ExpressionKind))) {
           //|| followsTerm(la))
           //@note By operator precedence, will only elaborate if need be, i.e. unless lookahead says shifting will get the right type
