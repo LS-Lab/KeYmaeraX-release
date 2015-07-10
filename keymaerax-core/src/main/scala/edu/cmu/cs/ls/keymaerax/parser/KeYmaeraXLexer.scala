@@ -223,13 +223,23 @@ object TOOL_OUTPUT extends Terminal("output") {
  * The location where a Terminal is located in an input stream.
  * @note Serializable to make sure sbt test allows Location in ParseException errors.
  */
-sealed abstract class Location extends Serializable
+sealed abstract class Location extends Serializable {
+  /** The range from this region to the other region, inclusive. Starting here and ending at other. */
+  //@todo review choices
+  def --(other: Location): Location
+}
 object UnknownLocation extends Location {
   override def toString = "<somewhere>"
+  def --(other: Location): Location = this
 }
 case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location {
   require(line <= endLine || (line == endLine && column <= endColumn),
     "A region cannot start after it ends.")
+  def --(other: Location): Location = other match {
+    case os: Region => Region(line, column, os.endLine, os.endColumn)
+    case _: SuffixRegion => this
+    case UnknownLocation => UnknownLocation
+  }
   override def toString = line + ":" + column + (if (column!=endColumn || line!=endLine) " to " + endLine + ":" + endColumn else "")
 }
 /**
@@ -238,6 +248,7 @@ case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends 
  * @param column The ending line.
  */
 case class SuffixRegion(line: Int, column: Int) extends Location {
+  def --(other: Location) = this
   override def toString = line + ":" + column + " to " + EOF
 }
 

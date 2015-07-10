@@ -48,6 +48,14 @@ class PairParserTests extends FlatSpec with Matchers {
   private val unparseable: String = "@#%@*!!!"
   /** Left string is expected to parse like the right string parses, or not at all if right==unparseable */
   private val expectedParse /*: List[Pair[String,String]]*/ = List(
+    // from doc/dL-grammar.md
+    ("x-y-z","(x-y)-z"),
+    ("x^2^4", "x^(2^4)"),
+    ("p()->q()->r()", "p()->(q()->r())"),
+    ("x:=1;x:=2;x:=3;", "x:=1;{x:=2;x:=3;}"),
+    ("[x:=1;x:=2;x:=3;]x=3", "[x:=1;{x:=2;x:=3;}]x=3"),
+
+    // reasonably systematic
     ("x+y+z","(x+y)+z"),
     ("x-y+z","(x-y)+z"),
     ("x+y-z","(x+y)-z"),
@@ -189,8 +197,34 @@ class PairParserTests extends FlatSpec with Matchers {
     ("\\forall p(x())","\\forall p (x())"),   //@todo not a great test on string level
 
 
+    ("x:=1;x:=2;++x:=3;", "{x:=1;x:=2;}++{x:=3;}"),
+    ("[x:=1;x:=2;++x:=3;]x>=5", "[{x:=1;x:=2;}++{x:=3;}]x>=5"),
+    ("<x:=1;x:=2;++x:=3;>x>5", "<{x:=1;x:=2;}++{x:=3;}>x>5"),
+    ("x:=1;++x:=2;x:=3;", "x:=1;++{x:=2;x:=3;}"),
+    ("[x:=1;++x:=2;x:=3;]x^2>4", "[x:=1;++{x:=2;x:=3;}]x^2>4"),
+    ("<x:=1;++x:=2;x:=3;>x^2>4", "<x:=1;++{x:=2;x:=3;}>x^2>4"),
+    ("x:=1;?x>0&x^2>5;{x'=5}", "x:=1;{?((x>0)&((x^2)>5));{x'=5}}"),
+    ("[x:=1;?x>0&x^2>5;{x'=5}]x+y>99", "[x:=1;{?((x>0)&((x^2)>5));{x'=5}}]x+y>99"),
+    ("<x:=1;?x>0&x^2>5;{x'=5}>x+y>99", "<x:=1;{?((x>0)&((x^2)>5));{x'=5}}>x+y>99"),
+    ("x:=1;?x<0&x^2>5;{x'=5}", "x:=1;{?((x<0)&((x^2)>5));{x'=5}}"),
+    ("[x:=1;?x<0&x^2>5;{x'=5}]x+y>99", "[x:=1;{?((x<0)&((x^2)>5));{x'=5}}]x+y>99"),
+    ("<x:=1;?x<0&x^2>5;{x'=5}>x+y>99", "<x:=1;{?((x<0)&((x^2)>5));{x'=5}}>x+y>99"),
+    ("x:=1;++x:=2;++x:=3;", "x:=1;++{x:=2;++x:=3;}"),
+    ("[x:=1;++x:=2;++x:=3;]x>5", "[x:=1;++{x:=2;++x:=3;}]x>5"),
+    ("<x:=1;++x:=2;++x:=3;>x>5", "<x:=1;++{x:=2;++x:=3;}>x>5"),
 
-  // Converted from ParserParenTests:
+    // nested modalities within programs
+    ("<x:=1;?<x:=2;>x>1;>x>5", "<x:=1;?(<x:=2;>(x>1));>(x>5)"),
+    ("[x:=1;?<x:=2;>x>1;]x>5", "[x:=1;?(<x:=2;>(x>1));](x>5)"),
+    ("<x:=1;?<{x'=2}>x>1;>x>5", "<x:=1;?(<{x'=2}>(x>1));>(x>5)"),
+    ("[x:=1;?<{x'=2}>x>1;]x>5", "[x:=1;?(<{x'=2}>(x>1));](x>5)"),
+    ("[?[?[?q();]p();]r();]s()", "[?([?([?(q());]p());]r());]s()"),
+    ("[?<?[?q();]p();>r();]s()", "[?(<?([?(q());]p());>r());]s()"),
+    ("<?<?<?q();>p();>r();>s()", "<?(<?(<?(q());>p());>r());>s()"),
+    ("[?<?[?q();]p();>r();]s()", "[?(<?([?(q());]p());>r());]s()"),
+    ("<?[?<?q();>p();]r();>s()", "<?([?(<?(q());>p());]r());>s()"),
+
+    // Converted from ParserParenTests:
 
     // unary operator binds stronger than binary operator
     ("! p > 0 & p < 5", "(!(p>0)) & (p<5)"),
@@ -249,5 +283,7 @@ class PairParserTests extends FlatSpec with Matchers {
       ("[ p:=1; ++ p:=2; p:=3;] p>0", "[ p:=1; ++ {p:=2; p:=3;}] p>0") ,
       ("[ p:=1; p:=2; {p:=3;}*] p>0", "[ p:=1; p:=2; {{p:=3;}*}] p>0") ,
       ("[ p:=1; p:=2; ++ {p:=3;}*] p>0", "[ {p:=1; p:=2;} ++ {{p:=3;}*}] p>0")
+
+        //("x() -> [x:=x(x);]x()>x(x,x())", unparseable) //@todo if !LAX
   )
 }

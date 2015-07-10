@@ -36,8 +36,10 @@ private[parser] case class RecognizedQuant(v: Expression) extends Item {
 /** Parts of expressions that are partially recognized on the parser item stack but not parsed to a proper Expression yet so merely stashed for later. */
 private[parser] case class RecognizedModal(ltok: Token, program: Program, rtok: Token) extends Item {
   require(ltok.tok==LBOX && rtok.tok==RBOX || ltok.tok==LDIA && rtok.tok==RDIA, "Compatible modality tokens required " + this)
+  /** The region that this recognized item spans. */
+  def loc: Location = ltok.loc--rtok.loc
   //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
-  override def toString: String = "Rec" + ltok + KeYmaeraXPrettyPrinter.stringify(program) + rtok
+  override def toString: String = "Rec" + ltok.tok.img + KeYmaeraXPrettyPrinter.stringify(program) + rtok.tok.img
 }
 private[parser] trait FinalItem extends Item
 /** Parser items representing expressions that are accepted by the parser. */
@@ -366,7 +368,8 @@ object KeYmaeraXParser extends Parser {
       // special case to force elaboration of modalities at the end
       //case r :+ (tok1@Token(LBOX,_)) :+ Expr(p1:Program) :+ (tok3@Token(RBOX,_)) :+ Expr(e1)
       case r :+ (mod:RecognizedModal) :+ Expr(e1)
-        if (la==EOF || la==RPAREN || la==RBRACE || formulaBinOp(la)) && e1.kind!=FormulaKind =>
+        if (la==EOF || la==RPAREN || la==RBRACE || formulaBinOp(la)) && e1.kind!=FormulaKind
+          || (if (statementSemicolon) la==SEMI else programOp(la)) =>
         reduce(st, 1, elaborate(st, OpSpec.sNone, FormulaKind, e1), r :+ mod)
 
 //      // special case to force elaboration of modalities at the end
@@ -611,6 +614,9 @@ object KeYmaeraXParser extends Parser {
 
   /** Is la a (binary) operator that only works for formulas? */
   private def formulaBinOp(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV
+
+  /** Is la a (unary/binary) operator that only works for programs? */
+  private def programOp(la: Terminal): Boolean = la==SEMI || la==CHOICE
 
   /** Follow(Term): Can la follow after a term? */
   private def followsTerm(la: Terminal): Boolean = la==RPAREN ||
