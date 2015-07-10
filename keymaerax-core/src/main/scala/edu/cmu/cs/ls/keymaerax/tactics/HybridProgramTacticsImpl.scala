@@ -8,12 +8,14 @@ import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.boxMonotoneT
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverAxiomT, axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
+import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.existsDualT
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT,AxiomCloseT,ImplyLeftT,ImplyRightT,cutT,
   hideT,kModalModusPonensT}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import BindingAssessment.allNames
 import edu.cmu.cs.ls.keymaerax.tactics.AlphaConversionHelper._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.freshIndexInFormula
 import TacticHelper.getFormula
 import SearchTacticsImpl.onBranch
 import edu.cmu.cs.ls.keymaerax.tools.Tool
@@ -49,9 +51,12 @@ object HybridProgramTacticsImpl {
       def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case Diamond(prg, phi) =>
-          Some(diamondDualityT(p) & base(p.first) & boxDualityT(p.first) & rewriteDoubleNegationEliminationT(p))
+          Some(diamondDualityT(p) & base(p.first) &
+            (boxDualityT(p.first) & rewriteDoubleNegationEliminationT(p) |
+              existsDualT(p) |
+              NilT))
         case Box(prg, phi) =>
-          Some(boxDualityT(p) & base(p.first) & diamondDualityT(p.first) & rewriteDoubleNegationEliminationT(p))
+          Some(boxDualityT(p) & base(p.first) & (diamondDualityT(p.first) & rewriteDoubleNegationEliminationT(p) | NilT))
         case _ => None
       }
     }
@@ -239,6 +244,44 @@ object HybridProgramTacticsImpl {
       }
   }
 
+  /**
+   * Creates a new axiom tactic for diamond assignment equational [x := t;].
+   * @return The axiom tactic.
+   * @author Stefan Mitsch
+   * // TODO provide only one implementation for both box and diamond
+   */
+  def diamondAssignEqualT: PositionTactic = new PositionTactic("<:=> assign equational") {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case Diamond(Assign(Variable(_, _,_), _), _) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        import scala.language.postfixOps
+
+        val f = getFormula(node.sequent, p)
+        // construct a new name for the quantified variable
+        val (newV1, newV2) = f match {
+          case Diamond(Assign(v: Variable, _), _) =>
+            val tIdx = freshIndexInFormula(v.name, f)
+            (Variable(v.name, tIdx, v.sort), Variable(v.name, Some(tIdx.get + 1), v.sort))
+          case _ => throw new IllegalStateException("Checked by applies to never happen")
+        }
+
+        f match {
+          case Diamond(Assign(v: Variable, _), phi: Modal)
+            if loopsAndODEsOf(phi).exists(p => StaticSemantics.symbols(p).contains(v) &&
+              !NameCategorizer.freeVariables(p).contains(v)) => Some(
+            alphaRenamingT(v, newV1)(p.second) & diamondAssignWithoutAlphaT(newV2, checkNewV = false)(p)
+          )
+          case _ => Some(diamondAssignWithoutAlphaT(newV1)(p))
+        }
+      }
+    }
+  }
 
   /**
    * Creates a new axiom tactic for box assignment equational [x := t;].
@@ -267,7 +310,7 @@ object HybridProgramTacticsImpl {
         }
 
         node.sequent(p) match {
-          case Box(Assign(v: Variable, _), phi@Box(_, _))
+          case Box(Assign(v: Variable, _), phi: Modal)
             if loopsAndODEsOf(phi).exists(p => StaticSemantics.symbols(p).contains(v) &&
             !NameCategorizer.freeVariables(p).contains(v)) => Some(
               alphaRenamingT(v, newV1)(p.second) & boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
@@ -275,20 +318,30 @@ object HybridProgramTacticsImpl {
           case _ => Some(boxAssignWithoutAlphaT(newV1)(p))
         }
       }
-
-      private def loopsAndODEsOf(fml: Formula): List[Program] = {
-        val result: mutable.MutableList[Program] = mutable.MutableList()
-        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-          override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
-            case Loop(_) => result += e; Left(None)
-            case ODESystem(_, _) => result += e; Left(None)
-            case _ => Left(None)
-          }
-        }, fml)
-        result.toList
-      }
     }
   }
+
+  private def loopsAndODEsOf(fml: Formula): List[Program] = {
+    val result: mutable.MutableList[Program] = mutable.MutableList()
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+        case Loop(_) => result += e; Left(None)
+        case ODESystem(_, _) => result += e; Left(None)
+        case _ => Left(None)
+      }
+    }, fml)
+    result.toList
+  }
+
+  /**
+   * Creates a new axiom tactic for diamond equational assignment, based on duality.
+   * @param newV The new variable to be used in the universal quantifier.
+   * @param checkNewV Indicates whether or not the tactic should check that newV is indeed a new name.
+   * @return The newly created tactic.
+   * @author Stefan Mitsch
+   */
+  def diamondAssignWithoutAlphaT(newV: Variable, checkNewV: Boolean = true): PositionTactic =
+    new ByDualityAxiomTactic(boxAssignWithoutAlphaT(newV, checkNewV))
 
   /**
    * Creates a new axiom tactic for box assignment [x := t;]. Helper for boxAssignEqualT
