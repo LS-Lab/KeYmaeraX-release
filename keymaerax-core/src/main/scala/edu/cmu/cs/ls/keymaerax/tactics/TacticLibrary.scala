@@ -158,6 +158,17 @@ object TacticLibrary {
         case Function(fName, _, fDomain, fSort) => Function(fName, freshIndexInSequent(fName, s), fDomain, fSort).asInstanceOf[T]
         case _ => ???
       } else t
+
+    def findFormulaByStructure(s: Sequent, f: Formula): Option[Formula] = {
+      val fStructure = f.dottify
+
+      val anteStructure = s.ante.map(_.dottify)
+      val succStructure = s.succ.map(_.dottify)
+
+      if (anteStructure.contains(fStructure)) Some(s.ante(anteStructure.indexOf(fStructure)))
+      else if (succStructure.contains(fStructure)) Some(s.succ(succStructure.indexOf(fStructure)))
+      else None
+    }
   }
 
   /*******************************************************************
