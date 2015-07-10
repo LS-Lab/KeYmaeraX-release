@@ -1,19 +1,22 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{axiomLookupBaseT,uncoverAxiomT}
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.equivalenceCongruenceT
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{axiomLookupBaseT, uncoverAxiomT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.cutInContext
+import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
+import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.Propositional
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.onBranch
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 
-import TacticLibrary.{universalClosure,closeT,hideT,CloseTrueT, debugT, locate}
+import TacticLibrary.{closeT, hideT, debugT, locate}
 import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT,cohideT,kModalModusPonensT,NotT,ImplyT,cutT, AxiomCloseT}
 import SearchTacticsImpl.{lastAnte,lastSucc,locateAnte,locateSucc,onBranch}
-import FOQuantifierTacticsImpl.instantiateT
 import AxiomaticRuleTactics.goedelT
 import TacticLibrary.TacticHelper.getFormula
-import edu.cmu.cs.ls.keymaerax.tools.Tool
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, Tool}
 
 import scala.collection.immutable.List
 import scala.language.postfixOps
@@ -24,39 +27,71 @@ import scala.language.postfixOps
 object ArithmeticTacticsImpl {
 
   /**
+   * Creates a new tactic that uses local quantifier elimination to turn a formula into an equivalent formula.
+   * @return The tactic.
+   */
+  def localQuantifierElimination: PositionTactic = new PositionTactic("Local Quantifier Elimination") {
+    override def applies(s: Sequent, p: Position): Boolean = isQeApplicable(getFormula(s, p))
+
+    override def apply(p: Position): Tactic = new Tactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def apply(tool: Tool, node: ProofNode) = {
+        val t = new ConstructionTactic(name) {
+          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+          override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = tool match {
+            case x: Mathematica =>
+              val f = getFormula(node.sequent, p)
+              val (solution, _, _) = x.qeInOut(f)
+              val result = Equiv(f, solution)
+              Some(cutInContext(result, p) & onBranch(
+                (cutShowLbl, lastSucc(cohideT) & equivalenceCongruenceT(p.inExpr) & quantifierEliminationT(tool.name)),
+                (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
+              ))
+          }
+        }
+        t.scheduler = Tactics.MathematicaScheduler
+        t.continuation = continuation
+        t.dispatch(this, node)
+      }
+    }
+  }
+
+  private def isQeApplicable(f: Formula): Boolean = {
+    var qeAble = true
+    val fn = new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+        e match {
+          case Box(_, _) => qeAble = false
+          case Diamond(_, _) => qeAble = false
+          case PredOf(_, _) => qeAble = false
+          case _ =>
+        }
+        if (qeAble) Left(None) else Left(Some(new StopTraversal {}))
+      }
+
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+        e match {
+          case FuncOf(Function(_, _, Unit, _), Nothing) => true
+          case FuncOf(fun, _) => qeAble = false // check if fun is an external function
+          case Differential(_) => qeAble = false
+          case _ =>
+        }
+        if (qeAble) Left(None) else Left(Some(new StopTraversal {}))
+      }
+    }
+    ExpressionTraversal.traverse(fn, f)
+    qeAble
+  }
+
+  /**
    * The quantifier elimination tactic.
    * @param toolId The quantifier elimination tool to use.
    * @return The tactic.
    */
   def quantifierEliminationT(toolId: String): Tactic = new Tactic("Quantifier Elimination") {
-    def qeApplicable(s: Sequent): Boolean = s.ante.isEmpty && s.succ.length == 1 && qeApplicable(s.succ.head)
-
-    def qeApplicable(f: Formula): Boolean = {
-      var qeAble = true
-      val fn = new ExpressionTraversalFunction {
-        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-          e match {
-            case Box(_, _) => qeAble = false
-            case Diamond(_, _) => qeAble = false
-            case PredOf(_, _) => qeAble = false
-            case _ =>
-          }
-          if (qeAble) Left(None) else Left(Some(new StopTraversal {}))
-        }
-
-        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-          e match {
-            case FuncOf(Function(_, _, Unit, _), Nothing) => true
-            case FuncOf(fun, _) => qeAble = false // check if fun is an external function
-            case Differential(_) => qeAble = false
-            case _ =>
-          }
-          if (qeAble) Left(None) else Left(Some(new StopTraversal {}))
-        }
-      }
-      ExpressionTraversal.traverse(fn, f)
-      qeAble
-    }
+    def qeApplicable(s: Sequent): Boolean = s.ante.isEmpty && s.succ.length == 1 && isQeApplicable(s.succ.head)
 
     override def applicable(node: ProofNode): Boolean = qeApplicable(node.sequent) && toolIsInitialized()
 
