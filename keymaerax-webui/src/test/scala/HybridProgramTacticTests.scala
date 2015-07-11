@@ -149,30 +149,6 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sucSequent("\\forall x_1. (x_1=1 -> [x_0:=x_1;][x_0'=1;]x_0>0)".asFormula)))
   }
 
-  it should "work in front of an ODE, even if it is not top-level" in {
-    import HybridProgramTacticsImpl.boxAssignEqualT
-    val s = sucSequent("[x:=1;][t:=0; x'=1;]x>0".asFormula)
-    val assignT = locateSucc(boxAssignEqualT)
-    helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("\\forall x_1. (x_1=1 -> [x_0:=x_1;][t:=0;x_0'=1;]x_0>0)".asFormula)))
-  }
-
-  it should "work in front of an ODE, even if it is not in the next box" in {
-    import HybridProgramTacticsImpl.boxAssignEqualT
-    val s = sucSequent("[x:=1;][t:=0;][t:=1; x'=1;]x>0".asFormula)
-    val assignT = locateSucc(boxAssignEqualT)
-    helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("\\forall x_1. (x_1=1 -> [x_0:=x_1;][t:=0;][t:=1;x_0'=1;]x_0>0)".asFormula)))
-  }
-
-  it should "not introduce stuttering when ODE does not write variable, even if it is not top-level" in {
-    import HybridProgramTacticsImpl.boxAssignEqualT
-    val s = sucSequent("[x:=1;][t:=0; y'=1; {z:=2;}* ]x>0".asFormula)
-    val assignT = locateSucc(boxAssignEqualT)
-    helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("\\forall x_0. (x_0=1 -> [t:=0;y'=1;{z:=2;}*]x_0>0)".asFormula)))
-  }
-
   // TODO not yet supported (partial variable writing)
   ignore should "not rename assignment lhs in may-bound" in {
     val s = sucSequent("[x:=z;][y:=y_0;{y:=y+1 ++ x:=x-1}]x<=y".asFormula)
@@ -428,9 +404,9 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "work with possible subsequent assignment to same variable" in {
-    val s = sucSequent("<y:=*;><{y:=2++z:=1};>(y>0 | z>0)".asFormula)
+    val s = sucSequent("< y:=*;><y:=2;++z:=1;>(y>0 | z>0)".asFormula)
     val assignT = locateSucc(diamondNDetAssign)
-    getProofSequent(assignT, new RootNode(s)) shouldBe sucSequent("\\exists y. <{y:=2++z:=1};>(y>0 | z>0)".asFormula)
+    getProofSequent(assignT, new RootNode(s)) shouldBe sucSequent("\\exists y <y:=2;++z:=1;>(y>0 | z>0)".asFormula)
   }
 
   it should "neither rename free variables nor variables bound by assignment in modality predicates" in {
