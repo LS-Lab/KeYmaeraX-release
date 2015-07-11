@@ -217,7 +217,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   it should "convert parameterless Apply()" in {
     val in = FuncOf(Function("y", None, Unit, Real), Nothing)
-    val expected = new MExpr(Expr.SYMBOL, "KeYmaera`constfn$underscore$y")
+    val expected = new MExpr(Expr.SYMBOL, "KeYmaera`constfn$y")
     KeYmaeraToMathematica.fromKeYmaera(in) should be (expected)
   }
 }
