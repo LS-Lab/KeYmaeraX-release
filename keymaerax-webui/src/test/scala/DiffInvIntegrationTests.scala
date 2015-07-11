@@ -39,7 +39,7 @@ class DiffInvIntegrationTests extends TacticTestSuite {
   }
 
   "diff inv tactic" should "work" in {
-    val s = sequent(Nil, "x>=0".asFormula::Nil, "[x' = 2;]x>=0".asFormula :: Nil)
+    val s = sequent(Nil, "x>=0".asFormula::Nil, "[{x' = 2}]x>=0".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
     n shouldBe 'closed
@@ -49,7 +49,7 @@ class DiffInvIntegrationTests extends TacticTestSuite {
   }
 
   it should "work with conjunction in inv" in {
-    val s = sequent(Nil, "x>=0 & x>=x".asFormula::Nil, "[x' = 2;](x>=0 & x>=x)".asFormula :: Nil)
+    val s = sequent(Nil, "x>=0 & x>=x".asFormula::Nil, "[{x' = 2}](x>=0 & x>=x)".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
     n shouldBe 'closed
@@ -59,7 +59,7 @@ class DiffInvIntegrationTests extends TacticTestSuite {
   }
 
   it should "work with disjunction in inv" in {
-    val s = sequent(Nil, "x>=0 & x>=x".asFormula::Nil, "[x' = 2;](x>=0 | x>=x)".asFormula :: Nil)
+    val s = sequent(Nil, "x>=0 & x>=x".asFormula::Nil, "[{x' = 2}](x>=0 | x>=x)".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
     n shouldBe 'closed
@@ -69,24 +69,25 @@ class DiffInvIntegrationTests extends TacticTestSuite {
   }
 
   it should "work with implication in inv" in {
-    val s = sequent(Nil, "x>=0 -> x>=x".asFormula::Nil, "[x' = 2;](x>=0 -> x>=x)".asFormula :: Nil)
+    val s = sequent(Nil, "x>=0 -> x>=x".asFormula::Nil, "[{x' = 2}](x>=0 -> x>=x)".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
-    n.openGoals().flatMap(_.sequent.ante) should contain only ("x>=0 -> x>=x".asFormula, "true".asFormula)
-    n.openGoals().flatMap(_.sequent.succ) should contain only "2<=0 & 2>=2".asFormula
+    n.openGoals() should have size 1
+    n.openGoals().head.sequent.ante shouldBe empty
+    n.openGoals().head.sequent.succ should contain only "\\forall x_0 ((x_0>=0 -> x_0>=x_0)&true&true -> 2<=0 & 2>=2)".asFormula
   }
 
   // Needed when we want to cut in universally quantified stuff
   ignore should "work with universal quantifier in inv" in {
-    val s = sequent(Nil, "\\forall t. 0<=t".asFormula::Nil, "[x' = 2, t'=1 & 0<=t;]\\forall t. 0<=t".asFormula :: Nil)
+    val s = sequent(Nil, "\\forall t 0<=t".asFormula::Nil, "[{x' = 2, t'=1 & 0<=t}](\\forall t 0<=t)".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
-    n.openGoals().flatMap(_.sequent.ante) should contain only ("\\forall t. 0<=t".asFormula, "true".asFormula)
+    n.openGoals().flatMap(_.sequent.ante) should contain only ("\\forall t 0<=t".asFormula, "true".asFormula)
     n.openGoals().flatMap(_.sequent.succ) should contain only "2<=0 & 2>=2".asFormula
   }
 
   it should "derive constant symbols to 0" in {
-    val s = sequent(Nil, "x>=0 & y()>=0".asFormula::Nil, "[x' = 2;](x>=0 & y()>=0)".asFormula :: Nil)
+    val s = sequent(Nil, "x>=0 & y()>=0".asFormula::Nil, "[{x' = 2}](x>=0 & y()>=0)".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
     // 2>=0 && 0>=0
@@ -94,7 +95,7 @@ class DiffInvIntegrationTests extends TacticTestSuite {
   }
 
   it should "derive multiplication" in {
-    val s = sequent(Nil, "x>=0 & y()>=0".asFormula::Nil, "[x' = 2;](x*y()>=0)".asFormula :: Nil)
+    val s = sequent(Nil, "x>=0 & y()>=0".asFormula::Nil, "[{x' = 2}](x*y()>=0)".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
     // x*0 + 2*y()>=0
@@ -102,7 +103,7 @@ class DiffInvIntegrationTests extends TacticTestSuite {
   }
 
   it should "derive nested multiplication" in {
-    val s = sequent(Nil, "x>=0 & y()>=0 & z>=0".asFormula::Nil, "[x' = 2, z'=1;](x*y()*z>=0)".asFormula :: Nil)
+    val s = sequent(Nil, "x>=0 & y()>=0 & z>=0".asFormula::Nil, "[{x' = 2, z'=1}](x*y()*z>=0)".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
     // x*(0*z + y()*1) + 2*(y()*z)>=0
@@ -110,7 +111,7 @@ class DiffInvIntegrationTests extends TacticTestSuite {
   }
 
   it should "derive division" in {
-    val s = sequent(Nil, "x>=0 & y()>0".asFormula::Nil, "[x' = 2;](x/y()>=0)".asFormula :: Nil)
+    val s = sequent(Nil, "x>=0 & y()>0".asFormula::Nil, "[{x' = 2}](x/y()>=0)".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
     // x*0 + 2*y()>=0
@@ -119,7 +120,7 @@ class DiffInvIntegrationTests extends TacticTestSuite {
 
   // infinite loop (might also be caused by pretty printer issue because nothing ever closes)
   ignore should "work with a complicated example" in {
-    val s = sequent(Nil, Nil, "[x' = y, y' = x & x^2 + y^2 = 4;]1=1".asFormula::Nil)
+    val s = sequent(Nil, Nil, "[{x' = y, y' = x & x^2 + y^2 = 4}]1=1".asFormula::Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
     n.openGoals().flatMap(_.sequent.ante) shouldBe empty
