@@ -39,10 +39,10 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Box differential weaken tactic" should "pull out evolution domain constraint" in {
-    val s = sucSequent("[x'=1 & x>2;]x>0".asFormula)
+    val s = sucSequent("[{x'=1 & x>2}]x>0".asFormula)
 
     val diffWeakenAx = locateSucc(diffWeakenAxiomT)
-    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("[x'=1 & x>2;](x>2 -> x>0)".asFormula))
+    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("[{x'=1 & x>2}](x>2 -> x>0)".asFormula))
 
     val diffWeaken = locateSucc(diffWeakenT)
     val result = helper.runTactic(diffWeaken, new RootNode(s))
@@ -52,19 +52,19 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "pull out evolution domain constraint in some context" in {
-    val s = sucSequent("[x:=0;][x'=1 & x>2;]x>0".asFormula)
+    val s = sucSequent("[x:=0;][{x'=1 & x>2}]x>0".asFormula)
 
     val diffWeakenAx = diffWeakenAxiomT(SuccPosition(0, PosInExpr(1::Nil)))
-    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("[x:=0;][x'=1 & x>2;](x>2 -> x>0)".asFormula))
+    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("[x:=0;][{x'=1 & x>2}](x>2 -> x>0)".asFormula))
   }
 
   it should "perform alpha renaming if necessary" in {
-    val s = sucSequent("[y'=y & y>2 & z<0;]y>0".asFormula)
+    val s = sucSequent("[{y'=y & y>2 & z<0}]y>0".asFormula)
     val diffWeakenAx = locateSucc(diffWeakenAxiomT)
     val result = helper.runTactic(diffWeakenAx, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[y'=y & y>2 & z<0;](y>2 & z<0 -> y>0)".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{y'=y & y>2 & z<0}](y>2 & z<0 -> y>0)".asFormula
 
     val diffWeaken = locateSucc(diffWeakenT)
     val result2 = helper.runTactic(diffWeaken, new RootNode(s))
@@ -74,12 +74,12 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "introduce true if there is no evolution domain constraint" in {
-    val s = sucSequent("[x'=1;]x>0".asFormula)
+    val s = sucSequent("[{x'=1}]x>0".asFormula)
     val diffWeakenAx = locateSucc(diffWeakenAxiomT)
     val result = helper.runTactic(diffWeakenAx, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=1;](true -> x>0)".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{x'=1}](true -> x>0)".asFormula
 
     val diffWeaken = locateSucc(diffWeakenT)
     val result2 = helper.runTactic(diffWeaken, new RootNode(s))
@@ -89,10 +89,10 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Diamond differential weaken tactic" should "pull out evolution domain constraint" in {
-    val s = sucSequent("<x'=1 & x>2;>x>0".asFormula)
+    val s = sucSequent("<{x'=1 & x>2}>x>0".asFormula)
 
     val diffWeakenAx = locateSucc(diamondDiffWeakenAxiomT)
-    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("<x'=1 & x>2;>(!(x>2 -> !x>0))".asFormula))
+    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("<{x'=1 & x>2}>(!(x>2 -> !x>0))".asFormula))
 
 //    val diffWeaken = locateSucc(diffWeakenT)
 //    val result = helper.runTactic(diffWeaken, new RootNode(s))
@@ -102,10 +102,10 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "work inside formula" in {
-    val s = sucSequent("x>0 & <x'=1 & x>2;>x>0".asFormula)
+    val s = sucSequent("x>0 & <{x'=1 & x>2}>x>0".asFormula)
 
     val diffWeakenAx = diamondDiffWeakenAxiomT(SuccPosition(0, PosInExpr(1::Nil)))
-    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("x>0 & <x'=1 & x>2;>(!(x>2 -> !x>0))".asFormula))
+    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("x>0 & <{x'=1 & x>2}>(!(x>2 -> !x>0))".asFormula))
 
     //    val diffWeaken = locateSucc(diffWeakenT)
     //    val result = helper.runTactic(diffWeaken, new RootNode(s))
@@ -115,9 +115,9 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "differential weaken of system of ODEs" should "pull out evolution domain constraint" in {
-    val s = sucSequent("[x'=x, y'=1 & y>2 & z<0;]y>0".asFormula)
+    val s = sucSequent("[{x'=x, y'=1 & y>2 & z<0}]y>0".asFormula)
     val diffWeakenAx = locateSucc(diffWeakenAxiomT)
-    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("[x'=x, y'=1 & y>2 & z<0;](y>2 & z<0 -> y>0)".asFormula))
+    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("[{x'=x, y'=1 & y>2 & z<0}](y>2 & z<0 -> y>0)".asFormula))
 
     val diffWeaken = locateSucc(diffWeakenT)
     val result = helper.runTactic(diffWeaken, new RootNode(s))
@@ -127,10 +127,10 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "also work when the ODEs are interdependent" in {
-    val s = sucSequent("[x'=x+y, y'=1, z'=2 & y>2 & z<0;]y>0".asFormula)
+    val s = sucSequent("[{x'=x+y, y'=1, z'=2 & y>2 & z<0}]y>0".asFormula)
     val diffWeakenAx = locateSucc(diffWeakenAxiomT)
     getProofSequent(diffWeakenAx, new RootNode(s)) should be (
-      sucSequent("[x'=x+y, y'=1, z'=2 & y>2 & z<0;](y>2 & z<0 -> y>0)".asFormula))
+      sucSequent("[{x'=x+y, y'=1, z'=2 & y>2 & z<0}](y>2 & z<0 -> y>0)".asFormula))
 
     val diffWeaken = locateSucc(diffWeakenT)
     val result = helper.runTactic(diffWeaken, new RootNode(s))
@@ -140,91 +140,91 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "also work inside formulas" in {
-    val s = sucSequent("x>0 & [x'=1 & y>2;]y>0".asFormula)
+    val s = sucSequent("x>0 & [{x'=1 & y>2}]y>0".asFormula)
     val diffWeakenAx = diffWeakenAxiomT(SuccPosition(0, PosInExpr(1::Nil)))
     getProofSequent(diffWeakenAx, new RootNode(s)) should be (
-      sucSequent("x>0 & [x'=1 & y>2;](y>2 -> y>0)".asFormula))
+      sucSequent("x>0 & [{x'=1 & y>2}](y>2 -> y>0)".asFormula))
 
     // TODO tactic with abstraction etc.
   }
 
   "differential cut" should "cut in a simple formula" in {
     import ODETactics.diffCutT
-    val s = sucSequent("[x'=2;]x>=0".asFormula)
+    val s = sucSequent("[{x'=2}]x>=0".asFormula)
     val tactic = locateSucc(diffCutT("x>0".asFormula))
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante shouldBe empty
-    result.openGoals()(0).sequent.succ should contain only "[x'=2 & true & x>0;]x>=0".asFormula
+    result.openGoals()(0).sequent.succ should contain only "[{x'=2 & true & x>0}]x>=0".asFormula
     result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
     result.openGoals()(1).sequent.ante shouldBe empty
-    result.openGoals()(1).sequent.succ should contain only "[x'=2;]x>0".asFormula
+    result.openGoals()(1).sequent.succ should contain only "[{x'=2}]x>0".asFormula
     result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
   }
 
   it should "retain context for showing condition" in {
     import ODETactics.diffCutT
-    val s = sequent(Nil, "x>0".asFormula::Nil, "y<0".asFormula :: "[x'=2;]x>=0".asFormula :: "z=0".asFormula :: Nil)
+    val s = sequent(Nil, "x>0".asFormula::Nil, "y<0".asFormula :: "[{x'=2}]x>=0".asFormula :: "z=0".asFormula :: Nil)
     val tactic = locateSucc(diffCutT("x>0".asFormula))
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante should contain only "x>0".asFormula
-    result.openGoals()(0).sequent.succ should contain only ("y<0".asFormula, "[x'=2 & true & x>0;]x>=0".asFormula, "z=0".asFormula)
+    result.openGoals()(0).sequent.succ should contain only ("y<0".asFormula, "[{x'=2 & true & x>0}]x>=0".asFormula, "z=0".asFormula)
     result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
     result.openGoals()(1).sequent.ante should contain only "x>0".asFormula
-    result.openGoals()(1).sequent.succ should contain only ("y<0".asFormula, "[x'=2;]x>0".asFormula, "z=0".asFormula)
+    result.openGoals()(1).sequent.succ should contain only ("y<0".asFormula, "[{x'=2}]x>0".asFormula, "z=0".asFormula)
     result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
   }
 
   it should "cut formula into evolution domain constraint of rightmost ODE in ODEProduct" in {
-    val s = sucSequent("[x'=2, y'=3, z'=4 & y>4;]x>0".asFormula)
+    val s = sucSequent("[{x'=2, y'=3, z'=4 & y>4}]x>0".asFormula)
     val tactic = locateSucc(diffCutT("x>1".asFormula))
 
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante shouldBe empty
-    result.openGoals()(0).sequent.succ should contain only "[x'=2,y'=3,z'=4 & (y>4&x>1);]x>0".asFormula
+    result.openGoals()(0).sequent.succ should contain only "[{x'=2,y'=3,z'=4 & (y>4&x>1)}]x>0".asFormula
     result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
     result.openGoals()(1).sequent.ante shouldBe empty
-    result.openGoals()(1).sequent.succ should contain only "[x'=2,y'=3,z'=4 & y>4;]x>1".asFormula
+    result.openGoals()(1).sequent.succ should contain only "[{x'=2,y'=3,z'=4 & y>4}]x>1".asFormula
     result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
   }
 
   it should "cut formula into rightmost ODE in ODEProduct, even if constraint empty" in {
-    val s = sucSequent("[x'=2, y'=3;]x>0".asFormula)
+    val s = sucSequent("[{x'=2, y'=3}]x>0".asFormula)
     val tactic = locateSucc(diffCutT("x>1".asFormula))
 
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante shouldBe empty
-    result.openGoals()(0).sequent.succ should contain only "[x'=2,y'=3 & (true&x>1);]x>0".asFormula
+    result.openGoals()(0).sequent.succ should contain only "[{x'=2,y'=3 & (true&x>1)}]x>0".asFormula
     result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
     result.openGoals()(1).sequent.ante shouldBe empty
-    result.openGoals()(1).sequent.succ should contain only "[x'=2, y'=3;]x>1".asFormula
+    result.openGoals()(1).sequent.succ should contain only "[{x'=2, y'=3}]x>1".asFormula
     result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
   }
 
   it should "preserve existing evolution domain constraint" in {
     import ODETactics.diffCutT
-    val s = sucSequent("[x'=2 & x>=0 | y<z;]x>=0".asFormula)
+    val s = sucSequent("[{x'=2 & x>=0 | y<z}]x>=0".asFormula)
     val tactic = locateSucc(diffCutT("x>0".asFormula))
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante shouldBe empty
-    result.openGoals()(0).sequent.succ should contain only "[x'=2 & (x>=0 | y<z) & x>0;]x>=0".asFormula
+    result.openGoals()(0).sequent.succ should contain only "[{x'=2 & (x>=0 | y<z) & x>0}]x>=0".asFormula
     result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
     result.openGoals()(1).sequent.ante shouldBe empty
-    result.openGoals()(1).sequent.succ should contain only "[x'=2 & x>=0 | y<z;]x>0".asFormula
+    result.openGoals()(1).sequent.succ should contain only "[{x'=2 & x>=0 | y<z}]x>0".asFormula
     result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
   }
 
   "differential solution tactic" should "use Mathematica to find solution if None is provided" in {
-    val s = sequent(Nil, "b=0 & x>b".asFormula :: Nil, "[x'=2;]x>b".asFormula :: Nil)
+    val s = sequent(Nil, "b=0 & x>b".asFormula :: Nil, "[{x'=2}]x>b".asFormula :: Nil)
 
     // solution = None -> Mathematica
     val tactic = locateSucc(diffSolution(None))
@@ -244,7 +244,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "find solutions for x'=v if None is provided" in {
-    val s = sequent(Nil, "x>0 & v()>=0".asFormula :: Nil, "[x'=v();]x>0".asFormula :: Nil)
+    val s = sequent(Nil, "x>0 & v()>=0".asFormula :: Nil, "[{x'=v()}]x>0".asFormula :: Nil)
 
     // solution = None -> Mathematica
     val tactic = locateSucc(diffSolution(None)) & debugT("After Diff Solution") & locateSucc(ImplyRightT) & arithmeticT
@@ -253,7 +253,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "find solutions for x'=v, v'=a if None is provided" in {
-    val s = sequent(Nil, "x>0 & v>=0 & a()>0".asFormula :: Nil, "[x'=v, v'=a();]x>0".asFormula :: Nil)
+    val s = sequent(Nil, "x>0 & v>=0 & a()>0".asFormula :: Nil, "[{x'=v, v'=a()}]x>0".asFormula :: Nil)
 
     // solution = None -> Mathematica
     val tactic = locateSucc(diffSolution(None)) & debugT("After Diff Solution") & locateSucc(ImplyRightT) & arithmeticT
@@ -262,7 +262,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "not introduce time if already present" in {
-    val s = sequent(Nil, "x>0".asFormula :: "t=0".asFormula :: Nil, "[x'=2, t'=1;]x>0".asFormula :: Nil)
+    val s = sequent(Nil, "x>0".asFormula :: "t=0".asFormula :: Nil, "[{x'=2, t'=1}]x>0".asFormula :: Nil)
 
     // solution = None -> Mathematica
     val tactic = locateSucc(diffSolution(None))
@@ -282,7 +282,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "preserve time evolution domain constraints when using Mathematica to find solution" in {
-    val s = sequent(Nil, "x>0 & t=0".asFormula :: Nil, "[x'=2, t'=1 & t<=5;]x>0".asFormula :: Nil)
+    val s = sequent(Nil, "x>0 & t=0".asFormula :: Nil, "[{x'=2, t'=1 & t<=5}]x>0".asFormula :: Nil)
 
     // solution = None -> Mathematica
     val tactic = locateSucc(diffSolution(None))
@@ -301,7 +301,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "work with evolution domain constraints" in {
-    val s = sequent(Nil, "x>0 & v>=0".asFormula :: Nil, "[x'=v, v'=a() & v>=0;]x>0".asFormula :: Nil)
+    val s = sequent(Nil, "x>0 & v>=0".asFormula :: Nil, "[{x'=v, v'=a() & v>=0}]x>0".asFormula :: Nil)
 
     // solution = None -> Mathematica
     val tactic = locateSucc(diffSolution(None)) & debugT("After Diff Solution") & arithmeticT
@@ -311,66 +311,66 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   "Differential auxiliaries tactic" should "add y'=1 to [x'=2]x>0" in {
     import ODETactics.diffAuxiliaryT
-    val s = sucSequent("[y'=2;]y>0".asFormula)
+    val s = sucSequent("[{y'=2}]y>0".asFormula)
     val tactic = locateSucc(diffAuxiliaryT(Variable("x", None, Real), "0".asTerm, "1".asTerm))
     getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("\\exists x. [y'=2,x'=0*x+1;]y>0".asFormula)
+      sucSequent("\\exists x [{y'=2,x'=0*x+1}]y>0".asFormula)
     )
   }
 
   it should "work without renaming (add y'=1 to [x'=2]x>0)" in {
     import ODETactics.diffAuxiliaryT
-    val s = sucSequent("[x'=2;]x>0".asFormula)
+    val s = sucSequent("[{x'=2}]x>0".asFormula)
     val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "0".asTerm, "1".asTerm))
     getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("\\exists y. [x'=2,y'=0*y+1;]x>0".asFormula)
+      sucSequent("\\exists y [{x'=2,y'=0*y+1}]x>0".asFormula)
     )
   }
 
   it should "add y'=3*y+10 to [x'=x+2*z]x>0" in {
     import ODETactics.diffAuxiliaryT
-    val s = sucSequent("[x'=2;]x>0".asFormula)
+    val s = sucSequent("[{x'=2}]x>0".asFormula)
     val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "3".asTerm, "10".asTerm))
     getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("\\exists y. [x'=2,y'=3*y+10;]x>0".asFormula)
+      sucSequent("\\exists y [{x'=2,y'=3*y+10}]x>0".asFormula)
     )
   }
 
   it should "add y'=3*y+z() to [x'=2]x>0" in {
     import ODETactics.diffAuxiliaryT
-    val s = sucSequent("[x'=2;]x>0".asFormula)
-    val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "3".asTerm, "z()".asTerm))
+    val s = sucSequent("[{x'=2}]x>0".asFormula)
+    val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "3".asTerm, FuncOf(Function("z", None, Unit, Real), Nothing)))
     getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("\\exists y. [x'=2,y'=3*y+z();]x>0".asFormula)
+      sucSequent("\\exists y [{x'=2,y'=3*y+z()}]x>0".asFormula)
     )
   }
 
   it should "preserve evolution domain" in {
     import ODETactics.diffAuxiliaryT
-    val s = sucSequent("[x'=2 & x>=0;]x>0".asFormula)
+    val s = sucSequent("[{x'=2 & x>=0}]x>0".asFormula)
     val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "3".asTerm, "10".asTerm))
     getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("\\exists y. [x'=2,y'=3*y+10 & x>=0;]x>0".asFormula)
+      sucSequent("\\exists y [{x'=2,y'=3*y+10 & x>=0}]x>0".asFormula)
     )
   }
 
   it should "not allow non-linear ghosts (1)" in {
     import ODETactics.diffAuxiliaryT
-    val s = sucSequent("[x'=2;]x>0".asFormula)
+    val s = sucSequent("[{x'=2}]x>0".asFormula)
     val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "y".asTerm, "1".asTerm))
     tactic.applicable(new RootNode(s)) shouldBe false
   }
 
   it should "not allow non-linear ghosts (2)" in {
     import ODETactics.diffAuxiliaryT
-    val s = sucSequent("[x'=2;]x>0".asFormula)
+    val s = sucSequent("[{x'=2}]x>0".asFormula)
     val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "1".asTerm, "y".asTerm))
     tactic.applicable(new RootNode(s)) shouldBe false
   }
 
   it should "not allow ghosts that are already present in the ODE" in {
     import ODETactics.diffAuxiliaryT
-    val s = sucSequent("[x'=2;]x>0".asFormula)
+    val s = sucSequent("[{x'=2}]x>0".asFormula)
     val tactic = locateSucc(diffAuxiliaryT(Variable("x", None, Real), "0".asTerm, "1".asTerm))
     tactic.applicable(new RootNode(s)) shouldBe false
   }
@@ -399,33 +399,33 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 //  }
 
   "Differential introduce constants" should "replace a with a() in v'=a" in {
-    val s = sucSequent("[v'=a;]v>0".asFormula)
+    val s = sucSequent("[{v'=a}]v>0".asFormula)
     val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[v'=a();]v>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{v'=a()}]v>0".asFormula
   }
 
   it should "not self-replace a() with a() in v'=a()" in {
-    val s = sucSequent("[v'=a();]v>0".asFormula)
+    val s = sucSequent("[{v'=a()}]v>0".asFormula)
     val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[v'=a();]v>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{v'=a()}]v>0".asFormula
   }
 
   it should "replace every free occurrence of a with a() everywhere in the sequent" in {
     val s = sequent(Seq(),
-      Seq("v>=0".asFormula, "a=0".asFormula, "\\forall a. a<0".asFormula),
-      Seq("[v'=a;]v>0".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula))
+      Seq("v>=0".asFormula, "a=0".asFormula, "\\forall a a<0".asFormula),
+      Seq("[{v'=a}]v>0".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula))
     val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
     result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) should contain only ("v>=0".asFormula, "a()=0".asFormula, "\\forall a. a<0".asFormula)
-    result.openGoals().flatMap(_.sequent.succ) should contain only ("[v'=a();]v>0".asFormula, "a()>=0".asFormula, "[a:=2;]v>0".asFormula)
+    result.openGoals().flatMap(_.sequent.ante) should contain only ("v>=0".asFormula, "a()=0".asFormula, "\\forall a a<0".asFormula)
+    result.openGoals().flatMap(_.sequent.succ) should contain only ("[{v'=a()}]v>0".asFormula, "a()>=0".asFormula, "[a:=2;]v>0".asFormula)
   }
 
   it should "work together with ODE solve" in {
-    val s = sequent(Seq(), Seq("v>0".asFormula, "a=0".asFormula), Seq("[v'=a;]v>0".asFormula))
+    val s = sequent(Seq(), Seq("v>0".asFormula, "a=0".asFormula), Seq("[{v'=a}]v>0".asFormula))
     val constified = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
     constified.openGoals() should have size 1
     val odeSolved = helper.runTactic(locateSucc(diffSolution(None)), constified.openGoals().head)
@@ -435,120 +435,65 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Differential effect" should "introduce a differential assignment" in {
-    val s = sucSequent("[x'=5 & x>2;]x>0".asFormula)
+    val s = sucSequent("[{x'=5 & x>2}]x>0".asFormula)
     val tactic = locateSucc(ODETactics.diffEffectT)
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=5 & x>2;][x':=5;]x>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{x'=5 & x>2}][x':=5;]x>0".asFormula
   }
 
   it should "introduce a differential assignment when the postcondition is primed" in {
-    val s = sucSequent("[x'=5 & x>2;](x>0)'".asFormula)
+    val s = sucSequent("[{x'=5 & x>2}](x>0)'".asFormula)
     val tactic = locateSucc(ODETactics.diffEffectT)
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=5 & x>2;][x':=5;](x>0)'".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{x'=5 & x>2}][x':=5;](x>0)'".asFormula
   }
 
   it should "introduce differential assignments when the postcondition is primed" in {
-    val s = sucSequent("[x'=5, y'=2 & x>2;](x>0)'".asFormula)
+    val s = sucSequent("[{x'=5, y'=2 & x>2}](x>0)'".asFormula)
     val tactic = locateSucc(ODETactics.diffEffectT)*2
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=5, y'=2 & x>2;][y':=2;][x':=5;](x>0)'".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{x'=5, y'=2 & x>2}][y':=2;][x':=5;](x>0)'".asFormula
   }
 
   it should "introduce a differential assignment in context" in {
-    val s = sucSequent("[x:=0;][x'=5 & x>2;]x>0".asFormula)
+    val s = sucSequent("[x:=0;][{x'=5 & x>2}]x>0".asFormula)
     val tactic = ODETactics.diffEffectT(SuccPosition(0, PosInExpr(1::Nil)))
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x:=0;][x'=5 & x>2;][x':=5;]x>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x:=0;][{x'=5 & x>2}][x':=5;]x>0".asFormula
   }
 
   it should "alpha rename if necessary" in {
-    val s = sucSequent("[y'=5 & y>2;]y>0".asFormula)
+    val s = sucSequent("[{y'=5 & y>2}]y>0".asFormula)
     val tactic = locateSucc(ODETactics.diffEffectT)
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[y'=5 & y>2;][y':=5;]y>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{y'=5 & y>2}][y':=5;]y>0".asFormula
   }
 
   it should "introduce a differential assignment for the first ODE in a system" in {
-    val s = sucSequent("[x'=5, y'=2 & x>2;]x>0".asFormula)
+    val s = sucSequent("[{x'=5, y'=2 & x>2}]x>0".asFormula)
     val tactic = locateSucc(ODETactics.diffEffectT)
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[y'=2, x'=5 & x>2;][x':=5;]x>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{y'=2, x'=5 & x>2}][x':=5;]x>0".asFormula
   }
 
   it should "introduce a differential assignment for the first ODE in a system repeatedly (even loop if asked to)" in {
-    val s = sucSequent("[x'=5, y'=2 & x>2;]x>0".asFormula)
+    val s = sucSequent("[{x'=5, y'=2 & x>2}]x>0".asFormula)
     val tactic = ODETactics.diffEffectT(SuccPosition(0)) * 3
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[y'=2, x'=5 & x>2;][x':=5;][y':=2;][x':=5;]x>0".asFormula
-  }
-
-  "Differential introduce constants" should "replace a with a() in v'=a" in {
-    val s = sucSequent("[v'=a;]v>0".asFormula)
-    val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[v'=a();]v>0".asFormula
-  }
-
-  it should "not self-replace a() with a() in v'=a()" in {
-    val s = sucSequent("[v'=a();]v>0".asFormula)
-    val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[v'=a();]v>0".asFormula
-  }
-
-  it should "replace every free occurrence of a with a() everywhere in the sequent" in {
-    val s = sequent(Seq(),
-      Seq("v>=0".asFormula, "a=0".asFormula, "\\forall a. a<0".asFormula),
-      Seq("[v'=a;]v>0".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula))
-    val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) should contain only ("v>=0".asFormula, "a()=0".asFormula, "\\forall a. a<0".asFormula)
-    result.openGoals().flatMap(_.sequent.succ) should contain only ("[v'=a();]v>0".asFormula, "a()>=0".asFormula, "[a:=2;]v>0".asFormula)
-  }
-
-  it should "work together with ODE solve" in {
-    val s = sequent(Seq(), Seq("v>0".asFormula, "a=0".asFormula), Seq("[v'=a;]v>0".asFormula))
-    val constified = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
-    constified.openGoals() should have size 1
-    val odeSolved = helper.runTactic(locateSucc(diffSolution(None)), constified.openGoals().head)
-    odeSolved.openGoals() should have size 1
-    val result = helper.runTactic(TacticLibrary.arithmeticT, odeSolved.openGoals().head)
-    result shouldBe 'closed
-  }
-
-  //Diff effect tests
-  it should "introduce a differential assignment when the postcondition is primed" in {
-    val s = sucSequent("[x'=5 & x>2;](x>0)'".asFormula)
-    val tactic = locateSucc(ODETactics.diffEffectT)
-    val result = helper.runTactic(tactic, new RootNode(s))
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=5 & x>2;][x':=5;](x>0)'".asFormula
-  }
-
-  it should "introduce differential assignments when the postcondition is primed" in {
-    val s = sucSequent("[x'=5, y'=2 & x>2;](x>0)'".asFormula)
-    val tactic = locateSucc(ODETactics.diffEffectT)*2
-    val result = helper.runTactic(tactic, new RootNode(s))
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=5, y'=2 & x>2;][y':=2;][x':=5;](x>0)'".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{y'=2, x'=5 & x>2}][x':=5;][y':=2;][x':=5;]x>0".asFormula
   }
 }
