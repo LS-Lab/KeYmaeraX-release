@@ -63,30 +63,30 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   "Quantifiers" should "convert forall" in {
-    z3.toSMT("\\forall x. x>y()".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
+    z3.toSMT("\\forall x x>y()".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
       + "(assert (not (forall ((x Real)) (> x y))))")
-    polya.toSMT("\\forall x. x>y()".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
+    polya.toSMT("\\forall x x>y()".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
       + "(assert (not (forall ((x Real)) (> x y))))")
   }
 
   it should "convert exists" in {
-    z3.toSMT("\\exists x. x>y()".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
+    z3.toSMT("\\exists x x>y()".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
       + "(assert (not (exists ((x Real)) (> x y))))")
-    polya.toSMT("\\exists x. x>y()".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
+    polya.toSMT("\\exists x x>y()".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
       + "(assert (not (exists ((x Real)) (> x y))))")
   }
 
   it should "convert nested qutifiers" in {
-    z3.toSMT("\\forall x. \\exists y. x>y".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
+    z3.toSMT("\\forall x \\exists y x>y".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
       + "(assert (not (forall ((x Real)) (exists ((y Real)) (> x y)))))")
-    polya.toSMT("\\forall x. \\exists y. x>y".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
+    polya.toSMT("\\forall x \\exists y x>y".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n"
       + "(assert (not (forall ((x Real)) (exists ((y Real)) (> x y)))))")
   }
 
   it should "convert complex qutifiers" in {
-    z3.toSMT("\\forall x. \\forall y. \\exists z. x^2+y^2=z^2".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
+    z3.toSMT("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
       + "(assert (not (forall ((x Real) (y Real)) (exists ((z Real)) (= (+ (* x x) (* y y)) (* z z))))))")
-    polya.toSMT("\\forall x. \\forall y. \\exists z. x^2+y^2=z^2".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
+    polya.toSMT("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
       + "(assert (not (forall ((x Real) (y Real)) (exists ((z Real)) (= (+ (* x x) (* y y)) (* z z))))))")
   }
 

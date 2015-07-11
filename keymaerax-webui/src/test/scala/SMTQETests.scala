@@ -38,8 +38,8 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "prove complex qutifiers" in {
-    z3.qe("\\forall x. \\forall y. \\exists z. x^2+y^2=z^2".asFormula) should be ("false".asFormula)
-    polya.qe("\\forall x. \\forall y. \\exists z. x^2+y^2=z^2".asFormula) should be ("false".asFormula)
+    z3.qe("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("false".asFormula)
+    polya.qe("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("false".asFormula)
   }
 
   it should "prove complex" in {
