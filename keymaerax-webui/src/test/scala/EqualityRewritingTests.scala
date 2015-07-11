@@ -64,7 +64,7 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
   }
 
   it should "rewrite complicated" in {
-    val s = sequent(Nil, "x=0".asFormula::Nil, "x*y=0 & x+3>2 | \\forall y. y+x>=0".asFormula::Nil)
+    val s = sequent(Nil, "x=0".asFormula::Nil, "x*y=0 & x+3>2 | \\forall y y+x>=0".asFormula::Nil)
     val tactic =
       constFormulaCongruenceT(AntePosition(0), left = true, exhaustive = false)(SuccPosition(0, PosInExpr(0::0::0::0::Nil))) &
       constFormulaCongruenceT(AntePosition(0), left = true, exhaustive = false)(SuccPosition(0, PosInExpr(0::1::0::0::Nil))) &
@@ -72,21 +72,21 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "x=0".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only "0*y=0 & 0+3>2 | \\forall y. y+0>=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "0*y=0 & 0+3>2 | \\forall y y+0>=0".asFormula
   }
 
   it should "rewrite complicated exhaustively" in {
-    val s = sequent(Nil, "x=0".asFormula::Nil, "x*y=0 & x+3>2 | \\forall y. y+x>=0 & \\exists x. x>0".asFormula::Nil)
+    val s = sequent(Nil, "x=0".asFormula::Nil, "x*y=0 & x+3>2 | \\forall y y+x>=0 & \\exists x x>0".asFormula::Nil)
     val tactic =
       constFormulaCongruenceT(AntePosition(0), left = true)(SuccPosition(0))
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "x=0".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only "0*y=0 & 0+3>2 | \\forall y. y+0>=0 & \\exists x. x>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "0*y=0 & 0+3>2 | \\forall y y+0>=0 & \\exists x x>0".asFormula
   }
 
   ignore should "throw a substitution clash exception if it tries to rename bound" in {
-    val s = sequent(Nil, "x=0".asFormula::Nil, "\\forall x. y+x>=0".asFormula::Nil)
+    val s = sequent(Nil, "x=0".asFormula::Nil, "\\forall x y+x>=0".asFormula::Nil)
     val tactic = constFormulaCongruenceT(AntePosition(0), left = true, exhaustive = false)(SuccPosition(0, PosInExpr(0::0::1::Nil)))
     // somehow, the exception is thrown but swallowed somewhere
     a [SubstitutionClashException] should be thrownBy helper.runTactic(tactic, new RootNode(s))
