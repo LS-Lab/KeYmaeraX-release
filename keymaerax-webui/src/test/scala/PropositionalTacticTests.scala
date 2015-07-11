@@ -1,6 +1,6 @@
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaerax.tactics._
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cohide2T, ConsolidateSequentT, hideT,
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cohide2T, ConsolidateSequentT, hideT, ImplyToAndT,
   kModalModusPonensT, modusPonensT}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import testHelper.ProvabilityTestHelper
@@ -140,5 +140,29 @@ class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante shouldBe empty
     result.openGoals().head.sequent.succ should contain only "xa>0&xb>1&xc>2 -> !(xa>0&xb>1&xc>2)".asFormula
+  }
+
+  "ImplyToAndT" should "rewrite an implication to a negated conjunction" in {
+    val s = sucSequent("x>0->x>=0".asFormula)
+    val result = helper.runTactic(locateSucc(ImplyToAndT), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "!(x>0&!x>=0)".asFormula
+  }
+
+  it should "rewrite an implication a->b to !(a&!b) with complicated a and b" in {
+    val s = sucSequent("(x>0 & y<2 | z>5 -> x>7) -> (x>=0 & y<5 <-> z>8)".asFormula)
+    val result = helper.runTactic(locateSucc(ImplyToAndT), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "!((x>0 & y<2 | z>5 -> x>7) & !(x>=0 & y<5 <-> z>8))".asFormula
+  }
+
+  it should "rewrite an implication to a negated conjunction in context" in {
+    val s = sucSequent("[i:=5;](j>2 & (x>0->x>=0))".asFormula)
+    val result = helper.runTactic(ImplyToAndT(SuccPosition(0, PosInExpr(List(1, 1)))), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "[i:=5;](j>2 & !(x>0&!x>=0))".asFormula
   }
 }

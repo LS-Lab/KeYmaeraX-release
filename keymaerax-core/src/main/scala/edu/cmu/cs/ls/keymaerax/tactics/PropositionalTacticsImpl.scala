@@ -1,8 +1,11 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.equivalenceCongruenceT
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverAxiomT, axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.cutInContext
+import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{lastAnte, lastSucc, locateAnte, locateSucc, onBranch}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
@@ -117,6 +120,29 @@ object PropositionalTacticsImpl {
 
     def apply(pos: Position): Tactic = new Tactics.ApplyRule(ImplyRight(pos)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+    }
+  }
+
+  def ImplyToAndT: PositionTactic = new PositionTactic("ImplyToAnd") {
+    def applies(s: Sequent, p: Position) = !p.isAnte & (getFormula(s, p) match {
+      case Imply(_, _) => true
+      case _ => false
+    })
+
+    def apply(pos: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
+        case fml@Imply(l, r) => Some(cutInContext(Equiv(fml, Not(And(l, Not(r)))), pos) & onBranch(
+          (cutShowLbl, lastSucc(cohideT) & equivalenceCongruenceT(pos.inExpr) & lastSucc(EquivRightT) & onBranch(
+            // use concrete positions instead of locate, so that original formulas remain untouched. makes assumptions about where formulas will appear after tactic execution
+            (equivLeftLbl, lastSucc(NotRightT) & lastAnte(AndLeftT) & lastAnte(NotLeftT) & ImplyLeftT(AntePosition(0)) & AxiomCloseT),
+            (equivRightLbl, lastAnte(NotLeftT) & ImplyRightT(SuccPosition(0)) & AndRightT(SuccPosition(0)) && (AxiomCloseT, NotRightT(SuccPosition(0)) & AxiomCloseT))
+            )),
+          (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), pos.topLevel))
+        ))
+        case _ => throw new IllegalStateException("Checked by applies to never happen")
+      }
     }
   }
 
