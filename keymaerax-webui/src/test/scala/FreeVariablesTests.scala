@@ -162,47 +162,47 @@ class FreeVariablesTests extends FlatSpec with Matchers {
   }
 
   "Free variables of Exists x. x=t" should "be {t}" in {
-    StaticSemantics("\\exists x. x=t".asFormula).fv should be (SetLattice(Set(V("t"))))
+    StaticSemantics("\\exists x x=t".asFormula).fv should be (SetLattice(Set(V("t"))))
   }
 
   "Free variables of Exists x. (x=t & y=x)" should "be {t,y}" in {
-    StaticSemantics("\\exists x. (x=t & y=x)".asFormula).fv should be (SetLattice(Set(V("t"),V("y"))))
+    StaticSemantics("\\exists x (x=t & y=x)".asFormula).fv should be (SetLattice(Set(V("t"),V("y"))))
   }
 
   "Free variables of Exists x. x=t & y=x" should "be {t,x,y}" in {
-    StaticSemantics("\\exists x. x=t & y=x".asFormula).fv should be (SetLattice(Set(V("t"),V("x"),V("y"))))
+    StaticSemantics("\\exists x x=t & y=x".asFormula).fv should be (SetLattice(Set(V("t"),V("x"),V("y"))))
   }
 
   "Free variables of Exists x. x=t | y=x" should "be {t,x,y}" in {
-    StaticSemantics("\\exists x. x=t | y=x".asFormula).fv should be (SetLattice(Set(V("t"),V("x"),V("y"))))
+    StaticSemantics("\\exists x x=t | y=x".asFormula).fv should be (SetLattice(Set(V("t"),V("x"),V("y"))))
   }
 
   "Free variables of Exists x. x=t & y=x | x=z" should "be {t,x,y,z}" in {
-    StaticSemantics("\\exists x. x=t & y=x | x=z ".asFormula).fv should be (SetLattice(Set(V("t"),V("x"),V("y"),V("z"))))
+    StaticSemantics("\\exists x x=t & y=x | x=z ".asFormula).fv should be (SetLattice(Set(V("t"),V("x"),V("y"),V("z"))))
   }
 
   "Free variables of Forall x. x=t" should "be {t}" in {
-    StaticSemantics("\\forall x. x=t".asFormula).fv should be (SetLattice(Set(V("t"))))
+    StaticSemantics("\\forall x x=t".asFormula).fv should be (SetLattice(Set(V("t"))))
   }
 
   "Free variables of Forall x. (x=t & y=x)" should "be {t,y}" in {
-    StaticSemantics("\\forall x. (x=t & y=x)".asFormula).fv should be (SetLattice(Set(V("t"),V("y"))))
+    StaticSemantics("\\forall x (x=t & y=x)".asFormula).fv should be (SetLattice(Set(V("t"),V("y"))))
   }
 
   "Free variables of Forall x. x=t & y=x" should "be {t,x,y}" in {
-    StaticSemantics("\\forall x. x=t & y=x".asFormula).fv should be (SetLattice(Set(V("t"),V("x"),V("y"))))
+    StaticSemantics("\\forall x x=t & y=x".asFormula).fv should be (SetLattice(Set(V("t"),V("x"),V("y"))))
   }
 
   "Free variables of Forall x. x=t | y=x" should "be {t,x,y}" in {
-    StaticSemantics("\\forall x. x=t | y=x".asFormula).fv should be (SetLattice(Set(V("t"),V("x"),V("y"))))
+    StaticSemantics("\\forall x x=t | y=x".asFormula).fv should be (SetLattice(Set(V("t"),V("x"),V("y"))))
   }
 
   "Free variables of Forall x. x=t & y=x | x=z" should "be {t,x,y,z}" in {
-    StaticSemantics("\\forall x. x=t & y=x | x=z ".asFormula).fv should be (SetLattice(Set(V("t"),V("x"),V("y"),V("z"))))
+    StaticSemantics("\\forall x x=t & y=x | x=z ".asFormula).fv should be (SetLattice(Set(V("t"),V("x"),V("y"),V("z"))))
   }
 
   "Free variables of Forall x. Exists y. x=y" should "be {}" in {
-    StaticSemantics("\\forall x. \\exists y. x=y".asFormula).fv should be (SetLattice.bottom)
+    StaticSemantics("\\forall x \\exists y x=y".asFormula).fv should be (SetLattice.bottom)
   }
 
   // test cases for programs
@@ -228,19 +228,19 @@ class FreeVariablesTests extends FlatSpec with Matchers {
   }
 
   "Free variables of [x:=*;y:=x]y>0" should "be {}" in {
-    StaticSemantics("[x:=*;y:=x]y>0".asFormula).fv should be (SetLattice.bottom)
+    StaticSemantics("[x:=*;y:=x;]y>0".asFormula).fv should be (SetLattice.bottom)
   }
 
   "Free variables of x:=* ++ y:=x;" should "be {x}" in {
-    StaticSemantics("x:=* ++ y:=x;".asProgram).fv should be (SetLattice(Set(V("x"))))
+    StaticSemantics("x:=*; ++ y:=x;".asProgram).fv should be (SetLattice(Set(V("x"))))
   }
 
   "Free variables of [x:=* ++ y:=x;]y>0" should "be {x,y}" in {
-    StaticSemantics("[x:=* ++ y:=x;]y>0".asFormula).fv should be (SetLattice(Set(V("x"),V("y"))))
+    StaticSemantics("[x:=*; ++ y:=x;]y>0".asFormula).fv should be (SetLattice(Set(V("x"),V("y"))))
   }
 
   "Free variables of [x:=* ++ ?z>0;]x>0" should "be {x,z}" in {
-    StaticSemantics("[x:=* ++ ?z>0;]x>0".asFormula).fv should be (SetLattice(Set(V("x"), V("z"))))
+    StaticSemantics("[x:=*; ++ ?z>0;]x>0".asFormula).fv should be (SetLattice(Set(V("x"), V("z"))))
   }
 
   "Free variables of x:=1; x:=x+1; z:=x;" should "be {}" in {
@@ -248,31 +248,31 @@ class FreeVariablesTests extends FlatSpec with Matchers {
   }
 
   "Free variables of x:=1 ++ x:=x+1 ++ z:=x;" should "be {x}" in {
-    StaticSemantics("x:=1 ++ x:=x+1 ++ z:=x;".asProgram).fv should be (SetLattice(Set(V("x"))))
+    StaticSemantics("x:=1; ++ x:=x+1; ++ z:=x;".asProgram).fv should be (SetLattice(Set(V("x"))))
   }
 
   "Free variables of {x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};" should "be {x}" in {
-    StaticSemantics("{x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};".asProgram).fv should be (SetLattice(Set(V("x"))))
+    StaticSemantics("{x:=1; ++ x:=x+1; ++ z:=x;}{x:=1; ++ x:=x+1; ++ z:=x;}".asProgram).fv should be (SetLattice(Set(V("x"))))
   }
 
   "Free variables of {x:=1 ++ x:=x+1 ++ z:=x}*;" should "be {x}" in {
-    StaticSemantics("{x:=1 ++ x:=x+1 ++ z:=x}*;".asProgram).fv should be (SetLattice(Set(V("x"))))
+    StaticSemantics("{x:=1; ++ x:=x+1; ++ z:=x;}*".asProgram).fv should be (SetLattice(Set(V("x"))))
   }
 
 
   "Free variables of [x'=1;]true" should "be {x}" in {
-    StaticSemantics("[x'=1;]true".asFormula).fv should be (SetLattice(Set(V("x"))))
+    StaticSemantics("[{x'=1}]true".asFormula).fv should be (SetLattice(Set(V("x"))))
   }
 
   "Free variables of [{x:=x+1;}*;]true" should "be {x}" in {
-    StaticSemantics("[{x:=x+1;}*;]true".asFormula).fv should be (SetLattice(Set(V("x"))))
+    StaticSemantics("[{x:=x+1;}*]true".asFormula).fv should be (SetLattice(Set(V("x"))))
   }
 
   "Free variables of [x:=1;][{x:=x+1;}*;]true" should "be {}" in {
-    StaticSemantics("[x:=1;][{x:=x+1;}*;]true".asFormula).fv should be (SetLattice.bottom)
+    StaticSemantics("[x:=1;][{x:=x+1;}*]true".asFormula).fv should be (SetLattice.bottom)
   }
 
   "Free variables of [x:=1;][x'=1;]true" should "be {}" in {
-    StaticSemantics("[x:=1;][x'=1;]true".asFormula).fv should be (SetLattice.bottom)
+    StaticSemantics("[x:=1;][{x'=1}]true".asFormula).fv should be (SetLattice.bottom)
   }
 }
