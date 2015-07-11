@@ -9,8 +9,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverAxiomT, axiomLookupBa
 import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.existsDualT
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT,AxiomCloseT,ImplyLeftT,ImplyRightT,cutT,
-  hideT,kModalModusPonensT}
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT,AxiomCloseT,ImplyLeftT,ImplyRightT,
+  ImplyToAndT, cutT, hideT,kModalModusPonensT}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import BindingAssessment.allNames
 import edu.cmu.cs.ls.keymaerax.tactics.AlphaConversionHelper._
@@ -340,8 +340,12 @@ object HybridProgramTacticsImpl {
    * @return The newly created tactic.
    * @author Stefan Mitsch
    */
-  def diamondAssignWithoutAlphaT(newV: Variable, checkNewV: Boolean = true): PositionTactic =
-    new ByDualityAxiomTactic(boxAssignWithoutAlphaT(newV, checkNewV))
+  def diamondAssignWithoutAlphaT(newV: Variable, checkNewV: Boolean = true)(pos: Position): Tactic = {
+    val implyPos = pos.first.first
+    (new ByDualityAxiomTactic(boxAssignWithoutAlphaT(newV, checkNewV)))(pos) &
+      // duality tactic finishes with unpolished result, because box assign has "special" result \\forall x. x=0 -> p
+      ImplyToAndT(implyPos) & (rewriteDoubleNegationEliminationT(implyPos.first.second) | NilT) & existsDualT(pos)
+  }
 
   /**
    * Creates a new axiom tactic for box assignment [x := t;]. Helper for boxAssignEqualT
