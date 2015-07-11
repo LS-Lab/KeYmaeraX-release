@@ -42,15 +42,15 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   "Box assignment equal tactic" should "introduce universal quantifier with new variable" in {
     import HybridProgramTacticsImpl.boxAssignEqualT
     val assignT = locateSucc(boxAssignEqualT)
-    getProofSequent(assignT, new RootNode(sucSequent("[y:=1;]y>0".asFormula))) should be (sucSequent("\\forall y_0. (y_0=1 -> y_0>0)".asFormula))
-    getProofSequent(assignT, new RootNode(sucSequent("[y:=y+1;]y>0".asFormula))) should be (sucSequent("\\forall y_0. (y_0=y+1 -> y_0>0)".asFormula))
+    getProofSequent(assignT, new RootNode(sucSequent("[y:=1;]y>0".asFormula))) should be (sucSequent("\\forall y_0 (y_0=1 -> y_0>0)".asFormula))
+    getProofSequent(assignT, new RootNode(sucSequent("[y:=y+1;]y>0".asFormula))) should be (sucSequent("\\forall y_0 (y_0=y+1 -> y_0>0)".asFormula))
   }
 
   it should "replace free variables in predicate with new universally quantified variable" in {
     import HybridProgramTacticsImpl.boxAssignEqualT
     val assignT = helper.positionTacticToTactic(boxAssignEqualT)
     getProofSequent(assignT, new RootNode(sucSequent("[y:=1;][z:=2;](y>0 & z>0)".asFormula))) should be (
-      sucSequent("\\forall y_0. (y_0=1 -> [z:=2;](y_0>0 & z>0))".asFormula))
+      sucSequent("\\forall y_0 (y_0=1 -> [z:=2;](y_0>0 & z>0))".asFormula))
   }
 
   it should "not replace bound variables with new universally quantified variable" in {
@@ -58,7 +58,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val s = sucSequent("[y:=1;][y:=2;]y>0".asFormula)
     val assignT = helper.positionTacticToTactic(boxAssignEqualT)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sucSequent("\\forall y_0. (y_0=1 -> [y:=2;]y>0)".asFormula))
+      sucSequent("\\forall y_0 (y_0=1 -> [y:=2;]y>0)".asFormula))
   }
 
   it should "only replace free but not bound variables with new universally quantified variable" in {
@@ -66,21 +66,21 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val s = sucSequent("[y:=1;][y:=2+y;]y>0".asFormula)
     val assignT = helper.positionTacticToTactic(boxAssignEqualT)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sucSequent("\\forall y_0. (y_0=1 -> [y:=2+y_0;]y>0)".asFormula))
+      sucSequent("\\forall y_0 (y_0=1 -> [y:=2+y_0;]y>0)".asFormula))
     getProofSequent(assignT, new RootNode(sucSequent("[y:=1;][z:=2;](y>0 & z>0)".asFormula))) should be (
-      sucSequent("\\forall y_0. (y_0=1 -> [z:=2;](y_0>0 & z>0))".asFormula))
+      sucSequent("\\forall y_0 (y_0=1 -> [z:=2;](y_0>0 & z>0))".asFormula))
     getProofSequent(assignT, new RootNode(sucSequent("[y:=1;][y:=2;]y>0".asFormula))) should be (
-      sucSequent("\\forall y_0. (y_0=1 -> [y:=2;]y>0)".asFormula))
+      sucSequent("\\forall y_0 (y_0=1 -> [y:=2;]y>0)".asFormula))
     getProofSequent(assignT, new RootNode(sucSequent("[y:=1;][y:=2+y;]y>0".asFormula))) should be (
-      sucSequent("\\forall y_0. (y_0=1 -> [y:=2+y_0;]y>0)".asFormula))
+      sucSequent("\\forall y_0 (y_0=1 -> [y:=2+y_0;]y>0)".asFormula))
   }
 
   it should "replace free variables in ODEs with new universally quantified variable" in {
     import HybridProgramTacticsImpl.boxAssignEqualT
-    val s = sucSequent("[y:=1;][z'=2+y;](y>0 & z>0)".asFormula)
+    val s = sucSequent("[y:=1;][{z'=2+y}](y>0 & z>0)".asFormula)
     val assignT = helper.positionTacticToTactic(boxAssignEqualT)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sucSequent("\\forall y_0. (y_0=1 -> [z'=2+y_0;](y_0>0 & z>0))".asFormula))
+      sucSequent("\\forall y_0 (y_0=1 -> [{z'=2+y_0}](y_0>0 & z>0))".asFormula))
   }
 
   it should "rebind original variable even if no other program follows" in {
@@ -88,31 +88,39 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val s = sucSequent("[y:=y+1;]y>0".asFormula)
     val assignT = helper.positionTacticToTactic(boxAssignEqualT)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sucSequent("\\forall y_0. (y_0=y+1 -> y_0>0)".asFormula))
+      sucSequent("\\forall y_0 (y_0=y+1 -> y_0>0)".asFormula))
   }
 
   it should "work in front of an ODE, even if it is not top-level" in {
     import HybridProgramTacticsImpl.boxAssignEqualT
-    val s = sucSequent("[x:=1;][t:=0; x'=1;]x>0".asFormula)
+    val s = sucSequent("[x:=1;][t:=0; {x'=1}]x>0".asFormula)
     val assignT = locateSucc(boxAssignEqualT)
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("\\forall x_1. (x_1=1 -> [x_0:=x_1;][t:=0;x_0'=1;]x_0>0)".asFormula)))
+      sucSequent("\\forall x_1 (x_1=1 -> [x_0:=x_1;][t:=0;{x_0'=1}]x_0>0)".asFormula)))
+  }
+
+  it should "work in front of an ODE system, even if it is not top-level" in {
+    import HybridProgramTacticsImpl.boxAssignEqualT
+    val s = sucSequent("[x:=1;][t:=0; {x'=1,y'=2}]x>0".asFormula)
+    val assignT = locateSucc(boxAssignEqualT)
+    helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("\\forall x_1 (x_1=1 -> [x_0:=x_1;][t:=0;{x_0'=1,y'=2}]x_0>0)".asFormula)))
   }
 
   it should "work in front of an ODE, even if it is not in the next box" in {
     import HybridProgramTacticsImpl.boxAssignEqualT
-    val s = sucSequent("[x:=1;][t:=0;][t:=1; x'=1;]x>0".asFormula)
+    val s = sucSequent("[x:=1;][t:=0;][t:=1; {x'=1}]x>0".asFormula)
     val assignT = locateSucc(boxAssignEqualT)
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("\\forall x_1. (x_1=1 -> [x_0:=x_1;][t:=0;][t:=1;x_0'=1;]x_0>0)".asFormula)))
+      sucSequent("\\forall x_1 (x_1=1 -> [x_0:=x_1;][t:=0;][t:=1; {x_0'=1}]x_0>0)".asFormula)))
   }
 
   it should "not introduce stuttering when ODE does not write variable, even if it is not top-level" in {
     import HybridProgramTacticsImpl.boxAssignEqualT
-    val s = sucSequent("[x:=1;][t:=0; y'=1; {z:=2;}* ]x>0".asFormula)
+    val s = sucSequent("[x:=1;][t:=0; {y'=1} {z:=2;}* ]x>0".asFormula)
     val assignT = locateSucc(boxAssignEqualT)
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("\\forall x_0. (x_0=1 -> [t:=0;y'=1;{z:=2;}*]x_0>0)".asFormula)))
+      sucSequent("\\forall x_0 (x_0=1 -> [t:=0;{y'=1}{z:=2;}*]x_0>0)".asFormula)))
   }
 
   it should "work in front of any discrete program" in {
@@ -135,58 +143,58 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   it should "work in front of a loop" in {
     import HybridProgramTacticsImpl.boxAssignEqualT
-    val s = sucSequent("[x:=1;][{x:=x+1;}*;]x>0".asFormula)
+    val s = sucSequent("[x:=1;][{x:=x+1;}*]x>0".asFormula)
     val assignT = locateSucc(boxAssignEqualT)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sucSequent("\\forall x_1. (x_1 = 1 -> [x_0:=x_1;][{x_0:=x_0+1;}*;]x_0>0)".asFormula))
+      sucSequent("\\forall x_1 (x_1 = 1 -> [x_0:=x_1;][{x_0:=x_0+1;}*]x_0>0)".asFormula))
   }
 
   it should "work in front of an ODE" in {
     import HybridProgramTacticsImpl.boxAssignEqualT
-    val s = sucSequent("[x:=1;][x'=1;]x>0".asFormula)
+    val s = sucSequent("[x:=1;][{x'=1}]x>0".asFormula)
     val assignT = locateSucc(boxAssignEqualT)
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("\\forall x_1. (x_1=1 -> [x_0:=x_1;][x_0'=1;]x_0>0)".asFormula)))
+      sucSequent("\\forall x_1 (x_1=1 -> [x_0:=x_1;][{x_0'=1}]x_0>0)".asFormula)))
   }
 
   // TODO not yet supported (partial variable writing)
   ignore should "not rename assignment lhs in may-bound" in {
-    val s = sucSequent("[x:=z;][y:=y_0;{y:=y+1 ++ x:=x-1}]x<=y".asFormula)
+    val s = sucSequent("[x:=z;][y:=y_0;{y:=y+1; ++ x:=x-1;}]x<=y".asFormula)
     val assignT = locateSucc(boxAssignEqualT)
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("\\forall x_0. (x_0=z -> [y:=y_0;{y:=y+1 ++ x:=x_0-1}]x<=y)".asFormula)))
+      sucSequent("\\forall x_0 (x_0=z -> [y:=y_0;{y:=y+1; ++ x:=x_0-1;}]x<=y)".asFormula)))
   }
 
   it should "not rename must-bound x" in {
-    val s = sucSequent("[x:=z;][y:=y_0;{x:=x;y:=y+1 ++ x:=x-1}]x<=y".asFormula)
+    val s = sucSequent("[x:=z;][y:=y_0;{x:=x;y:=y+1; ++ x:=x-1;}]x<=y".asFormula)
     val assignT = locateSucc(boxAssignEqualT)
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("\\forall x_0. (x_0=z -> [y:=y_0;{x:=x_0;y:=y+1 ++ x:=x_0-1}]x<=y)".asFormula)))
+      sucSequent("\\forall x_0 (x_0=z -> [y:=y_0;{x:=x_0;y:=y+1; ++ x:=x_0-1;}]x<=y)".asFormula)))
   }
 
   "Combined box assign tactics" should "handle assignment in front of an ODE" in {
     import TacticLibrary.boxAssignT
-    val s = sucSequent("[x:=1;][x'=1;]x>0".asFormula)
+    val s = sucSequent("[x:=1;][{x'=1}]x>0".asFormula)
     val assignT = locateSucc(boxAssignT)
     val result = helper.runTactic(assignT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "x_2=1".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x_2'=1;]x_2>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{x_2'=1}]x_2>0".asFormula
   }
 
   it should "handle arbitrary assignments to variables not mentioned in subsequent formulas" in {
     import HybridProgramTacticsImpl.boxAssignT
     val tactic = locateSucc(boxAssignT)
-    val result = helper.runTactic(tactic, new RootNode(sucSequent("[y_0:=y;][y'=2;]y>0".asFormula)))
+    val result = helper.runTactic(tactic, new RootNode(sucSequent("[y_0:=y;][{y'=2}]y>0".asFormula)))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "y_2=y".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[y'=2;]y>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{y'=2}]y>0".asFormula
   }
 
   it should "handle arbitrary assignments and not fail continuation" in {
     import HybridProgramTacticsImpl.boxAssignT
     val tactic = locateSucc(boxAssignT) & locateSucc(diffWeakenT)
-    val result = helper.runTactic(tactic, new RootNode(sucSequent("[x_0:=x;][x'=2;]x>0".asFormula)))
+    val result = helper.runTactic(tactic, new RootNode(sucSequent("[x_0:=x;][{x'=2}]x>0".asFormula)))
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "x_2=x".asFormula
@@ -195,19 +203,19 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   it should "handle assignment in front of a loop" in {
     import TacticLibrary.boxAssignT
-    val s = sucSequent("[x:=1;][{x:=x+1;}*;]x>0".asFormula)
+    val s = sucSequent("[x:=1;][{x:=x+1;}*]x>0".asFormula)
     val assignT = locateSucc(boxAssignT)
     val result = helper.runTactic(assignT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "x_2=1".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[{x_2:=x_2+1;}*;]x_2>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{x_2:=x_2+1;}*]x_2>0".asFormula
   }
 
   it should "be applicable in the antecedent" in {
     import TacticLibrary.boxAssignT
     val s = sequent(Nil, "[x:=x+1;]x>0".asFormula :: Nil, Nil)
     val assignT = locateAnte(boxAssignT)
-    getProofSequent(assignT, new RootNode(s)) should be (sequent(Nil, "\\forall x_0. (x_0=x+1 -> x_0>0)".asFormula :: Nil, Nil))
+    getProofSequent(assignT, new RootNode(s)) should be (sequent(Nil, "\\forall x_0 (x_0=x+1 -> x_0>0)".asFormula :: Nil, Nil))
   }
 
   // TODO not yet implemented
@@ -253,8 +261,8 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val tacticFactory = PrivateMethod[PositionTactic]('v2tBoxAssignT)
     val assignT = (HybridProgramTacticsImpl invokePrivate tacticFactory())(new SuccPosition(0, new PosInExpr(0 :: Nil)))
     // equivalence rewriting will not go past bound y in \\forall y
-    getProofSequent(assignT, new RootNode(sucSequent("\\forall y. [y:=y;]y>0".asFormula))) should be (
-      sucSequent("\\forall y. y>0".asFormula))
+    getProofSequent(assignT, new RootNode(sucSequent("\\forall y [y:=y;]y>0".asFormula))) should be (
+      sucSequent("\\forall y y>0".asFormula))
   }
 
   "Substitution diamond assignment" should "work on self assignment" in {
@@ -296,7 +304,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "y>0".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y. y>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y y>0".asFormula
   }
 
   it should "rename free variables in modality predicates" in {
@@ -306,7 +314,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val result = helper.runTactic(assignT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "y>0".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y. [z:=2;](y>0 & z>0)".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y [z:=2;](y>0 & z>0)".asFormula
   }
 
   it should "rename free variables but not bound variables (subsequent skolemization will, however)" in {
@@ -316,7 +324,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val result = helper.runTactic(assignT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "y>0".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y. [y:=2;]y>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y [y:=2;]y>0".asFormula
   }
 
   it should "rename free variables but not variables bound by assignment in modality predicates (subsequent skolemization will, however)" in {
@@ -326,17 +334,17 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val result = helper.runTactic(assignT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "y>0".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y. [y:=2+y;]y>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y [y:=2+y;]y>0".asFormula
   }
 
   it should "rename free variables but not variables bound by ODEs in modality predicates" in {
     import TacticLibrary.boxNDetAssign
-    val s = sequent(Nil, "y>0".asFormula :: Nil, "[y:=*;][z'=2+y;](y>0 & z>0)".asFormula :: Nil)
+    val s = sequent(Nil, "y>0".asFormula :: Nil, "[y:=*;][{z'=2+y}](y>0 & z>0)".asFormula :: Nil)
     val assignT = locateSucc(boxNDetAssign)
     val result = helper.runTactic(assignT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "y>0".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y. [z'=2+y;](y>0 & z>0)".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y [{z'=2+y}](y>0 & z>0)".asFormula
   }
 
   it should "work in front of any discrete program" in {
@@ -357,50 +365,50 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "work in front of a loop" in {
-    val s = sucSequent("[y:=*;][{y:=y+2;}*;]y>0".asFormula)
+    val s = sucSequent("[y:=*;][{y:=y+2;}*]y>0".asFormula)
     val assignT = locateSucc(boxNDetAssign)
     val result = helper.runTactic(assignT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y. [{y:=y+2;}*;]y>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y [{y:=y+2;}*]y>0".asFormula
   }
 
   it should "work in front of a continuous program" in {
-    val s = sucSequent("[y:=*;][y'=2;]y>0".asFormula)
+    val s = sucSequent("[y:=*;][{y'=2}]y>0".asFormula)
     val assignT = locateSucc(boxNDetAssign)
     val result = helper.runTactic(assignT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y. [y'=2;]y>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y [{y'=2}]y>0".asFormula
   }
 
   it should "work in front of a continuous program, even if it is not top-level" in {
-    val s = sucSequent("[y:=*;][z:=2;][t:=0; y'=2*y;]y>0".asFormula)
+    val s = sucSequent("[y:=*;][z:=2;][t:=0; {y'=2*y}]y>0".asFormula)
     val assignT = locateSucc(boxNDetAssign)
     val result = helper.runTactic(assignT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y. [z:=2;][t:=0; y'=2*y;]y>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y [z:=2;][t:=0; {y'=2*y}]y>0".asFormula
   }
 
   "Diamond nondeterministic assignment tactic" should "introduce existential quantifier and rename free variables" in {
     val s = sequent(Nil, "y>0".asFormula :: Nil, "<y:=*;>y>0".asFormula :: Nil)
     val tactic = locateSucc(diamondNDetAssign)
     getProofSequent(tactic, new RootNode(s)) should be (
-      sequent(Nil, "y>0".asFormula :: Nil, "\\exists y. y>0".asFormula :: Nil))
+      sequent(Nil, "y>0".asFormula :: Nil, "\\exists y y>0".asFormula :: Nil))
   }
 
   it should "work with subsequent box modality" in {
     val s = sequent(Nil, "y>0".asFormula :: Nil, "<y:=*;>[z:=2;](y>0 & z>0)".asFormula :: Nil)
     val assignT = locateSucc(diamondNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sequent(Nil, "y>0".asFormula :: Nil, "\\exists y. [z:=2;](y>0 & z>0)".asFormula :: Nil))
+      sequent(Nil, "y>0".asFormula :: Nil, "\\exists y [z:=2;](y>0 & z>0)".asFormula :: Nil))
   }
 
   it should "work with subsequent assignment to same variable" in {
     val s = sucSequent("<y:=*;><y:=2;>y>0".asFormula)
     val assignT = locateSucc(diamondNDetAssign)
-    getProofSequent(assignT, new RootNode(s)) shouldBe sucSequent("\\exists y. <y:=2;>y>0".asFormula)
+    getProofSequent(assignT, new RootNode(s)) shouldBe sucSequent("\\exists y <y:=2;>y>0".asFormula)
   }
 
   it should "work with possible subsequent assignment to same variable" in {
@@ -413,23 +421,23 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val s = sequent(Nil, "y>0".asFormula :: Nil, "<y:=*;>[y:=2+y;]y>0".asFormula :: Nil)
     val assignT = locateSucc(diamondNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sequent(Nil, "y>0".asFormula :: Nil, "\\exists y. [y:=2+y;]y>0".asFormula :: Nil))
+      sequent(Nil, "y>0".asFormula :: Nil, "\\exists y [y:=2+y;]y>0".asFormula :: Nil))
   }
 
   it should "rename free variables but not variables bound by ODEs in modality predicates" in {
-    val s = sequent(Nil, "y>0".asFormula :: Nil, "<y:=*;>[z'=2+y;](y>0 & z>0)".asFormula :: Nil)
+    val s = sequent(Nil, "y>0".asFormula :: Nil, "<y:=*;>[{z'=2+y}](y>0 & z>0)".asFormula :: Nil)
     val assignT = locateSucc(diamondNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sequent(Nil, "y>0".asFormula :: Nil, "\\exists y. [z'=2+y;](y>0 & z>0)".asFormula :: Nil))
+      sequent(Nil, "y>0".asFormula :: Nil, "\\exists y [{z'=2+y}](y>0 & z>0)".asFormula :: Nil))
   }
 
   it should "work in front of a loop" in {
-    val s = sequent(Nil, "y>0".asFormula :: Nil, "<y:=*;><{y:=y+2;}*;>y>0".asFormula :: Nil)
+    val s = sequent(Nil, "y>0".asFormula :: Nil, "<y:=*;><{y:=y+2;}*>y>0".asFormula :: Nil)
     val assignT = locateSucc(diamondNDetAssign)
     val assignResult = helper.runTactic(assignT, new RootNode(s))
     assignResult.openGoals() should have size 1
     assignResult.openGoals().flatMap(_.sequent.ante) should contain only "y>0".asFormula
-    assignResult.openGoals().flatMap(_.sequent.succ) should contain only "\\exists y. <{y:=y+2;}*;>y>0".asFormula
+    assignResult.openGoals().flatMap(_.sequent.succ) should contain only "\\exists y <{y:=y+2;}*>y>0".asFormula
 
     // TODO not yet supported
 //    val tactic =
@@ -442,10 +450,10 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "work in front of a continuous program" in {
-    val s = sucSequent("<y:=*;><y'=2;>y>0".asFormula)
+    val s = sucSequent("<y:=*;><{y'=2}>y>0".asFormula)
     val assignT = locateSucc(diamondNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sequent(Nil, Nil, "\\exists y. <y'=2;>y>0".asFormula :: Nil))
+      sequent(Nil, Nil, "\\exists y <{y'=2}>y>0".asFormula :: Nil))
   }
 
   "Substitution box assignment" should "replace with variables" in {
@@ -463,62 +471,62 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   it should "not apply when immediately followed by an ODE or loop" in {
     val tactic = locateSucc(HybridProgramTacticsImpl.substitutionBoxAssignT)
-    tactic.applicable(new RootNode(sucSequent("[y:=z;][y'=z+1;]y>0".asFormula))) shouldBe false
+    tactic.applicable(new RootNode(sucSequent("[y:=z;][{y'=z+1}]y>0".asFormula))) shouldBe false
     tactic.applicable(new RootNode(sucSequent("[y:=z;][{y:=z+1;}*]y>0".asFormula))) shouldBe false
   }
 
   "v2vAssignT" should "work on box ODEs" in {
     import HybridProgramTacticsImpl.v2vAssignT
     val tactic = locateSucc(v2vAssignT)
-    getProofSequent(tactic, new RootNode(sucSequent("[y:=z;][y'=2;]y>0".asFormula))) should be (sucSequent("[z'=2;]z>0".asFormula))
+    getProofSequent(tactic, new RootNode(sucSequent("[y:=z;][{y'=2}]y>0".asFormula))) should be (sucSequent("[{z'=2}]z>0".asFormula))
   }
 
   it should "work in the antecedent" in {
     import HybridProgramTacticsImpl.v2vAssignT
     val tactic = locateAnte(v2vAssignT)
-    getProofSequent(tactic, new RootNode(sequent(Nil, "[y:=z;][y'=2;]y>0".asFormula :: Nil, Nil))) should be (
-      sequent(Nil, "[z'=2;]z>0".asFormula :: Nil, Nil))
+    getProofSequent(tactic, new RootNode(sequent(Nil, "[y:=z;][{y'=2}]y>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "[{z'=2}]z>0".asFormula :: Nil, Nil))
   }
 
 
   it should "work on box loops" in {
-    val s = sucSequent("[y:=z;][{y:=y+2;}*;]y>0".asFormula)
+    val s = sucSequent("[y:=z;][{y:=y+2;}*]y>0".asFormula)
     import HybridProgramTacticsImpl.v2vAssignT
     val tactic = locateSucc(v2vAssignT)
     getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("[{z:=z+2;}*;]z>0".asFormula))
+      sucSequent("[{z:=z+2;}*]z>0".asFormula))
   }
 
   // TODO stuttering now creates boxes
   ignore should "work on diamond ODEs" in {
     import HybridProgramTacticsImpl.v2vAssignT
     val tactic = locateSucc(v2vAssignT)
-    getProofSequent(tactic, new RootNode(sucSequent("<y:=z;><y'=2;>y>0".asFormula))) should be (
-      sucSequent("<z'=2;>z>0".asFormula))
+    getProofSequent(tactic, new RootNode(sucSequent("<y:=z;><{y'=2}>y>0".asFormula))) should be (
+      sucSequent("<{z'=2}>z>0".asFormula))
   }
 
   // TODO stuttering now creates boxes
   ignore should "work on diamond ODEs inside formulas" in {
     import HybridProgramTacticsImpl.v2vAssignT
     val tactic = v2vAssignT(SuccPosition(0, PosInExpr(1::Nil)))
-    getProofSequent(tactic, new RootNode(sucSequent("x>y & <y:=z;><y'=2;>y>0".asFormula))) should be (
-      sucSequent("x>y & <z'=2;>z>0".asFormula))
+    getProofSequent(tactic, new RootNode(sucSequent("x>y & <y:=z;><{y'=2}>y>0".asFormula))) should be (
+      sucSequent("x>y & <{z'=2}>z>0".asFormula))
   }
 
   // TODO stuttering now creates boxes
   ignore should "work on diamond loops" in {
-    val s = sucSequent("<y:=z;><{y:=y+2;}*;>y>0".asFormula)
+    val s = sucSequent("<y:=z;><{y:=y+2;}*>y>0".asFormula)
     import HybridProgramTacticsImpl.v2vAssignT
     val tactic = locateSucc(v2vAssignT)
     getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("<{z:=z+2;}*;>z>0".asFormula))
+      sucSequent("<{z:=z+2;}*>z>0".asFormula))
   }
 
   it should "work inside formulas" in {
     import HybridProgramTacticsImpl.v2vAssignT
     val tactic = v2vAssignT(SuccPosition(0, PosInExpr(1::0::Nil)))
-    getProofSequent(tactic, new RootNode(sucSequent("x=y & ([y:=z;][y'=2;]y>0 | y>0)".asFormula))) should be (
-      sucSequent("x=y & ([z'=2;]z>0 | y>0)".asFormula))
+    getProofSequent(tactic, new RootNode(sucSequent("x=y & ([y:=z;][{y'=2}]y>0 | y>0)".asFormula))) should be (
+      sucSequent("x=y & ([{z'=2}]z>0 | y>0)".asFormula))
   }
 
   "Discrete ghost" should "introduce assignment to fresh variable" in {
@@ -583,7 +591,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   it should "not introduce self-assignment ghosts in the middle of formulas when bound" in {
     val tactic = discreteGhostT(Some(Variable("x", None, Real)), Variable("x", None, Real))(new SuccPosition(0, new PosInExpr(1 :: Nil)))
     // TODO for some reason the exception is thrown but still not satisfies the test
-    /*a [SubstitutionClashException] should be thrownBy*/ helper.runTactic(tactic, new RootNode(sucSequent("[x:=x+1;][x'=2;]x>0".asFormula)))
+    /*a [SubstitutionClashException] should be thrownBy*/ helper.runTactic(tactic, new RootNode(sucSequent("[x:=x+1;][{x'=2}]x>0".asFormula)))
   }
 
   ignore should "introduce ghosts in modality predicates" in {
@@ -595,22 +603,22 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   it should "work on loops" in {
     val tactic = locateSucc(discreteGhostT(None, Variable("y", None, Real)))
-    getProofSequent(tactic, new RootNode(sucSequent("[{y:=y+1;}*;]y>0".asFormula))) should be (
-      sucSequent("[y_0:=y;][{y:=y+1;}*;]y>0".asFormula))
+    getProofSequent(tactic, new RootNode(sucSequent("[{y:=y+1;}*]y>0".asFormula))) should be (
+      sucSequent("[y_0:=y;][{y:=y+1;}*]y>0".asFormula))
   }
 
   it should "work on ODEs" in {
     val tactic = locateSucc(discreteGhostT(None, Variable("y", None, Real)))
-    getProofSequent(tactic, new RootNode(sucSequent("[y'=1;]y>0".asFormula))) should be (
-      sucSequent("[y_0:=y;][y'=1;]y>0".asFormula))
+    getProofSequent(tactic, new RootNode(sucSequent("[{y'=1}]y>0".asFormula))) should be (
+      sucSequent("[y_0:=y;][{y'=1}]y>0".asFormula))
   }
 
   it should "not propagate arbitrary terms into ODEs" in {
     val tactic = locateSucc(discreteGhostT(Some(Variable("z", None, Real)),
       "y+1".asTerm))
     // would like to check for exception, but not possible because of Scheduler
-    getProofSequent(tactic, new RootNode(sucSequent("[y'=1;]y>0".asFormula))) should be (
-      sucSequent("[z:=y+1;][y'=1;]y>0".asFormula))
+    getProofSequent(tactic, new RootNode(sucSequent("[{y'=1}]y>0".asFormula))) should be (
+      sucSequent("[z:=y+1;][{y'=1}]y>0".asFormula))
   }
 
   it should "abbreviate terms in a formula" in {
@@ -632,17 +640,17 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val result = getProofSequent(tactic, new RootNode(
       sequent(Nil,
         "x>0".asFormula :: "y>1".asFormula :: Nil,
-        "[{x:=2;}*;]x>2".asFormula :: "x<3".asFormula :: "y<4".asFormula :: Nil)))
+        "[{x:=2;}*]x>2".asFormula :: "x<3".asFormula :: "y<4".asFormula :: Nil)))
 
     result shouldBe a [List[Sequent]]
     result.asInstanceOf[List[Sequent]] should contain only (
       sequent(Nil,
         "x>0".asFormula :: "y>1".asFormula :: Nil,
-        "x<3".asFormula :: "y<4".asFormula :: "\\forall x. (x*y>5 -> [x:=2;]x*y>5)".asFormula :: Nil
+        "x<3".asFormula :: "y<4".asFormula :: "\\forall x (x*y>5 -> [x:=2;]x*y>5)".asFormula :: Nil
       ),
       sequent(Nil,
         "x>0".asFormula :: "y>1".asFormula :: Nil,
-        "x<3".asFormula :: "y<4".asFormula :: "\\forall x. (x*y>5 -> x>2)".asFormula :: Nil
+        "x<3".asFormula :: "y<4".asFormula :: "\\forall x (x*y>5 -> x>2)".asFormula :: Nil
       ),
       sequent(Nil,
         "x>0".asFormula :: "y>1".asFormula :: Nil,
@@ -658,7 +666,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val result = helper.runTactic(tactic, new RootNode(
       sequent(Nil,
         "x>0".asFormula :: "y>1".asFormula :: "z>7".asFormula :: Nil,
-        "[{x:=2;}*;]x>2".asFormula :: "x<3".asFormula :: "y<4".asFormula :: Nil)))
+        "[{x:=2;}*]x>2".asFormula :: "x<3".asFormula :: "y<4".asFormula :: Nil)))
 
     result.openGoals() should have size 3
     result.openGoals()(0).sequent.ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
@@ -677,7 +685,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val result = helper.runTactic(tactic, new RootNode(
       sequent(Nil,
         "x>0".asFormula :: "y>1".asFormula :: "z>7".asFormula :: Nil,
-        "[{x:=2 ++ y:=z;}*;]x>2".asFormula :: "x<3".asFormula :: "y<4".asFormula :: Nil)))
+        "[{x:=2 ++ y:=z;}*]x>2".asFormula :: "x<3".asFormula :: "y<4".asFormula :: Nil)))
 
     result.openGoals() should have size 3
     result.openGoals()(0).sequent.ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
@@ -695,7 +703,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val result = helper.runTactic(tactic, new RootNode(
       sequent(Nil,
         "x>0".asFormula :: "x>0".asFormula :: "y>1".asFormula :: "z>7".asFormula :: Nil,
-        "[{x:=2;}*;]x>2".asFormula :: "x<3".asFormula :: "x<3".asFormula :: "y<4".asFormula :: Nil)))
+        "[{x:=2;}*]x>2".asFormula :: "x<3".asFormula :: "x<3".asFormula :: "y<4".asFormula :: Nil)))
 
     result.openGoals() should have size 3
     result.openGoals()(0).sequent.ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
@@ -722,8 +730,8 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   it should "work with subsequent ODEs" in {
     val tactic = boxDerivativeAssignT(SuccPosition(0))
-    getProofSequent(tactic, new RootNode(sucSequent("[x':=y;][y'=z;]y>0".asFormula))) should be (
-      sucSequent("[y'=z;]y>0".asFormula)
+    getProofSequent(tactic, new RootNode(sucSequent("[x':=y;][{y'=z}]y>0".asFormula))) should be (
+      sucSequent("[{y'=z}]y>0".asFormula)
     )
   }
 
@@ -764,20 +772,20 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Box choice" should "transform choice into a conjunction" in {
     val tactic = locateSucc(boxChoiceT)
-    getProofSequent(tactic, new RootNode(sucSequent("[x:=2 ++ x:=3]x>0".asFormula))) should be (
+    getProofSequent(tactic, new RootNode(sucSequent("[x:=2; ++ x:=3;]x>0".asFormula))) should be (
       sucSequent("[x:=2;]x>0 & [x:=3;]x>0".asFormula))
   }
 
   "Diamond choice" should "transform choice into a disjunction" in {
     val tactic = locateSucc(diamondChoiceT)
-    getProofSequent(tactic, new RootNode(sucSequent("<x:=2 ++ x:=3>x>0".asFormula))) should be (
+    getProofSequent(tactic, new RootNode(sucSequent("<x:=2; ++ x:=3;>x>0".asFormula))) should be (
       sucSequent("<x:=2;>x>0 | <x:=3;>x>0".asFormula))
   }
 
   "Box sequence" should "transform sequence into two boxes" in {
     import TacticLibrary.boxSeqT
     val tactic = locateSucc(boxSeqT)
-    getProofSequent(tactic, new RootNode(sucSequent("[x:=2; x:=3]x>0".asFormula))) should be (
+    getProofSequent(tactic, new RootNode(sucSequent("[x:=2; x:=3;]x>0".asFormula))) should be (
       sucSequent("[x:=2;][x:=3;]x>0".asFormula))
   }
 
@@ -868,10 +876,10 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   it should "remove box on a universally quantified predicate" in {
     val tactic = locateSucc(HybridProgramTacticsImpl.boxVacuousT)
-    val s = sucSequent("[x:=2;](\\forall x. x>0)".asFormula)
+    val s = sucSequent("[x:=2;](\\forall x x>0)".asFormula)
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall x. x>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall x x>0".asFormula
   }
 }

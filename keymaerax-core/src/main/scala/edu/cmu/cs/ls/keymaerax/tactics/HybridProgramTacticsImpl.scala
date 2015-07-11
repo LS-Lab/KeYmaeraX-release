@@ -326,6 +326,7 @@ object HybridProgramTacticsImpl {
     ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
         case Loop(_) => result += e; Left(None)
+        case AtomicODE(_, _) => result += e; Left(None)
         case ODESystem(_, _) => result += e; Left(None)
         case _ => Left(None)
       }
