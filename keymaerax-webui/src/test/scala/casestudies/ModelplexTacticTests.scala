@@ -1,18 +1,21 @@
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.tactics.ProofNode.ProofStep
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import testHelper.ParserFactory._
 import testHelper.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.ModelplexTacticImpl.{modelplex,modelplexInPlace,diamondModelplexTestT,locateT,optimizationOne}
+import edu.cmu.cs.ls.keymaerax.tactics.ModelplexTacticImpl.{modelplex, modelplexInPlace, diamondModelplexTestT,
+  locateT, optimizationOne, modelplexControllerMonitorTrafo}
 import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.diamondDiffSolve2DT
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{locateSucc,lastSucc,onBranch,lastAnte}
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
 import TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{LabelBranch, NilT}
+import scala.collection.immutable
 import scala.language.postfixOps
 
 /**
@@ -59,7 +62,7 @@ class ModelplexTacticTests extends TacticTestSuite {
     result.openGoals()(0).sequent.ante should contain only ("0<=x".asFormula, "x<=m".asFormula, "0<ep".asFormula)
     result.openGoals()(0).sequent.succ should contain only "-1<=f & f<=(m-x)/ep".asFormula
     result.openGoals()(1).sequent.ante should contain only ("0<=x".asFormula, "x<=m".asFormula, "0<ep".asFormula, "-1<=f".asFormula, "f<=(m-x)/ep".asFormula)
-//    result.openGoals()(1).sequent.succ should contain only "fpost()=f & xpost()=x & tpost()=0".asFormula
+    result.openGoals()(1).sequent.succ should contain only "t_0=0 & (fpost()=f & xpost()=x & tpost()=t_0)".asFormula
   }
 
   ignore should "find correct model monitor condition" in {
@@ -360,6 +363,50 @@ class ModelplexTacticTests extends TacticTestSuite {
     report(expected, result, "RSS controller")
   }
 
+  it should "generate the correct Modelplex property from the input model" in {
+    val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("a"), Variable("r"))
+
+    modelplexInput shouldBe  """
+        |v >= 0
+        |  & ( Abs(x-xo) > v^2 / (2*B) + V()*(v/B)
+        |    | Abs(y-yo) > v^2 / (2*B) + V()*(v/B))
+        |  & r != 0
+        |  & dx^2 + dy^2 = 1
+        |  & A >= 0
+        |  & B > 0
+        |  & V() >= 0
+        |  & ep > 0
+        |  -> <a:=apre();r:=rpre();>
+        |     <dxo :=*;
+        |      dyo :=*;
+        |      ?dxo^2 + dyo^2 <= V()^2;
+        |
+        |      /* brake on current curve or remain stopped */
+        |      {
+        |        {a := -B; r:=r; }
+        |      ++{?v = 0; a := 0; w := 0; r:=r; }
+        |      /* or choose a new safe curve */
+        |    	 ++{a :=*; ?-B <= a & a <= A;
+        |
+        |    	 r :=*; ?r != 0; /* do not spin */
+        |    	 w :=*; ?w * r = v;
+        |
+        |      /* for the chosen a, w, cx, cy: worst case position of obstacles wrt. curve */
+        |      xo :=*;
+        |      yo :=*;
+        |
+        |    	 /* use that curve, if it is a safe one (admissible velocities) */
+        |    	 ? Abs(x-xo) > v^2/(2*B) + V()*v/B + (A/B + 1) * (A/2 * ep^2 + ep*(v+V()))
+        |    	 | Abs(y-yo) > v^2/(2*B) + V()*v/B + (A/B + 1) * (A/2 * ep^2 + ep*(v+V()));
+        |    	 }
+        |    	 };
+        |
+        |    	 t := 0;>(apost()=a&rpost()=r)
+      """.stripMargin.asFormula
+  }
+
   it should "find a reduced correct controller monitor condition" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/rss13/passivesafety-ctrl-reduced.key"))
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
@@ -371,16 +418,34 @@ class ModelplexTacticTests extends TacticTestSuite {
     //      "(-b<=a&a<=A&(-b<=a&a<=A->r>0&(r>0->w*r=v&(w*r=v->(Abs(x-ox)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|Abs(y-oy)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&(Abs(x-ox)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|Abs(y-oy)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)->x_post()=x&y_post()=y&v_post()=v&a_post()=a&w_post()=w&dx_post()=dx&dy_post()=dy&r_post()=r&ox_post()=ox&oy_post()=oy&t_post()=0))))))").asFormula
 
     // with ordinary diamond test
-    val expected = ("(apost()=-B&rpost()=rpre()) | " +
+    val expectedAnte = "v>=0 & (Abs(x-ox)>v^2/(2*B) + V()*(v/B) | Abs(y-oy)>v^2/(2*B) + V()*(v/B)) & r!=0 & dx^2+dy^2=1 & A>=0 & B>0 & ep>0".asFormula
+    val expectedSucc = ("(apost()=-B&rpost()=rpre()) | " +
       "(v=0&(apost()=0&rpost()=rpre()) | " +
       "(-B<=a&a<=A&(r!=0&(w*r=v&((Abs(x-ox)>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-oy)>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(apost()=a&rpost()=r))))))").asFormula
 
     result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) should contain only
-      "v>=0 & (Abs(x-ox)>v^2/(2*B) + V()*(v/B) | Abs(y-oy)>v^2/(2*B) + V()*(v/B)) & r!=0 & dx^2+dy^2=1 & A>=0 & B>0 & ep>0".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only expected
+    result.openGoals().head.sequent.ante should contain only expectedAnte
+    result.openGoals().head.sequent.succ should contain only expectedSucc
 
-    report(expected, result, "RSS controller")
+    report(expectedSucc, result, "RSS controller")
+  }
+
+  it should "find the correct controller monitor condition from the input model" in {
+    val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("a"), Variable("r"))
+
+    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
+    val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
+
+    val expectedAnte = "v>=0 & (Abs(x-xo)>v^2/(2*B)+V()*(v/B)|Abs(y-yo)>v^2/(2*B)+V()*(v/B)) & r!=0 & dx^2+dy^2=1 & A>=0 & B>0 & V()>=0 & ep>0".asFormula
+    val expectedSucc = ("dxo^2+dyo^2<=V()^2 & (apost()=-B & rpost()=rpre() | " +
+      "                                       (v=0 & (apost()=0 & rpost()=rpre())" +
+      "                                       |-B<=a&a<=A & (r!=0 & (w*r=v & ((Abs(x-xo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-yo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))) & (apost()=a&rpost()=r))))))").asFormula
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only expectedAnte
+    result.openGoals().head.sequent.succ should contain only expectedSucc
   }
 
   it should "find correct controller monitor condition without intermediate Optimization 1" in {
