@@ -12,7 +12,7 @@ import testHelper.SequentFactory._
  */
 class SyntacticDerivationTests extends TacticTestSuite {
   "abstraction" should "at least work" in {
-    val f = "[s := 0;] \\forall x. x=x".asFormula
+    val f = "[s := 0;] \\forall x x=x".asFormula
     val tactic = TacticLibrary.abstractionT(SuccPos(0)) &
       TacticLibrary.debugT("one") &
       TacticLibrary.skolemizeT(SuccPos(0)) &
@@ -25,21 +25,21 @@ class SyntacticDerivationTests extends TacticTestSuite {
   }
   
   "ForallDerivativeT" should "atomize" in {
-    val f = "(\\forall s. s > 0)'".asFormula
+    val f = "(\\forall s s > 0)'".asFormula
     val tactic = SyntacticDerivationInContext.ForallDerivativeT(SuccPosition(0))
     val node = helper.runTactic(tactic, helper.formulaToNode(f), mustApply = true)
     node.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    node.openGoals().flatMap(_.sequent.succ) should contain only "(\\forall s. (s>0)')".asFormula
+    node.openGoals().flatMap(_.sequent.succ) should contain only "(\\forall s (s>0)')".asFormula
   }
 
   it should "atomize inside of a Box" in {
-    val f = "[x:=2;](\\forall s. s>0)'".asFormula
+    val f = "[x:=2;](\\forall s s>0)'".asFormula
 
     val tactic = SyntacticDerivationInContext.ForallDerivativeT(SuccPosition(0, PosInExpr(1::Nil)))
 
     val node = helper.runTactic(tactic, helper.formulaToNode(f), mustApply = true)
     node.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    node.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;](\\forall s. (s>0)')".asFormula
+    node.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;](\\forall s (s>0)')".asFormula
   }
 
 
@@ -343,13 +343,13 @@ class SyntacticDerivationTests extends TacticTestSuite {
     // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
 
-    val f = "[x'=b;](x-x<1)'".asFormula
+    val f = "[{x'=b}](x-x<1)'".asFormula
     val node = helper.formulaToNode(f)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     val result = helper.runTactic(tactic, node, mustApply = true)
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=b;]x'-x'<=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{x'=b}]x'-x'<=0".asFormula
   }
 
   "symbolizeDifferentials" should "work when the Differential() occurs in a formula without []'s" in {
