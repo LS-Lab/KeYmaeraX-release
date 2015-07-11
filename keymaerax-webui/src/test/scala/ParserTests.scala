@@ -12,8 +12,8 @@ class ParserParenTests extends FlatSpec with Matchers {
     "Problem." + program + "\nEnd."
   }
 
-  val parser = new KeYmaeraParser(false) 
-  val alpParser = parser.ProofFileParser
+//  val parser = new KeYmaeraParser(false)
+//  val alpParser = parser.ProofFileParser
   val x = Variable("x", None, Real)
   val y = Variable("y", None, Real)
 
@@ -26,12 +26,12 @@ class ParserParenTests extends FlatSpec with Matchers {
       ("! p > 0 -> p > 5", "(!(p>0)) -> (p>5)") ::
       ("! p > 0 <-> p > 5", "(!(p>0)) <-> (p>5)") ::
       // quantifiers do not bind logical connectives but do bind inequalities.
-      ("! \\forall x . x > 0 | p < 5", "(!(\\forall x . x>0)) | (p<5)") ::
-      ("! \\exists x . x > 0 | p < 5", "(!(\\exists x . x>0)) | (p<5)") ::
-      ("! \\forall x . [p:=x;]p >= x | p < 5", "(!(\\forall x . ([p:=x;](p>=x)))) | (p<5)") ::
+      ("! \\forall x x > 0 | p < 5", "(!(\\forall x x>0)) | (p<5)") ::
+      ("! \\exists x x > 0 | p < 5", "(!(\\exists x x>0)) | (p<5)") ::
+      ("! \\forall x [p:=x;]p >= x | p < 5", "(!(\\forall x ([p:=x;](p>=x)))) | (p<5)") ::
       // quantifiers with multiple variables
-      ("\\forall x, y . (y > x -> y > x)", "\\forall x, y . (y > x -> y > x)") ::
-      ("\\exists y, x . (y > x -> y > x)", "\\exists y, x . (y > x -> y > x)") ::
+//      ("\\forall x, y . (y > x -> y > x)", "\\forall x, y . (y > x -> y > x)") ::
+//      ("\\exists y, x . (y > x -> y > x)", "\\exists y, x . (y > x -> y > x)") ::
       // modalities do not bind logical connectives.
       ("[p:=1;] p>0 & p < 1", "([p:=1;](p>0)) & (p<1)") ::
       ("[p:=1;] p>0 | p < 1", "([p:=1;](p>0)) | (p<1)") ::
@@ -39,26 +39,26 @@ class ParserParenTests extends FlatSpec with Matchers {
       ("<p:=1;> p>0 & p < 1", "(<p:=1;>(p>0)) & (p<1)") ::
       ("<p:=1;> p>0 | p < 1", "(<p:=1;>(p>0)) | (p<1)") ::
       ("<p:=1;> p>0 -> p < 1", "(<p:=1;>(p>0)) -> (p<1)") ::
-      ("\\forall x . x > 2 & a", "(\\forall x . (x > 2)) & a") ::
-      ("\\forall x . x > 2 | a", "(\\forall x . (x > 2)) | a") ::
-      ("\\forall x . x > 2 -> a", "(\\forall x . (x > 2)) -> a") ::
-      ("\\forall x . x > 2 <-> a", "(\\forall x . (x > 2)) <-> a") ::
-      ("\\exists x . x > 2 & a", "(\\exists x . (x > 2)) & a") ::
-      ("\\exists x . x > 2 | a", "(\\exists x . (x > 2)) | a") ::
-      ("\\exists x . x > 2 -> a", "(\\exists x . (x > 2)) -> a") ::
-      ("\\exists x . x > 2 <-> a", "(\\exists x . (x > 2)) <-> a") ::
+      ("\\forall x x > 2 & a < 0", "(\\forall x (x > 2)) & a < 0") ::
+      ("\\forall x x > 2 | a < 0", "(\\forall x (x > 2)) | a < 0") ::
+      ("\\forall x x > 2 -> a < 0", "(\\forall x (x > 2)) -> a < 0") ::
+      ("\\forall x x > 2 <-> a < 0", "(\\forall x (x > 2)) <-> a < 0") ::
+      ("\\exists x x > 2 & a < 0", "(\\exists x (x > 2)) & a < 0") ::
+      ("\\exists x x > 2 | a < 0", "(\\exists x (x > 2)) | a < 0") ::
+      ("\\exists x x > 2 -> a < 0", "(\\exists x (x > 2)) -> a < 0") ::
+      ("\\exists x x > 2 <-> a < 0", "(\\exists x (x > 2)) <-> a < 0") ::
       //nested modalities
       ("< p:=1; > <p:=2; > p>0", "<p:=1;>(<p:=2;>p>0)") ::
       ("[ p:=1; ] <p:=2; > p>0", "[p:=1;](<p:=2;>p>0)") ::
       ("< p:=1; > [p:=2; ] p>0", "<p:=1;>([p:=2;]p>0)") ::
       //[], <>, \forall, \exists magic.
-      ("\\forall x . [x:=1;]<x:=2;>x>0","\\forall x . ([x:=1;]<x:=2;>(x>0))") ::
-      ("\\exists x . [x:=1;]<x:=2;>x>0","\\exists x . ([x:=1;]<x:=2;>(x>0))") ::
-      ("[p:=0;]\\forall x . [x:=p;] \\exists y . [q := x + y; ] q > 0", "[p:=0;](\\forall  x . [x:=p;] (\\exists y . [q := x + y; ] q > 0))") ::
+      ("\\forall x [x:=1;]<x:=2;>x>0","\\forall x ([x:=1;]<x:=2;>(x>0))") ::
+      ("\\exists x [x:=1;]<x:=2;>x>0","\\exists x ([x:=1;]<x:=2;>(x>0))") ::
+      ("[p:=0;]\\forall x [x:=p;] \\exists y [q := x + y; ] q > 0", "[p:=0;](\\forall x [x:=p;] (\\exists y [q := x + y; ] q > 0))") ::
       // <> vs >.
       ("< ?p>q; > p > 1", "<?(p > q);>(p>1)") ::
       ("[ ?p>q; ] p > 1", "[?(p > q);](p>1)") ::
-      ("< ?a; ++ ?a; > a", "< {?a;} ++ {?a;} > a") ::
+      ("< ?a < 0; ++ ?a < 0; > a < 0", "< {?a < 0;} ++ {?a < 0;} > a < 0") ::
       //arith.
       ("p + q * r = s", "p + (q * r) = s") ::
       ("p * q + r = s", "(p * q) + r = s") ::
@@ -72,36 +72,37 @@ class ParserParenTests extends FlatSpec with Matchers {
       ("1^2 + 3^2 = s^2", "(1^2) + (3^2) = (s^2)") ::
       ("p^5 * p^3 * q^2 >= 0", "(p^5) * (p^3) * (q^2) >= 0")::
       // implicit {} either assumed correctly or rejected
-      ("[ p:=1; p:=2; ++ p:=3] p>0", "[ {p:=1; p:=2;} ++ p:=3] p>0") ::
-      ("[ p:=1; ++ p:=2; p:=3] p>0", "[ p:=1; ++ {p:=2; p:=3;}] p>0") ::
-      ("[ p:=1; p:=2; p:=3*] p>0", "[ p:=1; p:=2; {{p:=3;}*}] p>0") ::
-      ("[ p:=1; p:=2; ++ p:=3*] p>0", "[ {p:=1; p:=2;} ++ {{p:=3;}*}] p>0") ::
+      ("[ p:=1; p:=2; ++ p:=3;] p>0", "[ {p:=1; p:=2;} ++ p:=3;] p>0") ::
+      ("[ p:=1; ++ p:=2; p:=3;] p>0", "[ p:=1; ++ {p:=2; p:=3;}] p>0") ::
+      ("[ p:=1; p:=2; {p:=3;}*] p>0", "[ p:=1; p:=2; {{p:=3;}*}] p>0") ::
+      ("[ p:=1; p:=2; ++ {p:=3;}*] p>0", "[ {p:=1; p:=2;} ++ {{p:=3;}*}] p>0") ::
       Nil
 
     for(pair <- equalPairs) {
-      val left : Expression = parser.runParser(makeInput(pair._1))
-      val right : Expression = parser.runParser(makeInput(pair._2))
+      val left : Expression = KeYmaeraXParser(pair._1)
+      val right : Expression = KeYmaeraXParser(pair._2)
       left should be (right)
     }
   }
 
   it should "be the case that r_0 becomes Variable(r, Some(0), Real)" in {
-    parser.runParser(makeInput("r_0 > 0")) should be (Greater(Variable("r", Some(0), Real), Number(0)))
+    KeYmaeraXParser("r_0 > 0") should be (Greater(Variable("r", Some(0), Real), Number(0)))
   }
 
   it should "fail to parse bad input" in {
     val badInputs =
-      "\\forall x . x > 2 > 3" ::
+      "\\forall x x > 2 > 3" ::
       Nil
 
     for(badInput <- badInputs) {
       a [Exception] should be thrownBy {
-        parser.runParser(makeInput(badInput))
+        KeYmaeraXParser(makeInput(badInput))
       }
     }
   }
-  
-  it should "parse all positive examples" in {
+
+  // TODO adapt example files to new parser
+  ignore should "parse all positive examples" in {
     val files =
       "abs.key" ::
       "dia.key" ::
@@ -120,14 +121,15 @@ class ParserParenTests extends FlatSpec with Matchers {
     for(testFile <- files) {
       val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/" + testFile)).mkString
       withClue(testFile) {
-        parser.runParser(src) //test fails on exception.
+        KeYmaeraXParser(src) //test fails on exception.
       }
     }
   }
 
-  it should "parse predicates using functions" in {
+  // TODO adapt input file to new parser
+  ignore should "parse predicates using functions" in {
     val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/functions.key")).mkString
-    parser.runParser(src)
+    KeYmaeraXParser(src)
   }
 
   it should "not parse any negative examples" in {
@@ -141,7 +143,7 @@ class ParserParenTests extends FlatSpec with Matchers {
     for(testFile <- files) {
       val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negative/" + testFile)).mkString
       try {
-        parser.runParser(src)
+        KeYmaeraXParser(src)
         fail("A negative file parsed correctly: " + testFile)
       }
       catch {
@@ -168,17 +170,19 @@ class ParserParenTests extends FlatSpec with Matchers {
   //////////////////////////////////////////////////////////////////////////////
   // Begin ALP Parser tests
   //////////////////////////////////////////////////////////////////////////////
-  
-  "The ALP Parser" should "parse all positive ALP examples" in {
+
+  // TODO adapt file to new parser
+  "The axiom file parser" should "parse all positive axiom examples" in {
     val files =
       "axioms.key.alp" ::
-      "QE94.alp" ::
-      "QE96.alp" :: Nil
+//      "QE94.alp" ::
+//      "QE96.alp" ::
+        Nil
 
     for(testFile <- files) {
       val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positiveALP/" + testFile)).mkString
       try {
-        alpParser.runParser(src) //test fails on exception.
+        KeYmaeraXAxiomParser(src) //test fails on exception.
       } catch {
         case ex: Exception => fail("Unable to parse " + testFile, ex)
       }
@@ -193,14 +197,30 @@ class ParserParenTests extends FlatSpec with Matchers {
       val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negativeALP/" + testFile)).mkString
       withClue(testFile) {
         a[Exception] should be thrownBy {
-          alpParser.runParser(src)
+          KeYmaeraXAxiomParser(src)
         }
       }
     }
   }
 
+  "The lemma file parser" should "parse all positive axiom examples" in {
+    val files =
+        "QE94.alp" ::
+        "QE96.alp" ::
+        Nil
+
+    for(testFile <- files) {
+      val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positiveALP/" + testFile)).mkString
+      try {
+        KeYmaeraXLemmaParser(src) //test fails on exception.
+      } catch {
+        case ex: Exception => fail("Unable to parse " + testFile, ex)
+      }
+    }
+  }
+
   "Random test cases from development" should "reduce systems of diffEqs correctly." in {
-    "[x'=y, y'=x;]true".asFormula shouldBe Box(ODESystem(DifferentialProduct(
+    "[{x'=y, y'=x}]true".asFormula shouldBe Box(ODESystem(DifferentialProduct(
       AtomicODE(DifferentialSymbol(x), y),
       AtomicODE(DifferentialSymbol(y), x)), True), True)
   }
