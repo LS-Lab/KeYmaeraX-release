@@ -488,14 +488,26 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
 
   "Exists duality" should "turn an existential quantifier into a negated universal" in {
     val tactic = locateSucc(FOQuantifierTacticsImpl.existsDualT)
-    getProofSequent(tactic, new RootNode(sucSequent("\\exists x . x>y".asFormula))) should be (
-      sucSequent("!(\\forall x . (!x>y))".asFormula))
+    getProofSequent(tactic, new RootNode(sucSequent("\\exists x x>y".asFormula))) should be (
+      sucSequent("!(\\forall x (!x>y))".asFormula))
+  }
+
+  it should "rename when turning an existential quantifier into a negated universal" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.existsDualT)
+    getProofSequent(tactic, new RootNode(sucSequent("\\exists y x>y".asFormula))) should be (
+      sucSequent("!(\\forall y (!x>y))".asFormula))
   }
 
   it should "turn a negated universal quantifier into an existential" in {
     val tactic = locateSucc(FOQuantifierTacticsImpl.existsDualT)
-    getProofSequent(tactic, new RootNode(sucSequent("!(\\forall x . (!x>y))".asFormula))) should be (
-      sucSequent("\\exists x . x>y".asFormula))
+    getProofSequent(tactic, new RootNode(sucSequent("!(\\forall x (!x>y))".asFormula))) should be (
+      sucSequent("\\exists x x>y".asFormula))
+  }
+
+  it should "rename when turn a negated universal quantifier into an existential" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.existsDualT)
+    getProofSequent(tactic, new RootNode(sucSequent("!(\\forall y (!x>y))".asFormula))) should be (
+      sucSequent("\\exists y x>y".asFormula))
   }
 
   "Forall gen" should "introduce a new universal quantifier" in {

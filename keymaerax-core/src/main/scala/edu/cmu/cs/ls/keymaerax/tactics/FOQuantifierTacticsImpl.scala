@@ -107,9 +107,37 @@ object FOQuantifierTacticsImpl {
         case Equiv(Not(Forall(vv, Not(pp))), _) => (pp, vv)
       }
       val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
-      SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v.head.asInstanceOf[Variable], DotTerm)) :: Nil
+      SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v.head, DotTerm)) :: Nil
     }
-    axiomLookupBaseT("exists dual", subst, _ => NilPT, (f, ax) => ax)
+
+    val aX = Variable("x")
+    def alpha(fml: Formula): PositionTactic = fml match {
+      case Equiv(Exists(v, _), _) =>
+        assert(v.size == 1, "Duality not supported for more than one variable")
+        if (v.head.name == aX.name && v.head.index == aX.index) NilPT
+        else new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+            case Equiv(Exists(_, _), _) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(globalAlphaRenamingT(v.head, aX))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+    }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
+      case Equiv(Exists(v, _), _) =>
+        assert(v.size == 1, "Duality not supported for more than one variable")
+        if (v.head.name == aX.name && v.head.index == aX.index) axiom
+        else replace(axiom)(aX, v.head)
+    }
+
+    axiomLookupBaseT("exists dual", subst, alpha, axiomInstance)
   }
 
   def allEliminateAlphaT(instantiation : Variable) = new PositionTactic("All eliminate with alpha-renaming") {
