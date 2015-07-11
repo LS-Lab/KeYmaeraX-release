@@ -1,7 +1,7 @@
 package testHelper
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraParser}
 
 /**
  * Implicit conversions from strings into core data structures.
@@ -14,26 +14,30 @@ object StringConverter {
 }
 
 class StringConverter(val s: String) {
-  def asExpr: Expression = new KeYmaeraParser().parseBareExpression(s) match {
-    case Some(e) => e
-    case None => throw new IllegalArgumentException(s + " is not an Expr")
-  }
-  def asTerm: Term = new KeYmaeraParser().parseBareTerm(s) match {
-    case Some(t) => t
-    case None => throw new IllegalArgumentException(s + " is not a Term")
-  }
-  def asNamedSymbol: NamedSymbol = new KeYmaeraParser().parseBareTerm(s) match {
-    case Some(t) => t.asInstanceOf[NamedSymbol]
-    case None => throw new IllegalArgumentException(s + " is not a Term")
-  }
-  def asVariable: Variable = new KeYmaeraParser().parseBareTerm(s) match {
-    case Some(t) => t.asInstanceOf[Variable]
-    case None => throw new IllegalArgumentException(s + " is not a Variable")
-  }
-  def asFormula: Formula = new KeYmaeraParser().parseBareFormulaUnquantified(s)
+  def asExpr: Expression = KeYmaeraXParser(s)
 
-  def asProgram: Program = new KeYmaeraParser().parseBareExpression("[" + s + "] true") match {
-    case Some(Box(p, f)) => p
-    case None => throw new IllegalArgumentException(s + " is not a Program")
+  def asTerm: Term = KeYmaeraXParser(s) match {
+    case t: Term => t
+    case _ => throw new IllegalArgumentException("Input " + s + " is not a term")
+  }
+
+  def asNamedSymbol: NamedSymbol = KeYmaeraXParser(s) match {
+    case ns: NamedSymbol => ns
+    case _ => throw new IllegalArgumentException("Input " + s + " is not a named symbol")
+  }
+
+  def asVariable: Variable = KeYmaeraXParser(s) match {
+    case v: Variable => v
+    case _ => throw new IllegalArgumentException("Input " + s + " is not a variable")
+  }
+
+  def asFormula: Formula = KeYmaeraXParser(s) match {
+    case f: Formula => f
+    case _ => throw new IllegalArgumentException("Input " + s + " is not a formula")
+  }
+
+  def asProgram: Program = KeYmaeraXParser(s) match {
+    case prg: Program => prg
+    case _ => throw new IllegalArgumentException("Input " + s + " is not a program")
   }
 }
