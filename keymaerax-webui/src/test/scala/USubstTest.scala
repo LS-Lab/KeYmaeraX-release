@@ -73,7 +73,7 @@ class USubstTests extends FlatSpec with Matchers {
     val prem = Equiv(Box(a, PredOf(p, x)), Box(a, And(PredOf(p, x), True)))
     val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(DotTerm, Number(2))),
       SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
-    s(prem) should be ("[x'=5;]x>=2 <-> [x'=5;](x>=2&true)".asFormula)
+    s(prem) should be ("[{x'=5}]x>=2 <-> [{x'=5}](x>=2&true)".asFormula)
   }
 
   it should "substitute simple sequent [a]p(x) <-> [a](p(x)&true)" in {
@@ -84,7 +84,7 @@ class USubstTests extends FlatSpec with Matchers {
     val prem = Equiv(Box(a, PredOf(p, x)), Box(a, And(PredOf(p, x), True)))
     val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(DotTerm, Number(2))),
       SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
-    val conc = "[x'=5;]x>=2 <-> [x'=5;](x>=2&true)".asFormula
+    val conc = "[{x'=5}]x>=2 <-> [{x'=5}](x>=2&true)".asFormula
     UniformSubstitutionRule(s,
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
         Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be
@@ -208,16 +208,16 @@ class USubstTests extends FlatSpec with Matchers {
   
   it should "instantiate nontrivial binding structures in [] congruence" taggedAs USubstTest in {
     val prem = "(-x)^2>=y <-> x^2>=y".asFormula
-    val conc = "[{y:=y+1++{z:=x+z;}*}; z:=x+y*z;](-x)^2>=y <-> [{y:=y+1++{z:=x+z;}*}; z:=x+y*z;]x^2>=y".asFormula
+    val conc = "[{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;](-x)^2>=y <-> [{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;]x^2>=y".asFormula
 
-    val prog = "{y:=y+1++{z:=x+z;}*}; z:=x+y*z;".asProgram
+    val prog = "{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;".asProgram
     val q_ = Function("q_", None, Real, Bool)
     val ctx_ = Function("ctx_", None, Bool, Bool)
     val s = USubst(
       SubstitutionPair(ap_, prog) ::
       SubstitutionPair(PredOf(pn_, Anything), "(-x)^2>=y".asFormula) ::
       SubstitutionPair(PredOf(q_, Anything), "x^2>=y".asFormula) ::
-      SubstitutionPair(PredicationalOf(ctx_, DotFormula), Box("{y:=y+1++{z:=x+z;}*}; z:=x+y*z;".asProgram, DotFormula)) :: Nil)
+      SubstitutionPair(PredicationalOf(ctx_, DotFormula), Box("{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;".asProgram, DotFormula)) :: Nil)
       AxiomaticRule("CE congruence", s)(
         Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
   }
@@ -566,7 +566,7 @@ class USubstTests extends FlatSpec with Matchers {
     val fml1 = "x=0".asFormula
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
-    val prog = "x'=5;".asProgram  //ODESystem(Seq(), AtomicODE(Derivative(Real, x), Number(5)), True)
+    val prog = "{x'=5}".asProgram  //ODESystem(Seq(), AtomicODE(Derivative(Real, x), Number(5)), True)
     val context = Box(prog, DotFormula)
     val s = USubst(
       SubstitutionPair(PredOf(pn_, Anything), fml1) ::
