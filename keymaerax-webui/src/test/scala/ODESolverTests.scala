@@ -29,7 +29,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
    * @author Nathan Fulton
    */
   "Prove after time intro" should "work" in {
-    val f = "x = 0 & v = 1 & a = 5 -> [x' =v, v' = a;]x >= 0".asFormula
+    val f = "x = 0 & v = 1 & a = 5 -> [{x' =v, v' = a}]x >= 0".asFormula
     val node = helper.formulaToNode(f)
     val tactic = locateSucc(ImplyRightT) & LogicalODESolver.solveT(SuccPos(0))
     helper.runTactic(tactic, node)
@@ -41,7 +41,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
    * @author Nathan Fulton
    */
   it should "work if there's already time in the ODE" in {
-    val f = "x = 0 & v = 1 & a = 5 & t=0 -> [x' =v, v' = a, t' = 0*t+1;]x >= 0".asFormula
+    val f = "x = 0 & v = 1 & a = 5 & t=0 -> [{x' =v, v' = a, t' = 0*t+1}]x >= 0".asFormula
     val node = helper.formulaToNode(f)
     val tactic = locateSucc(ImplyRightT) & LogicalODESolver.solveT(SuccPos(0))
     helper.runTactic(tactic, node)
@@ -53,7 +53,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
    * @author Nathan Fulton
    */
   it should "work if there's already a time in the ODE and it's not in explicit linear form" in {
-    val f = "x = 0 & v = 1 & a = 5 & t=0 -> [x' =v, v' = a, t' = 1;]x >= 0".asFormula
+    val f = "x = 0 & v = 1 & a = 5 & t=0 -> [{x' =v, v' = a, t' = 1}]x >= 0".asFormula
     val node = helper.formulaToNode(f)
     val tactic = locateSucc(ImplyRightT) & LogicalODESolver.solveT(SuccPos(0))
     helper.runTactic(tactic, node)
@@ -65,7 +65,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
    * @author Nathan Fulton
    */
   it should "work when we have two separate sets of linear vars." in {
-    val f = "x = 0 & v = 1 & a = 5 & t=0 & w = 0 & z = 0 -> [x' =v, v' = a, w' = z, t' = 1;]x >= 0".asFormula
+    val f = "x = 0 & v = 1 & a = 5 & t=0 & w = 0 & z = 0 -> [{x' =v, v' = a, w' = z, t' = 1}]x >= 0".asFormula
     val node = helper.formulaToNode(f)
     val tactic = locateSucc(ImplyRightT) & LogicalODESolver.solveT(SuccPos(0))
     helper.runTactic(tactic, node)
