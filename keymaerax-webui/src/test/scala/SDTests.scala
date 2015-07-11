@@ -35,14 +35,14 @@ class SDTests extends TacticTestSuite {
   }
 
   "Syntactic Derivation" should "work when there's no binding" in {
-    val node = helper.formulaToNode("[a'=b;](x-y<1)'".asFormula)
+    val node = helper.formulaToNode("[{a'=b}](x-y<1)'".asFormula)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     val result = helper.runTactic(tactic, node, mustApply = true)
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[a'=b & true;]x'-y'<=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{a'=b & true}]x'-y'<=0".asFormula
   }
 
   it should "work on an identical example with assignment" in {
@@ -69,36 +69,36 @@ class SDTests extends TacticTestSuite {
   }
 
   it should "work on formulas containing bound variables." in {
-    val node = helper.formulaToNode("[x'=b;](x+y<1)'".asFormula)
+    val node = helper.formulaToNode("[{x'=b}](x+y<1)'".asFormula)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     val result = helper.runTactic(tactic, node, mustApply = true)
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=b;]x'+y'<=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{x'=b}]x'+y'<=0".asFormula
   }
 
   it should "work on an identical example when there is binding inside of a marked box" in {
-    val node = helper.formulaToNode("[x'=b;](x-y<1)'".asFormula)
+    val node = helper.formulaToNode("[{x'=b}](x-y<1)'".asFormula)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     val result = helper.runTactic(tactic, node, mustApply = true)
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=b;]x'-y'<=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{x'=b}]x'-y'<=0".asFormula
   }
 
   it should "identical to prev test but alpha-varied" in {
-    val node = helper.formulaToNode("[a'=b;](a-y<1)'".asFormula)
+    val node = helper.formulaToNode("[{a'=b}](a-y<1)'".asFormula)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     val result = helper.runTactic(tactic, node, mustApply = true)
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[a'=b;]a'-y'<=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{a'=b}]a'-y'<=0".asFormula
   }
 
   "Syntactic derivation of constant function symbols" should "work" in {
