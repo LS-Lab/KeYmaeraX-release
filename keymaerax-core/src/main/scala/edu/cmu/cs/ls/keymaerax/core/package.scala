@@ -5,10 +5,10 @@
 package edu.cmu.cs.ls.keymaerax
 
 /**
- * KeYmaera X: An Axiomatic Tactical Theorem Prover
- * ================================================
- * KeYmaera X Kernel: Soundness-critical core of the KeYmaera X theorem prover.
- * 
+ * KeYmaera X Kernel:
+ * Soundness-critical core of the Axiomatic Tactical Theorem Prover KeYmaera X
+ * ==============================================================================================
+ *
  * Defines the syntax, static semantics, uniform substitutions, axioms, and proof rules of
  * differential dynamic logic.
  * Provides lemma data base, real arithmetic interfaces, error reporting, and set lattice management.

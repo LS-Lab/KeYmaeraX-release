@@ -5,10 +5,9 @@
 package edu.cmu.cs.ls.keymaerax
 
 /**
- * Interface to the actics exposed to the web UI and REST API. Tactic combinator parser.
+ * Simple interface to the tactics exposed to the web UI and REST-API. Tactic combinator parser.
  * @author aplatzer
  * @todo Stub. Describe for real.
+ * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
  */
-package object tacticsinterface {
-
-}
+package object tacticsinterface {}

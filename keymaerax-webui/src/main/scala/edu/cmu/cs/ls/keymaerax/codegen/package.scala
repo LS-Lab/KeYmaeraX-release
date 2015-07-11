@@ -5,10 +5,8 @@
 package edu.cmu.cs.ls.keymaerax
 
 /**
- * Code generation tools to generate C-Code etc.
+ * Code-generation tools to generate C-Code etc. from expressions.
  * @author aplatzer
  * @todo Stub. Describe for real.
  */
-package object codegen {
-
-}
+package object codegen {}

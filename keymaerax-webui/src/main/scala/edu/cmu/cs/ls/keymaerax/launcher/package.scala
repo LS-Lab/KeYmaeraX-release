@@ -5,10 +5,8 @@
 package edu.cmu.cs.ls.keymaerax
 
 /**
- * KeYmaera X command line launcher with main program.
+ * KeYmaera X command line launcher for starting its main program with the web UI.
  * @author aplatzer
  * @todo Stub. Describe for real.
  */
-package object launcher {
-
-}
+package object launcher {}

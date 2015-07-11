@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax
 
 /**
- * Arithmetic back-ends and arithmetic utilities for tactics.
+ * Arithmetic back-ends and arithmetic utilities for tactics, including an SMT interface.
  * @todo Stub. Describe for real.
  */
 package object tools {}

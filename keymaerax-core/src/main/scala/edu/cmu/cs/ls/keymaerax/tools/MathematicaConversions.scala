@@ -452,7 +452,8 @@ object MathematicaToKeYmaera {
 }
   
 /**
- * Converts KeYmaeara core.Expr terms and formulas into Mathematica Expr objects.
+ * Converts KeYmaeara X [[edu.cmu.cs.ls.keymaerax.core.Expression expression data structures]]
+ * into Mathematica Expr objects.
  * @author Nathan Fulton
  */
 object KeYmaeraToMathematica {
