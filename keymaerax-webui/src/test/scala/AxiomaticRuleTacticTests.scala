@@ -82,7 +82,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Forall generalization" should "alpha rename if necessary" in {
-    val s = sucSequent("\\forall y . x>0".asFormula)
+    val s = sucSequent("\\forall y x>0".asFormula)
     val tactic = AxiomaticRuleTactics.forallGeneralizationT
 
     val result = helper.runTactic(tactic, new RootNode(s))
@@ -92,7 +92,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   ignore should "work on a simple example" in {
-    val s = sucSequent("\\forall x . x>0".asFormula)
+    val s = sucSequent("\\forall x x>0".asFormula)
     val tactic = AxiomaticRuleTactics.forallGeneralizationT
 
     val result = helper.runTactic(tactic, new RootNode(s))
@@ -102,7 +102,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   ignore should "alpha rename simple" in {
-    val s = sucSequent("\\forall y . y>0".asFormula)
+    val s = sucSequent("\\forall y y>0".asFormula)
     val tactic = AxiomaticRuleTactics.forallGeneralizationT
 
     val result = helper.runTactic(tactic, new RootNode(s))
@@ -112,7 +112,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Forall congruence" should "work" in {
-    val s = sucSequent("(\\forall x. x>5) <-> (\\forall x . x>0)".asFormula)
+    val s = sucSequent("(\\forall x x>5) <-> (\\forall x x>0)".asFormula)
     val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
@@ -122,7 +122,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "alpha rename" in {
-    val s = sucSequent("(\\forall y. y>5) <-> (\\forall y. y>0)".asFormula)
+    val s = sucSequent("(\\forall y y>5) <-> (\\forall y y>0)".asFormula)
     val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
@@ -132,7 +132,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "alpha rename complicated" in {
-    val s = sucSequent("(\\forall x. [x:=2;]x>1) <-> (\\forall x. [x:=2;]x>0)".asFormula)
+    val s = sucSequent("(\\forall x [x:=2;]x>1) <-> (\\forall x [x:=2;]x>0)".asFormula)
     val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
@@ -142,7 +142,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Exists congruence" should "work" in {
-    val s = sucSequent("(\\exists x. x>5) <-> (\\exists x . x>0)".asFormula)
+    val s = sucSequent("(\\exists x x>5) <-> (\\exists x x>0)".asFormula)
     val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
@@ -152,7 +152,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Exists congruence" should "alpha rename" in {
-    val s = sucSequent("(\\exists y. y>5) <-> (\\exists y. y>0)".asFormula)
+    val s = sucSequent("(\\exists y y>5) <-> (\\exists y y>0)".asFormula)
     val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
@@ -221,7 +221,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "prove in a universally quantified context" in {
-    val s = sucSequent("(\\forall z. x>0) <-> (\\forall z. y>0)".asFormula)
+    val s = sucSequent("(\\forall z x>0) <-> (\\forall z y>0)".asFormula)
     val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -230,7 +230,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "prove in a universally quantified context even if quantified name occurs in predicate" in {
-    val s = sucSequent("(\\forall x. x>0) <-> (\\forall x. y>0)".asFormula)
+    val s = sucSequent("(\\forall x x>0) <-> (\\forall x y>0)".asFormula)
     val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
