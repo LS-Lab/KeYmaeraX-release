@@ -1,9 +1,11 @@
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.{SearchTacticsImpl, LogicalODESolver}
+import edu.cmu.cs.ls.keymaerax.tactics.{RootNode, SearchTacticsImpl, LogicalODESolver}
 import org.scalatest.{PrivateMethodTester, FlatSpec, Matchers}
 import testHelper.{ProvabilityTestHelper, StringConverter}
 import StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
+
+import scala.collection.immutable
 
 /**
  * @author Nathan Fulton
@@ -71,6 +73,18 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
     helper.runTactic(tactic, node)
     helper.report(node)
     node shouldBe 'closed
+  }
+
+  it should "work with ACAS X input" in {
+    val ante = "(w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0)".asFormula
+    val succ = "[{r'=-rv(),dhd'=ao(),h'=-dhd&w()*dhd>=w()*dhf()|w()*ao()>=a()}]((w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0))".asFormula
+    val s = Sequent(Nil, immutable.IndexedSeq(ante), immutable.IndexedSeq(succ))
+    val tactic = LogicalODESolver.solveT(SuccPos(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    // TODO expected succedent
+    result.openGoals().head.sequent.succ should contain only "true".asFormula
   }
 
 }

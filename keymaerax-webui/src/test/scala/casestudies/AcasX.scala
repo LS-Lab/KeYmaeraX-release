@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.PositionTactic
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{Propositional,NonBranchingPropositionalT,cohideT}
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, RootNode, SuccPosition, Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
@@ -97,7 +97,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           )),
         (cutUseLbl, debugT("Generalization Strong Enough") &
 //          /* remove when HACK ?rv()=rv etc. is removed from model */ ((ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT))*) &
-          debugT("Solving") & ls(diffIntroduceConstantT) & ls(diffSolution(None)) & ls(ImplyRightT) & (la(AndLeftT)*) & ls(AndRightT) && (
+          debugT("Introducing constants") & ls(diffIntroduceConstantT) & debugT("Solving") & /*ls(LogicalODESolver.solveT) &*/ ls(diffSolution(None)) & debugT("Diff. Solution") & ls(ImplyRightT) & (la(AndLeftT)*) & ls(AndRightT) && (
             ls(AndRightT) && (
               AxiomCloseT,
               debugT("Before skolemization") & (ls(skolemizeT)*) & debugT("After skolemization") & ls(ImplyRightT) & ls(OrRightT) &
