@@ -1,6 +1,6 @@
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.tactics.ProofNode.ProofStep
 import edu.cmu.cs.ls.keymaerax.core._
@@ -465,6 +465,20 @@ class ModelplexTacticTests extends TacticTestSuite {
     result.openGoals().flatMap(_.sequent.succ) should contain only expected
 
     report(expected, result, "RSS controller without intermediate Optimization 1")
+  }
+
+  it should "work using the command line interface" in {
+    val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.key"
+    val vars = "a,r"
+    val outputFileName = File.createTempFile("passivesafetyabs", ".mx").getAbsolutePath
+    ModelplexTacticImpl.main(Array("-in", inputFileName, "-vars", vars, "-out", outputFileName))
+
+    val expectedFileContent = ("dxo^2+dyo^2<=V()^2 & (apost()=-B & rpost()=rpre() | " +
+      "(v=0 & (apost()=0 & rpost()=rpre())" +
+      "| -B<=a&a<=A & (r!=0 & (w*r=v & ((Abs(x-xo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-yo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))) & (apost()=a&rpost()=r))))))").asFormula
+
+    val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
+    KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
   }
 
   "VSL modelplex in place" should "find correct controller monitor condition" in {

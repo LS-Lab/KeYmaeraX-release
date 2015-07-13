@@ -1,21 +1,23 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import java.io.PrintWriter
+
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal, TraverseToPosition}
 import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.localQuantifierElimination
-import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.eqLeft
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, Tactic, PositionTactic}
-import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
 import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.{diamondDiffSolveT, diamondDiffSolve2DT, diffIntroduceConstantT}
-import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{onBranch,lastAnte,locateAnte,locateSucc}
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{onBranch,locateAnte,locateSucc}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT,cutT,hideT}
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.{getFormula,isFormula,freshNamedSymbol}
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.{getFormula,isFormula}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{NilT,NilPT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
+import scala.collection.immutable
 import scala.language.postfixOps
 
 /**
@@ -23,6 +25,54 @@ import scala.language.postfixOps
  * @author Stefan Mitsch
  */
 object ModelplexTacticImpl {
+
+  def main (args: Array[String]) {
+    val usage = """Usage: ModelplexTactic -in filename -vars var1,var2,...,varn [-out filename]"""
+    if (args.length == 0) println(usage)
+    else {
+      type OptionMap = Map[Symbol, Any]
+
+      def makeVariables(varNames: Array[String]): Array[Variable] = {
+        varNames.map(vn => KeYmaeraXParser(vn) match {
+          case v: Variable => v
+          case v => throw new IllegalArgumentException("String " + v + " is not a valid variable name")
+        })
+      }
+
+      def nextOption(map: OptionMap, list: List[String]): OptionMap = {
+        list match {
+          case Nil => map
+          case "-in" :: value :: tail => nextOption(map ++ Map('in -> value), tail)
+          case "-out" :: value :: tail => nextOption(map ++ Map('out -> value), tail)
+          case "-vars" :: value :: tail => nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
+          case option :: tail => println("Unknown option " + option + "\n" + usage); sys.exit(1)
+        }
+      }
+
+      val options = nextOption(Map(), args.toList)
+
+      require(options.contains('in), usage)
+      require(options.contains('vars), usage)
+
+      val inputFileName = options.get('in).get.toString
+      val input = scala.io.Source.fromFile(inputFileName).mkString
+      val inputModel = KeYmaeraXProblemParser(input)
+
+      val mxInputFml = modelplexControllerMonitorTrafo(inputModel, options.get('vars).get.asInstanceOf[Array[Variable]]:_*)
+      val tactic = locateSucc(modelplexInPlace(useOptOne=true))
+      val rootNode = new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml)))
+      Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
+
+      assert(rootNode.openGoals().size == 1 && rootNode.openGoals().head.sequent.succ.size == 1,
+        "Modelplex failed to provide a single formula")
+      val outputFml = rootNode.openGoals().head.sequent.succ.head
+      val output = KeYmaeraXPrettyPrinter(outputFml)
+
+      val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".mx").toString)
+      pw.write(output)
+      pw.close()
+    }
+  }
 
   def modelplexControllerMonitorTrafo(fml: Formula, vars: Variable*): Formula = fml match {
     case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
