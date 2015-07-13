@@ -2,6 +2,8 @@ name := "KeYmaeraX"
 
 libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.10.4"
 
+libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.10.4"
+
 libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.2.4" % "test"
 
 libraryDependencies += "org.pegdown" % "pegdown" % "1.5.0" % "test"      // (For Html Scalatest reports)
