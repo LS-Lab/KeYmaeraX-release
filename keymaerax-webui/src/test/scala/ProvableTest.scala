@@ -1,3 +1,7 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import org.scalatest.{Matchers, FlatSpec}

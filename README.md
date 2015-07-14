@@ -61,6 +61,8 @@ To generate unified scaladoc for all subprojects, run:
 
     sbt unidoc
 
+Documentation will be generated for the whole project in the `target/scala-x.xx/unidoc` directory.
+For instance `target/scala-2.10/api`.
 
 IntelliJ IDEA
 =============
@@ -82,10 +84,19 @@ Create a new run configuration of type Application.
 Front End
 =========
 
-    sbt "~ re-start"
+The Web UI front end of KeYmaera X can be started as follows:
+
+    sbt assembly
+    java -jar /home/nfulton/dev/KeYmaeraX/target/scala-2.10/KeYmaeraX-assembly-0.1-SNAPSHOT.jar
     open http://localhost:8090/index_bootstrap.html
 
-The option re-start ensures that the server is automatically restarted whenever a source file changes.
+The first command builds a .JAR, and the second command runs the built .jar.
+
+For development purposes, the Web UI can be run from an IDE by selecting as the Main class:
+
+  keymaerax-webui/src/main/scala/edu/cmu/cs/ls/keymaerax/hydra/Boot.scala
+
+Note that using the launcher/Main class won't work in IntelliJ.
 
 Errors related to JLinkNative Library are caused by Java 1.8 in combination with Mathematica 9.
 Either run using Java 1.7, or update to Mathematica 10.
@@ -99,28 +110,29 @@ Source Code Layout
 
 build.sbt - SBT configuration file
 
-keymaerax-core/src/ - Source code directory
+The project is split into two subprojects, `keymaerax-core` for the core functionalities of the prover and `keymaerax-webui` for everything else.
 
-keymaerax-core/src/main/scala - source code (edu.cmu.cs.ls.keymaerax)
+    keymaerax-core/src/ - Source code directory
+    keymaerax-core/src/main/scala - source code (edu.cmu.cs.ls.keymaerax)
+    keymaerax-webui/src/ - Source code directory for Web UI etc.
+    keymaerax-webui/src/test/scala - tests run by `sbt test`
+    target/ - Generated files directory created by sbt on first compilation.
+    target/scala-2.10/classes/ - Target directory for sbt compilation.    
 
-Within the edu.cmu.cs.ls.keymaerax namespace, code is separated according to functionality:
+Within the `edu.cmu.cs.ls.keymaerax` namespace, source code is separated according to functionality:
 
     .core    - Soundness-critical core
     .parser  - Parsing and pretty printing
     .tactics - Tactic framework, including tactic implementations and the scheduler
     .tools   - Arithmetic back-ends
 
-keymaerax-webui/src/ - Source code directory for Web UI etc.
+The additional packages in the directory `keymaerax-webui/src/main/scala` are separated into:
 
-keymaerax-webui/src/test/scala - tests run by `sbt test`
-
-The wiki contains an introduction to the testing framework:
-https://github.com/LS-Lab/KeYmaera4/wiki/How-to-Add-Tests
-http://www.scalatest.org/user_guide
-
-target/ - Generated files directory created by sbt on first compilation.
-
-target/scala-2.10/classes/ - Target directory for sbt compilation.
+    .api     - Scala API for proof and tactics management etc.
+    .codegen - Code generation tools to generate C-Code etc.
+    .hydra   - HyDRA Hybrid Distributed Reasoning Architecture server with REST API and database
+    .launcher - KeYmaera X command line launcher with main program
+    .tacticsinterface - Interface to the actics exposed to the web UI and REST API. Tactic combinator parser.
 
 Test Cases
 ==========
@@ -150,6 +162,11 @@ To inline scala console output alongside the test suite information, first do:
 
     sbt>  set logBuffered in Test := false
 
+The Wiki contains an introduction to the testing framework:
+https://github.com/LS-Lab/KeYmaera4/wiki/How-to-Add-Tests
+http://www.scalatest.org/user_guide
+
+
 Optional Database Alternative: MongoDB
 =============================
 
@@ -167,76 +184,77 @@ Specification
 The goal of KeYmaera X is to implement the proof calculus of differential dynamic logic in a way that is amenable to soundness ensurance by way of a small trusted LCF-style core while still being amenable to automatic theorem proving.
 Differential dynamic logic and its Hilbert-type and sequent proof calculi have been described and specified in more detail in:
 
-André Platzer. 
+1. André Platzer. 
 A uniform substitution calculus for differential dynamic logic. 
 In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
 
-André Platzer. 
+2. André Platzer. 
 A uniform substitution calculus for differential dynamic logic. 
 arXiv 1503.01981.
 
-André Platzer.
+3. André Platzer.
 Logics of dynamical systems.
 ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012.
 
-André Platzer.
+4. André Platzer.
 Differential dynamic logic for hybrid systems.
 Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
 
-André Platzer.
+5. André Platzer.
 Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics.
 Springer, 2010. 426 p. ISBN 978-3-642-14508-7. 
 
-André Platzer.
+6. André Platzer.
 Differential dynamic logic for verifying parametric hybrid systems.
 In Nicola Olivetti, editor, Automated Reasoning with Analytic Tableaux and Related Methods, International Conference, TABLEAUX 2007, Aix en Provence, France, July 3-6, 2007, Proceedings, volume 4548 of LNCS, pages 216-232. Springer, 2007. 
 
 The prover is described in
 
-Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer. 
+7. Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer. 
 KeYmaera X: An axiomatic tactical theorem prover for hybrid systems. 
 In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. 
 
 The advanced proof techniques of differential invariants, differential cuts, and differential ghosts are described and specified in
 
-André Platzer.
+8. André Platzer.
 The structure of differential invariants and differential cut elimination.
 Logical Methods in Computer Science, 8(4), pages 1-38, 2012. 
 
 A secondary goal of KeYmaera X is to also make it possible to implement extensions of differential dynamic logic, such as quantified differential dynamic logic, which, along with its proof calculus, has been described and specified in
 
-André Platzer.
+9. André Platzer.
 A complete axiomatization of quantified differential dynamic logic for distributed hybrid systems.
 Logical Methods in Computer Science, 8(4), pages 1-44, 2012.
 Special issue for selected papers from CSL'10. 
 
-André Platzer.
+10. André Platzer.
 Dynamic logics of dynamical systems.
 May 2012.
 arXiv:1205.4788
 
-André Platzer. 
+11. André Platzer. 
 Differential game logic. 
 August 2014.
 arXiv:1408.1980
 
-Jan-David Quesel and André Platzer.
-Playing hybrid games with KeYmaera.
-In Bernhard Gramlich, Dale Miller, and Ulrike Sattler, editors, Automated Reasoning, Sixth International Joint Conference, IJCAR 2012, Manchester, UK, Proceedings, volume 7364 of LNCS, pages 439-453. Springer, June 2012
+Copyright and Licenses
+======================
 
-Licenses of External Tools
-==========================
+Copyright (c) 2014-2015 Carnegie Mellon University. See COPYRIGHT.txt for details.
 
-KeYmaera X distribution contains external tools. A list of tools and their licenses can be found at
+See LICENSE.txt for the conditions of this license.
 
-src/main/resources/license/tools_licenses
+The KeYmaera X distribution contains external tools. A list of tools and their licenses can be found in
+
+    keymaerax-webui/src/main/resources/license/tools_licenses
 
 Background & References
 =======================
 
 Background material and more material can be found at
 
+http://keymaeraX.org/
+
 http://symbolaris.com/pub/
 
 http://symbolaris.com/info/KeYmaera.html
-

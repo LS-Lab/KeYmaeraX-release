@@ -1,3 +1,7 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 import com.wolfram.jlink.Expr
 import testHelper.ProvabilityTestHelper
 import org.scalatest._

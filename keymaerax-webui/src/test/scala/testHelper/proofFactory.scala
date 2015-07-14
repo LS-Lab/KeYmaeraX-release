@@ -1,3 +1,7 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 package testHelper
 
 import edu.cmu.cs.ls.keymaerax.core.{UnknownOperatorException, Sequent}

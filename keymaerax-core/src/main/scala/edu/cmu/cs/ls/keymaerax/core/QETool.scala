@@ -1,4 +1,8 @@
 /**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
+/**
  * @note Code Review: 2015-05-01
  */
 package edu.cmu.cs.ls.keymaerax.core

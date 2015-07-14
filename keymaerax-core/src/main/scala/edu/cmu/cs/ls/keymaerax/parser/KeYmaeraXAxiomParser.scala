@@ -1,3 +1,7 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
@@ -8,6 +12,8 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
  * @author nfulton
  */
 object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
+  private val DEBUG = false
+
   /**
    * @todo sort checking.
    * @param input The contents of the axiom file.
@@ -15,7 +21,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
    */
   def apply(input: String) : List[(String, Formula)] = {
     val tokens = KeYmaeraXLexer.inMode(input, AxiomFileMode())
-    println("Tokens are: " + tokens)
+    if (DEBUG) println("Tokens are: " + tokens)
     try {
       val (decls, axiomTokens) = KeYmaeraXDeclarationsParser(tokens)
       println(decls)

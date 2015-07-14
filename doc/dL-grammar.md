@@ -30,7 +30,7 @@ with `->` right-associative, i.e. p()->q()->r() is p()->(q()->r()) and no preced
 
     P ::= a; | x:=T; | x':=T; | ?F; | {D&F} | {P}* | P P | P++P | {P}
 
-with `++` and the invisible `;` in P P right-associative, i.e. x:=1;x:=2;x:=3 is x:=1;{x:=2;x:=3}
+with `++` and the invisible `;` in P P right-associative, i.e. x:=1;x:=2;x:=3; is x:=1;{x:=2;x:=3;}
 
 This grammar is to be contrasted with the abstract dL grammar in theory:
 

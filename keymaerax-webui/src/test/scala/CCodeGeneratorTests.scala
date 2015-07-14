@@ -1,8 +1,12 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 import java.io.File
 
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.codegeneration.CGenerator
+import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
 
 /**
  * Created by ran on 6/22/15.

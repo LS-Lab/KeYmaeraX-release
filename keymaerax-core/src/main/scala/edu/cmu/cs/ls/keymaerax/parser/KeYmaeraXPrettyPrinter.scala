@@ -1,4 +1,8 @@
 /**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
+/**
  * Differential Dynamic Logic pretty printer in concrete KeYmaera X notation.
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
@@ -47,7 +51,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
 
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr) ensuring(
-    r => !checkPrettyPrinter || reparse(expr, r) == expr,
+    r => !checkPrettyPrinter || expr.kind==FunctionKind || reparse(expr, r) == expr,
     "Parse of print is identity." +
       "\nExpression: " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName +
       "\nPrinted:    " + stringify(expr) +
@@ -153,7 +157,8 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
-    case ode: DifferentialProgram => ppODE(ode)
+    //@note unambiguously reparse as ODE not as equation that happens to involve a differential symbol
+    case ode: DifferentialProgram => "{" + ppODE(ode) + "}"
   }
 
   private def ppODE(program: DifferentialProgram): String = program match {

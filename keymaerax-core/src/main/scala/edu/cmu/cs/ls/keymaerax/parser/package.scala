@@ -1,9 +1,12 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 package edu.cmu.cs.ls.keymaerax
 
 /**
- * KeYmaera X: An Axiomatic Tactical Theorem Prover
- * ================================================
- * KeYmaera X Parser: Parser & Pretty-Printer for Differential Dynamic Logic.
+ * Parser & Pretty-Printer for Differential Dynamic Logic
+ * ======================================================
  *
  * Defines the concrete syntax of differential dynamic logic as used in KeYmaera X.
  * Provides a parser to read string and file inputs with differential dynamic logic.

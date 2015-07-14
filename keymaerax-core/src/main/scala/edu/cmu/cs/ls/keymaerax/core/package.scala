@@ -1,13 +1,25 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 package edu.cmu.cs.ls.keymaerax
 
 /**
- * KeYmaera X: An Axiomatic Tactical Theorem Prover
- * ================================================
- * KeYmaera X Kernel: Soundness-critical core of the KeYmaera X theorem prover.
- * 
- * Defines the syntax, static semantics, uniform substitutions, axioms, and proof rules of
- * differential dynamic logic.
- * Provides lemma data base, real arithmetic interfaces, error reporting, and set lattice management.
+ * KeYmaera X Kernel:
+ * Soundness-critical core of the Axiomatic Tactical Theorem Prover KeYmaera X
+ * ==============================================================================================
+ *
+ * Defines the [[edu.cmu.cs.ls.keymaerax.core.Expression syntax]],
+ * [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics static semantics]],
+ * [[edu.cmu.cs.ls.keymaerax.core.USubst uniform substitutions]],
+ * [[edu.cmu.cs.ls.keymaerax.core.Axiom axioms]], and
+ * [[edu.cmu.cs.ls.keymaerax.core.Rule proof rules]] for constructing
+ * [[edu.cmu.cs.ls.keymaerax.core.Provable proof certificates]] of
+ * [[http://symbolaris.com/logic/dL.html differential dynamic logic]].
+ * Provides basic [[edu.cmu.cs.ls.keymaerax.core.LemmaDB lemma data base]],
+ * [[edu.cmu.cs.ls.keymaerax.core.QETool real arithmetic interfaces]],
+ * [[edu.cmu.cs.ls.keymaerax.core.CoreException error reporting]], and
+ * [[edu.cmu.cs.ls.keymaerax.core.SetLattice set lattice management]].
  * 
  * ==Usage Overview==
  * The KeYmaera X Kernel package provides the soundness-critical core of KeYmaera X.

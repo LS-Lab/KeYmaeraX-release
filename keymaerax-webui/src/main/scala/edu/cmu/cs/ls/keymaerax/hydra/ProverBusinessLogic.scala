@@ -1,3 +1,7 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 //package edu.cmu.cs.ls.keymaera.hydra
 //import com.mongodb.casbah.Imports._
 //import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface

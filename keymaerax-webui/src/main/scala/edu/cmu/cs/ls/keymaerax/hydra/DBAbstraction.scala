@@ -1,3 +1,7 @@
+/**
+* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* See LICENSE.txt for the conditions of this license.
+*/
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.nio.channels.Channels
@@ -14,9 +18,13 @@ import spray.json.DefaultJsonProtocol._
 object DBAbstractionObj {
   def defaultDatabase = SQLite //this needs to be a def and not a val because DBAbstractionObj is initialized in SQLite.
   val dblocation: String = {
+    new File(
+      System.getProperty("user.home") + File.separator +
+        ".keymaerax"
+    ).mkdirs()
+    
     val file = new File(System.getProperty("user.home") + File.separator +
       ".keymaerax" + File.separator + "keymaerax.sqlite")
-    file.mkdirs
     file.getCanonicalPath
   }
   println(dblocation)
