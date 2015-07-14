@@ -148,7 +148,7 @@ object KeYmaeraX {
         """.stripMargin
       val lemmaContent =
         s"""Lemma "${inputFileName.substring(inputFileName.lastIndexOf('/')+1)}".
-          | ($input) <-> true
+          | (${KeYmaeraXPrettyPrinter(inputModel)}) <-> true
           |End.
         """.stripMargin
 
