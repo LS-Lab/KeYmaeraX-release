@@ -1,5 +1,6 @@
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.tactics.ProofNode.ProofStep
@@ -468,14 +469,18 @@ class ModelplexTacticTests extends TacticTestSuite {
   }
 
   it should "work using the command line interface" in {
+    // command line main has to initialize the prover itself, so dispose all test setup first
+    afterEach()
+
     val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.key"
     val vars = "a,r"
     val outputFileName = File.createTempFile("passivesafetyabs", ".mx").getAbsolutePath
-    ModelplexTacticImpl.main(Array("-in", inputFileName, "-vars", vars, "-out", outputFileName))
+    KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-out", outputFileName))
 
-    val expectedFileContent = ("dxo^2+dyo^2<=V()^2 & (apost()=-B & rpost()=rpre() | " +
+    val expectedFileContent = And("v>=0 & (Abs(x-xo)>v^2/(2*B)+V()*(v/B)|Abs(y-yo)>v^2/(2*B)+V()*(v/B)) & r!=0 & dx^2+dy^2=1 & A>=0 & B>0 & V()>=0 & ep>0".asFormula,
+      ("dxo^2+dyo^2<=V()^2 & (apost()=-B & rpost()=rpre() | " +
       "(v=0 & (apost()=0 & rpost()=rpre())" +
-      "| -B<=a&a<=A & (r!=0 & (w*r=v & ((Abs(x-xo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-yo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))) & (apost()=a&rpost()=r))))))").asFormula
+      "| -B<=a&a<=A & (r!=0 & (w*r=v & ((Abs(x-xo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-yo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))) & (apost()=a&rpost()=r))))))").asFormula)
 
     val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
     KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent

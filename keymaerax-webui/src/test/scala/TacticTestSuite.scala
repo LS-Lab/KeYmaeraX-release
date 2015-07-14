@@ -29,10 +29,14 @@ trait TacticTestSuite extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   override def afterEach() = {
-    Tactics.KeYmaeraScheduler.shutdown()
-    Tactics.MathematicaScheduler.shutdown()
-    Tactics.KeYmaeraScheduler = null
-    Tactics.MathematicaScheduler = null
+    if (Tactics.KeYmaeraScheduler != null) {
+      Tactics.KeYmaeraScheduler.shutdown()
+      Tactics.KeYmaeraScheduler = null
+    }
+    if (Tactics.MathematicaScheduler != null) {
+      Tactics.MathematicaScheduler.shutdown()
+      Tactics.MathematicaScheduler = null
+    }
   }
   
   protected def formulaAtExpr(node : ProofNode, position : Position) : Option[Formula] = {

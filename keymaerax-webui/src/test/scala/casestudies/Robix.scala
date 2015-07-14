@@ -1,6 +1,9 @@
 package casestudies
 
+import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.core.{Real, Nothing, Function, FuncOf, Unit, Variable}
+import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.eqLeft
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.skolemizeT
@@ -278,5 +281,33 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafety.key"))
     val result = helper.runTactic(tactic, new RootNode(s))
     result shouldBe 'closed
+  }
+
+  it should "be provable with KeYmaeraX command line interface" in {
+    // command line main has to initialize the prover itself, so dispose all test setup first
+    afterEach()
+
+    val outputFileName = File.createTempFile("passivesafety", ".proof").getAbsolutePath
+
+    KeYmaeraX.main(Array(
+      "-prove", "keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafety.key",
+      "-tactic", "keymaerax-webui/src/test/resources/examples/casestudies/robix/PassiveSafetyTacticGenerator.scala",
+      "-out", outputFileName))
+
+
+    val expectedProofFileContent =
+      s"""
+        |Lemma "passivesafety.proof".
+        |  (${scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafety.key").mkString}) <-> true
+        |End.
+        |Tool.
+        |  input "${scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafety.key").mkString}"
+        |  tactic "${scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/PassiveSafetyTacticGenerator.scala").mkString}"
+        |  proof ""
+        |End.
+      """.stripMargin
+
+    val proofFileContent = scala.io.Source.fromFile(outputFileName).mkString
+    proofFileContent shouldBe expectedProofFileContent
   }
 }

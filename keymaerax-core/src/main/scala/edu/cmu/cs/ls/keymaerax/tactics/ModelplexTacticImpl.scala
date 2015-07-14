@@ -26,54 +26,6 @@ import scala.language.postfixOps
  */
 object ModelplexTacticImpl {
 
-  def main (args: Array[String]) {
-    val usage = """Usage: ModelplexTactic -in filename -vars var1,var2,...,varn [-out filename]"""
-    if (args.length == 0) println(usage)
-    else {
-      type OptionMap = Map[Symbol, Any]
-
-      def makeVariables(varNames: Array[String]): Array[Variable] = {
-        varNames.map(vn => KeYmaeraXParser(vn) match {
-          case v: Variable => v
-          case v => throw new IllegalArgumentException("String " + v + " is not a valid variable name")
-        })
-      }
-
-      def nextOption(map: OptionMap, list: List[String]): OptionMap = {
-        list match {
-          case Nil => map
-          case "-in" :: value :: tail => nextOption(map ++ Map('in -> value), tail)
-          case "-out" :: value :: tail => nextOption(map ++ Map('out -> value), tail)
-          case "-vars" :: value :: tail => nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
-          case option :: tail => println("Unknown option " + option + "\n" + usage); sys.exit(1)
-        }
-      }
-
-      val options = nextOption(Map(), args.toList)
-
-      require(options.contains('in), usage)
-      require(options.contains('vars), usage)
-
-      val inputFileName = options.get('in).get.toString
-      val input = scala.io.Source.fromFile(inputFileName).mkString
-      val inputModel = KeYmaeraXProblemParser(input)
-
-      val mxInputFml = modelplexControllerMonitorTrafo(inputModel, options.get('vars).get.asInstanceOf[Array[Variable]]:_*)
-      val tactic = locateSucc(modelplexInPlace(useOptOne=true))
-      val rootNode = new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml)))
-      Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
-
-      assert(rootNode.openGoals().size == 1 && rootNode.openGoals().head.sequent.succ.size == 1,
-        "Modelplex failed to provide a single formula")
-      val outputFml = rootNode.openGoals().head.sequent.succ.head
-      val output = KeYmaeraXPrettyPrinter(outputFml)
-
-      val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".mx").toString)
-      pw.write(output)
-      pw.close()
-    }
-  }
-
   def modelplexControllerMonitorTrafo(fml: Formula, vars: Variable*): Formula = fml match {
     case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
       val preassignments = vars.map(v => Assign(v, FuncOf(Function(v.name + "pre", v.index, Unit, Real), Nothing))).reduce(Compose)
