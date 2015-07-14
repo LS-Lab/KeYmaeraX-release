@@ -26,10 +26,10 @@ object KeYmaeraX {
     """Usage: KeYmaeraX [-mathkernel MathKernel(.exe) -jlink path/to/jlinkNativeLib]
       |  -prove filename -tactic filename [-out filename] |
       |  -modelplex filename [-vars var1,var2,...,varn] [-out filename] |
-      |  -codegen filename [-format spiral|c] [-out filename]""".stripMargin
+      |  -codegen filename [-format Spiral|C] [-out filename]""".stripMargin
 
   def main (args: Array[String]) {
-    if (args.length == 0) println(usage)
+    if (args.length == 0 || args==Array("-help") || args==Array("--help") || args==Array("-h")) println(usage)
     else {
       def makeVariables(varNames: Array[String]): Array[Variable] = {
         varNames.map(vn => KeYmaeraXParser(vn) match {
