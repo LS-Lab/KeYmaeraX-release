@@ -289,7 +289,7 @@ object Provable {
  *  // proof of finGoal
  *  println(proof.proved)
  * }}}
- * @example Proofs in Hilbert are use subsequent merging
+ * @example Proofs in Hilbert-calculus style order use subsequent merging
  * {{{
  *  import scala.collection.immutable._
  *  val fm = Greater(Variable("x"), Number(5))
