@@ -41,7 +41,7 @@ class PassiveSafetyTacticGenerator extends (() => Tactic) {
 
   val odePos = SuccPosition(0)
 
-  def plantT(a: FuncOf, xo: Variable, yo: Variable) = ls(boxSeqT) & ls(boxAssignT) & ls(
+  def plantT(a: FuncOf, xo: Variable, yo: Variable) = ls(boxAssignT) & ls(
     diffIntroduceConstantT) &
     // differential cuts
     ls(diffCutT("t_2>=0".
@@ -295,6 +295,7 @@ class PassiveSafetyTacticGenerator extends (() => Tactic) {
     (indStepLbl, debugT("Induction step") & la(hideT,
       "(x-xo>=0->x-xo>v^2/(2*B)+V()*(v/B))&(x-xo<=0->xo-x>v^2/(2*B)+V()*(v/B))|(y-yo>=0->y-yo>v^2/(2*B)+V()*(v/B))&(y-yo<=0->yo-y>v^2/(2*B)+V()*(v/B))")
       & ls(ImplyRightT) & (la(AndLeftT)*) &
+      ls(boxSeqT) &
       // obstacle control
       debugT("Obstacle control") & ls(boxSeqT) & ((ls(boxNDetAssign) & ls(skolemizeT) & ls(boxSeqT))*) & ls(boxTestT) & ls(ImplyRightT) &
       // robot control
@@ -310,7 +311,7 @@ class PassiveSafetyTacticGenerator extends (() => Tactic) {
           "yo", Some(0))) & brakeFinishT,
       ls(
         boxChoiceT) & ls(AndRightT) && ( // stay stopped
-        debugT("B2") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & (ls(boxAssignT)*) & plantT(FuncOf(Function("a", Some(1), Unit,
+        debugT("B2") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & (ls(boxAssignT)*2) & plantT(FuncOf(Function("a", Some(1), Unit,
           Real), Nothing), Variable("xo", Some(0)), Variable("yo", Some(0))) &
           hideAndEqT(Variable("xo", Some(0)
           )

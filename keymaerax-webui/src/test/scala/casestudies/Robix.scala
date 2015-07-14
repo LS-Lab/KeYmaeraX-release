@@ -4,6 +4,7 @@ import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.core.{Real, Nothing, Function, FuncOf, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.eqLeft
@@ -77,7 +78,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val odePos = SuccPosition(0)
 
-    def plantT(a: FuncOf, xo: Variable, yo: Variable) = ls(boxSeqT) & ls(boxAssignT) & ls(diffIntroduceConstantT) &
+    def plantT(a: FuncOf, xo: Variable, yo: Variable) = ls(boxAssignT) & ls(diffIntroduceConstantT) &
       // differential cuts
       ls(diffCutT("t_2>=0".asFormula)) & onBranch(
       (cutShowLbl, debugT("Show t_2>=0") &
@@ -241,6 +242,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
       (indInitLbl, debugT("Base case") & (ls(AndRightT)*) & (ls(OrRightT)*) & la(OrLeftT) & (AxiomCloseT | debugT("Robix axiom close failed unexpectedly") & Tactics.stopT)),
       (indUseCaseLbl, debugT("Use case") & la(hideT, "(x-xo>=0->x-xo>v^2/(2*B)+V()*(v/B))&(x-xo<=0->xo-x>v^2/(2*B)+V()*(v/B))|(y-yo>=0->y-yo>v^2/(2*B)+V()*(v/B))&(y-yo<=0->yo-y>v^2/(2*B)+V()*(v/B))") & ls(ImplyRightT) & (la(AndLeftT)*) & ls(ImplyRightT) & (AxiomCloseT | QE | debugT("Failed unexpectedly"))),
       (indStepLbl, debugT("Induction step") & la(hideT, "(x-xo>=0->x-xo>v^2/(2*B)+V()*(v/B))&(x-xo<=0->xo-x>v^2/(2*B)+V()*(v/B))|(y-yo>=0->y-yo>v^2/(2*B)+V()*(v/B))&(y-yo<=0->yo-y>v^2/(2*B)+V()*(v/B))") & ls(ImplyRightT) & (la(AndLeftT)*) &
+        ls(boxSeqT) &
         // obstacle control
         debugT("Obstacle control") & ls(boxSeqT) & ((ls(boxNDetAssign) & ls(skolemizeT) & ls(boxSeqT))*) & ls(boxTestT) & ls(ImplyRightT) &
         // robot control
@@ -250,7 +252,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
             hideAndEqT(Variable("xo", Some(0)), Variable("yo", Some(0))) & brakeFinishT,
           ls(boxChoiceT) & ls(AndRightT) && (
             // stay stopped
-            debugT("B2") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & (ls(boxAssignT)*) & plantT(FuncOf(Function("a", Some(1), Unit, Real), Nothing), Variable("xo", Some(0)), Variable("yo", Some(0))) &
+            debugT("B2") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & (ls(boxAssignT)*2) & plantT(FuncOf(Function("a", Some(1), Unit, Real), Nothing), Variable("xo", Some(0)), Variable("yo", Some(0))) &
               hideAndEqT(Variable("xo", Some(0)), Variable("yo", Some(0))) & stoppedFinishT,
             // accelerate/new curve
             debugT("B3") &
@@ -294,11 +296,13 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
       "-tactic", "keymaerax-webui/src/test/resources/examples/casestudies/robix/PassiveSafetyTacticGenerator.scala",
       "-out", outputFileName))
 
+    val inputModel = KeYmaeraXProblemParser(scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafety.key").mkString)
+
 
     val expectedProofFileContent =
       s"""
         |Lemma "passivesafety.proof".
-        |  (${scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafety.key").mkString}) <-> true
+        |  (${KeYmaeraXPrettyPrinter(inputModel)}) <-> true
         |End.
         |Tool.
         |  input "${scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafety.key").mkString}"
@@ -309,34 +313,5 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val proofFileContent = scala.io.Source.fromFile(outputFileName).mkString
     proofFileContent shouldBe expectedProofFileContent
-  }
-
-  "Passive orientation safety" should "be provable" in {
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafety.key"))
-
-    val QE = /*Tactics.NilT*/ TacticLibrary.arithmeticT
-
-    val invariant =
-      """
-        |   v >= 0
-        | & dx^2+dy^2 = 1
-        |	& r != 0
-        |	& (v = 0 |
-        |		 ( ( (x-xo >= 0 -> x-xo > v^2 / (2*B) + V()*(v/B))
-        |      & (x-xo <= 0 -> xo-x > v^2 / (2*B) + V()*(v/B)))
-        |    | ( (y-yo >= 0 -> y-yo > v^2 / (2*B) + V()*(v/B))
-        |      & (y-yo <= 0 -> yo-y > v^2 / (2*B) + V()*(v/B)))) |
-        |		 (isVisible < 0 & Abs(talpha) + v^2/(2*b*Abs(r)) < alpha))
-      """.stripMargin.asFormula
-
-    val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(inductionT(Some(invariant))) & onBranch(
-      (indInitLbl, debugT("Base case")),
-      (indUseCaseLbl, debugT("Use case")),
-      (indStepLbl, debugT("Induction step"))
-    )
-
-    val result = helper.runTactic(tactic, new RootNode(s))
-    Console.println("Open Goals: " + result.openGoals().length)
-    result shouldBe 'closed
   }
 }

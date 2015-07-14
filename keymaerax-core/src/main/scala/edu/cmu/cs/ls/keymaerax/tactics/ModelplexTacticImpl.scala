@@ -30,7 +30,8 @@ object ModelplexTacticImpl {
     case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
       val preassignments = vars.map(v => Assign(v, FuncOf(Function(v.name + "pre", v.index, Unit, Real), Nothing))).reduce(Compose)
       val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, Real), Nothing), v)).reduce(And)
-      Imply(assumptions, Diamond(preassignments, Diamond(controller, posteqs)))
+//      Imply(assumptions, Diamond(preassignments, Diamond(controller, posteqs)))
+      Imply(assumptions, Diamond(controller, posteqs))
     case _ => throw new IllegalArgumentException("Unsupported program form")
   }
 
