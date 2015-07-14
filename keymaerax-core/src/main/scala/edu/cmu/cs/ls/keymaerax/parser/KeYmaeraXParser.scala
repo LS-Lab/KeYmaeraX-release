@@ -377,8 +377,8 @@ object KeYmaeraXParser extends Parser {
 //        if (la==EOF || la==RPAREN || la==RBRACE || formulaBinOp(la)) && e1.kind!=FormulaKind =>
 //        reduce(st, 1, elaborate(st, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(p1) :+ tok3)
 
-      // special case to force elaboration to DifferentialProgramConst
-      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(e1:Variable) if la==AMP || la==COMMA =>
+      // special case to force elaboration to DifferentialProgramConst {c} and {c,...} and {c&...}
+      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(e1:Variable) if la==AMP || la==COMMA || la==RBRACE =>
         assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "IDENT stack for predicationals has already been handled")
         reduce(st, 1, elaborate(st, OpSpec.sNone, DifferentialProgramKind, e1), r :+ tok1)
 
