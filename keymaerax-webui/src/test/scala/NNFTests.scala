@@ -1,7 +1,7 @@
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, SearchTacticsImpl, SuccPosition, TacticLibrary, NNFRewrite}
 import edu.cmu.cs.ls.keymaerax.tactics.NNFRewrite._
-import testHelper.StringConverter._
 
 /**
  * Created by nfulton on 2/11/15.

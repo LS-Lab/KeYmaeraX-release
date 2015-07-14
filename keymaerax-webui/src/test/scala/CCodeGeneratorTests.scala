@@ -1,7 +1,7 @@
 import java.io.File
 
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
-import testHelper.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.codegeneration.CGenerator
 
 /**

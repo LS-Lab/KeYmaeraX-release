@@ -1,8 +1,7 @@
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{RootNode, SearchTacticsImpl, LogicalODESolver}
 import org.scalatest.{PrivateMethodTester, FlatSpec, Matchers}
-import testHelper.{ProvabilityTestHelper, StringConverter}
-import StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 
 import scala.collection.immutable

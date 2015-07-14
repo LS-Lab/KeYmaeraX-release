@@ -3,6 +3,7 @@ package casestudies
 import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.locateAnte
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.locateSucc
@@ -15,7 +16,6 @@ import testHelper.ParserFactory._
 import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.{diffIntroduceConstantT, diffSolution}
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.wipeContextInductionT
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
-import testHelper.StringConverter._
 import BranchLabels._
 
 import scala.language.postfixOps

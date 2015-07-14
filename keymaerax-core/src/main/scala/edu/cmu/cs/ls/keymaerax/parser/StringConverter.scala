@@ -1,7 +1,6 @@
-package testHelper
+package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraParser}
 
 /**
  * Implicit conversions from strings into core data structures.

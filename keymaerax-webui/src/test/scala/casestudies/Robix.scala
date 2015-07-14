@@ -4,6 +4,7 @@ import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.core.{Real, Nothing, Function, FuncOf, Unit, Variable}
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.eqLeft
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.skolemizeT
@@ -20,7 +21,6 @@ import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Z3}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
 import testHelper.ProvabilityTestHelper
-import testHelper.StringConverter._
 
 import scala.collection.immutable.Map
 import scala.language.postfixOps
@@ -309,5 +309,34 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val proofFileContent = scala.io.Source.fromFile(outputFileName).mkString
     proofFileContent shouldBe expectedProofFileContent
+  }
+
+  "Passive orientation safety" should "be provable" in {
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafety.key"))
+
+    val QE = /*Tactics.NilT*/ TacticLibrary.arithmeticT
+
+    val invariant =
+      """
+        |   v >= 0
+        | & dx^2+dy^2 = 1
+        |	& r != 0
+        |	& (v = 0 |
+        |		 ( ( (x-xo >= 0 -> x-xo > v^2 / (2*B) + V()*(v/B))
+        |      & (x-xo <= 0 -> xo-x > v^2 / (2*B) + V()*(v/B)))
+        |    | ( (y-yo >= 0 -> y-yo > v^2 / (2*B) + V()*(v/B))
+        |      & (y-yo <= 0 -> yo-y > v^2 / (2*B) + V()*(v/B)))) |
+        |		 (isVisible < 0 & Abs(talpha) + v^2/(2*b*Abs(r)) < alpha))
+      """.stripMargin.asFormula
+
+    val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(inductionT(Some(invariant))) & onBranch(
+      (indInitLbl, debugT("Base case")),
+      (indUseCaseLbl, debugT("Use case")),
+      (indStepLbl, debugT("Induction step"))
+    )
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    Console.println("Open Goals: " + result.openGoals().length)
+    result shouldBe 'closed
   }
 }

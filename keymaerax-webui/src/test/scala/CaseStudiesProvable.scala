@@ -1,4 +1,5 @@
 import edu.cmu.cs.ls.keymaerax.core.{AntePos, Expression, Sequent}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.{Z3, Mathematica, KeYmaera}
@@ -7,7 +8,6 @@ import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpe
 import scala.collection.immutable
 import scala.collection.immutable.Map
 import testHelper.ParserFactory._
-import testHelper.StringConverter._
 import TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.onBranch

@@ -1,9 +1,8 @@
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.SubstitutionHelper
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
-import testHelper.StringConverter
 import scala.collection.immutable.{List, Set, Seq}
-import StringConverter._
 
 import scala.util.Random
 

@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT, hideT, inductionT}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, LabelBranch, PositionTactic}
 import edu.cmu.cs.ls.keymaerax.tactics._
-import testHelper.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.language.postfixOps
 

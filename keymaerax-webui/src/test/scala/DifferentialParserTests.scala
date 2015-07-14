@@ -1,7 +1,7 @@
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{LoadedAxiom, KeYmaeraParser}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.ProvabilityTestHelper
-import testHelper.StringConverter._
 import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
 
 /**

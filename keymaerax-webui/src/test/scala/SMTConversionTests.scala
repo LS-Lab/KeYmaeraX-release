@@ -1,7 +1,7 @@
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
-import testHelper.StringConverter._
 
 /**
  * Created by ran on 3/23/15.

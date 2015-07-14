@@ -1,9 +1,9 @@
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.SequentFactory._
-import testHelper.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{locateAnte,locateSucc}
 import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl._
 

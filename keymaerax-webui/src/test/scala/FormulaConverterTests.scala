@@ -1,8 +1,8 @@
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Context
 import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 import org.scalatest.{Matchers, FlatSpec}
-import testHelper.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 
 /**

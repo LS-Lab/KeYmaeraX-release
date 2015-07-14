@@ -1,8 +1,8 @@
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import scala.collection.immutable._
-import testHelper.StringConverter._
 
 class ParserParenTests extends FlatSpec with Matchers {
   // type declaration header for tests

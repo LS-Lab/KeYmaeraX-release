@@ -2,10 +2,10 @@ import com.wolfram.jlink.Expr
 import testHelper.ProvabilityTestHelper
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
 import scala.collection.immutable._
-import testHelper.StringConverter._
 
 class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 

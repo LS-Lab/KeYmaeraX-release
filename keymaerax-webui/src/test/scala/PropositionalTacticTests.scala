@@ -1,3 +1,4 @@
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cohide2T, ConsolidateSequentT, hideT, ImplyToAndT,
@@ -7,7 +8,6 @@ import testHelper.ProvabilityTestHelper
 import org.scalatest.{FlatSpec, Matchers, BeforeAndAfterEach}
 import testHelper.ProofFactory._
 import testHelper.SequentFactory._
-import testHelper.StringConverter._
 
 import scala.collection.immutable.Map
 

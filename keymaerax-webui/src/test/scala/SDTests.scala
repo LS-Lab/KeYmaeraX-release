@@ -1,6 +1,6 @@
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, RootNode, SuccPosition, SearchTacticsImpl}
 import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext._
-import testHelper.StringConverter._
 import testHelper.SequentFactory._
 
 import scala.language.postfixOps

@@ -1,10 +1,10 @@
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.ODETactics._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.{RootNode, HybridProgramTacticsImpl, ODETactics}
 import testHelper.ProofFactory._
 import testHelper.SequentFactory._
-import testHelper.StringConverter._
 
 /**
  * Created by nfulton on 2/22/15.

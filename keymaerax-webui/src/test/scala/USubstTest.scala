@@ -1,8 +1,7 @@
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest._
-import testHelper.StringConverter
 import scala.collection.immutable.List
-import StringConverter._
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq

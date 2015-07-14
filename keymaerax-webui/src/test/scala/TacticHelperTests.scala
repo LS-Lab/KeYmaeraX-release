@@ -1,7 +1,7 @@
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, SuccPosition}
 import org.scalatest.{Matchers, FlatSpec}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper._
-import testHelper.StringConverter._
 import testHelper.SequentFactory.sequent
 
 /**

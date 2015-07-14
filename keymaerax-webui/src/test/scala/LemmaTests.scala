@@ -1,8 +1,8 @@
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{RootNode, TacticLibrary}
 import edu.cmu.cs.ls.keymaerax.tools.{Tool, Mathematica}
 import testHelper.ProvabilityTestHelper
-import testHelper.StringConverter._
 
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 

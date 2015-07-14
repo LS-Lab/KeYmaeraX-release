@@ -1,8 +1,8 @@
 import edu.cmu.cs.ls.keymaerax.core.Sequent
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics.{RootNode, Interpreter, Config}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.{CLInterpreter, CLParser}
-import testHelper.StringConverter._
 
 /**
  * Created by nfulton on 2/26/15.

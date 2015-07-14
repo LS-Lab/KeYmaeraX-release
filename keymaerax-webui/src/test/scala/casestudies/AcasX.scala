@@ -3,6 +3,7 @@ package casestudies
 import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.ODETactics._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT,skolemizeT}
@@ -18,7 +19,6 @@ import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 import testHelper.ParserFactory._
-import testHelper.StringConverter._
 
 import scala.collection.immutable.Map
 

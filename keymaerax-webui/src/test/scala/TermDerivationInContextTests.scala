@@ -1,5 +1,5 @@
 import edu.cmu.cs.ls.keymaerax.tactics._
-import testHelper.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 
 /**

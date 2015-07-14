@@ -1,7 +1,7 @@
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.JLinkMathematicaLink
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
-import testHelper.StringConverter._
 
 /**
  * Tests the JLink Mathematica implementation.
