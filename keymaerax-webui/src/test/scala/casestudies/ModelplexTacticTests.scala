@@ -486,6 +486,22 @@ class ModelplexTacticTests extends TacticTestSuite {
     KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
   }
 
+  "RSS passive orientation safety modelplex in place" should "extract the correct controller monitor" in {
+    val in = getClass.getResourceAsStream("examples/casestudies/robix/passiveorientationsafety.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("a"), Variable("r"))
+
+    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
+    val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
+
+    val expectedAnte = "v>=0&V()>=0&((x-ox>=0->x-ox>v^2/(2*b)+V()*(v/b))&(x-ox<=0->ox-x>v^2/(2*b)+V()*(v/b))|(y-oy>=0->y-oy>v^2/(2*b)+V()*(v/b))&(y-oy<=0->oy-y>v^2/(2*b)+V()*(v/b)))&(r < 0->v^2/(2*b*-r) < alpha())&(r>=0->v^2/(2*b*r) < alpha())&talpha=0&r!=0&dx^2+dy^2=1&A>=0&b>0&ep>0&alpha()>0".asFormula
+    val expectedSucc = "odx^2+ody^2<=V()^2&(w*r=v&(apost()=-b&rpost()=r)|(v=0&(w*r=v&(apost()=0&rpost()=r))|(-b<=a&a<=A&(r!=0&(v+a*ep < 0&((isVisble>=0->(x-ox>=0->x-ox>v^2/(-2*a)+v/-a*V())&(x-ox<=0->ox-x>v^2/(-2*a)+v/-a*V())|(y-oy>=0->y-oy>v^2/(-2*a)+v/-a*V())&(y-oy<=0->oy-y>v^2/(-2*a)+v/-a*V()))&((r>=0->v^2/(-2*a) < alpha()*r)&(r < 0->v^2/(-2*a) < -alpha()*r)&(w*r=v&(apost()=a&rpost()=r))))))|v+a*ep>=0&((isVisible>=0->(x-ox>=0->x-ox>v^2/(2*b)+V()*v/b+(a/b+1)*(a/2*ep^2+ep*(v+V())))&(x-ox<=0->ox-x>v^2/(2*b)+V()*v/b+(a/b+1)*(a/2*ep^2+ep*(v+V())))|(y-oy>=0->y-oy>v^2/(2*b)+V()*v/b+(a/b+1)*(a/2*ep^2+ep*(v+V())))&(y-oy<=0->oy-y>v^2/(2*b)+V()*v/b+(a/b+1)*(a/2*ep^2+ep*(v+V()))))&((r>=0->v^2/(2*b)+(a/b+1)*(a/2*ep^2+ep*v) < alpha()*r)&(r < 0->v^2/(2*b)+(a/b+1)*(a/2*ep^2+ep*v) < -alpha()*r)&(w*r=v&(apost()=a&rpost()=r)))))))".asFormula
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only expectedAnte
+    result.openGoals().head.sequent.succ should contain only expectedSucc
+  }
+
   "VSL modelplex in place" should "find correct controller monitor condition" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/iccps12/vsl-ctrl.key"))
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
