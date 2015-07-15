@@ -167,6 +167,16 @@ object ANYTHING extends OPERATOR(Anything.prettyString()) {
 }
 object PSEUDO  extends Terminal("<pseudo>")
 
+
+// @annotations
+
+object INVARIANT extends Terminal("@invariant") {
+  override def regexp = """\@invariant""".r
+}
+
+
+// axiom and problem file
+
 object AXIOM_BEGIN extends Terminal("Axiom") {
   override def regexp = """Axiom""".r
 }
@@ -224,17 +234,25 @@ object TOOL_OUTPUT extends Terminal("output") {
  * @note Serializable to make sure sbt test allows Location in ParseException errors.
  */
 sealed abstract class Location extends Serializable {
+  /** Beginning of this location */
+  def begin: Location
+  /** End of this location */
+  def end: Location
   /** The range from this region to the other region, inclusive. Starting here and ending at other. */
   //@todo review choices
   def --(other: Location): Location
 }
 object UnknownLocation extends Location {
   override def toString = "<somewhere>"
+  def begin = this
+  def end = this
   def --(other: Location): Location = this
 }
 case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location {
   require(line <= endLine || (line == endLine && column <= endColumn),
     "A region cannot start after it ends.")
+  def begin = Region(line, column, line, column)
+  def end = Region(endLine, endColumn, endLine, endColumn)
   def --(other: Location): Location = other match {
     case os: Region => Region(line, column, os.endLine, os.endColumn)
     case _: SuffixRegion => this
@@ -248,6 +266,8 @@ case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends 
  * @param column The ending line.
  */
 case class SuffixRegion(line: Int, column: Int) extends Location {
+  def begin = Region(line, column, line, column)
+  def end = UnknownLocation
   def --(other: Location) = this
   override def toString = line + ":" + column + " to " + EOF
 }
@@ -499,7 +519,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case PLACE.startPattern(_*) => consumeTerminalLength(PLACE, loc)
       case PSEUDO.startPattern(_*) => consumeTerminalLength(PSEUDO, loc)
 
-      //@TODO Incorrect code. Should split identifier into name and index properly
+      case INVARIANT.startPattern(_*) => consumeTerminalLength(INVARIANT, loc)
+
       case IDENT.startPattern(name) => {
         val (s, idx) = splitName(name)
         consumeTerminalLength(IDENT(s, idx), loc)
@@ -513,7 +534,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
 
       case _ if s.isEmpty => None
-      case _ => throw new Exception("Lexer did not understand input at " + loc + " in `\n" + s +"\n` First character was `" + s(0) + "`")
+      case _ => throw new Exception(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s +"\n` beginning with character `" + s(0) + "`")
     }
   }
 
