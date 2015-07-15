@@ -228,7 +228,8 @@ object LogicalODESolver {
    */
   private def extractInitialConditions(f : Formula) : List[Formula] = flattenAnds(f match {
     case And(l, r) => extractInitialConditions(l) ++ extractInitialConditions(r)
-    case Equal(v:Variable, _) => f :: Nil
+    case Equal(v: Variable, _) => f :: Nil
+    case Equal(_, v: Variable) => f :: Nil
     case _ => Nil //ignore?
   })
 
@@ -403,17 +404,29 @@ object LogicalODESolver {
    * @param fs A list of formulas.
    * @return A map (f -> term) which maps each f in fs of the foram f=term to term.
    */
-  private def conditionsToValues(fs : List[Formula]) : Map[Variable, Term] = flattenAnds(fs)
-    .map(f => f match {
-    case Equal(left, right) => left match {
-      case v : Variable => Some(v, right)
+  private def conditionsToValues(fs : List[Formula]) : Map[Variable, Term] = {
+    val flattened = flattenAnds(fs)
+    val vOnLhs = flattened.map({
+      case Equal(left, right) => left match {
+        case v : Variable => Some(v, right)
+        case _ => None
+      }
       case _ => None
-    }
-    case _ => None
-  })
-    .filter(_.isDefined)
-    .map(e => (e.get._1 -> e.get._2))
-    .toMap
+    })
+
+    val vOnRhs = flattened.map({
+      case Equal(left, right) => right match {
+        case v : Variable => Some(v, left)
+        case _ => None
+      }
+      case _ => None
+    })
+
+    (vOnLhs ++ vOnRhs)
+      .filter(_.isDefined)
+      .map(e => e.get._1 -> e.get._2)
+      .toMap
+  }
 
   /**
    * @param program (An system of) odes.
