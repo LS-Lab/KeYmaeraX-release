@@ -328,6 +328,7 @@ object LogicalODESolver {
       }
       Times(Divide(c, newExp), Power(t, newExp))
     }
+    case Neg(c) => Neg(integrator(c, t))
     case Power(base, exp) => exp match {
       case Number(n) =>
         if(n == 1) integrator(base, t)
