@@ -239,7 +239,9 @@ object KeYmaeraXParser extends Parser {
   /** Report an @invariant @annotation to interested parties */
   private def reportAnnotation(p: Program, invariant: Formula): Unit = annotationListener(p,invariant)
 
-
+  /** Whether p is compatible with @annotation */
+  private def isAnnotable(p: Program): Boolean =
+    p.isInstanceOf[Loop] || p.isInstanceOf[DifferentialProgram]
 
 
   // parsing
@@ -249,13 +251,13 @@ object KeYmaeraXParser extends Parser {
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
       // nonproductive: special notation for annotations
-      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1: Formula) :+ Token(RPAREN,_) =>
+      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1: Formula) :+ Token(RPAREN,_) if isAnnotable(p) =>
         reportAnnotation(p, f1)
         reduce(st, 4, Bottom, r :+ Expr(p))
-      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1: Formula) =>
+      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1: Formula) if isAnnotable(p) =>
         if (la==RPAREN) shift(st) else error(st)
       case r :+ Expr(p:Program) :+ Token(INVARIANT,_) =>
-        if (la==LPAREN) shift(st) else error(st)
+        if (la==LPAREN && isAnnotable(p)) shift(st) else error(st)
 
 
       // special quantifier notation
@@ -856,6 +858,8 @@ object KeYmaeraXParser extends Parser {
       case sCompose.op => sCompose
       case sChoice.op => sChoice
 
+
+      case INVARIANT => sNone
       //case
       case sEOF.op => sEOF
     }

@@ -927,6 +927,26 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
       Imply(Greater(x,Number(0)), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),Number(1)),AtomicODE(DifferentialSymbol(y),Number(5))), Less(x,Number(2))), Greater(x,Number(0))))
   }
 
+  it should "refuse to parse meaningless annotation x>0 -> [x:=5;@invariant(x>0)]x>0" in {
+    a [ParseException] should be thrownBy parser("x>0 -> [x:=5;@invariant(x>0)]x>0")
+  }
+
+  it should "refuse to parse meaningless annotation x>0 -> [x:=5;x:=2;@invariant(x>0)]x>0" in {
+    a [ParseException] should be thrownBy parser("x>0 -> [x:=5;x:=2;@invariant(x>0)]x>0")
+  }
+
+  it should "refuse to parse meaningless annotation x>0 -> [{x:=5;x:=2;}@invariant(x>0)]x>0" in {
+    a [ParseException] should be thrownBy parser("x>0 -> [{x:=5;x:=2;}@invariant(x>0)]x>0")
+  }
+
+  it should "refuse to parse meaningless annotation x>0 -> [{x:=5;++x:=2;}@invariant(x>0)]x>0" in {
+    a [ParseException] should be thrownBy parser("x>0 -> [{x:=5;++x:=2;}@invariant(x>0)]x>0")
+  }
+
+  it should "refuse to parse meaningless annotation x>0 -> [?x>0;@invariant(x>0)]x>0" in {
+    a [ParseException] should be thrownBy parser("x>0 -> [?x>0;@invariant(x>0)]x>0")
+  }
+
   /////////////////////////////////////
 
 
