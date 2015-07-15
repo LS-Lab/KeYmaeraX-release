@@ -78,12 +78,12 @@ object LogicalODESolver {
   def solveT : PositionTactic = new PositionTactic("Solve ODE") {
     override def applies(s: Sequent, p: Position): Boolean = true //@todo
 
-    override def apply(p: Position): Tactic = LogicalODESolver.setupTimeVarT(p) ~ (
-        (stepTacticT(p) *) &
-        cutTimeLB(p) &
-        ODETactics.diffWeakenT(p) &
-        arithmeticT
-      )
+    override def apply(p: Position): Tactic =
+      LogicalODESolver.setupTimeVarT(p) ~
+      (stepTacticT(p) *) &
+      cutTimeLB(p) &
+      ODETactics.diffWeakenT(p) &
+      arithmeticT
   }
 
   private def cutTimeLB : PositionTactic = new PositionTactic("DiffCut and prove a lower-bound on time.") {
@@ -121,6 +121,7 @@ object LogicalODESolver {
   }
 
   private def setupTimeVarT : PositionTactic = new PositionTactic("Introduce time into ODE") {
+
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case Box(dp : DifferentialProgram, f) => timeVar(dp).isEmpty
       case _ => false
@@ -134,6 +135,7 @@ object LogicalODESolver {
           // HACK need some convention for internal names
           val initialTime: Variable = freshNamedSymbol(Variable("kxtime", None, Real), node.sequent)
           // universal quantifier and skolemization in ghost tactic (t:=0) will increment index twice
+          // @todo tactics Language motivation holy crap that sort of thing is a super nasty side-effect we should have refinements for.
           val time = Variable(initialTime.name,
             initialTime.index match { case None => Some(1) case Some(a) => Some(a+2) }, initialTime.sort)
 
@@ -141,20 +143,46 @@ object LogicalODESolver {
 
           val setTimer = HybridProgramTacticsImpl.nonAbbrvDiscreteGhostT(Some(initialTime), Number(0))(p) & boxAssignT(p)
 
-          val introTime = setTimer &
-            ODETactics.diffAuxiliaryT(time, Number(0), Number(1))(p) & PropositionalTacticsImpl.AndRightT(p) && (
-              PropositionalTacticsImpl.EquivRightT(p) & onBranch(
-                (equivLeftLbl, vacuousExistentialQuanT(None)(p) & AxiomCloseT(lastAntePos, p)),
-                (equivRightLbl, skolemizeT(lastAntePos) & AxiomCloseT(lastAntePos, p))
-              ),
-              NilT //yield
-            ) & debugT("yield from setupTimeVar")
+          val tempTime = Variable(time.name, time.index match {
+            case None => Some(1)
+            case Some(a) => Some(a + 1)
+          })
+          val introTime =
+            setTimer &
+            ODETactics.diffAuxiliaryT(time, Number(0), Number(1))(p) &
+            debugT("Need exists monotone") &
+            hasTimeAssertionT(p) //Check post-cond holds.
 
           Some(introTime)
         }
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      /**
+       * Post-condition of setupTimeVarT
+       * A test that passes if and only if there is a time variable in the ODE.
+       */
+      private val hasTimeAssertionT = assertPT( (s,p) => {
+        val fAtPos : Formula = s(p)
+        fAtPos match {
+          case Box(differentialProgram : DifferentialProgram, cond) => {
+            val tv = timeVar(differentialProgram)
+            if(tv.isDefined) {
+              println("Found a time variable: " + tv.get.prettyString())
+              true
+            }
+            else {
+              println("Did not find time variable.")
+              false
+            }
+          }
+          case _ => {
+            println("Variable did not have correct form: " + fAtPos.prettyString());
+            false
+          }
+        }
+      }, "Expected to find [differnetialProgram]phi, where differentialProgram has a time variable.")
     }
   }
 

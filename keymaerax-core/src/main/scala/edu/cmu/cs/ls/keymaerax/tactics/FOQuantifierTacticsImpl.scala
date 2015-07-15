@@ -432,7 +432,7 @@ object FOQuantifierTacticsImpl {
           val desired = createDesired(node.sequent)
           val cutFrm = Imply(desired, node.sequent(p))
           Some(cutT(Some(cutFrm)) & onBranch(
-            (cutUseLbl, lastAnte(assertPT(cutFrm)) & lastAnte(ImplyLeftT) && (hideT(p.topLevel), AxiomCloseT)),
+            (cutUseLbl, lastAnte(assertPT(cutFrm)) & lastAnte(ImplyLeftT) && (hideT(p.topLevel), AxiomCloseT ~ errorT("Failed to close!"))),
             (cutShowLbl, lastSucc(assertPT(cutFrm)) & lastSucc(cohideT) & assertT(0, 1) & assertPT(cutFrm)(SuccPosition(0)) &
               ImplyRightT(SuccPosition(0)) & assertT(1, 1) &
               generalize(replace(phi)(quantified, t)))
@@ -564,10 +564,10 @@ object FOQuantifierTacticsImpl {
                              quantFactory: (Seq[Variable], Formula) => Quantified): PositionTactic = {
 
     def axiomInstance(fml: Formula): Formula = x match {
-      case Some(v) if !allNames(fml).contains(v) => Equiv(fml, quantFactory(v :: Nil, fml))
+      case Some(v) if !StaticSemantics.symbols(fml).contains(v) => Equiv(fml, quantFactory(v :: Nil, fml))
       case _ => fml match {
-        case q: Quantified if q.vars.size == 1 && allNames(q.child.asInstanceOf[Formula]).intersect(q.vars.toSet).isEmpty =>
-          Equiv(q.child.asInstanceOf[Formula], fml)
+        case q: Quantified if q.vars.size == 1 && StaticSemantics.symbols(q.child).intersect(q.vars.toSet).isEmpty =>
+          Equiv(q.child, fml)
         case _ => False
       }
     }
