@@ -907,6 +907,10 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     a [ParseException] should be thrownBy parser("x() -> [x:=x(x);]x()>x(x,x())")
   }
 
+  "Annotation parser" should "parse x>0 -> [{x:=x+1;}*@invariant(x>0)]x>0" in {
+    parser("x>0 -> [{x:=x+1;}*@invariant(x>0)]x>0") shouldBe
+      Imply(Greater(x,Number(0)), Box(Loop(Assign(x,Plus(x,Number(1)))), Greater(x,Number(0))))
+  }
 
   /////////////////////////////////////
 
