@@ -912,6 +912,21 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
       Imply(Greater(x,Number(0)), Box(Loop(Assign(x,Plus(x,Number(1)))), Greater(x,Number(0))))
   }
 
+  it should "parse x>0 -> [{x'=1}@invariant(x>0)]x>0" in {
+    parser("x>0 -> [{x'=1}@invariant(x>0)]x>0") shouldBe
+      Imply(Greater(x,Number(0)), Box(ODESystem(AtomicODE(DifferentialSymbol(x),Number(1)), True), Greater(x,Number(0))))
+  }
+
+  it should "parse x>0 -> [{x'=1&x<2}@invariant(x>0)]x>0" in {
+    parser("x>0 -> [{x'=1&x<2}@invariant(x>0)]x>0") shouldBe
+      Imply(Greater(x,Number(0)), Box(ODESystem(AtomicODE(DifferentialSymbol(x),Number(1)), Less(x,Number(2))), Greater(x,Number(0))))
+  }
+
+  it should "parse x>0 -> [{x'=1,y'=5&x<2}@invariant(x>0)]x>0" in {
+    parser("x>0 -> [{x'=1,y'=5&x<2}@invariant(x>0)]x>0") shouldBe
+      Imply(Greater(x,Number(0)), Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x),Number(1)),AtomicODE(DifferentialSymbol(y),Number(5))), Less(x,Number(2))), Greater(x,Number(0))))
+  }
+
   /////////////////////////////////////
 
 

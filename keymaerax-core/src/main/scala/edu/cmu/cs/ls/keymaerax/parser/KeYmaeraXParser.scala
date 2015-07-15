@@ -669,7 +669,8 @@ object KeYmaeraXParser extends Parser {
     (if (statementSemicolon) firstProgram(la) || /*Not sure:*/ la==SEMI else la==SEMI)  ||
     la==RBOX || la==RDIA ||  // from P in programs
     la==COMMA || la==AMP ||  // from D in differential programs
-    la==EOF
+    la==EOF ||
+    la==INVARIANT            // extra: additional @annotations
 
   /** Follow(kind(expr)): Can la follow an expression of the kind of expr? */
   private def followsExpression(expr: Expression, la: Terminal): Boolean = expr match {
