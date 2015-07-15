@@ -722,6 +722,22 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser("[{x'=5,y'=2&x>7|y<8}]p(x)") shouldBe (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Or(Greater(Variable("x"),Number(7)),Less(y,Number(8)))), PredOf(p, Variable("x"))))
   }
 
+  it should "parse differential program constants [{c}]p(x)" in {
+    parser("[{c}]p(x)") shouldBe (Box(ODESystem(DifferentialProgramConst("c"), True), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse differential program constants [{c&x>7|y<8}]p(x)" in {
+    parser("[{c&x>7|y<8}]p(x)") shouldBe (Box(ODESystem(DifferentialProgramConst("c"), Or(Greater(Variable("x"),Number(7)),Less(y,Number(8)))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse differential program constants [{c,y'=2&x>7|y<8}]p(x)" in {
+    parser("[{c,y'=2&x>7|y<8}]p(x)") shouldBe (Box(ODESystem(DifferentialProduct(DifferentialProgramConst("c"), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Or(Greater(Variable("x"),Number(7)),Less(y,Number(8)))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse differential program constants [{y'=2,c&x>7|y<8}]p(x)" in {
+    parser("[{y'=2,c&x>7|y<8}]p(x)") shouldBe (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("y")), Number(2)), DifferentialProgramConst("c")), Or(Greater(Variable("x"),Number(7)),Less(y,Number(8)))), PredOf(p, Variable("x"))))
+  }
+
   it should "parse !x<5" in {
     parser("!x<5") shouldBe Not(Less(x,Number(5)))
   }
