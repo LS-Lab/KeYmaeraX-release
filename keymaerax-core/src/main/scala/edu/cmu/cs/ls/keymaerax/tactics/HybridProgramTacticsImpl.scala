@@ -471,7 +471,7 @@ object HybridProgramTacticsImpl {
    */
   def nonAbbrvDiscreteGhostT(ghost: Option[Variable], t: Term): PositionTactic = {
     def ghostV(f: Formula): Variable = ghost match {
-      case Some(gv) => require(gv == t || (!allNames(f).contains(gv))); gv
+      case Some(gv) => require(gv == t || (!StaticSemantics.symbols(f).contains(gv))); gv
       case None => t match {
         case v: Variable => TacticHelper.freshNamedSymbol(v, f)
         case _ => throw new IllegalArgumentException("Only variables allowed when ghost name should be auto-provided")
