@@ -843,6 +843,10 @@ object ODETactics {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Differential Auxiliary Section.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /**
+   * Tactic Input: [c & H(?)]p()
+   * Tactic Output: \exists y . [c, y' = t()*y + s() & H(?);]p().
+   */
   def diffAuxiliaryT(x: Variable, t: Term, s: Term): PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       case Box(ode@ODESystem(c, h), p) if !StaticSemantics(ode).bv.contains(x) &&
