@@ -100,7 +100,11 @@ testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/te
 
 //mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.hydra.Boot")
 
-mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.Main")
+// web UI
+//mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.Main")
+
+// command line UI
+mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX")
 
 
 test in assembly := {}
