@@ -11,6 +11,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core.Anything
 
+import scala.annotation.tailrec
 import scala.collection.immutable._
 import scala.util.matching.Regex
 
@@ -282,6 +283,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
 
+  private val DEBUG = false
+
   /**
    * The lexer has multiple modes for the different sorts of files that are supported by KeYmaeraX.
    * The lexer will disallow non-expression symbols from occuring when the lexer is in expression mode.
@@ -291,6 +294,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
    * @return A stream of symbols corresponding to input.
    */
   def inMode(input: String, mode: LexerMode) = {
+    if (DEBUG) println("LEX: " + input)
     val output = lex(input, SuffixRegion(1,1), mode)
     require(output.last.tok.equals(EOF), "Expected EOF but found " + output.last.tok)
     output
@@ -306,13 +310,16 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
    * @param mode The mode of the lexer.
    * @return A token stream.
    */
+  //@tailrec
   private def lex(input: String, inputLocation:Location, mode: LexerMode): TokenStream =
     if(input.trim.length == 0) {
       List(Token(EOF))
     }
     else {
       findNextToken(input, inputLocation, mode) match {
-        case Some((nextInput, token, nextLoc)) => token +: lex(nextInput, nextLoc, mode)
+        case Some((nextInput, token, nextLoc)) =>
+          //if (DEBUG) print(token)
+          token +: lex(nextInput, nextLoc, mode)
         case None => List(Token(EOF)) //note: This case can happen if the input is e.g. only a comment or only whitespace.
       }
     }
