@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.PrintWriter
 
+import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ClassGenerator
 import edu.cmu.cs.ls.keymaerax.core.{And, Formula, Sequent, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
@@ -9,6 +10,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, TacticWrapper, Tactics, Roo
 import edu.cmu.cs.ls.keymaerax.tactics.ModelplexTacticImpl.{modelplexControllerMonitorTrafo, modelplexInPlace}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, SpiralHeaderGenerator, SpiralMonitorGenerator}
+
 
 import scala.collection.immutable
 import scala.reflect.runtime._
@@ -62,7 +65,7 @@ object KeYmaeraX {
       options.get('mode) match {
         case Some("prove") => prove(options)
         case Some("modelplex") => modelplex(options)
-        case Some("codegen") =>
+        case Some("codegen") => codegen(options)
       }
 
       shutdownProver()
@@ -158,5 +161,29 @@ object KeYmaeraX {
     } else {
       // TODO what to to when proof cannot be checked?
     }
+  }
+
+  def codegen(options: OptionMap) = {
+    require(options.contains('in), usage)
+    require(options.contains('format), usage)
+
+    val inputFileName = options.get('in).get.toString
+    val input = scala.io.Source.fromFile(inputFileName).mkString
+    val inputFormula = KeYmaeraXParser(input)
+    var output = ""
+
+    if(options.get('format).get.toString == "C") {
+      val cGen = new CGenerator()
+      output = cGen.apply(inputFormula)
+      val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".c").toString)
+      pw.write(output)
+      pw.close()
+    } else if(options.get('format).get.toString == "Spiral") {
+      val sGen = new SpiralMonitorGenerator
+      output = sGen.apply(inputFormula)
+      val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
+      pw.write(output)
+      pw.close()
+    } else throw new IllegalArgumentException("-format should be specified and only be C or Spiral")
   }
 }

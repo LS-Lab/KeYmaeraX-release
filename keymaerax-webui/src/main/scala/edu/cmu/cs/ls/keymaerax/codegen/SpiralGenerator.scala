@@ -26,7 +26,7 @@ class SpiralMonitorGenerator extends CodeGenerator {
     gFile
   }
 
-  private def generateSpiralMonitor(kExpr: Expression) : String = {
+  private def generateSpiralMonitor(kExpr: Expression, vars: Variable*) : String = {
     info + libs + varDec + monDec + compileToSpiral(kExpr)
   }
 
@@ -48,18 +48,18 @@ class SpiralMonitorGenerator extends CodeGenerator {
     "t := \n"
 
   private def compileToSpiral(e: Expression) = e match {
-    case t : Term => compilePolynimialTerm(t)
+    case t : Term => compilePolynomialTerm(t)
     case f : Formula => compileFormula(f)
     case _ => ???
   }
 
-  def compilePolynimialTerm(t: Term) : String = {
-    var coeffs: Array[Expression] = polynomialCoefficients(t)
-    if(coeffs.length == 0 || coeffs == null) {
-      compileTerm(t)
-    } else //      def infoConst = "# constants\n" + vectorName + " := var(\"" + vectorName+ "\", TPtr(T_Real(64)));\n"
-      compilePolynomial(coeffs)
-
+  def compilePolynomialTerm(t: Term) : String = {
+    compileTerm(t)
+//    var coeffs: Array[Expression] = polynomialCoefficients(t)
+//    if(coeffs.length == 0 || coeffs == null) {
+//      compileTerm(t)
+//    } else //      def infoConst = "# constants\n" + vectorName + " := var(\"" + vectorName+ "\", TPtr(T_Real(64)));\n"
+//      compilePolynomial(coeffs)
   }
 
   def compileTerm(t: Term) : String = {
@@ -100,14 +100,14 @@ class SpiralMonitorGenerator extends CodeGenerator {
       case Equiv(l, r) => "logic_equiv(" + compileFormula(l) + ", " + compileFormula(r) + ")"
 
       // sub terms are arithmetic terms
-      case Equal(l, r) => "TEqual(" + compilePolynimialTerm(l) + ", " + compilePolynimialTerm(r) + ")"
-      case NotEqual(l, r) => "TNotEqual(" + compilePolynimialTerm(l) + ", " + compilePolynimialTerm(r) + ")"
-      case Greater(l,r) => "TLess(" + compilePolynimialTerm(r) + ", " + compilePolynimialTerm(l) + ")"
-      case GreaterEqual(l,r) => "TLessEqual(" + compilePolynimialTerm(r) + ", " + compilePolynimialTerm(l) + ")"
-      case Less(l,r) => "TLess(" + compilePolynimialTerm(l) + ", " + compilePolynimialTerm(r) + ")"
-      case LessEqual(l,r) => "TLessEqual(" + compilePolynimialTerm(l) + ", " + compilePolynimialTerm(r) + ")"
-      //      case True => "1"
-      //      case False => "0"
+      case Equal(l, r) => "TEqual(" + compilePolynomialTerm(l) + ", " + compilePolynomialTerm(r) + ")"
+      case NotEqual(l, r) => "TNotEqual(" + compilePolynomialTerm(l) + ", " + compilePolynomialTerm(r) + ")"
+      case Greater(l,r) => "TLess(" + compilePolynomialTerm(r) + ", " + compilePolynomialTerm(l) + ")"
+      case GreaterEqual(l,r) => "TLessEqual(" + compilePolynomialTerm(r) + ", " + compilePolynomialTerm(l) + ")"
+      case Less(l,r) => "TLess(" + compilePolynomialTerm(l) + ", " + compilePolynomialTerm(r) + ")"
+      case LessEqual(l,r) => "TLessEqual(" + compilePolynomialTerm(l) + ", " + compilePolynomialTerm(r) + ")"
+      case True => "true"
+      case False => "false"
       case Box(_, _) | Diamond(_, _) => throw new CodeGenerationException("Conversion of Box or Diamond modality is not allowed")
       case _ => throw new CodeGenerationException("Conversion of formula " + f.prettyString() + " is not defined")
     }
