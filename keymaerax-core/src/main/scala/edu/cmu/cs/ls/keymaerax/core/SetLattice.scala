@@ -23,8 +23,7 @@ import scala.collection.GenTraversableOnce
  * @author aplatzer
  */
 sealed trait SetLattice[A] {
-  //@todo isInfinite might be a better name? If needed at all.
-  def isTop: Boolean
+  def isInfinite: Boolean
   def isEmpty: Boolean
 
   // element operations
@@ -56,36 +55,36 @@ sealed trait SetLattice[A] {
   def subsetOf(other: SetLattice[A]): Boolean = this match {
     case FiniteLattice(ts) => other match {
       case FiniteLattice(os) => ts.subsetOf(os)
-      case os: TopSet[A] => ts.intersect(os.excluded).isEmpty /* this is a subset of that top if that doesn't exclude any of this */
+      case os: CoSet[A] => ts.intersect(os.excluded).isEmpty /* this is a subset of that top if that doesn't exclude any of this */
     }
-    case ts: TopSet[A] => other match {
+    case ts: CoSet[A] => other match {
       case FiniteLattice(_) => false           /* top not a subset of anything else */
-      case os: TopSet[A] => os.excluded.subsetOf(ts.excluded) /* this top is a subset of that top if that excluded at most this's excluded */
+      case os: CoSet[A] => os.excluded.subsetOf(ts.excluded) /* this top is a subset of that top if that excluded at most this's excluded */
 
     }
   }
   /** Set union */
   def ++(other: SetLattice[A]): SetLattice[A] = other match {
     case FiniteLattice(os) => this ++ os
-    case os: TopSet[A] => this match {
+    case os: CoSet[A] => this match {
       case FiniteLattice(ts) => os ++ ts   // commute ++ for type reasons
-      case ts: TopSet[A] => new TopSet(ts.excluded.intersect(os.excluded), ts.symbols ++ os.symbols)
+      case ts: CoSet[A] => new CoSet(ts.excluded.intersect(os.excluded), ts.symbols ++ os.symbols)
     }
   }
   def --(other: SetLattice[A]): SetLattice[A] = other match {
     case FiniteLattice(os) => this -- os
-    case os: TopSet[A] => this match {
+    case os: CoSet[A] => this match {
       case FiniteLattice(ts) => FiniteLattice(ts.intersect(os.excluded)) /* ts -- (top except os) == ts/\os */
-      case ts: TopSet[A] => new TopSet(os.excluded -- ts.excluded, ts.symbols -- os.symbols)
+      case ts: CoSet[A] => new CoSet(os.excluded -- ts.excluded, ts.symbols -- os.symbols)
     }
   }
 
   def intersect(other: SetLattice[A]): SetLattice[A] = other match {
     case FiniteLattice(os) => intersect(os)
-    case os: TopSet[A] => this match {
-        //@todo could do symmetric call as well: os.intersect(ts)
+    case os: CoSet[A] => this match {
+        //@note could do symmetric call as well: os.intersect(ts)
       case FiniteLattice(ts) => FiniteLattice(ts -- os.excluded) /* ts /\ (top except os) == ts--os */
-      case ts: TopSet[A] => new TopSet(ts.excluded ++ os.excluded, ts.symbols.intersect(os.symbols)) /* (top except ts) /\ (top except os) == (top except ts++os) */
+      case ts: CoSet[A] => new CoSet(ts.excluded ++ os.excluded, ts.symbols.intersect(os.symbols)) /* (top except ts) /\ (top except os) == (top except ts++os) */
 
     }
   }
@@ -97,9 +96,9 @@ object SetLattice {
   def apply[A](s: immutable.Set[A]): SetLattice[A] = new FiniteLattice(s)
   def apply[A](s: immutable.Seq[A]): SetLattice[A] = new FiniteLattice(s.toSet)
   def bottom[A]: SetLattice[A] = new FiniteLattice(Set.empty[A])
-  def top[A](topSymbols: A*): SetLattice[A] = new TopSet(Set.empty, topSymbols.toSet)
+  def top[A](topSymbols: A*): SetLattice[A] = new CoSet(Set.empty, topSymbols.toSet)
   //@todo careful: this is an overapproximation of V\cup V'
-  def topVarsDiffVars[A >: NamedSymbol](topSymbols: A*): SetLattice[A] = new TopSet(Set(DotTerm, DotFormula), topSymbols.toSet)
+  def topVarsDiffVars[A >: NamedSymbol](topSymbols: A*): SetLattice[A] = new CoSet(Set(DotTerm, DotFormula), topSymbols.toSet)
 
   /**
    * Symbols and differential symbols of set lattice sl.
@@ -107,13 +106,13 @@ object SetLattice {
    * @return sl ++ sl' where sl' is the lattice containing the primes of the variables in sl.
    */
   def extendToDifferentialSymbols(sl : SetLattice[NamedSymbol]) : SetLattice[NamedSymbol] = sl match {
-    case TopSet(excluded, symbols) if excluded == topVarsDiffVars().asInstanceOf[TopSet[NamedSymbol]].excluded =>
+    case CoSet(excluded, symbols) if excluded == topVarsDiffVars().asInstanceOf[CoSet[NamedSymbol]].excluded =>
       // V\cup V' already closed under adding '.
-      //@todo Its overapproximation topVarsDiffVars is also closed since DotTerm, DotFormula are not variables
-      TopSet(excluded, extendToDifferentialSymbols(symbols))
+      //@note Its overapproximation topVarsDiffVars is also closed since DotTerm, DotFormula are not variables
+      CoSet(excluded, extendToDifferentialSymbols(symbols))
     case FiniteLattice(set) => SetLattice(extendToDifferentialSymbols(set))
-    case sl:TopSet[NamedSymbol] =>
-      assert(false, "Extension to differentialSymbols are not yet implemented if sl isTop " + sl); ???
+    case sl:CoSet[NamedSymbol] =>
+      assert(false, "Extension to differentialSymbols are not yet implemented if sl isInfinite " + sl); ???
   }
 
   /**
@@ -134,7 +133,7 @@ object SetLattice {
  */
 private case class FiniteLattice[A](set: immutable.Set[A])
   extends SetLattice[A] {
-  def isTop = false
+  def isInfinite = false
   def isEmpty: Boolean = set.isEmpty
 
   def contains(elem: A): Boolean = set.contains(elem)
@@ -156,43 +155,43 @@ private case class FiniteLattice[A](set: immutable.Set[A])
 }
 
 /**
- * Represents top in a lattice of sets (i.e., includes all elements, except explicitly excluded ones). Additionally,
+ * Represents a co-set i.e. an infinite set that is the complement of a finite set.
+ * It includes all elements, except explicitly excluded ones. Additionally,
  * keeps track of which symbols specifically are named to be included (i.e., a program constant c, which in terms of
  * fv/bv variables represents all possible symbols and thus is top, is tracked as c in symbols).
  * @param excluded The elements not included in top.
  * @param symbols The specific symbols contained verbatim in the set, even if all except excluded are present.
  * @tparam A The type of elements.
  * @author smitsch
- * @todo CoSet may be a better name because it's a complement of a set.
  */
-private case class TopSet[A](excluded: immutable.Set[A], symbols: immutable.Set[A])
+private case class CoSet[A](excluded: immutable.Set[A], symbols: immutable.Set[A])
   extends SetLattice[A] {
-  def isTop = true
+  def isInfinite = true
   def isEmpty = false
   /* top contains everything that's not excluded */
   def contains(e: A): Boolean = !excluded.contains(e)
 
   /* top excludes one element less now */
-  def +(e: A): TopSet[A] = new TopSet(excluded - e, symbols + e)
-  def ++(other: immutable.Set[A]): TopSet[A] = new TopSet(excluded -- other, symbols ++ other)
-  def ++(other: GenTraversableOnce[A]): TopSet[A] = new TopSet(excluded -- other, symbols ++ other)
+  def +(e: A): CoSet[A] = new CoSet(excluded - e, symbols + e)
+  def ++(other: immutable.Set[A]): CoSet[A] = new CoSet(excluded -- other, symbols ++ other)
+  def ++(other: GenTraversableOnce[A]): CoSet[A] = new CoSet(excluded -- other, symbols ++ other)
   /* union: (top except ts) ++ (top except os) == (top except ts/\os) */
-  //def ++(other: TopSet[A]): TopSet[A] = new TopSet(excluded.intersect(other.excluded), symbols ++ other.symbols)
+  //def ++(other: CoSet[A]): CoSet[A] = new CoSet(excluded.intersect(other.excluded), symbols ++ other.symbols)
   /* top now excludes one more element */
-  def -(e: A): TopSet[A] = new TopSet(excluded + e, symbols - e)
-  def --(other: immutable.Set[A]): TopSet[A] = new TopSet(excluded ++ other, symbols -- other)
-  def --(other: GenTraversableOnce[A]): TopSet[A] = new TopSet(excluded ++ other, symbols -- other)
+  def -(e: A): CoSet[A] = new CoSet(excluded + e, symbols - e)
+  def --(other: immutable.Set[A]): CoSet[A] = new CoSet(excluded ++ other, symbols -- other)
+  def --(other: GenTraversableOnce[A]): CoSet[A] = new CoSet(excluded ++ other, symbols -- other)
   /* setminus: (top except ts) -- (top except os) == os -- ts */
-  //def --(other: TopSet[A]): immutable.Set[A] = other.excluded -- excluded
+  //def --(other: CoSet[A]): immutable.Set[A] = other.excluded -- excluded
   /* this top is a subset of that top if that excluded at most this's excluded */
-  //def subsetOf(other: TopSet[A]): Boolean = other.excluded.subsetOf(excluded)
+  //def subsetOf(other: CoSet[A]): Boolean = other.excluded.subsetOf(excluded)
   /* (top except ts) /\ (top except os) == (top except ts++os) */
-  //def intersect(other: TopSet[A]): TopSet[A] = new TopSet(excluded ++ other.excluded, symbols.intersect(other.symbols))
+  //def intersect(other: CoSet[A]): CoSet[A] = new CoSet(excluded ++ other.excluded, symbols.intersect(other.symbols))
   def intersect(other: immutable.Set[A]): SetLattice[A] = FiniteLattice(other -- excluded)   /* (top except ts) /\ os == os--ts */
 
-  def map[B](fun: A => B): TopSet[B] = new TopSet(excluded.map(fun), symbols.map(fun))
+  def map[B](fun: A => B): CoSet[B] = new CoSet(excluded.map(fun), symbols.map(fun))
 
-  def toSetLattice[B >: A]: SetLattice[B] = new TopSet(excluded.toSet, symbols.toSet)
+  def toSetLattice[B >: A]: SetLattice[B] = new CoSet(excluded.toSet, symbols.toSet)
   def toSet[B >: A]: Set[B] = throw new IllegalStateException("SetLattice.top has no set representation")
   def toSymbolSet[B >: A]: Set[B] = symbols.toSet
 

@@ -38,10 +38,6 @@ class ProverException(msg: String) extends RuntimeException(msg) {
 // class ProverException private(ex: RuntimeException) extends RuntimeException(ex) {
 //   def this(message:String) = this(new RuntimeException(message))
 //   def this(message:String, throwable: Throwable) = this(new RuntimeException(message, throwable))
-//   
-//   //@TODO Add inContext():Throwable function that gives wraps the exception within some extra information that explains the context formula in which a problem occurred. So not just the local subformula but the whole context. Useful for try catch e => throw e.inContext("Context information")
-//   
-//   //@TODO Add functionality to prettyPrint all expressions passed in on demand.
 // }
 
 /**

@@ -456,7 +456,7 @@ case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferential
   require(e.sort == Real, "expected argument sort real " + this)
   /* @NOTE Soundness: AtomicODE requires explicit-form so f(?) cannot verbatim mention differentials/differential symbols,
      which is required for soundness of axiom "DE differential effect (system)" */
-  //@todo this toString call could cause an infinite loop coming from contracts checking in pretty printer.
+  //@todo this toString call could cause an infinite loop coming from contracts checking in pretty printer. But should probably be taken care of.
   require(!StaticSemantics.isDifferential(e), "Explicit-form differential equations expected, without any differentials on right-hand side " + this)
 }
 

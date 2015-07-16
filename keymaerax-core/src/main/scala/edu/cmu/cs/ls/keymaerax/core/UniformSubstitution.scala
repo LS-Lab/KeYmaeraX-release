@@ -53,7 +53,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case replt: Term => what match {
       case FuncOf(f: Function, Anything) => bottom[NamedSymbol] // Anything locally binds all variables
       case FuncOf(f: Function, DotTerm) =>
-        assert(!StaticSemantics.freeVars(replt).contains(DotTerm)/* || StaticSemantics(replt).isTop*/, "DotTerm is no variable")
+        assert(!StaticSemantics.freeVars(replt).contains(DotTerm)/* || StaticSemantics(replt).isInfinite*/, "DotTerm is no variable")
         assert(!(StaticSemantics.freeVars(replt) -- Set(DotTerm)).contains(DotTerm), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replt) -- Set(DotTerm)) + " leading to unnecessary clashes")
         assert(StaticSemantics.freeVars(replt) -- Set(DotTerm) == StaticSemantics.freeVars(replt), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
         StaticSemantics.freeVars(repl)
@@ -62,7 +62,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case replf: Formula => what match {
       case PredOf(p: Function, Anything) => bottom[NamedSymbol] // Anything locally binds all variables
       case PredOf(p: Function, DotTerm) =>
-        assert(!StaticSemantics.freeVars(replf).contains(DotTerm) /*|| StaticSemantics(replf).fv.isTop*/, "DotTerm is no variable")
+        assert(!StaticSemantics.freeVars(replf).contains(DotTerm) /*|| StaticSemantics(replf).fv.isInfinite*/, "DotTerm is no variable")
         assert(!(StaticSemantics.freeVars(replf) -- Set(DotTerm)).contains(DotTerm), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(DotTerm)) + " leading to unnecessary clashes")
         assert(StaticSemantics.freeVars(replf) -- Set(DotTerm) == StaticSemantics.freeVars(replf), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
         StaticSemantics.freeVars(repl)

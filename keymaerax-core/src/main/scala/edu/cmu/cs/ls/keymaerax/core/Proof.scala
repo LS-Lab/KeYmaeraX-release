@@ -418,7 +418,9 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
  * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
  */
 sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
-  //@TODO Could augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
+  //@TODO If there were inherited contracts, we could augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
+
+  private[core] val LAX_MODE = true
 
   def name: String
 
@@ -797,7 +799,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
     //immutable.List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))  // and then OrLeft ~ AndLeft
     // immutable.List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b),IndexedSeq())),
     //      s.updated(p, Sequent(s.pref, IndexedSeq(Not(a),Not(b)),IndexedSeq())))
-    //@TODO This choice is compatible with tactics but is unreasonable. Prefer upper choices
+    //@TODO This choice is compatible with tactics but is perhaps unreasonably surprising. Prefer upper choices
     immutable.List(s.updated(pos, And(a,b)),
                    s.updated(pos, And(Not(a),Not(b))))
   }
@@ -866,8 +868,8 @@ object AxiomaticRule {
  */
 final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   val name: String = "Axiomatic Rule " + id + " instance"
-  //@todo temporarily disabling (temporary?) require.
-//  require(subst.freeVars.isEmpty, "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
+  //@todo disable LAX_MODE after tactics have been adapted to Anything. Sound for current axiomatic rules, but generally problematic.
+  require(subst.freeVars.isEmpty || LAX_MODE, "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
 
   override def toString: String = name + "(" + subst + ")"
 
@@ -908,7 +910,7 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
 
   /** @todo Code Review: change to false: This is a slight euphemism for do you mind being possibly unsound */
   //@todo turn to false after telling alphaRenamingT and globalAlphaRenamingT to add the stutter by axiom if needed
-  private val compatibilityMode = true
+  private val compatibilityMode = LAX_MODE
 
   override def toString: String = name + "(" + what + "~>" + repl + ")"
 
@@ -1076,11 +1078,12 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
  * ---------------------------- (Skolemize) provided x not in G,D
  * G, \exists x . p(x) |- D
  * }}}
- * @TODO Could replace by uniform substitution rule application mechanism for rule "all generalization"
+ * @note Could replace by uniform substitution rule application mechanism for rule "all generalization"
  * along with tactics expanding scope of quantifier with axiom "all quantifier scope" at the cost of propositional repacking and unpacking.
  *      p(x)
  *  ---------------all generalize
  *  \forall x. p(x)
+ * Kept because of the incurred cost.
  */
 case class Skolemize(pos: SeqPos) extends PositionRule {
   val name: String = "Skolemize"
@@ -1173,11 +1176,11 @@ object RCF {
 /** Lemma mechanism */
 object LookupLemma {
   /**
-   * Add given lemma to the given lemma database
+   * Add given new lemma to the given lemma database.
    * @param lemmaDB Lemma database to insert into.
    * @param lemma The lemma whose Provable will be inserted under its name.
    * @return Internal lemma identifier.
-   * @todo error if name already exists?
+   * @requires if (lemma.name==Some(n)) then !lemmaDB.contains(n)
    */
   def addLemma(lemmaDB: LemmaDB, lemma: Lemma): String = lemmaDB.add(lemma)
 

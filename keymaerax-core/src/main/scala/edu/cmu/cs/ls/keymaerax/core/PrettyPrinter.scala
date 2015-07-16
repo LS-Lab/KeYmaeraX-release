@@ -14,16 +14,16 @@ package edu.cmu.cs.ls.keymaerax.core
  * A pretty printer for differential dynamic logic is a function from Expressions to Strings.
  * @author aplatzer
  */
-object PrettyPrinter {
+object PrettyPrinter extends (Expression => String) {
+  /** Pretty-print the given expression using printer() */
+  def apply(expr: Expression): String = printer(expr)
+
   /**
    * A pretty printer for differential dynamic logic is a function from Expressions to Strings.
    */
   type PrettyPrinter = (Expression => String)
 
   private var pp: PrettyPrinter = (e => e.canonicalString)
-
-  //@todo move this initialization outside the core
-  setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter)
 
   def printer: PrettyPrinter = pp
 
