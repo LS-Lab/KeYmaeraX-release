@@ -27,7 +27,8 @@ class SpiralMonitorGenerator extends CodeGenerator {
   }
 
   private def generateSpiralMonitor(kExpr: Expression, vars: Variable*) : String = {
-    info + libs + varDec + monDec + compileToSpiral(kExpr)
+    info + libs + monDec + compileToSpiral(kExpr)
+//    info + libs + varDec + monDec + compileToSpiral(kExpr)
   }
 
   private val info = "# *************************\n" +
