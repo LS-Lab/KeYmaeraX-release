@@ -140,6 +140,7 @@ object LESSEQ  extends OPERATOR("<=")
 object TRUE    extends OPERATOR("true")
 object FALSE   extends OPERATOR("false")
 
+//@todo should probably also allow := *
 object ASSIGNANY extends OPERATOR(":=*") {
   override def regexp = """:=\*""".r
 }

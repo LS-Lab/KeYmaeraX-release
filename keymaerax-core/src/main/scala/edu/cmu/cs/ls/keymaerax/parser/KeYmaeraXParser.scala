@@ -255,7 +255,7 @@ object KeYmaeraXParser extends Parser {
         reportAnnotation(p, f1)
         reduce(st, 4, Bottom, r :+ Expr(p))
       case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1: Formula) if isAnnotable(p) =>
-        if (la==RPAREN) shift(st) else error(st)
+        if (la==RPAREN || formulaBinOp(la)) shift(st) else error(st)
       case r :+ Expr(p:Program) :+ Token(INVARIANT,_) =>
         if (la==LPAREN && isAnnotable(p)) shift(st) else error(st)
 
