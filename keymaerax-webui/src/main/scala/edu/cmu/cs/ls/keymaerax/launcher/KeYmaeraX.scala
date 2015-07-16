@@ -53,6 +53,8 @@ object KeYmaeraX {
           case "-tactic" :: value :: tail => nextOption(map ++ Map('tactic -> value), tail)
           case "-mathkernel" :: value :: tail => nextOption(map ++ Map('mathkernel -> value), tail)
           case "-jlink" :: value :: tail => nextOption(map ++ Map('jlink -> value), tail)
+          case "-noverify" :: value :: tail => nextOption(map ++ Map('verify -> false), tail)
+          case "-verify" :: value :: tail => nextOption(map ++ Map('verify -> true), tail)
           case option :: tail => println("Unknown option " + option + "\n" + usage); sys.exit(1)
         }
       }
@@ -141,10 +143,14 @@ object KeYmaeraX {
     val rootNode = new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel)))
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
 
-    if (rootNode.openGoals().isEmpty) {
-      //@todo ask Provable.isProved instead via rootNode.isProved() alias rootNode.provableWitness.isProved
-      //@todo don't print input but rather print what has been actually been proved rootNode.provableWitness.proved
-      //@todo possibly re-check that parse(input) == rootNode.provableWitness.proved
+    if (rootNode.isClosed()) {
+      assert(rootNode.openGoals().isEmpty)
+      if (options.contains('verify) && options.get('verify)==true) {
+        val witness = rootNode.provableWitness
+        val proved = witness.proved
+        assert(KeYmaeraXParser(input) == proved, "Proved the original problem and not something else")
+      }
+      //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
       val evidence =
         s"""Tool.
           |  input "$input"
@@ -152,6 +158,7 @@ object KeYmaeraX {
           |  proof ""
           |End.
         """.stripMargin
+      //@todo why is this of the form bla <-> true instead of just bla?
       val lemmaContent =
         s"""Lemma "${inputFileName.substring(inputFileName.lastIndexOf('/')+1)}".
           | (${KeYmaeraXPrettyPrinter(inputModel)}) <-> true
@@ -162,6 +169,10 @@ object KeYmaeraX {
       pw.write(lemmaContent + "\n" + evidence)
       pw.close()
     } else {
+      assert(!rootNode.isClosed())
+      assert(!rootNode.openGoals().isEmpty)
+      System.out.println("Unsuccessful proof: unfinished")
+      System.exit(-1)
       // TODO what to to when proof cannot be checked?
     }
   }
