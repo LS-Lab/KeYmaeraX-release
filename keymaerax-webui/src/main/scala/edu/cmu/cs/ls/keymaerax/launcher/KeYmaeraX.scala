@@ -122,7 +122,7 @@ object KeYmaeraX {
     val outputFml = And(rootNode.openGoals().head.sequent.ante.head, rootNode.openGoals().head.sequent.succ.head)
     val output = KeYmaeraXPrettyPrinter(outputFml)
 
-    if (options.contains('verify) && options.get('verify)==true) {
+    if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
       //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
       System.err.println("Cannot yet verify modelplex proof certificates")
     }
@@ -148,15 +148,16 @@ object KeYmaeraX {
     val inputFileName = options.get('in).get.toString
     val input = scala.io.Source.fromFile(inputFileName).mkString
     val inputModel = KeYmaeraXProblemParser(input)
-    val rootNode = new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel)))
+    val inputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel))
+    val rootNode = new RootNode(inputSequent)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
 
     if (rootNode.isClosed()) {
       assert(rootNode.openGoals().isEmpty)
-      if (options.contains('verify) && options.get('verify)==true) {
+      if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
         val witness = rootNode.provableWitness
         val proved = witness.proved
-        assert(KeYmaeraXParser(input) == proved, "Proved the original problem and not something else")
+        assert(inputSequent == proved, "Proved the original problem and not something else")
         println("Proof certificate: Passed")
       } else {
         println("Proof certificate: Skipped")
@@ -168,20 +169,20 @@ object KeYmaeraX {
           |  tactic "${scala.io.Source.fromFile(tacticFileName).mkString}"
           |  proof ""
           |End.
-        """.stripMargin
+          |""".stripMargin
       //@todo why is this of the form bla <-> true instead of just bla?
       val lemmaContent =
         s"""Lemma "${inputFileName.substring(inputFileName.lastIndexOf('/')+1)}".
-          | (${KeYmaeraXPrettyPrinter(inputModel)}) <-> true
+          |  (${KeYmaeraXPrettyPrinter(inputModel)}) <-> true
           |End.
-        """.stripMargin
+          |""".stripMargin
 
       val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".proof").toString)
-      pw.write(lemmaContent + "\n" + evidence)
+      pw.write(lemmaContent + evidence)
       pw.close()
     } else {
       assert(!rootNode.isClosed())
-      assert(!rootNode.openGoals().isEmpty)
+      assert(rootNode.openGoals().nonEmpty)
       println("Unsuccessful proof: unfinished")
       System.err.println("Unsuccessful proof: unfinished")
       sys.exit(-1)

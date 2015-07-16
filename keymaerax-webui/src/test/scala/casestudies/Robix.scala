@@ -299,8 +299,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
 
 
     val expectedProofFileContent =
-      s"""
-        |Lemma "passivesafety.proof".
+      s"""Lemma "passivesafety.key".
         |  (${KeYmaeraXPrettyPrinter(inputModel)}) <-> true
         |End.
         |Tool.
@@ -308,7 +307,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  tactic "${scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/PassiveSafetyTacticGenerator.scala").mkString}"
         |  proof ""
         |End.
-      """.stripMargin
+        |""".stripMargin
 
     val proofFileContent = scala.io.Source.fromFile(outputFileName).mkString
     proofFileContent shouldBe expectedProofFileContent
