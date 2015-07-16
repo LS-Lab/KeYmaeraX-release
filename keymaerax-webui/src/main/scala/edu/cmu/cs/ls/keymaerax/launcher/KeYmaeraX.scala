@@ -142,6 +142,9 @@ object KeYmaeraX {
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
 
     if (rootNode.openGoals().isEmpty) {
+      //@todo ask Provable.isProved instead via rootNode.isProved() alias rootNode.provableWitness.isProved
+      //@todo don't print input but rather print what has been actually been proved rootNode.provableWitness.proved
+      //@todo possibly re-check that parse(input) == rootNode.provableWitness.proved
       val evidence =
         s"""Tool.
           |  input "$input"
