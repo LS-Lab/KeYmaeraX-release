@@ -29,7 +29,10 @@ object KeYmaeraX {
     """Usage: KeYmaeraX [-mathkernel MathKernel(.exe) -jlink path/to/jlinkNativeLib]
       |  -prove filename -tactic filename [-out filename] |
       |  -modelplex filename [-vars var1,var2,...,varn] [-out filename] |
-      |  -codegen filename [-format Spiral|C] [-out filename]""".stripMargin
+      |  -codegen filename [-format Spiral|C] [-out filename]
+      Options:
+      |  -verify check the resulting proof certificate
+      |  -noverify skip checking of the proof certificate""".stripMargin
 
   def main (args: Array[String]) {
     if (args.length == 0 || args==Array("-help") || args==Array("--help") || args==Array("-h")) println(usage)
@@ -119,6 +122,11 @@ object KeYmaeraX {
     val outputFml = And(rootNode.openGoals().head.sequent.ante.head, rootNode.openGoals().head.sequent.succ.head)
     val output = KeYmaeraXPrettyPrinter(outputFml)
 
+    if (options.contains('verify) && options.get('verify)==true) {
+      //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
+      System.err.println("Cannot yet verify modelplex proof certificates")
+    }
+
     val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".mx").toString)
     pw.write(output)
     pw.close()
@@ -149,6 +157,9 @@ object KeYmaeraX {
         val witness = rootNode.provableWitness
         val proved = witness.proved
         assert(KeYmaeraXParser(input) == proved, "Proved the original problem and not something else")
+        println("Proof certificate: Passed")
+      } else {
+        println("Proof certificate: Skipped")
       }
       //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
       val evidence =
@@ -171,8 +182,9 @@ object KeYmaeraX {
     } else {
       assert(!rootNode.isClosed())
       assert(!rootNode.openGoals().isEmpty)
-      System.out.println("Unsuccessful proof: unfinished")
-      System.exit(-1)
+      println("Unsuccessful proof: unfinished")
+      System.err.println("Unsuccessful proof: unfinished")
+      sys.exit(-1)
       // TODO what to to when proof cannot be checked?
     }
   }
