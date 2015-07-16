@@ -26,16 +26,25 @@ object KeYmaeraX {
   private type OptionMap = Map[Symbol, Any]
 
   private val usage =
-    """Usage: KeYmaeraX [-mathkernel MathKernel(.exe) -jlink path/to/jlinkNativeLib]
+    """KeYmaera X Prover
+      |
+      |Usage: KeYmaeraX [-mathkernel MathKernel(.exe) -jlink path/to/jlinkNativeLib]
       |  -prove filename -tactic filename [-out filename] |
       |  -modelplex filename [-vars var1,var2,...,varn] [-out filename] |
       |  -codegen filename [-format Spiral|C] [-out filename]
-      Options:
-      |  -verify check the resulting proof certificate
-      |  -noverify skip checking of the proof certificate""".stripMargin
+      |
+      |Additional options:
+      |  -verify   check the resulting proof certificate (recommended)
+      |  -noverify skip checking proof certificates
+      |
+      |Copyright (c) Carnegie Mellon University.
+      |See LICENSE.txt for the conditions of this license.
+      |""".stripMargin
 
   def main (args: Array[String]) {
-    if (args.length == 0 || args==Array("-help") || args==Array("--help") || args==Array("-h")) println(usage)
+    println("KeYmaera X Prover\n" +
+      "Use option -help for usage information")
+    if (args.length == 0 || args==Array("-help") || args==Array("--help") || args==Array("-h")) {println(usage); sys.exit(1)}
     else {
       def makeVariables(varNames: Array[String]): Array[Variable] = {
         varNames.map(vn => KeYmaeraXParser(vn) match {
@@ -56,8 +65,10 @@ object KeYmaeraX {
           case "-tactic" :: value :: tail => nextOption(map ++ Map('tactic -> value), tail)
           case "-mathkernel" :: value :: tail => nextOption(map ++ Map('mathkernel -> value), tail)
           case "-jlink" :: value :: tail => nextOption(map ++ Map('jlink -> value), tail)
-          case "-noverify" :: value :: tail => nextOption(map ++ Map('verify -> false), tail)
-          case "-verify" :: value :: tail => nextOption(map ++ Map('verify -> true), tail)
+          // additional options
+          case "-noverify" :: tail => nextOption(map ++ Map('verify -> false), tail)
+          case "-verify" :: tail => nextOption(map ++ Map('verify -> true), tail)
+          case "-help" :: _ => {println(usage); sys.exit(1)}
           case option :: tail => println("Unknown option " + option + "\n" + usage); sys.exit(1)
         }
       }
