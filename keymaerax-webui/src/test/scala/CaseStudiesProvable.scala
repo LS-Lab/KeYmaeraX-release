@@ -210,7 +210,7 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
 //    ),immutable.IndexedSeq(
 //
 //    ))
-    val node = helper.formulaToNode("[x'=v,v'=(a()),kxtime_1'=(0*kxtime_1+1) & (true&kxtime_1>=kxtime_4()&v=v_2()+a()*kxtime_1);][kxtime_1':=0*kxtime_1+1;][v':=a();][x':=v;](x)'=(0*2-1*0)/2^2*(2*x_2()+2*v_2()*kxtime_1+a()*kxtime_1^2)+1/2*(0*x_2()+2*0+((0*v_2()+2*0)*kxtime_1+2*v_2()*(kxtime_1)')+(0*kxtime_1^2+a()*(kxtime_1^2)'))".asFormula)
+    val node = helper.formulaToNode("[{x'=v,v'=(a()),kxtime_1'=(0*kxtime_1+1) & (true&kxtime_1>=kxtime_4()&v=v_2()+a()*kxtime_1)}][kxtime_1':=0*kxtime_1+1;][v':=a();][x':=v;](x)'=(0*2-1*0)/2^2*(2*x_2()+2*v_2()*kxtime_1+a()*kxtime_1^2)+1/2*(0*x_2()+2*0+((0*v_2()+2*0)*kxtime_1+2*v_2()*(kxtime_1)')+(0*kxtime_1^2+a()*(kxtime_1^2)'))".asFormula)
 
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivationInContext.PowerDerivativeT, false)
 
