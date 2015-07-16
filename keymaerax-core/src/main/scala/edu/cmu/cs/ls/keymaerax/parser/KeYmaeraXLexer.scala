@@ -11,6 +11,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core.Anything
 
+import scala.annotation.tailrec
 import scala.collection.immutable._
 import scala.util.matching.Regex
 
@@ -139,6 +140,7 @@ object LESSEQ  extends OPERATOR("<=")
 object TRUE    extends OPERATOR("true")
 object FALSE   extends OPERATOR("false")
 
+//@todo should probably also allow := *
 object ASSIGNANY extends OPERATOR(":=*") {
   override def regexp = """:=\*""".r
 }
@@ -166,6 +168,16 @@ object ANYTHING extends OPERATOR(Anything.prettyString()) {
   override def regexp = """\?\?""".r
 }
 object PSEUDO  extends Terminal("<pseudo>")
+
+
+// @annotations
+
+object INVARIANT extends Terminal("@invariant") {
+  override def regexp = """\@invariant""".r
+}
+
+
+// axiom and problem file
 
 object AXIOM_BEGIN extends Terminal("Axiom") {
   override def regexp = """Axiom""".r
@@ -224,17 +236,25 @@ object TOOL_OUTPUT extends Terminal("output") {
  * @note Serializable to make sure sbt test allows Location in ParseException errors.
  */
 sealed abstract class Location extends Serializable {
+  /** Beginning of this location */
+  def begin: Location
+  /** End of this location */
+  def end: Location
   /** The range from this region to the other region, inclusive. Starting here and ending at other. */
   //@todo review choices
   def --(other: Location): Location
 }
 object UnknownLocation extends Location {
   override def toString = "<somewhere>"
+  def begin = this
+  def end = this
   def --(other: Location): Location = this
 }
 case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location {
   require(line <= endLine || (line == endLine && column <= endColumn),
     "A region cannot start after it ends.")
+  def begin = Region(line, column, line, column)
+  def end = Region(endLine, endColumn, endLine, endColumn)
   def --(other: Location): Location = other match {
     case os: Region => Region(line, column, os.endLine, os.endColumn)
     case _: SuffixRegion => this
@@ -248,6 +268,8 @@ case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends 
  * @param column The ending line.
  */
 case class SuffixRegion(line: Int, column: Int) extends Location {
+  def begin = Region(line, column, line, column)
+  def end = UnknownLocation
   def --(other: Location) = this
   override def toString = line + ":" + column + " to " + EOF
 }
@@ -262,6 +284,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
 
+  private val DEBUG = false
+
   /**
    * The lexer has multiple modes for the different sorts of files that are supported by KeYmaeraX.
    * The lexer will disallow non-expression symbols from occuring when the lexer is in expression mode.
@@ -271,6 +295,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
    * @return A stream of symbols corresponding to input.
    */
   def inMode(input: String, mode: LexerMode) = {
+    if (DEBUG) println("LEX: " + input)
     val output = lex(input, SuffixRegion(1,1), mode)
     require(output.last.tok.equals(EOF), "Expected EOF but found " + output.last.tok)
     output
@@ -286,13 +311,16 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
    * @param mode The mode of the lexer.
    * @return A token stream.
    */
+  //@tailrec
   private def lex(input: String, inputLocation:Location, mode: LexerMode): TokenStream =
     if(input.trim.length == 0) {
       List(Token(EOF))
     }
     else {
       findNextToken(input, inputLocation, mode) match {
-        case Some((nextInput, token, nextLoc)) => token +: lex(nextInput, nextLoc, mode)
+        case Some((nextInput, token, nextLoc)) =>
+          //if (DEBUG) print(token)
+          token +: lex(nextInput, nextLoc, mode)
         case None => List(Token(EOF)) //note: This case can happen if the input is e.g. only a comment or only whitespace.
       }
     }
@@ -499,7 +527,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case PLACE.startPattern(_*) => consumeTerminalLength(PLACE, loc)
       case PSEUDO.startPattern(_*) => consumeTerminalLength(PSEUDO, loc)
 
-      //@TODO Incorrect code. Should split identifier into name and index properly
+      case INVARIANT.startPattern(_*) => consumeTerminalLength(INVARIANT, loc)
+
       case IDENT.startPattern(name) => {
         val (s, idx) = splitName(name)
         consumeTerminalLength(IDENT(s, idx), loc)
@@ -513,7 +542,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
 
       case _ if s.isEmpty => None
-      case _ => throw new Exception("Lexer did not understand input at " + loc + " in `\n" + s +"\n` First character was `" + s(0) + "`")
+      case _ => throw new Exception(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s +"\n` beginning with character `" + s(0) + "`")
     }
   }
 

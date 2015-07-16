@@ -563,7 +563,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Uniform substitution of (x,t) |-> [x:=1 ++ x:=x+1 ++ z:=x;]x>0" should "be [x:=1 ++ x:=t+1 ++ z:=t;]x>0" in {
     val s = USubst(SubstitutionPair(fnof("x"), "t".asTerm) :: Nil)
-    s("[x:=1 ++ x:=x()+1 ++ z:=x()]x>0".asFormula) should be ("[x:=1 ++ x:=t+1 ++ z:=t;]x>0".asFormula)
+    s("[x:=1; ++ x:=x()+1; ++ z:=x();]x>0".asFormula) should be ("[x:=1; ++ x:=t+1; ++ z:=t;]x>0".asFormula)
   }
 
   // <\alpha>\phi
@@ -592,15 +592,15 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Uniform substitution of (x,y) |-> t:=0;t'=x;" should "be t:=0;t'=y;" in {
     val s = create(SubstitutionPair(fnof("x"), "y".asTerm))
-    s("[t:=0;t'=x();]true".asFormula) should be ("[t:=0;t'=y;]true".asFormula)
-    s("[t:=0;][t'=x();]true".asFormula) should be ("[t:=0;][t'=y;]true".asFormula)
+    s("[t:=0;{t'=x()}]true".asFormula) should be ("[t:=0;{t'=y}]true".asFormula)
+    s("[t:=0;][{t'=x()}]true".asFormula) should be ("[t:=0;][{t'=y}]true".asFormula)
   }
 
   // TODO variable substitution not yet supported
   ignore /*"Uniform substitution of (t,y) |-> t:=0;t'=x;"*/ should "be t:=0;t'=x;" in {
     val s = create(SubstitutionPair("t".asTerm, "y".asTerm))
-    s("[t:=0;t'=x;]true".asFormula) should be ("[t:=0;t'=x;]true".asFormula)
-    s("[t:=0;][t'=x;]true".asFormula) should be ("[t:=0;][t'=x;]true".asFormula)
+    s("[t:=0;{t'=x}]true".asFormula) should be ("[t:=0;{t'=x}]true".asFormula)
+    s("[t:=0;][{t'=x}]true".asFormula) should be ("[t:=0;][{t'=x}]true".asFormula)
   }
 
   "Uniform substitution of (x,y) |-> (y,x+y) |-> x=y" should "be y=y+y" in {
@@ -965,7 +965,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
       (sToT("z()", "2*x"), "[x:=x+1; ++ x:=x+z;z:=z()-1;]x>0".asFormula) ::     // subst(z:=z-1): x free in 2*x but bound by x:=x+z
       (sToT("z()", "2*x"), "[x:=x+1; ++ x:=x+z();]x>z()".asFormula) ::            // subst(x>z): x free in 2*x but mustbe (and thus maybe) bound by {x:=x+1 ++ x:=x+z;...}
       (sToT("a()", "2*x"), "[{x:=x+1; ++ y:=5;}; z:=x-a();]x>0".asFormula) ::    // subst(z:=x-a): x free in 2*x but (maybe) bound by {x:=x+1 ++ ...}
-      (sToT("a()", "2*x"), "[{x:=x+1; ++ ?1>0}; z:=x-a();]x>0".asFormula) ::    // subst(z:=x-a): x free in 2*x but (maybe) bound by {x:=x+1 ++ ...}
+      (sToT("a()", "2*x"), "[{x:=x+1; ++ ?1>0;}; z:=x-a();]x>0".asFormula) ::    // subst(z:=x-a): x free in 2*x but (maybe) bound by {x:=x+1 ++ ...}
 //      (sToT("x", "2"), "[{x:=x+1;}*; z:=x+z]1>0".asFormula) ::            // subst(z:=x+z): x (maybe) bound by {x:=x+1}*
       (sToT("a()", "x"), "[{x:=x+1;}*; z:=a();]1>0".asFormula) ::              // subst(z:=a): x free in x but maybe bound by {x:=x+1}*
       (sToT("a()", "x"), "[x:=x+1; z:=a();]1>0".asFormula) ::                  // subst(z:=a): x free in x but mustbe (and thus maybe) bound by x:=x+1
@@ -1005,10 +1005,10 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
       (sToT("z()", "1"), "[x:=x+1; ++ x:=x+z();z:=z()-1;]x>0".asFormula, "[x:=x+1; ++ x:=x+1;z:=1-1;]x>0".asFormula) ::
       (sToT("x()", "2"), "[x:=x()+1; ++ x:=x()+z;z:=z-1;]x>0".asFormula, "[x:=2+1; ++ x:=2+z;z:=z-1;]x>0".asFormula) ::
       (sToT("x()", "2"), "[x:=x()+1; ++ x:=x()+z;z:=z-1;]x>z".asFormula, "[x:=2+1; ++ x:=2+z;z:=z-1;]x>z".asFormula) ::
-      (sToT("z()", "2"), "[{x:=x+1;}*; z:=x+z();]x>z".asFormula, "[{x:=x+1;}*; z:=x+2;]x>z".asFormula) ::
+      (sToT("z()", "2"), "[{x:=x+1;}*; z:=x+z();]x>z".asFormula, "[{x:=x+1;}* z:=x+2;]x>z".asFormula) ::
       (sToT("x()", "a"), "[x:=x()+1; z:=a;]1>0".asFormula, "[x:=a+1; z:=a;]1>0".asFormula) ::
       (sToT("x()", "a"), "[x:=x()+1; {x:=x+1;}*]1>0".asFormula, "[x:=a+1; {x:=x+1;}*]1>0".asFormula) ::
-      (sToT("z()", "-z"), "[{x:=x+1; ++ x:=x+z()}; z:=x-1;]x>z".asFormula, "[{x:=x+1; ++ x:=x+-z}; z:=x-1;]x>z".asFormula) ::
+      (sToT("z()", "-z"), "[{x:=x+1; ++ x:=x+z();}; z:=x-1;]x>z".asFormula, "[{x:=x+1; ++ x:=x+-z;} z:=x-1;]x>z".asFormula) ::
         Nil
 
     cases.foreach(c => c._1(c._2) should be (c._3))

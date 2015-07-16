@@ -19,14 +19,6 @@ class CGenerator extends CodeGenerator {
   def apply(kExpr: Expression): String = apply(kExpr, "long double")
   def apply(kExpr: Expression, cDataType: String): String = generateCCode(kExpr, cDataType)
 
-//  def generateCCodeFromKeyFile(path: String) : String = {
-//    val content = io.Source.fromInputStream(getClass.getResourceAsStream(path)).mkString
-//    new KeYmaeraParser(false, ComponentConfig).runParser(content) match {
-//      case f: Formula => generateCCode(f)
-//      case a => throw new IllegalArgumentException("Parsing the input did not result in a formula but in: " + a)
-//    }
-//  }
-
   def generateCFileFromCCode(cCode: String, fileName: String) : File = {
     val cTempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
     val cFile = new File(cTempDir, fileName)
@@ -38,39 +30,38 @@ class CGenerator extends CodeGenerator {
   }
 
   private def generateCCode(kExpr: Expression, cDataType: String) : String = {
-    val include = "#include \"math.h\"" + "\n"
-    val parameters = parameterDec(kExpr, cDataType)
-    val function = "int monitor (" + parameters + ")"
-    val body = compileToC(kExpr)
-    val program = include + function + " {\n" + "  return " + body + ";" + "\n}"
+    val includeLib = "#include <math.h>" + "\n"
+    val funcHead = "int monitor (" + parameterDec(kExpr, cDataType) + ")"
+    val funcBody = compileToC(kExpr)
+    val program = includeLib + funcHead + " {\n" + "  return " + funcBody + ";" + "\n}"
     program
   }
 
   def parameterDec(kExpr: Expression, cDataType: String) : String = {
-    var parameter = ""
+    var parameters = ""
     val allSortedNames = StaticSemantics.symbols(kExpr).toList.sorted
     if (allSortedNames.size > 0) {
       val lastName = allSortedNames.last
       for (i <- allSortedNames) {
         i.getClass.getSimpleName match {
           case "Variable" =>
-            parameter += cDataType + " " + i.name
-            if(i.index.isDefined) parameter += "_" + i.index.get
-            if(i != lastName) parameter += ", "
+            parameters += cDataType + " " + i.name
+            if(i.index.isDefined) parameters += "_" + i.index.get
+            if(i != lastName) parameters += ", "
           case "Function" =>
             if (!i.name.equals("Abs")) {
-              parameter += cDataType + " " + i.name
-              if(i != lastName) parameter += ", "
+              parameters += cDataType + " " + i.name
+              if(i != lastName) parameters += ", "
             }
         }
       }
     }
-    parameter
+    parameters
   }
 
   def compileToC(e: Expression) = e match {
     case t : Term => compileTerm(t)
-    case t : Formula => compileFormula(t)
+    case f : Formula => compileFormula(f)
     case _ => ???
   }
 
@@ -104,7 +95,9 @@ class CGenerator extends CodeGenerator {
       case Divide(l, r) => "(" + compileTerm(l) + "/" + compileTerm(r) + ")"
       case Power(l, r) => "(" + compilePower(l, r) + ")"
       // atomic terms
-      case Number(n) => n.underlying().toString
+      case Number(n) =>
+        assert(n.isValidDouble || n.isValidLong, throw new CodeGenerationException("Term " + t.prettyString() + " contains illegal numbers"))
+        n.underlying().toString
       case t: Variable =>
         if(t.index.isEmpty) t.name
         else t.name + "_" + t.index.get
@@ -181,7 +174,7 @@ class CGenerator extends CodeGenerator {
           "(" + "(!" + compileFormula(l) + ")" + "||" + compileFormula(r) + ")" +
           "&&" +
           "(" + "(!" + compileFormula(r) + ")" + "||" + compileFormula(l) + ")" +
-        ")"
+          ")"
       case Equal(l, r) => "(" + compileTerm(l) + "==" + compileTerm(r) + ")"
       case NotEqual(l, r) => "(" + compileTerm(l) + "!=" + compileTerm(r) + ")"
       case Greater(l,r) => "(" + compileTerm(l) + ">" + compileTerm(r) + ")"

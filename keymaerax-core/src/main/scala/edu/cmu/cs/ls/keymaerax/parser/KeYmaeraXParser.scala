@@ -41,6 +41,11 @@ private[parser] case class RecognizedModal(ltok: Token, program: Program, rtok: 
   //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
   override def toString: String = "Rec" + ltok.tok.img + KeYmaeraXPrettyPrinter.stringify(program) + rtok.tok.img
 }
+///** Parts of expressions that are partially recognized on the parser item stack but not parsed to a proper Expression yet so merely stashed for later. */
+//private[parser] case class RecognizedAnnotation(program: Program) extends Item {
+//  //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
+//  override def toString: String = "Rec(" + KeYmaeraXPrettyPrinter.stringify(program) + "@)"
+//}
 private[parser] trait FinalItem extends Item
 /** Parser items representing expressions that are accepted by the parser. */
 private[parser] case class Accept(expr: Expression) extends FinalItem
@@ -222,6 +227,22 @@ object KeYmaeraXParser extends Parser {
   private def elaborate(st: ParseState, tok: Terminal, op: BinaryOpSpec[Expression], e1: Expression, e2: Expression): Expression =
     op.const(tok.img, elaborate(st, op, op.kind._1, e1), elaborate(st, op, op.kind._2, e2))
 
+  private[parser] var annotationListener: ((Program,Formula) => Unit) =
+  {(p,inv) => println("Annotation: " + p + " @invariant(" + inv + ")")}
+  /**
+   * Register a listener for @annotations during the parse.
+   * @todo this design is suboptimal.
+   */
+  def setAnnotationListener(listener: (Program,Formula) => Unit): Unit =
+    this.annotationListener = listener
+
+  /** Report an @invariant @annotation to interested parties */
+  private def reportAnnotation(p: Program, invariant: Formula): Unit = annotationListener(p,invariant)
+
+  /** Whether p is compatible with @annotation */
+  private def isAnnotable(p: Program): Boolean =
+    p.isInstanceOf[Loop] || p.isInstanceOf[DifferentialProgram]
+
 
   // parsing
 
@@ -229,6 +250,16 @@ object KeYmaeraXParser extends Parser {
     val ParseState(s, input@(Token(la,_) :: rest)) = st
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
+      // nonproductive: special notation for annotations
+      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1: Formula) :+ Token(RPAREN,_) if isAnnotable(p) =>
+        reportAnnotation(p, f1)
+        reduce(st, 4, Bottom, r :+ Expr(p))
+      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1: Formula) if isAnnotable(p) =>
+        if (la==RPAREN || formulaBinOp(la)) shift(st) else error(st)
+      case r :+ Expr(p:Program) :+ Token(INVARIANT,_) =>
+        if (la==LPAREN && isAnnotable(p)) shift(st) else error(st)
+
+
       // special quantifier notation
       case r :+ (tok1@Token(FORALL,_)) :+ RecognizedQuant(v1:Variable) :+ Expr(f1:Formula) =>
         reduce(st, 3, OpSpec.sForall.const(tok1.tok.img, v1, f1), r)
@@ -329,7 +360,8 @@ object KeYmaeraXParser extends Parser {
       // special notation for loops
       case r :+ Token(LBRACE,_) :+ Expr(t1:Program) :+ Token(RBRACE,_) :+ (tok@Token(STAR,_)) =>
         assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "Can no longer have an IDENT on the stack")
-        reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, t1), r)
+        if (la==INVARIANT) shift(reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, t1), r))
+        else reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, t1), r)
 
       // parentheses for grouping
       case r :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
@@ -639,7 +671,8 @@ object KeYmaeraXParser extends Parser {
     (if (statementSemicolon) firstProgram(la) || /*Not sure:*/ la==SEMI else la==SEMI)  ||
     la==RBOX || la==RDIA ||  // from P in programs
     la==COMMA || la==AMP ||  // from D in differential programs
-    la==EOF
+    la==EOF ||
+    la==INVARIANT            // extra: additional @annotations
 
   /** Follow(kind(expr)): Can la follow an expression of the kind of expr? */
   private def followsExpression(expr: Expression, la: Terminal): Boolean = expr match {
@@ -825,6 +858,8 @@ object KeYmaeraXParser extends Parser {
       case sCompose.op => sCompose
       case sChoice.op => sChoice
 
+
+      case INVARIANT => sNone
       //case
       case sEOF.op => sEOF
     }

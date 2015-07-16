@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.PrintWriter
 
+import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ClassGenerator
 import edu.cmu.cs.ls.keymaerax.core.{And, Formula, Sequent, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
@@ -9,6 +10,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, TacticWrapper, Tactics, Roo
 import edu.cmu.cs.ls.keymaerax.tactics.ModelplexTacticImpl.{modelplexControllerMonitorTrafo, modelplexInPlace}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, SpiralHeaderGenerator, SpiralMonitorGenerator}
+
 
 import scala.collection.immutable
 import scala.reflect.runtime._
@@ -26,7 +29,10 @@ object KeYmaeraX {
     """Usage: KeYmaeraX [-mathkernel MathKernel(.exe) -jlink path/to/jlinkNativeLib]
       |  -prove filename -tactic filename [-out filename] |
       |  -modelplex filename [-vars var1,var2,...,varn] [-out filename] |
-      |  -codegen filename [-format Spiral|C] [-out filename]""".stripMargin
+      |  -codegen filename [-format Spiral|C] [-out filename]
+      Options:
+      |  -verify check the resulting proof certificate
+      |  -noverify skip checking of the proof certificate""".stripMargin
 
   def main (args: Array[String]) {
     if (args.length == 0 || args==Array("-help") || args==Array("--help") || args==Array("-h")) println(usage)
@@ -50,6 +56,8 @@ object KeYmaeraX {
           case "-tactic" :: value :: tail => nextOption(map ++ Map('tactic -> value), tail)
           case "-mathkernel" :: value :: tail => nextOption(map ++ Map('mathkernel -> value), tail)
           case "-jlink" :: value :: tail => nextOption(map ++ Map('jlink -> value), tail)
+          case "-noverify" :: value :: tail => nextOption(map ++ Map('verify -> false), tail)
+          case "-verify" :: value :: tail => nextOption(map ++ Map('verify -> true), tail)
           case option :: tail => println("Unknown option " + option + "\n" + usage); sys.exit(1)
         }
       }
@@ -62,7 +70,7 @@ object KeYmaeraX {
       options.get('mode) match {
         case Some("prove") => prove(options)
         case Some("modelplex") => modelplex(options)
-        case Some("codegen") =>
+        case Some("codegen") => codegen(options)
       }
 
       shutdownProver()
@@ -114,6 +122,11 @@ object KeYmaeraX {
     val outputFml = And(rootNode.openGoals().head.sequent.ante.head, rootNode.openGoals().head.sequent.succ.head)
     val output = KeYmaeraXPrettyPrinter(outputFml)
 
+    if (options.contains('verify) && options.get('verify)==true) {
+      //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
+      System.err.println("Cannot yet verify modelplex proof certificates")
+    }
+
     val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".mx").toString)
     pw.write(output)
     pw.close()
@@ -138,7 +151,17 @@ object KeYmaeraX {
     val rootNode = new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel)))
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
 
-    if (rootNode.openGoals().isEmpty) {
+    if (rootNode.isClosed()) {
+      assert(rootNode.openGoals().isEmpty)
+      if (options.contains('verify) && options.get('verify)==true) {
+        val witness = rootNode.provableWitness
+        val proved = witness.proved
+        assert(KeYmaeraXParser(input) == proved, "Proved the original problem and not something else")
+        println("Proof certificate: Passed")
+      } else {
+        println("Proof certificate: Skipped")
+      }
+      //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
       val evidence =
         s"""Tool.
           |  input "$input"
@@ -146,6 +169,7 @@ object KeYmaeraX {
           |  proof ""
           |End.
         """.stripMargin
+      //@todo why is this of the form bla <-> true instead of just bla?
       val lemmaContent =
         s"""Lemma "${inputFileName.substring(inputFileName.lastIndexOf('/')+1)}".
           | (${KeYmaeraXPrettyPrinter(inputModel)}) <-> true
@@ -156,7 +180,36 @@ object KeYmaeraX {
       pw.write(lemmaContent + "\n" + evidence)
       pw.close()
     } else {
+      assert(!rootNode.isClosed())
+      assert(!rootNode.openGoals().isEmpty)
+      println("Unsuccessful proof: unfinished")
+      System.err.println("Unsuccessful proof: unfinished")
+      sys.exit(-1)
       // TODO what to to when proof cannot be checked?
     }
+  }
+
+  def codegen(options: OptionMap) = {
+    require(options.contains('in), usage)
+    require(options.contains('format), usage)
+
+    val inputFileName = options.get('in).get.toString
+    val input = scala.io.Source.fromFile(inputFileName).mkString
+    val inputFormula = KeYmaeraXParser(input)
+    var output = ""
+
+    if(options.get('format).get.toString == "C") {
+      val cGen = new CGenerator()
+      output = cGen.apply(inputFormula)
+      val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".c").toString)
+      pw.write(output)
+      pw.close()
+    } else if(options.get('format).get.toString == "Spiral") {
+      val sGen = new SpiralMonitorGenerator
+      output = sGen.apply(inputFormula)
+      val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
+      pw.write(output)
+      pw.close()
+    } else throw new IllegalArgumentException("-format should be specified and only be C or Spiral")
   }
 }

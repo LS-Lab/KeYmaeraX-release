@@ -81,6 +81,11 @@ Create a new run configuration of type Application.
 - Set the working directory to the project path
 - Use the classpath of your project module
 
+Test cases:
+- Right click on project folder keymaerax-webui/src/test to mark this directory as Test Sources Root.
+- Make sure the JVM option -Xss20M is included in the run configuration.
+- Right click on the test folder to run all its ScalaTests.
+
 Front End
 =========
 

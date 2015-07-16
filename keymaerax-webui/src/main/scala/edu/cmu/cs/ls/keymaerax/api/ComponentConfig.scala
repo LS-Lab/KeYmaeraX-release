@@ -4,8 +4,9 @@
 */
 package edu.cmu.cs.ls.keymaerax.api
 
-import edu.cmu.cs.ls.keymaerax.core.Formula
+import edu.cmu.cs.ls.keymaerax.core.{Program, Formula}
 import edu.cmu.cs.ls.keymaerax.hydra._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.tactics.{TacticLibrary2, ConfigurableGenerate}
 
 /**
@@ -15,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.{TacticLibrary2, ConfigurableGenerate}
  */
 object ComponentConfig {
   lazy val generator = new ConfigurableGenerate[Formula]()
+  KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) => generator.products += (p->inv))
   lazy val db = DBAbstractionObj.defaultDatabase
   lazy val tacticLibrary = new TacticLibrary2(this)
   lazy val keymaeraInitializer = new KeYmaeraInitializer(this)
