@@ -20,32 +20,22 @@ import scala.tools.reflect.ToolBox
 /**
  * Created by smitsch on 7/13/15.
  * @author Stefan Mitsch
- * @author Ran Ji
  */
 object KeYmaeraX {
 
   private type OptionMap = Map[Symbol, Any]
 
   private val usage =
-    """KeYmaera X Prover
-      |
-      |Usage: KeYmaeraX [-mathkernel MathKernel(.exe) -jlink path/to/jlinkNativeLib]
+    """Usage: KeYmaeraX [-mathkernel MathKernel(.exe) -jlink path/to/jlinkNativeLib]
       |  -prove filename -tactic filename [-out filename] |
       |  -modelplex filename [-vars var1,var2,...,varn] [-out filename] |
       |  -codegen filename [-format Spiral|C] [-out filename]
-      |
-      |Additional options:
-      |  -verify   check the resulting proof certificate (recommended)
-      |  -noverify skip checking proof certificates
-      |
-      |Copyright (c) Carnegie Mellon University.
-      |See LICENSE.txt for the conditions of this license.
-      |""".stripMargin
+      Options:
+      |  -verify check the resulting proof certificate
+      |  -noverify skip checking of the proof certificate""".stripMargin
 
   def main (args: Array[String]) {
-    println("KeYmaera X Prover\n" +
-      "Use option -help for usage information")
-    if (args.length == 0 || args==Array("-help") || args==Array("--help") || args==Array("-h")) {println(usage); sys.exit(1)}
+    if (args.length == 0 || args==Array("-help") || args==Array("--help") || args==Array("-h")) println(usage)
     else {
       def makeVariables(varNames: Array[String]): Array[Variable] = {
         varNames.map(vn => KeYmaeraXParser(vn) match {
@@ -66,10 +56,8 @@ object KeYmaeraX {
           case "-tactic" :: value :: tail => nextOption(map ++ Map('tactic -> value), tail)
           case "-mathkernel" :: value :: tail => nextOption(map ++ Map('mathkernel -> value), tail)
           case "-jlink" :: value :: tail => nextOption(map ++ Map('jlink -> value), tail)
-          // additional options
-          case "-noverify" :: tail => nextOption(map ++ Map('verify -> false), tail)
-          case "-verify" :: tail => nextOption(map ++ Map('verify -> true), tail)
-          case "-help" :: _ => {println(usage); sys.exit(1)}
+          case "-noverify" :: value :: tail => nextOption(map ++ Map('verify -> false), tail)
+          case "-verify" :: value :: tail => nextOption(map ++ Map('verify -> true), tail)
           case option :: tail => println("Unknown option " + option + "\n" + usage); sys.exit(1)
         }
       }
@@ -134,7 +122,7 @@ object KeYmaeraX {
     val outputFml = And(rootNode.openGoals().head.sequent.ante.head, rootNode.openGoals().head.sequent.succ.head)
     val output = KeYmaeraXPrettyPrinter(outputFml)
 
-    if (options.contains('verify) && options.get('verify)==true) {
+    if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
       //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
       System.err.println("Cannot yet verify modelplex proof certificates")
     }
@@ -160,15 +148,16 @@ object KeYmaeraX {
     val inputFileName = options.get('in).get.toString
     val input = scala.io.Source.fromFile(inputFileName).mkString
     val inputModel = KeYmaeraXProblemParser(input)
-    val rootNode = new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel)))
+    val inputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel))
+    val rootNode = new RootNode(inputSequent)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
 
     if (rootNode.isClosed()) {
       assert(rootNode.openGoals().isEmpty)
-      if (options.contains('verify) && options.get('verify)==true) {
+      if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
         val witness = rootNode.provableWitness
         val proved = witness.proved
-        assert(KeYmaeraXParser(input) == proved, "Proved the original problem and not something else")
+        assert(inputSequent == proved, "Proved the original problem and not something else")
         println("Proof certificate: Passed")
       } else {
         println("Proof certificate: Skipped")
@@ -180,20 +169,20 @@ object KeYmaeraX {
           |  tactic "${scala.io.Source.fromFile(tacticFileName).mkString}"
           |  proof ""
           |End.
-        """.stripMargin
+          |""".stripMargin
       //@todo why is this of the form bla <-> true instead of just bla?
       val lemmaContent =
         s"""Lemma "${inputFileName.substring(inputFileName.lastIndexOf('/')+1)}".
-          | (${KeYmaeraXPrettyPrinter(inputModel)}) <-> true
+          |  (${KeYmaeraXPrettyPrinter(inputModel)}) <-> true
           |End.
-        """.stripMargin
+          |""".stripMargin
 
       val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".proof").toString)
-      pw.write(lemmaContent + "\n" + evidence)
+      pw.write(lemmaContent + evidence)
       pw.close()
     } else {
       assert(!rootNode.isClosed())
-      assert(!rootNode.openGoals().isEmpty)
+      assert(rootNode.openGoals().nonEmpty)
       println("Unsuccessful proof: unfinished")
       System.err.println("Unsuccessful proof: unfinished")
       sys.exit(-1)
