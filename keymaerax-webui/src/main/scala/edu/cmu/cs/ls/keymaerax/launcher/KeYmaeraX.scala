@@ -47,7 +47,7 @@ object KeYmaeraX {
   def main (args: Array[String]): Unit = {
     println("KeYmaera X Prover\n" +
       "Use option -help for usage information")
-    if (args.length == 0) {Main.main(args); sys.exit(5)}
+    if (args.length == 0) launchUI(args)
     if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); sys.exit(1)}
     else {
       def makeVariables(varNames: Array[String]): Array[Variable] = {
@@ -71,7 +71,7 @@ object KeYmaeraX {
           case "-jlink" :: value :: tail => nextOption(map ++ Map('jlink -> value), tail)
           case "-noverify" :: tail => nextOption(map ++ Map('verify -> false), tail)
           case "-verify" :: tail => nextOption(map ++ Map('verify -> true), tail)
-          case "-ui" :: tail => {Main.main(tail.toArray); sys.exit(5)}
+          case "-ui" :: tail => launchUI(tail.toArray)
           case "-help" :: _ => {println(usage); sys.exit(1)}
           case option :: tail => println("Unknown option " + option + "\n" + usage); sys.exit(1)
         }
@@ -80,16 +80,19 @@ object KeYmaeraX {
       val options = nextOption(Map(), args.toList)
       require(options.contains('mode), usage)
 
-      initializeProver(options)
+      try {
+        initializeProver(options)
 
-      //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen -format C
-      options.get('mode) match {
-        case Some("prove") => prove(options)
-        case Some("modelplex") => modelplex(options)
-        case Some("codegen") => codegen(options)
+        //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen -format C
+        options.get('mode) match {
+          case Some("prove") => prove(options)
+          case Some("modelplex") => modelplex(options)
+          case Some("codegen") => codegen(options)
+        }
       }
-
-      shutdownProver()
+      finally {
+        shutdownProver()
+      }
     }
   }
 
@@ -121,6 +124,9 @@ object KeYmaeraX {
   }
 
   private def exit(status: Int): Unit = {shutdownProver(); sys.exit(status)}
+
+  private def launchUI(args: Array[String]): Nothing =
+    {Main.main(args); sys.exit(5)}
 
   /**
    * ModelPlex monitor synthesis on the given input files
