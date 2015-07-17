@@ -9,6 +9,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec._
 
 import scala.collection.immutable._
@@ -25,7 +26,7 @@ object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 }
 
 /**
- * KeYmaera X Printer formats differential dynamic logic expressions
+ * Vanilla: KeYmaera X Printer formats differential dynamic logic expressions
  * in KeYmaera X notation according to the concrete syntax of differential dynamic logic
  * with explicit statement end ``;`` operator.
  * @example
@@ -60,16 +61,16 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       "\nExpected:   " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName
     )
 
-  def parser: Parser = KeYmaeraXParser
+  def parser: KeYmaeraXParser.type = KeYmaeraXParser
   def fullPrinter: (Expression => String) = FullPrettyPrinter
 
 
   /** Reparse the string print as the same kind as expr has */
   private def reparse(expr: Expression, print: String): Expression = expr.kind match {
-    case TermKind => KeYmaeraXParser.termParser(print)
-    case FormulaKind => KeYmaeraXParser.formulaParser(print)
-    case ProgramKind => KeYmaeraXParser.programParser(print)
-    case DifferentialProgramKind => KeYmaeraXParser.differentialProgramParser(print)
+    case TermKind => parser.termParser(print)
+    case FormulaKind => parser.formulaParser(print)
+    case ProgramKind => parser.programParser(print)
+    case DifferentialProgramKind => parser.differentialProgramParser(print)
   }
 
   /** Pretty-print term to a string without contract checking. */
@@ -178,7 +179,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
 }
 
 /**
- * KeYmaera X Pretty Printer formats differential dynamic logic expressions with compact brackets
+ * Precedence-based: KeYmaera X Pretty Printer formats differential dynamic logic expressions with compact brackets
  * in KeYmaera X notation according to the concrete syntax of differential dynamic logic
  * with explicit statement end ``;`` operator.
  * @author aplatzer
@@ -207,7 +208,7 @@ class KeYmaeraXPrecedencePrinter extends KeYmaeraXPrinter {
 }
 
 /**
- * A pretty printer in full form with full parentheses
+ * Fully-parenthesized pretty printer in full form with full parentheses.
  * @example
  * Fully parenthesized strings are obtained using the [[edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter]] printer:
  * {{{
