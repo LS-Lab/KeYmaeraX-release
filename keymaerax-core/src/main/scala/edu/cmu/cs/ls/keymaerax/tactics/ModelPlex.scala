@@ -32,7 +32,17 @@ import scala.language.postfixOps
  * @see "Stefan Mitsch and André Platzer. ModelPlex: Verified runtime validation of verified cyber-physical system models.
 In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014, Toronto, ON, Canada, September 22-25, 2014. Proceedings, volume 8734 of LNCS, pages 199-214. Springer, 2014."
  */
-object ModelPlex extends (List[Variable] => (Formula => Formula)) {
+object ModelPlex extends (Formula => Formula) with (List[Variable] => (Formula => Formula)) {
+
+  /**
+   * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
+   * @todo Add a parameter to determine controller monitor versus model monitor versus prediction monitor.
+   */
+  def apply(formula: Formula): Formula = formula match {
+    case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
+      (apply(StaticSemantics.boundVars(controller).toSymbolSet[Variable].toList.sortBy(x=>x)))(formula)
+    case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
+  }
 
   /**
     * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
@@ -51,6 +61,7 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
 
   /** Construct ModelPlex Controller Monitor specification formula corresponding to given formula for monitoring the given variables. */
   def modelplexControllerMonitorTrafo(fml: Formula, vars: List[Variable]): Formula = {
+    val varsSet = vars.toSet
     require(StaticSemantics.symbols(fml).intersect(
       vars.toSet[Variable].map(v=>Function(v.name + "pre", v.index, Unit, Real).asInstanceOf[NamedSymbol]) ++
         vars.toSet[Variable].map(v=>Function(v.name + "post", v.index, Unit, Real))
@@ -58,12 +69,14 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     fml match {
       // models of the form (ctrl;plant)*
       case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
+        require(StaticSemantics.boundVars(controller).toSymbolSet.forall(v => varsSet.contains(v)), "all bound variables are monitored " + StaticSemantics.boundVars(controller) + " must all occur in " + vars.mkString(", "))
         val preassignments = vars.map(v => Assign(v, FuncOf(Function(v.name + "pre", v.index, Unit, Real), Nothing))).reduce(Compose)
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, Real), Nothing), v)).reduce(And)
         //      Imply(assumptions, Diamond(preassignments, Diamond(controller, posteqs)))
         Imply(assumptions, Diamond(controller, posteqs))
       // models of the form (plant)
       case Imply(assumptions, Box(ODESystem(_, _), _)) =>
+        //@todo require bound variables
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, Real), Nothing), v)).reduce(And)
         Imply(assumptions, Diamond(Test(True), posteqs))
       case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
