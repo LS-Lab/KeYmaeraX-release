@@ -73,7 +73,7 @@ sealed trait Expression {
   //override def toString : String = "(" + prettyString() + ")@" + canonicalString
   override def toString : String = "(" + prettyString() + ")@" + getClass.getSimpleName
   /** Pretty-printed string representing this expression */
-  def prettyString() : String = PrettyPrinter.printer(this)
+  def prettyString : String = PrettyPrinter.printer(this)
   private[core] def canonicalString : String = super.toString
 }
 
@@ -195,7 +195,7 @@ object Anything extends NamedSymbol with AtomicTerm with RTerm {
   def name: String = "\\anything"
   def index: Option[Int] = None
   //@note Direct prettyString implementation bypasses pretty printer contracts, which fail since Anything can't be parsed standalone.
-  override def prettyString(): String = "??"
+  override def prettyString: String = "??"
 }
 
 /** Function symbol applied to argument child */
