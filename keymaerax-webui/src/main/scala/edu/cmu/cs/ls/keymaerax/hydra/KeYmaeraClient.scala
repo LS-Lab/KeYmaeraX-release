@@ -57,7 +57,7 @@
 //      case BoxModality(ep) => {
 //        val (program:Program, formula:Formula) = ep
 //        JsObject(
-//            "WTF" -> JsString(program.prettyString()),
+//            "WTF" -> JsString(program.prettyString),
 //          "uid" -> JsString(uid),
 //          "program" -> exprToJson(sessionName, uid+"0", program),
 //          "formula" -> exprToJson(sessionName, uid+"0", formula),
@@ -184,12 +184,12 @@
 //      
 //      case e : NamedSymbol => {JsObject(
 //          "uid" -> JsString(uid),
-//          "str" -> JsString(e.prettyString()+(e.index match { case Some(j) => "_" + j case _ => "" }))
+//          "str" -> JsString(e.prettyString+(e.index match { case Some(j) => "_" + j case _ => "" }))
 //      )}
-//      case e : Number.NumberObj => JsObject("uid" -> JsString(uid), "str" -> JsString(e.prettyString()))
+//      case e : Number.NumberObj => JsObject("uid" -> JsString(uid), "str" -> JsString(e.prettyString))
 //      case True() => JsObject("uid" -> JsString(uid),"str" -> JsString(TRUE))
 //      case False() => JsObject("uid" -> JsString(uid),"str" -> JsString(FALSE))
-//      case _ => JsString("unimmplemented: unary and quantifiers." + e.prettyString() + e.getClass().getName())
+//      case _ => JsString("unimmplemented: unary and quantifiers." + e.prettyString + e.getClass().getName())
 //    }
 //  }
 //  

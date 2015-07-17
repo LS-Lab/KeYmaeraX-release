@@ -169,7 +169,7 @@ object LogicalODESolver {
           case Box(differentialProgram : DifferentialProgram, cond) => {
             val tv = timeVar(differentialProgram)
             if(tv.isDefined) {
-              println("Found a time variable: " + tv.get.prettyString())
+              println("Found a time variable: " + tv.get.prettyString)
               true
             }
             else {
@@ -178,7 +178,7 @@ object LogicalODESolver {
             }
           }
           case _ => {
-            println("Variable did not have correct form: " + fAtPos.prettyString());
+            println("Variable did not have correct form: " + fAtPos.prettyString);
             false
           }
         }

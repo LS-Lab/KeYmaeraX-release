@@ -90,7 +90,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
           ls(diffInvariantT) | debugT("Diff. inv. dx^2+dy^2=1 failed")),
         (cutUseLbl, debugT("Use dx^2+dy^2=1") & discreteGhostT(Some(Variable("v0")), Variable("v", Some(0)))(odePos) &
           boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) & debugT("Cutting in v=v0+a*t") &
-          ls(diffCutT(("v_0=v0_1()+" + a.prettyString() + "*t_2").asFormula)) & onBranch(
+          ls(diffCutT(("v_0=v0_1()+" + a.prettyString + "*t_2").asFormula)) & onBranch(
           (cutShowLbl, debugT("Show v=v0+a*t") &
             la(hideT, "v_0=0|(x_0-xo_0>=0->x_0-xo_0>v_0^2/(2*B)+V()*(v_0/B))&(x_0-xo_0<=0->xo_0-x_0>v_0^2/(2*B)+V()*(v_0/B))|(y_0-yo_0>=0->y_0-yo_0>v_0^2/(2*B)+V()*(v_0/B))&(y_0-yo_0<=0->yo_0-y_0>v_0^2/(2*B)+V()*(v_0/B))", "dxo()^2+dyo()^2<=V()^2", "dx^2+dy^2=1") &
             (ls(diffInvariantT) | debugT("Diff. inv. v=v0+a*t failed"))),
@@ -355,7 +355,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
           (cutUseLbl, debugT("Use dx^2+dy^2=1") &
             discreteGhostT(Some(Variable("v0")), Variable("v", Some(0)))(odePos) &
             boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) & debugT("Cutting in v=v0+a*t") &
-            ls(diffCutT(("v_0=v0_1()+" + a.prettyString() + "*t_2").asFormula)) & onBranch(
+            ls(diffCutT(("v_0=v0_1()+" + a.prettyString + "*t_2").asFormula)) & onBranch(
             (cutShowLbl, debugT("Show v=v0+a*t") &
               la(hideT, "v_0=0|(talpha_0>=0&r_0()>=0->talpha_0+v_0^2/(2*b()*r_0()) < alpha())&(talpha_0>=0&r_0() < 0->talpha_0+v_0^2/(-2*b()*r_0()) < alpha())&(talpha_0 < 0&r_0()>=0->-talpha_0+v_0^2/(2*b()*r_0()) < alpha())&(talpha_0 < 0&r_0() < 0->-talpha_0+v_0^2/(-2*b()*r_0()) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", "r_0()!=0", "dx^2+dy^2=1", "odx()^2+ody()^2<=V()^2") &
               (ls(diffInvariantT) | debugT("Diff. inv. v=v0+a*t failed"))),
@@ -389,10 +389,10 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
                           // TODO probably differs per branch
 //                          ls(diffCutT(
 //                            s"""v_0=0 |
-//                                  ((talpha0_1() >= 0 & ${r.prettyString()} >= 0 -> talpha0_1() + v0_1()^2/(2*b()*${r.prettyString()}) < alpha()) &
-//                                   (talpha0_1() >= 0 & ${r.prettyString()} < 0 -> talpha0_1() + v0_1()^2/(-2*b()*${r.prettyString()}) < alpha()) &
-//                                   (talpha0_1() < 0 & ${r.prettyString()} >= 0 -> -talpha0_1() + v0_1()^2/(2*b()*${r.prettyString()}) < alpha()) &
-//                                   (talpha0_1() < 0 & ${r.prettyString()} < 0 -> -talpha0_1() + v0_1()^2/(-2*b()*${r.prettyString()}) < alpha()))""".asFormula)) & onBranch(
+//                                  ((talpha0_1() >= 0 & ${r.prettyString} >= 0 -> talpha0_1() + v0_1()^2/(2*b()*${r.prettyString}) < alpha()) &
+//                                   (talpha0_1() >= 0 & ${r.prettyString} < 0 -> talpha0_1() + v0_1()^2/(-2*b()*${r.prettyString}) < alpha()) &
+//                                   (talpha0_1() < 0 & ${r.prettyString} >= 0 -> -talpha0_1() + v0_1()^2/(2*b()*${r.prettyString}) < alpha()) &
+//                                   (talpha0_1() < 0 & ${r.prettyString} < 0 -> -talpha0_1() + v0_1()^2/(-2*b()*${r.prettyString}) < alpha()))""".asFormula)) & onBranch(
 //                          (cutShowLbl, debugT("Show v=0 | Abs(talpha0) + v0^2/(2*b()*Abs(r)) < alpha") /* TODO */ & ls(diffInvariantT)),
 //                          (cutUseLbl, debugT("Use Abs(talpha0) + v0^2/(2*b()*Abs(r)) < alpha") &
                             ls(diffWeakenT) & ls(ImplyRightT) & (la(AndLeftT)*) & debugT("Plant finished")

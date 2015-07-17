@@ -197,7 +197,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   def sameSequentAs(r: Sequent): Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
 
   override def toString: String = "Sequent[{(" + pref.map(_.prettyString).mkString(", ") + "), " +
-    ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "}]"
+    ante.map(_.prettyString).mkString(", ") + " ==> " + succ.map(_.prettyString).mkString(", ") + "}]"
 
 }
 
@@ -925,7 +925,7 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
       // old name is bound somewhere in f -> check that new name is admissible (does not occur)
       if (admissible(f)) rename(f)
       else throw new BoundRenamingClashException("Bound renaming only to fresh names but name " +
-        repl + " is not fresh", this.toString, f.prettyString())
+        repl + " is not fresh", this.toString, f.prettyString)
     }
   }
 
@@ -946,7 +946,7 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
         case _ => if (compatibilityMode) {//println("BoundRenaming: Change alphaRenamingT to disable compatibilityMode")
           Box(Assign(repl, what), apply(f))
         } else throw new BoundRenamingClashException("Bound renaming only to bound variables " +
-          what + " is not bound", this.toString, f.prettyString())
+          what + " is not bound", this.toString, f.prettyString)
     } } ensuring(admissible(f)) else {
       // old name is not bound anywhere in f, so no bound renaming needed/possible
       f

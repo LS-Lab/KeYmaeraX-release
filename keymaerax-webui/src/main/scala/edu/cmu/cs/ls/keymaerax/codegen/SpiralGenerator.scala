@@ -119,7 +119,7 @@ class SpiralGenerator extends CodeGenerator {
       case Power(l, r) => "pow(" + compileTerm(l) + ", " + compileTerm(r) + ")"
       // atomic terms
       case Number(n) =>
-        assert(n.isValidDouble || n.isValidLong, throw new CodeGenerationException("Term " + t.prettyString() + " contains illegal numbers"))
+        assert(n.isValidDouble || n.isValidLong, throw new CodeGenerationException("Term " + t.prettyString + " contains illegal numbers"))
         "TReal.value(" + n.underlying().toString + ")"
       case t: Variable =>
         if(t.index.isEmpty) t.name
@@ -132,7 +132,7 @@ class SpiralGenerator extends CodeGenerator {
           case _ => fn.name + "(" + compileTerm(child) + ")"
         }
       // otherwise exception
-      case _ => throw new CodeGenerationException("Conversion of term " + t.prettyString() + " is not defined")
+      case _ => throw new CodeGenerationException("Conversion of term " + t.prettyString + " is not defined")
     }
   }
 
@@ -155,7 +155,7 @@ class SpiralGenerator extends CodeGenerator {
       case True => "true"
       case False => "false"
       case Box(_, _) | Diamond(_, _) => throw new CodeGenerationException("Conversion of Box or Diamond modality is not allowed")
-      case _ => throw new CodeGenerationException("Conversion of formula " + f.prettyString() + " is not defined")
+      case _ => throw new CodeGenerationException("Conversion of formula " + f.prettyString + " is not defined")
     }
   }
 
@@ -234,7 +234,7 @@ class SpiralGenerator extends CodeGenerator {
   private def translateToCoeffs(coeffVec: Array[Expression]) : String = {
     var coeffsHex = ""
     for(i <- 0 until coeffVec.length) {
-      coeffsHex += "  " + coeffVec(i).prettyString()
+      coeffsHex += "  " + coeffVec(i).prettyString
       if(i != coeffVec.length-1) coeffsHex += ",\n"
     }
     coeffsHex

@@ -65,13 +65,13 @@ case class ObjectSort(name : String) extends Sort { override def toString = name
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.1]]
  * @author aplatzer
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
- * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser#parseBareExpression()]]
+ * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#apply]]
  */
 sealed trait Expression {
   def kind : Kind
   def sort : Sort
-  //override def toString : String = "(" + prettyString() + ")@" + canonicalString
-  override def toString : String = "(" + prettyString() + ")@" + getClass.getSimpleName
+  //override def toString : String = "(" + prettyString + ")@" + canonicalString
+  override def toString : String = "(" + prettyString + ")@" + getClass.getSimpleName
   /** Pretty-printed string representing this expression */
   def prettyString : String = PrettyPrinter.printer(this)
   private[core] def canonicalString : String = super.toString
@@ -138,7 +138,7 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
 /**
  * Terms of differential dynamic logic.
  * @author aplatzer
-  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser#parseBareTerm()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#termParser]]
  */
 sealed trait Term extends Expression {
   final def kind: Kind = TermKind
@@ -260,7 +260,7 @@ case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
 /**
  * Formulas of differential dynamic logic.
  * @author aplatzer
-  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser#parseBareFormula()]]
+ * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#formulaParser]]
  */
 sealed trait Formula extends Expression {
   final def kind: Kind = FormulaKind
@@ -383,9 +383,10 @@ case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula
   */
 
 /**
-  * Hybrid programs of differential dynamic logic.
-  * @author aplatzer
-  */
+ * Hybrid programs of differential dynamic logic.
+ * @author aplatzer
+ * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#programParser]]
+ */
 sealed trait Program extends Expression {
   /*final*/ def kind: Kind = ProgramKind
   final def sort: Sort = Trafo
@@ -435,7 +436,11 @@ case class Compose(left: Program, right: Program) extends BinaryCompositeProgram
 case class Loop(child: Program) extends UnaryCompositeProgram
 //case class Dual(child: Program) extends CompositeProgram
 
-/** differential programs */
+/**
+ * Differential programs
+ * @author aplatzer
+ * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#differentialProgramParser]]
+ */
 sealed trait DifferentialProgram extends Program {
   override def kind: Kind = DifferentialProgramKind
 }

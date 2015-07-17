@@ -183,6 +183,7 @@ object TacticLibrary {
     override def applicable(node: ProofNode): Boolean = true
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
+      node.tacticInfo.infos += ("debug" -> s.toString)
       println("===== " + s + " ==== " + node.sequent + " =====")
       continuation(this, Success, Seq(node))
     }
@@ -473,7 +474,7 @@ object TacticLibrary {
 //      else {
 //        println("apparently is applicable: " + s(p))
 //      }
-//      println("Found that this renaming of " + from.prettyString() + " is applicable: " + applicable + " for " + s(p).prettyString() + " with inExpr position: " + p.inExpr)
+//      println("Found that this renaming of " + from.prettyString + " is applicable: " + applicable + " for " + s(p).prettyString + " with inExpr position: " + p.inExpr)
 
       applicable
     }

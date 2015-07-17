@@ -936,7 +936,7 @@ object ODETactics {
         case DifferentialProduct(AtomicODE(DifferentialSymbol(_), _), _) => true
         case _ => false
       }
-      case f => println("Does not apply to: " + f.prettyString()); false
+      case f => println("Does not apply to: " + f.prettyString); false
     })
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {

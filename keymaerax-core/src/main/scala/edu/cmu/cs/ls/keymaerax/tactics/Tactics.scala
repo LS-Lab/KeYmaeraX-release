@@ -452,7 +452,7 @@ object Tactics {
     if(TacticHelper.getTerm(s, p) == termExpectedAtPosition) {
       true
     } else{
-      println(" ---> About to fail an assertPT because we expected " + termExpectedAtPosition.prettyString() + " but found " + TacticHelper.getTerm(s, p) + " <---")
+      println(" ---> About to fail an assertPT because we expected " + termExpectedAtPosition.prettyString + " but found " + TacticHelper.getTerm(s, p) + " <---")
       false
     }
   }, msg)
@@ -804,6 +804,10 @@ object Tactics {
   object LabelBranch {
     def apply(s: String): Tactic = new LabelBranch(s)
   }
+  /**
+   * Pseudo-tactic that has no effect but labeling the proof node
+   * @see BranchLabels
+   */
   class LabelBranch(s: String) extends Tactic("Label branch " + s) {
     override def applicable(node: ProofNode): Boolean = true
 

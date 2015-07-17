@@ -108,7 +108,7 @@ object ContextTactics {
 //      val fPos = PosInExpr(where.pos.dropRight(1))
 //
 //      val f: Formula = fml.subFormulaAt(fPos).getOrElse(
-//        throw new Exception("Could not find a subformula at position " + fPos.pos.mkString("::") + " in " + fml.prettyString())
+//        throw new Exception("Could not find a subformula at position " + fPos.pos.mkString("::") + " in " + fml.prettyString)
 //      )
       val newFormula = Imply(cond, f.replaceAt(lhs, lhsPos, rhs))
       Equiv(fml, fml.replaceAt(f, fPos, newFormula))

@@ -250,7 +250,7 @@ sealed class ProofNode protected (val parent : ProofNode, val provable: Provable
       proofStep
     }
 
-    // TODO: there should be a TestCase that checks that this field is never read in the prover core
+    //@todo Optional: there should be a TestCase that checks that this field is never read in the prover core. But Provable already ensures soundness.
     val tacticInfo: ProofNodeInfo = new ProofNodeInfo(if(parent == null) Map() else parent.tacticInfo.infos, this)
 
     override def toString = "ProofNode(" + sequent + " by " +
@@ -276,8 +276,8 @@ sealed class ProofNode protected (val parent : ProofNode, val provable: Provable
     }
 
     /**
-     * Retrieves a list of open goals.
-     * @return the list of all childless proof nodes in a proof tree.
+     * Retrieves a list of open goals under this proof node.
+     * @return the list of all proof nodes under this proof tree that are neither closed nor have children.
      */
     def openGoals() : List[ProofNode] = {
       children match {

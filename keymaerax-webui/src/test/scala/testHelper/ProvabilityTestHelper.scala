@@ -25,6 +25,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * Created by nfulton on 12/6/14.
  * @author nfulton
  * @author aplatzer
+ * @todo adapt to new KeYmaeraXParser
  */
 class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
 
@@ -177,7 +178,7 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
    */
   def runTactic(tactic : Tactic, rootNode : ProofNode, mustApply:Boolean=false):ProofNode = {
     if(!tactic.applicable(rootNode)) {
-      throw new Exception("Called a tactic an an inapplicable node! Details: runTactic was called on tactic " + tactic.name + ", but is not applicable on the node")
+      throw new Exception("Called a tactic at an inapplicable node! Details: runTactic was called on tactic " + tactic.name + ", but is not applicable on the node")
     }
 
     //Dispatching the tactic.

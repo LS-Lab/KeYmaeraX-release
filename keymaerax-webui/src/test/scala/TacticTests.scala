@@ -78,8 +78,8 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   def unsoundUniformSubstitution(assume : Formula, nonconclude : Formula, subst: USubst,
                                  checkAssumption: Boolean = true): ProvabilityStatus = {
-    println(s"Premise    ${assume.prettyString()}")
-    println(s"Nonclusion ${nonconclude.prettyString()}")
+    println(s"Premise    ${assume.prettyString}")
+    println(s"Nonclusion ${nonconclude.prettyString}")
     println(s"Usubst     $subst")
     //@TODO prove(nonconclude) should be (Counterexample) OR: prove(Not(nonconclude)) should be (Satisfiable)
     a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(subst,

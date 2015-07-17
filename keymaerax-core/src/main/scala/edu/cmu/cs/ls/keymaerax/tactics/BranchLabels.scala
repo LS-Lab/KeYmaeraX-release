@@ -5,20 +5,22 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 /**
+ * List of commonly used names of branch labels.
  * Created by Jan-David Quesel on 5/19/14.
+ * @see [[edu.cmu.cs.ls.keymaerax.tactics.Tactics.LabelBranch]]
  */
 object BranchLabels {
   val cutShowLbl = "Show cut"
   val cutUseLbl = "Use cut"
-  val indInitLbl = "Invariant Initially Valid"
+  val indInitLbl = "Invariant initially valid"
   val indUseCaseLbl = "Use case"
-  val indStepLbl = "Induction Step"
+  val indStepLbl = "Induction step"
 
-  val equivLeftLbl = "Positive Equiv Case"
-  val equivRightLbl = "Negative Equiv Case"
+  val equivLeftLbl = "Positive equiv case"
+  val equivRightLbl = "Negative equiv case"
 
   val axiomShowLbl = "Show axiom"
   val axiomUseLbl = "Use axiom"
 
-  val knowledgeSubclassContinue = "knowledge subclass continue"
+  val knowledgeSubclassContinue = "Knowledge subclass continue"
 }

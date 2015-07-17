@@ -132,7 +132,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case _ => assert(false, "sameHead only used for ApplicationOf"); false
   }
 
-  override def toString: String = "(" + what.prettyString() + "~>" + repl.prettyString() + ")"
+  override def toString: String = "(" + what.prettyString + "~>" + repl.prettyString + ")"
 }
 
 
@@ -236,15 +236,15 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   //@note could define a direct composition implementation for fast compositions of USubst, but not used.
 
   /** apply this uniform substitution everywhere in a term */
-  def apply(t: Term): Term = {try usubst(t) catch {case ex: ProverException => throw ex.inContext(t.prettyString())}
+  def apply(t: Term): Term = {try usubst(t) catch {case ex: ProverException => throw ex.inContext(t.prettyString)}
   } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + t + "\ngave " + usubst(t))
   /** apply this uniform substitution everywhere in a formula */
-  def apply(f: Formula): Formula = {try usubst(f) catch {case ex: ProverException => throw ex.inContext(f.prettyString())}
+  def apply(f: Formula): Formula = {try usubst(f) catch {case ex: ProverException => throw ex.inContext(f.prettyString)}
   } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + f + "\ngave " + usubst(f))
   /** apply this uniform substitution everywhere in a program */
-  def apply(p: Program): Program = {try usubst(p) catch {case ex: ProverException => throw ex.inContext(p.prettyString())}
+  def apply(p: Program): Program = {try usubst(p) catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
   } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
 
@@ -339,15 +339,15 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       }
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(toString, "undef", "undef", term.prettyString(), "undef", ex.getMessage).initCause(ex)
-        throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + term.prettyString()).initCause(ex)
+        throw new SubstitutionClashException(toString, "undef", "undef", term.prettyString, "undef", ex.getMessage).initCause(ex)
+        throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + term.prettyString).initCause(ex)
     }
   } ensuring(
     r => r.kind == term.kind && r.sort == term.sort, "Uniform Substitution leads to same kind and same sort " + term)
 
   /** uniform substitution on formulas */
   private[core] def usubst(formula: Formula): Formula = {
-    log("Substituting " + formula.prettyString() + " using " + this)
+    log("Substituting " + formula.prettyString + " using " + this)
     try {
       formula match {
         case app@PredOf(op, theta) if matchHead(app) =>
@@ -405,9 +405,9 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       }
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(toString, "undef", "undef", formula.prettyString(), "undef", ex.getMessage).initCause(ex)
+        throw new SubstitutionClashException(toString, "undef", "undef", formula.prettyString, "undef", ex.getMessage).initCause(ex)
       case ex: AssertionError =>
-        throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + formula.prettyString()).initCause(ex)
+        throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + formula.prettyString).initCause(ex)
     }
   } ensuring(
     r => r.kind == formula.kind && r.sort == formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
@@ -435,9 +435,9 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       }
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(toString, "undef", "undef", program.prettyString(), "undef", ex.getMessage).initCause(ex)
+        throw new SubstitutionClashException(toString, "undef", "undef", program.prettyString, "undef", ex.getMessage).initCause(ex)
       case ex: AssertionError =>
-        throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + program.prettyString()).initCause(ex)
+        throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + program.prettyString).initCause(ex)
     }
   } ensuring(
     r => r.kind == program.kind && r.sort == program.sort, "Uniform Substitution leads to same kind and same sort " + program)
@@ -472,9 +472,9 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    */
   private def requireAdmissible(U: SetLattice[NamedSymbol], e: Expression, context: Expression): Unit =
 //    require(admissible(U, e),
-//      "Substitution clash: " + this + " not " + U + "-admissible for " + e.prettyString() + " when substituting in " + context.prettyString())
+//      "Substitution clash: " + this + " not " + U + "-admissible for " + e.prettyString + " when substituting in " + context.prettyString)
     if (!admissible(U, e))
-      throw new SubstitutionClashException(toString, U.prettyString, e.prettyString(), context.prettyString(), clashSet(U, e).prettyString, "")
+      throw new SubstitutionClashException(toString, U.prettyString, e.prettyString, context.prettyString, clashSet(U, e).prettyString, "")
 
   /**
    * check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates symbols.

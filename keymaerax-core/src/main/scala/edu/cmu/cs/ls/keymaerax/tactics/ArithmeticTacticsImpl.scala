@@ -136,7 +136,7 @@ object ArithmeticTacticsImpl {
                     )
                     Some(tactic)
                   }
-                  case f => println("Only apply QE if the result is true, have " + f.prettyString()); None
+                  case f => println("Only apply QE if the result is true, have " + f.prettyString); None
                 }
             }
           } catch {

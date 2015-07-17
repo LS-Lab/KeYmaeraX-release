@@ -81,7 +81,7 @@ class CGenerator extends CodeGenerator {
   //      case FuncOf(fn, child) =>
   //        if(child.equals(Nothing)) fn.name
   //        else fn.name + "(" + compileTerm(child) + ")"
-  //      case _ => throw new CodeGenerationException("Conversion of term " + t.prettyString() + " is not defined")
+  //      case _ => throw new CodeGenerationException("Conversion of term " + t.prettyString + " is not defined")
   //    }
   //  }
 
@@ -96,7 +96,7 @@ class CGenerator extends CodeGenerator {
       case Power(l, r) => "(" + compilePower(l, r) + ")"
       // atomic terms
       case Number(n) =>
-        assert(n.isValidDouble || n.isValidLong, throw new CodeGenerationException("Term " + t.prettyString() + " contains illegal numbers"))
+        assert(n.isValidDouble || n.isValidLong, throw new CodeGenerationException("Term " + t.prettyString + " contains illegal numbers"))
         n.underlying().toString
       case t: Variable =>
         if(t.index.isEmpty) t.name
@@ -108,7 +108,7 @@ class CGenerator extends CodeGenerator {
           case _ => fn.name + "(" + compileTerm(child) + ")"
         }
       // otherwise exception
-      case _ => throw new CodeGenerationException("Conversion of term " + t.prettyString() + " is not defined")
+      case _ => throw new CodeGenerationException("Conversion of term " + t.prettyString + " is not defined")
     }
   }
 
@@ -159,7 +159,7 @@ class CGenerator extends CodeGenerator {
   //      case LessEqual(l, r) => "(" + compileTerm(l) + ") <= (" + compileTerm(r) + ")"
   //      case True => "1"
   //      case False => "0"
-  //      case Box(bp, bc) | Diamond(dp, dc)  => throw new CodeGenerationException("Conversion of formula " + f.prettyString() + " is not defined")
+  //      case Box(bp, bc) | Diamond(dp, dc)  => throw new CodeGenerationException("Conversion of formula " + f.prettyString + " is not defined")
   //    }
   //  }
 
@@ -184,7 +184,7 @@ class CGenerator extends CodeGenerator {
       case True => "1"
       case False => "0"
       case Box(_, _) | Diamond(_, _) => throw new CodeGenerationException("Conversion of Box or Diamond modality is not allowed")
-      case _ => throw new CodeGenerationException("Conversion of formula " + f.prettyString() + " is not defined")
+      case _ => throw new CodeGenerationException("Conversion of formula " + f.prettyString + " is not defined")
     }
   }
 }

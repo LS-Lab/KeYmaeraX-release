@@ -163,8 +163,8 @@ object DCHOICE  extends OPERATOR("--") {
 object NOTHING extends Terminal("")
 object DOT     extends OPERATOR("•") //(".")
 object PLACE   extends OPERATOR("⎵") //("_")
-object ANYTHING extends OPERATOR(Anything.prettyString()) {
-  assert(Anything.prettyString()=="??")
+object ANYTHING extends OPERATOR(Anything.prettyString) {
+  assert(Anything.prettyString=="??")
   override def regexp = """\?\?""".r
 }
 object PSEUDO  extends Terminal("<pseudo>")

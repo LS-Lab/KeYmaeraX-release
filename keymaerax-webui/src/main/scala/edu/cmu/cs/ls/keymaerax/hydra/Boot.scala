@@ -19,7 +19,7 @@ import scala.concurrent.duration.FiniteDuration
 class LoadingDialog {
   val progressBar = new JProgressBar()
 //  val progressMonitor = new ProgressMonitor(progressBar, "Initializing HyDRA..", "Binding port 8090", 0, 100)
-  val label = new JLabel("KeYmaeraX is Loading...")
+  val label = new JLabel("KeYmaera X Prover user interface is Loading...")
 
   var window = new JWindow()
   window.setLayout(new GridLayout(2,1))

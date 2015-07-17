@@ -603,7 +603,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
           val (n, i) = nameAndIndex(name)
           val fn = Function(n, i, Unit, Bool)
           val p = PredOf(fn, Nothing)
-          require(predicates.contains(fn), "All predicates have to be declared, but the predicate named ``" + p.prettyString() + "\" was not found in the list of predicates: " + predicates)
+          require(predicates.contains(fn), "All predicates have to be declared, but the predicate named ``" + p.prettyString + "\" was not found in the list of predicates: " + predicates)
           p
         }
       } 
@@ -833,7 +833,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
         case name => {
           val (n, i) = nameAndIndex(name)
           val p = ProgramConst(n)
-          require(programVariables.contains(p), "All program constants have to be declared " + p.prettyString() + " not found in " + programVariables)
+          require(programVariables.contains(p), "All program constants have to be declared " + p.prettyString + " not found in " + programVariables)
           p
         }
       } 
@@ -853,7 +853,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
         case name => {
           val (n, i) = nameAndIndex(name)
           val p = DifferentialProgramConst(n)
-          require(DifferentialProgramVariables.contains(p), "All program constants have to be declared; '" + p.prettyString() + "' not found in " + programVariables)
+          require(DifferentialProgramVariables.contains(p), "All program constants have to be declared; '" + p.prettyString + "' not found in " + programVariables)
           p
         }
       }
