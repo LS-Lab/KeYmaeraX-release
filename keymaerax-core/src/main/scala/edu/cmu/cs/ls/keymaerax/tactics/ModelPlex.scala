@@ -22,6 +22,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{NilT,NilPT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import scala.collection.immutable
+import scala.collection.immutable.SortedSet
 import scala.language.postfixOps
 
 /**
@@ -32,7 +33,7 @@ import scala.language.postfixOps
  * @see "Stefan Mitsch and André Platzer. ModelPlex: Verified runtime validation of verified cyber-physical system models.
 In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014, Toronto, ON, Canada, September 22-25, 2014. Proceedings, volume 8734 of LNCS, pages 199-214. Springer, 2014."
  */
-object ModelPlex extends (Formula => Formula) with (List[Variable] => (Formula => Formula)) {
+object ModelPlex extends (List[Variable] => (Formula => Formula)) {
 
   /**
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
@@ -40,8 +41,10 @@ object ModelPlex extends (Formula => Formula) with (List[Variable] => (Formula =
    */
   def apply(formula: Formula): Formula = formula match {
     case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
-      (apply(StaticSemantics.boundVars(controller).toSymbolSet[Variable].toList.sortBy(x=>x)))(formula)
-    case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
+      val vars = StaticSemantics.boundVars(controller).toSymbolSet.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
+      val sortedVars = vars.sortWith((x,y)=>x<y)
+      (apply(sortedVars))(formula)
+    case _ => throw new IllegalArgumentException("Unsupported shape of formula " + formula)
   }
 
   /**
@@ -69,7 +72,7 @@ object ModelPlex extends (Formula => Formula) with (List[Variable] => (Formula =
     fml match {
       // models of the form (ctrl;plant)*
       case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
-        require(StaticSemantics.boundVars(controller).toSymbolSet.forall(v => varsSet.contains(v)), "all bound variables are monitored " + StaticSemantics.boundVars(controller) + " must all occur in " + vars.mkString(", "))
+        require(StaticSemantics.boundVars(controller).toSymbolSet.forall(v => v.isInstanceOf[Variable] && varsSet.contains(v.asInstanceOf[Variable])), "all bound variables are monitored " + StaticSemantics.boundVars(controller) + " must all occur in " + vars.mkString(", "))
         val preassignments = vars.map(v => Assign(v, FuncOf(Function(v.name + "pre", v.index, Unit, Real), Nothing))).reduce(Compose)
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, Real), Nothing), v)).reduce(And)
         //      Imply(assumptions, Diamond(preassignments, Diamond(controller, posteqs)))
@@ -83,7 +86,7 @@ object ModelPlex extends (Formula => Formula) with (List[Variable] => (Formula =
     }
   }
 
-  /** ModelPlex proof tactic for monitor synthesis */
+  /** @todo document */
   def modelplex = new PositionTactic("Modelplex") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       // TODO generate from phi -> [alpha*]psi
@@ -136,6 +139,7 @@ object ModelPlex extends (Formula => Formula) with (List[Variable] => (Formula =
     }
   }
 
+  /** ModelPlex proof tactic for monitor synthesis (in-place version) */
   def modelplexInPlace(useOptOne: Boolean, time: Option[Variable] = None) = new PositionTactic("Modelplex In-Place") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       // TODO generate from phi -> [alpha*]psi
