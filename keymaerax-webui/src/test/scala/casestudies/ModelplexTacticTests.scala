@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.ProofNode.ProofStep
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import testHelper.ParserFactory._
-import edu.cmu.cs.ls.keymaerax.tactics.ModelplexTacticImpl.{modelplex, modelplexInPlace, diamondModelplexTestT,
+import edu.cmu.cs.ls.keymaerax.tactics.ModelPlex.{modelplex, modelplexInPlace, diamondModelplexTestT,
   locateT, optimizationOne, modelplexControllerMonitorTrafo}
 import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.diamondDiffSolve2DT
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{locateSucc,lastSucc,onBranch,lastAnte}
