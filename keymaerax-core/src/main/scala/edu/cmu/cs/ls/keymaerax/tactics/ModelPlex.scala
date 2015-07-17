@@ -41,6 +41,7 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
    */
   def apply(formula: Formula): Formula = formula match {
     case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
+      //@todo explicitly address DifferentialSymbol instead of exception
       val vars = StaticSemantics.boundVars(controller).toSymbolSet.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
       val sortedVars = vars.sortWith((x,y)=>x<y)
       (apply(sortedVars))(formula)
@@ -72,7 +73,8 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     fml match {
       // models of the form (ctrl;plant)*
       case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
-        require(StaticSemantics.boundVars(controller).toSymbolSet.forall(v => v.isInstanceOf[Variable] && varsSet.contains(v.asInstanceOf[Variable])), "all bound variables are monitored " + StaticSemantics.boundVars(controller) + " must all occur in " + vars.mkString(", "))
+        //@todo explicitly address DifferentialSymbol instead of skipping
+        require(StaticSemantics.boundVars(controller).toSymbolSet.forall(v => !v.isInstanceOf[Variable] || varsSet.contains(v.asInstanceOf[Variable])), "all bound variables are monitored " + StaticSemantics.boundVars(controller) + " must all occur in " + vars.mkString(", "))
         val preassignments = vars.map(v => Assign(v, FuncOf(Function(v.name + "pre", v.index, Unit, Real), Nothing))).reduce(Compose)
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, Real), Nothing), v)).reduce(And)
         //      Imply(assumptions, Diamond(preassignments, Diamond(controller, posteqs)))
