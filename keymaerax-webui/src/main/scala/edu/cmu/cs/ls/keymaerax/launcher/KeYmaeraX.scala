@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, TacticWrapper, Tactics, Roo
 import edu.cmu.cs.ls.keymaerax.tactics.ModelplexTacticImpl.{modelplexControllerMonitorTrafo, modelplexInPlace}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
-import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, SpiralHeaderGenerator, SpiralMonitorGenerator}
+import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, SpiralGenerator}
 
 
 import scala.collection.immutable
@@ -20,6 +20,7 @@ import scala.tools.reflect.ToolBox
 /**
  * Created by smitsch on 7/13/15.
  * @author Stefan Mitsch
+ * @author Ran Ji
  */
 object KeYmaeraX {
 
@@ -216,7 +217,7 @@ object KeYmaeraX {
       pw.write(output)
       pw.close()
     } else if(options.get('format).get.toString == "Spiral") {
-      val sGen = new SpiralMonitorGenerator
+      val sGen = new SpiralGenerator
       output = sGen.apply(inputFormula)
       val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
       pw.write(output)
