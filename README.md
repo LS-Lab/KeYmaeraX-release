@@ -95,7 +95,7 @@ The Web UI front end of KeYmaera X can be started as follows:
     java -jar target/scala-2.10/KeYmaeraX-assembly-0.1-SNAPSHOT.jar
     open http://localhost:8090/index_bootstrap.html
 
-The first command builds a .JAR, and the second command runs the built .jar.
+The first command builds a .JAR, and the second command runs the built .jar. If the jar won't start because of an error "no manifest found" you may have to run `sbt clean` first.
 
 For development purposes, the Web UI can be run from an IDE by selecting as the Main class if you pass its JVM the option -Xss20M:
 

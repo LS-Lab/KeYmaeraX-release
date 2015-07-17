@@ -136,7 +136,7 @@ object KeYmaeraX {
     val input = scala.io.Source.fromFile(inputFileName).mkString
     val inputModel = KeYmaeraXProblemParser(input)
 
-    val outputFml = ModelPlex(options.get('vars).get.asInstanceOf[List[Variable]])(inputModel)
+    val outputFml = ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList)(inputModel)
     val output = KeYmaeraXPrettyPrinter(outputFml)
 
     if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
