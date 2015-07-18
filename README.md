@@ -64,6 +64,15 @@ To generate unified scaladoc for all subprojects, run:
 Documentation will be generated for the whole project in the `target/scala-x.xx/unidoc` directory.
 For instance `target/scala-2.10/api`.
 
+Main documentation to consider:
+
+    http://keymaerax.org/doc/dL-grammar.md - concrete syntax for input language Differential Dynamic Logic
+    edu.cmu.cs.ls.keymaerax.core.package   - KeYmaera X kernel, proof certificates, main data structures
+    edu.cmu.cs.ls.keymaerax.parser.package - KeYmaera X parser and pretty printer with concrete syntax and notation
+    edu.cmu.cs.ls.keymaerax.tactics.package - KeYmaera X tactic library
+    edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary - Main tactic library for most common cases
+    edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX - command-line launcher for KeYmaera X
+
 IntelliJ IDEA
 =============
 
