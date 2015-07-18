@@ -8,7 +8,7 @@
  * @author Jan-David Quesel
  * @author aplatzer
  * @author nfulton
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
  * @note Code Review: 2015-05-01
@@ -78,8 +78,8 @@ object SeqPos {
    *  Zero is a degenerate case indicating whole sequent 0.
    * @see SeqPos#pos
    */
-  def SeqPos(signedPos: Int): SeqPos =
-    if (signedPos>0) {SuccPos(signedPos-1)} else {assert(signedPos<0);AntePos(-signedPos+1)}
+  def apply(signedPos: Int): SeqPos =
+    if (signedPos>0) {SuccPos(signedPos-1)} else {assert(signedPos<0);AntePos(-signedPos-1)}
 
 }
 
@@ -196,8 +196,8 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
    */
   def sameSequentAs(r: Sequent): Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
 
-  override def toString: String = "Sequent[{(" + pref.map(_.prettyString).mkString(", ") + "), " +
-    ante.map(_.prettyString).mkString(", ") + " ==> " + succ.map(_.prettyString).mkString(", ") + "}]"
+  override def toString: String = {assert(pref.isEmpty);
+    ante.map(_.prettyString).mkString(", ") + "\n  ==>  " + succ.map(_.prettyString).mkString(", ")}
 
 }
 
