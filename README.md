@@ -46,8 +46,8 @@ common sbt problems:
 
 https://github.com/LS-Lab/KeYmaera4/wiki/Building-Instructions
 
-Generating Scaladoc
-===================
+Generating Scaladoc Documentation
+=================================
 
 To generate Scaladoc documentation files, run:
 
@@ -68,8 +68,8 @@ Main documentation to consider:
 
     http://keymaerax.org/doc/dL-grammar.md - concrete syntax for input language Differential Dynamic Logic
     edu.cmu.cs.ls.keymaerax.core.package   - KeYmaera X kernel, proof certificates, main data structures
-    edu.cmu.cs.ls.keymaerax.parser.package - KeYmaera X parser and pretty printer with concrete syntax and notation
-    edu.cmu.cs.ls.keymaerax.tactics.package - KeYmaera X tactic library
+    edu.cmu.cs.ls.keymaerax.parser.package - Parser and pretty printer with concrete syntax and notation
+    edu.cmu.cs.ls.keymaerax.tactics.package - Tactic library
     edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary - Main tactic library for most common cases
     edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX - command-line launcher for KeYmaera X
 
@@ -98,7 +98,7 @@ Test cases:
 Front End
 =========
 
-The Web UI front end of KeYmaera X can be started as follows:
+The Web UI web user interface front end of KeYmaera X can be started as follows:
 
     sbt assembly
     java -jar target/scala-2.10/KeYmaeraX-assembly-0.1-SNAPSHOT.jar
@@ -183,7 +183,7 @@ http://www.scalatest.org/user_guide
 
 
 Optional Database Alternative: MongoDB
-=============================
+======================================
 
 If you prefer to work with a MongoDB than with SQL you also need to install
 
