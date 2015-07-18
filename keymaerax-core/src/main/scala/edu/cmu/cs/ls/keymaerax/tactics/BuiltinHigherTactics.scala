@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.diffIntroduceConstantT
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper._
 import TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
@@ -85,7 +86,7 @@ object BuiltinHigherTactics {
       | locateSuccAnte(stepAt(beta = false, simplifyProg = true, quantifiers = true))
       | locateSuccAnte(stepAt(beta = true, simplifyProg = true, quantifiers = true))
       | locateSucc(genInductionT(invGenerator))
-      | locateSucc(diffSolutionT)
+      | (locateSucc(diffIntroduceConstantT) ~ locateSucc(diffSolutionT))
       | locateSucc(diffInvariantSystemT)
       | locateAnte(eqLeft(exhaustive = false))
       | locateSuccAnte(stepAt(beta = true, simplifyProg = true, quantifiers = true, equiv = true))

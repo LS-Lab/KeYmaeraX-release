@@ -139,8 +139,13 @@ object KeYmaeraX {
   private def exit(status: Int): Unit = {shutdownProver(); sys.exit(status)}
 
   /** Launch the web user interface */
-  def launchUI(args: Array[String]): Nothing =
+  def launchUI(args: Array[String]): Nothing = {
+    if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
+      //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
+      System.err.println("Cannot yet verify modelplex proof certificates")
+    }
     {Main.main(args); sys.exit(5)}
+  }
 
 
   /**
@@ -167,7 +172,10 @@ object KeYmaeraX {
     val input = scala.io.Source.fromFile(inputFileName).mkString
     val inputModel = KeYmaeraXProblemParser(input)
     val inputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel))
+<<<<<<< HEAD
     //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
+=======
+>>>>>>> f2370f89bafc99344c78ca94f730fec6eedfb90f
     val rootNode = new RootNode(inputSequent)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
 
@@ -176,7 +184,10 @@ object KeYmaeraX {
       if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
         val witness = rootNode.provableWitness
         val proved = witness.proved
+<<<<<<< HEAD
         //@note assert(witness.isProved, "Successful proof certificate") already checked in line above
+=======
+>>>>>>> f2370f89bafc99344c78ca94f730fec6eedfb90f
         assert(inputSequent == proved, "Proved the original problem and not something else")
         println("Proof certificate: Passed")
       } else {
@@ -203,6 +214,7 @@ object KeYmaeraX {
     } else {
       assert(!rootNode.isClosed())
       assert(rootNode.openGoals().nonEmpty)
+<<<<<<< HEAD
       println("==================================")
       println("Tactic did not finish the proof    open goals: " + rootNode.openGoals().size)
       println("==================================")
@@ -337,6 +349,12 @@ object KeYmaeraX {
     if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
       //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
       System.err.println("Cannot yet verify ModelPlex proof certificates")
+=======
+      println("Unsuccessful proof: unfinished")
+      System.err.println("Unsuccessful proof: unfinished")
+      sys.exit(-1)
+      // TODO what to to when proof cannot be checked?
+>>>>>>> f2370f89bafc99344c78ca94f730fec6eedfb90f
     }
 
     val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".mx").toString)
