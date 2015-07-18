@@ -735,6 +735,7 @@ object Tactics {
   abstract class PositionTactic(val name: String) {
     def applies(s: Sequent, p: Position): Boolean
 
+    def apply(signedPos: Int): Tactic = apply(Position.seqPos2Position(SeqPos(signedPos)))
     def apply(p: Position): Tactic
 
     /**
