@@ -140,10 +140,10 @@ object KeYmaeraX {
 
   /** Launch the web user interface */
   def launchUI(args: Array[String]): Nothing = {
-    if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
+    /*if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
       //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
       System.err.println("Cannot yet verify modelplex proof certificates")
-    }
+    }*/
     {Main.main(args); sys.exit(5)}
   }
 
