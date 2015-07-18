@@ -19,6 +19,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
  * is consistent).
  *
  * Created by nfulton on 2/26/15.
+ * @see [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary]]
  */
 object ExposedTacticsLibrary {
   // Utility Tactics
