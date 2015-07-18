@@ -264,6 +264,7 @@ object KeYmaeraX {
         else if (command == "skip") {
           if (root.openGoals().size >= 2) {
             //@todo skip to the next goal somewhere on the right of node, not to a random goal
+            //@todo track this level skipping by closing and opening parentheses in the log
             var nextGoal = new Random().nextInt(root.openGoals().length)
             assert(0<=nextGoal&&nextGoal<root.openGoals().size, "random in range")
             node = if (root.openGoals()(nextGoal) != node)

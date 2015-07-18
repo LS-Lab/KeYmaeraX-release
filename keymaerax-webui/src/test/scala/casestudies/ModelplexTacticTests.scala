@@ -367,7 +367,7 @@ class ModelplexTacticTests extends TacticTestSuite {
   it should "generate the correct Modelplex property from the input model" in {
     val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("a"), Variable("r"))
+    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("a"), Variable("r")))
 
     modelplexInput shouldBe  """
         |v >= 0
@@ -434,7 +434,7 @@ class ModelplexTacticTests extends TacticTestSuite {
   it should "find the correct controller monitor condition from the input model" in {
     val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("a"), Variable("r"))
+    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("a"), Variable("r")))
 
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
@@ -489,7 +489,7 @@ class ModelplexTacticTests extends TacticTestSuite {
   "RSS passive orientation safety modelplex in place" should "extract the correct controller monitor" in {
     val in = getClass.getResourceAsStream("examples/casestudies/robix/passiveorientationsafety.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("a"), Variable("r"))
+    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("a"), Variable("r")))
 
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
@@ -581,8 +581,8 @@ class ModelplexTacticTests extends TacticTestSuite {
   "Quadcopter modelplex in place" should "find correct controller monitor condition" in {
     val in = getClass.getResourceAsStream("examples/casestudies/modelplex/quadcopter/simplepid.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("h"), Variable("v"), Variable("kp"),
-      Variable("kd"), Variable("href"))
+    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("h"), Variable("v"), Variable("kp"),
+      Variable("kd"), Variable("href")))
 
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
