@@ -192,6 +192,7 @@ class PairParserTests extends FlatSpec with Matchers {
     ("<{x'=1}> x>=0->x<0", "(<{x'=1}> (x>=0))->(x<0)"),
     ("<{x'=1}> x>=0<->x<0", "(<{x'=1}> (x>=0))<->(x<0)"),
 
+    ("<{x'=1}>[{x'=1}]true", "<{x'=1}>([{x'=1}](true))"),
     ("<{x'=1}>[{x'=1}]", unparseable),
 
     ("\\forall p(x())","\\forall p (x())"),   //@todo not a great test on string level
@@ -282,8 +283,14 @@ class PairParserTests extends FlatSpec with Matchers {
       ("[ p:=1; p:=2; ++ p:=3;] p>0", "[ {p:=1; p:=2;} ++ p:=3;] p>0") ,
       ("[ p:=1; ++ p:=2; p:=3;] p>0", "[ p:=1; ++ {p:=2; p:=3;}] p>0") ,
       ("[ p:=1; p:=2; {p:=3;}*] p>0", "[ p:=1; p:=2; {{p:=3;}*}] p>0") ,
-      ("[ p:=1; p:=2; ++ {p:=3;}*] p>0", "[ {p:=1; p:=2;} ++ {{p:=3;}*}] p>0")
+      ("[ p:=1; p:=2; ++ {p:=3;}*] p>0", "[ {p:=1; p:=2;} ++ {{p:=3;}*}] p>0"),
 
-        //("x() -> [x:=x(x);]x()>x(x,x())", unparseable) //@todo if !LAX
+    ("[{x'=1,y'=2,z'=3}]x>0", "[{x'=1,{y'=2,z'=3}}]x>0"),
+    ("[{x'=1,y'=2,z'=3&x<5}]x>0", "[{x'=1,{y'=2,z'=3}&x<5}]x>0"),
+
+    //("x() -> [x:=x(x);]x()>x(x,x())", unparseable) //@todo if !LAX
+
+    ("true", "true"),
+    ("false", "false")
   )
 }
