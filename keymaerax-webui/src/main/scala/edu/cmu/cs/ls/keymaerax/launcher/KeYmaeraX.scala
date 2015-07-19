@@ -250,11 +250,12 @@ object KeYmaeraX {
     val commands = io.Source.stdin.getLines()
     val cm = universe.runtimeMirror(getClass.getClassLoader)
     val tb = cm.mkToolBox()
-    println("KeYmaera X Interactive Command-line Prover\n" +
-      "If you are looking for the more convenient web user interface,\nrestart with option -ui")
-    println("Type a tactic command to apply to the current goal.\n" +
+    val interactiveUsage = "Type a tactic command to apply to the current goal.\n" +
       "skip will ignore the current goal for now and skip to the next goal.\n" +
-      "Tactics will be reported back when a branch closes but may need some cleanup.\n")
+      "Tactics will be reported back when a branch closes but may need cleanup.\n"
+    println("KeYmaera X Interactive Command-line Prover\n" +
+      "If you are looking for the more convenient web user interface,\nrestart with option -ui\n")
+    println(interactiveUsage)
 
     while (!root.isClosed()) {
       assert(!root.openGoals().isEmpty, "proofs that are not closed must have open goals")
@@ -263,39 +264,44 @@ object KeYmaeraX {
       var tacticLog = ""
       assert(!node.isClosed, "open goals are not closed")
       while (!node.isClosed()) {
-        elaborateNode(node)   //printNode(node)
+        elaborateNode(node) //printNode(node)
         System.out.flush()
-        val command = commands.next().trim
-        if (command == "") {}
-        else if (command == "skip") {
-          if (root.openGoals().size >= 2) {
-            //@todo skip to the next goal somewhere on the right of node, not to a random goal
-            //@todo track this level skipping by closing and opening parentheses in the log
-            var nextGoal = new Random().nextInt(root.openGoals().length)
-            assert(0<=nextGoal&&nextGoal<root.openGoals().size, "random in range")
-            node = if (root.openGoals()(nextGoal) != node)
-              root.openGoals()(nextGoal)
-            else {
-              val otherGoals = (root.openGoals() diff List(node))
-              assert(otherGoals.length == root.openGoals().length -1, "removing one open goal decreases open goal count by 1")
-              nextGoal = new Random().nextInt(otherGoals.length)
-              assert(0<=nextGoal&&nextGoal<otherGoals.size, "random in range")
-              otherGoals(nextGoal)
+        commands.next().trim match {
+          case "" =>
+          case "help" => println(interactiveUsage)
+          case "exit" => exit(5)
+          case "skip" =>
+            if (root.openGoals().size >= 2) {
+              //@todo skip to the next goal somewhere on the right of node, not to a random goal
+              //@todo track this level skipping by closing and opening parentheses in the log
+              var nextGoal = new Random().nextInt(root.openGoals().length)
+              assert(0 <= nextGoal && nextGoal < root.openGoals().size, "random in range")
+              node = if (root.openGoals()(nextGoal) != node)
+                root.openGoals()(nextGoal)
+              else {
+                val otherGoals = (root.openGoals() diff List(node))
+                assert(otherGoals.length == root.openGoals().length - 1, "removing one open goal decreases open goal count by 1")
+                nextGoal = new Random().nextInt(otherGoals.length)
+                assert(0 <= nextGoal && nextGoal < otherGoals.size, "random in range")
+                otherGoals(nextGoal)
+              }
+            } else {
+              println("No other open goals to skip to")
             }
-          } else {
-            println("No other open goals to skip to")
-          }
-        } else try {
-          val tacticGenerator = tb.eval(tb.parse(tacticParsePrefix + command + tacticParseSuffix)).asInstanceOf[() => Tactic]
-          val tactic = tacticGenerator()
-          tacticLog += "& " + command + "\n"
-          Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, node))
-          // walk to the next subgoal
-          if (!node.children.isEmpty && !node.children.head.subgoals.isEmpty) node = node.children.head.subgoals(0)
+          case command: String =>
+            //@note security issue since executing arbitrary input unsanitized
+            val tacticGenerator = tb.eval(tb.parse(tacticParsePrefix + command + tacticParseSuffix)).asInstanceOf[() => Tactic]
+            val tactic = tacticGenerator()
+            tacticLog += "& " + command + "\n"
+            Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, node))
+            // walk to the next subgoal
+            if (!node.children.isEmpty && !node.children.head.subgoals.isEmpty) node = node.children.head.subgoals(0)
         }
-        catch {
+        catch
+        {
           case e: ToolBoxError => println("Command failed: " + e + "\n"); System.out.flush()
         }
+      }
       }
       println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " === CLOSED")
       println(tacticLog)

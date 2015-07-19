@@ -47,6 +47,3 @@ with `D,D` right-associative, i.e. x'=1,y'=2,z'=3 is x'=1,(y'=2,z'=3)
 ==Types==
 
 It is considered an error to use the same name with different types in different places, such as in `x() -> [x:=x(x);]x()>x(x,x())`
-
-Parser would-be challenges:  < ? p > q > p > 1
-Parser expression challenges: f()    x'=5

@@ -16,17 +16,18 @@ import scala.collection.JavaConversions._
  */
 object Main {
   def main(args : Array[String]) : Unit = {
-    val isFirstLaunch = if(args.length > 0) {
-      !args.head.equals("LAUNCH")
+    val isFirstLaunch = if(args.length >= 1) {
+      !args.head.equals("LAUNCH") || args.length>=2 && args(0)=="-ui" && args(1)=="LAUNCH"
     } else true
 
     if(isFirstLaunch) {
       val java : String = javaLocation
       val keymaera : String = jarLocation
-      runCmd(java :: "-Xss20M" :: "-jar" :: keymaera :: "LAUNCH" :: Nil)
+      println("Restarting KeYmaera X with sufficient stack space")
+      runCmd(java :: "-Xss20M" :: "-jar" :: keymaera :: "-ui" :: "LAUNCH" :: Nil)
     }
     else {
-      launcherLog("Detected LAUNCH flag -- starting HyDRA.")
+      launcherLog("LAUNCH flag present -- starting KeYmaera X Web UI server HyDRA.")
       edu.cmu.cs.ls.keymaerax.hydra.Boot.main(Array[String]()) //@todo not sure.
     }
   }
@@ -48,8 +49,12 @@ object Main {
     val pb = new ProcessBuilder(cmd)
     var pollOnStd = false
     try {
-      pb.redirectError(File.createTempFile("keymaerax-error-stream", ".txt"))
-      pb.redirectOutput(File.createTempFile("keymaerax-output-stream", ".txt"))
+      val errorLog = File.createTempFile("keymaerax-error-stream", ".txt")
+      val outputLog = File.createTempFile("keymaerax-output-stream", ".txt")
+      pb.redirectError(errorLog)
+      System.err.println("Errors will be logged at " + errorLog.getPath)
+      pb.redirectOutput(outputLog)
+      System.err.println("Outputs will be logged at " + outputLog.getPath)
     } catch {
       case ex: NoSuchMethodError => pollOnStd = true
     }
@@ -102,7 +107,7 @@ object Main {
   }
 
   private def exitWith(err : String) = {
-    val message = "ERROR in loader :: See http://keymaerax.org/startup.html for trouble-shooting assistance (Message: " + err + ")"
+    val message = "ERROR in loader :: See http://keymaeraX.org/startup.html for trouble-shooting assistance (Message: " + err + ")"
     launcherLog(message)
     try {
       if (!java.awt.GraphicsEnvironment.isHeadless) {
