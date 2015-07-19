@@ -289,25 +289,24 @@ object KeYmaeraX {
               println("No other open goals to skip to")
             }
           case command: String =>
-            //@note security issue since executing arbitrary input unsanitized
-            val tacticGenerator = tb.eval(tb.parse(tacticParsePrefix + command + tacticParseSuffix)).asInstanceOf[() => Tactic]
-            val tactic = tacticGenerator()
-            tacticLog += "& " + command + "\n"
-            Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, node))
-            // walk to the next subgoal
-            if (!node.children.isEmpty && !node.children.head.subgoals.isEmpty) node = node.children.head.subgoals(0)
+            try {
+              //@note security issue since executing arbitrary input unsanitized
+              val tacticGenerator = tb.eval(tb.parse(tacticParsePrefix + command + tacticParseSuffix)).asInstanceOf[() => Tactic]
+              val tactic = tacticGenerator()
+              tacticLog += "& " + command + "\n"
+              Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, node))
+              // walk to the next subgoal
+              if (!node.children.isEmpty && !node.children.head.subgoals.isEmpty) node = node.children.head.subgoals(0)
+            }
+            catch {
+              case e: ToolBoxError => println("Command failed: " + e + "\n"); System.out.flush()
+            }
         }
-        catch
-        {
-          case e: ToolBoxError => println("Command failed: " + e + "\n"); System.out.flush()
-        }
+        println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " === CLOSED")
+        println(tacticLog)
       }
-      }
-      println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " === CLOSED")
-      println(tacticLog)
+      root
     }
-    root
-  }
 
   private val tacticParsePrefix =
     """
