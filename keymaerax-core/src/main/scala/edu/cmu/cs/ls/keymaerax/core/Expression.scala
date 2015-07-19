@@ -434,7 +434,8 @@ case class Choice(left: Program, right: Program) extends BinaryCompositeProgram
 case class Compose(left: Program, right: Program) extends BinaryCompositeProgram
 /** child* nondeterministic repetition */
 case class Loop(child: Program) extends UnaryCompositeProgram
-//case class Dual(child: Program) extends CompositeProgram
+/** `child^d` dual program */
+case class Dual(child: Program) extends UnaryCompositeProgram
 
 /**
  * Differential programs

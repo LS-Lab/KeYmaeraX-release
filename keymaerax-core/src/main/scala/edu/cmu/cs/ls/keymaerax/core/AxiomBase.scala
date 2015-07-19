@@ -561,6 +561,12 @@ End.
  * UNSOUND FOR HYBRID GAMES.
  */
 
+/* @NOTE requires removing axioms unsound for hybrid games */
+/*Axiom "<d> dual".
+  <{a;}^d>p(?) <-> !<a;>!p(?)
+  <{a;}^@>p(?) <-> !<a;>!p(?)
+End.*/
+
 /* @NOTE Unsound for hybrid games */
 Axiom "V vacuous".
   p -> [a;]p

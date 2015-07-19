@@ -152,6 +152,10 @@ object SEMI    extends OPERATOR(";")
 object CHOICE  extends OPERATOR("++") {
   override def regexp = """\+\+""".r
 }
+//@todo simplify lexer by using silly ^@ notation rather than ^d for now. @ for adversary isn't too bad to remember but doesn't look as good as ^d.
+object DUAL    extends OPERATOR("^@") {
+  override def regexp = """\^\@""".r
+}
 
 /*@TODO
 object DCHOICE  extends OPERATOR("--") {
@@ -493,6 +497,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case CHOICE.startPattern(_*) => consumeTerminalLength(CHOICE, loc)
       //This has to come before MINUS because otherwise -- because MINUS,MINUS instead of DCHOICE.
       //@TODO case DCHOICE.startPattern(_*) => consumeTerminalLength(DCHOICE, loc)
+      //@note must be before POWER
+      case DUAL.startPattern(_*) => consumeTerminalLength(DUAL, loc)
 
       case PRIME.startPattern(_*) => consumeTerminalLength(PRIME, loc)
       case SLASH.startPattern(_*) => consumeTerminalLength(SLASH, loc)

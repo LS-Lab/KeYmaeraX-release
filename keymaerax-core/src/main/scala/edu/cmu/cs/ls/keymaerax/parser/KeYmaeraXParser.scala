@@ -648,7 +648,7 @@ object KeYmaeraXParser extends Parser {
   private def formulaBinOp(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV
 
   /** Is la a (unary/binary) operator that only works for programs? */
-  private def programOp(la: Terminal): Boolean = la==SEMI || la==CHOICE
+  private def programOp(la: Terminal): Boolean = la==SEMI || la==CHOICE || la==DUAL
 
   /** Follow(Term): Can la follow after a term? */
   private def followsTerm(la: Terminal): Boolean = la==RPAREN ||
@@ -672,6 +672,7 @@ object KeYmaeraXParser extends Parser {
     la==RBOX || la==RDIA ||  // from P in programs
     la==COMMA || la==AMP ||  // from D in differential programs
     la==EOF ||
+    la==DUAL ||              // from P in hybrid games
     la==INVARIANT            // extra: additional @annotations
 
   /** Follow(kind(expr)): Can la follow an expression of the kind of expr? */
@@ -855,6 +856,7 @@ object KeYmaeraXParser extends Parser {
       //      case p: AtomicODE => sAtomicODE
       case sDifferentialProduct.op => sDifferentialProduct
       //      case sLoop.op => sLoop
+      case sDual.op => sDual
       case sCompose.op => sCompose
       case sChoice.op => sChoice
 

@@ -294,6 +294,12 @@ class PairParserTests extends FlatSpec with Matchers {
 
     //("x() -> [x:=x(x);]x()>x(x,x())", unparseable) //@todo if !LAX
 
+
+    //@note hybrid games
+    ("<{x:=x+1;{x'=1}^@ ++ x:=x-1;}*>(0<=x&x<1)", "<{x:=x+1;{x'=1}^@ ++ x:=x-1;}*> (0<=x&x<1)"),
+    ("<{{x:=x+1;{x'=1}^@ ++ x:=x-1;}^@}*^@>(0<=x&x<1)", "<{{{{x:=x+1;{{x'=1}^@}} ++ {x:=x-1;}}^@}*}^@> (0<=x&x<1)"),
+
+
     ("true", "true"),
     ("false", "false")
   )
