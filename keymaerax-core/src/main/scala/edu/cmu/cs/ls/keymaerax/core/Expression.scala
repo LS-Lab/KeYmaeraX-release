@@ -435,7 +435,9 @@ case class Compose(left: Program, right: Program) extends BinaryCompositeProgram
 /** child* nondeterministic repetition */
 case class Loop(child: Program) extends UnaryCompositeProgram
 /** `child^d` dual program */
-case class Dual(child: Program) extends UnaryCompositeProgram
+case class Dual(child: Program) extends UnaryCompositeProgram {
+  require(false, "Hybrid games are currently disabled")
+}
 
 /**
  * Differential programs
