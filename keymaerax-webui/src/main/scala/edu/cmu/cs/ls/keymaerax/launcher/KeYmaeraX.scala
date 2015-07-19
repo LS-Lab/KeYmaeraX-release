@@ -67,13 +67,17 @@ object KeYmaeraX {
       def nextOption(map: OptionMap, list: List[String]): OptionMap = {
         list match {
           case Nil => map
-          case "-help" :: _ => {println(usage); sys.exit(1)}
-          case "-license" :: _ => {println(license); sys.exit(1)}
+          case "-help" :: _ => {
+            println(usage); sys.exit(1)
+          }
+          case "-license" :: _ => {
+            println(license); sys.exit(1)
+          }
           // actions
           case "-prove" :: value :: tail => nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
           case "-modelplex" :: value :: tail => nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
           case "-codegen" :: value :: tail => nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
-          case "-ui" :: tail => launchUI(tail.toArray)
+          case "-ui" :: tail => launchUI(tail.toArray); Map('mode -> "ui")
           // action options
           case "-out" :: value :: tail => nextOption(map ++ Map('out -> value), tail)
           case "-vars" :: value :: tail => nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
@@ -92,18 +96,21 @@ object KeYmaeraX {
       val options = nextOption(Map(), args.toList)
       require(options.contains('mode), usage)
 
-      try {
-        initializeProver(options)
+      if (options.get('mode) != "ui") {
+        try {
+          initializeProver(options)
 
-        //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen -format C
-        options.get('mode) match {
-          case Some("prove") => prove(options)
-          case Some("modelplex") => modelplex(options)
-          case Some("codegen") => codegen(options)
+          //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen -format C
+          options.get('mode) match {
+            case Some("prove") => prove(options)
+            case Some("modelplex") => modelplex(options)
+            case Some("codegen") => codegen(options)
+            case Some("ui") => assert(false, "already handled above since no prover needed"); ???
+          }
         }
-      }
-      finally {
-        shutdownProver()
+        finally {
+          shutdownProver()
+        }
       }
     }
   }
@@ -139,12 +146,8 @@ object KeYmaeraX {
   private def exit(status: Int): Unit = {shutdownProver(); sys.exit(status)}
 
   /** Launch the web user interface */
-  def launchUI(args: Array[String]): Nothing = {
-    /*if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
-      //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
-      System.err.println("Cannot yet verify modelplex proof certificates")
-    }*/
-    {Main.main(args); sys.exit(5)}
+  def launchUI(args: Array[String]): Unit = {
+    Main.main(args)
   }
 
 
