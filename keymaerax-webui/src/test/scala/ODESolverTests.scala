@@ -32,6 +32,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
 
   /**
    * @author Nathan Fulton
+   *         @todo Nathan
    */
   "Prove after time intro" should "work" in {
     val f = "x = 0 & v = 1 & a = 5 -> [{x' =v, v' = a}]x >= 0".asFormula
@@ -44,6 +45,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
 
   /**
    * @author Nathan Fulton
+   *         @todo Nathan
    */
   it should "work if there's already time in the ODE" in {
     val f = "x = 0 & v = 1 & a = 5 & t=0 -> [{x' =v, v' = a, t' = 0*t+1}]x >= 0".asFormula
@@ -78,6 +80,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
     node shouldBe 'closed
   }
 
+  //@todo Nathan
   it should "work with ACAS X input" in {
     val ante = "(w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0)".asFormula
     val succ = "[{r'=-rv(),dhd'=ao(),h'=-dhd&w()*dhd>=w()*dhf()|w()*ao()>=a()}]((w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0))".asFormula

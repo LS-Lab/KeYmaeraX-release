@@ -56,9 +56,18 @@ class MoreParserTests2 extends FlatSpec with Matchers {
     Equiv(Forall(Seq(v), Imply(And(And(GreaterEqual(v, n0), True), GreaterEqual(n0, n0)), Equal(v, Plus(v, Times(n0, n0))))), True)
   }
 
-  it should "program parse x'=5&x>2&x>3 as an ODESystem with one evolution domain constraint" in {
+  it should "program parse {x'=5&x>2&x>3} as an ODESystem with one evolution domain constraint" in {
     val x = Variable("x")
-    parser.programParser("x'=5&x>2&x>3") shouldBe ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), And(Greater(x, Number(2)), Greater(x, Number(3))))
+    parser.programParser("{x'=5&x>2&x>3}") shouldBe ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), And(Greater(x, Number(2)), Greater(x, Number(3))))
+  }
+
+  it should "program parse x'=5&x>2&x>3 as an ODESystem with one evolution domain constraint (if parsed at all)" in {
+    val x = Variable("x")
+    try {
+      parser.programParser("x'=5&x>2&x>3") shouldBe ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), And(Greater(x, Number(2)), Greater(x, Number(3))))
+    } catch {
+      case acceptable: ParseException =>
+    }
   }
 
   it should "parse x'=5&x>2&x>3 as an equation system" in {

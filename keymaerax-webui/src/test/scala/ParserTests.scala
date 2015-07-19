@@ -175,7 +175,7 @@ class ParserParenTests extends FlatSpec with Matchers {
   // Begin ALP Parser tests
   //////////////////////////////////////////////////////////////////////////////
 
-  // TODO adapt file to new parser
+  //@todo adapt file to new parser and to new location of axioms file, which is in source
   "The axiom file parser" should "parse all positive axiom examples" in {
     val files =
       "axioms.key.alp" ::

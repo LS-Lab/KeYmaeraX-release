@@ -979,7 +979,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Uniform substitution of mustbe bound" should "be same as input" in {
-    // TODO variable substitution not yet supported
+    //@TODO variable substitution not yet supported
     val cases =
       (sToT("x", "5"), "[{x:=0; ++ z:=z;}]1>0".asFormula) ::                // x no free occurrence
 //      (sToT("x", "5"), "[x:=0 ++ x:=1]x>0".asFormula) ::                  // x mustbe bound
