@@ -154,5 +154,6 @@ object TactixLibrary {
   // Utility Tactics
   /** nil: skip is a no-op that has no effect */
   def nil : Tactic = Tactics.NilT
+  def skip : Tactic = nil
 
 }

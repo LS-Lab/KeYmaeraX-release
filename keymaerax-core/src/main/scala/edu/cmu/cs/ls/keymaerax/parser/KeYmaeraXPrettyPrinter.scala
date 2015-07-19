@@ -145,10 +145,12 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case AssignAny(x)           => statement(pp(x) + op(program).opcode)
     case DiffAssign(xp, e)      => statement(pp(xp) + op(program).opcode + pp(e))
     case Test(f)                => statement(op(program).opcode + pp(f))
-    case ODESystem(ode, f)      => "{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
-    //@note forced parentheses in grammar
-    case t: Loop                => "{" + pp(t.child) + "}" + op(program).opcode
-    //case t: Loop                => (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
+    case ODESystem(ode, f)      => "{" + ppODE(ode) + (if (false && f==True) "" else op(program).opcode + pp(f)) + "}"
+    //@note unambiguously reparse as ODE not as equation that happens to involve a differential symbol.
+    //@note This is only used in printing internal data structures, not user input.
+    case ode: DifferentialProgram => "{" + ppODE(ode) + "}"
+    //@note forced parentheses in grammar for loops and duals
+    case t: UnaryCompositeProgram => "{" + pp(t.child) + "}" + op(program).opcode
     //case t: UnaryCompositeProgram=> (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     case t: Compose if OpSpec.statementSemicolon =>
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
@@ -158,8 +160,6 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
-    //@note unambiguously reparse as ODE not as equation that happens to involve a differential symbol
-    case ode: DifferentialProgram => "{" + ppODE(ode) + "}"
   }
 
   private def ppODE(program: DifferentialProgram): String = program match {
@@ -169,8 +169,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       (if (skipParensLeft(t)) ppODE(t.left) else "{" + ppODE(t.left) + "}") +
         op(t).opcode +
         (if (skipParensRight(t)) ppODE(t.right) else "{" + ppODE(t.right) + "}")
-    // this case is supposed to have been handled already in pp(Program)
-    case ODESystem(ode, f)      => "{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
+    case ODESystem(ode, f)      => assert(false, "ODESystem does not occur recursively"); ??? //{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
   }
 
   /** Formatting the atomic statement s */
