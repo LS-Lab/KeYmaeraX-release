@@ -17,7 +17,7 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.{CLParser, CLInterpreter}
 
@@ -223,8 +223,7 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
   def getResultingResponses() = {
     try {
       //Return the resulting response.
-      var p = new KeYmaeraParser()
-      p.runParser(keyFileContents) match {
+      KeYmaeraXParser(keyFileContents) match {
         case f : Formula => {
           val result = db.createModel(userId, nameOfModel, keyFileContents, currentDate())
           new BooleanResponse(result.isDefined) :: Nil
