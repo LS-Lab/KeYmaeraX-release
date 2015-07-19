@@ -302,11 +302,13 @@ object KeYmaeraX {
               case e: ToolBoxError => println("Command failed: " + e + "\n"); System.out.flush()
             }
         }
-        println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " === CLOSED")
-        println(tacticLog)
       }
-      root
+      assert(node.isClosed())
+      println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " === CLOSED")
+      println(tacticLog)
     }
+    root
+  }
 
   private val tacticParsePrefix =
     """
