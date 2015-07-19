@@ -8,7 +8,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.io.{FileNotFoundException, FileReader}
+import java.io.{File, FileNotFoundException, FileReader}
 import java.text.SimpleDateFormat
 import java.util.{Locale, Calendar}
 
@@ -200,7 +200,7 @@ class GetMathematicaConfigurationRequest(db : DBAbstraction) extends Request {
       else "Unknown"
     }
     if (config.contains("linkName") && config.contains("jlinkLibDir")) {
-      new MathematicaConfigurationResponse(config("linkName"), config("jlinkLibDir")+"/"+jlinkLibFile) :: Nil
+      new MathematicaConfigurationResponse(config("linkName"), config("jlinkLibDir") + File.separator + jlinkLibFile) :: Nil
     } else {
       new MathematicaConfigurationResponse("", "") :: Nil
     }
