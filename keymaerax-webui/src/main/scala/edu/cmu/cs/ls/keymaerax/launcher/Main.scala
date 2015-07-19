@@ -13,21 +13,25 @@ import scala.collection.JavaConversions._
  *  java -jar KeYmaeraX.jar or else
  *  java -Xss20M -jar KeYmaeraX.jar
  * Created by nfulton on 4/17/15.
+ * @todo move functionality directly into KeYmaeraX.scala?
  */
 object Main {
+  //@todo set via -log command line option
+  private var logFile = false
   def main(args : Array[String]) : Unit = {
     val isFirstLaunch = if(args.length >= 1) {
-      !args.head.equals("LAUNCH") || args.length>=2 && args(0)=="-ui" && args(1)=="LAUNCH"
+      !args.head.equals("-launch") || args.length>=2 && args(0)=="-ui" && args(1)=="-launch"
     } else true
 
     if(isFirstLaunch) {
       val java : String = javaLocation
       val keymaera : String = jarLocation
       println("Restarting KeYmaera X with sufficient stack space")
-      runCmd(java :: "-Xss20M" :: "-jar" :: keymaera :: "-ui" :: "LAUNCH" :: Nil)
+      runCmd(java :: "-Xss20M" :: "-jar" :: keymaera :: "-ui" :: "-launch" :: Nil)
     }
     else {
-      launcherLog("LAUNCH flag present -- starting KeYmaera X Web UI server HyDRA.")
+      launcherLog("-launch -- starting KeYmaera X Web UI server HyDRA.")
+      //@todo skip -ui -launch
       edu.cmu.cs.ls.keymaerax.hydra.Boot.main(Array[String]()) //@todo not sure.
     }
   }
@@ -43,19 +47,27 @@ object Main {
     }
   }
 
+
   private def runCmd(cmd: List[String]) = {
     launcherLog("Running command: " + cmd)
 
     val pb = new ProcessBuilder(cmd)
     var pollOnStd = false
     try {
-      val errorLog = File.createTempFile("keymaerax-error-stream", ".txt")
-      val outputLog = File.createTempFile("keymaerax-output-stream", ".txt")
-      pb.redirectError(errorLog)
-      System.err.println("Errors will be logged at " + errorLog.getPath)
-      pb.redirectOutput(outputLog)
-      System.err.println("Outputs will be logged at " + outputLog.getPath)
+      if (logFile) {
+        //@todo not sure if it's really helpful to have separate error and output log. pb.redirectErrorStream(true)
+        val errorLog = File.createTempFile("keymaerax-error-stream", ".txt")
+        val outputLog = File.createTempFile("keymaerax-output-stream", ".txt")
+        pb.redirectError(errorLog)
+        System.err.println("Errors will be logged at " + errorLog.getPath)
+        pb.redirectOutput(outputLog)
+        System.err.println("Outputs will be logged at " + outputLog.getPath)
+      } else {
+        //@todo dump to console AND to logfile would be best
+        pb.inheritIO()
+      }
     } catch {
+      //@note JDK<1.7
       case ex: NoSuchMethodError => pollOnStd = true
     }
     val proc = pb.start()

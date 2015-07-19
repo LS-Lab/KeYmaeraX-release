@@ -131,6 +131,7 @@ object KeYmaeraX {
     Tactics.MathematicaScheduler.init(mathematicaConfig)
   }
 
+  //@todo Runtime.getRuntime.addShutdownHook??
   def shutdownProver() = {
     if (Tactics.KeYmaeraScheduler != null) {
       Tactics.KeYmaeraScheduler.shutdown()
