@@ -96,7 +96,7 @@ object KeYmaeraX {
       val options = nextOption(Map(), args.toList)
       require(options.contains('mode), usage)
 
-      if (options.get('mode) != "ui") {
+      if (options.get('mode) != Some("ui")) {
         try {
           initializeProver(options)
 
