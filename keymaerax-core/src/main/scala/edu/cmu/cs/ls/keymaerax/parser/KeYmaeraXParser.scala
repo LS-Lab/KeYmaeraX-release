@@ -377,12 +377,12 @@ object KeYmaeraXParser extends Parser {
 
       // modalities
       case r :+ (ltok@Token(LBOX,_)) :+ Expr(t1:Program) :+ (rtok@Token(RBOX,_)) =>
-        if (firstFormula(la)) shift(reduce(st, 3, RecognizedModal(ltok, t1, rtok), r))
+        if (firstFormula(la)) shift(reduce(st, 3, RecognizedModal(ltok, elaborate(st, OpSpec.sBox, ProgramKind, t1).asInstanceOf[Program], rtok), r))
         else error(st)
 
       case r :+ (ltok@Token(LDIA,_)) :+ Expr(t1:Program) :+ (rtok@Token(RDIA,_)) =>
         //@note convert to RecognizedMoal to avoid subsequent item confusion with t1 > la
-        if (firstFormula(la)) shift(reduce(st, 3, RecognizedModal(ltok, t1, rtok), r))
+        if (firstFormula(la)) shift(reduce(st, 3, RecognizedModal(ltok, elaborate(st, OpSpec.sDiamond, ProgramKind, t1).asInstanceOf[Program], rtok), r))
         else error(st)
 
       // modal formulas bind tight
