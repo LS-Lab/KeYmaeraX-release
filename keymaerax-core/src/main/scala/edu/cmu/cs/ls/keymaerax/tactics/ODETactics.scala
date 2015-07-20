@@ -778,7 +778,33 @@ object ODETactics {
   //////////////////////////////
   // Differential Cuts
   //////////////////////////////
-  
+
+  /**
+   * Prove the given list of differential invariants in that order by DC+DI
+   * @author aplatzer
+   */
+  def diffInvariant(invariants: List[Formula]): PositionTactic = new PositionTactic("diffInd") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
+      //@todo check that something in invariants isnt a conjunct of evo already and pick that one later
+      case Box(ODESystem(ode, evo), _) => !invariants.isEmpty
+      case _ => false
+    })
+
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Box(ODESystem(_, evo), _) =>
+          //@todo could also diffWeaken if invariants.isEmpty and proclaim applicability then as well
+          assert(!invariants.isEmpty, "Only non-empty lists of invariants are applicable")
+          val cut = invariants.head
+          Some(diffCutT(cut)(p) & onBranch(
+            (BranchLabels.cutShowLbl, diffInvariantT(p)),
+            (BranchLabels.cutUseLbl, diffInvariant(invariants.tail)(p))))
+        case _ => None
+      }
+    }
+  }
+
   /**
    * Applies a differential cut with the given cut formula.
    * @author aplatzer

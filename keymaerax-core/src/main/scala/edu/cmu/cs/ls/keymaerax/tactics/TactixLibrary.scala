@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Term, Variable}
+import edu.cmu.cs.ls.keymaerax.core.{Sequent, Formula, Term, Variable, Expression}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
 
 /**
@@ -17,8 +17,14 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  */
 object TactixLibrary {
-  /** step: makes one proof step to simplify the formula at the indicated position */
+  /** step: makes one proof step to simplify the formula at the indicated position (unless @invariant needed) */
   def step                    : PositionTactic = TacticLibrary.step
+
+  /** master: master tactic that tries hard to prove whatever it could */
+  def master                  : Tactic = TacticLibrary.master(new NoneGenerate(), true, "Mathematica")
+
+
+  def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic = SearchTacticsImpl.onBranch(s1, spec:_*)
 
   // Locating applicable positions for PositionTactics
 
@@ -52,8 +58,10 @@ object TactixLibrary {
   def implyL                  : PositionTactic = TacticLibrary.ImplyLeftT
   /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side */
   def implyR                  : PositionTactic = TacticLibrary.ImplyRightT
-  def equivL                  : PositionTactic = ???
-  def equivR                  : PositionTactic = ???
+  /** <->L Equiv left: use an equivalence by considering both true or both false cases */
+  def equivL                  : PositionTactic = TacticLibrary.EquivLeftT
+  /** <->R Equiv right: prove an equivalence by proving both implications */
+  def equivR                  : PositionTactic = TacticLibrary.EquivRightT
 
   /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds */
   def cut(cut : Formula)      : Tactic         = TacticLibrary.cutT(Some(cut))
@@ -118,6 +126,10 @@ object TactixLibrary {
   /** Dcompose: o' derives a function composition by chain rule */
   def Dcompose                : PositionTactic = ???
 
+  /** Prove the given list of differential invariants in that order by DC+DI */
+  //@todo could change type to invariants: Formula* if considered more readable
+  def diffInvariant(invariants: List[Formula]): PositionTactic = ODETactics.diffInvariant(invariants)
+
   // rules
 
   /** G: Goedel rule proves the postcondition of a box in isolation (hybrid systems) */
@@ -148,12 +160,32 @@ object TactixLibrary {
   // Bigger Tactics.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  /** master: master tactic that tries hard to prove whatever it could */
-  def master                  : Tactic = TacticLibrary.master(new NoneGenerate(), true, "Mathematica")
-
   // Utility Tactics
   /** nil: skip is a no-op that has no effect */
   def nil : Tactic = Tactics.NilT
   def skip : Tactic = nil
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Contract Tactics and Debugging Tactics
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Tactic contracts
+  /** Assert that the given condition holds for the goal's sequent. */
+  def assert(cond : Sequent=>Boolean, msg:String = ""): Tactic = Tactics.assertT(cond, msg)
+  /** Assertion that the sequent has the specified number of antecedent and succedent formulas, respectively. */
+  def assert(antecedents: Int, succedents: Int): Tactic = Tactics.assertT(antecedents, succedents)
+  /** Assert that the given formula is present at the given position in the sequent that this tactic is applied to. */
+  def assert(expected: Formula, pos: Position, msg:String): Tactic = Tactics.assertT(expected, pos, msg)
+
+  // PositionTactic contracts
+  /** Assert that the given condition holds for the sequent at the position where the tactic is applied */
+  def assert(cond : (Sequent,Position)=>Boolean, msg:String): PositionTactic = Tactics.assertPT(cond, msg)
+  /** Assert that the given expression is present at the position in the sequent where this tactic is applied to. */
+  def assert(expected: Expression, msg:String): PositionTactic = expected match {
+    case t: Term => Tactics.assertPT(t, msg)
+    case f: Formula => Tactics.assertPT(f, msg)
+  }
+
+  def debug(s: => Any): Tactic = TacticLibrary.debugT(s)
+  def debugAt(s: => Any): PositionTactic = TacticLibrary.debugAtT(s)
 
 }

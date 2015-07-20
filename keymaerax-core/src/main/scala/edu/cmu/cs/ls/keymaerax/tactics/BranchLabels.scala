@@ -12,9 +12,9 @@ package edu.cmu.cs.ls.keymaerax.tactics
 object BranchLabels {
   val cutShowLbl = "Show cut"
   val cutUseLbl = "Use cut"
-  val indInitLbl = "Invariant initially valid"
-  val indUseCaseLbl = "Use case"
-  val indStepLbl = "Induction step"
+  val indInitLbl = "base case"  //@todo rename to "base case" for paper consistency. Used to be "Invariant initially valid"
+  val indUseCaseLbl = "use case"  //@todo maybe renamed from "Use case" for paper consistency
+  val indStepLbl = "induction step"  //@todo maybe renamed from "Induction step" for paper consistency
 
   val equivLeftLbl = "Positive equiv case"
   val equivRightLbl = "Negative equiv case"
