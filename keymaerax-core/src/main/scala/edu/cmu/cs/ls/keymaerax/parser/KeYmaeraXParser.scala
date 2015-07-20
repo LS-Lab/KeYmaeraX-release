@@ -75,11 +75,11 @@ object KeYmaeraXParser extends Parser {
   val parser = this
 
   /** Lax mode where the parser is a little flexible about accepting input. */
-  private val LAX = true
+  private val LAX = System.getProperty("lax", "true")=="true"
 
   private val parseErrorsAsExceptions = true
 
-  private val DEBUG = true
+  private val DEBUG = System.getProperty("lax", "true")=="true"
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression = {
@@ -174,7 +174,8 @@ object KeYmaeraXParser extends Parser {
   // elaboration based on expected types
 
   /** Elaborate e to the expected kind of a part of op by lifting defaulted types as needed or return None. */
-  private def elaboratable(kind: Kind, e: Expression): Option[Expression] = if (e.kind==kind) Some(e) else e match {
+  private def elaboratable(kind: Kind, e: Expression): Option[Expression] = if (e.kind==kind
+  && !(kind==ProgramKind && e.isInstanceOf[DifferentialProgram])) Some(e) else e match {
     // lift misclassified defaulted function application to predicate application when required by context type.
     case FuncOf(f, t) if kind==FormulaKind => Some(PredOf(Function(f.name,f.index,f.domain,Bool), t))
     // lift misclassified defaulted predicate application to function application when required by context type.
