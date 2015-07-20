@@ -20,6 +20,11 @@ object TactixLibrary {
   /** step: makes one proof step to simplify the formula at the indicated position (unless @invariant needed) */
   def step                    : PositionTactic = TacticLibrary.step
 
+  /** Normalize to sequent form */
+  //@todo ensure to keep branching factor down by favoring alpha rules over beta rules
+  def normalize               : Tactic = l(step)*
+  /** exhaust propositional logic */
+  def prop                    : Tactic = TacticLibrary.propositional
   /** master: master tactic that tries hard to prove whatever it could */
   def master                  : Tactic = TacticLibrary.master(new NoneGenerate(), true, "Mathematica")
 
