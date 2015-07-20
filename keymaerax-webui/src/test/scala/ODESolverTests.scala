@@ -4,7 +4,7 @@
 */
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{RootNode, SearchTacticsImpl, LogicalODESolver}
+import edu.cmu.cs.ls.keymaerax.tactics._
 import org.scalatest.{PrivateMethodTester, FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 
@@ -89,5 +89,26 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
     // TODO expected succedent
     result.openGoals().head.sequent.succ should contain only "true".asFormula
   }
+
+
+  /*
+   * And Reodering derived axiom
+   * This axiom is used to move the x=blah to the end of the evolution domain constraint so that DC
+   * uses the correct thing.
+   */
+  "And Reodering" should "move the last element of a conjunction to the front." in {
+//    val f = "[{x' = v, v' = a}]x > 0".asFormula
+//    System.exit(-1)
+//    val f = "[{x'=v,v'=a & (true & v=v_0 + a*t & x = x_0 + (a/2)*t^2 + v_0*t & t >= 0)}]x > 0 <-> [{x'=v,v'=a & (t >= 0 & true & v=v_0 + a*t & x = x_0 + (a/2)*t^2 + v_0*t)}]x > 0".asFormula
+    val f = "[{x'=v,v'=a & (true & v=v_0 + a*t & x = x_0 + (a/2)*t^2 + v_0*t & t >= 0)}]x > 0".asFormula
+    val node = helper.formulaToNode(f)
+    val tactic = LogicalODESolver.AndReoderingT(SuccPos(0))
+    helper.runTactic(tactic, node)
+    node.openGoals().length shouldBe 1
+    node.openGoals().last.sequent.succ.length shouldBe 1
+    node.openGoals().last.sequent.succ.last shouldBe (
+      "[{x'=v,v'=a & t >= 0 & (true & v=v_0 + a*t & x = x_0 + (a/2)*t^2 + v_0*t)}]x > 0".asFormula)
+  }
+
 
 }

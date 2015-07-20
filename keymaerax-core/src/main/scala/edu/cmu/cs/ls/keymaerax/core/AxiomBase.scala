@@ -399,6 +399,11 @@ Axiom "<*> iterate".
   <a*>p(?) <-> (p(?) | <a;><a*> p(?)).
 End.
 
+/* @Derived */
+Axiom "Domain Constraint Conjunction Reordering".
+  [c & (H(?) & q(?));]p(?) <-> [c & (q(?) & H(?));]p(?)
+End.
+
 /**
  * DIFFERENTIAL EQUATION AXIOMS
  */
@@ -576,6 +581,14 @@ Axiom "I induction".
   /*@TODO Use this form instead? which is possibly more helpful: ([a*](p(?) -> [a;] p(?))) -> (p(?) -> [a*]p(?)) THEORY */
   (p(?) & [a*](p(?) -> [a;] p(?))) -> [a*]p(?)
 End.
+
+
+/**
+ * Boolean algebra
+ */
+ Axiom "& associative".
+  p(?) & (q(?) & r(?)) <-> (p(?) & q(?)) & r(?)
+ End.
 
 /**
  * Real arithmetic
