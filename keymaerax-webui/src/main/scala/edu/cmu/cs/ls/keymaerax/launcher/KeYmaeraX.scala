@@ -260,14 +260,18 @@ object KeYmaeraX {
       "\n")
   }
 
+  private val interactiveUsage = "Type a tactic command to apply to the current goal.\n" +
+    "skip - ignore the current goal for now and skip to the next goal.\n" +
+    "goals - list all open goals.\n" +
+    "goal i - switch to goal number i\n" +
+    "exit - quit the prover (or hit Ctrl-C any time).\n" +
+    "help - will display this usage information.\n" +
+    "Tactics will be reported back when a branch closes but may need cleanup.\n"
   /** KeYmaera C: A simple interactive command-line prover */
   private def interactiveProver(root: ProofNode): ProofNode = {
     val commands = io.Source.stdin.getLines()
     val cm = universe.runtimeMirror(getClass.getClassLoader)
     val tb = cm.mkToolBox()
-    val interactiveUsage = "Type a tactic command to apply to the current goal.\n" +
-      "skip will ignore the current goal for now and skip to the next goal.\n" +
-      "Tactics will be reported back when a branch closes but may need cleanup.\n"
     println("KeYmaera X Interactive Command-line Prover\n" +
       "If you are looking for the more convenient web user interface,\nrestart with option -ui\n")
     println(interactiveUsage)
@@ -286,6 +290,13 @@ object KeYmaeraX {
           case "" =>
           case "help" => println(interactiveUsage)
           case "exit" => exit(5)
+          case "goals" => val open = root.openGoals()
+            (1 to open.length).map(g => {println("Goal " + g); elaborateNode(open(g-1))})
+          case it if it.startsWith("goal ") => try {
+            val g = it.substring("goal ".length).toInt
+            if (1<=g&&g<=root.openGoals().size) node = root.openGoals()(g-1)
+            else println("No such goal: "+ g)
+          } catch {case e: NumberFormatException => println(e)}
           case "skip" =>
             if (root.openGoals().size >= 2) {
               //@todo skip to the next goal somewhere on the right of node, not to a random goal
@@ -311,10 +322,11 @@ object KeYmaeraX {
               val tactic = tacticGenerator()
               tacticLog += "& " + command + "\n"
               Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, node))
-              // walk to the next subgoal
+              // walk to the next open subgoal
               // continue walking if it has leaves
-              while (!node.children.isEmpty && !node.children.head.subgoals.isEmpty)
+              while (!node.isClosed() && !node.children.isEmpty && !node.children.head.subgoals.isEmpty)
                 node = node.children.head.subgoals(0)
+              //@todo make sure to walk to siblings ultimately
             }
             catch {
               case e: ToolBoxError => println("Command failed: " + e + "\n"); System.out.flush()
