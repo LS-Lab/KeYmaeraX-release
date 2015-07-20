@@ -315,7 +315,7 @@ object Provable {
  * }}}
  */
 final case class Provable private (conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
-  if (Provable.DEBUG && subgoals.distinct.size != subgoals.size) print("INFO: repeated subgoals may warrant set construction in Provable " + this)
+  if (Provable.DEBUG && subgoals.distinct.size != subgoals.size) print("INFO: repeated subgoals may warrant set construction or compactification in Provable " + this)
 
   /**
    * Position types for the subgoals of a Provable.
