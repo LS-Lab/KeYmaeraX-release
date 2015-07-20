@@ -419,7 +419,8 @@ object KeYmaeraX {
       var outputG = ""
       var outputH = ""
       if (options.contains('vars)) {
-        (outputG, outputH) = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)
+        outputG = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)._1
+        outputH = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)._2
         val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
         pwG.write(outputG)
         pwG.close()
