@@ -79,7 +79,7 @@ object KeYmaeraXParser extends Parser {
 
   private val parseErrorsAsExceptions = true
 
-  private val DEBUG = System.getProperty("lax", "true")=="true"
+  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression = {
@@ -174,8 +174,7 @@ object KeYmaeraXParser extends Parser {
   // elaboration based on expected types
 
   /** Elaborate e to the expected kind of a part of op by lifting defaulted types as needed or return None. */
-  private def elaboratable(kind: Kind, e: Expression): Option[Expression] = if (e.kind==kind
-  && !(kind==ProgramKind && e.isInstanceOf[DifferentialProgram])) Some(e) else e match {
+  private def elaboratable(kind: Kind, e: Expression): Option[Expression] = if (e.kind==kind) Some(e) else e match {
     // lift misclassified defaulted function application to predicate application when required by context type.
     case FuncOf(f, t) if kind==FormulaKind => Some(PredOf(Function(f.name,f.index,f.domain,Bool), t))
     // lift misclassified defaulted predicate application to function application when required by context type.
@@ -195,14 +194,16 @@ object KeYmaeraXParser extends Parser {
       case None => None
     }
     // lift misclassified defaulted differential equation
-    case Equal(xp:DifferentialSymbol, e)
-      if (kind==DifferentialProgramKind || kind==ProgramKind) && !StaticSemantics.isDifferential(e) => Some(AtomicODE(xp, e))
+    case Equal(xp:DifferentialSymbol, e) if kind==DifferentialProgramKind && !StaticSemantics.isDifferential(e) => Some(AtomicODE(xp, e))
+    // lift misclassified defaulted differential equation
+    case Equal(xp:DifferentialSymbol, e) if kind==ProgramKind && !StaticSemantics.isDifferential(e) => Some(ODESystem(AtomicODE(xp, e)))
     //@todo And(And(x'=5,x>0),x<12)) is not lifted yet
     // lift misclassified defaulted differential equation
     case And(Equal(xp:DifferentialSymbol, e), h)
       if (kind==DifferentialProgramKind || kind==ProgramKind) && !StaticSemantics.isDifferential(h) => Some(ODESystem(AtomicODE(xp, e), h))
+    case ode: ODESystem if kind==ProgramKind => Some(ode)
     // lift differential equations without evolution domain constraints to ODESystems
-    case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => Some(ODESystem(ode, True))
+    case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => Some(ODESystem(ode))
     // whether ODESystem is classified as ProgramKind or DifferentialProgramKind
     case ode: ODESystem if kind==ProgramKind || kind==DifferentialProgramKind => Some(ode)
     case _ => None
