@@ -9,7 +9,7 @@ import java.nio.channels.Channels
 import java.util.Locale
 
 import edu.cmu.cs.ls.keymaerax.core.{True, False, Term, Formula}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser}
 import scala.sys.process._
 
 /**
@@ -128,9 +128,10 @@ class Z3Solver extends SMTSolver {
     val output: String = cmd.!!
 //    println("[Z3 simplify result] \n" + output + "\n")
     smtFile.delete()
-    new KeYmaeraParser().parseBareTerm(output) match {
-      case Some(output) => output
-      case None => t
+    try {
+      KeYmaeraXParser.termParser(output)
+    } catch {
+      case e: ParseException => t
     }
   }
 
