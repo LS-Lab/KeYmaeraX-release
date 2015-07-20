@@ -288,7 +288,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
 
-  private val DEBUG = false
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   /**
    * The lexer has multiple modes for the different sorts of files that are supported by KeYmaeraX.

@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
  * @author nfulton
  */
 object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
-  private val DEBUG = false
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   /**
    * @todo sort checking.

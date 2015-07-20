@@ -209,7 +209,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
 
 /** Starting new Provables to begin a proof */
 object Provable {
-  private[core] val debugProver: Boolean = false
+  private[core] val debugProver: Boolean = System.getProperty("lax", "false")=="true"
 
   /**
    * Begin a new proof for the desired conclusion goal

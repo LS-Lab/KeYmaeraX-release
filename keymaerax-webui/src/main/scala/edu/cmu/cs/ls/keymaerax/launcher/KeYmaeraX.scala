@@ -33,7 +33,7 @@ object KeYmaeraX {
       |Usage: java -Xss20M -jar KeYmaeraX.jar
       |  -prove filename -tactic filename [-out filename] |
       |  -modelplex filename [-vars var1,var2,...,varn] [-out filename] |
-      |  -codegen filename [-format Spiral|C] [-out filename]
+      |  -codegen filename [-format Spiral|C] [-out filename] |
       |  -ui [filename] [web server options]
       |
       |Additional options:
@@ -77,7 +77,7 @@ object KeYmaeraX {
           case "-prove" :: value :: tail => nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
           case "-modelplex" :: value :: tail => nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
           case "-codegen" :: value :: tail => nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
-          case "-ui" :: tail => launchUI(tail.toArray); Map('mode -> "ui")
+          case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
           // action options
           case "-out" :: value :: tail => nextOption(map ++ Map('out -> value), tail)
           case "-vars" :: value :: tail => nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
@@ -94,7 +94,7 @@ object KeYmaeraX {
       }
 
       val options = nextOption(Map(), args.toList)
-      require(options.contains('mode), usage)
+      require(options.contains('mode), usage + "\narguments: " + args.mkString("  "))
 
       if (options.get('mode) != Some("ui")) {
         try {
@@ -319,6 +319,7 @@ object KeYmaeraX {
       |import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
       |import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
       |import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+      |import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
       |class InteractiveLocalTactic extends (() => Tactic) {
       |  def apply(): Tactic = {
       |

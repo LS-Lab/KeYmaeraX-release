@@ -48,7 +48,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
   import OpSpec.op
   import OpSpec.statementSemicolon
 
-  private val checkPrettyPrinter = true
+  private val checkPrettyPrinter = System.getProperty("lax", "false")=="true"
 
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr) ensuring(
