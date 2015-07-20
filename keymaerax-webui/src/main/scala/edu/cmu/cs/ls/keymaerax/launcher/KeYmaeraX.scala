@@ -44,8 +44,10 @@ object KeYmaeraX {
       |  -verify   check the resulting proof certificate (recommended)
       |  -noverify skip checking proof certificates
       |  -interactive starts a simple command-line prover if -prove fails
-      |  -lax      enable lax mode with more flexible parser input and printer output
+      |  -lax      enable lax mode with more flexible parser input and printer output etc.
+      |  -strict   enable strict mode with no flexibility in prover
       |  -debug    enable debug mode with more exhaustive messages
+      |  -nodebug  disable debug mode to suppress intermediate messages
       |  -help     Display this usage information
       |  -license  Show license agreement for using this software
       |
@@ -92,8 +94,10 @@ object KeYmaeraX {
           case "-noverify" :: tail => nextOption(map ++ Map('verify -> false), tail)
           case "-verify" :: tail => nextOption(map ++ Map('verify -> true), tail)
           // global options
-          case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
           case "-lax" :: tail => System.setProperty("LAX", "true"); nextOption(map, tail)
+          case "-strict" :: tail => System.setProperty("LAX", "false"); nextOption(map, tail)
+          case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
+          case "-nodebug" :: tail => System.setProperty("DEBUG", "false"); nextOption(map, tail)
           case option :: tail => println("Unknown option " + option + "\n" + usage); sys.exit(1)
         }
       }
