@@ -313,6 +313,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
     proofFileContent shouldBe expectedProofFileContent
   }
 
+  // long-running test (~1.5h)
   "Passive orientation safety" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafety.key"))
 
@@ -400,47 +401,47 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
     def plantAccelerateT(a: FuncOf, r: FuncOf, dx: Variable, dy: Variable, ox: Variable, oy: Variable) = debugT("Plant Accelerate") & ls(boxSeqT) & ls(boxAssignT) & ls(boxSeqT) & ls(boxNDetAssign) & ls(skolemizeT) &
       ls(boxTestT) & ls(ImplyRightT) & ls(diffIntroduceConstantT) &
       ls(diffCutT("t_2>=0".asFormula)) & onBranch(
-      (cutShowLbl, debugT("Show t_2>=0") & Tactics.stopT &
+      (cutShowLbl, debugT("Show t_2>=0") &
         la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", s"r_0!=0", "v_0>=0", "dx^2+dy^2=1", "odx()^2+ody()^2<=V()^2", s"w*r_1()=v_0") &
         (ls(diffInvariantT) | debugT("Diff. inv. t>=0 failed"))),
       (cutUseLbl, debugT("Use t_2>=0") &
         ls(diffCutT(s"${dx.prettyString}^2+${dy.prettyString}^2=1".asFormula)) & onBranch(
-        (cutShowLbl, debugT("Show dx^2+dy^2=1") & Tactics.stopT &
+        (cutShowLbl, debugT("Show dx^2+dy^2=1") &
           la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", s"r_0!=0", "v_0>=0", "odx()^2+ody()^2<=V()^2", "t_2=0", s"w*r_1()=v_0") &
           ls(diffInvariantT) | debugT("Diff. inv. dx^2+dy^2=1 failed")),
         (cutUseLbl, debugT("Use dx^2+dy^2=1") &
           discreteGhostT(Some(Variable("v0")), Variable("v", Some(0)))(odePos) &
           boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) & debugT("Cutting in v=v0+a*t") &
           ls(diffCutT(("v_0=v0_1()+" + a.prettyString + "*t_2").asFormula)) & onBranch(
-          (cutShowLbl, debugT("Show v=v0+a*t") & Tactics.stopT &
+          (cutShowLbl, debugT("Show v=v0+a*t") &
             la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", s"r_0!=0", "dx^2+dy^2=1", "odx()^2+ody()^2<=V()^2") &
             (ls(diffInvariantT) | debugT("Diff. inv. v=v0+a*t failed"))),
           (cutUseLbl, debugT("Use v=v0+a*t") &
             discreteGhostT(Some(Variable("x0")), Variable("x", Some(0)))(odePos) &
             boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) &
             ls(diffCutT(("-t_2*(v_0 - " + a.prettyString + "/2*t_2) <= x_0 - x0_1() & x_0 - x0_1() <= t_2*(v_0 - " + a.prettyString + "/2*t_2)").asFormula)) & onBranch(
-            (cutShowLbl, debugT("Show ... <= x - x0 <= ...") & Tactics.stopT & la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", s"r_0!=0", "dx^2+dy^2=1", "odx()^2+ody()^2<=V()^2") & ls(diffInvariantT)),
+            (cutShowLbl, debugT("Show ... <= x - x0 <= ...") & la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", s"r_0!=0", "dx^2+dy^2=1", "odx()^2+ody()^2<=V()^2") & ls(diffInvariantT)),
             (cutUseLbl, debugT("Use ... <= x -x0 <= ...") & discreteGhostT(Some(Variable("y0")), Variable("y", Some(0)))(odePos) &
               boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) &
               ls(diffCutT(("-t_2*(v_0 - " + a.prettyString + "/2*t_2) <= y_0 - y0_1() & y_0 - y0_1() <= t_2*(v_0 - " + a.prettyString + "/2*t_2)").asFormula)) & onBranch(
-              (cutShowLbl, debugT("Show ... <= y - y0 <= ...") & Tactics.stopT & la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", s"r_0!=0", "dx^2+dy^2=1", "odx()^2+ody()^2<=V()^2") & ls(diffInvariantT)),
+              (cutShowLbl, debugT("Show ... <= y - y0 <= ...") & la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", s"r_0!=0", "dx^2+dy^2=1", "odx()^2+ody()^2<=V()^2") & ls(diffInvariantT)),
               (cutUseLbl, debugT("Use ... <= y - y) <= ...") &
                 discreteGhostT(Some(Variable("ox0")), ox)(odePos) &
                 boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) &
                 ls(diffCutT(("-t_2 * V() <= " + ox.prettyString + " - ox0_1() & " + ox.prettyString + " - ox0_1() <= t_2 * V()").asFormula)) & onBranch(
-                (cutShowLbl, debugT("Show ... <= ox - ox0 <= ...") & Tactics.stopT & la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", s"r_0!=0", "v_0>=0", "dx^2+dy^2=1", s"w*r_1()=v_0", "v0_1()=v_0", "x0_1()=x_0", "y0_1()=y_0") & ls(diffInvariantT)),
+                (cutShowLbl, debugT("Show ... <= ox - ox0 <= ...") & la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", s"r_0!=0", "v_0>=0", "dx^2+dy^2=1", s"w*r_1()=v_0", "v0_1()=v_0", "x0_1()=x_0", "y0_1()=y_0") & ls(diffInvariantT)),
                 (cutUseLbl, debugT("Use ... <= ox - ox0 <= ...") & discreteGhostT(Some(Variable("oy0")), oy)(odePos) &
                   boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) &
                   ls(diffCutT(("-t_2 * V() <= " + oy.prettyString + " - oy0_1() & " + oy.prettyString + " - oy0_1() <= t_2 * V()").asFormula)) & onBranch(
-                  (cutShowLbl, debugT("Show ... <= oy - oy0 <= ...") & Tactics.stopT & la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", s"r_0!=0", "v_0>=0", "dx^2+dy^2=1", s"w*r_1()=v_0", "v0_1()=v_0", "x0_1()=x_0", "y0_1()=y_0") & ls(diffInvariantT)),
+                  (cutShowLbl, debugT("Show ... <= oy - oy0 <= ...") & la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", s"r_0!=0", "v_0>=0", "dx^2+dy^2=1", s"w*r_1()=v_0", "v0_1()=v_0", "x0_1()=x_0", "y0_1()=y_0") & ls(diffInvariantT)),
                   (cutUseLbl, debugT("Use ... <= oy - oy0 <= ...") &
                     // here starts the new stuff (additional to passive safety diff. cuts)
                     ls(diffCutT(("w=(" + a.prettyString + "*t_2+v0_1())/" + r.prettyString).asFormula)) & onBranch(
-                    (cutShowLbl, debugT("Show w = (a*t+v0)/r") & Tactics.stopT & la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", "dx^2+dy^2=1", "odx()^2+ody()^2<=V()^2", "x0_1()=x_0", "y0_1()=y_0", s"ox0_1()=${ox.prettyString}", s"oy0_1()=${oy.prettyString}") & ls(diffInvariantT)),
+                    (cutShowLbl, debugT("Show w = (a*t+v0)/r") & la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", "dx^2+dy^2=1", "odx()^2+ody()^2<=V()^2", "x0_1()=x_0", "y0_1()=y_0", s"ox0_1()=${ox.prettyString}", s"oy0_1()=${oy.prettyString}") & ls(diffInvariantT)),
                     (cutUseLbl, debugT("Use w = (a*t+v0)/r") & discreteGhostT(Some(Variable("talpha0")), Variable("talpha", Some(3)))(odePos) &
                       boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) &
                       ls(diffCutT(("talpha_3-talpha0_1() = " + a.prettyString + "*t_2^2/(2*" + r.prettyString + ") + v0_1()*t_2/" + r.prettyString).asFormula)) & onBranch(
-                      (cutShowLbl, debugT("Show talpha-talpha0 = a*t^2/(2*r) + v0*t/r") & Tactics.stopT & la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", "dx^2+dy^2=1", "odx()^2+ody()^2<=V()^2", "x0_1()=x_0", "y0_1()=y_0", s"ox0_1()=${ox.prettyString}", s"oy0_1()=${oy.prettyString}") & ls(diffInvariantT)),
+                      (cutShowLbl, debugT("Show talpha-talpha0 = a*t^2/(2*r) + v0*t/r") & la(hideT, s"v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))", "dx^2+dy^2=1", "odx()^2+ody()^2<=V()^2", "x0_1()=x_0", "y0_1()=y_0", s"ox0_1()=${ox.prettyString}", s"oy0_1()=${oy.prettyString}") & ls(diffInvariantT)),
                       (cutUseLbl, debugT("Use talpha-talpha0 = a*t^2/(2*r) + v0*t/r") &
                         ls(diffWeakenT) & ls(ImplyRightT) & (la(AndLeftT)*) & debugT("Plant finished")
                         ) /* use talpha=talpha0 = a*t^2/(2*r) + v0*t/r */
@@ -632,7 +633,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
       )
     )
 
-    def finishAccelerate2AlphaT = Tactics.stopT & la(hideT,
+    def finishAccelerate2AlphaT = la(hideT,
       "-t_3*(v_1-a()/2*t_3)<=x_1-x_0", "x_1-x_0<=t_3*(v_1-a()/2*t_3)", "-t_3*(v_1-a()/2*t_3)<=y_1-y_0",
       "y_1-y_0<=t_3*(v_1-a()/2*t_3)", "-t_3*V()<=ox_2-ox_1", "ox_2-ox_1<=t_3*V()", "-t_3*V()<=oy_2-oy_1",
       "oy_2-oy_1<=t_3*V()", "dx_0^2+dy_0^2=1",
@@ -834,11 +835,11 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
     )
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(inductionT(Some(invariant))) & onBranch(
-      (indInitLbl, debugT("Base case") & Tactics.stopT & ((AxiomCloseT | la(Propositional) | ls(Propositional))*) & (AxiomCloseT | QE)),
-      (indUseCaseLbl, debugT("Use case") & Tactics.stopT & la(hideT, "talpha=0", "r>=0->v^2/(2*b()*r) < alpha()", "r < 0->v^2/(2*b()*-r) < alpha()",
+      (indInitLbl, debugT("Base case") & ((AxiomCloseT | la(Propositional) | ls(Propositional))*) & (AxiomCloseT | QE)),
+      (indUseCaseLbl, debugT("Use case") & la(hideT, "talpha=0", "r>=0->v^2/(2*b()*r) < alpha()", "r < 0->v^2/(2*b()*-r) < alpha()",
         "(x-ox>=0->x-ox>v^2/(2*b())+V()*(v/b()))&(x-ox<=0->ox-x>v^2/(2*b())+V()*(v/b()))|(y-oy>=0->y-oy>v^2/(2*b())+V()*(v/b()))&(y-oy<=0->oy-y>v^2/(2*b())+V()*(v/b()))",
         "v>=0") & ls(ImplyRightT) & QE),
-      (indStepLbl, debugT("Induction step") & /*Tactics.stopT &*/ la(hideT, "r!=0", "talpha=0", "r>=0->v^2/(2*b()*r) < alpha()",
+      (indStepLbl, debugT("Induction step") & la(hideT, "r!=0", "talpha=0", "r>=0->v^2/(2*b()*r) < alpha()",
         "r < 0->v^2/(2*b()*-r) < alpha()", "(x-ox>=0->x-ox>v^2/(2*b())+V()*(v/b()))&(x-ox<=0->ox-x>v^2/(2*b())+V()*(v/b()))|(y-oy>=0->y-oy>v^2/(2*b())+V()*(v/b()))&(y-oy<=0->oy-y>v^2/(2*b())+V()*(v/b()))",
         "v>=0") &
         ls(ImplyRightT) & (la(AndLeftT)*) & ls(boxSeqT) &
@@ -847,19 +848,19 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
         ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) &
         /* control robot */
         ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) && (
-        debugT("Brake") & Tactics.stopT & ls(boxAssignT) &
+        debugT("Brake") & ls(boxAssignT) &
           plantT(FuncOf(Function("a", Some(1), Unit, Real), Nothing), FuncOf(Function("r", Some(0), Unit, Real), Nothing), Variable("dx"), Variable("dy"), Variable("ox", Some(0)), Variable("oy", Some(0))) &
           hideAndEqT(Variable("ox", Some(0)), Variable("oy", Some(0))) & finishBrakeStoppedT,
         ls(boxChoiceT) & ls(AndRightT) && (
-          debugT("Stopped") & Tactics.stopT & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
+          debugT("Stopped") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
             ls(boxSeqT) & ls(boxAssignT)*2 &
             plantT(FuncOf(Function("a", Some(1), Unit, Real), Nothing), FuncOf(Function("r", Some(0), Unit, Real), Nothing), Variable("dx", Some(2)), Variable("dy", Some(2)), Variable("ox", Some(0)), Variable("oy", Some(0))) &
             hideAndEqT(Variable("ox", Some(0)), Variable("oy", Some(0))) & finishBrakeStoppedT,
-          debugT("Accelerate") & /*Tactics.stopT &*/ (ls(boxSeqT) & ls(boxNDetAssign) & ls(skolemizeT) & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT))*2 &
+          debugT("Accelerate") & (ls(boxSeqT) & ls(boxNDetAssign) & ls(skolemizeT) & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT))*2 &
             (ls(boxSeqT) & ls(boxNDetAssign) & ls(skolemizeT))*3 &
             ls(boxSeqT) &
             ls(boxChoiceT) & ls(AndRightT) && (
-              debugT("if v+a*ep<0") & Tactics.stopT & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxAssignT) &
+              debugT("if v+a*ep<0") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxAssignT) &
                 plantAccelerateT(FuncOf(Function("a", None, Unit, Real), Nothing), FuncOf(Function("r", Some(1), Unit, Real), Nothing), Variable("dx"), Variable("dy"), Variable("ox", Some(1)), Variable("oy", Some(1))) &
                 hideAndEqAccelerate1T(Variable("ox", Some(1)), Variable("oy", Some(1))) & finishAccelerate1T,
               debugT("else") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxAssignT) &
