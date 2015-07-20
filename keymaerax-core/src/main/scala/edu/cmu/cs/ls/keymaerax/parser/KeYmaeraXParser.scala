@@ -75,11 +75,11 @@ object KeYmaeraXParser extends Parser {
   val parser = this
 
   /** Lax mode where the parser is a little flexible about accepting input. */
-  private val LAX = System.getProperty("lax", "true")=="true"
-
-  private val parseErrorsAsExceptions = true
+  private val LAX = System.getProperty("LAX", "true")=="true"
 
   private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+
+  private val parseErrorsAsExceptions = true
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression = {

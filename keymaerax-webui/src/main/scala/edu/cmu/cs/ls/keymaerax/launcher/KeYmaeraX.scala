@@ -37,13 +37,15 @@ object KeYmaeraX {
       |  -ui [filename] [web server options]
       |
       |Additional options:
-      |  -ui       start the web user interface opening the given file (if any),
-      |            passing additional arguments to the web server
+      |  -ui [opt] optional arguments [opts] are passed to the web user interface
+      |            that -ui starts, opening the given file (if any)
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
       |  -verify   check the resulting proof certificate (recommended)
       |  -noverify skip checking proof certificates
       |  -interactive starts a simple command-line prover if -prove fails
+      |  -lax      enable lax mode with more flexible parser input and printer output
+      |  -debug    enable debug mode with more exhaustive messages
       |  -help     Display this usage information
       |  -license  Show license agreement for using this software
       |
@@ -89,6 +91,9 @@ object KeYmaeraX {
           case "-jlink" :: value :: tail => nextOption(map ++ Map('jlink -> value), tail)
           case "-noverify" :: tail => nextOption(map ++ Map('verify -> false), tail)
           case "-verify" :: tail => nextOption(map ++ Map('verify -> true), tail)
+          // global options
+          case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
+          case "-lax" :: tail => System.setProperty("LAX", "true"); nextOption(map, tail)
           case option :: tail => println("Unknown option " + option + "\n" + usage); sys.exit(1)
         }
       }

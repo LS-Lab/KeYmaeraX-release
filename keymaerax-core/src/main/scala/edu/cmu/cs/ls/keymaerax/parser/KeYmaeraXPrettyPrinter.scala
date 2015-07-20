@@ -49,7 +49,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
   import OpSpec.statementSemicolon
 
   /** Lax mode where the pretty-printer does not mind printing output that it can't parse the same way again. */
-  private val LAX = System.getProperty("lax", "false")=="true"
+  private val LAX = System.getProperty("LAX", "false")=="true"
 
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr) ensuring(
