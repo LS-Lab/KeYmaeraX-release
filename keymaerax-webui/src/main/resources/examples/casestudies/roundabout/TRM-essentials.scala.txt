@@ -5,12 +5,12 @@ import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 class TRM_Essentials_Tactic extends (() => Tactic) {
   def apply(): Tactic = {
     implyR(1) &
-    ls(loop("(x1-y1)^2 + (x2-y2)^2 >= p^2".asFormula)) & onBranch(
+    ls(loop("(x1-y1)^2 + (x2-y2)^2 >= p()^2".asFormula)) & onBranch(
       ("base case", QE),
       ("induction step",
         (ls(step)*) &
         ls(diffInvariant(List("d1-e1=-om*(x2-y2)&d2-e2=om*(x1-y1)".asFormula,
-          "(x1-y1)^2 + (x2-y2)^2 >= p^2".asFormula))) &
+          "(x1-y1)^2 + (x2-y2)^2 >= p()^2".asFormula))) &
           DW(1) & QE
       ),
       ("use case", QE)
