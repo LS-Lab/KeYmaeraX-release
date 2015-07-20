@@ -48,11 +48,12 @@ class KeYmaeraXPrinter extends PrettyPrinter {
   import OpSpec.op
   import OpSpec.statementSemicolon
 
-  private val checkPrettyPrinter = System.getProperty("lax", "false")=="true"
+  /** Lax mode where the pretty-printer does not mind printing output that it can't parse the same way again. */
+  private val LAX = System.getProperty("lax", "false")=="true"
 
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr) ensuring(
-    r => !checkPrettyPrinter || expr.kind==FunctionKind || reparse(expr, r) == expr,
+    r => LAX || expr.kind==FunctionKind || reparse(expr, r) == expr,
     "Parse of print is identity." +
       "\nExpression: " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName +
       "\nPrinted:    " + stringify(expr) +
