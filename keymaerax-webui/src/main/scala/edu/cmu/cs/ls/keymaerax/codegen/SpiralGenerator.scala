@@ -32,8 +32,9 @@ class Hcol {
 }
 
 class SpiralGenerator extends CodeGenerator {
-  def apply(kExpr: Expression): String = apply(kExpr, Nil, "")
-  def apply(kExpr: Expression, vars: List[Variable], fileName: String): String = generateSpiralMonitor(kExpr, vars, fileName)._1
+  def apply(kExpr: Expression): String = apply(kExpr, Nil, "")._1
+  def apply(kExpr: Expression, fileName: String) : String = apply(kExpr, Nil, fileName)._1
+  def apply(kExpr: Expression, vars: List[Variable], fileName: String): (String, String) = generateSpiralMonitor(kExpr, vars, fileName)
 
   private val hcol = new Hcol
 
@@ -107,7 +108,7 @@ class SpiralGenerator extends CodeGenerator {
     val polynomialMode = vars.nonEmpty
     val spiralMonitor = compileToSpiral(kExpr, vars)
     hcol.setMonitor(spiralMonitor)
-    val gCode = infoG(fileName) + libs + {if(polynomialMode) "# declare constant table\n" else ""} + hcol.getConstTbl + monDec + hcol.getMonitor + "\n;\n"
+    val gCode = infoG(fileName) + libs + {if(polynomialMode) "# declare constant table\n" + hcol.getConstTbl else ""} + monDec + hcol.getMonitor + "\n;\n"
     val hCode =
       if(polynomialMode) infoH(fileName) + ifnDef(fileName) + define(fileName) + hcol.getCoefficientHex + endIf
       else ""
