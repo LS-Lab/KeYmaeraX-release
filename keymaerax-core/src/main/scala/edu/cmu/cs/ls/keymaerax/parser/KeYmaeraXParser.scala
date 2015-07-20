@@ -440,7 +440,7 @@ object KeYmaeraXParser extends Parser {
         if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX
           || (la == RDIA || la == RDIA) && (p1.kind == ProgramKind || p1.kind == DifferentialProgramKind)
           || la!=LBRACE && (optok < op(st, la, List(p2.kind,ExpressionKind)) || optok <= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == LeftAssociative))
-          reduce(st, 2, op(st, SEMI, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(SEMI.img, p1, p2), r)
+          reduce(st, 2, elaborate(st, SEMI, op(st, SEMI, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Expression]], p1, p2), r)
         else if (statementSemicolon&&la==LBRACE || optok > op(st, la, List(p2.kind,ExpressionKind)) || optok >= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == RightAssociative)
           shift(st)
         else error(st)
