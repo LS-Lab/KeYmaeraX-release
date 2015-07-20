@@ -451,7 +451,7 @@ sealed trait DifferentialProgram extends Program {
 sealed trait AtomicDifferentialProgram extends AtomicProgram with DifferentialProgram
 /** Differential equation system ode with given evolution domain constraint */
 //@todo should not be a differential program since not nested within DifferentialProduct.
-case class ODESystem(ode: DifferentialProgram, constraint: Formula)
+case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
   extends Program with DifferentialProgram {
   override def kind: Kind = ProgramKind
 }
