@@ -91,9 +91,9 @@ class FileLemmaDB extends LemmaDB {
   private def proofHeader(ns : List[NamedSymbol]) : String = {
     val varDecls = ns.map({
       case Variable(n, i, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "."
-      case DifferentialSymbol(x) =>
+      case DifferentialSymbol(x@Variable(n, i, s)) =>
         /*implicitly declared by their corresponding variables*/
-        if (!ns.contains(x)) sortProofPrinter(x.s) + " " + x.n + printIndex(x.i) + "." else ""
+        if (!ns.contains(x)) sortProofPrinter(s) + " " + n + printIndex(i) + "." else ""
       case Function(n, i, Unit, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "()" + "."
       case Function(n, i, d, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "(" + sortProofPrinter(d) + ")" + "."
     })
