@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 
 import scala.collection.immutable.Seq
 
@@ -115,26 +116,30 @@ class KeYmaeraToSMT(toolId : String) {
       case Number(n) => n.underlying().toString
       case t: Variable => convertVariable(t)
       case FuncOf(fn, _) => convertConstantFunction(fn)
-      case _ => throw new SMTConversionException("Conversion of term " + t.prettyString + " is not defined")
+      case _ => throw new SMTConversionException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
     }
   }
 
   def convertVariable(t: Variable): String = {
-    if(!existingVars.contains(t.prettyString)) {
-      existingVars = existingVars :+ t.prettyString
-      val vl : String = smtLib.getVariableList.concat("(declare-fun " + t.prettyString + " () Real)\n")
+    val varName = {
+      if(t.index.isEmpty) t.name
+      else t.name + "_" + t.index.get
+    }
+    if(!existingVars.contains(varName)) {
+      existingVars = existingVars :+ varName
+      val vl : String = smtLib.getVariableList.concat("(declare-fun " + varName + " () Real)\n")
       smtLib.setVariableList(vl)
     }
-    t.prettyString
+    varName
   }
 
   def convertConstantFunction(fun: Function) : String = {
-    if(!existingVars.contains(fun.prettyString)) {
-      existingVars = existingVars :+ fun.prettyString
-      val vl : String = smtLib.getVariableList.concat("(declare-fun " + fun.prettyString + " () Real)\n")
+    if(!existingVars.contains(fun.name)) {
+      existingVars = existingVars :+ fun.name
+      val vl : String = smtLib.getVariableList.concat("(declare-fun " + fun.name + " () Real)\n")
       smtLib.setVariableList(vl)
     }
-    fun.prettyString
+    fun.name
   }
 
   /**
@@ -162,10 +167,10 @@ class KeYmaeraToSMT(toolId : String) {
               }
               res += ")"
               res
-            } else throw new SMTConversionException("Cannot convert exponential " + Power(l,r).prettyString + " with negative index")
-          } else throw new SMTConversionException("Cannot convert exponential " + Power(l,r).prettyString + " with non-integer index")
+            } else throw new SMTConversionException("Cannot convert exponential " + KeYmaeraXPrettyPrinter(Power(l,r)) + " with negative index")
+          } else throw new SMTConversionException("Cannot convert exponential " + KeYmaeraXPrettyPrinter(Power(l,r)) + " with non-integer index")
         case Neg(Number(n)) => "(/ 1. " + convertExp(base, Number(n)) + ")"
-        case _ => throw new SMTConversionException("Conversion of exponential " + Power(l,r).prettyString + " is not defined")
+        case _ => throw new SMTConversionException("Conversion of exponential " + KeYmaeraXPrettyPrinter(Power(l,r)) + " is not defined")
       }
     }
   }
@@ -229,7 +234,7 @@ class KeYmaeraToSMT(toolId : String) {
       return ""
     var result : String = "("
     for (i <- 0 to args.length-1) {
-      result += "(" + args(i).prettyString + " Real)"
+      result += "(" + args(i).name + " Real)"
       if (i != args.length - 1) {
         result += " "
       }
