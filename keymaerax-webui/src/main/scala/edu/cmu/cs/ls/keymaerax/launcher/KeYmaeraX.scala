@@ -252,9 +252,11 @@ object KeYmaeraX {
       (if (node.isClosed) "Closed Goal: " else if (node.children.isEmpty) "Open Goal: " else "Inner Node: ") +
       "\tdebug: " + node.tacticInfo.infos.getOrElse("debug", "<none>") +
       "\n" +
-      (if (node.sequent.ante.isEmpty) "" else (1 to node.sequent.ante.length).map(i => -i + ":  " + node.sequent.ante(i-1).prettyString + "\t" + node.sequent.ante(i-1).getClass.getSimpleName).mkString("\n")) +
+      (1 to node.sequent.ante.length).
+        map(i => -i + ":  " + node.sequent.ante(i-1).prettyString + "\t" + node.sequent.ante(i-1).getClass.getSimpleName).mkString("\n") +
       "\n  ==>\n" +
-      (if (node.sequent.succ.isEmpty) "" else (1 to node.sequent.succ.length).map(i => +i + ":  " + node.sequent.succ(i-1).prettyString + "\t" + node.sequent.ante(i-1).getClass.getSimpleName).mkString("\n")) +
+      (1 to node.sequent.succ.length).
+        map(i => +i + ":  " + node.sequent.succ(i-1).prettyString + "\t" + node.sequent.succ(i-1).getClass.getSimpleName).mkString("\n") +
       "\n")
   }
 
@@ -272,6 +274,7 @@ object KeYmaeraX {
 
     while (!root.isClosed()) {
       assert(!root.openGoals().isEmpty, "proofs that are not closed must have open goals")
+      println("Open Goals: " + root.openGoals.size)
       var node = root.openGoals().head
       println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " ===\n")
       var tacticLog = ""
