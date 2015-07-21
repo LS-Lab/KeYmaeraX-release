@@ -341,12 +341,14 @@ object KeYmaeraX {
     root
   }
 
+  //@todo import namespace of the user tactic *object* passed in -tactic
   private val tacticParsePrefix =
     """
       |import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
       |import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
       |import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
       |import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
+      |import edu.cmu.cs.ls.keymaerax.tactics._
       |class InteractiveLocalTactic extends (() => Tactic) {
       |  def apply(): Tactic = {
       |

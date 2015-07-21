@@ -33,10 +33,14 @@ object TactixLibrary {
 
   // Locating applicable positions for PositionTactics
 
-  /** Locate applicable position in succedent */
+  /** Locate applicable position in succedent that is on the right */
   def ls(tactic: PositionTactic): Tactic = TacticLibrary.locateSucc(tactic)
-  /** Locate applicable position in antecedent */
+  /** Locate applicable position in succedent that is on the right */
+  def lR(tactic: PositionTactic): Tactic = ls(tactic)
+  /** Locate applicable position in antecedent that is on the left */
   def la(tactic: PositionTactic): Tactic = TacticLibrary.locateAnte(tactic)
+  /** Locate applicable position in antecedent that is on the left */
+  def lL(tactic: PositionTactic): Tactic = la(tactic)
   /** Locate applicable position in antecedent or succedent */
   def l(tactic: PositionTactic): Tactic  = TacticLibrary.locateAnteSucc(tactic)
 
@@ -149,7 +153,7 @@ object TactixLibrary {
   def CE(inEqPos: PosInExpr)  : Tactic         = AxiomaticRuleTactics.equivalenceCongruenceT(inEqPos)
 
 
-  /** QE: Quantifier Elimination to decide arithmetic */
+  /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
   def QE                      : Tactic         = TacticLibrary.arithmeticT
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
@@ -193,4 +197,23 @@ object TactixLibrary {
   def debug(s: => Any): Tactic = TacticLibrary.debugT(s)
   def debugAt(s: => Any): PositionTactic = TacticLibrary.debugAtT(s)
 
+
+
+  /** Alpha rules are propositional rules that do not split */
+  def alphaRule: Tactic = lL(andL) | lR(orR) | lR(implyR) | lL(notL) | lR(notR)
+  /** Beta rules are propositional rules that split */
+  def betaRule: Tactic = lR(andR) | lL(orL) | lL(implyL) | lL(equivL) | lR(equivR)
+  /** Real-closed field arithmetic after consolidating sequent into a single universally-quantified formula */
+  def RCF: Tactic = PropositionalTacticsImpl.ConsolidateSequentT & assert(0, 1) & FOQuantifierTacticsImpl.universalClosureT(1) & debug("Handing to Mathematica") &
+    ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+
+  /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
+  //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
+  def lazyQE = (
+    ((alphaRule | ls(allR) | la(existsL)
+      | close
+      //@todo eqLeft|eqRight for equality rewriting directionally toward easy
+      | (la(TacticLibrary.eqThenHideIfChanged)*)
+      | betaRule)*)
+      | RCF)
 }

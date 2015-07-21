@@ -780,26 +780,37 @@ object ODETactics {
   //////////////////////////////
 
   /**
-   * Prove the given list of differential invariants in that order by DC+DI
+   * Prove the given list of differential invariants in that order by DC+DI.
+   * The operational effect of {x'=f(x)&q(x)}@invariant(f1,f2,f3) is diffInvariant(List(f1,f2,f3))
    * @author aplatzer
    */
-  def diffInvariant(invariants: List[Formula]): PositionTactic = new PositionTactic("diffInd") {
+  def diffInvariant(invariants: List[Formula]): PositionTactic = new PositionTactic("diffInvariant") {
+    /** Find the first invariant among given invariants that is not a conjunct of the evolution domain constraint already */
+    private def nextInvariant(ode: ODESystem): Option[Formula] = {
+      val evos = FormulaTools.conjuncts(ode.constraint)
+      invariants.find(inv => !evos.contains(inv))
+    } ensuring(r => remainingInvariants(ode).isEmpty && r==None || r==Some(remainingInvariants(ode).head), "compatible with remainingInvariants")
+
+    /** Find all remaining invariants among given invariants that are not a conjunct of the evolution domain constraint already */
+    private def remainingInvariants(ode: ODESystem): List[Formula] = {
+      val evos = FormulaTools.conjuncts(ode.constraint)
+      invariants.filter(inv => !evos.contains(inv))
+    }
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
-      //@todo check that something in invariants isnt a conjunct of evo already and pick that one later
-      case Box(ODESystem(ode, evo), _) => !invariants.isEmpty
+      case Box(ode:ODESystem, _) => !nextInvariant(ode).isEmpty
       case _ => false
     })
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case Box(ODESystem(_, evo), _) =>
-          //@todo could also diffWeaken if invariants.isEmpty and proclaim applicability then as well
-          assert(!invariants.isEmpty, "Only non-empty lists of invariants are applicable")
-          val cut = invariants.head
+        case Box(ode:ODESystem, _) =>
+          val remaining = remainingInvariants(ode)
+          assert(!remaining.isEmpty, "Only non-empty lists of remaining invariants are applicable")
+          val cut = remaining.head
           Some(diffCutT(cut)(p) & onBranch(
             (BranchLabels.cutShowLbl, diffInvariantT(p)),
-            (BranchLabels.cutUseLbl, diffInvariant(invariants.tail)(p))))
+            (BranchLabels.cutUseLbl, diffInvariant(remaining.tail)(p))))
         case _ => None
       }
     }

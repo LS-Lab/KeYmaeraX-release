@@ -252,6 +252,7 @@ object TacticLibrary {
   /**
    * Default arithmeticT
    * Use Mathematica
+   * @todo allow allRight and existsLeft rules as well.
    */
   def arithmeticT = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
     PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & lastSucc(FOQuantifierTacticsImpl.universalClosureT) & debugT("Handing to Mathematica/Z3") &
@@ -265,7 +266,7 @@ object TacticLibrary {
     PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & lastSucc(FOQuantifierTacticsImpl.universalClosureT) & debugT("Handing to " + toolId) &
     ArithmeticTacticsImpl.quantifierEliminationT(toolId)
 
-  private def eqThenHideIfChanged: PositionTactic = new PositionTactic("Eq and Hide if Changed") {
+  /*private*/ def eqThenHideIfChanged: PositionTactic = new PositionTactic("Eq and Hide if Changed") {
     override def applies(s: Sequent, p: Position): Boolean = eqLeft(exhaustive = true).applies(s, p)
 
     override def apply(p: Position): Tactic = new Tactic(name) {

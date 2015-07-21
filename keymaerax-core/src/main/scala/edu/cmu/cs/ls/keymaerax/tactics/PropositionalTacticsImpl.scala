@@ -22,6 +22,7 @@ import scala.collection.immutable.{Map, List}
  * Implementation of tactics for handling propositions.
  */
 object PropositionalTacticsImpl {
+  /** Alpha-rules that is propositional rules that do not split branches*/
   def NonBranchingPropositionalT: PositionTactic = ListPropositionalT("Nonbranching Propositional",
     NotLeftT :: AndLeftT :: NotRightT :: ImplyRightT :: OrRightT :: Nil)
 
