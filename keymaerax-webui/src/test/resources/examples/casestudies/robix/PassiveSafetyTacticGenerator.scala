@@ -65,8 +65,8 @@ class PassiveSafetyTacticGenerator extends (() => Tactic) {
         boxAssignT(
           FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) & debugT("Cutting in v=v0+a*t") &
         ls(
-          diffCutT(("v_0=v0_1()+" + a.prettyString(
-          ) + "*t_2").asFormula)) & onBranch(
+          diffCutT(("v_0=v0_1()+" + a.prettyString
+          + "*t_2").asFormula)) & onBranch(
         (cutShowLbl, debugT("Show v=v0+a*t") &
           la(hideT,
             "v_0=0|(x_0-xo_0>=0->x_0-xo_0>v_0^2/(2*B)+V()*(v_0/B))&(x_0-xo_0<=0->xo_0-x_0>v_0^2/(2*B)+V()*(v_0/B))|(y_0-yo_0>=0->y_0-yo_0>v_0^2/(2*B)+V()*(v_0/B))&(y_0-yo_0<=0->yo_0-y_0>v_0^2/(2*B)+V()*(v_0/B))",
