@@ -729,6 +729,33 @@ object ODETactics {
     }
   }
 
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // Comma Commute an ODE
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  def commaCommuteT : PositionTactic = {
+    val axiomInstance = (fml : Formula) => fml match {
+      case Box(ODESystem(DifferentialProduct(l,r), h), p) => {
+        Equiv(fml, Box(ODESystem(DifferentialProduct(r,l), h), p))
+      }
+    }
+    uncoverAxiomT(", commute", axiomInstance, _ => commaCommuteAxiomBaseT)
+  }
+
+  def commaCommuteAxiomBaseT : PositionTactic = {
+    def subst(fml : Formula) = fml match {
+      case Equiv(Box(ODESystem(DifferentialProduct(c,d), h), p), _) => {
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
+        val aC = DifferentialProgramConst("c")
+        val aD = DifferentialProgramConst("d")
+        val aH = PredOf(Function("H", None, Real, Bool), Anything)
+        SubstitutionPair(aP, p) :: SubstitutionPair(aC, c) :: SubstitutionPair(aD, d) :: SubstitutionPair(aH, h) :: Nil
+      }
+    }
+    axiomLookupBaseT(", commute", subst, _ => NilPT, (f, ax) => ax)
+  }
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Differential Weakening Section.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1336,6 +1363,7 @@ object ODETactics {
       }
     }
   }
+
 }
 
 

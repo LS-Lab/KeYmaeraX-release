@@ -239,6 +239,7 @@ Variables.
   P a.
   P b.
   CP c.
+  CP d.
   F p.
   F p(T).
   F p(?).
@@ -439,6 +440,11 @@ Axiom "DA differential ghost".
   /* [x'=f(x)&q(x);]p(x) <-> \exists y. [(x'=f(x),y'=a(x)*y+b(x))&q(x);]p(x) THEORY */
 End.
 
+/* Formatter axioms for diff eqs. */
+Axiom ", commute".
+  [c,d & H(?);]p(?) <-> [d,c & H(?);]p(?)
+End.
+
 /* @Derived */
 Axiom "DS differential equation solution".
   [x'=c();]p(x) <-> \forall t. (t>=0 -> [x:=x+c()*t;]p(x))
@@ -586,13 +592,6 @@ End.
 Axiom "I induction".
   /*@TODO Use this form instead? which is possibly more helpful: ([a*](p(?) -> [a;] p(?))) -> (p(?) -> [a*]p(?)) THEORY */
   (p(?) & [a*](p(?) -> [a;] p(?))) -> [a*]p(?)
-End.
-
-/**
- * Formatter axioms for diff eqs.
- */
- Axiom ", commute".
-  [c,d&H(?);]p(?) <-> [d,c&H(?);]p(?)
 End.
 
 /**

@@ -113,9 +113,17 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
 }
 
 class InverseDiffGhostTests extends TacticTestSuite {
-//  "Comma Commutation" should "move the target of the next inverse ghost to the front" in {
-//    ???
-//  }
+  "Comma Commute Axiom" should "work on a binary example" in {
+    val f = "[{x' = v, v' = a & t >= 0}]x>0".asFormula
+    val node = helper.formulaToNode(f)
+    val tactic = ODETactics.commaCommuteT(SuccPos(0))
+    helper.runTactic(tactic, node)
+    node.openGoals().length shouldBe 1
+    node.openGoals().last.sequent.succ.length shouldBe 1
+    node.openGoals().last.sequent.succ.last shouldBe (
+      "[{v' = a, x' = v & t >= 0}]x>0".asFormula
+      )
+  }
 
   "Inverse Ghost" should "work when we don't have to reorder diffeq" in {
     val f = "\\exists x ([{t' = 0*t + 1, v' = 0*v + a, x' = 0*x + v & true & t >= 0}]x>0)".asFormula
