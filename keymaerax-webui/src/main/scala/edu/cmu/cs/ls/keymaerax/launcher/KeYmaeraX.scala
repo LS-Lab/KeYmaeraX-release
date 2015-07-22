@@ -406,9 +406,10 @@ object KeYmaeraX {
     require(options.contains('in), usage)
     require(options.contains('format), usage)
 
-    val inputFileName = options.get('in).get.toString
-    val input = scala.io.Source.fromFile(inputFileName).mkString
+    val inputFileNameMx = options.get('in).get.toString
+    val input = scala.io.Source.fromFile(inputFileNameMx).mkString
     val inputFormula = KeYmaeraXParser(input)
+    val inputFileName = inputFileNameMx.substring(0, inputFileNameMx.length-".mx".length)
 
     if(options.get('format).get.toString == "C") {
       val cGen = new CGenerator()
@@ -421,8 +422,9 @@ object KeYmaeraX {
       var outputG = ""
       var outputH = ""
       if (options.contains('vars)) {
-        outputG = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)._1
-        outputH = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)._2
+        val output = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)
+        outputG = output._1
+        outputH = output._2
         val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
         pwG.write(outputG)
         pwG.close()
