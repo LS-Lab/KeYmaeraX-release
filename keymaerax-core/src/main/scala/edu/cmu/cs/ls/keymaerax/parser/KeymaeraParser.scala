@@ -1122,8 +1122,9 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       val alParser = makeAxiomLemmaParser(programs, differentialPrograms, formulas, terms, funs) //axiomlemmaParser
       val knowledge = parseAll(alParser, nextIn) match {
         case Success(result, next) => result
-        case Failure(msg, next)    => 
+        case Failure(msg, next)    =>
           throw new Exception("Failed to parse Lemmas & Axioms at " + posStr(msg,next) + ": "  + msg)
+        //@todo print that axiom that failed to parse
         case Error(msg,next)       =>
           throw new Exception("Error while parsing Lemmas & Axioms at " + posStr(msg,next) + ":" + msg)
       }

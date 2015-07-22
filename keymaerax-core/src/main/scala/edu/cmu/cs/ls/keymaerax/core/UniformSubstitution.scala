@@ -424,8 +424,11 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         case a: AssignAny => a
         case Test(f) => Test(usubst(f))
         //case IfThen(cond, thenT) => IfThen(usubst(cond), usubst(thenT))
-        case ode: DifferentialProgram => requireAdmissible(StaticSemantics(ode).bv, ode, program)
-          // require is redundant with the checks on NFContEvolve in usubst(ode, primed)
+        case ode: DifferentialProgram =>
+          //@note This case is a mixture of AtomicODE and ProgramConst. Only admissibility wrt BV still bound in the result (after substitution of DifferentialProgramConst) but admissible within the whole system simultaneously.
+          //@note Conceptually easiest (albeit suboptimally efficient): pre-substitute without taboos to determine BV, then check admissibility during the proper substitution w.r.t. those BV as in other cases.
+          requireAdmissible(StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv, ode, program)
+          // requires within usubst(ode, odeBV) are checking redundantly
           usubstODE(ode, StaticSemantics(ode).bv)
         case Choice(a, b) => Choice(usubst(a), usubst(b))
         case Compose(a, b) => requireAdmissible(StaticSemantics(usubst(a)).bv, b, program)
@@ -443,7 +446,10 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   } ensuring(
     r => r.kind == program.kind && r.sort == program.sort, "Uniform Substitution leads to same kind and same sort " + program)
 
-  /** uniform substitutions on differential programs */
+  /**
+   * uniform substitutions on differential programs
+   * @param odeBV the bound variables of the whole ODESystem, which are thus all taboo during the substitution.
+   */
   private def usubstODE(ode: DifferentialProgram, odeBV: SetLattice[NamedSymbol]): DifferentialProgram = {
     ode match {
       case ODESystem(a, h) => requireAdmissible(odeBV, h, ode)

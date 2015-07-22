@@ -775,31 +775,109 @@ object ODETactics {
     axiomLookupBaseT("DW differential weakening", subst, _ => NilPT, (f, ax) => ax)
   }
 
-  //////////////////////////////
-  // Differential Cuts
-  //////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // Inverse Differential Cuts
+  // Used for linear ordinary differential equation solver, when removing domain constraints form the ODE.
+  //////////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Prove the given list of differential invariants in that order by DC+DI
-   * @author aplatzer
+   * Applies an inverse differential cut with the last formula in the ev dom constraint.
+   * Assumes that formulas are ordered correctly (by dependency; most dependent on the right.
+   * @author Nathan Fulton
    */
-  def diffInvariant(invariants: List[Formula]): PositionTactic = new PositionTactic("diffInd") {
+  def diffInverseCutT: PositionTactic = new PositionTactic("DC differential cut") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
-      //@todo check that something in invariants isnt a conjunct of evo already and pick that one later
-      case Box(ODESystem(ode, evo), _) => !invariants.isEmpty
+      case Box(ODESystem(c, And(h,q)), _) => true
       case _ => false
     })
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case Box(ODESystem(_, evo), _) =>
-          //@todo could also diffWeaken if invariants.isEmpty and proclaim applicability then as well
-          assert(!invariants.isEmpty, "Only non-empty lists of invariants are applicable")
-          val cut = invariants.head
+        case Box(ODESystem(_, _), _) =>
+          val anteLength = node.sequent.ante.length
+          Some(diffInverseCutAxiomT(p) & onBranch(
+            (axiomUseLbl,
+              /* use axiom: here we have to show that our cut was correct */ LabelBranch(cutShowLbl)),
+            (axiomShowLbl,
+              /* show axiom: here we continue with equiv rewriting so that desired result remains */
+              equivRewriting(AntePosition(anteLength), p) & LabelBranch(cutUseLbl) /*@TODO equalityRewriting(whereTheEquivalenceWentTo, p) apply the remaining diffcut equivalence to replace the original p */)
+          ))
+        case _ => None
+      }
+    }
+  }
+
+  /**
+   * Adds an instance of the differential cut axiom for the given cut formula,
+   * with instantiation patterns supporting and inverse cut.
+   * @author Nathan Fulton
+   */
+  private def diffInverseCutAxiomT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case Box(ODESystem(c, And(h, r)), p) =>
+        val showDC = Box(ODESystem(c, h), r)
+        val useDC = Box(ODESystem(c, h), p)
+        Imply(showDC, Equiv(useDC, fml))
+      case _ => False
+    }
+
+    def condT: PositionTactic = new PositionTactic("Label") {
+      override def applies(s: Sequent, p: Position): Boolean = true
+      override def apply(p: Position): Tactic = LabelBranch(cutShowLbl)
+    }
+
+    uncoverConditionalAxiomT("DC differential cut", axiomInstance, _ => condT, _ => diffInverseCutAxiomBaseT)
+  }
+  /** Base tactic for inverse differential cuts */
+  private def diffInverseCutAxiomBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Imply(_, Equiv(_, Box(ODESystem(c, And(h, r)), p))) =>
+        val aC = DifferentialProgramConst("c")
+        val aH = PredOf(Function("H", None, Real, Bool), Anything)
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
+        val aR = PredOf(Function("r", None, Real, Bool), Anything)
+        SubstitutionPair(aC, c) :: SubstitutionPair(aH, h) :: SubstitutionPair(aP, p):: SubstitutionPair(aR, r) :: Nil
+    }
+    axiomLookupBaseT("DC differential cut", subst, _ => NilPT, (f, ax) => ax)
+  }
+
+  //////////////////////////////
+  // Differential Cuts
+  //////////////////////////////
+
+  /**
+   * Prove the given list of differential invariants in that order by DC+DI.
+   * The operational effect of {x'=f(x)&q(x)}@invariant(f1,f2,f3) is diffInvariant(List(f1,f2,f3))
+   * @author aplatzer
+   */
+  def diffInvariant(invariants: List[Formula]): PositionTactic = new PositionTactic("diffInvariant") {
+    /** Find the first invariant among given invariants that is not a conjunct of the evolution domain constraint already */
+    private def nextInvariant(ode: ODESystem): Option[Formula] = {
+      val evos = FormulaTools.conjuncts(ode.constraint)
+      invariants.find(inv => !evos.contains(inv))
+    } ensuring(r => remainingInvariants(ode).isEmpty && r==None || r==Some(remainingInvariants(ode).head), "compatible with remainingInvariants")
+
+    /** Find all remaining invariants among given invariants that are not a conjunct of the evolution domain constraint already */
+    private def remainingInvariants(ode: ODESystem): List[Formula] = {
+      val evos = FormulaTools.conjuncts(ode.constraint)
+      invariants.filter(inv => !evos.contains(inv))
+    }
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
+      case Box(ode:ODESystem, _) => !nextInvariant(ode).isEmpty
+      case _ => false
+    })
+
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Box(ode:ODESystem, _) =>
+          val remaining = remainingInvariants(ode)
+          assert(!remaining.isEmpty, "Only non-empty lists of remaining invariants are applicable")
+          val cut = remaining.head
           Some(diffCutT(cut)(p) & onBranch(
             (BranchLabels.cutShowLbl, diffInvariantT(p)),
-            (BranchLabels.cutUseLbl, diffInvariant(invariants.tail)(p))))
+            (BranchLabels.cutUseLbl, diffInvariant(remaining.tail)(p))))
         case _ => None
       }
     }
@@ -865,6 +943,155 @@ object ODETactics {
     }
     axiomLookupBaseT("DC differential cut", subst, _ => NilPT, (f, ax) => ax)
   }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // Inverse Differential Auxiliary Section
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // Inverse Differential Auxiliary
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  object InverseDiffAuxHelpers {
+    def toList(p : DifferentialProduct) : List[AtomicODE] = {
+      assert(isProductOfAtomics(p))
+      val left : List[AtomicODE] =
+        if (p.left.isInstanceOf[AtomicODE]) (p.left.asInstanceOf[AtomicODE] :: Nil)
+        else toList(p.left.asInstanceOf[DifferentialProduct])
+
+      val right : List[AtomicODE] =
+        if(p.right.isInstanceOf[AtomicODE]) (p.right.asInstanceOf[AtomicODE] :: Nil)
+        else toList(p.right.asInstanceOf[DifferentialProduct])
+
+      left ++ right
+    }
+
+    //@todo reimplement and enforce contract that toList and toProduct are inverses.
+    def toProduct(as : List[AtomicODE]) =
+      as.tail.tail.foldLeft(DifferentialProduct(as.head, as.tail.head))((ode, a) => DifferentialProduct(a, ode))
+
+    def isProductOfAtomics(p : DifferentialProgram) : Boolean = p match {
+      case AtomicODE(_,_) => true
+      case DifferentialProduct(l,r) => isProductOfAtomics(l) && isProductOfAtomics(r)
+      case _ => false
+    }
+
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case Exists(y :: Nil, Box(ODESystem(product : DifferentialProduct, h), p)) => {
+        val (c, atom) = {
+          val l = toList(product)
+          (toProduct(l.tail), l.head)
+        }
+
+        atom match {
+          case AtomicODE(DifferentialSymbol(yy), Plus(Times(t, yyy), s)) => {
+            assert(y.equals(yy), "quantified and final primed variable are the same.")
+            assert(yy.equals(yyy), "primed and linear variable are the same.")
+            Equiv(
+              Box(ODESystem(c, h), p),
+              fml
+            )
+          }
+          case _ => throw new Exception("Term not of correct form " + atom)
+        }
+      }
+      case _ => False
+    }
+  }
+
+  /**
+   * Tactic Input: \exists y . [c, y' = t()*y + s() & H(?);]p().
+   * Tactic Output: [c & H(?)]p()
+   */
+  def inverseDiffAuxiliaryT: PositionTactic =
+    uncoverAxiomT("DA inverse differential ghost", InverseDiffAuxHelpers.axiomInstance, _ => inverseDiffAuxiliaryBaseT)
+
+  private def inverseDiffAuxiliaryBaseT: PositionTactic = {
+    /**
+     * Extracts the last primed variable and the uniform substitution from the axiom instance (fml)
+     */
+    val extractFrom : Formula => (List[SubstitutionPair], Variable) =
+      (fml: Formula) => fml match {
+        case Equiv(Box(ode@ODESystem(alsoC, alsoH), alsoP), Exists(y :: Nil, Box(ODESystem(product : DifferentialProduct, h), p))) => {
+          //Extract portions of the ODE. tail is the final (linear) ODE.
+          val (c, tail) = {
+            val l = InverseDiffAuxHelpers.toList(product)
+            (InverseDiffAuxHelpers.toProduct(l.tail), l.head)
+          }
+          val (yy, yyy, t, s) = tail match {
+            case AtomicODE(DifferentialSymbol(yy), Plus(Times(t, yyy), s)) => (yy, yyy, t, s)
+          }
+
+          assert(y.equals(yy), "quantified variable and last primed variable are the same")
+          assert(yy.equals(yyy), "last primed variable and linear variable are the same.")
+//          assert(c.equals(alsoC), "non-linear parts of diff eq are the same") @todo false b/c reodering in cAndTail but we can still proceed (I think).
+          assert(h.equals(alsoH), "ode constraints are the same")
+          assert(p.equals(alsoP), "post conds are the same.")
+
+          val aP = PredOf(Function("p", None, Real, Bool), Anything)
+          val aH = PredOf(Function("H", None, Real, Bool), Anything)
+          val aC = DifferentialProgramConst("c")
+          val aS = FuncOf(Function("s", None, Unit, Real), Nothing)
+          val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
+          val subst =
+            SubstitutionPair(aP, p) :: SubstitutionPair(aH, h) ::
+            SubstitutionPair(aC, c) :: SubstitutionPair(aS, s) :: SubstitutionPair(aT, t) :: Nil
+          (subst, y)
+        }
+      }
+    val subst = (fml : Formula) => extractFrom(fml)._1
+    val theY  = (fml : Formula) => extractFrom(fml)._2
+
+    val aY = Variable("y", None, Real)
+    def alpha(fml: Formula): PositionTactic = {
+      val y = theY(fml)
+      if (y.name != aY.name || y.index != aY.index) {
+        new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Equiv(Box(_, _), Exists(_, _)) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(globalAlphaRenamingT(y, aY))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+      } else NilPT
+    }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = {
+      val y = theY(fml)
+      if (y.name != aY.name || y.index != aY.index) AlphaConversionHelper.replaceBound(axiom)(aY, y)
+      else axiom
+    }
+    axiomLookupBaseT("DA inverse differential ghost", subst, alpha, axiomInstance)
+  }
+
+  // Comma Commute an ODE -- used in master inv aux tactic
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  def commaCommuteT : PositionTactic = {
+    val axiomInstance = (fml : Formula) => fml match {
+      case Box(ODESystem(DifferentialProduct(l,r), h), p) => {
+        Equiv(fml, Box(ODESystem(DifferentialProduct(r,l), h), p))
+      }
+    }
+    uncoverAxiomT(", commute", axiomInstance, _ => commaCommuteAxiomBaseT)
+  }
+
+  def commaCommuteAxiomBaseT : PositionTactic = {
+    def subst(fml : Formula) = fml match {
+      case Equiv(Box(ODESystem(DifferentialProduct(c,d), h), p), _) => {
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
+        val aC = DifferentialProgramConst("c")
+        val aD = DifferentialProgramConst("d")
+        val aH = PredOf(Function("H", None, Real, Bool), Anything)
+        SubstitutionPair(aP, p) :: SubstitutionPair(aC, c) :: SubstitutionPair(aD, d) :: SubstitutionPair(aH, h) :: Nil
+      }
+    }
+    axiomLookupBaseT(", commute", subst, _ => NilPT, (f, ax) => ax)
+  }
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Differential Auxiliary Section.
@@ -1054,15 +1281,21 @@ object ODETactics {
               numAtomics
             }
 
-            Some(diffInvariantAxiomT(p) & ImplyRightT(p) & AndRightT(p) & (
-              debugT("left branch") & ((AxiomCloseT | PropositionalRightT(p))*) & arithmeticT,
-              debugT("right branch") & (diffEffectT(p) * n) & debugT("differential effect complete") &
-                debugT("About to NNF rewrite") & NNFRewrite(p.second) && debugT("Finished NNF rewrite") &
-                SyntacticDerivationInContext.SyntacticDerivationT(p.second) ~ debugT("Done with syntactic derivation") &
-                (boxDerivativeAssignT(p.second)*) & debugT("Box assignments complete") &
-                diffWeakenT(p) & debugT("ODE removed") &
-                (arithmeticT | NilT) & debugT("Finished result")
+            def dDebugT(s : String) = debugT("[DiffInvT]" + s)
+
+            val successTactic = (diffInvariantAxiomT(p) & ImplyRightT(p) & AndRightT(p) & (
+              dDebugT("left branch") & ((AxiomCloseT | PropositionalRightT(p))*) & arithmeticT,
+              dDebugT("right branch") & (diffEffectT(p) * n) & dDebugT("differential effect complete") &
+                dDebugT("About to NNF rewrite") & NNFRewrite(p.second) && dDebugT("Finished NNF rewrite") &
+                SyntacticDerivationInContext.SyntacticDerivationT(p.second) ~ dDebugT("Done with syntactic derivation") &
+                (boxDerivativeAssignT(p.second)*) & dDebugT("Box assignments complete") &
+                diffWeakenT(p) & dDebugT("ODE removed") &
+                (arithmeticT | NilT) & dDebugT("Finished result")
             ))
+
+            //@todo we should have some form of error catching on this tactic b/c it's pretty huge and intended to be self-contained
+            //@todo what happens when the last arith step fails? Is that supposed to happen for true formulas?
+            Some(successTactic /*| errorT("Diff Invariant tactic failed!")*/)
           }
         }
       }
@@ -1128,6 +1361,7 @@ object ODETactics {
       }
     }
   }
+
 }
 
 

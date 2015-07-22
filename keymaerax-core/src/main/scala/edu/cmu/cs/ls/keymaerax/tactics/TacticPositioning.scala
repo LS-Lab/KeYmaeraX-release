@@ -15,6 +15,8 @@ import scala.language.implicitConversions
     def second: PosInExpr = new PosInExpr(pos :+ 1)
     def third:  PosInExpr = new PosInExpr(pos :+ 2)
 
+    def append(p2 : PosInExpr): PosInExpr = PosInExpr(this.pos ++ p2.pos) ensuring(x => this.isPrefixOf(x))
+
     def isPrefixOf(p: PosInExpr): Boolean = p.pos.startsWith(pos)
     def child: PosInExpr = PosInExpr(pos.tail)
   }
@@ -51,6 +53,17 @@ import scala.language.implicitConversions
     def topLevel: Position = {
       clone(index)
     } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr == HereP)
+
+    /**
+     * @param p The additional portion to append onto PosInExpr
+     * @return A subposition.
+     */
+    def subPos(p : PosInExpr) = {
+      if(this.isAnte)
+        AntePosition(this.index, this.inExpr.append(p))
+      else
+        SuccPosition(this.index, this.inExpr.append(p))
+    } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr.pos.equals(this.inExpr.pos ++ p.pos) && this.inExpr.isPrefixOf(r.inExpr))
 
     /**
      * Whether this position is a top-level position of a sequent.

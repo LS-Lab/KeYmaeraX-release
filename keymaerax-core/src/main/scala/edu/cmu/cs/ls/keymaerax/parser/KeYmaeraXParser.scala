@@ -252,6 +252,10 @@ object KeYmaeraXParser extends Parser {
     val ParseState(s, input@(Token(la,_) :: rest)) = st
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
+      // nonproductive: help KeYmaeraXLexer recognize := * with whitespaces as ASSIGNANY
+      case r :+ Token(ASSIGN,loc1) :+ Token(STAR,loc2) =>
+        reduce(st, 2, Bottom :+ Token(ASSIGNANY, loc1--loc2), r)
+
       // nonproductive: special notation for annotations
       case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1: Formula) :+ Token(RPAREN,_) if isAnnotable(p) =>
         reportAnnotation(p, f1)

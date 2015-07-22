@@ -239,6 +239,7 @@ Variables.
   P a.
   P b.
   CP c.
+  CP d.
   F p.
   F p(T).
   F p(?).
@@ -399,6 +400,11 @@ Axiom "<*> iterate".
   <a*>p(?) <-> (p(?) | <a;><a*> p(?)).
 End.
 
+/* @Derived */
+Axiom "Domain Constraint Conjunction Reordering".
+  [c & (H(?) & q(?));]p(?) <-> [c & (q(?) & H(?));]p(?)
+End.
+
 /**
  * DIFFERENTIAL EQUATION AXIOMS
  */
@@ -432,6 +438,33 @@ Axiom "DA differential ghost".
    * [c,x'=t()*x+s()&H(?);]q(?)) */
   [c&H(?);]p(?) <-> \exists y. [c,y'=t()*y+s()&H(?);]p(?)
   /* [x'=f(x)&q(x);]p(x) <-> \exists y. [(x'=f(x),y'=a(x)*y+b(x))&q(x);]p(x) THEORY */
+End.
+
+/* Inverse Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work. */
+Axiom "DA inverse differential ghost".
+  [c&H(?);]p(?) <-> \exists y. [y'=t()*y+s(),c&H(?);]p(?)
+End.
+
+/*Axiom "DA inverse differential ghost theory version".
+  [x'=f(x)&q(x);]p(x) <-> \exists y. [(y'=a(x)*y+b(x), x'=f(x))&q(x);]p(x)
+End.*/
+
+/* DG differential ghost, general Lipschitz case */
+Axiom "DG differential Lipschitz ghost".
+  ([x'=f(x)&q(x);]p(x) <-> \exists y. [(x'=f(x),y'=g(x,y))&q(x);]p(x))
+  <- (\exists L \forall x \forall y \forall z (y>=z -> (-L*(y-z) <= g(x,y)-g(x,z) & g(x,y)-g(x,z) <= L*(y-z)))
+End.
+
+/* DG differential ghost, general Lipschitz case, system case */
+Axiom "DG differential Lipschitz ghost system".
+  /* @see "DG differential Lipschitz ghost" THEORY */
+  [c&H(?);]p(?) <-> \exists y. [c,y'=g(?)&H(?);]p(?)
+  <- (\exists L \forall x \forall a \forall b \forall u \forall v (a>=b -> [y:=a;u:=g(?);y:=b;v:=g(?)] (-L*(a-b) <= u-v & u-v <= L*(a-b)))
+End.
+
+/* Formatter axioms for diff eqs. @todo unused except in tactics implementation of itself */
+Axiom ", commute".
+  [c,d & H(?);]p(?) <-> [d,c & H(?);]p(?)
 End.
 
 /* @Derived */
@@ -582,6 +615,14 @@ Axiom "I induction".
   /*@TODO Use this form instead? which is possibly more helpful: ([a*](p(?) -> [a;] p(?))) -> (p(?) -> [a*]p(?)) THEORY */
   (p(?) & [a*](p(?) -> [a;] p(?))) -> [a*]p(?)
 End.
+
+/**
+ * Boolean algebra
+ */
+ Axiom "& associative".
+  p(?) & q(?) & r(?) <-> p(?) & (q(?) & r(?))
+ End.
+ /* ... */
 
 /**
  * Real arithmetic

@@ -22,6 +22,7 @@ import scala.util.Random
  * Command-line interface for KeYmaera X.
  * @author Stefan Mitsch
  * @author aplatzer
+ * @author Ran Ji
  */
 object KeYmaeraX {
 
@@ -33,7 +34,7 @@ object KeYmaeraX {
       |Usage: java -Xss20M -jar KeYmaeraX.jar
       |  -prove filename -tactic filename [-out filename] |
       |  -modelplex filename [-vars var1,var2,...,varn] [-out filename] |
-      |  -codegen filename [-format Spiral|C] [-out filename] |
+      |  -codegen filename [-format Spiral|C] [-vars var1,var2,...,varn] [-out filename] |
       |  -ui [filename] [web server options]
       |
       |Additional options:
@@ -340,12 +341,14 @@ object KeYmaeraX {
     root
   }
 
+  //@todo import namespace of the user tactic *object* passed in -tactic
   private val tacticParsePrefix =
     """
       |import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
       |import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
       |import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
       |import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
+      |import edu.cmu.cs.ls.keymaerax.tactics._
       |class InteractiveLocalTactic extends (() => Tactic) {
       |  def apply(): Tactic = {
       |
@@ -415,10 +418,23 @@ object KeYmaeraX {
       pw.close()
     } else if(options.get('format).get.toString == "Spiral") {
       val sGen = new SpiralGenerator
-      val output = sGen(inputFormula)
-      val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
-      pw.write(output)
-      pw.close()
+      var outputG = ""
+      var outputH = ""
+      if (options.contains('vars)) {
+        outputG = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)._1
+        outputH = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)._2
+        val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
+        pwG.write(outputG)
+        pwG.close()
+        val pwH = new PrintWriter(options.getOrElse('out, inputFileName + ".h").toString)
+        pwH.write(outputH)
+        pwH.close()
+      } else {
+        outputG = sGen(inputFormula, inputFileName)
+        val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
+        pwG.write(outputG)
+        pwG.close()
+      }
     } else throw new IllegalArgumentException("-format should be specified and only be C or Spiral")
   }
 
