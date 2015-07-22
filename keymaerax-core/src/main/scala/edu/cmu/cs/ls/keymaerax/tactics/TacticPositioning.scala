@@ -54,6 +54,10 @@ import scala.language.implicitConversions
       clone(index)
     } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr == HereP)
 
+    /**
+     * @param p The additional portion to append onto PosInExpr
+     * @return A subposition.
+     */
     def subPos(p : PosInExpr) = {
       if(this.isAnte)
         AntePosition(this.index, this.inExpr.append(p))

@@ -3,6 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import org.scalatest.{PrivateMethodTester, FlatSpec, Matchers}
@@ -148,6 +149,21 @@ class InverseDiffGhostTests extends TacticTestSuite {
     node.openGoals().last.sequent.succ.last shouldBe (
       "[{t' = 0*t + 1 & true & t >= 0}]x>0".asFormula
       )
+  }
+
+  it should "playground" in {
+    val formula = "[{x' = 0, y' = 0 & 1=1}]x=1"
+
+    val f = KeYmaeraXParser.formulaParser(formula)
+
+    val s = Sequent(
+      scala.collection.immutable.Seq(),
+      scala.collection.immutable.IndexedSeq(),
+      scala.collection.immutable.IndexedSeq(f)
+    )
+    val pie = PosInExpr(0 :: 0 :: Nil)
+    val asdf = TacticHelper.getTerm(s, SuccPosition(0, pie))
+    println(asdf.prettyString)
   }
 }
 
