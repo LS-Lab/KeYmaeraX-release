@@ -588,6 +588,12 @@ Axiom "I induction".
   (p(?) & [a*](p(?) -> [a;] p(?))) -> [a*]p(?)
 End.
 
+/**
+ * Formatter axioms for diff eqs.
+ */
+ Axiom ", commute".
+  [c,d&H(?);] <-> [d,c&H(?);]
+End.
 
 /**
  * Boolean algebra
