@@ -944,12 +944,15 @@ object ODETactics {
     axiomLookupBaseT("DC differential cut", subst, _ => NilPT, (f, ax) => ax)
   }
 
-
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Inverse Differential Auxiliary Section
   //////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // Inverse Differential Auxiliary
+  //////////////////////////////////////////////////////////////////////////////////////////////////
   object InverseDiffAuxHelpers {
     def toList(p : DifferentialProduct) : List[AtomicODE] = {
+      assert(isProductOfAtomics(p))
       val left : List[AtomicODE] =
         if (p.left.isInstanceOf[AtomicODE]) (p.left.asInstanceOf[AtomicODE] :: Nil)
         else toList(p.left.asInstanceOf[DifferentialProduct])
@@ -961,27 +964,29 @@ object ODETactics {
       left ++ right
     }
 
-    /**
-     * Extracts the final ODE and all the others from a product of atomic ODEs.
-     * @todo p should be a product of atomics.
-     * @todo This does not ensure that DifferentialProdcut(header, l.last) == p, but that should probably be the case.
-     */
-    def cAndTail(p : DifferentialProduct) = {
-      val l = toList(p)
-      val header = l.tail.dropRight(1).foldLeft(l.head.asInstanceOf[DifferentialProgram])((a,b) => DifferentialProduct(a,b))
-      (header, l.last)
+    //@todo reimplement and enforce contract that toList and toProduct are inverses.
+    def toProduct(as : List[AtomicODE]) =
+      as.tail.tail.foldLeft(DifferentialProduct(as.head, as.tail.head))((ode, a) => DifferentialProduct(a, ode))
+
+    def isProductOfAtomics(p : DifferentialProgram) : Boolean = p match {
+      case AtomicODE(_,_) => true
+      case DifferentialProduct(l,r) => isProductOfAtomics(l) && isProductOfAtomics(r)
+      case _ => false
     }
 
     def axiomInstance(fml: Formula): Formula = fml match {
       case Exists(y :: Nil, Box(ODESystem(product : DifferentialProduct, h), p)) => {
-        val (c, atom) = cAndTail(product)
+        val (c, atom) = {
+          val l = toList(product)
+          (toProduct(l.tail), l.head)
+        }
 
         atom match {
           case AtomicODE(DifferentialSymbol(yy), Plus(Times(t, yyy), s)) => {
             assert(y.equals(yy), "quantified and final primed variable are the same.")
             assert(yy.equals(yyy), "primed and linear variable are the same.")
             Equiv(
-              Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y),Plus(Times(t, yyy), s))), h), p),
+              Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y),Plus(Times(t, yyy), s)), c), h), p),
               fml
             )
           }
@@ -1004,7 +1009,7 @@ object ODETactics {
    * Tactic Output: [c & H(?)]p()
    */
   def inverseDiffAuxiliaryT: PositionTactic =
-    uncoverAxiomT("DA differential ghost", InverseDiffAuxHelpers.axiomInstance, _ => inverseDiffAuxiliaryBaseT)
+    uncoverAxiomT("DA inverse differential ghost", InverseDiffAuxHelpers.axiomInstance, _ => inverseDiffAuxiliaryBaseT)
 
   private def inverseDiffAuxiliaryBaseT: PositionTactic = {
     /**
@@ -1014,7 +1019,10 @@ object ODETactics {
       (fml: Formula) => fml match {
         case Equiv(Box(ode@ODESystem(alsoC, alsoH), alsoP), Exists(y :: Nil, Box(ODESystem(product : DifferentialProduct, h), p))) => {
           //Extract portions of the ODE. tail is the final (linear) ODE.
-          val (c, tail) = InverseDiffAuxHelpers.cAndTail(product)
+          val (c, tail) = {
+            val l = InverseDiffAuxHelpers.toList(product)
+            (InverseDiffAuxHelpers.toProduct(l.tail), l.head)
+          }
           val (yy, yyy, t, s) = tail match {
             case AtomicODE(DifferentialSymbol(yy), Plus(Times(t, yyy), s)) => (yy, yyy, t, s)
           }
@@ -1064,7 +1072,31 @@ object ODETactics {
       if (y.name != aY.name || y.index != aY.index) AlphaConversionHelper.replaceBound(axiom)(aY, y)
       else axiom
     }
-    axiomLookupBaseT("DA differential ghost", subst, alpha, axiomInstance)
+    axiomLookupBaseT("DA inverse differential ghost", subst, alpha, axiomInstance)
+  }
+
+  // Comma Commute an ODE -- used in master inv aux tactic
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  def commaCommuteT : PositionTactic = {
+    val axiomInstance = (fml : Formula) => fml match {
+      case Box(ODESystem(DifferentialProduct(l,r), h), p) => {
+        Equiv(fml, Box(ODESystem(DifferentialProduct(r,l), h), p))
+      }
+    }
+    uncoverAxiomT(", commute", axiomInstance, _ => commaCommuteAxiomBaseT)
+  }
+
+  def commaCommuteAxiomBaseT : PositionTactic = {
+    def subst(fml : Formula) = fml match {
+      case Equiv(Box(ODESystem(DifferentialProduct(c,d), h), p), _) => {
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
+        val aC = DifferentialProgramConst("c")
+        val aD = DifferentialProgramConst("d")
+        val aH = PredOf(Function("H", None, Real, Bool), Anything)
+        SubstitutionPair(aP, p) :: SubstitutionPair(aC, c) :: SubstitutionPair(aD, d) :: SubstitutionPair(aH, h) :: Nil
+      }
+    }
+    axiomLookupBaseT(", commute", subst, _ => NilPT, (f, ax) => ax)
   }
 
 
@@ -1336,6 +1368,7 @@ object ODETactics {
       }
     }
   }
+
 }
 
 

@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext.ApplicableAtFormula
@@ -65,6 +66,12 @@ object LogicalODESolver {
       ODETactics.diffWeakenT(p) &
       arithmeticT
   }
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // Successive inverse diff ghosts
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Successive inverse diff cuts
@@ -829,6 +836,4 @@ object LogicalODESolver {
 //  */
 
 //  private def removeTimeVar : PositionTactic = ???
-
-
 }

@@ -3,6 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import org.scalatest.{PrivateMethodTester, FlatSpec, Matchers}
@@ -113,12 +114,20 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
 }
 
 class InverseDiffGhostTests extends TacticTestSuite {
-//  "Comma Commutation" should "move the target of the next inverse ghost to the front" in {
-//    ???
-//  }
+  "Comma Commute Axiom" should "work on a binary example" in {
+    val f = "[{x' = v, v' = a & t >= 0}]x>0".asFormula
+    val node = helper.formulaToNode(f)
+    val tactic = ODETactics.commaCommuteT(SuccPos(0))
+    helper.runTactic(tactic, node)
+    node.openGoals().length shouldBe 1
+    node.openGoals().last.sequent.succ.length shouldBe 1
+    node.openGoals().last.sequent.succ.last shouldBe (
+      "[{v' = a, x' = v & t >= 0}]x>0".asFormula
+      )
+  }
 
   "Inverse Ghost" should "work when we don't have to reorder diffeq" in {
-    val f = "\\exists x ([{t' = 0*t + 1, v' = 0*v + a, x' = 0*x + v & true & t >= 0}]x>0)".asFormula
+    val f = "\\exists x ([{x' = 0*x + v, v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0)".asFormula
     println(ODETactics.InverseDiffAuxHelpers.axiomInstance(f).prettyString)
     val node = helper.formulaToNode(f)
     val tactic = ODETactics.inverseDiffAuxiliaryT(SuccPos(0))
@@ -126,20 +135,37 @@ class InverseDiffGhostTests extends TacticTestSuite {
     node.openGoals().length shouldBe 1
     node.openGoals().last.sequent.succ.length shouldBe 1
     node.openGoals().last.sequent.succ.last shouldBe (
-        "[{t' = 0*t + 1, v' = 0*v + a & true & t >= 0}]x>0".asFormula
-    )
+        "[{v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0".asFormula)
   }
 
   it should "then work on v as well" in {
-    val f = "\\exists v ([{t' = 0*t + 1, v' = 0*v + a & true & t >= 0}]x>0)".asFormula
+    val f = "\\exists x ([{v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0)".asFormula
     val node = helper.formulaToNode(f)
     val tactic = ODETactics.inverseDiffAuxiliaryT(SuccPos(0))
     helper.runTactic(tactic, node)
     node.openGoals().length shouldBe 1
     node.openGoals().last.sequent.succ.length shouldBe 1
     node.openGoals().last.sequent.succ.last shouldBe (
-      "[{t' = 0*t + 1 & true & t >= 0}]x>0".asFormula
-      )
+      "[{t' = 0*t + 1 & true & t >= 0}]x>0".asFormula)
+  }
+
+  it should "not work when time is all that's left" in {
+    ???
+  }
+
+  it should "playground" in {
+    val formula = "[{x' = 0, y' = 0 & 1=1}]x=1"
+
+    val f = KeYmaeraXParser.formulaParser(formula)
+
+    val s = Sequent(
+      scala.collection.immutable.Seq(),
+      scala.collection.immutable.IndexedSeq(),
+      scala.collection.immutable.IndexedSeq(f)
+    )
+    val pie = PosInExpr(0 :: 0 :: Nil)
+    val asdf = TacticHelper.getTerm(s, SuccPosition(0, pie))
+    println(asdf.prettyString)
   }
 }
 
