@@ -775,10 +775,10 @@ object ODETactics {
     axiomLookupBaseT("DW differential weakening", subst, _ => NilPT, (f, ax) => ax)
   }
 
-  ///
+  //////////////////////////////////////////////////////////////////////////////////////////////////
   // Inverse Differential Cuts
   // Used for linear ordinary differential equation solver, when removing domain constraints form the ODE.
-  ///
+  //////////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
    * Applies an inverse differential cut with the last formula in the ev dom constraint.
@@ -906,6 +906,130 @@ object ODETactics {
     }
     axiomLookupBaseT("DC differential cut", subst, _ => NilPT, (f, ax) => ax)
   }
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // Inverse Differential Auxiliary Section
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  object InverseDiffAuxHelpers {
+    def toList(p : DifferentialProduct) : List[AtomicODE] = {
+      val left : List[AtomicODE] =
+        if (p.left.isInstanceOf[AtomicODE]) (p.left.asInstanceOf[AtomicODE] :: Nil)
+        else toList(p.left.asInstanceOf[DifferentialProduct])
+
+      val right : List[AtomicODE] =
+        if(p.right.isInstanceOf[AtomicODE]) (p.right.asInstanceOf[AtomicODE] :: Nil)
+        else toList(p.right.asInstanceOf[DifferentialProduct])
+
+      left ++ right
+    }
+
+    /**
+     * Extracts the final ODE and all the others from a product of atomic ODEs.
+     * @todo p should be a product of atomics.
+     * @todo This does not ensure that DifferentialProdcut(header, l.last) == p, but that should probably be the case.
+     */
+    def cAndTail(p : DifferentialProduct) = {
+      val l = toList(p)
+      val header = l.tail.dropRight(1).foldLeft(l.head.asInstanceOf[DifferentialProgram])((a,b) => DifferentialProduct(a,b))
+      (header, l.last)
+    }
+
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case Exists(y :: Nil, Box(ODESystem(product : DifferentialProduct, h), p)) => {
+        val (c, atom) = cAndTail(product)
+
+        atom match {
+          case AtomicODE(DifferentialSymbol(yy), Plus(Times(t, yyy), s)) => {
+            assert(y.equals(yy), "quantified and final primed variable are the same.")
+            assert(yy.equals(yyy), "primed and linear variable are the same.")
+            Equiv(
+              Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y),Plus(Times(t, yyy), s))), h), p),
+              fml
+            )
+          }
+          case _ => throw new Exception("Term not of correct form " + atom)
+        }
+      }
+      case Exists(_, Box(ODESystem(DifferentialProduct(l,r),_), _)) => {
+        if(r.isInstanceOf[AtomicODE]) {
+          throw new Exception("Atomic ODE but not quite.")
+        }
+        else throw new Exception("Product but not quite " + l.prettyString + " =+= " + r.prettyString)
+      }
+      case Exists(_, Box(ODESystem(c,_), _)) => throw new Exception("Almost but not quite?")
+      case _ => False
+    }
+  }
+
+  /**
+   * Tactic Input: \exists y . [c, y' = t()*y + s() & H(?);]p().
+   * Tactic Output: [c & H(?)]p()
+   */
+  def inverseDiffAuxiliaryT: PositionTactic =
+    uncoverAxiomT("DA differential ghost", InverseDiffAuxHelpers.axiomInstance, _ => inverseDiffAuxiliaryBaseT)
+
+  private def inverseDiffAuxiliaryBaseT: PositionTactic = {
+    /**
+     * Extracts the last primed variable and the uniform substitution from the axiom instance (fml)
+     */
+    val extractFrom : Formula => (List[SubstitutionPair], Variable) =
+      (fml: Formula) => fml match {
+        case Equiv(Box(ode@ODESystem(alsoC, alsoH), alsoP), Exists(y :: Nil, Box(ODESystem(product : DifferentialProduct, h), p))) => {
+          //Extract portions of the ODE. tail is the final (linear) ODE.
+          val (c, tail) = InverseDiffAuxHelpers.cAndTail(product)
+          val (yy, yyy, t, s) = tail match {
+            case AtomicODE(DifferentialSymbol(yy), Plus(Times(t, yyy), s)) => (yy, yyy, t, s)
+          }
+
+          assert(y.equals(yy), "quantified variable and last primed variable are the same")
+          assert(yy.equals(yyy), "last primed variable and linear variable are the same.")
+//          assert(c.equals(alsoC), "non-linear parts of diff eq are the same") @todo false b/c reodering in cAndTail but we can still proceed (I think).
+          assert(h.equals(alsoH), "ode constraints are the same")
+          assert(p.equals(alsoP), "post conds are the same.")
+
+          val aP = PredOf(Function("p", None, Real, Bool), Anything)
+          val aH = PredOf(Function("H", None, Real, Bool), Anything)
+          val aC = DifferentialProgramConst("c")
+          val aS = FuncOf(Function("s", None, Unit, Real), Nothing)
+          val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
+          val subst =
+            SubstitutionPair(aP, p) :: SubstitutionPair(aH, h) ::
+            SubstitutionPair(aC, c) :: SubstitutionPair(aS, s) :: SubstitutionPair(aT, t) :: Nil
+          (subst, y)
+        }
+      }
+    val subst = (fml : Formula) => extractFrom(fml)._1
+    val theY  = (fml : Formula) => extractFrom(fml)._2
+
+    val aY = Variable("y", None, Real)
+    def alpha(fml: Formula): PositionTactic = {
+      val y = theY(fml)
+      if (y.name != aY.name || y.index != aY.index) {
+        new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Equiv(Box(_, _), Exists(_, _)) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(globalAlphaRenamingT(y, aY))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+      } else NilPT
+    }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = {
+      val y = theY(fml)
+      if (y.name != aY.name || y.index != aY.index) AlphaConversionHelper.replaceBound(axiom)(aY, y)
+      else axiom
+    }
+    axiomLookupBaseT("DA differential ghost", subst, alpha, axiomInstance)
+  }
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Differential Auxiliary Section.

@@ -114,6 +114,39 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
 
 }
 
+class InverseDiffGhostTests extends TacticTestSuite {
+//  "Comma Commutation" should "move the target of the next inverse ghost to the front" in {
+//    ???
+//  }
+
+
+
+  "Inverse Ghost" should "work when we don't have to reorder diffeq" in {
+    val f = "\\exists x ([{t' = 0*t + 1, v' = 0*v + a, x' = 0*x + v & true & t >= 0}]x>0)".asFormula
+    println(ODETactics.InverseDiffAuxHelpers.axiomInstance(f).prettyString)
+    val node = helper.formulaToNode(f)
+    val tactic = ODETactics.inverseDiffAuxiliaryT(SuccPos(0))
+    helper.runTactic(tactic, node)
+    node.openGoals().length shouldBe 1
+    node.openGoals().last.sequent.succ.length shouldBe 1
+    node.openGoals().last.sequent.succ.last shouldBe (
+        "[{t' = 0*t + 1, v' = 0*v + a & true & t >= 0}]x>0".asFormula
+    )
+  }
+
+  it should "then work on v as well" in {
+    val f = "\\exists v ([{t' = 0*t + 1, v' = 0*v + a & true & t >= 0}]x>0)".asFormula
+    val node = helper.formulaToNode(f)
+    val tactic = ODETactics.inverseDiffAuxiliaryT(SuccPos(0))
+    helper.runTactic(tactic, node)
+    node.openGoals().length shouldBe 1
+    node.openGoals().last.sequent.succ.length shouldBe 1
+    node.openGoals().last.sequent.succ.last shouldBe (
+      "[{t' = 0*t + 1 & true & t >= 0}]x>0".asFormula
+      )
+  }
+}
+
 class InverseDiffCutTests extends TacticTestSuite {
   ////
   // Inverse Cut Tests
