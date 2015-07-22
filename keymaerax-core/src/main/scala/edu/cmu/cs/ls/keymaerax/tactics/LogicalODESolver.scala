@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
+import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext.ApplicableAtFormula
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.AxiomCloseT
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.skolemizeT
@@ -23,6 +24,7 @@ import scala.collection.immutable.List
  * @author Nathan Fulton
  */
 object LogicalODESolver {
+  def debugger(s : String) = debugT("[Logical ODE Solver] " + s)
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -49,7 +51,7 @@ object LogicalODESolver {
       cutTimeLB(p) &
       ODETactics.diffWeakenAxiomT(p) & //the axiom, not the proof rule.
       renameAndDropImpl(p) & onBranch(
-        ("renameAndDropImpl-output", (successiveInverseCut(p) ))
+        ("renameAndDropImpl-output", (successiveInverseCut(p) *))
       )
   }
 
@@ -68,10 +70,23 @@ object LogicalODESolver {
   // Successive inverse diff cuts
   //////////////////////////////////////////////////////////////////////////////////////////////////
   //Should be private but for testing.
-  def successiveInverseCut : PositionTactic = new PositionTactic("successiveInverseCut") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case Box(pi:DifferentialProgram, f : Formula) => true //not even close.
-      case _ => false
+  def successiveInverseCut : PositionTactic with ApplicableAtFormula =
+  new PositionTactic("successiveInverseCut") with ApplicableAtFormula {
+
+    override def applies(f: Formula): Boolean = f match {
+      case Box(pi:DifferentialProgram, f: Formula) => pi match {
+        case a:AtomicODE => false
+        case ODESystem(pipi, ff) => timeVar(pi).isDefined
+        case DifferentialProduct(l,r) => timeVar(pi).isDefined
+      }
+    }
+
+    override def applies(s: Sequent, p: Position): Boolean = {
+      val f = TacticHelper.getFormula(s,p)
+      val doesApply = applies(f)
+      if(doesApply) println(this.name + " Applies to " + f)
+      else println(this.name + " Does not apply to " + f);
+      doesApply
     }
 
     // ([c&H(?);]p(?) <-> [c&(H(?)&r(?));]p(?)) <- [c&H(?);]r(?)
@@ -80,14 +95,21 @@ object LogicalODESolver {
         case Box(program : DifferentialProgram, formula) => {
           val lastPartial = getLastPartialSoln(program)
 
-            Some(
-            debugT("Trying to perform a successive inverse cut.") &
+          Some(
+            debugger("Trying to perform a successive inverse cut.") &
             mvPartialSolnToEnd(lastPartial)(p) &
-//            Normalizers.leftAssociateConj(p) &
-            debugT(s"Successfully moved partial soln $lastPartial to end") &
+            debugger("Trying to reassociate Ands") &
+//            (SearchTacticsImpl.locateLargestSubformula(Formatters.leftAssociateConj)(p) *) &
+            Formatters.leftAssociateConj(p) & //Note: only the outermose formula hs toe be correct.
+            debugger("After moving to end and left-associating ev dom constraint") &
+            debugger(s"Successfully moved partial soln $lastPartial to end") &
             ODETactics.diffInverseCutT(p) & onBranch(
-              (BranchLabels.cutUseLbl, debugT("Axiom use")),
-              (BranchLabels.cutShowLbl, debugT("axiom show") ~ ODETactics.diffInvariantT(p) ~ TacticLibrary.arithmeticT ~ errorT("should've closed."))
+              (BranchLabels.cutUseLbl, debugger("Axiom use")),
+              (BranchLabels.cutShowLbl,
+                debugger("Showing condition for inverse diff cut equivalence to hold for inverse cut of " + lastPartial.prettyString) ~
+                ODETactics.diffInvariantT(p) ~
+                errorT("Should have closed.")
+              )
             )
           )
 
@@ -96,6 +118,7 @@ object LogicalODESolver {
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
+
   }
 
   private def getLastPartialSoln(program : DifferentialProgram) : Formula = program match {

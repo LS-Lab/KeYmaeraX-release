@@ -1095,15 +1095,21 @@ object ODETactics {
               numAtomics
             }
 
-            Some(diffInvariantAxiomT(p) & ImplyRightT(p) & AndRightT(p) & (
-              debugT("left branch") & ((AxiomCloseT | PropositionalRightT(p))*) & arithmeticT,
-              debugT("right branch") & (diffEffectT(p) * n) & debugT("differential effect complete") &
-                debugT("About to NNF rewrite") & NNFRewrite(p.second) && debugT("Finished NNF rewrite") &
-                SyntacticDerivationInContext.SyntacticDerivationT(p.second) ~ debugT("Done with syntactic derivation") &
-                (boxDerivativeAssignT(p.second)*) & debugT("Box assignments complete") &
-                diffWeakenT(p) & debugT("ODE removed") &
-                (arithmeticT | NilT) & debugT("Finished result")
+            def dDebugT(s : String) = debugT("[DiffInvT]" + s)
+
+            val successTactic = (diffInvariantAxiomT(p) & ImplyRightT(p) & AndRightT(p) & (
+              dDebugT("left branch") & ((AxiomCloseT | PropositionalRightT(p))*) & arithmeticT,
+              dDebugT("right branch") & (diffEffectT(p) * n) & dDebugT("differential effect complete") &
+                dDebugT("About to NNF rewrite") & NNFRewrite(p.second) && dDebugT("Finished NNF rewrite") &
+                SyntacticDerivationInContext.SyntacticDerivationT(p.second) ~ dDebugT("Done with syntactic derivation") &
+                (boxDerivativeAssignT(p.second)*) & dDebugT("Box assignments complete") &
+                diffWeakenT(p) & dDebugT("ODE removed") &
+                (arithmeticT | NilT) & dDebugT("Finished result")
             ))
+
+            //@todo we should have some form of error catching on this tactic b/c it's pretty huge and intended to be self-contained
+            //@todo what happens when the last arith step fails? Is that supposed to happen for true formulas?
+            Some(successTactic /*| errorT("Diff Invariant tactic failed!")*/)
           }
         }
       }

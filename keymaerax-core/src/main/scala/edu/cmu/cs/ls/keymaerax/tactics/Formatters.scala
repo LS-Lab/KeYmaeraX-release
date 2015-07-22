@@ -10,6 +10,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{LabelBranch, Tactic, PositionTac
  * Created by nfulton on 7/19/15.
  */
 object Formatters {
+  def debugger(s : String) = TacticLibrary.debugT("[Formatters] " + s)
+
   /**
    * Converts a conjunctive formula into left associative form; i.e., turns any And(x, And(y,z)) into
    * And(And(x,y),z)
@@ -30,8 +32,16 @@ object Formatters {
       case _ => true
     }
 
-    override def apply(p: Position): Tactic =
-      SearchTacticsImpl.locateLargestSubformula((x:Formula) => !leftAssociated(x), PropositionalAxioms.AndAssocT)(p)
+    override def apply(p: Position): Tactic = {
+      val t : PositionTactic =
+        TacticLibrary.debugAtT("[Formatters] About to try AndAssocT") &
+        PropositionalAxioms.AndAssocT &
+        TacticLibrary.debugAtT("[Formatters] Done with AndAssocT")
+
+      debugger("About to try to reassociate Ands") &
+      SearchTacticsImpl.locateLargestSubformula(((x:Formula) => x.isInstanceOf[And] && !leftAssociated(x)), t)(p)
+
+    }
   }
 }
 
