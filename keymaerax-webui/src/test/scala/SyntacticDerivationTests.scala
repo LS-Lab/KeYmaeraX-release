@@ -27,7 +27,8 @@ class SyntacticDerivationTests extends TacticTestSuite {
     val node = helper.runTactic(tactic, helper.formulaToNode(f), mustApply = true)
     node.openGoals().flatMap(_.sequent.succ) should contain only "x=x".asFormula
   }
-  
+
+  //@todo Nathan
   "ForallDerivativeT" should "atomize" in {
     val f = "(\\forall s s > 0)'".asFormula
     val tactic = SyntacticDerivationInContext.ForallDerivativeT(SuccPosition(0))

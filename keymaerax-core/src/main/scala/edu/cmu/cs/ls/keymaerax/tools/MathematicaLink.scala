@@ -52,6 +52,8 @@ trait MathematicaLink extends QETool with DiffSolutionTool {
  * @author Stefan Mitsch
  */
 class JLinkMathematicaLink extends MathematicaLink {
+  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+
   var ml: KernelLink = null
 
   var queryIndex: Long = 0
@@ -112,7 +114,7 @@ class JLinkMathematicaLink extends MathematicaLink {
       val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(queryIndex), cmd))
       // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
       val checkErrorMsgCmd = new MExpr(checkExpr, Array(indexedCmd, exceptionExpr/*, checkedMessagesExpr*/))
-      println("Sending to Mathematica " + checkErrorMsgCmd)
+      if (DEBUG) println("Sending to Mathematica " + checkErrorMsgCmd)
       dispatch(checkErrorMsgCmd.toString)
       getAnswer(indexedCmd.toString, queryIndex)
     }

@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.api
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.PositionTacticAutomation.PositionTacticAutomation
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement.{TaskProgressStatus, TaskLoadStatus}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
@@ -287,8 +287,8 @@ object KeYmaeraInterface {
     if (TaskManagement.containsTask(taskId)) throw new IllegalArgumentException("Duplicate task ID " + taskId)
 //    TaskManagement.startLoadingTask(taskId) -- This doesn't make sense. If the parse succeeds then we can automatically open the task because there will be no extant tactics. But if hte parse does not succeed then we don't want references to this proof in the server state at all.
     // TODO ComponentConfig will be provided from outside once KeYmaeraInterface is dependency injection enabled
-    new KeYmaeraParser(false, ComponentConfig).runParser(content) match {
-      case f: Formula =>
+    KeYmaeraXProblemParser(content) match {
+    case f: Formula =>
         val seq = Sequent(List(), collection.immutable.IndexedSeq[Formula](), collection.immutable.IndexedSeq[Formula](f) )
         val r = new RootNode(seq)
         TaskManagement.addTask(r, taskId)

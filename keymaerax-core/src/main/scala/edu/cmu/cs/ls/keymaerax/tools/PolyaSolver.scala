@@ -9,7 +9,7 @@ import java.nio.channels.Channels
 import java.util.Locale
 
 import edu.cmu.cs.ls.keymaerax.core.{False, True, Term, Formula}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser}
 import scala.sys.process._
 
 /**
@@ -26,7 +26,7 @@ class PolyaSolver extends SMTSolver {
     if(!new File(polyaTempDir).exists) new File(polyaTempDir).mkdirs
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
 
-    // so far only for Mac Os
+    // so far only for Mac Os and linux
     // TODO: support for other OS
     if(new File(polyaTempDir+"polya").exists()) {
       polyaTempDir+"polya"
@@ -110,9 +110,10 @@ class PolyaSolver extends SMTSolver {
     val output: String = cmd.!!
 //    println("[Polya simplify result] \n" + output + "\n")
     smtFile.delete()
-    new KeYmaeraParser().parseBareTerm(output) match {
-      case Some(output) => output
-      case None => t
+    try {
+      KeYmaeraXParser.termParser(output)
+    } catch {
+      case e: ParseException => t
     }
   }
 

@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
 object KeYmaeraXLemmaParser extends (String => (String, Formula, (String, String))) {
   private type Lemma = (String, Formula, (String, String))
 
-  private val DEBUG = false
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   /**
    * @todo sort hcecking.

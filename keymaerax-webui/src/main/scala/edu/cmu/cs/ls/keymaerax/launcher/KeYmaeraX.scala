@@ -22,6 +22,7 @@ import scala.util.Random
  * Command-line interface for KeYmaera X.
  * @author Stefan Mitsch
  * @author aplatzer
+ * @author Ran Ji
  */
 object KeYmaeraX {
 
@@ -33,17 +34,21 @@ object KeYmaeraX {
       |Usage: java -Xss20M -jar KeYmaeraX.jar
       |  -prove filename -tactic filename [-out filename] |
       |  -modelplex filename [-vars var1,var2,...,varn] [-out filename] |
-      |  -codegen filename [-format Spiral|C] [-out filename]
+      |  -codegen filename [-format Spiral|C] [-vars var1,var2,...,varn] [-out filename] |
       |  -ui [filename] [web server options]
       |
       |Additional options:
-      |  -ui       start the web user interface opening the given file (if any),
-      |            passing additional arguments to the web server
+      |  -ui [opt] optional arguments [opts] are passed to the web user interface
+      |            that -ui starts, opening the given file (if any)
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
       |  -verify   check the resulting proof certificate (recommended)
       |  -noverify skip checking proof certificates
       |  -interactive starts a simple command-line prover if -prove fails
+      |  -lax      enable lax mode with more flexible parser input and printer output etc.
+      |  -strict   enable strict mode with no flexibility in prover
+      |  -debug    enable debug mode with more exhaustive messages
+      |  -nodebug  disable debug mode to suppress intermediate messages
       |  -help     Display this usage information
       |  -license  Show license agreement for using this software
       |
@@ -67,13 +72,17 @@ object KeYmaeraX {
       def nextOption(map: OptionMap, list: List[String]): OptionMap = {
         list match {
           case Nil => map
-          case "-help" :: _ => {println(usage); sys.exit(1)}
-          case "-license" :: _ => {println(license); sys.exit(1)}
+          case "-help" :: _ => {
+            println(usage); sys.exit(1)
+          }
+          case "-license" :: _ => {
+            println(license); sys.exit(1)
+          }
           // actions
           case "-prove" :: value :: tail => nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
           case "-modelplex" :: value :: tail => nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
           case "-codegen" :: value :: tail => nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
-          case "-ui" :: tail => launchUI(tail.toArray)
+          case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
           // action options
           case "-out" :: value :: tail => nextOption(map ++ Map('out -> value), tail)
           case "-vars" :: value :: tail => nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
@@ -85,25 +94,33 @@ object KeYmaeraX {
           case "-jlink" :: value :: tail => nextOption(map ++ Map('jlink -> value), tail)
           case "-noverify" :: tail => nextOption(map ++ Map('verify -> false), tail)
           case "-verify" :: tail => nextOption(map ++ Map('verify -> true), tail)
+          // global options
+          case "-lax" :: tail => System.setProperty("LAX", "true"); nextOption(map, tail)
+          case "-strict" :: tail => System.setProperty("LAX", "false"); nextOption(map, tail)
+          case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
+          case "-nodebug" :: tail => System.setProperty("DEBUG", "false"); nextOption(map, tail)
           case option :: tail => println("Unknown option " + option + "\n" + usage); sys.exit(1)
         }
       }
 
       val options = nextOption(Map(), args.toList)
-      require(options.contains('mode), usage)
+      require(options.contains('mode), usage + "\narguments: " + args.mkString("  "))
 
-      try {
-        initializeProver(options)
+      if (options.get('mode) != Some("ui")) {
+        try {
+          initializeProver(options)
 
-        //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen -format C
-        options.get('mode) match {
-          case Some("prove") => prove(options)
-          case Some("modelplex") => modelplex(options)
-          case Some("codegen") => codegen(options)
+          //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen -format C
+          options.get('mode) match {
+            case Some("prove") => prove(options)
+            case Some("modelplex") => modelplex(options)
+            case Some("codegen") => codegen(options)
+            case Some("ui") => assert(false, "already handled above since no prover needed"); ???
+          }
         }
-      }
-      finally {
-        shutdownProver()
+        finally {
+          shutdownProver()
+        }
       }
     }
   }
@@ -124,6 +141,7 @@ object KeYmaeraX {
     Tactics.MathematicaScheduler.init(mathematicaConfig)
   }
 
+  //@todo Runtime.getRuntime.addShutdownHook??
   def shutdownProver() = {
     if (Tactics.KeYmaeraScheduler != null) {
       Tactics.KeYmaeraScheduler.shutdown()
@@ -139,12 +157,8 @@ object KeYmaeraX {
   private def exit(status: Int): Unit = {shutdownProver(); sys.exit(status)}
 
   /** Launch the web user interface */
-  def launchUI(args: Array[String]): Nothing = {
-    /*if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
-      //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
-      System.err.println("Cannot yet verify modelplex proof certificates")
-    }*/
-    {Main.main(args); sys.exit(5)}
+  def launchUI(args: Array[String]): Unit = {
+    Main.main(args)
   }
 
 
@@ -239,75 +253,102 @@ object KeYmaeraX {
       (if (node.isClosed) "Closed Goal: " else if (node.children.isEmpty) "Open Goal: " else "Inner Node: ") +
       "\tdebug: " + node.tacticInfo.infos.getOrElse("debug", "<none>") +
       "\n" +
-      (1 to node.sequent.ante.length).map(i => -i + ":  " + node.sequent.ante(i-1).prettyString + "\t" + node.sequent.ante(i-1).getClass.getSimpleName).mkString("\n") +
+      (1 to node.sequent.ante.length).
+        map(i => -i + ":  " + node.sequent.ante(i-1).prettyString + "\t" + node.sequent.ante(i-1).getClass.getSimpleName).mkString("\n") +
       "\n  ==>\n" +
-      (1 to node.sequent.succ.length).map(i => +i + ":  " + node.sequent.succ(i-1).prettyString + "\t" + node.sequent.ante(i-1).getClass.getSimpleName).mkString("\n") +
+      (1 to node.sequent.succ.length).
+        map(i => +i + ":  " + node.sequent.succ(i-1).prettyString + "\t" + node.sequent.succ(i-1).getClass.getSimpleName).mkString("\n") +
       "\n")
   }
 
+  private val interactiveUsage = "Type a tactic command to apply to the current goal.\n" +
+    "skip - ignore the current goal for now and skip to the next goal.\n" +
+    "goals - list all open goals.\n" +
+    "goal i - switch to goal number i\n" +
+    "exit - quit the prover (or hit Ctrl-C any time).\n" +
+    "help - will display this usage information.\n" +
+    "Tactics will be reported back when a branch closes but may need cleanup.\n"
   /** KeYmaera C: A simple interactive command-line prover */
   private def interactiveProver(root: ProofNode): ProofNode = {
     val commands = io.Source.stdin.getLines()
     val cm = universe.runtimeMirror(getClass.getClassLoader)
     val tb = cm.mkToolBox()
     println("KeYmaera X Interactive Command-line Prover\n" +
-      "If you are looking for the more convenient web user interface,\nrestart with option -ui")
-    println("Type a tactic command to apply to the current goal.\n" +
-      "skip will ignore the current goal for now and skip to the next goal.\n" +
-      "Tactics will be reported back when a branch closes but may need some cleanup.\n")
+      "If you are looking for the more convenient web user interface,\nrestart with option -ui\n")
+    println(interactiveUsage)
 
     while (!root.isClosed()) {
       assert(!root.openGoals().isEmpty, "proofs that are not closed must have open goals")
+      println("Open Goals: " + root.openGoals.size)
       var node = root.openGoals().head
       println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " ===\n")
       var tacticLog = ""
       assert(!node.isClosed, "open goals are not closed")
       while (!node.isClosed()) {
-        elaborateNode(node)   //printNode(node)
+        elaborateNode(node) //printNode(node)
         System.out.flush()
-        val command = commands.next().trim
-        if (command == "") {}
-        else if (command == "skip") {
-          if (root.openGoals().size >= 2) {
-            //@todo skip to the next goal somewhere on the right of node, not to a random goal
-            //@todo track this level skipping by closing and opening parentheses in the log
-            var nextGoal = new Random().nextInt(root.openGoals().length)
-            assert(0<=nextGoal&&nextGoal<root.openGoals().size, "random in range")
-            node = if (root.openGoals()(nextGoal) != node)
-              root.openGoals()(nextGoal)
-            else {
-              val otherGoals = (root.openGoals() diff List(node))
-              assert(otherGoals.length == root.openGoals().length -1, "removing one open goal decreases open goal count by 1")
-              nextGoal = new Random().nextInt(otherGoals.length)
-              assert(0<=nextGoal&&nextGoal<otherGoals.size, "random in range")
-              otherGoals(nextGoal)
+        commands.next().trim match {
+          case "" =>
+          case "help" => println(interactiveUsage)
+          case "exit" => exit(5)
+          case "goals" => val open = root.openGoals()
+            (1 to open.length).map(g => {println("Goal " + g); elaborateNode(open(g-1))})
+          case it if it.startsWith("goal ") => try {
+            val g = it.substring("goal ".length).toInt
+            if (1<=g&&g<=root.openGoals().size) node = root.openGoals()(g-1)
+            else println("No such goal: "+ g)
+          } catch {case e: NumberFormatException => println(e)}
+          case "skip" =>
+            if (root.openGoals().size >= 2) {
+              //@todo skip to the next goal somewhere on the right of node, not to a random goal
+              //@todo track this level skipping by closing and opening parentheses in the log
+              var nextGoal = new Random().nextInt(root.openGoals().length)
+              assert(0 <= nextGoal && nextGoal < root.openGoals().size, "random in range")
+              node = if (root.openGoals()(nextGoal) != node)
+                root.openGoals()(nextGoal)
+              else {
+                val otherGoals = (root.openGoals() diff List(node))
+                assert(otherGoals.length == root.openGoals().length - 1, "removing one open goal decreases open goal count by 1")
+                nextGoal = new Random().nextInt(otherGoals.length)
+                assert(0 <= nextGoal && nextGoal < otherGoals.size, "random in range")
+                otherGoals(nextGoal)
+              }
+            } else {
+              println("No other open goals to skip to")
             }
-          } else {
-            println("No other open goals to skip to")
-          }
-        } else try {
-          val tacticGenerator = tb.eval(tb.parse(tacticParsePrefix + command + tacticParseSuffix)).asInstanceOf[() => Tactic]
-          val tactic = tacticGenerator()
-          tacticLog += "& " + command + "\n"
-          Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, node))
-          // walk to the next subgoal
-          if (!node.children.isEmpty && !node.children.head.subgoals.isEmpty) node = node.children.head.subgoals(0)
-        }
-        catch {
-          case e: ToolBoxError => println("Command failed: " + e + "\n"); System.out.flush()
+          case command: String =>
+            try {
+              //@note security issue since executing arbitrary input unsanitized
+              val tacticGenerator = tb.eval(tb.parse(tacticParsePrefix + command + tacticParseSuffix)).asInstanceOf[() => Tactic]
+              val tactic = tacticGenerator()
+              tacticLog += "& " + command + "\n"
+              Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, node))
+              // walk to the next open subgoal
+              // continue walking if it has leaves
+              while (!node.isClosed() && !node.children.isEmpty && !node.children.head.subgoals.isEmpty)
+                node = node.children.head.subgoals(0)
+              //@todo make sure to walk to siblings ultimately
+            }
+            catch {
+              case e: ToolBoxError => println("Command failed: " + e + "\n"); System.out.flush()
+            }
         }
       }
+      assert(node.isClosed())
       println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " === CLOSED")
       println(tacticLog)
     }
     root
   }
 
+  //@todo import namespace of the user tactic *object* passed in -tactic
   private val tacticParsePrefix =
     """
       |import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
       |import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
       |import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+      |import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
+      |import edu.cmu.cs.ls.keymaerax.tactics._
       |class InteractiveLocalTactic extends (() => Tactic) {
       |  def apply(): Tactic = {
       |
@@ -377,10 +418,23 @@ object KeYmaeraX {
       pw.close()
     } else if(options.get('format).get.toString == "Spiral") {
       val sGen = new SpiralGenerator
-      val output = sGen(inputFormula)
-      val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
-      pw.write(output)
-      pw.close()
+      var outputG = ""
+      var outputH = ""
+      if (options.contains('vars)) {
+        outputG = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)._1
+        outputH = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)._2
+        val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
+        pwG.write(outputG)
+        pwG.close()
+        val pwH = new PrintWriter(options.getOrElse('out, inputFileName + ".h").toString)
+        pwH.write(outputH)
+        pwH.close()
+      } else {
+        outputG = sGen(inputFormula, inputFileName)
+        val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
+        pwG.write(outputG)
+        pwG.close()
+      }
     } else throw new IllegalArgumentException("-format should be specified and only be C or Spiral")
   }
 

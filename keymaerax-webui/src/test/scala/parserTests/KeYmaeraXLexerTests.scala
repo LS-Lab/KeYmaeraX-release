@@ -29,6 +29,7 @@ class KeYmaeraXLexerTests extends FlatSpec with Matchers {
     KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(EOF, UnknownLocation)
   }
 
+  //@todo Nathan
   it should "Handle newlines correctly" in {
     val input =
       """
@@ -49,6 +50,7 @@ class KeYmaeraXLexerTests extends FlatSpec with Matchers {
     KeYmaeraXLexer(input).tail.head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(FORALL, Region(1,9,1,15))
   }
 
+  //@todo Nathan
   it should "parse an identifier" in {
     val input = "input"
     KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(IDENT("input"), Region(1,1,1,5))

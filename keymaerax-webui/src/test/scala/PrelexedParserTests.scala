@@ -183,6 +183,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     Times(Variable("x"), Neg(Variable("y")))
   }
 
+  //@todo test wrong --> Nathan split into two cases for both -x*y and -(x*y)
   it should "parse -x*y" in {
     val lex = KeYmaeraXLexer("-x*y")
     val theStream = toStream(MINUS, IDENT("x"), STAR, IDENT("y"))
@@ -879,7 +880,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     And(Forall(Seq(Variable("x")), PredOf(p, Variable("x"))), PredOf(q,Variable("x")))
   }
 
-  "Predicate/function parser" should "parse" in {
+  "Predicate/function parser (unless LAX mode)" should "parse" in {
     parser("p(x,y)->f(x,y)>g(x)") shouldBe Imply(PredOf(p2, Pair(x,y)), Greater(FuncOf(f2,Pair(x,y)), FuncOf(g,x)))
   }
 

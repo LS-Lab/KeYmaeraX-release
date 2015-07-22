@@ -432,6 +432,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
           Compose(usubst(a), usubst(b))
         case Loop(a) => requireAdmissible(StaticSemantics(usubst(a)).bv, a, program)
           Loop(usubst(a))
+        case Dual(a) => Dual(usubst(a))
       }
     } catch {
       case ex: IllegalArgumentException =>

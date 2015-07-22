@@ -11,4 +11,4 @@ import edu.cmu.cs.ls.keymaerax.core.ProverException
  * with the context information state.
  * @author aplatzer
  */
-case class ParseException(msg: String, loc: Location, state: String/*ParseState*/) extends ProverException(msg + "\nat " + loc + "\nin " + state)
+case class ParseException(msg: String, loc: Location, state: String/*ParseState*/) extends ProverException(loc.begin + " " + msg + "\nat " + loc + "\nin " + state)

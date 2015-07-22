@@ -8,7 +8,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.io.{FileNotFoundException, FileReader}
+import java.io.{File, FileNotFoundException, FileReader}
 import java.text.SimpleDateFormat
 import java.util.{Locale, Calendar}
 
@@ -17,7 +17,7 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.{CLParser, CLInterpreter}
 
@@ -30,10 +30,10 @@ import spray.json.DefaultJsonProtocol._
  * possible side-effects of a request (e.g. updating the database), but should
  * not modify the internal state of the HyDRA server (e.g. do not update the 
  * event queue).
- * 
+ *
  * Requests objects should do work after getResultingUpdates is called, 
  * not during object construction.
- * 
+ *
  * Request.getResultingUpdates might be run from a new thread. 
  */
 sealed trait Request {
@@ -200,7 +200,7 @@ class GetMathematicaConfigurationRequest(db : DBAbstraction) extends Request {
       else "Unknown"
     }
     if (config.contains("linkName") && config.contains("jlinkLibDir")) {
-      new MathematicaConfigurationResponse(config("linkName"), config("jlinkLibDir")+"/"+jlinkLibFile) :: Nil
+      new MathematicaConfigurationResponse(config("linkName"), config("jlinkLibDir") + File.separator + jlinkLibFile) :: Nil
     } else {
       new MathematicaConfigurationResponse("", "") :: Nil
     }
@@ -223,8 +223,7 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
   def getResultingResponses() = {
     try {
       //Return the resulting response.
-      var p = new KeYmaeraParser()
-      p.runParser(keyFileContents) match {
+      KeYmaeraXProblemParser(keyFileContents) match {
         case f : Formula => {
           val result = db.createModel(userId, nameOfModel, keyFileContents, currentDate())
           new BooleanResponse(result.isDefined) :: Nil

@@ -68,6 +68,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
+  //@todo Ran
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
     helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
@@ -84,6 +85,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
+  //@todo Ran
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.key"))
     helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
@@ -215,6 +217,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
+  //@todo Ran
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5_simplectrl.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
@@ -248,6 +251,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
+  //@todo Ran
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
@@ -281,6 +285,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
+  //@todo Ran
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
@@ -314,6 +319,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*b) <= S".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
+  //@todo Ran
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*b) <= S".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
@@ -322,6 +328,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   // TODO not yet implemented: differential inequalities
   // Example 8
 
+  //@todo Stefan
   "Example 9a" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example9a.key"))
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(diffInvariant)

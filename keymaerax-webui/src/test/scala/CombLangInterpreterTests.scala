@@ -29,6 +29,7 @@ class CombLangInterpreterTests extends TacticTestSuite {
     n.isClosed() shouldBe true
   }
 
+  //@todo Nathan
   it should "cut" in {
     val t = CLInterpreter.construct(CLParser("cutT(\"1 > 0\")").get)
     val n = new RootNode(Sequent(Nil,scala.collection.immutable.IndexedSeq("x>1".asFormula),scala.collection.immutable.IndexedSeq("x>0".asFormula)))

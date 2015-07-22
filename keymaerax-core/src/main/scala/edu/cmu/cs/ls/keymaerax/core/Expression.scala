@@ -434,7 +434,10 @@ case class Choice(left: Program, right: Program) extends BinaryCompositeProgram
 case class Compose(left: Program, right: Program) extends BinaryCompositeProgram
 /** child* nondeterministic repetition */
 case class Loop(child: Program) extends UnaryCompositeProgram
-//case class Dual(child: Program) extends CompositeProgram
+/** `child^d` dual program */
+case class Dual(child: Program) extends UnaryCompositeProgram {
+  require(false, "Hybrid games are currently disabled")
+}
 
 /**
  * Differential programs
@@ -448,7 +451,7 @@ sealed trait DifferentialProgram extends Program {
 sealed trait AtomicDifferentialProgram extends AtomicProgram with DifferentialProgram
 /** Differential equation system ode with given evolution domain constraint */
 //@todo should not be a differential program since not nested within DifferentialProduct.
-case class ODESystem(ode: DifferentialProgram, constraint: Formula)
+case class ODESystem(ode: DifferentialProgram, constraint: Formula = True)
   extends Program with DifferentialProgram {
   override def kind: Kind = ProgramKind
 }

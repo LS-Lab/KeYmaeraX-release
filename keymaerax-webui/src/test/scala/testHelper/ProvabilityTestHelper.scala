@@ -10,7 +10,7 @@ import java.util.concurrent.TimeoutException
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
 
@@ -25,7 +25,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * Created by nfulton on 12/6/14.
  * @author nfulton
  * @author aplatzer
- * @todo adapt to new KeYmaeraXParser
+ * @author Ran Ji
  */
 class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
 
@@ -40,7 +40,12 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
    * @param s
    * @return Some result of parse on success, or None
    */
-  def parse(s:String) : Option[Expression] = new KeYmaeraParser().parseBareExpression(s)
+  def parse(s:String) : Option[Expression] =
+    try{
+      Some(KeYmaeraXParser(s))
+    } catch {
+      case e: ParseException => None
+    }
 
 
   /**
@@ -65,7 +70,7 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
    */
   def parseBareProgram(s : String) : Option[Program] = {
     //approach: add a modality around the bare program, parse the valid expression, extract the program.
-    val result = new KeYmaeraParser().parseBareExpression("[" + s + "] 1>0")
+    val result = parse("[" + s + "] 1>0")
     result match {
       case Some(Box(program, formula)) => Some(program)
       case _ => None

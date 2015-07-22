@@ -75,11 +75,11 @@ object KeYmaeraXParser extends Parser {
   val parser = this
 
   /** Lax mode where the parser is a little flexible about accepting input. */
-  private val LAX = true
+  private val LAX = System.getProperty("LAX", "true")=="true"
+
+  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
   private val parseErrorsAsExceptions = true
-
-  private val DEBUG = true
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression = {
@@ -194,14 +194,16 @@ object KeYmaeraXParser extends Parser {
       case None => None
     }
     // lift misclassified defaulted differential equation
-    case Equal(xp:DifferentialSymbol, e)
-      if (kind==DifferentialProgramKind || kind==ProgramKind) && !StaticSemantics.isDifferential(e) => Some(AtomicODE(xp, e))
+    case Equal(xp:DifferentialSymbol, e) if kind==DifferentialProgramKind && !StaticSemantics.isDifferential(e) => Some(AtomicODE(xp, e))
+    // lift misclassified defaulted differential equation
+    case Equal(xp:DifferentialSymbol, e) if kind==ProgramKind && !StaticSemantics.isDifferential(e) => Some(ODESystem(AtomicODE(xp, e)))
     //@todo And(And(x'=5,x>0),x<12)) is not lifted yet
     // lift misclassified defaulted differential equation
     case And(Equal(xp:DifferentialSymbol, e), h)
       if (kind==DifferentialProgramKind || kind==ProgramKind) && !StaticSemantics.isDifferential(h) => Some(ODESystem(AtomicODE(xp, e), h))
+    case ode: ODESystem if kind==ProgramKind => Some(ode)
     // lift differential equations without evolution domain constraints to ODESystems
-    case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => Some(ODESystem(ode, True))
+    case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => Some(ODESystem(ode))
     // whether ODESystem is classified as ProgramKind or DifferentialProgramKind
     case ode: ODESystem if kind==ProgramKind || kind==DifferentialProgramKind => Some(ode)
     case _ => None
@@ -250,6 +252,10 @@ object KeYmaeraXParser extends Parser {
     val ParseState(s, input@(Token(la,_) :: rest)) = st
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
+      // nonproductive: help KeYmaeraXLexer recognize := * with whitespaces as ASSIGNANY
+      case r :+ Token(ASSIGN,loc1) :+ Token(STAR,loc2) =>
+        reduce(st, 2, Bottom :+ Token(ASSIGNANY, loc1--loc2), r)
+
       // nonproductive: special notation for annotations
       case r :+ Expr(p:Program) :+ Token(INVARIANT,_) :+ Token(LPAREN,_) :+ Expr(f1: Formula) :+ Token(RPAREN,_) if isAnnotable(p) =>
         reportAnnotation(p, f1)
@@ -377,12 +383,12 @@ object KeYmaeraXParser extends Parser {
 
       // modalities
       case r :+ (ltok@Token(LBOX,_)) :+ Expr(t1:Program) :+ (rtok@Token(RBOX,_)) =>
-        if (firstFormula(la)) shift(reduce(st, 3, RecognizedModal(ltok, t1, rtok), r))
+        if (firstFormula(la)) shift(reduce(st, 3, RecognizedModal(ltok, elaborate(st, OpSpec.sBox, ProgramKind, t1).asInstanceOf[Program], rtok), r))
         else error(st)
 
       case r :+ (ltok@Token(LDIA,_)) :+ Expr(t1:Program) :+ (rtok@Token(RDIA,_)) =>
         //@note convert to RecognizedMoal to avoid subsequent item confusion with t1 > la
-        if (firstFormula(la)) shift(reduce(st, 3, RecognizedModal(ltok, t1, rtok), r))
+        if (firstFormula(la)) shift(reduce(st, 3, RecognizedModal(ltok, elaborate(st, OpSpec.sDiamond, ProgramKind, t1).asInstanceOf[Program], rtok), r))
         else error(st)
 
       // modal formulas bind tight
@@ -438,7 +444,7 @@ object KeYmaeraXParser extends Parser {
         if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX
           || (la == RDIA || la == RDIA) && (p1.kind == ProgramKind || p1.kind == DifferentialProgramKind)
           || la!=LBRACE && (optok < op(st, la, List(p2.kind,ExpressionKind)) || optok <= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == LeftAssociative))
-          reduce(st, 2, op(st, SEMI, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(SEMI.img, p1, p2), r)
+          reduce(st, 2, elaborate(st, SEMI, op(st, SEMI, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Expression]], p1, p2), r)
         else if (statementSemicolon&&la==LBRACE || optok > op(st, la, List(p2.kind,ExpressionKind)) || optok >= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == RightAssociative)
           shift(st)
         else error(st)
@@ -648,7 +654,7 @@ object KeYmaeraXParser extends Parser {
   private def formulaBinOp(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV
 
   /** Is la a (unary/binary) operator that only works for programs? */
-  private def programOp(la: Terminal): Boolean = la==SEMI || la==CHOICE
+  private def programOp(la: Terminal): Boolean = la==SEMI || la==CHOICE || la==DUAL
 
   /** Follow(Term): Can la follow after a term? */
   private def followsTerm(la: Terminal): Boolean = la==RPAREN ||
@@ -672,6 +678,7 @@ object KeYmaeraXParser extends Parser {
     la==RBOX || la==RDIA ||  // from P in programs
     la==COMMA || la==AMP ||  // from D in differential programs
     la==EOF ||
+    la==DUAL ||              // from P in hybrid games
     la==INVARIANT            // extra: additional @annotations
 
   /** Follow(kind(expr)): Can la follow an expression of the kind of expr? */
@@ -855,6 +862,7 @@ object KeYmaeraXParser extends Parser {
       //      case p: AtomicODE => sAtomicODE
       case sDifferentialProduct.op => sDifferentialProduct
       //      case sLoop.op => sLoop
+      case sDual.op => sDual
       case sCompose.op => sCompose
       case sChoice.op => sChoice
 

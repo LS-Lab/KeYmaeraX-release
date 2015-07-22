@@ -209,7 +209,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
 
 /** Starting new Provables to begin a proof */
 object Provable {
-  private[core] val debugProver: Boolean = false
+  private[core] val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
 
   /**
    * Begin a new proof for the desired conclusion goal
@@ -315,7 +315,7 @@ object Provable {
  * }}}
  */
 final case class Provable private (conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
-  if (Provable.debugProver && subgoals.distinct.size != subgoals.size) print("WARNING: repeated subgoals may warrant set construction in Provable " + this)
+  if (Provable.DEBUG && subgoals.distinct.size != subgoals.size) print("INFO: repeated subgoals may warrant set construction or compactification in Provable " + this)
 
   /**
    * Position types for the subgoals of a Provable.
