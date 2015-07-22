@@ -32,48 +32,6 @@ object LogicalODESolver {
   // of only specific points in time.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  /**
-   * Given a system of form:
-   *    [x1' = theta1, ..., t' = 0*t+1 & x1=s1, ...]p
-   * produces a system of form:
-   *    [x2' = theta2, ..., t' = 0*t+1 & x1=s1, ...]p
-   * that is, it removes the first ODE from the system that is not required.
-   *
-   * @return The tactic.
-   */
-  /*
-  private def stepRemoveT : PositionTactic = new PositionTactic("Remove solved ODE from system") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case program : DifferentialProduct => {
-        val solvedEquations = conditionsToValues(odeConstraints(program))
-        val variables = atomicODEs(program).map(_.xp.x)
-
-        val nextVariable : Option[Variable] = ???
-
-        (variables.toSet - timeVar(program) -- solvedEquations.keys.toSet).isEmpty && nextVariable.isDefined
-      }
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic() {
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case program : DifferentialProduct => {
-          val solvedEquations = conditionsToValues(odeConstraints(program))
-          val variables = atomicODEs(program).map(_.xp.x)
-          require((variables.toSet - timeVar(program) -- solvedEquations.keys.toSet).isEmpty,
-            "All primed variables should have solution")
-
-          ???
-        }
-      }
-
-      override def applicable(node: ProofNode): Boolean = ???
-    }
-  }
-  */
-
-  private def removeTimeVar : PositionTactic = ???
-
-
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Tactics of the simple solver
   //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -81,6 +39,10 @@ object LogicalODESolver {
   def solveT : PositionTactic = new PositionTactic("Solve ODE") {
     override def applies(s: Sequent, p: Position): Boolean = true //@todo
 
+    /*
+     * Note:
+     * renameAndDropImpl still produces an open goal that needs to be closed, maybe with monotonicity?
+     */
     override def apply(p: Position): Tactic =
       LogicalODESolver.setupTimeVarT(p) ~
       (stepTacticT(p) *) &
@@ -91,10 +53,22 @@ object LogicalODESolver {
       )
   }
 
+  def weakSolveT : PositionTactic = new PositionTactic("Solve ODE w. Weaken") {
+    override def applies(s: Sequent, p: Position): Boolean = true //@todo
+
+    override def apply(p: Position): Tactic =
+      LogicalODESolver.setupTimeVarT(p) ~
+      (stepTacticT(p) *) &
+      cutTimeLB(p) &
+      ODETactics.diffWeakenT(p) &
+      arithmeticT
+  }
+
   //////////////////////////////////////////////////////////////////////////////////////////////////
-  // Successive diff cuts
+  // Successive inverse diff cuts
   //////////////////////////////////////////////////////////////////////////////////////////////////
-  private def successiveInverseCut : PositionTactic = new PositionTactic("successiveInverseCut") {
+  //Should be private but for testing.
+  def successiveInverseCut : PositionTactic = new PositionTactic("successiveInverseCut") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case Box(pi:DifferentialProgram, f : Formula) => true //not even close.
       case _ => false
@@ -107,12 +81,13 @@ object LogicalODESolver {
           val lastPartial = getLastPartialSoln(program)
 
             Some(
-            debugT("before axiom") &
+            debugT("Trying to perform a successive inverse cut.") &
             mvPartialSolnToEnd(lastPartial)(p) &
+//            Normalizers.leftAssociateConj(p) &
             debugT(s"Successfully moved partial soln $lastPartial to end") &
-            ODETactics.diffCutInvAxiomT(lastPartial)(p) & onBranch(
-              (BranchLabels.axiomUseLbl, debugT("Axiom use")),
-              (BranchLabels.axiomShowLbl, debugT("axiom show"))
+            ODETactics.diffInverseCutT(p) & onBranch(
+              (BranchLabels.cutUseLbl, debugT("Axiom use")),
+              (BranchLabels.cutShowLbl, debugT("axiom show") ~ ODETactics.diffInvariantT(p) ~ TacticLibrary.arithmeticT ~ errorT("should've closed."))
             )
           )
 
@@ -124,7 +99,7 @@ object LogicalODESolver {
   }
 
   private def getLastPartialSoln(program : DifferentialProgram) : Formula = program match {
-    case ODESystem(odes, constraint) => extractInitialConditions(constraint).last
+    case ODESystem(odes, constraint) => extractInitialConditions(Some(program))(constraint).last
     case _ => throw new Exception("Need to implement all cases. Not sure." + program)
   }
 
@@ -229,7 +204,7 @@ object LogicalODESolver {
     private def constructNewConclusion(evolutionDomain : Formula, originalConclusion : Formula) = {
       //Compute the new conclusion.
       val fvsConclusion = StaticSemantics.freeVars(originalConclusion) //Free vars of conc'l
-      val variablesToReplace : List[Equal] = extractInitialConditions(evolutionDomain).filter(_ match {
+      val variablesToReplace : List[Equal] = extractInitialConditions(None)(evolutionDomain).filter(_ match {
           case Equal(x: Variable, _) => fvsConclusion.contains(x)
           case _ => false
         }).asInstanceOf[List[Equal]]
@@ -255,7 +230,7 @@ object LogicalODESolver {
           val t = timeVar(program).getOrElse(throw new Exception("Need time var"))
 
           //Should always be 0, but let's be safe.
-          val timeInitialCondition : Term = node.sequent.ante.flatMap(extractInitialConditions).find(f => f match {
+          val timeInitialCondition : Term = node.sequent.ante.flatMap(extractInitialConditions(Some(program))).find(f => f match {
             case Equal(x, _) if x.equals(t) => true
             case _ => false
           }).getOrElse(throw new Exception("Need initial condition on time variable " + t)) match {
@@ -359,7 +334,7 @@ object LogicalODESolver {
 
     override def apply(p: Position): Tactic = new ConstructionTactic("Construct " + name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val initialConditions : List[Formula] = node.sequent.ante.flatMap(extractInitialConditions).toList
+        val initialConditions : List[Formula] = node.sequent.ante.flatMap(extractInitialConditions(None)).toList
 
         node.sequent(p) match {
           case Box(program : DifferentialProgram, f) => {
@@ -408,14 +383,29 @@ object LogicalODESolver {
   /**
    *
    * @param f A formula containing conjunctions.
-   * @return A list of *equality* formulas after deconstructing Ands. E.g., A&B&C -> A::B::C::Nil
+   * @return A list of equality formulas after deconstructing Ands. E.g., A&B&C -> A::B::C::Nil
    */
-  private def extractInitialConditions(f : Formula) : List[Formula] = flattenAnds(f match {
-    case And(l, r) => extractInitialConditions(l) ++ extractInitialConditions(r)
-    case Equal(v: Variable, _) => f :: Nil
-    case Equal(_, v: Variable) => f :: Nil
-    case _ => Nil //ignore?
-  })
+  private def extractInitialConditions(ode : Option[DifferentialProgram])(f : Formula) : List[Formula] =
+    flattenAnds(f match {
+      case And(l, r) => extractInitialConditions(ode)(l) ++ extractInitialConditions(ode)(r)
+      case Equal(v: Variable, _) => {if(isPrimedVariable(v, ode)) (f :: Nil) else Nil}
+      case Equal(_, v: Variable) => {if(isPrimedVariable(v, ode)) (f :: Nil) else Nil}
+      case _ => Nil //ignore?
+    })
+
+  private def isPrimedVariable(v : Variable, ode : Option[DifferentialProgram]) = ode match {
+    case Some(odes) => {
+      //@todo
+//      getPrimedVariables(ode).contains(v)
+      true
+    }
+    case None => true
+  }
+  private def getPrimedVariables(ode : DifferentialProgram) : List[Variable] = ode match {
+    case _: AtomicDifferentialProgram => ???
+    case ODESystem(ode, constraint) => getPrimedVariables(ode)
+    case DifferentialProduct(l,r) => getPrimedVariables(l) ++ getPrimedVariables(r)
+  }
 
   /**
    *
@@ -465,9 +455,9 @@ object LogicalODESolver {
     }
   }
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////
   // Integrals of a single ODE.
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
    * If v' = term occurs in the system of ODEs, then this function computes the integral of term.
@@ -773,6 +763,49 @@ object LogicalODESolver {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
   }
+
+
+
+//  /**
+//   * Given a system of form:
+//   *    [x1' = theta1, ..., t' = 0*t+1 & x1=s1, ...]p
+//   * produces a system of form:
+//   *    [x2' = theta2, ..., t' = 0*t+1 & x1=s1, ...]p
+//   * that is, it removes the first ODE from the system that is not required.
+//   *
+//   * @return The tactic.
+//   */
+//  /*
+//  private def stepRemoveT : PositionTactic = new PositionTactic("Remove solved ODE from system") {
+//    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+//      case program : DifferentialProduct => {
+//        val solvedEquations = conditionsToValues(odeConstraints(program))
+//        val variables = atomicODEs(program).map(_.xp.x)
+//
+//        val nextVariable : Option[Variable] = ???
+//
+//        (variables.toSet - timeVar(program) -- solvedEquations.keys.toSet).isEmpty && nextVariable.isDefined
+//      }
+//    }
+//
+//    override def apply(p: Position): Tactic = new ConstructionTactic() {
+//      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+//        case program : DifferentialProduct => {
+//          val solvedEquations = conditionsToValues(odeConstraints(program))
+//          val variables = atomicODEs(program).map(_.xp.x)
+//          require((variables.toSet - timeVar(program) -- solvedEquations.keys.toSet).isEmpty,
+//            "All primed variables should have solution")
+//
+//          ???
+//        }
+//      }
+//
+//      override def applicable(node: ProofNode): Boolean = ???
+//    }
+//  }
+//  */
+
+//  private def removeTimeVar : PositionTactic = ???
 
 
 }

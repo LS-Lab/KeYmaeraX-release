@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext.ApplicableAtFormula
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
@@ -38,6 +39,50 @@ object SearchTacticsImpl {
     }
   }
 
+  def locateLargestSubformula(t : (PositionTactic with ApplicableAtFormula)) : PositionTactic = {
+    val predicate = (f : Formula) => t.applies(f)
+    locateLargestSubformula(predicate, t)
+  }
+
+  /**
+    *
+    * @param pred A predicate over formulas defining where the tactic should be applied.
+   *             I.e., it should be that pred(f) implies t.applies(s,p) whenever s(p) = f.
+    * @param t
+    * @return Tactic that applies t to largest position for which pred holds in p.
+    */
+  def locateLargestSubformula(pred : Formula => Boolean, t : PositionTactic) =
+  new PositionTactic("locate largest subformula") {
+    override def applies(s: Sequent, p: Position): Boolean = largestPredPos(TacticHelper.getFormula(s,p)).isDefined
+
+    override def apply(p: Position): Tactic = new ConstructionTactic("Construct " + name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val f = TacticHelper.getFormula(node.sequent,p)
+        largestPredPos(f) match {
+          case Some(pApp) => Some(t(p.subPos(pApp)))
+          case None => None
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+
+    def largestPredPos(formula : Formula) : Option[PosInExpr] = {
+      var pos : Option[PosInExpr] = None
+      val traversal = new ExpressionTraversalFunction {
+        override def preF(p : PosInExpr, f : Formula) = {
+          if(pred(f)) {
+            pos = Some(p);
+            Left(Some(ExpressionTraversal.stop))
+          }
+          else Left(None)
+        }
+      }
+      ExpressionTraversal.traverse(traversal, formula);
+      pos
+    }
+  }
+
   /**
    * Finds the position of a in f(a) <-> f(b), and applies congT at that position.
    * @param a The left term.
@@ -46,7 +91,7 @@ object SearchTacticsImpl {
    * @return Result of running congT on the position of a, given a position containing f(a) <-> f(b).
    */
   def locateForCongruenceRewriting(a : Term, b : Term, congT : PositionTactic) =
-  new PositionTactic("locate for congurnece rewirting") {
+  new PositionTactic("locate for congurnece rewriting") {
     override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && (s(p) match {
       case Equiv(_,_) => true
       case _          => false

@@ -587,8 +587,9 @@ End.
  * Boolean algebra
  */
  Axiom "& associative".
-  p(?) & (q(?) & r(?)) <-> (p(?) & q(?)) & r(?)
+  p(?) & q(?) & r(?) <-> p(?) & (q(?) & r(?))
  End.
+ /* ... */
 
 /**
  * Real arithmetic
