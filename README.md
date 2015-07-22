@@ -101,10 +101,10 @@ Front End
 The Web UI web user interface front end of KeYmaera X can be started as follows:
 
     sbt assembly
-    java -jar target/scala-2.10/KeYmaeraX-assembly-0.1-SNAPSHOT.jar
+    java -jar keymaerax-webui/target/scala-2.10/KeYmaeraX-assembly-0.1-SNAPSHOT.jar
     open http://localhost:8090/index_bootstrap.html
 
-The first command builds a .JAR, and the second command runs the built .jar. If the jar won't start because of an error "no manifest found" you may have to run `sbt clean` first.
+The first command builds a .JAR, and the second command runs the built .jar. If the jar won't start because of an error `no manifest found` you may have to run `sbt clean` first.
 In case of errors about `invalid or corrupt jarfile`, please update Java to a newer version.
 
 For development purposes, the Web UI can be run from an IDE by selecting as the Main class if you pass its JVM the option -Xss20M:
@@ -119,6 +119,10 @@ Either run using Java 1.7, or update to Mathematica 10.
 KeYmaera X is successfully started when you see the following console output
 
     Bound to localhost/127.0.0.1:8090
+
+To find out how to use KeYmaera X from command line run
+
+    java -Xss20M -jar keymaerax-webui/target/scala-2.10/KeYmaeraX-assembly-0.1-SNAPSHOT.jar
 
 Source Code Layout
 ==================
