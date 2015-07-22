@@ -986,20 +986,13 @@ object ODETactics {
             assert(y.equals(yy), "quantified and final primed variable are the same.")
             assert(yy.equals(yyy), "primed and linear variable are the same.")
             Equiv(
-              Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y),Plus(Times(t, yyy), s)), c), h), p),
+              Box(ODESystem(c, h), p),
               fml
             )
           }
           case _ => throw new Exception("Term not of correct form " + atom)
         }
       }
-      case Exists(_, Box(ODESystem(DifferentialProduct(l,r),_), _)) => {
-        if(r.isInstanceOf[AtomicODE]) {
-          throw new Exception("Atomic ODE but not quite.")
-        }
-        else throw new Exception("Product but not quite " + l.prettyString + " =+= " + r.prettyString)
-      }
-      case Exists(_, Box(ODESystem(c,_), _)) => throw new Exception("Almost but not quite?")
       case _ => False
     }
   }

@@ -445,6 +445,10 @@ Axiom "DA inverse differential ghost".
   [c&H(?);]p(?) <-> \exists y. [y'=t()*y+s(),c&H(?);]p(?)
 End.
 
+/*Axiom "DA inverse differential ghost theory version".
+  [x'=f(x)&q(x);]p(x) <-> \exists y. [(y'=a(x)*y+b(x), x'=f(x))&q(x);]p(x)
+End.*/
+
 /* Formatter axioms for diff eqs. @todo unused except in tactics implementation of itself */
 Axiom ", commute".
   [c,d & H(?);]p(?) <-> [d,c & H(?);]p(?)

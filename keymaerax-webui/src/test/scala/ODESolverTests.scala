@@ -121,22 +121,23 @@ class InverseDiffGhostTests extends TacticTestSuite {
     helper.runTactic(tactic, node)
     node.openGoals().length shouldBe 1
     node.openGoals().last.sequent.succ.length shouldBe 1
-    node.openGoals().last.sequent.succ.last shouldBe (
+    node.openGoals().last.sequent.succ.last shouldBe
       "[{v' = a, x' = v & t >= 0}]x>0".asFormula
-      )
+
   }
 
   "Inverse Ghost" should "work when we don't have to reorder diffeq" in {
-    val f = "\\exists x ([{x' = 0*x + v, v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0)".asFormula
+    val f = "\\exists x ([{x' = 0*x+v, v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0)".asFormula
     println(ODETactics.InverseDiffAuxHelpers.axiomInstance(f).prettyString)
     val node = helper.formulaToNode(f)
     val tactic = ODETactics.inverseDiffAuxiliaryT(SuccPos(0))
     helper.runTactic(tactic, node)
     node.openGoals().length shouldBe 1
     node.openGoals().last.sequent.succ.length shouldBe 1
-    node.openGoals().last.sequent.succ.last shouldBe (
-        "[{v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0".asFormula)
+    node.openGoals().last.sequent.succ.last shouldBe
+      "[{v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0".asFormula
   }
+
 
   it should "then work on v as well" in {
     val f = "\\exists x ([{v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0)".asFormula
@@ -145,8 +146,8 @@ class InverseDiffGhostTests extends TacticTestSuite {
     helper.runTactic(tactic, node)
     node.openGoals().length shouldBe 1
     node.openGoals().last.sequent.succ.length shouldBe 1
-    node.openGoals().last.sequent.succ.last shouldBe (
-      "[{t' = 0*t + 1 & true & t >= 0}]x>0".asFormula)
+    node.openGoals().last.sequent.succ.last shouldBe
+      "[{t' = 0*t + 1 & true & t >= 0}]x>0".asFormula
   }
 
   it should "not work when time is all that's left" in {
