@@ -202,6 +202,7 @@ object KeYmaeraX {
       } else {
         println("Proof certificate: Skipped")
       }
+      //@todo Printing of Provable as text should be somewhere in LemmaDB functionalities.
       //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
       val evidence =
         s"""Tool.
@@ -210,6 +211,8 @@ object KeYmaeraX {
           |  proof ""
           |End.
           |""".stripMargin
+      //@note pretty-printing the result of parse ensures that the lemma states what's actually been proved.
+      assert(KeYmaeraXParser(KeYmaeraXPrettyPrinter(inputModel)) == inputModel, "parse of print is identity")
       //@todo why is this of the form bla <-> true instead of just bla?
       val lemmaContent =
         s"""Lemma "${inputFileName.substring(inputFileName.lastIndexOf('/')+1)}".
@@ -218,6 +221,7 @@ object KeYmaeraX {
           |""".stripMargin
 
       val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".proof").toString)
+      //@todo ensure that reparse of this lemma is as expected
       pw.write(lemmaContent + evidence)
       pw.close()
     } else {
@@ -267,6 +271,9 @@ object KeYmaeraX {
     }
 
     val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".mx").toString)
+    val reparse = KeYmaeraXParser(output)
+    assert(reparse == outputFml, "parse of print is identity")
+    pw.write("/* @evidence parse of print of ModelPlex proof output */\n")
     pw.write(output)
     pw.close()
   }

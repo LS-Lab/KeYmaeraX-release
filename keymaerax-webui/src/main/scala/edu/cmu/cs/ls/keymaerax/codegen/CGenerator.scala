@@ -16,28 +16,19 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
  */
 class CGenerator extends CodeGenerator {
 
-  def apply(kExpr: Expression): String = apply(kExpr, "long double")
-  def apply(kExpr: Expression, cDataType: String): String = generateCCode(kExpr, cDataType)
+  def apply(expr: Expression): String = apply(expr, "long double")
+  /** Generate C Code for given expression using the data type cDataType throughout */
+  def apply(expr: Expression, cDataType: String): String = generateCCode(expr, cDataType)
 
-  def generateCFileFromCCode(cCode: String, fileName: String) : File = {
-    val cTempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
-    val cFile = new File(cTempDir, fileName)
-    val writer = new FileWriter(cFile)
-    writer.write(cCode)
-    writer.flush()
-    writer.close()
-    cFile
+  private def generateCCode(expr: Expression, cDataType: String) : String = {
+    val includeLib = "#include <math.h>\n" +
+      "#include <stdbool.h>\n"
+    val funcHead = "bool monitor (" + parameterDec(expr, cDataType) + ")"
+    val funcBody = compileToC(expr)
+    includeLib + funcHead + " {\n" + "  return " + funcBody + ";" + "\n}"
   }
 
-  private def generateCCode(kExpr: Expression, cDataType: String) : String = {
-    val includeLib = "#include <math.h>" + "\n"
-    val funcHead = "int monitor (" + parameterDec(kExpr, cDataType) + ")"
-    val funcBody = compileToC(kExpr)
-    val program = includeLib + funcHead + " {\n" + "  return " + funcBody + ";" + "\n}"
-    program
-  }
-
-  def parameterDec(kExpr: Expression, cDataType: String) : String = {
+  private def parameterDec(kExpr: Expression, cDataType: String) : String = {
     var parameters = ""
     val allSortedNames = StaticSemantics.symbols(kExpr).toList.sorted
     if (allSortedNames.size > 0) {
@@ -59,7 +50,7 @@ class CGenerator extends CodeGenerator {
     parameters
   }
 
-  def compileToC(e: Expression) = e match {
+  private def compileToC(e: Expression) = e match {
     case t : Term => compileTerm(t)
     case f : Formula => compileFormula(f)
     case _ => ???
@@ -85,7 +76,7 @@ class CGenerator extends CodeGenerator {
   //    }
   //  }
 
-  def compileTerm(t: Term) : String = {
+  private def compileTerm(t: Term) : String = {
     require(t.sort == Real || t.sort == Unit, "can only deal with reals not with sort " + t.sort)
     t match {
       case Neg(c) => "(" + "-" + compileTerm(c) + ")"
@@ -118,7 +109,7 @@ class CGenerator extends CodeGenerator {
    * @param exp
    * @return
    */
-  def compilePower(base: Term, exp: Term) : String = {
+  private def compilePower(base: Term, exp: Term) : String = {
     if(base.equals(Number(0))) {
       "0"
     } else {
@@ -163,7 +154,7 @@ class CGenerator extends CodeGenerator {
   //    }
   //  }
 
-  def compileFormula(f: Formula) : String = {
+  private def compileFormula(f: Formula) : String = {
     f match {
       case Not(ff) => "(!" + compileFormula(ff) + ")"
       case And(l, r) => "(" + compileFormula(l) + "&&" + compileFormula(r) + ")"
