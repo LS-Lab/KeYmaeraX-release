@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
- * Uniform Substitution for KeYmaera
+ * Uniform Substitution for KeYmaera X
  * @author aplatzer
  * @author smitsch
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
@@ -253,7 +253,8 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    */
   def apply(s: Sequent): Sequent = {
     try {
-      Sequent(s.pref, s.ante.map(usubst), s.succ.map(usubst))
+      //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensuring contracts checked.
+      Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
     } catch {
       case ex: ProverException => throw ex.inContext(s.toString)
       case ex: IllegalArgumentException =>

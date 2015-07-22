@@ -896,6 +896,23 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
 
 
 /**
+ * Uniformly rename all occurrences of variable what (and its associated DifferentialSymbol) to repl.
+ * @param what What variable to replace (along with its associated DifferentialSymbol).
+ * @param repl The target variable to replace what with.
+ * @requires repl is fresh in the sequent.
+ * @author aplatzer
+ */
+case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
+  require(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
+  val name: String = "Uniform Renaming"
+  private val renaming: URename = URename(what, repl)
+
+  override def toString: String = name + "(" + what + "~>" + repl + ")"
+
+  def apply(s: Sequent): immutable.List[Sequent] = List(renaming(s))
+}
+
+/**
  * Performs bound renaming renaming all occurrences of variable what
  * (and its associated DifferentialSymbol) to repl.
  * @param what What variable (and its associated DifferentialSymbol) to replace.
