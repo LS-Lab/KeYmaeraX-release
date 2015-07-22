@@ -115,11 +115,11 @@ class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "consolidate sequent from many formulas" in {
-    val s = sequent(Nil, "xa>0".asFormula :: "xb>1".asFormula :: "xc>2".asFormula :: Nil, "ya<0".asFormula :: "yb<1".asFormula :: Nil)
+    val s = sequent(Nil, "xa>0".asFormula :: "xb>1".asFormula :: "xc>2".asFormula :: Nil, "ya<0".asFormula :: "yb<1".asFormula :: "yc<2".asFormula :: Nil)
     val result = helper.runTactic(ConsolidateSequentT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante shouldBe empty
-    result.openGoals().head.sequent.succ should contain only "xa>0&xb>1&xc>2 -> ya<0|yb<1".asFormula
+    result.openGoals().head.sequent.succ should contain only "xa>0&xb>1&xc>2 -> ya<0|yb<1|yc<2".asFormula
   }
 
   it should "consolidate sequent from many formulas (containing conjunctions and disjunctions)" in {
@@ -130,6 +130,14 @@ class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().head.sequent.succ should contain only "xa>0&xb>1&(xc>2&xd>3) -> (ya<0|yc<2)|yb<1".asFormula
   }
 
+  it should "consolidate sequent when antecedent is empty and succedent contains only 1 formula" in {
+    val s = sequent(Nil, Nil, "ya<0".asFormula :: Nil)
+    val result = helper.runTactic(ConsolidateSequentT, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "ya<0".asFormula
+  }
+
   it should "consolidate sequent when antecedent is empty" in {
     val s = sequent(Nil, Nil, "ya<0".asFormula :: "yb<1".asFormula :: Nil)
     val result = helper.runTactic(ConsolidateSequentT, new RootNode(s))
@@ -138,12 +146,28 @@ class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().head.sequent.succ should contain only "ya<0|yb<1".asFormula
   }
 
+  it should "consolidate sequent when succedent is empty and antecedent contains only 1 formula" in {
+    val s = sequent(Nil, "xa>0".asFormula :: Nil, Nil)
+    val result = helper.runTactic(ConsolidateSequentT, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "xa>0 -> !(xa>0)".asFormula
+  }
+
   it should "consolidate sequent when succedent is empty" in {
     val s = sequent(Nil, "xa>0".asFormula :: "xb>1".asFormula :: "xc>2".asFormula :: Nil, Nil)
     val result = helper.runTactic(ConsolidateSequentT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante shouldBe empty
     result.openGoals().head.sequent.succ should contain only "xa>0&xb>1&xc>2 -> !(xa>0&xb>1&xc>2)".asFormula
+  }
+
+  it should "consolidate sequent when both antecedent and succedent are empty" in {
+    val s = sequent(Nil, Nil, Nil)
+    val result = helper.runTactic(ConsolidateSequentT, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ shouldBe empty
   }
 
   "ImplyToAndT" should "rewrite an implication to a negated conjunction" in {
