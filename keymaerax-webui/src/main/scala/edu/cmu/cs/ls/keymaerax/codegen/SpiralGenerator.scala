@@ -54,7 +54,7 @@ class SpiralGenerator extends CodeGenerator {
       "# *************************\n"
 
   private val libs = "# imports\n" +
-    "Import(spl, formgen, code, rewrite, transforms, search, compiler, sigma, platforms, platforms.sse, paradigms.common, paradigms.vector, paradigms.cache, libgen, backend);\n" +
+//    "Import(spl, formgen, code, rewrite, transforms, search, compiler, sigma, platforms, platforms.sse, paradigms.common, paradigms.vector, paradigms.cache, libgen, backend);\n" +
     "ImportAll(packages.hacms);\n" +
     "ImportAll(paradigms.vector);\n\n"
 
@@ -103,7 +103,8 @@ class SpiralGenerator extends CodeGenerator {
    */
   def generateSpiralMonitor(kExpr: Expression, vars: List[Variable], fileName: String) : (String, String) = {
     val polynomialMode = vars.nonEmpty
-    val spiralMonitor = compileToSpiral(kExpr, vars)
+    val sortedRlvtVars = getSortedRelevantVars(kExpr, vars)
+    val spiralMonitor = compileToSpiral(kExpr, sortedRlvtVars)
     hcol.setMonitor(spiralMonitor)
     val gCode = infoG(fileName) + libs + {if(polynomialMode) "# declare constant table\n" + hcol.getConstTbl else ""} + monDec + hcol.getMonitor + "\n;\n"
     val hCode =
@@ -127,6 +128,7 @@ class SpiralGenerator extends CodeGenerator {
       case Times(l, r) => "mul(" + compileTerm(l) + ", " + compileTerm(r) + ")"
       case Divide(l, r) => "div(" + compileTerm(l) + ", " + compileTerm(r) + ")"
       case Power(l, r) => "pow(" + compileTerm(l) + ", " + compileTerm(r) + ")"
+
       // atomic terms
       case Number(n) =>
         assert(n.isValidDouble || n.isValidLong, throw new CodeGenerationException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
@@ -152,16 +154,29 @@ class SpiralGenerator extends CodeGenerator {
       case Not(ff) => "logic_neg(" + compileFormula(ff, vars) + ")"
       case And(l, r) => "logic_and(" + compileFormula(l, vars) + ", " + compileFormula(r, vars) + ")"
       case Or(l, r) => "logic_or(" + compileFormula(l, vars) + ", " + compileFormula(r, vars) + ")"
-      case Imply(l, r) => "logic_impl(" + compileFormula(l, vars) + ", " + compileFormula(r, vars) + ")"
+      case Imply(l, r) => "logic_or(" + "logic_neg(" + compileFormula(l, vars) + ")" + ", " + compileFormula(r, vars) + ")"
       case Equiv(l, r) => "logic_equiv(" + compileFormula(l, vars) + ", " + compileFormula(r, vars) + ")"
 
       // sub terms are arithmetic terms
-      case Equal(l, r) => "TEqual(" + compilePolynomialTerm(l, vars) + ", " + compilePolynomialTerm(r, vars) + ")"
-      case NotEqual(l, r) => "TNotEqual(" + compilePolynomialTerm(l, vars) + ", " + compilePolynomialTerm(r, vars) + ")"
-      case Greater(l,r) => "TLess(" + compilePolynomialTerm(r, vars) + ", " + compilePolynomialTerm(l, vars) + ")"
-      case GreaterEqual(l,r) => "TLessEqual(" + compilePolynomialTerm(r, vars) + ", " + compilePolynomialTerm(l, vars) + ")"
-      case Less(l,r) => "TLess(" + compilePolynomialTerm(l, vars) + ", " + compilePolynomialTerm(r, vars) + ")"
-      case LessEqual(l,r) => "TLessEqual(" + compilePolynomialTerm(l, vars) + ", " + compilePolynomialTerm(r, vars) + ")"
+      case Equal(l, r) =>
+        if(isPolynomialTerm(l) & isPolynomialTerm(r)) "TEqual(" + compilePolynomialTerm(Minus(l, r), vars) + ", TReal.value(0))"
+        else "TEqual(" + compilePolynomialTerm(l, vars) + ", " + compilePolynomialTerm(r, vars) + ")"
+      case NotEqual(l, r) =>
+        if(isPolynomialTerm(l) & isPolynomialTerm(r)) "TNot(TEqual(" + compilePolynomialTerm(Minus(l, r), vars) + ", TReal.value(0)))"
+        else "TNot(TEqual(" + compilePolynomialTerm(l, vars) + ", " + compilePolynomialTerm(r, vars) + "))"
+      case Greater(l,r) =>
+        if(isPolynomialTerm(l) & isPolynomialTerm(r)) "TLess(" + compilePolynomialTerm(Minus(r, l), vars) + ", TReal.value(0))"
+        else "TLess(" + compilePolynomialTerm(r, vars) + ", " + compilePolynomialTerm(l, vars) + ")"
+      case GreaterEqual(l,r) =>
+        if(isPolynomialTerm(l) & isPolynomialTerm(r)) "TNot(TLess(" + compilePolynomialTerm(Minus(l, r), vars) + ", TReal.value(0)))"
+        else "TNot(TLess(" + compilePolynomialTerm(l, vars) + ", " + compilePolynomialTerm(r, vars) + "))"
+      case Less(l,r) =>
+        if(isPolynomialTerm(l) & isPolynomialTerm(r)) "TLess(" + compilePolynomialTerm(Minus(l, r), vars) + ", TReal.value(0))"
+        else "TLess(" + compilePolynomialTerm(l, vars) + ", " + compilePolynomialTerm(r, vars) + ")"
+      case LessEqual(l,r) =>
+        if(isPolynomialTerm(l) & isPolynomialTerm(r)) "TNot(TLess(" + compilePolynomialTerm(Minus(r, l), vars) + ", TReal.value(0)))"
+        else "TNot(TLess(" + compilePolynomialTerm(r, vars) + ", " + compilePolynomialTerm(l, vars) + "))"
+
       case True => "true"
       case False => "false"
       case Box(_, _) | Diamond(_, _) => throw new CodeGenerationException("Conversion of Box or Diamond modality is not allowed")
@@ -170,25 +185,33 @@ class SpiralGenerator extends CodeGenerator {
   }
 
   private def compilePolynomialTerm(t: Term, vars: List[Variable]) : String = {
-    // only convert to mathVar if the relevant is relevant (appeared) in t
-    val allSortedNames = StaticSemantics.symbols(t).toList.sorted
-    var mathVarsRelevant = List[Expr]()
-    for(i <- vars.indices) {
-      if(allSortedNames.contains(vars.apply(i)))
-        mathVarsRelevant = KeYmaeraToMathematica.fromKeYmaera(vars.apply(i)) :: mathVarsRelevant
-    }
-    if(mathVarsRelevant.isEmpty) {    // no relevant variable, then t is not polynomial
+    if(getSortedRelevantVars(t, vars).isEmpty) { // t is not real polynomial
       compileTerm(t)
-    } else {    // t is polynomial
-      assert(mathVarsRelevant.nonEmpty)
-      // sort mathVars
-      val mathVarsSorted = mathVarsRelevant.sortWith(_.toString < _.toString)
+    } else {
+      val mathVarsSorted = vars.map(v => KeYmaeraToMathematica.fromKeYmaera(v))
       val mathTerm = KeYmaeraToMathematica.fromKeYmaera(t)
       if(mathVarsSorted.length==1) {   // one relevant variable, t is single polynomial
         compileSinglePoly(mathTerm, mathVarsSorted)
       } else {    // more than one relevant variable, t is multi polynomial
         compileMultiPoly(mathTerm, mathVarsSorted)
       }
+    }
+  }
+
+  private def getSortedRelevantVars(e: Expression, vars: List[Variable]) : List[Variable] = {
+    val allSortedNames = StaticSemantics.symbols(e).toList.sorted
+    var sortedRelevantVars = List[Variable]()
+    for(i <- vars.indices) {
+      if(allSortedNames.contains(vars.apply(i)))
+        sortedRelevantVars = vars.apply(i) :: sortedRelevantVars
+    }
+    sortedRelevantVars.sortWith(_.toString < _.toString)
+  }
+
+  private def isPolynomialTerm(t: Term) : Boolean = {
+    t match {
+      case FuncOf(fn, child) => !(fn.name == "Abs" | fn.name == "DChebyshev")
+      case _ => true
     }
   }
 
@@ -214,18 +237,7 @@ class SpiralGenerator extends CodeGenerator {
     } else compilePolyCoeff(vectorName, coeffVector, 1)
   }
 
-  private def compileMultiPoly(mathTerm: Expr, mathVarsSorted: List[Expr]) : String = {
-    // todo
-    ???
-//    val resCoeffMap = computeCoeff(mathTerm, mathVarsSorted)
-//    println("resCoeffMap for mp is " + resCoeffMap)
-//    val varNumber = mathVarsSorted.length
-//    println("varNumber is " + varNumber)
-//    val maxDegree = 2
-//    val length = 1 + varNumber*maxDegree + maxDegree*(maxDegree-1)/2 // length of the vector
-//    println("multi polynomial coefficient vector length is " + length)
-//    ""
-  }
+  private def compileMultiPoly(mathTerm: Expr, mathVarsSorted: List[Expr]) : String = ???
 
   private def computeCoeff(t: Expr, vars: List[Expr]) : Expr = {
     var mathCmd = ""
@@ -233,13 +245,7 @@ class SpiralGenerator extends CodeGenerator {
       mathCmd = "CoefficientList[" + t + "," + vars.head + "]"
     else {
       assert(vars.length > 1)
-      var varList = ""
-      for(i <- vars.indices) {
-        varList += vars.apply(i).toString
-        if(i != vars.length-1) varList += ", "
-      }
-      println("varList is " + varList)
-      mathCmd = "CoefficientRules[" + t + "," + "{" + varList + "}" + "]"
+      mathCmd = "CoefficientRules[" + t + "," + "{" + vars.mkString(", ") + "}" + "]"
     }
     link.ml.evaluate(mathCmd)
     link.ml.waitForAnswer()
