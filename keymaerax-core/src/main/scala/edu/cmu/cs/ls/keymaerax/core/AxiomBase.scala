@@ -440,7 +440,7 @@ Axiom "DA differential ghost".
   /* [x'=f(x)&q(x);]p(x) <-> \exists y. [(x'=f(x),y'=a(x)*y+b(x))&q(x);]p(x) THEORY */
 End.
 
-/* Inverse Differentual Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work. */
+/* Inverse Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work. */
 Axiom "DA inverse differential ghost".
   [c&H(?);]p(?) <-> \exists y. [y'=t()*y+s(),c&H(?);]p(?)
 End.
@@ -448,6 +448,19 @@ End.
 /*Axiom "DA inverse differential ghost theory version".
   [x'=f(x)&q(x);]p(x) <-> \exists y. [(y'=a(x)*y+b(x), x'=f(x))&q(x);]p(x)
 End.*/
+
+/* DG differential ghost, general Lipschitz case */
+Axiom "DG differential Lipschitz ghost".
+  ([x'=f(x)&q(x);]p(x) <-> \exists y. [(x'=f(x),y'=g(x,y))&q(x);]p(x))
+  <- (\exists L \forall x \forall y \forall z (y>=z -> (-L*(y-z) <= g(x,y)-g(x,z) & g(x,y)-g(x,z) <= L*(y-z)))
+End.
+
+/* DG differential ghost, general Lipschitz case, system case */
+Axiom "DG differential Lipschitz ghost system".
+  /* @see "DG differential Lipschitz ghost" THEORY */
+  [c&H(?);]p(?) <-> \exists y. [c,y'=g(?)&H(?);]p(?)
+  <- (\exists L \forall x \forall a \forall b \forall u \forall v (a>=b -> [y:=a;u:=g(?);y:=b;v:=g(?)] (-L*(a-b) <= u-v & u-v <= L*(a-b)))
+End.
 
 /* Formatter axioms for diff eqs. @todo unused except in tactics implementation of itself */
 Axiom ", commute".
