@@ -106,7 +106,7 @@ class SpiralGenerator extends CodeGenerator {
     val sortedRlvtVars = getSortedRelevantVars(kExpr, vars)
     val spiralMonitor = compileToSpiral(kExpr, sortedRlvtVars)
     hcol.setMonitor(spiralMonitor)
-    val gCode = infoG(fileName) + libs + {if(polynomialMode) "# declare constant table\n" + hcol.getConstTbl else ""} + monDec + hcol.getMonitor + "\n;\n"
+    val gCode = infoG(fileName) + libs + {if(polynomialMode) "# declare constant table\n" + hcol.getConstTbl + "\n" else ""} + monDec + hcol.getMonitor + "\n;\n"
     val hCode =
       if(polynomialMode) infoH(fileName) + ifnDef(fileName) + define(fileName) + hcol.getCoefficientHex + endIf
       else ""
@@ -217,7 +217,6 @@ class SpiralGenerator extends CodeGenerator {
 
   private def compileSinglePoly(mathTerm: Expr, mathVarsSorted: List[Expr]) : String = {
     val resCoeffList = computeCoeff(mathTerm, mathVarsSorted)
-    println("resCoeffList is: " + resCoeffList)
     val resCoeffListLength = resCoeffList.length()
     var coeffVector: Array[Expression] = new Array[Expression](resCoeffListLength)
     val coeffVectorDouble: Array[Double] = new Array[Double](resCoeffListLength)
