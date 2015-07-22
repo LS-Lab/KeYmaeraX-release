@@ -592,7 +592,7 @@ End.
  * Formatter axioms for diff eqs.
  */
  Axiom ", commute".
-  [c,d&H(?);] <-> [d,c&H(?);]
+  [c,d&H(?);]p(?) <-> [d,c&H(?);]p(?)
 End.
 
 /**

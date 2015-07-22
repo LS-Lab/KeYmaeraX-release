@@ -109,7 +109,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
     result.openGoals() should have size 1
     // TODO expected succedent
     result.openGoals().head.sequent.succ should contain only "true".asFormula
-  } 
+  }
 }
 
 class InverseDiffGhostTests extends TacticTestSuite {
