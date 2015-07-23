@@ -324,26 +324,21 @@ object KeYmaeraX {
     }
 
     if(options.get('format).get.toString == "C") {
-      if (options.contains('vars)) {
-        val vars = options.get('vars).get.asInstanceOf[Array[Variable]].toList
-        if (true) //(vars.sorted != vars)
-          println("-vars option is currently ignored in C generation")
-        //@todo implement
-      }
-      val output = CGenerator(inputFormula)
+      val vars: List[Variable] =
+        if(options.contains('vars)) options.get('vars).get.asInstanceOf[Array[Variable]].toList
+        else Nil
+      val output = CGenerator(inputFormula, vars, inputFileName)
       val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".c").toString)
       pw.write(stampHead(options))
       pw.write("/* @evidence: print of CGenerator of input */\n\n")
       pw.write(output)
       pw.close()
     } else if(options.get('format).get.toString == "Spiral") {
-      val sGen = new SpiralGenerator
       var outputG = ""
-      var outputH = ""
       if (options.contains('vars)) {
-        val output = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)
+        val output = SpiralGenerator(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)
         outputG = output._1
-        outputH = output._2
+        val outputH = output._2
         val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
         pwG.write(stampHead(options))
         pwG.write(outputG)
@@ -353,7 +348,7 @@ object KeYmaeraX {
         pwH.write(outputH)
         pwH.close()
       } else {
-        outputG = sGen(inputFormula, inputFileName)
+        outputG = SpiralGenerator(inputFormula, inputFileName)
         val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
         pwG.write(stampHead(options))
         pwG.write(outputG)

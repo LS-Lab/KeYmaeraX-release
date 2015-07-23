@@ -2,6 +2,8 @@
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
+
+import edu.cmu.cs.ls.keymaerax.core.Variable
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.codegen.{CodeGenerationException, CGenerator}
@@ -10,37 +12,36 @@ import edu.cmu.cs.ls.keymaerax.codegen.{CodeGenerationException, CGenerator}
  * Created by ran on 6/22/15.
  * @author Ran Ji
  */
-class CCodeGeneratorTests extends FlatSpec with Matchers with BeforeAndAfterEach {
-  val cGen = CGenerator
+class CCodeGeneratorTests extends FlatSpec with Matchers {
 
   // terms
 
   "Numbers" should "compile floating point" in {
-    cGen.apply("2+1.5>3.25".asFormula) should be  ("#include <math.h>\nint monitor () {\n  return ((2+1.5)>3.25);\n}")
+    CGenerator("2+1.5>3.25".asFormula, List(Variable("x"),Variable("y"))) should be  ("#include <math.h>\nint monitor () {\n  return ((2+1.5)>3.25);\n}")
   }
 
   it should "compile large number" in {
-    cGen.apply("9223372036854775807>1".asFormula) should be  ("#include <math.h>\nint monitor () {\n  return (9223372036854775807>1);\n}")
+    CGenerator("9223372036854775807>1".asFormula) should be  ("#include <math.h>\nint monitor () {\n  return (9223372036854775807>1);\n}")
   }
 
   it should "throw exception for too large number" in {
-    a [CodeGenerationException] should be thrownBy cGen.apply("92233720368547758079>1".asFormula)
+    a [CodeGenerationException] should be thrownBy CGenerator("92233720368547758079>1".asFormula)
   }
 
   "variables" should "compile with index" in {
-    cGen.apply("x*z-y_1>1".asFormula) should be  ("#include <math.h>\nint monitor (long double x, long double y_1, long double z) {\n  return (((x*z)-y_1)>1);\n}")
+    CGenerator("x*z-y_1>1".asFormula, List(Variable("x"))) should be  ("#include <math.h>\nint monitor (long double x, long double y_1, long double z) {\n  return (((x*z)-y_1)>1);\n}")
   }
 
   "power"  should "compile int exp" in {
-    cGen.apply("x^3>1".asFormula) should be  ("#include <math.h>\nint monitor (long double x) {\n  return ((x*x*x)>1);\n}")
+    CGenerator("x^3>1".asFormula) should be  ("#include <math.h>\nint monitor (long double x) {\n  return ((x*x*x)>1);\n}")
   }
 
   it should "compile neg int exp" in {
-    cGen.apply("(x+y)^-3>1".asFormula) should be  ("#include <math.h>\nint monitor (long double x, long double y) {\n  return ((1/((x+y)*(x+y)*(x+y)))>1);\n}")
+    CGenerator("(x+y)^-3>1".asFormula) should be  ("#include <math.h>\nint monitor (long double x, long double y) {\n  return ((1/((x+y)*(x+y)*(x+y)))>1);\n}")
   }
 
   it should "compile any exp" in {
-    cGen.apply("x()^y_0>1".asFormula) should be  ("#include <math.h>\nint monitor (long double x, long double y_0) {\n  return ((pow(x,y_0))>1);\n}")
+    CGenerator("x()^y_0>1".asFormula) should be  ("#include <math.h>\nint monitor (long double x, long double y_0) {\n  return ((pow(x,y_0))>1);\n}")
   }
 
   // formulas
@@ -59,7 +60,7 @@ class CCodeGeneratorTests extends FlatSpec with Matchers with BeforeAndAfterEach
       "((((-B)<=af)&&(af<=A))&&(((((((xfPost==xf)&&(vfPost==vf))&&(afPost==af))&&(xlPost==xl))&&(vlPost==vl))&&(alPost==al))&&(tPost==0))))||" +
       "(((vf==0)&&(((((((xfPost==xf)&&(vfPost==vf))&&(afPost==0))&&(xlPost==xl))&&(vlPost==vl))&&(alPost==al))&&(tPost==0)))||" +
       "((((-B)<=af)&&(af<=(-b)))&&(((((((xfPost==xf)&&(vfPost==vf))&&(afPost==af))&&(xlPost==xl))&&(vlPost==vl))&&(alPost==al))&&(tPost==0))))));\n}"
-    cGen.apply(input) should be (outputC)
+    CGenerator(input) should be (outputC)
   }
 
   "RSS passive safety modelplex in place" should "generate C code" in {
@@ -71,7 +72,7 @@ class CCodeGeneratorTests extends FlatSpec with Matchers with BeforeAndAfterEach
       "{\n  return ((((((((((((xPost==x)&&(yPost==y))&&(vPost==v))&&(aPost==(-b)))&&(wPost==w))&&(dxPost==dx))&&(dyPost==dy))&&(rPost==r))&&(oxPost==ox))&&(oyPost==oy))&&(tPost==0))||" +
       "(((v==0)&&(((((((((((xPost==x)&&(yPost==y))&&(vPost==v))&&(aPost==0))&&(wPost==0))&&(dxPost==dx))&&(dyPost==dy))&&(rPost==r))&&(oxPost==ox))&&(oyPost==oy))&&(tPost==0)))||" +
       "((((-b)<=a)&&(a<=A))&&((r>0)&&(((w*r)==v)&&(((fabsl((x-ox))>(((v*v)/(2*b))+(((A/b)+1)*(((A/2)*(ep*ep))+(ep*v)))))||(fabsl((y-oy))>(((v*v)/(2*b))+(((A/b)+1)*(((A/2)*(ep*ep))+(ep*v))))))&&(((((((((((xPost==x)&&(yPost==y))&&(vPost==v))&&(aPost==a))&&(wPost==w))&&(dxPost==dx))&&(dyPost==dy))&&(rPost==r))&&(oxPost==ox))&&(oyPost==oy))&&(tPost==0))))))));\n}"
-    cGen.apply(input) should be (outputC)
+    CGenerator(input) should be (outputC)
   }
 
   "VSL modelplex in place" should "generate C code" in {
@@ -99,6 +100,6 @@ class CCodeGeneratorTests extends FlatSpec with Matchers with BeforeAndAfterEach
       "(((((((x1Post==x1)&&(v1Post==v1))&&(a1Post==a1))&&(tPost==0))&&(vslPost==vsl))&&(xslPost==xsl))||" +
       "(((vsl>=0)&&(xsl>=((x1+(((v1*v1)-(vsl*vsl))/(2*B)))+(((A/B)+1)*(((A/2)*(ep*ep))+(ep*v1))))))&&" +
       "((((((x1Post==x1)&&(v1Post==v1))&&(a1Post==a1))&&(tPost==0))&&(vslPost==vsl))&&(xslPost==xsl))))))));\n}"
-    cGen.apply(input) should be (outputC)
+    CGenerator(input) should be (outputC)
   }
 }
