@@ -87,6 +87,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   private def rename(formula: Formula): Formula = {
     formula match {
       case PredOf(p, theta)        => PredOf(p, rename(theta))
+      //@todo eisegesis
       case PredicationalOf(p, fml) => PredicationalOf(p, rename(fml))
       case DotFormula | True | False => formula
 
@@ -121,6 +122,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   private def rename(program: Program): Program = {
     program match {
+      //@todo eisegesis
       case a: ProgramConst             => a
       case Assign(x, e) if x==what     => Assign(repl, rename(e))
       case Assign(x, e) if x==repl     => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
@@ -146,6 +148,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
       case AtomicODE(DifferentialSymbol(x), e) if x==what => AtomicODE(DifferentialSymbol(repl), rename(e))
       case AtomicODE(DifferentialSymbol(x), e) if x==repl => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
       case AtomicODE(xp, e)            => assert(xp.x!=what && xp.x!=repl); AtomicODE(xp, rename(e))
+      //@todo eisegesis
       case c: DifferentialProgramConst => c
       // homomorphic cases
       case DifferentialProduct(a, b) => DifferentialProduct(renameODE(a), renameODE(b))
