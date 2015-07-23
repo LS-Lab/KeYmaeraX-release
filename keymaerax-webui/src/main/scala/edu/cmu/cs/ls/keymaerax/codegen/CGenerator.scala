@@ -76,6 +76,7 @@ class CGenerator extends CodeGenerator {
   //    }
   //  }
 
+  //@todo do not use this parentheses style because it's locally incorrect. Use the local parentheses style commented out above 
   private def compileTerm(t: Term) : String = {
     require(t.sort == Real || t.sort == Unit, "can only deal with reals not with sort " + t.sort)
     t match {

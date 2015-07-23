@@ -43,7 +43,7 @@ object KeYmaeraX {
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
       |  -verify   check the resulting proof certificate (recommended)
-      |  -noverify skip checking proof certificates
+      |  -noverify skip checking proof certificates after proof search
       |  -interactive starts a simple command-line prover if -prove fails
       |  -lax      enable lax mode with more flexible parser input and printer output etc.
       |  -strict   enable strict mode with no flexibility in prover
@@ -92,8 +92,8 @@ object KeYmaeraX {
           // aditional options
           case "-mathkernel" :: value :: tail => nextOption(map ++ Map('mathkernel -> value), tail)
           case "-jlink" :: value :: tail => nextOption(map ++ Map('jlink -> value), tail)
-          case "-noverify" :: tail => nextOption(map ++ Map('verify -> false), tail)
-          case "-verify" :: tail => nextOption(map ++ Map('verify -> true), tail)
+          case "-noverify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> false), tail)
+          case "-verify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> true), tail)
           // global options
           case "-lax" :: tail => System.setProperty("LAX", "true"); nextOption(map, tail)
           case "-strict" :: tail => System.setProperty("LAX", "false"); nextOption(map, tail)
@@ -200,7 +200,7 @@ object KeYmaeraX {
         assert(inputSequent == proved, "Proved the original problem and not something else")
         println("Proof certificate: Passed")
       } else {
-        println("Proof certificate: Skipped")
+        println("Proof certificate: Skipped extraction of proof certificate from proof search\n (use -verify to generate and check proof certificate)")
       }
       //@todo Printing of Provable as text should be somewhere in LemmaDB functionalities.
       //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
