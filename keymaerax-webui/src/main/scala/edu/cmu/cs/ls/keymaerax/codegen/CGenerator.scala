@@ -25,7 +25,8 @@ object CGenerator extends CodeGenerator {
       "#include <stdbool.h>\n\n"
     val funcHead = "bool monitor (" + parameterDeclaration(expr, cDataType) + ")"
     val funcBody = compileToC(expr)
-    includeLib + funcHead + " {\n" + "  return " + funcBody + ";" + "\n}"
+    //@note gcc -Wall -Wextra -Werror -std=c99 -pedantic absolutely wants "newline at end of file" -Wnewline-eof
+    includeLib + funcHead + " {\n" + "  return " + funcBody + ";" + "\n}\n\n"
   }
 
   private def parameterDeclaration(kExpr: Expression, cDataType: String) : String =
