@@ -35,7 +35,7 @@ class Hcol {
   def setCoefficients(ceh : String) = this.coeffs = ceh
 }
 
-class SpiralGenerator extends CodeGenerator {
+object SpiralGenerator extends CodeGenerator {
   def apply(kExpr: Expression): String = apply(kExpr, Nil, "")._1
   def apply(kExpr: Expression, fileName: String) : String = apply(kExpr, Nil, fileName)._1
   def apply(kExpr: Expression, vars: List[Variable], fileName: String): (String, String) = generateSpiralMonitor(kExpr, vars, fileName)
