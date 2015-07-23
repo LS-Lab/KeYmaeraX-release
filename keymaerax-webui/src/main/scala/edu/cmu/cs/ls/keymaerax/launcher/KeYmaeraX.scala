@@ -265,8 +265,11 @@ object KeYmaeraX {
     val inputFileName = options.get('in).get.toString
     val input = scala.io.Source.fromFile(inputFileName).mkString
     val inputModel = KeYmaeraXProblemParser(input)
+    val verifyOption = options.getOrElse('verify, true).asInstanceOf[Boolean]
 
-    if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
+    val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".mx").toString)
+
+    if (verifyOption) {
       //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
       System.err.println("Cannot yet verify ModelPlex proof certificates")
 
@@ -279,12 +282,10 @@ object KeYmaeraX {
     }
 
     val outputFml = if (options.contains('vars))
-      ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList)(inputModel)
+      ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList, verifyOption)(inputModel)
     else
-      ModelPlex(inputModel)
+      ModelPlex(inputModel, verifyOption)
     val output = KeYmaeraXPrettyPrinter(outputFml)
-
-    val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".mx").toString)
 
     val reparse = KeYmaeraXParser(output)
     assert(reparse == outputFml, "parse of print is identity")

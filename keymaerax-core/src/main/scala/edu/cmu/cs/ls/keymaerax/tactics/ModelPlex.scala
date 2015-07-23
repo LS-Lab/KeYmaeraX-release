@@ -39,12 +39,12 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
    * @todo Add a parameter to determine controller monitor versus model monitor versus prediction monitor.
    */
-  def apply(formula: Formula): Formula = formula match {
+  def apply(formula: Formula, checkProvable: Boolean = true): Formula = formula match {
     case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
       //@todo explicitly address DifferentialSymbol instead of exception
       val vars = StaticSemantics.boundVars(controller).toSymbolSet.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
       val sortedVars = vars.sortWith((x,y)=>x<y)
-      (apply(sortedVars))(formula)
+      (apply(sortedVars, checkProvable))(formula)
     case _ => throw new IllegalArgumentException("Unsupported shape of formula " + formula)
   }
 
@@ -52,7 +52,14 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
     * @todo Add a parameter to determine controller monitor versus model monitor versus prediction monitor.
     */
-  def apply(vars: List[Variable], checkProvable: Boolean = true): (Formula => Formula) = formula => {
+  def apply(vars: List[Variable]): (Formula => Formula) = apply(vars, true)
+
+  /**
+   * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
+   * @todo Add a parameter to determine controller monitor versus model monitor versus prediction monitor.
+   * @param checkProvable true to check the Provable proof certificates (recommended).
+   */
+  def apply(vars: List[Variable], checkProvable: Boolean): (Formula => Formula) = formula => {
     if (checkProvable) throw new IllegalArgumentException("checking Provable not yet implemented for ModelPlex")
     val mxInputFml = modelplexControllerMonitorTrafo(formula, vars)
     val mxInputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
