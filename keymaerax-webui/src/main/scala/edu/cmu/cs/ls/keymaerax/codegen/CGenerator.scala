@@ -20,14 +20,14 @@ object CGenerator extends CodeGenerator {
   def apply(expr: Expression, cDataType: String, vars: List[Variable], fileName: String): String = generateCCode(expr, cDataType, vars, fileName)
 
   private def generateCCode(expr: Expression, cDataType: String, vars: List[Variable], fileName: String) : String = {
-    val relevantVarsSet = vars.toSet.intersect(StaticSemantics.symbols(expr).toSet)
-    if(!relevantVarsSet.equals(vars.toSet))
-      println("Warning! -vars contains unkonwn variables {" + vars.toSet.diff(relevantVarsSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "}, which will be ignored")
-    val calledFuncs = getCalledFuncs(expr, relevantVarsSet)
+    val relevantVars = getRelevantVars(expr, vars)
+    if(!relevantVars.toSet.equals(vars.toSet))
+      println("[warning] -vars contains unkonwn variables {" + vars.toSet.diff(relevantVars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "}, which will be ignored")
+    val calledFuncs = getCalledFuncs(expr, relevantVars)
     val includeLib = "#include <math.h>\n" +
       "#include <stdbool.h>\n\n"
     val funcHead = "/* monitor */\n" +
-      "bool monitor (" + parameterDeclaration(expr, cDataType, vars) + ")"
+      "bool monitor (" + parameterDeclaration(expr, cDataType, relevantVars) + ")"
     val funcBody = compileToC(expr, calledFuncs)
     infoC(fileName) + includeLib + FuncCallDeclaration(calledFuncs, cDataType) + funcHead + " {\n" + "  return " + funcBody + ";" + "\n}\n\n"
     //@note gcc -Wall -Wextra -Werror -std=c99 -pedantic absolutely wants "newline at end of file" -Wnewline-eof
@@ -54,7 +54,17 @@ object CGenerator extends CodeGenerator {
     }
   }
 
-  private def getCalledFuncs(expr: Expression, varsSet: Set[NamedSymbol]): Set[NamedSymbol] = StaticSemantics.symbols(expr).toSet.diff(varsSet)
+  private def getRelevantVars(e: Expression, vars: List[Variable]) : List[Variable] = {
+    val allSymbolNames = StaticSemantics.symbols(e).toList
+    var relevantVars = List[Variable]()
+    for(i <- vars.indices) {
+      if(allSymbolNames.contains(vars.apply(i)))
+        relevantVars = vars.apply(i) :: relevantVars
+    }
+    relevantVars.reverse
+  }
+
+  private def getCalledFuncs(expr: Expression, vars: List[Variable]): Set[NamedSymbol] = StaticSemantics.symbols(expr).toSet.diff(vars.toSet)
 
   private def FuncCallDeclaration(calledFuncs: Set[NamedSymbol], cDataType: String): String = {
     if(calledFuncs.nonEmpty) {
