@@ -126,11 +126,14 @@ import scala.collection.immutable.{List, Map}
  * @param subgoal The subgoal of provable that this ProofNode is trying to prove.
  */
 sealed class ProofNode protected (val parent : ProofNode, val provable: Provable, val subgoal: Int) {
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+
   /**
    * The (closed) Provable this ProofNode proves if isClosed.
    * Finds an alternative that it can successively merge via
    * Provability.apply(Provable, Int) to yield an isProved().
    * @requires(isClosed)
+   * @todo should generalize to generate a Provable with !.isProved when !this.isClosed()
    */
   final def provableWitness : Provable = {
     // probably not proved if isClosed status is not even set (may be conservatively incorrect)
@@ -142,8 +145,8 @@ sealed class ProofNode protected (val parent : ProofNode, val provable: Provable
       case Some(step) => step
       case None => assert(false, "isClosed() should imply that there is at least one alternative ProofStep that is closed"); ???
     }
-    assert(orStep.conclusion == sequent && orStep.goal.sequent == sequent, "The alternative's ProofStep\n" + orStep + " fits to this ProofNode\n" + this)
-    assert(orStep.goal == this, "Goal of the alternative or-branch ProofStep is this")
+    assert(!DEBUG || orStep.conclusion == sequent && orStep.goal.sequent == sequent, "The alternative's ProofStep\n" + orStep + " fits to this ProofNode\n" + this)
+    assert(!DEBUG || orStep.goal == this, "Goal of the alternative or-branch ProofStep is this")
     if (orStep.subgoals.isEmpty) {
       // apply the closing rule
       val done = provable(orStep.rule, subgoal)

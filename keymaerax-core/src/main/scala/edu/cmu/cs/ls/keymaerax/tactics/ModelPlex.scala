@@ -52,19 +52,24 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
     * @todo Add a parameter to determine controller monitor versus model monitor versus prediction monitor.
     */
-  def apply(vars: List[Variable]): (Formula => Formula) = formula => {
+  def apply(vars: List[Variable], checkProvable: Boolean = true): (Formula => Formula) = formula => {
+    if (checkProvable) throw new IllegalArgumentException("checking Provable not yet implemented for ModelPlex")
     val mxInputFml = modelplexControllerMonitorTrafo(formula, vars)
+    val mxInputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
-    val rootNode = new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml)))
+    val rootNode = new RootNode(mxInputSequent)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
 
     assert(rootNode.openGoals().size == 1 && rootNode.openGoals().head.sequent.ante.size == 1 &&
       rootNode.openGoals().head.sequent.succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
+    assert(rootNode.sequent == mxInputSequent, "Proof was a proof of the ModelPlex specification")
+    //@todo after generalizing beyond closed proofs should ask rootNode.provableWitness instead of rootNode.openGoals() when -verify
     And(rootNode.openGoals().head.sequent.ante.head, rootNode.openGoals().head.sequent.succ.head)
   }
 
   /** Construct ModelPlex Controller Monitor specification formula corresponding to given formula for monitoring the given variables. */
   def modelplexControllerMonitorTrafo(fml: Formula, vars: List[Variable]): Formula = {
+    require(!vars.isEmpty, "ModelPlex expects non-empty list of variables to monitor")
     val varsSet = vars.toSet
     require(StaticSemantics.symbols(fml).intersect(
       vars.toSet[Variable].map(v=>Function(v.name + "pre", v.index, Unit, v.sort).asInstanceOf[NamedSymbol]) ++
