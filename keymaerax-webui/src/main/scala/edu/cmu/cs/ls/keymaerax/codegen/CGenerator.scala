@@ -112,7 +112,8 @@ class CGenerator extends CodeGenerator {
    */
   private def compilePower(base: Term, exp: Term) : String = {
     if(base.equals(Number(0))) {
-      "0"
+      if(exp.equals(Number(0))) "1" // 0^0 =1
+      else "0"
     } else {
       exp match {
         case Number(n) =>
