@@ -22,7 +22,7 @@ object CGenerator extends CodeGenerator {
 
   private def generateCCode(expr: Expression, cDataType: String) : String = {
     val includeLib = "#include <math.h>\n" +
-      "#include <stdbool.h>\n"
+      "#include <stdbool.h>\n\n"
     val funcHead = "bool monitor (" + parameterDeclaration(expr, cDataType) + ")"
     val funcBody = compileToC(expr)
     includeLib + funcHead + " {\n" + "  return " + funcBody + ";" + "\n}"
@@ -86,6 +86,7 @@ object CGenerator extends CodeGenerator {
   private def compilePower(base: Term, exp: Term) : String = {
     if(base.equals(Number(0))) {
       //@todo since when is that the case?
+      println("[warning] generating 0^0")
       if(exp.equals(Number(0))) "1.0" // 0^0 =1
       else "0.0"
     } else {
@@ -114,8 +115,9 @@ object CGenerator extends CodeGenerator {
   private def compileFormula(f: Formula) : String = {
     f match {
       case Not(ff)     => "!" + "(" + compileFormula(ff) + ")"
-      case And(l, r)   => "(" + compileFormula(l) + ")" + "&&" + "(" + compileFormula(r) + ")"
-      case Or(l, r)    => "(" + compileFormula(l) + ")" + "||" + "(" + compileFormula(r) + ")"
+      case And(l, r)   => "(" + compileFormula(l) + ")" + "  &&  " + "(" + compileFormula(r) + ")"
+      case Or(l, r)    => "(" + compileFormula(l) + ")" + "  ||  " + "(" + compileFormula(r) + ")"
+      //@todo the following two transformations of formulas should be done by a tactic and just asserted here that these cases no longer happen.
       case Imply(l, r) => compileFormula(Or(Not(l), r))
       case Equiv(l, r) => compileFormula(And(Imply(l, r), Imply(r, l)))
         //compileFormula(Or(And(l,r),And(Not(l),Not(r))))
