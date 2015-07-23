@@ -231,6 +231,7 @@ object KeYmaeraX {
 
       //@todo ensure that reparse of this lemma is as expected
       pw.write(stampHead(options))
+      pw.write("/* @evidence parse of print of result of a proof */\n")
       pw.write(lemmaContent + evidence)
       pw.close()
     } else {
@@ -332,6 +333,7 @@ object KeYmaeraX {
       val output = CGenerator(inputFormula)
       val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".c").toString)
       pw.write(stampHead(options))
+      pw.write("/* @evidence print of CGenerator */\n")
       pw.write(output)
       pw.close()
     } else if(options.get('format).get.toString == "Spiral") {
