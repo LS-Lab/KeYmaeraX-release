@@ -45,6 +45,8 @@ object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
 class KeYmaeraXPrinter extends PrettyPrinter {
+//  private val verboseParens = true
+
   import OpSpec.op
   import OpSpec.statementSemicolon
 

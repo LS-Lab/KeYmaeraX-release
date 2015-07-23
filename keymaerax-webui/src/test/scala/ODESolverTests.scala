@@ -154,20 +154,20 @@ class InverseDiffGhostTests extends TacticTestSuite {
     ???
   }
 
-  it should "playground" in {
-    val formula = "[{x' = 0, y' = 0 & 1=1}]x=1"
-
-    val f = KeYmaeraXParser.formulaParser(formula)
-
-    val s = Sequent(
-      scala.collection.immutable.Seq(),
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(f)
-    )
-    val pie = PosInExpr(0 :: 0 :: Nil)
-    val asdf = TacticHelper.getTerm(s, SuccPosition(0, pie))
-    println(asdf.prettyString)
-  }
+//  it should "playground" in {
+//    val formula = "[{x' = 0, y' = 0 & 1=1}]x=1"
+//
+//    val f = KeYmaeraXParser.formulaParser(formula)
+//
+//    val s = Sequent(
+//      scala.collection.immutable.Seq(),
+//      scala.collection.immutable.IndexedSeq(),
+//      scala.collection.immutable.IndexedSeq(f)
+//    )
+//    val pie = PosInExpr(0 :: 0 :: Nil)
+//    val asdf = TacticHelper.getTerm(s, SuccPosition(0, pie))
+//    println(asdf.prettyString)
+//  }
 }
 
 class InverseDiffCutTests extends TacticTestSuite {
@@ -197,5 +197,24 @@ class InverseDiffCutTests extends TacticTestSuite {
     val tactic = ODETactics.diffInverseCutT(SuccPos(0))
     helper.runTactic(tactic,node)
     helper.report(node)
+    //@todo
+    fail("No assertions -- this test isn't complete yet.")
   }
+}
+
+class ODESolutionTactic extends TacticTestSuite {
+
+  "->" should "default to correct assoc" in {
+    "1=1 -> 2=2 -> 3=3".asFormula shouldBe "1=1 -> (2=2 -> 3=3)".asFormula
+  }
+
+  "ODE solver" should "work for example in US paper" in {
+    val f = "[{b' = 1}](x_0 + (a/2)*b^2 + v_0*b >= 0)".asFormula
+    val node = helper.formulaToNode(f)
+    val tactic = ODETactics.diffSolveConstraintT(SuccPos(0))
+    helper.runTactic(tactic,node)
+    helper.report(node)
+  }
+
+
 }
