@@ -70,16 +70,6 @@ class CCodeGeneratorTests extends FlatSpec with Matchers with BeforeAndAfterEach
     cGen.apply(input) should be (outputC)
   }
 
-  ignore should "generate C file" in {
-    val cCode = cGen.apply(("-B<=al & al<=A & " +
-      "((xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf)<xl+vl^2/(2*B) & " +
-      "(-B<=af&af<=A&(xfPost()=xf&vfPost()=vf&afPost()=af&xlPost()=xl&vlPost()=vl&alPost()=al&tPost()=0))) | " +
-      "((vf=0&(xfPost()=xf&vfPost()=vf&afPost()=0&xlPost()=xl&vlPost()=vl&alPost()=al&tPost()=0)) | " +
-      "(-B<=af&af<=-b&(xfPost()=xf&vfPost()=vf&afPost()=af&xlPost()=xl&vlPost()=vl&alPost()=al&tPost()=0))))").asFormula)
-    val fileName = "localLaneControl.c"
-    cGen.generateCFileFromCCode(cCode, fileName) should be ("")
-  }
-
   "RSS passive safety modelplex in place" should "generate C code" in {
     val input = ("(xPost()=x&yPost()=y&vPost()=v&aPost()=-b&wPost()=w&dxPost()=dx&dyPost()=dy&rPost()=r&oxPost()=ox&oyPost()=oy&tPost()=0) | " +
       "((v=0&(xPost()=x&yPost()=y&vPost()=v&aPost()=0&wPost()=0&dxPost()=dx&dyPost()=dy&rPost()=r&oxPost()=ox&oyPost()=oy&tPost()=0)) | " +
@@ -90,14 +80,6 @@ class CCodeGeneratorTests extends FlatSpec with Matchers with BeforeAndAfterEach
       "(((v==0)&&(((((((((((xPost==x)&&(yPost==y))&&(vPost==v))&&(aPost==0))&&(wPost==0))&&(dxPost==dx))&&(dyPost==dy))&&(rPost==r))&&(oxPost==ox))&&(oyPost==oy))&&(tPost==0)))||" +
       "((((-b)<=a)&&(a<=A))&&((r>0)&&(((w*r)==v)&&(((fabsl((x-ox))>(((v*v)/(2*b))+(((A/b)+1)*(((A/2)*(ep*ep))+(ep*v)))))||(fabsl((y-oy))>(((v*v)/(2*b))+(((A/b)+1)*(((A/2)*(ep*ep))+(ep*v))))))&&(((((((((((xPost==x)&&(yPost==y))&&(vPost==v))&&(aPost==a))&&(wPost==w))&&(dxPost==dx))&&(dyPost==dy))&&(rPost==r))&&(oxPost==ox))&&(oyPost==oy))&&(tPost==0))))))));\n}"
     cGen.apply(input) should be (outputC)
-  }
-
-  ignore should "generate C file" in {
-    val cCode = cGen.apply(("(xPost()=x&yPost()=y&vPost()=v&aPost()=-b&wPost()=w&dxPost()=dx&dyPost()=dy&rPost()=r&oxPost()=ox&oyPost()=oy&tPost()=0) | " +
-      "((v=0&(xPost()=x&yPost()=y&vPost()=v&aPost()=0&wPost()=0&dxPost()=dx&dyPost()=dy&rPost()=r&oxPost()=ox&oyPost()=oy&tPost()=0)) | " +
-      "(-b<=a&a<=A&(r>0&(w*r=v&((Abs(x-ox)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|Abs(y-oy)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&(xPost()=x&yPost()=y&vPost()=v&aPost()=a&wPost()=w&dxPost()=dx&dyPost()=dy&rPost()=r&oxPost()=ox&oyPost()=oy&tPost()=0))))))").asFormula)
-    val fileName = "rss.c"
-    cGen.generateCFileFromCCode(cCode, fileName) should be ("")
   }
 
   "VSL modelplex in place" should "generate C code" in {
@@ -126,21 +108,5 @@ class CCodeGeneratorTests extends FlatSpec with Matchers with BeforeAndAfterEach
       "(((vsl>=0)&&(xsl>=((x1+(((v1*v1)-(vsl*vsl))/(2*B)))+(((A/B)+1)*(((A/2)*(ep*ep))+(ep*v1))))))&&" +
       "((((((x1Post==x1)&&(v1Post==v1))&&(a1Post==a1))&&(tPost==0))&&(vslPost==vsl))&&(xslPost==xsl))))))));\n}"
     cGen.apply(input) should be (outputC)
-  }
-
-  ignore should "generate C file" in {
-    val cCode = cGen.apply(("(x1Post()=x1&v1Post()=v1&a1Post()=-B&tPost()=0&vslPost()=vsl&xslPost()=xsl) | " +
-      "(vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) & " +
-      "(x1Post()=x1&v1Post()=v1&a1Post()=-B&tPost()=0&vslPost()=vsl&xslPost()=xsl)) | " +
-      "((xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1)&(-B<=a1&a1<=A & " +
-      "((x1Post()=x1&v1Post()=v1&a1Post()=a1&tPost()=0&vslPost()=vsl&xslPost()=xsl) | " +
-      "(vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) & " +
-      "(x1Post()=x1&v1Post()=v1&a1Post()=a1&tPost()=0&vslPost()=vsl&xslPost()=xsl))))) | " +
-      "(x1>=xsl&(-B<=a1&a1<=A&a1<=(v1-vsl)/ep & " +
-      "((x1Post()=x1&v1Post()=v1&a1Post()=a1&tPost()=0&vslPost()=vsl&xslPost()=xsl) | " +
-      "(vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) & " +
-      "(x1Post()=x1&v1Post()=v1&a1Post()=a1&tPost()=0&vslPost()=vsl&xslPost()=xsl))))))").asFormula)
-    val fileName = "vsl.c"
-    cGen.generateCFileFromCCode(cCode, fileName) should be ("")
   }
 }
