@@ -231,7 +231,7 @@ object KeYmaeraX {
 
       //@todo ensure that reparse of this lemma is as expected
       pw.write(stampHead(options))
-      pw.write("/* @evidence parse of print of result of a proof */\n")
+      pw.write("/* @evidence parse of print of result of a proof */\n\n")
       pw.write(lemmaContent + evidence)
       pw.close()
     } else {
@@ -289,7 +289,7 @@ object KeYmaeraX {
     val reparse = KeYmaeraXParser(output)
     assert(reparse == outputFml, "parse of print is identity")
     pw.write(stampHead(options))
-    pw.write("/* @evidence parse of print of ModelPlex proof output */\n")
+    pw.write("/* @evidence parse of print of ModelPlex proof output */\n\n")
     pw.write(output)
     pw.close()
   }
@@ -333,7 +333,7 @@ object KeYmaeraX {
       val output = CGenerator(inputFormula)
       val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".c").toString)
       pw.write(stampHead(options))
-      pw.write("/* @evidence print of CGenerator */\n")
+      pw.write("/* @evidence print of CGenerator */\n\n")
       pw.write(output)
       pw.close()
     } else if(options.get('format).get.toString == "Spiral") {
