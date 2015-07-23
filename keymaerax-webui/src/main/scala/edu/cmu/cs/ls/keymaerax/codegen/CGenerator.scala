@@ -58,8 +58,10 @@ object CGenerator extends CodeGenerator {
       case Number(n) =>
         assert(n.isValidDouble || n.isValidLong, throw new CodeGenerationException("Term " + t.prettyString + " contains illegal-precision numbers"))
         //@note assume the C compiler will detect representation-size errors
-        if(n.toDouble < 0)  "(" + n.underlying().toString + ")"
-        else n.underlying().toString
+        //if(n.toDouble < 0)  "(" + n.underlying().toString + ")"
+        //else n.underlying().toString
+        //@note with parentheses in case literal is negative
+        "(" + n.underlying().toString + ")"
       case t: Variable  => nameIdentifier(t)
       case FuncOf(fn, Nothing) => nameIdentifier(fn)
       case FuncOf(fn, child) => nameIdentifier(fn) + "(" + compileTerm(child) + ")"
