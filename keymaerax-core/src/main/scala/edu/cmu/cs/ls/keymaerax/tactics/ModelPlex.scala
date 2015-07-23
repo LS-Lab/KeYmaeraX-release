@@ -60,7 +60,6 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
    * @param checkProvable true to check the Provable proof certificates (recommended).
    */
   def apply(vars: List[Variable], checkProvable: Boolean): (Formula => Formula) = formula => {
-    if (checkProvable) throw new IllegalArgumentException("checking Provable not yet implemented for ModelPlex")
     val mxInputFml = modelplexControllerMonitorTrafo(formula, vars)
     val mxInputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
@@ -70,8 +69,18 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     assert(rootNode.openGoals().size == 1 && rootNode.openGoals().head.sequent.ante.size == 1 &&
       rootNode.openGoals().head.sequent.succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
     assert(rootNode.sequent == mxInputSequent, "Proof was a proof of the ModelPlex specification")
-    //@todo after generalizing beyond closed proofs should ask rootNode.provableWitness instead of rootNode.openGoals() when -verify
-    And(rootNode.openGoals().head.sequent.ante.head, rootNode.openGoals().head.sequent.succ.head)
+    val mxOutputProofTree = And(rootNode.openGoals().head.sequent.ante.head, rootNode.openGoals().head.sequent.succ.head)
+    if (checkProvable) {
+      val provable = rootNode.provableWitness
+      assert(provable.subgoals.size == 1 && provable.subgoals(0).ante.size == 1 &&
+        provable.subgoals(0).succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
+      assert(provable.conclusion == mxInputSequent, "Provable is a proof of the ModelPlex specification")
+      val mxOutput = And(provable.subgoals(0).ante.head, provable.subgoals(0).succ.head)
+      assert(mxOutput == mxOutputProofTree, "ModelPlex output from Provable and from ProofNode agree (if ProofNode is correct)")
+      mxOutput
+    } else {
+      mxOutputProofTree
+    }
   }
 
   /** Construct ModelPlex Controller Monitor specification formula corresponding to given formula for monitoring the given variables. */
