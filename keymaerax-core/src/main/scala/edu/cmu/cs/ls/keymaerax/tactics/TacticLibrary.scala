@@ -173,6 +173,34 @@ object TacticLibrary {
       else if (succStructure.contains(fStructure)) Some(s.succ(succStructure.indexOf(fStructure)))
       else None
     }
+
+
+    /**
+     * Axioms
+     */
+
+    /**
+     * Tactic that renames aV with v
+     * @param v replacement
+     * @param aV axiom contents
+     * @return Position tactic that performs renaming, or else the nil position tactic.
+     */
+    def axiomAlphaT(v : Variable, aV : Variable) =
+      if (v.name != aV.name || v.index != aV.index) {
+        new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Equiv(Box(_, _), Exists(_, _)) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(globalAlphaRenamingT(v, aV))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+      } else NilPT
   }
 
   /*******************************************************************

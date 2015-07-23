@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics
+import edu.cmu.cs.ls.keymaerax.{core, tactics}
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.goedelT
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverAxiomT,uncoverConditionalAxiomT,axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
@@ -16,12 +16,13 @@ import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.skolemizeT
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.boxAssignT
+import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.boxDerivativeAssignT
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT, AxiomCloseT, EquivRightT, ImplyRightT, cutT,
   EquivLeftT, ImplyLeftT, uniformSubstT, NotLeftT, AndLeftT, cohideT, PropositionalRightT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{abstractionT, globalAlphaRenamingT, debugT, arithmeticT}
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol, findFormulaByStructure}
 import AlphaConversionHelper._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, Tool}
@@ -944,6 +945,168 @@ object ODETactics {
     axiomLookupBaseT("DC differential cut", subst, _ => NilPT, (f, ax) => ax)
   }
 
+
+  ///
+  // Diff Solve w/ ev dom constraint axiom
+  // DS& differential equation solution
+  // [x'=c()&q(x);]p(x) <->
+  // \forall t. (t>=0 -> ((\forall s. ((0<=s&s<=t) -> q(x+c()*s))) -> [x:=x+c()*t;]p(x)))
+  ////
+  def diffSolveConstraintT : PositionTactic = {
+    def freshT(fml : Formula) = {
+      val tName = "T"
+      Variable(tName, TacticHelper.freshIndexInFormula(tName, fml))
+    }
+    def freshS(fml : Formula) = {
+      val sName = "S"
+      Variable(sName, TacticHelper.freshIndexInFormula(sName, fml))
+    }
+
+    def axiomInstance(fml : Formula) = fml match {
+      case Box(ODESystem(AtomicODE(DifferentialSymbol(x), c), q), p) => {
+        val t = freshT(fml)
+        val s = freshS(fml)
+        val newQ = SubstitutionHelper.replaceFree(q)(x, Plus(x, Times(c, s)))
+        val zero = Number(BigDecimal(0))
+        Equiv(
+          fml,
+          Forall(t :: Nil,
+            Imply(
+              GreaterEqual(t, zero),
+              Imply(
+                Forall(s :: Nil, Imply(And(LessEqual(zero, s), LessEqual(s, t)), newQ)),
+                Box(Assign(x, Plus(x, Times(c, t))), p)
+              )
+            )
+          )
+        )
+      }
+      case _ => False
+    }
+
+    uncoverAxiomT("DS& differential equation solution", axiomInstance, _ => diffSolveConstraintBaseT)
+  }
+
+  def diffSolveConstraintBaseT : PositionTactic = {
+    def subst(fml : Formula) : List[SubstitutionPair] = fml match {
+      case Equiv(
+        Box(ODESystem(AtomicODE(DifferentialSymbol(x), c), q), p),
+        Forall(t :: Nil, Imply(_, Imply(Forall(s :: Nil, _), _)))
+      ) => {
+        //forall t. (t>=0 -> ((\forall s. ((0<=s&s<=t) -> q(x+c()*s))) -> [x:=x+c()*t;]p(x)))
+        val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
+        val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
+        val aQ = PredOf(Function("q", None, Real, Bool), DotTerm)
+
+        SubstitutionPair(aC, c) ::
+        SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(x, DotTerm)) ::
+        SubstitutionPair(aQ, SubstitutionHelper.replaceFree(q)(x, DotTerm)) :: Nil
+      }
+    }
+
+    val aX = Variable("x", None, Real)
+    def theX(fml : Formula) = fml match {
+      case Equiv(Box(ODESystem(AtomicODE(DifferentialSymbol(x), c), q), p), _) => x
+    }
+
+    val aT = Variable("t", None, Real)
+    def theT(fml : Formula) = fml match {
+      case Equiv(_, Forall(t :: Nil, Imply(_, Imply(Forall(s :: Nil, _),_)))) => t
+    }
+
+    val aS = Variable("s", None, Real)
+    def theS(fml : Formula) = fml match {
+      case Equiv(_, Forall(t :: Nil, Imply(_, Imply(Forall(s :: Nil, _),_)))) => s
+    }
+
+    def alpha(fml: Formula): PositionTactic =
+      TacticHelper.axiomAlphaT(theT(fml), aT) & TacticHelper.axiomAlphaT(theS(fml), aS) & TacticHelper.axiomAlphaT(theX(fml), aX)
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = {
+      val x = theX(fml)
+      val t = theT(fml)
+      val s = theS(fml)
+      val xRenamed = if (x.name != aX.name || x.index != aX.index) AlphaConversionHelper.replace(axiom)(aX, x) else axiom
+      val tRenamed = if(t.name != aT.name || t.index != aT.index) AlphaConversionHelper.replace(xRenamed)(aT, t) else xRenamed
+      if(s.name != aS.name || s.index != aS.index) AlphaConversionHelper.replace(tRenamed)(aS, s) else tRenamed
+    }
+
+    axiomLookupBaseT("DS& differential equation solution", subst, alpha, axiomInstance)
+  }
+
+
+  ////
+  // Diff Solve axiom
+  // [x'=c();]p(x) <-> \forall t. (t>=0 -> [x:=x+c()*t;]p(x))
+  //
+  def diffSolveAxiomT: PositionTactic = {
+    val axiomInstance  = (fml : Formula) => fml match {
+      case Box(AtomicODE(DifferentialSymbol(x), c), p) => {
+        val nameOfvar = "explicitTime"
+        val t = Variable(nameOfvar, TacticHelper.freshIndexInFormula(nameOfvar, fml), Real)
+        Equiv(
+          fml,
+          Forall(t :: Nil, Imply(GreaterEqual(t, Number(0)), Box(Assign(x, Plus(x, Times(c, t))), p)))
+        )
+      }
+    }
+    uncoverAxiomT("DS differential equation solution", axiomInstance, _ => diffSolveAxiomBaseT)
+  }
+
+  def diffSolveAxiomBaseT : PositionTactic = {
+    val aX = Variable("x", None, Real)
+    val zero = Number(BigDecimal(0))
+
+    def subst(fml : Formula) : List[SubstitutionPair] = fml match {
+      case Equiv(Box(AtomicODE(DifferentialSymbol(x), c), p), Forall(t :: Nil, Imply(GreaterEqual(tt, zero), Box(Assign(xx, Plus(xxx, Times(cc, ttt))), pp)))) => {
+        //@todo these assertions should be possible to get implicitly by pattern matching on t,t,t instead of t,tt,ttt.
+        //@todo Check docs.
+        assert(t.equals(tt), "quantified and guarded time")
+        assert(tt.equals(ttt), "guarded and linear time")
+        assert(c.equals(cc), "terms of atomicODE")
+        assert(p.equals(pp), "post conditions")
+        assert(x.equals(xx), "primed and assigned time")
+        assert(xx.equals(xxx), "assigned and constant var")
+
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
+        val aC = DifferentialProgramConst("c")
+        val aS = Variable("s", None, Real)
+        SubstitutionPair(aX, x) :: SubstitutionPair(aP, p) :: SubstitutionPair(aC, c) :: SubstitutionPair(aS, t) :: Nil
+      }
+    }
+
+    def theX(fml : Formula) : Variable = fml match {
+      case Equiv(Box(AtomicODE(DifferentialSymbol(x),c), _), _) => x
+    }
+
+    def alpha(fml: Formula): PositionTactic = {
+      val x = theX(fml)
+      if (x.name != aX.name || x.index != aX.index) {
+        new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Equiv(Box(_, _), Forall(_, _)) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(globalAlphaRenamingT(x, aX))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+      } else NilPT
+    }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = {
+      val x = theX(fml)
+      if (x.name != aX.name || x.index != aX.index) AlphaConversionHelper.replaceBound(axiom)(aX, x)
+      else axiom
+    }
+
+    axiomLookupBaseT("DS differential equation solution", subst, alpha, axiomInstance)
+  }
+
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Inverse Differential Auxiliary Section
   //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1361,7 +1524,6 @@ object ODETactics {
       }
     }
   }
-
 }
 
 
