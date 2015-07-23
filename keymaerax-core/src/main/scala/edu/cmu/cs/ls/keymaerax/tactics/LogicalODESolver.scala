@@ -52,7 +52,13 @@ object LogicalODESolver {
       cutTimeLB(p) &
       ODETactics.diffWeakenAxiomT(p) & //the axiom, not the proof rule.
       renameAndDropImpl(p) & onBranch(
-        ("renameAndDropImpl-output", (successiveInverseCut(p) *))
+        ("renameAndDropImpl-output",
+          (successiveInverseCut(p) *) &
+          (successiveInverseDiffGhost(p) *) &
+          ODETactics.diffSolveAxiomT(p) &
+          ImplyRightT(p) &
+          errorT("@todo Need to box assign at correct position.")
+        )
       )
   }
 
@@ -71,7 +77,16 @@ object LogicalODESolver {
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Successive inverse diff ghosts
   //////////////////////////////////////////////////////////////////////////////////////////////////
+  def successiveInverseDiffGhost : PositionTactic =
+  new PositionTactic("Successive " + ODETactics.inverseDiffAuxiliaryT.name) {
+    override def applies(s: Sequent, p: Position): Boolean = TacticHelper.getFormula(s, p) match {
+      case Box(ODESystem(program : DifferentialProgram, _), _) =>
+        timeVar(program).isDefined && getPrimedVariables(program).length > 2
+      case _ => false
+    }
 
+    override def apply(p: Position): Tactic = ODETactics.inverseDiffAuxiliaryT(p)
+  }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Successive inverse diff cuts

@@ -9,7 +9,6 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec._
 
 import scala.collection.immutable._
@@ -45,6 +44,8 @@ object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
 class KeYmaeraXPrinter extends PrettyPrinter {
+//  private val verboseParens = true
+
   import OpSpec.op
   import OpSpec.statementSemicolon
 
