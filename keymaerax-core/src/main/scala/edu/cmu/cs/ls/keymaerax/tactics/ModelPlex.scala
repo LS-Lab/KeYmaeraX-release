@@ -67,8 +67,8 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
   def modelplexControllerMonitorTrafo(fml: Formula, vars: List[Variable]): Formula = {
     val varsSet = vars.toSet
     require(StaticSemantics.symbols(fml).intersect(
-      vars.toSet[Variable].map(v=>Function(v.name + "pre", v.index, Unit, Real).asInstanceOf[NamedSymbol]) ++
-        vars.toSet[Variable].map(v=>Function(v.name + "post", v.index, Unit, Real))
+      vars.toSet[Variable].map(v=>Function(v.name + "pre", v.index, Unit, v.sort).asInstanceOf[NamedSymbol]) ++
+        vars.toSet[Variable].map(v=>Function(v.name + "post", v.index, Unit, v.sort))
     ).isEmpty, "ModelPlex pre and post function symbols do not occur in original formula")
     fml match {
       // models of the form (ctrl;plant)*
@@ -76,14 +76,14 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
         //@todo explicitly address DifferentialSymbol instead of skipping
         require(StaticSemantics.boundVars(controller).toSymbolSet.forall(v => !v.isInstanceOf[Variable] || varsSet.contains(v.asInstanceOf[Variable])),
           "all bound variables " + StaticSemantics.boundVars(controller).prettyString + " must occur in monitor list " + vars.mkString(", "))
-        val preassignments = vars.map(v => Assign(v, FuncOf(Function(v.name + "pre", v.index, Unit, Real), Nothing))).reduce(Compose)
-        val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, Real), Nothing), v)).reduce(And)
+        val preassignments = vars.map(v => Assign(v, FuncOf(Function(v.name + "pre", v.index, Unit, v.sort), Nothing))).reduce(Compose)
+        val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
         //      Imply(assumptions, Diamond(preassignments, Diamond(controller, posteqs)))
         Imply(assumptions, Diamond(controller, posteqs))
       // models of the form (plant)
       case Imply(assumptions, Box(ODESystem(_, _), _)) =>
         //@todo require bound variables
-        val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, Real), Nothing), v)).reduce(And)
+        val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
         Imply(assumptions, Diamond(Test(True), posteqs))
       case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
     }
