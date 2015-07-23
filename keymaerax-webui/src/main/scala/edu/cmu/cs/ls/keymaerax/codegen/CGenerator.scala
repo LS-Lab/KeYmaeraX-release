@@ -89,7 +89,8 @@ class CGenerator extends CodeGenerator {
       // atomic terms
       case Number(n) =>
         assert(n.isValidDouble || n.isValidLong, throw new CodeGenerationException("Term " + t.prettyString + " contains illegal numbers"))
-        n.underlying().toString
+        if(n.toDouble < 0)  "(" + n.underlying().toString + ")"
+        else n.underlying().toString
       case t: Variable =>
         if(t.index.isEmpty) t.name
         else t.name + "_" + t.index.get
