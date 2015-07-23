@@ -77,8 +77,10 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
       assert(provable.conclusion == mxInputSequent, "Provable is a proof of the ModelPlex specification")
       val mxOutput = And(provable.subgoals(0).ante.head, provable.subgoals(0).succ.head)
       assert(mxOutput == mxOutputProofTree, "ModelPlex output from Provable and from ProofNode agree (if ProofNode is correct)")
+      println("ModelPlex Proof certificate: Passed")
       mxOutput
     } else {
+      println("ModelPlex Proof certificate: Skipped")
       mxOutputProofTree
     }
   }

@@ -269,18 +269,6 @@ object KeYmaeraX {
 
     val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".mx").toString)
 
-    if (verifyOption) {
-      //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
-      System.err.println("Cannot yet verify ModelPlex proof certificates")
-
-      println("Unsuccessful proof: unfinished")
-      System.err.println("Unsuccessful proof: unfinished")
-      //@note PrintWriter above has already emptied the output file
-      pw.close()
-      sys.exit(-1)
-      // TODO what to to when proof cannot be checked?
-    }
-
     val outputFml = if (options.contains('vars))
       ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList, verifyOption)(inputModel)
     else
