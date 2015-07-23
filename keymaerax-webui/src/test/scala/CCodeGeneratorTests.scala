@@ -11,15 +11,7 @@ import edu.cmu.cs.ls.keymaerax.codegen.{CodeGenerationException, CGenerator}
  * @author Ran Ji
  */
 class CCodeGeneratorTests extends FlatSpec with Matchers with BeforeAndAfterEach {
-  var cGen: CGenerator = null
-
-  override def beforeEach() = {
-    cGen = new CGenerator
-  }
-
-  override def afterEach() = {
-    cGen = null
-  }
+  val cGen = CGenerator
 
   // terms
 
