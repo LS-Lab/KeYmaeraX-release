@@ -202,6 +202,7 @@ object KeYmaeraX {
       } else {
         println("Proof certificate: Skipped")
       }
+      //@todo Printing of Provable as text should be somewhere in LemmaDB functionalities.
       //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
       val evidence =
         s"""Tool.
@@ -210,6 +211,8 @@ object KeYmaeraX {
           |  proof ""
           |End.
           |""".stripMargin
+      //@note pretty-printing the result of parse ensures that the lemma states what's actually been proved.
+      assert(KeYmaeraXParser(KeYmaeraXPrettyPrinter(inputModel)) == inputModel, "parse of print is identity")
       //@todo why is this of the form bla <-> true instead of just bla?
       val lemmaContent =
         s"""Lemma "${inputFileName.substring(inputFileName.lastIndexOf('/')+1)}".
@@ -218,6 +221,7 @@ object KeYmaeraX {
           |""".stripMargin
 
       val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".proof").toString)
+      //@todo ensure that reparse of this lemma is as expected
       pw.write(lemmaContent + evidence)
       pw.close()
     } else {
@@ -235,6 +239,87 @@ object KeYmaeraX {
         exit(-1)
       }
     }
+  }
+
+  /**
+   * ModelPlex monitor synthesis for the given input files
+   * {{{KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))}}}
+   * @param options in describes input file name, vars describes the list of variables, out describes the output file name.
+   */
+  def modelplex(options: OptionMap) = {
+    require(options.contains('in), usage)
+
+    // KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))
+    val inputFileName = options.get('in).get.toString
+    val input = scala.io.Source.fromFile(inputFileName).mkString
+    val inputModel = KeYmaeraXProblemParser(input)
+
+    val outputFml = if (options.contains('vars))
+      ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList)(inputModel)
+    else
+      ModelPlex(inputModel)
+    val output = KeYmaeraXPrettyPrinter(outputFml)
+
+    if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
+      //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
+      System.err.println("Cannot yet verify ModelPlex proof certificates")
+
+      println("Unsuccessful proof: unfinished")
+      System.err.println("Unsuccessful proof: unfinished")
+      sys.exit(-1)
+      // TODO what to to when proof cannot be checked?
+    }
+
+    val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".mx").toString)
+    val reparse = KeYmaeraXParser(output)
+    assert(reparse == outputFml, "parse of print is identity")
+    pw.write("/* @evidence parse of print of ModelPlex proof output */\n")
+    pw.write(output)
+    pw.close()
+  }
+
+
+
+  /**
+   * Code generation
+   * {{{CGenerator()(input)}}}
+   */
+  def codegen(options: OptionMap) = {
+    require(options.contains('in), usage)
+    require(options.contains('format), usage)
+
+    val inputFileNameMx = options.get('in).get.toString
+    val input = scala.io.Source.fromFile(inputFileNameMx).mkString
+    val inputFormula = KeYmaeraXParser(input)
+    val inputFileName = inputFileNameMx.substring(0, inputFileNameMx.length-".mx".length)
+
+    if(options.get('format).get.toString == "C") {
+      val cGen = new CGenerator()
+      val output = cGen(inputFormula)
+      val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".c").toString)
+      pw.write(output)
+      pw.close()
+    } else if(options.get('format).get.toString == "Spiral") {
+      val sGen = new SpiralGenerator
+      var outputG = ""
+      var outputH = ""
+      if (options.contains('vars)) {
+        val output = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)
+        outputG = output._1
+        outputH = output._2
+        val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
+        pwG.write(outputG)
+        pwG.close()
+        val pwH = new PrintWriter(options.getOrElse('out, inputFileName + ".h").toString)
+        pwH.write(outputH)
+        pwH.close()
+      } else {
+        outputG = sGen(inputFormula, inputFileName)
+        val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
+        pwG.write(outputG)
+        pwG.close()
+      }
+    } else throw new IllegalArgumentException("-format should be specified and only be C or Spiral")
   }
 
   /** Print brief information about all open goals in the proof tree under node */
@@ -361,82 +446,6 @@ object KeYmaeraX {
       |new InteractiveLocalTactic()
     """.stripMargin
 
-
-  /**
-   * ModelPlex monitor synthesis for the given input files
-   * {{{KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))}}}
-   * @param options in describes input file name, vars describes the list of variables, out describes the output file name.
-   */
-  def modelplex(options: OptionMap) = {
-    require(options.contains('in), usage)
-
-    // KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))
-    val inputFileName = options.get('in).get.toString
-    val input = scala.io.Source.fromFile(inputFileName).mkString
-    val inputModel = KeYmaeraXProblemParser(input)
-
-    val outputFml = if (options.contains('vars))
-      ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList)(inputModel)
-    else
-      ModelPlex(inputModel)
-    val output = KeYmaeraXPrettyPrinter(outputFml)
-
-    if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
-      //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
-      System.err.println("Cannot yet verify ModelPlex proof certificates")
-
-      println("Unsuccessful proof: unfinished")
-      System.err.println("Unsuccessful proof: unfinished")
-      sys.exit(-1)
-      // TODO what to to when proof cannot be checked?
-    }
-
-    val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".mx").toString)
-    pw.write(output)
-    pw.close()
-  }
-
-
-
-  /**
-   * Code generation
-   * {{{CGenerator()(input)}}}
-   */
-  def codegen(options: OptionMap) = {
-    require(options.contains('in), usage)
-    require(options.contains('format), usage)
-
-    val inputFileName = options.get('in).get.toString
-    val input = scala.io.Source.fromFile(inputFileName).mkString
-    val inputFormula = KeYmaeraXParser(input)
-
-    if(options.get('format).get.toString == "C") {
-      val cGen = new CGenerator()
-      val output = cGen(inputFormula)
-      val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".c").toString)
-      pw.write(output)
-      pw.close()
-    } else if(options.get('format).get.toString == "Spiral") {
-      val sGen = new SpiralGenerator
-      var outputG = ""
-      var outputH = ""
-      if (options.contains('vars)) {
-        outputG = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)._1
-        outputH = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)._2
-        val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
-        pwG.write(outputG)
-        pwG.close()
-        val pwH = new PrintWriter(options.getOrElse('out, inputFileName + ".h").toString)
-        pwH.write(outputH)
-        pwH.close()
-      } else {
-        outputG = sGen(inputFormula, inputFileName)
-        val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
-        pwG.write(outputG)
-        pwG.close()
-      }
-    } else throw new IllegalArgumentException("-format should be specified and only be C or Spiral")
-  }
 
   private val license: String =
     """
