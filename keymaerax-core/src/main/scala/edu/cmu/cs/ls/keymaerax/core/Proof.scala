@@ -960,7 +960,7 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
         case Exists(vars, _) if vars.contains(what) => apply(f)
         case Box(Assign(x, y), _) if x == y && x == repl => apply(f)
         case Diamond(Assign(x, y), _) if x == y && x == repl => apply(f)
-        case _ => if (compatibilityMode) {//println("BoundRenaming: Change alphaRenamingT to disable compatibilityMode")
+        case _ => if (compatibilityMode) {println("LAX: BoundRenaming: Change alphaRenamingT and disable compatibilityMode" + (if (what==repl) " stutter " else "") + "\nfor " + this + " in " + f.prettyString + " led to " + Box(Assign(repl, what), apply(f)).prettyString)
           Box(Assign(repl, what), apply(f))
         } else throw new BoundRenamingClashException("Bound renaming only to bound variables " +
           what + " is not bound", this.toString, f.prettyString)

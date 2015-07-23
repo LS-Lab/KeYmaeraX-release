@@ -9,7 +9,6 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec._
 
 import scala.collection.immutable._
