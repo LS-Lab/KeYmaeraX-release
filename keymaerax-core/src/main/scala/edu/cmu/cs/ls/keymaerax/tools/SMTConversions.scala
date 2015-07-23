@@ -1,7 +1,7 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-* See LICENSE.txt for the conditions of this license.
-*/
+ * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+ * See LICENSE.txt for the conditions of this license.
+ */
 package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -113,7 +113,10 @@ class KeYmaeraToSMT(toolId : String) {
       case Times(l, r) => "(* " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Divide(l, r) => "(/ " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Power(l, r) => convertExp(l, r)
-      case Number(n) => n.underlying().toString
+      case Number(n) =>
+        assert(n.isValidDouble || n.isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
+        if(n.toDouble < 0)  "(- " + (0-n).underlying().toString + ")"
+        else n.underlying().toString
       case t: Variable => convertVariable(t)
       case FuncOf(fn, _) => convertConstantFunction(fn)
       case _ => throw new SMTConversionException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
@@ -152,7 +155,8 @@ class KeYmaeraToSMT(toolId : String) {
     val base = simplifyTerm(l)
     val index = simplifyTerm(r)
     if(base.equals(Number(0))) {
-      "0"
+      if(index.equals(Number(0))) "1" // 0^0 =1
+      else "0"
     } else {
       index match {
         case Number(n) =>
@@ -167,9 +171,9 @@ class KeYmaeraToSMT(toolId : String) {
               }
               res += ")"
               res
-            } else throw new SMTConversionException("Cannot convert exponential " + KeYmaeraXPrettyPrinter(Power(l,r)) + " with negative index")
+            } else "(/ 1 " + convertExp(base, Number(n.underlying().negate())) + ")"
           } else throw new SMTConversionException("Cannot convert exponential " + KeYmaeraXPrettyPrinter(Power(l,r)) + " with non-integer index")
-        case Neg(Number(n)) => "(/ 1. " + convertExp(base, Number(n)) + ")"
+        case Neg(Number(n)) => "(/ 1 " + convertExp(base, Number(n)) + ")"
         case _ => throw new SMTConversionException("Conversion of exponential " + KeYmaeraXPrettyPrinter(Power(l,r)) + " is not defined")
       }
     }
