@@ -20,6 +20,8 @@ object CGenerator extends CodeGenerator {
   def apply(expr: Expression, cDataType: String, vars: List[Variable], fileName: String): String = generateCCode(expr, cDataType, vars, fileName)
 
   private def generateCCode(expr: Expression, cDataType: String, vars: List[Variable], fileName: String) : String = {
+    val names = StaticSemantics.symbols(expr).toList.map(s => nameIdentifier(s))
+    require(names.distinct.size == names.size, "Expect unique name_index identifiers for code generation")
     val relevantVars = getRelevantVars(expr, vars)
     if(!relevantVars.toSet.equals(vars.toSet))
       println("[warning] -vars contains unknown variables {" + vars.toSet.diff(relevantVars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "}, which will be ignored")
@@ -118,9 +120,12 @@ object CGenerator extends CodeGenerator {
 
   /** C Identifier corresponding to a NamedSymbol */
   private def nameIdentifier(s: NamedSymbol): String = {
-    require(s.isInstanceOf[Function] || s.isInstanceOf[Variable])
+    require(s.isInstanceOf[Function] || s.isInstanceOf[Variable] || s.isInstanceOf[DifferentialSymbol])
     require(s.sort == Real, "only real-valued symbols are currently supported")
-    if (s.index.isEmpty) s.name else s.name + "_" + s.index.get
+    s match {
+      case DifferentialSymbol(x) => nameIdentifier(x) + "__p"
+      case s: _ => if (s.index.isEmpty) s.name else s.name + "_" + s.index.get
+    }
   }
 
   /**
