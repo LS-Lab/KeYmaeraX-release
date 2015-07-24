@@ -22,7 +22,7 @@ object CGenerator extends CodeGenerator {
   private def generateCCode(expr: Expression, cDataType: String, vars: List[Variable], fileName: String) : String = {
     val relevantVars = getRelevantVars(expr, vars)
     if(!relevantVars.toSet.equals(vars.toSet))
-      println("[warning] -vars contains unkonwn variables {" + vars.toSet.diff(relevantVars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "}, which will be ignored")
+      println("[warning] -vars contains unknown variables {" + vars.toSet.diff(relevantVars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "}, which will be ignored")
     val calledFuncs = getCalledFuncs(expr, relevantVars)
     val includeLib = "#include <math.h>\n" +
       "#include <stdbool.h>\n\n"
