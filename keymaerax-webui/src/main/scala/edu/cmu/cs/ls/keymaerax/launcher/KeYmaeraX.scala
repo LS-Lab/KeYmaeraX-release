@@ -81,8 +81,8 @@ object KeYmaeraX {
       def nextOption(map: OptionMap, list: List[String]): OptionMap = {
         list match {
           case Nil => map
-          case "-help" :: _ => {println(usage); exit(1); ???}
-          case "-license" :: _ => {println(license); exit(1); ???}
+          case "-help" :: _ => {println(usage); exit(1)}
+          case "-license" :: _ => {println(license); exit(1)}
           // actions
           case "-prove" :: value :: tail => nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
           case "-modelplex" :: value :: tail => nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
@@ -106,7 +106,7 @@ object KeYmaeraX {
           case "-strict" :: tail => System.setProperty("LAX", "false"); nextOption(map, tail)
           case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
           case "-nodebug" :: tail => System.setProperty("DEBUG", "false"); nextOption(map, tail)
-          case option :: tail => println("Unknown option " + option + "\n" + usage); exit(1); ???
+          case option :: tail => println("Unknown option " + option + "\n" + usage); exit(1)
         }
       }
 
