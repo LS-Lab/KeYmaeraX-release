@@ -271,7 +271,19 @@ object PropositionalTacticsImpl {
           else Imply(assumption, implicant)
 
         Some(cutT(Some(consolidatedFml)) & onBranch(
-          (cutUseLbl, (AxiomCloseT | locateAnte(Propositional) | locateSucc(Propositional))*),
+          (cutUseLbl,
+            if (s.ante.isEmpty) {
+              if (s.succ.isEmpty) lastAnte(NotLeftT) & AxiomCloseT
+              else AxiomCloseT | (lastAnte(OrLeftT) && (AxiomCloseT | NilT, AxiomCloseT))*(s.succ.length-1)
+            } else {
+              if (s.succ.isEmpty) lastAnte(ImplyLeftT) && (
+                AxiomCloseT | (lastSucc(AndRightT) && (AxiomCloseT | NilT, AxiomCloseT))*(s.ante.length-1),
+                lastAnte(NotLeftT) & (AxiomCloseT | (lastSucc(AndRightT) && (AxiomCloseT | NilT, AxiomCloseT))*(s.ante.length-1)))
+              else lastAnte(ImplyLeftT) && (
+                AxiomCloseT | (lastSucc(AndRightT) && (AxiomCloseT | NilT, AxiomCloseT))*(s.ante.length-1),
+                AxiomCloseT | (lastAnte(OrLeftT) && (AxiomCloseT | NilT, AxiomCloseT))*(s.succ.length-1))
+            }
+            ),
           (cutShowLbl, SearchTacticsImpl.lastSucc(cohideT))
         ))
       }
