@@ -91,21 +91,29 @@ object CGenerator extends CodeGenerator {
     val allSymbolNames = StaticSemantics.symbols(e).toList
     var relevantVars = List[Variable]()
     for(i <- vars.indices) {
+      println("getPostNameIdentifier is " + getPostNameIdentifier(vars.apply(i)))
       if(allSymbolNames.contains(vars.apply(i)))
         // variable occurs in the expression, add it to the return list
         relevantVars = vars.apply(i) :: relevantVars
       if((allSymbolNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real))))
       // variable occur as nullary function, add it to the return list as a variable
         relevantVars = Variable(nameIdentifier(vars.apply(i))) :: relevantVars
-      if(allSymbolNames.contains(Variable(nameIdentifier(vars.apply(i))+"post")))
+      if(allSymbolNames.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
       // post variable occurs in the expression as variable, add it to the return list as a variable
-        relevantVars = Variable(nameIdentifier(vars.apply(i))+"post") :: relevantVars
-      if(allSymbolNames.contains(Function(nameIdentifier(vars.apply(i))+"post", None, Unit, Real)))
+        relevantVars = Variable(getPostNameIdentifier(vars.apply(i))) :: relevantVars
+      if(allSymbolNames.contains(Function(getPostNameIdentifier(vars.apply(i)), None, Unit, Real)))
         // post variable occurs in the expression as nullary function, add it to the return list as a variable
-        relevantVars = Variable(nameIdentifier(vars.apply(i))+"post") :: relevantVars
+        relevantVars = Variable(getPostNameIdentifier(vars.apply(i))) :: relevantVars
     }
     // reverse the list to get the correct order
     relevantVars.reverse
+  }
+
+  private def getPostNameIdentifier(v: NamedSymbol): String = {
+    v match {
+      case DifferentialSymbol(x) => getPostNameIdentifier(x) + "__p"
+      case _ => if (v.index.isEmpty) v.name + "post" else v.name + "post_" + v.index.get
+    }
   }
 
   /**
