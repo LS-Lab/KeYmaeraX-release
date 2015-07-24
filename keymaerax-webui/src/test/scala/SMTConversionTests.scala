@@ -99,10 +99,9 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     polya.toSMT("3^3 > 1".asFormula).getAssertNot should be  ("(assert (not (> (* 3 3 3) 1)))")
   }
 
-  //@todo Ran
   it should "convert negative" in {
-    z3.toSMT("3^-2 < 1".asFormula).getAssertNot should be ("(assert (not (< (/ 1. (* 3 3)) 1)))")
-    polya.toSMT("3^-2 < 1".asFormula).getAssertNot should be ("(assert (not (< (/ 1. (* 3 3)) 1)))")
+    z3.toSMT("3^-2 < 1".asFormula).getAssertNot should be ("(assert (not (< (/ 1 (* 3 3)) 1)))")
+    polya.toSMT("3^-2 < 1".asFormula).getAssertNot should be ("(assert (not (< (/ 1 (* 3 3)) 1)))")
   }
 
   it should "convert index 0" in {
@@ -115,19 +114,17 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     polya.toSMT("(0+0)^(x+y-1) = 1".asFormula).getAssertNot should be ("(assert (not (= 0 1)))")
   }
 
-  //@todo Ran
   it should "cause exception when converting fraction" in {
     a [SMTConversionException] should be thrownBy z3.toSMT("3^(-0.5) < 1".asFormula).getAssertNot
     a [SMTConversionException] should be thrownBy polya.toSMT("3^(-0.5) < 1".asFormula).getAssertNot
   }
 
-  //@todo Ran
   it should "convert complex" in {
     // Z3 and Polya gives different conversion results, both are sound
     z3.toSMT("(x+y-z)^3 = 1".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (= (* (+ x (- y z)) (+ x (- y z)) (+ x (- y z))) 1)))")
-    polya.toSMT("(x+y-z)^3 = 1".asFormula).getAssertNot should be ("(declare-fun z () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun x () Real)\n"
-      + "(assert (not (= (* (+ (+ (* (- 1) z) y) x) (+ (+ (* (- 1) z) y) x) (+ (+ (* (- 1) z) y) x)) 1)))")
+      + "(assert (not (= (* (- (+ x y) z) (- (+ x y) z) (- (+ x y) z)) 1)))")
+    polya.toSMT("(x+y-z)^3 = 1".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
+      + "(assert (not (= (* (+ (+ x y) (* (- 1) z)) (+ (+ x y) (* (- 1) z)) (+ (+ x y) (* (- 1) z))) 1)))")
   }
 
   it should "convert complex 2" in {
@@ -138,13 +135,12 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
       + "(assert (not (= (* (* 3 x) (* 3 x) (* 3 x)) 1)))")
   }
 
-  //@todo Ran
   it should "convert complex simplify index" in {
     // Z3 and Polya gives different conversion results, both are sound
     z3.toSMT("(x+y-z)^(y*2-y-y+3) = 1".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
-      + "(assert (not (= (* (+ x (- y z)) (+ x (- y z)) (+ x (- y z))) 1)))")
-    polya.toSMT("(x+y-z)^(y*2-y-y+3) = 1".asFormula).getAssertNot should be ("(declare-fun z () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun x () Real)\n"
-      + "(assert (not (= (* (+ (+ (* (- 1) z) y) x) (+ (+ (* (- 1) z) y) x) (+ (+ (* (- 1) z) y) x)) 1)))")
+      + "(assert (not (= (* (- (+ x y) z) (- (+ x y) z) (- (+ x y) z)) 1)))")
+    polya.toSMT("(x+y-z)^(y*2-y-y+3) = 1".asFormula).getAssertNot should be ("(declare-fun x () Real)\n" + "(declare-fun y () Real)\n" + "(declare-fun z () Real)\n"
+      + "(assert (not (= (* (+ (+ x y) (* (- 1) z)) (+ (+ x y) (* (- 1) z)) (+ (+ x y) (* (- 1) z))) 1)))")
   }
 
   // complex

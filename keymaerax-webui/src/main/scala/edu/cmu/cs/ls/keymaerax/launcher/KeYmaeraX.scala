@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 import java.io.PrintWriter
 
 import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ClassGenerator
-import edu.cmu.cs.ls.keymaerax.core.{And, Formula, Sequent, Variable}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics._
@@ -26,26 +26,36 @@ import scala.util.Random
  */
 object KeYmaeraX {
 
+  /** KeYmaera X version number */
+  val VERSION = "4.0a2"
+
   private type OptionMap = Map[Symbol, Any]
 
-  private val usage =
-    """KeYmaera X Prover
+  private val usage = "KeYmaera X Prover" + " " + VERSION +
+    """
       |
       |Usage: java -Xss20M -jar KeYmaeraX.jar
       |  -prove filename -tactic filename [-out filename] |
       |  -modelplex filename [-vars var1,var2,...,varn] [-out filename] |
-      |  -codegen filename [-format Spiral|C] [-vars var1,var2,...,varn] [-out filename] |
+      |  -codegen filename -format C|Spiral [-vars var1,var2,...,varn] [-out filename] |
       |  -ui [filename] [web server options]
       |
+      |Actions:
+      |  -prove     run KeYmaera X prover on given file with given tactic
+      |  -modelplex synthesize monitor from given file with ModelPlex prover tactic
+      |  -codegen   generate executable code from given file for given target language
+      |  -ui        start web user interface opening given file (if any) with optional arguments
+      |
       |Additional options:
-      |  -ui [opt] optional arguments [opts] are passed to the web user interface
-      |            that -ui starts, opening the given file (if any)
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
-      |  -verify   check the resulting proof certificate (recommended)
+      |  -verify   generate and check the final proof certificate (recommended)
       |  -noverify skip checking proof certificates after proof search
-      |  -interactive starts a simple command-line prover if -prove fails
-      |  -lax      enable lax mode with more flexible parser input and printer output etc.
+      |  -interval guard real arithmetic by interval arithmetic in floating point (recommended)
+      |  -nointerval  skip interval arithmetic presuming no floating point rounding occurs
+      |  -interactive start a simple command-line prover if -prove fails
+      |  -vars     use the given ordered list of variables, treating others as constant functions
+      |  -lax      enable lax mode with more flexible parser, printer, prover etc.
       |  -strict   enable strict mode with no flexibility in prover
       |  -debug    enable debug mode with more exhaustive messages
       |  -nodebug  disable debug mode to suppress intermediate messages
@@ -53,14 +63,13 @@ object KeYmaeraX {
       |  -license  Show license agreement for using this software
       |
       |Copyright (c) Carnegie Mellon University.
-      |Use option -license for the license conditions for using this software.
       |""".stripMargin
 
   def main (args: Array[String]): Unit = {
     println("KeYmaera X Prover\n" +
       "Use option -help for usage and license information")
     if (args.length == 0) launchUI(args)
-    if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); sys.exit(1)}
+    if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
     else {
       def makeVariables(varNames: Array[String]): Array[Variable] = {
         varNames.map(vn => KeYmaeraXParser(vn) match {
@@ -72,12 +81,8 @@ object KeYmaeraX {
       def nextOption(map: OptionMap, list: List[String]): OptionMap = {
         list match {
           case Nil => map
-          case "-help" :: _ => {
-            println(usage); sys.exit(1)
-          }
-          case "-license" :: _ => {
-            println(license); sys.exit(1)
-          }
+          case "-help" :: _ => {println(usage); exit(1)}
+          case "-license" :: _ => {println(license); exit(1)}
           // actions
           case "-prove" :: value :: tail => nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
           case "-modelplex" :: value :: tail => nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
@@ -92,21 +97,27 @@ object KeYmaeraX {
           // aditional options
           case "-mathkernel" :: value :: tail => nextOption(map ++ Map('mathkernel -> value), tail)
           case "-jlink" :: value :: tail => nextOption(map ++ Map('jlink -> value), tail)
-          case "-noverify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> false), tail)
           case "-verify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> true), tail)
+          case "-noverify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> false), tail)
+          case "-interval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> true), tail)
+          case "-nointerval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> false), tail)
           // global options
           case "-lax" :: tail => System.setProperty("LAX", "true"); nextOption(map, tail)
           case "-strict" :: tail => System.setProperty("LAX", "false"); nextOption(map, tail)
           case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
           case "-nodebug" :: tail => System.setProperty("DEBUG", "false"); nextOption(map, tail)
-          case option :: tail => println("Unknown option " + option + "\n" + usage); sys.exit(1)
+          case option :: tail => println("Unknown option " + option + "\n" + usage); exit(1)
         }
       }
 
-      val options = nextOption(Map(), args.toList)
+      //@note 'commandLine is only passed in to preserve evidence of what generated the output.
+      val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
       require(options.contains('mode), usage + "\narguments: " + args.mkString("  "))
 
-      if (options.get('mode) != Some("ui")) {
+      if (options.get('mode) == Some("codegen") && options.getOrElse('format, "C")=="C")
+        //@note no MathKernel initialization needed for C generation
+        codegen(options)
+      else if (options.get('mode) != Some("ui") ) {
         try {
           initializeProver(options)
 
@@ -156,10 +167,9 @@ object KeYmaeraX {
   /** Exit gracefully */
   private def exit(status: Int): Unit = {shutdownProver(); sys.exit(status)}
 
-  /** Launch the web user interface */
-  def launchUI(args: Array[String]): Unit = {
-    Main.main(args)
-  }
+  /** Generate a header stamping the source of a generated file */
+  //@todo Of course this has a security attack for non-letter characters like end of comments from command line
+  private def stampHead(options: OptionMap): String = "/* @evidence: generated by KeYmaeraX " + VERSION + " " + options.getOrElse('commandLine, "<unavailable>") + " */\n\n"
 
 
   /**
@@ -186,6 +196,8 @@ object KeYmaeraX {
     val input = scala.io.Source.fromFile(inputFileName).mkString
     val inputModel = KeYmaeraXProblemParser(input)
     val inputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel))
+
+    val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".proof").toString)
 
     //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
     val rootNode = new RootNode(inputSequent)
@@ -220,13 +232,16 @@ object KeYmaeraX {
           |End.
           |""".stripMargin
 
-      val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".proof").toString)
       //@todo ensure that reparse of this lemma is as expected
+      pw.write(stampHead(options))
+      pw.write("/* @evidence: parse of print of result of a proof */\n\n")
       pw.write(lemmaContent + evidence)
       pw.close()
     } else {
       assert(!rootNode.isClosed())
       assert(rootNode.openGoals().nonEmpty)
+      //@note PrintWriter above has already emptied the output file
+      pw.close()
       println("==================================")
       println("Tactic did not finish the proof    open goals: " + rootNode.openGoals().size)
       println("==================================")
@@ -253,27 +268,20 @@ object KeYmaeraX {
     val inputFileName = options.get('in).get.toString
     val input = scala.io.Source.fromFile(inputFileName).mkString
     val inputModel = KeYmaeraXProblemParser(input)
-
-    val outputFml = if (options.contains('vars))
-      ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList)(inputModel)
-    else
-      ModelPlex(inputModel)
-    val output = KeYmaeraXPrettyPrinter(outputFml)
-
-    if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
-      //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
-      System.err.println("Cannot yet verify ModelPlex proof certificates")
-
-      println("Unsuccessful proof: unfinished")
-      System.err.println("Unsuccessful proof: unfinished")
-      sys.exit(-1)
-      // TODO what to to when proof cannot be checked?
-    }
+    val verifyOption = options.getOrElse('verify, true).asInstanceOf[Boolean]
 
     val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".mx").toString)
+
+    val outputFml = if (options.contains('vars))
+      ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList, verifyOption)(inputModel)
+    else
+      ModelPlex(inputModel, verifyOption)
+    val output = KeYmaeraXPrettyPrinter(outputFml)
+
     val reparse = KeYmaeraXParser(output)
     assert(reparse == outputFml, "parse of print is identity")
-    pw.write("/* @evidence parse of print of ModelPlex proof output */\n")
+    pw.write(stampHead(options))
+    pw.write("/* @evidence: parse of print of ModelPlex proof output */\n\n")
     pw.write(output)
     pw.close()
   }
@@ -293,34 +301,61 @@ object KeYmaeraX {
     val inputFormula = KeYmaeraXParser(input)
     val inputFileName = inputFileNameMx.substring(0, inputFileNameMx.length-".mx".length)
 
+    if (options.getOrElse('interval, true).asInstanceOf[Boolean]) {
+      //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
+      System.err.println("Cannot yet augment compiled code with interval arithmetic to guard against floating-point roundoff errors\n(use -nointerval instead)")
+
+      println("Interval arithmetic: unfinished")
+      System.err.println("Interval arithmetic: unfinished")
+      //@todo wipe out output file PrintWriter above has already emptied the output file
+      //@todo pw.close()
+      exit(-1)
+      // TODO what to to when proof cannot be checked?
+    } else {
+      println("Interval arithmetic: Skipped interval arithmetic generation\n(use -interval to guard against floating-point roundoff errors)")
+    }
+
     if(options.get('format).get.toString == "C") {
-      val cGen = new CGenerator()
-      val output = cGen(inputFormula)
+      val vars: List[Variable] =
+        if(options.contains('vars)) options.get('vars).get.asInstanceOf[Array[Variable]].toList
+        else StaticSemantics.vars(inputFormula).toSymbolSet.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList.sortWith((x,y)=>x<y)
+      val output = CGenerator(inputFormula, vars, inputFileName)
       val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".c").toString)
+      pw.write(stampHead(options))
+      pw.write("/* @evidence: print of CGenerator of input */\n\n")
       pw.write(output)
       pw.close()
     } else if(options.get('format).get.toString == "Spiral") {
-      val sGen = new SpiralGenerator
       var outputG = ""
-      var outputH = ""
       if (options.contains('vars)) {
-        val output = sGen(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)
+        val output = SpiralGenerator(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)
         outputG = output._1
-        outputH = output._2
+        val outputH = output._2
         val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
+        pwG.write(stampHead(options))
         pwG.write(outputG)
         pwG.close()
         val pwH = new PrintWriter(options.getOrElse('out, inputFileName + ".h").toString)
+        pwH.write(stampHead(options))
         pwH.write(outputH)
         pwH.close()
       } else {
-        outputG = sGen(inputFormula, inputFileName)
+        outputG = SpiralGenerator(inputFormula, inputFileName)
         val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
+        pwG.write(stampHead(options))
         pwG.write(outputG)
         pwG.close()
       }
-    } else throw new IllegalArgumentException("-format should be specified and only be C or Spiral")
+    } else throw new IllegalArgumentException("-format C or -format Spiral should be specified as a command line argument")
   }
+
+
+  /** Launch the web user interface */
+  def launchUI(args: Array[String]): Unit = {
+    Main.main(args)
+  }
+
+  // helpers
 
   /** Print brief information about all open goals in the proof tree under node */
   def printOpenGoals(node: ProofNode): Unit = node.openGoals().foreach(g => printNode(g))
@@ -359,7 +394,7 @@ object KeYmaeraX {
     val cm = universe.runtimeMirror(getClass.getClassLoader)
     val tb = cm.mkToolBox()
     println("KeYmaera X Interactive Command-line Prover\n" +
-      "If you are looking for the more convenient web user interface,\nrestart with option -ui\n")
+      "If you are looking for the more convenient web user interface,\nrestart with option -ui\n\n")
     println(interactiveUsage)
 
     while (!root.isClosed()) {

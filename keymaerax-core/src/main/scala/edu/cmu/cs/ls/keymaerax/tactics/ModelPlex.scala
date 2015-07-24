@@ -39,12 +39,12 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
    * @todo Add a parameter to determine controller monitor versus model monitor versus prediction monitor.
    */
-  def apply(formula: Formula): Formula = formula match {
+  def apply(formula: Formula, checkProvable: Boolean = true): Formula = formula match {
     case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
       //@todo explicitly address DifferentialSymbol instead of exception
       val vars = StaticSemantics.boundVars(controller).toSymbolSet.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
       val sortedVars = vars.sortWith((x,y)=>x<y)
-      (apply(sortedVars))(formula)
+      (apply(sortedVars, checkProvable))(formula)
     case _ => throw new IllegalArgumentException("Unsupported shape of formula " + formula)
   }
 
@@ -52,23 +52,46 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
     * @todo Add a parameter to determine controller monitor versus model monitor versus prediction monitor.
     */
-  def apply(vars: List[Variable]): (Formula => Formula) = formula => {
+  def apply(vars: List[Variable]): (Formula => Formula) = apply(vars, true)
+
+  /**
+   * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
+   * @todo Add a parameter to determine controller monitor versus model monitor versus prediction monitor.
+   * @param checkProvable true to check the Provable proof certificates (recommended).
+   */
+  def apply(vars: List[Variable], checkProvable: Boolean): (Formula => Formula) = formula => {
     val mxInputFml = modelplexControllerMonitorTrafo(formula, vars)
+    val mxInputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
-    val rootNode = new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml)))
+    val rootNode = new RootNode(mxInputSequent)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
 
     assert(rootNode.openGoals().size == 1 && rootNode.openGoals().head.sequent.ante.size == 1 &&
       rootNode.openGoals().head.sequent.succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
-    And(rootNode.openGoals().head.sequent.ante.head, rootNode.openGoals().head.sequent.succ.head)
+    assert(rootNode.sequent == mxInputSequent, "Proof was a proof of the ModelPlex specification")
+    val mxOutputProofTree = And(rootNode.openGoals().head.sequent.ante.head, rootNode.openGoals().head.sequent.succ.head)
+    if (checkProvable) {
+      val provable = rootNode.provableWitness
+      assert(provable.subgoals.size == 1 && provable.subgoals(0).ante.size == 1 &&
+        provable.subgoals(0).succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
+      assert(provable.conclusion == mxInputSequent, "Provable is a proof of the ModelPlex specification")
+      val mxOutput = And(provable.subgoals(0).ante.head, provable.subgoals(0).succ.head)
+      assert(mxOutput == mxOutputProofTree, "ModelPlex output from Provable and from ProofNode agree (if ProofNode is correct)")
+      println("ModelPlex Proof certificate: Passed")
+      mxOutput
+    } else {
+      println("ModelPlex Proof certificate: Skipped")
+      mxOutputProofTree
+    }
   }
 
   /** Construct ModelPlex Controller Monitor specification formula corresponding to given formula for monitoring the given variables. */
   def modelplexControllerMonitorTrafo(fml: Formula, vars: List[Variable]): Formula = {
+    require(!vars.isEmpty, "ModelPlex expects non-empty list of variables to monitor")
     val varsSet = vars.toSet
     require(StaticSemantics.symbols(fml).intersect(
-      vars.toSet[Variable].map(v=>Function(v.name + "pre", v.index, Unit, Real).asInstanceOf[NamedSymbol]) ++
-        vars.toSet[Variable].map(v=>Function(v.name + "post", v.index, Unit, Real))
+      vars.toSet[Variable].map(v=>Function(v.name + "pre", v.index, Unit, v.sort).asInstanceOf[NamedSymbol]) ++
+        vars.toSet[Variable].map(v=>Function(v.name + "post", v.index, Unit, v.sort))
     ).isEmpty, "ModelPlex pre and post function symbols do not occur in original formula")
     fml match {
       // models of the form (ctrl;plant)*
@@ -76,14 +99,14 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
         //@todo explicitly address DifferentialSymbol instead of skipping
         require(StaticSemantics.boundVars(controller).toSymbolSet.forall(v => !v.isInstanceOf[Variable] || varsSet.contains(v.asInstanceOf[Variable])),
           "all bound variables " + StaticSemantics.boundVars(controller).prettyString + " must occur in monitor list " + vars.mkString(", "))
-        val preassignments = vars.map(v => Assign(v, FuncOf(Function(v.name + "pre", v.index, Unit, Real), Nothing))).reduce(Compose)
-        val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, Real), Nothing), v)).reduce(And)
+        val preassignments = vars.map(v => Assign(v, FuncOf(Function(v.name + "pre", v.index, Unit, v.sort), Nothing))).reduce(Compose)
+        val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
         //      Imply(assumptions, Diamond(preassignments, Diamond(controller, posteqs)))
         Imply(assumptions, Diamond(controller, posteqs))
       // models of the form (plant)
       case Imply(assumptions, Box(ODESystem(_, _), _)) =>
         //@todo require bound variables
-        val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, Real), Nothing), v)).reduce(And)
+        val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
         Imply(assumptions, Diamond(Test(True), posteqs))
       case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
     }

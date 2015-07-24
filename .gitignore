@@ -88,3 +88,4 @@ lemmadb/
 
 # Nathan-specific
 deploy.sh
+export/

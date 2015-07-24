@@ -237,7 +237,7 @@ object Provable {
  * Provable(conclusion, subgoals) is the proof certificate representing certified provability of
  * conclusion from the premises in subgoals.
  * If subgoals is an empty list, conclusion is provable.
- * Otherwise conclusion is provable from the assumptions subgoals.
+ * Otherwise conclusion is provable from the set of assumptions in subgoals.
  * @param conclusion the conclusion that follows if all subgoals are valid.
  * @param subgoals the premises that, if they are all valid, imply the conclusion.
  * @note soundness-critical
@@ -960,7 +960,9 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
         case Exists(vars, _) if vars.contains(what) => apply(f)
         case Box(Assign(x, y), _) if x == y && x == repl => apply(f)
         case Diamond(Assign(x, y), _) if x == y && x == repl => apply(f)
-        case _ => if (compatibilityMode) {println("LAX: BoundRenaming: Change alphaRenamingT and disable compatibilityMode" + (if (what==repl) " stutter " else "") + "\nfor " + this + " in " + f.prettyString + " led to " + Box(Assign(repl, what), apply(f)).prettyString)
+        case _ => if (compatibilityMode) {
+          //println("LAX: BoundRenaming: Change alphaRenamingT and disable compatibilityMode" + (if (what==repl) " stutter " else "non-stutter") + "\nfor " + this + " in " + f.prettyString + " led to " + Box(Assign(repl, what), apply(f)).prettyString)
+          if (Provable.DEBUG && repl != what) {println("LAX: BoundRenaming: Change alphaRenamingT and disable compatibilityMode" + (if (what==repl) " stutter " else "non-stutter") + "\nfor " + this + " in " + f.prettyString + " led to " + Box(Assign(repl, what), apply(f)).prettyString)}
           Box(Assign(repl, what), apply(f))
         } else throw new BoundRenamingClashException("Bound renaming only to bound variables " +
           what + " is not bound", this.toString, f.prettyString)
