@@ -34,6 +34,8 @@ object CGenerator extends CodeGenerator {
     val relevantVars = getRelevantVars(expr, vars)
     if(vars.toSet.diff(relevantVars.toSet).nonEmpty)
       println("[warning] -vars contains unknown variables {" + vars.toSet.diff(relevantVars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "}, which will be ignored")
+    if(relevantVars.toSet.diff(vars.toSet).nonEmpty)
+      println("[info] post variables {" + relevantVars.toSet.diff(vars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "} will be added as parameters")
     val calledFuncs = getCalledFuncs(expr, relevantVars)
     val funcHead = "/* monitor */\n" +
       "bool monitor (" + parameterDeclaration(expr, cDataType, relevantVars) + ")"
