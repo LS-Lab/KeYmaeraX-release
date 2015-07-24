@@ -165,7 +165,7 @@ object KeYmaeraX {
   }
 
   /** Exit gracefully */
-  private def exit(status: Int): Unit = {shutdownProver(); sys.exit(status)}
+  private def exit(status: Int): Nothing = {shutdownProver(); sys.exit(status)}
 
   /** Generate a header stamping the source of a generated file */
   //@todo Of course this has a security attack for non-letter characters like end of comments from command line
