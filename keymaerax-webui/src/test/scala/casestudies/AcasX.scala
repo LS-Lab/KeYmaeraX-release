@@ -94,13 +94,12 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       (indStepLbl, debugT("Step") & ls(ImplyRightT) & ls(boxSeqGenT(invariant)) & onBranch(
         (cutShowLbl, debugT("Generalization Holds") &
           ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) && (
-          debugT("1.1") & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) /* & ls(skolemizeT) & ls(ImplyRightT) */ & AxiomCloseT,
-          debugT("1.2") & ls(boxSeqT) & ls(boxNDetAssign) /* & ls(skolemizeT) & ls(ImplyRightT) */ & ls(boxSeqT) & ls(boxChoiceT) & hideT(AntePosition(1)) &
+          debugT("1.1") & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) & ls(skolemizeT) & AxiomCloseT,
+          debugT("1.2") & ls(boxSeqT) & ls(boxNDetAssign) & ls(skolemizeT) & ls(boxSeqT) & ls(boxChoiceT) & hideT(AntePosition(1)) &
             ls(AndRightT) & /* both branches are the same */
-            ls(substitutionBoxAssignT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) /* & ls(skolemizeT) & ls(ImplyRightT) */ & arith
+            ls(substitutionBoxAssignT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) & ls(skolemizeT) & arith
           )),
         (cutUseLbl, debugT("Generalization Strong Enough") &
-//          /* remove when HACK ?rv()=rv etc. is removed from model */ ((ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT))*) &
           debugT("Introducing constants") & ls(diffIntroduceConstantT) & debugT("Solving") & /*ls(LogicalODESolver.solveT) &*/ ls(diffSolution(None)) & debugT("Diff. Solution") & ls(ImplyRightT) & (la(AndLeftT)*) & ls(AndRightT) && (
             ls(AndRightT) && (
               AxiomCloseT,
@@ -235,7 +234,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           discreteGhostT(Some(Variable("r0")), Variable("r"))(odePos) & boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) &
           discreteGhostT(Some(Variable("dhd0")), Variable("dhd"))(odePos) & boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) &
           discreteGhostT(Some(Variable("h0")), Variable("h"))(odePos) & boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) &
-          debugT("Solving") & ls(LogicalODESolver.solveT) & debugT("Diff. Solution") &
+          debugT("Solving") & /* TODO have to use advanced ODE solver, this one uses diff. weaken */ ls(LogicalODESolver.solveT) & debugT("Diff. Solution") &
           Tactics.stopT &
           // TODO when ODESolver works, continue fixing the proof here (just copied from above)
           ls(ImplyRightT) & (la(AndLeftT)*) & ls(AndRightT) && (
