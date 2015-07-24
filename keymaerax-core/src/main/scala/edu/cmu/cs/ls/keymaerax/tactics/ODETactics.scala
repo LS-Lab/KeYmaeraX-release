@@ -945,13 +945,12 @@ object ODETactics {
     axiomLookupBaseT("DC differential cut", subst, _ => NilPT, (f, ax) => ax)
   }
 
-
-  ///
+  //////////////////////////////////////////////////////////////////////////////////////////////////
   // Diff Solve w/ ev dom constraint axiom
   // DS& differential equation solution
   // [x'=c()&q(x);]p(x) <->
   // \forall t. (t>=0 -> ((\forall s. ((0<=s&s<=t) -> q(x+c()*s))) -> [x:=x+c()*t;]p(x)))
-  ////
+  //////////////////////////////////////////////////////////////////////////////////////////////////
   def diffSolveConstraintT : PositionTactic = {
     def freshT(fml : Formula) = {
       val tName = "T"
@@ -1108,40 +1107,87 @@ object ODETactics {
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
-  // Inverse Differential Auxiliary Section
+  // Inverse Lipschitz Diff Ghost
+  // DG differential Lipschitz ghost system
+  // [c&H(?);]p(?) <-> \exists y. [y'=g(?),c&H(?);]p(?)
+  // <- (\exists L . \forall x . \forall a . \forall b . \forall u . \forall v . (a>=b -> [y:=a;u:=g(?);y:=b;v:=g(?)] (-L*(a-b) <= u-v & u-v <= L*(a-b))))
   //////////////////////////////////////////////////////////////////////////////////////////////////
 
+  def inverseLipschitzGhostT : PositionTactic = {
+    def fresh(fml : Formula, name : String) = Variable(name, TacticHelper.freshIndexInFormula(name, fml))
+
+    def LFresh(fml : Formula) = fresh(fml, "L")
+    def xFresh(fml : Formula) = fresh(fml, "x")
+    def aFresh(fml : Formula) = fresh(fml, "a")
+    def bFresh(fml: Formula) = fresh(fml, "b")
+    def uFresh(fml: Formula) = fresh(fml, "u")
+    def vFresh(fml : Formula) = fresh(fml, "v")
+
+    def axiomInstance(fml : Formula) : Formula = fml match {
+      case Exists(y :: Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(dy, g)), h), p)) => {
+        require(dy.x.equals(y), "Quantified and primed variable should agree.")
+        val l = LFresh(fml)
+        val x = xFresh(fml)
+        val a = aFresh(fml)
+        val b = bFresh(fml)
+        val v = vFresh(fml)
+        val u = uFresh(fml)
+        //(a>=b -> [y:=a;u:=g(?);y:=b;v:=g(?)] (-L*(a-b) <= u-v & u-v <= L*(a-b))))
+        val implicant = {
+          //@todo assuming default assoc of Compose, but that's not enforced in the data structures.
+          val boxAssignments = Compose(
+            Assign(y, a),Compose(
+              Assign(u, g), Compose(
+                Assign(y, b),
+                Assign(v, g)
+              )
+            )
+          )
+          val postcond : Formula = And(
+            LessEqual(Times(Neg(l), Minus(a,b)), Minus(u,v)),
+            LessEqual(Minus(u,v), Times(l, Minus(a,b)))
+          )
+          val implicantBody : Formula = Imply(GreaterEqual(a,b), Box(boxAssignments, postcond))
+
+          Exists(l :: Nil,
+            Forall(x :: Nil,
+              Forall(a :: Nil,
+                Forall(b :: Nil,
+                  Forall(u :: Nil,
+                    Forall(v :: Nil, implicantBody))))))
+        }
+
+        //[c&H(?);]p(?) <-> \exists y. [y'=g(?),c&H(?);]p(?)
+        val implicand = {
+          val left = Box(ODESystem(c, h), p)
+          val right = Exists(y :: Nil,
+            Box(ODESystem(DifferentialProduct(AtomicODE(dy, g), c), h), p)
+          )
+          Equiv(left, right)
+        }
+
+        Imply(implicant, implicand)
+      }
+    }
+
+    uncoverAxiomT("DG differential Lipschitz ghost system", axiomInstance, _ => inverseLipschitzGhostBaseT)
+  }
+  
+  def inverseLipschitzGhostBaseT : PositionTactic = ???
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////
   // Inverse Differential Auxiliary
   //////////////////////////////////////////////////////////////////////////////////////////////////
-  object InverseDiffAuxHelpers {
-    def toList(p : DifferentialProduct) : List[AtomicODE] = {
-      assert(isProductOfAtomics(p))
-      val left : List[AtomicODE] =
-        if (p.left.isInstanceOf[AtomicODE]) (p.left.asInstanceOf[AtomicODE] :: Nil)
-        else toList(p.left.asInstanceOf[DifferentialProduct])
-
-      val right : List[AtomicODE] =
-        if(p.right.isInstanceOf[AtomicODE]) (p.right.asInstanceOf[AtomicODE] :: Nil)
-        else toList(p.right.asInstanceOf[DifferentialProduct])
-
-      left ++ right
-    }
-
-    //@todo reimplement and enforce contract that toList and toProduct are inverses.
-    def toProduct(as : List[AtomicODE]) =
-      as.tail.tail.foldLeft(DifferentialProduct(as.head, as.tail.head))((ode, a) => DifferentialProduct(a, ode))
-
-    def isProductOfAtomics(p : DifferentialProgram) : Boolean = p match {
-      case AtomicODE(_,_) => true
-      case DifferentialProduct(l,r) => isProductOfAtomics(l) && isProductOfAtomics(r)
-      case _ => false
-    }
-
+  /**
+   * Tactic Input: \exists y . [c, y' = t()*y + s() & H(?);]p().
+   * Tactic Output: [c & H(?)]p()
+   */
+  def inverseDiffAuxiliaryT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case Exists(y :: Nil, Box(ODESystem(product : DifferentialProduct, h), p)) => {
+      case Exists(y :: Nil, Box(ODESystem(product: DifferentialProduct, h), p)) => {
         val (c, atom) = {
-          val l = toList(product)
-          (toProduct(l.tail), l.head)
+          val l = SystemHelpers.toList(product)
+          (SystemHelpers.toProduct(l.tail), l.head)
         }
 
         atom match {
@@ -1158,14 +1204,8 @@ object ODETactics {
       }
       case _ => False
     }
+    uncoverAxiomT("DA inverse differential ghost", axiomInstance, _ => inverseDiffAuxiliaryBaseT)
   }
-
-  /**
-   * Tactic Input: \exists y . [c, y' = t()*y + s() & H(?);]p().
-   * Tactic Output: [c & H(?)]p()
-   */
-  def inverseDiffAuxiliaryT: PositionTactic =
-    uncoverAxiomT("DA inverse differential ghost", InverseDiffAuxHelpers.axiomInstance, _ => inverseDiffAuxiliaryBaseT)
 
   private def inverseDiffAuxiliaryBaseT: PositionTactic = {
     /**
@@ -1176,8 +1216,8 @@ object ODETactics {
         case Equiv(Box(ode@ODESystem(alsoC, alsoH), alsoP), Exists(y :: Nil, Box(ODESystem(product : DifferentialProduct, h), p))) => {
           //Extract portions of the ODE. tail is the final (linear) ODE.
           val (c, tail) = {
-            val l = InverseDiffAuxHelpers.toList(product)
-            (InverseDiffAuxHelpers.toProduct(l.tail), l.head)
+            val l = SystemHelpers.toList(product)
+            (SystemHelpers.toProduct(l.tail), l.head)
           }
           val (yy, yyy, t, s) = tail match {
             case AtomicODE(DifferentialSymbol(yy), Plus(Times(t, yyy), s)) => (yy, yyy, t, s)
@@ -1522,6 +1562,36 @@ object ODETactics {
             consts.tail)
         }
       }
+    }
+  }
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // Helper methods for tactics that must interrogate the structure of an ODE
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+
+  object SystemHelpers {
+    def toList(p : DifferentialProduct) : List[AtomicODE] = {
+      assert(isProductOfAtomics(p))
+      val left : List[AtomicODE] =
+        if (p.left.isInstanceOf[AtomicODE]) (p.left.asInstanceOf[AtomicODE] :: Nil)
+        else toList(p.left.asInstanceOf[DifferentialProduct])
+
+      val right : List[AtomicODE] =
+        if(p.right.isInstanceOf[AtomicODE]) (p.right.asInstanceOf[AtomicODE] :: Nil)
+        else toList(p.right.asInstanceOf[DifferentialProduct])
+
+      left ++ right
+    }
+
+    //@todo reimplement and enforce contract that toList and toProduct are inverses.
+    def toProduct(as : List[AtomicODE]) =
+      as.tail.tail.foldLeft(DifferentialProduct(as.head, as.tail.head))((ode, a) => DifferentialProduct(a, ode))
+
+    def isProductOfAtomics(p : DifferentialProgram) : Boolean = p match {
+      case AtomicODE(_, _) => true
+      case DifferentialProduct(l, r) => isProductOfAtomics(l) && isProductOfAtomics(r)
+      case _ => false
     }
   }
 }
