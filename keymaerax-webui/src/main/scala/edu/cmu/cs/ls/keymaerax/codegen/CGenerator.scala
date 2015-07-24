@@ -124,7 +124,7 @@ object CGenerator extends CodeGenerator {
     require(s.sort == Real, "only real-valued symbols are currently supported")
     s match {
       case DifferentialSymbol(x) => nameIdentifier(x) + "__p"
-      case s: _ => if (s.index.isEmpty) s.name else s.name + "_" + s.index.get
+      case _ => if (s.index.isEmpty) s.name else s.name + "_" + s.index.get
     }
   }
 
