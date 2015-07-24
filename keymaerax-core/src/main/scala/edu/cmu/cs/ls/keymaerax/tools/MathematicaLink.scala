@@ -86,10 +86,13 @@ class JLinkMathematicaLink extends MathematicaLink {
    * Closes the connection to Mathematica.
    */
   def shutdown() = {
-    if (ml == null) throw new IllegalStateException("No MathKernel set")
-    ml.terminateKernel()
-    ml.close()
-    ml = null
+    if (ml == null) println("Cannot shut down if no MathKernel has been initialized")
+    //if (ml == null) throw new IllegalStateException("Cannot shut down if no MathKernel has been initialized")
+    else {
+      ml.terminateKernel()
+      ml.close()
+      ml = null
+    }
   }
 
   /**

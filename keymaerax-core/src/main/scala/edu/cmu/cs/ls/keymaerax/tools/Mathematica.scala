@@ -25,6 +25,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
     }
     val libDir = config.get("libDir") // doesn't need to be defined
     jlink.init(linkName, libDir)
+    //@todo isn't this a bug because MathematicaLink.init may also work without libDir.isDefined?
     initialized = libDir.isDefined
   }
 
