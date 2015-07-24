@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.core.StaticSemantics
 import scala.collection.immutable
 
 /**
- * Uniformly rename all occurrences of variable what (and its associated DifferentialSymbol) to repl.
+ * Uniformly rename all occurrences of variable what (and its associated DifferentialSymbol) to repl everywhere.
  * @param what What variable to replace (along with its associated DifferentialSymbol).
  * @param repl The target variable to replace what with.
  * @requires only used when repl does not occur in the input.
@@ -87,8 +87,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   private def rename(formula: Formula): Formula = {
     formula match {
       case PredOf(p, theta)        => PredOf(p, rename(theta))
-      //@todo eisegesis
-      case PredicationalOf(p, fml) => PredicationalOf(p, rename(fml))
+      case PredicationalOf(p, fml) => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
       case DotFormula | True | False => formula
 
       case Equal(l, r)        => Equal(rename(l),        rename(r))
@@ -122,8 +121,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   private def rename(program: Program): Program = {
     program match {
-      //@todo eisegesis
-      case a: ProgramConst             => a
+      case a: ProgramConst             => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, toString)
       case Assign(x, e) if x==what     => Assign(repl, rename(e))
       case Assign(x, e) if x==repl     => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
       case Assign(x, e)                => assert(x!=what && x!=repl); Assign(x, rename(e))
@@ -148,9 +146,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
       case AtomicODE(DifferentialSymbol(x), e) if x==what => AtomicODE(DifferentialSymbol(repl), rename(e))
       case AtomicODE(DifferentialSymbol(x), e) if x==repl => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
       case AtomicODE(xp, e)            => assert(xp.x!=what && xp.x!=repl); AtomicODE(xp, rename(e))
-      //@todo eisegesis
-      case c: DifferentialProgramConst => c
-      // homomorphic cases
+      case c: DifferentialProgramConst => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, toString)      // homomorphic cases
       case DifferentialProduct(a, b) => DifferentialProduct(renameODE(a), renameODE(b))
     }
   }
