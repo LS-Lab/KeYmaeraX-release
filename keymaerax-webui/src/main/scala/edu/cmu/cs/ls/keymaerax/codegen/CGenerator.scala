@@ -89,16 +89,18 @@ object CGenerator extends CodeGenerator {
     val allSymbolNames = StaticSemantics.symbols(e).toList
     var relevantVars = List[Variable]()
     for(i <- vars.indices) {
-      if(allSymbolNames.contains(vars.apply(i))) {
+      if(allSymbolNames.contains(vars.apply(i)))
         // variable occurs in the expression, add it to the return list
         relevantVars = vars.apply(i) :: relevantVars
-        if(allSymbolNames.contains(Function(nameIdentifier(vars.apply(i))+"post", None, Unit, Real))) {
-          // post variable occurs in the expression as nullary function, add it to the return list as a variable
-          relevantVars = Variable(nameIdentifier(vars.apply(i))+"post") :: relevantVars
-        }
-      } else if((allSymbolNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real))))
-        // variable occur as nullary function, add it to the return list as a variable
+      if((allSymbolNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real))))
+      // variable occur as nullary function, add it to the return list as a variable
         relevantVars = Variable(nameIdentifier(vars.apply(i))) :: relevantVars
+      if(allSymbolNames.contains(Variable(nameIdentifier(vars.apply(i))+"post")))
+      // post variable occurs in the expression as variable, add it to the return list as a variable
+        relevantVars = Variable(nameIdentifier(vars.apply(i))+"post") :: relevantVars
+      if(allSymbolNames.contains(Function(nameIdentifier(vars.apply(i))+"post", None, Unit, Real)))
+        // post variable occurs in the expression as nullary function, add it to the return list as a variable
+        relevantVars = Variable(nameIdentifier(vars.apply(i))+"post") :: relevantVars
     }
     // reverse the list to get the correct order
     relevantVars.reverse
@@ -134,7 +136,7 @@ object CGenerator extends CodeGenerator {
    *
    * @param e           given expression
    * @param calledFuncs the list of names need to be declared as function calls,
-   *                    which helps to determine whether a viriable encountered in expression should be generated as a nullary function
+   *                    which helps to determine whether a variable encountered in expression should be generated as a nullary function
    * @return            generated C code
    */
   private def compileToC(e: Expression, calledFuncs: Set[NamedSymbol]) = e match {
