@@ -40,9 +40,13 @@ object KeYmaeraX {
       |  -codegen filename -format C|Spiral [-vars var1,var2,...,varn] [-out filename] |
       |  -ui [filename] [web server options]
       |
+      |Actions:
+      |  -prove     run KeYmaera X prover on given file with given tactic
+      |  -modelplex synthesize monitor from given file with ModelPlex prover tactic
+      |  -codegen   generate executable code from given file for given target language
+      |  -ui        start web user interface opening given file (if any) with optional arguments
+      |
       |Additional options:
-      |  -ui [opt] optional arguments [opts] are passed to the web user interface
-      |            that -ui starts, opening the given file (if any)
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
       |  -verify   generate and check the final proof certificate (recommended)
