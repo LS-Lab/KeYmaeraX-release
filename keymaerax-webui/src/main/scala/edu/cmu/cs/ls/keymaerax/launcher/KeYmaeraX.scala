@@ -298,9 +298,10 @@ object KeYmaeraX {
     require(options.contains('in), usage)
     require(options.contains('format), usage)
 
-    val inputFileName = options.get('in).get.toString
-    val input = scala.io.Source.fromFile(inputFileName).mkString
+    val inputFileNameDotMx = options.get('in).get.toString
+    val input = scala.io.Source.fromFile(inputFileNameDotMx).mkString
     val inputFormula = KeYmaeraXParser(input)
+    val inputFileName = inputFileNameDotMx.substring(0, inputFileNameDotMx.length-".mx".length)
 
     if (options.getOrElse('interval, true).asInstanceOf[Boolean]) {
       //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
