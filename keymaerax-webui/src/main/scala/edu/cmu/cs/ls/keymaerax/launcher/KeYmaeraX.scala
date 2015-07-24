@@ -69,7 +69,7 @@ object KeYmaeraX {
     println("KeYmaera X Prover\n" +
       "Use option -help for usage and license information")
     if (args.length == 0) launchUI(args)
-    if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); sys.exit(1)}
+    if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
     else {
       def makeVariables(varNames: Array[String]): Array[Variable] = {
         varNames.map(vn => KeYmaeraXParser(vn) match {
@@ -81,8 +81,8 @@ object KeYmaeraX {
       def nextOption(map: OptionMap, list: List[String]): OptionMap = {
         list match {
           case Nil => map
-          case "-help" :: _ => {println(usage); sys.exit(1)}
-          case "-license" :: _ => {println(license); sys.exit(1)}
+          case "-help" :: _ => {println(usage); exit(1)}
+          case "-license" :: _ => {println(license); exit(1)}
           // actions
           case "-prove" :: value :: tail => nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
           case "-modelplex" :: value :: tail => nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
@@ -106,7 +106,7 @@ object KeYmaeraX {
           case "-strict" :: tail => System.setProperty("LAX", "false"); nextOption(map, tail)
           case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
           case "-nodebug" :: tail => System.setProperty("DEBUG", "false"); nextOption(map, tail)
-          case option :: tail => println("Unknown option " + option + "\n" + usage); sys.exit(1)
+          case option :: tail => println("Unknown option " + option + "\n" + usage); exit(1)
         }
       }
 
@@ -114,7 +114,10 @@ object KeYmaeraX {
       val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
       require(options.contains('mode), usage + "\narguments: " + args.mkString("  "))
 
-      if (options.get('mode) != Some("ui")) {
+      if (options.get('mode) == Some("codegen") && options.getOrElse('format, "C")=="C")
+        //@note no MathKernel initialization needed for C generation
+        codegen(options)
+      else if (options.get('mode) != Some("ui") ) {
         try {
           initializeProver(options)
 
@@ -306,7 +309,7 @@ object KeYmaeraX {
       System.err.println("Interval arithmetic: unfinished")
       //@todo wipe out output file PrintWriter above has already emptied the output file
       //@todo pw.close()
-      sys.exit(-1)
+      exit(-1)
       // TODO what to to when proof cannot be checked?
     } else {
       println("Interval arithmetic: Skipped interval arithmetic generation\n(use -interval to guard against floating-point roundoff errors)")
