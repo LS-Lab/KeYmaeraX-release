@@ -114,6 +114,10 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           onBranch(
             (cutShowLbl, debugT("Ignore this branch - cut cannot be shown") /* TODO Counts as open goal */),
             (cutUseLbl,
+              /* repeat cut so that we can instantiate twice */
+              cutT(Some("\\forall tside (0<=tside & tside<=kxtime_5 -> (w()*(dhd_2()+ao()*tside)>=w()*dhf()|w()*ao()>=a()))".asFormula)) & onBranch(
+                (cutShowLbl, AxiomCloseT),
+                (cutUseLbl,
           ls(ImplyRightT) & (la(AndLeftT)*) & ls(AndRightT) && (
             ls(AndRightT) && (
               AxiomCloseT,
@@ -182,18 +186,13 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                                     (cutUseLbl, la(OrLeftT, "w()*ao()>=a()|!w()*ao()>=a()") && (
                                       arith,
                                       debugT("Goal 231") & la(OrLeftT, "w()*dhd_3>=w()*dhf()|w()*ao()>=a()") && (
-                                        debugT("Goal 233") /* TODO instantiate tside with 0: call to instantiateT above did hide forall */ &
-                                          cutT(Some("\\forall tside (0<=tside & tside<=kxtime_5 -> (w()*(dhd_2()+ao()*tside)>=w()*dhf()|w()*ao()>=a()))".asFormula)) &
-                                          onBranch(
-                                            (cutShowLbl, debugT("Ignore this branch - cut cannot be shown") /* TODO Counts as open goal */),
-                                            (cutUseLbl, la(instantiateT(Variable("tside"), "0".asTerm), "\\forall tside (0<=tside&tside<=kxtime_5->w()*(dhd_2()+ao()*tside)>=w()*dhf()|w()*ao()>=a())") &
-                                              la(ImplyLeftT, "0<=0&0<=kxtime_5->w()*(dhd_2()+ao()*0)>=w()*dhf()|w()*ao()>=a()") && (
-                                                arith,
-                                                la(OrLeftT, "w()*(dhd_2()+ao()*0)>=w()*dhf()|w()*ao()>=a()") && (
-                                                  crushor,
-                                                  la(PropositionalTacticsImpl.NotLeftT) & AxiomCloseT
-                                                  )
-                                              )
+                                        debugT("Goal 233") &
+                                          la(instantiateT(Variable("tside"), "0".asTerm), "\\forall tside (0<=tside&tside<=kxtime_5->w()*(dhd_2()+ao()*tside)>=w()*dhf()|w()*ao()>=a())") &
+                                          la(ImplyLeftT, "0<=0&0<=kxtime_5->w()*(dhd_2()+ao()*0)>=w()*dhf()|w()*ao()>=a()") && (
+                                            arith,
+                                            la(OrLeftT, "w()*(dhd_2()+ao()*0)>=w()*dhf()|w()*ao()>=a()") && (
+                                              crushor,
+                                              la(PropositionalTacticsImpl.NotLeftT) & AxiomCloseT
                                               )
                                           ),
                                         la(PropositionalTacticsImpl.NotLeftT) & AxiomCloseT
@@ -207,7 +206,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                             )
                         ),
                         /* w*(dhf-dhd_3) <= 0 */ locateAnte(instantiateT(Variable("ho"), "dhf()*(t_0+kxtime_5)".asTerm), { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false }) &
-                        debugT("BGoal 120-2") /* TODO open goal: remainder of this tactic copied from above */ & lastAnte(ImplyLeftT) && (
+                        debugT("BGoal 120-2") & lastAnte(ImplyLeftT) && (
                         debugT("BGoal 122") & arith,
                         debugT("BGoal 123") & la(OrLeftT, "0<=t_0&t_0 < w()*(dhf()-dhd_3)/a()&ro_0=rv()*t_0&ho_0=w()*a()/2*t_0^2+dhd_3*t_0|t_0>=0&t_0>=w()*(dhf()-dhd_3)/a()&ro_0=rv()*t_0&(w()*(dhf()-dhd_3)<=0&ho_0=dhf()*t_0|w()*(dhf()-dhd_3)>0&ho_0=dhf()*t_0-w()*(w()*(dhf()-dhd_3))^2/(2*a()))") && (
                           crushor,
@@ -240,7 +239,9 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
             arith
           ) /* End AndRight */
           ) /* End cutUseLbl of ODE cut */
-          ) /* End onBranch of ODE cut */
+              ) /* End cutUseLbl of 1st ODE cut */
+              ) /* End onBranch of ODE cut */
+          ) /* End onBranch of 1st ODE cut */
           )
         ))
     )
