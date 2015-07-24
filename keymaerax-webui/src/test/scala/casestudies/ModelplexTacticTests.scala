@@ -61,9 +61,9 @@ class ModelplexTacticTests extends TacticTestSuite {
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante should contain only ("0<=x".asFormula, "x<=m".asFormula, "0<ep".asFormula)
-    result.openGoals()(0).sequent.succ should contain only "-1<=f & f<=(m-x)/ep".asFormula
-    result.openGoals()(1).sequent.ante should contain only ("0<=x".asFormula, "x<=m".asFormula, "0<ep".asFormula, "-1<=f".asFormula, "f<=(m-x)/ep".asFormula)
-    result.openGoals()(1).sequent.succ should contain only "t_0=0 & (fpost()=f & xpost()=x & tpost()=t_0)".asFormula
+    result.openGoals()(0).sequent.succ should contain only "-1<=fpost_0() & fpost_0()<=(m-x)/ep".asFormula
+    result.openGoals()(1).sequent.ante should contain only ("0<=x".asFormula, "x<=m".asFormula, "0<ep".asFormula, "-1<=fpost_0()".asFormula, "fpost_0()<=(m-x)/ep".asFormula)
+    result.openGoals()(1).sequent.succ should contain only "tpost_0()=0 & (fpost()=fpost_0() & xpost()=x & tpost()=tpost_0())".asFormula
   }
 
   ignore should "find correct model monitor condition" in {
@@ -86,7 +86,7 @@ class ModelplexTacticTests extends TacticTestSuite {
 //    val expected = "-1<=f & f<=(m-x)/ep & (-1<=f & f<=(m-x)/ep -> f_post()=f & x_post()=x & t_post()=0)".asFormula
 
     // with ordinary diamond test
-    val expected = "-1<=f&f<=(m-x)/ep&(fpost()=f&xpost()=x&tpost()=0)".asFormula
+    val expected = "-1<=fpost_0()&fpost_0()<=(m-x)/ep&(fpost()=fpost_0()&xpost()=x&tpost()=0)".asFormula
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "0<=x & x<=m & 0<ep".asFormula
@@ -101,7 +101,7 @@ class ModelplexTacticTests extends TacticTestSuite {
     val result = helper.runTactic(tactic, new RootNode(s))
 
     // with ordinary diamond test
-    val expected = "-1<=f&f<=(m-x)/ep&(fpost()=f&xpost()=x&tpost()=0)".asFormula
+    val expected = "-1<=fpost_0()&fpost_0()<=(m-x)/ep&(fpost()=fpost_0()&xpost()=x&tpost()=0)".asFormula
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "0<=x & x<=m & 0<ep".asFormula
@@ -289,11 +289,11 @@ class ModelplexTacticTests extends TacticTestSuite {
 //      "xf_post()=xf&vf_post()=vf&af_post()=af&xl_post()=xl&vl_post()=vl&al_post()=al&t_post()=0))))").asFormula
 
     // with ordinary diamond test
-    val expected = ("-B<=al & al<=A & " +
+    val expected = ("-B<=alpost_0() & alpost_0()<=A & " +
       "((xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf)<xl+vl^2/(2*B) & " +
-      "(-B<=af&af<=A&(xfpost()=xf&vfpost()=vf&afpost()=af&xlpost()=xl&vlpost()=vl&alpost()=al&tpost()=0))) | " +
-      "((vf=0&(xfpost()=xf&vfpost()=vf&afpost()=0&xlpost()=xl&vlpost()=vl&alpost()=al&tpost()=0)) | " +
-      "(-B<=af&af<=-b&(xfpost()=xf&vfpost()=vf&afpost()=af&xlpost()=xl&vlpost()=vl&alpost()=al&tpost()=0))))").asFormula
+      "(-B<=afpost_0()&afpost_0()<=A&(xfpost()=xf&vfpost()=vf&afpost()=afpost_0()&xlpost()=xl&vlpost()=vl&alpost()=alpost_0()&tpost()=0))) | " +
+      "((vf=0&(xfpost()=xf&vfpost()=vf&afpost()=0&xlpost()=xl&vlpost()=vl&alpost()=alpost_0()&tpost()=0)) | " +
+      "(-B<=afpost_0()&afpost_0()<=-b&(xfpost()=xf&vfpost()=vf&afpost()=afpost_0()&xlpost()=xl&vlpost()=vl&alpost()=alpost_0()&tpost()=0))))").asFormula
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only
@@ -303,18 +303,18 @@ class ModelplexTacticTests extends TacticTestSuite {
     report(expected, result, "Local lane controller ")
   }
 
-  it should "find correct controller monitor condition without intermediate Optimization 1" in {
+  ignore should "find correct controller monitor condition without intermediate Optimization 1" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-ctrl.key"))
     val tactic = modelplexInPlace(useOptOne=false)(SuccPosition(0)) &
       (optimizationOne()(SuccPosition(0))*)
     val result = helper.runTactic(tactic, new RootNode(s))
 
     // with ordinary diamond test
-    val expected = ("-B<=al & al<=A & " +
+    val expected = ("-B<=alpost_0() & alpost_0()<=A & " +
       "((xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf)<xl+vl^2/(2*B) & " +
-      "(-B<=af&af<=A&(xfpost()=xf&vfpost()=vf&afpost()=af&xlpost()=xl&vlpost()=vl&alpost()=al&tpost()=0))) | " +
-      "((vf=0&(xfpost()=xf&vfpost()=vf&afpost()=0&xlpost()=xl&vlpost()=vl&alpost()=al&tpost()=0)) | " +
-      "(-B<=af&af<=-b&(xfpost()=xf&vfpost()=vf&afpost()=af&xlpost()=xl&vlpost()=vl&alpost()=al&tpost()=0))))").asFormula
+      "(-B<=afpost_0()&afpost_0()<=A&(xfpost()=xf&vfpost()=vf&afpost()=afpost_0()&xlpost()=xl&vlpost()=vl&alpost()=alpost_0()&tpost()=0))) | " +
+      "((vf=0&(xfpost()=xf&vfpost()=vf&afpost()=0&xlpost()=xl&vlpost()=vl&alpost()=alpost_0()&tpost()=0)) | " +
+      "(-B<=afpost_0()&afpost_0()<=-b&(xfpost()=xf&vfpost()=vf&afpost()=afpost_0()&xlpost()=xl&vlpost()=vl&alpost()=alpost_0()&tpost()=0))))").asFormula
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only
@@ -346,15 +346,10 @@ class ModelplexTacticTests extends TacticTestSuite {
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
     val result = helper.runTactic(tactic, new RootNode(s))
 
-    // with Modelplex diamond test
-//    val expected = ("(x_post()=x&y_post()=y&v_post()=v&a_post()=-b&w_post()=w&dx_post()=dx&dy_post()=dy&r_post()=r&ox_post()=ox&oy_post()=oy&t_post()=0) | " +
-//      "((v=0&(v=0->x_post()=x&y_post()=y&v_post()=v&a_post()=0&w_post()=0&dx_post()=dx&dy_post()=dy&r_post()=r&ox_post()=ox&oy_post()=oy&t_post()=0)) | " +
-//      "(-b<=a&a<=A&(-b<=a&a<=A->r>0&(r>0->w*r=v&(w*r=v->(Abs(x-ox)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|Abs(y-oy)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&(Abs(x-ox)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|Abs(y-oy)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)->x_post()=x&y_post()=y&v_post()=v&a_post()=a&w_post()=w&dx_post()=dx&dy_post()=dy&r_post()=r&ox_post()=ox&oy_post()=oy&t_post()=0))))))").asFormula
-
     // with ordinary diamond test
     val expected = ("(xpost()=x&ypost()=y&vpost()=v&apost()=-B&wpost()=w&dxpost()=dx&dypost()=dy&rpost()=r&oxpost()=ox&oypost()=oy&tpost()=0) | " +
       "((v=0&(xpost()=x&ypost()=y&vpost()=v&apost()=0&wpost()=0&dxpost()=dx&dypost()=dy&rpost()=r&oxpost()=ox&oypost()=oy&tpost()=0)) | " +
-      "(-B<=a&a<=A&(r!=0&(w*r=v&((Abs(x-ox)>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-oy)>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(xpost()=x&ypost()=y&vpost()=v&apost()=a&wpost()=w&dxpost()=dx&dypost()=dy&rpost()=r&oxpost()=ox&oypost()=oy&tpost()=0))))))").asFormula
+      "(-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&((Abs(x-oxpost_0())>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-oypost_0())>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(xpost()=x&ypost()=y&vpost()=v&apost()=apost_0()&wpost()=wpost_0()&dxpost()=dx&dypost()=dy&rpost()=rpost_0()&oxpost()=oxpost_0()&oypost()=oypost_0()&tpost()=0))))))").asFormula
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only
@@ -367,7 +362,8 @@ class ModelplexTacticTests extends TacticTestSuite {
   it should "generate the correct Modelplex property from the input model" in {
     val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("a"), Variable("r")))
+    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("a"), Variable("r"), Variable("xo"),
+      Variable("yo"), Variable("t"), Variable("w"), Variable("dxo"), Variable("dyo")))
 
     modelplexInput shouldBe  """
         |v >= 0
@@ -379,8 +375,7 @@ class ModelplexTacticTests extends TacticTestSuite {
         |  & B > 0
         |  & V() >= 0
         |  & ep > 0
-        |  -> <a:=apre();r:=rpre();>
-        |     <dxo :=*;
+        |  -> <dxo :=*;
         |      dyo :=*;
         |      ?dxo^2 + dyo^2 <= V()^2;
         |
@@ -404,7 +399,7 @@ class ModelplexTacticTests extends TacticTestSuite {
         |    	 }
         |    	 };
         |
-        |    	 t := 0;>(apost()=a&rpost()=r)
+        |    	 t := 0;>(apost()=a&rpost()=r&xopost()=xo&yopost()=yo&tpost()=t&wpost()=w&dxopost()=dxo&dyopost()=dyo)
       """.stripMargin.asFormula
   }
 
@@ -413,16 +408,11 @@ class ModelplexTacticTests extends TacticTestSuite {
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
     val result = helper.runTactic(tactic, new RootNode(s))
 
-    // with Modelplex diamond test
-    //    val expected = ("(x_post()=x&y_post()=y&v_post()=v&a_post()=-b&w_post()=w&dx_post()=dx&dy_post()=dy&r_post()=r&ox_post()=ox&oy_post()=oy&t_post()=0) | " +
-    //      "((v=0&(v=0->x_post()=x&y_post()=y&v_post()=v&a_post()=0&w_post()=0&dx_post()=dx&dy_post()=dy&r_post()=r&ox_post()=ox&oy_post()=oy&t_post()=0)) | " +
-    //      "(-b<=a&a<=A&(-b<=a&a<=A->r>0&(r>0->w*r=v&(w*r=v->(Abs(x-ox)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|Abs(y-oy)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v))&(Abs(x-ox)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)|Abs(y-oy)>v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)->x_post()=x&y_post()=y&v_post()=v&a_post()=a&w_post()=w&dx_post()=dx&dy_post()=dy&r_post()=r&ox_post()=ox&oy_post()=oy&t_post()=0))))))").asFormula
-
     // with ordinary diamond test
     val expectedAnte = "v>=0 & (Abs(x-ox)>v^2/(2*B) + V()*(v/B) | Abs(y-oy)>v^2/(2*B) + V()*(v/B)) & r!=0 & dx^2+dy^2=1 & A>=0 & B>0 & ep>0".asFormula
-    val expectedSucc = ("(apost()=-B&rpost()=rpre()) | " +
-      "(v=0&(apost()=0&rpost()=rpre()) | " +
-      "(-B<=a&a<=A&(r!=0&(w*r=v&((Abs(x-ox)>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-oy)>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(apost()=a&rpost()=r))))))").asFormula
+    val expectedSucc = ("(apost()=-B&rpost()=r) | " +
+      "(v=0&(apost()=0&rpost()=r) | " +
+      "(-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&((Abs(x-oxpost_0())>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-oypost_0())>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(apost()=apost_0()&rpost()=rpost_0()))))))").asFormula
 
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only expectedAnte
@@ -434,22 +424,23 @@ class ModelplexTacticTests extends TacticTestSuite {
   it should "find the correct controller monitor condition from the input model" in {
     val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("a"), Variable("r")))
+    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("a"), Variable("r"), Variable("t"),
+      Variable("dxo"), Variable("dyo"), Variable("xo"), Variable("yo"), Variable("w")))
 
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
 
     val expectedAnte = "v>=0 & (Abs(x-xo)>v^2/(2*B)+V()*(v/B)|Abs(y-yo)>v^2/(2*B)+V()*(v/B)) & r!=0 & dx^2+dy^2=1 & A>=0 & B>0 & V()>=0 & ep>0".asFormula
-    val expectedSucc = ("dxo^2+dyo^2<=V()^2 & (apost()=-B & rpost()=rpre() | " +
-      "                                       (v=0 & (apost()=0 & rpost()=rpre())" +
-      "                                       |-B<=a&a<=A & (r!=0 & (w*r=v & ((Abs(x-xo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-yo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))) & (apost()=a&rpost()=r))))))").asFormula
+    val expectedSucc = ("dxopost_0()^2+dyopost_0()^2<=V()^2 & (apost()=-B & rpost()=r & tpost()=0 & dxopost()=dxopost_0() & dyopost()=dyopost_0() & xopost()=xo & yopost()=yo & wpost()=w" +
+      "                                       | (v=0 & (apost()=0 & rpost()=r & tpost()=0 & dxopost()=dxopost_0() & dyopost()=dyopost_0() & xopost()=xo & yopost()=yo & wpost()=0)" +
+      "                                       | -B<=apost_0()&apost_0()<=A & (rpost_0()!=0 & (wpost_0()*rpost_0()=v & ((Abs(x-xopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-yopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))) & (apost()=apost_0()&rpost()=rpost_0()&tpost()=0&dxopost()=dxopost_0()&dyopost()=dyopost_0()&xopost()=xopost_0()&yopost()=yopost_0()&wpost()=wpost_0()))))))").asFormula
 
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only expectedAnte
     result.openGoals().head.sequent.succ should contain only expectedSucc
   }
 
-  it should "find correct controller monitor condition without intermediate Optimization 1" in {
+  ignore should "find correct controller monitor condition without intermediate Optimization 1" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/rss13/passivesafety-ctrl.key"))
     val tactic = modelplexInPlace(useOptOne=false)(SuccPosition(0)) &
       (optimizationOne()(SuccPosition(0))*)
@@ -472,15 +463,32 @@ class ModelplexTacticTests extends TacticTestSuite {
     // command line main has to initialize the prover itself, so dispose all test setup first
     afterEach()
 
-    val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.key"
-    val vars = "a,r"
+    val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafety.key"
+    val vars = "a,r,xo,yo,dxo,dyo,t,w"
     val outputFileName = File.createTempFile("passivesafetyabs", ".mx").getAbsolutePath
     KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-out", outputFileName))
 
-    val expectedFileContent = And("v>=0 & (Abs(x-xo)>v^2/(2*B)+V()*(v/B)|Abs(y-yo)>v^2/(2*B)+V()*(v/B)) & r!=0 & dx^2+dy^2=1 & A>=0 & B>0 & V()>=0 & ep>0".asFormula,
-      ("dxo^2+dyo^2<=V()^2 & (apost()=-B & rpost()=rpre() | " +
-      "(v=0 & (apost()=0 & rpost()=rpre())" +
-      "| -B<=a&a<=A & (r!=0 & (w*r=v & ((Abs(x-xo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-yo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))) & (apost()=a&rpost()=r))))))").asFormula)
+    val expectedFileContent = And(
+      "v>=0&((x-xo>=0->x-xo>v^2/(2*B)+V()*(v/B))&(x-xo<=0->xo-x>v^2/(2*B)+V()*(v/B))|(y-yo>=0->y-yo>v^2/(2*B)+V()*(v/B))&(y-yo<=0->yo-y>v^2/(2*B)+V()*(v/B)))&r!=0&dx^2+dy^2=1&A>=0&B>0&V()>=0&ep>0".asFormula,
+      "dxopost_0()^2+dyopost_0()^2<=V()^2&(apost()=-B&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=w|(v=0&(apost()=0&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=0)|-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&(((x-xopost_0()>=0->x-xopost_0()>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(x-xopost_0()<=0->xopost_0()-x>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))|(y-yopost_0()>=0->y-yopost_0()>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(y-yopost_0()<=0->yopost_0()-y>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))))&(apost()=apost_0()&rpost()=rpost_0()&xopost()=xopost_0()&yopost()=yopost_0()&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=wpost_0()))))))".asFormula)
+
+
+    val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
+    KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
+  }
+
+  it should "work using the command line interface with abs function" in {
+    // command line main has to initialize the prover itself, so dispose all test setup first
+    afterEach()
+
+    val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.key"
+    val vars = "a,r,xo,yo,dxo,dyo,t,w"
+    val outputFileName = File.createTempFile("passivesafetyabs", ".mx").getAbsolutePath
+    KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-out", outputFileName))
+
+    val expectedFileContent = And(
+      "v>=0&(Abs(x-xo)>v^2/(2*B)+V()*(v/B)|Abs(y-yo)>v^2/(2*B)+V()*(v/B))&r!=0&dx^2+dy^2=1&A>=0&B>0&V()>=0&ep>0".asFormula,
+      "dxopost_0()^2+dyopost_0()^2<=V()^2&(apost()=-B&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=w|(v=0&(apost()=0&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=0)|-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&((Abs(x-xopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-yopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(apost()=apost_0()&rpost()=rpost_0()&xopost()=xopost_0()&yopost()=yopost_0()&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=wpost_0()))))))".asFormula)
 
     val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
     KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
@@ -489,13 +497,15 @@ class ModelplexTacticTests extends TacticTestSuite {
   "RSS passive orientation safety modelplex in place" should "extract the correct controller monitor" in {
     val in = getClass.getResourceAsStream("examples/casestudies/robix/passiveorientationsafety.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("a"), Variable("r")))
+    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("a"), Variable("r"),
+      Variable("talpha"), Variable("odx"), Variable("ody"), Variable("ox"), Variable("oy"), Variable("dx"),
+      Variable("dy"), Variable("w"), Variable("isVisible"), Variable("t")))
 
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
 
-    val expectedAnte = "v>=0&V()>=0&((x-ox>=0->x-ox>v^2/(2*b)+V()*(v/b))&(x-ox<=0->ox-x>v^2/(2*b)+V()*(v/b))|(y-oy>=0->y-oy>v^2/(2*b)+V()*(v/b))&(y-oy<=0->oy-y>v^2/(2*b)+V()*(v/b)))&(r < 0->v^2/(2*b*-r) < alpha())&(r>=0->v^2/(2*b*r) < alpha())&talpha=0&r!=0&dx^2+dy^2=1&A>=0&b>0&ep>0&alpha()>0".asFormula
-    val expectedSucc = "odx^2+ody^2<=V()^2&(w*r=v&(apost()=-b&rpost()=r)|(v=0&(w*r=v&(apost()=0&rpost()=r))|(-b<=a&a<=A&(r!=0&(v+a*ep < 0&((isVisble>=0->(x-ox>=0->x-ox>v^2/(-2*a)+v/-a*V())&(x-ox<=0->ox-x>v^2/(-2*a)+v/-a*V())|(y-oy>=0->y-oy>v^2/(-2*a)+v/-a*V())&(y-oy<=0->oy-y>v^2/(-2*a)+v/-a*V()))&((r>=0->v^2/(-2*a) < alpha()*r)&(r < 0->v^2/(-2*a) < -alpha()*r)&(w*r=v&(apost()=a&rpost()=r))))))|v+a*ep>=0&((isVisible>=0->(x-ox>=0->x-ox>v^2/(2*b)+V()*v/b+(a/b+1)*(a/2*ep^2+ep*(v+V())))&(x-ox<=0->ox-x>v^2/(2*b)+V()*v/b+(a/b+1)*(a/2*ep^2+ep*(v+V())))|(y-oy>=0->y-oy>v^2/(2*b)+V()*v/b+(a/b+1)*(a/2*ep^2+ep*(v+V())))&(y-oy<=0->oy-y>v^2/(2*b)+V()*v/b+(a/b+1)*(a/2*ep^2+ep*(v+V()))))&((r>=0->v^2/(2*b)+(a/b+1)*(a/2*ep^2+ep*v) < alpha()*r)&(r < 0->v^2/(2*b)+(a/b+1)*(a/2*ep^2+ep*v) < -alpha()*r)&(w*r=v&(apost()=a&rpost()=r)))))))".asFormula
+    val expectedAnte = "v>=0&V()>=0&((x-ox>=0->x-ox>v^2/(2*b())+V()*(v/b()))&(x-ox<=0->ox-x>v^2/(2*b())+V()*(v/b()))|(y-oy>=0->y-oy>v^2/(2*b())+V()*(v/b()))&(y-oy<=0->oy-y>v^2/(2*b())+V()*(v/b())))&(r < 0->v^2/(2*b()*-r) < alpha())&(r>=0->v^2/(2*b()*r) < alpha())&talpha=0&r!=0&dx^2+dy^2=1&A>=0&b()>0&ep>0&alpha()>0".asFormula
+    val expectedSucc = "odxpost_0()^2+odypost_0()^2<=V()^2&(wpost_0()*r=v&(apost()=-b()&rpost()=r)|(v=0&(wpost_0()*r=v&(apost()=0&rpost()=r))|(-b()<=apost_0()&apost_0()<=A&(rpost_0()!=0&(v+apost_0()*ep < 0&((isVisblepost_0()>=0->(x-oxpost_0()>=0->x-oxpost_0()>v^2/(-2*apost_0())+v/-apost_0()*V())&(x-oxpost_0()<=0->oxpost_0()-x>v^2/(-2*apost_0())+v/-apost_0()*V())|(y-oypost_0()>=0->y-oypost_0()>v^2/(-2*apost_0())+v/-apost_0()*V())&(y-oypost_0()<=0->oypost_0()-y>v^2/(-2*apost_0())+v/-apost_0()*V()))&((rpost_0()>=0->v^2/(-2*apost_0()) < alpha()*rpost_0())&(rpost_0() < 0->v^2/(-2*apost_0()) < -alpha()*rpost_0())&(wpost_0()*rpost_0()=v&(apost()=apost_0()&rpost()=rpost_0()))))))|v+apost_0()*ep>=0&((isVisiblepost_0()>=0->(x-oxpost_0()>=0->x-oxpost_0()>v^2/(2*b())+V()*v/b()+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*(v+V())))&(x-oxpost_0()<=0->oxpost_0()-x>v^2/(2*b())+V()*v/b()+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*(v+V())))|(y-oypost_0()>=0->y-oypost_0()>v^2/(2*b())+V()*v/b()+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*(v+V())))&(y-oypost_0()<=0->oypost_0()-y>v^2/(2*b())+V()*v/b()+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*(v+V()))))&((rpost_0()>=0->v^2/(2*b())+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*v) < alpha()*rpost_0())&(rpost_0() < 0->v^2/(2*b())+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*v) < -alpha()*rpost_0())&(wpost_0()*rpost_0()=v&(apost()=apost_0()&rpost()=rpost_0()&talphapost()=0&odxpost()=odxpost_0()&odypost()=odypost_0()&oxpost()=oxpost_0()&oypost()=oypost_0()&dxpost()=dx&dypost()=dy&wpost=wpost_0()&isVisiblepost()=isVisiblepost_0()&tpost()=0)))))))".asFormula
 
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only expectedAnte

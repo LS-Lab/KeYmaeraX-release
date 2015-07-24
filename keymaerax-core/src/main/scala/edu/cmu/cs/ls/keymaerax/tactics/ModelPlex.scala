@@ -168,7 +168,6 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
   /** ModelPlex proof tactic for monitor synthesis (in-place version) */
   def modelplexInPlace(useOptOne: Boolean, time: Option[Variable] = None) = new PositionTactic("Modelplex In-Place") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      // TODO generate from phi -> [alpha*]psi
       case Imply(_, Diamond(_, _)) => true
       case _ => false
     }
@@ -178,7 +177,9 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         Some(ImplyRightT(p) & ((debugT("Before HP") & hp(useOptOne, time)(p) & debugT("After  HP"))*) &
-          (atOutermostQuantifier(localQuantifierElimination)(p) | NilT)
+          debugT("Done with transformation, now looking for quantifiers") &
+          (atOutermostQuantifier(TacticLibrary.debugAtT("Local quantifier elimination") & localQuantifierElimination)(p) | NilT) &
+          debugT("Modelplex done")
         )
       }
     }
@@ -333,27 +334,19 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case Exists(vars, phi) if !p.isAnte => inst match {
           case Some(i) => Some(instantiateT(i._1, i._2)(p))
-          case None => Some(instantiateT(p))
-//            require(vars.size == 1)
-//            require(vars.forall { case _: Variable => true case _ => false })
-//            val (v, post) = vars.map(v => (v.asInstanceOf[Variable], Function(s"${v.name}_post", v.index, Unit, v.sort))).head
-////          TODO optimization one does not quite work out (how to handle resulting f_post = f_post?)
-//            val f = getFormula(node.sequent, p)
-//            val postFn = Apply(post, Nothing)
-////            val postFn = Apply(freshNamedSymbol(post, f), Nothing)
-////
-//            val postTempFn = Apply(freshNamedSymbol(post, f), Nothing)
-//            val substToTemp = SubstitutionPair(postTempFn, postFn) :: Nil
-//            val concToTemp = SubstitutionHelper.replaceFree(f)(postFn, postTempFn)
-//
-//            Some(debugT("b4 optimization 1") & uniformSubstT(substToTemp, Map(f -> concToTemp)) &
-//              debugT("after substitution") &
-//              instantiateT(v, postFn)(p) & debugT(s"after instantiate: $postTempFn -> $postFn") &
-//              substFromTemp(postTempFn, postFn)(p) & debugT("result"))
+          case None => //Some(instantiateT(p))
+            require(vars.size == 1)
+            val (v, post) = vars.map(v => (v, Function(s"${v.name}post", Some(0), Unit, v.sort))).head
+            val postFn = FuncOf(post, Nothing)
+            Some(instantiateT(v, postFn)(p))
         }
         case Forall(vars, phi) if p.isAnte => inst match {
           case Some(i) => Some(instantiateT(i._1, i._2)(p))
-          case None => Some(instantiateT(p))
+          case None => //Some(instantiateT(p))
+            require(vars.size == 1)
+            val (v, post) = vars.map(v => (v, Function(s"${v.name}post", Some(0), Unit, v.sort))).head
+            val postFn = FuncOf(post, Nothing)
+            Some(instantiateT(v, postFn)(p))
         }
       }
     }
