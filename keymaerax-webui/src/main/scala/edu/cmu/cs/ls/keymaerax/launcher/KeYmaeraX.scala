@@ -36,25 +36,25 @@ object KeYmaeraX {
       |
       |Usage: java -Xss20M -jar KeYmaeraX.jar
       |  -prove filename -tactic filename [-out filename] |
-      |  -modelplex filename [-vars var1,var2,...,varn] [-out filename] |
-      |  -codegen filename -format C|Spiral [-vars var1,var2,...,varn] [-out filename] |
+      |  -modelplex filename [-vars var1,var2,..,varn] [-out filename] |
+      |  -codegen filename -format C|Spiral [-vars var1,var2,..,varn] [-out filename] |
       |  -ui [filename] [web server options]
       |
       |Actions:
       |  -prove     run KeYmaera X prover on given file with given tactic
       |  -modelplex synthesize monitor from given file with ModelPlex prover tactic
       |  -codegen   generate executable code from given file for given target language
-      |  -ui        start web user interface opening given file (if any) with optional arguments
+      |  -ui        start web user interface with optional file (if any) and arguments
       |
       |Additional options:
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
       |  -verify   generate and check the final proof certificate (recommended)
       |  -noverify skip checking proof certificates after proof search
-      |  -interval guard real arithmetic by interval arithmetic in floating point (recommended)
-      |  -nointerval  skip interval arithmetic presuming no floating point rounding occurs
+      |  -interval guard reals by interval arithmetic in floating point (recommended)
+      |  -nointerval  skip interval arithmetic presuming no floating point errors
       |  -interactive start a simple command-line prover if -prove fails
-      |  -vars     use the given ordered list of variables, treating others as constant functions
+      |  -vars     use ordered list of variables treating others as constant functions
       |  -lax      enable lax mode with more flexible parser, printer, prover etc.
       |  -strict   enable strict mode with no flexibility in prover
       |  -debug    enable debug mode with more exhaustive messages
@@ -165,7 +165,7 @@ object KeYmaeraX {
   }
 
   /** Exit gracefully */
-  private def exit(status: Int): Unit = {shutdownProver(); sys.exit(status)}
+  private def exit(status: Int): Nothing = {shutdownProver(); sys.exit(status)}
 
   /** Generate a header stamping the source of a generated file */
   //@todo Of course this has a security attack for non-letter characters like end of comments from command line
