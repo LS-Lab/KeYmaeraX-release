@@ -128,7 +128,7 @@ class InverseDiffGhostTests extends TacticTestSuite {
 
   "Inverse Ghost" should "work when we don't have to reorder diffeq" in {
     val f = "\\exists x ([{x' = 0*x+v, v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0)".asFormula
-    println(ODETactics.InverseDiffAuxHelpers.axiomInstance(f).prettyString)
+//    println(ODETactics.SystemHelpers.axiomInstance(f).prettyString)
     val node = helper.formulaToNode(f)
     val tactic = ODETactics.inverseDiffAuxiliaryT(SuccPos(0))
     helper.runTactic(tactic, node)
@@ -168,6 +168,16 @@ class InverseDiffGhostTests extends TacticTestSuite {
 //    val asdf = TacticHelper.getTerm(s, SuccPosition(0, pie))
 //    println(asdf.prettyString)
 //  }
+//
+  /**
+   * The Lipschitz axiom tactic depends on this assumption.
+   * @author Nathan Fulton
+   */
+  "Compose" should "be right assoc" in {
+    val formula = "[x := 0; y := 1; x:=2;]1=1".asFormula
+
+    formula.asInstanceOf[Box].program.asInstanceOf[Compose].left.asInstanceOf[Assign].x shouldBe Variable("x", None, Real)
+  }
 }
 
 class InverseDiffCutTests extends TacticTestSuite {
