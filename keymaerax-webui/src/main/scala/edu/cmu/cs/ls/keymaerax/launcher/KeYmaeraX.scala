@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 import java.io.PrintWriter
 
 import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ClassGenerator
-import edu.cmu.cs.ls.keymaerax.core.{And, Formula, Sequent, Variable}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics._
@@ -45,12 +45,13 @@ object KeYmaeraX {
       |            that -ui starts, opening the given file (if any)
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
-      |  -verify   check the resulting proof certificate (recommended)
+      |  -verify   generate and check the final proof certificate (recommended)
       |  -noverify skip checking proof certificates after proof search
-      |  -interval guard real arithmetic by interval arithmetic in float point (recommended)
+      |  -interval guard real arithmetic by interval arithmetic in floating point (recommended)
       |  -nointerval  skip interval arithmetic presuming no floating point rounding occurs
-      |  -interactive starts a simple command-line prover if -prove fails
-      |  -lax      enable lax mode with more flexible parser input and printer output etc.
+      |  -interactive start a simple command-line prover if -prove fails
+      |  -vars     use the given ordered list of variables, treating others as constant functions
+      |  -lax      enable lax mode with more flexible parser, printer, prover etc.
       |  -strict   enable strict mode with no flexibility in prover
       |  -debug    enable debug mode with more exhaustive messages
       |  -nodebug  disable debug mode to suppress intermediate messages
@@ -58,7 +59,6 @@ object KeYmaeraX {
       |  -license  Show license agreement for using this software
       |
       |Copyright (c) Carnegie Mellon University.
-      |Use option -license for the license conditions for using this software.
       |""".stripMargin
 
   def main (args: Array[String]): Unit = {
@@ -77,12 +77,8 @@ object KeYmaeraX {
       def nextOption(map: OptionMap, list: List[String]): OptionMap = {
         list match {
           case Nil => map
-          case "-help" :: _ => {
-            println(usage); sys.exit(1)
-          }
-          case "-license" :: _ => {
-            println(license); sys.exit(1)
-          }
+          case "-help" :: _ => {println(usage); sys.exit(1)}
+          case "-license" :: _ => {println(license); sys.exit(1)}
           // actions
           case "-prove" :: value :: tail => nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
           case "-modelplex" :: value :: tail => nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
@@ -237,6 +233,8 @@ object KeYmaeraX {
     } else {
       assert(!rootNode.isClosed())
       assert(rootNode.openGoals().nonEmpty)
+      //@note PrintWriter above has already emptied the output file
+      pw.close()
       println("==================================")
       println("Tactic did not finish the proof    open goals: " + rootNode.openGoals().size)
       println("==================================")
@@ -246,8 +244,6 @@ object KeYmaeraX {
         interactiveProver(rootNode)
       } else {
         System.err.println("Incomplete proof: tactic did not finish the proof")
-        //@note PrintWriter above has already emptied the output file
-        pw.close()
         exit(-1)
       }
     }
@@ -315,7 +311,7 @@ object KeYmaeraX {
     if(options.get('format).get.toString == "C") {
       val vars: List[Variable] =
         if(options.contains('vars)) options.get('vars).get.asInstanceOf[Array[Variable]].toList
-        else Nil
+        else StaticSemantics.vars(inputFormula).toSymbolSet.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList.sortWith((x,y)=>x<y)
       val output = CGenerator(inputFormula, vars, inputFileName)
       val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".c").toString)
       pw.write(stampHead(options))
@@ -391,7 +387,7 @@ object KeYmaeraX {
     val cm = universe.runtimeMirror(getClass.getClassLoader)
     val tb = cm.mkToolBox()
     println("KeYmaera X Interactive Command-line Prover\n" +
-      "If you are looking for the more convenient web user interface,\nrestart with option -ui\n")
+      "If you are looking for the more convenient web user interface,\nrestart with option -ui\n\n")
     println(interactiveUsage)
 
     while (!root.isClosed()) {
