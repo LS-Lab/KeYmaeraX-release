@@ -925,6 +925,8 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
   require(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
   val name: String = "Bound Renaming"
 
+  private val renaming = URename(what, repl)
+
   /** @todo Code Review: change to false: This is a slight euphemism for do you mind being possibly unsound */
   //@todo turn to false after telling alphaRenamingT and globalAlphaRenamingT to add the stutter by axiom if needed
   private val compatibilityMode = LAX_MODE
@@ -940,7 +942,7 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
       f
     } else {
       // old name is bound somewhere in f -> check that new name is admissible (does not occur)
-      if (admissible(f)) rename(f)
+      if (admissible(f)) {if (what==repl) f else renaming(f)}
       else throw new BoundRenamingClashException("Bound renaming only to fresh names but name " +
         repl + " is not fresh", this.toString, f.prettyString)
     }
@@ -975,98 +977,6 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
    * Introduce a ghost for the target variable to remember the value of the previous variable.
    */
   //private def ghostifyDiamond(f: Formula) = DiamondModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
-
-  /** Perform bound variable renaming in a term (i.e. alpha conversion) */
-  private def rename(term: Term): Term = term match {
-    // base cases
-    case x: Variable => renameVar(x)
-    case DifferentialSymbol(x) => DifferentialSymbol(renameVar(x))
-    case n: Number => n
-    // homomorphic cases
-    case FuncOf(f, e) => FuncOf(f, rename(e))
-    case Neg(l) => Neg(rename(l))
-    case Plus(l, r)   => Plus(rename(l), rename(r))
-    case Minus(l, r)  => Minus(rename(l), rename(r))
-    case Times(l, r)  => Times(rename(l), rename(r))
-    case Divide(l, r) => Divide(rename(l), rename(r))
-    case Power(l, r)  => Power(rename(l), rename(r))
-
-    case Differential(e) => Differential(rename(e))
-
-    // special
-    case DotTerm => DotTerm
-    case Nothing => Nothing
-    case Anything => Anything
-    case Pair(l, r) => Pair(rename(l), rename(r))
-  }
-
-  private def renameVar(e: Variable): Variable = if (e == what) repl else e
-
-  /** Perform bound variable renaming in a formula (i.e. alpha conversion) */
-  private def rename(formula: Formula): Formula = {
-    assert(admissible(formula), "new variable does not occur")
-    formula match {
-      // homomorphic base cases
-      case Equal(l, r)        => Equal(rename(l), rename(r))
-      case NotEqual(l, r)     => NotEqual(rename(l), rename(r))
-
-      case GreaterEqual(l, r) => GreaterEqual(rename(l), rename(r))
-      case Greater(l, r)      => Greater(rename(l), rename(r))
-      case LessEqual(l, r)    => LessEqual(rename(l), rename(r))
-      case Less(l, r)         => Less(rename(l), rename(r))
-
-      case PredOf(fn, e) => PredOf(fn, rename(e))
-
-      // homomorphic cases
-      case Not(g) => Not(rename(g))
-      case And(l, r)   => And(rename(l), rename(r))
-      case Or(l, r)    => Or(rename(l), rename(r))
-      case Imply(l, r) => Imply(rename(l), rename(r))
-      case Equiv(l, r) => Equiv(rename(l), rename(r))
-
-      case Forall(vars, g) => Forall(vars.map(renameVar), rename(g))
-      case Exists(vars, g) => Exists(vars.map(renameVar), rename(g))
-
-      case Box(a, g)     => Box(rename(a), rename(g))
-      case Diamond(a, g) => Diamond(rename(a), rename(g))
-
-      case DifferentialFormula(g) => DifferentialFormula(rename(g))
-
-      case True | False => formula
-    }
-  }
-
-  /** Perform bound variable renaming in a program (i.e. alpha conversion) */
-  private def rename(program: Program): Program = {
-    assert(admissible(program), "new variable does not occur")
-    program match {
-      case Assign(x, t) => Assign(renameVar(x), rename(t))
-      case DiffAssign(DifferentialSymbol(x), t) =>
-        DiffAssign(DifferentialSymbol(renameVar(x)), rename(t))
-      case AssignAny(x) => AssignAny(renameVar(x))
-      case Test(cond) => Test(rename(cond))
-      case ode: DifferentialProgram => renameODE(ode)
-      case Choice(a, b)  => Choice(rename(a), rename(b))
-      case Compose(a, b) => Compose(rename(a), rename(b))
-      case Loop(a)       => Loop(rename(a))
-      // extended cases
-      //    case IfThen(cond, thenT) => IfThen(rename(cond), rename(thenT))
-      //    case IfThenElse(cond, thenT, elseT) => IfThenElse(rename(cond), rename(thenT), rename(elseT))
-    }
-  }
-
-  /** Perform bound variable renaming in a differential programs (i.e. alpha conversion) */
-  private def renameODE(dp: DifferentialProgram): DifferentialProgram = {
-    assert(admissible(dp), "new variable does not occur")
-    dp match {
-      case ODESystem(a, h) => ODESystem(renameODE(a), rename(h))
-      case AtomicODE(DifferentialSymbol(x), t) =>
-        AtomicODE(DifferentialSymbol(renameVar(x)), rename(t))
-      case DifferentialProduct(a, b) => DifferentialProduct(renameODE(a), renameODE(b))
-      //@todo The following case looks incorrect when compared to URename
-      case _: DifferentialProgramConst => dp
-    }
-  }
 
   /**
    * Check whether this renaming is admissible for expression e, i.e.
