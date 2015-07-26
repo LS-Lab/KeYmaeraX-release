@@ -28,6 +28,8 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   require(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
   /** The variables that are not allowed to occur initially */
   private val taboo: Set[NamedSymbol] = if (repl.sort == Real) Set(repl,DifferentialSymbol(repl)) else Set(repl)
+  /** The variables that are affected and should be gone finally */
+  private val affected: Set[NamedSymbol] = if (what.sort == Real) Set(what,DifferentialSymbol(what)) else Set(what)
 
   override def toString: String = "URename{" + what + "~>" + repl + "}"
 
@@ -41,15 +43,18 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   /** apply this uniform renaming everywhere in a term */
   def apply(t: Term): Term = { try rename(t) catch { case ex: ProverException => throw ex.inContext(t.prettyString) }
-  } ensuring(r => StaticSemantics.symbols(t).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + t)
+  } ensuring(r => StaticSemantics.symbols(t).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + t
+    ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")
 
   /** apply this uniform renaming everywhere in a formula */
   def apply(f: Formula): Formula = { try rename(f) catch { case ex: ProverException => throw ex.inContext(f.prettyString) }
-  } ensuring(r => StaticSemantics.symbols(f).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + f)
+  } ensuring(r => StaticSemantics.symbols(f).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + f
+    ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")
 
   /** apply this uniform renaming everywhere in a program */
   def apply(p: Program): Program = { try rename(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
-  } ensuring(r => StaticSemantics.symbols(p).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + p)
+  } ensuring(r => StaticSemantics.symbols(p).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + p
+    ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")
 
   /**
    * Apply uniform renaming everywhere in the sequent.
