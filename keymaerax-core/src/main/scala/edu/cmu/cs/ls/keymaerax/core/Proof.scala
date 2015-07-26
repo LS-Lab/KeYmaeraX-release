@@ -1063,6 +1063,7 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
       case AtomicODE(DifferentialSymbol(x), t) =>
         AtomicODE(DifferentialSymbol(renameVar(x)), rename(t))
       case DifferentialProduct(a, b) => DifferentialProduct(renameODE(a), renameODE(b))
+      //@todo The following case looks incorrect when compared to URename
       case _: DifferentialProgramConst => dp
     }
   }

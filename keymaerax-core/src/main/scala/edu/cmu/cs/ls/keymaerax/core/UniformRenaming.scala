@@ -22,6 +22,7 @@ import scala.collection.immutable
  * @param repl The target variable to replace what with.
  * @requires only used when repl does not occur in the input.
  * @author aplatzer
+ * @author smitsch
  */
 final case class URename(what: Variable, repl: Variable) extends (Expression => Expression) {
   require(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
@@ -63,12 +64,15 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   private def rename(term: Term): Term = {
     term match {
-      case x: Variable if x==what           => repl
-      case x: Variable if x==repl           => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
-      case x: Variable                      => assert(x!=what && x!=repl); x
-      case DifferentialSymbol(x) if x==what => DifferentialSymbol(repl)
-      case DifferentialSymbol(x) if x==repl => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
-      case DifferentialSymbol(x)            => assert(x!=what && x!=repl); DifferentialSymbol(x)
+      case x: Variable                      => renameVar(x, term)
+//      case x: Variable if x==what           => repl
+//      case x: Variable if x==repl           => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
+//      case x: Variable                      => assert(x!=what && x!=repl); x
+      case DifferentialSymbol(x)            => DifferentialSymbol(renameVar(x, term))
+//      case DifferentialSymbol(x) if x==what => DifferentialSymbol(repl)
+//      case DifferentialSymbol(x) if x==repl => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
+//      case DifferentialSymbol(x)            => assert(x!=what && x!=repl); DifferentialSymbol(x)
+      case n: Number                        => n
       case FuncOf(f:Function, theta)        => FuncOf(f, rename(theta))
       case Anything | Nothing | DotTerm     => term
       // homomorphic cases
@@ -86,10 +90,11 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   private def rename(formula: Formula): Formula = {
     formula match {
-      case PredOf(p, theta)        => PredOf(p, rename(theta))
-      case PredicationalOf(p, fml) => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
-      case DotFormula | True | False => formula
+      case PredOf(p, theta)   => PredOf(p, rename(theta))
+      case PredicationalOf(p, fml) | DotFormula => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
+      case True | False => formula
 
+      // homomorphic base cases
       case Equal(l, r)        => Equal(rename(l),        rename(r))
       case NotEqual(l, r)     => NotEqual(rename(l),     rename(r))
       case GreaterEqual(l, r) => GreaterEqual(rename(l), rename(r))
@@ -108,29 +113,33 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
       case DifferentialFormula(g) => DifferentialFormula(rename(g))
 
       // binding cases add bound variables to u
-      case Forall(vars, g) => Forall(vars.map(renameVar), rename(g))
-      case Exists(vars, g) => Exists(vars.map(renameVar), rename(g))
+      case Forall(vars, g) => Forall(vars.map(x => renameVar(x,formula)), rename(g))
+      case Exists(vars, g) => Exists(vars.map(x => renameVar(x,formula)), rename(g))
 
-      // Note could optimize speed by avoiding duplicate computation unless Scalac knows about CSE
       case Box(p, g)       => Box(rename(p), rename(g))
       case Diamond(p, g)   => Diamond(rename(p), rename(g))
     }
   }
 
-  private def renameVar(x: Variable): Variable = if (x==what) repl else {assert(x!=repl); x}
+  private def renameVar(x: Variable, context: Expression): Variable = if (x==what) repl
+  else if (x==repl) throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", context.toString)
+  else x
 
   private def rename(program: Program): Program = {
     program match {
       case a: ProgramConst             => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, toString)
-      case Assign(x, e) if x==what     => Assign(repl, rename(e))
-      case Assign(x, e) if x==repl     => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
-      case Assign(x, e)                => assert(x!=what && x!=repl); Assign(x, rename(e))
-      case DiffAssign(DifferentialSymbol(x), e) if x==what => DiffAssign(DifferentialSymbol(repl), rename(e))
-      case DiffAssign(DifferentialSymbol(x), e) if x==repl => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
-      case DiffAssign(xp, e)           => assert(xp.x!=what && xp.x!=repl); DiffAssign(xp, rename(e))
-      case AssignAny(x) if x==what     => AssignAny(repl)
-      case AssignAny(x) if x==repl     => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
-      case AssignAny(x)                => assert(x!=what && x!=repl); AssignAny(x)
+      case Assign(x, e)                => Assign(renameVar(x,program), rename(e))
+      // case Assign(x, e) if x==what     => Assign(repl, rename(e))
+      // case Assign(x, e) if x==repl     => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
+      // case Assign(x, e)                => assert(x!=what && x!=repl); Assign(x, rename(e))
+      case DiffAssign(xp, e)           => DiffAssign(renameVar(xp,program), rename(e))
+      // case DiffAssign(DifferentialSymbol(x), e) if x==what => DiffAssign(DifferentialSymbol(repl), rename(e))
+      // case DiffAssign(DifferentialSymbol(x), e) if x==repl => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
+      // case DiffAssign(xp, e)           => assert(xp.x!=what && xp.x!=repl); DiffAssign(xp, rename(e))
+      case AssignAny(x)                => AssignAny(renameVar(x,program))
+      // case AssignAny(x) if x==what     => AssignAny(repl)
+      // case AssignAny(x) if x==repl     => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
+      // case AssignAny(x)                => assert(x!=what && x!=repl); AssignAny(x)
       case Test(f)                     => Test(rename(f))
       case ode: DifferentialProgram    => renameODE(ode)
       case Choice(a, b)                => Choice(rename(a), rename(b))
@@ -143,11 +152,12 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   private def renameODE(ode: DifferentialProgram): DifferentialProgram = {
     ode match {
       case ODESystem(a, h)             => ODESystem(renameODE(a), rename(h))
-      case AtomicODE(DifferentialSymbol(x), e) if x==what => AtomicODE(DifferentialSymbol(repl), rename(e))
-      case AtomicODE(DifferentialSymbol(x), e) if x==repl => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
-      case AtomicODE(xp, e)            => assert(xp.x!=what && xp.x!=repl); AtomicODE(xp, rename(e))
+      case AtomicODE(DifferentialSymbol(x), e) => AtomicODE(DifferentialSymbol(renameVar(x)), rename(e))
+      // case AtomicODE(DifferentialSymbol(x), e) if x==what => AtomicODE(DifferentialSymbol(repl), rename(e))
+      // case AtomicODE(DifferentialSymbol(x), e) if x==repl => throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", toString)
+      // case AtomicODE(xp, e)            => assert(xp.x!=what && xp.x!=repl); AtomicODE(xp, rename(e))
       case c: DifferentialProgramConst => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, toString)      // homomorphic cases
-      case DifferentialProduct(a, b) => DifferentialProduct(renameODE(a), renameODE(b))
+      case DifferentialProduct(a, b)   => DifferentialProduct(renameODE(a), renameODE(b))
     }
   }
 }
