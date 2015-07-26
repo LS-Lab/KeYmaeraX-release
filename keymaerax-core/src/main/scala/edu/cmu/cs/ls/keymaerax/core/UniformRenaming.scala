@@ -21,8 +21,8 @@ import scala.collection.immutable
  * @param what What variable to replace (along with its associated DifferentialSymbol).
  * @param repl The target variable to replace what with.
  * @requires only used when repl does not occur in the input.
- * @author aplatzer
  * @author smitsch
+ * @author aplatzer
  */
 final case class URename(what: Variable, repl: Variable) extends (Expression => Expression) {
   require(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
@@ -30,6 +30,9 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   private val taboo: Set[NamedSymbol] = if (repl.sort == Real) Set(repl,DifferentialSymbol(repl)) else Set(repl)
   /** The variables that are affected and should be gone finally */
   private val affected: Set[NamedSymbol] = if (what.sort == Real) Set(what,DifferentialSymbol(what)) else Set(what)
+
+  /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of what. */
+  private val semanticRenaming: Boolean = true
 
   override def toString: String = "URename{" + what + "~>" + repl + "}"
 
@@ -91,8 +94,9 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   private def rename(formula: Formula): Formula = formula match {
     case PredOf(p, theta)   => PredOf(p, rename(theta))
-    case _: PredicationalOf | DotFormula => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
-    case True | False => formula
+    case PredicationalOf(c, fml) => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
+    case DotFormula         => if (semanticRenaming) DotFormula else throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
+    case True | False       => formula
 
     // homomorphic base cases
     case Equal(l, r)        => Equal(rename(l),        rename(r))
@@ -121,7 +125,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   }
 
   private def rename(program: Program): Program = program match {
-    case a: ProgramConst             => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, toString)
+    case a: ProgramConst             => if (semanticRenaming) a else throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, toString)
     case Assign(x, e)                => Assign(renameVar(x,program), rename(e))
     case DiffAssign(DifferentialSymbol(x), e) => DiffAssign(DifferentialSymbol(renameVar(x,program)), rename(e))
     case AssignAny(x)                => AssignAny(renameVar(x,program))
@@ -135,7 +139,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   private def renameODE(ode: DifferentialProgram): DifferentialProgram = ode match {
     case AtomicODE(DifferentialSymbol(x), e) => AtomicODE(DifferentialSymbol(renameVar(x,ode)), rename(e))
-    case c: DifferentialProgramConst => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, toString)      // homomorphic cases
+    case c: DifferentialProgramConst => if (semanticRenaming) c else throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, toString)      // homomorphic cases
     case DifferentialProduct(a, b)   => DifferentialProduct(renameODE(a), renameODE(b))
   }
 }
