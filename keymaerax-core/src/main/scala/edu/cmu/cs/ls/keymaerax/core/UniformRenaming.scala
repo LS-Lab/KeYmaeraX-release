@@ -41,15 +41,15 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   /** apply this uniform renaming everywhere in a term */
   def apply(t: Term): Term = { try rename(t) catch { case ex: ProverException => throw ex.inContext(t.prettyString) }
-  } ensuring(r => StaticSemantics.freeVars(t).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + t)
+  } ensuring(r => StaticSemantics.symbols(t).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + t)
 
   /** apply this uniform renaming everywhere in a formula */
   def apply(f: Formula): Formula = { try rename(f) catch { case ex: ProverException => throw ex.inContext(f.prettyString) }
-  } ensuring(r => StaticSemantics.vars(f).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + f)
+  } ensuring(r => StaticSemantics.symbols(f).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + f)
 
   /** apply this uniform renaming everywhere in a program */
   def apply(p: Program): Program = { try rename(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
-  } ensuring(r => StaticSemantics.vars(p).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + p)
+  } ensuring(r => StaticSemantics.symbols(p).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + p)
 
   /**
    * Apply uniform renaming everywhere in the sequent.
