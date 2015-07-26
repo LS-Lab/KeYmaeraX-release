@@ -151,6 +151,7 @@ private[core] object AxiomBase {
        * Conclusion [a;]p(x)
        * End.
        * @NOTE Unsound for hybrid games
+       * @TODO Add [a;]true -> to conclusion to make it sound for hybrid games (and then equivalent to [] monotone)
        */
       ("Goedel",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany)),
@@ -607,6 +608,7 @@ End.*/
 /* @NOTE Unsound for hybrid games */
 Axiom "V vacuous".
   p -> [a;]p
+  /* @TODO (p -> [a;]p) <- [a;]true sound for hybrid games */
 End.
 
 /* @NOTE Unsound for hybrid games */
