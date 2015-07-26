@@ -192,12 +192,22 @@ object KeYmaeraX {
     val tactic = tacticGenerator()
 
     // KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))
-    val inputFileName = options.get('in).get.toString
-    val input = scala.io.Source.fromFile(inputFileName).mkString
+    val inputFileNameDotKey = options.get('in).get.toString
+    assert(inputFileNameDotKey.endsWith(".key"),
+      "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -prove! KeYmaera X only proves .key file. Please use: -prove FILENAME.key")
+    val input = scala.io.Source.fromFile(inputFileNameDotKey).mkString
     val inputModel = KeYmaeraXProblemParser(input)
     val inputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(inputModel))
+    val inputFileName = inputFileNameDotKey.dropRight(4)
+    var outputFileName = inputFileName
+    if(options.contains('out)) {
+      val outputFileNameDotProof = options.get('out).get.toString
+      assert(outputFileNameDotProof.endsWith(".proof"),
+        "\n[Error] Wrong file name " + outputFileNameDotProof + " used for -out! KeYmaera X only produces proof evidence as .proof file. Please use: -out FILENAME.proof")
+      outputFileName = outputFileNameDotProof.dropRight(6)
+    }
 
-    val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".proof").toString)
+    val pw = new PrintWriter(outputFileName + ".proof")
 
     //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
     val rootNode = new RootNode(inputSequent)
@@ -265,12 +275,22 @@ object KeYmaeraX {
     require(options.contains('in), usage)
 
     // KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))
-    val inputFileName = options.get('in).get.toString
-    val input = scala.io.Source.fromFile(inputFileName).mkString
+    val inputFileNameDotKey = options.get('in).get.toString
+    assert(inputFileNameDotKey.endsWith(".key"),
+      "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -modelplex! ModelPlex only handles .key file. Please use: -modelplex FILENAME.key")
+    val input = scala.io.Source.fromFile(inputFileNameDotKey).mkString
     val inputModel = KeYmaeraXProblemParser(input)
     val verifyOption = options.getOrElse('verify, true).asInstanceOf[Boolean]
+    val inputFileName = inputFileNameDotKey.dropRight(4)
+    var outputFileName = inputFileName
+    if(options.contains('out)) {
+      val outputFileNameDotMx = options.get('out).get.toString
+      assert(outputFileNameDotMx.endsWith(".mx"),
+        "\n[Error] Wrong file name " + outputFileNameDotMx + " used for -out! ModelPlex only generates .mx file. Please use: -out FILENAME.mx")
+      outputFileName = outputFileNameDotMx.dropRight(3)
+    }
 
-    val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".mx").toString)
+    val pw = new PrintWriter(outputFileName + ".mx")
 
     val outputFml = if (options.contains('vars))
       ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList, verifyOption)(inputModel)
@@ -298,9 +318,12 @@ object KeYmaeraX {
     require(options.contains('in), usage)
     require(options.contains('format), usage)
 
-    val inputFileName = options.get('in).get.toString
-    val input = scala.io.Source.fromFile(inputFileName).mkString
+    val inputFileNameDotMx = options.get('in).get.toString
+    assert(inputFileNameDotMx.endsWith(".mx"),
+      "\n[Error] Wrong file name " + inputFileNameDotMx + " used for -codegen! Code generator only handles .mx file. Please use: -codegen FILENAME.mx")
+    val input = scala.io.Source.fromFile(inputFileNameDotMx).mkString
     val inputFormula = KeYmaeraXParser(input)
+    val inputFileName = inputFileNameDotMx.dropRight(3)
 
     if (options.getOrElse('interval, true).asInstanceOf[Boolean]) {
       //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
@@ -317,32 +340,49 @@ object KeYmaeraX {
     }
 
     if(options.get('format).get.toString == "C") {
+
+      var outputFileName = inputFileName
+      if(options.contains('out)) {
+        val outputFileNameDotC = options.get('out).get.toString
+        assert(outputFileNameDotC.endsWith(".c"),
+          "\n[Error] Wrong file name " + outputFileNameDotC + " used for -out! C generator only generates .c file. Please use： -out FILENAME.c")
+        outputFileName = outputFileNameDotC.dropRight(2)
+      }
       val vars: List[Variable] =
         if(options.contains('vars)) options.get('vars).get.asInstanceOf[Array[Variable]].toList
         else StaticSemantics.vars(inputFormula).toSymbolSet.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList.sortWith((x,y)=>x<y)
-      val output = CGenerator(inputFormula, vars, inputFileName)
-      val pw = new PrintWriter(options.getOrElse('out, inputFileName + ".c").toString)
+      val output = CGenerator(inputFormula, vars, outputFileName)
+      val pw = new PrintWriter(outputFileName + ".c")
       pw.write(stampHead(options))
       pw.write("/* @evidence: print of CGenerator of input */\n\n")
       pw.write(output)
       pw.close()
     } else if(options.get('format).get.toString == "Spiral") {
+
+      var outputFileName = inputFileName
+      if(options.contains('out)) {
+        val outputFileNameDotG = options.get('out).get.toString
+        assert(outputFileNameDotG.endsWith(".g"),
+          "\n[Error] Wrong file name " + outputFileNameDotG + " used for -out! Spiral generator only generates .g file and the .h file when necessary. Please use： -out FILENAME.g")
+        outputFileName = outputFileNameDotG.dropRight(2)
+      }
+
       var outputG = ""
       if (options.contains('vars)) {
-        val output = SpiralGenerator(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, inputFileName)
+        val output = SpiralGenerator(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, outputFileName)
         outputG = output._1
         val outputH = output._2
-        val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
+        val pwG = new PrintWriter(outputFileName + ".g")
         pwG.write(stampHead(options))
         pwG.write(outputG)
         pwG.close()
-        val pwH = new PrintWriter(options.getOrElse('out, inputFileName + ".h").toString)
+        val pwH = new PrintWriter(outputFileName + ".h")
         pwH.write(stampHead(options))
         pwH.write(outputH)
         pwH.close()
       } else {
-        outputG = SpiralGenerator(inputFormula, inputFileName)
-        val pwG = new PrintWriter(options.getOrElse('out, inputFileName + ".g").toString)
+        outputG = SpiralGenerator(inputFormula, outputFileName)
+        val pwG = new PrintWriter(outputFileName + ".g")
         pwG.write(stampHead(options))
         pwG.write(outputG)
         pwG.close()
