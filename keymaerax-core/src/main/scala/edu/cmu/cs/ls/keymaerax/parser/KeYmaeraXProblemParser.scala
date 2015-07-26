@@ -14,7 +14,7 @@ import scala.annotation.tailrec
  * Created by nfulton on 6/12/15.
  */
 object KeYmaeraXProblemParser {
-  def apply(input : String) = try { parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode()))._2 }
+  def apply(input : String): Formula = try { parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode()))._2 }
   catch {case e: ParseException => throw e.inContext(input)}
 
   def parseProblem(tokens: List[Token]) :  (Map[(String, Option[Int]), (Option[Sort], Sort)], Formula) = {
@@ -31,6 +31,7 @@ object KeYmaeraXProblemParser {
       case expr : Expression => throw new ParseException("Expected problem to parse to a Formula, but found " + expr, UnknownLocation, "problem block")
     }
 
+    //@todo semantic analysis to type-check problem by checking whether the types in StaticSemantics.symbols(problem) match with the ones in decls
     (decls, problem)
   }
 }
