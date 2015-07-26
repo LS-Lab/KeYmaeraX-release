@@ -11,6 +11,8 @@ Soundness-critical core:
 4) Requires preconditions are strictly enforced. Ample use of asserts, assumes, and ensuring postconditions are encouraged. Their string arguments should state the expected positive outcome. Unlike thrown exceptions, whose strings can talk negatively about what failed. No hidden aspects that are crucial to the understanding of the correctness of the local code is acceptable without documentation or local checking via asserts even if that causes redundant checking.
 
   assert, assume, require, ensuring
+  
+If there is a way of running your code to obtain an incorrect answer or incorrect behavior without a requires contract failing, then your code is wrong. If you detect invalid input by requires contracts, instead, it's the fault of the program calling yours. If your assert or ensures contracts fails, then at least it prevented incorrect output from happpening.
 
 5) The code should follow the principle of least astonishment, not using  surprising or unconventional Scala features in the core. Preferably not making correctness of code depend on the order that match case are placed in, without an explicit comment indicating that.
 
