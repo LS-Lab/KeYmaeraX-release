@@ -361,7 +361,9 @@ object KeYmaeraX {
       val vars: List[Variable] =
         if(options.contains('vars)) options.get('vars).get.asInstanceOf[Array[Variable]].toList
         else StaticSemantics.vars(inputFormula).toSymbolSet.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList.sortWith((x,y)=>x<y)
+      val codegenStart = Platform.currentTime
       val output = CGenerator(inputFormula, vars, outputFileName)
+      Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
       val pw = new PrintWriter(outputFileName + ".c")
       pw.write(stampHead(options))
       pw.write("/* @evidence: print of CGenerator of input */\n\n")
