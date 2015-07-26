@@ -13,6 +13,7 @@ package edu.cmu.cs.ls.keymaerax.core
  *
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
+ * @see Lemma
  */
 trait LemmaDB {
 
