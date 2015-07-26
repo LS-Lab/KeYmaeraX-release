@@ -86,7 +86,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   private def rename(formula: Formula): Formula = formula match {
     case PredOf(p, theta)   => PredOf(p, rename(theta))
-    case PredicationalOf(p, fml) | DotFormula => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
+    case _: PredicationalOf | DotFormula => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
     case True | False => formula
 
     // homomorphic base cases
@@ -118,7 +118,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   private def rename(program: Program): Program = program match {
     case a: ProgramConst             => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, toString)
     case Assign(x, e)                => Assign(renameVar(x,program), rename(e))
-    case DiffAssign(xp, e)           => DiffAssign(renameVar(xp,program), rename(e))
+    case DiffAssign(DifferentialSymbol(x), e) => DiffAssign(DifferentialSymbol(renameVar(x,program)), rename(e))
     case AssignAny(x)                => AssignAny(renameVar(x,program))
     case Test(f)                     => Test(rename(f))
     case ODESystem(a, h)             => ODESystem(renameODE(a), rename(h))
@@ -129,7 +129,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   }
 
   private def renameODE(ode: DifferentialProgram): DifferentialProgram = ode match {
-    case AtomicODE(DifferentialSymbol(x), e) => AtomicODE(DifferentialSymbol(renameVar(x)), rename(e))
+    case AtomicODE(DifferentialSymbol(x), e) => AtomicODE(DifferentialSymbol(renameVar(x,ode)), rename(e))
     case c: DifferentialProgramConst => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, toString)      // homomorphic cases
     case DifferentialProduct(a, b)   => DifferentialProduct(renameODE(a), renameODE(b))
   }
