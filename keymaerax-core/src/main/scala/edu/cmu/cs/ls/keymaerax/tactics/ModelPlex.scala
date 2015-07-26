@@ -23,6 +23,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import scala.collection.immutable
 import scala.collection.immutable.SortedSet
+import scala.compat.Platform
 import scala.language.postfixOps
 
 /**
@@ -63,20 +64,27 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     val mxInputFml = modelplexControllerMonitorTrafo(formula, vars)
     val mxInputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
+    val proofStart = Platform.currentTime
     val rootNode = new RootNode(mxInputSequent)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
+    val proofDuration = Platform.currentTime - proofStart
+    Console.println("[proof time " + proofDuration + "ms]")
 
     assert(rootNode.openGoals().size == 1 && rootNode.openGoals().head.sequent.ante.size == 1 &&
       rootNode.openGoals().head.sequent.succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
     assert(rootNode.sequent == mxInputSequent, "Proof was a proof of the ModelPlex specification")
     val mxOutputProofTree = And(rootNode.openGoals().head.sequent.ante.head, rootNode.openGoals().head.sequent.succ.head)
     if (checkProvable) {
+      val witnessStart= Platform.currentTime
       val provable = rootNode.provableWitness
       assert(provable.subgoals.size == 1 && provable.subgoals(0).ante.size == 1 &&
         provable.subgoals(0).succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
       assert(provable.conclusion == mxInputSequent, "Provable is a proof of the ModelPlex specification")
       val mxOutput = And(provable.subgoals(0).ante.head, provable.subgoals(0).succ.head)
       assert(mxOutput == mxOutputProofTree, "ModelPlex output from Provable and from ProofNode agree (if ProofNode is correct)")
+      val witnessDuration = Platform.currentTime - witnessStart
+      Console.println("[proof time       " + proofDuration + "ms]")
+      Console.println("[certificate time " + witnessDuration + "ms]")
       println("ModelPlex Proof certificate: Passed")
       mxOutput
     } else {

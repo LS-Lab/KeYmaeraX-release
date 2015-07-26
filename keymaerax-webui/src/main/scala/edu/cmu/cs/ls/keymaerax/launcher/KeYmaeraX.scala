@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, SpiralGenerator}
 
 
 import scala.collection.immutable
+import scala.compat.Platform
 import scala.reflect.runtime._
 import scala.tools.reflect.{ToolBoxError, ToolBox}
 import scala.util.Random
@@ -68,7 +69,7 @@ object KeYmaeraX {
   def main (args: Array[String]): Unit = {
     println("KeYmaera X Prover\n" +
       "Use option -help for usage and license information")
-    if (args.length == 0) launchUI(args)
+    if (args.length == 0) return launchUI(args)
     if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
     else {
       def makeVariables(varNames: Array[String]): Array[Variable] = {
@@ -211,17 +212,24 @@ object KeYmaeraX {
 
     val pw = new PrintWriter(outputFileName + ".proof")
 
+    val proofStart: Long = Platform.currentTime
     //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
     val rootNode = new RootNode(inputSequent)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
+    val proofDuration = Platform.currentTime - proofStart
+    Console.println("[proof time " + proofDuration + "ms]")
 
     if (rootNode.isClosed()) {
       assert(rootNode.openGoals().isEmpty)
       if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
+        val witnessStart: Long = Platform.currentTime
         val witness = rootNode.provableWitness
         val proved = witness.proved
         //@note assert(witness.isProved, "Successful proof certificate") already checked in line above
         assert(inputSequent == proved, "Proved the original problem and not something else")
+        val witnessDuration = Platform.currentTime - witnessStart
+        Console.println("[proof time       " + proofDuration + "ms]")
+        Console.println("[certificate time " + witnessDuration + "ms]")
         println("Proof certificate: Passed")
       } else {
         println("Proof certificate: Skipped extraction of proof certificate from proof search\n (use -verify to generate and check proof certificate)")
