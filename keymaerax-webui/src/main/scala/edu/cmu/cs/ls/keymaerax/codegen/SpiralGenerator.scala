@@ -154,7 +154,7 @@ object SpiralGenerator extends CodeGenerator {
       var dnfPoly = new Array[String](dnfNum)
       for(i <- 0 until dnfNum)
         dnfPoly(i)=compileMathCnfToSpiral(me.args().apply(i), vars)
-      "TForAny(\n" + dnfNum +",\n" + dnfPoly.mkString(",\n") + "\n)"
+      "TForAny(\n  " + dnfNum +",\n  " + dnfPoly.mkString(",\n  ") + "\n)"
     } else compileMathCnfToSpiral(me,vars)
   }
 
@@ -165,7 +165,7 @@ object SpiralGenerator extends CodeGenerator {
       var cnfPoly = new Array[String](cnfNum)
       for(i <- 0 until cnfNum)
         cnfPoly(i)=compileToSpiral(MathematicaToKeYmaera.fromMathematica(me.args().apply(i)), vars)
-      "TForall(" + cnfNum +"," + cnfPoly.mkString(",") + ")"
+      "TForAll(" + cnfNum +", " + cnfPoly.mkString(", ") + ")"
     } else compileToSpiral(MathematicaToKeYmaera.fromMathematica(me), vars)
   }
 
