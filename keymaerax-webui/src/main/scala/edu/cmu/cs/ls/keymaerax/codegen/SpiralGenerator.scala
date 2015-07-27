@@ -88,7 +88,7 @@ object SpiralGenerator extends CodeGenerator {
     // if the variable list is not empty, generate polynomial form, otherwise generate explicit form 
     val polynomialMode = vars.nonEmpty
     val sortedRlvtVars = getSortedRelevantVars(kExpr, vars)
-    val spiralMonitor = if(dnfMode) compileMathDnfToSprial(convertToDNF(kExpr), sortedRlvtVars) else compileToSpiral(kExpr, sortedRlvtVars)
+    val spiralMonitor = if(dnfMode) compileMathDnfToSpiral(convertToDnf(kExpr), sortedRlvtVars) else compileToSpiral(kExpr, sortedRlvtVars)
     hcol.setMonitor(spiralMonitor)
     val gCode = infoG(fileName) + libs + {if(polynomialMode) "# declare constant table\n" + hcol.getConstTbl + "\n" else ""} + monDec + hcol.getMonitor + "\n;\n"
     val hCode =
@@ -111,7 +111,7 @@ object SpiralGenerator extends CodeGenerator {
       if(allSortedNames.contains(vars.apply(i)))
       // variable occurs in the expression, add it to the return list
         sortedRelevantVars = vars.apply(i) :: sortedRelevantVars
-      if((allSortedNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real))))
+      if(allSortedNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real)))
       // variable occur as nullary function, add it to the return list as a variable
         sortedRelevantVars = Variable(nameIdentifier(vars.apply(i))) :: sortedRelevantVars
       if(allSortedNames.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
@@ -140,7 +140,7 @@ object SpiralGenerator extends CodeGenerator {
   private def getPostNameIdentifier(v: Variable): String = if (v.index.isEmpty) v.name + "post" else v.name + "post_" + v.index.get
 
   /** Compute the DNF form of the given formula */
-  private def convertToDNF(e: Expression): Expr = {
+  private def convertToDnf(e: Expression): Expr = {
     val mathCmd = "BooleanConvert[" +  KeYmaeraToMathematica.fromKeYmaera(e) + ",DNF]"
     link.ml.evaluate(mathCmd)
     link.ml.waitForAnswer()
@@ -148,7 +148,7 @@ object SpiralGenerator extends CodeGenerator {
   }
 
   /** Compile the DNF formula in Mathematica term to Spiral */
-  private def compileMathDnfToSprial(me: Expr, vars: List[Variable]) : String = {
+  private def compileMathDnfToSpiral(me: Expr, vars: List[Variable]) : String = {
     if(me.head().toString=="Or") {
       val dnfNum = me.length()
       var dnfPoly = new Array[String](dnfNum)
@@ -166,7 +166,7 @@ object SpiralGenerator extends CodeGenerator {
       for(i <- 0 until cnfNum)
         cnfPoly(i)=compileToSpiral(MathematicaToKeYmaera.fromMathematica(me.args().apply(i)), vars)
       "TForall(" + cnfNum +"," + cnfPoly.mkString(",") + ")"
-    } else compileToSpiral(MathematicaToKeYmaera.fromMathematica((me)), vars)
+    } else compileToSpiral(MathematicaToKeYmaera.fromMathematica(me), vars)
   }
 
   /** Compile the input formula to Spiral */

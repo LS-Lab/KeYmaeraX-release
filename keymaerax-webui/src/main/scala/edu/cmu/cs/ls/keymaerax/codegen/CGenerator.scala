@@ -79,7 +79,7 @@ object CGenerator extends CodeGenerator {
       if(allSymbolNames.contains(vars.apply(i)))
         // variable occurs in the expression, add it to the return list
         relevantVars = vars.apply(i) :: relevantVars
-      if((allSymbolNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real))))
+      if(allSymbolNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real)))
       // variable occur as nullary function, add it to the return list as a variable
         relevantVars = Variable(nameIdentifier(vars.apply(i))) :: relevantVars
       if(allSymbolNames.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
