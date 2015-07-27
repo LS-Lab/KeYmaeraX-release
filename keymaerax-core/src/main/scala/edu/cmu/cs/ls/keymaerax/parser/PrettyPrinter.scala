@@ -20,6 +20,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  *     PrettyPrinter: Expression => String
  * }}}
  * @author aplatzer
+ * @see [[edu.cmu.cs.ls.keymaerax.core.PrettyPrinter]]
  */
 trait PrettyPrinter extends (Expression => String) {
 
