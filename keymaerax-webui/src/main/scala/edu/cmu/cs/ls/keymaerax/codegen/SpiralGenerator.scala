@@ -82,10 +82,10 @@ object SpiralGenerator extends CodeGenerator {
    * @return          .g code and .h code
    */
   def generateSpiralMonitor(kExpr: Expression, vars: List[Variable], fileName: String) : (String, String) = {
-    
+    val names = StaticSemantics.symbols(kExpr).toList.map(s => nameIdentifier(s))
+    require(names.distinct.size == names.size, "Expect unique name_index identifiers for code generation")
     // if the variable list is not empty, generate polynomial form, otherwise generate explicit form 
     val polynomialMode = vars.nonEmpty
-    
     val sortedRlvtVars = getSortedRelevantVars(kExpr, vars)
     val spiralMonitor = compileToSpiral(kExpr, sortedRlvtVars)
     hcol.setMonitor(spiralMonitor)
@@ -96,10 +96,52 @@ object SpiralGenerator extends CodeGenerator {
     (gCode, hCode)
   }
 
+  /**
+   * Get a list of alphabetically sorted variables relevant to (occur in) the given expression
+   *
+   * @param e     expression
+   * @param vars  list of variables
+   * @return      a list of sorted variables relevant to e
+   */
+  private def getSortedRelevantVars(e: Expression, vars: List[Variable]) : List[Variable] = {
+    val allSortedNames = StaticSemantics.symbols(e).toList.sorted
+    var sortedRelevantVars = List[Variable]()
+    for(i <- vars.indices) {
+      if(allSortedNames.contains(vars.apply(i)))
+      // variable occurs in the expression, add it to the return list
+        sortedRelevantVars = vars.apply(i) :: sortedRelevantVars
+      if((allSortedNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real))))
+      // variable occur as nullary function, add it to the return list as a variable
+        sortedRelevantVars = Variable(nameIdentifier(vars.apply(i))) :: sortedRelevantVars
+      if(allSortedNames.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
+      // post variable occurs in the expression as variable, add it to the return list as a variable
+        sortedRelevantVars = Variable(getPostNameIdentifier(vars.apply(i))) :: sortedRelevantVars
+      if(allSortedNames.contains(Function(getPostNameIdentifier(vars.apply(i)), None, Unit, Real)))
+      // post variable occurs in the expression as nullary function, add it to the return list as a variable
+        sortedRelevantVars = Variable(getPostNameIdentifier(vars.apply(i))) :: sortedRelevantVars
+    }
+    assert(sortedRelevantVars.distinct.size == sortedRelevantVars.size,
+      "Duplicated name_index identifiers found in {" + sortedRelevantVars.map(v => KeYmaeraXPrettyPrinter(v)).mkString(", ") + "}")
+    sortedRelevantVars.sortWith(_.toString < _.toString)
+  }
+
+  /** Spiral Identifier corresponding to a NamedSymbol */
+  private def nameIdentifier(s: NamedSymbol): String = {
+    require(s.isInstanceOf[Function] || s.isInstanceOf[Variable] || s.isInstanceOf[DifferentialSymbol])
+    require(s.sort == Real, "only real-valued symbols are currently supported")
+    s match {
+      case DifferentialSymbol(x) => nameIdentifier(x) + "__p"
+      case _ => if (s.index.isEmpty) s.name else s.name + "_" + s.index.get
+    }
+  }
+
+  /** Get the post variable name identifier */
+  private def getPostNameIdentifier(v: Variable): String = if (v.index.isEmpty) v.name + "post" else v.name + "post_" + v.index.get
+
+  /** Compile the input formula to Spiral */
   private def compileToSpiral(e: Expression, vars: List[Variable]) = e match {
-    case t : Term => compilePolynomialTerm(t, vars)
     case f : Formula => compileFormula(f, vars)
-    case _ => ???
+    case _ => throw new CodeGenerationException("The input expression: \n" + KeYmaeraXPrettyPrinter(e) + "\nis expected to be formula.")
   }
 
   /**
@@ -122,15 +164,13 @@ object SpiralGenerator extends CodeGenerator {
       case Number(n) =>
         assert(n.isValidDouble || n.isValidLong, throw new CodeGenerationException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
         "TReal.value(" + n.underlying().toString + ")"
-      case t: Variable =>
-        if(t.index.isEmpty) t.name
-        else t.name + "_" + t.index.get
+      case t: Variable => nameIdentifier(t)
       case FuncOf(fn, child) =>
-        if(child.equals(Nothing)) fn.name
-        else fn.name match {
+        if(child.equals(Nothing)) nameIdentifier(fn)
+        else nameIdentifier(fn) match {
           case "Abs" => "abs(" + compileTerm(child) + ")"
           case "DChebyshev" => "TDistance(TInfinityNorm(" + "2" + "))"  //hack for InfinityNorm of degree 2
-          case _ => fn.name + "(" + compileTerm(child) + ")"
+          case _ => nameIdentifier(fn) + "(" + compileTerm(child) + ")"
         }
       // otherwise exception
       case _ => throw new CodeGenerationException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
@@ -206,23 +246,6 @@ object SpiralGenerator extends CodeGenerator {
   }
 
   /**
-   * Get a list of alphabetically sorted variables relevant to (occur in) the given expression
-   * 
-   * @param e     expression
-   * @param vars  list of variables
-   * @return      a list of sorted variables relevant to e
-   */
-  private def getSortedRelevantVars(e: Expression, vars: List[Variable]) : List[Variable] = {
-    val allSortedNames = StaticSemantics.symbols(e).toList.sorted
-    var sortedRelevantVars = List[Variable]()
-    for(i <- vars.indices) {
-      if(allSortedNames.contains(vars.apply(i)))
-        sortedRelevantVars = vars.apply(i) :: sortedRelevantVars
-    }
-    sortedRelevantVars.sortWith(_.toString < _.toString)
-  }
-
-  /**
    * A simple check if a term is polynomial
    * 
    * @param t term
@@ -230,7 +253,7 @@ object SpiralGenerator extends CodeGenerator {
    */
   private def isPolynomialTerm(t: Term) : Boolean = {
     t match {
-      case FuncOf(fn, child) => !(fn.name == "Abs" | fn.name == "DChebyshev")
+      case FuncOf(fn, child) => !(nameIdentifier(fn) == "Abs" | nameIdentifier(fn) == "DChebyshev")
       case _ => true
     }
   }
@@ -324,17 +347,13 @@ object SpiralGenerator extends CodeGenerator {
     "TEvalPolynomial(" + maxDegree + "," + vectorName + ")"
   }
 
-  private def translateSinglePolyCoeffs(coeffArray: Array[Expression]) : String = {
-    var coeffs = ""
-    for(i <- coeffArray.indices) {
-      coeffArray(i) match {
-        case Number(n) => coeffs += "  " + translateToHex(n.underlying().doubleValue())
-        case _ => coeffs += "  " + KeYmaeraXPrettyPrinter(coeffArray(i))
+  private def translateSinglePolyCoeffs(coeffArray: Array[Expression]) : String = "  " +
+    coeffArray.map(
+      ce => ce match {
+        case Number(n) => translateToHex(n.underlying().doubleValue())
+        case _ => KeYmaeraXPrettyPrinter(ce)
       }
-      if(i != coeffArray.length-1) coeffs += ",\n"
-    }
-    coeffs
-  }
+    ).mkString(",\n  ")
 
   /**
    * Compile polynomial with many main variables
