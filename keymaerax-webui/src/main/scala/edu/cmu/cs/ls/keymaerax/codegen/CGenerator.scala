@@ -89,8 +89,20 @@ object CGenerator extends CodeGenerator {
         // post variable occurs in the expression as nullary function, add it to the return list as a variable
         relevantVars = Variable(getPostNameIdentifier(vars.apply(i))) :: relevantVars
     }
+    assert(relevantVars.distinct.size == relevantVars.size,
+      "Duplicated name_index identifiers found in {" + relevantVars.map(v => KeYmaeraXPrettyPrinter(v)).mkString(", ") + "}")
     // reverse the list to get the correct order
     relevantVars.reverse
+  }
+
+  /** C Identifier corresponding to a NamedSymbol */
+  private def nameIdentifier(s: NamedSymbol): String = {
+    require(s.isInstanceOf[Function] || s.isInstanceOf[Variable] || s.isInstanceOf[DifferentialSymbol])
+    require(s.sort == Real, "only real-valued symbols are currently supported")
+    s match {
+      case DifferentialSymbol(x) => nameIdentifier(x) + "__p"
+      case _ => if (s.index.isEmpty) s.name else s.name + "_" + s.index.get
+    }
   }
 
   /** Get the post variable name identifier */
@@ -130,9 +142,8 @@ object CGenerator extends CodeGenerator {
    * @return            generated C code
    */
   private def compileToC(e: Expression, calledFuncs: Set[NamedSymbol]) = e match {
-    case t : Term => compileTerm(t, calledFuncs)
     case f : Formula => compileFormula(f, calledFuncs)
-    case _ => ???
+    case _ => throw new CodeGenerationException("The input expression: \n" + KeYmaeraXPrettyPrinter(e) + "\nis expected to be formula.")
   }
 
 
@@ -163,16 +174,6 @@ object CGenerator extends CodeGenerator {
       case FuncOf(fn, child) => nameIdentifier(fn) + "(" + compileTerm(child, calledFuncs) + ")"
       // otherwise exception
       case _ => throw new CodeGenerationException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
-    }
-  }
-
-  /** C Identifier corresponding to a NamedSymbol */
-  private def nameIdentifier(s: NamedSymbol): String = {
-    require(s.isInstanceOf[Function] || s.isInstanceOf[Variable] || s.isInstanceOf[DifferentialSymbol])
-    require(s.sort == Real, "only real-valued symbols are currently supported")
-    s match {
-      case DifferentialSymbol(x) => nameIdentifier(x) + "__p"
-      case _ => if (s.index.isEmpty) s.name else s.name + "_" + s.index.get
     }
   }
 
