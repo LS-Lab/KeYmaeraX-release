@@ -38,7 +38,7 @@ object CGenerator extends CodeGenerator {
       println("[info] post variables {" + relevantVars.toSet.diff(vars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "} will be added as parameters")
     val calledFuncs = getCalledFuncs(expr, relevantVars)
     val funcHead = "/* monitor */\n" +
-      "bool monitor (" + parameterDeclaration(expr, cDataType, relevantVars) + ")"
+      "bool monitor (" + parameterDeclaration(cDataType, relevantVars) + ")"
     val funcBody = compileToC(expr, calledFuncs)
     infoC(fileName) + includeLib + FuncCallDeclaration(calledFuncs, cDataType) + funcHead + " {\n" + "  return " + funcBody + ";" + "\n}\n\n"
     //@note gcc -Wall -Wextra -Werror -std=c99 -pedantic absolutely wants "newline at end of file" -Wnewline-eof
@@ -57,26 +57,11 @@ object CGenerator extends CodeGenerator {
   /**
    * Generate a list of variables declared as parameters of the main function
    *
-   * @param expr      given expression
    * @param cDataType data type
-   * @param vars      given list of variables which needs to be declared as parameters,
-   *                  if empty, then declare all names in the expression as parameters
+   * @param vars      given list of variables which needs to be declared as parameters
    * @return          a lit of parameter declarations
    */
-  private def parameterDeclaration(expr: Expression, cDataType: String, vars: List[Variable]) : String = {
-    if(vars.isEmpty) {
-      StaticSemantics.symbols(expr).toList.sorted.map(
-        s => s match {
-          case x: Variable => cDataType + " " + nameIdentifier(x)
-          case f: Function if f.domain==Unit && f.sort==Real => cDataType + " " + nameIdentifier(f)
-        }
-      ).mkString(", ")
-    } else {
-      vars.map(
-        v => cDataType + " " + nameIdentifier(v)
-      ).mkString(", ")
-    }
-  }
+  private def parameterDeclaration(cDataType: String, vars: List[Variable]) : String = vars.map(v => cDataType + " " + nameIdentifier(v)).mkString(", ")
 
   /**
    * Get a list of variables relevant to (occur in) the given expression,
@@ -91,7 +76,6 @@ object CGenerator extends CodeGenerator {
     val allSymbolNames = StaticSemantics.symbols(e).toList
     var relevantVars = List[Variable]()
     for(i <- vars.indices) {
-      println("getPostNameIdentifier is " + getPostNameIdentifier(vars.apply(i)))
       if(allSymbolNames.contains(vars.apply(i)))
         // variable occurs in the expression, add it to the return list
         relevantVars = vars.apply(i) :: relevantVars
@@ -109,12 +93,8 @@ object CGenerator extends CodeGenerator {
     relevantVars.reverse
   }
 
-  private def getPostNameIdentifier(v: NamedSymbol): String = {
-    v match {
-      case DifferentialSymbol(x) => getPostNameIdentifier(x) + "__p"
-      case _ => if (v.index.isEmpty) v.name + "post" else v.name + "post_" + v.index.get
-    }
-  }
+  /** Get the post variable name identifier */
+  private def getPostNameIdentifier(v: Variable): String = if (v.index.isEmpty) v.name + "post" else v.name + "post_" + v.index.get
 
   /**
    * Get a set of names that need to be generated as function calls,
