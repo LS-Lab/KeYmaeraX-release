@@ -26,6 +26,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @author aplatzer
+ * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  */
 private[core] object AxiomBase {
   /**

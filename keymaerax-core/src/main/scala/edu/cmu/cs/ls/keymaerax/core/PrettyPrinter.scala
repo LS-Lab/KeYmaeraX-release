@@ -13,6 +13,7 @@ package edu.cmu.cs.ls.keymaerax.core
 /**
  * A pretty printer for differential dynamic logic is a function from Expressions to Strings.
  * @author aplatzer
+ * @see [[edu.cmu.cs.ls.keymaerax.parser.PrettyPrinter]]
  */
 object PrettyPrinter extends (Expression => String) {
   /** Pretty-print the given expression using printer() */
