@@ -558,7 +558,7 @@ case class Close(assume: AntePos, pos: SuccPos) extends AssumptionRule with Clos
   /** Close identity */
   def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(assume) == s(pos)) {assert (assume.isAnte && pos.isSucc); Nil }
-    else throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(assume) + " not the same as " + s(pos), this, s)
+    else throw new InapplicableRuleException("The referenced formulas are not identical. Cannot close goal.\n  " + s(assume) + " not the same as\n  " + s(pos), this, s)
   } ensuring (_.isEmpty, "closed if applicable")
 }
 
@@ -1288,5 +1288,39 @@ case class EquivifyRight(pos: SuccPos) extends RightRule {
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(a,b) = s(pos)
     immutable.List(s.updated(pos, Equiv(a, b)))
+  }
+}
+
+/**
+ * Commute equivalence left
+ * {{{
+ * G, b<->a |-  D
+ * -------------
+ * G, a<->b |-  D
+ * }}}
+ * @derived
+ */
+case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
+  val name: String = "c<-> commute equivalence Left"
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Equiv(a,b) = s(pos)
+    immutable.List(s.updated(pos, Equiv(b, a)))
+  }
+}
+
+/**
+ * Commute equivalence right
+ * {{{
+ * G |- b<->a, D
+ * -------------
+ * G |- a<->b,  D
+ * }}}
+ * @derived
+ */
+case class CommuteEquivRight(pos: SuccPos) extends RightRule {
+  val name: String = "c<-> commute equivalence Right"
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Equiv(a,b) = s(pos)
+    immutable.List(s.updated(pos, Equiv(b, a)))
   }
 }
