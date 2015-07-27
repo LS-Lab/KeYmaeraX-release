@@ -55,6 +55,7 @@ object KeYmaeraX {
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval  skip interval arithmetic presuming no floating point errors
       |  -interactive start a simple command-line prover if -prove fails
+      |  -dnf      generate Spiral code in DNF format
       |  -vars     use ordered list of variables treating others as constant functions
       |  -lax      enable lax mode with more flexible parser, printer, prover etc.
       |  -strict   enable strict mode with no flexibility in prover
@@ -102,6 +103,7 @@ object KeYmaeraX {
           case "-noverify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> false), tail)
           case "-interval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> true), tail)
           case "-nointerval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> false), tail)
+          case "-dnf" :: tail => require(!map.contains('dnf)); nextOption(map ++ Map('dnf -> true), tail)
           // global options
           case "-lax" :: tail => System.setProperty("LAX", "true"); nextOption(map, tail)
           case "-strict" :: tail => System.setProperty("LAX", "false"); nextOption(map, tail)
@@ -370,7 +372,6 @@ object KeYmaeraX {
       pw.write(output)
       pw.close()
     } else if(options.get('format).get.toString == "Spiral") {
-
       var outputFileName = inputFileName
       if(options.contains('out)) {
         val outputFileNameDotG = options.get('out).get.toString
@@ -378,10 +379,10 @@ object KeYmaeraX {
           "\n[Error] Wrong file name " + outputFileNameDotG + " used for -out! Spiral generator only generates .g file and the .h file when necessary. Please use： -out FILENAME.g")
         outputFileName = outputFileNameDotG.dropRight(2)
       }
-
+      val dnfMode = options.contains('dnf)
       var outputG = ""
       if (options.contains('vars)) {
-        val output = SpiralGenerator(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, outputFileName)
+        val output = SpiralGenerator(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, outputFileName, dnfMode)
         outputG = output._1
         val outputH = output._2
         val pwG = new PrintWriter(outputFileName + ".g")

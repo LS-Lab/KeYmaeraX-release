@@ -38,7 +38,8 @@ class Hcol {
 object SpiralGenerator extends CodeGenerator {
   def apply(kExpr: Expression): String = apply(kExpr, Nil, "")._1
   def apply(kExpr: Expression, fileName: String) : String = apply(kExpr, Nil, fileName)._1
-  def apply(kExpr: Expression, vars: List[Variable], fileName: String): (String, String) = generateSpiralMonitor(kExpr, vars, fileName)
+  def apply(kExpr: Expression, vars: List[Variable], fileName: String): (String, String) = generateSpiralMonitor(kExpr, vars, fileName, false)
+  def apply(kExpr: Expression, vars: List[Variable], fileName: String, dnfMode: Boolean): (String, String) = generateSpiralMonitor(kExpr, vars, fileName, dnfMode)
 
   private val hcol = new Hcol
 
@@ -81,13 +82,13 @@ object SpiralGenerator extends CodeGenerator {
    * @param fileName  file name
    * @return          .g code and .h code
    */
-  def generateSpiralMonitor(kExpr: Expression, vars: List[Variable], fileName: String) : (String, String) = {
+  def generateSpiralMonitor(kExpr: Expression, vars: List[Variable], fileName: String, dnfMode: Boolean) : (String, String) = {
     val names = StaticSemantics.symbols(kExpr).toList.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers for code generation")
     // if the variable list is not empty, generate polynomial form, otherwise generate explicit form 
     val polynomialMode = vars.nonEmpty
     val sortedRlvtVars = getSortedRelevantVars(kExpr, vars)
-    val spiralMonitor = compileToSpiral(kExpr, sortedRlvtVars)
+    val spiralMonitor = if(dnfMode) compileMathDnfToSprial(convertToDNF(kExpr), sortedRlvtVars) else compileToSpiral(kExpr, sortedRlvtVars)
     hcol.setMonitor(spiralMonitor)
     val gCode = infoG(fileName) + libs + {if(polynomialMode) "# declare constant table\n" + hcol.getConstTbl + "\n" else ""} + monDec + hcol.getMonitor + "\n;\n"
     val hCode =
@@ -137,6 +138,36 @@ object SpiralGenerator extends CodeGenerator {
 
   /** Get the post variable name identifier */
   private def getPostNameIdentifier(v: Variable): String = if (v.index.isEmpty) v.name + "post" else v.name + "post_" + v.index.get
+
+  /** Compute the DNF form of the given formula */
+  private def convertToDNF(e: Expression): Expr = {
+    val mathCmd = "BooleanConvert[" +  KeYmaeraToMathematica.fromKeYmaera(e) + ",DNF]"
+    link.ml.evaluate(mathCmd)
+    link.ml.waitForAnswer()
+    link.ml.getExpr
+  }
+
+  /** Compile the DNF formula in Mathematica term to Spiral */
+  private def compileMathDnfToSprial(me: Expr, vars: List[Variable]) : String = {
+    if(me.head().toString=="Or") {
+      val dnfNum = me.length()
+      var dnfPoly = new Array[String](dnfNum)
+      for(i <- 0 until dnfNum)
+        dnfPoly(i)=compileMathCnfToSpiral(me.args().apply(i), vars)
+      "TForAny(\n" + dnfNum +",\n" + dnfPoly.mkString(",\n") + "\n)"
+    } else compileMathCnfToSpiral(me,vars)
+  }
+
+  /** Compile the CNF formula in Mathematica term to Spiral */
+  private def compileMathCnfToSpiral(me: Expr, vars: List[Variable]) : String = {
+    if(me.head().toString=="And") {
+      val cnfNum = me.length()
+      var cnfPoly = new Array[String](cnfNum)
+      for(i <- 0 until cnfNum)
+        cnfPoly(i)=compileToSpiral(MathematicaToKeYmaera.fromMathematica(me.args().apply(i)), vars)
+      "TForall(" + cnfNum +"," + cnfPoly.mkString(",") + ")"
+    } else compileToSpiral(MathematicaToKeYmaera.fromMathematica((me)), vars)
+  }
 
   /** Compile the input formula to Spiral */
   private def compileToSpiral(e: Expression, vars: List[Variable]) = e match {
