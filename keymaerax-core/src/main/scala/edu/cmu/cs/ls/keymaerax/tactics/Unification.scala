@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  * Created by aplatzer on 7/26/15.
  * @author aplatzer
  */
-object Unification /*@todo extends (Expression,Expression => Option[USubst])*/ {
+object Unification extends ((Expression,Expression) => Option[USubst]) {
   private val id: List[SubstitutionPair] = Nil
 
   def apply(e1: Expression, e2: Expression): Option[USubst] = if (e1.kind==e2.kind) e1 match {
