@@ -29,26 +29,26 @@ object Unification /*@todo extends (Expression,Expression => Option[USubst])*/ {
   private def ununifiable(e1: Expression, e2: Expression): Nothing = throw new UnificationException(e1.toString, e2.toString)
 
   /** A simple recursive unification algorithm that actually just recursive single-sided matching without occurs check */
-  private def unify(t1: Term, t2: Term): List[SubstitutionPair] = t1 match {
-    case x: Variable                      => if (t2==t1) id else ununifiable(t1,t2)
-    case DifferentialSymbol(x)            => if (t2==t1) id else ununifiable(t1,t2)
-    case n: Number                        => if (t2==t1) id else ununifiable(t1,t2)
-    case FuncOf(f:Function, Anything)     => if (t2==t1) id else List(SubstitutionPair(t1, t2))
-    case FuncOf(f:Function, Nothing)      => if (t2==t1) id else List(SubstitutionPair(t1, t2))
+  private def unify(e1: Term, e2: Term): List[SubstitutionPair] = e1 match {
+    case x: Variable                      => if (e1==e2) id else ununifiable(e1,e2)
+    case DifferentialSymbol(x)            => if (e1==e2) id else ununifiable(e1,e2)
+    case n: Number                        => if (e1==e2) id else ununifiable(e1,e2)
+    case FuncOf(f:Function, Anything)     => if (e1==e2) id else List(SubstitutionPair(e1, e2))
+    case FuncOf(f:Function, Nothing)      => if (e1==e2) id else List(SubstitutionPair(e1, e2))
     //@todo otherwise DotTerm abstraction of all occurrences of the argument
-    case FuncOf(f:Function, e)            => t2 match {case FuncOf(g, e2) if f==g => unify(e,e2) /*case DotTerm => List(SubstitutionPair(DotTerm, t1))*/ case _ => ???}
-    case Anything | Nothing               => if (t2==t1) id else ununifiable(t1,t2)
-    case DotTerm                          => if (t2==t1) id else List(SubstitutionPair(t1, t2))
+    case FuncOf(f:Function, t)            => e2 match {case FuncOf(g, t2) if f==g => unify(t,t2) /*case DotTerm => List(SubstitutionPair(DotTerm, t1))*/ case _ => ???}
+    case Anything | Nothing               => if (e1==e2) id else ununifiable(e1,e2)
+    case DotTerm                          => if (e1==e2) id else List(SubstitutionPair(e1, e2))
     // homomorphic cases
-    case Neg(e)       => t2 match {case Neg(e2) => unify(e,e2) case _ => ununifiable(t1,t2)}
-    case Plus(l, r)   => t2 match {case Plus(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(t1,t2)}
-    case Minus(l, r)  => t2 match {case Minus(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(t1,t2)}
-    case Times(l, r)  => t2 match {case Times(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(t1,t2)}
-    case Divide(l, r) => t2 match {case Divide(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(t1,t2)}
-    case Power(l, r)  => t2 match {case Power(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(t1,t2)}
-    case Differential(e) => t2 match {case Differential(e2) => unify(e,e2) case _ => ununifiable(t1,t2)}
+    case Neg(t)       => e2 match {case Neg(t2) => unify(t,t2) case _ => ununifiable(e1,e2)}
+    case Plus(l, r)   => e2 match {case Plus(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Minus(l, r)  => e2 match {case Minus(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Times(l, r)  => e2 match {case Times(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Divide(l, r) => e2 match {case Divide(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Power(l, r)  => e2 match {case Power(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Differential(t) => e2 match {case Differential(t2) => unify(t,t2) case _ => ununifiable(e1,e2)}
     // unofficial
-    case Pair(l, r)   => t2 match {case Pair(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(t1,t2)}
+    case Pair(l, r)   => e2 match {case Pair(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
   }
 
   private def unify(e1: Formula, e2: Formula): List[SubstitutionPair] = e1 match {
