@@ -28,10 +28,11 @@ import scala.util.Random
 object KeYmaeraX {
 
   /** KeYmaera X version number */
-  val VERSION = "4.0a2"
+  val VERSION = "4.0a3"
 
   private type OptionMap = Map[Symbol, Any]
 
+  /** Usage -help information, formatted to 80 characters width. */
   private val usage = "KeYmaera X Prover" + " " + VERSION +
     """
       |
@@ -55,9 +56,9 @@ object KeYmaeraX {
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval  skip interval arithmetic presuming no floating point errors
       |  -interactive start a simple command-line prover if -prove fails
-      |  -cse      generate C code in CSE format
-      |  -dnf      generate Spiral code in DNF format
-      |  -vars     use ordered list of variables treating others as constant functions
+      |  -cse      use common subexpression elimination in C code (not recommended)
+      |  -dnf      use disjunctive normal form in Spiral code
+      |  -vars     use ordered list of variables, treating others as constant functions
       |  -lax      enable lax mode with more flexible parser, printer, prover etc.
       |  -strict   enable strict mode with no flexibility in prover
       |  -debug    enable debug mode with more exhaustive messages
@@ -66,6 +67,7 @@ object KeYmaeraX {
       |  -license  Show license agreement for using this software
       |
       |Copyright (c) Carnegie Mellon University.
+      |Use option -license to show the license conditions.
       |""".stripMargin
 
   def main (args: Array[String]): Unit = {
