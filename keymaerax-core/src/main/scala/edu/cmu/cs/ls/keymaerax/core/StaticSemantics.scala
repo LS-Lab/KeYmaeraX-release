@@ -161,8 +161,8 @@ object StaticSemantics {
 
     case PredOf(p, arg) => VCF(fv = freeVars(arg), bv = bottom)
     // DotFormula is like a reserved Predicational
-    //@todo eisegesis should be bv=topVarsDiffVars()
-    case DotFormula => VCF(fv = topVarsDiffVars(), bv = bottom)
+    //@todo eisegesis should be bv=topVarsDiffVars() not bv=bottom
+    case DotFormula => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
     case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
 
     // homomorphic cases
