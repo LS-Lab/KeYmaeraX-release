@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 object StaticSemanticsTools {
 
   /**
-   * The set variables that the top-level operator of this formula is binding itself,
+   * The set of variables that the top-level operator of this formula is binding itself,
    * so not those variables that are only bound because of operators in subformulas.
    */
   def bindingVars(formula: Formula): SetLattice[NamedSymbol] = formula match {
@@ -41,7 +41,7 @@ object StaticSemanticsTools {
   //@todo ensuring(r => !formula.isInstanceOf[BinaryCompositeFormula] || r==boundVars(formula.class.apply(True,True)), "same bound variables as replacing left,right with True)
 
   /**
-   * The set variables that the top-level operator of this formula is binding itself,
+   * The set of variables that the top-level operator of this formula is binding itself,
    * so not those variables that are only bound because of operators in subprograms.
    */
   def bindingVars(program: Program): SetLattice[NamedSymbol] = program match {
@@ -52,4 +52,17 @@ object StaticSemanticsTools {
   }
   //@todo ensuring(r => !formula.isInstanceOf[BinaryCompositeFormula] || r==boundVars(formula.class.apply(True,True)), "same bound variables as replacing left,right with True)
 
+  /**
+   * The set of variables that, if they occurred at formula(pos) would be bound occurrences,
+   * because there was an operator in formula on the path to pos for which it was binding.
+   * If an occurrence of a variable at formula(pos) is not boundAt(formula,pos) then it is a free occurrence.
+   */
+  def boundAt(formula: Formula, pos: PosInExpr): SetLattice[NamedSymbol] = ???
+
+  /**
+   * The set of variables that, if they occurred at program(pos) would be bound occurrences,
+   * because there was an operator in program on the path to pos for which it was binding.
+   * If an occurrence of a variable at formuprogramla(pos) is not boundAt(program,pos) then it is a free occurrence.
+   */
+  def boundAt(program: Program, pos: PosInExpr): SetLattice[NamedSymbol] = ???
 }
