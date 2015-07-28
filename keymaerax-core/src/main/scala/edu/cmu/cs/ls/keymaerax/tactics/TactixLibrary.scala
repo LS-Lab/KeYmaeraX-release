@@ -122,6 +122,8 @@ object TactixLibrary {
   def DI                      : PositionTactic = TacticLibrary.diffInvariant
   /** DG: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b */
   def DG(y:Variable, a:Term, b:Term) : PositionTactic = ODETactics.diffAuxiliaryT(y,a,b)
+  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
+  def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
   /** DS: Differential Solution solves a differential equation */
   def DS                      : PositionTactic = ???
   /** Dassignb: Substitute a differential assignment */
