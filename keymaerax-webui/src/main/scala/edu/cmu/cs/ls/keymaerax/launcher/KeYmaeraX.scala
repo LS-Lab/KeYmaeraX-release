@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.ModelPlex.{modelplexControllerMonitorTrafo, modelplexInPlace}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
-import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, SpiralGenerator}
+import edu.cmu.cs.ls.keymaerax.codegen.{CseCGenerator, CGenerator, SpiralGenerator}
 
 
 import scala.collection.immutable
@@ -55,6 +55,7 @@ object KeYmaeraX {
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval  skip interval arithmetic presuming no floating point errors
       |  -interactive start a simple command-line prover if -prove fails
+      |  -cse      generate C code in CSE format
       |  -dnf      generate Spiral code in DNF format
       |  -vars     use ordered list of variables treating others as constant functions
       |  -lax      enable lax mode with more flexible parser, printer, prover etc.
@@ -103,6 +104,7 @@ object KeYmaeraX {
           case "-noverify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> false), tail)
           case "-interval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> true), tail)
           case "-nointerval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> false), tail)
+          case "-cse" :: tail => require(!map.contains('cse)); nextOption(map ++ Map('cse -> true), tail)
           case "-dnf" :: tail => require(!map.contains('dnf)); nextOption(map ++ Map('dnf -> true), tail)
           // global options
           case "-lax" :: tail => System.setProperty("LAX", "true"); nextOption(map, tail)
@@ -352,7 +354,6 @@ object KeYmaeraX {
     }
 
     if(options.get('format).get.toString == "C") {
-
       var outputFileName = inputFileName
       if(options.contains('out)) {
         val outputFileNameDotC = options.get('out).get.toString
@@ -363,8 +364,9 @@ object KeYmaeraX {
       val vars: List[Variable] =
         if(options.contains('vars)) options.get('vars).get.asInstanceOf[Array[Variable]].toList
         else StaticSemantics.vars(inputFormula).toSymbolSet.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList.sortWith((x,y)=>x<y)
+      val cseMode = options.contains('cse)
       val codegenStart = Platform.currentTime
-      val output = CGenerator(inputFormula, vars, outputFileName)
+      val output = if(cseMode) CseCGenerator(inputFormula, vars, outputFileName) else CGenerator(inputFormula, vars, outputFileName)
       Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
       val pw = new PrintWriter(outputFileName + ".c")
       pw.write(stampHead(options))
