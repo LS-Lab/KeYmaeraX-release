@@ -56,6 +56,7 @@ object StaticSemanticsTools {
    * The set of variables that, if they occurred at formula(pos) would be bound occurrences,
    * because there was an operator in formula on the path to pos for which it was binding.
    * If an occurrence of a variable at formula(pos) is not boundAt(formula,pos) then it is a free occurrence.
+   * @todo
    */
   def boundAt(formula: Formula, pos: PosInExpr): SetLattice[NamedSymbol] = ???
 
@@ -63,6 +64,7 @@ object StaticSemanticsTools {
    * The set of variables that, if they occurred at program(pos) would be bound occurrences,
    * because there was an operator in program on the path to pos for which it was binding.
    * If an occurrence of a variable at formuprogramla(pos) is not boundAt(program,pos) then it is a free occurrence.
+   * @todo
    */
   def boundAt(program: Program, pos: PosInExpr): SetLattice[NamedSymbol] = ???
 }
