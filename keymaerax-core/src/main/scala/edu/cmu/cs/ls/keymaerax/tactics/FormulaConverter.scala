@@ -185,6 +185,7 @@ class FormulaConverter(val fml: Formula) {
       case None => ???
     }
   }
+  //@todo ensuring(r => USubst(SubstitutionPair(DotTerm/DotFormula, r._2))(r._1) == formula)
 
   /**
    * Transforms the formula into its structural form (all variables and functions substituted with CDot).

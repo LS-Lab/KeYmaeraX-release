@@ -35,17 +35,20 @@ object Unification extends ((Expression,Expression) => Option[USubst]) {
     case n: Number                        => if (e1==e2) id else ununifiable(e1,e2)
     case FuncOf(f:Function, Anything)     => if (e1==e2) id else List(SubstitutionPair(e1, e2))
     case FuncOf(f:Function, Nothing)      => if (e1==e2) id else List(SubstitutionPair(e1, e2))
-    //@todo otherwise DotTerm abstraction of all occurrences of the argument
-    case FuncOf(f:Function, t)            => e2 match {case FuncOf(g, t2) if f==g => unify(t,t2) /*case DotTerm => List(SubstitutionPair(DotTerm, t1))*/ case _ => ???}
+    case FuncOf(f:Function, t)            => e2 match {
+      case FuncOf(g, t2) if f==g => unify(t,t2) /*case DotTerm => List(SubstitutionPair(DotTerm, t1))*/
+      // otherwise DotTerm abstraction of all occurrences of the argument
+      case _ => List(SubstitutionPair(FuncOf(f,DotTerm), SubstitutionHelper.replaceFree(e2)(t,DotTerm)))
+    }
     case Anything | Nothing               => if (e1==e2) id else ununifiable(e1,e2)
     case DotTerm                          => if (e1==e2) id else List(SubstitutionPair(e1, e2))
     // homomorphic cases
     case Neg(t)       => e2 match {case Neg(t2) => unify(t,t2) case _ => ununifiable(e1,e2)}
-    case Plus(l, r)   => e2 match {case Plus(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
-    case Minus(l, r)  => e2 match {case Minus(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
-    case Times(l, r)  => e2 match {case Times(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Plus(l, r)   => e2 match {case Plus  (l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Minus(l, r)  => e2 match {case Minus (l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Times(l, r)  => e2 match {case Times (l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
     case Divide(l, r) => e2 match {case Divide(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
-    case Power(l, r)  => e2 match {case Power(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Power(l, r)  => e2 match {case Power (l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
     case Differential(t) => e2 match {case Differential(t2) => unify(t,t2) case _ => ununifiable(e1,e2)}
     // unofficial
     case Pair(l, r)   => e2 match {case Pair(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
@@ -54,26 +57,32 @@ object Unification extends ((Expression,Expression) => Option[USubst]) {
   private def unify(e1: Formula, e2: Formula): List[SubstitutionPair] = e1 match {
     case PredOf(f:Function, Anything)     => if (e1==e2) id else List(SubstitutionPair(e1, e2))
     case PredOf(f:Function, Nothing)      => if (e1==e2) id else List(SubstitutionPair(e1, e2))
-    //@todo otherwise DotTerm abstraction of all occurrences of the argument
-    case PredOf(f:Function, t)            => e2 match {case PredOf(g, t2) if f==g => unify(t,t2) case _ => ???}
+    case PredOf(f:Function, t)            => e2 match {
+      case PredOf(g, t2) if f == g => unify(t, t2)
+      // otherwise DotTerm abstraction of all occurrences of the argument
+      case _ => List(SubstitutionPair(PredOf(f,DotTerm), SubstitutionHelper.replaceFree(e2)(t,DotTerm)))
+    }
     case PredicationalOf(f:Function, DotFormula) => if (e1==e2) id else List(SubstitutionPair(e1, e2))
-    //@todo otherwise DotFormula abstraction of all occurrences of the argument
-    case PredicationalOf(c, fml) => ???
+    case PredicationalOf(c, fml) => e2 match {
+      case PredicationalOf(g, fml2) if c == g => unify(fml, fml2)
+      // otherwise DotFormula abstraction of all occurrences of the argument
+      case _ => ??? //@todo List(SubstitutionPair(PredicationalOf(c,DotFormula), SubstitutionHelper.replaceFree(e2)(fml,DotFormula)))
+    }
     case DotFormula         => if (e1==e2) id else List(SubstitutionPair(e1, e2))
     case True | False       => if (e1==e2) id else ununifiable(e1,e2)
 
     // homomorphic base cases
-    case Equal(l, r)        => e2 match {case Equal(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
-    case NotEqual(l, r)     => e2 match {case NotEqual(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Equal(l, r)        => e2 match {case Equal       (l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case NotEqual(l, r)     => e2 match {case NotEqual    (l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
     case GreaterEqual(l, r) => e2 match {case GreaterEqual(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
-    case Greater(l, r)      => e2 match {case Greater(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
-    case LessEqual(l, r)    => e2 match {case LessEqual(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
-    case Less(l, r)         => e2 match {case Less(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Greater(l, r)      => e2 match {case Greater     (l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case LessEqual(l, r)    => e2 match {case LessEqual   (l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Less(l, r)         => e2 match {case Less        (l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
 
     // homomorphic cases
-    case Not(g)      => e2 match {case Not(g2) => unify(g,g2) case _ => ununifiable(e1,e2)}
-    case And(l, r)   => e2 match {case And(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
-    case Or(l, r)    => e2 match {case Or(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Not(g)      => e2 match {case Not(g2)      => unify(g,g2) case _ => ununifiable(e1,e2)}
+    case And(l, r)   => e2 match {case And(l2,r2)   => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
+    case Or(l, r)    => e2 match {case Or(l2,r2)    => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
     case Imply(l, r) => e2 match {case Imply(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
     case Equiv(l, r) => e2 match {case Equiv(l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}
 
@@ -84,7 +93,7 @@ object Unification extends ((Expression,Expression) => Option[USubst]) {
     case Forall(vars, g) => e2 match {case Forall(v2,g2) if vars==v2 => unify(g,g2) case _ => ununifiable(e1,e2)}
     case Exists(vars, g) => e2 match {case Exists(v2,g2) if vars==v2 => unify(g,g2) case _ => ununifiable(e1,e2)}
 
-    case Box(a, p)       => e2 match {case Box(a2,p2) => unify(a,a2) ++ unify(p,p2) case _ => ununifiable(e1,e2)}
+    case Box(a, p)       => e2 match {case Box(a2,p2)     => unify(a,a2) ++ unify(p,p2) case _ => ununifiable(e1,e2)}
     case Diamond(a, p)   => e2 match {case Diamond(a2,p2) => unify(a,a2) ++ unify(p,p2) case _ => ununifiable(e1,e2)}
   }
 
