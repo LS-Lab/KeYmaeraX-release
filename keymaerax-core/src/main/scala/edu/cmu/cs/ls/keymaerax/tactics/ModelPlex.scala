@@ -110,12 +110,16 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
         val preassignments = vars.map(v => Assign(v, FuncOf(Function(v.name + "pre", v.index, Unit, v.sort), Nothing))).reduce(Compose)
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
         //      Imply(assumptions, Diamond(preassignments, Diamond(controller, posteqs)))
-        Imply(assumptions, Diamond(controller, posteqs))
+        //Imply(assumptions, Diamond(controller, posteqs))
+        //@note suppress assumptions since at most those without bound variables are still around.
+        Imply(True, Diamond(controller, posteqs))
       // models of the form (plant)
       case Imply(assumptions, Box(ODESystem(_, _), _)) =>
         //@todo require bound variables
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
         Imply(assumptions, Diamond(Test(True), posteqs))
+        //@note suppress assumptions since at most those without bound variables are still around.
+        Imply(True, Diamond(Test(True), posteqs))
       case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
     }
   }
