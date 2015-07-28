@@ -106,7 +106,8 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
       case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
         //@todo explicitly address DifferentialSymbol instead of skipping
         require(StaticSemantics.boundVars(controller).toSymbolSet.forall(v => !v.isInstanceOf[Variable] || varsSet.contains(v.asInstanceOf[Variable])),
-          "all bound variables " + StaticSemantics.boundVars(controller).prettyString + " must occur in monitor list " + vars.mkString(", "))
+          "all bound variables " + StaticSemantics.boundVars(controller).prettyString + " must occur in monitor list " + vars.mkString(", ") +
+            "\nMissing: " + (StaticSemantics.boundVars(controller).toSymbolSet diff varsSet).mkString(", "))
         val preassignments = vars.map(v => Assign(v, FuncOf(Function(v.name + "pre", v.index, Unit, v.sort), Nothing))).reduce(Compose)
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
         //      Imply(assumptions, Diamond(preassignments, Diamond(controller, posteqs)))
