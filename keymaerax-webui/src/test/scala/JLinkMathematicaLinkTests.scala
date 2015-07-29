@@ -6,6 +6,9 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.JLinkMathematicaLink
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import testHelper.ProvabilityTestHelper
+
+import scala.collection.immutable.Map
 
 /**
  * Tests the JLink Mathematica implementation.
@@ -13,6 +16,8 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
  */
 class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
+  val helper = new ProvabilityTestHelper((x) => println(x))
+  val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
   private var link: JLinkMathematicaLink = null
 
   private val x = Variable("x", None, Real)
@@ -25,7 +30,7 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
 
   override def beforeEach() = {
     link = new JLinkMathematicaLink
-    link.init("/Applications/Mathematica.app/Contents/MacOS/MathKernel", None)
+    link.init(mathematicaConfig("linkName"), None)
   }
 
   override def afterEach() = {
