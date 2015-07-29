@@ -10,7 +10,6 @@ import edu.cmu.cs.ls.keymaerax.core._
 /**
  * Created by smitsch on 3/23/15.
  * @author Stefan Mitsch
- * @todo Design: wouldn't it be better design to turn it into an object since formula argument doesn't seem to be leveraged? Or not?
  */
 object FormulaConverter {
   import scala.language.implicitConversions
