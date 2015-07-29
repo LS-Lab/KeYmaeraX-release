@@ -512,6 +512,22 @@ class ModelplexTacticTests extends TacticTestSuite {
     result.openGoals().head.sequent.succ should contain only expectedSucc
   }
 
+  "Hybrid quadcopter" should "extract the correct controller monitor" in {
+    val in = getClass.getResourceAsStream("examples/casestudies/quadcopter/hybridquadrotor.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("href")))
+
+    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
+    val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
+
+    val expectedAnte = "true".asFormula
+    val expectedSucc = "h>=hrefpost_0()&hrefpost_0()>0&((kp < 0&v=0&hrefpost_0()>=h|kp < 0&v>0&2*h*kp+v*(kd+y)=2*hrefpost_0()*kp&h*y>h*kd+2*v|kp < 0&v < 0&2*hrefpost_0()*kp+v*y=2*h*kp+kd*v&2*v+h*(kd+y)>0|kp>0&v=0&hrefpost_0()=h|kp>0&v>0&(2*h*kp+v*(kd+y)=2*hrefpost_0()*kp&h*y>h*kd+2*v&kd+2*sqrkp<=0|2*h*kp+v*(kd+y)=2*hrefpost_0()*kp&kd+2*sqrkp < 0&2*v+h*(kd+y) < 0|2*hrefpost_0()*kp+v*y=2*h*kp+kd*v&kd+2*sqrkp < 0&2*v+h*(kd+y) < 0|2*h*kp+v*(kd+y)=2*hrefpost_0()*kp&kd>2*sqrkp&2*v+h*(kd+y)>0&h*y>=h*kd+2*v)|kp>0&v < 0&(2*h*kp+v*(kd+y)=2*hrefpost_0()*kp&kd>2*sqrkp&h*y < h*kd+2*v|2*hrefpost_0()*kp+v*y=2*h*kp+kd*v&kd>=2*sqrkp&h*y < h*kd+2*v|2*hrefpost_0()*kp+v*y=2*h*kp+kd*v&kd>2*sqrkp&2*v+h*(kd+y)>0&h*y>=h*kd+2*v|2*hrefpost_0()*kp+v*y=2*h*kp+kd*v&h*y>h*kd+2*v&2*v+h*(kd+y)>=0&kd+2*sqrkp < 0))&(y^2=kd^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*hrefpost_0()*kp^2+hrefpost_0()^2*kp^2+h*kd*kp*v-hrefpost_0()*kd*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd|h*(kd+y)<=0|h>hrefpost_0())|kp < 0&v < 0&(h*y<=h*kd+2*v|2*v+h*(kd+y)<=0|2*h*kp+kd*v!=2*hrefpost_0()*kp+v*y)|kp < 0&v>0&(h*y<=h*kd+2*v|2*v+h*(kd+y)<=0|2*h*kp+v*(kd+y)!=2*hrefpost_0()*kp)|kp>0&v=0&(h!=hrefpost_0()&(kd>=2*sqrkp&h*y>=h*kd|h*(kd+y)>=0&kd+2*sqrkp < 0)|kd=2*sqrkp&h*y>=h*kd|kd < 2*sqrkp&kd+2*sqrkp>0|h>hrefpost_0()|kd>2*sqrkp&h*(kd+y)<=0|kd+2*sqrkp<=0&h*y<=h*kd)|kp>0&v < 0&(2*hrefpost_0()*kp+v*y!=2*h*kp+kd*v&(h*y>=h*kd+2*v|kd<=2*sqrkp)|kd < 2*sqrkp|kd>2*sqrkp&(h*y < h*kd+2*v&(2*hrefpost_0()*kp+v*y < 2*h*kp+kd*v&2*h*kp+v*(kd+y) < 2*hrefpost_0()*kp|2*hrefpost_0()*kp+v*y>2*h*kp+kd*v|2*h*kp+v*(kd+y)>2*hrefpost_0()*kp)|2*v+h*(kd+y)<=0)|h*y>=h*kd+2*v&kd<=2*sqrkp|kd+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd+y)!=2*hrefpost_0()*kp&(kd+2*sqrkp>=0|2*v+h*(kd+y)>=0)|kd>=2*sqrkp|kd+2*sqrkp < 0&2*v+h*(kd+y) < 0&(2*hrefpost_0()*kp+v*y < 2*h*kp+kd*v|2*h*kp+v*(kd+y) < 2*hrefpost_0()*kp|2*hrefpost_0()*kp+v*y>2*h*kp+kd*v&2*h*kp+v*(kd+y)>2*hrefpost_0()*kp)|kd+2*sqrkp>0|h*y<=h*kd+2*v))&y^2=kd^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*hrefpost_0()*kp^2+hrefpost_0()^2*kp^2+h*kd*kp*v-hrefpost_0()*kd*kp*v+kp*v^2=0)&hrefpost()=hrefpost_0()".asFormula
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only expectedAnte
+    result.openGoals().head.sequent.succ should contain only expectedSucc
+  }
+
   "VSL modelplex in place" should "find correct controller monitor condition" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/iccps12/vsl-ctrl.key"))
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
