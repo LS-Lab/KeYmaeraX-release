@@ -210,8 +210,9 @@ object TacticLibrary {
    * @author aplatzer
    * @todo generalize to automatically find a proof of fact by axiom lookup or master or so
    */
-  /*def useAt(fact: Formula): PositionTactic = new PositionTactic("useAt") {
+  def useAt(fact: Formula): PositionTactic = new PositionTactic("useAt") {
     import FormulaConverter._
+    import PropositionalTacticsImpl._
     require(fact.isInstanceOf[Equiv] || fact.isInstanceOf[Equal] || fact.isInstanceOf[Imply], "equivalence or implication fact expected")
     require(fact.isInstanceOf[Equiv], "only equivalence facts implemented so far")
     private val Equiv(left,right) = fact
@@ -228,27 +229,34 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val (ctx:Context,expr) = new FormulaConverter(node.sequent(p.topLevel)).extractContext(p.inExpr)
         val fml = expr.asInstanceOf[Formula]
-        val leftmatch = Unification(fml, left)
-        if (leftmatch.isDefined) {
-          val subst = leftmatch.get
+        val matched = Unification(fml, left)
+        if (matched.isDefined) {
+          val subst = matched.get
           assert(fml == subst(left), "unification matched left successfully: " + fml + " is " + subst(left) + " which is " + left + " instantiated by " + subst)
           //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
-          //@todo wrap CutRight, EquivifyRight inside a tactic to make operator & work on it even
-          Some(CutRight(Equiv(ctx(fml), ctx(subst(right))), p.topLevel) & onBranch(
+          Some(cutRightT(Equiv(ctx(fml), ctx(subst(right))))(p.topLevel) & onBranch(
             (BranchLabels.cutUseLbl, NilT),
             //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
             //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-            (BranchLabels.cutShowLbl, EquivifyRight(p.topLevel) & AxiomaticRuleTactics.equivalenceCongruenceT(p))
+            (BranchLabels.cutShowLbl, equivifyRightT(p.topLevel) & AxiomaticRuleTactics.equivalenceCongruenceT(p))
           ))
         } else {
-          ???
-          //@todo similarly for Unification(fml, right) except with one more use of CommuteEquivRight
+          val matched = Unification(fml, right)
+          assert(matched.isDefined, "one side must match if applicable already")
+          val subst = matched.get
+          assert(fml == subst(right), "unification matched right successfully: " + fml + " is " + subst(right) + " which is " + right + " instantiated by " + subst)
+          //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
+          Some(cutRightT(Equiv(ctx(fml), ctx(subst(right))))(p.topLevel) & onBranch(
+            (BranchLabels.cutUseLbl, NilT),
+            //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
+            //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
+            (BranchLabels.cutShowLbl, equivifyRightT(p.topLevel) & commuteEquivRightT(p.topLevel) & AxiomaticRuleTactics.equivalenceCongruenceT(p))
+          ))
         }
-
       }
     }
 
-  }*/
+  }
 
   /*******************************************************************
    * Debug tactics
