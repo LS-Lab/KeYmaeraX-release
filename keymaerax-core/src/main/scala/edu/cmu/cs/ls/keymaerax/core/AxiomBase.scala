@@ -463,8 +463,10 @@ End.*/
 /* DG differential ghost, general Lipschitz case, system case */
 Axiom "DG differential Lipschitz ghost system".
   /* @see "DG differential Lipschitz ghost" THEORY */
-  [c&H(?);]p(?) <-> \exists y. [y'=g(?),c&H(?);]p(?)
-  <- (\exists L . \forall x . \forall a . \forall b . \forall u . \forall v . (a>=b -> [y:=a;u:=g(?);y:=b;v:=g(?)] (-L*(a-b) <= u-v & u-v <= L*(a-b))))
+  /* @TODO should there be parens on the first line? They were added by Nathan... */
+  /* @TODO why was the second line quantifying over x when x does not occur in the body of the quantifier? Removed by Nathan... */
+  ([c&H(?);]p(?) <-> \exists y. [y'=g(?),c&H(?);]p(?))
+  <- (\exists L . \forall a . \forall b . \forall u . \forall v . (a>=b -> [y:=a;u:=g(?);y:=b;v:=g(?)] (-L*(a-b) <= u-v & u-v <= L*(a-b))))
 End.
 
 /* Formatter axioms for diff eqs. @todo unused except in tactics implementation of itself */

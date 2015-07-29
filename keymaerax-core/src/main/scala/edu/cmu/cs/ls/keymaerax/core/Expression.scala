@@ -497,7 +497,11 @@ object DifferentialProduct {
   def apply(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = {
     require(!left.isInstanceOf[ODESystem], "Left should not be its own ODESystem: " + left + " with " + right)
     require(!right.isInstanceOf[ODESystem], "Right should not be its own ODESystem: " + left + " with " + right)
-    require(differentialSymbols(left).intersect(differentialSymbols(right)).isEmpty, "No duplicate differential equations when composing differential equations " + left + " and " + right)
+    //So that a breakpoint can be inserted.
+    val hasDuplicates = differentialSymbols(left).intersect(differentialSymbols(right)).nonEmpty
+    if(hasDuplicates) {
+      require(!hasDuplicates, "No duplicate differential equations when composing differential equations " + left + " and " + right)
+    }
     reassociate(left, right)
   } ensuring(r => differentialSymbols(r).length == differentialSymbols(r).distinct.length,
     "No undetected duplicate differential equations when composing differential equations " + left + " and " + right + " to form " + reassociate(left, right))

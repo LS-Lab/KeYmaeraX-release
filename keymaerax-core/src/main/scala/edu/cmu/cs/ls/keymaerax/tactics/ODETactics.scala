@@ -1124,7 +1124,7 @@ object ODETactics {
     def vFresh(fml : Formula) = fresh(fml, "v")
 
     def axiomInstance(fml : Formula) : Formula = fml match {
-      case Exists(y :: Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(dy, g)), h), p)) => {
+      case Exists(y :: Nil, Box(ODESystem(DifferentialProduct(AtomicODE(dy, g), c), h), p)) => {
         require(dy.x.equals(y), "Quantified and primed variable should agree.")
         val l = LFresh(fml)
         val x = xFresh(fml)
@@ -1150,11 +1150,11 @@ object ODETactics {
           val implicantBody : Formula = Imply(GreaterEqual(a,b), Box(boxAssignments, postcond))
 
           Exists(l :: Nil,
-            Forall(x :: Nil,
+//            Forall(x :: Nil,
               Forall(a :: Nil,
                 Forall(b :: Nil,
                   Forall(u :: Nil,
-                    Forall(v :: Nil, implicantBody))))))
+                    Forall(v :: Nil, implicantBody)))))
         }
 
         //[c&H(?);]p(?) <-> \exists y. [y'=g(?),c&H(?);]p(?)
@@ -1170,14 +1170,19 @@ object ODETactics {
       }
     }
 
-    uncoverAxiomT("DG differential Lipschitz ghost system", axiomInstance, _ => inverseLipschitzGhostBaseT)
+    def condT: PositionTactic = new PositionTactic("Label") {
+      override def applies(s: Sequent, p: Position): Boolean = true
+      override def apply(p: Position): Tactic = LabelBranch(cutShowLbl)
+    }
+
+    uncoverConditionalAxiomT("DG differential Lipschitz ghost system", axiomInstance, _ => condT, _ => inverseLipschitzGhostBaseT)
   }
 
   // [c&H(?);]p(?) <-> \exists y. [y'=g(?),c&H(?);]p(?)
   // <- (\exists L . \forall x . \forall a . \forall b . \forall u . \forall v . (a>=b -> [y:=a;u:=g(?);y:=b;v:=g(?)] (-L*(a-b) <= u-v & u-v <= L*(a-b))))
   def inverseLipschitzGhostBaseT : PositionTactic = {
     val aY = Variable("y", None, Real)
-    val aX = Variable("x", None, Real)
+//    val aX = Variable("x", None, Real)
     val aL = Variable("L", None, Real)
     val aA = Variable("a", None, Real)
     val aB = Variable("b", None, Real)
@@ -1190,39 +1195,40 @@ object ODETactics {
     val aP = PredOf(Function("p", None, Real, Bool), Anything)
 
     def subst(fml : Formula) = fml match {
-      case Imply(_, Equiv(_, Exists(y :: Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(dy, g)), h), p)))) => {
+      case Imply(_, Equiv(_, Exists(y :: Nil, Box(ODESystem(DifferentialProduct(AtomicODE(dy, g), c), h), p)))) => {
         SubstitutionPair(aC, c) :: SubstitutionPair(aG, g) :: SubstitutionPair(aP, p) ::
         SubstitutionPair(aH, h) :: Nil
       }
     }
 
-    def alpha(fml : Formula) = fml match {
+    def alpha(fml : Formula) : PositionTactic = fml match {
       case Imply(Exists(l :: Nil,
-      Forall(x :: Nil,
+//      Forall(x :: Nil,
       Forall(a :: Nil,
       Forall(b :: Nil,
       Forall(u :: Nil,
-      Forall(v :: Nil, _)))))), Equiv(_, Exists(y :: Nil, _)))
+      Forall(v :: Nil, _))))), Equiv(_, Exists(y :: Nil, _)))
       => {
         TacticHelper.axiomAlphaT(y, aY) &
-        TacticHelper.axiomAlphaT(x, aX) &
+//        TacticHelper.axiomAlphaT(x, aX) &
         TacticHelper.axiomAlphaT(a, aA) &
         TacticHelper.axiomAlphaT(b, aB) &
         TacticHelper.axiomAlphaT(u, aU) &
         TacticHelper.axiomAlphaT(v, aV)
       }
+      case _ => ???
     }
 
     def axiomInstance(fml: Formula, axiom: Formula) =fml match {
       case Imply(Exists(l :: Nil,
-      Forall(x :: Nil,
+//      Forall(x :: Nil,
       Forall(a :: Nil,
       Forall(b :: Nil,
       Forall(u :: Nil,
-      Forall(v :: Nil, _)))))), Equiv(_, Exists(y :: Nil, _)))
+      Forall(v :: Nil, _))))), Equiv(_, Exists(y :: Nil, _)))
       => {
-        val afterY = if (!y.equals(aY)) SubstitutionHelper.replaceFree(axiom)(aY, y) else axiom
-        val afterX = if (!x.equals(aX)) AlphaConversionHelper.replaceBound(afterY)(aX, x) else afterY
+        val afterY = if (!y.equals(aY)) AlphaConversionHelper.replace(axiom)(aY, y) else axiom
+        val afterX = afterY //if (!x.equals(aX)) AlphaConversionHelper.replaceBound(afterY)(aX, x) else afterY
         val afterA = if (!a.equals(aA)) AlphaConversionHelper.replaceBound(afterX)(aA, a) else afterX
         val afterB = if (!b.equals(aB)) AlphaConversionHelper.replaceBound(afterA)(aB, b) else afterA
         val afterU = if (!u.equals(aU)) AlphaConversionHelper.replaceBound(afterB)(aU, u) else afterB
@@ -1273,11 +1279,10 @@ object ODETactics {
       (fml: Formula) => fml match {
         case Equiv(Box(ode@ODESystem(alsoC, alsoH), alsoP), Exists(y :: Nil, Box(ODESystem(product : DifferentialProduct, h), p))) => {
           //Extract portions of the ODE. tail is the final (linear) ODE.
-          val (c, tail) = {
-            val l = SystemHelpers.toList(product)
-            (SystemHelpers.toProduct(l.tail), l.head)
+          val (hd, c) = product match {
+            case DifferentialProduct(hd : AtomicODE, tl: DifferentialProduct) => (hd, tl)
           }
-          val (yy, yyy, t, s) = tail match {
+          val (yy, yyy, t, s) = hd match {
             case AtomicODE(DifferentialSymbol(yy), Plus(Times(t, yyy), s)) => (yy, yyy, t, s)
           }
 
@@ -1329,30 +1334,31 @@ object ODETactics {
     axiomLookupBaseT("DA inverse differential ghost", subst, alpha, axiomInstance)
   }
 
-//  //////////////////////////////////////////////////////////////////////////////////////////////////
-//  // Comma Commute an ODE -- (no longer) used in master inv aux tactic
-//  //////////////////////////////////////////////////////////////////////////////////////////////////
-//  def commaCommuteT : PositionTactic = {
-//    val axiomInstance = (fml : Formula) => fml match {
-//      case Box(ODESystem(DifferentialProduct(l,r), h), p) => {
-//        Equiv(fml, Box(ODESystem(DifferentialProduct(r,l), h), p))
-//      }
-//    }
-//    uncoverAxiomT(", commute", axiomInstance, _ => commaCommuteAxiomBaseT)
-//  }
-//
-//  def commaCommuteAxiomBaseT : PositionTactic = {
-//    def subst(fml : Formula) = fml match {
-//      case Equiv(Box(ODESystem(DifferentialProduct(c,d), h), p), _) => {
-//        val aP = PredOf(Function("p", None, Real, Bool), Anything)
-//        val aC = DifferentialProgramConst("c")
-//        val aD = DifferentialProgramConst("d")
-//        val aH = PredOf(Function("H", None, Real, Bool), Anything)
-//        SubstitutionPair(aP, p) :: SubstitutionPair(aC, c) :: SubstitutionPair(aD, d) :: SubstitutionPair(aH, h) :: Nil
-//      }
-//    }
-//    axiomLookupBaseT(", commute", subst, _ => NilPT, (f, ax) => ax)
-//  }
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // Comma Commute an ODE -- (no longer) used in master inv aux tactic
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  //@todo this was marked as no longer used but it has one use site. Is that a mistake?
+  def commaCommuteT : PositionTactic = {
+    val axiomInstance = (fml : Formula) => fml match {
+      case Box(ODESystem(DifferentialProduct(l,r), h), p) => {
+        Equiv(fml, Box(ODESystem(DifferentialProduct(r,l), h), p))
+      }
+    }
+    uncoverAxiomT(", commute", axiomInstance, _ => commaCommuteAxiomBaseT)
+  }
+
+  def commaCommuteAxiomBaseT : PositionTactic = {
+    def subst(fml : Formula) = fml match {
+      case Equiv(Box(ODESystem(DifferentialProduct(c,d), h), p), _) => {
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
+        val aC = DifferentialProgramConst("c")
+        val aD = DifferentialProgramConst("d")
+        val aH = PredOf(Function("H", None, Real, Bool), Anything)
+        SubstitutionPair(aP, p) :: SubstitutionPair(aC, c) :: SubstitutionPair(aD, d) :: SubstitutionPair(aH, h) :: Nil
+      }
+    }
+    axiomLookupBaseT(", commute", subst, _ => NilPT, (f, ax) => ax)
+  }
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

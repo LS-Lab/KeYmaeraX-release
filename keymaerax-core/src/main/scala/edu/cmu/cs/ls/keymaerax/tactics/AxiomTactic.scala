@@ -173,7 +173,9 @@ object AxiomTactic {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val fml = getFormula(node.sequent, p)
         Some(
+          TacticLibrary.debugT("axiomLookupBaseT on " + axiomName) &
           uniformSubstT(subst(fml), Map(fml -> axiomInstance(fml, axiom))) &
+            TacticLibrary.debugT("Made it this far") &
             assertT(0, 1) & lastSucc(assertPT(axiomInstance(fml, axiom), "Unexpected uniform substitution result")) &
             lastSucc(alpha(fml)) & AxiomTactic.axiomT(axiomName) &
             assertT(1, 1) & lastAnte(assertPT(axiom, "Unexpected axiom form in antecedent")) &

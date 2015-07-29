@@ -201,6 +201,23 @@ object TacticLibrary {
           }
         }
       } else NilPT
+
+
+//    def axiomMultiAlphaT(renames : List[(Variable, Variable)]) = {
+//      val realRenames = renames.filter(x => x._1.name != x._2.name || x._1.index != x._2.index)
+//      if(realRenames.length > 0)
+//        new PositionTactic("Multi Alpha") {
+//          override def applies(s: Sequent, p: Position): Boolean = new ConstructionTactic(this.name) {
+//            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+//              Some(globalAlphaRenamingT(v, aV))
+//
+//            override def applicable(node: ProofNode): Boolean = ???
+//          }
+//
+//          override def apply(p: Position): Tactic = ???
+//        }
+//      else NilPT
+//    }
   }
 
   /*******************************************************************
