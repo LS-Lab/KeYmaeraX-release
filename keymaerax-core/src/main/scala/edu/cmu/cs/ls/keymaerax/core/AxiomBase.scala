@@ -713,11 +713,10 @@ Axiom "> flip".
   f(?) > g(?) <-> (g(?) < f(?))
 End.
 
-/* Unused so far
-Axiom "abs expand".
-  Abs(s) = if (s < 0) then -s else s fi
+Axiom "abs".
+  (abs(f()) = g()) <->  ((f()>=0 -> g()=f()) & (f()<=0 -> g()=-f()))
 End.
-*/
+
 /* @todo Multi-argument don't parse
 Axiom "max expand".
   Max(s, t) = if (s > t) then s else t fi
