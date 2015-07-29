@@ -2,6 +2,7 @@ package casestudies
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.boxSplitConjunctionT
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateAnte
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
@@ -86,10 +87,10 @@ class Quadcopter extends FlatSpec with Matchers with BeforeAndAfterEach {
               debug("Diff. cut (2)") &
               DC(cut2)(odePos) &
               onBranch(
-                (cutShowLbl, debug("Need []split box conjunction") & cut("[{h'=v,v'=kp()*(href()-h)-kd()*v,z'=kd()*z+0&true}]((h^2*kp()^2-2*h*href()*kp()^2+href()^2*kp()^2+h*kd()*kp()*v-href()*kd()*kp()*v+kp()*v^2)*(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+href()^2*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)*z=(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)^2*z0_1()&z>0) <-> ([{h'=v,v'=kp()*(href()-h)-kd()*v,z'=kd()*z+0&true}]((h^2*kp()^2-2*h*href()*kp()^2+href()^2*kp()^2+h*kd()*kp()*v-href()*kd()*kp()*v+kp()*v^2)*(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+href()^2*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)*z=(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)^2*z0_1()) & [{h'=v,v'=kp()*(href()-h)-kd()*v,z'=kd()*z+0&true}]z>0)".asFormula) &
-                  onBranch(
-                    (cutShowLbl, debug("Show []split box conjunction") /* TODO */),
-                    (cutUseLbl, debug("Use []split box conjunction") & EqualityRewritingImpl.equivRewriting(AntePosition(5), SuccPosition(0)) & ls(andR) &&(
+                (cutShowLbl,
+                  debug("[]split box conjunction") &
+                  lastSucc(boxSplitConjunctionT) &
+                    ls(andR) &&(
                       debug("Show first conjunct with DI") & ls(DI),
                       debug("Hiding irrelevant facts in second conjunct") &
                         la(andL, "(h^2*kp()^2-2*h*href()*kp()^2+href()^2*kp()^2+h*kd()*kp()*v-href()*kd()*kp()*v+kp()*v^2)*(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+href()^2*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)>0&z>0") &
@@ -106,9 +107,8 @@ class Quadcopter extends FlatSpec with Matchers with BeforeAndAfterEach {
                           (cutUseLbl, debug("Use z*u^2=1") & DW(odePos) & ls(implyR) & (la(andL)*) & debug("Closing by QE") & QE)
                         ))
                       )
-
-                      ))
-                  )),
+                    )
+                  ),
                 (cutUseLbl, debug("Use diff. cut (2)") & DW(odePos) & debug("Off to QE") & QE)
               ))
           )
