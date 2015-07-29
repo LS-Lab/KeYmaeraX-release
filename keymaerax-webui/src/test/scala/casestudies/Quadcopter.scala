@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateAnte
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.PositionTactic
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.onBranch
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
@@ -18,6 +18,8 @@ import testHelper.ParserFactory._
 import testHelper.ProvabilityTestHelper
 
 import scala.collection.immutable.Map
+import scala.reflect.runtime._
+import scala.tools.reflect.ToolBox
 
 /**
  * Created by smitsch on 7/22/15.
@@ -118,6 +120,20 @@ class Quadcopter extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val result = helper.runTactic(tactic, new RootNode(s))
     Console.println("Open Goals: " + result.openGoals().length)
+    result shouldBe 'closed
+  }
+
+  it should "be provable when tactic is loaded from a file" in {
+    val tacticSource = scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/quadcopter/SimpleQuadrotorTacticGenerator.scala").mkString
+
+    val cm = universe.runtimeMirror(getClass.getClassLoader)
+    val tb = cm.mkToolBox()
+    val tacticGenerator = tb.eval(tb.parse(tacticSource)).asInstanceOf[() => Tactic]
+
+    val tactic = tacticGenerator()
+
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/quadcopter/simplequadrotor.key"))
+    val result = helper.runTactic(tactic, new RootNode(s))
     result shouldBe 'closed
   }
 }
