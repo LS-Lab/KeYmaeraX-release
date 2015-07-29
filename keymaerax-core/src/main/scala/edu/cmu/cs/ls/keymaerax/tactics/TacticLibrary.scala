@@ -246,7 +246,7 @@ object TacticLibrary {
           val subst = matched.get
           assert(fml == subst(right), "unification matched right successfully: " + fml + " is " + subst(right) + " which is " + right + " instantiated by " + subst)
           //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
-          Some(cutRightT(Equiv(ctx(fml), ctx(subst(right))))(p.topLevel) & onBranch(
+          Some(cutRightT(Equiv(ctx(fml), ctx(subst(left))))(p.topLevel) & onBranch(
             (BranchLabels.cutUseLbl, NilT),
             //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
             //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
