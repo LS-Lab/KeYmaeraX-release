@@ -258,8 +258,8 @@ object KeYmaeraX {
     require(options.contains('tactic), usage)
 
     val tacticFileNameDotScala = options.get('tactic).get.toString
-    assert(tacticFileNameDotScala.endsWith(".scala"),
-      "\n[Error] Wrong file name " + tacticFileNameDotScala + " used for -tactic! KeYmaera X only reads .scala tactic file. Please use: -tactic FILENAME.scala")
+    //assert(tacticFileNameDotScala.endsWith(".scala"),
+    //  "\n[Error] Wrong file name " + tacticFileNameDotScala + " used for -tactic! KeYmaera X only reads .scala tactic file. Please use: -tactic FILENAME.scala")
     val tacticSource = scala.io.Source.fromFile(tacticFileNameDotScala).mkString
 
     val cm = universe.runtimeMirror(getClass.getClassLoader)
