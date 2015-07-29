@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 /**
  * Created by smitsch on 3/23/15.
  * @author Stefan Mitsch
+ * @todo Design: wouldn't it be better design to turn it into an object since formula argument doesn't seem to be leveraged? Or not?
  */
 object FormulaConverter {
   import scala.language.implicitConversions
@@ -159,7 +160,7 @@ class FormulaConverter(val fml: Formula) {
   }
 
   /**
-   * Extracts a sub-expression from its context and returns both.
+   * Split formula at a position into sub-expression at that position and the context in which it occurs.
    * @param pos The position pointing to the expression.
    * @return A tuple (p(.), e) of context p(.) and sub-expression e, where p(e) is equivalent to fml.
    */

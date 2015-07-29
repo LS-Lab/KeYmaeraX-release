@@ -19,7 +19,7 @@ import ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTravers
 import AxiomaticRuleTactics.boxMonotoneT
 import FOQuantifierTacticsImpl.instantiateT
 import PropositionalTacticsImpl.NonBranchingPropositionalT
-import SearchTacticsImpl.{lastAnte,lastSucc,onBranch}
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import HybridProgramTacticsImpl.boxVacuousT
 import AlphaConversionHelper.replace
 import BranchLabels._
@@ -202,6 +202,47 @@ object TacticLibrary {
         }
       } else NilPT
   }
+
+  /**
+   * useAt(fact)(pos) uses the given fact at the given position in the sequent.
+   * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
+   * instance to make progress by reducing to the other side.
+   * @author aplatzer
+   * @todo generalize to automatically find a proof of fact by axiom lookup or master or so
+   */
+  /*def useAt(fact: Formula): PositionTactic = new PositionTactic("useAt") {
+    require(fact.isInstanceOf[Equiv] || fact.isInstanceOf[Equal] || fact.isInstanceOf[Imply], "equivalence or implication fact expected")
+    require(fact.isInstanceOf[Equiv], "only equivalence facts implemented so far")
+    private val Equiv(left,right) = fact
+
+    //@todo s(Position) is meant to locate into PosInExpr too
+    override def applies(s: Sequent, p: Position): Boolean = Unification(s.apply(p),left).isDefined || Unification(s(p),right).isDefined
+
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val (expr,ctx) = new FormulaConverter(node.sequent(p.topLevel)).extractContext(p.inExpr)
+        val fml = expr.asInstanceOf[Formula]
+        val leftmatch = Unification(fml, left)
+        if (leftmatch.isDefined) {
+          val subst = leftmatch.get
+          assert(fml == subst(left), "unification matched left successfully: " + fml + " is " + subst(left) + " which is " + left + " instantiated by " + subst)
+          //@todo ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
+          Some(CutRight(Equiv(ctx(fml), ctx(subst(right)))) & onBranch(
+            (BranchLabels.cutUseLbl, NilT),
+            //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
+            (BranchLabels.cutShowLbl, EquivifyRight(p.topLevel) & AxiomaticRuleTactics.equivalenceCongruenceT(p))
+          ))
+        } else {
+          ???
+          //@todo similarly for Unification(fml, right) except with one more use of CommuteEquivRight
+        }
+
+      }
+    }
+
+  }*/
 
   /*******************************************************************
    * Debug tactics
