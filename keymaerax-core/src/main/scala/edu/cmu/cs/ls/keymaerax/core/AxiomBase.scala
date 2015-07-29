@@ -458,7 +458,7 @@ End.*/
 /* DG differential ghost, general Lipschitz case */
 /*Axiom "DG differential Lipschitz ghost".
   ([x'=f(x)&q(x);]p(x) <-> \exists y. [x'=f(x),y'=g(x,y)&q(x);]p(x))
-  <- (\exists L \forall u \forall v \forall w (v>=w -> (-L*(v-w) <= g(u,v)-g(u,w) & g(u,v)-g(u,w) <= L*(v-w))))
+  <- (\exists L \forall x \forall y \forall z (y>=z -> (-L*(y-x) <= g(x,y)-g(x,z) & g(x,y)-g(x,z) <= L*(y-z))))
 End.*/
 
 /* DG differential ghost, general Lipschitz case, system case */
