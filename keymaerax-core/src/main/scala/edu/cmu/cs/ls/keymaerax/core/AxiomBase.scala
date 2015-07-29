@@ -464,8 +464,8 @@ End.*/
 /* DG differential ghost, general Lipschitz case, system case */
 Axiom "DG differential Lipschitz ghost system".
   /* @see "DG differential Lipschitz ghost" THEORY */
-  [c&H(?);]p(?) <-> \exists y. [y'=g(?),c&H(?);]p(?)
-  <- (\exists L . \forall x . \forall a . \forall b . \forall u . \forall v . (a>=b -> [y:=a;u:=g(?);y:=b;v:=g(?)] (-L*(a-b) <= u-v & u-v <= L*(a-b))))
+  ([c&H(?);]p(?) <-> \exists y. [y'=g(?),c&H(?);]p(?))
+  <- (\exists L . [c&H(?);] (\forall a . \forall b . \forall u . \forall v . (a>=b -> [y:=a;u:=g(?);y:=b;v:=g(?)] (-L*(a-b) <= u-v & u-v <= L*(a-b)))))
 End.
 
 /* Formatter axioms for diff eqs. @todo unused except in tactics implementation of itself */
