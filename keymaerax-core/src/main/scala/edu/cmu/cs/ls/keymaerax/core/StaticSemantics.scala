@@ -21,6 +21,7 @@ import scala.collection.immutable
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.3]]
  * @author aplatzer
  * @author smitsch
+ * @note soundness-critical
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @example
@@ -33,6 +34,7 @@ import scala.collection.immutable
  *   println("Free variables " + stat.fv)
  *   println("Bound variables " + stat.bv)
  * }}}
+ * @see [[edu.cmu.cs.ls.keymaerax.tactics.StaticSemanticsTools]]
  */
 object StaticSemantics {
 
@@ -159,7 +161,8 @@ object StaticSemantics {
 
     case PredOf(p, arg) => VCF(fv = freeVars(arg), bv = bottom)
     // DotFormula is like a reserved Predicational
-    case DotFormula => VCF(fv = topVarsDiffVars(), bv = bottom)
+    //@todo eisegesis should be bv=topVarsDiffVars() not bv=bottom
+    case DotFormula => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
     case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
 
     // homomorphic cases

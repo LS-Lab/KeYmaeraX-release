@@ -9,15 +9,54 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 
 
 /**
- * Created by ran on 6/16/15.
+ * Created by ran on 7/27/15.
  * @author Ran Ji
  */
-object CGenerator extends CodeGenerator {
+
+class C {
+  private var allNames : List[String] = Nil
+  private var localVarsDef : String = ""
+  private var body : String = ""
+
+  def getAllNames = this.allNames
+  def setAllNames(allNames : List[String]) = this.allNames = allNames
+  def getLocalVarsDef = this.localVarsDef
+  def setLocalVarsDef(lvd : String) = this.localVarsDef = lvd
+  def getBody = this.body
+  def setBody(body : String) = this.body = body
+}
+
+object CseCGenerator extends CodeGenerator {
   def apply(expr: Expression): String = apply(expr, "long double", Nil, "")
   def apply(expr: Expression, vars: List[Variable]): String = apply(expr, "long double", vars, "")
   def apply(expr: Expression, vars: List[Variable], fileName: String): String = apply(expr, "long double", vars, fileName)
   /** Generate C Code for given expression using the data type cDataType throughout and the input list of variables */
   def apply(expr: Expression, cDataType: String, vars: List[Variable], fileName: String): String = generateCCode(expr, cDataType, vars, fileName)
+
+  private val c = new C
+
+  /** Name counter used for generating new vector names */
+  private var vecNameCounter: Int = 0
+
+  /**
+   * A list of encountered simple formula (without logical connectives) and the corresponding generated Spiral code pair,
+   * which is used to avoid generating Spiral code for the same  simple formula multiple times
+   */
+  private var encounteredFormula: List[(Formula, String)] = Nil
+
+  private def allNames(expr: Expression) = StaticSemantics.symbols(expr).toList.map(s => nameIdentifier(s))
+
+  /* Generates new local variable name */
+  private def getNewLocalVarName: String = {
+    var boolName = "f"
+    // make sure to use a fresh name for the local boolean variable
+    while(c.getAllNames.contains(boolName))
+      boolName = boolName.concat("f")
+    assert(!c.getAllNames.contains(boolName))
+    val name = boolName + "_"+vecNameCounter
+    vecNameCounter+=1
+    name
+  }
 
   /**
    * Generate C code
@@ -31,6 +70,7 @@ object CGenerator extends CodeGenerator {
   private def generateCCode(expr: Expression, cDataType: String, vars: List[Variable], fileName: String) : String = {
     val names = StaticSemantics.symbols(expr).toList.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers for code generation")
+    c.setAllNames(names)
     val relevantVars = getRelevantVars(expr, vars)
     if(vars.toSet.diff(relevantVars.toSet).nonEmpty)
       println("[warning] -vars contains unknown variables {" + vars.toSet.diff(relevantVars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "}, which will be ignored")
@@ -40,7 +80,9 @@ object CGenerator extends CodeGenerator {
     val funcHead = "/* monitor */\n" +
       "bool monitor (" + parameterDeclaration(cDataType, relevantVars) + ")"
     val funcBody = compileToC(expr, calledFuncs)
-    infoC(fileName) + includeLib + FuncCallDeclaration(calledFuncs, cDataType) + funcHead + " {\n" + "  return " + funcBody + ";" + "\n}\n\n"
+    c.setBody(funcBody)
+    infoC(fileName) + includeLib + FuncCallDeclaration(calledFuncs, cDataType) + funcHead + " {\n" + "\n  /* local boolean variables */\n" +
+      c.getLocalVarsDef + "\n  return " + c.getBody + ";" + "\n}\n\n"
     //@note gcc -Wall -Wextra -Werror -std=c99 -pedantic absolutely wants "newline at end of file" -Wnewline-eof
   }
 
@@ -77,16 +119,16 @@ object CGenerator extends CodeGenerator {
     var relevantVars = List[Variable]()
     for(i <- vars.indices) {
       if(allSymbolNames.contains(vars.apply(i)))
-        // variable occurs in the expression, add it to the return list
+      // variable occurs in the expression, add it to the return list
         relevantVars = vars.apply(i) :: relevantVars
       if(allSymbolNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real)))
-        // variable occur as nullary function, add it to the return list as a variable
+      // variable occur as nullary function, add it to the return list as a variable
         relevantVars = Variable(nameIdentifier(vars.apply(i))) :: relevantVars
       if(allSymbolNames.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
-        // post variable occurs in the expression as variable, add it to the return list as a variable
+      // post variable occurs in the expression as variable, add it to the return list as a variable
         relevantVars = Variable(getPostNameIdentifier(vars.apply(i))) :: relevantVars
       if(allSymbolNames.contains(Function(getPostNameIdentifier(vars.apply(i)), None, Unit, Real)))
-        // post variable occurs in the expression as nullary function, add it to the return list as a variable
+      // post variable occurs in the expression as nullary function, add it to the return list as a variable
         relevantVars = Variable(getPostNameIdentifier(vars.apply(i))) :: relevantVars
     }
     assert(relevantVars.distinct.size == relevantVars.size,
@@ -225,14 +267,51 @@ object CGenerator extends CodeGenerator {
       case Imply(l, r) => compileFormula(Or(Not(l), r), calledFuncs)
       case Equiv(l, r) => compileFormula(And(Imply(l, r), Imply(r, l)), calledFuncs)
       //compileFormula(Or(And(l,r),And(Not(l),Not(r))))
-      case Equal(l, r)       => "(" + compileTerm(l, calledFuncs) + ")" + "==" + "(" + compileTerm(r, calledFuncs) + ")"
-      case NotEqual(l, r)    => "(" + compileTerm(l, calledFuncs) + ")" + "!=" + "(" + compileTerm(r, calledFuncs) + ")"
-      case Greater(l,r)      => "(" + compileTerm(l, calledFuncs) + ")" + ">"  + "(" + compileTerm(r, calledFuncs) + ")"
-      case GreaterEqual(l,r) => "(" + compileTerm(l, calledFuncs) + ")" + ">=" + "(" + compileTerm(r, calledFuncs) + ")"
-      case Less(l,r)         => "(" + compileTerm(l, calledFuncs) + ")" + "<"  + "(" + compileTerm(r, calledFuncs) + ")"
-      case LessEqual(l,r)    => "(" + compileTerm(l, calledFuncs) + ")" + "<=" + "(" + compileTerm(r, calledFuncs) + ")"
-      case True              => "true"
-      case False             => "false"
+      case _ => compileSimpleFormula(f, calledFuncs)
+    }
+  }
+
+
+  /**
+   * Compile a simple formula without logical connective
+   * if the formula is encountered before, get the previously compiled result
+   * otherwise compile the fresh formula and updates the list of encounteredFormula
+   *
+   * @param f
+   * @param calledFuncs
+   * @return
+   */
+  private def compileSimpleFormula(f: Formula, calledFuncs: Set[NamedSymbol]) : String = {
+    if(encounteredFormula.map(s => s._1).contains(f)) {
+      encounteredFormula.apply(encounteredFormula.map(s => s._1).indexOf(f))._2
+    } else {
+      val generatedFormula = compileFreshSimpleFormula(f, calledFuncs)
+      val newName = getNewLocalVarName
+      val lvd = c.getLocalVarsDef.concat("  bool " + newName + " = " + generatedFormula + ";\n")
+      c.setLocalVarsDef(lvd)
+      encounteredFormula = (f, newName) :: encounteredFormula
+      newName
+    }
+  }
+
+  /**
+   * Compile a simple formula without logical connective, this formula was not encountered before
+   *
+   * @param f
+   * @param calledFuncs
+   * @return
+   */
+  private def compileFreshSimpleFormula(f: Formula, calledFuncs: Set[NamedSymbol]) : String = {
+    f match {
+      //compileFormula(Or(And(l,r),And(Not(l),Not(r))))
+      case Equal(l, r) => "(" + compileTerm(l, calledFuncs) + ")" + "==" + "(" + compileTerm(r, calledFuncs) + ")"
+      case NotEqual(l, r) => "(" + compileTerm(l, calledFuncs) + ")" + "!=" + "(" + compileTerm(r, calledFuncs) + ")"
+      case Greater(l, r) => "(" + compileTerm(l, calledFuncs) + ")" + ">" + "(" + compileTerm(r, calledFuncs) + ")"
+      case GreaterEqual(l, r) => "(" + compileTerm(l, calledFuncs) + ")" + ">=" + "(" + compileTerm(r, calledFuncs) + ")"
+      case Less(l, r) => "(" + compileTerm(l, calledFuncs) + ")" + "<" + "(" + compileTerm(r, calledFuncs) + ")"
+      case LessEqual(l, r) => "(" + compileTerm(l, calledFuncs) + ")" + "<=" + "(" + compileTerm(r, calledFuncs) + ")"
+      case True => "true"
+      case False => "false"
       case Box(_, _) | Diamond(_, _) => throw new CodeGenerationException("Conversion of Box or Diamond modality is not allowed")
       case _ => throw new CodeGenerationException("Conversion of formula " + KeYmaeraXPrettyPrinter(f) + " is not defined")
     }

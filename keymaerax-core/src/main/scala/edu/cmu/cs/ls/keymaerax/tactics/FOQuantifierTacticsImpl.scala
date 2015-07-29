@@ -587,8 +587,8 @@ object FOQuantifierTacticsImpl {
       case Some(vv) => vv
       case None => fml match {
         case Equiv(_, q: Quantified) =>
-          require(q.vars.size == 1 && q.vars.head.isInstanceOf[Variable])
-          q.vars.head.asInstanceOf[Variable]
+          require(q.vars.size == 1)
+          q.vars.head
       }
     }
 
@@ -602,7 +602,7 @@ object FOQuantifierTacticsImpl {
 
         override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
           override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-            Some(alphaRenamingT(v(fml).name, v(fml).index, aX.name, aX.index)(p.second))
+            Some(alphaRenamingT(v(fml), aX)(p.second))
 
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         }

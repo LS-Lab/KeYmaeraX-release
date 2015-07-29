@@ -19,7 +19,7 @@ import ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTravers
 import AxiomaticRuleTactics.boxMonotoneT
 import FOQuantifierTacticsImpl.instantiateT
 import PropositionalTacticsImpl.NonBranchingPropositionalT
-import SearchTacticsImpl.{lastAnte,lastSucc,onBranch}
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import HybridProgramTacticsImpl.boxVacuousT
 import AlphaConversionHelper.replace
 import BranchLabels._
@@ -218,6 +218,61 @@ object TacticLibrary {
 //        }
 //      else NilPT
 //    }
+  }
+
+  /**
+   * useAt(fact)(pos) uses the given fact at the given position in the sequent.
+   * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
+   * instance to make progress by reducing to the other side.
+   * @author aplatzer
+   * @todo generalize to automatically find a proof of fact by axiom lookup or master or so
+   */
+  def useAt(fact: Formula): PositionTactic = new PositionTactic("useAt") {
+    import FormulaConverter._
+    import PropositionalTacticsImpl._
+    require(fact.isInstanceOf[Equiv] || fact.isInstanceOf[Equal] || fact.isInstanceOf[Imply], "equivalence or implication fact expected")
+    require(fact.isInstanceOf[Equiv], "only equivalence facts implemented so far")
+    private val Equiv(left,right) = fact
+
+    //@todo s(Position) is meant to locate into PosInExpr too
+    private def at(s: Sequent, p: Position): Option[Formula] = new FormulaConverter(s(p.topLevel)).subFormulaAt(p.inExpr)
+
+    override def applies(s: Sequent, p: Position): Boolean =
+      at(s,p).isDefined && (Unification(at(s,p).get,left).isDefined || Unification(at(s,p).get,right).isDefined)
+
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val (ctx:Context,expr) = new FormulaConverter(node.sequent(p.topLevel)).extractContext(p.inExpr)
+        val fml = expr.asInstanceOf[Formula]
+        val matched = Unification(fml, left)
+        if (matched.isDefined) {
+          val subst = matched.get
+          assert(fml == subst(left), "unification matched left successfully: " + fml + " is " + subst(left) + " which is " + left + " instantiated by " + subst)
+          //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
+          Some(cutRightT(Equiv(ctx(fml), ctx(subst(right))))(p.topLevel) & onBranch(
+            (BranchLabels.cutUseLbl, NilT),
+            //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
+            //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
+            (BranchLabels.cutShowLbl, equivifyRightT(p.topLevel) & AxiomaticRuleTactics.equivalenceCongruenceT(p))
+          ))
+        } else {
+          val matched = Unification(fml, right)
+          assert(matched.isDefined, "one side must match if applicable already")
+          val subst = matched.get
+          assert(fml == subst(right), "unification matched right successfully: " + fml + " is " + subst(right) + " which is " + right + " instantiated by " + subst)
+          //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
+          Some(cutRightT(Equiv(ctx(fml), ctx(subst(left))))(p.topLevel) & onBranch(
+            (BranchLabels.cutUseLbl, NilT),
+            //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
+            //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
+            (BranchLabels.cutShowLbl, equivifyRightT(p.topLevel) & commuteEquivRightT(p.topLevel) & AxiomaticRuleTactics.equivalenceCongruenceT(p))
+          ))
+        }
+      }
+    }
+
   }
 
   /*******************************************************************

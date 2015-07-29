@@ -73,7 +73,8 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     assert(rootNode.openGoals().size == 1 && rootNode.openGoals().head.sequent.ante.size == 1 &&
       rootNode.openGoals().head.sequent.succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
     assert(rootNode.sequent == mxInputSequent, "Proof was a proof of the ModelPlex specification")
-    val mxOutputProofTree = And(rootNode.openGoals().head.sequent.ante.head, rootNode.openGoals().head.sequent.succ.head)
+    // @todo conjunction with phi|_cnst when monitor should also check the conditions on constants
+    val mxOutputProofTree = rootNode.openGoals().head.sequent.succ.head
     if (checkProvable) {
       val witnessStart= Platform.currentTime
       val provable = rootNode.provableWitness
@@ -95,7 +96,7 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
 
   /** Construct ModelPlex Controller Monitor specification formula corresponding to given formula for monitoring the given variables. */
   def modelplexControllerMonitorTrafo(fml: Formula, vars: List[Variable]): Formula = {
-    require(!vars.isEmpty, "ModelPlex expects non-empty list of variables to monitor")
+    require(vars.nonEmpty, "ModelPlex expects non-empty list of variables to monitor")
     val varsSet = vars.toSet
     require(StaticSemantics.symbols(fml).intersect(
       vars.toSet[Variable].map(v=>Function(v.name + "pre", v.index, Unit, v.sort).asInstanceOf[NamedSymbol]) ++
@@ -106,16 +107,19 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
       case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
         //@todo explicitly address DifferentialSymbol instead of skipping
         require(StaticSemantics.boundVars(controller).toSymbolSet.forall(v => !v.isInstanceOf[Variable] || varsSet.contains(v.asInstanceOf[Variable])),
-          "all bound variables " + StaticSemantics.boundVars(controller).prettyString + " must occur in monitor list " + vars.mkString(", "))
-        val preassignments = vars.map(v => Assign(v, FuncOf(Function(v.name + "pre", v.index, Unit, v.sort), Nothing))).reduce(Compose)
+          "all bound variables " + StaticSemantics.boundVars(controller).prettyString + " must occur in monitor list " + vars.mkString(", ") +
+            "\nMissing: " + (StaticSemantics.boundVars(controller).toSymbolSet.toSet diff varsSet.toSet).mkString(", "))
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
-        //      Imply(assumptions, Diamond(preassignments, Diamond(controller, posteqs)))
-        Imply(assumptions, Diamond(controller, posteqs))
+        //Imply(assumptions, Diamond(controller, posteqs))
+        //@note suppress assumptions since at most those without bound variables are still around.
+        Imply(True, Diamond(controller, posteqs))
       // models of the form (plant)
       case Imply(assumptions, Box(ODESystem(_, _), _)) =>
         //@todo require bound variables
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
         Imply(assumptions, Diamond(Test(True), posteqs))
+        //@note suppress assumptions since at most those without bound variables are still around.
+        Imply(True, Diamond(Test(True), posteqs))
       case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
     }
   }

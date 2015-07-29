@@ -159,7 +159,7 @@ class FormulaConverter(val fml: Formula) {
   }
 
   /**
-   * Extracts a sub-expression from its context and returns both.
+   * Split formula at a position into sub-expression at that position and the context in which it occurs.
    * @param pos The position pointing to the expression.
    * @return A tuple (p(.), e) of context p(.) and sub-expression e, where p(e) is equivalent to fml.
    */
@@ -185,6 +185,7 @@ class FormulaConverter(val fml: Formula) {
       case None => ???
     }
   }
+  //@todo ensuring(r => USubst(SubstitutionPair(DotTerm/DotFormula, r._2))(r._1) == formula)
 
   /**
    * Transforms the formula into its structural form (all variables and functions substituted with CDot).

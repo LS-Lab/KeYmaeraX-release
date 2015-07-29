@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import java.io.PrintWriter
+import java.io.{File, PrintWriter}
 
 import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ClassGenerator
 import edu.cmu.cs.ls.keymaerax.core._
@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.ModelPlex.{modelplexControllerMonitorTrafo, modelplexInPlace}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
-import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, SpiralGenerator}
+import edu.cmu.cs.ls.keymaerax.codegen.{CseCGenerator, CGenerator, SpiralGenerator}
 
 
 import scala.collection.immutable
@@ -28,10 +28,11 @@ import scala.util.Random
 object KeYmaeraX {
 
   /** KeYmaera X version number */
-  val VERSION = "4.0a2"
+  val VERSION = "4.0a3"
 
   private type OptionMap = Map[Symbol, Any]
 
+  /** Usage -help information, formatted to 80 characters width. */
   private val usage = "KeYmaera X Prover" + " " + VERSION +
     """
       |
@@ -55,7 +56,9 @@ object KeYmaeraX {
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval  skip interval arithmetic presuming no floating point errors
       |  -interactive start a simple command-line prover if -prove fails
-      |  -vars     use ordered list of variables treating others as constant functions
+      |  -cse      use common subexpression elimination in C code (not recommended)
+      |  -dnf      use disjunctive normal form in Spiral code
+      |  -vars     use ordered list of variables, treating others as constant functions
       |  -lax      enable lax mode with more flexible parser, printer, prover etc.
       |  -strict   enable strict mode with no flexibility in prover
       |  -debug    enable debug mode with more exhaustive messages
@@ -64,6 +67,7 @@ object KeYmaeraX {
       |  -license  Show license agreement for using this software
       |
       |Copyright (c) Carnegie Mellon University.
+      |Use option -license to show the license conditions.
       |""".stripMargin
 
   def main (args: Array[String]): Unit = {
@@ -85,29 +89,49 @@ object KeYmaeraX {
           case "-help" :: _ => {println(usage); exit(1)}
           case "-license" :: _ => {println(license); exit(1)}
           // actions
-          case "-prove" :: value :: tail => nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
-          case "-modelplex" :: value :: tail => nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
-          case "-codegen" :: value :: tail => nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
+          case "-prove" :: value :: tail =>
+            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
+            else optionErrorReporter("-prove")
+          case "-modelplex" :: value :: tail =>
+            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
+            else optionErrorReporter("-modelPlex")
+          case "-codegen" :: value :: tail =>
+            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
+            else optionErrorReporter("-codegen")
           case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
           // action options
-          case "-out" :: value :: tail => nextOption(map ++ Map('out -> value), tail)
-          case "-vars" :: value :: tail => nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
-          case "-format" :: value :: tail => nextOption(map ++ Map('format -> value), tail)
-          case "-tactic" :: value :: tail => nextOption(map ++ Map('tactic -> value), tail)
+          case "-out" :: value :: tail =>
+            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
+            else optionErrorReporter("-out")
+          case "-vars" :: value :: tail =>
+            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
+            else optionErrorReporter("-vars")
+          case "-format" :: value :: tail =>
+            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('format -> value), tail)
+            else optionErrorReporter("-format")
+          case "-tactic" :: value :: tail =>
+            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tactic -> value), tail)
+            else optionErrorReporter("-tactic")
           case "-interactive" :: tail => nextOption(map ++ Map('interactive -> true), tail)
           // aditional options
-          case "-mathkernel" :: value :: tail => nextOption(map ++ Map('mathkernel -> value), tail)
-          case "-jlink" :: value :: tail => nextOption(map ++ Map('jlink -> value), tail)
+          case "-mathkernel" :: value :: tail =>
+            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mathkernel -> value), tail)
+            else optionErrorReporter("-mathkernel")
+          case "-jlink" :: value :: tail =>
+            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('jlink -> value), tail)
+            else optionErrorReporter("-jlink")
           case "-verify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> true), tail)
           case "-noverify" :: tail => require(!map.contains('verify)); nextOption(map ++ Map('verify -> false), tail)
           case "-interval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> true), tail)
           case "-nointerval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> false), tail)
+          case "-cse" :: tail => require(!map.contains('cse)); nextOption(map ++ Map('cse -> true), tail)
+          case "-dnf" :: tail => require(!map.contains('dnf)); nextOption(map ++ Map('dnf -> true), tail)
           // global options
           case "-lax" :: tail => System.setProperty("LAX", "true"); nextOption(map, tail)
           case "-strict" :: tail => System.setProperty("LAX", "false"); nextOption(map, tail)
           case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
           case "-nodebug" :: tail => System.setProperty("DEBUG", "false"); nextOption(map, tail)
-          case option :: tail => println("Unknown option " + option + "\n" + usage); exit(1)
+          case option :: tail => optionErrorReporter(option)
         }
       }
 
@@ -137,14 +161,62 @@ object KeYmaeraX {
     }
   }
 
+  private def optionErrorReporter(option: String) = {
+    val noValueMessage = "[Error] No value specified for " + option + " option. "
+    option match {
+      case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.key\n\n" + usage); exit(1)
+      case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.key\n\n" + usage); exit(1)
+      case "codegen" => println(noValueMessage + "Please use: -codegen FILENAME.mx\n\n" + usage); exit(1)
+      case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.mx | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
+      case "-vars" => println(noValueMessage + "Please use: -vars VARIABLE_1,VARIABLE_2,...\n\n" + usage); exit(1)
+      case "-format" => println(noValueMessage + "Please use: -format C | Spiral\n\n" + usage); exit(1)
+      case "-tactic" =>  println(noValueMessage + "Please use: -tactic FILENAME.scala\n\n" + usage); exit(1)
+      case "-mathkernel" => println(noValueMessage + "Please use: -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n\n" + usage); exit(1)
+      case "-jlink" => println(noValueMessage + "Please use: -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n\n" + usage); exit(1)
+      case _ =>  println("[Error] Unknown option " + option + "\n\n" + usage); exit(1)
+    }
+  }
+
   def initializeProver(options: OptionMap) = {
+    assert((options.contains('mathkernel) && options.contains('jlink)) || (!options.contains('mathkernel) && !options.contains('jlink)),
+      "\n[Error] Please always use command line option -mathkernel and -jlink together," +
+        "and specify the Mathematica link paths with:\n" +
+        " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE" +
+        " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE \n\n" + usage)
+
     val mathematicaConfig =
       if (options.contains('mathkernel) && options.contains('jlink)) Map("linkName" -> options.get('mathkernel).get.toString,
                                                                          "libDir" -> options.get('jlink).get.toString)
       else DefaultConfiguration.defaultMathematicaConfig
 
-    require(mathematicaConfig.contains("linkName") && mathematicaConfig.contains("libDir"),
-      if (!options.contains('mathkernel)) "Cannot find Mathematica at default location, please use command line options\n" + usage)
+    val linkNamePath = mathematicaConfig.get("linkName") match {
+      case Some(path) => path
+      case _ => ""
+    }
+    val libDirPath = mathematicaConfig.get("libDir") match {
+      case Some(path) => path
+      case _ => ""
+    }
+    assert(linkNamePath!="" && libDirPath!="",
+      "\n[Error] The paths to MathKernel file named " + DefaultConfiguration.defaultMathLinkName._1 + " and jlinkLibDir file named " + DefaultConfiguration.defaultMathLinkName._2 + " are not specified! " +
+        "(On your system, they could look like: " + {if(DefaultConfiguration.defaultMathLinkPath._1!="") DefaultConfiguration.defaultMathLinkPath._1 else DefaultConfiguration.exemplaryMathLinkPath._1} +
+        " and " + {if(DefaultConfiguration.defaultMathLinkPath._2!="") DefaultConfiguration.defaultMathLinkPath._2 else DefaultConfiguration.exemplaryMathLinkPath._2} + ")\n" +
+        "Please specify the paths to " + DefaultConfiguration.defaultMathLinkName._1 + " and " + DefaultConfiguration.defaultMathLinkName._2 + " with command line option:" +
+        " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE" +
+        " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
+        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
+    assert(linkNamePath.endsWith(DefaultConfiguration.defaultMathLinkName._1) && new java.io.File(linkNamePath).exists(),
+      "\n[Error] Cannot find MathKernel file named " + DefaultConfiguration.defaultMathLinkName._1 + " in path: " + linkNamePath+ "! " +
+        "(On your system, it could look like: " + {if(DefaultConfiguration.defaultMathLinkPath._1!="") DefaultConfiguration.defaultMathLinkPath._1 else DefaultConfiguration.exemplaryMathLinkPath._1} + ")\n" +
+        "Please specify the correct path that points to " + DefaultConfiguration.defaultMathLinkName._1 + " file with command line option:" +
+        " -mathkernel PATH_TO_" + DefaultConfiguration.defaultMathLinkName._1 + "_FILE\n" +
+        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
+    assert(new java.io.File(libDirPath + File.separator + DefaultConfiguration.defaultMathLinkName._2).exists(),
+      "\n[Error] Cannot find jlinkLibDir file named " + DefaultConfiguration.defaultMathLinkName._2 + " in path " + libDirPath+ "! " +
+        "(On your system, it could look like: " + {if(DefaultConfiguration.defaultMathLinkPath._2!="") DefaultConfiguration.defaultMathLinkPath._2 else DefaultConfiguration.exemplaryMathLinkPath._2} + ")\n" +
+        "Please specify the correct path that points to the directory contains " + DefaultConfiguration.defaultMathLinkName._2 + " file with command line option:" +
+        " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
+        "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
 
     Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
     Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
@@ -185,8 +257,10 @@ object KeYmaeraX {
     require(options.contains('in), usage)
     require(options.contains('tactic), usage)
 
-    val tacticFileName = options.get('tactic).get.toString
-    val tacticSource = scala.io.Source.fromFile(tacticFileName).mkString
+    val tacticFileNameDotScala = options.get('tactic).get.toString
+    assert(tacticFileNameDotScala.endsWith(".scala"),
+      "\n[Error] Wrong file name " + tacticFileNameDotScala + " used for -tactic! KeYmaera X only reads .scala tactic file. Please use: -tactic FILENAME.scala")
+    val tacticSource = scala.io.Source.fromFile(tacticFileNameDotScala).mkString
 
     val cm = universe.runtimeMirror(getClass.getClassLoader)
     val tb = cm.mkToolBox()
@@ -239,7 +313,7 @@ object KeYmaeraX {
       val evidence =
         s"""Tool.
           |  input "$input"
-          |  tactic "${scala.io.Source.fromFile(tacticFileName).mkString}"
+          |  tactic "${scala.io.Source.fromFile(tacticFileNameDotScala).mkString}"
           |  proof ""
           |End.
           |""".stripMargin
@@ -350,7 +424,6 @@ object KeYmaeraX {
     }
 
     if(options.get('format).get.toString == "C") {
-
       var outputFileName = inputFileName
       if(options.contains('out)) {
         val outputFileNameDotC = options.get('out).get.toString
@@ -361,8 +434,9 @@ object KeYmaeraX {
       val vars: List[Variable] =
         if(options.contains('vars)) options.get('vars).get.asInstanceOf[Array[Variable]].toList
         else StaticSemantics.vars(inputFormula).toSymbolSet.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList.sortWith((x,y)=>x<y)
+      val cseMode = options.contains('cse)
       val codegenStart = Platform.currentTime
-      val output = CGenerator(inputFormula, vars, outputFileName)
+      val output = if(cseMode) CseCGenerator(inputFormula, vars, outputFileName) else CGenerator(inputFormula, vars, outputFileName)
       Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
       val pw = new PrintWriter(outputFileName + ".c")
       pw.write(stampHead(options))
@@ -370,7 +444,6 @@ object KeYmaeraX {
       pw.write(output)
       pw.close()
     } else if(options.get('format).get.toString == "Spiral") {
-
       var outputFileName = inputFileName
       if(options.contains('out)) {
         val outputFileNameDotG = options.get('out).get.toString
@@ -378,10 +451,10 @@ object KeYmaeraX {
           "\n[Error] Wrong file name " + outputFileNameDotG + " used for -out! Spiral generator only generates .g file and the .h file when necessary. Please use： -out FILENAME.g")
         outputFileName = outputFileNameDotG.dropRight(2)
       }
-
+      val dnfMode = options.contains('dnf)
       var outputG = ""
       if (options.contains('vars)) {
-        val output = SpiralGenerator(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, outputFileName)
+        val output = SpiralGenerator(inputFormula, options.get('vars).get.asInstanceOf[Array[Variable]].toList, outputFileName, dnfMode)
         outputG = output._1
         val outputH = output._2
         val pwG = new PrintWriter(outputFileName + ".g")

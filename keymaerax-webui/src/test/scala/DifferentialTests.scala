@@ -14,6 +14,7 @@ import testHelper.SequentFactory._
 import testHelper.ProofFactory._
 
 
+import scala.collection.immutable
 import scala.collection.immutable.Map
 
 
@@ -401,6 +402,23 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 //    result.openGoals()flatMap(_.sequent.succ) should contain only
 //      "\\exists t. (t>=0 & (\\forall s. (0<=s&s<=t -> <x:=5*s+x_2();>x>2) & <x:=5*t+x_2();>x>0))".asFormula
 //  }
+
+  "Differential auxiliaries proof rule" should "add y'=1 to [x'=2]x>0" in {
+    import ODETactics.diffAuxiliariesRule
+    val s = Sequent(Nil, immutable.IndexedSeq("x>0".asFormula), immutable.IndexedSeq("[{x'=2}]x>0".asFormula))
+    val tactic = locateSucc(diffAuxiliariesRule(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 4
+    result.openGoals()(0).sequent.ante should contain only "\\exists y (y>0 & x*y>0)".asFormula
+    result.openGoals()(0).sequent.succ should contain only "x>0".asFormula
+    result.openGoals()(1).sequent.ante should contain only "y>0 & x*y>0".asFormula
+    result.openGoals()(1).sequent.succ should contain only "[{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+    result.openGoals()(2).sequent.ante shouldBe empty
+    result.openGoals()(2).sequent.succ should contain only "x>0 <-> \\exists y (y>0 & x*y>0)".asFormula
+    result.openGoals()(3).sequent.ante should contain only "x>0".asFormula
+    result.openGoals()(3).sequent.succ should contain only "x>0".asFormula
+  }
 
   "Differential introduce constants" should "replace a with a() in v'=a" in {
     val s = sucSequent("[{v'=a}]v>0".asFormula)

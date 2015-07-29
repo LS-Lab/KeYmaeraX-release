@@ -25,11 +25,11 @@ import SetLattice.topVarsDiffVars
  * @param what the expression to be replaced. what can have one of the following forms:
  *          - DotTerm
  *          - Anything
- *          - ApplyPredicate(p:Function, DotTerm/Nothing/Anything)
- *          - Apply(f:Function, DotTerm/Nothing/Anything)
+ *          - PredOf(p:Function, DotTerm/Nothing/Anything)
+ *          - FuncOf(f:Function, DotTerm/Nothing/Anything)
  *          - ProgramConstant/DifferentialProgramConstant
  *          - Derivative(...)
- *          - ApplyPredicational(p:Function, DotFormula)
+ *          - PredicationalOf(p:Function, DotFormula)
  *          - DotFormula
  * @param repl the expression to be used in place of what
  */

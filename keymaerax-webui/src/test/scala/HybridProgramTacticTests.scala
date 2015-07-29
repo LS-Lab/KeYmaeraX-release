@@ -17,6 +17,7 @@ import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpe
 import testHelper.SequentFactory._
 import testHelper.ProofFactory._
 
+import scala.collection.immutable
 import scala.collection.immutable.Map
 import scala.language.postfixOps
 
@@ -885,5 +886,35 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall x x>0".asFormula
+  }
+
+  "[]split conjunction" should "split a box conjunction" in {
+    val tactic = locateSucc(HybridProgramTacticsImpl.boxSplitConjunctionT)
+    val s = sucSequent("[x:=2;](x>0 & x>1)".asFormula)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "[x:=2;]x>0 & [x:=2;]x>1".asFormula
+  }
+
+  it should "split a box conjunction when other formulas are around" in {
+    val tactic = locateSucc(HybridProgramTacticsImpl.boxSplitConjunctionT)
+    val s = Sequent(Nil, immutable.IndexedSeq("y>2".asFormula), immutable.IndexedSeq("y>5".asFormula, "[x:=2;](x>0 & x>1)".asFormula, "z<1".asFormula))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "y>2".asFormula
+    result.openGoals().head.sequent.succ should contain only ("y>5".asFormula, "[x:=2;]x>0 & [x:=2;]x>1".asFormula, "z<1".asFormula)
+  }
+
+  it should "work on the quadcopter example" in {
+    val tactic = locateSucc(HybridProgramTacticsImpl.boxSplitConjunctionT)
+    val s = sucSequent("[{h'=v,v'=kp()*(href()-h)-kd()*v,z'=kd()*z+0&true}]((h^2*kp()^2-2*h*href()*kp()^2+href()^2*kp()^2+h*kd()*kp()*v-href()*kd()*kp()*v+kp()*v^2)*(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+href()^2*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)*z=(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)^2*z0_1()&z>0)".asFormula)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "[{h'=v,v'=kp()*(href()-h)-kd()*v,z'=kd()*z+0&true}]((h^2*kp()^2-2*h*href()*kp()^2+href()^2*kp()^2+h*kd()*kp()*v-href()*kd()*kp()*v+kp()*v^2)*(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+href()^2*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)*z=(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)^2*z0_1()) & [{h'=v,v'=kp()*(href()-h)-kd()*v,z'=kd()*z+0&true}]z>0".asFormula
   }
 }
