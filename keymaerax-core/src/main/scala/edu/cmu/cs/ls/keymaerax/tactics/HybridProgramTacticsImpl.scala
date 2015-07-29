@@ -14,12 +14,13 @@ import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.existsDualT
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT,AxiomCloseT,ImplyLeftT,ImplyRightT,
-  ImplyToAndT, cutT, hideT,kModalModusPonensT}
+  ImplyToAndT, cutT, hideT, cohideT, cohide2T, kModalModusPonensT, modusPonensT, uniformSubstT}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import BindingAssessment.allNames
 import edu.cmu.cs.ls.keymaerax.tactics.AlphaConversionHelper._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.freshIndexInFormula
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{lastAnte, lastSucc}
 import TacticHelper.getFormula
 import SearchTacticsImpl.onBranch
 import edu.cmu.cs.ls.keymaerax.tools.Tool
@@ -1153,6 +1154,101 @@ object HybridProgramTacticsImpl {
             case None => None
           }
         case None => Some(ind(p, NilT) & LabelBranch(indStepLbl))
+      }
+    }
+  }
+
+  def boxSplitConjunctionT: PositionTactic = new PositionTactic("[]split conjunction") {
+    override def applies(s: Sequent, pos: Position): Boolean = getFormula(s, pos) match {
+      case Box(_, And(p, q)) => true
+      case _ => false
+    }
+
+    override def apply(pos: Position): Tactic = new ConstructionTactic("[]split conjunction") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
+        case b@Box(a, And(p, q)) =>
+          // implements Cresswell, Hughes. A New Introduction to Modal Logic, K2 p. 27
+
+          // (9) ([a](q->p&q) -> ([a]q -> [a](p&q)))  ->  (([a]p & [a]q) -> [a](p&q))
+          val f9 = Imply(Imply(Box(a, Imply(q, And(p, q))), Imply(Box(a, q), Box(a, And(p, q)))), Imply(And(Box(a, p), Box(a, q)), Box(a, And(p, q))))
+
+          // (8) ([a]p -> [a](q -> p&q))  ->  (9)
+          val f8 = Imply(Imply(Box(a, p), Box(a, Imply(q, And(p, q)))), f9)
+
+          // (6) [a](q -> (p&q))  ->  ([a]q -> [a](p&q))
+          val f6 = Imply(Box(a, Imply(q, And(p, q))), Imply(Box(a, q), Box(a, And(p, q))))
+
+          // (5) [a]p -> [a](q -> p&q)
+          val f5 = Imply(Box(a, p), Box(a, Imply(q, And(p, q))))
+
+          // (4) [a](p -> (q -> p&q))  ->  ([a]p -> [a](q -> p&q))
+          val f4 = Imply(Box(a, Imply(p, Imply(q, And(p, q)))), Imply(Box(a, p), Box(a, Imply(q, And(p, q)))))
+
+          // (2) [a](p -> (q -> p&q))
+          val f2 = Box(a, Imply(p, Imply(q, And(p, q))))
+
+          // uniform substitution to get (6) from K
+          val subst =
+            SubstitutionPair(ProgramConst("a"), a) ::
+            SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), q) ::
+            SubstitutionPair(PredOf(Function("q", None, Real, Bool), Anything), And(p, q)) :: Nil
+
+          val k = Axiom.axioms.get("K modal modus ponens").get
+
+          Some(cutT(Some(Equiv(b, And(Box(a, p), Box(a, q))))) & onBranch(
+            (cutShowLbl, lastSucc(EquivRightT) & onBranch(
+              (equivLeftLbl, AxiomCloseT),
+              (equivRightLbl,
+                debugT("Show [a]p & [a]q -> [a](p&q)") &
+                cohide2T(AntePosition(node.sequent.ante.length), SuccPosition(node.sequent.succ.length)) &
+                cutT(Some(f9)) & onBranch(
+                  (cutShowLbl,
+                    debugT("Show f9") &
+                    cutT(Some(f8)) & onBranch(
+                      (cutShowLbl,
+                        debugT("Show f8") &
+                        lastSucc(cohideT) &
+                        /* PC8 (just propositional stuff) */
+                        lastSucc(ImplyRightT)*3 & lastAnte(AndLeftT) &
+                        modusPonensT(AntePosition(2), AntePosition(0)) &
+                        modusPonensT(AntePosition(2), AntePosition(0)) &
+                        modusPonensT(AntePosition(0), AntePosition(1)) & AxiomCloseT),
+                      (cutUseLbl, cutT(Some(f5)) & onBranch(
+                        (cutShowLbl,
+                          debugT("Show f5, get f2 by KMP") &
+                          lastSucc(cohideT) & lastSucc(kModalModusPonensT) &
+                          debugT("Show f2") & lastSucc(abstractionT) & (lastSucc(skolemizeT)*) &
+                          // PC4 (just propositional stuff)
+                          lastSucc(ImplyRightT)*2 & lastSucc(AndRightT) & AxiomCloseT
+                          ),
+                        (cutUseLbl,
+                          debugAtT("Use f5, modus ponens with assumption")(AntePosition(2)) &
+                            modusPonensT(AntePosition(2), AntePosition(1)) &
+                            AxiomCloseT)
+                      ))
+                    )),
+                  (cutUseLbl,
+                    debugT("Use f9") &
+                    cutT(Some(f6)) & onBranch(
+                      (cutShowLbl,
+                        debugT("Show f6") &
+                        lastSucc(cohideT) &
+                        // uniform substitution from K
+                        uniformSubstT(subst, Map(f6 -> k)) &
+                        AxiomTactic.axiomT("K modal modus ponens") & AxiomCloseT
+                        ),
+                      (cutUseLbl,
+                        debugAtT("Use f6, modus ponens with assumption")(AntePosition(2)) &
+                        modusPonensT(AntePosition(2), AntePosition(1)) &
+                        lastAnte(ImplyLeftT) & AxiomCloseT)
+                  ))
+                ))
+            )),
+            (cutUseLbl, EqualityRewritingImpl.equivRewriting(AntePosition(node.sequent.ante.length), pos) /* desired result remains open */)
+          ))
+        case _ => throw new IllegalStateException("Checked by applies to never happen")
       }
     }
   }
