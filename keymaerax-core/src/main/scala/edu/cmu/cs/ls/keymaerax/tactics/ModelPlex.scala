@@ -107,14 +107,19 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
       case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
         //@todo explicitly address DifferentialSymbol instead of skipping
         require(StaticSemantics.boundVars(controller).toSymbolSet.forall(v => !v.isInstanceOf[Variable] || varsSet.contains(v.asInstanceOf[Variable])),
-          "all bound variables " + StaticSemantics.boundVars(controller).prettyString + " must occur in monitor list " + vars.mkString(", "))
+          "all bound variables " + StaticSemantics.boundVars(controller).prettyString + " must occur in monitor list " + vars.mkString(", ") +
+            "\nMissing: " + (StaticSemantics.boundVars(controller).toSymbolSet.toSet diff varsSet.toSet).mkString(", "))
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
-        Imply(assumptions, Diamond(controller, posteqs))
+        //Imply(assumptions, Diamond(controller, posteqs))
+        //@note suppress assumptions since at most those without bound variables are still around.
+        Imply(True, Diamond(controller, posteqs))
       // models of the form (plant)
       case Imply(assumptions, Box(ODESystem(_, _), _)) =>
         //@todo require bound variables
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
         Imply(assumptions, Diamond(Test(True), posteqs))
+        //@note suppress assumptions since at most those without bound variables are still around.
+        Imply(True, Diamond(Test(True), posteqs))
       case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
     }
   }

@@ -594,7 +594,7 @@ object KeYmaeraXParser extends Parser {
 
       case Bottom =>
         if (firstExpression(la)) shift(st)
-        else error(st)
+        else if (la==EOF) throw new ParseException("Empty input is not a well-formed expression ", input.head.loc, st.toString) else error(st)
 
       case _ =>
         throw new AssertionError("Incomplete parser missing an item, so does not yet know how to handle case.\nFound: " + la + "\nAfter: " + s)

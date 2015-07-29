@@ -38,19 +38,26 @@ class Hcol {
 object SpiralGenerator extends CodeGenerator {
   def apply(kExpr: Expression): String = apply(kExpr, Nil, "")._1
   def apply(kExpr: Expression, fileName: String) : String = apply(kExpr, Nil, fileName)._1
-  def apply(kExpr: Expression, vars: List[Variable], fileName: String): (String, String) = generateSpiralMonitor(kExpr, vars, fileName)
+  def apply(kExpr: Expression, vars: List[Variable], fileName: String): (String, String) = generateSpiralMonitor(kExpr, vars, fileName, false)
+  def apply(kExpr: Expression, vars: List[Variable], fileName: String, dnfMode: Boolean): (String, String) = generateSpiralMonitor(kExpr, vars, fileName, dnfMode)
 
   private val hcol = new Hcol
 
-  /* Mathematica settings */
+  /** Mathematica settings */
   private val mathematicaConfig: Map[String, String] = DefaultConfiguration.defaultMathematicaConfig
   private val link : JLinkMathematicaLink= new JLinkMathematicaLink()
   link.init(mathematicaConfig.apply(mathematicaConfig.keys.head), None)
 
-  /* name counter used for generating new vector names */
+  /** Name counter used for generating new vector names */
   private var vecNameCounter : Int = 0
 
-  /* printings for monitor generation */
+  /**
+   * A list of encountered polynomial term and the corresponding generated Spiral code pair,
+   * which is used to avoid generating Spiral code for the same  polynomial term multiple times
+   */
+  private var encounteredPolyTerm: List[(Term, String)] = Nil
+
+  /** printings for monitor generation */
   private def infoG(fileName: String) =
     "# *************************\n" +
       {if(fileName.nonEmpty) "# " + fileName + ".g\n" + "# \n" else "" } +
@@ -63,7 +70,7 @@ object SpiralGenerator extends CodeGenerator {
   private val monDec = "# monitor\n" +
     "t := \n"
 
-  /* printings for coefficientHex generation */
+  /** Printings for coefficientHex generation */
   private def infoH(fileName: String) =
     "/**************************\n" +
       {if(fileName.nonEmpty) " * " + fileName + ".h\n" + " * \n" else "" } +
@@ -81,13 +88,13 @@ object SpiralGenerator extends CodeGenerator {
    * @param fileName  file name
    * @return          .g code and .h code
    */
-  def generateSpiralMonitor(kExpr: Expression, vars: List[Variable], fileName: String) : (String, String) = {
+  def generateSpiralMonitor(kExpr: Expression, vars: List[Variable], fileName: String, dnfMode: Boolean) : (String, String) = {
     val names = StaticSemantics.symbols(kExpr).toList.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers for code generation")
     // if the variable list is not empty, generate polynomial form, otherwise generate explicit form 
     val polynomialMode = vars.nonEmpty
     val sortedRlvtVars = getSortedRelevantVars(kExpr, vars)
-    val spiralMonitor = compileToSpiral(kExpr, sortedRlvtVars)
+    val spiralMonitor = if(dnfMode) compileMathDnfToSpiral(convertToDnf(kExpr), sortedRlvtVars) else compileToSpiral(kExpr, sortedRlvtVars)
     hcol.setMonitor(spiralMonitor)
     val gCode = infoG(fileName) + libs + {if(polynomialMode) "# declare constant table\n" + hcol.getConstTbl + "\n" else ""} + monDec + hcol.getMonitor + "\n;\n"
     val hCode =
@@ -110,7 +117,7 @@ object SpiralGenerator extends CodeGenerator {
       if(allSortedNames.contains(vars.apply(i)))
       // variable occurs in the expression, add it to the return list
         sortedRelevantVars = vars.apply(i) :: sortedRelevantVars
-      if((allSortedNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real))))
+      if(allSortedNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real)))
       // variable occur as nullary function, add it to the return list as a variable
         sortedRelevantVars = Variable(nameIdentifier(vars.apply(i))) :: sortedRelevantVars
       if(allSortedNames.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
@@ -137,6 +144,36 @@ object SpiralGenerator extends CodeGenerator {
 
   /** Get the post variable name identifier */
   private def getPostNameIdentifier(v: Variable): String = if (v.index.isEmpty) v.name + "post" else v.name + "post_" + v.index.get
+
+  /** Compute the DNF form of the given formula */
+  private def convertToDnf(e: Expression): Expr = {
+    val mathCmd = "BooleanConvert[" +  KeYmaeraToMathematica.fromKeYmaera(e) + ",DNF]"
+    link.ml.evaluate(mathCmd)
+    link.ml.waitForAnswer()
+    link.ml.getExpr
+  }
+
+  /** Compile the DNF formula in Mathematica term to Spiral */
+  private def compileMathDnfToSpiral(me: Expr, vars: List[Variable]) : String = {
+    if(me.head().toString=="Or") {
+      val dnfNum = me.length()
+      var dnfPoly = new Array[String](dnfNum)
+      for(i <- 0 until dnfNum)
+        dnfPoly(i)=compileMathCnfToSpiral(me.args().apply(i), vars)
+      "TForAny(\n  " + dnfNum +",\n  " + dnfPoly.mkString(",\n  ") + "\n)"
+    } else compileMathCnfToSpiral(me,vars)
+  }
+
+  /** Compile the CNF formula in Mathematica term to Spiral */
+  private def compileMathCnfToSpiral(me: Expr, vars: List[Variable]) : String = {
+    if(me.head().toString=="And") {
+      val cnfNum = me.length()
+      var cnfPoly = new Array[String](cnfNum)
+      for(i <- 0 until cnfNum)
+        cnfPoly(i)=compileToSpiral(MathematicaToKeYmaera.fromMathematica(me.args().apply(i)), vars)
+      "TForAll(" + cnfNum +", " + cnfPoly.mkString(", ") + ")"
+    } else compileToSpiral(MathematicaToKeYmaera.fromMathematica(me), vars)
+  }
 
   /** Compile the input formula to Spiral */
   private def compileToSpiral(e: Expression, vars: List[Variable]) = e match {
@@ -193,24 +230,24 @@ object SpiralGenerator extends CodeGenerator {
       case Imply(l, r) => "logic_or(" + "logic_neg(" + compileFormula(l, vars) + ")" + ", " + compileFormula(r, vars) + ")"
       case Equiv(l, r) => "logic_equiv(" + compileFormula(l, vars) + ", " + compileFormula(r, vars) + ")"
 
-      // sub terms l and r are arithmetic terms, 
-      // if l and r are both polynomials, turn l ? r into l-r ? 0 for optimized result 
+      // sub terms l and r are arithmetic terms,
+      // if l and r are both polynomials, turn l ? r into l-r ? 0 for optimized result
       case Equal(l, r) =>
         if(isPolynomialTerm(l) & isPolynomialTerm(r)) "TEqual(" + compilePolynomialTerm(Minus(l, r), vars) + ", TReal.value(0))"
         else "TEqual(" + compilePolynomialTerm(l, vars) + ", " + compilePolynomialTerm(r, vars) + ")"
       case NotEqual(l, r) =>
         if(isPolynomialTerm(l) & isPolynomialTerm(r)) "TNot(TEqual(" + compilePolynomialTerm(Minus(l, r), vars) + ", TReal.value(0)))"
         else "TNot(TEqual(" + compilePolynomialTerm(l, vars) + ", " + compilePolynomialTerm(r, vars) + "))"
-      case Greater(l,r) =>
+      case Greater(l, r) =>
         if(isPolynomialTerm(l) & isPolynomialTerm(r)) "TLess(" + compilePolynomialTerm(Minus(r, l), vars) + ", TReal.value(0))"
         else "TLess(" + compilePolynomialTerm(r, vars) + ", " + compilePolynomialTerm(l, vars) + ")"
-      case GreaterEqual(l,r) =>
+      case GreaterEqual(l, r) =>
         if(isPolynomialTerm(l) & isPolynomialTerm(r)) "TNot(TLess(" + compilePolynomialTerm(Minus(l, r), vars) + ", TReal.value(0)))"
         else "TNot(TLess(" + compilePolynomialTerm(l, vars) + ", " + compilePolynomialTerm(r, vars) + "))"
-      case Less(l,r) =>
+      case Less(l, r) =>
         if(isPolynomialTerm(l) & isPolynomialTerm(r)) "TLess(" + compilePolynomialTerm(Minus(l, r), vars) + ", TReal.value(0))"
         else "TLess(" + compilePolynomialTerm(l, vars) + ", " + compilePolynomialTerm(r, vars) + ")"
-      case LessEqual(l,r) =>
+      case LessEqual(l, r) =>
         if(isPolynomialTerm(l) & isPolynomialTerm(r)) "TNot(TLess(" + compilePolynomialTerm(Minus(r, l), vars) + ", TReal.value(0)))"
         else "TNot(TLess(" + compilePolynomialTerm(r, vars) + ", " + compilePolynomialTerm(l, vars) + "))"
 
@@ -222,13 +259,32 @@ object SpiralGenerator extends CodeGenerator {
   }
 
   /**
-   * Compile the polynomial term
+   * Compile a polynomial term
+   * if the polynomial term is encountered before, get the previously compiled result
+   * otherwise compile the fresh polynomial term and updates the list of encounteredPolyTerm
+   *
+   * @param t     polynomial term
+   * @param vars  a list of variables
+   * @return      compiled polynomial term
+   */
+  private def compilePolynomialTerm(t: Term, vars: List[Variable]) : String = {
+    if(encounteredPolyTerm.map(s => s._1).contains(t)) {
+      encounteredPolyTerm.apply(encounteredPolyTerm.map(s => s._1).indexOf(t))._2
+    } else {
+      val generatedPoly = compileFreshPolynomialTerm(t, vars)
+      encounteredPolyTerm = (t, generatedPoly) :: encounteredPolyTerm
+      generatedPoly
+    }
+  }
+
+  /**
+   * Compile the polynomial term, this polynomial was not encountered before
    * 
    * @param t     term 
    * @param vars  a list of variables
    * @return      compiled polynomial term
    */
-  private def compilePolynomialTerm(t: Term, vars: List[Variable]) : String = {
+  private def compileFreshPolynomialTerm(t: Term, vars: List[Variable]) : String = {
     if(getSortedRelevantVars(t, vars).isEmpty) { 
       // t is not polynomial, compile t as a simple term
       compileTerm(t)
@@ -385,7 +441,7 @@ object SpiralGenerator extends CodeGenerator {
     coeffs
   }
 
-  /* Translate a coefficient of Double type to Hex form */
+  /** Translate a coefficient of Double type to Hex form */
   private def translateToHex(value: Double) = "0x" + java.lang.Long.toHexString(java.lang.Double.doubleToRawLongBits(value))
 }
 

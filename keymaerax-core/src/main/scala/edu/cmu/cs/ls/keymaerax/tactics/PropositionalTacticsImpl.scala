@@ -397,4 +397,44 @@ object PropositionalTacticsImpl {
     }
 
   }
+
+  // derived
+
+  def equivifyRightT: PositionTactic = new PositionTactic("EquivifyRight") {
+    def applies(s: Sequent, p: Position) = !p.isAnte && p.inExpr == HereP && (s.succ(p.index) match {
+      case Imply(_, _) => true
+      case _ => false
+    })
+
+    def apply(pos: Position): Tactic = new Tactics.ApplyRule(EquivifyRight(pos)) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+    }
+  }
+
+  def cutRightT(cut: Formula): PositionTactic = new PositionTactic("CutRight") {
+    def applies(s: Sequent, p: Position) = !p.isAnte && p.inExpr == HereP
+
+    def apply(pos: Position): Tactic = new Tactics.ApplyRule(CutRight(cut, pos)) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+    }
+  }
+
+  def cutLeftT(cut: Formula): PositionTactic = new PositionTactic("CutLeft") {
+    def applies(s: Sequent, p: Position) = p.isAnte && p.inExpr == HereP
+
+    def apply(pos: Position): Tactic = new Tactics.ApplyRule(CutLeft(cut, pos)) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+    }
+  }
+
+  def commuteEquivRightT: PositionTactic = new PositionTactic("CommuteEquivRight") {
+    def applies(s: Sequent, p: Position) = !p.isAnte && p.inExpr == HereP && (s.succ(p.index) match {
+      case Equiv(_, _) => true
+      case _ => false
+    })
+
+    def apply(pos: Position): Tactic = new Tactics.ApplyRule(CommuteEquivRight(pos)) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+    }
+  }
 }
