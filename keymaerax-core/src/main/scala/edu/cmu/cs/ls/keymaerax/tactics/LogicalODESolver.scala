@@ -27,18 +27,6 @@ import scala.collection.immutable.List
 object LogicalODESolver {
   def debugger(s : String) = debugT("[Logical ODE Solver] " + s)
 
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // tactics for the advanced solver
-  // The advanced solver is the same as the simple solver, but instead of diffWeaken it does successive inverse ghosts
-  // and inverse cuts until finally only time remains, and then solves just for t' = 0*t + 1. This allows the selection
-  // of only specific points in time.
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////
-  // Tactics of the simple solver
-  //////////////////////////////////////////////////////////////////////////////////////////////////
-
   def solveT : PositionTactic = new PositionTactic("Solve ODE") {
     override def applies(s: Sequent, p: Position): Boolean = true //@todo
 
@@ -62,17 +50,12 @@ object LogicalODESolver {
       )
   }
 
-  def weakSolveT : PositionTactic = new PositionTactic("Solve ODE w. Weaken") {
-    override def applies(s: Sequent, p: Position): Boolean = true //@todo
-
-    override def apply(p: Position): Tactic =
-      LogicalODESolver.setupTimeVarT(p) ~
-      (stepTacticT(p) *) &
-      cutTimeLB(p) &
-      ODETactics.diffWeakenT(p) &
-      arithmeticT
-  }
-
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // tactics for the advanced solver
+  // The advanced solver is the same as the simple solver, but instead of diffWeaken it does successive inverse ghosts
+  // and inverse cuts until finally only time remains, and then solves just for t' = 0*t + 1. This allows the selection
+  // of only specific points in time.
+  //////////////////////////////////////////////////////////////////////////////////////////////////
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Successive inverse diff ghosts
@@ -261,7 +244,21 @@ object LogicalODESolver {
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
-  // Setting up explicit time and add solutions to the evoluation domain constraint
+  // Tactics of the weak solver
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  def weakSolveT : PositionTactic = new PositionTactic("Solve ODE w. Weaken") {
+    override def applies(s: Sequent, p: Position): Boolean = true //@todo
+
+    override def apply(p: Position): Tactic =
+      LogicalODESolver.setupTimeVarT(p) ~
+        (stepTacticT(p) *) &
+        cutTimeLB(p) &
+        ODETactics.diffWeakenT(p) &
+        arithmeticT
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // Setting up explicit time and add solutions to the evolution domain constraint
   //////////////////////////////////////////////////////////////////////////////////////////////////
   private def cutTimeLB : PositionTactic = new PositionTactic("DiffCut and prove a lower-bound on time.") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {

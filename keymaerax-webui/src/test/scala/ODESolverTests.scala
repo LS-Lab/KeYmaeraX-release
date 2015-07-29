@@ -224,7 +224,26 @@ class ODESolutionTactic extends TacticTestSuite {
     val tactic = ODETactics.diffSolveConstraintT(SuccPos(0))
     helper.runTactic(tactic,node)
     helper.report(node)
+    fail("No assertion.")
+  }
+}
+
+class GhostOfLipschitz extends TacticTestSuite {
+  "Inverse Lipschitz ghost" should "work on simple example" in {
+    //Make sure things occur free and bound and such a lot.
+    //@todo changing v to y creates a clash...
+    val f = "\\exists x [{x'=0*x + v, v' = 0*v + a, t' = 1 & t > 0 & x>0 & v>0}]x>0".asFormula
+    val node = helper.formulaToNode(f)
+    val tactic = ODETactics.inverseLipschitzGhostT(SuccPos(0))
+    helper.runTactic(tactic,node)
+    helper.report(node)
   }
 
-
+  ignore should "not clash because of error caused by y in axiom file." in {
+    val f = "\\exists x [{x'=0*x + y, y' = 0*y + a, t' = 1 & t > 0 & x>0 & y>0}]x>0".asFormula
+    val node = helper.formulaToNode(f)
+    val tactic = ODETactics.inverseLipschitzGhostT(SuccPos(0))
+    helper.runTactic(tactic,node)
+    helper.report(node)
+  }
 }
