@@ -23,6 +23,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
 
 /**
  * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @author aplatzer
@@ -180,31 +181,64 @@ private[core] object AxiomBase {
     }
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
+  /** Redundant code checking expected form of axioms */
   private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
     val x = Variable("x", None, Real)
     val x_ = Variable("x_", None, Real)
-    val aP0 = PredOf(Function("p", None, Unit, Bool), Nothing)
-    val aPn = PredOf(Function("p", None, Real, Bool), Anything)
-    val aQn = PredOf(Function("q", None, Real, Bool), Anything)
+    val xp = DifferentialSymbol(x)
+    val p0 = PredOf(Function("p", None, Unit, Bool), Nothing)
+    val p = Function("p", None, Real, Bool)
+    val pany = PredOf(p, Anything)
+    val q = Function("q", None, Real, Bool)
+    val q0 = PredOf(Function("q", None, Unit, Bool), Nothing)
+    val qny = PredOf(Function("q", None, Real, Bool), Anything)
+    val r = Function("r", None, Real, Bool)
     val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
-    val aF = FuncOf(Function("f", None, Real, Real), Anything)
-    val aG = FuncOf(Function("g", None, Real, Real), Anything)
+    val f = Function("f", None, Real, Real)
+    val f0 = FuncOf(Function("f", None, Unit, Real), Nothing)
+    val fany = FuncOf(Function("f", None, Real, Real), Anything)
+    val gany = FuncOf(Function("g", None, Real, Real), Anything)
+    val t0 = FuncOf(Function("t", None, Unit, Real), Nothing)
     val a = ProgramConst("a")
     val b = ProgramConst("b")
-    // soundness-critical that these are for p() not for p(x) or p(?)
-    assert(axs("vacuous all quantifier") == Equiv(aP0, Forall(immutable.IndexedSeq(x), aP0)), "vacuous all quantifier")
-    assert(axs("vacuous exists quantifier") == Equiv(aP0, Exists(immutable.IndexedSeq(x), aP0)), "vacuous exists quantifier")
-    assert(axs("V vacuous") == Imply(aP0, Box(a, aP0)), "V vacuous")
 
-    assert(axs("[++] choice") == Equiv(Box(Choice(a,b), aPn), And(Box(a, aPn), Box(b, aPn))), "[++] choice")
-    assert(axs("[;] compose") == Equiv(Box(Compose(a,b), aPn), Box(a, Box(b, aPn))), "[;] compose")
+    //@todo should not use strange names
+    val v = Variable("v", None, Real)
+    val h0 = PredOf(Function("H", None, Unit, Bool), Nothing)
+
+    // Figure 2
+    assert(axs("<> dual") == Equiv(Diamond(a, pany), Not(Box(a, Not(pany)))), "<> dual")
+    assert(axs("[:=] assign") == Equiv(Box(Assign(x,f0), PredOf(p,x)), PredOf(p, f0))
+      || axs("[:=] assign") == Equiv(Box(Assign(v,t0), PredOf(p,v)), PredOf(p, t0)), "[:=] assign")
+    assert(axs("[?] test") == Equiv(Box(Test(q0), p0), Imply(q0, p0))
+      || axs("[?] test") == Equiv(Box(Test(h0), p0), Imply(h0, p0)), "[?] test")
+    assert(axs("[++] choice") == Equiv(Box(Choice(a,b), pany), And(Box(a, pany), Box(b, pany))), "[++] choice")
+    assert(axs("[;] compose") == Equiv(Box(Compose(a,b), pany), Box(a, Box(b, pany))), "[;] compose")
+    assert(axs("[*] iterate") == Equiv(Box(Loop(a), pany), And(pany, Box(a, Box(Loop(a), pany)))), "[*] iterate")
+    //@note only sound for hybrid systems not for hybrid games
+    assert(axs("K modal modus ponens") == Imply(Box(a, Imply(pany,qny)), Imply(Box(a, pany), Box(a, qny))), "K modal modus ponens")
+    //@todo could accept I for hybrid systems
+    assert(axs("V vacuous") == Imply(p0, Box(a, p0)), "V vacuous")
+
+    // Figure 3
+   /* assert(axs("DC differential cut") == Imply(Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), PredOf(q,x)), PredOf(r,x)),
+      Equiv(Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), PredOf(q,x)), PredOf(p,x)),
+        Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), And(PredOf(q,x), PredOf(r,x))), PredOf(p,x)))), "DC differential cut") */
 
     assert(axs("c()' derive constant fn") == Equal(Differential(aC), Number(0)), "c()' derive constant fn")
-    assert(axs("-' derive minus") == Equal(Differential(Minus(aF, aG)), Minus(Differential(aF), Differential(aG))), "-' derive minus")
-    assert(axs("*' derive product") == Equal(Differential(Times(aF, aG)), Plus(Times(Differential(aF), aG), Times(aF, Differential(aG)))), "*' derive product")
-    assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(aF, aG)), Equal(Differential(aF), Differential(aG))), "!=' derive !=")
-    assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(aPn, aQn)), And(DifferentialFormula(aPn), DifferentialFormula(aQn))), "|' derive or")
+    assert(axs("+' derive sum") == Equal(Differential(Plus(fany, gany)), Plus(Differential(fany), Differential(gany))), "+' derive sum")
+    assert(axs("-' derive minus") == Equal(Differential(Minus(fany, gany)), Minus(Differential(fany), Differential(gany))), "-' derive minus")
+    assert(axs("*' derive product") == Equal(Differential(Times(fany, gany)), Plus(Times(Differential(fany), gany), Times(fany, Differential(gany)))), "*' derive product")
+    assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(fany, gany)), Equal(Differential(fany), Differential(gany))), "!=' derive !=")
+    assert(axs("&' derive and") == Equiv(DifferentialFormula(And(pany, qny)), And(DifferentialFormula(pany), DifferentialFormula(qny))), "&' derive and")
+    assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(pany, qny)), And(DifferentialFormula(pany), DifferentialFormula(qny))) || axs("|' derive or") == Imply(And(DifferentialFormula(pany), DifferentialFormula(qny)), DifferentialFormula(Or(pany, qny))), "|' derive or")
     assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
+
+    assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,t0)), "all instantiate")
+    //@todo could allow: assert(axs("all distribute") == Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x)))), "all distribute")
+    // soundness-critical that these are for p() not for p(x) or p(?)
+    assert(axs("vacuous all quantifier") == Equiv(p0, Forall(immutable.IndexedSeq(x), p0)), "vacuous all quantifier")
+    assert(axs("vacuous exists quantifier") == Equiv(p0, Exists(immutable.IndexedSeq(x), p0)), "vacuous exists quantifier")
     true
   }
 
@@ -215,7 +249,7 @@ private[core] object AxiomBase {
   private[core] def loadAxiomString() : String =
 """
 /**
- * KeYmaera Axioms.
+ * KeYmaera X Axioms.
  *
  * @note Soundness-critical: Only adopt valid formulas as axioms.
  *
@@ -225,6 +259,7 @@ private[core] object AxiomBase {
  * @author Andre Platzer
  * 
  * Basic dL Axioms of Differential Dynamic Logic.
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012."
  * @see "Andre Platzer. Dynamic logics of dynamical systems. arXiv 1205.4788, May 2012."
  * @see "Andre Platzer. Differential game logic. arXiv 1408.1980, August 2014."
@@ -256,10 +291,10 @@ Variables.
   F H.
   F H(T).
   /* for arithmetic axioms */
-  /* T r.
-   * T Abs(T).
-   * T Max(T, T).
-   * T Min(T, T).*/
+  /* T r. */
+  T abs(T).
+  /*T max(T, T).
+  T min(T, T).*/
 End.
 
 /**
@@ -713,18 +748,17 @@ Axiom "> flip".
   f(?) > g(?) <-> (g(?) < f(?))
 End.
 
-Axiom "abs".
-  (abs(f()) = g()) <->  ((f()>=0 -> g()=f()) & (f()<=0 -> g()=-f()))
-End.
+/*Axiom "abs".
+  (abs(f()) = g()) <->  ((f()>=0 & g()=f()) | (f()<=0 & g()=-f()))
+End.*/
 
-/* @todo Multi-argument don't parse
+/* @todo Multi-argument don't parse in KeYmaeraParser:1203
 Axiom "max expand".
-  Max(s, t) = if (s > t) then s else t fi
+  (max(f(), g()) = h()) <-> ((f()>=g() & h()=f()) | (f()<=g() & h()=g()))
 End.
 
 Axiom "min expand".
-  Min(s, t) = if (s < t) then s else t fi
-End.
-*/
+  (min(f(), g()) = h()) <-> ((f()<=g() & h()=f()) | (f()>=g() & h()=g()))
+End. */
 """
 }
