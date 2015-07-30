@@ -18,8 +18,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable
 import scala.collection.immutable._
 
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXAxiomParser, KeYmaeraParser}
-
+import edu.cmu.cs.ls.keymaerax.parser.{LoadedAxiom, KeYmaeraParser, KeYmaeraXAxiomParser}
 
 /**
  * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
