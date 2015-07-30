@@ -201,7 +201,7 @@ object Anything extends NamedSymbol with AtomicTerm with RTerm {
 /** Function symbol applied to argument child */
 case class FuncOf(func: Function, child: Term) extends AtomicTerm with ApplicationOf {
   def sort: Sort = func.sort
-  require(child.sort == func.domain, "expected argument sort to match domain sort")
+  require(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain)
 }
 
 /** Composite terms */
@@ -312,8 +312,8 @@ object DotFormula extends NamedSymbol with AtomicFormula {
 
 /** Predicate symbol applied to argument child */
 case class PredOf(func: Function, child: Term) extends AtomicFormula with ApplicationOf {
-  require(func.sort == Bool, "expected predicate sort Bool: " + this)
-  require(child.sort == func.domain, "expected argument sort: " + this)
+  require(func.sort == Bool, "expected predicate sort Bool found " + func.sort + " in " + this)
+  require(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " in " + this)
 }
 /** Predicational symbol applied to argument formula child */
 case class PredicationalOf(func: Function, child: Formula) extends AtomicFormula with ApplicationOf {
