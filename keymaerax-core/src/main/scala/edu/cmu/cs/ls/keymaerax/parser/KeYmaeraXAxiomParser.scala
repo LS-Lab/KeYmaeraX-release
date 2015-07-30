@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
  * Created by nfulton on 6/11/15.
  * @author nfulton
  */
-object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
+object KeYmaeraXAxiomParser extends (String => List[LoadedKnowledge]) {
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   /**
@@ -19,13 +19,13 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
    * @param input The contents of the axiom file.
    * @return A list of named axioms occurring in the file.
    */
-  def apply(input: String) : List[(String, Formula)] = {
+  def apply(input: String) : List[LoadedKnowledge] = {
     val tokens = KeYmaeraXLexer.inMode(input, AxiomFileMode())
     if (DEBUG) println("Tokens are: " + tokens)
     try {
       val (decls, axiomTokens) = KeYmaeraXDeclarationsParser(tokens)
-      println(decls)
-      parseAxioms(axiomTokens)
+      val namesAndFormulas : List[(String, Formula)] = parseAxioms(axiomTokens)
+      namesAndFormulas.map(p => LoadedAxiom(p._1, p._2))
     } catch {case e: ParseException => throw e.inContext("axiom file"/*input*/)}
   }
 
@@ -61,7 +61,9 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
       val axiom = KeYmaeraXParser.formulaTokenParser(axiomTokens :+ Token(EOF, UnknownLocation))
 
       (name, axiom, remainderTokens.tail)
-    } catch {case e: ParseException => throw e.inContext(input.toString)}
+    } catch {
+      case e: ParseException => throw e.inContext(input.toString, " Error occurred while parsing formula associated with axiom named " + name)
+    }
   }
 
 }
