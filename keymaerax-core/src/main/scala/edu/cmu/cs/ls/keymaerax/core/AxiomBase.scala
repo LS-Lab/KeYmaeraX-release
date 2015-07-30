@@ -18,7 +18,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable
 import scala.collection.immutable._
 
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXAxiomParser, KeYmaeraParser}
 
 
 /**
@@ -105,7 +105,7 @@ private[core] object AxiomBase {
       /**
        * Rule "all monotone".
        * Premise p(x) ==> q(x)
-       * Conclusion \forall x. p(x) ==> \forall x. q(x)
+       * Conclusion \forall x p(x) ==> \forall x q(x)
        * End.
        */
       ("all monotone",
@@ -114,7 +114,7 @@ private[core] object AxiomBase {
       /**
        * Rule "exists monotone".
        * Premise p(x) ==> q(x)
-       * Conclusion \exists x. p(x) ==> \exists x. q(x)
+       * Conclusion \exists x p(x) ==> \exists x q(x)
        * End.
        */
       ("exists monotone",
@@ -169,9 +169,11 @@ private[core] object AxiomBase {
    */
   private[core] def loadAxioms: immutable.Map[String, Formula] = {
     try {
-      val parser = new KeYmaeraParser(enabledLogging = false)
-      val alp = parser.ProofFileParser
-      val res = alp.runParser(loadAxiomString())
+      //Code for old parser:
+//      val parser = new KeYmaeraParser(enabledLogging = false)
+//      val alp = parser.ProofFileParser
+//      val res = alp.runParser(loadAxiomString())
+      val res = KeYmaeraXAxiomParser(loadAxiomString())
 
       assert(res.length == res.map(k => k.name).distinct.length, "No duplicate axiom names during parse")
 
@@ -303,26 +305,26 @@ End.
  * FIRST-ORDER QUANTIFIER AXIOMS
  */
 Axiom /*\\foralli */ "all instantiate".
-  (\forall x. p(x)) -> p(t())
+  (\forall x p(x)) -> p(t())
 End.
 
 /* consequence of "all instantiate" */
 Axiom "all eliminate".
-  (\forall x. p(?)) -> p(?)
+  (\forall x p(?)) -> p(?)
 End.
 
 /* @Derived */
 Axiom "exists generalize".
-  p(t()) -> \exists x. p(x)
+  p(t()) -> (\exists x p(x))
 End.
 
 Axiom "vacuous all quantifier".
-  p <-> \forall x. p
+  p <-> \forall x p
 End.
 
 /* @Derived */
 Axiom "vacuous exists quantifier".
-  p <-> \exists x. p
+  p <-> (\exists x p)
 End.
 
 Axiom "all dual".
@@ -336,7 +338,7 @@ End.
 
 /*
 Axiom "all quantifier scope".
-  (\forall x. (p(x) & q)) <-> ((\forall x. p(x)) & q)
+  (\forall x (p(x) & q)) <-> ((\forall x p(x)) & q)
 End.
 */
 
@@ -477,7 +479,7 @@ End.
 /* Differential Auxiliary / Differential Ghost */
 Axiom "DA differential ghost".
   /*@TODO Code Review discrepancy: change to TODO form from theory, not old calculus */
-  /* [c&H(?);]p(?) <- ((p(?) <-> \exists x. q(?)) &
+  /* [c&H(?);]p(?) <- ((p(?) <-> (\exists x q(?))) &
    * [c,x'=t()*x+s()&H(?);]q(?)) */
   [c&H(?);]p(?) <-> \exists y. [c,y'=t()*y+s()&H(?);]p(?)
   /* [x'=f(x)&q(x);]p(x) <-> \exists y. [(x'=f(x),y'=a(x)*y+b(x))&q(x);]p(x) THEORY */
@@ -559,11 +561,11 @@ Axiom "|' derive or".
 End.
 
 Axiom "forall' derive forall".
-  (\forall x. p(?))' <-> (\forall x. (p(?)'))
+  (\forall x p(?))' <-> (\forall x (p(?)'))
 End.
 
 Axiom "exists' derive exists".
-  (\exists x. p(?))' <-> (\forall x. (p(?)'))
+  (\exists x p(?))' <-> (\forall x (p(?)'))
   /* sic! */
 End.
 
