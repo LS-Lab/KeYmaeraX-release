@@ -26,8 +26,9 @@ class ProverException(msg: String) extends RuntimeException(msg) {
   /**
    * Add the context information to this exception, returning the resulting exception to be thrown.
    */
-  def inContext(context: String): ProverException = {
-    this.logicalContext = this.logicalContext + "\nin " + context
+  def inContext(context: String, additionalMessage : String = ""): ProverException = {
+    this.logicalContext  = this.logicalContext + "\nin " + context
+    if(!additionalMessage.equals("")) this.logicalContext = this.logicalContext + "\n(" + additionalMessage + ")"
     this
   }
 
