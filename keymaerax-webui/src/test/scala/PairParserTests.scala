@@ -292,6 +292,8 @@ class PairParserTests extends FlatSpec with Matchers {
     ("p(x)>0->[x:=0;{x'=2}x:=x+1;\n{y'=x&\nx<   2}]x<=5", "p(x)>0->[x:=0;{{x'=2}{x:=x+1;{y'=x&(x<2)}}}](x<=5)"),
 
     ("v>=0&A()>0->[{x'=v,v'=A()&true}]v>=0", "(v>=0&A()>0)->[{{x'=v,v'=A()}&true}](v>=0)"),
+    ("abs(f()) = g() <->  f()>=0 & g()=f() | f()<=0 & g()=-f()", "(abs(f()) = g()) <->  ((f()>=0 & g()=f()) | (f()<=0 & g()=-f()))"),
+    ("max(f(), g()) = h() <-> f()>=g() & h()=f() | f()<=g() & h()=g()", "(max(f(), g()) = h()) <-> ((f()>=g() & h()=f()) | (f()<=g() & h()=g()))"),
 
 
     //("x() -> [x:=x(x);]x()>x(x,x())", unparseable) //@todo if !LAX
