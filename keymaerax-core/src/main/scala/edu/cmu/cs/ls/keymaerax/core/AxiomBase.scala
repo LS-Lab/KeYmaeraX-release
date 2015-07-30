@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+ * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
 /**
@@ -319,10 +319,6 @@ End.
 /* consequence of "all instantiate" */
 Axiom "all eliminate".
   (\forall x p(??)) -> p(??)
-End.
-
-Axiom "all distribute".
-  (\forall x. (p(x)->q(x))) -> ((\forall x. p(x)) -> (\forall x. q(x)))
 End.
 
 /* @Derived */
