@@ -293,6 +293,8 @@ Variables.
   /* for arithmetic axioms */
   /* T r. */
   T abs(T).
+  T f().
+  T g().
   /*T max(T, T).
   T min(T, T).*/
 End.
