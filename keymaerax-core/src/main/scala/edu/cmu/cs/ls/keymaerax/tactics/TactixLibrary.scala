@@ -20,13 +20,18 @@ object TactixLibrary {
   /** step: makes one proof step to simplify the formula at the indicated position (unless @invariant needed) */
   def step                    : PositionTactic = TacticLibrary.step
 
-  /** Normalize to sequent form */
-  //@todo ensure to keep branching factor down by favoring alpha rules over beta rules
-  def normalize               : Tactic = l(step)*
+  /** Normalize to sequent form, keeping branching factor down by precedence */
+  def normalize               : Tactic = (alphaRule | ls(allR) | la(existsL)
+    | close
+    | betaRule
+    | l(step))*
   /** exhaust propositional logic */
   def prop                    : Tactic = TacticLibrary.propositional
   /** master: master tactic that tries hard to prove whatever it could */
   def master                  : Tactic = TacticLibrary.master(new NoneGenerate(), true, "Mathematica")
+
+  /** useAt(fact)(pos) uses the given fact at the given position in the sequent, by unifying and equivalence rewriting. */
+  def useAt(fact: Formula): PositionTactic = TacticLibrary.useAt(fact)
 
 
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic = SearchTacticsImpl.onBranch(s1, spec:_*)
