@@ -32,6 +32,7 @@ import SetLattice.topVarsDiffVars
  *          - PredicationalOf(p:Function, DotFormula)
  *          - DotFormula
  * @param repl the expression to be used in place of what
+ * @todo rename to something like USubstRepl or so
  */
 final case class SubstitutionPair (what: Expression, repl: Expression) {
   require(what.kind == repl.kind,
@@ -208,7 +209,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  */
 final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops */
-  val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
+  private val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
   applicable()
   /** unique left hand sides in subsDefs */
