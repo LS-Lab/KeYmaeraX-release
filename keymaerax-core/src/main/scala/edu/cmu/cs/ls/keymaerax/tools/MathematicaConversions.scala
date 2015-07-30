@@ -55,6 +55,9 @@ private object NameConversion {
     //   name (for external functions)
     //   KeYmaera + name
     val identifier : String = ns match {
+      //@note special function
+      //@todo detect conversely when sent back from Mathematica
+      case Function("abs",None,Real,Real) => "Abs"
 //      case n: Function if n.external => n.name
       case _ => PREFIX + maskIdentifier(ns.name)
     }
