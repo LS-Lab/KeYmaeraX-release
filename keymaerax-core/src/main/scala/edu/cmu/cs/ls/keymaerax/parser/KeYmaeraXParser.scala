@@ -352,6 +352,9 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 1, Number(BigDecimal(value)), r)
 
 
+        // PERIOD to DOT conversion for convenience
+      case r :+ Token(PERIOD,loc) =>
+        reduce(st, 1, Bottom :+ Token(DOT,loc), r)
       case r :+ Token(tok@(DOT|PLACE|NOTHING|ANYTHING | TRUE|FALSE),_) =>
         reduce(st, 1, op(st, tok, List()).asInstanceOf[UnitOpSpec].const(tok.img), r)
 
@@ -634,7 +637,8 @@ object KeYmaeraXParser extends Parser {
 
   /** First(Term): Is la the beginning of a new term? */
   private def firstTerm(la: Terminal): Boolean = la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] ||
-    la==MINUS || la==LPAREN || la==DOT
+    la==MINUS || la==LPAREN || la==DOT ||
+    la==PERIOD      // from DotTerm
 
   /** First(Formula): Is la the beginning of a new formula? */
   private def firstFormula(la: Terminal): Boolean = firstTerm(la) || /*la.isInstanceOf[IDENT] ||*/
@@ -703,7 +707,8 @@ object KeYmaeraXParser extends Parser {
   /** Shift to put the next input token la on the parser stack s. */
   private def shift(st: ParseState): ParseState = {
     val ParseState(s, (la :: rest)) = st
-    require(la.tok != EOF, "Cannot shift past end of file")
+    if (parseErrorsAsExceptions && la.tok == EOF) throw new ParseException("Unfinished input. Parser cannot shit past end of file\nFound: " + la, la.loc, st.toString)
+    else require(la.tok != EOF, "Cannot shift past end of file")
     ParseState(s :+ la, rest)
   }
 

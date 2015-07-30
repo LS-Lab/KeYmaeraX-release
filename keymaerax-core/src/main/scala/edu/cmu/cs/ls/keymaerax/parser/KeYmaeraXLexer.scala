@@ -401,10 +401,11 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       }
 
       // File cases
-      case PERIOD.startPattern(_*) => mode match {
+      case PERIOD.startPattern(_*) => consumeTerminalLength(PERIOD, loc)
+        /*mode match {
         case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(PERIOD, loc)
         case _ => throw new Exception("Periods should only occur when processing files.")
-      }
+      }*/
       case FUNCTIONS_BLOCK.startPattern(_*) => mode match {
         case AxiomFileMode() | ProblemFileMode() | LemmaFileMode() => consumeTerminalLength(FUNCTIONS_BLOCK, loc)
         case _ => throw new Exception("Functions. should only occur when processing files.")
