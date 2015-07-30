@@ -57,6 +57,7 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                   "false" ,
                   "apply",
                   "derivative" ,
+                  "differentialsymbol" ,
                   "Variable",
                   "Number"].reverse()
 
@@ -213,6 +214,12 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                             content = "\\left[" + left + "\\right]" + right;
                             break;
 
+                        case "diamondmodality":
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
+                            content = "\\langle" + left + "\\rangle" + right;
+                            break;
+
                         case "Assign":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
@@ -275,6 +282,10 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                         case "derivative":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             content = "\\dot{" + left + "}";
+                            break;
+
+                        case "differentialsymbol":
+                            content = parseFormulaHelper(c[0], depth) + "'"
                             break;
 
                         case "Anything": content = "?"; break;
