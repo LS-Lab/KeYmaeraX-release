@@ -201,7 +201,7 @@ object Anything extends NamedSymbol with AtomicTerm with RTerm {
 /** Function symbol applied to argument child */
 case class FuncOf(func: Function, child: Term) extends AtomicTerm with ApplicationOf {
   def sort: Sort = func.sort
-  require(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain)
+  require(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
 }
 
 /** Composite terms */
@@ -214,7 +214,7 @@ trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
 
 /** Unary Composite Real Terms, i.e. real terms composed of one real term. */
 private[core] trait RUnaryCompositeTerm extends UnaryCompositeTerm with RTerm {
-  require(child.sort == Real, "expected argument sort real")
+  require(child.sort == Real, "expected argument sort real: " + child.sort)
 }
 
 /** Binary Composite Terms, i.e. terms composed of two terms. */
@@ -225,7 +225,7 @@ trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
 
 /** Binary Composite Real Terms, i.e. real terms composed of two real terms. */
 private[core] trait RBinaryCompositeTerm extends BinaryCompositeTerm with RTerm {
-  require(left.sort == Real && right.sort == Real, "expected argument sorts real")
+  require(left.sort == Real && right.sort == Real, "expected argument sorts real: " + left + " and " + right)
   def left: Term
   def right: Term
 }
@@ -278,7 +278,7 @@ trait ComparisonFormula extends AtomicFormula {
 
 /** Real comparison formula composed of two real terms. */
 private[core] trait RComparisonFormula extends ComparisonFormula {
-  require(left.sort == Real && right.sort == Real, "expected argument sorts real")
+  require(left.sort == Real && right.sort == Real, "expected argument sorts real: " + left + " and " + right)
 }
 
 /** Verum formula true */
@@ -288,11 +288,11 @@ object False extends AtomicFormula
 
 /** ``=`` equality left = right */
 case class Equal(left: Term, right: Term) extends ComparisonFormula {
-  require(left.sort == right.sort, "expected identical argument sorts")
+  require(left.sort == right.sort, "expected identical argument sorts: " + left + " and " + right)
 }
 /** != disequality left != right */
 case class NotEqual(left: Term, right: Term) extends ComparisonFormula {
-  require(left.sort == right.sort, "expected identical argument sorts")
+  require(left.sort == right.sort, "expected identical argument sorts: " + left + " and " + right)
 }
 
 /** >= greater or equal comparison left >= right */
@@ -313,7 +313,7 @@ object DotFormula extends NamedSymbol with AtomicFormula {
 /** Predicate symbol applied to argument child */
 case class PredOf(func: Function, child: Term) extends AtomicFormula with ApplicationOf {
   require(func.sort == Bool, "expected predicate sort Bool found " + func.sort + " in " + this)
-  require(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " in " + this)
+  require(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
 }
 /** Predicational symbol applied to argument formula child */
 case class PredicationalOf(func: Function, child: Formula) extends AtomicFormula with ApplicationOf {
