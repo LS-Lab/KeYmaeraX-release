@@ -11,6 +11,7 @@ import testHelper.SequentFactory._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{locateAnte,locateSucc}
 import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl._
 
+import scala.collection.immutable
 import scala.collection.immutable.Map
 
 /**
@@ -469,5 +470,45 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
       TacticLibrary.debugT("Foo") &
       quantifierEliminationT("Mathematica")
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
+
+  "Abs axiom tactic" should "expand abs(x) = y in succedent" in {
+    val s = sucSequent("abs(x) = y".asFormula)
+    val tactic = ArithmeticTacticsImpl.AbsAxiomT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "(x>=0 & y=x) | (x<=0 & y=-x)".asFormula
+  }
+
+  it should "expand abs(x) = y in antecedent" in {
+    val s = sequent(Nil, immutable.IndexedSeq("abs(x) = y".asFormula), immutable.IndexedSeq())
+    val tactic = ArithmeticTacticsImpl.AbsAxiomT(AntePosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "(x>=0 & y=x) | (x<=0 & y=-x)".asFormula
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
+  "Abs tactic" should "expand abs(x) in succedent" in {
+    val s = sucSequent("abs(x) >= 5".asFormula)
+    val tactic = ArithmeticTacticsImpl.AbsT(SuccPosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "x>=0&abs_0=x | x<=0&abs_0=-x".asFormula
+    result.openGoals().head.sequent.succ should contain only "abs_0>=5".asFormula
+  }
+
+  it should "expand abs(x) in antecedent" in {
+    val s = sequent(Nil, immutable.IndexedSeq("abs(x) >= 5".asFormula), immutable.IndexedSeq())
+    val tactic = ArithmeticTacticsImpl.AbsT(AntePosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("x>=0&abs_0=x | x<=0&abs_0=-x".asFormula, "abs_0>=5".asFormula)
+    result.openGoals().head.sequent.succ shouldBe empty
   }
 }

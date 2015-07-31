@@ -19,7 +19,7 @@ import TacticLibrary.{closeT, hideT, debugT, locate}
 import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT,cohideT,kModalModusPonensT,NotT,ImplyT,cutT, AxiomCloseT}
 import SearchTacticsImpl.{lastAnte,lastSucc,locateAnte,locateSucc,onBranch}
 import AxiomaticRuleTactics.goedelT
-import TacticLibrary.TacticHelper.getFormula
+import TacticLibrary.TacticHelper.{getFormula, getTerm}
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, Tool}
 
 import scala.collection.immutable.List
@@ -557,5 +557,54 @@ object ArithmeticTacticsImpl {
         }
       }
     }
+  }
+
+
+  def AbsT: PositionTactic = new PositionTactic("Abs") {
+    override def applies(s: Sequent, pos: Position): Boolean = getTerm(s, pos) match {
+      case FuncOf(Function("abs", None, Real, Real), f) => true
+      case _ => false
+    }
+
+    override def apply(pos: Position): Tactic = new ConstructionTactic("Abs") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTerm(node.sequent, pos) match {
+        case abs@FuncOf(Function("abs", None, Real, Real), f) =>
+          val freshAbsIdx = TacticLibrary.TacticHelper.freshIndexInSequent("abs", node.sequent)
+          val absVar = Variable("abs", freshAbsIdx)
+          Some(cutT(Some(Exists(absVar :: Nil, Equal(abs, absVar)))) & onBranch(
+            (cutShowLbl, lastSucc(cohideT) & AbsAxiomT(SuccPosition(0).first) & TacticLibrary.arithmeticT),
+            (cutUseLbl, lastAnte(FOQuantifierTacticsImpl.skolemizeT) &
+              lastAnte(EqualityRewritingImpl.eqLeft(exhaustive=true)) & lastAnte(AbsAxiomT))
+          ))
+        case _ => throw new IllegalStateException("Impossible by applies")
+      }
+    }
+  }
+
+  /**
+   * Expands absolute value function as a disjunction.
+   * Axiom abs: (abs(f()) = g())  <->  ((f()>=0 & g()=f()) | (f()<=0 & g()=-f()))
+   * @return The tactic to replace lhs of axiom abs with rhs.
+   */
+  def AbsAxiomT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case Equal(FuncOf(Function("abs", None, Real, Real), f), g) =>
+        Equiv(fml, Or(And(GreaterEqual(f, Number(0)), Equal(g, f)), And(LessEqual(f, Number(0)), Equal(g, Neg(f)))))
+      case _ => False
+    }
+    uncoverAxiomT("abs", axiomInstance, _ => AbsAxiomBaseT)
+  }
+  /** Base tactic for abs */
+  private def AbsAxiomBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(Equal(FuncOf(Function("abs", _, _, _), f), g), _) =>
+        val aS = FuncOf(Function("s", None, Unit, Real), Nothing)
+        val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
+        SubstitutionPair(aS, f) :: SubstitutionPair(aT, g) :: Nil
+      case _ => throw new IllegalStateException("Impossible by axiomInstance of AbsT")
+    }
+    axiomLookupBaseT("abs", subst, _ => NilPT, (f, ax) => ax)
   }
 }

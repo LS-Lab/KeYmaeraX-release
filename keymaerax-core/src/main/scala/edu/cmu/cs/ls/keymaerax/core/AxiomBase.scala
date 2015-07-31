@@ -750,9 +750,9 @@ Axiom "> flip".
   f(?) > g(?) <-> (g(?) < f(?))
 End.
 
-/*Axiom "abs".
-  (abs(f()) = g()) <->  ((f()>=0 & g()=f()) | (f()<=0 & g()=-f()))
-End.*/
+Axiom "abs".
+  (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<=0 & t()=-s()))
+End.
 
 /* @todo Multi-argument don't parse in KeYmaeraParser:1203
 Axiom "max expand".
