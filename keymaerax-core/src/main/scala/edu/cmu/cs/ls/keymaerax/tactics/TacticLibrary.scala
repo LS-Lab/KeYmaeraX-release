@@ -224,6 +224,17 @@ object TacticLibrary {
    * useAt(fact)(pos) uses the given fact at the given position in the sequent.
    * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
    * instance to make progress by reducing to the other side.
+   *
+   * Tactic specification:
+   * {{{
+   * useAt(fact)(p)(F) = let (C,f)=F(p) in
+   *   case f of {
+   *     s=unify(fact.left,_) => CutRight(C(f)<->C(s(fact.right)))(p) & <(
+   *       "use cut": skip
+   *       "show cut": EquivifyRight(p) & CE(C(_))(p) & master
+   *     )
+   *   }
+   * }}}
    * @author aplatzer
    * @todo generalize to automatically find a proof of fact by axiom lookup or master or so
    */
