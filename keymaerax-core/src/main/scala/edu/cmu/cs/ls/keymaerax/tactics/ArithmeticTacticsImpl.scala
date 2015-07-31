@@ -576,7 +576,9 @@ object ArithmeticTacticsImpl {
           Some(cutT(Some(Exists(absVar :: Nil, Equal(abs, absVar)))) & onBranch(
             (cutShowLbl, lastSucc(cohideT) & AbsAxiomT(SuccPosition(0).first) & TacticLibrary.arithmeticT),
             (cutUseLbl, lastAnte(FOQuantifierTacticsImpl.skolemizeT) &
-              lastAnte(EqualityRewritingImpl.eqLeft(exhaustive=true)) & lastAnte(AbsAxiomT))
+              lastAnte(EqualityRewritingImpl.eqLeft(exhaustive=true)) &
+              //@todo may find wrong equality, if abs(x) = ... is already present in antecedent
+              locateAnte(AbsAxiomT, { case Equal(a, _) if a == abs => true case _ => false }))
           ))
         case _ => throw new IllegalStateException("Impossible by applies")
       }
