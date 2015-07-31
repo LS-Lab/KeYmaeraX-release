@@ -129,9 +129,13 @@ object AxiomTactic {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = axiomInstance(getTerm(node.sequent, p)) match {
         case inst@Imply(cond, equiv@Equiv(lhs, rhs)) =>
+          val secondToLastPos =
+            /* cuts will have produced one additional formula in succedent */
+            if (node.sequent.succ.nonEmpty) SuccPosition(node.sequent.succ.length - 1)
+            else SuccPosition(0)
           Some(cutT(Some(equiv))/*cutEquivInContext(equiv, p)*/ & onBranch(
             (cutShowLbl, hideT(p.topLevel) & /* only works because top-level */ cutT(Some(cond)) & onBranch(
-              (cutShowLbl, /* hide second-to-last */ hideT(SuccPosition(node.sequent.succ.length - 1)) &
+              (cutShowLbl, /* hide second-to-last */ hideT(secondToLastPos) &
                 lastSucc(condT(getTerm(node.sequent, p)))),
               (cutUseLbl, cutT(Some(inst)) & onBranch(
                 (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getTerm(node.sequent, p)))),
