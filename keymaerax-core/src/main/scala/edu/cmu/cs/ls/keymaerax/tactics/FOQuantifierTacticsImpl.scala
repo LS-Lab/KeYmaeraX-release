@@ -454,7 +454,15 @@ object FOQuantifierTacticsImpl {
         if (p.isTopLevel) {
           existentialGenT(quantified, t)(AntePosition(0)) & AxiomCloseT
         } else {
-          repeatT(AxiomCloseT | locateAnte(PropositionalLeftT) | locateSucc(PropositionalRightT)) &
+          // we know that we have the same operator in antecedent and succedent with the same lhs -> we know that one
+          // will branch and one of these branches will close by identity. on the other branch, we have to hide
+          TacticLibrary.debugT(s"Start unpeeling in exists at $p") &
+            // list all cases explicitly, hide appropriate formulas in order to not blow up branching
+            ( (lastAnte(NotLeftT) & NotRightT(SuccPosition(0)) & assertT(1, 1)) |
+              (lastAnte(AndLeftT) & lastSucc(AndRightT) && (AxiomCloseT | hideT(AntePosition(1)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1)) |
+              (lastSucc(OrRightT) & lastAnte(OrLeftT) && (AxiomCloseT | hideT(SuccPosition(1)), AxiomCloseT | hideT(SuccPosition(0))) & assertT(1, 1)) |
+              (lastSucc(ImplyRightT) & ImplyLeftT(AntePosition(0)) && (AxiomCloseT | hideT(SuccPosition(0)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1))
+              )*p.inExpr.pos.length &
             locateAnte(existentialGenT(quantified, t), _ == fToGen) & AxiomCloseT
         }
       }
