@@ -511,4 +511,13 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     result.openGoals().head.sequent.ante should contain only ("x>=0&abs_0=x | x<=0&abs_0=-x".asFormula, "abs_0>=5".asFormula)
     result.openGoals().head.sequent.succ shouldBe empty
   }
+
+  it should "be able to prove x>2 -> abs(x) > 2" in {
+    val s = sucSequent("x>2 -> abs(x) > 2".asFormula)
+    val tactic = TactixLibrary.implyR(SuccPosition(0)) &
+      ArithmeticTacticsImpl.AbsT(SuccPosition(0, PosInExpr(0 :: Nil))) &
+      TactixLibrary.orL(AntePosition(1)) & TactixLibrary.andL(AntePosition(1)) & TactixLibrary.QE
+
+    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
 }
