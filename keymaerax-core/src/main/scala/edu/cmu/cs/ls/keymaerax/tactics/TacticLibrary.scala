@@ -365,9 +365,12 @@ object TacticLibrary {
    * Use Mathematica
    * @todo allow allRight and existsLeft rules as well.
    */
-  def arithmeticT = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
-    PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & lastSucc(FOQuantifierTacticsImpl.universalClosureT) & debugT("Handing to Mathematica/Z3") &
-    (ArithmeticTacticsImpl.quantifierEliminationT("Mathematica") | ArithmeticTacticsImpl.quantifierEliminationT("Z3"))
+  def arithmeticT =
+    debugT("Apply non-branching propositional") & repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) &
+    debugT("Search and apply equalities") & repeatT(locateAnte(eqThenHideIfChanged)) &
+    debugT("Consolidate sequent") & PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) &
+    debugT("Compute universal closure") & lastSucc(FOQuantifierTacticsImpl.universalClosureT) &
+    debugT("Handing to Mathematica/Z3") & (ArithmeticTacticsImpl.quantifierEliminationT("Mathematica") | ArithmeticTacticsImpl.quantifierEliminationT("Z3"))
 
   /**
    * Alternative arithmeticT
@@ -555,7 +558,7 @@ object TacticLibrary {
   def boxChoiceT = HybridProgramTacticsImpl.boxChoiceT
   def inductionT(inv: Option[Formula]) = HybridProgramTacticsImpl.wipeContextInductionT(inv)
   def diffInvariantSystemT = ODETactics.diffInvariantT
-  def diffSolutionT = ODETactics.diffSolution(None)
+  def diffSolutionT = ODETactics.diffIntroduceConstantT ~ ODETactics.diffSolution(None)
 
   @deprecated("Use alphaRenamingT(Variable,Variable) instead.")
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
