@@ -228,6 +228,21 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
   }
 
+  it should "introduce ghosts when special function old is used" in {
+    import ODETactics.diffCutT
+    val s = sucSequent("[{x'=2 & x>=0 | y<z}]x>=0".asFormula)
+    val tactic = locateSucc(diffCutT("x>old(x)".asFormula))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 2
+    result.openGoals()(0).sequent.ante should contain only "x0_1()=x".asFormula
+    result.openGoals()(0).sequent.succ should contain only "[{x'=2 & (x>=0 | y<z) & x>x0_1()}]x>=0".asFormula
+    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
+    result.openGoals()(1).sequent.ante should contain only "x0_1()=x".asFormula
+    result.openGoals()(1).sequent.succ should contain only "[{x'=2 & x>=0 | y<z}]x>x0_1()".asFormula
+    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
+  }
+
   "differential solution tactic" should "use Mathematica to find solution if None is provided" in {
     val s = sequent(Nil, "b=0 & x>b".asFormula :: Nil, "[{x'=2}]x>b".asFormula :: Nil)
 
