@@ -884,27 +884,69 @@ object ODETactics {
   }
 
   /**
-   * Applies a differential cut with the given cut formula.
+   * Applies a differential cut with the given cut formula. If the cut formula contains old(x), the tactic introduces
+   * ghosts first to keep track of the initial value of x, and replaces occurrences of old(x) with that ghost.
    * @author aplatzer
+   * @author smitsch
    */
   def diffCutT(diffcut: Formula): PositionTactic = new PositionTactic("DC differential cut") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
+    override def applies(s: Sequent, pos: Position): Boolean = !pos.isAnte && pos.isTopLevel && (s(pos) match {
       case Box(_: ODESystem, _) => true
       case _ => false
     })
 
-    def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      override def applicable(node : ProofNode) = applies(node.sequent, p)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+    private def oldVars(fml: Formula): Set[Variable] = {
+      var oldVars = Set[Variable]()
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+          case FuncOf(Function("old", None, Real, Real), v: Variable) => oldVars += v; Left(None)
+          case _ => Left(None)
+        }
+      }, diffcut)
+      oldVars
+    }
+
+    private def replaceOld(fml: Formula, ghostsByOld: Map[Variable, FuncOf]): Formula = {
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+          case FuncOf(Function("old", None, Real, Real), v: Variable) => Right(ghostsByOld(v))
+          case _ => Left(None)
+        }
+      }, diffcut) match {
+        case Some(f) => f
+      }
+    }
+
+    private def diffCut(node: ProofNode, pos: Position, fml: Formula): Tactic = {
+      val anteLength = node.sequent.ante.length
+      diffCutAxiomT(fml)(pos) & onBranch(
+        (axiomUseLbl,
+          /* use axiom: here we have to show that our cut was correct */ LabelBranch(cutShowLbl)),
+        (axiomShowLbl,
+          /* show axiom: here we continue with equiv rewriting so that desired result remains */
+          equivRewriting(AntePosition(anteLength), pos) & LabelBranch(cutUseLbl) /*@TODO equalityRewriting(whereTheEquivalenceWentTo, p) apply the remaining diffcut equivalence to replace the original p */)
+      )
+    }
+
+    def apply(pos: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) = applies(node.sequent, pos)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos) match {
         case Box(ODESystem(_, _), _) =>
-          val anteLength = node.sequent.ante.length
-          Some(diffCutAxiomT(diffcut)(p) & onBranch(
-            (axiomUseLbl,
-              /* use axiom: here we have to show that our cut was correct */ LabelBranch(cutShowLbl)),
-            (axiomShowLbl,
-              /* show axiom: here we continue with equiv rewriting so that desired result remains */
-              equivRewriting(AntePosition(anteLength), p) & LabelBranch(cutUseLbl) /*@TODO equalityRewriting(whereTheEquivalenceWentTo, p) apply the remaining diffcut equivalence to replace the original p */)
-          ))
+          val ov = oldVars(diffcut)
+          if (ov.isEmpty) {
+            Some(diffCut(node, pos, diffcut))
+          } else {
+            val ghosts: Set[((Variable, FuncOf), Tactic)] = ov.map(old => {
+              val ghost = freshNamedSymbol(Variable(old.name + "0"), node.sequent)
+              val varAfterAssign = FuncOf(Function(ghost.name, ghost.index match {
+                case Some(i) => Some(i+2)
+                case None => Some(1)
+              }, Unit, ghost.sort), Nothing)
+              (old -> varAfterAssign,
+               discreteGhostT(Some(ghost), old)(pos) & boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(pos))
+            })
+            Some(ghosts.map(_._2).reduce(_ & _) & diffCut(node, pos, replaceOld(diffcut, ghosts.map(_._1).toMap)))
+          }
         case _ => None
       }
     }
