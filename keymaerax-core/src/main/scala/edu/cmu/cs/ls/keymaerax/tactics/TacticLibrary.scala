@@ -231,7 +231,7 @@ object TacticLibrary {
    *   case f of {
    *     s=unify(fact.left,_) => CutRight(C(f)<->C(s(fact.right)))(p) & <(
    *       "use cut": skip
-   *       "show cut": EquivifyRight(p) & CE(C(_))(p) & master
+   *       "show cut": EquivifyRight(p.seq) & CE(C(_))(p.seq) & master
    *     )
    *   }
    * }}}
