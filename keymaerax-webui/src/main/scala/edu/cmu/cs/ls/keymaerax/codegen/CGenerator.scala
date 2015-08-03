@@ -110,7 +110,7 @@ object CGenerator extends CodeGenerator {
   private def getPostNameIdentifier(v: Variable): String = if (v.index.isEmpty) v.name + "post" else v.name + "post_" + v.index.get
 
   /**
-   * Get a set of names that need to be generated as function calls,
+   * Get a set of names (excluding predefined functions such as: abs) that need to be generated as function calls,
    * by subtracting all relevant names as variables (for the real input variables)
    * and as functions (for post variables and input variables used as nullary functions)
    *
@@ -119,7 +119,9 @@ object CGenerator extends CodeGenerator {
    * @return      a set of names that does not occur in relevant variables, thus need to be generated as function calls
    */
   private def getCalledFuncs(expr: Expression, vars: List[Variable]): Set[NamedSymbol] =
-    StaticSemantics.symbols(expr).toSet.diff(vars.toSet).diff(vars.map(v => Function(nameIdentifier(v), None, Unit, Real)).toSet)
+    StaticSemantics.symbols(expr).toSet.filterNot((absFun: NamedSymbol) => {absFun == Function("abs", None, Real, Real)})
+      .diff(vars.toSet).diff(vars.map(v => Function(nameIdentifier(v), None, Unit, Real)).toSet)
+
 
   /** Declaration of function calls using the list of function call names */
   private def FuncCallDeclaration(calledFuncs: Set[NamedSymbol], cDataType: String): String = {
