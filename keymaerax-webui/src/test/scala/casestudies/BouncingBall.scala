@@ -88,7 +88,6 @@ class BouncingBall extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(master(new Generate("v^2<=2*g()*(H-h) & h>=0".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
-  //@todo Ran
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/simple/bouncing-ball/bouncing-ball-tout.key"))
     helper.runTactic(master(new Generate("v^2<=2*g()*(H-h) & h>=0".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed

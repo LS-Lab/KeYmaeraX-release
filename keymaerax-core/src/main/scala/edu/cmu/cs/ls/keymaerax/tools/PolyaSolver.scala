@@ -9,7 +9,7 @@ import java.nio.channels.Channels
 import java.util.Locale
 
 import edu.cmu.cs.ls.keymaerax.core.{False, True, Term, Formula}
-import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, ParseException, KeYmaeraXParser}
 import scala.sys.process._
 
 /**
@@ -18,10 +18,10 @@ import scala.sys.process._
  */
 class PolyaSolver extends SMTSolver {
 
-  val k2s = new KeYmaeraToSMT("Polya")
+  private val k2s = new KeYmaeraToSMT("Polya")
   def toSMT(expr : KExpr): SExpr = k2s.convertToSMT(expr)
 
-  val pathToPolya : String = {
+  private val pathToPolya : String = {
     val polyaTempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
     if(!new File(polyaTempDir).exists) new File(polyaTempDir).mkdirs
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
@@ -82,17 +82,15 @@ class PolyaSolver extends SMTSolver {
     var smtCode = toSMT(f).getVariableList + "(assert (not " + toSMT(f).getFormula + "))"
     smtCode += "\n(check-sat)\n"
     println("[Solving with Polya...] \n" + smtCode)
-    val smtTempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
-    val smtFile = new File(smtTempDir, "KeymaeraToPolya.smt2")
+    val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
     writer.flush()
     writer.close()
     val cmd = pathToPolya + " " + smtFile.getAbsolutePath
     val (output, result) = run(cmd)
-    smtFile.delete()
     result match {
-      case f : Formula => (f, cmd, output)
+      case f : Formula => (f, cmd, KeYmaeraXPrettyPrinter(f))
       case _ => throw new Exception("Expected a formula from QE call but got a non-formula expression.")
     }
   }
@@ -100,8 +98,7 @@ class PolyaSolver extends SMTSolver {
   def simplify(t: Term) = {
     val smtCode = toSMT(t).getVariableList + "(simplify " + toSMT(t).getFormula + ")"
 //    println("[Simplifying with Polya ...] \n" + smtCode)
-    val smtTempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
-    val smtFile = new File(smtTempDir, "KeymaeraToPolyaSimplify.smt2")
+    val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
     writer.flush()
@@ -109,13 +106,11 @@ class PolyaSolver extends SMTSolver {
     val cmd = pathToPolya + " " + smtFile.getAbsolutePath
     val output: String = cmd.!!
 //    println("[Polya simplify result] \n" + output + "\n")
-    smtFile.delete()
     try {
       KeYmaeraXParser.termParser(output)
     } catch {
       case e: ParseException => t
     }
   }
-
 }
 

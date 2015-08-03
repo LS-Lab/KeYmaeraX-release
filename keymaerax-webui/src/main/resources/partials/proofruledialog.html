@@ -10,7 +10,7 @@
     <div class="panel panel-default">
         <div class="panel-body">
             <div class="k4-inline-block" ng-repeat="t in ruleTactics" k4-popover>
-                <span ng-if="t.name != 'keymaera.step'"> <!-- exclude step tactic from the list of applicable tactics, since it's available in the sequent view. -->
+                <span ng-if="t.name != 'keymaerax.step' && t.name != 'dl.hide'"> <!-- exclude step and weaken tactic from the list of applicable tactics, since it's available in the sequent view. -->
                     <div class="btn-group btn-group-lg k4-inline-block">
                         <a ng-if="t.tooltip == undefined" type="button" class="btn btn-default input-block-level"
                            ng-click="applyTactics(t)">
@@ -44,7 +44,7 @@
     </div>
     <div class="panel panel-default">
         <div class="panel-body">
-            <a class="btn btn-default" ng-click="applyTacticsByName('keymaera.step')"><i class="fa fa-step-forward"></i><br/><span>Step</span></a>
+            <a class="btn btn-default" ng-click="applyTacticsByName('keymaerax.step')"><i class="fa fa-step-forward"></i><br/><span>Step</span></a>
             <a class="btn btn-default" ng-if="formula" ng-click="applyTacticsByName('dl.hide')"><i class="fa fa-eye-slash"></i><br/><span>Hide</span></a>
         </div>
     </div>

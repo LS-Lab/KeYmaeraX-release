@@ -425,7 +425,7 @@ class ModelplexTacticTests extends TacticTestSuite {
     val expectedAnte = "true".asFormula
     val expectedSucc = ("dxopost_0()^2+dyopost_0()^2<=V()^2 & (apost()=-B & rpost()=r & tpost()=0 & dxopost()=dxopost_0() & dyopost()=dyopost_0() & xopost()=xo & yopost()=yo & wpost()=w" +
       "                                       | (v=0 & (apost()=0 & rpost()=r & tpost()=0 & dxopost()=dxopost_0() & dyopost()=dyopost_0() & xopost()=xo & yopost()=yo & wpost()=0)" +
-      "                                       | -B<=apost_0()&apost_0()<=A & (rpost_0()!=0 & (wpost_0()*rpost_0()=v & ((Abs(x-xopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-yopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))) & (apost()=apost_0()&rpost()=rpost_0()&tpost()=0&dxopost()=dxopost_0()&dyopost()=dyopost_0()&xopost()=xopost_0()&yopost()=yopost_0()&wpost()=wpost_0()))))))").asFormula
+      "                                       | -B<=apost_0()&apost_0()<=A & (rpost_0()!=0 & (wpost_0()*rpost_0()=v & ((abs(x-xopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|abs(y-yopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))) & (apost()=apost_0()&rpost()=rpost_0()&tpost()=0&dxopost()=dxopost_0()&dyopost()=dyopost_0()&xopost()=xopost_0()&yopost()=yopost_0()&wpost()=wpost_0()))))))").asFormula
 
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only expectedAnte
@@ -475,7 +475,7 @@ class ModelplexTacticTests extends TacticTestSuite {
     val outputFileName = File.createTempFile("passivesafetyabs", ".mx").getAbsolutePath
     KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-out", outputFileName))
 
-    val expectedFileContent = "dxopost_0()^2+dyopost_0()^2<=V()^2&(apost()=-B&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=w|(v=0&(apost()=0&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=0)|-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&((Abs(x-xopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-yopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(apost()=apost_0()&rpost()=rpost_0()&xopost()=xopost_0()&yopost()=yopost_0()&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=wpost_0()))))))".asFormula
+    val expectedFileContent = "dxopost_0()^2+dyopost_0()^2<=V()^2&(apost()=-B&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=w|(v=0&(apost()=0&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=0)|-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&((abs(x-xopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|abs(y-yopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(apost()=apost_0()&rpost()=rpost_0()&xopost()=xopost_0()&yopost()=yopost_0()&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=wpost_0()))))))".asFormula
 
     val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
     KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
