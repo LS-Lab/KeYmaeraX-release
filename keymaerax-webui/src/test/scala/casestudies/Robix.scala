@@ -328,6 +328,20 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
     result shouldBe 'closed
   }
 
+  it should "be provable with renamed variables when tactic is loaded from a file" in {
+    val tacticSource = scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/PassiveSafetyTacticGenerator_renamed.scala").mkString
+
+    val cm = universe.runtimeMirror(getClass.getClassLoader)
+    val tb = cm.mkToolBox()
+    val tacticGenerator = tb.eval(tb.parse(tacticSource)).asInstanceOf[() => Tactic]
+
+    val tactic = tacticGenerator()
+
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafety_renamed.key"))
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result shouldBe 'closed
+  }
+
   "Passive orientation safety" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafety.key"))
 
