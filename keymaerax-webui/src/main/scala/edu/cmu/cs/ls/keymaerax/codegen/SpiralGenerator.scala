@@ -114,16 +114,17 @@ object SpiralGenerator extends CodeGenerator {
     val allSortedNames = StaticSemantics.symbols(e).toList.sorted
     var sortedRelevantVars = List[Variable]()
     for(i <- vars.indices) {
+      assert(!nameIdentifier(vars.apply(i)).equals("abs"), "[Error] Cannot use abs as variable name, abs is predefined function for absolute value.")
       if(allSortedNames.contains(vars.apply(i)))
       // variable occurs in the expression, add it to the return list
         sortedRelevantVars = vars.apply(i) :: sortedRelevantVars
       if(allSortedNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real)))
       // variable occur as nullary function, add it to the return list as a variable
         sortedRelevantVars = Variable(nameIdentifier(vars.apply(i))) :: sortedRelevantVars
-      if(allSortedNames.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
+      if(allSortedNames.contains(Variable(getPostNameIdentifier(vars.apply(i)))) && !vars.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
       // post variable occurs in the expression as variable, add it to the return list as a variable
         sortedRelevantVars = Variable(getPostNameIdentifier(vars.apply(i))) :: sortedRelevantVars
-      if(allSortedNames.contains(Function(getPostNameIdentifier(vars.apply(i)), None, Unit, Real)))
+      if(allSortedNames.contains(Function(getPostNameIdentifier(vars.apply(i)), None, Unit, Real)) && !vars.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
       // post variable occurs in the expression as nullary function, add it to the return list as a variable
         sortedRelevantVars = Variable(getPostNameIdentifier(vars.apply(i))) :: sortedRelevantVars
     }
@@ -205,7 +206,7 @@ object SpiralGenerator extends CodeGenerator {
       case FuncOf(fn, child) =>
         if(child.equals(Nothing)) nameIdentifier(fn)
         else nameIdentifier(fn) match {
-          case "Abs" => "abs(" + compileTerm(child) + ")"
+          case "abs" => "abs(" + compileTerm(child) + ")"
           case "DChebyshev" => "TDistance(TInfinityNorm(" + "2" + "))"  //hack for InfinityNorm of degree 2
           case _ => nameIdentifier(fn) + "(" + compileTerm(child) + ")"
         }
