@@ -161,7 +161,7 @@ object StaticSemantics {
 
     case PredOf(p, arg) => VCF(fv = freeVars(arg), bv = bottom)
     // DotFormula is like a reserved Predicational
-    //@todo eisegesis should be bv=topVarsDiffVars() not bv=bottom
+    //@note DotFormula is a zero-parameter predicational, thus bv=topVarsDiffVars() not bv=bottom
     case DotFormula => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
     case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
 
@@ -231,7 +231,11 @@ object StaticSemantics {
 
   /**
    * The signature of expression e.
-   * @todo change return types or at least implementation types to SortedSet for order stability?
+   * @note Result will not be order stable, so order could be different on different runs of the prover.
+   * @example{{{
+   *    signature(e).toList.sort            // sorts by compare of NamedSymbol, by name and index
+   *    signature(e).toList.sortBy(_.name)  // sorts alphabetically by name, ignores indices
+   * }}}
    */
   def signature(e: Expression): immutable.Set[NamedSymbol] = e match {
     case t: Term => signature(t)
