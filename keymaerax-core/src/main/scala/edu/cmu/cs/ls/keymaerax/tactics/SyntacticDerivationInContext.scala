@@ -439,8 +439,7 @@ object SyntacticDerivationInContext {
           Some(
             assertT(0,1) & PropositionalTacticsImpl.uniformSubstT(subst, Map(fml -> axiom)) &
               lastSucc(assertPT(axiom)) &
-              AxiomTactic.axiomT("c()' derive constant fn") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
-              AxiomCloseT)
+              AxiomTactic.axiomT("c()' derive constant fn"))
         case fml@Equal(Differential(s@FuncOf(Function(_, _, Unit, Real), Nothing)), _) =>
           val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
           val subst = List(SubstitutionPair(aC, s))
@@ -449,8 +448,7 @@ object SyntacticDerivationInContext {
           Some(
             assertT(0,1) & PropositionalTacticsImpl.uniformSubstT(subst, Map(fml -> axiom)) &
               lastSucc(assertPT(axiom)) &
-              AxiomTactic.axiomT("c()' derive constant fn") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
-              AxiomCloseT)
+              AxiomTactic.axiomT("c()' derive constant fn"))
       }
     }
   }
@@ -532,7 +530,7 @@ object SyntacticDerivationInContext {
             assertT(0,1) &
               TacticLibrary.cutT(Some(axiom)) & onBranch(
                 (BranchLabels.cutUseLbl, renameAndInstantiate ~ closeT ~ errorT("Should've closed (use cut symbolize differential axiom).")),
-                (BranchLabels.cutShowLbl, lastSucc(cohideT) & AxiomTactic.axiomT("x' derive variable") ~ AxiomCloseT ~ errorT("Should've closed (2)."))
+                (BranchLabels.cutShowLbl, lastSucc(cohideT) & AxiomTactic.axiomT("x' derive variable"))
               )
           )
         }
@@ -594,8 +592,7 @@ object SyntacticDerivationInContext {
           Some(
             assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
               lastSucc(assertPT(axiom)) &
-              AxiomTactic.axiomT("-' derive neg") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
-              AxiomCloseT)
+              AxiomTactic.axiomT("-' derive neg"))
         }
         case fml@Equal(Neg(Differential(s)), _) => {
           val aF = FuncOf(Function("f", None, s.sort, s.sort), Anything)
@@ -606,8 +603,7 @@ object SyntacticDerivationInContext {
           Some(
             assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
               lastSucc(assertPT(axiom)) &
-              AxiomTactic.axiomT("-' derive neg") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
-              AxiomCloseT)
+              AxiomTactic.axiomT("-' derive neg"))
         }
       }
     }
@@ -716,8 +712,7 @@ object SyntacticDerivationInContext {
           Some(
             assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
               lastSucc(assertPT(axiom)) &
-              AxiomTactic.axiomT(axiomName) & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
-              AxiomCloseT)
+              AxiomTactic.axiomT(axiomName))
         }
         case fml@Equal(BUnapplyer(Differential(f), Differential(g)), _) => {
           val aF = FuncOf(Function("f", None, f.sort, f.sort), Anything)
@@ -733,8 +728,7 @@ object SyntacticDerivationInContext {
           Some(
             assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
               lastSucc(assertPT(axiom)) &
-              AxiomTactic.axiomT(axiomName) & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
-              AxiomCloseT)
+              AxiomTactic.axiomT(axiomName))
         }
       }
     }

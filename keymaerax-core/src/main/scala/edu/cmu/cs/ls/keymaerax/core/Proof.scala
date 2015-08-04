@@ -1049,18 +1049,20 @@ object Axiom {
  * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Axiom.axioms]].
  * @author nfulton
  * @author aplatzer
+ * @author smitsch
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
- * @todo change to the format where the axiom ends up on the right (so cut if needed on the left).
  */
-case class Axiom(id: String) extends Rule {
+case class Axiom(id: String) extends Rule with ClosingRule {
   val name: String = "Axiom " + id
   def apply(s: Sequent): immutable.List[Sequent] = {
     Axiom.axioms.get(id) match {
-      case Some(f) => immutable.List(new Sequent(s.pref, s.ante :+ f, s.succ))
+      case Some(f) => immutable.List(new Sequent(s.pref, s.ante, s.succ.filter(_ != f)))
+        if (s.ante.isEmpty && s.succ.size == 1 && s.succ.contains(f)) Nil
+        else throw new InapplicableRuleException("Axiom " + f + " is not sole formula in:\n", this, s)
       case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"), this, s)
     }
-  } ensuring (r => r.nonEmpty && r.forall(s.subsequentOf), "axiom lookup adds formulas")
+  } ensuring (r => r.isEmpty, "axiom lookup did not close")
 }
 
 /*********************************************************************************

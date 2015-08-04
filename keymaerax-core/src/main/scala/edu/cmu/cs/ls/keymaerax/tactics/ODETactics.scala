@@ -246,7 +246,7 @@ object ODETactics {
             uniformSubstT(subst, Map(fml -> axiomAfterAlpha)) &
               assertT(0, 1) &
               alpha &
-              AxiomTactic.axiomT("<'> differential solution") & assertT(1, 1) & AxiomCloseT
+              AxiomTactic.axiomT("<'> differential solution")
           )
       }
     }
@@ -500,7 +500,7 @@ object ODETactics {
             uniformSubstT(subst, Map(fml -> axiomAfterAlpha)) &
               assertT(0, 1) &
               alphaT &
-              AxiomTactic.axiomT("<','> differential solution") & assertT(1, 1) & (AxiomCloseT | debugT("Unable to prove from axiom <','> differential solution") & stopT)
+              AxiomTactic.axiomT("<','> differential solution")
           )
       }
     }
