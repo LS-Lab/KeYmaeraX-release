@@ -28,7 +28,7 @@ import scala.util.Random
 object KeYmaeraX {
 
   /** KeYmaera X version number */
-  val VERSION = "4.0a3"
+  val VERSION = "4.0a4"
 
   private type OptionMap = Map[Symbol, Any]
 
