@@ -680,4 +680,75 @@ object ArithmeticTacticsImpl {
     }
     axiomLookupBaseT(name, subst, _ => NilPT, (f, ax) => ax)
   }
+
+
+  def MinzMaxzT: PositionTactic = new PositionTactic("MinzMaxz") {
+    override def applies(s: Sequent, pos: Position): Boolean = getTerm(s, pos) match {
+      case FuncOf(Function("minz", None, Real, Real), f) => true
+      case FuncOf(Function("maxz", None, Real, Real), f) => true
+      case _ => false
+    }
+
+    override def apply(pos: Position): Tactic = new ConstructionTactic("MinzMaxz") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTerm(node.sequent, pos) match {
+        case minzmaxz@FuncOf(Function(name, None, Real, Real), f) if name == "minz" || name == "maxz" =>
+          val freshMinzMaxzIdx = TacticLibrary.TacticHelper.freshIndexInSequent(name, node.sequent)
+          val minzmaxzVar = Variable(name, freshMinzMaxzIdx)
+          Some(cutT(Some(Exists(minzmaxzVar :: Nil, Equal(minzmaxz, minzmaxzVar)))) & onBranch(
+            (cutShowLbl, lastSucc(cohideT) & MinzMaxzAxiomT(SuccPosition(0).first) & TacticLibrary.arithmeticT),
+            (cutUseLbl, lastAnte(FOQuantifierTacticsImpl.skolemizeT) &
+              lastAnte(EqualityRewritingImpl.eqLeft(exhaustive=true)) &
+              //@todo may find wrong equality, if minz(x) = ... is already present in antecedent
+              locateAnte(MinzMaxzAxiomT, { case Equal(a, _) if a == minzmaxz => true case _ => false }))
+          ))
+        case _ => throw new IllegalStateException("Impossible by applies")
+      }
+    }
+  }
+
+  /**
+   * Expands minimumzero/maximumzero value function as a disjunction.
+   * Axiom min: (minz(s()) = t()) <-> ((0<=s() & t()=0) | (0>s() & t()=s()))
+   * Axiom max: (maxz(s()) = t()) <-> ((0>=s() & t()=0) | (0<s() & t()=s()))
+   * @return The tactic to replace lhs of axiom min/max with rhs.
+   */
+  def MinzMaxzAxiomT: PositionTactic = new PositionTactic("MinzMaxzAxiom") {
+    override def applies(s: Sequent, pos: Position): Boolean = getFormula(s, pos) match {
+      case Equal(FuncOf(Function("minz", None, Real, Real), f), h) => true
+      case Equal(FuncOf(Function("maxz", None, Real, Real), f), h) => true
+      case _ => false
+    }
+
+    override def apply(pos: Position): Tactic = new ConstructionTactic("MinzMaxzAxiom") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
+        case Equal(FuncOf(Function("minz", _, _, _), _), _) => Some(uncoverAxiomT("minz", axiomInstance, _ => MinzMaxzAxiomBaseT("minz"))(pos))
+        case Equal(FuncOf(Function("maxz", _, _, _), _), _) => Some(uncoverAxiomT("maxz", axiomInstance, _ => MinzMaxzAxiomBaseT("maxz"))(pos))
+        case _ => throw new IllegalStateException("Impossible by applies")
+      }
+    }
+
+    private def axiomInstance(fml: Formula): Formula = fml match {
+      case Equal(FuncOf(Function("minz", None, Real, Real), s), t) =>
+        Equiv(fml, Or(And(LessEqual(Number(0), s), Equal(t, Number(0))), And(Greater(Number(0), s), Equal(t, s))))
+      case Equal(FuncOf(Function("maxz", None, Real, Real), s), t) =>
+        Equiv(fml, Or(And(GreaterEqual(Number(0), s), Equal(t, Number(0))), And(Less(Number(0), s), Equal(t, s))))
+      case _ => False
+    }
+
+  }
+  /** Base tactic for min/max */
+  private def MinzMaxzAxiomBaseT(name: String): PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(Equal(FuncOf(Function(n, _, _, _), f), g), _) if n == name =>
+        val aS = FuncOf(Function("s", None, Unit, Real), Nothing)
+        val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
+        SubstitutionPair(aS, f) :: SubstitutionPair(aT, g) :: Nil
+      case _ => throw new IllegalStateException("Impossible by axiomInstance of MinzMaxzAxiomT")
+    }
+    axiomLookupBaseT(name, subst, _ => NilPT, (f, ax) => ax)
+  }
 }
