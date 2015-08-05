@@ -347,55 +347,82 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   "Example 10" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.key"))
 
-    val plant = ls(composeb) & ls(assignb) &
+    def plant(a: Variable) = ls(composeb) & ls(assignb) &
       ls(DC("c_2>=0".asFormula)) & onBranch(
         (cutShowLbl, debug("Show c>=0") &
-          (la(hide, "abs(y_0-ly)+v_0^2/(2*B) < lw") ~
-           la(hide, "abs(y_0-ly)+x+v_0^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v_0) < lw")) ~ ls(DI)),
+          (la(hide, "abs(y_0-ly)+v_0^2/(2*b) < lw") ~
+           la(hide, "abs(y_0-ly)+v_0^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v_0) < lw")) ~ ls(DI)),
         (cutUseLbl, debug("Use c>=0") &
           ls(DC("dx^2+dy^2=1".asFormula)) & onBranch(
           (cutShowLbl, debug("Show dx^2+dy^2=1") &
-            (la(hide, "abs(y_0-ly)+v_0^2/(2*B) < lw") ~
-             la(hide, "abs(y_0-ly)+x+v_0^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v_0) < lw")) ~ ls(DI)),
+            (la(hide, "abs(y_0-ly)+v_0^2/(2*b) < lw") ~
+             la(hide, "abs(y_0-ly)+v_0^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v_0) < lw")) ~ ls(DI)),
           (cutUseLbl, debug("Use dx^2+dy^2=1") &
-            ls(DC("v_0=old(v_0)+a*c_2".asFormula)) & onBranch(
+            ls(DC(s"v_0=old(v_0)+${a.prettyString}*c_2".asFormula)) & onBranch(
             (cutShowLbl, debug("Show v_0=old(v_0)+a*c_2") &
-              (la(hide, "abs(y_0-ly)+v_0^2/(2*B) < lw") ~
-               la(hide, "abs(y_0-ly)+x+v_0^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v_0) < lw")) ~ (ls(Dconstify) & ls(DI))),
+              (la(hide, "abs(y_0-ly)+v_0^2/(2*b) < lw") ~
+               la(hide, "abs(y_0-ly)+v_0^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v_0) < lw")) ~ (ls(Dconstify) & ls(DI))),
             (cutUseLbl, debug("Use v_0=old(v_0)+a*c_2") &
-              ls(DC("-c_2*(v_0 - a/2*c_2) <= x-old(x) & x-old(x) <= c_2*(v_0 - a/2*c_2)".asFormula)) & onBranch(
-              (cutShowLbl, debug("Show ... <= x-old(x) <= ...") &
-                (la(hide, "abs(y_0-ly)+v_0^2/(2*B) < lw") ~
-                 la(hide, "abs(y_0-ly)+x+v_0^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v_0) < lw")) ~ (ls(Dconstify) & ls(DI))),
-              (cutUseLbl, debug("Use ... <= x-old(x) <= ...") &
-                ls(DC("-c_2*(v_0 - a/2*c_2) <= y_0-old(y_0) & y_0-old(y_0) <= c_2*(v_0 - a/2*c_2)".asFormula)) & onBranch(
+//              ls(DC("-c_2*(v_0 - a/2*c_2) <= x-old(x) & x-old(x) <= c_2*(v_0 - a/2*c_2)".asFormula)) & onBranch(
+//              (cutShowLbl, debug("Show ... <= x-old(x) <= ...") &
+//                (la(hide, "abs(y_0-ly)+v_0^2/(2*b) < lw") ~
+//                 la(hide, "abs(y_0-ly)+v_0^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v_0) < lw")) ~ (ls(Dconstify) & ls(DI))),
+//              (cutUseLbl, debug("Use ... <= x-old(x) <= ...") &
+                ls(DC(s"-c_2*(v_0 - ${a.prettyString}/2*c_2) <= y_0-old(y_0) & y_0-old(y_0) <= c_2*(v_0 - ${a.prettyString}/2*c_2)".asFormula)) & onBranch(
                 (cutShowLbl, debug("Show ... <= y_0-old(y_0) <= ...") &
-                  (la(hide, "abs(y_0-ly)+v_0^2/(2*B) < lw") ~
-                   la(hide, "abs(y_0-ly)+x+v_0^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v_0) < lw")) ~ (ls(Dconstify) & ls(DI))),
-                (cutUseLbl, debug("Use ... <= y_0-old(y_0) <= ...") & ls(DW) & ls(implyR) & (la(andL)*) /* todo finish*/)
-              ))
+                  (la(hide, "abs(y_0-ly)+v_0^2/(2*b) < lw") ~
+                   la(hide, "abs(y_0-ly)+v_0^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v_0) < lw")) ~ (ls(Dconstify) & ls(DI))),
+                (cutUseLbl, debug("Use ... <= y_0-old(y_0) <= ...") & ls(DW) & ls(implyR) & (la(andL)*))
+//              ))
             ))
           ))
         ))
       )
 
+    val accFinish = debug("Acc tactic") & ls(andR) &&(
+      (ls(andR)*) & closeId,
+      debug("Hiding irrelevant formulas") &
+        la(hide, "abs(y_0-ly)+v_0^2/(2*b) < lw") &
+        la(hide, "r!=0") & la(hide, "r_0!=0") & la(hide, "v>=0") & la(hide, "dx^2+dy^2=1") & la(hide, "r_1!=0") &
+        la(hide, "w*r_1=v_0") & la(hide, "dx_0^2+dy_0^2=1") &
+        debug("Cutting in actual time") &
+        cut("abs(y_0-ly)+v_0^2/(2*b)+(A/b+1)*(A/2*c_3^2+c_3*v_0) < lw".asFormula) & onBranch(
+          (cutShowLbl, debug("Show cut") & ls(hide, "abs(y_1-ly)+v_1^2/(2*b) < lw") &
+            abs(SuccPosition(0, HereP.first.first.first)) & QE),
+          (cutUseLbl, debug("Use cut") &
+            la(hide, "ep>0") & la(hide, "abs(y_0-ly)+v_0^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v_0) < lw") &
+            la(hide, "c_3<=ep") & debug("Rewriting abs") &
+            abs(AntePosition(16, HereP.first.first.first)) & abs(SuccPosition(0, HereP.first.first)) &
+            debug("Splitting abs cases") & (la(orL)*) & QE)
+        )
+      )
+
+    val finish = debug("Finish") & ls(andR) &&(
+      (ls(andR)*) & closeId,
+      debug("Hiding irrelevant formulas") & la(hide, "r!=0") & la(hide, "r_0!=0") & la(hide, "v>=0") & la(hide, "dx^2+dy^2=1") &
+        la(hide, "dx_0^2+dy_0^2=1") & debug("Rewriting abs") &
+        abs(AntePosition(6, HereP.first.first)) & abs(SuccPosition(0, HereP.first.first)) &
+        debug("Splitting abs cases") & (la(orL)*) & QE
+      )
+
     val tactic = ls(implyR) & (la(andL)*) &
-      ls(I("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v^2/(2*B) < lw".asFormula)) & onBranch(
+      ls(I("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly) + v^2/(2*b) < lw".asFormula)) & onBranch(
       (indInitLbl, debug("Base case") & (ls(andR)*) & closeId),
-      (indStepLbl, debug("Step") & la(hideL, "abs(y-ly)+v^2/(2*B) < lw") & ls(implyR) & (la(andL)*) & ls(composeb) &
+      (indStepLbl, debug("Step") & la(hideL, "abs(y-ly)+v^2/(2*b) < lw") & ls(implyR) & (la(andL)*) & ls(composeb) &
         ls(choiceb) & ls(andR) &&
         (debug("Case 1") & ls(composeb) & ls(testb) & ls(implyR) & ls(composeb) & ls(randomb) & ls(allR) &
           ls(composeb) & ls(testb) & ls(implyR) & (ls(composeb) & ls(randomb) & ls(allR))*2 & ls(testb) & ls(implyR) &
-          debug("Result 1") & plant,
+          debug("Result 1") & plant(Variable("a")) & accFinish,
          ls(choiceb) & ls(andR) && (
            debug("Case 2") & ls(composeb) & ls(testb) & ls(implyR) & ls(composeb) & ls(assignb) & ls(assignb) &
-             debug("Result 2"),
-           debug("Case 3") & ls(composeb) & ls(randomb) & ls(allR) & ls(testb) & ls(implyR) & debug("Result 3")
+             debug("Result 2") & plant(Variable("a", Some(1))) & finish,
+           debug("Case 3") & ls(composeb) & ls(randomb) & ls(allR) & ls(testb) & ls(implyR) & debug("Result 3") &
+             plant(Variable("a")) & finish
            )
         )
       ),
       (indUseCaseLbl, debug("Use case") &
-        la(hide, "abs(y-ly)+v^2/(2*B) < lw") & la(hide, "r!=0") & la(hide, "y=ly") & la(hide, "lw>0") &
+        la(hide, "abs(y-ly)+v^2/(2*b) < lw") & la(hide, "r!=0") & la(hide, "y=ly") & la(hide, "lw>0") &
         la(hide, "v>=0") & ls(implyR) & (la(andL)*) &
         abs(AntePosition(4).first.first) & QE)
     )
