@@ -652,6 +652,8 @@ object TacticLibrary {
    *********************************************/
   def diffWeakenT = ODETactics.diffWeakenT
 
+  def diffConstifyT = ODETactics.diffIntroduceConstantT
+
   def diffInvariant = ODETactics.diffInvariantT
 
   def diffCutT(h: Formula) = ODETactics.diffCutT(h)

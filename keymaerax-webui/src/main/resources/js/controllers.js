@@ -302,6 +302,13 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
                 "\\Gamma ~\\vdash~\\forall^{\\alpha}(H \\rightarrow \\phi, \\Delta)",
                 "\\Gamma ~\\vdash~ \\left[ x' = \\theta \\& H \\right]\\phi, \\Delta")
             },
+        "dl.diffconstify" :
+            {
+                "name" : "dl.diffconstify",
+                "label" : makeRuleLabel("\\text{Dconstify}",
+                "\\Gamma(\\theta()) ~\\vdash~ \\left[ x' = \\theta() \\& H(\\theta()) \\right]\\phi(\\theta()), \\Delta(\\theta())",
+                "\\Gamma ~\\vdash~ \\left[ x' = \\theta \\& H \\right]\\phi, \\Delta")
+            },
         "dl.equalityRewriting" :
             { "name" : "dl.equalityRewriting",
               "label" : "\\(\\left(= \\text{rewrite}\\right) \\frac{\\Gamma, \\phi(t) ~\\vdash \\psi(t), \\Delta}{\\Gamma, x=t, \\phi(x) ~\\vdash \\psi(x), \\Delta}\\)",
