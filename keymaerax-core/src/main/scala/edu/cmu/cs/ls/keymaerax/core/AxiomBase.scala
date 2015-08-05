@@ -18,7 +18,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable
 import scala.collection.immutable._
 
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.parser.{LoadedAxiom, KeYmaeraParser}
 
 
 /**
@@ -175,7 +175,16 @@ private[core] object AxiomBase {
 
       assert(res.length == res.map(k => k.name).distinct.length, "No duplicate axiom names during parse")
 
-      res.map(k => (k.name -> k.formula)).toMap
+      //@todo move as assertions to assertCheckAxiomFile once we can parse multi-argument functions
+      val f = FuncOf(Function("f", None, Unit, Real), Nothing)
+      val g = FuncOf(Function("g", None, Unit, Real), Nothing)
+      val h = FuncOf(Function("h", None, Unit, Real), Nothing)
+      val min = Equal(FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(f, g)), h)
+      val minAxiom = Equiv(min, Or(And(LessEqual(f, g), Equal(h, f)), And(GreaterEqual(f, g), Equal(h, g))))
+      val max = Equal(FuncOf(Function("max", None, Tuple(Real, Real), Real), Pair(f, g)), h)
+      val maxAxiom = Equiv(max, Or(And(GreaterEqual(f, g), Equal(h, f)), And(LessEqual(f, g), Equal(h, g))))
+
+      (res ++ (LoadedAxiom("min", minAxiom) :: LoadedAxiom("max", maxAxiom) :: Nil)).map(k => (k.name -> k.formula)).toMap
     } catch {
       case e: Exception => e.printStackTrace(); println("Problem while reading axioms " + e); sys.exit(10)
     }

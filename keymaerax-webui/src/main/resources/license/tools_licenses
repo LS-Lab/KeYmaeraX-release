@@ -14,4 +14,5 @@ RequireJS           BSD 3-Clause (http://opensource.org/licenses/BSD-3-Clause) o
 D3.js               BSD 3-Clause
 es5-shim            MIT
 jsTree              MIT
-z3                  MIT
+Z3                  MIT
+Polya               Apache v2.0
