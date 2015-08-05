@@ -558,7 +558,7 @@ object TacticLibrary {
   def boxChoiceT = HybridProgramTacticsImpl.boxChoiceT
   def inductionT(inv: Option[Formula]) = HybridProgramTacticsImpl.wipeContextInductionT(inv)
   def diffInvariantSystemT = ODETactics.diffInvariantT
-  def diffSolutionT = ODETactics.diffIntroduceConstantT ~ ODETactics.diffSolution(None)
+  def diffSolutionT = ODETactics.diffSolution(None)
 
   @deprecated("Use alphaRenamingT(Variable,Variable) instead.")
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =

@@ -4,6 +4,7 @@
 */
 package casestudies
 
+import edu.cmu.cs.ls.keymaerax.core.Variable
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
@@ -313,15 +314,14 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
-  //@todo Stefan (needs extended constify: our DCs talk about xm, S, which are not even mentioned in ODE)
   "Example 9b" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.key"))
 
-    val plant = debug("Plant") & ls(Dconstify) & debug("Before Cut") &
-      ls(DC("xm() <= x_0".asFormula)) & onBranch(
-      (cutShowLbl, debug("Show cut 1") & ls(DI)),
-      (cutUseLbl, debug("Use cut 1") & ls(DC("5/4*(x_0-xr())^2 + (x_0-xr())*v/2 + v^2/4 < ((S() - xm())/2)^2".asFormula)) & onBranch(
-        (cutShowLbl, debug("Show cut 2") & ls(DI)),
+    def plant(xm: Variable, xr: Variable) = debug("Plant") &
+      ls(DC(s"${xm.prettyString} <= x_0".asFormula)) & onBranch(
+      (cutShowLbl, debug("Show cut 1") & ls(Dconstify) & ls(DI)),
+      (cutUseLbl, debug("Use cut 1") & ls(DC(s"5/4*(x_0-${xr.prettyString})^2 + (x_0-${xr.prettyString})*v/2 + v^2/4 < ((S - ${xm.prettyString})/2)^2".asFormula)) & onBranch(
+        (cutShowLbl, debug("Show cut 2") & ls(Dconstify) & ls(DI)),
         (cutUseLbl, debug("Use cut 2") & ls(DW) & ls(implyR) & debug("Result Weaken"))
           )
         )
@@ -332,9 +332,11 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
       (indInitLbl, debug("Base case") & (ls(andR)*) & closeId),
       (indStepLbl, debug("Step") & ls(implyR) & (la(andL)*) & ls(composeb) & ls(choiceb) & ls(andR) &&
         (debug("Case 1") & ls(composeb) & ls(assignb) & ls(composeb) & ls(assignb) & ls(testb) &
-          ls(implyR) & debug("Result 1"),
-         debug("Case 2") & ls(composeb) & ls(assignb) & ls (assignb) & debug("Result 2")
-        ) & plant & (la(andL)*) & (ls(andR)*) & closeId
+          ls(implyR) & debug("Result 1") &
+          plant(Variable("xm"), Variable("xr")) & (la(andL)*) & (ls(andR)*) & QE,
+         debug("Case 2") & ls(composeb) & ls(assignb) & ls (assignb) & debug("Result 2") &
+           plant(Variable("xm", Some(2)), Variable("xr", Some(2))) & (la(andL)*) & (ls(andR)*) & QE
+        )
         ),
       (indUseCaseLbl, debug("Use case") & ls(implyR) & QE)
       )

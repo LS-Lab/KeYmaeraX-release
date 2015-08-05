@@ -436,36 +436,52 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Differential introduce constants" should "replace a with a() in v'=a" in {
+    val s = sucSequent("[{v'=a}]v=v0()+a*t()".asFormula)
+    val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{v'=a()}]v=v0()+a()*t()".asFormula
+  }
+
+  it should "not self-replace a() with a() in v'=a()" in {
+    val s = sucSequent("[{v'=a()}]v=v0()+a()*t()".asFormula)
+    val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{v'=a()}]v=v0()+a()*t()".asFormula
+  }
+
+  it should "not replace a with a() when a is not free in p" in {
     val s = sucSequent("[{v'=a}]v>0".asFormula)
     val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[{v'=a()}]v>0".asFormula
-  }
-
-  it should "not self-replace a() with a() in v'=a()" in {
-    val s = sucSequent("[{v'=a()}]v>0".asFormula)
-    val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[{v'=a()}]v>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{v'=a}]v>0".asFormula
   }
 
   it should "replace every free occurrence of a with a() everywhere in the sequent" in {
     val s = sequent(Seq(),
       Seq("v>=0".asFormula, "a=0".asFormula, "\\forall a a<0".asFormula),
-      Seq("[{v'=a}]v>0".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula))
+      Seq("[{v'=a}]v=v0()+a*t()".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula))
     val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only ("v>=0".asFormula, "a()=0".asFormula, "\\forall a a<0".asFormula)
-    result.openGoals().flatMap(_.sequent.succ) should contain only ("[{v'=a()}]v>0".asFormula, "a()>=0".asFormula, "[a:=2;]v>0".asFormula)
+    result.openGoals().flatMap(_.sequent.succ) should contain only ("[{v'=a()}]v=v0()+a()*t()".asFormula, "a()>=0".asFormula, "[a:=2;]v>0".asFormula)
   }
 
-  it should "work together with ODE solve" in {
+  it should "replace every free occurrence of b (only in p) with b() everywhere in the sequent" in {
+    val s = sequent(Seq(),
+      Seq("v>=0".asFormula, "a=0".asFormula, "b=2".asFormula, "\\forall b b<0".asFormula),
+      Seq("[{v'=a}](v>0 & b<0)".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula))
+    val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only ("v>=0".asFormula, "a=0".asFormula, "b()=2".asFormula, "\\forall b b<0".asFormula)
+    result.openGoals().flatMap(_.sequent.succ) should contain only ("[{v'=a}](v>0& b()<0)".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula)
+  }
+
+  it should "work as part of ODE solve" in {
     val s = sequent(Seq(), Seq("v>0".asFormula, "a=0".asFormula), Seq("[{v'=a}]v>0".asFormula))
-    val constified = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
-    constified.openGoals() should have size 1
-    val odeSolved = helper.runTactic(locateSucc(diffSolution(None)), constified.openGoals().head)
+    val odeSolved = helper.runTactic(locateSucc(diffSolution(None)), new RootNode(s))
     odeSolved.openGoals() should have size 1
     val result = helper.runTactic(TacticLibrary.arithmeticT, odeSolved.openGoals().head)
     result shouldBe 'closed

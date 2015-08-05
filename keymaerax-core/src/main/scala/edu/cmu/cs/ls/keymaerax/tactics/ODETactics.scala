@@ -692,7 +692,9 @@ object ODETactics {
 
           val cuts = flatSolution.foldLeft(diffWeakenT(p))((a, b) =>
             debugT(s"About to cut in $b at $p") & diffCutT(b)(p) & onBranch(
-              (cutShowLbl, debugT(s"Prove Solution using DI at $p") & diffInvariantT(p)),
+              (cutShowLbl,
+                debugT("Substituting with constants") & (diffIntroduceConstantT(p) | NilT) &
+                debugT(s"Prove Solution using DI at $p") & diffInvariantT(p)),
               (cutUseLbl, a)))
 
           Some(initialGhosts && cuts)
@@ -1685,7 +1687,7 @@ object ODETactics {
       case _ => false
     }
 
-    private def primedSymbols(ode: DifferentialProgram) = {
+    private def primedSymbols(ode: DifferentialProgram): Set[Variable] = {
       var primedSymbols = Set[Variable]()
       ExpressionTraversal.traverse(new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
@@ -1697,27 +1699,26 @@ object ODETactics {
       primedSymbols
     }
 
-    private def diffConstants(ode: DifferentialProgram): Set[Variable] =
-      (StaticSemantics.symbols(ode) -- primedSymbols(ode)).filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
+    private def freeVars(fml: Formula): Set[Variable] =
+      StaticSemantics.freeVars(fml).toSet.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
 
-    override def apply(p: Position): Tactic = new ConstructionTactic("IDC introduce differential constants") {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    override def apply(pos: Position): Tactic = new ConstructionTactic("IDC introduce differential constants") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case Box(ode@ODESystem(_, _), _) => introduceConstants(ode, node.sequent)
-        case Diamond(ode@ODESystem(_, _), _) => introduceConstants(ode, node.sequent)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
+        case Box(ode@ODESystem(_, _), p) => introduceConstants(freeVars(p) -- primedSymbols(ode), node.sequent)
+        case Diamond(ode@ODESystem(_, _), p) => introduceConstants(freeVars(p) -- primedSymbols(ode), node.sequent)
         case _ => throw new IllegalArgumentException("Checked by applies to never happen")
       }
 
-      private def introduceConstants(ode: ODESystem, sequent: Sequent) = {
-        val dc = diffConstants(ode)
-        if (dc.isEmpty) {
+      private def introduceConstants(cnsts: Set[Variable], sequent: Sequent) = {
+        if (cnsts.isEmpty) {
           None
         } else {
-          val subst = dc.map(c => SubstitutionPair(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c)).toList
+          val subst = cnsts.map(c => SubstitutionPair(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c)).toList
           val fsWithDCFree = (sequent.ante ++ sequent.succ).
-            filter(f => StaticSemantics.freeVars(f).toSet.intersect(dc.toSet[NamedSymbol]).nonEmpty)
-          val constified = fsWithDCFree.map(f => f -> constify(f, dc)).toMap
+            filter(f => StaticSemantics.freeVars(f).toSet.intersect(cnsts.toSet[NamedSymbol]).nonEmpty)
+          val constified = fsWithDCFree.map(f => f -> constify(f, cnsts)).toMap
           Some(uniformSubstT(subst, constified))
         }
       }
