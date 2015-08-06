@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT,skolemizeT}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT, arithmeticT, ImplyRightT, AndLeftT, hideT, AndRightT,
   ImplyLeftT, AxiomCloseT, OrRightT, OrLeftT, cutT, locate}
+import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.{AbsAxiomT,AbsT,MinMaxAxiomT,MinMaxT,MinzMaxzAxiomT,MinzMaxzT}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.PositionTactic
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{Propositional,NonBranchingPropositionalT,cohideT}
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
@@ -255,7 +256,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val arith = arithmeticT
 
-    val tactic = ls(ImplyRightT) & debugT("A simple goal with abs") & arith
+    val tactic = ls(ImplyRightT) & debugT("A simple goal with abs") &
+      AbsT(AntePosition(0, PosInExpr(0 :: Nil))) & arith
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
