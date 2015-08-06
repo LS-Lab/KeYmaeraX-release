@@ -273,8 +273,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val crushor = (la(OrLeftT)*) & arith
 
-    val tactic = ls(ImplyRightT) & la(AndLeftT) /*& ls(wipeContextInductionT(Some(invariant))) & onBranch(
-      (indInitLbl, debugT("Base case") & arith),
+    val tactic = ls(ImplyRightT) & la(AndLeftT) & ls(wipeContextInductionT(Some(invariant))) & onBranch(
+      (indInitLbl, debugT("Base case") & (la(AndLeftT)*) & (ls(AndRightT)*) /*& arith & debugT("Remaining base case")*/),
       (indUseCaseLbl, debugT("Use case") & ls(ImplyRightT) & (la(AndLeftT)*) & ls(AndRightT) &&(
         la(instantiateT(Variable("t"), Number(0))) &
           la(instantiateT(Variable("ro"), Number(0))) &
@@ -284,7 +284,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           ),
         arith
         )),
-      (indStepLbl, debugT("Step") & ls(ImplyRightT) & ls(boxSeqGenT(invariant)) & onBranch(
+      (indStepLbl, debugT("Step") /*& ls(ImplyRightT) & ls(boxSeqGenT(invariant)) & onBranch(
         (cutShowLbl, debugT("Generalization Holds") &
           ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) && (
           debugT("1.1") & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) & ls(skolemizeT) & AxiomCloseT,
@@ -430,8 +430,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
               ) /* End onBranch of ODE cut */
           ) /* End onBranch of 1st ODE cut */
           )
-      ))
-    )*/
+      )*/)
+    )
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
