@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core.{Sequent, Formula, Term, Variable, Expression}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
 
 /**
@@ -28,7 +29,9 @@ object TactixLibrary {
   /** exhaust propositional logic */
   def prop                    : Tactic = TacticLibrary.propositional
   /** master: master tactic that tries hard to prove whatever it could */
-  def master                  : Tactic = TacticLibrary.master(new NoneGenerate(), true, "Mathematica")
+  def master                  : Tactic = master(new NoneGenerate(), "Mathematica")
+  def master(qeTool: String)  : Tactic = master(new NoneGenerate(), qeTool)
+  def master(gen: Generator[Formula] = new NoneGenerate(), qeTool: String = "Mathematica"): Tactic = TacticLibrary.master(gen, true, qeTool)
 
   /** useAt(fact)(pos) uses the given fact at the given position in the sequent, by unifying and equivalence rewriting. */
   def useAt(fact: Formula): PositionTactic = TacticLibrary.useAt(fact)
@@ -39,11 +42,11 @@ object TactixLibrary {
   // Locating applicable positions for PositionTactics
 
   /** Locate applicable position in succedent that is on the right */
-  def ls(tactic: PositionTactic): Tactic = TacticLibrary.locateSucc(tactic)
+  def ls(tactic: PositionTactic, fml: String = ""): Tactic = SearchTacticsImpl.locateSucc(tactic, if (fml == "") _ => true else _ == fml.asFormula)
   /** Locate applicable position in succedent that is on the right */
   def lR(tactic: PositionTactic): Tactic = ls(tactic)
   /** Locate applicable position in antecedent that is on the left */
-  def la(tactic: PositionTactic): Tactic = TacticLibrary.locateAnte(tactic)
+  def la(tactic: PositionTactic, fml: String = ""): Tactic = SearchTacticsImpl.locateAnte(tactic, if (fml == "") _ => true else _ == fml.asFormula)
   /** Locate applicable position in antecedent that is on the left */
   def lL(tactic: PositionTactic): Tactic = la(tactic)
   /** Locate applicable position in antecedent or succedent */
@@ -141,6 +144,8 @@ object TactixLibrary {
   def Dtimes                  : PositionTactic = SyntacticDerivationInContext.MultiplyDerivativeT
   /** Dcompose: o' derives a function composition by chain rule */
   def Dcompose                : PositionTactic = ???
+  /** Dconstify: substitute non-bound occurences of x with x() */
+  def Dconstify               : PositionTactic = ODETactics.diffIntroduceConstantT
 
   /** Prove the given list of differential invariants in that order by DC+DI */
   //@todo could change type to invariants: Formula* if considered more readable
@@ -204,6 +209,15 @@ object TactixLibrary {
   def debug(s: => Any): Tactic = TacticLibrary.debugT(s)
   def debugAt(s: => Any): PositionTactic = TacticLibrary.debugAtT(s)
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Special functions
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /** Expands abs using abs(x)=y <-> (x>=0&y=x | x<=0&y=-x) */
+  def abs: PositionTactic = ArithmeticTacticsImpl.AbsT
+  /** Expands min using min(x,y)=z <-> (x<=y&z=x | x>=y&z=y) */
+  def min: PositionTactic = ArithmeticTacticsImpl.MinMaxT
+  /** Expands max using max(x,y)=z <-> (x>=y&z=x | x<=y&z=y) */
+  def max: PositionTactic = ArithmeticTacticsImpl.MinMaxT
 
 
   /** Alpha rules are propositional rules that do not split */

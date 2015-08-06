@@ -181,9 +181,8 @@ object AxiomTactic {
           uniformSubstT(subst(fml), Map(fml -> axiomInstance(fml, axiom))) &
             TacticLibrary.debugT("Made it this far") &
             assertT(0, 1) & lastSucc(assertPT(axiomInstance(fml, axiom), "Unexpected uniform substitution result")) &
-            lastSucc(alpha(fml)) & AxiomTactic.axiomT(axiomName) &
-            assertT(1, 1) & lastAnte(assertPT(axiom, "Unexpected axiom form in antecedent")) &
-            lastSucc(assertPT(axiom, "Unexpected axiom form in succedent")) & AxiomCloseT
+            lastSucc(alpha(fml)) &
+            lastSucc(assertPT(axiom, "Unexpected axiom form in succedent")) & AxiomTactic.axiomT(axiomName)
         )
       }
     }

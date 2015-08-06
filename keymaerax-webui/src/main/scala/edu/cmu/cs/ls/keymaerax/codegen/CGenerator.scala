@@ -33,7 +33,7 @@ object CGenerator extends CodeGenerator {
     require(names.distinct.size == names.size, "Expect unique name_index identifiers for code generation")
     val relevantVars = getRelevantVars(expr, vars)
     if(vars.toSet.diff(relevantVars.toSet).nonEmpty)
-      println("[warning] -vars contains unknown variables {" + vars.toSet.diff(relevantVars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "}, which will be ignored")
+      println("[warn] -vars contains unknown variables {" + vars.toSet.diff(relevantVars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "}, which will be ignored")
     if(relevantVars.toSet.diff(vars.toSet).nonEmpty)
       println("[info] post variables {" + relevantVars.toSet.diff(vars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "} will be added as parameters")
     val calledFuncs = getCalledFuncs(expr, relevantVars)
@@ -76,16 +76,17 @@ object CGenerator extends CodeGenerator {
     val allSymbolNames = StaticSemantics.symbols(e).toList
     var relevantVars = List[Variable]()
     for(i <- vars.indices) {
+      assert(!nameIdentifier(vars.apply(i)).equals("abs"), "[Error] Cannot use abs as variable name, abs is predefined function for absolute value.")
       if(allSymbolNames.contains(vars.apply(i)))
         // variable occurs in the expression, add it to the return list
         relevantVars = vars.apply(i) :: relevantVars
       if(allSymbolNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real)))
         // variable occur as nullary function, add it to the return list as a variable
         relevantVars = Variable(nameIdentifier(vars.apply(i))) :: relevantVars
-      if(allSymbolNames.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
+      if(allSymbolNames.contains(Variable(getPostNameIdentifier(vars.apply(i)))) && !vars.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
         // post variable occurs in the expression as variable, add it to the return list as a variable
         relevantVars = Variable(getPostNameIdentifier(vars.apply(i))) :: relevantVars
-      if(allSymbolNames.contains(Function(getPostNameIdentifier(vars.apply(i)), None, Unit, Real)))
+      if(allSymbolNames.contains(Function(getPostNameIdentifier(vars.apply(i)), None, Unit, Real)) && !vars.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
         // post variable occurs in the expression as nullary function, add it to the return list as a variable
         relevantVars = Variable(getPostNameIdentifier(vars.apply(i))) :: relevantVars
     }
@@ -109,7 +110,7 @@ object CGenerator extends CodeGenerator {
   private def getPostNameIdentifier(v: Variable): String = if (v.index.isEmpty) v.name + "post" else v.name + "post_" + v.index.get
 
   /**
-   * Get a set of names that need to be generated as function calls,
+   * Get a set of names (excluding predefined functions such as: abs) that need to be generated as function calls,
    * by subtracting all relevant names as variables (for the real input variables)
    * and as functions (for post variables and input variables used as nullary functions)
    *
@@ -118,7 +119,9 @@ object CGenerator extends CodeGenerator {
    * @return      a set of names that does not occur in relevant variables, thus need to be generated as function calls
    */
   private def getCalledFuncs(expr: Expression, vars: List[Variable]): Set[NamedSymbol] =
-    StaticSemantics.symbols(expr).toSet.diff(vars.toSet).diff(vars.map(v => Function(nameIdentifier(v), None, Unit, Real)).toSet)
+    StaticSemantics.symbols(expr).toSet.filterNot((absFun: NamedSymbol) => {absFun == Function("abs", None, Real, Real)})
+      .diff(vars.toSet).diff(vars.map(v => Function(nameIdentifier(v), None, Unit, Real)).toSet)
+
 
   /** Declaration of function calls using the list of function call names */
   private def FuncCallDeclaration(calledFuncs: Set[NamedSymbol], cDataType: String): String = {
@@ -126,7 +129,7 @@ object CGenerator extends CodeGenerator {
       val FuncCallDeclaration = calledFuncs.map(
         s => s match {
           case x: Variable => cDataType + " " + nameIdentifier(x) + "()"
-          case f: Function if f.domain==Unit && f.sort==Real => cDataType + " " + nameIdentifier(f) + "()"
+          case f: Function if !nameIdentifier(f).equals("abs") && f.domain==Unit && f.sort==Real => cDataType + " " + nameIdentifier(f) + "()"
         }
       ).mkString("; \n")
       "/* function declaration */\n" + FuncCallDeclaration + ";\n\n"
@@ -171,7 +174,12 @@ object CGenerator extends CodeGenerator {
       case FuncOf(fn, Nothing) =>
         if(!calledFuncs.contains(fn)) nameIdentifier(fn)
         else nameIdentifier(fn)+"()"
-      case FuncOf(fn, child) => nameIdentifier(fn) + "(" + compileTerm(child, calledFuncs) + ")"
+      case FuncOf(fn, child) =>
+        nameIdentifier(fn) match {
+          case "abs" => "fabsl(" + compileTerm(child, calledFuncs) + ")"
+          case _ => nameIdentifier(fn) + "(" + compileTerm(child, calledFuncs) + ")"
+        }
+
       // otherwise exception
       case _ => throw new CodeGenerationException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
     }

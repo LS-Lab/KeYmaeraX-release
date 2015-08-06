@@ -78,7 +78,6 @@ class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(master(new Generate("v^2<=2*b*(m-x)".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
-  //@todo Ran
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/lics/lics-4a.key"))
     helper.runTactic(master(new Generate("v^2<=2*b*(m-x)".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed

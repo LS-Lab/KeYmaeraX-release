@@ -385,7 +385,7 @@ object FOQuantifierTacticsImpl {
 
                 val (renAxiom, alpha) =
                   if (quantified.name != aX.name || quantified.index != aX.index)
-                    (repl(a, aX), alphaRenamingT(aX.name, aX.index, quantified.name, quantified.index)(AntePosition(0, HereP.first)))
+                    (repl(a, aX), alphaRenamingT(quantified, aX)(SuccPosition(0, HereP.first)))
                   else (a, NilT)
 
                 val axInstance = axiomInstance match {
@@ -394,7 +394,7 @@ object FOQuantifierTacticsImpl {
 
                 val replMap = Map[Formula, Formula](axInstance -> renAxiom)
                 val branch2Tactic = cohideT(SuccPosition(node.sequent.succ.length)) ~
-                  (uniformSubstT(subst, replMap) & (axiomT(axiomName) & alpha & AxiomCloseT))
+                  (uniformSubstT(subst, replMap) & alpha & axiomT(axiomName))
                 Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
               case None => println("Giving up " + this.name); None
             }

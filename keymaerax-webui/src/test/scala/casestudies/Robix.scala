@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Real, Nothing, Function, FuncOf, Unit, Vari
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.AbsT
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.eqLeft
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.skolemizeT
@@ -313,7 +314,34 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
     proofFileContent shouldBe expectedProofFileContent
   }
 
-  // long-running test (~1.5h)
+  it should "be provable with abs when tactic is loaded from a file" in {
+    val tacticSource = scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/PassiveSafetyAbsTacticGenerator.scala").mkString
+
+    val cm = universe.runtimeMirror(getClass.getClassLoader)
+    val tb = cm.mkToolBox()
+    val tacticGenerator = tb.eval(tb.parse(tacticSource)).asInstanceOf[() => Tactic]
+
+    val tactic = tacticGenerator()
+
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.key"))
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result shouldBe 'closed
+  }
+
+  it should "be provable with renamed variables when tactic is loaded from a file" in {
+    val tacticSource = scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/PassiveSafetyTacticGenerator_renamed.scala").mkString
+
+    val cm = universe.runtimeMirror(getClass.getClassLoader)
+    val tb = cm.mkToolBox()
+    val tacticGenerator = tb.eval(tb.parse(tacticSource)).asInstanceOf[() => Tactic]
+
+    val tactic = tacticGenerator()
+
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passivesafety_renamed.key"))
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result shouldBe 'closed
+  }
+
   "Passive orientation safety" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafety.key"))
 

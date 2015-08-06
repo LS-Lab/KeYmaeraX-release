@@ -748,6 +748,13 @@ object Tactics {
       override def apply(p: Position): Tactic = PositionTactic.this.apply(p) & pt.apply(p)
     }
 
+    def ~(pt: PositionTactic) = new PositionTactic("WeakSeq(" + this.name + ", " + pt.name) {
+      override def applies(s: Sequent, p: Position): Boolean = PositionTactic.this.applies(s, p)
+
+      //@TODO Unfortunately, this crucially relies on stable positions
+      override def apply(p: Position): Tactic = PositionTactic.this.apply(p) ~ pt.apply(p)
+    }
+
     def formulaAtPosition(sequent : Sequent, position : Position) : Option[Formula] = {
       var formula : Option[Formula] = None
       val fn = new ExpressionTraversalFunction {

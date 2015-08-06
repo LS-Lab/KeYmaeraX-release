@@ -231,7 +231,7 @@ object TacticLibrary {
    *   case f of {
    *     s=unify(fact.left,_) => CutRight(C(f)<->C(s(fact.right)))(p) & <(
    *       "use cut": skip
-   *       "show cut": EquivifyRight(p) & CE(C(_))(p) & master
+   *       "show cut": EquivifyRight(p.seq) & CE(C(_))(p.seq) & master
    *     )
    *   }
    * }}}
@@ -365,9 +365,12 @@ object TacticLibrary {
    * Use Mathematica
    * @todo allow allRight and existsLeft rules as well.
    */
-  def arithmeticT = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
-    PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & lastSucc(FOQuantifierTacticsImpl.universalClosureT) & debugT("Handing to Mathematica/Z3") &
-    (ArithmeticTacticsImpl.quantifierEliminationT("Mathematica") | ArithmeticTacticsImpl.quantifierEliminationT("Z3"))
+  def arithmeticT =
+    debugT("Apply non-branching propositional") & repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) &
+    debugT("Search and apply equalities") & repeatT(locateAnte(eqThenHideIfChanged)) &
+    debugT("Consolidate sequent") & PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) &
+    debugT("Compute universal closure") & lastSucc(FOQuantifierTacticsImpl.universalClosureT) &
+    debugT("Handing to Mathematica/Z3") & (ArithmeticTacticsImpl.quantifierEliminationT("Mathematica") | ArithmeticTacticsImpl.quantifierEliminationT("Z3"))
 
   /**
    * Alternative arithmeticT
@@ -648,6 +651,8 @@ object TacticLibrary {
    * Differential Tactics
    *********************************************/
   def diffWeakenT = ODETactics.diffWeakenT
+
+  def diffConstifyT = ODETactics.diffIntroduceConstantT
 
   def diffInvariant = ODETactics.diffInvariantT
 
