@@ -90,3 +90,6 @@ lemmadb/
 deploy.sh
 export/
 KeYmaeraX.jar
+
+.DS_Store
+

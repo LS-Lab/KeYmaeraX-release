@@ -479,7 +479,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante shouldBe empty
-    result.openGoals().head.sequent.succ should contain only "(x>=0 & y=x) | (x<=0 & y=-x)".asFormula
+    result.openGoals().head.sequent.succ should contain only "(x>=0 & y=x) | (x<0 & y=-x)".asFormula
   }
 
   it should "expand abs(x) = y in antecedent" in {
@@ -488,7 +488,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante should contain only "(x>=0 & y=x) | (x<=0 & y=-x)".asFormula
+    result.openGoals().head.sequent.ante should contain only "(x>=0 & y=x) | (x<0 & y=-x)".asFormula
     result.openGoals().head.sequent.succ shouldBe empty
   }
 
@@ -498,7 +498,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante should contain only "x>=0&abs_0=x | x<=0&abs_0=-x".asFormula
+    result.openGoals().head.sequent.ante should contain only "x>=0&abs_0=x | x<0&abs_0=-x".asFormula
     result.openGoals().head.sequent.succ should contain only "abs_0>=5".asFormula
   }
 
@@ -508,7 +508,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante should contain only ("x>=0&abs_0=x | x<=0&abs_0=-x".asFormula, "abs_0>=5".asFormula)
+    result.openGoals().head.sequent.ante should contain only ("x>=0&abs_0=x | x<0&abs_0=-x".asFormula, "abs_0>=5".asFormula)
     result.openGoals().head.sequent.succ shouldBe empty
   }
 
@@ -581,4 +581,64 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     result.openGoals().head.sequent.succ shouldBe empty
   }
 
+  /* Tests for Minz and Maxz */
+  "Minz axiom tactic" should "expand minz(x) = z in succedent" in {
+    val s = sucSequent("minz(x) = z".asFormula)
+    val tactic = ArithmeticTacticsImpl.MinzMaxzAxiomT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "(0<=x & z=0) | (0>x & z=x)".asFormula
+  }
+
+  "Minz tactic" should "expand minz(x) in succedent" in {
+    val s = sucSequent("minz(x) >= 5".asFormula)
+    val tactic = ArithmeticTacticsImpl.MinzMaxzT(SuccPosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "0<=x&minz_0=0 | 0>x&minz_0=x".asFormula
+    result.openGoals().head.sequent.succ should contain only "minz_0>=5".asFormula
+  }
+
+  it should "expand minz(x) in antecedent" in {
+    val s = sequent(Nil, immutable.IndexedSeq("minz(x) >= 5".asFormula), immutable.IndexedSeq())
+    val tactic = ArithmeticTacticsImpl.MinzMaxzT(AntePosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("0<=x&minz_0=0 | 0>x&minz_0=x".asFormula, "minz_0>=5".asFormula)
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
+  "Maxz axiom tactic" should "expand maxz(x) = z in succedent" in {
+    val s = sucSequent("maxz(x) = z".asFormula)
+    val tactic = ArithmeticTacticsImpl.MinzMaxzAxiomT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "0>=x&z=0 | 0<x&z=x".asFormula
+  }
+
+  "Maxz tactic" should "expand maxz(x) in succedent" in {
+    val s = sucSequent("maxz(x) >= 5".asFormula)
+    val tactic = ArithmeticTacticsImpl.MinzMaxzT(SuccPosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "0>=x&maxz_0=0 | 0<x&maxz_0=x".asFormula
+    result.openGoals().head.sequent.succ should contain only "maxz_0>=5".asFormula
+  }
+
+  it should "expand maxz(x) in antecedent" in {
+    val s = sequent(Nil, immutable.IndexedSeq("maxz(x) >= 5".asFormula), immutable.IndexedSeq())
+    val tactic = ArithmeticTacticsImpl.MinzMaxzT(AntePosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("0>=x&maxz_0=0 | 0<x&maxz_0=x".asFormula, "maxz_0>=5".asFormula)
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
 }
