@@ -42,6 +42,7 @@ object ExposedTacticsLibrary {
   def NDetAssign              : Tactic = TacticLibrary.locate(TacticLibrary.boxNDetAssign)
   def ForallRight             : Tactic = TacticLibrary.locateSucc(TacticLibrary.skolemizeT)
   def DiffWeaken              : Tactic = TacticLibrary.locateSucc(TacticLibrary.diffWeakenT)
+  def DiffConstify            : Tactic = TacticLibrary.locateSucc(TacticLibrary.diffConstifyT)
   def DiffInvariant           : Tactic = TacticLibrary.locate(TacticLibrary.diffInvariant)
 
   //Tactics with input
