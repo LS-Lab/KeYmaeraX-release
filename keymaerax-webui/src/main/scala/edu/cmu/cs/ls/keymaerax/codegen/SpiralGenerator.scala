@@ -37,7 +37,8 @@ class Hcol {
 
 object SpiralGenerator extends CodeGenerator {
   def apply(kExpr: Expression): String = apply(kExpr, Nil, "")._1
-  def apply(kExpr: Expression, fileName: String) : String = apply(kExpr, Nil, fileName)._1
+  def apply(kExpr: Expression, fileName: String): String = apply(kExpr, Nil, fileName)._1
+  def apply(kExpr: Expression, vars: List[Variable]): (String, String) = apply(kExpr, vars, "")
   def apply(kExpr: Expression, vars: List[Variable], fileName: String): (String, String) = generateSpiralMonitor(kExpr, vars, fileName, false)
   def apply(kExpr: Expression, vars: List[Variable], fileName: String, dnfMode: Boolean): (String, String) = generateSpiralMonitor(kExpr, vars, fileName, dnfMode)
 
