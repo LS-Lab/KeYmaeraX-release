@@ -255,7 +255,7 @@ object TacticLibrary {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val (ctx:Context,expr) = new FormulaConverter(node.sequent(p.topLevel)).extractContext(p.inExpr)
+        val (ctx:Context[Formula],expr) = new FormulaConverter(node.sequent(p.topLevel)).extractContext(p.inExpr)
         val fml = expr.asInstanceOf[Formula]
         val matched = Unification(fml, left)
         if (matched.isDefined) {
