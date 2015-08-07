@@ -484,6 +484,14 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(arith, s5).openGoals() should have size 1
   }
 
+  "min and max" should "be parseable" in {
+    "min(0, x) <= max(x, 0)".asFormula shouldBe
+      LessEqual(
+        FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(Number(0), Variable("x"))),
+        FuncOf(Function("max", None, Tuple(Real, Real), Real), Pair(Variable("x"), Number(0)))
+      )
+  }
+
 /*
 "Problem" should "be provable" in {
   val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay.key"))
