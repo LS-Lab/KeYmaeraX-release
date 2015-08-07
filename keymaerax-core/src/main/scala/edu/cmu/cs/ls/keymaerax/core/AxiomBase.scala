@@ -304,8 +304,6 @@ Variables.
   T abs(T).
   T f().
   T g().
-  T maxz(T).
-  T minz(T).
   /*T max(T, T).
   T min(T, T).*/
 End.
@@ -760,16 +758,6 @@ End.
 
 Axiom "abs".
   (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))
-End.
-
-/* @todo using maxz and minz while waiting for the parser */
-/* maxz(a) = max(0, a) and minz(a) = min(0, a) */
-Axiom "maxz".
-  (maxz(s()) = t()) <-> ((0>=s() & t()=0) | (0<s() & t()=s()))
-End.
-
-Axiom "minz".
-  (minz(s()) = t()) <-> ((0<=s() & t()=0) | (0>s() & t()=s()))
 End.
 
 /* @todo Multi-argument don't parse in KeYmaeraParser:1203
