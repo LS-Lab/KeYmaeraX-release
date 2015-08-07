@@ -453,14 +453,35 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
-  "reflexivity" should "be provable" in {
+  "reflexivity" should "be provable 0" in {
     val arith = arithmeticT
-    val s = sequent(Nil, Nil, "a=a".asFormula :: Nil)
-    //val s = sequent(Nil, Nil, "maxz(w*(dhf-dhd))=maxz(w*(dhf-dhd))".asFormula :: Nil)
-    val tactic = debugT("reflexivity") & AxiomCloseT
-    //val result = helper.runTactic(tactic, new RootNode(s))
-    //result.openGoals() should have size 0
-    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+    val s0 = new RootNode(sequent(Nil, Nil, "a=a".asFormula :: Nil))
+    helper.runTactic(arith, s0) shouldBe 'closed
+  }
+  it should "NOT be provable 1" in {
+    val arith = arithmeticT
+    val s1 = new RootNode(sequent(Nil, Nil, "f(x)=f(x)".asFormula :: Nil))
+    helper.runTactic(arith, s1).openGoals() should have size 1
+  }
+  it should "be provable 2" in {
+    val arith = arithmeticT
+    val s2 = new RootNode(sequent(Nil, "f(x)=y".asFormula :: "1+y=0".asFormula :: Nil, "1+f(x)=0".asFormula :: Nil))
+    helper.runTactic(arith, s2) shouldBe 'closed
+  }
+  it should "be provable 3" in {
+    val arith = arithmeticT
+    val s3 = new RootNode(sequent(Nil, "f(x)=y".asFormula :: Nil, "f(x)=f(x)".asFormula :: Nil))
+    helper.runTactic(arith, s3) shouldBe 'closed
+  }
+  it should "NOT be provable 4" in {
+    val arith = arithmeticT
+    val s4 = new RootNode(sequent(Nil, Nil, "f(x)=y".asFormula  :: "f(x)=f(x)".asFormula :: Nil))
+    helper.runTactic(arith, s4).openGoals() should have size 1
+  }
+  it should "NOT be provable 5" in {
+    val arith = arithmeticT
+    val s5 = new RootNode(sequent(Nil, "!(f(x)=f(x))".asFormula :: "!(f(x)=y)".asFormula :: Nil, Nil))
+    helper.runTactic(arith, s5).openGoals() should have size 1
   }
 
 /*
