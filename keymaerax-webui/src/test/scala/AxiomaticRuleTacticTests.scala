@@ -273,4 +273,25 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     tactic.applicable(new RootNode(s)) shouldBe false
     tactic.applicable(new RootNode(t)) shouldBe false
   }
+
+  "CT term congruence" should "work" in {
+    val s = sequent(Nil, Nil, "abs(a) = abs(a)".asFormula :: Nil)
+    val tactic = AxiomaticRuleTactics.termCongruenceT(PosInExpr(0::Nil))
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "a=a".asFormula
+  }
+
+  it should "throw an exception when the position does not point to a term context" in {
+    val s = sequent(Nil, Nil, "abs(a) = abs(a)".asFormula :: Nil)
+    val tactic = AxiomaticRuleTactics.termCongruenceT(PosInExpr(1::Nil))
+    an [IllegalArgumentException] should be thrownBy helper.runTactic(tactic, new RootNode(s))
+  }
+
+  it should "throw an exception when the position does not point to a term" in {
+    val s = sequent(Nil, Nil, "abs(a) = abs(a)".asFormula :: Nil)
+    val tactic = AxiomaticRuleTactics.termCongruenceT(PosInExpr(1::0::1::Nil))
+    an [IllegalArgumentException] should be thrownBy helper.runTactic(tactic, new RootNode(s))
+  }
 }
