@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.AlphaConversionHelper.replace
+import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction, TraverseToPosition}
 import edu.cmu.cs.ls.keymaerax.tactics.SubstitutionHelper.replaceFree
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ApplyRule, ConstructionTactic, Tactic, NilT}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.globalAlphaRenamingT
@@ -98,6 +99,55 @@ object AxiomaticRuleTactics {
         val cX = PredOf(Function("ctx_", None, Real, Bool), DotTerm)
         val s = USubst(SubstitutionPair(fX, f) :: SubstitutionPair(gX, g) :: SubstitutionPair(cX, ctxP.ctx) :: Nil)
         Some(new ApplyRule(AxiomaticRule("CQ equation congruence", s)) {
+          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+        })
+    }
+  }
+
+  /**
+   * Creates a new tactic for CT term congruence.
+   * @example{{{
+   *           f_(?) = g_(?)
+   *    ---------------------------
+   *    ctxT_(f_(?)) = ctxT_(g_(?))
+   * }}}
+   * @return The newly created tactic.
+   */
+  def termCongruenceT(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CT term congruence") { outer =>
+    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
+      (node.sequent.succ.head match {
+        case Equal(f, g) => extractContext(f)(inEqPos)._1 == extractContext(g)(inEqPos)._1
+        case _ => false
+      })
+
+    private def extractContext(term: Term)(pos: PosInExpr): (Context[Term], Expression) = {
+      var eInCtx: Option[Expression] = None
+      ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+          if (p == pos) {
+            eInCtx = Some(e)
+            Right(DotTerm)
+          } else {
+            Left(None)
+          }
+      }), term) match {
+        case Some(t) if  eInCtx.isDefined => (new Context(t), eInCtx.get)
+        case Some(t) if !eInCtx.isDefined => throw new IllegalArgumentException(s"Position $pos does not refer to a context inside $term")
+        case None => throw new IllegalArgumentException(s"Position $pos does not refer to a term inside $term")
+      }
+    }
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ.head match {
+      case Equal(lhs, rhs) =>
+        val (ctxF, f) = extractContext(lhs)(inEqPos)
+        val (ctxG, g) = extractContext(rhs)(inEqPos)
+        assert(ctxF == ctxG)
+
+        val fX = FuncOf(Function("f_", None, Real, Real), Anything)
+        val gX = FuncOf(Function("g_", None, Real, Real), Anything)
+        val cX = FuncOf(Function("ctx_", None, Real, Real), DotTerm)
+        val s = USubst(SubstitutionPair(fX, f) :: SubstitutionPair(gX, g) :: SubstitutionPair(cX, ctxF.ctx) :: Nil)
+        Some(new ApplyRule(AxiomaticRule("CT term congruence", s)) {
           override def applicable(node: ProofNode): Boolean = outer.applicable(node)
         })
     }

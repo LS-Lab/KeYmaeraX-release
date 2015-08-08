@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature
  * Created by smitsch on 3/29/15.
  * @author Stefan Mitsch
  */
-sealed case class Context(ctx: Formula) {
+sealed case class Context[T <: Expression](ctx: T) {
   // either a term or a formula context, not both
   assert(!(signature(ctx).contains(DotFormula) && signature(ctx).contains(DotTerm)))
 

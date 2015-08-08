@@ -163,7 +163,7 @@ class FormulaConverter(val fml: Formula) {
    * @param pos The position pointing to the expression.
    * @return A tuple (p(.), e) of context p(.) and sub-expression e, where p(e) is equivalent to fml.
    */
-  def extractContext(pos: PosInExpr): (Context, Expression) = {
+  def extractContext(pos: PosInExpr): (Context[Formula], Expression) = {
     var eInCtx: Option[Expression] = None
     ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
