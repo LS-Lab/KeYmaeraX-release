@@ -4,7 +4,7 @@
  */
 /**
  * Uniform Renaming for KeYmaera X
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @note Code Review: 2015-05-01
  */
@@ -22,7 +22,7 @@ import scala.collection.immutable
  * @param repl The target variable to replace what with.
  * @requires only used when repl does not occur in the input.
  * @author smitsch
- * @author aplatzer
+ * @author Andre Platzer
  */
 final case class URename(what: Variable, repl: Variable) extends (Expression => Expression) {
   require(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")

@@ -34,7 +34,7 @@ import scala.language.postfixOps
  *
  * Created by Jan-David Quesel on 4/28/14.
  * @author Jan-David Quesel
- * @author aplatzer
+ * @author Andre Platzer
  * @author Stefan Mitsch
  */
 object TacticLibrary {
@@ -235,7 +235,7 @@ object TacticLibrary {
    *     )
    *   }
    * }}}
-   * @author aplatzer
+   * @author Andre Platzer
    * @todo generalize to automatically find a proof of fact by axiom lookup or master or so
    */
   def useAt(fact: Formula): PositionTactic = new PositionTactic("useAt") {

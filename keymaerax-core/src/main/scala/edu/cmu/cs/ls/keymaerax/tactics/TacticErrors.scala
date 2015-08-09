@@ -4,7 +4,7 @@
 */
 /**
  * KeYmaera Exception and Error Hierarchy
- * @author aplatzer
+ * @author Andre Platzer
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 

@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * @author jdq
- * @author aplatzer
+ * @author Andre Platzer
  */
 
 /**

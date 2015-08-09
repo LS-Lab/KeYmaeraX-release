@@ -6,7 +6,7 @@
  * Axioms of KeYmaera X and axiomatic proof rules of KeYmaera X.
  * resulting from differential dynamic logic
  * @note Soundness-critical: Only adopt sound axioms and sound axiomatic rules.
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @note Code Review: 2015-05-01
@@ -26,7 +26,7 @@ import edu.cmu.cs.ls.keymaerax.parser.{LoadedAxiom, KeYmaeraParser}
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
- * @author aplatzer
+ * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  */
 private[core] object AxiomBase {
@@ -35,7 +35,7 @@ private[core] object AxiomBase {
    * @note Soundness-critical: Only return locally sound proof rules.
    * @return immutable list of locally sound axiomatic proof rules (premise, conclusion)
    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
-   * @author aplatzer
+   * @author Andre Platzer
    */
   private[core] def loadAxiomaticRules() : immutable.Map[String, (Sequent, Sequent)] = {
     val x = Variable("x_", None, Real)

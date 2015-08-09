@@ -8,8 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 /**
  * Unification algorithm for tactics.
- * Created by aplatzer on 7/26/15.
- * @author aplatzer
+ * @author Andre Platzer
  */
 object Unification extends ((Expression,Expression) => Option[USubst]) {
   private val id: List[SubstitutionPair] = Nil

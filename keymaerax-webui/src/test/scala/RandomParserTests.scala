@@ -13,7 +13,7 @@ import test.RandomFormula
 
 /**
  * Tests the parser on pretty prints of randomly generated formulas
- * @author aplatzer
+ * @author Andre Platzer
  */
 class RandomParserTests extends FlatSpec with Matchers {
   val randomTrials = 40000

@@ -5,7 +5,7 @@
 /**
  * Obsolete Proof Tree data structures
  * @author Jan-David Quesel
- * @author aplatzer
+ * @author Andre Platzer
  * @author nfulton
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */

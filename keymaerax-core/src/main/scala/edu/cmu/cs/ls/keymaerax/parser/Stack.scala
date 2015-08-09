@@ -11,7 +11,7 @@ import scala.annotation.tailrec
  * Stack with top on the right.
  * For example the stack Bottom :+ a3 :+ a2 +: a1 has element a1 on the top, then a2 as the top of the tail.
  * @author nfulton
- * @author aplatzer
+ * @author Andre Platzer
  */
 sealed trait Stack[+A] {
   /** Top element of this stack or error if empty. */

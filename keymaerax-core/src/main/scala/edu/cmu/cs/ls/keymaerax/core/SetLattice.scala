@@ -20,7 +20,7 @@ import scala.collection.GenTraversableOnce
  * Lattice of sets, i.e. the lattice of sets that also includes top and top-like elements.
  * @tparam A Type of elements in the set
  * @author smitsch
- * @author aplatzer
+ * @author Andre Platzer
  */
 sealed trait SetLattice[A] {
   def isInfinite: Boolean
@@ -129,7 +129,7 @@ object SetLattice {
  * @param set the concrete members of this finite element of a lattice
  * @tparam A Type of elements in the set
  * @note Implementation forwards to set.
- * @author aplatzer
+ * @author Andre Platzer
  */
 private case class FiniteLattice[A](set: immutable.Set[A])
   extends SetLattice[A] {

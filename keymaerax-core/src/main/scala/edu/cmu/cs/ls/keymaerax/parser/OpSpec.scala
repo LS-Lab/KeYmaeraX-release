@@ -105,7 +105,7 @@ object BinaryOpSpec {
 
 /**
  * Differential Dynamic Logic's concrete syntax: operator notation specifications.
- * @author aplatzer
+ * @author Andre Platzer
  */
 object OpSpec {
   /** Whether to terminate atomic statements with a semicolon instead of separating sequential compositions by a semicolon. */

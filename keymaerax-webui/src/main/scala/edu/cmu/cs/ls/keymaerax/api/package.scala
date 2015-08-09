@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax
 
 /**
  * Scala API for proof and tactics management etc.
- * @author aplatzer
+ * @author Andre Platzer
  * @todo Stub. Describe for real.
  */
 package object api {

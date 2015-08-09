@@ -13,7 +13,7 @@ import test.RandomFormula
 
 /**
  * Tests the parser on pairs of strings that are expected to parse the same.
- * @author aplatzer
+ * @author Andre Platzer
  */
 class PairParserTests extends FlatSpec with Matchers {
   val pp = KeYmaeraXPrettyPrinter

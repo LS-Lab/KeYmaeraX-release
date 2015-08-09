@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 /**
  * Tactic tools for formula manipulation and extraction.
- * @author aplatzer
+ * @author Andre Platzer
  */
 object FormulaTools {
   // formula tools

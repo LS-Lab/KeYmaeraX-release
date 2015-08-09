@@ -24,7 +24,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  *    import edu.cmu.cs.ls.keymaerax.ProvabilityTestHelper.scala
  * Created by nfulton on 12/6/14.
  * @author nfulton
- * @author aplatzer
+ * @author Andre Platzer
  * @author Ran Ji
  */
 class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {

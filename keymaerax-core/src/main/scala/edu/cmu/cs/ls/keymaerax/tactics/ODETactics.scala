@@ -32,7 +32,7 @@ import scala.language.postfixOps
 /**
  * Created by smitsch on 1/9/15.
  * @author Stefan Mitsch
- * @author aplatzer
+ * @author Andre Platzer
  */
 object ODETactics {
 
@@ -851,7 +851,7 @@ object ODETactics {
   /**
    * Prove the given list of differential invariants in that order by DC+DI.
    * The operational effect of {x'=f(x)&q(x)}@invariant(f1,f2,f3) is diffInvariant(List(f1,f2,f3))
-   * @author aplatzer
+   * @author Andre Platzer
    */
   def diffInvariant(invariants: List[Formula]): PositionTactic = new PositionTactic("diffInvariant") {
     /** Find the first invariant among given invariants that is not a conjunct of the evolution domain constraint already */
@@ -888,7 +888,7 @@ object ODETactics {
   /**
    * Applies a differential cut with the given cut formula. If the cut formula contains old(x), the tactic introduces
    * ghosts first to keep track of the initial value of x, and replaces occurrences of old(x) with that ghost.
-   * @author aplatzer
+   * @author Andre Platzer
    * @author smitsch
    */
   def diffCutT(diffcut: Formula): PositionTactic = new PositionTactic("DC differential cut") {
@@ -956,7 +956,7 @@ object ODETactics {
 
   /**
    * Adds an instance of the differential cut axiom for the given cut formula.
-   * @author aplatzer
+   * @author Andre Platzer
    * @author Stefan Mitsch
    */
   private def diffCutAxiomT(diffcut: Formula): PositionTactic = {

@@ -15,7 +15,7 @@ object USubstTest extends Tag("USubstTest")
 object OptimisticTest extends Tag("OptimisticTest")
 
 /**
- * @author aplatzer
+ * @author Andre Platzer
  * @author smitsch
  */
 

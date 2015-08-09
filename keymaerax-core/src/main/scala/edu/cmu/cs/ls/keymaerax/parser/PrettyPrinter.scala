@@ -4,7 +4,7 @@
 */
 /**
  * Differential Dynamic Logic pretty-printer for concrete KeYmaera X notation.
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 package edu.cmu.cs.ls.keymaerax.parser
@@ -19,7 +19,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  * {{{
  *     PrettyPrinter: Expression => String
  * }}}
- * @author aplatzer
+ * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.core.PrettyPrinter]]
  */
 trait PrettyPrinter extends (Expression => String) {

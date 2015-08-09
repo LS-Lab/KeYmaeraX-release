@@ -6,7 +6,7 @@
  * Sequent prover, proof rules, and axioms of KeYmaera X.
  * @note Soundness-critical: Only provide sound proof rule application mechanisms.
  * @author Jan-David Quesel
- * @author aplatzer
+ * @author Andre Platzer
  * @author nfulton
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
@@ -88,7 +88,7 @@ object SeqPos {
  *
  * The semantics of sequent ante |- succ is the conjunction of the formulas in ante implying
  * the disjunction of the formulas in succ.
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
  */
 final case class Sequent(pref: immutable.Seq[NamedSymbol],
@@ -244,7 +244,7 @@ object Provable {
  * @note Only private constructor calls for soundness
  * @note For soundness: No reflection to bybass constructor call privacy,
  *       nor reflection to bypass immutable val data structures.
- * @author aplatzer
+ * @author Andre Platzer
  * @todo may want to split into different locality levels of subgoals
  * @example Proofs can be constructed in sequent order using Provables:
  * {{{
@@ -829,7 +829,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  * @param subst the uniform substitution to be applied to origin.
  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
  * @note this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule {
@@ -867,7 +867,7 @@ object AxiomaticRule {
  * i.e. locally sound proof rules that are represented by a pair of concrete formulas, one for the premise and one for the conclusion.
  * Axiomatic proof rules are employed after forming their uniform substitution instances.
  * All available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
@@ -904,7 +904,7 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
  * @param what What variable to replace (along with its associated DifferentialSymbol).
  * @param repl The target variable to replace what with.
  * @requires repl is fresh in the sequent.
- * @author aplatzer
+ * @author Andre Platzer
  */
 case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   require(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
@@ -923,7 +923,7 @@ case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
  * @param repl The target variable to replace what with.
  * @requires repl is fresh in the sequent.
  * @author smitsch
- * @author aplatzer
+ * @author Andre Platzer
  */
 case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
   require(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
@@ -1052,7 +1052,7 @@ object Axiom {
  * Sound axioms are valid formulas of differential dynamic logic.
  * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Axiom.axioms]].
  * @author nfulton
- * @author aplatzer
+ * @author Andre Platzer
  * @author smitsch
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
