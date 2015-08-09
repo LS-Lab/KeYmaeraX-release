@@ -222,6 +222,7 @@ class KeYmaeraXPrecedencePrinter extends KeYmaeraXPrinter {
  * val fml1str = pp(fml1)
  * }}}
  * @author Andre Platzer
+ * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrinter.fullPrinter]]
  */
 object FullPrettyPrinter extends KeYmaeraXPrinter {
   override def apply(expr: Expression): String = stringify(expr)

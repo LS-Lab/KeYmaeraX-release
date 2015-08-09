@@ -33,7 +33,9 @@ import edu.cmu.cs.ls.keymaerax.parser.ToolEvidence  // external
  * Positions of formulas in a sequent, i.e. antecedent or succedent positions.
  */
 sealed trait SeqPos {
+  /** Whether this position is in the antecedent on the left of the sequent arrow */
   def isAnte: Boolean
+  /** Whether this position is in the succedent on the right of the sequent arrow */
   def isSucc: Boolean = !isAnte
 
   /**
@@ -58,15 +60,17 @@ sealed trait SeqPos {
  */
 case class AntePos(private[core] val index: Int) extends SeqPos {
   def isAnte: Boolean = true
+  /** The position base 0 in antecedent. */
   def getIndex: Int = index
 }
 
 /**
  * Antecedent Positions of formulas in a sequent.
- * @param index the position base 0 in antecedent.
+ * @param index the position base 0 in succedent.
  */
 case class SuccPos(private[core] val index: Int) extends SeqPos {
   def isAnte: Boolean = false
+  /** The position base 0 in succedent. */
   def getIndex: Int = index
 }
 
@@ -85,7 +89,9 @@ object SeqPos {
 
 /**
  * Sequent ante |- succ with antecedent ante and succedent succ.
- *
+ * {{{
+ *   ante(0),ante(1),...,ante(n) |- succ(0),succ(1),...,succ(m)
+ * }}}
  * The semantics of sequent ante |- succ is the conjunction of the formulas in ante implying
  * the disjunction of the formulas in succ.
  * @author Andre Platzer
@@ -226,7 +232,7 @@ object Provable {
    * Create a new provable for facts provided by external tools.
    * @param goal the desired conclusion.
    * @return a Provable without subgoals.
-   * @note soundness-critical, only call from RCF/LemmaDB within core with true facts.
+   * @note soundness-critical magic, only call from RCF/LemmaDB within core with true facts.
    */
   private[core] def toolFact(goal: Sequent): Provable = {
     Provable(goal, immutable.IndexedSeq())
@@ -435,24 +441,29 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
 /** A rule that tries closing a subgoal */
 trait ClosingRule extends Rule {}
 
+/** A rule applied to a position */
 trait PositionRule extends Rule {
   def pos: SeqPos
   override def toString: String = name + " at " + pos
 }
 
+/** A rule applied to a position in the antecedent on the left */
 trait LeftRule extends PositionRule {
   def pos: AntePos
 }
 
+/** A rule applied to a position in the succedent on the right */
 trait RightRule extends PositionRule {
   def pos: SuccPos
 }
 
+/** An assumption rule, which is a position rule that has an additional position of an assumption. */
 trait AssumptionRule extends PositionRule {
   def assume: SeqPos
   override def toString: String = name + " at " + pos + " assumption at " + assume
 }
 
+/** A rule applied to two positions. */
 trait TwoPositionRule extends Rule {
   def pos1: SeqPos
   def pos2: SeqPos

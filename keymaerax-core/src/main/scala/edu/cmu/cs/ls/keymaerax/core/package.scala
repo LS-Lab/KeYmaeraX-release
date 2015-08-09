@@ -149,5 +149,10 @@ package edu.cmu.cs.ls.keymaerax
  * @see "Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. KeYmaera X: An axiomatic tactical theorem prover for hybrid systems.  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015."
  * @see Andre Plater. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
+ * @see [[edu.cmu.cs.ls.keymaerax.core.Provable]]
+ * @see [[edu.cmu.cs.ls.keymaerax.core.Expression]]
+ * @see [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics]]
+ * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
+ * @see [[edu.cmu.cs.ls.keymaerax.core.Lemma]]
  */
 package object core {}

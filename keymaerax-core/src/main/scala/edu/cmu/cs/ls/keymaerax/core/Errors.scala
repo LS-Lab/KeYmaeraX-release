@@ -68,6 +68,8 @@ case class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null) exte
   (if (s != null) " applied to " + s else "")) {
 }
 
+/** Assertions that fail in the prover */
 case class ProverAssertionError(msg: String) extends ProverException("Assertion failed " + msg)
 
+/** Thrown to indicate when an unknown operator occurs */
 case class UnknownOperatorException(msg: String, e:Expression) extends ProverException(msg + ": " + e.prettyString + " of " + e.getClass + " " + e) {}
