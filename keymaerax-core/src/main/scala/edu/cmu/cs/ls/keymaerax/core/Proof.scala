@@ -110,7 +110,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
     }
   }
 
-  //@todo enable quicker apply(AntePos) and apply(SeqPos) after resolving ambiguous implicit conversion from Position.
+  //@todo enable quicker apply(AntePos) and apply(SeqPos) after resolving ambiguous implicit conversion from tactics.Position.
 //  /**
 //   * Retrieves the formula in sequent at a given succedent position.
 //   * @param pos the succedent position of the formula
@@ -245,7 +245,7 @@ object Provable {
  * @note For soundness: No reflection to bybass constructor call privacy,
  *       nor reflection to bypass immutable val data structures.
  * @author aplatzer
- * @todo probably split into different locality levels of subgoals
+ * @todo may want to split into different locality levels of subgoals
  * @example Proofs can be constructed in sequent order using Provables:
  * {{{
  *   import scala.collection.immutable._
@@ -418,7 +418,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
  * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
  */
 sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
-  //@TODO If there were inherited contracts, we could augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
+  //@note If there were inherited contracts in Scala, we could augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
 
   private[core] val LAX_MODE = true
 
@@ -427,21 +427,25 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   override def toString: String = name
 }
 
-sealed trait ClosingRule {}
+/*********************************************************************************
+  * Categories of Proof Rules
+  *********************************************************************************
+  */
+
+/** A rule that tries closing a subgoal */
+trait ClosingRule extends Rule {}
 
 trait PositionRule extends Rule {
   def pos: SeqPos
   override def toString: String = name + " at " + pos
 }
 
-trait LeftRule extends Rule {
+trait LeftRule extends PositionRule {
   def pos: AntePos
-  override def toString: String = name + " at " + pos
 }
 
-trait RightRule extends Rule {
+trait RightRule extends PositionRule {
   def pos: SuccPos
-  override def toString: String = name + " at " + pos
 }
 
 trait AssumptionRule extends PositionRule {
@@ -799,7 +803,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
     //immutable.List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))  // and then OrLeft ~ AndLeft
     // immutable.List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b),IndexedSeq())),
     //      s.updated(p, Sequent(s.pref, IndexedSeq(Not(a),Not(b)),IndexedSeq())))
-    //@TODO This choice is compatible with tactics but is perhaps unreasonably surprising. Prefer upper choices
+    //@note This choice is compatible with tactics and has stable positions but is perhaps unreasonably surprising. Could prefer upper choices
     immutable.List(s.updated(pos, And(a,b)),
                    s.updated(pos, And(Not(a),Not(b))))
   }
@@ -928,7 +932,7 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
   private val renaming = URename(what, repl)
 
   /** @todo Code Review: change to false: This is a slight euphemism for do you mind being possibly unsound */
-  //@todo turn to false after telling alphaRenamingT and globalAlphaRenamingT to add the stutter by axiom if needed
+  //@note turn to false after telling alphaRenamingT and globalAlphaRenamingT to add the stutter by axiom if needed
   private val compatibilityMode = LAX_MODE
 
   override def toString: String = name + "(" + what + "~>" + repl + ")"

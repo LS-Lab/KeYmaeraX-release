@@ -165,7 +165,7 @@ private[core] object AxiomBase {
    * Look up an axiom of KeYmaera X,
    * i.e. sound axioms are valid formulas of differential dynamic logic.
    * parse the axiom file and add all loaded knowledge to the axioms map.
-   * @todo In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
+   * @note Result of axiom parse is asserted for a decent set of axioms to remove from soundness-critical core.
    */
   private[core] def loadAxioms: immutable.Map[String, Formula] = {
     try {
@@ -211,7 +211,7 @@ private[core] object AxiomBase {
     val a = ProgramConst("a")
     val b = ProgramConst("b")
 
-    //@todo should not use strange names
+    //@todo should not use strange names, better x and q
     val v = Variable("v", None, Real)
     val h0 = PredOf(Function("H", None, Unit, Bool), Nothing)
 
@@ -226,7 +226,7 @@ private[core] object AxiomBase {
     assert(axs("[*] iterate") == Equiv(Box(Loop(a), pany), And(pany, Box(a, Box(Loop(a), pany)))), "[*] iterate")
     //@note only sound for hybrid systems not for hybrid games
     assert(axs("K modal modus ponens") == Imply(Box(a, Imply(pany,qny)), Imply(Box(a, pany), Box(a, qny))), "K modal modus ponens")
-    //@todo could accept I for hybrid systems
+    //@note could also have accepted axiom I for hybrid systems but not for hybrid games
     assert(axs("V vacuous") == Imply(p0, Box(a, p0)), "V vacuous")
 
     // Figure 3
@@ -244,7 +244,7 @@ private[core] object AxiomBase {
     assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
 
     assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,t0)), "all instantiate")
-    //@todo could allow: assert(axs("all distribute") == Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x)))), "all distribute")
+    assert(axs("all distribute") == Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x)))), "all distribute")
     // soundness-critical that these are for p() not for p(x) or p(?)
     assert(axs("vacuous all quantifier") == Equiv(p0, Forall(immutable.IndexedSeq(x), p0)), "vacuous all quantifier")
     assert(axs("vacuous exists quantifier") == Equiv(p0, Exists(immutable.IndexedSeq(x), p0)), "vacuous exists quantifier")
@@ -318,6 +318,10 @@ End.
 /* consequence of "all instantiate" */
 Axiom "all eliminate".
   (\forall x. p(?)) -> p(?)
+End.
+
+Axiom "all distribute".
+  (\forall x. (p(x)->q(x))) -> ((\forall x. p(x)) -> (\forall x. q(x)))
 End.
 
 /* @Derived */
