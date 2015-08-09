@@ -1,7 +1,7 @@
-KeYmaera 4 Examples
+KeYmaera X Examples
 ===================
 
-This directory contains examples for KeYmaera 4.
+This directory contains examples for KeYmaera X.
 
 The examples directory structure is:
 
