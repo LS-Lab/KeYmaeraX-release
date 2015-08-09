@@ -25,7 +25,7 @@ libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "2.1.0"
 libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.7.2"
 
 ////////////////////////////////////////////////////////////////////////////////
-// Hyrda Settings
+// HyDRA Settings
 // Taken from https://www.assembla.com/wiki/show/liftweb/using_sbt
 ////////////////////////////////////////////////////////////////////////////////
 
