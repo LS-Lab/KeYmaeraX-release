@@ -73,6 +73,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case FormulaKind => parser.formulaParser(print)
     case ProgramKind => parser.programParser(print)
     case DifferentialProgramKind => parser.differentialProgramParser(print)
+    case ExpressionKind => assert(false, "No expressions of ExpressionKind can be constructed"); ???
   }
 
   /** Pretty-print term to a string without contract checking. */
