@@ -217,4 +217,24 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     result.openGoals().flatMap(_.sequent.ante) should contain only "x>=0".asFormula
     result.openGoals().flatMap(_.sequent.succ) shouldBe empty
   }
+
+  "Abbrv tactic" should "abbreviate a+b to z" in {
+    val s = sucSequent("a+b < c".asFormula)
+    val tactic = EqualityRewritingImpl.abbrv(Variable("z"))(SuccPosition(0).first)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "z = a+b".asFormula
+    result.openGoals().head.sequent.succ should contain only "z < c".asFormula
+  }
+
+  it should "abbreviate min(a,b) to z" in {
+    val s = sucSequent("min(a,b) < c".asFormula)
+    val tactic = EqualityRewritingImpl.abbrv(Variable("z"))(SuccPosition(0).first)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "z = min(a,b)".asFormula
+    result.openGoals().head.sequent.succ should contain only "z < c".asFormula
+  }
 }

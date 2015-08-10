@@ -6,9 +6,12 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.EqualReflexiveT
 import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.replaceInContext
-import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateAnte
+import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT, skolemizeT}
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cutT, EquivLeftT}
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{lastSucc,locateAnte}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, PositionTactic, Tactic, NilPT, NilT}
 import PropositionalTacticsImpl._
 import BranchLabels._
@@ -203,4 +206,39 @@ object EqualityRewritingImpl {
    * @return The new tactic.
    */
   def eqRight(exhaustive: Boolean): PositionTactic = eqPos("Find Right and Apply Left to Right", left=false, exhaustive=exhaustive)
+
+  /**
+   * Abbreviates a term at a position to a variable.
+   * @example{{{
+   *   maxcd = max(c,d) |- a+b <= maxcd+e
+   *   ----------------------------------------abbrv(Variable("maxcd"))(SuccPosition(0).second.first)
+   *                    |- a+b <= max(c, d) + e
+   * }}}
+   * @param abbrvV The abbreviation.
+   * @return The tactic.
+   */
+  def abbrv(abbrvV: Variable): PositionTactic = new PositionTactic("abbrv") {
+    override def applies(s: Sequent, p: Position): Boolean = getTerm(s, p) != null // just to test that there is no exception
+
+    override def apply(p: Position): Tactic = new ConstructionTactic("abbrv") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val t = getTerm(node.sequent, p)
+        Some(cutT(Some(Exists(abbrvV :: Nil, Equal(abbrvV, t)))) & onBranch(
+          (cutShowLbl, lastSucc(cohideT) &
+            //@note cannot use instantiateT, because during \exists generalize we don't know which part of z=z we should generalize
+            cutT(Some(Equiv(Exists(abbrvV :: Nil, Equal(abbrvV, t)), Equal(t, t)))) & onBranch(
+              (cutShowLbl, lastSucc(EquivRightT) & onBranch(
+                (equivLeftLbl, AxiomCloseT),
+                (equivRightLbl, FOQuantifierTacticsImpl.existentialGenPosT(abbrvV, HereP.first)(AntePosition(0)) & AxiomCloseT)
+              )),
+              (cutUseLbl, equivRewriting(AntePosition(0), SuccPosition(0)) & EqualReflexiveT(SuccPosition(0)))
+            )),
+          (cutUseLbl, lastAnte(skolemizeT) & lastAnte(eqRight(exhaustive = true)))
+        ))
+      }
+    }
+  }
+
 }
