@@ -581,4 +581,28 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     result.openGoals().head.sequent.succ shouldBe empty
   }
 
+  "= reflexive" should "close a=a by reflexivity" in {
+    val s = sucSequent("a=a".asFormula)
+    val tactic = ArithmeticTacticsImpl.EqualReflexiveT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result shouldBe 'closed
+  }
+
+  it should "close 2=2 by reflexivity" in {
+    val s = sucSequent("2=2".asFormula)
+    val tactic = ArithmeticTacticsImpl.EqualReflexiveT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result shouldBe 'closed
+  }
+
+  it should "close min(a,b)=min(a,b) by reflexivity" in {
+    val s = sucSequent("min(a,b)=min(a,b)".asFormula)
+    val tactic = ArithmeticTacticsImpl.EqualReflexiveT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result shouldBe 'closed
+  }
+
 }

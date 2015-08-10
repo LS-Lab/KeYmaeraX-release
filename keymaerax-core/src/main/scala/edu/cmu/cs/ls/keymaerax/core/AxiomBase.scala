@@ -682,6 +682,10 @@ End.
  * Real arithmetic
  */
 
+Axiom "= reflexive".
+  s() = s()
+End.
+
 /* Unused so far
 Axiom "+ associative".
   (r + s) + t = r + (s + t)
