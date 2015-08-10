@@ -141,6 +141,23 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     result.openGoals().flatMap(_.sequent.succ) shouldBe empty
   }
 
+  it should "replace arbitary terms" in {
+    val s = sequent(Nil, "a+b<5".asFormula :: "a+b=c".asFormula :: Nil, Nil)
+    val tactic = eqLeft(exhaustive=true)(AntePosition(1))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("c<5".asFormula, "a+b=c".asFormula)
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
+  // rewriting numbers is disallowed, because otherwise we run into endless rewriting
+  it should "not rewrite numbers" in {
+    val s = sequent(Nil, "0<5".asFormula :: "0=0".asFormula :: Nil, Nil)
+    val tactic = eqLeft(exhaustive=true)(AntePosition(1))
+    tactic.applicable(new RootNode(s)) shouldBe false
+  }
+
   "Equivalence rewriting" should "rewrite if lhs occurs in succedent" in {
     val s = sequent(Nil, "x>=0 <-> y>=0".asFormula :: Nil, "x>=0".asFormula :: Nil)
     val tactic = EqualityRewritingImpl.equivRewriting(AntePosition(0), SuccPosition(0))
