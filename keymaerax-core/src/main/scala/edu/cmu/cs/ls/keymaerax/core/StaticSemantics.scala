@@ -4,7 +4,7 @@
 */
 /**
  * The static semantics of differential dynamic logic.
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @note Code Review: 2015-05-01
  */
@@ -19,7 +19,7 @@ import scala.collection.immutable
  * This object defines the static semantics of differential dynamic logic
  * in terms of the free variables and bound variables that expressions have as well as their signatures.
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.3]]
- * @author aplatzer
+ * @author Andre Platzer
  * @author smitsch
  * @note soundness-critical
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
@@ -161,7 +161,7 @@ object StaticSemantics {
 
     case PredOf(p, arg) => VCF(fv = freeVars(arg), bv = bottom)
     // DotFormula is like a reserved Predicational
-    //@todo eisegesis should be bv=topVarsDiffVars() not bv=bottom
+    //@note DotFormula is a zero-parameter predicational, thus bv=topVarsDiffVars() not bv=bottom
     case DotFormula => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
     case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
 
@@ -231,7 +231,11 @@ object StaticSemantics {
 
   /**
    * The signature of expression e.
-   * @todo change return types or at least implementation types to SortedSet for order stability?
+   * @note Result will not be order stable, so order could be different on different runs of the prover.
+   * @example{{{
+   *    signature(e).toList.sort            // sorts by compare of NamedSymbol, by name and index
+   *    signature(e).toList.sortBy(_.name)  // sorts alphabetically by name, ignores indices
+   * }}}
    */
   def signature(e: Expression): immutable.Set[NamedSymbol] = e match {
     case t: Term => signature(t)

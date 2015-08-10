@@ -366,15 +366,7 @@ class ModelplexTacticTests extends TacticTestSuite {
       Variable("yo"), Variable("t"), Variable("w"), Variable("dxo"), Variable("dyo")))
 
     modelplexInput shouldBe  """
-        |v >= 0
-        |  & ( Abs(x-xo) > v^2 / (2*B) + V()*(v/B)
-        |    | Abs(y-yo) > v^2 / (2*B) + V()*(v/B))
-        |  & r != 0
-        |  & dx^2 + dy^2 = 1
-        |  & A >= 0
-        |  & B > 0
-        |  & V() >= 0
-        |  & ep > 0
+        true
         |  -> <dxo :=*;
         |      dyo :=*;
         |      ?dxo^2 + dyo^2 <= V()^2;
@@ -430,10 +422,10 @@ class ModelplexTacticTests extends TacticTestSuite {
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
 
-    val expectedAnte = "v>=0 & (Abs(x-xo)>v^2/(2*B)+V()*(v/B)|Abs(y-yo)>v^2/(2*B)+V()*(v/B)) & r!=0 & dx^2+dy^2=1 & A>=0 & B>0 & V()>=0 & ep>0".asFormula
+    val expectedAnte = "true".asFormula
     val expectedSucc = ("dxopost_0()^2+dyopost_0()^2<=V()^2 & (apost()=-B & rpost()=r & tpost()=0 & dxopost()=dxopost_0() & dyopost()=dyopost_0() & xopost()=xo & yopost()=yo & wpost()=w" +
       "                                       | (v=0 & (apost()=0 & rpost()=r & tpost()=0 & dxopost()=dxopost_0() & dyopost()=dyopost_0() & xopost()=xo & yopost()=yo & wpost()=0)" +
-      "                                       | -B<=apost_0()&apost_0()<=A & (rpost_0()!=0 & (wpost_0()*rpost_0()=v & ((Abs(x-xopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-yopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))) & (apost()=apost_0()&rpost()=rpost_0()&tpost()=0&dxopost()=dxopost_0()&dyopost()=dyopost_0()&xopost()=xopost_0()&yopost()=yopost_0()&wpost()=wpost_0()))))))").asFormula
+      "                                       | -B<=apost_0()&apost_0()<=A & (rpost_0()!=0 & (wpost_0()*rpost_0()=v & ((abs(x-xopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|abs(y-yopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))) & (apost()=apost_0()&rpost()=rpost_0()&tpost()=0&dxopost()=dxopost_0()&dyopost()=dyopost_0()&xopost()=xopost_0()&yopost()=yopost_0()&wpost()=wpost_0()))))))").asFormula
 
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only expectedAnte
@@ -465,13 +457,10 @@ class ModelplexTacticTests extends TacticTestSuite {
 
     val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafety.key"
     val vars = "a,r,xo,yo,dxo,dyo,t,w"
-    val outputFileName = File.createTempFile("passivesafetyabs", ".mx").getAbsolutePath
+    val outputFileName = File.createTempFile("passivesafety", ".mx").getAbsolutePath
     KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-out", outputFileName))
 
-    val expectedFileContent = And(
-      "v>=0&((x-xo>=0->x-xo>v^2/(2*B)+V()*(v/B))&(x-xo<=0->xo-x>v^2/(2*B)+V()*(v/B))|(y-yo>=0->y-yo>v^2/(2*B)+V()*(v/B))&(y-yo<=0->yo-y>v^2/(2*B)+V()*(v/B)))&r!=0&dx^2+dy^2=1&A>=0&B>0&V()>=0&ep>0".asFormula,
-      "dxopost_0()^2+dyopost_0()^2<=V()^2&(apost()=-B&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=w|(v=0&(apost()=0&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=0)|-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&(((x-xopost_0()>=0->x-xopost_0()>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(x-xopost_0()<=0->xopost_0()-x>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))|(y-yopost_0()>=0->y-yopost_0()>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(y-yopost_0()<=0->yopost_0()-y>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))))&(apost()=apost_0()&rpost()=rpost_0()&xopost()=xopost_0()&yopost()=yopost_0()&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=wpost_0()))))))".asFormula)
-
+    val expectedFileContent = "dxopost_0()^2+dyopost_0()^2<=V()^2&(apost()=-B&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=w|(v=0&(apost()=0&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=0)|-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&(((x-xopost_0()>=0->x-xopost_0()>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(x-xopost_0()<=0->xopost_0()-x>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))|(y-yopost_0()>=0->y-yopost_0()>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(y-yopost_0()<=0->yopost_0()-y>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))))&(apost()=apost_0()&rpost()=rpost_0()&xopost()=xopost_0()&yopost()=yopost_0()&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=wpost_0()))))))".asFormula
 
     val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
     KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
@@ -486,9 +475,7 @@ class ModelplexTacticTests extends TacticTestSuite {
     val outputFileName = File.createTempFile("passivesafetyabs", ".mx").getAbsolutePath
     KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-out", outputFileName))
 
-    val expectedFileContent = And(
-      "v>=0&(Abs(x-xo)>v^2/(2*B)+V()*(v/B)|Abs(y-yo)>v^2/(2*B)+V()*(v/B))&r!=0&dx^2+dy^2=1&A>=0&B>0&V()>=0&ep>0".asFormula,
-      "dxopost_0()^2+dyopost_0()^2<=V()^2&(apost()=-B&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=w|(v=0&(apost()=0&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=0)|-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&((Abs(x-xopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-yopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(apost()=apost_0()&rpost()=rpost_0()&xopost()=xopost_0()&yopost()=yopost_0()&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=wpost_0()))))))".asFormula)
+    val expectedFileContent = "dxopost_0()^2+dyopost_0()^2<=V()^2&(apost()=-B&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=w|(v=0&(apost()=0&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=0)|-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&((abs(x-xopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|abs(y-yopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(apost()=apost_0()&rpost()=rpost_0()&xopost()=xopost_0()&yopost()=yopost_0()&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=wpost_0()))))))".asFormula
 
     val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
     KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
@@ -504,8 +491,8 @@ class ModelplexTacticTests extends TacticTestSuite {
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
 
-    val expectedAnte = "v>=0&V()>=0&((x-ox>=0->x-ox>v^2/(2*b())+V()*(v/b()))&(x-ox<=0->ox-x>v^2/(2*b())+V()*(v/b()))|(y-oy>=0->y-oy>v^2/(2*b())+V()*(v/b()))&(y-oy<=0->oy-y>v^2/(2*b())+V()*(v/b())))&(r < 0->v^2/(2*b()*-r) < alpha())&(r>=0->v^2/(2*b()*r) < alpha())&talpha=0&r!=0&dx^2+dy^2=1&A>=0&b()>0&ep>0&alpha()>0".asFormula
-    val expectedSucc = "odxpost_0()^2+odypost_0()^2<=V()^2&(wpost_0()*r=v&(apost()=-b()&rpost()=r)|(v=0&(wpost_0()*r=v&(apost()=0&rpost()=r))|(-b()<=apost_0()&apost_0()<=A&(rpost_0()!=0&(v+apost_0()*ep < 0&((isVisblepost_0()>=0->(x-oxpost_0()>=0->x-oxpost_0()>v^2/(-2*apost_0())+v/-apost_0()*V())&(x-oxpost_0()<=0->oxpost_0()-x>v^2/(-2*apost_0())+v/-apost_0()*V())|(y-oypost_0()>=0->y-oypost_0()>v^2/(-2*apost_0())+v/-apost_0()*V())&(y-oypost_0()<=0->oypost_0()-y>v^2/(-2*apost_0())+v/-apost_0()*V()))&((rpost_0()>=0->v^2/(-2*apost_0()) < alpha()*rpost_0())&(rpost_0() < 0->v^2/(-2*apost_0()) < -alpha()*rpost_0())&(wpost_0()*rpost_0()=v&(apost()=apost_0()&rpost()=rpost_0()))))))|v+apost_0()*ep>=0&((isVisiblepost_0()>=0->(x-oxpost_0()>=0->x-oxpost_0()>v^2/(2*b())+V()*v/b()+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*(v+V())))&(x-oxpost_0()<=0->oxpost_0()-x>v^2/(2*b())+V()*v/b()+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*(v+V())))|(y-oypost_0()>=0->y-oypost_0()>v^2/(2*b())+V()*v/b()+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*(v+V())))&(y-oypost_0()<=0->oypost_0()-y>v^2/(2*b())+V()*v/b()+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*(v+V()))))&((rpost_0()>=0->v^2/(2*b())+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*v) < alpha()*rpost_0())&(rpost_0() < 0->v^2/(2*b())+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*v) < -alpha()*rpost_0())&(wpost_0()*rpost_0()=v&(apost()=apost_0()&rpost()=rpost_0()&talphapost()=0&odxpost()=odxpost_0()&odypost()=odypost_0()&oxpost()=oxpost_0()&oypost()=oypost_0()&dxpost()=dx&dypost()=dy&wpost=wpost_0()&isVisiblepost()=isVisiblepost_0()&tpost()=0)))))))".asFormula
+    val expectedAnte = "true".asFormula
+    val expectedSucc = "odxpost_0()^2+odypost_0()^2<=V()^2&(wpost_0()*r=v&(apost()=-b()&rpost()=r&talphapost()=talpha&odxpost()=odxpost_0()&odypost()=odypost_0()&oxpost()=ox&oypost()=oy&dxpost()=dx&dypost()=dy&wpost()=wpost_0()&isVisiblepost()=isVisible&tpost()=0)|(v=0&(wpost_0()*r=v&(apost()=0&rpost()=r&talphapost()=talpha&odxpost()=odxpost_0()&odypost()=odypost_0()&oxpost()=ox&oypost()=oy&dxpost()=-dx&dypost()=-dy&wpost()=wpost_0()&isVisiblepost()=isVisible&tpost()=0))|-b()<=apost_0()&apost_0()<=A&(rpost_0()!=0&(v+apost_0()*ep < 0&((isVisiblepost_0() < 0|((x-oxpost_0()>=0->x-oxpost_0()>v^2/(-2*apost_0())+V()*(v/-apost_0()))&(x-oxpost_0()<=0->oxpost_0()-x>v^2/(-2*apost_0())+V()*(v/-apost_0()))|(y-oypost_0()>=0->y-oypost_0()>v^2/(-2*apost_0())+V()*(v/-apost_0()))&(y-oypost_0()<=0->oypost_0()-y>v^2/(-2*apost_0())+V()*(v/-apost_0()))))&((rpost_0()>=0->v^2/(-2*apost_0()) < alpha()*rpost_0())&(rpost_0() < 0->v^2/(-2*apost_0()) < -alpha()*rpost_0())&(wpost_0()*rpost_0()=v&(apost()=apost_0()&rpost()=rpost_0()&talphapost()=0&odxpost()=odxpost_0()&odypost()=odypost_0()&oxpost()=oxpost_0()&oypost()=oypost_0()&dxpost()=dx&dypost()=dy&wpost()=wpost_0()&isVisiblepost()=isVisiblepost_0()&tpost()=0))))|v+apost_0()*ep>=0&((isVisiblepost_0() < 0|((x-oxpost_0()>=0->x-oxpost_0()>v^2/(2*b())+V()*(v/b())+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*(v+V())))&(x-oxpost_0()<=0->oxpost_0()-x>v^2/(2*b())+V()*(v/b())+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*(v+V())))|(y-oypost_0()>=0->y-oypost_0()>v^2/(2*b())+V()*(v/b())+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*(v+V())))&(y-oypost_0()<=0->oypost_0()-y>v^2/(2*b())+V()*(v/b())+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*(v+V())))))&((rpost_0()>=0->v^2/(2*b())+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*v) < alpha()*rpost_0())&(rpost_0() < 0->v^2/(2*b())+(apost_0()/b()+1)*(apost_0()/2*ep^2+ep*v) < -alpha()*rpost_0())&(wpost_0()*rpost_0()=v&(apost()=apost_0()&rpost()=rpost_0()&talphapost()=0&odxpost()=odxpost_0()&odypost()=odypost_0()&oxpost()=oxpost_0()&oypost()=oypost_0()&dxpost()=dx&dypost()=dy&wpost()=wpost_0()&isVisiblepost()=isVisiblepost_0()&tpost()=0))))))))".asFormula
 
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only expectedAnte
@@ -613,7 +600,7 @@ class ModelplexTacticTests extends TacticTestSuite {
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
 
-    val expectedAnte = "h>=href&href>0&((kp < 0&v=0&href>=h|kp < 0&v>0&2*h*kp+v*(kd+y)=2*href*kp&h*y>h*kd+2*v|kp < 0&v < 0&2*href*kp+v*y=2*h*kp+kd*v&2*v+h*(kd+y)>0|kp>0&v=0&href=h|kp>0&v>0&(2*h*kp+v*(kd+y)=2*href*kp&h*y>h*kd+2*v&kd+2*sqrkp<=0|2*h*kp+v*(kd+y)=2*href*kp&kd+2*sqrkp < 0&2*v+h*(kd+y) < 0|2*href*kp+v*y=2*h*kp+kd*v&kd+2*sqrkp < 0&2*v+h*(kd+y) < 0|2*h*kp+v*(kd+y)=2*href*kp&kd>2*sqrkp&2*v+h*(kd+y)>0&h*y>=h*kd+2*v)|kp>0&v < 0&(2*h*kp+v*(kd+y)=2*href*kp&kd>2*sqrkp&h*y < h*kd+2*v|2*href*kp+v*y=2*h*kp+kd*v&kd>=2*sqrkp&h*y < h*kd+2*v|2*href*kp+v*y=2*h*kp+kd*v&kd>2*sqrkp&2*v+h*(kd+y)>0&h*y>=h*kd+2*v|2*href*kp+v*y=2*h*kp+kd*v&h*y>h*kd+2*v&2*v+h*(kd+y)>=0&kd+2*sqrkp < 0))&(y^2=kd^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd*kp*v-href*kd*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd|h*(kd+y)<=0|h>href)|kp < 0&v < 0&(h*y<=h*kd+2*v|2*v+h*(kd+y)<=0|2*h*kp+kd*v!=2*href*kp+v*y)|kp < 0&v>0&(h*y<=h*kd+2*v|2*v+h*(kd+y)<=0|2*h*kp+v*(kd+y)!=2*href*kp)|kp>0&v=0&(h!=href&(kd>=2*sqrkp&h*y>=h*kd|h*(kd+y)>=0&kd+2*sqrkp < 0)|kd=2*sqrkp&h*y>=h*kd|kd < 2*sqrkp&kd+2*sqrkp>0|h>href|kd>2*sqrkp&h*(kd+y)<=0|kd+2*sqrkp<=0&h*y<=h*kd)|kp>0&v < 0&(2*href*kp+v*y!=2*h*kp+kd*v&(h*y>=h*kd+2*v|kd<=2*sqrkp)|kd < 2*sqrkp|kd>2*sqrkp&(h*y < h*kd+2*v&(2*href*kp+v*y < 2*h*kp+kd*v&2*h*kp+v*(kd+y) < 2*href*kp|2*href*kp+v*y>2*h*kp+kd*v|2*h*kp+v*(kd+y)>2*href*kp)|2*v+h*(kd+y)<=0)|h*y>=h*kd+2*v&kd<=2*sqrkp|kd+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd+y)!=2*href*kp&(kd+2*sqrkp>=0|2*v+h*(kd+y)>=0)|kd>=2*sqrkp|kd+2*sqrkp < 0&2*v+h*(kd+y) < 0&(2*href*kp+v*y < 2*h*kp+kd*v|2*h*kp+v*(kd+y) < 2*href*kp|2*href*kp+v*y>2*h*kp+kd*v&2*h*kp+v*(kd+y)>2*href*kp)|kd+2*sqrkp>0|h*y<=h*kd+2*v))&y^2=kd^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd*kp*v-href*kd*kp*v+kp*v^2=0)".asFormula
+    val expectedAnte = "true".asFormula
     val expectedSucc = "true & (hpost()=h & vpost()=v & kppost()=kp & kdpost()=kd & hrefpost()=href)".asFormula
 
     result.openGoals() should have size 1

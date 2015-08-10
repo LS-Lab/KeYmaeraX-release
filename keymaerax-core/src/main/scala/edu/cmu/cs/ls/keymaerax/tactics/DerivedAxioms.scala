@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
  * Derived Axioms.
- * @author aplatzer
+ * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
 object DerivedAxioms {

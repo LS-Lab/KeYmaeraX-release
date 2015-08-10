@@ -1,36 +1,36 @@
 ImplyRight
 & AndLeft & AndLeft & AndLeft & AndLeft & AndLeft & AndLeft
-& Loop("v >= 0 & xm() <= x & xr() = (xm() + S())/2 & 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < ((S() - xm())/2)^2")
+& Loop("v >= 0 & xm <= x & xr = (xm + S)/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S - xm)/2)^2")
 & onLabel(
-  ("Invariant Initially Valid", ArithmeticT),
-  ("Use case", ArithmeticT),
-  ("Induction Step",
+  ("base case", ArithmeticT),
+  ("use case", ArithmeticT),
+  ("induction step",
     ImplyRight
     & Seq
     & Choice & AndRight && (
-      Seq & Assign & Seq & Assign & Test & ImplyRight & Seq & Test & ImplyRight
-          & DiffCut("xm() <= x_0")
+      Seq & Assign & Seq & Assign & Test & ImplyRight
+          & DiffCut("xm_2 <= x_0")
           & onLabel(
             ("Use cut",
-              DiffCut("5/4*(x_0-xr())^2 + (x_0-xr())*v/2 + v^2/4 < ((S() - xm())/2)^2")
+              DiffCut("5/4*(x_0-xr_2)^2 + (x_0-xr_2)*v/2 + v^2/4 < ((S - xm_2)/2)^2")
               & onLabel(
                 ("Use cut", DiffWeaken & ImplyRight & ArithmeticT),
-                ("Show cut", DiffInvariant)
+                ("Show cut", DiffConstify & DiffInvariant)
               )
             ),
-            ("Show cut", DiffInvariant)
+            ("Show cut", DiffConstify & DiffInvariant)
           ),
-      Seq & Assign & Assign & Seq & Test & ImplyRight
-          & DiffCut("xm() <= x_0")
+      Seq & Assign & Assign
+          & DiffCut("xm_2 <= x_0")
           & onLabel(
             ("Use cut",
-              DiffCut("5/4*(x_0-xr())^2 + (x_0-xr())*v/2 + v^2/4 < ((S() - xm())/2)^2")
+              DiffCut("5/4*(x_0-xr_2)^2 + (x_0-xr_2)*v/2 + v^2/4 < ((S - xm_2)/2)^2")
               & onLabel(
                 ("Use cut", DiffWeaken & ImplyRight & ArithmeticT),
-                ("Show cut", DiffInvariant)
+                ("Show cut", DiffConstify & DiffInvariant)
               )
             ),
-            ("Show cut", DiffInvariant)
+            ("Show cut", DiffConstify & DiffInvariant)
           )
     )
   )

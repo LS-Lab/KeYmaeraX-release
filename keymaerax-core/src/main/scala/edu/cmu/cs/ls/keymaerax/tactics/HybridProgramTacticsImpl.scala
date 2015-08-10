@@ -1237,7 +1237,7 @@ object HybridProgramTacticsImpl {
                         lastSucc(cohideT) &
                         // uniform substitution from K
                         uniformSubstT(subst, Map(f6 -> k)) &
-                        AxiomTactic.axiomT("K modal modus ponens") & AxiomCloseT
+                        AxiomTactic.axiomT("K modal modus ponens")
                         ),
                       (cutUseLbl,
                         debugAtT("Use f6, modus ponens with assumption")(AntePosition(2)) &

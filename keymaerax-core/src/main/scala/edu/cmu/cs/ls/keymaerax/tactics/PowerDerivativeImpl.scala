@@ -157,11 +157,10 @@ object PowerDerivativeImpl {
     cutT(Some(instance))  &
       onBranch(
         (BranchLabels.cutShowLbl, {
-          uniformSubstT(subst, Map(instance -> axiom)) & //Do we need to hide stuff here?
-            AxiomTactic.axiomT("^' derive power") &
-            lastAnte(assertPT(axiom)) &
-            lastSucc(assertPT(axiom)) &
-            AxiomCloseT ~ debugT("Expected close")
+          lastSucc(cohideT) &
+            uniformSubstT(subst, Map(instance -> axiom)) &
+            lastSucc(assertPT(axiom)) & assertT(0, 1) &
+            AxiomTactic.axiomT("^' derive power")
         }),
         (BranchLabels.cutUseLbl, LabelBranch(yield_proveAxiomInstance))
       )

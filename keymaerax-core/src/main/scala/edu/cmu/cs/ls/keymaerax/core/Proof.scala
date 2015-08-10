@@ -5,8 +5,8 @@
 /**
  * Sequent prover, proof rules, and axioms of KeYmaera X.
  * @note Soundness-critical: Only provide sound proof rule application mechanisms.
+ * @author Andre Platzer
  * @author Jan-David Quesel
- * @author aplatzer
  * @author nfulton
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
@@ -33,7 +33,9 @@ import edu.cmu.cs.ls.keymaerax.parser.ToolEvidence  // external
  * Positions of formulas in a sequent, i.e. antecedent or succedent positions.
  */
 sealed trait SeqPos {
+  /** Whether this position is in the antecedent on the left of the sequent arrow */
   def isAnte: Boolean
+  /** Whether this position is in the succedent on the right of the sequent arrow */
   def isSucc: Boolean = !isAnte
 
   /**
@@ -58,15 +60,17 @@ sealed trait SeqPos {
  */
 case class AntePos(private[core] val index: Int) extends SeqPos {
   def isAnte: Boolean = true
+  /** The position base 0 in antecedent. */
   def getIndex: Int = index
 }
 
 /**
  * Antecedent Positions of formulas in a sequent.
- * @param index the position base 0 in antecedent.
+ * @param index the position base 0 in succedent.
  */
 case class SuccPos(private[core] val index: Int) extends SeqPos {
   def isAnte: Boolean = false
+  /** The position base 0 in succedent. */
   def getIndex: Int = index
 }
 
@@ -85,10 +89,12 @@ object SeqPos {
 
 /**
  * Sequent ante |- succ with antecedent ante and succedent succ.
- *
+ * {{{
+ *   ante(0),ante(1),...,ante(n) |- succ(0),succ(1),...,succ(m)
+ * }}}
  * The semantics of sequent ante |- succ is the conjunction of the formulas in ante implying
  * the disjunction of the formulas in succ.
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
  */
 final case class Sequent(pref: immutable.Seq[NamedSymbol],
@@ -110,7 +116,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
     }
   }
 
-  //@todo enable quicker apply(AntePos) and apply(SeqPos) after resolving ambiguous implicit conversion from Position.
+  //@todo enable quicker apply(AntePos) and apply(SeqPos) after resolving ambiguous implicit conversion from tactics.Position.
 //  /**
 //   * Retrieves the formula in sequent at a given succedent position.
 //   * @param pos the succedent position of the formula
@@ -226,7 +232,7 @@ object Provable {
    * Create a new provable for facts provided by external tools.
    * @param goal the desired conclusion.
    * @return a Provable without subgoals.
-   * @note soundness-critical, only call from RCF/LemmaDB within core with true facts.
+   * @note soundness-critical magic, only call from RCF/LemmaDB within core with true facts.
    */
   private[core] def toolFact(goal: Sequent): Provable = {
     Provable(goal, immutable.IndexedSeq())
@@ -244,8 +250,8 @@ object Provable {
  * @note Only private constructor calls for soundness
  * @note For soundness: No reflection to bybass constructor call privacy,
  *       nor reflection to bypass immutable val data structures.
- * @author aplatzer
- * @todo probably split into different locality levels of subgoals
+ * @author Andre Platzer
+ * @todo may want to split into different locality levels of subgoals
  * @example Proofs can be constructed in sequent order using Provables:
  * {{{
  *   import scala.collection.immutable._
@@ -418,7 +424,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
  * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
  */
 sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
-  //@TODO If there were inherited contracts, we could augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
+  //@note If there were inherited contracts in Scala, we could augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
 
   private[core] val LAX_MODE = true
 
@@ -427,28 +433,37 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   override def toString: String = name
 }
 
-sealed trait ClosingRule {}
+/*********************************************************************************
+  * Categories of Proof Rules
+  *********************************************************************************
+  */
 
+/** A rule that tries closing a subgoal */
+trait ClosingRule extends Rule {}
+
+/** A rule applied to a position */
 trait PositionRule extends Rule {
   def pos: SeqPos
   override def toString: String = name + " at " + pos
 }
 
-trait LeftRule extends Rule {
+/** A rule applied to a position in the antecedent on the left */
+trait LeftRule extends PositionRule {
   def pos: AntePos
-  override def toString: String = name + " at " + pos
 }
 
-trait RightRule extends Rule {
+/** A rule applied to a position in the succedent on the right */
+trait RightRule extends PositionRule {
   def pos: SuccPos
-  override def toString: String = name + " at " + pos
 }
 
+/** An assumption rule, which is a position rule that has an additional position of an assumption. */
 trait AssumptionRule extends PositionRule {
   def assume: SeqPos
   override def toString: String = name + " at " + pos + " assumption at " + assume
 }
 
+/** A rule applied to two positions. */
 trait TwoPositionRule extends Rule {
   def pos1: SeqPos
   def pos2: SeqPos
@@ -799,7 +814,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
     //immutable.List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))  // and then OrLeft ~ AndLeft
     // immutable.List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b),IndexedSeq())),
     //      s.updated(p, Sequent(s.pref, IndexedSeq(Not(a),Not(b)),IndexedSeq())))
-    //@TODO This choice is compatible with tactics but is perhaps unreasonably surprising. Prefer upper choices
+    //@note This choice is compatible with tactics and has stable positions but is perhaps unreasonably surprising. Could prefer upper choices
     immutable.List(s.updated(pos, And(a,b)),
                    s.updated(pos, And(Not(a),Not(b))))
   }
@@ -825,7 +840,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  * @param subst the uniform substitution to be applied to origin.
  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
  * @note this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule {
@@ -863,7 +878,7 @@ object AxiomaticRule {
  * i.e. locally sound proof rules that are represented by a pair of concrete formulas, one for the premise and one for the conclusion.
  * Axiomatic proof rules are employed after forming their uniform substitution instances.
  * All available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
@@ -900,7 +915,7 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
  * @param what What variable to replace (along with its associated DifferentialSymbol).
  * @param repl The target variable to replace what with.
  * @requires repl is fresh in the sequent.
- * @author aplatzer
+ * @author Andre Platzer
  */
 case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   require(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
@@ -919,7 +934,7 @@ case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
  * @param repl The target variable to replace what with.
  * @requires repl is fresh in the sequent.
  * @author smitsch
- * @author aplatzer
+ * @author Andre Platzer
  */
 case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
   require(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
@@ -928,7 +943,7 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
   private val renaming = URename(what, repl)
 
   /** @todo Code Review: change to false: This is a slight euphemism for do you mind being possibly unsound */
-  //@todo turn to false after telling alphaRenamingT and globalAlphaRenamingT to add the stutter by axiom if needed
+  //@note turn to false after telling alphaRenamingT and globalAlphaRenamingT to add the stutter by axiom if needed
   private val compatibilityMode = LAX_MODE
 
   override def toString: String = name + "(" + what + "~>" + repl + ")"
@@ -1048,19 +1063,21 @@ object Axiom {
  * Sound axioms are valid formulas of differential dynamic logic.
  * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Axiom.axioms]].
  * @author nfulton
- * @author aplatzer
+ * @author Andre Platzer
+ * @author smitsch
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
- * @todo change to the format where the axiom ends up on the right (so cut if needed on the left).
  */
-case class Axiom(id: String) extends Rule {
+case class Axiom(id: String) extends Rule with ClosingRule {
   val name: String = "Axiom " + id
   def apply(s: Sequent): immutable.List[Sequent] = {
     Axiom.axioms.get(id) match {
-      case Some(f) => immutable.List(new Sequent(s.pref, s.ante :+ f, s.succ))
+      case Some(f) => immutable.List(new Sequent(s.pref, s.ante, s.succ.filter(_ != f)))
+        if (s.ante.isEmpty && s.succ.size == 1 && s.succ.contains(f)) Nil
+        else throw new InapplicableRuleException("Axiom " + f + " is not sole formula in:\n", this, s)
       case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"), this, s)
     }
-  } ensuring (r => r.nonEmpty && r.forall(s.subsequentOf), "axiom lookup adds formulas")
+  } ensuring (r => r.isEmpty, "axiom lookup did not close")
 }
 
 /*********************************************************************************

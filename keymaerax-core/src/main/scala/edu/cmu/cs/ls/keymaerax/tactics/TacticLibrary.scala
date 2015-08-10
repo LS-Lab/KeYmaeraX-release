@@ -34,7 +34,7 @@ import scala.language.postfixOps
  *
  * Created by Jan-David Quesel on 4/28/14.
  * @author Jan-David Quesel
- * @author aplatzer
+ * @author Andre Platzer
  * @author Stefan Mitsch
  */
 object TacticLibrary {
@@ -224,7 +224,18 @@ object TacticLibrary {
    * useAt(fact)(pos) uses the given fact at the given position in the sequent.
    * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
    * instance to make progress by reducing to the other side.
-   * @author aplatzer
+   *
+   * Tactic specification:
+   * {{{
+   * useAt(fact)(p)(F) = let (C,f)=F(p) in
+   *   case f of {
+   *     s=unify(fact.left,_) => CutRight(C(f)<->C(s(fact.right)))(p) & <(
+   *       "use cut": skip
+   *       "show cut": EquivifyRight(p.seq) & CE(C(_))(p.seq) & master
+   *     )
+   *   }
+   * }}}
+   * @author Andre Platzer
    * @todo generalize to automatically find a proof of fact by axiom lookup or master or so
    */
   def useAt(fact: Formula): PositionTactic = new PositionTactic("useAt") {
@@ -244,7 +255,7 @@ object TacticLibrary {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val (ctx:Context,expr) = new FormulaConverter(node.sequent(p.topLevel)).extractContext(p.inExpr)
+        val (ctx:Context[Formula],expr) = new FormulaConverter(node.sequent(p.topLevel)).extractContext(p.inExpr)
         val fml = expr.asInstanceOf[Formula]
         val matched = Unification(fml, left)
         if (matched.isDefined) {
@@ -354,9 +365,12 @@ object TacticLibrary {
    * Use Mathematica
    * @todo allow allRight and existsLeft rules as well.
    */
-  def arithmeticT = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
-    PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & lastSucc(FOQuantifierTacticsImpl.universalClosureT) & debugT("Handing to Mathematica/Z3") &
-    (ArithmeticTacticsImpl.quantifierEliminationT("Mathematica") | ArithmeticTacticsImpl.quantifierEliminationT("Z3"))
+  def arithmeticT =
+    debugT("Apply non-branching propositional") & repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) &
+    debugT("Search and apply equalities") & repeatT(locateAnte(eqThenHideIfChanged)) &
+    debugT("Consolidate sequent") & PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) &
+    debugT("Compute universal closure") & lastSucc(FOQuantifierTacticsImpl.universalClosureT) &
+    debugT("Handing to Mathematica/Z3") & (ArithmeticTacticsImpl.quantifierEliminationT("Mathematica") | ArithmeticTacticsImpl.quantifierEliminationT("Z3"))
 
   /**
    * Alternative arithmeticT
@@ -637,6 +651,8 @@ object TacticLibrary {
    * Differential Tactics
    *********************************************/
   def diffWeakenT = ODETactics.diffWeakenT
+
+  def diffConstifyT = ODETactics.diffIntroduceConstantT
 
   def diffInvariant = ODETactics.diffInvariantT
 

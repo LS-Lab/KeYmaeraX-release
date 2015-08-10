@@ -61,13 +61,12 @@ class Quadcopter extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val odePos = SuccPosition(0)
 
-    val cut1 = "(h^2*kp()^2 - 2*h*href()*kp()^2 + href()^2*kp()^2 + h*kd()*kp()*v - href()*kd()*kp()*v + kp()*v^2) * (h0_1()^2*kp()^2 - 2*h0_1()*href()*kp()^2 + href()^2*kp()^2 + h0_1()*kd()*kp()*v0_1() - href()*kd()*kp()*v0_1() + kp()*v0_1()^2) > 0".asFormula
-    val cut2 = "(h^2*kp()^2 - 2*h*href()*kp()^2 + href()^2*kp()^2 + h*kd()*kp()*v - href()*kd()*kp()*v + kp()*v^2) * (h0_1()^2*kp()^2 - 2*h0_1()*href()*kp()^2 + href()^2*kp()^2 + h0_1()*kd()*kp()*v0_1() - href()*kd()*kp()*v0_1() + kp()*v0_1()^2) * z = (h0_1()^2*kp()^2 - 2*h0_1()*href()*kp()^2 + h0_1()*kd()*kp()*v0_1() - href()*kd()*kp()*v0_1() + kp()*v0_1()^2)^2 * z0_1() & z > 0".asFormula
+    val cut1 = "(h^2*kp^2 - 2*h*href*kp^2 + href^2*kp^2 + h*kd()*kp*v - href*kd()*kp*v + kp*v^2) * (h0_1()^2*kp^2 - 2*h0_1()*href*kp^2 + href^2*kp^2 + h0_1()*kd()*kp*v0_1() - href*kd()*kp*v0_1() + kp*v0_1()^2) > 0".asFormula
+    val cut2 = "(h^2*kp^2 - 2*h*href*kp^2 + href^2*kp^2 + h*kd()*kp*v - href*kd()*kp*v + kp*v^2) * (h0_1()^2*kp^2 - 2*h0_1()*href*kp^2 + href^2*kp^2 + h0_1()*kd()*kp*v0_1() - href*kd()*kp*v0_1() + kp*v0_1()^2) * z = (h0_1()^2*kp^2 - 2*h0_1()*href*kp^2 + h0_1()*kd()*kp*v0_1() - href*kd()*kp*v0_1() + kp*v0_1()^2)^2 * z0_1() & z > 0".asFormula
 
     val tactic = ls(implyR) &
-      debug("Constantifying ODE") &
-      ODETactics.diffIntroduceConstantT(odePos) &
       debug("Introducing ghost h0") &
+      //@todo nicer tactic for introducing ghosts + assign
       HybridProgramTacticsImpl.discreteGhostT(Some(Variable("h0")), Variable("h"))(odePos) &
       HybridProgramTacticsImpl.boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) &
       debug("Introducing ghost v0") &
@@ -78,7 +77,8 @@ class Quadcopter extends FlatSpec with Matchers with BeforeAndAfterEach {
       onBranch(
         (cutShowLbl,
           debug("Introducing diff. auxiliary z'=z*kd()") &
-            DA(Variable("z"), FuncOf(Function("kd", None, Unit, Real), Nothing), "0".asTerm, And(cut1, "z>0".asFormula))(odePos) & onBranch(
+            //@todo need constify(variable) tactic
+            DA(Variable("z"), "kd()".asTerm, "0".asTerm, And(cut1, "z>0".asFormula))(odePos) & onBranch(
             ("Diff. Aux. P Initially Valid", debug("Initially valid") & QE),
             ("Diff. Aux. Show Equivalence (1)", debug("Auxiliary equivalent (1)") & QE),
             ("Diff. Aux. Show Equivalence (2)", debug("Auxiliary equivalent (2)") & QE),
@@ -93,10 +93,10 @@ class Quadcopter extends FlatSpec with Matchers with BeforeAndAfterEach {
                   debug("[]split box conjunction") &
                   lastSucc(boxSplitConjunctionT) &
                     ls(andR) &&(
-                      debug("Show first conjunct with DI") & ls(DI),
+                      debug("Show first conjunct with DI") & ls(Dconstify) & ls(DI),
                       debug("Hiding irrelevant facts in second conjunct") &
-                        la(andL, "(h^2*kp()^2-2*h*href()*kp()^2+href()^2*kp()^2+h*kd()*kp()*v-href()*kd()*kp()*v+kp()*v^2)*(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+href()^2*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)>0&z>0") &
-                        la(hide, "(h^2*kp()^2-2*h*href()*kp()^2+href()^2*kp()^2+h*kd()*kp()*v-href()*kd()*kp()*v+kp()*v^2)*(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+href()^2*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)>0") &
+                        la(andL, "(h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd()*kp*v-href*kd()*kp*v+kp*v^2)*(h0_1()^2*kp^2-2*h0_1()*href*kp^2+href^2*kp^2+h0_1()*kd()*kp*v0_1()-href*kd()*kp*v0_1()+kp*v0_1()^2)>0&z>0") &
+                        la(hide, "(h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd()*kp*v-href*kd()*kp*v+kp*v^2)*(h0_1()^2*kp^2-2*h0_1()*href*kp^2+href^2*kp^2+h0_1()*kd()*kp*v0_1()-href*kd()*kp*v0_1()+kp*v0_1()^2)>0") &
                         debug("Introducing diff. auxiliary u'=u*-1/2*kd()") &
                         DA(Variable("u"), "-1/2*kd()".asTerm, "0".asTerm, "z>0 & z*u^2=1".asFormula)(odePos) & onBranch(
                         ("Diff. Aux. P Initially Valid", debug("Initially valid") & closeId),
@@ -143,8 +143,8 @@ class Quadcopter extends FlatSpec with Matchers with BeforeAndAfterEach {
     val odePos = SuccPosition(0)
 
     val inv = "h>=href".asFormula
-    val cut1 = "(h^2*kp()^2 - 2*h*href()*kp()^2 + href()^2*kp()^2 + h*kd()*kp()*v - href()*kd()*kp()*v + kp()*v^2) * (h0_1()^2*kp()^2 - 2*h0_1()*href()*kp()^2 + href()^2*kp()^2 + h0_1()*kd()*kp()*v0_1() - href()*kd()*kp()*v0_1() + kp()*v0_1()^2) > 0".asFormula
-    val cut2 = "(h^2*kp()^2 - 2*h*href()*kp()^2 + href()^2*kp()^2 + h*kd()*kp()*v - href()*kd()*kp()*v + kp()*v^2) * (h0_1()^2*kp()^2 - 2*h0_1()*href()*kp()^2 + href()^2*kp()^2 + h0_1()*kd()*kp()*v0_1() - href()*kd()*kp()*v0_1() + kp()*v0_1()^2) * z = (h0_1()^2*kp()^2 - 2*h0_1()*href()*kp()^2 + h0_1()*kd()*kp()*v0_1() - href()*kd()*kp()*v0_1() + kp()*v0_1()^2)^2 * z0_1() & z > 0".asFormula
+    val cut1 = "(h^2*kp^2 - 2*h*href*kp^2 + href^2*kp^2 + h*kd()*kp*v - href*kd()*kp*v + kp*v^2) * (h0_1()^2*kp^2 - 2*h0_1()*href*kp^2 + href^2*kp^2 + h0_1()*kd()*kp*v0_1() - href*kd()*kp*v0_1() + kp*v0_1()^2) > 0".asFormula
+    val cut2 = "(h^2*kp^2 - 2*h*href*kp^2 + href^2*kp^2 + h*kd()*kp*v - href*kd()*kp*v + kp*v^2) * (h0_1()^2*kp^2 - 2*h0_1()*href*kp^2 + href^2*kp^2 + h0_1()*kd()*kp*v0_1() - href*kd()*kp*v0_1() + kp*v0_1()^2) * z = (h0_1()^2*kp^2 - 2*h0_1()*href*kp^2 + h0_1()*kd()*kp*v0_1() - href*kd()*kp*v0_1() + kp*v0_1()^2)^2 * z0_1() & z > 0".asFormula
 
     val tactic = ls(implyR) &
       ls(I(inv)) &
@@ -157,8 +157,6 @@ class Quadcopter extends FlatSpec with Matchers with BeforeAndAfterEach {
           lastAnte(hide) &
           ls(composeb) &
           ls(composeb) & ls(randomb) & ls(allR) & ls(testb) & ls(implyR) &
-          debug("Constantifying ODE") &
-          ODETactics.diffIntroduceConstantT(odePos) &
           debug("Introducing ghost h0") &
           HybridProgramTacticsImpl.discreteGhostT(Some(Variable("h0")), Variable("h"))(odePos) &
           HybridProgramTacticsImpl.boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) &
@@ -185,10 +183,10 @@ class Quadcopter extends FlatSpec with Matchers with BeforeAndAfterEach {
                       debug("[]split box conjunction") &
                         lastSucc(boxSplitConjunctionT) &
                         ls(andR) &&(
-                        debug("Show first conjunct with DI") & ls(DI),
+                        debug("Show first conjunct with DI") & ls(Dconstify) & ls(DI),
                         debug("Hiding irrelevant facts in second conjunct") &
-                          la(andL, "(h^2*kp()^2-2*h*href()*kp()^2+href()^2*kp()^2+h*kd()*kp()*v-href()*kd()*kp()*v+kp()*v^2)*(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+href()^2*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)>0&z>0") &
-                          la(hide, "(h^2*kp()^2-2*h*href()*kp()^2+href()^2*kp()^2+h*kd()*kp()*v-href()*kd()*kp()*v+kp()*v^2)*(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+href()^2*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)>0") &
+                          la(andL, "(h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd()*kp*v-href*kd()*kp*v+kp*v^2)*(h0_1()^2*kp^2-2*h0_1()*href*kp^2+href^2*kp^2+h0_1()*kd()*kp*v0_1()-href*kd()*kp*v0_1()+kp*v0_1()^2)>0&z>0") &
+                          la(hide, "(h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd()*kp*v-href*kd()*kp*v+kp*v^2)*(h0_1()^2*kp^2-2*h0_1()*href*kp^2+href^2*kp^2+h0_1()*kd()*kp*v0_1()-href*kd()*kp*v0_1()+kp*v0_1()^2)>0") &
                           debug("Introducing diff. auxiliary u'=u*-1/2*kd()") &
                           DA(Variable("u"), "-1/2*kd()".asTerm, "0".asTerm, "z>0 & z*u^2=1".asFormula)(odePos) & onBranch(
                           ("Diff. Aux. P Initially Valid", debug("Initially valid") & closeId),

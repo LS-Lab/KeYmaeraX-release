@@ -4,7 +4,7 @@
 */
 /**
  * Differential Dynamic Logic lexer for concrete KeYmaera X notation.
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 package edu.cmu.cs.ls.keymaerax.parser
@@ -26,7 +26,7 @@ case class LemmaFileMode() extends LexerMode
 
 /**
  * Terminal symbols of the differential dynamic logic grammar.
- * @author aplatzer
+ * @author Andre Platzer
  */
 sealed abstract class Terminal(val img: String) {
   override def toString = getClass.getSimpleName// + "\"" + img + "\""
@@ -280,7 +280,7 @@ case class SuffixRegion(line: Int, column: Int) extends Location {
 
 /**
  * Created by aplatzer on 6/8/15.
- * @author aplatzer
+ * @author Andre Platzer
  * @author nfulton
  */
 object KeYmaeraXLexer extends ((String) => List[Token]) {

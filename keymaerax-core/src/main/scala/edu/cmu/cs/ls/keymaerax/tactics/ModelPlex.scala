@@ -30,7 +30,7 @@ import scala.language.postfixOps
  * ModelPlex: Verified runtime validation of verified cyber-physical system models.
  * Created by smitsch on 3/6/15.
  * @author Stefan Mitsch
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Stefan Mitsch and André Platzer. ModelPlex: Verified runtime validation of verified cyber-physical system models.
 In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014, Toronto, ON, Canada, September 22-25, 2014. Proceedings, volume 8734 of LNCS, pages 199-214. Springer, 2014."
  */
@@ -78,10 +78,11 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     if (checkProvable) {
       val witnessStart= Platform.currentTime
       val provable = rootNode.provableWitness
-      assert(provable.subgoals.size == 1 && provable.subgoals(0).ante.size == 1 &&
-        provable.subgoals(0).succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
+      assert(provable.subgoals.size == 1 && provable.subgoals.head.ante.size == 1 &&
+        provable.subgoals.head.succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
       assert(provable.conclusion == mxInputSequent, "Provable is a proof of the ModelPlex specification")
-      val mxOutput = And(provable.subgoals(0).ante.head, provable.subgoals(0).succ.head)
+      assert(provable.subgoals.head.ante.head == True)
+      val mxOutput = provable.subgoals.head.succ.head
       assert(mxOutput == mxOutputProofTree, "ModelPlex output from Provable and from ProofNode agree (if ProofNode is correct)")
       val witnessDuration = Platform.currentTime - witnessStart
       Console.println("[proof time       " + proofDuration + "ms]")

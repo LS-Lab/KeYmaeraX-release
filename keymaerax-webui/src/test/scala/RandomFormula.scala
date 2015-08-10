@@ -11,7 +11,7 @@ import scala.collection.immutable._
 /**
  * Random formula generator and random term generator and random program generator
  * for testing purposes.
- * @author aplatzer
+ * @author Andre Platzer
  */
 class RandomFormula(val rand : Random = new Random()) {
   private def shortProbability = 0.10

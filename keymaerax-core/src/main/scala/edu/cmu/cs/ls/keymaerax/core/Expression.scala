@@ -4,7 +4,7 @@
 */
 /**
  * Differential Dynamic Logic expression data structures.
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @note Code Review: 2015-05-01
@@ -63,7 +63,7 @@ case class ObjectSort(name : String) extends Sort { override def toString = name
  * 3. hybrid programs are of type [[edu.cmu.cs.ls.keymaerax.core.Program]] of kind [[edu.cmu.cs.ls.keymaerax.core.ProgramKind]]
  *
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.1]]
- * @author aplatzer
+ * @author Andre Platzer
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#apply]]
  */
@@ -137,7 +137,7 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
 
 /**
  * Terms of differential dynamic logic.
- * @author aplatzer
+ * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#termParser]]
  */
 sealed trait Term extends Expression {
@@ -259,7 +259,7 @@ case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
 
 /**
  * Formulas of differential dynamic logic.
- * @author aplatzer
+ * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#formulaParser]]
  */
 sealed trait Formula extends Expression {
@@ -384,7 +384,7 @@ case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula
 
 /**
  * Hybrid programs of differential dynamic logic.
- * @author aplatzer
+ * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#programParser]]
  */
 sealed trait Program extends Expression {
@@ -441,7 +441,7 @@ case class Dual(child: Program) extends UnaryCompositeProgram {
 
 /**
  * Differential programs
- * @author aplatzer
+ * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser#differentialProgramParser]]
  */
 sealed trait DifferentialProgram extends Program {
@@ -464,8 +464,8 @@ case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferential
   require(e.sort == Real, "expected argument sort real " + this)
   /* @NOTE Soundness: AtomicODE requires explicit-form so f(?) cannot verbatim mention differentials/differential symbols,
      which is required for soundness of axiom "DE differential effect (system)" */
-  //@todo this toString call could cause an infinite loop coming from contracts checking in pretty printer. But should probably be taken care of.
-  require(!StaticSemantics.isDifferential(e), "Explicit-form differential equations expected, without any differentials on right-hand side " + this)
+  //@note avoid toString call, which could cause an infinite loop coming from contracts checking in pretty printer. But should probably be taken care of.
+  require(!StaticSemantics.isDifferential(e), "Explicit-form differential equations expected, without any differentials on right-hand side: " + xp + "=" + e)
 }
 
 /**

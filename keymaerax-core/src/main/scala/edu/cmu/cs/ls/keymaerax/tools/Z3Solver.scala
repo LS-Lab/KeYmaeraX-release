@@ -9,7 +9,7 @@ import java.nio.channels.Channels
 import java.util.Locale
 
 import edu.cmu.cs.ls.keymaerax.core.{True, False, Term, Formula}
-import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, ParseException, KeYmaeraXParser}
 import scala.sys.process._
 
 /**
@@ -18,10 +18,10 @@ import scala.sys.process._
  */
 class Z3Solver extends SMTSolver {
 
-  val k2s = new KeYmaeraToSMT("Z3")
+  private val k2s = new KeYmaeraToSMT("Z3")
   def toSMT(expr : KExpr): SExpr = k2s.convertToSMT(expr)
 
-  val pathToZ3 : String = {
+  private val pathToZ3 : String = {
     val z3TempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
     if(!new File(z3TempDir).exists) new File(z3TempDir).mkdirs
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
@@ -100,17 +100,15 @@ class Z3Solver extends SMTSolver {
     var smtCode = toSMT(f).getVariableList + "(assert (not " + toSMT(f).getFormula + "))"
     smtCode += "\n(check-sat)\n"
     println("[Solving with Z3...] \n" + smtCode)
-    val smtTempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
-    val smtFile = new File(smtTempDir, "KeymaeraToZ3.smt2")
+    val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
     writer.flush()
     writer.close()
     val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
     val (output, result) = run(cmd)
-    smtFile.delete()
     result match {
-      case f : Formula => (f, cmd, output)
+      case f : Formula => (f, cmd, KeYmaeraXPrettyPrinter(f))
       case _ => throw new Exception("Expected a formula from QE call but got a non-formula expression.")
     }
   }
@@ -118,8 +116,7 @@ class Z3Solver extends SMTSolver {
   def simplify(t: Term) = {
     val smtCode = toSMT(t).getVariableList + "(simplify " + toSMT(t).getFormula + ")"
 //    println("[Simplifying with Z3 ...] \n" + smtCode)
-    val smtTempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
-    val smtFile = new File(smtTempDir, "KeymaeraToZ3Simplify.smt2")
+    val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
     writer.flush()
@@ -127,12 +124,10 @@ class Z3Solver extends SMTSolver {
     val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
     val output: String = cmd.!!
 //    println("[Z3 simplify result] \n" + output + "\n")
-    smtFile.delete()
     try {
       KeYmaeraXParser.termParser(output)
     } catch {
       case e: ParseException => t
     }
   }
-
 }

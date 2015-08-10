@@ -14,7 +14,7 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 /**
  * Tests provability of the derived axioms.
- * @author aplatzer
+ * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  */
 class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach {

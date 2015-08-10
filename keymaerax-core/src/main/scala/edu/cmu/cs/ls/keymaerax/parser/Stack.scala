@@ -11,7 +11,7 @@ import scala.annotation.tailrec
  * Stack with top on the right.
  * For example the stack Bottom :+ a3 :+ a2 +: a1 has element a1 on the top, then a2 as the top of the tail.
  * @author nfulton
- * @author aplatzer
+ * @author Andre Platzer
  */
 sealed trait Stack[+A] {
   /** Top element of this stack or error if empty. */
@@ -47,11 +47,13 @@ sealed trait Stack[+A] {
   override def toString: String = fold("")((s, e) => s + " :+ " + e)
 }
 
+/** A stack tail :+ top with top on the top of tail */
 case class :+[B](tail: Stack[B], top: B) extends Stack[B] {
   def isEmpty = false
   def drop(n: Int) = {require(n>=0); if (n==0) this else tail.drop(n-1)}
 }
 
+/** The empty stack bottom */
 object Bottom extends Stack[Nothing] {
   def top = throw new UnsupportedOperationException("Empty stack has no top")
   def tail = throw new UnsupportedOperationException("Empty stack has no tail")

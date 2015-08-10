@@ -63,6 +63,8 @@ package edu.cmu.cs.ls.keymaerax
  * val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
  * val fml1str = pp(fml1)
  * }}}
+ * The fully-parenthesized pretty printer corresponding to a pretty printer can also be obtained using
+ * [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrinter.fullPrinter]]
  *
  * ===Parsing Differential Dynamic Logic===
  *
@@ -171,10 +173,12 @@ package edu.cmu.cs.ls.keymaerax
  *   println("Original: " + input)
  * }}}
  *
- * @author aplatzer
+ * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see "Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. KeYmaera X: An axiomatic tactical theorem prover for hybrid systems.  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015."
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
+ * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser]]
+ * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter]]
  */
 package object parser {}

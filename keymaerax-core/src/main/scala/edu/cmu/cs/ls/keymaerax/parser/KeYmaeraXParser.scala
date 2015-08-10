@@ -4,7 +4,7 @@
 */
 /**
  * Differential Dynamic Logic parser for concrete KeYmaera X notation.
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 package edu.cmu.cs.ls.keymaerax.parser
@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 /**
  * KeYmaera X parser items on the parser stack.
- * @author aplatzer
+ * @author Andre Platzer
  */
 private[parser] sealed trait Item
 /** Tokens are terminals occurring at a given location in the input. */
@@ -64,7 +64,7 @@ private[parser] case class Error(msg: String, loc: Location, st: String) extends
  * val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
  * }}}
 
- * @author aplatzer
+ * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.parser]]
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
@@ -142,7 +142,7 @@ object KeYmaeraXParser extends Parser {
     }
     semanticAnalysis(parse) match {
       case None => parse
-      case Some(error) => if (LAX) {println("WARNING: " + "Semantic analysis error" + "\nin " + "parsed: " + printer.stringify(parse) + "\n" + error); parse}
+      case Some(error) => if (LAX) {if (false) println("WARNING: " + "Semantic analysis" + "\nin " + "parsed: " + printer.stringify(parse) + "\n" + error); parse}
       else throw new ParseException("Semantic analysis error", UnknownLocation, "parsed: " + printer.stringify(parse) + "\n" + error)
     }
   }

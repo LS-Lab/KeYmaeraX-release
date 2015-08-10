@@ -10,7 +10,7 @@ import scala.collection.immutable.Map
 
 /**
  * Test Provable constructions
- * @author aplatzer
+ * @author Andre Platzer
  */
 class ProvableTest extends FlatSpec with Matchers {
   "Provable" should "close trivial proofs" in {

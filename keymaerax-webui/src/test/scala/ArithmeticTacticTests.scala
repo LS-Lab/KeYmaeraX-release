@@ -11,6 +11,7 @@ import testHelper.SequentFactory._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{locateAnte,locateSucc}
 import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl._
 
+import scala.collection.immutable
 import scala.collection.immutable.Map
 
 /**
@@ -470,4 +471,114 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
       quantifierEliminationT("Mathematica")
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
+
+  "Abs axiom tactic" should "expand abs(x) = y in succedent" in {
+    val s = sucSequent("abs(x) = y".asFormula)
+    val tactic = ArithmeticTacticsImpl.AbsAxiomT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "(x>=0 & y=x) | (x<=0 & y=-x)".asFormula
+  }
+
+  it should "expand abs(x) = y in antecedent" in {
+    val s = sequent(Nil, immutable.IndexedSeq("abs(x) = y".asFormula), immutable.IndexedSeq())
+    val tactic = ArithmeticTacticsImpl.AbsAxiomT(AntePosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "(x>=0 & y=x) | (x<=0 & y=-x)".asFormula
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
+  "Abs tactic" should "expand abs(x) in succedent" in {
+    val s = sucSequent("abs(x) >= 5".asFormula)
+    val tactic = ArithmeticTacticsImpl.AbsT(SuccPosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "x>=0&abs_0=x | x<=0&abs_0=-x".asFormula
+    result.openGoals().head.sequent.succ should contain only "abs_0>=5".asFormula
+  }
+
+  it should "expand abs(x) in antecedent" in {
+    val s = sequent(Nil, immutable.IndexedSeq("abs(x) >= 5".asFormula), immutable.IndexedSeq())
+    val tactic = ArithmeticTacticsImpl.AbsT(AntePosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("x>=0&abs_0=x | x<=0&abs_0=-x".asFormula, "abs_0>=5".asFormula)
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
+  it should "be able to prove x>2 -> abs(x) > 2" in {
+    val s = sucSequent("x>2 -> abs(x) > 2".asFormula)
+    val tactic = TactixLibrary.implyR(SuccPosition(0)) &
+      ArithmeticTacticsImpl.AbsT(SuccPosition(0, PosInExpr(0 :: Nil))) &
+      TactixLibrary.orL(AntePosition(1)) & TactixLibrary.andL(AntePosition(1)) & TactixLibrary.QE
+
+    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
+
+  "Min axiom tactic" should "expand min(x,y) = z in succedent" in {
+    val s = sucSequent("min(x,y) = z".asFormula)
+    val tactic = ArithmeticTacticsImpl.MinMaxAxiomT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "(x<=y & z=x) | (x>=y & z=y)".asFormula
+  }
+
+  "Min tactic" should "expand min(x,y) in succedent" in {
+    val s = sucSequent("min(x,y) >= 5".asFormula)
+    val tactic = ArithmeticTacticsImpl.MinMaxT(SuccPosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "x<=y&min_0=x | x>=y&min_0=y".asFormula
+    result.openGoals().head.sequent.succ should contain only "min_0>=5".asFormula
+  }
+
+  it should "expand min(x,y) in antecedent" in {
+    val s = sequent(Nil, immutable.IndexedSeq("min(x,y) >= 5".asFormula), immutable.IndexedSeq())
+    val tactic = ArithmeticTacticsImpl.MinMaxT(AntePosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("x<=y&min_0=x | x>=y&min_0=y".asFormula, "min_0>=5".asFormula)
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
+  "Max axiom tactic" should "expand max(x,y) = z in succedent" in {
+    val s = sucSequent("max(x,y) = z".asFormula)
+    val tactic = ArithmeticTacticsImpl.MinMaxAxiomT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "(x>=y & z=x) | (x<=y & z=y)".asFormula
+  }
+
+  "Max tactic" should "expand max(x,y) in succedent" in {
+    val s = sucSequent("max(x,y) >= 5".asFormula)
+    val tactic = ArithmeticTacticsImpl.MinMaxT(SuccPosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "x>=y&max_0=x | x<=y&max_0=y".asFormula
+    result.openGoals().head.sequent.succ should contain only "max_0>=5".asFormula
+  }
+
+  it should "expand max(x,y) in antecedent" in {
+    val s = sequent(Nil, immutable.IndexedSeq("max(x,y) >= 5".asFormula), immutable.IndexedSeq())
+    val tactic = ArithmeticTacticsImpl.MinMaxT(AntePosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("x>=y&max_0=x | x<=y&max_0=y".asFormula, "max_0>=5".asFormula)
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
 }

@@ -385,7 +385,7 @@ object FOQuantifierTacticsImpl {
 
                 val (renAxiom, alpha) =
                   if (quantified.name != aX.name || quantified.index != aX.index)
-                    (repl(a, aX), alphaRenamingT(aX.name, aX.index, quantified.name, quantified.index)(AntePosition(0, HereP.first)))
+                    (repl(a, aX), alphaRenamingT(quantified, aX)(SuccPosition(0, HereP.first)))
                   else (a, NilT)
 
                 val axInstance = axiomInstance match {
@@ -394,7 +394,7 @@ object FOQuantifierTacticsImpl {
 
                 val replMap = Map[Formula, Formula](axInstance -> renAxiom)
                 val branch2Tactic = cohideT(SuccPosition(node.sequent.succ.length)) ~
-                  (uniformSubstT(subst, replMap) & (axiomT(axiomName) & alpha & AxiomCloseT))
+                  (uniformSubstT(subst, replMap) & alpha & axiomT(axiomName))
                 Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
               case None => println("Giving up " + this.name); None
             }
@@ -454,7 +454,15 @@ object FOQuantifierTacticsImpl {
         if (p.isTopLevel) {
           existentialGenT(quantified, t)(AntePosition(0)) & AxiomCloseT
         } else {
-          repeatT(AxiomCloseT | locateAnte(PropositionalLeftT) | locateSucc(PropositionalRightT)) &
+          // we know that we have the same operator in antecedent and succedent with the same lhs -> we know that one
+          // will branch and one of these branches will close by identity. on the other branch, we have to hide
+          TacticLibrary.debugT(s"Start unpeeling in exists at $p") &
+            // list all cases explicitly, hide appropriate formulas in order to not blow up branching
+            ( (lastAnte(NotLeftT) & NotRightT(SuccPosition(0)) & assertT(1, 1)) |
+              (lastAnte(AndLeftT) & lastSucc(AndRightT) && (AxiomCloseT | hideT(AntePosition(1)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1)) |
+              (lastSucc(OrRightT) & lastAnte(OrLeftT) && (AxiomCloseT | hideT(SuccPosition(1)), AxiomCloseT | hideT(SuccPosition(0))) & assertT(1, 1)) |
+              (lastSucc(ImplyRightT) & ImplyLeftT(AntePosition(0)) && (AxiomCloseT | hideT(SuccPosition(0)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1))
+              )*p.inExpr.pos.length &
             locateAnte(existentialGenT(quantified, t), _ == fToGen) & AxiomCloseT
         }
       }

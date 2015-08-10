@@ -12,7 +12,7 @@ import org.scalatest.{Matchers, FlatSpec}
 
 /**
  * Created by aplatzer on 7/28/15.
- * @author aplatzer
+ * @author Andre Platzer
  */
 class UnificationTest extends FlatSpec with Matchers {
 

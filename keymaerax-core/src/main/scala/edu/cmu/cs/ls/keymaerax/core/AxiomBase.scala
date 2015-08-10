@@ -6,7 +6,7 @@
  * Axioms of KeYmaera X and axiomatic proof rules of KeYmaera X.
  * resulting from differential dynamic logic
  * @note Soundness-critical: Only adopt sound axioms and sound axiomatic rules.
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @note Code Review: 2015-05-01
@@ -18,7 +18,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable
 import scala.collection.immutable._
 
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.parser.{LoadedAxiom, KeYmaeraParser}
 
 
 /**
@@ -26,7 +26,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
- * @author aplatzer
+ * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  */
 private[core] object AxiomBase {
@@ -35,7 +35,7 @@ private[core] object AxiomBase {
    * @note Soundness-critical: Only return locally sound proof rules.
    * @return immutable list of locally sound axiomatic proof rules (premise, conclusion)
    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
-   * @author aplatzer
+   * @author Andre Platzer
    */
   private[core] def loadAxiomaticRules() : immutable.Map[String, (Sequent, Sequent)] = {
     val x = Variable("x_", None, Real)
@@ -165,7 +165,7 @@ private[core] object AxiomBase {
    * Look up an axiom of KeYmaera X,
    * i.e. sound axioms are valid formulas of differential dynamic logic.
    * parse the axiom file and add all loaded knowledge to the axioms map.
-   * @todo In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
+   * @note Result of axiom parse is asserted for a decent set of axioms to remove from soundness-critical core.
    */
   private[core] def loadAxioms: immutable.Map[String, Formula] = {
     try {
@@ -175,7 +175,16 @@ private[core] object AxiomBase {
 
       assert(res.length == res.map(k => k.name).distinct.length, "No duplicate axiom names during parse")
 
-      res.map(k => (k.name -> k.formula)).toMap
+      //@todo move as assertions to assertCheckAxiomFile once we can parse multi-argument functions
+      val f = FuncOf(Function("f", None, Unit, Real), Nothing)
+      val g = FuncOf(Function("g", None, Unit, Real), Nothing)
+      val h = FuncOf(Function("h", None, Unit, Real), Nothing)
+      val min = Equal(FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(f, g)), h)
+      val minAxiom = Equiv(min, Or(And(LessEqual(f, g), Equal(h, f)), And(GreaterEqual(f, g), Equal(h, g))))
+      val max = Equal(FuncOf(Function("max", None, Tuple(Real, Real), Real), Pair(f, g)), h)
+      val maxAxiom = Equiv(max, Or(And(GreaterEqual(f, g), Equal(h, f)), And(LessEqual(f, g), Equal(h, g))))
+
+      (res ++ (LoadedAxiom("min", minAxiom) :: LoadedAxiom("max", maxAxiom) :: Nil)).map(k => (k.name -> k.formula)).toMap
     } catch {
       case e: Exception => e.printStackTrace(); println("Problem while reading axioms " + e); sys.exit(10)
     }
@@ -202,7 +211,7 @@ private[core] object AxiomBase {
     val a = ProgramConst("a")
     val b = ProgramConst("b")
 
-    //@todo should not use strange names
+    //@todo should not use strange names, better x and q
     val v = Variable("v", None, Real)
     val h0 = PredOf(Function("H", None, Unit, Bool), Nothing)
 
@@ -217,7 +226,7 @@ private[core] object AxiomBase {
     assert(axs("[*] iterate") == Equiv(Box(Loop(a), pany), And(pany, Box(a, Box(Loop(a), pany)))), "[*] iterate")
     //@note only sound for hybrid systems not for hybrid games
     assert(axs("K modal modus ponens") == Imply(Box(a, Imply(pany,qny)), Imply(Box(a, pany), Box(a, qny))), "K modal modus ponens")
-    //@todo could accept I for hybrid systems
+    //@note could also have accepted axiom I for hybrid systems but not for hybrid games
     assert(axs("V vacuous") == Imply(p0, Box(a, p0)), "V vacuous")
 
     // Figure 3
@@ -235,7 +244,7 @@ private[core] object AxiomBase {
     assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
 
     assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,t0)), "all instantiate")
-    //@todo could allow: assert(axs("all distribute") == Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x)))), "all distribute")
+    assert(axs("all distribute") == Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x)))), "all distribute")
     // soundness-critical that these are for p() not for p(x) or p(?)
     assert(axs("vacuous all quantifier") == Equiv(p0, Forall(immutable.IndexedSeq(x), p0)), "vacuous all quantifier")
     assert(axs("vacuous exists quantifier") == Equiv(p0, Exists(immutable.IndexedSeq(x), p0)), "vacuous exists quantifier")
@@ -309,6 +318,10 @@ End.
 /* consequence of "all instantiate" */
 Axiom "all eliminate".
   (\forall x. p(?)) -> p(?)
+End.
+
+Axiom "all distribute".
+  (\forall x. (p(x)->q(x))) -> ((\forall x. p(x)) -> (\forall x. q(x)))
 End.
 
 /* @Derived */
@@ -476,9 +489,6 @@ End.
 
 /* Differential Auxiliary / Differential Ghost */
 Axiom "DA differential ghost".
-  /*@TODO Code Review discrepancy: change to TODO form from theory, not old calculus */
-  /* [c&H(?);]p(?) <- ((p(?) <-> \exists x. q(?)) &
-   * [c,x'=t()*x+s()&H(?);]q(?)) */
   [c&H(?);]p(?) <-> \exists y. [c,y'=t()*y+s()&H(?);]p(?)
   /* [x'=f(x)&q(x);]p(x) <-> \exists y. [(x'=f(x),y'=a(x)*y+b(x))&q(x);]p(x) THEORY */
 End.
@@ -750,9 +760,10 @@ Axiom "> flip".
   f(?) > g(?) <-> (g(?) < f(?))
 End.
 
-/*Axiom "abs".
-  (abs(f()) = g()) <->  ((f()>=0 & g()=f()) | (f()<=0 & g()=-f()))
-End.*/
+/* @todo change second case to a strict inequality */
+Axiom "abs".
+  (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<=0 & t()=-s()))
+End.
 
 /* @todo Multi-argument don't parse in KeYmaeraParser:1203
 Axiom "max expand".

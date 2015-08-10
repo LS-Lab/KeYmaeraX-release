@@ -1,16 +1,16 @@
 ImplyRight
 & Loop("v >= 0")
 & onLabel(
-  ("Invariant Initially Valid", ArithmeticT),
-  ("Use case", ArithmeticT),
-  ("Induction Step",
+  ("base case", ArithmeticT),
+  ("use case", ArithmeticT),
+  ("induction step",
     ImplyRight
     & Seq
     & Choice & AndRight && (
-      Assign & Seq & Test & ImplyRight & ODESolve & ImplyRight & ArithmeticT,
+      Assign & ODESolve & ImplyRight & ArithmeticT,
       Choice & AndRight && (
-        Assign & Seq & Test & ImplyRight & ODESolve & ImplyRight & ArithmeticT,
-        Assign & Seq & Test & ImplyRight & ODESolve & ImplyRight & ArithmeticT
+        Assign & ODESolve & ImplyRight & ArithmeticT,
+        Assign & ODESolve & ImplyRight & ArithmeticT
       )
     )
   )

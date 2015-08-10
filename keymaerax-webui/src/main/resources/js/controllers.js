@@ -302,6 +302,13 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
                 "\\Gamma ~\\vdash~\\forall^{\\alpha}(H \\rightarrow \\phi, \\Delta)",
                 "\\Gamma ~\\vdash~ \\left[ x' = \\theta \\& H \\right]\\phi, \\Delta")
             },
+        "dl.diffconstify" :
+            {
+                "name" : "dl.diffconstify",
+                "label" : makeRuleLabel("\\text{Dconstify}",
+                "\\Gamma(\\theta()) ~\\vdash~ \\left[ x' = \\theta() \\& H(\\theta()) \\right]\\phi(\\theta()), \\Delta(\\theta())",
+                "\\Gamma ~\\vdash~ \\left[ x' = \\theta \\& H \\right]\\phi, \\Delta")
+            },
         "dl.equalityRewriting" :
             { "name" : "dl.equalityRewriting",
               "label" : "\\(\\left(= \\text{rewrite}\\right) \\frac{\\Gamma, \\phi(t) ~\\vdash \\psi(t), \\Delta}{\\Gamma, x=t, \\phi(x) ~\\vdash \\psi(x), \\Delta}\\)",
@@ -328,16 +335,16 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             { "name" : "dl.hide",
               "label" : "\\(\\left(\\text{weaken}\\right) \\frac{\\Gamma ~\\vdash~ \\Delta}{\\Gamma,\\phi ~\\vdash~ \\psi,\\Delta}\\)"
             },
-        "keymaera.arithmetic" :
-            { "name" : "keymaera.arithmetic",
+        "keymaerax.arithmetic" :
+            { "name" : "keymaerax.arithmetic",
               "label" : "\\(\\left(\\text{QE}\\right) \\frac{QE(\\forall X. \\Phi(X) ~\\vdash~ \\Psi(X))}{\\Phi(X_1,\\ldots,X_n) ~\\vdash~ \\Psi(X_1,\\ldots,X_n)}\\)"
             },
-        "keymaera.default":
-            { "name" : "keymaera.default",
+        "keymaerax.default":
+            { "name" : "keymaerax.default",
               "label" : "KeYmaera Master Tactic"
             },
-        "keymaera.step":
-            { "name": "keymaera.step",
+        "keymaerax.step":
+            { "name": "keymaerax.step",
               "label": "KeYmaera Step Tactic"
             }
     };

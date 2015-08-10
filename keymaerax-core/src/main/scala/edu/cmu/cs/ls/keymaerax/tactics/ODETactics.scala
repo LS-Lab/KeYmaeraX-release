@@ -32,7 +32,7 @@ import scala.language.postfixOps
 /**
  * Created by smitsch on 1/9/15.
  * @author Stefan Mitsch
- * @author aplatzer
+ * @author Andre Platzer
  */
 object ODETactics {
 
@@ -246,7 +246,7 @@ object ODETactics {
             uniformSubstT(subst, Map(fml -> axiomAfterAlpha)) &
               assertT(0, 1) &
               alpha &
-              AxiomTactic.axiomT("<'> differential solution") & assertT(1, 1) & AxiomCloseT
+              AxiomTactic.axiomT("<'> differential solution")
           )
       }
     }
@@ -500,7 +500,7 @@ object ODETactics {
             uniformSubstT(subst, Map(fml -> axiomAfterAlpha)) &
               assertT(0, 1) &
               alphaT &
-              AxiomTactic.axiomT("<','> differential solution") & assertT(1, 1) & (AxiomCloseT | debugT("Unable to prove from axiom <','> differential solution") & stopT)
+              AxiomTactic.axiomT("<','> differential solution")
           )
       }
     }
@@ -692,7 +692,9 @@ object ODETactics {
 
           val cuts = flatSolution.foldLeft(diffWeakenT(p))((a, b) =>
             debugT(s"About to cut in $b at $p") & diffCutT(b)(p) & onBranch(
-              (cutShowLbl, debugT(s"Prove Solution using DI at $p") & diffInvariantT(p)),
+              (cutShowLbl,
+                debugT("Substituting with constants") & (diffIntroduceConstantT(p) | NilT) &
+                debugT(s"Prove Solution using DI at $p") & diffInvariantT(p)),
               (cutUseLbl, a)))
 
           Some(initialGhosts && cuts)
@@ -849,7 +851,7 @@ object ODETactics {
   /**
    * Prove the given list of differential invariants in that order by DC+DI.
    * The operational effect of {x'=f(x)&q(x)}@invariant(f1,f2,f3) is diffInvariant(List(f1,f2,f3))
-   * @author aplatzer
+   * @author Andre Platzer
    */
   def diffInvariant(invariants: List[Formula]): PositionTactic = new PositionTactic("diffInvariant") {
     /** Find the first invariant among given invariants that is not a conjunct of the evolution domain constraint already */
@@ -884,27 +886,69 @@ object ODETactics {
   }
 
   /**
-   * Applies a differential cut with the given cut formula.
-   * @author aplatzer
+   * Applies a differential cut with the given cut formula. If the cut formula contains old(x), the tactic introduces
+   * ghosts first to keep track of the initial value of x, and replaces occurrences of old(x) with that ghost.
+   * @author Andre Platzer
+   * @author smitsch
    */
   def diffCutT(diffcut: Formula): PositionTactic = new PositionTactic("DC differential cut") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
+    override def applies(s: Sequent, pos: Position): Boolean = !pos.isAnte && pos.isTopLevel && (s(pos) match {
       case Box(_: ODESystem, _) => true
       case _ => false
     })
 
-    def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      override def applicable(node : ProofNode) = applies(node.sequent, p)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+    private def oldVars(fml: Formula): Set[Variable] = {
+      var oldVars = Set[Variable]()
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+          case FuncOf(Function("old", None, Real, Real), v: Variable) => oldVars += v; Left(None)
+          case _ => Left(None)
+        }
+      }, diffcut)
+      oldVars
+    }
+
+    private def replaceOld(fml: Formula, ghostsByOld: Map[Variable, FuncOf]): Formula = {
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+          case FuncOf(Function("old", None, Real, Real), v: Variable) => Right(ghostsByOld(v))
+          case _ => Left(None)
+        }
+      }, diffcut) match {
+        case Some(f) => f
+      }
+    }
+
+    private def diffCut(node: ProofNode, pos: Position, fml: Formula): Tactic = {
+      val anteLength = node.sequent.ante.length
+      diffCutAxiomT(fml)(pos) & onBranch(
+        (axiomUseLbl,
+          /* use axiom: here we have to show that our cut was correct */ LabelBranch(cutShowLbl)),
+        (axiomShowLbl,
+          /* show axiom: here we continue with equiv rewriting so that desired result remains */
+          equivRewriting(AntePosition(anteLength), pos) & LabelBranch(cutUseLbl) /*@TODO equalityRewriting(whereTheEquivalenceWentTo, p) apply the remaining diffcut equivalence to replace the original p */)
+      )
+    }
+
+    def apply(pos: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) = applies(node.sequent, pos)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos) match {
         case Box(ODESystem(_, _), _) =>
-          val anteLength = node.sequent.ante.length
-          Some(diffCutAxiomT(diffcut)(p) & onBranch(
-            (axiomUseLbl,
-              /* use axiom: here we have to show that our cut was correct */ LabelBranch(cutShowLbl)),
-            (axiomShowLbl,
-              /* show axiom: here we continue with equiv rewriting so that desired result remains */
-              equivRewriting(AntePosition(anteLength), p) & LabelBranch(cutUseLbl) /*@TODO equalityRewriting(whereTheEquivalenceWentTo, p) apply the remaining diffcut equivalence to replace the original p */)
-          ))
+          val ov = oldVars(diffcut)
+          if (ov.isEmpty) {
+            Some(diffCut(node, pos, diffcut))
+          } else {
+            val ghosts: Set[((Variable, FuncOf), Tactic)] = ov.map(old => {
+              val ghost = freshNamedSymbol(Variable(old.name + "0"), node.sequent)
+              val varAfterAssign = FuncOf(Function(ghost.name, ghost.index match {
+                case Some(i) => Some(i+2)
+                case None => Some(1)
+              }, Unit, ghost.sort), Nothing)
+              (old -> varAfterAssign,
+               discreteGhostT(Some(ghost), old)(pos) & boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(pos))
+            })
+            Some(ghosts.map(_._2).reduce(_ & _) & diffCut(node, pos, replaceOld(diffcut, ghosts.map(_._1).toMap)))
+          }
         case _ => None
       }
     }
@@ -912,7 +956,7 @@ object ODETactics {
 
   /**
    * Adds an instance of the differential cut axiom for the given cut formula.
-   * @author aplatzer
+   * @author Andre Platzer
    * @author Stefan Mitsch
    */
   private def diffCutAxiomT(diffcut: Formula): PositionTactic = {
@@ -1643,7 +1687,7 @@ object ODETactics {
       case _ => false
     }
 
-    private def primedSymbols(ode: DifferentialProgram) = {
+    private def primedSymbols(ode: DifferentialProgram): Set[Variable] = {
       var primedSymbols = Set[Variable]()
       ExpressionTraversal.traverse(new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
@@ -1655,27 +1699,26 @@ object ODETactics {
       primedSymbols
     }
 
-    private def diffConstants(ode: DifferentialProgram): Set[Variable] =
-      (StaticSemantics.symbols(ode) -- primedSymbols(ode)).filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
+    private def freeVars(fml: Formula): Set[Variable] =
+      StaticSemantics.freeVars(fml).toSet.filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
 
-    override def apply(p: Position): Tactic = new ConstructionTactic("IDC introduce differential constants") {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    override def apply(pos: Position): Tactic = new ConstructionTactic("IDC introduce differential constants") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case Box(ode@ODESystem(_, _), _) => introduceConstants(ode, node.sequent)
-        case Diamond(ode@ODESystem(_, _), _) => introduceConstants(ode, node.sequent)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
+        case Box(ode@ODESystem(_, _), p) => introduceConstants(freeVars(p) -- primedSymbols(ode), node.sequent)
+        case Diamond(ode@ODESystem(_, _), p) => introduceConstants(freeVars(p) -- primedSymbols(ode), node.sequent)
         case _ => throw new IllegalArgumentException("Checked by applies to never happen")
       }
 
-      private def introduceConstants(ode: ODESystem, sequent: Sequent) = {
-        val dc = diffConstants(ode)
-        if (dc.isEmpty) {
+      private def introduceConstants(cnsts: Set[Variable], sequent: Sequent) = {
+        if (cnsts.isEmpty) {
           None
         } else {
-          val subst = dc.map(c => SubstitutionPair(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c)).toList
+          val subst = cnsts.map(c => SubstitutionPair(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c)).toList
           val fsWithDCFree = (sequent.ante ++ sequent.succ).
-            filter(f => StaticSemantics.freeVars(f).toSet.intersect(dc.toSet[NamedSymbol]).nonEmpty)
-          val constified = fsWithDCFree.map(f => f -> constify(f, dc)).toMap
+            filter(f => StaticSemantics.freeVars(f).toSet.intersect(cnsts.toSet[NamedSymbol]).nonEmpty)
+          val constified = fsWithDCFree.map(f => f -> constify(f, cnsts)).toMap
           Some(uniformSubstT(subst, constified))
         }
       }

@@ -1,6 +1,0 @@
- * api schema definitions
- * api 
- * eventhandler w/ schema checks
- * TreeModel and TreeView
-    - D3TreeView <: TreeView
- * dummy inputs and test the D3TreeView

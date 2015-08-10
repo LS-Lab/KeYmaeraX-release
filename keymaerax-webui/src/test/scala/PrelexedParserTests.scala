@@ -11,7 +11,7 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
 
 /**
  * Tests the parser on manually lexed inputs
- * @author aplatzer
+ * @author Andre Platzer
  */
 class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTester {
   val parser = KeYmaeraXParser

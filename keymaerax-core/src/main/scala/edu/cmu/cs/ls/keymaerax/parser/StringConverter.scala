@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  * Implicit conversions from strings into core data structures.
  * Created by smitsch on 1/8/15.
  * @author Stefan Mitsch
- * @author aplatzer
+ * @author Andre Platzer
  */
 object StringConverter {
   import scala.language.implicitConversions

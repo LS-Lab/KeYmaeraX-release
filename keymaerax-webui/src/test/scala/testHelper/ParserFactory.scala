@@ -4,15 +4,13 @@
 */
 package testHelper
 
-import edu.cmu.cs.ls.keymaerax.api.ComponentConfig
 import edu.cmu.cs.ls.keymaerax.core.{Sequent, Formula}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ProblemFileMode, KeYmaeraXParser, KeYmaeraParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 
 /**
  * Created by ran on 2/4/15.
  * @author Ran Ji
  * @author Stefan Mitsch
- * @todo adapt to new KeYmaeraXParser
  */
 object ParserFactory {
 

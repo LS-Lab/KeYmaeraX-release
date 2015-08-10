@@ -129,9 +129,13 @@ object AxiomTactic {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = axiomInstance(getTerm(node.sequent, p)) match {
         case inst@Imply(cond, equiv@Equiv(lhs, rhs)) =>
+          val secondToLastPos =
+            /* cuts will have produced one additional formula in succedent */
+            if (node.sequent.succ.nonEmpty) SuccPosition(node.sequent.succ.length - 1)
+            else SuccPosition(0)
           Some(cutT(Some(equiv))/*cutEquivInContext(equiv, p)*/ & onBranch(
             (cutShowLbl, hideT(p.topLevel) & /* only works because top-level */ cutT(Some(cond)) & onBranch(
-              (cutShowLbl, /* hide second-to-last */ hideT(SuccPosition(node.sequent.succ.length - 1)) &
+              (cutShowLbl, /* hide second-to-last */ hideT(secondToLastPos) &
                 lastSucc(condT(getTerm(node.sequent, p)))),
               (cutUseLbl, cutT(Some(inst)) & onBranch(
                 (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getTerm(node.sequent, p)))),
@@ -177,9 +181,8 @@ object AxiomTactic {
           uniformSubstT(subst(fml), Map(fml -> axiomInstance(fml, axiom))) &
             TacticLibrary.debugT("Made it this far") &
             assertT(0, 1) & lastSucc(assertPT(axiomInstance(fml, axiom), "Unexpected uniform substitution result")) &
-            lastSucc(alpha(fml)) & AxiomTactic.axiomT(axiomName) &
-            assertT(1, 1) & lastAnte(assertPT(axiom, "Unexpected axiom form in antecedent")) &
-            lastSucc(assertPT(axiom, "Unexpected axiom form in succedent")) & AxiomCloseT
+            lastSucc(alpha(fml)) &
+            lastSucc(assertPT(axiom, "Unexpected axiom form in succedent")) & AxiomTactic.axiomT(axiomName)
         )
       }
     }

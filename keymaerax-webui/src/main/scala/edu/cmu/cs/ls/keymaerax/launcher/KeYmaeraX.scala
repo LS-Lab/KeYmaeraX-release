@@ -22,13 +22,13 @@ import scala.util.Random
 /**
  * Command-line interface for KeYmaera X.
  * @author Stefan Mitsch
- * @author aplatzer
+ * @author Andre Platzer
  * @author Ran Ji
  */
 object KeYmaeraX {
 
   /** KeYmaera X version number */
-  val VERSION = "4.0a3"
+  val VERSION = "4.0a4"
 
   private type OptionMap = Map[Symbol, Any]
 

@@ -70,6 +70,7 @@ angular.module('formula', ['ngSanitize'])
                   "false" ,
                   "apply",
                   "derivative" ,
+                  "differentialsymbol" ,
                   "Variable",
                   "Number"].reverse()
 
@@ -219,6 +220,12 @@ angular.module('formula', ['ngSanitize'])
                             content = "[" + left + "] " + right;
                             break;
 
+                        case "diamondmodality":
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
+                            content = "<" + left + "> " + right;
+                            break;
+
                         case "Assign":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
@@ -289,7 +296,9 @@ angular.module('formula', ['ngSanitize'])
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
                             if (c[1].name != "EmptyODE") {
-                              content = left + ", " + right;
+                              if(c[1].name == "AtomicODE" || c[1].name == "ODEProduct") {
+                                content = left + ", " + right;
+                              } else content = left + " & " + right;
                             } else {
                               content = left;
                             }
@@ -300,6 +309,11 @@ angular.module('formula', ['ngSanitize'])
                             break;
 
                         case "derivative":
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            content = left + "'";
+                            break;
+
+                        case "differentialsymbol":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             content = left + "'";
                             break;

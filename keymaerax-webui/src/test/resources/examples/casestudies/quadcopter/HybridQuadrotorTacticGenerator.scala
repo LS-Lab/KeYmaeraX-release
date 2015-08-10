@@ -24,8 +24,8 @@ class HybridQuadrotorTacticGenerator extends (() => Tactic) {
     val odePos = SuccPosition(0)
 
     val inv = "h>=href".asFormula
-    val cut1 = "(h^2*kp()^2 - 2*h*href()*kp()^2 + href()^2*kp()^2 + h*kd()*kp()*v - href()*kd()*kp()*v + kp()*v^2) * (h0_1()^2*kp()^2 - 2*h0_1()*href()*kp()^2 + href()^2*kp()^2 + h0_1()*kd()*kp()*v0_1() - href()*kd()*kp()*v0_1() + kp()*v0_1()^2) > 0".asFormula
-    val cut2 = "(h^2*kp()^2 - 2*h*href()*kp()^2 + href()^2*kp()^2 + h*kd()*kp()*v - href()*kd()*kp()*v + kp()*v^2) * (h0_1()^2*kp()^2 - 2*h0_1()*href()*kp()^2 + href()^2*kp()^2 + h0_1()*kd()*kp()*v0_1() - href()*kd()*kp()*v0_1() + kp()*v0_1()^2) * z = (h0_1()^2*kp()^2 - 2*h0_1()*href()*kp()^2 + h0_1()*kd()*kp()*v0_1() - href()*kd()*kp()*v0_1() + kp()*v0_1()^2)^2 * z0_1() & z > 0".asFormula
+    val cut1 = "(h^2*kp^2 - 2*h*href*kp^2 + href^2*kp^2 + h*kd()*kp*v - href*kd()*kp*v + kp*v^2) * (h0_1()^2*kp^2 - 2*h0_1()*href*kp^2 + href^2*kp^2 + h0_1()*kd()*kp*v0_1() - href*kd()*kp*v0_1() + kp*v0_1()^2) > 0".asFormula
+    val cut2 = "(h^2*kp^2 - 2*h*href*kp^2 + href^2*kp^2 + h*kd()*kp*v - href*kd()*kp*v + kp*v^2) * (h0_1()^2*kp^2 - 2*h0_1()*href*kp^2 + href^2*kp^2 + h0_1()*kd()*kp*v0_1() - href*kd()*kp*v0_1() + kp*v0_1()^2) * z = (h0_1()^2*kp^2 - 2*h0_1()*href*kp^2 + h0_1()*kd()*kp*v0_1() - href*kd()*kp*v0_1() + kp*v0_1()^2)^2 * z0_1() & z > 0".asFormula
 
     val tactic = ls(implyR) &
       ls(I(inv)) &
@@ -38,8 +38,6 @@ class HybridQuadrotorTacticGenerator extends (() => Tactic) {
             lastAnte(hide) &
             ls(composeb) &
             ls(composeb) & ls(randomb) & ls(allR) & ls(testb) & ls(implyR) &
-            debug("Constantifying ODE") &
-            ODETactics.diffIntroduceConstantT(odePos) &
             debug("Introducing ghost h0") &
             HybridProgramTacticsImpl.discreteGhostT(Some(Variable("h0")), Variable("h"))(odePos) &
             HybridProgramTacticsImpl.boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT(_))(odePos) &
@@ -66,10 +64,10 @@ class HybridQuadrotorTacticGenerator extends (() => Tactic) {
                         debug("[]split box conjunction") &
                           lastSucc(boxSplitConjunctionT) &
                           ls(andR) &&(
-                          debug("Show first conjunct with DI") & ls(DI),
+                          debug("Show first conjunct with DI") & ls(Dconstify) & ls(DI),
                           debug("Hiding irrelevant facts in second conjunct") &
-                            la(andL, "(h^2*kp()^2-2*h*href()*kp()^2+href()^2*kp()^2+h*kd()*kp()*v-href()*kd()*kp()*v+kp()*v^2)*(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+href()^2*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)>0&z>0") &
-                            la(hide, "(h^2*kp()^2-2*h*href()*kp()^2+href()^2*kp()^2+h*kd()*kp()*v-href()*kd()*kp()*v+kp()*v^2)*(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+href()^2*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)>0") &
+                            la(andL, "(h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd()*kp*v-href*kd()*kp*v+kp*v^2)*(h0_1()^2*kp^2-2*h0_1()*href*kp^2+href^2*kp^2+h0_1()*kd()*kp*v0_1()-href*kd()*kp*v0_1()+kp*v0_1()^2)>0&z>0") &
+                            la(hide, "(h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd()*kp*v-href*kd()*kp*v+kp*v^2)*(h0_1()^2*kp^2-2*h0_1()*href*kp^2+href^2*kp^2+h0_1()*kd()*kp*v0_1()-href*kd()*kp*v0_1()+kp*v0_1()^2)>0") &
                             debug("Introducing diff. auxiliary u'=u*-1/2*kd()") &
                             DA(Variable("u"), "-1/2*kd()".asTerm, "0".asTerm, "z>0 & z*u^2=1".asFormula)(odePos) & onBranch(
                             ("Diff. Aux. P Initially Valid", debug("Initially valid") & closeId),

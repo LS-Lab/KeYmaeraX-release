@@ -132,6 +132,15 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     result.openGoals().flatMap(_.sequent.succ) should contain only ("0*y=0".asFormula, "z>2".asFormula, "z<0+1".asFormula)
   }
 
+  it should "work even if there is only one other formula" in {
+    val s = sequent(Nil, "x<5".asFormula :: "x=0".asFormula :: Nil, Nil)
+    val tactic = eqLeft(exhaustive=true)(AntePosition(1))
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only ("0<5".asFormula, "x=0".asFormula)
+    result.openGoals().flatMap(_.sequent.succ) shouldBe empty
+  }
+
   "Equivalence rewriting" should "rewrite if lhs occurs in succedent" in {
     val s = sequent(Nil, "x>=0 <-> y>=0".asFormula :: Nil, "x>=0".asFormula :: Nil)
     val tactic = EqualityRewritingImpl.equivRewriting(AntePosition(0), SuccPosition(0))

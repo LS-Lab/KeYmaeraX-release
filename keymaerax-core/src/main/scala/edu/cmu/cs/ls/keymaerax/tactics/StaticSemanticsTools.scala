@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 /**
  * Additional tools read off from the static semantics for the tactics.
- * @author aplatzer
+ * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics]]
  */
 object StaticSemanticsTools {

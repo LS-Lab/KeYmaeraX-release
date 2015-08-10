@@ -4,7 +4,7 @@
 */
 /**
  * Differential Dynamic Logic pretty printer in concrete KeYmaera X notation.
- * @author aplatzer
+ * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 package edu.cmu.cs.ls.keymaerax.parser
@@ -39,7 +39,7 @@ object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
  * val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
  * val fml1str = pp(fml1)
  * }}}
- * @author aplatzer
+ * @author Andre Platzer
  * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
@@ -73,6 +73,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case FormulaKind => parser.formulaParser(print)
     case ProgramKind => parser.programParser(print)
     case DifferentialProgramKind => parser.differentialProgramParser(print)
+    case ExpressionKind => assert(false, "No expressions of ExpressionKind can be constructed"); ???
   }
 
   /** Pretty-print term to a string without contract checking. */
@@ -183,7 +184,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
  * Precedence-based: KeYmaera X Pretty Printer formats differential dynamic logic expressions with compact brackets
  * in KeYmaera X notation according to the concrete syntax of differential dynamic logic
  * with explicit statement end ``;`` operator.
- * @author aplatzer
+ * @author Andre Platzer
  * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
  * @see doc/dL-grammar.md
  */
@@ -221,7 +222,8 @@ class KeYmaeraXPrecedencePrinter extends KeYmaeraXPrinter {
  * val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
  * val fml1str = pp(fml1)
  * }}}
- * @author aplatzer
+ * @author Andre Platzer
+ * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrinter.fullPrinter]]
  */
 object FullPrettyPrinter extends KeYmaeraXPrinter {
   override def apply(expr: Expression): String = stringify(expr)

@@ -228,6 +228,21 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
   }
 
+  it should "introduce ghosts when special function old is used" in {
+    import ODETactics.diffCutT
+    val s = sucSequent("[{x'=2 & x>=0 | y<z}]x>=0".asFormula)
+    val tactic = locateSucc(diffCutT("x>old(x)".asFormula))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 2
+    result.openGoals()(0).sequent.ante should contain only "x0_1()=x".asFormula
+    result.openGoals()(0).sequent.succ should contain only "[{x'=2 & (x>=0 | y<z) & x>x0_1()}]x>=0".asFormula
+    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
+    result.openGoals()(1).sequent.ante should contain only "x0_1()=x".asFormula
+    result.openGoals()(1).sequent.succ should contain only "[{x'=2 & x>=0 | y<z}]x>x0_1()".asFormula
+    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
+  }
+
   "differential solution tactic" should "use Mathematica to find solution if None is provided" in {
     val s = sequent(Nil, "b=0 & x>b".asFormula :: Nil, "[{x'=2}]x>b".asFormula :: Nil)
 
@@ -421,36 +436,52 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Differential introduce constants" should "replace a with a() in v'=a" in {
+    val s = sucSequent("[{v'=a}]v=v0()+a*t()".asFormula)
+    val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{v'=a()}]v=v0()+a()*t()".asFormula
+  }
+
+  it should "not self-replace a() with a() in v'=a()" in {
+    val s = sucSequent("[{v'=a()}]v=v0()+a()*t()".asFormula)
+    val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{v'=a()}]v=v0()+a()*t()".asFormula
+  }
+
+  it should "not replace a with a() when a is not free in p" in {
     val s = sucSequent("[{v'=a}]v>0".asFormula)
     val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[{v'=a()}]v>0".asFormula
-  }
-
-  it should "not self-replace a() with a() in v'=a()" in {
-    val s = sucSequent("[{v'=a()}]v>0".asFormula)
-    val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[{v'=a()}]v>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[{v'=a}]v>0".asFormula
   }
 
   it should "replace every free occurrence of a with a() everywhere in the sequent" in {
     val s = sequent(Seq(),
       Seq("v>=0".asFormula, "a=0".asFormula, "\\forall a a<0".asFormula),
-      Seq("[{v'=a}]v>0".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula))
+      Seq("[{v'=a}]v=v0()+a*t()".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula))
     val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only ("v>=0".asFormula, "a()=0".asFormula, "\\forall a a<0".asFormula)
-    result.openGoals().flatMap(_.sequent.succ) should contain only ("[{v'=a()}]v>0".asFormula, "a()>=0".asFormula, "[a:=2;]v>0".asFormula)
+    result.openGoals().flatMap(_.sequent.succ) should contain only ("[{v'=a()}]v=v0()+a()*t()".asFormula, "a()>=0".asFormula, "[a:=2;]v>0".asFormula)
   }
 
-  it should "work together with ODE solve" in {
+  it should "replace every free occurrence of b (only in p) with b() everywhere in the sequent" in {
+    val s = sequent(Seq(),
+      Seq("v>=0".asFormula, "a=0".asFormula, "b=2".asFormula, "\\forall b b<0".asFormula),
+      Seq("[{v'=a}](v>0 & b<0)".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula))
+    val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only ("v>=0".asFormula, "a=0".asFormula, "b()=2".asFormula, "\\forall b b<0".asFormula)
+    result.openGoals().flatMap(_.sequent.succ) should contain only ("[{v'=a}](v>0& b()<0)".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula)
+  }
+
+  it should "work as part of ODE solve" in {
     val s = sequent(Seq(), Seq("v>0".asFormula, "a=0".asFormula), Seq("[{v'=a}]v>0".asFormula))
-    val constified = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
-    constified.openGoals() should have size 1
-    val odeSolved = helper.runTactic(locateSucc(diffSolution(None)), constified.openGoals().head)
+    val odeSolved = helper.runTactic(locateSucc(diffSolution(None)), new RootNode(s))
     odeSolved.openGoals() should have size 1
     val result = helper.runTactic(TacticLibrary.arithmeticT, odeSolved.openGoals().head)
     result shouldBe 'closed

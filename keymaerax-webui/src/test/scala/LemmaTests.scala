@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
 import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.debugT
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.{assignb, closeId, composeb, cut, ls, onBranch}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tools.{Tool, Mathematica}
@@ -28,6 +29,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   override def beforeEach() = {
     math = new Mathematica
     math.init(mathematicaConfig)
+    PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter)
   }
 
   override def afterEach() = {
@@ -100,7 +102,8 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val f = "[x:=2;]x=2".asFormula
     val s = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(f))
-    val r1 = helper.runTactic(ls(assignb) & closeId, new RootNode(s))
+    val r1 = helper.runTactic(debugT("msg") & ls(assignb) & debugT("msg") & closeId, new RootNode(s))
+    //val r1 = helper.runTactic(ls(assignb) & closeId, new RootNode(s))
     r1 shouldBe 'closed
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(immutable.Map("input" -> f.prettyString, "output" -> "true")) :: Nil
