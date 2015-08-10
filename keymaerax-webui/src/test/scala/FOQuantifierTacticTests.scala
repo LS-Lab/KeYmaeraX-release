@@ -458,6 +458,15 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
       sucSequent("[{z:=z+1;}*]z>0".asFormula))
   }
 
+  it should "instantiate when min/max are used in the quantified formula" in {
+    val tactic = locateAnte(instantiateT(Variable("x", None, Real), "z".asTerm))
+    val s = sequent(Nil, "\\forall x min(x,y) <= max(x,y)".asFormula :: Nil, Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "min(z,y) <= max(z,y)".asFormula
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
   "All eliminate" should "remove quantifier" in {
     val tactic = locateAnte(allEliminateT)
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x x>0".asFormula :: Nil, Nil))) should be (
