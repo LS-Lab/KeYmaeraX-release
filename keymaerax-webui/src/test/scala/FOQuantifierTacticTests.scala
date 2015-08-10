@@ -13,7 +13,7 @@ import testHelper.ProofFactory._
 import testHelper.SequentFactory._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{locateSucc,locateAnte}
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateExistentialQuanT,
-  instantiateUniversalQuanT,instantiateT,existentialGenT,vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT,
+  instantiateUniversalQuanT,instantiateT,existentialGenT,existentialGenPosT,vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT,
   allEliminateT}
 
 import scala.collection.immutable.Map
@@ -266,6 +266,16 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     val tactic = existentialGenT(Variable("z", None, Real), "x".asTerm)(AntePosition(0, PosInExpr(1::Nil)))
     getProofSequent(tactic, new RootNode(sequent(Nil, "[x:=5;]x=5".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "[x:=5;](\\exists z z=5)".asFormula :: Nil, Nil))
+  }
+
+  "Existential generalization at position" should "only generalize the specified occurrences of t" in {
+    val tactic = existentialGenPosT(Variable("z"), PosInExpr(0 :: Nil))(AntePosition(0))
+    val s = sequent(Nil, "a+b=a+b".asFormula :: Nil, Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "\\exists z z=a+b".asFormula
+    result.openGoals().head.sequent.succ shouldBe empty
   }
 
   // TODO AlphaConversionHelper replaces variable bound by quantifier -> might be needed by some tactics (check before fixing)
