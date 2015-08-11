@@ -281,12 +281,18 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
             (cutShowLbl, hideT(SuccPosition(0)) & debugT("Cut proof 0") & cohideT(SuccPosition(0)) &
               ls(FOQuantifierTacticsImpl.existsDualT) & ls(NotRightT) &
               la(instantiateT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) & la(NotLeftT) &
-              /* @todo: Should replace previous two lines by ls(instantiateExistentialQuanT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) & */
+              /* @todo: Should replace previous two lines by ls(instantiateExistentialQuanT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) &
+              * (once the bug of instantiateExistentialQuanT is fixed) */
               debugT("Cut proof") & EqualReflexiveT(SuccPosition(0))) /* Closed, but something else open?? */,
             (cutUseLbl, la(skolemizeT) & debugT("Cut use case") &
               cutT(Some("0<=0&0 < max0/a&0=rv*0&0=w*a/2*0^2+dhd*0|0>=max0/a&0=rv*0&0=dhf*0-w*max0^2/(2*a)".asFormula)) &
               onBranch(
-                (cutShowLbl, hideT(SuccPosition(0)) & hideT(AntePosition(9)) & debugT("Cut 2 proof")), /* Open Goal */
+                (cutShowLbl, hideT(SuccPosition(0)) & hideT(AntePosition(8)) & hideT(AntePosition(7)) &
+                  hideT(AntePosition(6)) & hideT(AntePosition(5)) & hideT(AntePosition(4)) & hideT(AntePosition(3)) & hideT(AntePosition(2)) &
+                  hideT(AntePosition(1)) & debugT("Cut 2 proof") & cutT(Some("max0>=0".asFormula)) & onBranch(
+                  (cutShowLbl, debugT("Cut 3 proof") & hideT(SuccPosition(0)) & MinMaxT(AntePosition(1, PosInExpr(0 :: Nil))) & debugT("Cut 3 proof 0") & arith),
+                  (cutUseLbl, debugT("Cut 3 use case") & hideT(AntePosition(1)) & arith)
+                )),
                 (cutUseLbl, debugT("Cut 2 use case") & arith)
                 /* [ arith ] could be just replaced by [ la(EqualityRewritingImpl.eqLeft(exhaustive=true)) & AxiomCloseT ] */
               ))
