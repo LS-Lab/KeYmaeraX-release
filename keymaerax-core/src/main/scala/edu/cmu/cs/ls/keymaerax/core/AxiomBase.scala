@@ -525,12 +525,12 @@ End.
 
 /* @derived(DS differential equation solution + duality) */
 Axiom "Dsol differential equation solution".
- <x'=c();>p(x) <-> \exists t (t>=0 & <x:=x+(c()*t);>p(x))
+ <{x'=c()}>p(x) <-> \exists t (t>=0 & <x:=x+(c()*t);>p(x))
 End.
 
 /* @Derived */
 Axiom "Dsol& differential equation solution".
-  <x'=c()&q(x);>p(x) <-> \exists t (t>=0 & ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))
+  <{x'=c()&q(x)}>p(x) <-> \exists t (t>=0 & ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))
 End.
 
 /**

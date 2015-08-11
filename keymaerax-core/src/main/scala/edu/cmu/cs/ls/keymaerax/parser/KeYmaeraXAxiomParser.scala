@@ -59,10 +59,10 @@ object KeYmaeraXAxiomParser extends (String => List[LoadedKnowledge]) {
 
     try {
       val axiom = KeYmaeraXParser.formulaTokenParser(axiomTokens :+ Token(EOF, UnknownLocation))
-
       (name, axiom, remainderTokens.tail)
     } catch {
       case e: ParseException => throw e.inContext(input.toString, " Error occurred while parsing formula associated with axiom named " + name)
+      case e: AssertionError => throw new AssertionError(e.getMessage + " Error occurred while parsing formula associated with axiom named " + name)
     }
   }
 
