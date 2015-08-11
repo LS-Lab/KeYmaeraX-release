@@ -6,10 +6,11 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, ApplyRule}
 
+import scala.collection.immutable
 import scala.collection.immutable._
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.Evidence
+import edu.cmu.cs.ls.keymaerax.parser.{ToolEvidence, Evidence}
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -23,14 +24,21 @@ object DerivedAxioms {
   //@todo which lemma db to use?
   val derivedAxiomDB = new FileLemmaDB
   type LemmaID = String
-  private val derivedEvidence: List[Evidence] = Nil
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  //@todo add to FileLemmaDB
   private def derivedAxiom(name: String, fact: Provable): ApplyRule[LookupLemma] = {
     require(fact.isProved, "only proved Provables would be accepted as derived axioms")
-    val lemma = Lemma(fact, derivedEvidence, Some(name))
-    val lemmaID = LookupLemma.addLemma(derivedAxiomDB, lemma)
+    // create evidence (traces input into tool and output from tool)
+    val evidence = new ToolEvidence(immutable.Map("input" -> fact.toString, "output" -> "true")) :: Nil
+    val lemma = Lemma(fact, evidence, Some(name))
+    // first check whether the lemma DB already contains identical lemma name
+    val lemmaID = if (derivedAxiomDB.contains(name)) {
+      // identical lemma contents with identical name, so reuse ID
+      if (derivedAxiomDB.get(name) == Some(lemma)) name
+      else throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(name))
+    } else {
+      LookupLemma.addLemma(derivedAxiomDB, lemma)
+    }
     val lemmaRule = LookupLemma(derivedAxiomDB, lemmaID)
     new ApplyRule(lemmaRule) {
       override def applicable(node: ProofNode): Boolean = node.sequent.sameSequentAs(lemma.fact.conclusion)
@@ -39,6 +47,7 @@ object DerivedAxioms {
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
   private def derivedAxiom(name: String, derived: Sequent, tactic: Tactic): ApplyRule[LookupLemma] = {
+    //@todo optimize: no need to prove if already filed in derivedAxiomDB anyhow
     val rootNode = new RootNode(derived)
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))

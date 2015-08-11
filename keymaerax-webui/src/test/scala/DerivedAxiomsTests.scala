@@ -4,6 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.tactics.{TacticWrapper, Tactics, RootNode}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Tool}
 import testHelper.ProvabilityTestHelper
 
@@ -35,15 +37,26 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
 
-  private def check(lemma: Lemma): Sequent = {
+  private def check(lem: ApplyRule[LookupLemma]): Sequent = {
+    val lemma = lem.rule.lemma
     println(lemma.name.get + "\n" + lemma.fact.conclusion)
     lemma.fact.isProved shouldBe true
+    useToClose(lem)
     lemma.fact.conclusion
+  }
+
+  private def useToClose(lem: ApplyRule[LookupLemma]): Unit = {
+    val rootNode = new RootNode(lem.rule.lemma.fact.conclusion)
+    //@todo what/howto ensure it's been initialized already
+    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(lem, rootNode))
+    rootNode.isClosed() shouldBe true
+    rootNode.isProved() shouldBe true
   }
 
   "Derived Axioms" should "prove" in {
     check(doubleNegationAxiom)
     //@todo check(existsDualAxiom)
+    check(abs)
   }
 
 }
