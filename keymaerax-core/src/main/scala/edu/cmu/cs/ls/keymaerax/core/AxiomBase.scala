@@ -409,48 +409,48 @@ Axiom "<':=> differential assign".
 End.
 
 Axiom "[:*] assign nondet".
-  [v:=*;]p(v) <-> \forall v. p(v)
+  [v:=*;]p(v) <-> (\forall v p(v))
 End.
 
 /* @derived */
 Axiom "<:*> assign nondet".
-  <v:=*;>p(v) <-> \exists v. p(v)
+  <v:=*;>p(v) <-> (\exists v p(v))
 End.
 
 Axiom "[?] test".
-  [?H();]p() <-> (H() -> p()).
+  [?H();]p() <-> (H() -> p())
 End.
 
 /* @Derived */
 Axiom "<?> test".
-  <?H();>p() <-> (H() & p()).
+  <?H();>p() <-> (H() & p())
 End.
 
 Axiom "[++] choice".
-  [a; ++ b;]p(??) <-> ([a;]p(??) & [b;]p(??)).
+  [a; ++ b;]p(??) <-> ([a;]p(??) & [b;]p(??))
 End.
 
 /* @Derived */
 Axiom "<++> choice".
-   <a; ++ b;>p(??) <-> (<a;>p(??) | <b;>p(??)).
+   <a; ++ b;>p(??) <-> (<a;>p(??) | <b;>p(??))
 End.
 
 Axiom "[;] compose".
-  [a;b;]p(??) <-> [a;][b;]p(??).
+  [a;b;]p(??) <-> [a;][b;]p(??)
 End.
 
 /* @Derived */
 Axiom "<;> compose".
-  <a;b;>p(??) <-> <a;><b;>p(??).
+  <a;b;>p(??) <-> <a;><b;>p(??)
 End.
 
 Axiom "[*] iterate".
-  [{a;}*]p(??) <-> (p(??) & [a;][{a;}*] p(??)).
+  [{a;}*]p(??) <-> (p(??) & [a;][{a;}*] p(??))
 End.
 
 /* @Derived */
 Axiom "<*> iterate".
-  <{a;}*>p(??) <-> (p(??) | <a;><{a;}*> p(??)).
+  <{a;}*>p(??) <-> (p(??) | <a;><{a;}*> p(??))
 End.
 
 /* @Derived */
@@ -475,8 +475,8 @@ End.
 Axiom "DE differential effect".
   /* [x'=f(x)&q(x);]p(x) <-> [x'=f(x)&q(x);][x':=f(x);]p(x)  @TODO sound but incomplete */
   /* @TODO [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
-  /*@NOTE Generalized argument compared to theory as in DE differential effect (system) */
-  [x'=f(x)&q(x);]p(??) <-> [x'=f(x)&q(x);][x':=f(x);]p(??)
+  /* @NOTE Generalized argument compared to theory as in DE differential effect (system) */
+  [{x'=f(x)&q(x)}]p(??) <-> [{x'=f(x)&q(x)}][x':=f(x);]p(??)
 End.
 
 Axiom "DI differential invariant".
@@ -505,8 +505,8 @@ End.*/
 /* DG differential ghost, general Lipschitz case, system case */
 Axiom "DG differential Lipschitz ghost system".
   /* @see "DG differential Lipschitz ghost" THEORY */
-  ([{c&H(??)}]p(??) <-> \exists y [{y'=g(??),c&H(??)}]p(??))
-  <- (\exists L [{c&H(??)}] (\forall a \forall b \forall u \forall v (a>=b -> [y:=a;u:=g(??);y:=b;v:=g(??)] (-L*(a-b) <= u-v & u-v <= L*(a-b)))))
+  ([{c&H(??)}]p(??) <-> (\exists y [{y'=g(??),c&H(??)}]p(??)))
+  <- (\exists L [{c&H(??)}] (\forall a \forall b \forall u \forall v (a>=b -> [y:=a;u:=g(??);y:=b;v:=g(??);] (-L*(a-b) <= u-v & u-v <= L*(a-b)))))
 End.
 
 /* Formatter axioms for diff eqs. @todo unused except in tactics implementation of itself */
