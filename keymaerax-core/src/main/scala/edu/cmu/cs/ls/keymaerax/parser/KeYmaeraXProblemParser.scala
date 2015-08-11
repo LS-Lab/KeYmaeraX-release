@@ -31,7 +31,7 @@ object KeYmaeraXProblemParser {
       case expr : Expression => throw new ParseException("Expected problem to parse to a Formula, but found " + expr, UnknownLocation, "problem block")
     }
 
-    //@todo semantic analysis to type-check problem by checking whether the types in StaticSemantics.symbols(problem) match with the ones in decls
+    require(KeYmaeraXDeclarationsParser.typeAnalysis(decls, problem), "type analysis")
     (decls, problem)
   }
 }
@@ -44,7 +44,7 @@ object KeYmaeraXDeclarationsParser {
    *
    * @param tokens The tokens to parse
    * @return A pair containing:
-   *          _1: A mapping from variable names and indices to variable sorts, where the sort is:
+   *          _1: A mapping from variable name/index pairs to variable sorts, where the sort is a pair:
    *              _1: (Optionally) the domain sort of a function
    *              _2: The sort of a ProgramVariable, or the codomain sort of a function.
    *          _2: The list of remaining tokens.
@@ -70,6 +70,36 @@ object KeYmaeraXDeclarationsParser {
       (Map(), tokens)
     }
   }
+
+  /**
+   * Type analysis of expression according to the given type declarations decls
+   * @param decls the type declarations known from the context
+   * @param expr the expression parsed
+   * @return whether expr conforms to the types declared in decls.
+   * @todo distinguish whether it was in ProgramVariables or in Functions block, which is not currently recorded in decls.
+   */
+  def typeAnalysis(decls: Map[(String, Option[Int]), (Option[Sort], Sort)], expr: Expression): Boolean = {
+    StaticSemantics.signature(expr).forall(f => f match {
+      case f:Function =>
+        val (domain,sort) = decls.get((f.name,f.index)) match {
+          case Some(d) => d
+          case None => throw new ParseException("undefined symbol " + f, UnknownLocation, "type analysis")
+        }
+        f.sort == sort &&
+          (if (f.domain==Unit) domain==None else domain==Some(f.domain))
+      case _ => true
+    }) &&
+    StaticSemantics.vars(expr).toSymbolSet.forall(x => x match {
+      case x: Variable =>
+        val (None,sort) = decls.get((x.name,x.index)) match {
+          case Some(d) => d
+          case None => throw new ParseException("undefined symbol " + x, UnknownLocation, "type analysis")
+        }
+        x.sort == sort
+      case _ => true
+    })
+  }
+
 
   /**
    *
