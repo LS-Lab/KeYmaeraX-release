@@ -13,7 +13,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT,skolemizeT,instantiateExistentialQuanT}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT, arithmeticT, ImplyRightT, AndLeftT, hideT, AndRightT,
   ImplyLeftT, AxiomCloseT, OrRightT, OrLeftT, cutT, locate, NotRightT, NotLeftT}
-import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.{AbsAxiomT,AbsT,MinMaxAxiomT,MinMaxT} //,MinzMaxzAxiomT,MinzMaxzT}
+import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.{AbsAxiomT,AbsT,MinMaxAxiomT,MinMaxT,EqualReflexiveT}
+import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.{abbrv,eqLeft}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.PositionTactic
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{Propositional,NonBranchingPropositionalT,cohideT}
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
@@ -277,25 +278,16 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           la(instantiateT(Variable("ro"), Number(0))) &
           la(instantiateT(Variable("ho"), Number(0))) & la(ImplyLeftT) && (
           hideT(SuccPosition(0)) & debugT("Use case 1") &
-            cutT(Some("\\exists max0 max(0, w*(dhf-dhd)) = max0".asFormula)) & onBranch(
-            (cutShowLbl, hideT(SuccPosition(0)) & debugT("Cut proof 0") & ls(FOQuantifierTacticsImpl.existsDualT) &
-              ls(NotRightT) & cohideT(AntePosition(9)) & debugT("Cut proof 1") &
-              la(instantiateT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) & la(NotLeftT) & debugT("Cut proof") & AxiomCloseT) /* Open Goal */,
-            (cutUseLbl, la(skolemizeT) & debugT("Cut use case") &
-              cutT(Some("0<=0&0 < max0/a&0=rv*0&0=w*a/2*0^2+dhd*0|0>=max0/a&0=rv*0&0=dhf*0-w*max0^2/(2*a)".asFormula)) &
-              onBranch(
-                (cutShowLbl, hideT(SuccPosition(0)) & hideT(AntePosition(9)) & debugT("Cut 2 proof") & arith), /* Open Goal */
-                (cutUseLbl, debugT("Cut 2 use case") & arith)
-                /* [ arith ] could be just replaced by [ la(EqualityRewritingImpl.eqLeft(exhaustive=true)) & AxiomCloseT ] */
-              ))
-          ),
+            abbrv(Variable("max0"))(SuccPosition(0).first.first.first.second.second.first) & debugT("abbrv") &
+            /* super super fragile, any better way of doing it? */
+            MinMaxT(AntePosition(9, PosInExpr(1 :: Nil))) & arith,
           AbsT(AntePosition(9, PosInExpr(0 :: 0 :: Nil))) &
             AbsT(SuccPosition(0, PosInExpr(0 :: 0 :: Nil))) &
             AbsT(SuccPosition(0, PosInExpr(1 :: 0 :: Nil))) & debugT("Use case 2") & arith
           ),
         AxiomCloseT
         )),
-      (indStepLbl, debugT("Step") /* @todo copy again from No Delay proof */)
+      (indStepLbl, debugT("Step") /* Open Goal */ /* @todo copy again from No Delay proof */)
     )
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed

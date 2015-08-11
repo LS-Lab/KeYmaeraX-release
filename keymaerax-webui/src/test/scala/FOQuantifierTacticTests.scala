@@ -11,7 +11,7 @@ import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.ProofFactory._
 import testHelper.SequentFactory._
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{locateSucc,locateAnte}
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{locateSucc,locateAnte,NotLeftT,NotRightT}
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateExistentialQuanT,
   instantiateUniversalQuanT,instantiateT,existentialGenT,existentialGenPosT,vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT,
   allEliminateT}
@@ -617,5 +617,28 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante shouldBe empty
     result.openGoals().head.sequent.succ should contain only "\\forall x x>5".asFormula
+  }
+
+
+
+  it should "close exists max0 max(0, w*(dhf-dhd)) = max0 by reflexivity" in {
+    val s = sucSequent("\\exists max0 max(0, w*(dhf-dhd)) = max0".asFormula)
+    val tactic = locateSucc(FOQuantifierTacticsImpl.instantiateExistentialQuanT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) &
+      edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.debugT("Remaining goal") &
+      edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.EqualReflexiveT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result shouldBe 'closed
+  }
+
+  it should "close (in a convoluted way) exists max0 max(0, w*(dhf-dhd)) = max0 by reflexivity" in {
+    val s = sucSequent("\\exists max0 max(0, w*(dhf-dhd)) = max0".asFormula)
+    val tactic = locateSucc(FOQuantifierTacticsImpl.existsDualT) & locateSucc(NotRightT) &
+      locateAnte(instantiateT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) & locateAnte(NotLeftT) &
+      edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.debugT("Remaining goal") &
+      edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.EqualReflexiveT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result shouldBe 'closed
   }
 }
