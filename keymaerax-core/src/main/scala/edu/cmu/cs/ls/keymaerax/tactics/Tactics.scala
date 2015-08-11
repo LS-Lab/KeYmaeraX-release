@@ -703,9 +703,9 @@ object Tactics {
    */
 
   /**
-   * Apply rule
+   * Base tactic that directly applies the given rule.
    */
-  abstract class ApplyRule(val rule : Rule) extends Tactic("Apply rule " + rule) {
+  abstract class ApplyRule[R <: Rule](val rule : R) extends Tactic("Apply rule " + rule) {
 
     def apply(tool : Tool, node : ProofNode) {
       if (applicable(node)) {
