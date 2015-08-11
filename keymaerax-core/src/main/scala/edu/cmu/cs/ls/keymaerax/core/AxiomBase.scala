@@ -290,12 +290,12 @@ Variables.
   P b.
   CP c.
   CP d.
-  F p.
+  F pf.
   F p(T).
-  F p(?).
+  F p(??).
   F q.
   F q(T).
-  F r(?).
+  F r(??).
   F ctxF_(T).
   F H.
   F H(T).
@@ -317,6 +317,7 @@ End.
 
 /* consequence of "all instantiate" */
 Axiom "all eliminate".
+
   (\forall x. p(?)) -> p(?)
 End.
 
@@ -331,6 +332,7 @@ End.
 
 Axiom "vacuous all quantifier".
   p <-> \forall x. p
+  /*  pf <-> \forall x pf*/
 End.
 
 /* @Derived */
@@ -371,12 +373,12 @@ End.
  */
 
 Axiom "<> dual".
-  <a;>p(?) <-> ![a;](!p(?))
+  <a;>p(??) <-> ![a;](!p(??))
 End.
 
 /* @Derived */
 Axiom "[] dual".
-  [a;]p(?) <-> !<a;>(!p(?))
+  [a;]p(??) <-> !<a;>(!p(??))
 End.
 
 Axiom "[:=] assign".
@@ -430,16 +432,16 @@ Axiom "<?> test".
 End.
 
 Axiom "[++] choice".
-  [a ++ b]p(?) <-> ([a;]p(?) & [b;]p(?)).
+  [a ++ b]p(??) <-> ([a;]p(??) & [b;]p(??)).
 End.
 
 /* @Derived */
 Axiom "<++> choice".
-   <a ++ b;>p(?) <-> (<a;>p(?) | <b;>p(?)).
+   <a ++ b;>p(??) <-> (<a;>p(??) | <b;>p(??)).
 End.
 
 Axiom "[;] compose".
-  [ a; b; ]p(?) <-> [a;][b;]p(?).
+  [ a; b; ]p(??) <-> [a;][b;]p(??).
 End.
 
 /* @Derived */
