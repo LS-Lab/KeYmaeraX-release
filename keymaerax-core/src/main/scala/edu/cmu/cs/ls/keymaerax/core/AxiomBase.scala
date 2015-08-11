@@ -18,7 +18,7 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable
 import scala.collection.immutable._
 
-import edu.cmu.cs.ls.keymaerax.parser.{LoadedAxiom, KeYmaeraXAxiomParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXAxiomParser
 
 /**
  * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
@@ -174,9 +174,9 @@ private[core] object AxiomBase {
 //      val res = alp.runParser(loadAxiomString())
       val res = KeYmaeraXAxiomParser(loadAxiomString())
 
-      assert(res.length == res.map(k => k.name).distinct.length, "No duplicate axiom names during parse")
+      assert(res.length == res.map(k => k._1).distinct.length, "No duplicate axiom names during parse")
 
-      res.map(k => (k.name -> k.formula)).toMap
+      res.map(k => (k._1 -> k._2)).toMap
     } catch {
       case e: Exception => e.printStackTrace(); println("Problem while reading axioms " + e); sys.exit(10)
     }
