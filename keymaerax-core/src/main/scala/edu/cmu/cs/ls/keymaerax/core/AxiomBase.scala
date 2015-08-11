@@ -516,7 +516,7 @@ End.
 
 /* @Derived */
 Axiom "DS differential equation solution".
-  [x'=c();]p(x) <-> \forall t (t>=0 -> [x:=x+(c()*t);]p(x))
+  [{x'=c()}]p(x) <-> \forall t (t>=0 -> [x:=x+(c()*t);]p(x))
 End.
 
 Axiom "DS& differential equation solution".
