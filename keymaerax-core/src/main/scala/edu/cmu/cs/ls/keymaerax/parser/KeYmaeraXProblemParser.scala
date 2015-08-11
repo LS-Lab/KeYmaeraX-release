@@ -98,6 +98,7 @@ object KeYmaeraXDeclarationsParser {
         x.sort == sort
       case _ => true
     })
+    true
   }
 
 
