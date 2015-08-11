@@ -511,7 +511,7 @@ End.
 
 /* Formatter axioms for diff eqs. @todo unused except in tactics implementation of itself */
 Axiom ", commute".
-  [{c,d & H(??);}]p(??) <-> [{d,c & H(??)}]p(??)
+  [{c,d & H(??)}]p(??) <-> [{d,c & H(??)}]p(??)
 End.
 
 /* @Derived */
