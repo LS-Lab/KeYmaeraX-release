@@ -759,9 +759,8 @@ Axiom "> flip".
   f(??) > g(??) <-> (g(??) < f(??))
 End.
 
-/* @todo change second case to a strict inequality */
 Axiom "abs".
-  (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<=0 & t()=-s()))
+  (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))
 End.
 
 /* @todo Multi-argument don't parse in KeYmaeraParser:1203
