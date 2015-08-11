@@ -25,7 +25,7 @@ object KeYmaeraXLemmaParser extends (String => (String, Formula, (String, String
     val tokens = KeYmaeraXLexer.inMode(s, LemmaFileMode())
     if (DEBUG) println("Tokens are: " + tokens)
     val (decls, lemmaTokens) = KeYmaeraXDeclarationsParser(tokens)
-    println(decls)
+    if (DEBUG) println("Declarations: " + decls)
     parseLemma(lemmaTokens)
   }
 
