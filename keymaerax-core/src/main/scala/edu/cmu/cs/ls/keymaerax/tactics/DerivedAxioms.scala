@@ -38,13 +38,13 @@ object DerivedAxioms {
   }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
-  private def derivedAxiom(name: String, derivedAxiom: Sequent, tactic: Tactic): ApplyRule[LookupLemma] = {
-    val rootNode = new RootNode(derivedAxiom)
+  private def derivedAxiom(name: String, derived: Sequent, tactic: Tactic): ApplyRule[LookupLemma] = {
+    val rootNode = new RootNode(derived)
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
     assert(rootNode.isClosed, "tactics proving derived axioms should close the proof")
-    val witness = rootNode.provableWitness
-    assert(witness.proved, "tactics proving derived axioms should produce proved Provables")
+    val witness: Provable = rootNode.provableWitness
+    assert(witness.isProved, "tactics proving derived axioms should produce proved Provables")
     derivedAxiom(name, witness)
   }
 
