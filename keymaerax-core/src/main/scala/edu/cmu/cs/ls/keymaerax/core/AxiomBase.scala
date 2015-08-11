@@ -55,7 +55,7 @@ private[core] object AxiomBase {
       /**
        * Rule "all generalization".
        * Premise p(x)
-       * Conclusion \forall x . p(x)
+       * Conclusion \forall x p(x)
        * End.
        */
       /*("all generalization",
@@ -63,8 +63,8 @@ private[core] object AxiomBase {
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),*/
       /**
        * Rule "all generalization".
-       * Premise p(?)
-       * Conclusion \forall x . p(?)
+       * Premise p(??)
+       * Conclusion \forall x p(??)
        * End.
        */
       ("all generalization",
@@ -72,8 +72,8 @@ private[core] object AxiomBase {
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Forall(immutable.Seq(x), pany))))),
       /**
        * Rule "CT term congruence".
-       * Premise f_(?) = g_(?)
-       * Conclusion ctxT_(f_(?)) = ctxT_(g_(?))
+       * Premise f_(??) = g_(??)
+       * Conclusion ctxT_(f_(??)) = ctxT_(g_(??))
        * End.
        * @derived("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
        */
@@ -82,8 +82,8 @@ private[core] object AxiomBase {
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(FuncOf(ctxt, fany), FuncOf(ctxt, gany)))))),
       /**
        * Rule "CQ equation congruence".
-       * Premise f_(?) = g_(?)
-       * Conclusion ctxP_(f_(?)) <-> ctxP_(g_(?))
+       * Premise f_(??) = g_(??)
+       * Conclusion ctxP_(f_(??)) <-> ctxP_(g_(??))
        * End.
        */
       ("CQ equation congruence",
@@ -91,8 +91,8 @@ private[core] object AxiomBase {
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredOf(ctxf, fany), PredOf(ctxf, gany)))))),
       /**
        * Rule "CE congruence".
-       * Premise p_(?) <-> q_(?)
-       * Conclusion ctxF_(p_(?)) <-> ctxF_(q_(?))
+       * Premise p_(??) <-> q_(??)
+       * Conclusion ctxF_(p_(??)) <-> ctxF_(q_(??))
        * End.
        */
       ("CE congruence",
@@ -139,8 +139,8 @@ private[core] object AxiomBase {
           Sequent(immutable.Seq(), immutable.IndexedSeq(Diamond(a, pany)), immutable.IndexedSeq(Diamond(a, qany))))),
       /**
        * Rule "ind induction".
-       * Premise p(?) ==> [a;]p(?)
-       * Conclusion p(?) ==> [a*]p(?)
+       * Premise p(??) ==> [a;]p(??)
+       * Conclusion p(??) ==> [a*]p(??)
        */
       ("ind induction",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany))),
@@ -246,7 +246,7 @@ private[core] object AxiomBase {
 
     assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,t0)), "all instantiate")
     assert(axs("all distribute") == Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x)))), "all distribute")
-    // soundness-critical that these are for p() not for p(x) or p(?)
+    // soundness-critical that these are for p() not for p(x) or p(??)
     assert(axs("vacuous all quantifier") == Equiv(p0, Forall(immutable.IndexedSeq(x), p0)), "vacuous all quantifier")
     assert(axs("vacuous exists quantifier") == Equiv(p0, Exists(immutable.IndexedSeq(x), p0)), "vacuous exists quantifier")
     true
@@ -327,12 +327,12 @@ Axiom "exists generalize".
 End.
 
 Axiom "vacuous all quantifier".
-  p <-> \forall x p
+  p() <-> \forall x p()
 End.
 
 /* @Derived */
 Axiom "vacuous exists quantifier".
-  p <-> (\exists x p)
+  p() <-> (\exists x p())
 End.
 
 Axiom "all dual".
@@ -346,7 +346,7 @@ End.
 
 /*
 Axiom "all quantifier scope".
-  (\forall x (p(x) & q)) <-> ((\forall x p(x)) & q)
+  (\forall x (p(x) & q())) <-> ((\forall x p(x)) & q())
 End.
 */
 
@@ -391,12 +391,12 @@ Axiom "[:=] assign equational".
 End.
 
 Axiom "[:=] vacuous assign".
-  [v:=t();]p <-> p
+  [v:=t();]p() <-> p()
 End.
 
 /* @derived */
 Axiom "<:=> vacuous assign".
-  <v:=t();>p <-> p
+  <v:=t();>p() <-> p()
 End.
 
 Axiom "[':=] differential assign".
@@ -418,12 +418,12 @@ Axiom "<:*> assign nondet".
 End.
 
 Axiom "[?] test".
-  [?H;]p <-> (H -> p).
+  [?H();]p() <-> (H() -> p()).
 End.
 
 /* @Derived */
 Axiom "<?> test".
-  <?H;>p <-> (H & p).
+  <?H();>p() <-> (H() & p()).
 End.
 
 Axiom "[++] choice".
@@ -538,7 +538,7 @@ End.
  */
 
 Axiom "DE differential effect (system)".
-    /* @NOTE Soundness: AtomicODE requires explicit-form so f(?) cannot verbatim mention differentials/differential symbols */
+    /* @NOTE Soundness: AtomicODE requires explicit-form so f(??) cannot verbatim mention differentials/differential symbols */
     /* @NOTE Completeness: reassociate needed in DifferentialProduct data structures */
     [{x'=f(??),c&H(??)}]p(??) <-> [{c,x'=f(??)&H(??)}][x':=f(??);]p(??)
 End.
@@ -649,8 +649,8 @@ End.*/
 
 /* @NOTE Unsound for hybrid games */
 Axiom "V vacuous".
-  p -> [a;]p
-  /* @TODO (p -> [a;]p) <- [a;]true sound for hybrid games */
+  p() -> [a;]p()
+  /* @TODO (p() -> [a;]p()) <- [a;]true sound for hybrid games */
 End.
 
 /* @NOTE Unsound for hybrid games */
