@@ -10,10 +10,22 @@ KeYmaera X is built up from a small trusted core. The core contains a finite lis
 Installation
 ============
 
+The easiest way to run KeYmaera X is to download the keymaerax.jar binary file from
+
+  http://keymaeraX.org/
+
+and run it via
+
+    java -Xss20M -jar keymaerax.jar
+
+If this results in the error `Invalid or corrupt jarfile` then update to Java 1.8 or run via
+
+    java -Xss20M -cp keymaerax.jar KeYmaeraX
+
 The easiest way to run KeYmaera X from source is to install its dependencies and run HyDRA via SBT:
 
     * Install Scala (and the JRE).
-    * Install SBT and following the instructions in the Building section.
+    * Install SBT and follow the instructions in the Building section.
 
 Building
 ========
@@ -122,7 +134,7 @@ KeYmaera X is successfully started when you see the following console output
 
 To find out how to use KeYmaera X from command line run
 
-    java -Xss20M -jar keymaerax-webui/target/scala-2.10/KeYmaeraX-assembly-0.1-SNAPSHOT.jar -ui
+    java -Xss20M -jar keymaerax-webui/target/scala-2.10/KeYmaeraX-assembly-0.1-SNAPSHOT.jar -help
 
 Make sure you have Java 1.8 for using command line. Java 1.7 and earlier versions may not work.
 
@@ -142,7 +154,7 @@ The project is split into two subprojects, `keymaerax-core` for the core functio
 
 Within the `edu.cmu.cs.ls.keymaerax` namespace, source code is separated according to functionality:
 
-    .core    - Soundness-critical core
+    .core    - KeYmaera X Kernel: Soundness-critical core
     .parser  - Parsing and pretty printing
     .tactics - Tactic framework, including tactic implementations and the scheduler
     .tools   - Arithmetic back-ends
@@ -255,7 +267,7 @@ arXiv:1205.4788
 
 11. André Platzer. 
 Differential game logic. 
-August 2014.
+ACM Trans. Comput. Log.
 arXiv:1408.1980
 
 Copyright and Licenses
