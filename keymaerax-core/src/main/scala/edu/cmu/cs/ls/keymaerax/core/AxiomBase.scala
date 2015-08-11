@@ -328,7 +328,6 @@ Axiom "exists generalize".
 End.
 
 Axiom "vacuous all quantifier".
-  /*  pf <-> \forall x pf*/
   p <-> \forall x p
 End.
 
