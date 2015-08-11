@@ -310,7 +310,7 @@ End.
 
 /* consequence of "all instantiate" */
 Axiom "all eliminate".
-  (\forall x p(?)) -> p(?)
+  (\forall x p(??)) -> p(??)
 End.
 
 /* @Derived */
@@ -328,12 +328,12 @@ Axiom "vacuous exists quantifier".
 End.
 
 Axiom "all dual".
-  (\forall x . p(x)) <-> !(\exists x . (!p(x)))
+  (\forall x p(x)) <-> !(\exists x (!p(x)))
 End.
 
 /* @Derived */
 Axiom "exists dual".
-  (\exists x . p(x)) <-> !(\forall x . (!p(x)))
+  (\exists x p(x)) <-> !(\forall x (!p(x)))
 End.
 
 /*
@@ -347,11 +347,11 @@ End.
  */
 
 Axiom "const congruence".
-  s() = t() -> ctxT_(s()) = ctxT_(t())
+  (s() = t()) -> (ctxT_(s()) = ctxT_(t()))
 End.
 
 Axiom "const formula congruence".
-  s() = t() -> (ctxF_(s()) <-> ctxF_(t()))
+  (s() = t()) -> (ctxF_(s()) <-> ctxF_(t()))
 End.
 
 
@@ -360,12 +360,12 @@ End.
  */
 
 Axiom "<> dual".
-  <a;>p(?) <-> ![a;](!p(?))
+  <a;>p(??) <-> ![a;](!p(??))
 End.
 
 /* @Derived */
 Axiom "[] dual".
-  [a;]p(?) <-> !<a;>(!p(?))
+  [a;]p(??) <-> !<a;>(!p(??))
 End.
 
 Axiom "[:=] assign".
@@ -379,7 +379,7 @@ End.
 
 /* @derived */
 Axiom "[:=] assign equational".
-  [v:=t();]p(v) <-> \forall v . (v=t() -> p(v))
+  [v:=t();]p(v) <-> \forall v (v=t() -> p(v))
 End.
 
 Axiom "[:=] vacuous assign".
@@ -419,35 +419,35 @@ Axiom "<?> test".
 End.
 
 Axiom "[++] choice".
-  [a ++ b]p(?) <-> ([a;]p(?) & [b;]p(?)).
+  [a; ++ b;]p(??) <-> ([a;]p(??) & [b;]p(??)).
 End.
 
 /* @Derived */
 Axiom "<++> choice".
-   <a ++ b;>p(?) <-> (<a;>p(?) | <b;>p(?)).
+   <a; ++ b;>p(??) <-> (<a;>p(??) | <b;>p(??)).
 End.
 
 Axiom "[;] compose".
-  [ a; b; ]p(?) <-> [a;][b;]p(?).
+  [a;b;]p(??) <-> [a;][b;]p(??).
 End.
 
 /* @Derived */
 Axiom "<;> compose".
-  < a; b; >p(?) <-> <a;><b;>p(?).
+  <a;b;>p(??) <-> <a;><b;>p(??).
 End.
 
 Axiom "[*] iterate".
-  [a*]p(?) <-> (p(?) & [a;][a*] p(?)).
+  [{a;}*]p(??) <-> (p(??) & [a;][{a;}*] p(??)).
 End.
 
 /* @Derived */
 Axiom "<*> iterate".
-  <a*>p(?) <-> (p(?) | <a;><a*> p(?)).
+  <{a;}*>p(??) <-> (p(??) | <a;><{a;}*> p(??)).
 End.
 
 /* @Derived */
 Axiom "Domain Constraint Conjunction Reordering".
-  [c & (H(?) & q(?));]p(?) <-> [c & (q(?) & H(?));]p(?)
+  [{c & (H(??) & q(??))}]p(??) <-> [{c & (q(??) & H(??))}]p(??)
 End.
 
 /**
@@ -455,80 +455,74 @@ End.
  */
 
 Axiom "DW differential weakening".
-  [c&H(?);]p(?) <-> ([c&H(?);](H(?)->p(?)))
+  [{c&H(??)}]p(??) <-> ([{c&H(??)}](H(??)->p(??)))
 /* [x'=f(x)&q(x);]p(x) <-> ([x'=f(x)&q(x);](q(x)->p(x))) THEORY */
 End.
 
 Axiom "DC differential cut".
-  ([c&H(?);]p(?) <-> [c&(H(?)&r(?));]p(?)) <- [c&H(?);]r(?)
+  ([{c&H(??)}]p(??) <-> [{c&(H(??)&r(??))}]p(??)) <- [{c&H(??)}]r(??)
 /* ([x'=f(x)&q(x);]p(x) <-> [x'=f(x)&(q(x)&r(x));]p(x)) <- [x'=f(x)&q(x);]r(x) THEORY */
 End.
 
 Axiom "DE differential effect".
   /* [x'=f(x)&q(x);]p(x) <-> [x'=f(x)&q(x);][x':=f(x);]p(x)  @TODO sound but incomplete */
   /* @TODO [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
-  /*@NOTE Generalized compared to theory as in DE differential effect (system) */
-  [x'=f(x)&q(x);]p(?) <-> [x'=f(x)&q(x);][x':=f(x);]p(?)
+  /*@NOTE Generalized argument compared to theory as in DE differential effect (system) */
+  [x'=f(x)&q(x);]p(??) <-> [x'=f(x)&q(x);][x':=f(x);]p(??)
 End.
 
 Axiom "DI differential invariant".
-  [c&H(?);]p(?) <- (H(?)-> (p(?) & [c&H(?);]((p(?))')))
+  [{c&H(??)}]p(??) <- (H(??)-> (p(??) & [{c&H(??)}]((p(??))')))
 /* [x'=f(x)&q(x);]p(x) <- (q(x) -> (p(x) & [x'=f(x)&q(x);]((p(x))'))) THEORY */
 End.
 
 /* Differential Auxiliary / Differential Ghost */
-Axiom "DA differential ghost".
-  /*@TODO Code Review discrepancy: change to TODO form from theory, not old calculus */
-  /* [c&H(?);]p(?) <- ((p(?) <-> (\exists x q(?))) &
-   * [c,x'=t()*x+s()&H(?);]q(?)) */
-  [c&H(?);]p(?) <-> \exists y. [c,y'=t()*y+s()&H(?);]p(?)
-  /* [x'=f(x)&q(x);]p(x) <-> \exists y. [(x'=f(x),y'=a(x)*y+b(x))&q(x);]p(x) THEORY */
+Axiom "DG differential ghost".
+  [{c&H(??)}]p(??) <-> \exists y [{c,y'=(t()*y)+s()&H(??)}]p(??)
+  /* [x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}]p(x) THEORY */
 End.
 
 /* Inverse Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work. */
-Axiom "DA inverse differential ghost".
-  [c&H(?);]p(?) <-> \exists y. [y'=t()*y+s(),c&H(?);]p(?)
+Axiom "DG differential pre-ghost".
+  [{c&H(??)}]p(??) <-> \exists y [{y'=(t()*y)+s(),c&H(??)}]p(??)
+  /* [x'=f(x)&q(x);]p(x) <-> \exists y [{y'=(a(x)*y)+b(x), x'=f(x))&q(x)}]p(x) THEORY */
 End.
-
-/*Axiom "DA inverse differential ghost theory version".
-  [x'=f(x)&q(x);]p(x) <-> \exists y. [(y'=a(x)*y+b(x), x'=f(x))&q(x);]p(x)
-End.*/
 
 /* DG differential ghost, general Lipschitz case */
 /*Axiom "DG differential Lipschitz ghost".
-  ([x'=f(x)&q(x);]p(x) <-> \exists y. [x'=f(x),y'=g(x,y)&q(x);]p(x))
+  ([x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=g(x,y)&q(x)}]p(x))
   <- (\exists L \forall x \forall y \forall z (y>=z -> (-L*(y-x) <= g(x,y)-g(x,z) & g(x,y)-g(x,z) <= L*(y-z))))
 End.*/
 
 /* DG differential ghost, general Lipschitz case, system case */
 Axiom "DG differential Lipschitz ghost system".
   /* @see "DG differential Lipschitz ghost" THEORY */
-  ([c&H(?);]p(?) <-> \exists y. [y'=g(?),c&H(?);]p(?))
-  <- (\exists L . [c&H(?);] (\forall a . \forall b . \forall u . \forall v . (a>=b -> [y:=a;u:=g(?);y:=b;v:=g(?)] (-L*(a-b) <= u-v & u-v <= L*(a-b)))))
+  ([{c&H(??)}]p(??) <-> \exists y [{y'=g(??),c&H(??)}]p(??))
+  <- (\exists L [{c&H(??)}] (\forall a \forall b \forall u \forall v (a>=b -> [y:=a;u:=g(??);y:=b;v:=g(??)] (-L*(a-b) <= u-v & u-v <= L*(a-b)))))
 End.
 
 /* Formatter axioms for diff eqs. @todo unused except in tactics implementation of itself */
 Axiom ", commute".
-  [c,d & H(?);]p(?) <-> [d,c & H(?);]p(?)
+  [{c,d & H(??);}]p(??) <-> [{d,c & H(??)}]p(??)
 End.
 
 /* @Derived */
 Axiom "DS differential equation solution".
-  [x'=c();]p(x) <-> \forall t. (t>=0 -> [x:=x+c()*t;]p(x))
+  [x'=c();]p(x) <-> \forall t (t>=0 -> [x:=x+(c()*t);]p(x))
 End.
 
 Axiom "DS& differential equation solution".
-  [x'=c()&q(x);]p(x) <-> \forall t. (t>=0 -> ((\forall s. ((0<=s&s<=t) -> q(x+c()*s))) -> [x:=x+c()*t;]p(x)))
+  [x'=c()&q(x);]p(x) <-> \forall t (t>=0 -> ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) -> [x:=x+(c()*t);]p(x)))
 End.
 
 /* @derived(DS differential equation solution + duality) */
 Axiom "Dsol differential equation solution".
- <x'=c();>p(x) <-> \exists t. (t>=0 & <x:=x+c()*t;>p(x))
+ <x'=c();>p(x) <-> \exists t (t>=0 & <x:=x+(c()*t);>p(x))
 End.
 
 /* @Derived */
 Axiom "Dsol& differential equation solution".
-  <x'=c()&q(x);>p(x) <-> \exists t. (t>=0 & ((\forall s. ((0<=s&s<=t) -> q(x+c()*s))) & <x:=x+c()*t;>p(x)))
+  <x'=c()&q(x);>p(x) <-> \exists t (t>=0 & ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))
 End.
 
 /**
@@ -538,7 +532,7 @@ End.
 Axiom "DE differential effect (system)".
     /* @NOTE Soundness: AtomicODE requires explicit-form so f(?) cannot verbatim mention differentials/differential symbols */
     /* @NOTE Completeness: reassociate needed in DifferentialProduct data structures */
-    [x'=f(?),c&H(?);]p(?) <-> [c,x'=f(?)&H(?);][x':=f(?);]p(?)
+    [{x'=f(??),c&H(??)}]p(??) <-> [{c,x'=f(??)&H(??)}][x':=f(??);]p(??)
 End.
 
 /**
@@ -548,24 +542,24 @@ End.
 /* @todo added and probably not nec. */
 /* @derived by CE */
 Axiom "->' derive imply".
-  (p(?) -> q(?))' <-> (!p(?) | q(?))'
+  (p(??) -> q(??))' <-> (!p(??) | q(??))'
 End.
 
 Axiom "&' derive and".
-  (p(?) & q(?))' <-> ((p(?)') & (q(?)'))
+  (p(??) & q(??))' <-> ((p(??)') & (q(??)'))
 End.
 
 Axiom "|' derive or".
-  (p(?) | q(?))' <-> ((p(?)') & (q(?)'))
+  (p(??) | q(??))' <-> ((p(??)') & (q(??)'))
   /* sic! */
 End.
 
 Axiom "forall' derive forall".
-  (\forall x p(?))' <-> (\forall x (p(?)'))
+  (\forall x p(??))' <-> (\forall x (p(??)'))
 End.
 
 Axiom "exists' derive exists".
-  (\exists x p(?))' <-> (\forall x (p(?)'))
+  (\exists x p(??))' <-> (\forall x (p(??)'))
   /* sic! */
 End.
 
@@ -574,52 +568,52 @@ Axiom "c()' derive constant fn".
 End.
 
 Axiom "=' derive =".
-  (f(?) = g(?))' <-> ((f(?)') = (g(?)'))
+  (f(??) = g(??))' <-> ((f(??)') = (g(??)'))
 End.
 
 Axiom ">=' derive >=".
-  (f(?) >= g(?))' <-> ((f(?)') >= (g(?)'))
+  (f(??) >= g(??))' <-> ((f(??)') >= (g(??)'))
 End.
 
 Axiom ">' derive >".
-  (f(?) > g(?))' <-> ((f(?)') >= (g(?)'))
+  (f(??) > g(??))' <-> ((f(??)') >= (g(??)'))
   /* sic! easier */
 End.
 
 Axiom "<=' derive <=".
-  (f(?) <= g(?))' <-> ((f(?)') <= (g(?)'))
+  (f(??) <= g(??))' <-> ((f(??)') <= (g(??)'))
 End.
 
 Axiom "<' derive <".
-  (f(?) < g(?))' <-> ((f(?)') <= (g(?)'))
+  (f(??) < g(??))' <-> ((f(??)') <= (g(??)'))
   /* sic! easier */
 End.
 
 Axiom "!=' derive !=".
-  (f(?) != g(?))' <-> ((f(?)') = (g(?)'))
+  (f(??) != g(??))' <-> ((f(??)') = (g(??)'))
   /* sic! */
 End.
 
 /* DERIVATION FOR TERMS */
 
 Axiom "-' derive neg".
-  (-f(?))' = -(f(?)')
+  (-f(??))' = -(f(??)')
 End.
 
 Axiom "+' derive sum".
-  (f(?) + g(?))' = (f(?)') + (g(?)')
+  (f(??) + g(??))' = (f(??)') + (g(??)')
 End.
 
 Axiom "-' derive minus".
-  (f(?) - g(?))' = (f(?)') - (g(?)')
+  (f(??) - g(??))' = (f(??)') - (g(??)')
 End.
 
 Axiom "*' derive product".
-  (f(?) * g(?))' = ((f(?)')*g(?)) + (f(?)*(g(?)'))
+  (f(??) * g(??))' = ((f(??)')*g(??)) + (f(??)*(g(??)'))
 End.
 
 Axiom "/' derive quotient".
-  (f(?) / g(?))' = (((f(?)')*g(?)) - (f(?)*(g(?)'))) / (g(?)^2)
+  (f(??) / g(??))' = (((f(??)')*g(??)) - (f(??)*(g(??)'))) / (g(??)^2)
 End.
 
 Axiom "chain rule".
@@ -627,11 +621,11 @@ Axiom "chain rule".
 End.
 
 Axiom "^' derive power".
-	(f(?)^c())' = (c()*(f(?)^(c()-1)))*(f(?)') <- c() != 0
+	((f(??)^(c()))' = (c()*(f(??)^(c()-1)))*(f(??)')) <- (c() != 0)
 End.
 
 Axiom "x' derive variable".
-  \forall x_ . ((x_)' = x_')
+  \forall x_ ((x_)' = x_')
 End.
 
 /**
@@ -641,8 +635,8 @@ End.
 
 /* @NOTE requires removing axioms unsound for hybrid games */
 /*Axiom "<d> dual".
-  <{a;}^d>p(?) <-> !<a;>!p(?)
-  <{a;}^@>p(?) <-> !<a;>!p(?)
+  <{a;}^d>p(??) <-> !<a;>!p(??)
+  <{a;}^@>p(??) <-> !<a;>!p(??)
 End.*/
 
 /* @NOTE Unsound for hybrid games */
@@ -653,20 +647,21 @@ End.
 
 /* @NOTE Unsound for hybrid games */
 Axiom "K modal modus ponens".
-  [a;](p(?)->q(?)) -> (([a;]p(?)) -> ([a;]q(?)))
+  [a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))
 End.
 
 /* @NOTE Unsound for hybrid games, use ind induction rule instead */
 Axiom "I induction".
-  /*@TODO Use this form instead? which is possibly more helpful: ([a*](p(?) -> [a;] p(?))) -> (p(?) -> [a*]p(?)) THEORY */
-  (p(?) & [a*](p(?) -> [a;] p(?))) -> [a*]p(?)
+  /*@TODO Drop or Use this form instead? which is possibly more helpful: ([{a;}*](p(??) -> [a;] p(??))) -> (p(??) -> [{a;}*]p(??)) THEORY */
+  (p(??) & [{a;}*](p(??) -> [a;] p(??))) -> [{a;}*]p(??)
 End.
 
 /**
  * Boolean algebra
+ * @derived
  */
  Axiom "& associative".
-  p(?) & q(?) & r(?) <-> p(?) & (q(?) & r(?))
+  p(??) & q(??) & r(??) <-> p(??) & (q(??) & r(??))
  End.
  /* ... */
 
@@ -674,7 +669,7 @@ End.
  * Real arithmetic
  */
 
-/* Unused so far
+/* Unused so far @todo use f(), g() etc instead of r,s
 Axiom "+ associative".
   (r + s) + t = r + (s + t)
 End.
@@ -733,23 +728,24 @@ End.
 */
 
 Axiom "<=".
-  f(?)<=g(?) <-> (f(?)<g(?) | f(?)=g(?))
+  f(??)<=g(??) <-> (f(??)<g(??) | f(??)=g(??))
 End.
 
+/* @todo swapping <-> sides would be more intuitive. Also ?? argument not needed */
 Axiom "= negate".
-  f(?) = g(?) <-> !(f(?) != g(?))
+  f(??) = g(??) <-> !(f(??) != g(??))
 End.
 
 Axiom "< negate".
-  f(?) < g(?) <-> !(f(?) >= g(?))
+  f(??) < g(??) <-> !(f(??) >= g(??))
 End.
 
 Axiom ">= flip".
-  f(?) >= g(?) <-> (g(?) <= f(?))
+  f(??) >= g(??) <-> (g(??) <= f(??))
 End.
 
 Axiom "> flip".
-  f(?) > g(?) <-> (g(?) < f(?))
+  f(??) > g(??) <-> (g(??) < f(??))
 End.
 
 /*Axiom "abs".
