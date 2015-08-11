@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.Propositional
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{Propositional, uniformSubstT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.onBranch
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 
@@ -559,6 +559,36 @@ object ArithmeticTacticsImpl {
     }
   }
 
+
+  /**
+   * Creates a new axiom tactic for closing by = reflexivity.
+   * @example{{{
+   *         EqualReflexiveT(SuccPosition(0))
+   *
+   *          *
+   *          --------
+   *          |- s = s
+   * }}}
+   * @return The axiom tactic.
+   */
+  def EqualReflexiveT: PositionTactic = new PositionTactic("= reflexive") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
+      case Equal(s1, s2) if s1 == s2 => true
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = new ConstructionTactic("= reflexive") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Equal(s1, s2) if s1 == s2 =>
+          val aS = FuncOf(Function("s", None, Unit, Real), Nothing)
+          val subst = SubstitutionPair(aS, s1) :: Nil
+          Some(uniformSubstT(subst, Map(node.sequent(p) -> Equal(aS, aS))) & AxiomTactic.axiomT("= reflexive"))
+        case _ => throw new IllegalStateException("Impossible by EqualReflexiveT.applies")
+      }
+    }
+  }
 
   def AbsT: PositionTactic = new PositionTactic("Abs") {
     override def applies(s: Sequent, pos: Position): Boolean = getTerm(s, pos) match {

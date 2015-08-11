@@ -61,6 +61,8 @@ class SubstitutionHelper(what: Term, repl: Term) {
       case Nothing => Nothing
       case Number(_) if t == what => repl
       case x: Atomic => x
+      case Pair(l, r) if t != what => Pair(usubst(o, u, l), usubst(o, u, r))
+      case Pair(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
       case _ => throw new UnknownOperatorException("Not implemented yet", t)
     }
   }

@@ -13,7 +13,7 @@ import testHelper.ProofFactory._
 import testHelper.SequentFactory._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{locateSucc,locateAnte}
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateExistentialQuanT,
-  instantiateUniversalQuanT,instantiateT,existentialGenT,vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT,
+  instantiateUniversalQuanT,instantiateT,existentialGenT,existentialGenPosT,vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT,
   allEliminateT}
 
 import scala.collection.immutable.Map
@@ -268,6 +268,16 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
       sequent(Nil, "[x:=5;](\\exists z z=5)".asFormula :: Nil, Nil))
   }
 
+  "Existential generalization at position" should "only generalize the specified occurrences of t" in {
+    val tactic = existentialGenPosT(Variable("z"), PosInExpr(0 :: Nil))(AntePosition(0))
+    val s = sequent(Nil, "a+b=a+b".asFormula :: Nil, Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "\\exists z z=a+b".asFormula
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
   // TODO AlphaConversionHelper replaces variable bound by quantifier -> might be needed by some tactics (check before fixing)
   ignore should "not replace bound occurrences of t with x" in {
     val tactic = locateAnte(existentialGenT(Variable("y", None, Real), "x".asTerm))
@@ -456,6 +466,15 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     val tactic = instantiateT(Variable("x", None, Real), "z".asTerm)(SuccPosition(0))
     getProofSequent(tactic, new RootNode(sucSequent("\\exists x [{x:=x+1;}*]x>0".asFormula))) should be (
       sucSequent("[{z:=z+1;}*]z>0".asFormula))
+  }
+
+  it should "instantiate when min/max are used in the quantified formula" in {
+    val tactic = locateAnte(instantiateT(Variable("x", None, Real), "z".asTerm))
+    val s = sequent(Nil, "\\forall x min(x,y) <= max(x,y)".asFormula :: Nil, Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "min(z,y) <= max(z,y)".asFormula
+    result.openGoals().head.sequent.succ shouldBe empty
   }
 
   "All eliminate" should "remove quantifier" in {

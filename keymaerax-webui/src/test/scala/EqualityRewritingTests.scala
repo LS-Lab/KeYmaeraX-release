@@ -141,6 +141,23 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     result.openGoals().flatMap(_.sequent.succ) shouldBe empty
   }
 
+  it should "replace arbitary terms" in {
+    val s = sequent(Nil, "a+b<5".asFormula :: "a+b=c".asFormula :: Nil, Nil)
+    val tactic = eqLeft(exhaustive=true)(AntePosition(1))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("c<5".asFormula, "a+b=c".asFormula)
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
+  // rewriting numbers is disallowed, because otherwise we run into endless rewriting
+  it should "not rewrite numbers" in {
+    val s = sequent(Nil, "0<5".asFormula :: "0=0".asFormula :: Nil, Nil)
+    val tactic = eqLeft(exhaustive=true)(AntePosition(1))
+    tactic.applicable(new RootNode(s)) shouldBe false
+  }
+
   "Equivalence rewriting" should "rewrite if lhs occurs in succedent" in {
     val s = sequent(Nil, "x>=0 <-> y>=0".asFormula :: Nil, "x>=0".asFormula :: Nil)
     val tactic = EqualityRewritingImpl.equivRewriting(AntePosition(0), SuccPosition(0))
@@ -199,5 +216,25 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "x>=0".asFormula
     result.openGoals().flatMap(_.sequent.succ) shouldBe empty
+  }
+
+  "Abbrv tactic" should "abbreviate a+b to z" in {
+    val s = sucSequent("a+b < c".asFormula)
+    val tactic = EqualityRewritingImpl.abbrv(Variable("z"))(SuccPosition(0).first)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "z = a+b".asFormula
+    result.openGoals().head.sequent.succ should contain only "z < c".asFormula
+  }
+
+  it should "abbreviate min(a,b) to z" in {
+    val s = sucSequent("min(a,b) < c".asFormula)
+    val tactic = EqualityRewritingImpl.abbrv(Variable("z"))(SuccPosition(0).first)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "z = min(a,b)".asFormula
+    result.openGoals().head.sequent.succ should contain only "z < c".asFormula
   }
 }

@@ -559,6 +559,78 @@ object FOQuantifierTacticsImpl {
     axiomLookupBaseT("exists generalize", subst, alpha, axiomInstance)
   }
 
+  /**
+   * Tactic for existential quantifier generalization. Generalizes only at a certain position.
+   * @example{{{
+   *           \exists z z=a+b |-
+   *           ------------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil))(AntePosition(0))
+   *                 a+b = a+b |-
+   * }}}
+   * @param x The new existentially quantified variable.
+   * @param where The term to generalize.
+   * @return The tactic.
+   */
+  def existentialGenPosT(x: Variable, where: PosInExpr): PositionTactic = {
+    // construct axiom instance: p(t) -> \exists x. p(x)
+    def axiomInstance(fml: Formula): Formula = {
+      val t = ExpressionTraversal.traverse(TraverseToPosition(where, new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+          if (p == where) Right(x)
+          else Left(Some(ExpressionTraversal.stop))
+      }), fml) match {
+        case Some(f) => f
+        case _ => throw new IllegalArgumentException(s"Position $where is not a term")
+      }
+      Imply(fml, Exists(x :: Nil, t))
+    }
+    uncoverAxiomT("exists generalize", axiomInstance, _ => existentialGenPosBaseT(x, where))
+  }
+  /** Base tactic for existential generalization */
+  private def existentialGenPosBaseT(x: Variable, where: PosInExpr): PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Imply(p, Exists(_, _)) =>
+        val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
+        val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
+
+        val t = ExpressionTraversal.traverse(TraverseToPosition(where, new ExpressionTraversalFunction {
+          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+            if (p == where) Right(DotTerm)
+            else Left(Some(ExpressionTraversal.stop))
+        }), p) match {
+          case Some(f) => f
+          case _ => throw new IllegalArgumentException(s"Position $where is not a term")
+        }
+
+        SubstitutionPair(aT, TacticHelper.getTerm(fml, where).get) ::
+        SubstitutionPair(aP, t) :: Nil
+    }
+
+    val aX = Variable("x", None, Real)
+    def alpha(fml: Formula): PositionTactic = {
+      new PositionTactic("Alpha") {
+        override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+          case Imply(_, Exists(_, _)) => true
+          case _ => false
+        }
+
+        override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+          override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+            Some(alphaRenamingT(x, aX)(p.second))
+
+          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+        }
+      }
+    }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = {
+      val Imply(left, right) = axiom
+      if (x.name != aX.name || x.index != aX.index) Imply(left, replaceFree(right)(aX, x))
+      else Imply(left, right)
+    }
+
+    axiomLookupBaseT("exists generalize", subst, alpha, axiomInstance)
+  }
+
   def vacuousUniversalQuanT(x: Option[Variable]) = vacuousQuantificationT(x, "vacuous all quantifier", Forall.apply)
   def vacuousExistentialQuanT(x: Option[Variable]) = vacuousQuantificationT(x, "vacuous exists quantifier", Exists.apply)
 
