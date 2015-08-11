@@ -1136,14 +1136,19 @@ object LookupLemma {
  * Lookup a lemma that has been proved previously or by an external arithmetic tool.
  * @author nfulton
  * @author Stefan Mitsch
+ * @see [[edu.cmu.cs.ls.keymaerax.core.LemmaDB.get()]]
  */
 case class LookupLemma(lemmaDB: LemmaDB, lemmaID: String) extends Rule {
   val name: String = "Lookup Lemma"
-  def apply(s : Sequent): immutable.List[Sequent] = {
+  /** Get the lemma that this lookup lemma rule will apply */
+  def lemma: Lemma = {
     require(lemmaDB.contains(lemmaID), "Cannot lookup lemmas that have not been added to the LemmaDB")
-    val lemma = lemmaDB.get(lemmaID).get
-    if (s.sameSequentAs(lemma.fact.conclusion)) lemma.fact.subgoals.toList
-    else throw new IllegalArgumentException("Lemma " + lemmaID + " with conclusion " + lemma.fact.conclusion + " not " +
+    lemmaDB.get(lemmaID).get
+  }
+  def apply(s : Sequent): immutable.List[Sequent] = {
+    val lem = lemma
+    if (s.sameSequentAs(lem.fact.conclusion)) lem.fact.subgoals.toList
+    else throw new IllegalArgumentException("Lemma " + lemmaID + " with conclusion " + lem.fact.conclusion + " not " +
       "applicable for sequent " + s)
   }
 }
