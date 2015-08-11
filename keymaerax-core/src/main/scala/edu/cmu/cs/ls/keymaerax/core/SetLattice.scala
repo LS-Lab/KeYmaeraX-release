@@ -112,7 +112,7 @@ object SetLattice {
       CoSet(excluded, extendToDifferentialSymbols(symbols))
     case FiniteLattice(set) => SetLattice(extendToDifferentialSymbols(set))
     case sl:CoSet[NamedSymbol] =>
-      assert(false, "Extension to differentialSymbols are not yet implemented if sl isInfinite " + sl); ???
+      assert(false, "Extension to differentialSymbols are not yet implemented if sl isInfinite: " + sl); ???
   }
 
   /**
