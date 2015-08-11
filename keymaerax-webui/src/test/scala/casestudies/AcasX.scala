@@ -279,10 +279,10 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           hideT(SuccPosition(0)) & debugT("Use case 1") &
             cutT(Some("\\exists max0 max(0, w*(dhf-dhd)) = max0".asFormula)) & onBranch(
             (cutShowLbl, hideT(SuccPosition(0)) & debugT("Cut proof 0") & cohideT(SuccPosition(0)) &
-              /* Next tactic does the same as [ ls(FOQuantifierTacticsImpl.existsDualT) &
-                 ls(NotRightT) & la(instantiateT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) & ls(NotLeftT) & ] */
-              ls(instantiateExistentialQuanT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) & arith /* This generates two goals?? */ /*&
-              debugT("Cut proof") & EqualReflexiveT(SuccPosition(0))*/) /* Closed, but something else open?? */,
+              ls(FOQuantifierTacticsImpl.existsDualT) & ls(NotRightT) &
+              la(instantiateT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) & la(NotLeftT) &
+              /* @todo: Should replace previous two lines by ls(instantiateExistentialQuanT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) & */
+              debugT("Cut proof") & EqualReflexiveT(SuccPosition(0))) /* Closed, but something else open?? */,
             (cutUseLbl, la(skolemizeT) & debugT("Cut use case") &
               cutT(Some("0<=0&0 < max0/a&0=rv*0&0=w*a/2*0^2+dhd*0|0>=max0/a&0=rv*0&0=dhf*0-w*max0^2/(2*a)".asFormula)) &
               onBranch(
