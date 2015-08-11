@@ -53,6 +53,7 @@ object KeYmaeraXAxiomParser extends (String => List[LoadedKnowledge]) {
       case Token(LEMMA_AXIOM_NAME(x),_) => x
       case _ => throw new AssertionError("Require should have failed.")
     }
+    if (DEBUG) println("Axiom " + name)
     //Find the End. token and exclude it.
     val (axiomTokens, remainderTokens) =
       input.tail.tail.span(x => !x.tok.equals(END_BLOCK)) //1st element is AXIOM_BEGIN, 2nd is AXIOM_NAME.
