@@ -618,4 +618,16 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     result.openGoals().head.sequent.ante shouldBe empty
     result.openGoals().head.sequent.succ should contain only "\\forall x x>5".asFormula
   }
+
+
+
+  it should "close exists max0 max(0, w*(dhf-dhd)) = max0 by reflexivity" in {
+    val s = sucSequent("\\exists max0 max(0, w*(dhf-dhd)) = max0".asFormula)
+    val tactic = locateSucc(FOQuantifierTacticsImpl.instantiateExistentialQuanT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) &
+      edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.debugT("Remaining goal") &
+      edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.EqualReflexiveT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result shouldBe 'closed
+  }
 }

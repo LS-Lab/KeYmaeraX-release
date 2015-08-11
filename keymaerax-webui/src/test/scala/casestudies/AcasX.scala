@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT,skolemizeT,instantiateExistentialQuanT}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT, arithmeticT, ImplyRightT, AndLeftT, hideT, AndRightT,
   ImplyLeftT, AxiomCloseT, OrRightT, OrLeftT, cutT, locate, NotRightT, NotLeftT}
-import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.{AbsAxiomT,AbsT,MinMaxAxiomT,MinMaxT} //,MinzMaxzAxiomT,MinzMaxzT}
+import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.{AbsAxiomT,AbsT,MinMaxAxiomT,MinMaxT,EqualReflexiveT}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.PositionTactic
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{Propositional,NonBranchingPropositionalT,cohideT}
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
@@ -278,13 +278,15 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           la(instantiateT(Variable("ho"), Number(0))) & la(ImplyLeftT) && (
           hideT(SuccPosition(0)) & debugT("Use case 1") &
             cutT(Some("\\exists max0 max(0, w*(dhf-dhd)) = max0".asFormula)) & onBranch(
-            (cutShowLbl, hideT(SuccPosition(0)) & debugT("Cut proof 0") & ls(FOQuantifierTacticsImpl.existsDualT) &
-              ls(NotRightT) & cohideT(AntePosition(9)) & debugT("Cut proof 1") &
-              la(instantiateT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) & la(NotLeftT) & debugT("Cut proof") & AxiomCloseT) /* Open Goal */,
+            (cutShowLbl, hideT(SuccPosition(0)) & debugT("Cut proof 0") & cohideT(SuccPosition(0)) &
+              /* Next tactic does the same as [ ls(FOQuantifierTacticsImpl.existsDualT) &
+                 ls(NotRightT) & la(instantiateT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) & ls(NotLeftT) & ] */
+              ls(instantiateExistentialQuanT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) & arith /* This generates two goals?? */ /*&
+              debugT("Cut proof") & EqualReflexiveT(SuccPosition(0))*/) /* Closed, but something else open?? */,
             (cutUseLbl, la(skolemizeT) & debugT("Cut use case") &
               cutT(Some("0<=0&0 < max0/a&0=rv*0&0=w*a/2*0^2+dhd*0|0>=max0/a&0=rv*0&0=dhf*0-w*max0^2/(2*a)".asFormula)) &
               onBranch(
-                (cutShowLbl, hideT(SuccPosition(0)) & hideT(AntePosition(9)) & debugT("Cut 2 proof") & arith), /* Open Goal */
+                (cutShowLbl, hideT(SuccPosition(0)) & hideT(AntePosition(9)) & debugT("Cut 2 proof")), /* Open Goal */
                 (cutUseLbl, debugT("Cut 2 use case") & arith)
                 /* [ arith ] could be just replaced by [ la(EqualityRewritingImpl.eqLeft(exhaustive=true)) & AxiomCloseT ] */
               ))
@@ -295,7 +297,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           ),
         AxiomCloseT
         )),
-      (indStepLbl, debugT("Step") /* @todo copy again from No Delay proof */)
+      (indStepLbl, debugT("Step") /* Open Goal */ /* @todo copy again from No Delay proof */)
     )
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
