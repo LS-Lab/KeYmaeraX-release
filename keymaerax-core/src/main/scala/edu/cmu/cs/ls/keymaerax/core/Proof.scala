@@ -1077,7 +1077,7 @@ case class Axiom(id: String) extends Rule with ClosingRule {
         else throw new InapplicableRuleException("Axiom " + f + " is not sole formula in:\n", this, s)
       case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"), this, s)
     }
-  } ensuring (r => r.isEmpty, "axiom lookup did not close")
+  } ensuring (r => r.isEmpty, "axiom lookup should close")
 }
 
 /*********************************************************************************
