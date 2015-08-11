@@ -520,7 +520,7 @@ Axiom "DS differential equation solution".
 End.
 
 Axiom "DS& differential equation solution".
-  [x'=c()&q(x);]p(x) <-> \forall t (t>=0 -> ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) -> [x:=x+(c()*t);]p(x)))
+  [{x'=c()&q(x)}]p(x) <-> \forall t (t>=0 -> ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) -> [x:=x+(c()*t);]p(x)))
 End.
 
 /* @derived(DS differential equation solution + duality) */
