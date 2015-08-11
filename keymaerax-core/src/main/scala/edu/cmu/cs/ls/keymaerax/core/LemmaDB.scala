@@ -29,7 +29,7 @@ trait LemmaDB {
   /**
    * Returns the lemma with the given name or None if non-existent.
    * @param lemmaID Identifies the lemma.
-   * @return The lemma, if found. None otherwise.
+   * @return The lemma, if found under the given lemma ID. None otherwise.
    * @ensures contains(lemmaID) && \result==Some(l) && l.name == lemmaID
    *         || !contains(lemmaID) && \result==None
    */
@@ -40,6 +40,7 @@ trait LemmaDB {
    * @param lemma The lemma to add.
    * @return The lemma ID.
    * @requires if (lemma.name==Some(n)) then !contains(n)
+   * @ensures  if (lemma.name==Some(n)) then \result==n  (usually)
    */
   private[core] def add(lemma: Lemma): LemmaID
 }
