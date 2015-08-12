@@ -20,6 +20,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
 object DerivedAxioms {
+  import TactixLibrary._
   /** Database for derived axioms */
   //@todo which lemma db to use?
   val derivedAxiomDB = new FileLemmaDB
@@ -48,13 +49,17 @@ object DerivedAxioms {
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
   private def derivedAxiom(name: String, derived: Sequent, tactic: Tactic): ApplyRule[LookupLemma] = {
     //@todo optimize: no need to prove if already filed in derivedAxiomDB anyhow
-    val rootNode = new RootNode(derived)
-    //@todo what/howto ensure it's been initialized already
-    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
-    assert(rootNode.isClosed, "tactics proving derived axioms should close the proof")
-    val witness: Provable = rootNode.provableWitness
+    val witness = tactic2Provable(derived, tactic)
     assert(witness.isProved, "tactics proving derived axioms should produce proved Provables")
     derivedAxiom(name, witness)
+  }
+
+  /** Convert a tactic for a goal to the resulting Provable */
+  private def tactic2Provable(goal: Sequent, tactic: Tactic): Provable = {
+    val rootNode = new RootNode(goal)
+    //@todo what/howto ensure it's been initialized already
+    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
+    rootNode.provableWitness
   }
 
   private val x = Variable("x_", None, Real)
@@ -67,6 +72,22 @@ object DerivedAxioms {
   private val ctxt = Function("ctx_", None, Real, Real) // function symbol
   private val ctxf = Function("ctx_", None, Real, Bool) // predicate symbol
   private val context = Function("ctx_", None, Bool, Bool) // predicational symbol
+
+  /**
+   * {{{Axiom "<-> reflexive".
+   *  p() <-> p()
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val equivReflexiveAxiom = derivedAxiom("<-> reflexive",
+    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("p() <-> p()".asFormula)))
+      (EquivRight(SuccPos(0)), 0)
+      // right branch
+      (Close(AntePos(0),SuccPos(0)), 1)
+      // left branch
+      (Close(AntePos(0),SuccPos(0)), 0)
+  )
 
   /**
    * {{{Axiom "!! double negation".
@@ -107,6 +128,14 @@ object DerivedAxioms {
    * }}}
    * @Derived
    */
+//    lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",
+//      Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)),
+//    useAt("all dual")(SuccPosition(0, PosInExpr(1::0))) &
+//    useAt(doubleNegationAxiom)(SuccPosition(0, PosInExpr(1))) &
+//    useAt(doubleNegationAxiom)(SuccPosition(0, PosInExpr(1::0))) &
+//    useAt(equivReflexiveAxiom)(SuccPosition(0))
+//  )
+
 //  lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",
 //    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)))
 //      (CutRight("\\exists x q(x) <-> !!(\\exists x (!!q(x)))".asFormula, SuccPos(0)), 0)

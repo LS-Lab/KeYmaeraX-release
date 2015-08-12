@@ -2,7 +2,6 @@
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
-package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.tactics.{TacticWrapper, Tactics, RootNode}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
@@ -53,7 +52,9 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     rootNode.isProved() shouldBe true
   }
 
-  "Derived Axioms" should "prove !!" in {check(doubleNegationAxiom)}
+  "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
+
+  it should "prove !!" in {check(doubleNegationAxiom)}
   //@todo check(existsDualAxiom)
 
   it should "prove abs" in {check(abs)}

@@ -207,8 +207,8 @@ object ArithmeticTacticsImpl {
         case Not(NotEqual(ff, gg)) => (ff.sort, ff, gg)
       }
       // TODO check that axiom is of the expected form s=t <-> !(s != t)
-      val aF = FuncOf(Function("f", None, sort, sort), Anything)
-      val aG = FuncOf(Function("g", None, sort, sort), Anything)
+      val aF = FuncOf(Function("f", None, Unit, sort), Nothing)
+      val aG = FuncOf(Function("g", None, Unit, sort), Nothing)
       SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
     axiomLookupBaseT("= negate", subst, _ => NilPT, (f, ax) => ax)
@@ -234,8 +234,8 @@ object ArithmeticTacticsImpl {
         case Equiv(Less(ff, gg), _) => (ff.sort, ff, gg)
         case Equiv(Not(GreaterEqual(ff, gg)), _) => (ff.sort, ff, gg)
       }
-      val aF = FuncOf(Function("f", None, sort, sort), Anything)
-      val aG = FuncOf(Function("g", None, sort, sort), Anything)
+      val aF = FuncOf(Function("f", None, Unit, sort), Nothing)
+      val aG = FuncOf(Function("g", None, Unit, sort), Nothing)
       SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
     axiomLookupBaseT("< negate", subst, _ => NilPT, (f, ax) => ax)
@@ -261,8 +261,8 @@ object ArithmeticTacticsImpl {
         case Equiv(LessEqual(ff, gg), _) => (ff.sort, ff, gg)
         case Equiv(Or(Less(ff, gg), Equal(f2, g2)), _) if ff == f2 && gg == g2 => (ff.sort, ff, gg)
       }
-      val aF = FuncOf(Function("f", None, sort, sort), Anything)
-      val aG = FuncOf(Function("g", None, sort, sort), Anything)
+      val aF = FuncOf(Function("f", None, Unit, sort), Nothing)
+      val aG = FuncOf(Function("g", None, Unit, sort), Nothing)
       SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
     axiomLookupBaseT("<=", subst, _ => NilPT, (f, ax) => ax)
@@ -287,8 +287,8 @@ object ArithmeticTacticsImpl {
         case Equiv(GreaterEqual(ff, gg), _) => (ff.sort, ff, gg)
         case Equiv(LessEqual(ff, gg), _) => (ff.sort, ff, gg)
       }
-      val aF = FuncOf(Function("f", None, sort, sort), Anything)
-      val aG = FuncOf(Function("g", None, sort, sort), Anything)
+      val aF = FuncOf(Function("f", None, Unit, sort), Nothing)
+      val aG = FuncOf(Function("g", None, Unit, sort), Nothing)
       SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
     axiomLookupBaseT(">= flip", subst, _ => NilPT, (f, ax) => ax)
@@ -312,8 +312,8 @@ object ArithmeticTacticsImpl {
         case Equiv(Greater(ff, gg), _) => (ff.sort, ff, gg)
         case Equiv(Less(ff, gg), _) => (ff.sort, ff, gg)
       }
-      val aF = FuncOf(Function("f", None, sort, sort), Anything)
-      val aG = FuncOf(Function("g", None, sort, sort), Anything)
+      val aF = FuncOf(Function("f", None, Unit, sort), Nothing)
+      val aG = FuncOf(Function("g", None, Unit, sort), Nothing)
       SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
     axiomLookupBaseT("> flip", subst, _ => NilPT, (f, ax) => ax)
@@ -623,7 +623,7 @@ object ArithmeticTacticsImpl {
   def AbsAxiomT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       case Equal(FuncOf(Function("abs", None, Real, Real), f), g) =>
-        Equiv(fml, Or(And(GreaterEqual(f, Number(0)), Equal(g, f)), And(LessEqual(f, Number(0)), Equal(g, Neg(f)))))
+        Equiv(fml, Or(And(GreaterEqual(f, Number(0)), Equal(g, f)), And(Less(f, Number(0)), Equal(g, Neg(f)))))
       case _ => False
     }
     uncoverAxiomT("abs", axiomInstance, _ => AbsAxiomBaseT)
@@ -691,9 +691,9 @@ object ArithmeticTacticsImpl {
 
     private def axiomInstance(fml: Formula): Formula = fml match {
       case Equal(FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(f, g)), h) =>
-        Equiv(fml, Or(And(LessEqual(f, g), Equal(h, f)), And(GreaterEqual(f, g), Equal(h, g))))
+        Equiv(fml, Or(And(LessEqual(f, g), Equal(h, f)), And(Greater(f, g), Equal(h, g))))
       case Equal(FuncOf(Function("max", None, Tuple(Real, Real), Real), Pair(f, g)), h) =>
-        Equiv(fml, Or(And(GreaterEqual(f, g), Equal(h, f)), And(LessEqual(f, g), Equal(h, g))))
+        Equiv(fml, Or(And(GreaterEqual(f, g), Equal(h, f)), And(Less(f, g), Equal(h, g))))
       case _ => False
     }
 

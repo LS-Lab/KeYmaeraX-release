@@ -978,7 +978,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
       foreach(c => withClue(c._1 + " on " + c._2) { a [SubstitutionClashException] should be thrownBy c._1(c._2) })
   }
 
-  "Uniform substitution of mustbe bound" should "be same as input" in {
+  ignore /*"Uniform substitution of mustbe bound"*/ should "be same as input" in {
     //@TODO variable substitution not yet supported
     val cases =
       (sToT("x", "5"), "[{x:=0; ++ z:=z;}]1>0".asFormula) ::                // x no free occurrence
