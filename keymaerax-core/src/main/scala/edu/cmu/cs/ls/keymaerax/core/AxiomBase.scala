@@ -680,6 +680,10 @@ End.
  * Real arithmetic
  */
 
+Axiom "= reflexive".
+  s() = s()
+End.
+
 /* Unused so far @todo use f(), g() etc instead of r,s
 Axiom "+ associative".
   (r + s) + t = r + (s + t)
