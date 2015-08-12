@@ -269,13 +269,29 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   "Existential generalization at position" should "only generalize the specified occurrences of t" in {
-    val tactic = existentialGenPosT(Variable("z"), PosInExpr(0 :: Nil))(AntePosition(0))
+    val tactic = existentialGenPosT(Variable("z"), PosInExpr(0 :: Nil) :: Nil)(AntePosition(0))
     val s = sequent(Nil, "a+b=a+b".asFormula :: Nil, Nil)
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only "\\exists z z=a+b".asFormula
     result.openGoals().head.sequent.succ shouldBe empty
+  }
+
+  it should "generalize all the specified occurrences of t" in {
+    val tactic = existentialGenPosT(Variable("z"), PosInExpr(0 :: Nil) :: PosInExpr(1:: Nil) :: Nil)(AntePosition(0))
+    val s = sequent(Nil, "a+b=a+b".asFormula :: Nil, Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "\\exists z z=z".asFormula
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
+  it should "reject positions that refer to different terms" in {
+    val tactic = existentialGenPosT(Variable("z"), PosInExpr(0 :: Nil) :: PosInExpr(1:: Nil) :: Nil)(AntePosition(0))
+    val s = sequent(Nil, "a+b=a+c".asFormula :: Nil, Nil)
+    an [IllegalArgumentException] should be thrownBy helper.runTactic(tactic, new RootNode(s))
   }
 
   // TODO AlphaConversionHelper replaces variable bound by quantifier -> might be needed by some tactics (check before fixing)
@@ -619,9 +635,7 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     result.openGoals().head.sequent.succ should contain only "\\forall x x>5".asFormula
   }
 
-
-
-  it should "close exists max0 max(0, w*(dhf-dhd)) = max0 by reflexivity" in {
+  "Exists instantiate" should "close exists max0 max(0, w*(dhf-dhd)) = max0 by reflexivity" in {
     val s = sucSequent("\\exists max0 max(0, w*(dhf-dhd)) = max0".asFormula)
     val tactic = locateSucc(FOQuantifierTacticsImpl.instantiateExistentialQuanT(Variable("max0"), "max(0, w*(dhf-dhd))".asTerm)) &
       edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.debugT("Remaining goal") &
