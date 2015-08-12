@@ -73,7 +73,8 @@ import scala.collection.immutable.{List, Map}
     }
   }
 
-  class ProofStepInfo(var infos: Map[String, String])
+/** Tactic management information about a proof step, with mutable information state in blackboard style */
+class ProofStepInfo(var infos: Map[String, String])
 
   object ProofNode {
     /**
@@ -81,15 +82,18 @@ import scala.collection.immutable.{List, Map}
      * which leads to the given conjunctive list of subgoals.
      * For soundness, only ProofNode.apply is allowed to construct proof steps.
      * But Provable is justifying soundness even without that constraint.
-     * @param provable the given Provable is provable by rule.
-     * @param rule the proof rule used in this proof step
-     * @param goal - the goal that this ProofStep was applied to, i.e. its immediate conclusion.
-     * @param subgoals - children of the step
-     * @todo could merely use a Provable as evidence rather than remembering the Rule as evidence.
+     * @param provable the Provable that is provable by using the given rule on the given goal yielding the given subgoals.
+     * @param step the proof rule or Provable used in this proof step.
+     * @param goal the goal that this ProofStep was applied to, i.e. its immediate conclusion.
+     * @param subgoals subgoals resulting from using the given rule on the given goal.
+     * @note could merely use a Provable as evidence rather than also remembering the Rule as evidence,
+     *       but remembering the rule makes it easier to reconstruct.
+     * @note Only private constructor calls to help soundness
+     * @author Andre Platzer
      */
     //@deprecated("Redundant soundness-checking. Can use Provable() instead.")
     sealed case class ProofStep private[ProofNode] (provable: Provable,
-                                                    rule : Rule,
+                                                    step : Either[Rule,Provable],
                                                     goal : ProofNode,
                                                     subgoals : scala.collection.immutable.List[ProofNode],
                                                     tacticInfo: ProofStepInfo = new ProofStepInfo(Map())) {
@@ -100,22 +104,35 @@ import scala.collection.immutable.{List, Map}
       }
       ruleJustifiesProvable
       @elidable(ASSERTION) def ruleJustifiesProvable = {
-        assert(Provable.startProof(provable.conclusion)(rule, 0) == provable, "The ProofStep's rule is the witness for its provable")
+        assert(step.isRight || Provable.startProof(provable.conclusion)(rule, 0) == provable, "The ProofStep's rule is the witness for its provable")
       }
       //justifiedByProofRule //@note redundant re-check of ruleJustifiesProvable
       @elidable(ASSERTION) def justifiedByProofRule = {
 //        println("Checking " + this)
 //        println("Reapply  " + rule(goal.sequent))
-        require(rule(conclusion) == premises, this + "\nled to subgoals\n" + rule(conclusion))
+        require(step.isRight || rule(conclusion) == premises, this + "\nled to subgoals\n" + rule(conclusion))
 //        println("Checked  " + this)
       }
 
+      /** The conclusion that this ProofStep proves from the premises, i.e., sequent of the goal */
       def conclusion = goal.sequent
+      /** The premises that this ProofStep still needs to prove, i.e., sequents of the subgoals */
       def premises = subgoals.map(_.sequent)
 
+      /** Whether this ProofStep uses a Rule (true) or merges a subderivation (false) */
+      private[ProofNode] def isRule: Boolean = step.isLeft
+      /** The rule used for this ProofStep if isRule */
+      private[ProofNode] def rule: Rule = {require(isRule); step.left.get}
+      /** The subderivation used for this ProofStep if !isRule */
+      private[ProofNode] def subderivation: Provable = {require(!isRule); step.right.get}
+
+      /** Whether this ProofStep has been closed, i.e., ran out of subgoals */
       private[ProofNode] def isClosed : Boolean = subgoals.foldLeft(true)(_ && _.isClosed())
 
-      override def toString() = "ProofStep(" + rule + "\napplied to goal\n\n" + conclusion + "\n\nexpects subgoals\n" + premises.mkString(",\n") + ")"
+      override def toString() = "ProofStep(" + (step match {
+        case Left(rule) => rule.toString
+        case Right(useProvable) => useProvable.toString
+      }) + "\napplied to goal\n\n" + conclusion + "\n\nexpects subgoals\n" + premises.mkString(",\n") + ")"
     }
   }
 
@@ -123,7 +140,7 @@ import scala.collection.immutable.{List, Map}
  * Proof Search Data Structure for tactics.
  * A proof node for the tactics trying to prove the given subgoal of Provable.
  * @param parent The parent's proof node that this ProofNode is trying to help finish a full proof for.
- * @param provable The provable that this ProofNode is trying to help prove by closing the given subgoal.
+ * @param provable The Provable that this ProofNode is trying to help prove by closing the given subgoal.
  * @param subgoal The subgoal of provable that this ProofNode is trying to prove.
  */
 sealed class ProofNode protected (val parent : ProofNode, val provable: Provable, val subgoal: Int) {
@@ -135,6 +152,7 @@ sealed class ProofNode protected (val parent : ProofNode, val provable: Provable
    * Finds an alternative that it can successively merge via
    * Provability.apply(Provable, Int) to yield a Provable that will be isProved().
    * @note generalization to !isClosed needs to be tested more if there's multiple open branches or alternatives.
+   * @author Andre Platzer
    */
   final def provableWitness : Provable = {
     // probably not proved if isClosed status is not even set (may be conservatively incorrect)
@@ -153,12 +171,12 @@ sealed class ProofNode protected (val parent : ProofNode, val provable: Provable
     assert(!DEBUG || orStep.goal == this, "Goal of the alternative or-branch ProofStep is this")
     if (orStep.subgoals.isEmpty) {
       // apply the closing rule
-      val done = provable(orStep.rule, subgoal)
+      val done = if (orStep.isRule) provable(orStep.rule, subgoal) else provable(orStep.subderivation, subgoal)
       //@elidable assert(!isClosed || done.isProved, "ProofNodes with a ProofStep without subgoals are provable directly")
       done
     } else {
       // successively merge Provables of all subgoals
-      var merged = provable(orStep.rule, subgoal)
+      var merged = if (orStep.isRule) provable(orStep.rule, subgoal) else provable(orStep.subderivation, subgoal)
       for (i <- orStep.subgoals.length to 1 by -1) {
         //@elidable assert(!isClosed || orStep.subgoals(i - 1).provableWitness.isProved, "isClosed() should imply that there is a closed Provable")
         merged = merged(orStep.subgoals(i - 1).provableWitness, i - 1)
@@ -224,9 +242,10 @@ sealed class ProofNode protected (val parent : ProofNode, val provable: Provable
     /**
      * Apply the given proof rule to this ProofNode.
      * Return the resulting list of subgoals (after including them as an or-branch alternative for proving this ProofNode).
-     * Soundness-critical proof rule application mechanism.
+     * @note Uses soundness-critical proof rule application mechanism from Provable
+     *       in a non-soundness-critical but still correct way.
      */
-    final def apply(rule : Rule) : ProofNode.ProofStep = {
+    final def apply(rule: Rule): ProofNode.ProofStep = {
       // ProofNodes for the respective sequents resulting from applying rule to sequent.
       checkInvariant
       val proofStep = {
@@ -237,14 +256,14 @@ sealed class ProofNode protected (val parent : ProofNode, val provable: Provable
             Range(provable.subgoals.length, newProvable.subgoals.length).
               map(new ProofNode(this, newProvable, _))
           //@TODO assert(all subgoals have the same provable and the same parent)
-          ProofNode.ProofStep(newProvable, rule, this, subgoals)
+          ProofNode.ProofStep(newProvable, Left(rule), this, subgoals)
         } else {  // only keep subProvable around to simplify subsequent merge
           // conduct a new Provable just for the selected subgoal and apply proof rule
           val subProvable = provable.sub(subgoal)
           assert(subProvable.conclusion == sequent, "subProvable concluding our goal expected")
           val newProvable = subProvable(rule, 0)
           // a new ProofNode for each resulting subgoal
-          ProofNode.ProofStep(newProvable, rule, this,
+          ProofNode.ProofStep(newProvable, Left(rule), this,
             Range(0, newProvable.subgoals.length).
             map(i => new ProofNode(this, Provable.startProof(newProvable.subgoals(i)), 0)).toList)
         }
@@ -256,6 +275,35 @@ sealed class ProofNode protected (val parent : ProofNode, val provable: Provable
       checkInvariant
       proofStep
     }
+
+  /**
+   * Use the given Provable to prove this ProofNode.
+   * Return the resulting list of subgoals (after including them as an or-branch alternative for proving this ProofNode).
+   * @note Uses soundness-critical proof rule application mechanism from Provable
+   *       in a non-soundness-critical but still correct way.
+   */
+  final def apply(useProvable: Provable): ProofNode.ProofStep = {
+    // ProofNodes for the respective sequents resulting from applying rule to sequent.
+    checkInvariant
+    val proofStep = {
+      assert(!fullProvable, "fullProvable not implemented")
+      // only keep subProvable around to simplify subsequent merge
+      // conduct a new Provable just for the selected subgoal and apply proof rule
+      val subProvable = provable.sub(subgoal)
+        assert(subProvable.conclusion == sequent, "subProvable concluding our goal expected")
+        val newProvable = subProvable(useProvable, 0)
+        // a new ProofNode for each resulting subgoal
+        ProofNode.ProofStep(newProvable, Right(useProvable), this,
+          Range(0, newProvable.subgoals.length).
+            map(i => new ProofNode(this, Provable.startProof(newProvable.subgoals(i)), 0)).toList)
+    }
+    // Add as or-branching alternative
+    this.synchronized {
+      alternatives = alternatives :+ proofStep
+    }
+    checkInvariant
+    proofStep
+  }
 
     //@todo Optional: there should be a TestCase that checks that this field is never read in the prover core. But Provable already ensures soundness.
     val tacticInfo: ProofNodeInfo = new ProofNodeInfo(if(parent == null) Map() else parent.tacticInfo.infos, this)

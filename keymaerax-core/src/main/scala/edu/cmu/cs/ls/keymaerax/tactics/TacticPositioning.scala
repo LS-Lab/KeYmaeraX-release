@@ -73,6 +73,9 @@ import scala.language.implicitConversions
      */
     def isTopLevel: Boolean = inExpr == HereP
 
+    /** The top-level part of this position */
+    def top: SeqPos
+
     def +(i: Int): Position
 
     def first: Position
@@ -87,6 +90,7 @@ import scala.language.implicitConversions
 @deprecated("Automated position converters should be removed ultimately.")
 object Position {
   //@deprecated("Move as implicit definition to tactics and then ultimately remove")
+  //@todo could also use p.top
   implicit def position2SeqPos[T <: SeqPos](p: Position): T = if (p.isAnte) new AntePos(p.index).asInstanceOf[T] else new SuccPos(p.index).asInstanceOf[T]
 
   //implicit def antePosition2AntePos(p: AntePosition) : AntePos = assert(p.isAnte); new AntePos(p.index)
@@ -106,6 +110,7 @@ object Position {
     def first: Position = AntePosition(index, inExpr.first)
     def second: Position = AntePosition(index, inExpr.second)
     def third: Position = AntePosition(index, inExpr.third)
+    def top: AntePos = AntePos(index)
   }
 
   object AntePosition {
@@ -119,6 +124,7 @@ object Position {
     def first: Position = SuccPosition(index, inExpr.first)
     def second: Position = SuccPosition(index, inExpr.second)
     def third: Position = SuccPosition(index, inExpr.third)
+    def top: SuccPos = SuccPos(index)
   }
 
   object SuccPosition {
