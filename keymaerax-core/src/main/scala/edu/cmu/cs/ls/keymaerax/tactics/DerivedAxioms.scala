@@ -20,6 +20,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
 object DerivedAxioms {
+  import TactixLibrary._
   /** Database for derived axioms */
   //@todo which lemma db to use?
   val derivedAxiomDB = new FileLemmaDB
@@ -69,6 +70,22 @@ object DerivedAxioms {
   private val context = Function("ctx_", None, Bool, Bool) // predicational symbol
 
   /**
+   * {{{Axiom "<-> reflexive".
+   *  p() <-> p()
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val equivReflexiveAxiom = derivedAxiom("<-> reflexive",
+    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("p() <-> p()".asFormula)))
+      (EquivRight(SuccPos(0)), 0)
+      // right branch
+      (Close(AntePos(0),SuccPos(0)), 1)
+      // left branch
+      (Close(AntePos(0),SuccPos(0)), 0)
+  )
+
+  /**
    * {{{Axiom "!! double negation".
    *  p() <-> !(!p())
    * End.
@@ -107,6 +124,14 @@ object DerivedAxioms {
    * }}}
    * @Derived
    */
+//    lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",
+//      Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)),
+//    useAt("all dual")(SuccPosition(0, PosInExpr(1::0))) &
+//    useAt(doubleNegationAxiom)(SuccPosition(0, PosInExpr(1))) &
+//    useAt(doubleNegationAxiom)(SuccPosition(0, PosInExpr(1::0))) &
+//    useAt(equivReflexiveAxiom)(SuccPosition(0))
+//  )
+
 //  lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",
 //    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)))
 //      (CutRight("\\exists x q(x) <-> !!(\\exists x (!!q(x)))".asFormula, SuccPos(0)), 0)
