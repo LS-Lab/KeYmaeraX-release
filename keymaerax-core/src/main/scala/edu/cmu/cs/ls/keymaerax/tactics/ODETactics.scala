@@ -1248,7 +1248,6 @@ object ODETactics {
 
     def alpha(fml : Formula) : PositionTactic = fml match {
       case Imply(Exists(l :: Nil, Box(ODESystem(c,h),
-      //      Forall(x :: Nil,
       Forall(a :: Nil,
       Forall(b :: Nil,
       Forall(u :: Nil,
@@ -1266,7 +1265,6 @@ object ODETactics {
 
     def axiomInstance(fml: Formula, axiom: Formula) =fml match {
       case Imply(Exists(l :: Nil, Box(ODESystem(c,h),
-      //      Forall(x :: Nil,
       Forall(a :: Nil,
       Forall(b :: Nil,
       Forall(u :: Nil,
