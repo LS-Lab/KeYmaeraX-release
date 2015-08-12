@@ -1423,7 +1423,7 @@ object ODETactics {
             AtomicODE(DifferentialSymbol(x), Plus(Times(t, x), s))), h), p)))
       case _ => False
     }
-    uncoverAxiomT("DA differential ghost", axiomInstance, _ => diffAuxiliaryBaseT(x, t, s))
+    uncoverAxiomT("DG differential ghost", axiomInstance, _ => diffAuxiliaryBaseT(x, t, s))
   }
 
   private def diffAuxiliaryBaseT(y: Variable, t: Term, s: Term): PositionTactic = {
@@ -1461,7 +1461,7 @@ object ODETactics {
       if (y.name != aY.name || y.index != aY.index) AlphaConversionHelper.replaceBound(axiom)(aY, y)
       else axiom
     }
-    axiomLookupBaseT("DA differential ghost", subst, alpha, axiomInstance)
+    axiomLookupBaseT("DG differential ghost", subst, alpha, axiomInstance)
   }
 
   /**

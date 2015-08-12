@@ -47,6 +47,7 @@ object StaticSemanticsTools {
   def bindingVars(program: Program): SetLattice[NamedSymbol] = program match {
       // base cases
     case a: AtomicProgram => boundVars(a)
+    case a: ODESystem     => boundVars(a)
     //@note acceptable but slightly dangerous catch-all but not soundness-critical
     case a: CompositeProgram => bottom
   }
@@ -85,6 +86,8 @@ object StaticSemanticsTools {
     case e@DiffAssign(xp,t)       if pos.head==0 => bindingVars(e)
     case e@DiffAssign(xp,t)       if pos.head==1 => bottom
     case e@ODESystem(ode, h)      if pos.head<=1 => bindingVars(e)
+    case e:DifferentialProduct    if pos.head==0 => boundAt(e.left,  pos.child)
+    case e:DifferentialProduct    if pos.head==1 => boundAt(e.right,  pos.child)
     //@todo the following would be suboptimal (except for AssignAny,Test,ProgramConst,DifferentialProgramConst)
     case e:AtomicProgram                         => bindingVars(e)
     case _ => throw new IllegalArgumentException("boundAt position " + pos + " of program " + program + " may not be defined")
