@@ -55,6 +55,9 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
+  it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
+  it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
+  it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom)}
   it should "prove abs" in {check(abs)}
 
 }
