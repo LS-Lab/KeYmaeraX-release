@@ -53,10 +53,9 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     rootNode.isProved() shouldBe true
   }
 
-  "Derived Axioms" should "prove" in {
-    check(doubleNegationAxiom)
-    //@todo check(existsDualAxiom)
-    check(abs)
-  }
+  "Derived Axioms" should "prove !!" in {check(doubleNegationAxiom)}
+  //@todo check(existsDualAxiom)
+
+  it should "prove abs" in {check(abs)}
 
 }
