@@ -195,17 +195,17 @@ object TactixLibrary {
 
   // Tactic contracts
   /** Assert that the given condition holds for the goal's sequent. */
-  def assert(cond : Sequent=>Boolean, msg:String = ""): Tactic = Tactics.assertT(cond, msg)
+  def assertT(cond : Sequent=>Boolean, msg:String = ""): Tactic = Tactics.assertT(cond, msg)
   /** Assertion that the sequent has the specified number of antecedent and succedent formulas, respectively. */
-  def assert(antecedents: Int, succedents: Int): Tactic = Tactics.assertT(antecedents, succedents)
+  def assertT(antecedents: Int, succedents: Int): Tactic = Tactics.assertT(antecedents, succedents)
   /** Assert that the given formula is present at the given position in the sequent that this tactic is applied to. */
-  def assert(expected: Formula, pos: Position, msg:String): Tactic = Tactics.assertT(expected, pos, msg)
+  def assertT(expected: Formula, pos: Position, msg:String): Tactic = Tactics.assertT(expected, pos, msg)
 
   // PositionTactic contracts
   /** Assert that the given condition holds for the sequent at the position where the tactic is applied */
-  def assert(cond : (Sequent,Position)=>Boolean, msg:String): PositionTactic = Tactics.assertPT(cond, msg)
+  def assertT(cond : (Sequent,Position)=>Boolean, msg:String): PositionTactic = Tactics.assertPT(cond, msg)
   /** Assert that the given expression is present at the position in the sequent where this tactic is applied to. */
-  def assert(expected: Expression, msg:String): PositionTactic = expected match {
+  def assertT(expected: Expression, msg:String): PositionTactic = expected match {
     case t: Term => Tactics.assertPT(t, msg)
     case f: Formula => Tactics.assertPT(f, msg)
   }
@@ -229,7 +229,7 @@ object TactixLibrary {
   /** Beta rules are propositional rules that split */
   def betaRule: Tactic = lR(andR) | lL(orL) | lL(implyL) | lL(equivL) | lR(equivR)
   /** Real-closed field arithmetic after consolidating sequent into a single universally-quantified formula */
-  def RCF: Tactic = PropositionalTacticsImpl.ConsolidateSequentT & assert(0, 1) & FOQuantifierTacticsImpl.universalClosureT(1) & debug("Handing to Mathematica") &
+  def RCF: Tactic = PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & FOQuantifierTacticsImpl.universalClosureT(1) & debug("Handing to Mathematica") &
     ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
 
   /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
