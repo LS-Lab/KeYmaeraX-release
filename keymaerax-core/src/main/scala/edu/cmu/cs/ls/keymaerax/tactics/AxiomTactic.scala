@@ -179,9 +179,8 @@ object AxiomTactic {
         Some(
           TacticLibrary.debugT("axiomLookupBaseT on " + axiomName) &
           uniformSubstT(subst(fml), Map(fml -> axiomInstance(fml, axiom))) &
-            TacticLibrary.debugT("Made it this far") &
             assertT(0, 1) & lastSucc(assertPT(axiomInstance(fml, axiom), "Unexpected uniform substitution result")) &
-            lastSucc(alpha(fml)) &
+            lastSucc(alpha(fml)) & TacticLibrary.debugT("alpha renaming succeeded for axiom " + axiomName) &
             lastSucc(assertPT(axiom, "Unexpected axiom form in succedent")) & AxiomTactic.axiomT(axiomName)
         )
       }

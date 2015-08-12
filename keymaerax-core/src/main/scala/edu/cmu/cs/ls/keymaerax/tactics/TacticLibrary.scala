@@ -188,10 +188,7 @@ object TacticLibrary {
     def axiomAlphaT(v : Variable, aV : Variable) =
       if (v.name != aV.name || v.index != aV.index) {
         new PositionTactic("Alpha") {
-          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-            case Equiv(Box(_, _), Exists(_, _)) => true
-            case _ => false
-          }
+          override def applies(s: Sequent, p: Position): Boolean = true
 
           override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =

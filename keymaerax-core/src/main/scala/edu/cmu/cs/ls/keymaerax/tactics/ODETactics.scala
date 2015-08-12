@@ -1175,7 +1175,9 @@ object ODETactics {
         val b = bFresh(fml)
         val v = vFresh(fml)
         val u = uFresh(fml)
-        //(a>=b -> [y:=a;u:=g(?);y:=b;v:=g(?)] (-L*(a-b) <= u-v & u-v <= L*(a-b))))
+        // (\exists L [{c&H(??)}] (\forall a \forall b \forall u \forall v
+        // (a>=b -> [y:=a;u:=g(??);y:=b;v:=g(??);] (-L*(a-b) <= u-v & u-v <= L*(a-b)))))
+        //old: (a>=b -> [y:=a;u:=g(?);y:=b;v:=g(?)] (-L*(a-b) <= u-v & u-v <= L*(a-b))))
         val implicant = {
           //@todo assuming default assoc of Compose, but that's not enforced in the data structures.
           val boxAssignments = Compose(
@@ -1193,11 +1195,11 @@ object ODETactics {
           val implicantBody : Formula = Imply(GreaterEqual(a,b), Box(boxAssignments, postcond))
 
           Exists(l :: Nil,
-//            Forall(x :: Nil,
+            Box(ODESystem(c, h),
               Forall(a :: Nil,
                 Forall(b :: Nil,
                   Forall(u :: Nil,
-                    Forall(v :: Nil, implicantBody)))))
+                    Forall(v :: Nil, implicantBody))))))
         }
 
         //[c&H(?);]p(?) <-> \exists y. [y'=g(?),c&H(?);]p(?)
@@ -1245,12 +1247,11 @@ object ODETactics {
     }
 
     def alpha(fml : Formula) : PositionTactic = fml match {
-      case Imply(Exists(l :: Nil,
-//      Forall(x :: Nil,
+      case Imply(Exists(l :: Nil, Box(ODESystem(c,h),
       Forall(a :: Nil,
       Forall(b :: Nil,
       Forall(u :: Nil,
-      Forall(v :: Nil, _))))), Equiv(_, Exists(y :: Nil, _)))
+      Forall(v :: Nil, _)))))), Equiv(_, Exists(y :: Nil, _)))
       => {
         TacticHelper.axiomAlphaT(y, aY) &
 //        TacticHelper.axiomAlphaT(x, aX) &
@@ -1263,12 +1264,11 @@ object ODETactics {
     }
 
     def axiomInstance(fml: Formula, axiom: Formula) =fml match {
-      case Imply(Exists(l :: Nil,
-//      Forall(x :: Nil,
+      case Imply(Exists(l :: Nil, Box(ODESystem(c,h),
       Forall(a :: Nil,
       Forall(b :: Nil,
       Forall(u :: Nil,
-      Forall(v :: Nil, _))))), Equiv(_, Exists(y :: Nil, _)))
+      Forall(v :: Nil, _)))))), Equiv(_, Exists(y :: Nil, _)))
       => {
         val afterY = if (!y.equals(aY)) AlphaConversionHelper.replace(axiom)(aY, y) else axiom
         val afterX = afterY //if (!x.equals(aX)) AlphaConversionHelper.replaceBound(afterY)(aX, x) else afterY
