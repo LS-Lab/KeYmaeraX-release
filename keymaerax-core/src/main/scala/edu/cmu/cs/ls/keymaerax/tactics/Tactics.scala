@@ -809,6 +809,34 @@ object Tactics {
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic]
   }
 
+  /**
+   * Base tactic that directly uses the given Provable.
+   */
+  case class UseProvable(provable: Provable) extends Tactic("Use provable " + provable) {
+
+    def applicable(node : ProofNode): Boolean = node.sequent==provable.conclusion
+
+    def apply(tool : Tool, node : ProofNode) {
+      if (applicable(node)) {
+        incRule()
+        val res = measure(node(provable))
+        // call updateInfo in order to propagate information along this proof node
+        this.root match {
+          case Some(r) =>
+            r.updateStepInfo(res.tacticInfo)
+            for(n <- res.subgoals) r.updateInfo(n.tacticInfo)
+          case None =>
+            this.updateStepInfo(res.tacticInfo)
+            for(n <- res.subgoals) this.updateInfo(n.tacticInfo)
+        }
+        continuation(this, checkStats(Success), res.subgoals)
+      } else {
+        continuation(this, Failed,  Seq(node))
+      }
+    }
+
+  }
+
   object LabelBranch {
     def apply(s: String): Tactic = new LabelBranch(s)
   }
@@ -840,10 +868,11 @@ object Tactics {
   object ProofStepView {
     def apply(n: ProofNode.ProofStep): ProofStepView = new ProofStepView(n)
   }
+  //@todo document
   sealed class ProofStepView(private val s: ProofNode.ProofStep) {
     // TODO check when this is allowed to be readable
     def tacticInfo = s.tacticInfo
-    def rule = s.rule
+    //def rule = s.rule
     def goal = ProofNodeView(s.goal)
     def subgoals = s.subgoals.map(ProofNodeView.apply)
 
