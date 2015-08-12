@@ -234,7 +234,10 @@ class GhostOfLipschitz extends TacticTestSuite {
     //@todo changing v to y creates a clash...
     val f = "\\exists x [{x'=0*x + v, v' = 0*v + a, t' = 1 & t > 0 & x>0 & v>0}]x>0".asFormula
     val node = helper.formulaToNode(f)
-    val tactic = ODETactics.inverseLipschitzGhostT(SuccPos(0))
+    val tactic = ODETactics.inverseLipschitzGhostT(SuccPos(0)) & SearchTacticsImpl.onBranch(
+      (BranchLabels.cutShowLbl, debugT("This is the cut show branch")),
+      (BranchLabels.cutUseLbl, debugT("This is the cut use brnach"))
+    )
     helper.runTactic(tactic,node)
     helper.report(node)
   }
