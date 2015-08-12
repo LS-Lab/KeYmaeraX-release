@@ -28,11 +28,15 @@ import scala.collection.immutable
  * {{{
  *   val fml = Imply(Greater(Variable("x",None,Real), Number(5)),
  *     Forall(Seq(Variable("y",None,Real)),
- *       GreaterEqual(Variable("x",None,Real), Variable("y",None,Real))))
+ *       GreaterEqual(Variable("x",None,Real), FuncOf(Function("f",None,Real,Real), Variable("y",None,Real)))))
  *   // determine the static semantics of the above formula
  *   val stat = StaticSemantics(fml)
- *   println("Free variables " + stat.fv)
+ *   println("Free variables  " + stat.fv)
  *   println("Bound variables " + stat.bv)
+ *   // determine all function, predicate and program constants occurring in the above formula
+ *   println("Signature       " + StaticSemantics.signature(fml))
+ *   // determine all symbols occurring in the above formula
+ *   println("Symbols         " + StaticSemantics.symbols(fml))
  * }}}
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.StaticSemanticsTools]]
  */
@@ -328,7 +332,7 @@ object StaticSemantics {
   }
 
   /**
-   * Any symbols in expression e.
+   * Any (non-logical) symbols occurring verbatim in expression e, whether free or bound variable or function or predicate or program constant.
    */
   def symbols(e: Expression): immutable.Set[NamedSymbol] = e match {
     case t: Term => symbols(t)
@@ -337,19 +341,19 @@ object StaticSemantics {
   }
 
   /**
-   * Any symbol occurring verbatim in term, whether variable or function
+   * Any (non-logical) symbol occurring verbatim in term, whether variable or function.
    */
   def symbols(t: Term): immutable.Set[NamedSymbol] = signature(t) ++ freeVars(t).toSymbolSet
 
   /**
-   * Any symbol occurring verbatim in formula, whether free or bound variable or function or predicate or program constant
+   * Any (non-logical) symbol occurring verbatim in formula, whether free or bound variable or function or predicate or program constant.
    */
   def symbols(f: Formula): immutable.Set[NamedSymbol] = {
     val stat = StaticSemantics(f); signature(f) ++ stat.fv.toSymbolSet ++ stat.bv.toSymbolSet
   }
 
   /**
-   * Any symbol occurring verbatim in program, whether free or bound variable or function or predicate or program constant
+   * Any (non-logical) symbol occurring verbatim in program, whether free or bound variable or function or predicate or program constant.
    */
   def symbols(p: Program): immutable.Set[NamedSymbol] = {
     val stat = StaticSemantics(p); signature(p) ++ stat.fv.toSymbolSet ++ stat.bv.toSymbolSet

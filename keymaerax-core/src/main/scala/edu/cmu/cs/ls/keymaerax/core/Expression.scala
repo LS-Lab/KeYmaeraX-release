@@ -315,7 +315,7 @@ case class PredOf(func: Function, child: Term) extends AtomicFormula with Applic
   require(func.sort == Bool, "expected predicate sort Bool found " + func.sort + " in " + this)
   require(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
 }
-/** Predicational symbol applied to argument formula child */
+/** Predicational or quantifier symbol applied to argument formula child */
 case class PredicationalOf(func: Function, child: Formula) extends AtomicFormula with ApplicationOf {
   require(func.sort == Bool, "expected argument sort Bool: " + this)
   require(func.domain == Bool, "expected domain simplifies to Bool: " + this)
@@ -347,7 +347,7 @@ case class Imply(left: Formula, right:Formula) extends BinaryCompositeFormula
 case class Equiv(left: Formula, right:Formula) extends BinaryCompositeFormula
 
 /** Quantified formulas */
-trait Quantified extends /*Unary?*/CompositeFormula {
+sealed trait Quantified extends /*Unary?*/CompositeFormula {
   def vars: immutable.Seq[Variable]
   def child: Formula
 }
@@ -365,7 +365,7 @@ case class Exists(vars: immutable.Seq[Variable], child: Formula) extends Composi
 }
 
 /** Modal formulas */
-trait Modal extends CompositeFormula {
+sealed trait Modal extends CompositeFormula {
   def program: Program
   def child: Formula
 }
