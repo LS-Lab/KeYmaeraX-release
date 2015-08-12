@@ -170,6 +170,7 @@ object AxiomTactic {
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       val axiom = Axiom.axioms.get(axiomName) match {
         case Some(ax) => ax
+        case None => throw new IllegalArgumentException("Axiom " + axiomName + " cannot be found in the axiom base")
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
