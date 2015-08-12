@@ -228,14 +228,15 @@ object TacticLibrary {
    *   case f of {
    *     s=unify(fact.left,_) => CutRight(C(f)<->C(s(fact.right)))(p) & <(
    *       "use cut": skip
-   *       "show cut": EquivifyRight(p.seq) & CE(C(_))(p.seq) & master
+   *       "show cut": EquivifyRight(p.seq) & CE(C(_))(p.seq) & factTactic
    *     )
+   *     s=unify(fact.right,_) => accordingly
    *   }
    * }}}
    * @author Andre Platzer
    * @todo generalize to automatically find a proof of fact by axiom lookup or master or so
    */
-  def useAt(fact: Formula): PositionTactic = new PositionTactic("useAt") {
+  def useAt(fact: Formula, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
     import FormulaConverter._
     import PropositionalTacticsImpl._
     require(fact.isInstanceOf[Equiv] || fact.isInstanceOf[Equal] || fact.isInstanceOf[Imply], "equivalence or implication fact expected")
@@ -263,7 +264,7 @@ object TacticLibrary {
             (BranchLabels.cutUseLbl, NilT),
             //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
             //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-            (BranchLabels.cutShowLbl, equivifyRightT(p.topLevel) & AxiomaticRuleTactics.equivalenceCongruenceT(p))
+            (BranchLabels.cutShowLbl, equivifyRightT(p.topLevel) & AxiomaticRuleTactics.equivalenceCongruenceT(p) & factTactic)
           ))
         } else {
           val matched = Unification(fml, right)
@@ -275,12 +276,35 @@ object TacticLibrary {
             (BranchLabels.cutUseLbl, NilT),
             //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
             //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-            (BranchLabels.cutShowLbl, equivifyRightT(p.topLevel) & commuteEquivRightT(p.topLevel) & AxiomaticRuleTactics.equivalenceCongruenceT(p))
+            (BranchLabels.cutShowLbl, equivifyRightT(p.topLevel) & commuteEquivRightT(p.topLevel) & AxiomaticRuleTactics.equivalenceCongruenceT(p) & factTactic)
           ))
         }
       }
     }
 
+  }
+  def useAt(fact: Formula): PositionTactic = useAt(fact, TactixLibrary.skip)
+
+  /**
+   * useAt(fact)(pos) uses the given fact at the given position in the sequent.
+   * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
+   * instance to make progress by reducing to the other side.
+   *
+   * Tactic specification:
+   * {{{
+   * useAt(fact)(p)(F) = let (C,f)=F(p) in
+   *   case f of {
+   *     s=unify(fact.left,_) => CutRight(C(f)<->C(s(fact.right)))(p) & <(
+   *       "use cut": skip
+   *       "show cut": EquivifyRight(p.seq) & CE(C(_))(p.seq) & by(fact)
+   *     )
+   *   }
+   * }}}
+   * @author Andre Platzer
+   */
+  def useAt(fact: Provable): PositionTactic = {
+    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
+    useAt(fact.conclusion.succ.head, TactixLibrary.by(fact))
   }
 
   /*******************************************************************

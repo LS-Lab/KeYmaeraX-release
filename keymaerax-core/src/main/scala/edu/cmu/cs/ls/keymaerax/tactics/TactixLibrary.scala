@@ -4,9 +4,9 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import edu.cmu.cs.ls.keymaerax.core.{Sequent, Formula, Term, Variable, Expression}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ByProvable, PositionTactic, Tactic}
 
 /**
  * Tactix: Main tactic library with simple interface.
@@ -33,8 +33,15 @@ object TactixLibrary {
   def master(qeTool: String)  : Tactic = master(new NoneGenerate(), qeTool)
   def master(gen: Generator[Formula] = new NoneGenerate(), qeTool: String = "Mathematica"): Tactic = TacticLibrary.master(gen, true, qeTool)
 
-  /** useAt(fact)(pos) uses the given fact at the given position in the sequent, by unifying and equivalence rewriting. */
+  /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(fact: Formula): PositionTactic = TacticLibrary.useAt(fact)
+  /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
+  def useAt(fact: Provable): PositionTactic = TacticLibrary.useAt(fact)
+  /** useAt(fact, tactic)(pos) uses the given fact (that'll be proved by tactic after unification) at the given position in the sequent (by unifying and equivalence rewriting). */
+  def useAt(fact: Formula, tactic: Tactic): PositionTactic = TacticLibrary.useAt(fact)
+
+  /** by(provable) is a pseudo-tactic that uses the given Provable to continue or close the proof (if it fits to what has been proved) */
+  def by(provable: Provable): Tactic = new ByProvable(provable)
 
 
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic = SearchTacticsImpl.onBranch(s1, spec:_*)

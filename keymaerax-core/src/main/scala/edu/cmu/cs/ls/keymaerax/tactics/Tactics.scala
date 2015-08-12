@@ -811,8 +811,10 @@ object Tactics {
 
   /**
    * Base tactic that directly uses the given Provable.
+   * Provable2Tactic conversion.
+   * @see [[DerivedAxioms.tactic2Provable(Sequent,Tactic)]]
    */
-  case class UseProvable(provable: Provable) extends Tactic("Use provable " + provable) {
+  case class ByProvable(provable: Provable) extends Tactic("By provable " + provable) {
 
     def applicable(node : ProofNode): Boolean = node.sequent==provable.conclusion
 
