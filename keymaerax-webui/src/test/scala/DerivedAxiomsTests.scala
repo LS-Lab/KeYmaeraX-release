@@ -53,10 +53,8 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
-
   it should "prove !!" in {check(doubleNegationAxiom)}
-  //@todo check(existsDualAxiom)
-
+  it should "prove exists dual" in {check(existsDualAxiom)}
   it should "prove abs" in {check(abs)}
 
 }

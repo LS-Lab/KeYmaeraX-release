@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, ApplyRule}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic, ApplyRule}
 
 import scala.collection.immutable
 import scala.collection.immutable._
@@ -54,8 +54,11 @@ object DerivedAxioms {
     derivedAxiom(name, witness)
   }
 
-  /** Convert a tactic for a goal to the resulting Provable */
-  private def tactic2Provable(goal: Sequent, tactic: Tactic): Provable = {
+  /**
+   * Convert a tactic for a goal to the resulting Provable
+   * @see [[TactixLibrary.by(Provable)]]
+   */
+  private[tactics] def tactic2Provable(goal: Sequent, tactic: Tactic): Provable = {
     val rootNode = new RootNode(goal)
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
@@ -128,15 +131,21 @@ object DerivedAxioms {
    * }}}
    * @Derived
    */
-//    lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",
-//      Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)),
-//    useAt("all dual")(SuccPosition(0, PosInExpr(1::0))) &
-//    useAt(doubleNegationAxiom)(SuccPosition(0, PosInExpr(1))) &
-//    useAt(doubleNegationAxiom)(SuccPosition(0, PosInExpr(1::0))) &
-//    useAt(equivReflexiveAxiom)(SuccPosition(0))
-//  )
+  lazy val existsDualAxiom = derivedAxiom("exists dual",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)),
+    useAt("all dual")(SuccPosition(0, PosInExpr(1::0::Nil))) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, PosInExpr(1::Nil))) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, PosInExpr(1::0::Nil))) &
+      useAt(equivReflexiveAxiom)(SuccPosition(0))
+  )
 
-//  lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",
+  //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
+  private def useAt(lem: ApplyRule[LookupLemma]): PositionTactic = TactixLibrary.useAt(lem.rule.lemma.fact)
+
+  private def useAt(axiom: String): PositionTactic =
+    TactixLibrary.useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0))
+
+  //  lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",
 //    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)))
 //      (CutRight("\\exists x q(x) <-> !!(\\exists x (!!q(x)))".asFormula, SuccPos(0)), 0)
 //      // right branch
