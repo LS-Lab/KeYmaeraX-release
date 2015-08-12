@@ -623,7 +623,7 @@ object ArithmeticTacticsImpl {
   def AbsAxiomT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       case Equal(FuncOf(Function("abs", None, Real, Real), f), g) =>
-        Equiv(fml, Or(And(GreaterEqual(f, Number(0)), Equal(g, f)), And(LessEqual(f, Number(0)), Equal(g, Neg(f)))))
+        Equiv(fml, Or(And(GreaterEqual(f, Number(0)), Equal(g, f)), And(Less(f, Number(0)), Equal(g, Neg(f)))))
       case _ => False
     }
     uncoverAxiomT("abs", axiomInstance, _ => AbsAxiomBaseT)
@@ -691,9 +691,9 @@ object ArithmeticTacticsImpl {
 
     private def axiomInstance(fml: Formula): Formula = fml match {
       case Equal(FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(f, g)), h) =>
-        Equiv(fml, Or(And(LessEqual(f, g), Equal(h, f)), And(GreaterEqual(f, g), Equal(h, g))))
+        Equiv(fml, Or(And(LessEqual(f, g), Equal(h, f)), And(Greater(f, g), Equal(h, g))))
       case Equal(FuncOf(Function("max", None, Tuple(Real, Real), Real), Pair(f, g)), h) =>
-        Equiv(fml, Or(And(GreaterEqual(f, g), Equal(h, f)), And(LessEqual(f, g), Equal(h, g))))
+        Equiv(fml, Or(And(GreaterEqual(f, g), Equal(h, f)), And(Less(f, g), Equal(h, g))))
       case _ => False
     }
 

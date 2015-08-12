@@ -479,7 +479,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante shouldBe empty
-    result.openGoals().head.sequent.succ should contain only "(x>=0 & y=x) | (x<=0 & y=-x)".asFormula
+    result.openGoals().head.sequent.succ should contain only "(x>=0 & y=x) | (x<0 & y=-x)".asFormula
   }
 
   it should "expand abs(x) = y in antecedent" in {
@@ -488,7 +488,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante should contain only "(x>=0 & y=x) | (x<=0 & y=-x)".asFormula
+    result.openGoals().head.sequent.ante should contain only "(x>=0 & y=x) | (x<0 & y=-x)".asFormula
     result.openGoals().head.sequent.succ shouldBe empty
   }
 
@@ -498,7 +498,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante should contain only "x>=0&abs_0=x | x<=0&abs_0=-x".asFormula
+    result.openGoals().head.sequent.ante should contain only "x>=0&abs_0=x | x<0&abs_0=-x".asFormula
     result.openGoals().head.sequent.succ should contain only "abs_0>=5".asFormula
   }
 
@@ -508,7 +508,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante should contain only ("x>=0&abs_0=x | x<=0&abs_0=-x".asFormula, "abs_0>=5".asFormula)
+    result.openGoals().head.sequent.ante should contain only ("x>=0&abs_0=x | x<0&abs_0=-x".asFormula, "abs_0>=5".asFormula)
     result.openGoals().head.sequent.succ shouldBe empty
   }
 
@@ -528,7 +528,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante shouldBe empty
-    result.openGoals().head.sequent.succ should contain only "(x<=y & z=x) | (x>=y & z=y)".asFormula
+    result.openGoals().head.sequent.succ should contain only "(x<=y & z=x) | (x>y & z=y)".asFormula
   }
 
   "Min tactic" should "expand min(x,y) in succedent" in {
@@ -537,7 +537,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante should contain only "x<=y&min_0=x | x>=y&min_0=y".asFormula
+    result.openGoals().head.sequent.ante should contain only "x<=y&min_0=x | x>y&min_0=y".asFormula
     result.openGoals().head.sequent.succ should contain only "min_0>=5".asFormula
   }
 
@@ -547,7 +547,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante should contain only ("x<=y&min_0=x | x>=y&min_0=y".asFormula, "min_0>=5".asFormula)
+    result.openGoals().head.sequent.ante should contain only ("x<=y&min_0=x | x>y&min_0=y".asFormula, "min_0>=5".asFormula)
     result.openGoals().head.sequent.succ shouldBe empty
   }
 
@@ -558,7 +558,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante shouldBe empty
-    result.openGoals().head.sequent.succ should contain only "(x>=y & z=x) | (x<=y & z=y)".asFormula
+    result.openGoals().head.sequent.succ should contain only "(x>=y & z=x) | (x<y & z=y)".asFormula
   }
 
   "Max tactic" should "expand max(x,y) in succedent" in {
@@ -567,7 +567,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante should contain only "x>=y&max_0=x | x<=y&max_0=y".asFormula
+    result.openGoals().head.sequent.ante should contain only "x>=y&max_0=x | x<y&max_0=y".asFormula
     result.openGoals().head.sequent.succ should contain only "max_0>=5".asFormula
   }
 
@@ -577,7 +577,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante should contain only ("x>=y&max_0=x | x<=y&max_0=y".asFormula, "max_0>=5".asFormula)
+    result.openGoals().head.sequent.ante should contain only ("x>=y&max_0=x | x<y&max_0=y".asFormula, "max_0>=5".asFormula)
     result.openGoals().head.sequent.succ shouldBe empty
   }
 

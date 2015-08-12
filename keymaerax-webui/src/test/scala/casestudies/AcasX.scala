@@ -79,7 +79,6 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       "        (w * (dhf - dhd) > 0 & ho = dhf * t - w * (w * (dhf - dhd))^2 / (2*a))))" +
       "         -> (r - ro < -rp | r - ro > rp | w * h < w * ho - hp))" +
       "      )) & ( hp>0&rp>0&rv>=0&a>0 )").asFormula
-//    val invariant = "w=42".asFormula
 
     val arith = arithmeticT
 
@@ -264,7 +263,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val arith = arithmeticT
 
-    val crushw = la(OrLeftT, "w()=-1|w()=1") && (
+    val crushw = la(OrLeftT, "w=-1|w=1") && ( // Q: Stefan, why did you change this from w() ?
       debugT("Goal Crush Left") & arith,
       debugT("Goal Crush Right") & arith
       )
@@ -273,13 +272,13 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val tactic = ls(ImplyRightT) & la(AndLeftT) & ls(wipeContextInductionT(Some(invariant))) & onBranch(
       (indInitLbl, debugT("Base case") & ls(AndRightT) & AxiomCloseT),
-      (indUseCaseLbl, debugT("Use case") & ls(ImplyRightT) & (la(AndLeftT)*) & ls(AndRightT) &&(
+      (indUseCaseLbl, debugT("Use case") & ls(ImplyRightT) & (la(AndLeftT)*) & ls(AndRightT) && (
         la(instantiateT(Variable("t"), Number(0))) &
           la(instantiateT(Variable("ro"), Number(0))) &
           la(instantiateT(Variable("ho"), Number(0))) & la(ImplyLeftT) && (
           hideT(SuccPosition(0)) & debugT("Use case 1") &
             abbrv(Variable("max0"))(SuccPosition(0).first.first.first.second.second.first) & debugT("abbrv") &
-            /* super super fragile, any better way of doing it? */
+            /* super super fragile, any better way of doing this? e.g., ("max(0,w*(dhf-dhd))".asTerm) */
             MinMaxT(AntePosition(9, PosInExpr(1 :: Nil))) & arith,
           AbsT(AntePosition(9, PosInExpr(0 :: 0 :: Nil))) &
             AbsT(SuccPosition(0, PosInExpr(0 :: 0 :: Nil))) &
@@ -287,7 +286,152 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           ),
         AxiomCloseT
         )),
-      (indStepLbl, debugT("Step") /* Open Goal */ /* @todo copy again from No Delay proof */)
+      (indStepLbl, debugT("Step") & ls(ImplyRightT) & ls(boxSeqGenT(invariant)) & /*debugT("before abbrv2") &
+        abbrv(Variable("max0"))(SuccPosition(0).first.first.first.second.second.first) & debugT("abbrv2") &*/ onBranch(
+        (cutShowLbl, debugT("Generalization Holds") &
+          ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) && (
+          debugT("1.1") & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) & ls(skolemizeT) & AxiomCloseT, /* closed */
+          debugT("1.2") & ls(boxSeqT) & ls(boxNDetAssign) & ls(skolemizeT) & ls(boxSeqT) & ls(boxChoiceT) & hideT(AntePosition(1)) &
+            debugT("1.2.1") & ls(AndRightT) & /* both branches are the same */
+            ls(substitutionBoxAssignT) & ls(boxTestT) & debugT("1.2.2") & ls(ImplyRightT) & ls(boxNDetAssign) & ls(skolemizeT) &
+            ls(AndRightT) && (ls(AndRightT) && (cohideT(SuccPosition(0)) & arith, AxiomCloseT), AxiomCloseT)
+            /* last line used to be handled by arith, but Max broke that */
+          )),
+        (cutUseLbl, debugT("Generalization Strong Enough") &
+          debugT("Goal 69 (Solving)") /* & ls(LogicalODESolver.solveT) */ /*& ls(diffSolution(None))*/ /* & debugT("Diff. Solution") &
+          /* cutting in the side condition that we expect from diff. solution. Remove once diff. solution produces it */
+          cutT(Some("\\forall tside (0<=tside & tside<=kxtime_5 -> (w*(dhd_2()+ao*tside)>=w*dhf|w*ao>=a))".asFormula)) &
+          onBranch(
+            (cutShowLbl, debugT("Ignore this branch - cut cannot be shown") /* TODO Counts as open goal */),
+            (cutUseLbl, debugT("bla")
+              /* repeat cut so that we can instantiate twice */
+              cutT(Some("\\forall tside (0<=tside & tside<=kxtime_5 -> (w*(dhd_2()+ao*tside)>=w*dhf|w*ao>=a))".asFormula)) & onBranch(
+                (cutShowLbl, AxiomCloseT),
+                (cutUseLbl,
+                  ls(ImplyRightT) & (la(AndLeftT)*) & ls(AndRightT) && (
+                    ls(AndRightT) && (
+                      AxiomCloseT,
+                      debugT("Before skolemization") & (ls(skolemizeT)*) & debugT("After skolemization") & ls(ImplyRightT) & ls(OrRightT) &
+                        // here we'd want to access the previously introduced skolem symbol and the time introduced by diffSolution
+                        // goal 90
+                        la(instantiateT(Variable("t"),
+                          // t_22+t_23: kxtime_5 == t_22, t_0 == t_23
+                          "kxtime_5 + t_0".asTerm)) &
+                        la(instantiateT(Variable("ro"),
+                          // rv*(t_22+t_23)
+                          "rv*(kxtime_5 + t_0)".asTerm)) &
+                        debugT("Before CUT") &
+                        // here we'd also want to access symbols created during the proof
+                        // CUT 1: (0 <= t_0+kxtime_5 & t_0+kxtime_5 < Max(0, w*(dhf-dhd))/a) | t_0+kxtime_5 >= Max(0, w*(dhf-dhd))/a
+                        // TODO: This cut should be done way later. We need a proper use of quantifiers
+                        cutT(Some("(0 <= t_0+kxtime_5 & t_0+kxtime_5 < w*(dhf-dhd)/a) | (0 <= t_0+kxtime_5 & t_0+kxtime_5 >= w*(dhf-dhd)/a)".asFormula)) & onBranch(
+                        (cutShowLbl, debugT("Show Cut") & lastAnte(hideT) & hideT(SuccPosition(1)) & hideT(SuccPosition(0)) &
+                          ls(OrRightT) & lastAnte(OrLeftT) & (la(AndLeftT)*) & (ls(AndRightT)*) & (arith | debugT("Should be closed") & Tactics.stopT)),
+                        (cutUseLbl, debugT("Use Cut") & /* OrLeftT on formula of CUT 1 */ lastAnte(OrLeftT) && (
+                          // goal 110
+                          debugT("Goal 110") & locateAnte(instantiateT(Variable("ho"), "w*a/2*(t_0+kxtime_5)^2 + dhd*(t_0+kxtime_5)".asTerm), { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false }) &
+                            // OrLeftT on ???
+                            ((AxiomCloseT | l(NonBranchingPropositionalT))*) & la(ImplyLeftT, "0<=kxtime_5+t_0&kxtime_5+t_0 < w*(dhf-dhd)/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=w*a/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=0&kxtime_5+t_0>=w*(dhf-dhd)/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&(w*(dhf-dhd)<=0&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=dhf*(kxtime_5+t_0)|w*(dhf-dhd)>0&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=dhf*(kxtime_5+t_0)-w*(w*(dhf-dhd))^2/(2*a))->r-rv*(kxtime_5+t_0) < -rp|r-rv*(kxtime_5+t_0)>rp|w*h < w*(w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5))-hp") && (
+                            (ls(OrRightT)*) & lastSucc(hideT) & (ls(AndRightT)*) & (AxiomCloseT | arith | debugT("Shouldn't get here")),
+                            la(OrLeftT, "0<=t_0&t_0 < w*(dhf-dhd_3)/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=0&t_0>=w*(dhf-dhd_3)/a&ro_0=rv*t_0&(w*(dhf-dhd_3)<=0&ho_0=dhf*t_0|w*(dhf-dhd_3)>0&ho_0=dhf*t_0-w*(w*(dhf-dhd_3))^2/(2*a))") && (
+                              debugT("Goal 124") & lastAnte(OrLeftT) && (
+                                hideT(SuccPosition(0)) & (arith | debugT("This should close") & Tactics.stopT),
+                                debugT("Goal 135") & lastSucc(hideT) & lastSucc(hideT) & (la(AndLeftT)*) & debugT("Goal 145") & la(OrLeftT, "w*dhd_3>=w*dhf|w*ao>=a") && (
+                                  debugT("Goal 146") & crushw,
+                                  debugT("Goal 148") & crushw
+                                  )
+                                ),
+                              debugT("Goal 125") & lastAnte(OrLeftT) && (
+                                debugT("Goal 280") & arith,
+                                debugT("Goal 281") & (la(AndLeftT)*) & (la(OrLeftT)*) & arith
+                                )
+                              )
+                            ),
+                          // goal 111
+                          // we don't have Max, so instead of instantiating ho with dhf*(t_0+kxtime_5) - w*(Max(0, w*(dhf-dhd))^2/(2*a) we first cut
+                          debugT("Goal 111") &
+                            cutT(Some("w*(dhf-dhd) > 0 | w*(dhf-dhd) <= 0".asFormula)) & onBranch(
+                            (cutShowLbl, lastSucc(cohideT) & arith),
+                            (cutUseLbl, lastAnte(OrLeftT) && (
+                              /* w*(dhf-dhd_3) > 0 */ locateAnte(instantiateT(Variable("ho"), "dhf*(t_0+kxtime_5) - w*(w*(dhf-dhd))^2/(2*a)".asTerm), { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false }) &
+                              debugT("Goal 120-1") & lastAnte(ImplyLeftT) && (
+                              debugT("Goal 122") & arith,
+                              debugT("Goal 123") & la(OrLeftT, "0<=t_0&t_0 < w*(dhf-dhd_3)/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=0&t_0>=w*(dhf-dhd_3)/a&ro_0=rv*t_0&(w*(dhf-dhd_3)<=0&ho_0=dhf*t_0|w*(dhf-dhd_3)>0&ho_0=dhf*t_0-w*(w*(dhf-dhd_3))^2/(2*a))") && (
+                                crushor,
+                                debugT("Goal 127") &
+                                  la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_1=0") &
+                                  la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_4()=0") &
+                                  (la(AndLeftT)*) &
+                                  la(instantiateT(Variable("tside"), Variable("kxtime", Some(5))), "\\forall tside (0<=tside&tside<=kxtime_5->w*(dhd_2()+ao*tside)>=w*dhf|w*ao>=a)") &
+                                  la(ImplyLeftT, "0<=kxtime_5&kxtime_5<=kxtime_5->w*(dhd_2()+ao*kxtime_5)>=w*dhf|w*ao>=a") && (
+                                  arith,
+                                  debugT("Goal 193") & la(OrLeftT, "r-rv*(kxtime_5+t_0) < -rp|r-rv*(kxtime_5+t_0)>rp|w*h < w*(dhf*(t_0+kxtime_5)-w*(w*(dhf-dhd))^2/(2*a))-hp") && (
+                                    debugT("Goal 194") & crushor,
+                                    debugT("Goal 195") & ls(hideT, "r_3-ro_0 < -rp|r_3-ro_0>rp") &
+                                      la(OrLeftT, "w*(dhf-dhd_3)<=0&ho_0=dhf*t_0|w*(dhf-dhd_3)>0&ho_0=dhf*t_0-w*(w*(dhf-dhd_3))^2/(2*a)") && (
+                                      debugT("Goal 214") & cutT(Some("w*ao>=a|!w*ao>=a".asFormula)) & onBranch(
+                                        (cutShowLbl, lastSucc(cohideT) & arith),
+                                        (cutUseLbl, la(OrLeftT, "w*ao>=a|!w*ao>=a") && (
+                                          arith,
+                                          debugT("Goal 231") & la(OrLeftT, "w*dhd_3>=w*dhf|w*ao>=a") && (
+                                            debugT("Goal 233") &
+                                              la(instantiateT(Variable("tside"), "0".asTerm), "\\forall tside (0<=tside&tside<=kxtime_5->w*(dhd_2()+ao*tside)>=w*dhf|w*ao>=a)") &
+                                              la(ImplyLeftT, "0<=0&0<=kxtime_5->w*(dhd_2()+ao*0)>=w*dhf|w*ao>=a") && (
+                                              arith,
+                                              la(OrLeftT, "w*(dhd_2()+ao*0)>=w*dhf|w*ao>=a") && (
+                                                crushor,
+                                                la(PropositionalTacticsImpl.NotLeftT) & AxiomCloseT
+                                                )
+                                              ),
+                                            la(PropositionalTacticsImpl.NotLeftT) & AxiomCloseT
+                                            )
+                                          ))
+                                      ),
+                                      crushor
+                                      )
+                                    )
+                                  )
+                                )
+                              ),
+                              /* w*(dhf-dhd_3) <= 0 */ locateAnte(instantiateT(Variable("ho"), "dhf*(t_0+kxtime_5)".asTerm), { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false }) &
+                              debugT("BGoal 120-2") & lastAnte(ImplyLeftT) && (
+                              debugT("BGoal 122") & arith,
+                              debugT("BGoal 123") & la(OrLeftT, "0<=t_0&t_0 < w*(dhf-dhd_3)/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=0&t_0>=w*(dhf-dhd_3)/a&ro_0=rv*t_0&(w*(dhf-dhd_3)<=0&ho_0=dhf*t_0|w*(dhf-dhd_3)>0&ho_0=dhf*t_0-w*(w*(dhf-dhd_3))^2/(2*a))") && (
+                                crushor,
+                                debugT("BGoal 127") &
+                                  la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_1=0") &
+                                  la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_4()=0") &
+                                  (la(AndLeftT)*) &
+                                  la(instantiateT(Variable("tside"), Variable("kxtime", Some(5))), "\\forall tside (0<=tside&tside<=kxtime_5->w*(dhd_2()+ao*tside)>=w*dhf|w*ao>=a)") &
+                                  la(ImplyLeftT, "0<=kxtime_5&kxtime_5<=kxtime_5->w*(dhd_2()+ao*kxtime_5)>=w*dhf|w*ao>=a") && (
+                                  arith,
+                                  debugT("BGoal 193") & la(OrLeftT, "r-rv*(kxtime_5+t_0) < -rp|r-rv*(kxtime_5+t_0)>rp|w*h < w*(dhf*(t_0+kxtime_5))-hp") && (
+                                    debugT("BGoal 194") & crushor,
+                                    debugT("BGoal 195") & ls(hideT, "r_3-ro_0 < -rp|r_3-ro_0>rp") &
+                                      la(OrLeftT, "w*(dhf-dhd_3)<=0&ho_0=dhf*t_0|w*(dhf-dhd_3)>0&ho_0=dhf*t_0-w*(w*(dhf-dhd_3))^2/(2*a)") && (
+                                      crushor,
+                                      crushor
+                                      )
+                                    )
+                                  )
+                                )
+                              )
+
+
+                              ))
+                          )
+                          )
+                          )
+                      )
+                      ),
+                    arith
+                    ) /* End AndRight */
+                  ) /* End cutUseLbl of ODE cut */
+              ) /* End cutUseLbl of 1st ODE cut */
+              ) /* End onBranch of ODE cut */
+          ) /* End onBranch of 1st ODE cut */
+          ) */
+      )) )
     )
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
