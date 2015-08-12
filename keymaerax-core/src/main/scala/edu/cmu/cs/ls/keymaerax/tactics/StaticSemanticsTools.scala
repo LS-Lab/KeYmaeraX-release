@@ -80,7 +80,12 @@ object StaticSemanticsTools {
     case e:UnaryCompositeProgram  if pos.head==0 => bindingVars(e) ++ boundAt(e.child, pos.child)
     case e:BinaryCompositeProgram if pos.head==0 => bindingVars(e) ++ boundAt(e.left,  pos.child)
     case e:BinaryCompositeProgram if pos.head==1 => bindingVars(e) ++ boundAt(e.right, pos.child)
-    //@todo the following is suboptimal
+    case e@Assign(x,t)            if pos.head==0 => bindingVars(e)
+    case e@Assign(x,t)            if pos.head==1 => bottom
+    case e@DiffAssign(xp,t)       if pos.head==0 => bindingVars(e)
+    case e@DiffAssign(xp,t)       if pos.head==1 => bottom
+    case e@ODESystem(ode, h)      if pos.head<=1 => bindingVars(e)
+    //@todo the following would be suboptimal (except for AssignAny,Test,ProgramConst,DifferentialProgramConst)
     case e:AtomicProgram                         => bindingVars(e)
     case _ => throw new IllegalArgumentException("boundAt position " + pos + " of program " + program + " may not be defined")
   }
