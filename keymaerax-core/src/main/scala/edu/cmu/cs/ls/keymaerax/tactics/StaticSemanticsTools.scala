@@ -56,15 +56,32 @@ object StaticSemanticsTools {
    * The set of variables that, if they occurred at formula(pos) would be bound occurrences,
    * because there was an operator in formula on the path to pos for which it was binding.
    * If an occurrence of a variable at formula(pos) is not boundAt(formula,pos) then it is a free occurrence.
-   * @todo
    */
-  def boundAt(formula: Formula, pos: PosInExpr): SetLattice[NamedSymbol] = ???
+  def boundAt(formula: Formula, pos: PosInExpr): SetLattice[NamedSymbol] = if (pos==HereP) bottom else formula match {
+    case e:Quantified             if pos.head==0 => bindingVars(e) ++ boundAt(e.child, pos.child)
+    case e:Modal                  if pos.head==0 => bindingVars(e) ++ boundAt(e.program, pos.child)
+    case e:Modal                  if pos.head==1 => bindingVars(e) ++ boundAt(e.child, pos.child)
+    case e:UnaryCompositeFormula  if pos.head==0 => bindingVars(e) ++ boundAt(e.child, pos.child)
+    case e:BinaryCompositeFormula if pos.head==0 => bindingVars(e) ++ boundAt(e.left,  pos.child)
+    case e:BinaryCompositeFormula if pos.head==1 => bindingVars(e) ++ boundAt(e.right, pos.child)
+    //@note predicationals will bind everything anyhow so no need to descend
+    case e:PredicationalOf                       => bindingVars(e)
+    //@note term children won't bind anything anyhow so no need to descend
+    case e:AtomicFormula                         => bindingVars(e)
+    case _ => throw new IllegalArgumentException("boundAt position " + pos + " of formula " + formula + " may not be defined")
+  }
 
   /**
    * The set of variables that, if they occurred at program(pos) would be bound occurrences,
    * because there was an operator in program on the path to pos for which it was binding.
-   * If an occurrence of a variable at formuprogramla(pos) is not boundAt(program,pos) then it is a free occurrence.
-   * @todo
+   * If an occurrence of a variable at program(pos) is not boundAt(program,pos) then it is a free occurrence.
    */
-  def boundAt(program: Program, pos: PosInExpr): SetLattice[NamedSymbol] = ???
+  def boundAt(program: Program, pos: PosInExpr): SetLattice[NamedSymbol] = if (pos==HereP) bottom else program match {
+    case e:UnaryCompositeProgram  if pos.head==0 => bindingVars(e) ++ boundAt(e.child, pos.child)
+    case e:BinaryCompositeProgram if pos.head==0 => bindingVars(e) ++ boundAt(e.left,  pos.child)
+    case e:BinaryCompositeProgram if pos.head==1 => bindingVars(e) ++ boundAt(e.right, pos.child)
+    //@todo the following is suboptimal
+    case e:AtomicProgram                         => bindingVars(e)
+    case _ => throw new IllegalArgumentException("boundAt position " + pos + " of program " + program + " may not be defined")
+  }
 }

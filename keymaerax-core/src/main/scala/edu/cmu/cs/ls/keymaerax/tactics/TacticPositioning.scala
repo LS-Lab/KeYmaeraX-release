@@ -8,6 +8,8 @@ import edu.cmu.cs.ls.keymaerax.core.{SeqPos, SuccPos, AntePos, Sequent}
 import scala.language.implicitConversions
 
 /**
+ * Position within an expression as a list of subexpressions.
+ * 0 is first child, 1 is second child, 2 is third child.
  */
   case class PosInExpr(pos: List[Int] = Nil) {
     require(pos forall(_>=0), "all nonnegative positions")
@@ -18,6 +20,7 @@ import scala.language.implicitConversions
     def append(p2 : PosInExpr): PosInExpr = PosInExpr(this.pos ++ p2.pos) ensuring(x => this.isPrefixOf(x))
 
     def isPrefixOf(p: PosInExpr): Boolean = p.pos.startsWith(pos)
+  def head: Int = {require(pos!=Nil); pos.head}
     def child: PosInExpr = PosInExpr(pos.tail)
   }
 
