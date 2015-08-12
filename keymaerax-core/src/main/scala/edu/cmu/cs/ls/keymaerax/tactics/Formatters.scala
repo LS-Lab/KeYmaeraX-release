@@ -62,9 +62,9 @@ object PropositionalAxioms {
   private def andAssocBaseT: PositionTactic = {
     def subst(fml: Formula) : List[SubstitutionPair] = fml match {
       case Equiv(And(And(ll, lr), r), _) => {
-        val aP = PredOf(Function("p", None, Real, Bool), Anything)
-        val aQ = PredOf(Function("q", None, Real, Bool), Anything)
-        val aR = PredOf(Function("r", None, Real, Bool), Anything)
+        val aP = PredOf(Function("p", None, Unit, Bool), Nothing)
+        val aQ = PredOf(Function("q", None, Unit, Bool), Nothing)
+        val aR = PredOf(Function("r", None, Unit, Bool), Nothing)
         SubstitutionPair(aP, ll) :: SubstitutionPair(aQ, lr) :: SubstitutionPair(aR, r) :: Nil
       }
     }

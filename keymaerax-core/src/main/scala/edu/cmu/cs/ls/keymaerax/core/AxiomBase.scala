@@ -640,9 +640,8 @@ End.
  * @derived
  */
  Axiom "& associative".
-  p(??) & q(??) & r(??) <-> p(??) & (q(??) & r(??))
+  ((p() & q()) & r()) <-> (p() & (q() & r()))
  End.
- /* ... */
 
 /**
  * Real arithmetic
@@ -711,24 +710,23 @@ End.
 */
 
 Axiom "<=".
-  f(??)<=g(??) <-> (f(??)<g(??) | f(??)=g(??))
+  (f()<=g()) <-> ((f()<g()) | (f()=g()))
 End.
 
-/* @todo swapping <-> sides would be more intuitive. Also ?? argument not needed */
 Axiom "= negate".
-  f(??) = g(??) <-> !(f(??) != g(??))
+  (f() = g()) <-> !(f() != g())
 End.
 
 Axiom "< negate".
-  f(??) < g(??) <-> !(f(??) >= g(??))
+  (f() < g()) <-> !(f() >= g())
 End.
 
 Axiom ">= flip".
-  f(??) >= g(??) <-> (g(??) <= f(??))
+  (f() >= g()) <-> (g() <= f())
 End.
 
 Axiom "> flip".
-  f(??) > g(??) <-> (g(??) < f(??))
+  (f() > g()) <-> (g() < f())
 End.
 
 Axiom "abs".

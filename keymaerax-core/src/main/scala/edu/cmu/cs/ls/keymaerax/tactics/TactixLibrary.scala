@@ -186,12 +186,13 @@ object TactixLibrary {
   def nil : Tactic = Tactics.NilT
   def skip : Tactic = nil
 
-  /** abbrv(name) Abbreviate the term at the given position by a new name. */
+  /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term. */
   def abbrv(name: Variable): PositionTactic = EqualityRewritingImpl.abbrv(name)
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Contract Tactics and Debugging Tactics
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
   // Tactic contracts
   /** Assert that the given condition holds for the goal's sequent. */
   def assert(cond : Sequent=>Boolean, msg:String = ""): Tactic = Tactics.assertT(cond, msg)
