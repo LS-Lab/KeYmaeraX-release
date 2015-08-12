@@ -41,13 +41,14 @@ object StaticSemanticsTools {
   //@todo ensuring(r => !formula.isInstanceOf[BinaryCompositeFormula] || r==boundVars(formula.class.apply(True,True)), "same bound variables as replacing left,right with True)
 
   /**
-   * The set of variables that the top-level operator of this formula is binding itself,
+   * The set of variables that the top-level operator of this program is binding itself,
    * so not those variables that are only bound because of operators in subprograms.
    */
   def bindingVars(program: Program): SetLattice[NamedSymbol] = program match {
-      // base cases
-    case a: AtomicProgram => boundVars(a)
+    //@note It's the pieces of ODESystems that bind but the scope is the whole ODESystem, which is somewhat like an AtomicProgram
     case a: ODESystem     => boundVars(a)
+    // base cases
+    case a: AtomicProgram => boundVars(a)
     //@note acceptable but slightly dangerous catch-all but not soundness-critical
     case a: CompositeProgram => bottom
   }
@@ -78,6 +79,9 @@ object StaticSemanticsTools {
    * If an occurrence of a variable at program(pos) is not boundAt(program,pos) then it is a free occurrence.
    */
   def boundAt(program: Program, pos: PosInExpr): SetLattice[NamedSymbol] = if (pos==HereP) bottom else program match {
+    //@note differential programs have global scope within the whole DifferentialProgram
+    case dp:DifferentialProgram                  => bindingVars(dp)
+    case e@ODESystem(ode, h)      if pos.head<=1 => bindingVars(e)
     case e:UnaryCompositeProgram  if pos.head==0 => bindingVars(e) ++ boundAt(e.child, pos.child)
     case e:BinaryCompositeProgram if pos.head==0 => bindingVars(e) ++ boundAt(e.left,  pos.child)
     case e:BinaryCompositeProgram if pos.head==1 => bindingVars(e) ++ boundAt(e.right, pos.child)
@@ -85,9 +89,8 @@ object StaticSemanticsTools {
     case e@Assign(x,t)            if pos.head==1 => bottom
     case e@DiffAssign(xp,t)       if pos.head==0 => bindingVars(e)
     case e@DiffAssign(xp,t)       if pos.head==1 => bottom
-    case e@ODESystem(ode, h)      if pos.head<=1 => bindingVars(e)
-    case e:DifferentialProduct    if pos.head==0 => boundAt(e.left,  pos.child)
-    case e:DifferentialProduct    if pos.head==1 => boundAt(e.right,  pos.child)
+    //case e:DifferentialProduct    if pos.head==0 => boundAt(e.left,  pos.child)
+    //case e:DifferentialProduct    if pos.head==1 => boundAt(e.right,  pos.child)
     //@todo the following would be suboptimal (except for AssignAny,Test,ProgramConst,DifferentialProgramConst)
     case e:AtomicProgram                         => bindingVars(e)
     case _ => throw new IllegalArgumentException("boundAt position " + pos + " of program " + program + " may not be defined")
