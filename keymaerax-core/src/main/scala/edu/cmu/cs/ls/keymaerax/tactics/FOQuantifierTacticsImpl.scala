@@ -431,9 +431,12 @@ object FOQuantifierTacticsImpl {
         case Exists(vars, phi) =>
           var varPos = List[PosInExpr]()
           ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-            override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-              if (vars.contains(e)) { varPos = varPos :+ p; Left(None) }
-              else Left(None)
+            override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+              case n: NamedSymbol if vars.contains(n) && !StaticSemanticsTools.boundAt(phi, p).contains(n) =>
+                varPos = varPos :+ p
+                Left(None)
+              case _ => Left(None)
+            }
           }, phi)
 
           val desired = createDesired(node.sequent)
@@ -592,6 +595,7 @@ object FOQuantifierTacticsImpl {
   def existentialGenPosT(x: Variable, where: List[PosInExpr]): PositionTactic = {
     // construct axiom instance: p(t) -> \exists x. p(x)
     def axiomInstance(fml: Formula): Formula = {
+      require(where.nonEmpty, "need at least one position to generalize")
       require(where.map(w => TacticHelper.getTerm(fml, w)).toSet.size == 1, "not all positions refer to the same term")
       val t = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
