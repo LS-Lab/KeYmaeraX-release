@@ -395,18 +395,28 @@ sealed trait Program extends Expression {
 /** Atomic programs */
 sealed trait AtomicProgram extends Program with Atomic
 
+/** Atomic program composed of two terms. */
+trait BinaryAtomicProgram extends AtomicProgram {
+  def left: Term
+  def right: Term
+}
+
 /** Uninterpreted program constant */
 sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram {
   def index: Option[Int] = None
 }
 
 /** x:=e assignment */
-case class Assign(x: Variable, e: Term) extends AtomicProgram {
+case class Assign(x: Variable, e: Term) extends BinaryAtomicProgram {
   require(e.sort == x.sort, "assignment of compatible sort")
+  def left: Variable = x
+  def right: Term = e
 }
 /** x':=e differential assignment */
-case class DiffAssign(xp: DifferentialSymbol, e: Term) extends AtomicProgram {
+case class DiffAssign(xp: DifferentialSymbol, e: Term) extends BinaryAtomicProgram {
   require(e.sort == Real, "differential assignment of real sort")
+  def left: DifferentialSymbol = xp
+  def right: Term = e
 }
 /** x:=* nondeterministic assignment */
 case class AssignAny(x: Variable) extends AtomicProgram
