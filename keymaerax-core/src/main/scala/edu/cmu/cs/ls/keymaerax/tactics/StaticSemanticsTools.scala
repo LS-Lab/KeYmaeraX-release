@@ -59,7 +59,7 @@ object StaticSemanticsTools {
    */
   def boundAt(formula: Formula, pos: PosInExpr): SetLattice[NamedSymbol] = if (pos==HereP) bottom else formula match {
     case e:Quantified             if pos.head==0 => bindingVars(e) ++ boundAt(e.child, pos.child)
-    case e:Modal                  if pos.head==0 => bindingVars(e) ++ boundAt(e.program, pos.child)
+    case e:Modal                  if pos.head==0 => boundAt(e.program, pos.child)
     case e:Modal                  if pos.head==1 => bindingVars(e) ++ boundAt(e.child, pos.child)
     case e:UnaryCompositeFormula  if pos.head==0 => bindingVars(e) ++ boundAt(e.child, pos.child)
     case e:BinaryCompositeFormula if pos.head==0 => bindingVars(e) ++ boundAt(e.left,  pos.child)
