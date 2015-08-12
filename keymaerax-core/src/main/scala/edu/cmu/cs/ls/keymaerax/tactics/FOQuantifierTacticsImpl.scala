@@ -429,13 +429,20 @@ object FOQuantifierTacticsImpl {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case Exists(vars, phi) =>
+          var varPos = List[PosInExpr]()
+          ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+            override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+              if (vars.contains(e)) { varPos = varPos :+ p; Left(None) }
+              else Left(None)
+          }, phi)
+
           val desired = createDesired(node.sequent)
           val cutFrm = Imply(desired, node.sequent(p))
           Some(cutT(Some(cutFrm)) & onBranch(
             (cutUseLbl, lastAnte(assertPT(cutFrm)) & lastAnte(ImplyLeftT) && (hideT(p.topLevel), AxiomCloseT ~ errorT("Failed to close!"))),
             (cutShowLbl, lastSucc(assertPT(cutFrm)) & lastSucc(cohideT) & assertT(0, 1) & assertPT(cutFrm)(SuccPosition(0)) &
               ImplyRightT(SuccPosition(0)) & assertT(1, 1) &
-              generalize(replace(phi)(quantified, t)))
+              generalize(replace(phi)(quantified, t), varPos))
           ))
         case _ => None
       }
@@ -450,9 +457,9 @@ object FOQuantifierTacticsImpl {
         case None => throw new IllegalArgumentException(s"Did not find existential quantifier in $s at $p")
       }
 
-      private def generalize(fToGen: Formula) = {
+      private def generalize(fToGen: Formula, where: List[PosInExpr]) = {
         if (p.isTopLevel) {
-          existentialGenT(quantified, t)(AntePosition(0)) & AxiomCloseT
+          existentialGenPosT(quantified, where)(AntePosition(0)) & AxiomCloseT
         } else {
           // we know that we have the same operator in antecedent and succedent with the same lhs -> we know that one
           // will branch and one of these branches will close by identity. on the other branch, we have to hide
@@ -463,7 +470,7 @@ object FOQuantifierTacticsImpl {
               (lastSucc(OrRightT) & lastAnte(OrLeftT) && (AxiomCloseT | hideT(SuccPosition(1)), AxiomCloseT | hideT(SuccPosition(0))) & assertT(1, 1)) |
               (lastSucc(ImplyRightT) & ImplyLeftT(AntePosition(0)) && (AxiomCloseT | hideT(SuccPosition(0)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1))
               )*p.inExpr.pos.length &
-            locateAnte(existentialGenT(quantified, t), _ == fToGen) & AxiomCloseT
+            locateAnte(existentialGenPosT(quantified, where), _ == fToGen) & AxiomCloseT
         }
       }
     }
@@ -514,11 +521,17 @@ object FOQuantifierTacticsImpl {
   }
 
   /**
-   * Tactic for existential quantifier generalization.
+   * Tactic for existential quantifier generalization. Generalizes the specified term everywhere in a formula.
+   * @example{{{
+   *           \exists z z+1 < z+2 |-
+   *           -----------------------existentialGenT(Variable("z"), "x+y".asTerm)(AntePosition(0))
+   *                 x+y+1 < x+y+2 |-
+   * }}}
    * @param x The new existentially quantified variable.
    * @param t The term to generalize.
    * @return The tactic.
    */
+  //@todo there's only one usage of this tactic -> replace with existentialGenPosT
   def existentialGenT(x: Variable, t: Term): PositionTactic = {
     // construct axiom instance: p(t) -> \exists x. p(x)
     def axiomInstance(fml: Formula): Formula = Imply(fml, Exists(x :: Nil, SubstitutionHelper.replaceFree(fml)(t, x)))
@@ -543,7 +556,7 @@ object FOQuantifierTacticsImpl {
 
         override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
           override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-            Some(alphaRenamingT(x.name, x.index, aX.name, aX.index)(p.second))
+            Some(alphaRenamingT(x, aX)(p.second))
 
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         }
@@ -560,24 +573,31 @@ object FOQuantifierTacticsImpl {
   }
 
   /**
-   * Tactic for existential quantifier generalization. Generalizes only at a certain position.
+   * Tactic for existential quantifier generalization. Generalizes only at certain positions. All positions have to
+   * refer to the same term.
    * @example{{{
    *           \exists z z=a+b |-
-   *           ------------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil))(AntePosition(0))
+   *           ------------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil) :: Nil)(AntePosition(0))
    *                 a+b = a+b |-
+   * }}}
+   * @example{{{
+   *           \exists z z=z |-
+   *           ----------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil) :: PosInExpr(1::Nil) :: Nil)(AntePosition(0))
+   *               a+b = a+b |-
    * }}}
    * @param x The new existentially quantified variable.
    * @param where The term to generalize.
    * @return The tactic.
    */
-  def existentialGenPosT(x: Variable, where: PosInExpr): PositionTactic = {
+  def existentialGenPosT(x: Variable, where: List[PosInExpr]): PositionTactic = {
     // construct axiom instance: p(t) -> \exists x. p(x)
     def axiomInstance(fml: Formula): Formula = {
-      val t = ExpressionTraversal.traverse(TraverseToPosition(where, new ExpressionTraversalFunction {
+      require(where.map(w => TacticHelper.getTerm(fml, w)).toSet.size == 1, "not all positions refer to the same term")
+      val t = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-          if (p == where) Right(x)
-          else Left(Some(ExpressionTraversal.stop))
-      }), fml) match {
+          if (where.contains(p)) Right(x)
+          else Left(None)
+      }, fml) match {
         case Some(f) => f
         case _ => throw new IllegalArgumentException(s"Position $where is not a term")
       }
@@ -586,22 +606,24 @@ object FOQuantifierTacticsImpl {
     uncoverAxiomT("exists generalize", axiomInstance, _ => existentialGenPosBaseT(x, where))
   }
   /** Base tactic for existential generalization */
-  private def existentialGenPosBaseT(x: Variable, where: PosInExpr): PositionTactic = {
+  private def existentialGenPosBaseT(x: Variable, where: List[PosInExpr]): PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
       case Imply(p, Exists(_, _)) =>
+        assert(where.map(w => TacticHelper.getTerm(p, w)).toSet.size == 1, "not all positions refer to the same term")
+
         val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
         val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
 
-        val t = ExpressionTraversal.traverse(TraverseToPosition(where, new ExpressionTraversalFunction {
+        val t = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
           override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-            if (p == where) Right(DotTerm)
-            else Left(Some(ExpressionTraversal.stop))
-        }), p) match {
+            if (where.contains(p)) Right(DotTerm)
+            else Left(None)
+        }, p) match {
           case Some(f) => f
           case _ => throw new IllegalArgumentException(s"Position $where is not a term")
         }
 
-        SubstitutionPair(aT, TacticHelper.getTerm(fml, where).get) ::
+        SubstitutionPair(aT, TacticHelper.getTerm(p, where.head).get) ::
         SubstitutionPair(aP, t) :: Nil
     }
 

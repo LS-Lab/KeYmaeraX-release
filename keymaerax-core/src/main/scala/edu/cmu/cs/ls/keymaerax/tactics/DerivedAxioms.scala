@@ -97,7 +97,7 @@ object DerivedAxioms {
    */
   lazy val abs = derivedAxiom("abs",
     Sequent(Nil, IndexedSeq(), IndexedSeq("(abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))".asFormula)),
-    TactixLibrary.master
+    TactixLibrary.QE //TactixLibrary.master
   )
 
   /**

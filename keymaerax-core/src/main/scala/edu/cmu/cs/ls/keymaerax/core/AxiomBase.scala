@@ -8,6 +8,7 @@
  * @note Soundness-critical: Only adopt sound axioms and sound axiomatic rules.
  * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+ * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @note Code Review: 2015-05-01
  */
@@ -18,12 +19,13 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable
 import scala.collection.immutable._
 
-import edu.cmu.cs.ls.keymaerax.parser.{LoadedAxiom, KeYmaeraParser, KeYmaeraXAxiomParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXAxiomParser
 
 /**
  * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
@@ -34,6 +36,7 @@ private[core] object AxiomBase {
    * @note Soundness-critical: Only return locally sound proof rules.
    * @return immutable list of locally sound axiomatic proof rules (premise, conclusion)
    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+   * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
    * @author Andre Platzer
    */
   private[core] def loadAxiomaticRules() : immutable.Map[String, (Sequent, Sequent)] = {
@@ -174,18 +177,9 @@ private[core] object AxiomBase {
 //      val res = alp.runParser(loadAxiomString())
       val res = KeYmaeraXAxiomParser(loadAxiomString())
 
-      assert(res.length == res.map(k => k.name).distinct.length, "No duplicate axiom names during parse")
+      assert(res.length == res.map(k => k._1).distinct.length, "No duplicate axiom names during parse")
 
-      //@todo move as assertions to assertCheckAxiomFile once we can parse multi-argument functions
-      val f = FuncOf(Function("f", None, Unit, Real), Nothing)
-      val g = FuncOf(Function("g", None, Unit, Real), Nothing)
-      val h = FuncOf(Function("h", None, Unit, Real), Nothing)
-      val min = Equal(FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(f, g)), h)
-      val minAxiom = Equiv(min, Or(And(LessEqual(f, g), Equal(h, f)), And(GreaterEqual(f, g), Equal(h, g))))
-      val max = Equal(FuncOf(Function("max", None, Tuple(Real, Real), Real), Pair(f, g)), h)
-      val maxAxiom = Equiv(max, Or(And(GreaterEqual(f, g), Equal(h, f)), And(LessEqual(f, g), Equal(h, g))))
-
-      (res ++ (LoadedAxiom("min", minAxiom) :: LoadedAxiom("max", maxAxiom) :: Nil)).map(k => (k.name -> k.formula)).toMap
+      res.map(k => (k._1 -> k._2)).toMap
     } catch {
       case e: Exception => e.printStackTrace(); println("Problem while reading axioms " + e); sys.exit(10)
     }
@@ -207,21 +201,23 @@ private[core] object AxiomBase {
     val f = Function("f", None, Real, Real)
     val f0 = FuncOf(Function("f", None, Unit, Real), Nothing)
     val fany = FuncOf(Function("f", None, Real, Real), Anything)
+    val g0 = FuncOf(Function("g", None, Unit, Real), Nothing)
     val gany = FuncOf(Function("g", None, Real, Real), Anything)
+    val h0 = FuncOf(Function("h", None, Unit, Real), Nothing)
     val t0 = FuncOf(Function("t", None, Unit, Real), Nothing)
     val a = ProgramConst("a")
     val b = ProgramConst("b")
 
     //@todo should not use strange names, better x and q
     val v = Variable("v", None, Real)
-    val h0 = PredOf(Function("H", None, Unit, Bool), Nothing)
+    val H0 = PredOf(Function("H", None, Unit, Bool), Nothing)
 
     // Figure 2
     assert(axs("<> dual") == Equiv(Diamond(a, pany), Not(Box(a, Not(pany)))), "<> dual")
     assert(axs("[:=] assign") == Equiv(Box(Assign(x,f0), PredOf(p,x)), PredOf(p, f0))
       || axs("[:=] assign") == Equiv(Box(Assign(v,t0), PredOf(p,v)), PredOf(p, t0)), "[:=] assign")
     assert(axs("[?] test") == Equiv(Box(Test(q0), p0), Imply(q0, p0))
-      || axs("[?] test") == Equiv(Box(Test(h0), p0), Imply(h0, p0)), "[?] test")
+      || axs("[?] test") == Equiv(Box(Test(H0), p0), Imply(H0, p0)), "[?] test")
     assert(axs("[++] choice") == Equiv(Box(Choice(a,b), pany), And(Box(a, pany), Box(b, pany))), "[++] choice")
     assert(axs("[;] compose") == Equiv(Box(Compose(a,b), pany), Box(a, Box(b, pany))), "[;] compose")
     assert(axs("[*] iterate") == Equiv(Box(Loop(a), pany), And(pany, Box(a, Box(Loop(a), pany)))), "[*] iterate")
@@ -250,33 +246,35 @@ private[core] object AxiomBase {
     // soundness-critical that these are for p() not for p(x) or p(??)
     assert(axs("vacuous all quantifier") == Equiv(p0, Forall(immutable.IndexedSeq(x), p0)), "vacuous all quantifier")
     assert(axs("vacuous exists quantifier") == Equiv(p0, Exists(immutable.IndexedSeq(x), p0)), "vacuous exists quantifier")
+
+    assert(axs("min") == Equiv(Equal(FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(f0, g0)), h0),
+      Or(And(LessEqual(f0, g0), Equal(h0, f0)), And(Greater(f0, g0), Equal(h0, g0)))), "min")
+    assert(axs("max") == Equiv(Equal(FuncOf(Function("max", None, Tuple(Real, Real), Real), Pair(f0, g0)), h0),
+      Or(And(GreaterEqual(f0, g0), Equal(h0, f0)), And(Less(f0, g0), Equal(h0, g0)))), "max")
+
     true
   }
 
   /**
-   * Look up an axiom of KeYmaera X,
+   * KeYmaera X axioms,
    * i.e. sound axioms are valid formulas of differential dynamic logic.
+   *
+   * @note Soundness-critical: Only adopt valid formulas as axioms.
+   *
+   * @author Nathan Fulton
+   * @author Stefan Mitsch
+   * @author Jan-David Quesel
+   * @author Andre Platzer
+   *
+   * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+   * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012."
+   * @see "Andre Platzer. Dynamic logics of dynamical systems. arXiv 1205.4788, May 2012."
+   * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
+   * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+   * @todo simplify/unify the number of declarations.
    */
   private[core] def loadAxiomString() : String =
 """
-/**
- * KeYmaera X Axioms.
- *
- * @note Soundness-critical: Only adopt valid formulas as axioms.
- *
- * @author Nathan Fulton
- * @author Stefan Mitsch
- * @author Jan-David Quesel
- * @author Andre Platzer
- * 
- * Basic dL Axioms of Differential Dynamic Logic.
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
- * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012."
- * @see "Andre Platzer. Dynamic logics of dynamical systems. arXiv 1205.4788, May 2012."
- * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
- * @todo simplify/unify the number of declarations.
- */
 Variables.
   T c().
   T s.
@@ -767,13 +765,12 @@ Axiom "abs".
   (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))
 End.
 
-/* @todo Multi-argument don't parse in KeYmaeraParser:1203
-Axiom "max expand".
-  (max(f(), g()) = h()) <-> ((f()>=g() & h()=f()) | (f()<=g() & h()=g()))
+Axiom "max".
+  (max(f(), g()) = h()) <-> ((f()>=g() & h()=f()) | (f()<g() & h()=g()))
 End.
 
-Axiom "min expand".
-  (min(f(), g()) = h()) <-> ((f()<=g() & h()=f()) | (f()>=g() & h()=g()))
-End. */
+Axiom "min".
+  (min(f(), g()) = h()) <-> ((f()<=g() & h()=f()) | (f()>g() & h()=g()))
+End.
 """
 }

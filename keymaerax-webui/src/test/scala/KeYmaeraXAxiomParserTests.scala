@@ -22,10 +22,10 @@ class KeYmaeraXAxiomParserTests extends FlatSpec with Matchers {
         |End.
       """.stripMargin
     val axioms = KeYmaeraXAxiomParser(input)
-    axioms.head.name should be ("This is an axiom")
-    axioms.head.formula should be (Equal(Number(1), Number(1)))
-    axioms(1).name should be ("This is another = axiom")
-    axioms(1).formula should be (Equal(Variable("x"), Variable("x")))
+    axioms.head._1 should be ("This is an axiom")
+    axioms.head._2 should be (Equal(Number(1), Number(1)))
+    axioms(1)._1 should be ("This is another = axiom")
+    axioms(1)._2 should be (Equal(Variable("x"), Variable("x")))
   }
 
   it should "parse the actual axiom file" in {
@@ -49,8 +49,8 @@ class KeYmaeraXAxiomParserTests extends FlatSpec with Matchers {
                   |End.""".stripMargin
     val axioms = KeYmaeraXAxiomParser(input)
     axioms.length shouldBe 1
-    axioms.head.name shouldBe "all instantiate"
+    axioms.head._1 shouldBe "all instantiate"
 
-    axioms.head.formula shouldBe Imply(Forall(x :: Nil, PredOf(p,x)), PredOf(p, t))
+    axioms.head._2 shouldBe Imply(Forall(x :: Nil, PredOf(p,x)), PredOf(p, t))
   }
 }

@@ -32,6 +32,7 @@ object LoadedKnowledgeTools {
   }
 }
 sealed class LoadedKnowledge(val name : String, val formula : Formula)
+@deprecated("Not needed. Use (String,Formula) instead")
 case class LoadedAxiom(n : String, f : Formula) extends LoadedKnowledge(n,f)
 case class LoadedLemma(n : String, f : Formula, evidence : List[Evidence]) extends LoadedKnowledge(n,f)
 

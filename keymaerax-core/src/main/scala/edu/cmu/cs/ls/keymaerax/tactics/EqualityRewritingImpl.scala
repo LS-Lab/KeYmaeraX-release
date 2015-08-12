@@ -231,7 +231,7 @@ object EqualityRewritingImpl {
             cutT(Some(Equiv(Exists(abbrvV :: Nil, Equal(abbrvV, t)), Equal(t, t)))) & onBranch(
               (cutShowLbl, lastSucc(EquivRightT) & onBranch(
                 (equivLeftLbl, AxiomCloseT),
-                (equivRightLbl, FOQuantifierTacticsImpl.existentialGenPosT(abbrvV, HereP.first)(AntePosition(0)) & AxiomCloseT)
+                (equivRightLbl, FOQuantifierTacticsImpl.existentialGenPosT(abbrvV, HereP.first :: Nil)(AntePosition(0)) & AxiomCloseT)
               )),
               (cutUseLbl, equivRewriting(AntePosition(0), SuccPosition(0)) & EqualReflexiveT(SuccPosition(0)))
             )),

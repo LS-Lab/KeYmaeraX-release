@@ -18,16 +18,17 @@ object KeYmaeraXLemmaParser extends (String => (String, Formula, (String, String
 
   /**
    * @todo sort hcecking.
-   * @param s The contents of the lemma file.
+   * @param input The contents of the lemma file.
    * @return A list of named lemmas, each with tool evidence (tool input/output) occurring in the file.
    */
-  def apply(s: String) : Lemma = {
-    val tokens = KeYmaeraXLexer.inMode(s, LemmaFileMode())
+  def apply(input: String) : Lemma = try {
+    val tokens = KeYmaeraXLexer.inMode(input, LemmaFileMode())
     if (DEBUG) println("Tokens are: " + tokens)
     val (decls, lemmaTokens) = KeYmaeraXDeclarationsParser(tokens)
     if (DEBUG) println("Declarations: " + decls)
     parseLemma(lemmaTokens)
-  }
+  } catch {case e: ParseException => throw e.inContext("input:  " + input)
+    case e: IllegalArgumentException => throw new ParseException(e.toString, UnknownLocation, "\ninput:  " + input).initCause(e)}
 
 
   /**

@@ -8,10 +8,11 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
 
 /**
+ * Parse an axiom string to a list of named formulas that are to be used as axioms in a theory.
  * Created by nfulton on 6/11/15.
  * @author nfulton
  */
-object KeYmaeraXAxiomParser extends (String => List[LoadedKnowledge]) {
+object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) {
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   /**
@@ -19,13 +20,14 @@ object KeYmaeraXAxiomParser extends (String => List[LoadedKnowledge]) {
    * @param input The contents of the axiom file.
    * @return A list of named axioms occurring in the file.
    */
-  def apply(input: String) : List[LoadedKnowledge] = {
+  def apply(input: String) : List[(String,Formula)] = {
     val tokens = KeYmaeraXLexer.inMode(input, AxiomFileMode())
     if (DEBUG) println("Tokens are: " + tokens)
     try {
       val (decls, axiomTokens) = KeYmaeraXDeclarationsParser(tokens)
-      val namesAndFormulas : List[(String, Formula)] = parseAxioms(axiomTokens)
-      namesAndFormulas.map(p => LoadedAxiom(p._1, p._2))
+      val axioms = parseAxioms(axiomTokens)
+      assert(axioms.forall(ax => KeYmaeraXDeclarationsParser.typeAnalysis(decls, ax._2)), "type analysis of axioms")
+      axioms
     } catch {case e: ParseException => throw e.inContext("axiom file"/*input*/)}
   }
 
