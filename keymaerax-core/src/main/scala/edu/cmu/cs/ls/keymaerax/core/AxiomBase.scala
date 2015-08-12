@@ -271,41 +271,11 @@ private[core] object AxiomBase {
    * @see "Andre Platzer. Dynamic logics of dynamical systems. arXiv 1205.4788, May 2012."
    * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
-   * @todo simplify/unify the number of declarations.
+   * @todo more consistent naming scheme.
    */
   private[core] def loadAxiomString() : String =
 """
 Variables.
-  T c().
-  T s.
-  T s().
-  T t.
-  T t().
-  T x.
-  T v. /* TODO-nrf this needs to be a V */
-  T f(T).
-  T g(T).
-  T ctxT_(T).
-  P a.
-  P b.
-  CP c.
-  CP d.
-  F pf.
-  F p(T).
-  F p(??).
-  F q.
-  F q(T).
-  F r(??).
-  F ctxF_(T).
-  F H.
-  F H(T).
-  /* for arithmetic axioms */
-  /* T r. */
-  T abs(T).
-  T f().
-  T g().
-  /*T max(T, T).
-  T min(T, T).*/
 End.
 
 /**
