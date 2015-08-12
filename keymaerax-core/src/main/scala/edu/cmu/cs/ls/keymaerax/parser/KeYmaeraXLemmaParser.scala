@@ -18,7 +18,7 @@ object KeYmaeraXLemmaParser extends (String => (String, Formula, (String, String
 
   /**
    * @todo sort hcecking.
-   * @param s The contents of the lemma file.
+   * @param input The contents of the lemma file.
    * @return A list of named lemmas, each with tool evidence (tool input/output) occurring in the file.
    */
   def apply(input: String) : Lemma = try {

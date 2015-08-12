@@ -79,7 +79,8 @@ object KeYmaeraXDeclarationsParser {
    * @todo distinguish whether it was in ProgramVariables or in Functions block, which is not currently recorded in decls.
    */
   def typeAnalysis(decls: Map[(String, Option[Int]), (Option[Sort], Sort)], expr: Expression): Boolean = {
-    StaticSemantics.signature(expr).forall(f => f match {
+    if (KeYmaeraXParser.LAX) true
+    else StaticSemantics.signature(expr).forall(f => f match {
       case f:Function =>
         val (domain,sort) = decls.get((f.name,f.index)) match {
           case Some(d) => d
@@ -98,7 +99,6 @@ object KeYmaeraXDeclarationsParser {
         x.sort == sort
       case _ => true
     })
-    true
   }
 
 
