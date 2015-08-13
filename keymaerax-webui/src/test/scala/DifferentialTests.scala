@@ -329,6 +329,20 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
+  it should "use a user-defined tactic before DI" in {
+    val s = sequent(Nil, "max(0,1) >= 0".asFormula :: "x>0 & v>=0 & a>0".asFormula :: Nil, "[{x'=v, v'=a}]x>0".asFormula :: Nil)
+
+    // solution = None -> Mathematica
+    val tactic = locateSucc(diffSolution(None, TactixLibrary.la(hideT, "max(0,1) >= 0")))
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("max(0,1)>=0".asFormula, "x>0&v>=0&a>0".asFormula,
+      "kxtime_1=0".asFormula, "x_2()=x".asFormula, "v_2()=v".asFormula, "kxtime_4()=kxtime_1".asFormula)
+    result.openGoals().head.sequent.succ should contain only "true & kxtime_5>=kxtime_4() & v_3=v_2()+a*kxtime_5 & x_3=1/2*(2*x_2() + 2*v_2()*kxtime_5 + a*kxtime_5^2) -> x_3>0".asFormula
+  }
+
   "Differential auxiliaries tactic" should "add y'=1 to [x'=2]x>0" in {
     import ODETactics.diffAuxiliaryT
     val s = sucSequent("[{y'=2}]y>0".asFormula)
