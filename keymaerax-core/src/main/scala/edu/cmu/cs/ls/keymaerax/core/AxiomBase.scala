@@ -213,7 +213,7 @@ private[core] object AxiomBase {
     val H0 = PredOf(Function("H", None, Unit, Bool), Nothing)
 
     // Figure 2
-    assert(axs("<> dual") == Equiv(Diamond(a, pany), Not(Box(a, Not(pany)))), "<> dual")
+    assert(axs("<> dual") == Equiv(Not(Box(a, Not(pany))), Diamond(a, pany)), "<> dual")
     assert(axs("[:=] assign") == Equiv(Box(Assign(x,f0), PredOf(p,x)), PredOf(p, f0))
       || axs("[:=] assign") == Equiv(Box(Assign(v,t0), PredOf(p,v)), PredOf(p, t0)), "[:=] assign")
     assert(axs("[?] test") == Equiv(Box(Test(q0), p0), Imply(q0, p0))
@@ -244,8 +244,8 @@ private[core] object AxiomBase {
 //    assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,t0)), "all instantiate")
 //    assert(axs("all distribute") == Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x)))), "all distribute")
     // soundness-critical that these are for p() not for p(x) or p(??)
-    assert(axs("vacuous all quantifier") == Equiv(p0, Forall(immutable.IndexedSeq(x), p0)), "vacuous all quantifier")
-    assert(axs("vacuous exists quantifier") == Equiv(p0, Exists(immutable.IndexedSeq(x), p0)), "vacuous exists quantifier")
+    assert(axs("vacuous all quantifier") == Equiv(Forall(immutable.IndexedSeq(x), p0), p0), "vacuous all quantifier")
+    assert(axs("vacuous exists quantifier") == Equiv(Exists(immutable.IndexedSeq(x), p0), p0), "vacuous exists quantifier")
 
     assert(axs("min") == Equiv(Equal(FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(f0, g0)), h0),
       Or(And(LessEqual(f0, g0), Equal(h0, f0)), And(Greater(f0, g0), Equal(h0, g0)))), "min")
@@ -296,21 +296,21 @@ Axiom "exists generalize".
 End.
 
 Axiom "vacuous all quantifier".
-  p() <-> \forall x p()
+  (\forall x p()) <-> p()
 End.
 
 /* @Derived */
 Axiom "vacuous exists quantifier".
-  p() <-> (\exists x p())
+  (\exists x p()) <-> p()
 End.
 
 Axiom "all dual".
-  (\forall x p(x)) <-> !(\exists x (!p(x)))
+  (!\exists x (!p(x))) <-> (\forall x p(x))
 End.
 
 /* @Derived */
 Axiom "exists dual".
-  (\exists x p(x)) <-> !(\forall x (!p(x)))
+  (!\forall x (!p(x))) <-> (\exists x p(x))
 End.
 
 /*
@@ -337,12 +337,12 @@ End.
  */
 
 Axiom "<> dual".
-  <a;>p(??) <-> ![a;](!p(??))
+  (![a;](!p(??))) <-> <a;>p(??)
 End.
 
 /* @Derived */
 Axiom "[] dual".
-  [a;]p(??) <-> !<a;>(!p(??))
+  (!<a;>(!p(??))) <-> [a;]p(??)
 End.
 
 Axiom "[:=] assign".
@@ -396,12 +396,12 @@ Axiom "<?> test".
 End.
 
 Axiom "[++] choice".
-  [a; ++ b;]p(??) <-> ([a;]p(??) & [b;]p(??))
+  [a;++b;]p(??) <-> ([a;]p(??) & [b;]p(??))
 End.
 
 /* @Derived */
 Axiom "<++> choice".
-   <a; ++ b;>p(??) <-> (<a;>p(??) | <b;>p(??))
+   <a;++b;>p(??) <-> (<a;>p(??) | <b;>p(??))
 End.
 
 Axiom "[;] compose".
@@ -714,11 +714,11 @@ Axiom "<=".
 End.
 
 Axiom "= negate".
-  (f() = g()) <-> !(f() != g())
+  (!(f() != g())) <-> (f() = g())
 End.
 
 Axiom "< negate".
-  (f() < g()) <-> !(f() >= g())
+  (!(f() >= g())) <-> (f() < g())
 End.
 
 Axiom ">= flip".
