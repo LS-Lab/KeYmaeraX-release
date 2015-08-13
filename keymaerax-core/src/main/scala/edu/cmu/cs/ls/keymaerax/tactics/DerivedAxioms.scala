@@ -14,44 +14,58 @@ import edu.cmu.cs.ls.keymaerax.parser.{ToolEvidence, Evidence}
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
+import TactixLibrary._
+import TactixLibrary.useAt
+
 /**
  * Derived Axioms.
  * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
 object DerivedAxioms {
-  import TactixLibrary._
   /** Database for derived axioms */
   //@todo which lemma db to use?
   val derivedAxiomDB = new FileLemmaDB
   type LemmaID = String
 
+  private val AUTO_INSERT = false
+
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  private def derivedAxiom(name: String, fact: Provable): ApplyRule[LookupLemma] = {
-    require(fact.isProved, "only proved Provables would be accepted as derived axioms")
+  private def derivedAxiom(name: String, fact: Provable): Lemma = {
+    require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(immutable.Map("input" -> fact.toString, "output" -> "true")) :: Nil
     val lemma = Lemma(fact, evidence, Some(name))
-    // first check whether the lemma DB already contains identical lemma name
-    val lemmaID = if (derivedAxiomDB.contains(name)) {
-      // identical lemma contents with identical name, so reuse ID
-      if (derivedAxiomDB.get(name) == Some(lemma)) name
-      else throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(name))
+    if (!AUTO_INSERT) {
+      lemma
     } else {
-      LookupLemma.addLemma(derivedAxiomDB, lemma)
-    }
-    val lemmaRule = LookupLemma(derivedAxiomDB, lemmaID)
-    new ApplyRule(lemmaRule) {
-      override def applicable(node: ProofNode): Boolean = node.sequent.sameSequentAs(lemma.fact.conclusion)
+      // first check whether the lemma DB already contains identical lemma name
+      val lemmaID = if (derivedAxiomDB.contains(name)) {
+        // identical lemma contents with identical name, so reuse ID
+        if (derivedAxiomDB.get(name) == Some(lemma)) lemma.name.get
+        else throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(name))
+      } else {
+        LookupLemma.addLemma(derivedAxiomDB, lemma)
+      }
+      derivedAxiomDB.get(lemmaID).get
     }
   }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
-  private def derivedAxiom(name: String, derived: Sequent, tactic: Tactic): ApplyRule[LookupLemma] = {
+  private def derivedAxiom(name: String, derived: Sequent, tactic: Tactic): Lemma = {
     //@todo optimize: no need to prove if already filed in derivedAxiomDB anyhow
     val witness = tactic2Provable(derived, tactic)
-    assert(witness.isProved, "tactics proving derived axioms should produce proved Provables")
+    assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + name + " got\n" + witness)
     derivedAxiom(name, witness)
+  }
+
+  /** Package a Lemma for a derived axiom up as a tactic */
+  private def derivedAxiomT(lemma: Lemma): ApplyRule[LookupLemma] = {
+    require(derivedAxiomDB.contains(lemma.name.get), "Lemma has already been added")
+    val lemmaRule = LookupLemma(derivedAxiomDB, lemma.name.get)
+    new ApplyRule(lemmaRule) {
+      override def applicable(node: ProofNode): Boolean = node.sequent.sameSequentAs(lemma.fact.conclusion)
+    }
   }
 
   /**
@@ -62,6 +76,7 @@ object DerivedAxioms {
     val rootNode = new RootNode(goal)
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
+    println("tactic2Provable " + (if (rootNode.isClosed()) "closed" else "open"))
     rootNode.provableWitness
   }
 
@@ -92,6 +107,8 @@ object DerivedAxioms {
       (Close(AntePos(0),SuccPos(0)), 0)
   )
 
+  lazy val equivReflexiveT = derivedAxiomT(equivReflexiveAxiom)
+
   /**
    * {{{Axiom "!! double negation".
    *  p() <-> !(!p())
@@ -112,6 +129,8 @@ object DerivedAxioms {
       (Close(AntePos(0),SuccPos(0)), 0)
   )
 
+  lazy val doubleNegationT = derivedAxiomT(doubleNegationAxiom)
+
   /**
    * {{{Axiom "abs".
    *   (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))
@@ -123,6 +142,8 @@ object DerivedAxioms {
     Sequent(Nil, IndexedSeq(), IndexedSeq("(abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))".asFormula)),
     TactixLibrary.QE //TactixLibrary.master
   )
+
+  lazy val absT = derivedAxiomT(abs)
 
   /**
    * {{{Axiom "exists dual".
@@ -139,11 +160,16 @@ object DerivedAxioms {
       useAt(equivReflexiveAxiom)(SuccPosition(0))
   )
 
+  lazy val existsDualT = derivedAxiomT(existsDualAxiom)
+
   //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
-  private def useAt(lem: ApplyRule[LookupLemma]): PositionTactic = TactixLibrary.useAt(lem.rule.lemma.fact)
+  //private def useAt(lem: ApplyRule[LookupLemma]): PositionTactic = TactixLibrary.useAt(lem.rule.lemma.fact)
 
   private def useAt(axiom: String): PositionTactic =
     TactixLibrary.useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0))
+
+  //@todo why is this necessary?
+  private def useAt(lem: Lemma): PositionTactic = TactixLibrary.useAt(lem)
 
   /**
    * {{{Axiom "vacuous exists quantifier".
@@ -160,6 +186,8 @@ object DerivedAxioms {
       useAt(equivReflexiveAxiom)(SuccPosition(0))
   )
 
+  lazy val vacuousExistsT = derivedAxiomT(vacuousExistsAxiom)
+
   /**
    * {{{Axiom "V[:*] vacuous assign nondet".
    *    p() <-> [x:=*;] p()
@@ -174,6 +202,8 @@ object DerivedAxioms {
       useAt(equivReflexiveAxiom)(SuccPosition(0))
   )
 
+  lazy val vacuousBoxAssignNondetT = derivedAxiomT(vacuousBoxAssignNondetAxiom)
+
   /**
    * {{{Axiom "V<:*> vacuous assign nondet".
    *    p() <-> <x:=*;> p()
@@ -187,6 +217,8 @@ object DerivedAxioms {
       useAt(vacuousExistsAxiom)(SuccPosition(0, PosInExpr(1::Nil))) &
       useAt(equivReflexiveAxiom)(SuccPosition(0))
   )
+
+  lazy val vacuousDiamondAssignNondetT = derivedAxiomT(vacuousDiamondAssignNondetAxiom)
 
 
   //  lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",

@@ -37,6 +37,8 @@ object TactixLibrary {
   def useAt(fact: Formula): PositionTactic = TacticLibrary.useAt(fact)
   /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(fact: Provable): PositionTactic = TacticLibrary.useAt(fact)
+  /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
+  def useAt(lem: Lemma): PositionTactic = useAt(lem.fact)
   /** useAt(fact, tactic)(pos) uses the given fact (that'll be proved by tactic after unification) at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(fact: Formula, tactic: Tactic): PositionTactic = TacticLibrary.useAt(fact)
 

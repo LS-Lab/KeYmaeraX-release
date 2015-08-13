@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
-import edu.cmu.cs.ls.keymaerax.tactics.{TacticWrapper, Tactics, RootNode}
+import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, TacticWrapper, Tactics, RootNode}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Tool}
 import testHelper.ProvabilityTestHelper
@@ -21,20 +21,34 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))
-  val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
-  var math: Tool with QETool = null
+  val mathematicaConfig : Map[String, String] = helper.mathematicaConfig
 
   override def beforeEach() = {
-    KeYmaera.init(Map()) //@todo how to do this really?
-    math = new Mathematica
-    math.init(mathematicaConfig)
+    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
+    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
+    Tactics.MathematicaScheduler.init(mathematicaConfig)
+    Tactics.KeYmaeraScheduler.init(Map())
   }
 
   override def afterEach() = {
-    math.shutdown()
-    math = null
+    Tactics.MathematicaScheduler.shutdown()
+    Tactics.KeYmaeraScheduler.shutdown()
+    Tactics.MathematicaScheduler = null
+    Tactics.KeYmaeraScheduler = null
   }
 
+
+  private def check(lemma: Lemma): Sequent = {
+    println(lemma.name.get + "\n" + lemma.fact.conclusion)
+    lemma.fact.isProved shouldBe true
+    useToClose(lemma)
+    lemma.fact.conclusion
+  }
+
+  private def useToClose(lemma: Lemma): Unit = {
+    val rootNode = Provable.startProof(lemma.fact.conclusion)
+    rootNode(lemma.fact, 0).isProved shouldBe true
+  }
 
   private def check(lem: ApplyRule[LookupLemma]): Sequent = {
     val lemma = lem.rule.lemma
@@ -60,4 +74,11 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom)}
   it should "prove abs" in {check(abs)}
 
+  "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveT)}
+  it should "prove !!" in {check(doubleNegationT)}
+  it should "prove exists dual" in {check(existsDualT)}
+  it should "prove vacuous exists" in {check(vacuousExistsT)}
+  it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetT)}
+  it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetT)}
+  it should "prove abs" in {check(abs)}
 }
