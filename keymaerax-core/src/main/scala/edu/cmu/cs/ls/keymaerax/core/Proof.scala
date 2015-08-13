@@ -320,6 +320,30 @@ object Provable {
  *  // proof of finGoal
  *  println(proof.proved)
  * }}}
+ * @example Proofs directly in forward Hilbert order and merging of branches
+ * {{{
+ *  import scala.collection.immutable._
+ *   val fm = Greater(Variable("x"), Number(5))
+ *  // proof of x>5 |- x>5 & true merges left and right branch by AndRight
+ *  val proof = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(And(fm, True))))(
+ *    AndRight(SuccPos(0)), 0) (
+ *    // left branch: x>5 |- x>5
+ *    Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(fm)))(
+ *      Close(AntePos(0), SuccPos(0)), 0),
+ *    0) (
+ *    //right branch: |- true
+ *    Provable.startProof(Sequent(Seq(), IndexedSeq(), IndexedSeq(True)))(
+ *      CloseTrue(SuccPos(0)), 0)(
+ *        // x>5 |- true
+ *        Sequent(Seq(), IndexedSeq(fm), IndexedSeq(True)), HideLeft(AntePos(0))),
+ *    0) (
+ *    // |- x>5 -> x>5 & true
+ *    new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True)))),
+ *    ImplyRight(SuccPos(0))
+ *  )
+ *  // proof of finGoal  |- x>5 -> x>5 & true
+ *  println(proof.proved)
+ * }}}
  */
 final case class Provable private (conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
   if (Provable.DEBUG && subgoals.distinct.size != subgoals.size) print("INFO: repeated subgoals may warrant set construction or compactification in Provable " + this)

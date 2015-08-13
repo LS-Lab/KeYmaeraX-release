@@ -149,6 +149,44 @@ class ProvableTest extends FlatSpec with Matchers {
   }
 
   /**
+   * Proves in a direct forward Hilbert-style order:
+   * {{{
+   *                      *
+   *                 ----------- CloseTrue
+   *     *               |- true
+   * ----------ax    ----------- WL
+   * x>0 |- x>0      x>0 |- true
+   * ---------------------------- &R
+   *     x>0  |-  x>0 & true
+   * ---------------------------- ->R
+   *     |-  x>0 ->  x>0 & true
+   * }}}
+   */
+  it should "forward proofs in Hilbert order of x>0 -> x>0 & true (direct)" in {
+    import scala.collection.immutable._
+    val fm = Greater(Variable("x"), Number(5))
+    // proof of x>5 |- x>5 & true merges left and right branch by AndRight
+    val proof = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(And(fm, True))))(
+      AndRight(SuccPos(0)), 0) (
+      // left branch: x>5 |- x>5
+      Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(fm)))(
+        Close(AntePos(0), SuccPos(0)), 0),
+      0)(
+        //right branch: |- true
+        Provable.startProof(Sequent(Seq(), IndexedSeq(), IndexedSeq(True)))(
+          CloseTrue(SuccPos(0)), 0)(
+            // x>5 |- true
+            Sequent(Seq(), IndexedSeq(fm), IndexedSeq(True)), HideLeft(AntePos(0))),
+        0)(
+        // |- x>5 -> x>5 & true
+        new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True)))),
+        ImplyRight(SuccPos(0))
+      )
+    proof.isProved should be (true)
+    proof.proved should be (new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True)))))
+  }
+
+  /**
    * Proves in a mixed yoyo order both forward and backward and up and down.
    * {{{
    *                      *
