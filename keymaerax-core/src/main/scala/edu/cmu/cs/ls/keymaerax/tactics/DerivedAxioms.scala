@@ -76,7 +76,7 @@ object DerivedAxioms {
     val rootNode = new RootNode(goal)
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
-    println("tactic2Provable " + (if (rootNode.isClosed()) "closed" else "open"))
+    println("tactic2Provable " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().foreach(x => println("Open Goal: " + x.sequent.toString()))))
     rootNode.provableWitness
   }
 

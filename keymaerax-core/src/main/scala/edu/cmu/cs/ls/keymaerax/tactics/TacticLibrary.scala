@@ -283,29 +283,6 @@ object TacticLibrary {
     }
 
   }
-  def useAt(fact: Formula): PositionTactic = useAt(fact, TactixLibrary.skip)
-
-  /**
-   * useAt(fact)(pos) uses the given fact at the given position in the sequent.
-   * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
-   * instance to make progress by reducing to the other side.
-   *
-   * Tactic specification:
-   * {{{
-   * useAt(fact)(p)(F) = let (C,f)=F(p) in
-   *   case f of {
-   *     s=unify(fact.left,_) => CutRight(C(f)<->C(s(fact.right)))(p) & <(
-   *       "use cut": skip
-   *       "show cut": EquivifyRight(p.seq) & CE(C(_))(p.seq) & by(fact)
-   *     )
-   *   }
-   * }}}
-   * @author Andre Platzer
-   */
-  def useAt(fact: Provable): PositionTactic = {
-    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
-    useAt(fact.conclusion.succ.head, TactixLibrary.by(fact))
-  }
 
   /*******************************************************************
    * Debug tactics

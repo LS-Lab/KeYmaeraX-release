@@ -33,14 +33,17 @@ object TactixLibrary {
   def master(qeTool: String)  : Tactic = master(new NoneGenerate(), qeTool)
   def master(gen: Generator[Formula] = new NoneGenerate(), qeTool: String = "Mathematica"): Tactic = TacticLibrary.master(gen, true, qeTool)
 
+  /** useAt(fact, tactic)(pos) uses the given fact (that'll be proved by tactic after unification) at the given position in the sequent (by unifying and equivalence rewriting). */
+  def useAt(fact: Formula, tactic: Tactic): PositionTactic = TacticLibrary.useAt(fact, tactic)
   /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(fact: Formula): PositionTactic = TacticLibrary.useAt(fact)
+  def useAt(fact: Formula): PositionTactic = useAt(fact, skip)
   /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(fact: Provable): PositionTactic = TacticLibrary.useAt(fact)
+  def useAt(fact: Provable): PositionTactic = {
+    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
+    useAt(fact.conclusion.succ.head, by(fact))
+  }
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma): PositionTactic = useAt(lem.fact)
-  /** useAt(fact, tactic)(pos) uses the given fact (that'll be proved by tactic after unification) at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(fact: Formula, tactic: Tactic): PositionTactic = TacticLibrary.useAt(fact)
 
   /** by(provable) is a pseudo-tactic that uses the given Provable to continue or close the proof (if it fits to what has been proved) */
   def by(provable: Provable): Tactic = new ByProvable(provable)
