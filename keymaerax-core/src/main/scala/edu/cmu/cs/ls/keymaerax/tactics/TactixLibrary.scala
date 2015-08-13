@@ -47,7 +47,7 @@ object TactixLibrary {
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma, key:PosInExpr): PositionTactic = useAt(lem.fact, key)
   /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(axiom: String, key: PosInExpr): PositionTactic =
+  def useAt(axiom: String, key: PosInExpr = PosInExpr(0::Nil)): PositionTactic =
     useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
 
   /** by(provable) is a pseudo-tactic that uses the given Provable to continue or close the proof (if it fits to what has been proved) */

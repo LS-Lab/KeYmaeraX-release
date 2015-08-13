@@ -111,21 +111,21 @@ object DerivedAxioms {
 
   /**
    * {{{Axiom "!! double negation".
-   *  p() <-> !(!p())
+   *  (!(!p())) <-> p()
    * End.
    * }}}
    * @Derived
    */
   lazy val doubleNegationAxiom = derivedAxiom("!! double negation",
-    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("p() <-> !(!p())".asFormula)))
+    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("(!(!p())) <-> p()".asFormula)))
       (EquivRight(SuccPos(0)), 0)
       // right branch
-      (NotLeft(AntePos(0)), 1)
-      (NotRight(SuccPos(1)), 1)
+      (NotRight(SuccPos(0)), 1)
+      (NotLeft(AntePos(1)), 1)
       (Close(AntePos(0),SuccPos(0)), 1)
       // left branch
-      (NotRight(SuccPos(0)), 0)
-      (NotLeft(AntePos(1)), 0)
+      (NotLeft(AntePos(0)), 0)
+      (NotRight(SuccPos(1)), 0)
       (Close(AntePos(0),SuccPos(0)), 0)
   )
 
@@ -155,8 +155,8 @@ object DerivedAxioms {
   lazy val existsDualAxiom = derivedAxiom("exists dual",
     Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x p(x) <-> !(\\forall x (!p(x)))".asFormula)),
     useAt("all dual", PosInExpr(0::Nil))(SuccPosition(0, 1::0::Nil)) &
-      useAt(doubleNegationAxiom, PosInExpr(1::Nil))(SuccPosition(0, 1::Nil)) &
-      useAt(doubleNegationAxiom, PosInExpr(1::Nil))(SuccPosition(0, 1::0::Nil)) &
+      useAt(doubleNegationAxiom, PosInExpr(0::Nil))(SuccPosition(0, 1::Nil)) &
+      useAt(doubleNegationAxiom, PosInExpr(0::Nil))(SuccPosition(0, 1::0::Nil)) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -176,7 +176,7 @@ object DerivedAxioms {
     Sequent(Nil, IndexedSeq(), IndexedSeq("p() <-> (\\exists x p())".asFormula)),
     useAt(existsDualAxiom, PosInExpr(0::Nil))(SuccPosition(0, 1::Nil)) &
       useAt("vacuous all quantifier", PosInExpr(1::Nil))(SuccPosition(0, 1::0::Nil)) &
-      useAt(doubleNegationAxiom, PosInExpr(1::Nil))(SuccPosition(0, 1::Nil)) &
+      useAt(doubleNegationAxiom, PosInExpr(0::Nil))(SuccPosition(0, 1::Nil)) &
       byUS(equivReflexiveAxiom)
   )
 
