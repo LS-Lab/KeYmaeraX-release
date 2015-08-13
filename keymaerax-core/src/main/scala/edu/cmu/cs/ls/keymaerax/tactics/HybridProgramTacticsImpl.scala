@@ -801,7 +801,7 @@ object HybridProgramTacticsImpl {
         SubstitutionPair(PredOf(aP, DotTerm), SubstitutionHelper.replaceFree(p)(v, DotTerm)) :: Nil
     }
 
-    val aV = Variable("v", None, Real)
+    val aV = Variable("x", None, Real)
     def alpha(fml: Formula): PositionTactic = fml match {
       case Equiv(Box(AssignAny(v: Variable), p), _) =>
         if (v.name != aV.name || v.index != aV.index) {
@@ -885,7 +885,7 @@ object HybridProgramTacticsImpl {
         SubstitutionPair(PredOf(aP, DotTerm), SubstitutionHelper.replaceFree(p)(v, DotTerm)) :: Nil
     }
 
-    val aV = Variable("v", None, Real)
+    val aV = Variable("x", None, Real)
     def alpha(fml: Formula): PositionTactic = fml match {
       case Equiv(Diamond(AssignAny(v: Variable), p), _) =>
         if (v.name != aV.name || v.index != aV.index) {
