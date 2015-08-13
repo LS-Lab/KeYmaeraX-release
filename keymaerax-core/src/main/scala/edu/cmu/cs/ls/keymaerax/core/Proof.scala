@@ -323,7 +323,7 @@ object Provable {
  * @example Proofs directly in forward Hilbert order and merging of branches
  * {{{
  *  import scala.collection.immutable._
- *   val fm = Greater(Variable("x"), Number(5))
+ *  val fm = Greater(Variable("x"), Number(5))
  *  // proof of x>5 |- x>5 & true merges left and right branch by AndRight
  *  val proof = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(And(fm, True))))(
  *    AndRight(SuccPos(0)), 0) (
@@ -341,7 +341,7 @@ object Provable {
  *    new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True)))),
  *    ImplyRight(SuccPos(0))
  *  )
- *  // proof of finGoal  |- x>5 -> x>5 & true
+ *  // proof of finGoal:  |- x>5 -> x>5 & true
  *  println(proof.proved)
  * }}}
  */
