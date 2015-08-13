@@ -132,20 +132,6 @@ object DerivedAxioms {
   lazy val doubleNegationT = derivedAxiomT(doubleNegationAxiom)
 
   /**
-   * {{{Axiom "abs".
-   *   (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))
-   * End.
-   * }}}
-   * @Derived from built-in arithmetic abs in [[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]
-   */
-  lazy val abs = derivedAxiom("abs",
-    Sequent(Nil, IndexedSeq(), IndexedSeq("(abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))".asFormula)),
-    TactixLibrary.QE //TactixLibrary.master
-  )
-
-  lazy val absT = derivedAxiomT(abs)
-
-  /**
    * {{{Axiom "exists dual".
    *   (\exists x p(x)) <-> !(\forall x (!p(x)))
    * End.
@@ -229,4 +215,19 @@ object DerivedAxioms {
 //      (Axiom("all dual"), 1)
 //      (Close(AntePos(0),SuccPos(0)), 1)
 //  )
+
+  /**
+   * {{{Axiom "abs".
+   *   (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))
+   * End.
+   * }}}
+   * @Derived from built-in arithmetic abs in [[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]
+   */
+  lazy val abs = derivedAxiom("abs",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))".asFormula)),
+    TactixLibrary.QE //TactixLibrary.master
+  )
+
+  lazy val absT = derivedAxiomT(abs)
+
 }

@@ -5,7 +5,7 @@
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics, Unification}
+import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import scala.collection.immutable._
 import org.scalatest.{Matchers, FlatSpec}
@@ -15,7 +15,7 @@ import org.scalatest.{Matchers, FlatSpec}
  * Created by aplatzer on 7/28/15.
  * @author Andre Platzer
  */
-class UnificationTest extends FlatSpec with Matchers {
+class UnificationMatchTest extends FlatSpec with Matchers {
   Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
   Tactics.KeYmaeraScheduler.init(Map())
 
@@ -23,7 +23,7 @@ class UnificationTest extends FlatSpec with Matchers {
     if (us.isDefined) {
       println("Expression: " + e1)
       println("Expression: " + e2)
-      val s = Unification(e1, e2)
+      val s = UnificationMatch(e1, e2)
       println("Unified:  " + s)
       println("Expected: " + us.get)
       s shouldBe us
@@ -31,7 +31,7 @@ class UnificationTest extends FlatSpec with Matchers {
       println("Expression: " + e1)
       println("Expression: " + e2)
       println("Expected: " + "<ununifiable>")
-      Unification(e1, e2) shouldBe us
+      UnificationMatch(e1, e2) shouldBe us
     }
   }
 

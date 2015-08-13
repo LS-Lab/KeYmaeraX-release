@@ -254,7 +254,7 @@ object TacticLibrary {
     private def at(s: Sequent, p: Position): Option[Formula] = new FormulaConverter(s(p.topLevel)).subFormulaAt(p.inExpr)
 
     override def applies(s: Sequent, p: Position): Boolean =
-      at(s,p).isDefined && Unification(keyPart,at(s,p).get).isDefined
+      at(s,p).isDefined && UnificationMatch(keyPart,at(s,p).get).isDefined
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
@@ -262,7 +262,7 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val (ctx:Context[Formula],expr) = new FormulaConverter(node.sequent(p.topLevel)).extractContext(p.inExpr)
         val fml = expr.asInstanceOf[Formula]
-        val matched = Unification(keyPart, fml)
+        val matched = UnificationMatch(keyPart, fml)
         assert(matched.isDefined, "must match if applicable already: " + fml + " matches against " + keyPart + " of " + fact)
         val subst = matched.get
         println("useAt unify: " + fml + " matches against " + keyPart + " by " + subst)
@@ -291,10 +291,10 @@ object TacticLibrary {
    * @param form the sequent to reduce this proof node to by a Uniform Substitution
    */
   def US(form: Sequent): Tactic = new ConstructionTactic("US") {
-    def applicable(node: ProofNode) = Unification(form,node.sequent).isDefined
+    def applicable(node: ProofNode) = UnificationMatch(form,node.sequent).isDefined
 
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      val matched = Unification(form, node.sequent)
+      val matched = UnificationMatch(form, node.sequent)
       assert(matched.isDefined, "must match if applicable already: " + node.sequent + " matches against " + form)
       val subst = matched.get
       println("US unify: " + node.sequent + " matches against " + form + " by " + subst)
