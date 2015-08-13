@@ -227,24 +227,24 @@ class ODESolutionTactic extends TacticTestSuite {
     fail("No assertion.")
   }
 
-  it should "solve simplest case ODEsolve" in { /* works */
+  "Diff. Solution tactic" should "solve simplest case ODEsolve" in { /* works */
     val s = testHelper.SequentFactory.sequent(Nil, "r>=0".asFormula :: Nil, "[{r' = 0}](r>=0)".asFormula :: Nil)
     val tactic = debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
   }
 
-  it should "solve simplest using max (minimal)" in { /* doesn't work correctly */
+  it should "solve simplest using max (minimal)" in { /* works */
   val s = testHelper.SequentFactory.sequent(Nil, "max(0,r)=r".asFormula :: Nil, "[{r' = 0}](r>=0)".asFormula :: Nil)
-    val tactic = debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
+    val tactic = debugT("here") & locateSucc(ODETactics.diffSolution(None, TactixLibrary.la(hideT, "max(0,r)=r"))) & debugT("there")
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
   }
 
-  it should "solve simplest using max (with abbreviation)" in { /* doesn't work correctly */
+  it should "solve simplest using max (with abbreviation)" in { /* works */
   val s = testHelper.SequentFactory.sequent(Nil, "max(0,r)=r".asFormula :: Nil, "[{r' = 0}](r>=0)".asFormula :: Nil)
     val tactic = EqualityRewritingImpl.abbrv(Variable("max0"))(AntePosition(0).first) &
-      debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
+      debugT("here") & locateSucc(ODETactics.diffSolution(None, TactixLibrary.la(hideT, "max0=max(0,r)"))) & debugT("there")
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
   }
@@ -283,9 +283,9 @@ class ODESolutionTactic extends TacticTestSuite {
   }
 
   /* Other non-minimal tests */
-  it should "solve simplest using max" in { /* doesn't work */
+  it should "solve simplest using max" in { /* works */
   val s = testHelper.SequentFactory.sequent(Nil, "max(0,r)=r".asFormula :: Nil, "[{r' = 0}](max(0,r)=r)".asFormula :: Nil)
-    val tactic = debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
+    val tactic = debugT("here") & locateSucc(ODETactics.diffSolution(None, TactixLibrary.la(hideT, "max(0,r)=r"))) & debugT("there")
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
   }
