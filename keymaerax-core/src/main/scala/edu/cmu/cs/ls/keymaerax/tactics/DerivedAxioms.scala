@@ -157,7 +157,7 @@ object DerivedAxioms {
     useAt("all dual", PosInExpr(0::Nil))(SuccPosition(0, PosInExpr(1::0::Nil))) &
       useAt(doubleNegationAxiom, PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
       useAt(doubleNegationAxiom, PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::0::Nil))) &
-      useAt(equivReflexiveAxiom, PosInExpr(0::Nil))(SuccPosition(0))
+      byUS(equivReflexiveAxiom) //useAt(equivReflexiveAxiom, PosInExpr(0::Nil))(SuccPosition(0))
   )
 
   lazy val existsDualT = derivedAxiomT(existsDualAxiom)
@@ -175,9 +175,9 @@ object DerivedAxioms {
   lazy val vacuousExistsAxiom = derivedAxiom("vacuous exists quantifier",
     Sequent(Nil, IndexedSeq(), IndexedSeq("p() <-> (\\exists x p())".asFormula)),
     useAt(existsDualAxiom, PosInExpr(0::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
-      useAt("vacuous forall quantifier", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::0::Nil))) &
+      useAt("vacuous all quantifier", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::0::Nil))) &
       useAt(doubleNegationAxiom, PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
-      useAt(equivReflexiveAxiom, PosInExpr(0::Nil))(SuccPosition(0))
+      byUS(equivReflexiveAxiom) //useAt(equivReflexiveAxiom, PosInExpr(0::Nil))(SuccPosition(0))
   )
 
   lazy val vacuousExistsT = derivedAxiomT(vacuousExistsAxiom)
@@ -200,13 +200,13 @@ object DerivedAxioms {
 
   /**
    * {{{Axiom "V<:*> vacuous assign nondet".
-   *    p() <-> <v:=*;> p()
+   *    p() <-> <x:=*;> p()
    * End.
    * }}}
    * @Derived
    */
   lazy val vacuousDiamondAssignNondetAxiom = derivedAxiom("V<:*> vacuous assign nondet",
-    Sequent(Nil, IndexedSeq(), IndexedSeq("p() <-> (<v:=*;>p())".asFormula)),
+    Sequent(Nil, IndexedSeq(), IndexedSeq("p() <-> (<x:=*;>p())".asFormula)),
     useAt("<:*> assign nondet", PosInExpr(0::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
       useAt(vacuousExistsAxiom, PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
       byUS(equivReflexiveAxiom) // useAt(equivReflexiveAxiom, PosInExpr(0::Nil))(SuccPosition(0))

@@ -268,14 +268,14 @@ object TacticLibrary {
         println("useAt unify: " + fml + " matches against " + keyPart + " by " + subst)
         assert(fml == subst(keyPart), "unification matched left successfully: " + fml + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
-        Some(debugT("start useAt") & cutRightT(ctx(subst(otherPart)))(p.topLevel) & debugT("cutted right") & onBranch(
-          (BranchLabels.cutUseLbl, debugT("useAt result")),
+        Some(debugT("start useAt") & cutRightT(ctx(subst(otherPart)))(p.topLevel) & debugT("  cutted right") & onBranch(
+          (BranchLabels.cutUseLbl, debugT("  useAt result")),
           //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
           //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-          (BranchLabels.cutShowLbl, debugT("show use") & cohideT(p.topLevel) & assertT(0,1) & debugT("cohidden") &
-            equivifyRightT(SuccPosition(0)) & debugT("equivified") &
-            debugT("CE coming up") & AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr) &
-            (if (key==PosInExpr(0::Nil)) commuteEquivRightT(SuccPosition(0)) else NilT) & debugT("using fact tactic") & factTactic & debugT("done useAt"))
+          (BranchLabels.cutShowLbl, debugT("  show use") & cohideT(p.topLevel) & assertT(0,1) & debugT("  cohidden") &
+            equivifyRightT(SuccPosition(0)) & debugT("  equivified") &
+            debugT("  CE coming up") & AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr) &
+            (if (key==PosInExpr(0::Nil)) commuteEquivRightT(SuccPosition(0)) else NilT) & debugT("  using fact tactic") & factTactic & debugT("done useAt"))
           //@todo error if factTactic is not applicable (factTactic | errorT)
          ) & debugT("end useAt"))
       }
