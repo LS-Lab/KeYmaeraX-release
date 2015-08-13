@@ -14,15 +14,14 @@ import edu.cmu.cs.ls.keymaerax.parser.{ToolEvidence, Evidence}
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
-import TactixLibrary._
-import TactixLibrary.useAt
-
 /**
  * Derived Axioms.
  * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
 object DerivedAxioms {
+  import TactixLibrary._
+
   /** Database for derived axioms */
   //@todo which lemma db to use?
   val derivedAxiomDB = new FileLemmaDB
@@ -154,22 +153,16 @@ object DerivedAxioms {
    */
   lazy val existsDualAxiom = derivedAxiom("exists dual",
     Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)),
-    useAt("all dual")(SuccPosition(0, PosInExpr(1::0::Nil))) &
-      useAt(doubleNegationAxiom)(SuccPosition(0, PosInExpr(1::Nil))) &
-      useAt(doubleNegationAxiom)(SuccPosition(0, PosInExpr(1::0::Nil))) &
-      useAt(equivReflexiveAxiom)(SuccPosition(0))
+    useAt("all dual", PosInExpr(0::Nil))(SuccPosition(0, PosInExpr(1::0::Nil))) &
+      useAt(doubleNegationAxiom, PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
+      useAt(doubleNegationAxiom, PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::0::Nil))) &
+      useAt(equivReflexiveAxiom, PosInExpr(0::Nil))(SuccPosition(0))
   )
 
   lazy val existsDualT = derivedAxiomT(existsDualAxiom)
 
   //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
   //private def useAt(lem: ApplyRule[LookupLemma]): PositionTactic = TactixLibrary.useAt(lem.rule.lemma.fact)
-
-  private def useAt(axiom: String): PositionTactic =
-    TactixLibrary.useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0))
-
-  //@todo why is this necessary?
-  private def useAt(lem: Lemma): PositionTactic = TactixLibrary.useAt(lem)
 
   /**
    * {{{Axiom "vacuous exists quantifier".
@@ -180,26 +173,26 @@ object DerivedAxioms {
    */
   lazy val vacuousExistsAxiom = derivedAxiom("vacuous exists quantifier",
     Sequent(Nil, IndexedSeq(), IndexedSeq("p() <-> (\\exists x p())".asFormula)),
-    useAt(existsDualAxiom)(SuccPosition(0, PosInExpr(1::Nil))) &
-      useAt("vacuous forall quantifier")(SuccPosition(0, PosInExpr(1::0::Nil))) &
-      useAt(doubleNegationAxiom)(SuccPosition(0, PosInExpr(1::Nil))) &
-      useAt(equivReflexiveAxiom)(SuccPosition(0))
+    useAt(existsDualAxiom, PosInExpr(0::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
+      useAt("vacuous forall quantifier", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::0::Nil))) &
+      useAt(doubleNegationAxiom, PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
+      useAt(equivReflexiveAxiom, PosInExpr(0::Nil))(SuccPosition(0))
   )
 
   lazy val vacuousExistsT = derivedAxiomT(vacuousExistsAxiom)
 
   /**
    * {{{Axiom "V[:*] vacuous assign nondet".
-   *    p() <-> [v:=*;] p()
+   *    p() <-> [x:=*;] p()
    * End.
    * }}}
    * @Derived
    */
   lazy val vacuousBoxAssignNondetAxiom = derivedAxiom("V[:*] vacuous assign nondet",
-    Sequent(Nil, IndexedSeq(), IndexedSeq("p() <-> ([v:=*;]p())".asFormula)),
-    useAt("[:*] assign nondet")(SuccPosition(0, PosInExpr(1::Nil))) &
-      useAt("vacuous all quantifier")(SuccPosition(0, PosInExpr(1::Nil))) &
-      useAt(equivReflexiveAxiom)(SuccPosition(0))
+    Sequent(Nil, IndexedSeq(), IndexedSeq("p() <-> ([x:=*;]p())".asFormula)),
+    useAt("[:*] assign nondet", PosInExpr(0::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
+      useAt("vacuous all quantifier", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
+      useAt(equivReflexiveAxiom, PosInExpr(0::Nil))(SuccPosition(0))
   )
 
   lazy val vacuousBoxAssignNondetT = derivedAxiomT(vacuousBoxAssignNondetAxiom)
@@ -213,9 +206,9 @@ object DerivedAxioms {
    */
   lazy val vacuousDiamondAssignNondetAxiom = derivedAxiom("V<:*> vacuous assign nondet",
     Sequent(Nil, IndexedSeq(), IndexedSeq("p() <-> (<v:=*;>p())".asFormula)),
-    useAt("<:*> assign nondet")(SuccPosition(0, PosInExpr(1::Nil))) &
-      useAt(vacuousExistsAxiom)(SuccPosition(0, PosInExpr(1::Nil))) &
-      useAt(equivReflexiveAxiom)(SuccPosition(0))
+    useAt("<:*> assign nondet", PosInExpr(0::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
+      useAt(vacuousExistsAxiom, PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
+      useAt(equivReflexiveAxiom, PosInExpr(0::Nil))(SuccPosition(0))
   )
 
   lazy val vacuousDiamondAssignNondetT = derivedAxiomT(vacuousDiamondAssignNondetAxiom)

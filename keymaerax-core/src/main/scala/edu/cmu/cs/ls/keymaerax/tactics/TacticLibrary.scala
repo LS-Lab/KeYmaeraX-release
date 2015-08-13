@@ -235,18 +235,23 @@ object TacticLibrary {
    * }}}
    * @author Andre Platzer
    */
-  def useAt(fact: Formula, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
+  def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
     import FormulaConverter._
     import PropositionalTacticsImpl._
     require(fact.isInstanceOf[Equiv] || fact.isInstanceOf[Equal] || fact.isInstanceOf[Imply], "equivalence or implication fact expected")
     require(fact.isInstanceOf[Equiv], "only equivalence facts implemented so far")
     private val Equiv(left,right) = fact
+    private val (keyPart,otherPart) = key match {
+      case PosInExpr(0::Nil) => (left, right)
+      case PosInExpr(1::Nil) => (right, left)
+      case _ => throw new IllegalArgumentException("Not yet implemented for " + key)
+    }
 
     //@todo s(Position) is meant to locate into PosInExpr too
     private def at(s: Sequent, p: Position): Option[Formula] = new FormulaConverter(s(p.topLevel)).subFormulaAt(p.inExpr)
 
     override def applies(s: Sequent, p: Position): Boolean =
-      at(s,p).isDefined && (Unification(left,at(s,p).get).isDefined || Unification(right,at(s,p).get).isDefined)
+      at(s,p).isDefined && Unification(keyPart,at(s,p).get).isDefined
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
@@ -254,30 +259,19 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val (ctx:Context[Formula],expr) = new FormulaConverter(node.sequent(p.topLevel)).extractContext(p.inExpr)
         val fml = expr.asInstanceOf[Formula]
-        val matched = Unification(left, fml)
-        if (matched.isDefined) {
-          val subst = matched.get
-          assert(fml == subst(left), "unification matched left successfully: " + fml + " is " + subst(left) + " which is " + left + " instantiated by " + subst)
-          //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
-          Some(cutRightT(Equiv(ctx(fml), ctx(subst(right))))(p.topLevel) & onBranch(
-            (BranchLabels.cutUseLbl, NilT),
-            //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
-            //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-            (BranchLabels.cutShowLbl, equivifyRightT(p.topLevel) & cohideT(p.topLevel) & assertT(0,1) & AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr.child) & factTactic)
-          ))
-        } else {
-          val matched = Unification(right, fml)
-          assert(matched.isDefined, "one side must match if applicable already: " + fml + " matches against " + left + " or against " + right + " of " + fact)
-          val subst = matched.get
-          assert(fml == subst(right), "unification matched right successfully: " + fml + " is " + subst(right) + " which is " + right + " instantiated by " + subst)
-          //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
-          Some(cutRightT(Equiv(ctx(fml), ctx(subst(left))))(p.topLevel) & onBranch(
-            (BranchLabels.cutUseLbl, NilT),
-            //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
-            //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-            (BranchLabels.cutShowLbl, equivifyRightT(p.topLevel) & commuteEquivRightT(p.topLevel) & cohideT(p.topLevel) & assertT(0,1) & AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr.child) & factTactic)
-          ))
-        }
+        val matched = Unification(keyPart, fml)
+        assert(matched.isDefined, "must match if applicable already: " + fml + " matches against " + keyPart + " of " + fact)
+        val subst = matched.get
+        assert(fml == subst(keyPart), "unification matched left successfully: " + fml + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
+        //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
+        Some(cutRightT(Equiv(ctx(fml), ctx(subst(otherPart))))(p.topLevel) & onBranch(
+          (BranchLabels.cutUseLbl, NilT),
+          //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
+          //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
+          (BranchLabels.cutShowLbl, equivifyRightT(p.topLevel) &
+            cohideT(p.topLevel) & assertT(0,1) & AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr.child) &
+            (if (key==PosInExpr(1::Nil)) commuteEquivRightT(SuccPosition(0)) else NilT) & factTactic)
+        ))
       }
     }
 

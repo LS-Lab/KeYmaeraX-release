@@ -8,6 +8,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ByProvable, PositionTactic, Tactic}
 
+import scala.collection.immutable._
+
 /**
  * Tactix: Main tactic library with simple interface.
  *
@@ -34,16 +36,18 @@ object TactixLibrary {
   def master(gen: Generator[Formula] = new NoneGenerate(), qeTool: String = "Mathematica"): Tactic = TacticLibrary.master(gen, true, qeTool)
 
   /** useAt(fact, tactic)(pos) uses the given fact (that'll be proved by tactic after unification) at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(fact: Formula, tactic: Tactic): PositionTactic = TacticLibrary.useAt(fact, tactic)
+  def useAt(fact: Formula, key: PosInExpr, tactic: Tactic): PositionTactic = TacticLibrary.useAt(fact, key, tactic)
   /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(fact: Formula): PositionTactic = useAt(fact, skip)
+  def useAt(fact: Formula, key: PosInExpr): PositionTactic = useAt(fact, key, skip)
   /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(fact: Provable): PositionTactic = {
+  def useAt(fact: Provable, key: PosInExpr): PositionTactic = {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
-    useAt(fact.conclusion.succ.head, by(fact))
+    useAt(fact.conclusion.succ.head, key, by(fact))
   }
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(lem: Lemma): PositionTactic = useAt(lem.fact)
+  def useAt(lem: Lemma, key:PosInExpr): PositionTactic = useAt(lem.fact, key)
+  def useAt(axiom: String, key: PosInExpr): PositionTactic =
+    useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
 
   /** by(provable) is a pseudo-tactic that uses the given Provable to continue or close the proof (if it fits to what has been proved) */
   def by(provable: Provable): Tactic = new ByProvable(provable)
