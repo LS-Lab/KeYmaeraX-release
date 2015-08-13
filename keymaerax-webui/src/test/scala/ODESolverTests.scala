@@ -226,6 +226,59 @@ class ODESolutionTactic extends TacticTestSuite {
     helper.report(node)
     fail("No assertion.")
   }
+
+  it should "solve simplest case ODEsolve" in { /* works */
+    val s = testHelper.SequentFactory.sequent(Nil, "r>=0".asFormula :: Nil, "[{r' = 0}](r>=0)".asFormula :: Nil)
+    val tactic = debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+  }
+
+  it should "solve simplest using max (minimal)" in { /* doesn't work correctly */
+  val s = testHelper.SequentFactory.sequent(Nil, "max(0,r)=r".asFormula :: Nil, "[{r' = 0}](r>=0)".asFormula :: Nil)
+    val tactic = debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+  }
+
+  it should "solve simplest using max (with abbreviation)" in { /* doesn't work correctly */
+  val s = testHelper.SequentFactory.sequent(Nil, "max(0,r)=r".asFormula :: Nil, "[{r' = 0}](r>=0)".asFormula :: Nil)
+    val tactic = EqualityRewritingImpl.abbrv(Variable("max0"))(AntePosition(0).first) &
+      debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+  }
+
+  it should "solve simplest using max (with abbreviation and hide)" in { /* works but pointless */
+  val s = testHelper.SequentFactory.sequent(Nil, "max(0,r)=r".asFormula :: Nil, "[{r' = 0}](r>=0)".asFormula :: Nil)
+    val tactic = EqualityRewritingImpl.abbrv(Variable("max0"))(AntePosition(0).first) & hideT(AntePosition(0)) &
+      debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+  }
+
+  it should "solve simplest using max (with MinMaxT)" in { /* works but only by decomposing Max */
+  val s = testHelper.SequentFactory.sequent(Nil, "max(0,r)=r".asFormula :: Nil, "[{r' = 0}](r>=0)".asFormula :: Nil)
+    val tactic = ArithmeticTacticsImpl.MinMaxT(AntePosition(0, PosInExpr(0 :: Nil))) &
+      debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+  }
+
+  /* Other non-minimal tests */
+  it should "solve simplest using max" in { /* doesn't work */
+  val s = testHelper.SequentFactory.sequent(Nil, "max(0,r)=r".asFormula :: Nil, "[{r' = 0}](max(0,r)=r)".asFormula :: Nil)
+    val tactic = debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+  }
+
+  it should "solve simplest using max 2" in { /* works */
+  val s = testHelper.SequentFactory.sequent(Nil, "r>=0".asFormula :: Nil, "[{r' = 0}](max(0,r)=r)".asFormula :: Nil)
+    val tactic = debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+  }
 }
 
 class GhostOfLipschitz extends TacticTestSuite {
