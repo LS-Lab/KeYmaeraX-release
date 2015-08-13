@@ -707,7 +707,7 @@ object KeYmaeraXParser extends Parser {
   /** Shift to put the next input token la on the parser stack s. */
   private def shift(st: ParseState): ParseState = {
     val ParseState(s, (la :: rest)) = st
-    if (parseErrorsAsExceptions && la.tok == EOF) throw new ParseException("Unfinished input. Parser cannot shit past end of file\nFound: " + la, la.loc, st.toString)
+    if (parseErrorsAsExceptions && la.tok == EOF) throw new ParseException("Unfinished input. Parser cannot shift past end of file\nFound: " + la, la.loc, st.toString)
     else require(la.tok != EOF, "Cannot shift past end of file")
     ParseState(s :+ la, rest)
   }
