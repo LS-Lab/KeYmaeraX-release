@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ByProvable, PositionTactic, Tactic}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, ByProvable, PositionTactic, Tactic}
 
 import scala.collection.immutable._
 
@@ -42,7 +42,7 @@ object TactixLibrary {
   /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(fact: Provable, key: PosInExpr): PositionTactic = {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
-    useAt(fact.conclusion.succ.head, key, by(fact))
+    useAt(fact.conclusion.succ.head, key, byUS(fact))
   }
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma, key:PosInExpr): PositionTactic = useAt(lem.fact, key)
@@ -50,9 +50,13 @@ object TactixLibrary {
     useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
 
   /** by(provable) is a pseudo-tactic that uses the given Provable to continue or close the proof (if it fits to what has been proved) */
-  def by(provable: Provable): Tactic = new ByProvable(provable)
+  def by(provable: Provable): Tactic   = new ByProvable(provable)
   /** by(lemma) is a pseudo-tactic that uses the given Lemma to continue or close the proof (if it fits to what has been proved) */
-  def by(lemma: Lemma): Tactic       = by(lemma.fact)
+  def by(lemma: Lemma): Tactic         = by(lemma.fact)
+  /** byUS(provable) proves by a uniform substitution instance of provable */
+  def byUS(provable: Provable): Tactic = US(provable.conclusion) & by(provable)
+  /** byUS(lemma) proves by a uniform substitution instance of lemma */
+  def byUS(lemma: Lemma): Tactic       = byUS(lemma.fact)
 
 
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic = SearchTacticsImpl.onBranch(s1, spec:_*)
@@ -198,6 +202,11 @@ object TactixLibrary {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  /** US: uniform substitution */
+  def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula])): Tactic = PropositionalTacticsImpl.uniformSubstT(subst, delta)
+  /** US(form) reduce the proof to form by a suitable uniform substitution obtained by unification */
+  def US(form: Sequent): Tactic = TacticLibrary.US(form)
 
   // Utility Tactics
   /** nil: skip is a no-op that has no effect */

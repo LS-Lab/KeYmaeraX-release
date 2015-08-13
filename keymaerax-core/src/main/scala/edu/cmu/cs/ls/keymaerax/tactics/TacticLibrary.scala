@@ -254,7 +254,7 @@ object TacticLibrary {
     private def at(s: Sequent, p: Position): Option[Formula] = new FormulaConverter(s(p.topLevel)).subFormulaAt(p.inExpr)
 
     override def applies(s: Sequent, p: Position): Boolean =
-      true || at(s,p).isDefined && Unification(keyPart,at(s,p).get).isDefined
+      at(s,p).isDefined && Unification(keyPart,at(s,p).get).isDefined
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
@@ -265,6 +265,7 @@ object TacticLibrary {
         val matched = Unification(keyPart, fml)
         assert(matched.isDefined, "must match if applicable already: " + fml + " matches against " + keyPart + " of " + fact)
         val subst = matched.get
+        println("useAt unify: " + fml + " matches against " + keyPart + " by " + subst)
         assert(fml == subst(keyPart), "unification matched left successfully: " + fml + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
         Some(debugT("start useAt") & cutRightT(ctx(subst(otherPart)))(p.topLevel) & debugT("cutted right") & onBranch(
@@ -274,9 +275,33 @@ object TacticLibrary {
           (BranchLabels.cutShowLbl, debugT("show use") & cohideT(p.topLevel) & assertT(0,1) & debugT("cohidden") &
             equivifyRightT(SuccPosition(0)) & debugT("equivified") &
             debugT("CE coming up") & AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr) &
-            (if (key==PosInExpr(0::Nil)) commuteEquivRightT(SuccPosition(0)) else NilT) & debugT("using fact") & factTactic & debugT("done useAt"))
+            (if (key==PosInExpr(0::Nil)) commuteEquivRightT(SuccPosition(0)) else NilT) & debugT("using fact tactic") & factTactic & debugT("done useAt"))
+          //@todo error if factTactic is not applicable (factTactic | errorT)
          ) & debugT("end useAt"))
       }
+    }
+
+  }
+
+  /**
+   * US(form) uses a suitable uniform substitution to reduce the proof to the given form.
+   * Unifies the sequent with form and uses that as a uniform substitution.
+   *
+   * @author Andre Platzer
+   * @param form the sequent to reduce this proof node to by a Uniform Substitution
+   */
+  def US(form: Sequent): Tactic = new ConstructionTactic("US") {
+    def applicable(node: ProofNode) = Unification(form,node.sequent).isDefined
+
+    def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+      val matched = Unification(form, node.sequent)
+      assert(matched.isDefined, "must match if applicable already: " + node.sequent + " matches against " + form)
+      val subst = matched.get
+      println("US unify: " + node.sequent + " matches against " + form + " by " + subst)
+      assert(node.sequent == subst(form), "unification matched successfully: " + node.sequent + " is " + subst(form) + " which is " + form + " instantiated by " + subst)
+      Some(new Tactics.ApplyRule(UniformSubstitutionRule(subst, form)) {
+        override def applicable(node: ProofNode): Boolean = true
+      })
     }
 
   }

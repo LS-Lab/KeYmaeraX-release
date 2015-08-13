@@ -26,7 +26,11 @@ object Unification extends ((Expression,Expression) => Option[USubst]) {
 
   def apply(p1: Program, p2: Program): Option[USubst] = try { Some(USubst(unify(p1,p2))) } catch { case _: UnificationException => None }
 
+  def apply(s1: Sequent, s2: Sequent): Option[USubst] = try { Some(USubst(unify(s1,s2))) } catch { case _: UnificationException => None }
+
   private def ununifiable(e1: Expression, e2: Expression): Nothing = {println(new UnificationException(e1.toString, e2.toString)); throw new UnificationException(e1.toString, e2.toString)}
+
+  private def ununifiable(e1: Sequent, e2: Sequent): Nothing = {println(new UnificationException(e1.toString, e2.toString)); throw new UnificationException(e1.toString, e2.toString)}
 
   /** A simple recursive unification algorithm that actually just recursive single-sided matching without occurs check */
   private def unify(e1: Term, e2: Term): List[SubstitutionPair] = e1 match {
@@ -116,6 +120,15 @@ object Unification extends ((Expression,Expression) => Option[USubst]) {
     case DifferentialProduct(a, b)   => e2 match {case DifferentialProduct(a2,b2) => unify(a,a2) ++ unify(b,b2) case _ => ununifiable(e1,e2)}
   }
 
+  private def unify(s1: Sequent, s2: Sequent): List[SubstitutionPair] =
+    if (!(s1.pref == s2.pref && s1.ante.length == s2.ante.length && s1.succ.length == s2.succ.length)) ununifiable(s1,s2)
+    else {
+      //@todo this is really a zip fold
+      (
+        (0 to s1.ante.length-1).foldLeft(List[SubstitutionPair]())((subst,i) => subst ++ unify(s1.ante(i), s2.ante(i))) ++
+          (0 to s1.succ.length-1).foldLeft(List[SubstitutionPair]())((subst,i) => subst ++ unify(s1.succ(i), s2.succ(i)))
+        ).distinct
+    }
 }
 
 case class UnificationException(e1: String, e2: String, info: String = "")
