@@ -378,12 +378,12 @@ Axiom "<':=> differential assign".
 End.
 
 Axiom "[:*] assign nondet".
-  [v:=*;]p(v) <-> (\forall v p(v))
+  [x:=*;]p(x) <-> (\forall x p(x))
 End.
 
 /* @derived */
 Axiom "<:*> assign nondet".
-  <v:=*;>p(v) <-> (\exists v p(v))
+  <x:=*;>p(x) <-> (\exists x p(x))
 End.
 
 Axiom "[?] test".
