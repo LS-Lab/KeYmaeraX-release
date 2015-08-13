@@ -22,7 +22,7 @@ object AxiomaticRuleTactics {
 
   /**
    * Creates a new tactic for CE equivalence congruence rewriting.
-   * @return The newly created tactic.
+   * @todo document
    */
   def equivalenceCongruenceT(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CE congruence") { outer =>
     override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&

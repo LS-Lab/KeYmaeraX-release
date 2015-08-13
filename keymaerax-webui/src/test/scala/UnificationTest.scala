@@ -5,7 +5,8 @@
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.Unification
+import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics, Unification}
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import scala.collection.immutable._
 import org.scalatest.{Matchers, FlatSpec}
 
@@ -15,6 +16,8 @@ import org.scalatest.{Matchers, FlatSpec}
  * @author Andre Platzer
  */
 class UnificationTest extends FlatSpec with Matchers {
+  Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
+  Tactics.KeYmaeraScheduler.init(Map())
 
   private def should(e1: Expression, e2: Expression, us: Option[USubst]): Unit = {
     if (us.isDefined) {
@@ -60,6 +63,15 @@ class UnificationTest extends FlatSpec with Matchers {
       SubstitutionPair("p()".asFormula, "x^2+y>=0".asFormula) :: Nil))
   }
 
+  it should "unify \\forall x p(x) with \\forall x (!q(x)) " in {
+    shouldUnify("\\forall x p(x)".asFormula, "\\forall x (!q(x))".asFormula, USubst(
+      SubstitutionPair("p(.)".asFormula, "!q(.)".asFormula) :: Nil))
+  }
+
+  it should "match \\forall x p(x) with \\forall x (!p(x)) " in {
+    shouldUnify("\\forall x p(x)".asFormula, "\\forall x (!p(x))".asFormula, USubst(
+      SubstitutionPair("p(.)".asFormula, "!p(.)".asFormula) :: Nil))
+  }
 
   "Unification programs" should "unify [a;]x>=0 with [x:=x+5;]x>=0" in {
     shouldUnify("[a;]x>=0".asFormula, "[x:=x+5;]x>=0".asFormula, USubst(

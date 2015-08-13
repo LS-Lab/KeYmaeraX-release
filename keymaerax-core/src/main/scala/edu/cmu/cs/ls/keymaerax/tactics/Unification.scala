@@ -7,7 +7,8 @@ package edu.cmu.cs.ls.keymaerax.tactics
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
- * Unification algorithm for tactics.
+ * Unification/matching algorithm for tactics.
+ * @note Currently matches second argument against the pattern of the first argument but not vice versa.
  * @author Andre Platzer
  */
 object Unification extends ((Expression,Expression) => Option[USubst]) {
@@ -25,7 +26,7 @@ object Unification extends ((Expression,Expression) => Option[USubst]) {
 
   def apply(p1: Program, p2: Program): Option[USubst] = try { Some(USubst(unify(p1,p2))) } catch { case _: UnificationException => None }
 
-  private def ununifiable(e1: Expression, e2: Expression): Nothing = throw new UnificationException(e1.toString, e2.toString)
+  private def ununifiable(e1: Expression, e2: Expression): Nothing = {println(new UnificationException(e1.toString, e2.toString)); throw new UnificationException(e1.toString, e2.toString)}
 
   /** A simple recursive unification algorithm that actually just recursive single-sided matching without occurs check */
   private def unify(e1: Term, e2: Term): List[SubstitutionPair] = e1 match {
@@ -118,4 +119,4 @@ object Unification extends ((Expression,Expression) => Option[USubst]) {
 }
 
 case class UnificationException(e1: String, e2: String, info: String = "")
-  extends CoreException("Unifiable:\n" + e1 + "\n" + e2 + "\n" + info) {}
+  extends CoreException("Un-Unifiable:\n" + e1 + "\n" + e2 + "\n" + info) {}
