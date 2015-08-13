@@ -161,10 +161,14 @@ object TactixLibrary {
   def Dassignb                : PositionTactic = HybridProgramTacticsImpl.boxDerivativeAssignT
   /** Dplus: +' derives a sum */
   def Dplus                   : PositionTactic = SyntacticDerivationInContext.AddDerivativeT
+  /** neg: -' derives neg */
+  def Dneg                    : PositionTactic = SyntacticDerivationInContext.NegativeDerivativeT
   /** Dminus: -' derives a difference */
   def Dminus                  : PositionTactic = SyntacticDerivationInContext.SubtractDerivativeT
   /** Dtimes: *' derives a product */
   def Dtimes                  : PositionTactic = SyntacticDerivationInContext.MultiplyDerivativeT
+  /** Dquotient: /' derives a quotient */
+  def Dquotient               : PositionTactic = SyntacticDerivationInContext.DivideDerivativeT
   /** Dcompose: o' derives a function composition by chain rule */
   def Dcompose                : PositionTactic = ???
   /** Dconstify: substitute non-bound occurences of x with x() */

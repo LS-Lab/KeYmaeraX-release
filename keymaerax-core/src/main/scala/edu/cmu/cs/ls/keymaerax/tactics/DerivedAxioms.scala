@@ -146,6 +146,15 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
+  //@todo move to test case instead
+  lazy val dummyexistsDualAxiom = derivedAxiom("exists dual dumy",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists y p(y) <-> !(\\forall y (!p(y)))".asFormula)),
+    useAt("all dual", PosInExpr(0::Nil))(SuccPosition(0, 1::0::Nil)) &
+      useAt(doubleNegationAxiom, PosInExpr(0::Nil))(SuccPosition(0, 1::Nil)) &
+      useAt(doubleNegationAxiom, PosInExpr(0::Nil))(SuccPosition(0, 1::0::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
   lazy val existsDualT = derivedAxiomT(existsDualAxiom)
 
   //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
