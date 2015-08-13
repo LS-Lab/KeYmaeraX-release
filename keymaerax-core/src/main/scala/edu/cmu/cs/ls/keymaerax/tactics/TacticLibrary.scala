@@ -226,7 +226,7 @@ object TacticLibrary {
    * {{{
    * useAt(fact)(p)(F) = let (C,f)=F(p) in
    *   case f of {
-   *     s=unify(fact.left,_) => CutRight(C(f)<->C(s(fact.right)))(p) & <(
+   *     s=unify(fact.left,_) => CutRight(C(s(fact.right))(p) & <(
    *       "use cut": skip
    *       "show cut": EquivifyRight(p.top) & CoHide(p.top) & CE(C(_)) & factTactic
    *     )
@@ -234,6 +234,9 @@ object TacticLibrary {
    *   }
    * }}}
    * @author Andre Platzer
+   * @param fact the Formula to use to simplify at the indicated position of the sequent
+   * @param key the part of the Formula fact to unify the indicated position of the sequent with
+   * @param factTactic the tactic to use to prove the instance of the fact obtained after unification
    */
   def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
     import FormulaConverter._
@@ -251,7 +254,7 @@ object TacticLibrary {
     private def at(s: Sequent, p: Position): Option[Formula] = new FormulaConverter(s(p.topLevel)).subFormulaAt(p.inExpr)
 
     override def applies(s: Sequent, p: Position): Boolean =
-      at(s,p).isDefined && Unification(keyPart,at(s,p).get).isDefined
+      true || at(s,p).isDefined && Unification(keyPart,at(s,p).get).isDefined
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
@@ -264,14 +267,15 @@ object TacticLibrary {
         val subst = matched.get
         assert(fml == subst(keyPart), "unification matched left successfully: " + fml + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
-        Some(cutRightT(Equiv(ctx(fml), ctx(subst(otherPart))))(p.topLevel) & onBranch(
-          (BranchLabels.cutUseLbl, NilT),
+        Some(debugT("start useAt") & cutRightT(ctx(subst(otherPart)))(p.topLevel) & debugT("cutted right") & onBranch(
+          (BranchLabels.cutUseLbl, debugT("useAt result")),
           //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
           //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-          (BranchLabels.cutShowLbl, equivifyRightT(p.topLevel) &
-            cohideT(p.topLevel) & assertT(0,1) & AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr.child) &
-            (if (key==PosInExpr(1::Nil)) commuteEquivRightT(SuccPosition(0)) else NilT) & factTactic)
-        ))
+          (BranchLabels.cutShowLbl, debugT("show use") & cohideT(p.topLevel) & assertT(0,1) & debugT("cohidden") &
+            equivifyRightT(SuccPosition(0)) & debugT("equivified") &
+            debugT("CE coming up") & AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr) &
+            (if (key==PosInExpr(0::Nil)) commuteEquivRightT(SuccPosition(0)) else NilT) & debugT("using fact") & factTactic & debugT("done useAt"))
+         ) & debugT("end useAt"))
       }
     }
 

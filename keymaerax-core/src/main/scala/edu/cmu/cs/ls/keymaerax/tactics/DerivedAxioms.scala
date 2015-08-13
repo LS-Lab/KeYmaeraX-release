@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic, ApplyRule}
+import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 
 import scala.collection.immutable
 import scala.collection.immutable._
@@ -190,9 +191,9 @@ object DerivedAxioms {
    */
   lazy val vacuousBoxAssignNondetAxiom = derivedAxiom("V[:*] vacuous assign nondet",
     Sequent(Nil, IndexedSeq(), IndexedSeq("p() <-> ([x:=*;]p())".asFormula)),
-    useAt("[:*] assign nondet", PosInExpr(0::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
-      useAt("vacuous all quantifier", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
-      useAt(equivReflexiveAxiom, PosInExpr(0::Nil))(SuccPosition(0))
+    debug("step0") & useAt("[:*] assign nondet", PosInExpr(0::Nil))(SuccPosition(0, PosInExpr(1::Nil))) & debug("step1") &
+      useAt("vacuous all quantifier", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::Nil))) & debug("step2") &
+      by(equivReflexiveAxiom) & debug("step3") //useAt(equivReflexiveAxiom, PosInExpr(0::Nil))(SuccPosition(0)) & debug("step3")
   )
 
   lazy val vacuousBoxAssignNondetT = derivedAxiomT(vacuousBoxAssignNondetAxiom)

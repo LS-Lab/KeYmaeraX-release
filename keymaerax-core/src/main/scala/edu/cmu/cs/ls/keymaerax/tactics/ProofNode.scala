@@ -120,11 +120,11 @@ class ProofStepInfo(var infos: Map[String, String])
       def premises = subgoals.map(_.sequent)
 
       /** Whether this ProofStep uses a Rule (true) or merges a subderivation (false) */
-      private[ProofNode] def isRule: Boolean = step.isLeft
+      def isRule: Boolean = step.isLeft
       /** The rule used for this ProofStep if isRule */
-      private[ProofNode] def rule: Rule = {require(isRule); step.left.get}
+      def rule: Rule = {require(isRule, "rule only makes sense if not subderivation"); step.left.get}
       /** The subderivation used for this ProofStep if !isRule */
-      private[ProofNode] def subderivation: Provable = {require(!isRule); step.right.get}
+      def subderivation: Provable = {require(!isRule); step.right.get}
 
       /** Whether this ProofStep has been closed, i.e., ran out of subgoals */
       private[ProofNode] def isClosed : Boolean = subgoals.foldLeft(true)(_ && _.isClosed())

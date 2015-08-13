@@ -51,6 +51,8 @@ object TactixLibrary {
 
   /** by(provable) is a pseudo-tactic that uses the given Provable to continue or close the proof (if it fits to what has been proved) */
   def by(provable: Provable): Tactic = new ByProvable(provable)
+  /** by(lemma) is a pseudo-tactic that uses the given Lemma to continue or close the proof (if it fits to what has been proved) */
+  def by(lemma: Lemma): Tactic       = by(lemma.fact)
 
 
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic = SearchTacticsImpl.onBranch(s1, spec:_*)

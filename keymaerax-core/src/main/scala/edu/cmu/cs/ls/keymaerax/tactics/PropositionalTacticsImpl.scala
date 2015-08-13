@@ -416,7 +416,7 @@ object PropositionalTacticsImpl {
 
     def apply(pos: Position): Tactic = new Tactics.ApplyRule(CutRight(cut, pos)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-    }
+    } & (LabelBranch(BranchLabels.cutUseLbl), LabelBranch(BranchLabels.cutShowLbl))
   }
 
   def cutLeftT(cut: Formula): PositionTactic = new PositionTactic("CutLeft") {
@@ -424,7 +424,7 @@ object PropositionalTacticsImpl {
 
     def apply(pos: Position): Tactic = new Tactics.ApplyRule(CutLeft(cut, pos)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-    }
+    } & (LabelBranch(BranchLabels.cutUseLbl), LabelBranch(BranchLabels.cutShowLbl))
   }
 
   def commuteEquivRightT: PositionTactic = new PositionTactic("CommuteEquivRight") {

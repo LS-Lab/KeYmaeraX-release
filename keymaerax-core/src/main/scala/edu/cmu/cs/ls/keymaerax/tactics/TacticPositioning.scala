@@ -115,6 +115,7 @@ object Position {
 
   object AntePosition {
     def apply(index: Int, inExpr: PosInExpr = HereP): Position = new AntePosition(index, inExpr)
+    def apply(index: Int, inExpr: List[Int]): Position = new AntePosition(index, PosInExpr(inExpr))
   }
 
   class SuccPosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
@@ -129,5 +130,6 @@ object Position {
 
   object SuccPosition {
     def apply(index: Int, inExpr: PosInExpr = HereP): Position = new SuccPosition(index, inExpr)
+    def apply(index: Int, inExpr: List[Int]): Position = new SuccPosition(index, PosInExpr(inExpr))
   }
 

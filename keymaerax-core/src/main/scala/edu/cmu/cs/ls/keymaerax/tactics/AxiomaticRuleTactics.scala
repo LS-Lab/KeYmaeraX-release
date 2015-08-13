@@ -22,7 +22,7 @@ object AxiomaticRuleTactics {
 
   /**
    * Creates a new tactic for CE equivalence congruence rewriting.
-   * @todo document
+   * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
    */
   def equivalenceCongruenceT(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CE congruence") { outer =>
     override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
@@ -35,7 +35,8 @@ object AxiomaticRuleTactics {
       case Equiv(lhs, rhs) =>
         val (ctxP, p) = lhs.extractContext(inEqPos)
         val (ctxQ, q) = rhs.extractContext(inEqPos)
-        assert(ctxP == ctxQ)
+        assert(ctxP == ctxQ, "same context if applicable")
+        assert(ctxP.ctx == ctxQ.ctx, "same context formula if applicable")
 
         if (ctxP.isFormulaContext) {
           val pX = PredOf(Function("p_", None, Real, Bool), Anything)
@@ -45,7 +46,7 @@ object AxiomaticRuleTactics {
           Some(new ApplyRule(AxiomaticRule("CE congruence", s)) {
             override def applicable(node: ProofNode): Boolean = outer.applicable(node)
           })
-        } else Some(NilT)
+        } else throw new IllegalStateException("Formula context expected")/*Some(NilT)*/
     }
   }
 
