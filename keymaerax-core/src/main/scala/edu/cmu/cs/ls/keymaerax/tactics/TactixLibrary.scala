@@ -46,6 +46,7 @@ object TactixLibrary {
   }
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma, key:PosInExpr): PositionTactic = useAt(lem.fact, key)
+  /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: String, key: PosInExpr): PositionTactic =
     useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
 
@@ -203,10 +204,10 @@ object TactixLibrary {
   // Bigger Tactics.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  /** US(form) reduce the proof to a proof of form by a suitable uniform substitution obtained by unification */
+  def US(form: Sequent): Tactic = TacticLibrary.US(form)
   /** US: uniform substitution */
   def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula])): Tactic = PropositionalTacticsImpl.uniformSubstT(subst, delta)
-  /** US(form) reduce the proof to form by a suitable uniform substitution obtained by unification */
-  def US(form: Sequent): Tactic = TacticLibrary.US(form)
 
   // Utility Tactics
   /** nil: skip is a no-op that has no effect */
