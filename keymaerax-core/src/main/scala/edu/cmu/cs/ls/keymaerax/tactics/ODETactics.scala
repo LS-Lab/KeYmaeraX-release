@@ -583,9 +583,10 @@ object ODETactics {
   /**
    * Returns a tactic to use the solution of an ODE as a differential invariant.
    * @param solution The solution. If None, the tactic uses Mathematica to find a solution.
+   * @param preDITactic An optional tactic to perform before proving the solution with DI.
    * @return The tactic.
    */
-  def diffSolution(solution: Option[Formula]): PositionTactic = new PositionTactic("differential solution") {
+  def diffSolution(solution: Option[Formula], preDITactic: Tactic = NilT): PositionTactic = new PositionTactic("differential solution") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
       case Box(odes: DifferentialProgram, _) => true
       case _ => false
@@ -622,10 +623,6 @@ object ODETactics {
       def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       def apply(tool: Tool, node: ProofNode) = {
-        import FOQuantifierTacticsImpl.vacuousExistentialQuanT
-        import SearchTacticsImpl.onBranch
-        import BranchLabels.{equivLeftLbl,equivRightLbl}
-
         val (time, timeTactic, timeZeroInitially) = findTimeInOdes(node.sequent(p)) match {
           case Some(existingTime) => (existingTime, NilT, false)
           case None =>
@@ -635,7 +632,6 @@ object ODETactics {
             val time = Variable(initialTime.name,
               initialTime.index match { case None => Some(1) case Some(a) => Some(a+2) }, initialTime.sort)
             // boxAssignT and equivRight will extend antecedent by 2 -> length + 1
-            val lastAntePos = AntePosition(node.sequent.ante.length + 1)
             val introTime = nonAbbrvDiscreteGhostT(Some(initialTime), Number(0))(p) & boxAssignT(p) &
               diffAuxiliaryT(time, Number(0), Number(1))(p) & FOQuantifierTacticsImpl.instantiateT(time, time)(p)
 
@@ -679,8 +675,6 @@ object ODETactics {
           result
         }
 
-        def sizeOf[T](s: SetLattice[T]): Int = s.toSet.size
-
         def createTactic(ode: DifferentialProgram, solution: Formula, time: Variable, iv: Map[Variable, Variable],
                          diffEqPos: Position) = {
           val initialGhosts = primedSymbols(ode).foldLeft(NilT)((a, b) =>
@@ -693,6 +687,7 @@ object ODETactics {
           val cuts = flatSolution.foldLeft(diffWeakenT(p))((a, b) =>
             debugT(s"About to cut in $b at $p") & diffCutT(b)(p) & onBranch(
               (cutShowLbl,
+                debugT("Executing user-defined pre DI tactic") & preDITactic &
                 debugT("Substituting with constants") & (diffIntroduceConstantT(p) | NilT) &
                 debugT(s"Prove Solution using DI at $p") & diffInvariantT(p)),
               (cutUseLbl, a)))
@@ -707,7 +702,7 @@ object ODETactics {
 
         val iv = primedSymbols(diffEq).map(v => v -> freshNamedSymbol(v, node.sequent(p))).toMap
         // boxAssignT will increment the index twice (universal quantifier, skolemization) -> tell Mathematica
-        val ivm = iv.map(e =>  (e._1, Function(e._2.name, Some(e._2.index.get + 2), Unit, e._2.sort))).toMap
+        val ivm = iv.map(e =>  (e._1, Function(e._2.name, Some(e._2.index.get + 2), Unit, e._2.sort)))
 
         val theSolution = solution match {
           case sol@Some(_) => sol
