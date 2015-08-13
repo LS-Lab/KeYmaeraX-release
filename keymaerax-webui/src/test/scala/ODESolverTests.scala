@@ -265,6 +265,23 @@ class ODESolutionTactic extends TacticTestSuite {
     result.openGoals() should have size 1
   }
 
+  it should "solve simplest using max (with MinMaxT and cut -- kind of a hack)" in { /* works but kind of a hack */
+  val s = testHelper.SequentFactory.sequent(Nil, "max(0,r)=r".asFormula :: Nil, "[{r' = 0}](r>=0)".asFormula :: Nil)
+    val tactic = ArithmeticTacticsImpl.MinMaxT(AntePosition(0, PosInExpr(0 :: Nil))) &
+      locateSucc(ODETactics.diffSolution(None)) & debugT("here") &
+      cutT(Some("max(0,r)=max_0".asFormula)) & SearchTacticsImpl.onBranch(
+        (BranchLabels.cutShowLbl, debugT("show") &
+          ArithmeticTacticsImpl.MinMaxT(SuccPosition(1, PosInExpr(0 :: Nil))) &
+          arithmeticT),
+        (BranchLabels.cutUseLbl, debugT("use") & locateAnte(eqLeft(exhaustive=true)) &
+          TacticLibrary.hideT(AntePosition(5)) & // "0>=r&r=0|0 < r&r=r"
+          TacticLibrary.hideT(AntePosition(0)) & // "max_0=r"
+          debugT("done"))
+      )
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+  }
+
   /* Other non-minimal tests */
   it should "solve simplest using max" in { /* doesn't work */
   val s = testHelper.SequentFactory.sequent(Nil, "max(0,r)=r".asFormula :: Nil, "[{r' = 0}](max(0,r)=r)".asFormula :: Nil)
