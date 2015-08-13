@@ -401,6 +401,19 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     r => subderivation.subgoals.toSet.subsetOf(r.subgoals.toSet), "All premises in joined derivation are new subgoals")
 
   /**
+   * Apply Rule Forward: Apply given proof rule forward in Hilbert style to prolong this Provable to a Provable for concludes.
+   * @param concludes the new conclusion that the rule shows to follow from this.conclusion
+   * @param rule the proof rule to apply to concludes to reduce it to this.conclusion.
+   * @return A Provable derivation that proves concludes from the same subgoals by using the given proof rule.
+   * Will return a Provable with the same subgoals but an updated conclusion.
+   * @note not soundness-critical since implemented in terms of other apply functions
+   */
+  final def apply(concludes: Sequent, rule: Rule): Provable = {
+    Provable.startProof(concludes)(rule, 0)(this, 0)
+  } ensuring(r => r.conclusion == concludes, "New conclusion\n" + concludes + " after continuing derivations") ensuring(
+    r => r.subgoals == subgoals, "Same subgoals\n" + subgoals + " after continuing derivations")
+
+  /**
    * Sub-Provable: Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
    * Provables resulting from the returned subgoal can be merged into this Provable to prove said subgoal.
    * @note not soundness-critical only completeness-critical
