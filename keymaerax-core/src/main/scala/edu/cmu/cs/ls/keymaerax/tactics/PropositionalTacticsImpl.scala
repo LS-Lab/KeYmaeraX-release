@@ -437,4 +437,30 @@ object PropositionalTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
     }
   }
+
+
+  /**
+   * Premise: a |- b
+   * Conclusion: |- a -> b
+   *
+   */
+  def InverseImplyRightT : Tactic = new ConstructionTactic("inverse imply right") {
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+      val left = node.sequent.ante.head
+      val right = node.sequent.succ.head
+      Some(
+        cutT(Some(Imply(left, right))) & onBranch(
+          (BranchLabels.cutUseLbl,
+            assertT(2, 1) ~
+            PropositionalTacticsImpl.modusPonensT(AntePos(0), AntePos(1)) ~
+            AxiomCloseT ~ errorT("Should have closed.")
+          ),
+          (BranchLabels.cutShowLbl, hideT(SuccPos(0)) & hideT(AntePos(0)) /* This is the result. */)
+        )
+      )
+    }
+
+    override def applicable(node: ProofNode): Boolean =
+      node.sequent.succ.length == 1 && node.sequent.ante.length == 1
+  }
 }
