@@ -442,7 +442,8 @@ object PropositionalTacticsImpl {
   /**
    * Premise: a |- b
    * Conclusion: |- a -> b
-   *
+   * @author Nathan Fulton
+   *         (only used in one place. Delete if this duplicates something that already exists.)
    */
   def InverseImplyRightT : Tactic = new ConstructionTactic("inverse imply right") {
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
