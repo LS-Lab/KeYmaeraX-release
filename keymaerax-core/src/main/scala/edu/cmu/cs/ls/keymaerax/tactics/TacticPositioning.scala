@@ -11,21 +11,33 @@ import scala.language.implicitConversions
  * Position within an expression as a list of subexpressions.
  * 0 is first child, 1 is second child, 2 is third child.
  */
-  case class PosInExpr(pos: List[Int] = Nil) {
-    require(pos forall(_>=0), "all nonnegative positions")
-    def first:  PosInExpr = new PosInExpr(pos :+ 0)
-    def second: PosInExpr = new PosInExpr(pos :+ 1)
-    def third:  PosInExpr = new PosInExpr(pos :+ 2)
+case class PosInExpr(pos: List[Int] = Nil) {
+  require(pos forall(_>=0), "all nonnegative positions")
 
-    def append(p2 : PosInExpr): PosInExpr = PosInExpr(this.pos ++ p2.pos) ensuring(x => this.isPrefixOf(x))
-
-    def isPrefixOf(p: PosInExpr): Boolean = p.pos.startsWith(pos)
+  /** Head: The top-most position */
   def head: Int = {require(pos!=Nil); pos.head}
-    def child: PosInExpr = PosInExpr(pos.tail)
-  }
+  /** The child that this position refers to */
+  def child: PosInExpr = PosInExpr(pos.tail)
+  /** The parent of this position, i.e., one level up */
+  def parent: PosInExpr = PosInExpr(pos.dropRight(1))
 
-  // observe that HereP and PosInExpr([]) will be equals, since PosInExpr is a case class
-  object HereP extends PosInExpr
+  /** first child 0 */
+  def first:  PosInExpr = new PosInExpr(pos :+ 0)
+  /** second child 1 */
+  def second: PosInExpr = new PosInExpr(pos :+ 1)
+  /** third child 2 */
+  def third:  PosInExpr = new PosInExpr(pos :+ 2)
+
+  /** Concatenate this with p2: Append p2 to this position */
+  def append(p2 : PosInExpr): PosInExpr = PosInExpr(this.pos ++ p2.pos) ensuring(x => this.isPrefixOf(x))
+
+  /** Whether this position is a prefix of p */
+  def isPrefixOf(p: PosInExpr): Boolean = p.pos.startsWith(pos)
+}
+
+// @note observe that HereP and PosInExpr([]) will be equals, since PosInExpr is a case class
+/** Top position of an expression, i.e., the whole expression itself, not any subexpressions */
+object HereP extends PosInExpr
 
   /**
    * @param index the number of the formula in the antecedent or succedent, respectively.

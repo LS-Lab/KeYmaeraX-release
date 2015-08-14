@@ -184,8 +184,7 @@ class FormulaConverter(val fml: Formula) {
       case Some(f) => (new Context(f), eInCtx.get)
       case None => ???
     }
-  }
-  //@todo ensuring(r => USubst(SubstitutionPair(DotTerm/DotFormula, r._2))(r._1) == formula)
+  } ensuring(r => r._1(r._2) == fml, "context splitting of " + fml + " at " + pos + " is successful")
 
   /**
    * Transforms the formula into its structural form (all variables and functions substituted with CDot).

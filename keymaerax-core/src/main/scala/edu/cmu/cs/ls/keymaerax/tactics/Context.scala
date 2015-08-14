@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature
 
 /**
+ * Convenience wrapper around contexts such as f(.) or p(.) or C{_} etc
  * Created by smitsch on 3/29/15.
  * @author Stefan Mitsch
  */
@@ -15,6 +16,7 @@ sealed case class Context[T <: Expression](ctx: T) {
   // either a term or a formula context, not both
   assert(!(signature(ctx).contains(DotFormula) && signature(ctx).contains(DotTerm)))
 
+  /** Return the result of filling the dot placeholder of this context with expression e */
   def apply(e: Expression) = e match {
     case f: Formula => instantiate(f)
     case t: Term => instantiate(t)
