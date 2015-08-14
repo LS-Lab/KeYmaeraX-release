@@ -709,6 +709,10 @@ Axiom ">".
 End.
 */
 
+Axiom "= commute".
+  (f()=g()) <-> (g()=f())
+End.
+
 Axiom "<=".
   (f()<=g()) <-> ((f()<g()) | (f()=g()))
 End.
