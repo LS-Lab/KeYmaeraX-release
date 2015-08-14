@@ -670,10 +670,10 @@ object FOQuantifierTacticsImpl {
                              quantFactory: (Seq[Variable], Formula) => Quantified): PositionTactic = {
 
     def axiomInstance(fml: Formula): Formula = x match {
-      case Some(v) if !StaticSemantics.symbols(fml).contains(v) => Equiv(fml, quantFactory(v :: Nil, fml))
+      case Some(v) if !StaticSemantics.symbols(fml).contains(v) => Equiv(quantFactory(v :: Nil, fml), fml)
       case _ => fml match {
         case q: Quantified if q.vars.size == 1 && StaticSemantics.symbols(q.child).intersect(q.vars.toSet).isEmpty =>
-          Equiv(q.child, fml)
+          Equiv(fml, q.child)
         case _ => False
       }
     }
@@ -684,7 +684,7 @@ object FOQuantifierTacticsImpl {
                                          quantFactory: (Seq[Variable], Formula) => Quantified): PositionTactic = {
 
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(p, _) =>
+      case Equiv(_, p) =>
         val aP = PredOf(Function("p", None, Unit, Bool), Nothing)
         SubstitutionPair(aP, p) :: Nil
     }
@@ -692,7 +692,7 @@ object FOQuantifierTacticsImpl {
     def v(fml: Formula) = x match {
       case Some(vv) => vv
       case None => fml match {
-        case Equiv(_, q: Quantified) =>
+        case Equiv(q: Quantified, _) =>
           require(q.vars.size == 1)
           q.vars.head
       }
@@ -702,7 +702,7 @@ object FOQuantifierTacticsImpl {
     def alpha(fml: Formula): PositionTactic = {
       new PositionTactic("Alpha") {
         override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-          case Equiv(_, _: Quantified) => true
+          case Equiv(_: Quantified, _) => true
           case _ => false
         }
 
@@ -718,7 +718,7 @@ object FOQuantifierTacticsImpl {
     def axiomInstance(fml: Formula, axiom: Formula): Formula = {
       val Equiv(left, right) = axiom
       if (v(fml).name == aX.name && v(fml).index == aX.index) Equiv(left, right)
-      else Equiv(left, replaceFree(right)(aX, v(fml)))
+      else Equiv(replaceFree(left)(aX, v(fml)), right)
     }
 
     axiomLookupBaseT(axiomName, subst, alpha, axiomInstance)
