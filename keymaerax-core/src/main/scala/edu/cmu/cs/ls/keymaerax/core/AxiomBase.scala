@@ -427,11 +427,6 @@ Axiom "Domain Constraint Conjunction Reordering".
   [{c & (H(??) & q(??))}]p(??) <-> [{c & (q(??) & H(??))}]p(??)
 End.
 
-/* @Derived - by ->R, ^R, then (G, Ax) on both brances */
-Axiom "[] conjunction".
-  [a;](p(??) & q(??)) -> ( ([a;]p(??)) & ([a;]q(??)) )
-End.
-
 /**
  * DIFFERENTIAL EQUATION AXIOMS
  */

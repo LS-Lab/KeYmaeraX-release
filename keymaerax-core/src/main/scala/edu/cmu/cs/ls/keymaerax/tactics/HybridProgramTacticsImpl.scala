@@ -1009,28 +1009,6 @@ object HybridProgramTacticsImpl {
   }
 
   /**
-   * Axiom tactic for [] conjunction
-   */
-  def boxConjunctionT : PositionTactic = {
-    def axiomInstance(fml : Formula) : Formula = fml match {
-      case Box(a, And(p,q)) => Imply(fml, And(Box(a,p), Box(a,q)))
-      case _ => False
-    }
-    uncoverAxiomT("[] conjunction", axiomInstance, _ => boxConjunctionBaseT)
-  }
-  def boxConjunctionBaseT : PositionTactic = {
-    def subst(fml : Formula) : List[SubstitutionPair] = fml match {
-      case Imply(Box(a, And(p,q)), _) => {
-        val aA = ProgramConst("a")
-        val aP = PredOf(Function("p", None, Real, Bool), Anything)
-        val aQ = PredOf(Function("q", None, Real, Bool), Anything)
-        SubstitutionPair(aA, a) :: SubstitutionPair(aP, p) :: SubstitutionPair(aQ, q) :: Nil
-      }
-    }
-    axiomLookupBaseT("[] conjunction", subst, _ => NilPT, (f,ax) => ax)
-  }
-
-  /**
    * Creates a new axiom tactic for diamond choice <++>.
    * @return The new tactic.
    * @author Stefan Mitsch
