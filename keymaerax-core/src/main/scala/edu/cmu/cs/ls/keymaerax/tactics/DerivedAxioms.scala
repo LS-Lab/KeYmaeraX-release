@@ -31,7 +31,7 @@ object DerivedAxioms {
   private val AUTO_INSERT = false
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
-  private def derivedAxiom(name: String, fact: Provable): Lemma = {
+  private[tactics] def derivedAxiom(name: String, fact: Provable): Lemma = {
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(immutable.Map("input" -> fact.toString, "output" -> "true")) :: Nil
@@ -52,7 +52,7 @@ object DerivedAxioms {
   }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
-  private def derivedAxiom(name: String, derived: Sequent, tactic: Tactic): Lemma = {
+  private[tactics] def derivedAxiom(name: String, derived: Sequent, tactic: Tactic): Lemma = {
     //@todo optimize: no need to prove if already filed in derivedAxiomDB anyhow
     val witness = tactic2Provable(derived, tactic)
     assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + name + " got\n" + witness)
@@ -60,7 +60,7 @@ object DerivedAxioms {
   }
 
   /** Package a Lemma for a derived axiom up as a tactic */
-  private def derivedAxiomT(lemma: Lemma): ApplyRule[LookupLemma] = {
+  private[tactics] def derivedAxiomT(lemma: Lemma): ApplyRule[LookupLemma] = {
     require(derivedAxiomDB.contains(lemma.name.get), "Lemma has already been added")
     val lemmaRule = LookupLemma(derivedAxiomDB, lemma.name.get)
     new ApplyRule(lemmaRule) {
@@ -145,27 +145,6 @@ object DerivedAxioms {
       useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
       useAt(doubleNegationAxiom)(SuccPosition(0, 0::0::Nil)) &
       byUS(equivReflexiveAxiom)
-  )
-
-  //@todo move to test case instead
-  lazy val dummyexistsDualAxiom = derivedAxiom("exists dual dummy",
-    Sequent(Nil, IndexedSeq(), IndexedSeq("(!\\forall y (!p(y))) <-> \\exists y p(y)".asFormula)),
-    useAt("all dual", PosInExpr(1::Nil))(SuccPosition(0, 0::0::Nil)) &
-      useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
-      useAt(doubleNegationAxiom)(SuccPosition(0, 0::0::Nil)) &
-      byUS(equivReflexiveAxiom)
-  )
-
-  //@todo move to test case instead
-  lazy val dummyallDualAxiom = derivedAxiom("all dual dummy",
-    Sequent(Nil, IndexedSeq(), IndexedSeq("(!\\exists y (!p(y))) <-> \\forall y p(y)".asFormula)),
-    byUS("all dual")
-  )
-
-  //@todo move to test case instead
-  lazy val dummyallDualAxiom2 = derivedAxiom("all dual dummy",
-    Sequent(Nil, IndexedSeq(), IndexedSeq("(!\\exists y (!q(y))) <-> \\forall y q(y)".asFormula)),
-    byUS("all dual")
   )
 
   lazy val existsDualT = derivedAxiomT(existsDualAxiom)
