@@ -36,10 +36,13 @@ object UnificationMatch extends ((Expression,Expression) => Option[USubst]) {
 
   private def ununifiable(e1: Sequent, e2: Sequent): Nothing = {println(new UnificationException(e1.toString, e2.toString)); throw new UnificationException(e1.toString, e2.toString)}
 
+  private def unifyVar(x1: Variable, e2: Expression): List[SubstitutionPair] = if (x1==e2) id else ununifiable(x1,e2)
+  private def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstitutionPair] = if (xp1==e2) id else ununifiable(xp1,e2)
+
   /** A simple recursive unification algorithm that actually just recursive single-sided matching without occurs check */
   private def unify(e1: Term, e2: Term): List[SubstitutionPair] = e1 match {
-    case x: Variable                      => if (e1==e2) id else ununifiable(e1,e2)
-    case DifferentialSymbol(x)            => if (e1==e2) id else ununifiable(e1,e2)
+    case x: Variable                      => unifyVar(x,e2)
+    case xp: DifferentialSymbol           => unifyVar(xp,e2)
     case n: Number                        => if (e1==e2) id else ununifiable(e1,e2)
     case FuncOf(f:Function, Anything)     => if (e1==e2) id else List(SubstitutionPair(e1, e2))
     case FuncOf(f:Function, Nothing)      => if (e1==e2) id else List(SubstitutionPair(e1, e2))
@@ -98,8 +101,10 @@ object UnificationMatch extends ((Expression,Expression) => Option[USubst]) {
     case DifferentialFormula(g) => e2 match {case DifferentialFormula(g2) => unify(g,g2) case _ => ununifiable(e1,e2)}
 
     // binding cases add bound variables to u
-    case Forall(vars, g) => e2 match {case Forall(v2,g2) if vars==v2 => unify(g,g2) case _ => ununifiable(e1,e2)}
-    case Exists(vars, g) => e2 match {case Exists(v2,g2) if vars==v2 => unify(g,g2) case _ => ununifiable(e1,e2)}
+    case Forall(vars, g) => e2 match {case Forall(v2,g2) if vars==v2 => unify(g,g2)
+      case Forall(v2,g2) if vars.length==1&&v2.length==1 => unifyVar(vars.head, v2.head) ++ unify(g,g2) case _ => ununifiable(e1,e2)}
+    case Exists(vars, g) => e2 match {case Exists(v2,g2) if vars==v2 => unify(g,g2)
+      case Exists(v2,g2) if vars.length==1&&v2.length==1 => unifyVar(vars.head, v2.head) ++ unify(g,g2) case _ => ununifiable(e1,e2)}
 
     case Box(a, p)       => e2 match {case Box(a2,p2)     => unify(a,a2) ++ unify(p,p2) case _ => ununifiable(e1,e2)}
     case Diamond(a, p)   => e2 match {case Diamond(a2,p2) => unify(a,a2) ++ unify(p,p2) case _ => ununifiable(e1,e2)}
@@ -107,9 +112,9 @@ object UnificationMatch extends ((Expression,Expression) => Option[USubst]) {
 
   private def unify(e1: Program, e2: Program): List[SubstitutionPair] = e1 match {
     case a: ProgramConst             => if (e1==e2) id else List(SubstitutionPair(e1, e2))
-    case Assign(x, t)                => e2 match {case Assign(x2,t2) if x==x2 => unify(t,t2) case _ => ununifiable(e1,e2)}
-    case DiffAssign(xp, t)           => e2 match {case DiffAssign(xp2,t2) if xp==xp2 => unify(t,t2) case _ => ununifiable(e1,e2)}
-    case AssignAny(x)                => e2 match {case AssignAny(x2) if x==x2 => id case _ => ununifiable(e1,e2)}
+    case Assign(x, t)                => e2 match {case Assign(x2,t2) => unifyVar(x,x2) ++ unify(t,t2) case _ => ununifiable(e1,e2)}
+    case DiffAssign(xp, t)           => e2 match {case DiffAssign(xp2,t2) => unifyVar(xp,xp2) ++ unify(t,t2) case _ => ununifiable(e1,e2)}
+    case AssignAny(x)                => e2 match {case AssignAny(x2) => unifyVar(x,x2) case _ => ununifiable(e1,e2)}
     case Test(f)                     => e2 match {case Test(f2) => unify(f,f2) case _ => ununifiable(e1,e2)}
     case ODESystem(a, h)             => e2 match {case ODESystem(a2,h2) => unifyODE(a,a2) ++ unify(h,h2) case _ => ununifiable(e1,e2)}
     case Choice(a, b)                => e2 match {case Choice(a2,b2) => unify(a,a2) ++ unify(b,b2) case _ => ununifiable(e1,e2)}
@@ -119,7 +124,7 @@ object UnificationMatch extends ((Expression,Expression) => Option[USubst]) {
   }
 
   private def unifyODE(e1: DifferentialProgram, e2: DifferentialProgram): List[SubstitutionPair] = e1 match {
-    case AtomicODE(xp, t) => e2 match {case AtomicODE(xp2,t2) if xp==xp2 => unify(t,t2) case _ => ununifiable(e1,e2)}
+    case AtomicODE(xp, t) => e2 match {case AtomicODE(xp2,t2) => unifyVar(xp,xp2) ++ unify(t,t2) case _ => ununifiable(e1,e2)}
     case c: DifferentialProgramConst => if (e1==e2) id else List(SubstitutionPair(e1, e2))
     case DifferentialProduct(a, b)   => e2 match {case DifferentialProduct(a2,b2) => unify(a,a2) ++ unify(b,b2) case _ => ununifiable(e1,e2)}
   }
