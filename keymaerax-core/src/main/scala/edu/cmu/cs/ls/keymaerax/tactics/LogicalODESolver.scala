@@ -17,6 +17,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.skolemizeT
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import TacticLibrary._
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{InverseImplyRightT, kModalModusPonensT}
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.boxMonotoneT
 
 import scala.collection.immutable.List
 
@@ -46,7 +48,8 @@ object LogicalODESolver {
           ODETactics.diffSolveAxiomT(p) &
           ImplyRightT(p) &
           errorT("@todo Need to box assign at correct position.")
-        )
+        ),
+        ("renameAndDropImpl-show", errorT("Should've closed"))
       )
   }
 
@@ -68,7 +71,15 @@ object LogicalODESolver {
       case _ => false
     }
 
-    override def apply(p: Position): Tactic = ODETactics.inverseDiffAuxiliaryT(p)
+    /**
+     * A tactic that adds \exists x . F to any formula F of the form [{x' = \theta, c & H}]Phi ???
+     */
+    private def addExistential : Tactic = ???
+
+    override def apply(p: Position): Tactic = ODETactics.inverseLipschitzGhostT(p) & onBranch(
+      (BranchLabels.cutShowLbl, errorT("What to do here?")),
+      (BranchLabels.cutUseLbl, errorT("What to do in use?"))
+    )
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -81,13 +92,14 @@ object LogicalODESolver {
     override def applies(f: Formula): Boolean = f match {
       case Box(pi:DifferentialProgram, f: Formula) => pi match {
         case a:AtomicODE => false
-        case ODESystem(pipi, ff) => timeVar(pi).isDefined
+        case ODESystem(pipi, ff) => timeVar(pi).isDefined && getLastPartialSoln(pi).isDefined
         case DifferentialProduct(l,r) => timeVar(pi).isDefined
       }
     }
 
     override def applies(s: Sequent, p: Position): Boolean = {
       val f = TacticHelper.getFormula(s,p)
+      //Some temporary debugging output.
       val doesApply = applies(f)
       if(doesApply) println(this.name + " Applies to " + f)
       else println(this.name + " Does not apply to " + f);
@@ -98,7 +110,9 @@ object LogicalODESolver {
     override def apply(p: Position): Tactic = new ConstructionTactic("construct next " + name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case Box(program : DifferentialProgram, formula) => {
-          val lastPartial = getLastPartialSoln(program)
+          val lastPartial = getLastPartialSoln(program).getOrElse(
+            throw new Exception("This tactic should not because apply if there are no more partial solutions left in " + program.prettyString)
+          )
 
           Some(
             debugger("Trying to perform a successive inverse cut.") &
@@ -126,8 +140,28 @@ object LogicalODESolver {
 
   }
 
-  private def getLastPartialSoln(program : DifferentialProgram) : Formula = program match {
-    case ODESystem(odes, constraint) => extractInitialConditions(Some(program))(constraint).last
+  /**
+   * A *partial solution* is a formula of the form x = \theta occuring in the evolution domain
+   * constraint of an ODE s.t. x is primed in the differential program.
+   * Positive examples of partial solutions (for x):
+   *    {x' = y, y' = x, x = theta}
+   *    {x' = v, v' = a, x = theta & v = theta2 & true}
+   *    {x' = v, v' = a, x = theta & v = theta2 & true}
+   * Negative examples of partial solutions (for x):
+   *    {v' = a, x = \theta}
+   *    {x' = v, v' = a & v = \theta & true}
+   *
+   * Partial solutions are so-called because they are part of a solution to a system of
+   * differential equations.
+   *
+   * @param program A differential program.
+   * @return The right-most "partial solution" in an ODE, or else None if the domain constraint does
+   *         not contain any partial solutions.
+   */
+  private def getLastPartialSoln(program : DifferentialProgram) : Option[Formula] = program match {
+    case ODESystem(odes, constraint) => {
+      extractInitialConditions(Some(program))(constraint).lastOption
+    }
     case _ => throw new Exception("Need to implement all cases. Not sure." + program)
   }
 
@@ -158,7 +192,12 @@ object LogicalODESolver {
             cutT(Some(rewritingFormula)) & onBranch(
             //Um yeah not sure what was meant here but it's definitely not G,K...
 //              (BranchLabels.cutShowLbl, dischargeEquivalence(pi, Imply(evolutionDomain, originalConclusion), newConclusion)(SuccPos(node.sequent.succ.length))),
-              (BranchLabels.cutShowLbl, LabelBranch("renameAndDropImpl-todo")),
+              (BranchLabels.cutShowLbl,
+                lastSucc(PropositionalTacticsImpl.cohideT) & LabelBranch("renameAndDropImpl-show") &
+                  debugT("About to show GK Equivalence") ~
+                  showGKEquivalenceTactic ~
+                  errorT("All goals should've closed.")
+              ),
               (BranchLabels.cutUseLbl, {
                 val equivPos = AntePos(node.sequent.ante.length)
                 assertPT(rewritingFormula, "Precond check failed: Expected equivalence")(equivPos) &
@@ -175,59 +214,54 @@ object LogicalODESolver {
     }
 
     /**
-     * Input: [pi](x = T -> p(x)) <-> [pi](q) where q = T for x in p
-     * Output: Close
+     * Proves:
+     *  [{c & x=\theta...}](x = \theta -> x >= 0) <-> [{c & x=\theta...}](\theta >= 0)
+     *
+     * The proof for the -> direction is really easy -- just monotonicity and arithmetic.
+     *
+     * The proof for the <- direction is more involved, I think because we need the evolution domain
+     * constraint in order to get x = \theta. However, there may be a simpler proof for this branch.
      */
-//    private def dischargeEquivalence(pi : DifferentialProgram, originalConclusion : Formula, newConclusion : Formula) : PositionTactic = new PositionTactic(name + " discharge equivalence") {
-//      override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-//        case Equiv(Box(leftProgram, leftFormula), Box(rightProgram, rightFormula)) =>
-//          leftProgram.equals(pi) && rightProgram.equals(pi) &&
-//            leftFormula.equals(originalConclusion) && rightFormula.equals(newConclusion)
-//        case _ => false
-//      }
+    def showGKEquivalenceTactic = new ConstructionTactic("Show Equivalence for GK Step in page 25 of USubst paper") {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ.head match {
+        case Equiv(Box(ODESystem(dp, h), Imply(l,r)), right) => {
+          val left = Box(ODESystem(dp, h), Imply(l,r))
+          val conjunction = Box(ODESystem(dp, h),And(l,r))
 
-//      override def apply(p: Position): Tactic =
-//        PropositionalTacticsImpl.cohideT(p) &
-//        debugT("what's up?") &
-//        EquivRightT(SuccPos(0)) &
-//        debugT("sup?")
-//    }
+          Some(Tactics.assertT(0,1) &
+            lastSucc(EquivRightT) & onBranch(
+            //To show: [a]p->q ==> [a].
+            (BranchLabels.equivLeftLbl, cutT(Some(conjunction)) & onBranch(
+              (BranchLabels.cutShowLbl,
+                Tactics.assertT(1,2) &
+                  assertT(s => s.succ.head.equals(right)) &
+                  hideT(SuccPos(0)) &
+                  InverseImplyRightT ~
+                    debugT("After inverse") ~
+                    kModalModusPonensT(SuccPos(0)) ~
+                    debugT("After k modal") ~
+                    diffWeakenT(SuccPos(0)) ~
+                    debugT("after DW") ~
+                    arithmeticT ~
+                    errorT("Should have closed.")
+                ),
+              (BranchLabels.cutUseLbl,
+                Tactics.assertT(2,1) &
+                  Tactics.assertT(s => s.ante.head.equals(left)) &
+                  hideT(AntePos(0)) &
+                  assertT(s => s.ante.length == 1 && s.ante.head.equals(conjunction)) &
+                  boxMonotoneT &
+                  arithmeticT ~ Tactics.errorT("Should have closed.")
+                )
+            )),
+            (BranchLabels.equivRightLbl, boxMonotoneT & arithmeticT )
+          ))
+        }
+      }
 
-//    private def dischargeEquivalence(pi : DifferentialProgram, originalConclusion : Formula, newConclusion : Formula) : PositionTactic = new PositionTactic(name + " discharge equivalence") {
-//      override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-//        case Equiv(Box(leftProgram, leftFormula), Box(rightProgram, rightFormula)) =>
-//          leftProgram.equals(pi) && rightProgram.equals(pi) &&
-//          leftFormula.equals(originalConclusion) && rightFormula.equals(newConclusion)
-//        case _ => false
-//      }
-//
-//      override def apply(p: Position): Tactic =
-//        PropositionalTacticsImpl.cohideT(p) &
-//        AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(1 :: Nil)) ~
-//        assertPT(Equiv(originalConclusion, newConclusion),
-//          "Expected to find appropriate equiv " + originalConclusion.prettyString + " " + newConclusion.prettyString)(SuccPos(0)) &
-//        PropositionalTacticsImpl.EquivRightT(SuccPos(0)) & onBranch(
-//          (BranchLabels.equivLeftLbl, TacticLibrary.arithmeticT  ~ errorT("left label")),
-//          (BranchLabels.equivRightLbl, TacticLibrary.arithmeticT ~ errorT("right label"))
-//        )
-//    }
-
-//    private def dischargeEquivalence(program : DifferentialProgram,
-//                                     originalConclusion : Formula,
-//                                     newConclusion : Formula) : PositionTactic =
-//      new PositionTactic(name + "Discharge Equivalence") {
-//        override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-//          case Equiv(Box(leftProgram, leftFormula), Box(rightProgram, rightFormula)) =>
-//            leftProgram.equals(program) && rightProgram.equals(program) &&
-//            leftFormula.equals(originalConclusion) && rightFormula.equals(newConclusion)
-//          case _ => false
-//        }
-//
-//        override def apply(p: Position): Tactic = debugT("Before equiv right") &
-//          assertPT(Equiv(Box(program, originalConclusion), Box(program, newConclusion)))(p) &
-//          PropositionalTacticsImpl.cohideT(p) &
-//          EquivRightT(SuccPos(0)) & debugT("broken...")
-//      }
+      override def applicable(node: ProofNode): Boolean =
+        node.sequent.ante.isEmpty && node.sequent.succ.length == 1
+    }
 
     private def constructNewConclusion(evolutionDomain : Formula, originalConclusion : Formula) = {
       //Compute the new conclusion.

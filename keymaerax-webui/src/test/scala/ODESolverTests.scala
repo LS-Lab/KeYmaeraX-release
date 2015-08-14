@@ -69,7 +69,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
   ignore should "work when we have two separate sets of linear vars." in {
     val f = "x = 0 & v = 1 & a = 5 & t=0 & w = 0 & z = 0 -> [{x' =v, v' = a, w' = z, t' = 1}]x >= 0".asFormula
     val node = helper.formulaToNode(f)
-    val tactic = locateSucc(ImplyRightT) & LogicalODESolver.solveT(SuccPos(0))
+    val tactic = locateSucc(ImplyRightT) & LogicalODESolver.weakSolveT(SuccPos(0))
     helper.runTactic(tactic, node)
     helper.report(node)
     node shouldBe 'closed
