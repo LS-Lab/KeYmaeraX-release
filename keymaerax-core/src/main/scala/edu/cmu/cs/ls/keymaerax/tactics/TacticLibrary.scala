@@ -237,7 +237,7 @@ object TacticLibrary {
    * @param fact the Formula to use to simplify at the indicated position of the sequent
    * @param key the part of the Formula fact to unify the indicated position of the sequent with
    * @param factTactic the tactic to use to prove the instance of the fact obtained after unification
-   * @todo add URename on demand
+   * @todo key==HereP could call byUS(fact)
    * @todo generalize to Equal using CQ instead of CE
    */
   def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
@@ -286,12 +286,11 @@ object TacticLibrary {
   }
 
   /**
-   * US(form) uses a suitable uniform substitution to reduce the proof to the given form.
+   * US(form) uses a suitable uniform substitution to reduce the proof to instead proving form.
    * Unifies the sequent with form and uses that as a uniform substitution.
    *
    * @author Andre Platzer
    * @param form the sequent to reduce this proof node to by a Uniform Substitution
-   * @todo add URename on demand
    */
   def US(form: Sequent): Tactic = new ConstructionTactic("US") {
     def applicable(node: ProofNode) = UnificationMatch(form,node.sequent).isDefined
