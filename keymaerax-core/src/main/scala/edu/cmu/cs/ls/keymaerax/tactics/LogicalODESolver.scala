@@ -17,6 +17,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.skolemizeT
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import TacticLibrary._
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{InverseImplyRightT, kModalModusPonensT}
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.boxMonotoneT
 
 import scala.collection.immutable.List
 
@@ -215,6 +217,10 @@ object LogicalODESolver {
      * Proves:
      *  [{c & x=\theta...}](x = \theta -> x >= 0) <-> [{c & x=\theta...}](\theta >= 0)
      *
+     * The proof for the -> direction is really easy -- just monotonicity and arithmetic.
+     *
+     * The proof for the <- direction is more involved, I think because we need the evolution domain
+     * constraint in order to get x = \theta. However, there may be a simpler proof for this branch.
      */
     def showGKEquivalenceTactic = new ConstructionTactic("Show Equivalence for GK Step in page 25 of USubst paper") {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ.head match {
@@ -224,31 +230,31 @@ object LogicalODESolver {
 
           Some(Tactics.assertT(0,1) &
             lastSucc(EquivRightT) & onBranch(
-            //To show: [a]p->q ==> [a]. Via ->R^-1, K, DW, Arith.
+            //To show: [a]p->q ==> [a].
             (BranchLabels.equivLeftLbl, cutT(Some(conjunction)) & onBranch(
               (BranchLabels.cutShowLbl,
                 Tactics.assertT(1,2) &
-                  Tactics.assertT(s => s.succ.head.equals(right)) &
-                  PropositionalTacticsImpl.hideT(SuccPos(0)) &
-                  PropositionalTacticsImpl.InverseImplyRightT ~
+                  assertT(s => s.succ.head.equals(right)) &
+                  hideT(SuccPos(0)) &
+                  InverseImplyRightT ~
                     debugT("After inverse") ~
-                    PropositionalTacticsImpl.kModalModusPonensT(SuccPos(0)) ~
+                    kModalModusPonensT(SuccPos(0)) ~
                     debugT("After k modal") ~
-                    ODETactics.diffWeakenT(SuccPos(0)) ~
+                    diffWeakenT(SuccPos(0)) ~
                     debugT("after DW") ~
                     arithmeticT ~
-                    Tactics.errorT("Should have closed.")
+                    errorT("Should have closed.")
                 ),
               (BranchLabels.cutUseLbl,
                 Tactics.assertT(2,1) &
                   Tactics.assertT(s => s.ante.head.equals(left)) &
-                  PropositionalTacticsImpl.hideT(AntePos(0)) &
-                  Tactics.assertT(s => s.ante.length == 1 && s.ante.head.equals(conjunction)) &
-                  AxiomaticRuleTactics.boxMonotoneT &
+                  hideT(AntePos(0)) &
+                  assertT(s => s.ante.length == 1 && s.ante.head.equals(conjunction)) &
+                  boxMonotoneT &
                   arithmeticT ~ Tactics.errorT("Should have closed.")
                 )
             )),
-            (BranchLabels.equivRightLbl, AxiomaticRuleTactics.boxMonotoneT & arithmeticT )
+            (BranchLabels.equivRightLbl, boxMonotoneT & arithmeticT )
           ))
         }
       }
