@@ -253,7 +253,7 @@ object Provable {
  *       nor reflection to bypass immutable val data structures.
  * @author Andre Platzer
  * @todo may want to split into different locality levels of subgoals
- * @example Proofs can be constructed in sequent order using Provables:
+ * @example Proofs can be constructed in (backward/tableaux) sequent order using Provables:
  * {{{
  *   import scala.collection.immutable._
  *   val verum = new Sequent(Seq(), IndexedSeq(), IndexedSeq(True))
@@ -296,31 +296,7 @@ object Provable {
  *  // proof of finGoal
  *  println(proof.proved)
  * }}}
- * @example Proofs in Hilbert-calculus style order use subsequent merging
- * {{{
- *  import scala.collection.immutable._
- *  val fm = Greater(Variable("x"), Number(5))
- *  // x>0 |- x>0
- *  val left = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(fm)))(
- *    Close(AntePos(0), SuccPos(0)), 0)
- *  // |- true
- *  val right = Provable.startProof(Sequent(Seq(), IndexedSeq(), IndexedSeq(True)))(
- *    CloseTrue(SuccPos(0)), 0)
- *  val right2 = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(True)))(
- *    HideLeft(AntePos(0)), 0) (right, 0)
- *  // gluing order for subgoals is irrelevant. Could use: (right2, 1)(left, 0))
- *  val merged = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(And(fm, True))))(
- *    AndRight(SuccPos(0)), 0) (
- *    left, 0)(
- *      right2, 0)
- *  // |- x>5 -> x>5 & true
- *  val finGoal = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
- *  val proof = Provable.startProof(finGoal)(
- *    ImplyRight(SuccPos(0)), 0) (merged, 0)
- *  // proof of finGoal
- *  println(proof.proved)
- * }}}
- * @example Proofs directly in forward Hilbert order and merging of branches
+ * @example Proofs in forward Hilbert order are straightforward with merging of branches
  * {{{
  *  import scala.collection.immutable._
  *  val fm = Greater(Variable("x"), Number(5))
@@ -342,6 +318,30 @@ object Provable {
  *    ImplyRight(SuccPos(0))
  *  )
  *  // proof of finGoal:  |- x>5 -> x>5 & true
+ *  println(proof.proved)
+ * }}}
+ * @example Proofs in Hilbert-calculus style order can also be based exclusively on subsequent merging
+ * {{{
+ *  import scala.collection.immutable._
+ *  val fm = Greater(Variable("x"), Number(5))
+ *  // x>0 |- x>0
+ *  val left = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(fm)))(
+ *    Close(AntePos(0), SuccPos(0)), 0)
+ *  // |- true
+ *  val right = Provable.startProof(Sequent(Seq(), IndexedSeq(), IndexedSeq(True)))(
+ *    CloseTrue(SuccPos(0)), 0)
+ *  val right2 = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(True)))(
+ *    HideLeft(AntePos(0)), 0) (right, 0)
+ *  // gluing order for subgoals is irrelevant. Could use: (right2, 1)(left, 0))
+ *  val merged = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(And(fm, True))))(
+ *    AndRight(SuccPos(0)), 0) (
+ *    left, 0)(
+ *      right2, 0)
+ *  // |- x>5 -> x>5 & true
+ *  val finGoal = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
+ *  val proof = Provable.startProof(finGoal)(
+ *    ImplyRight(SuccPos(0)), 0) (merged, 0)
+ *  // proof of finGoal
  *  println(proof.proved)
  * }}}
  */
