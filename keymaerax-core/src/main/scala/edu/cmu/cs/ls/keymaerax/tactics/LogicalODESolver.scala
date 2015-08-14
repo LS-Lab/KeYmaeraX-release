@@ -84,7 +84,7 @@ object LogicalODESolver {
     override def applies(f: Formula): Boolean = f match {
       case Box(pi:DifferentialProgram, f: Formula) => pi match {
         case a:AtomicODE => false
-        case ODESystem(pipi, ff) => timeVar(pi).isDefined
+        case ODESystem(pipi, ff) => timeVar(pi).isDefined && getLastPartialSoln(pi).isDefined
         case DifferentialProduct(l,r) => timeVar(pi).isDefined
       }
     }
