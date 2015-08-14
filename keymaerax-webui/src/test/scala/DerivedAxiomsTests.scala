@@ -3,14 +3,20 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
-import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, TacticWrapper, Tactics, RootNode}
+package edu.cmu.cs.ls.keymaerax.tactics
+
+import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms._
+import DerivedAxioms.abs
+
+import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Tool}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.ProvabilityTestHelper
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms._
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 /**
@@ -72,6 +78,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom)}
+  it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
   it should "prove abs" in {check(abs)}
   it should "prove y-variant of all dual" in {check(dummyallDualAxiom)}
   it should "prove y-variant of all dual 2" in {check(dummyallDualAxiom2)}
@@ -84,4 +91,25 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetT)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetT)}
   it should "prove abs" in {check(abs)}
+
+
+  lazy val dummyexistsDualAxiom = derivedAxiom("exists dual dummy",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(!\\forall y (!p(y))) <-> \\exists y p(y)".asFormula)),
+    useAt("all dual", PosInExpr(1::Nil))(SuccPosition(0, 0::0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::0::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val dummyallDualAxiom = derivedAxiom("all dual dummy",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(!\\exists y (!p(y))) <-> \\forall y p(y)".asFormula)),
+    byUS("all dual")
+  )
+
+  //@todo move to test case instead
+  lazy val dummyallDualAxiom2 = derivedAxiom("all dual dummy",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(!\\exists y (!q(y))) <-> \\forall y q(y)".asFormula)),
+    byUS("all dual")
+  )
+
 }

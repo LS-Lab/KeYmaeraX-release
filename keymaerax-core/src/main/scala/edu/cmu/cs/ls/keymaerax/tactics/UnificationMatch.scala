@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  * Matches second argument against the pattern of the first argument but not vice versa.
  * @author Andre Platzer
  */
-object UnificationMatch extends ((Expression,Expression) => Option[RenUSubst]) {
+object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
 //  type Subst = USubst
 //  private def Subst(subs: List[SubstRepl]): Subst = USubst(subs)
 //  type SubstRepl = SubstitutionPair
@@ -25,23 +25,54 @@ object UnificationMatch extends ((Expression,Expression) => Option[RenUSubst]) {
 
   private val id: List[SubstRepl] = Nil
 
-  def apply(e1: Expression, e2: Expression): Option[Subst] = if (e1.kind==e2.kind) e1 match {
+  def apply(e1: Expression, e2: Expression): Subst = if (e1.kind==e2.kind) e1 match {
     case t1: Term => apply(t1, e2.asInstanceOf[Term])
     case f1: Formula => apply(f1, e2.asInstanceOf[Formula])
     case p1: Program => apply(p1, e2.asInstanceOf[Program])
-  } else None
+  } else throw new UnificationException(e1.prettyString, e2.prettyString, "have different kinds " + e1.kind + " and " + e2.kind)
 
-  def apply(t1: Term, t2: Term): Option[Subst] = {try { Some(Subst(unify(t1,t2))) } catch { case _: UnificationException => None }
-  } ensuring (r => r.isEmpty || r.get(t1) == t2, "unifier match makes " + t1 + " and " + t2 + " equal")
+  /** Compute some unifier if unifiable else None */
+  def unifiable(e1: Expression, e2: Expression): Option[Subst] = try {Some(apply(e1, e2))} catch {case e: UnificationException => println("Expression unifiable " + e); None}
 
-  def apply(f1: Formula, f2: Formula): Option[Subst] = {try { Some(Subst(unify(f1,f2))) } catch { case _: UnificationException => None }
-  } ensuring (r => r.isEmpty || r.get(f1) == f2, "unifier match makes " + f1 + " and " + f2 + " equal")
+  /** Compute some unifier if unifiable else None */
+  def unifiable(e1: Sequent, e2: Sequent): Option[Subst] = try {Some(apply(e1, e2))} catch {case e: UnificationException => println("Sequent unifiable " + e); None}
 
-  def apply(p1: Program, p2: Program): Option[Subst] = {try { Some(Subst(unify(p1,p2))) } catch { case _: UnificationException => None }
-  } ensuring (r => r.isEmpty || r.get(p1) == p2, "unifier match makes " + p1 + " and " + p2 + " equal")
+  //  def apply(t1: Term, t2: Term): Option[Subst] = {try { Some(Subst(unify(t1,t2))) } catch { case _: UnificationException => None }
+//  } ensuring (r => r.isEmpty || r.get(t1) == t2, "unifier match makes " + t1 + " and " + t2 + " equal")
+//
+//  def apply(f1: Formula, f2: Formula): Option[Subst] = {try { Some(Subst(unify(f1,f2))) } catch { case _: UnificationException => None }
+//  } ensuring (r => r.isEmpty || r.get(f1) == f2, "unifier match makes " + f1 + " and " + f2 + " equal")
+//
+//  def apply(p1: Program, p2: Program): Option[Subst] = {try { Some(Subst(unify(p1,p2))) } catch { case _: UnificationException => None }
+//  } ensuring (r => r.isEmpty || r.get(p1) == p2, "unifier match makes " + p1 + " and " + p2 + " equal")
+//
+//  def apply(s1: Sequent, s2: Sequent): Option[Subst] = {try { Some(Subst(unify(s1,s2))) } catch { case _: UnificationException => None }
+//  } ensuring (r => r.isEmpty || r.get(s1) == s2, "unifier match makes " + s1 + " and " + s2 + " equal")
 
-  def apply(s1: Sequent, s2: Sequent): Option[Subst] = {try { Some(Subst(unify(s1,s2))) } catch { case _: UnificationException => None }
-  } ensuring (r => r.isEmpty || r.get(s1) == s2, "unifier match makes " + s1 + " and " + s2 + " equal")
+  //@note To circumvent shortcomings of renaming-unaware unification algorithm, the following code unifies for renaming, renames, and then reunifies the renamed outcomes for substitution
+  def apply(e1: Term, e2: Term): Subst = {try {
+    val ren = Subst(unify(e1,e2)).renaming
+    Subst(unify(ren(e1),e2) ++ ren.subsDefsInput)
+  } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + " with " + e2.prettyString)}
+  } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
+
+  def apply(e1: Formula, e2: Formula): Subst = {try {
+    val ren = Subst(unify(e1,e2)).renaming
+    Subst(unify(ren(e1),e2) ++ ren.subsDefsInput)
+  } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + " with " + e2.prettyString)}
+  } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
+
+  def apply(e1: Program, e2: Program): Subst = {try {
+    val ren = Subst(unify(e1,e2)).renaming
+    Subst(unify(ren(e1),e2) ++ ren.subsDefsInput)
+  } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + " with " + e2.prettyString)}
+  } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
+
+  def apply(e1: Sequent, e2: Sequent): Subst = {try {
+    val ren = Subst(unify(e1,e2)).renaming
+    Subst(unify(ren(e1),e2) ++ ren.subsDefsInput)
+  } catch {case ex: ProverException => throw ex.inContext("match " + e1.toString + " with " + e2.toString)}
+  } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
 
   private def ununifiable(e1: Expression, e2: Expression): Nothing = {println(new UnificationException(e1.toString, e2.toString)); throw new UnificationException(e1.toString, e2.toString)}
 

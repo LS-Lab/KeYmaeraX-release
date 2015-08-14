@@ -46,20 +46,21 @@ object TactixLibrary {
   }
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma, key:PosInExpr): PositionTactic = useAt(lem.fact, key)
+  def useAt(lem: Lemma)       : PositionTactic = useAt(lem.fact, PosInExpr(0::Nil))
   /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: String, key: PosInExpr = PosInExpr(0::Nil)): PositionTactic =
     useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
 
   /** by(provable) is a pseudo-tactic that uses the given Provable to continue or close the proof (if it fits to what has been proved) */
-  def by(provable: Provable): Tactic   = new ByProvable(provable)
+  def by(provable: Provable)  : Tactic = new ByProvable(provable)
   /** by(lemma) is a pseudo-tactic that uses the given Lemma to continue or close the proof (if it fits to what has been proved) */
-  def by(lemma: Lemma): Tactic         = by(lemma.fact)
+  def by(lemma: Lemma)        : Tactic = by(lemma.fact)
   /** byUS(provable) proves by a uniform substitution instance of provable */
   def byUS(provable: Provable): Tactic = US(provable.conclusion) & by(provable)
   /** byUS(lemma) proves by a uniform substitution instance of lemma */
-  def byUS(lemma: Lemma): Tactic       = byUS(lemma.fact)
+  def byUS(lemma: Lemma)      : Tactic  = byUS(lemma.fact)
   /** byUS(axiom) proves by a uniform substitution instance of axiom */
-  def byUS(axiom: String): Tactic =
+  def byUS(axiom: String)     : Tactic =
     byUS(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0))
 
 

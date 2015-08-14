@@ -69,7 +69,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
   ignore should "work when we have two separate sets of linear vars." in {
     val f = "x = 0 & v = 1 & a = 5 & t=0 & w = 0 & z = 0 -> [{x' =v, v' = a, w' = z, t' = 1}]x >= 0".asFormula
     val node = helper.formulaToNode(f)
-    val tactic = locateSucc(ImplyRightT) & LogicalODESolver.solveT(SuccPos(0))
+    val tactic = locateSucc(ImplyRightT) & LogicalODESolver.weakSolveT(SuccPos(0))
     helper.runTactic(tactic, node)
     helper.report(node)
     node shouldBe 'closed
@@ -229,6 +229,22 @@ class ODESolutionTactic extends TacticTestSuite {
 
   "Diff. Solution tactic" should "solve simplest case ODEsolve" in { /* works */
     val s = testHelper.SequentFactory.sequent(Nil, "r>=0".asFormula :: Nil, "[{r' = 0}](r>=0)".asFormula :: Nil)
+    val tactic = debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+  }
+
+  "Diff. Solution tactic" should "solve simplest case ODEsolve with 1" in { /* doesn't work */
+    /* Stefan: the r'=1 is taken as time and something goes wrong with that */
+  val s = testHelper.SequentFactory.sequent(Nil, "r>=0".asFormula :: Nil, "[{r' = 1}](r>=0)".asFormula :: Nil)
+    val tactic = debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+  }
+
+
+  "Diff. Solution tactic" should "solve simplest case ODEsolve with 2" in { /* works */
+  val s = testHelper.SequentFactory.sequent(Nil, "r>=0".asFormula :: Nil, "[{r' = 2}](r>=0)".asFormula :: Nil)
     val tactic = debugT("here") & locateSucc(ODETactics.diffSolution(None)) & debugT("there")
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
