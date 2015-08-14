@@ -17,7 +17,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
 //  type SubstRepl = SubstitutionPair
 //  private def SubstRepl(what: Expression, repl: Expression): SubstRepl = SubstitutionPair(what,repl)
   type Subst = RenUSubst
-  private def Subst(subs: List[SubstRepl]): Subst = RenUSubst(subs)
+  private def Subst(subs: List[SubstRepl]): Subst = RenUSubst(subs.distinct)
   type SubstRepl = scala.Predef.Pair[Expression,Expression]
   private def SubstRepl(what: Expression, repl: Expression): SubstRepl = (what,repl)
 

@@ -182,7 +182,7 @@ class FormulaConverter(val fml: Formula) {
         }
     }), fml) match {
       case Some(f) => (new Context(f), eInCtx.get)
-      case None => ???
+      case None => throw new IllegalArgumentException("Position not defined")
     }
   } ensuring(r => r._1(r._2) == fml, "context splitting of " + fml + " at " + pos + " is successful")
 

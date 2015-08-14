@@ -437,4 +437,7 @@ object PropositionalTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
     }
   }
+
+  //@todo use "= commute" to commute left and right side of an equality
+  def commuteEqualT: PositionTactic = ???
 }
