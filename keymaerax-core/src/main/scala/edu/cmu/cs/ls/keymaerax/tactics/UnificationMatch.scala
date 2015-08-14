@@ -11,15 +11,15 @@ import edu.cmu.cs.ls.keymaerax.core._
  * Matches second argument against the pattern of the first argument but not vice versa.
  * @author Andre Platzer
  */
-object UnificationMatch extends ((Expression,Expression) => Option[USubst]) {
-  type Subst = USubst
-  private def Subst(subs: List[SubstRepl]): Subst = USubst(subs)
-  type SubstRepl = SubstitutionPair
-  private def SubstRepl(what: Expression, repl: Expression): SubstRepl = SubstitutionPair(what,repl)
-//  type Subst = RenUSubst
-//  private def Subst(subs: List[SubstRepl]): Subst = RenUSubst(subs)
-//  type SubstRepl = scala.Predef.Pair[Expression,Expression]
-//  private def SubstRepl(what: Expression, repl: Expression): SubstRepl = (what,repl)
+object UnificationMatch extends ((Expression,Expression) => Option[RenUSubst]) {
+//  type Subst = USubst
+//  private def Subst(subs: List[SubstRepl]): Subst = USubst(subs)
+//  type SubstRepl = SubstitutionPair
+//  private def SubstRepl(what: Expression, repl: Expression): SubstRepl = SubstitutionPair(what,repl)
+  type Subst = RenUSubst
+  private def Subst(subs: List[SubstRepl]): Subst = RenUSubst(subs)
+  type SubstRepl = scala.Predef.Pair[Expression,Expression]
+  private def SubstRepl(what: Expression, repl: Expression): SubstRepl = (what,repl)
 
   //
 
@@ -47,8 +47,10 @@ object UnificationMatch extends ((Expression,Expression) => Option[USubst]) {
 
   private def ununifiable(e1: Sequent, e2: Sequent): Nothing = {println(new UnificationException(e1.toString, e2.toString)); throw new UnificationException(e1.toString, e2.toString)}
 
-  private def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] = if (x1==e2) id else ununifiable(x1,e2)
-  private def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = if (xp1==e2) id else ununifiable(xp1,e2)
+//  private def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] = if (x1==e2) id else ununifiable(x1,e2)
+//  private def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = if (xp1==e2) id else ununifiable(xp1,e2)
+  private def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] = if (x1==e2) id else if (e2.isInstanceOf[Variable]) List(SubstRepl(x1,e2.asInstanceOf[Variable])) else ununifiable(x1,e2)
+  private def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = if (xp1==e2) id else if (e2.isInstanceOf[DifferentialSymbol]) List(SubstRepl(xp1.x,e2.asInstanceOf[DifferentialSymbol].x)) else ununifiable(xp1,e2)
 
   /** A simple recursive unification algorithm that actually just recursive single-sided matching without occurs check */
   private def unify(e1: Term, e2: Term): List[SubstRepl] = e1 match {

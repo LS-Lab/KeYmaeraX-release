@@ -300,11 +300,12 @@ object TacticLibrary {
       val matched = UnificationMatch(form, node.sequent)
       assert(matched.isDefined, "must match if applicable already: " + node.sequent + " matches against " + form)
       val subst = matched.get
-      println("US unify: " + node.sequent + " matches against " + form + " by " + subst)
+      println("US unify: " + node.sequent + " matches against form " + form + " by " + subst)
       assert(node.sequent == subst(form), "unification matched successfully: " + node.sequent + " is " + subst(form) + " which is " + form + " instantiated by " + subst)
-      Some(new Tactics.ApplyRule(UniformSubstitutionRule(subst, form)) {
-        override def applicable(node: ProofNode): Boolean = true
-      })
+      Some(subst.toTactic(form))
+//      Some(new Tactics.ApplyRule(UniformSubstitutionRule(subst, form)) {
+//        override def applicable(node: ProofNode): Boolean = true
+//      })
     }
 
   }

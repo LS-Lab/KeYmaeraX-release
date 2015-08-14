@@ -73,6 +73,8 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom)}
   it should "prove abs" in {check(abs)}
+  it should "prove y-variant of all dual" in {check(dummyallDualAxiom)}
+  it should "prove y-variant of all dual 2" in {check(dummyallDualAxiom2)}
   it should "prove y-variant of exists dual" in {check(dummyexistsDualAxiom)}
 
   "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveT)}
