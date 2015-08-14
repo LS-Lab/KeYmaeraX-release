@@ -16,7 +16,11 @@ import java.io.PrintWriter
 import edu.cmu.cs.ls.keymaerax.parser._
 
 /**
- * File-based lemma DB implementation.
+ * File-based lemma DB implementation. Stores one lemma per file in the user's KeYmaera X home directory under
+ * cache/lemmadb/. Lemma file names are created automatically and in a thread-safe manner.
+ *
+ * Instantiate (parameter-less constructor) to get access to lemmas. All instances will have the same view on the
+ * lemmas.
  *
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
@@ -35,14 +39,13 @@ class FileLemmaDB extends LemmaDB {
   override def get(lemmaID: LemmaID): Option[Lemma] = {
     val file = new File(lemmadbpath, lemmaID + ".alp")
     if (file.exists()) {
-      val (name, formula, (toolInput, toolOutput)) = KeYmaeraXLemmaParser(scala.io.Source.fromFile(file).mkString)
-      val evidence = List(ToolEvidence(Map(toolInput -> toolOutput)))
+      val (name, formula, evidence) = KeYmaeraXLemmaParser(scala.io.Source.fromFile(file).mkString)
       // @note this means, all lemma DB implementations have to be part of the core
       // TODO Code Review: Any way of checking/certifying this to remove it from the core?
       val fact = Provable.toolFact(new Sequent(Nil,
         immutable.IndexedSeq(),
         immutable.IndexedSeq(formula)))
-      Some(Lemma(fact, evidence, Some(name)))
+      Some(Lemma(fact, evidence :: Nil, Some(name)))
     } else None
   }
 
@@ -60,7 +63,7 @@ class FileLemmaDB extends LemmaDB {
           (newId, newFile)
       }
     }
-    saveProof(file, lemma.fact.conclusion.succ.head, lemma.evidence)
+    saveProof(file, lemma)
     id
   }
 
@@ -74,49 +77,18 @@ class FileLemmaDB extends LemmaDB {
     else (id, f)
   }
 
-  private def saveProof(file: File, f: Formula, ev: List[Evidence]): Unit = {
-    val namesToDeclare = StaticSemantics.symbols(f) -- StaticSemantics(f).bv.toSymbolSet ++ StaticSemantics(f).fv.toSymbolSet
-    val header = proofHeader(namesToDeclare.toList)
-    val fString = KeYmaeraXPrettyPrinter(f)
+  private def saveProof(file: File, lemma: Lemma): Unit = {
+    val f = lemma.fact.conclusion.succ.head
 
-    val fileContents = header + "Lemma " + "\"" + file.getName + "\"." + "\n" +
-      fString + "\nEnd.\n" + ev.map(stringifyEvidence).mkString("\n")
+    //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
+    assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "illegal lemma form")
+    assert(KeYmaeraXLemmaParser(lemma.toString) == (lemma.name.getOrElse(""), lemma.fact.conclusion.succ.head, lemma.evidence.head),
+      "reparse of printed lemma is not original lemma")
 
     val pw = new PrintWriter(file)
-    pw.write(fileContents)
+    pw.write(lemma.toString)
     //@TODO Code Review: Read and parse file again. Compare with f.
     pw.close()
-  }
-
-  private def proofHeader(ns : List[NamedSymbol]) : String = {
-    val varDecls = ns.map({
-      case Variable(n, i, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "."
-      case DifferentialSymbol(x@Variable(n, i, s)) =>
-        /*implicitly declared by their corresponding variables*/
-        if (!ns.contains(x)) sortProofPrinter(s) + " " + n + printIndex(i) + "." else ""
-      case Function(n, i, Unit, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "()" + "."
-      case Function(n, i, d, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "(" + sortProofPrinter(d) + ")" + "."
-    })
-    "Variables.\n" + varDecls.mkString("\n") + "\nEnd.\n"
-  }
-
-  private def sortProofPrinter(s:Sort):String = s match {
-    case Bool        => "T"
-    case Trafo       => "P"
-    case Real        => "T"
-    case Unit        => "Void"
-    case _: ObjectSort => ???
-  }
-
-  private def printIndex(index: Option[Int]) = index match {
-    case None => ""
-    case Some(i) => "_" + i
-  }
-
-  private def stringifyEvidence(e:Evidence) = e match {
-    case e : ProofEvidence => ??? //TODO
-    case e : ExternalEvidence => "External.\n\t" + e.file.toString + "\nEnd."
-    case e : ToolEvidence => "Tool.\n\t" + e.info.map( p => p._1 + "\t\"" + p._2 + "\"").mkString("\n\t") + "\nEnd."
   }
 
 }

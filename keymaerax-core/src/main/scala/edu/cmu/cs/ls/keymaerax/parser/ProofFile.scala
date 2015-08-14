@@ -16,7 +16,10 @@ import edu.cmu.cs.ls.keymaerax.tactics.ProofNode
 
 sealed trait Evidence
 case class ProofEvidence(proof : List[LoadedBranch])   extends Evidence
-case class ToolEvidence(info : Map[String,String])     extends Evidence
+case class ToolEvidence(info : Map[String,String])     extends Evidence {
+  override def toString: String =
+    "Tool.\n  " + info.map(entry => entry._1 + " \"\"\"\"" + entry._2 + "\"\"\"\"").mkString("\n  ") + "\nEnd."
+}
 case class ExternalEvidence(file:File)                 extends Evidence
 
 object LoadedKnowledgeTools {

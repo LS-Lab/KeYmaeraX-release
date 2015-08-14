@@ -4,7 +4,7 @@ import java.io.{File, PrintWriter}
 
 import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ClassGenerator
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.ModelPlex.{modelplexControllerMonitorTrafo, modelplexInPlace}
@@ -308,28 +308,33 @@ object KeYmaeraX {
       } else {
         println("Proof certificate: Skipped extraction of proof certificate from proof search\n (use -verify to generate and check proof certificate)")
       }
-      //@todo Printing of Provable as text should be somewhere in LemmaDB functionalities.
+
       //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
-      val evidence =
-        s"""Tool.
-          |  input "$input"
-          |  tactic "${scala.io.Source.fromFile(tacticFileNameDotScala).mkString}"
-          |  proof ""
-          |End.
-          |""".stripMargin
+      val evidence = ToolEvidence(Map(
+        "tool" -> "KeYmaera X",
+        "model" -> input,
+        "tactic" -> scala.io.Source.fromFile(tacticFileNameDotScala).mkString,
+        "proof" -> "" //@todo serialize proof
+      )) :: Nil
+
       //@note pretty-printing the result of parse ensures that the lemma states what's actually been proved.
       assert(KeYmaeraXParser(KeYmaeraXPrettyPrinter(inputModel)) == inputModel, "parse of print is identity")
-      //@todo why is this of the form bla <-> true instead of just bla?
-      val lemmaContent =
-        s"""Lemma "${inputFileName.substring(inputFileName.lastIndexOf('/')+1)}".
-          |  (${KeYmaeraXPrettyPrinter(inputModel)}) <-> true
-          |End.
-          |""".stripMargin
+      //@note check that proved conclusion is what we actually wanted to prove
+      assert(rootNode.provable.conclusion == inputSequent && rootNode.provableWitness.proved == inputSequent,
+        "proved conclusion deviates from input")
 
-      //@todo ensure that reparse of this lemma is as expected
+      assert(inputFileName.lastIndexOf(File.separatorChar) < inputFileName.length, "Input file name is not an absolute path")
+      val lemma = Lemma(rootNode.provableWitness, evidence,
+        Some(inputFileName.substring(inputFileName.lastIndexOf(File.separatorChar)+1)))
+
+      //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
+      assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "Illegal lemma form")
+      assert(KeYmaeraXLemmaParser(lemma.toString) == (lemma.name.getOrElse(""), lemma.fact.conclusion.succ.head, lemma.evidence.head),
+        "reparse of printed lemma is not original lemma")
+
       pw.write(stampHead(options))
       pw.write("/* @evidence: parse of print of result of a proof */\n\n")
-      pw.write(lemmaContent + evidence)
+      pw.write(lemma.toString)
       pw.close()
     } else {
       assert(!rootNode.isClosed())
