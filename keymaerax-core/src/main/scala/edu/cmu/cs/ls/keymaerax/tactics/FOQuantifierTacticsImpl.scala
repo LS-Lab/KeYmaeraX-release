@@ -66,11 +66,11 @@ object FOQuantifierTacticsImpl {
    */
   def forallDualT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      // \forall x . p(x) <-> !(\exists x . (!p(x)))
+      // !(\exists x . (!p(x))) <-> \forall x . p(x)
       case Forall(v, p) =>
         assert(v.size == 1, "Duality not supported for more than one variable")
-        Equiv(fml, Not(Exists(v, Not(p))))
-      case Not(Exists(v, Not(p))) => Equiv(Forall(v, p), fml)
+        Equiv(Not(Exists(v, Not(p))), fml)
+      case Not(Exists(v, Not(p))) => Equiv(fml, Forall(v, p))
       case _ => False
     }
     uncoverAxiomT("all dual", axiomInstance, _ => forallDualBaseT)
@@ -79,11 +79,11 @@ object FOQuantifierTacticsImpl {
   private def forallDualBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = {
       val (p, v) = fml match {
-        case Equiv(Forall(vv, pp), _) => (pp, vv)
+        case Equiv(_, Forall(vv, pp)) => (pp, vv)
         case Equiv(Not(Exists(vv, Not(pp))), _) => (pp, vv)
       }
       val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
-      SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v.head.asInstanceOf[Variable], DotTerm)) :: Nil
+      SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v.head, DotTerm)) :: Nil
     }
     axiomLookupBaseT("all dual", subst, _ => NilPT, (f, ax) => ax)
   }
@@ -94,11 +94,11 @@ object FOQuantifierTacticsImpl {
    */
   def existsDualT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      // \exists x . p(x) <-> !(\forall x . (!p(x)))
+      // !(\forall x . (!p(x))) <-> \exists x . p(x)
       case Exists(v, p) =>
         assert(v.size == 1, "Duality not supported for more than one variable")
-        Equiv(fml, Not(Forall(v, Not(p))))
-      case Not(Forall(v, Not(p))) => Equiv(Exists(v, p), fml)
+        Equiv(Not(Forall(v, Not(p))), fml)
+      case Not(Forall(v, Not(p))) => Equiv(fml, Exists(v, p))
       case _ => False
     }
     uncoverAxiomT("exists dual", axiomInstance, _ => existsDualBaseT)
@@ -107,7 +107,7 @@ object FOQuantifierTacticsImpl {
   private def existsDualBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = {
       val (p, v) = fml match {
-        case Equiv(Exists(vv, pp), _) => (pp, vv)
+        case Equiv(_, Exists(vv, pp)) => (pp, vv)
         case Equiv(Not(Forall(vv, Not(pp))), _) => (pp, vv)
       }
       val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
@@ -116,12 +116,12 @@ object FOQuantifierTacticsImpl {
 
     val aX = Variable("x")
     def alpha(fml: Formula): PositionTactic = fml match {
-      case Equiv(Exists(v, _), _) =>
+      case Equiv(_, Exists(v, _)) =>
         assert(v.size == 1, "Duality not supported for more than one variable")
         if (v.head.name == aX.name && v.head.index == aX.index) NilPT
         else new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-            case Equiv(Exists(_, _), _) => true
+            case Equiv(_, Exists(_, _)) => true
             case _ => false
           }
 
@@ -135,7 +135,7 @@ object FOQuantifierTacticsImpl {
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
-      case Equiv(Exists(v, _), _) =>
+      case Equiv(_, Exists(v, _)) =>
         assert(v.size == 1, "Duality not supported for more than one variable")
         if (v.head.name == aX.name && v.head.index == aX.index) axiom
         else replace(axiom)(aX, v.head)
