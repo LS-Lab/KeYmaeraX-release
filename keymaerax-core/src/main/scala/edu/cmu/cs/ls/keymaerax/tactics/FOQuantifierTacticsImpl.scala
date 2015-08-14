@@ -708,7 +708,7 @@ object FOQuantifierTacticsImpl {
 
         override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
           override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-            Some(alphaRenamingT(v(fml), aX)(p.second))
+            Some(alphaRenamingT(v(fml), aX)(p.first))
 
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         }
