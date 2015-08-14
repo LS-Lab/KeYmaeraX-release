@@ -142,8 +142,8 @@ object DerivedAxioms {
   lazy val existsDualAxiom = derivedAxiom("exists dual",
     Sequent(Nil, IndexedSeq(), IndexedSeq("(!\\forall x (!p(x))) <-> \\exists x p(x)".asFormula)),
     useAt("all dual", PosInExpr(1::Nil))(SuccPosition(0, 0::0::Nil)) &
-      useAt(doubleNegationAxiom, PosInExpr(0::Nil))(SuccPosition(0, 0::Nil)) &
-      useAt(doubleNegationAxiom, PosInExpr(0::Nil))(SuccPosition(0, 0::0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::0::Nil)) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -151,8 +151,8 @@ object DerivedAxioms {
   lazy val dummyexistsDualAxiom = derivedAxiom("exists dual dummy",
     Sequent(Nil, IndexedSeq(), IndexedSeq("(!\\forall y (!p(y))) <-> \\exists y p(y)".asFormula)),
     useAt("all dual", PosInExpr(1::Nil))(SuccPosition(0, 0::0::Nil)) &
-      useAt(doubleNegationAxiom, PosInExpr(0::Nil))(SuccPosition(0, 0::Nil)) &
-      useAt(doubleNegationAxiom, PosInExpr(0::Nil))(SuccPosition(0, 0::0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::0::Nil)) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -184,8 +184,8 @@ object DerivedAxioms {
   lazy val vacuousExistsAxiom = derivedAxiom("vacuous exists quantifier",
     Sequent(Nil, IndexedSeq(), IndexedSeq("(\\exists x p()) <-> p()".asFormula)),
     useAt(existsDualAxiom, PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
-      useAt("vacuous all quantifier", PosInExpr(0::Nil))(SuccPosition(0, 0::0::Nil)) &
-      useAt(doubleNegationAxiom, PosInExpr(0::Nil))(SuccPosition(0, 0::Nil)) &
+      useAt("vacuous all quantifier")(SuccPosition(0, 0::0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -201,8 +201,8 @@ object DerivedAxioms {
    */
   lazy val vacuousBoxAssignNondetAxiom = derivedAxiom("V[:*] vacuous assign nondet",
     Sequent(Nil, IndexedSeq(), IndexedSeq("([x:=*;]p()) <-> p()".asFormula)),
-    useAt("[:*] assign nondet", PosInExpr(0::Nil))(SuccPosition(0, 0::Nil)) &
-      useAt("vacuous all quantifier", PosInExpr(0::Nil))(SuccPosition(0, 0::Nil)) &
+    useAt("[:*] assign nondet")(SuccPosition(0, 0::Nil)) &
+      useAt("vacuous all quantifier")(SuccPosition(0, 0::Nil)) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -218,8 +218,8 @@ object DerivedAxioms {
    */
   lazy val vacuousDiamondAssignNondetAxiom = derivedAxiom("V<:*> vacuous assign nondet",
     Sequent(Nil, IndexedSeq(), IndexedSeq("(<x:=*;>p()) <-> p()".asFormula)),
-    useAt("<:*> assign nondet", PosInExpr(0::Nil))(SuccPosition(0, 0::Nil)) &
-      useAt(vacuousExistsAxiom, PosInExpr(0::Nil))(SuccPosition(0, 0::Nil)) &
+    useAt("<:*> assign nondet")(SuccPosition(0, 0::Nil)) &
+      useAt(vacuousExistsAxiom)(SuccPosition(0, 0::Nil)) &
       byUS(equivReflexiveAxiom)
   )
 
