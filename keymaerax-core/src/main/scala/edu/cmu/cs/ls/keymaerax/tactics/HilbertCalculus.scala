@@ -22,7 +22,7 @@ object HilbertCalculus {
   lazy val randomb            : PositionTactic = useAt("[:*] assign nondet")
   /** testb: [?] simplifies test to an implication */
   lazy val testb              : PositionTactic = useAt("[?] test")
-  /** diffSolve: solve a differential equationb */
+  /** diffSolve: solve a differential equation */
   def diffSolve               : PositionTactic = TacticLibrary.diffSolutionT
   /** choiceb: [++] handles both cases of a nondeterministic choice separately */
   lazy val choiceb            : PositionTactic = useAt("[++] choice")
