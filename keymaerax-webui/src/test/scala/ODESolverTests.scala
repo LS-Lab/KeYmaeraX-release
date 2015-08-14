@@ -336,3 +336,13 @@ class GhostOfLipschitz extends TacticTestSuite {
     helper.report(node)
   }
 }
+
+class BoxConjunctionAxiomTests extends TacticTestSuite {
+  "Extra Hybrid Program Derived Axiom [] conjunction" should "work" in {
+    val f = "[{x'=v,v'=a,t'=0*t+1&true&v=5*t+1&x=5/2*t^2+1*t+0&t>=0}](true&v=5*t+1&x=5/2*t^2+1*t+0&t>=0&x>=0)".asFormula
+    val node = helper.formulaToNode(f)
+    val tactic = HybridProgramTacticsImpl.boxConjunctionT(SuccPos(0))
+    helper.runTactic(tactic, node)
+    helper.report(node)
+  }
+}
