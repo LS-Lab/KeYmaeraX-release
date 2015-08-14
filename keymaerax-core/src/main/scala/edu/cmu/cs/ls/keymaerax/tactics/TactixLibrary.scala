@@ -58,6 +58,9 @@ object TactixLibrary {
   def byUS(provable: Provable): Tactic = US(provable.conclusion) & by(provable)
   /** byUS(lemma) proves by a uniform substitution instance of lemma */
   def byUS(lemma: Lemma): Tactic       = byUS(lemma.fact)
+  /** byUS(axiom) proves by a uniform substitution instance of axiom */
+  def byUS(axiom: String): Tactic =
+    byUS(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0))
 
 
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic = SearchTacticsImpl.onBranch(s1, spec:_*)
