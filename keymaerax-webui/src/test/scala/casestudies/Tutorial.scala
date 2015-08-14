@@ -4,7 +4,11 @@
 */
 package casestudies
 
+import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.core.Variable
+import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
@@ -61,6 +65,36 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
     helper.runTactic(master("Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable from the command line" in {
+    afterEach()
+
+    val outputFileName = File.createTempFile("example1", ".proof").getAbsolutePath
+
+    KeYmaeraX.main(Array(
+      "-prove", "keymaerax-webui/src/test/resources/examples/tutorials/sttt/example1.key",
+      "-tactic", "keymaerax-webui/src/test/resources/examples/tutorials/sttt/Example1Tactic.scala",
+      "-out", outputFileName, "-verify"))
+
+    val inputModel = scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/tutorials/sttt/example1.key").mkString
+    val tactic = scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/tutorials/sttt/Example1Tactic.scala").mkString
+    val qq = "\"\"\"\""
+    val expectedProofFileContent =
+      s"""Lemma "example1".
+          |  ${KeYmaeraXPrettyPrinter(KeYmaeraXProblemParser(inputModel))}
+          |End.
+          |
+          |Tool.
+          |  tool ${qq}KeYmaera X$qq
+          |  model $qq$inputModel$qq
+          |  tactic $qq$tactic$qq
+          |  proof $qq$qq
+          |End.""".stripMargin
+
+    // drop evidence lines, those are different in every test due to temporary file name
+    val proofFileContent = scala.io.Source.fromFile(outputFileName).getLines().toList.drop(4).mkString("\n")
+    proofFileContent shouldBe expectedProofFileContent
   }
 
   "Example 1a" should "be provable" in {
