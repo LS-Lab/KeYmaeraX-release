@@ -68,7 +68,10 @@ object LogicalODESolver {
       case _ => false
     }
 
-    override def apply(p: Position): Tactic = ODETactics.inverseDiffAuxiliaryT(p)
+    override def apply(p: Position): Tactic = ODETactics.inverseLipschitzGhostT(p) & onBranch(
+      (BranchLabels.cutShowLbl, errorT("What to do here?")),
+      (BranchLabels.cutUseLbl, errorT("What to do in use?"))
+    )
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -88,6 +91,7 @@ object LogicalODESolver {
 
     override def applies(s: Sequent, p: Position): Boolean = {
       val f = TacticHelper.getFormula(s,p)
+      //Some temporary debugging output.
       val doesApply = applies(f)
       if(doesApply) println(this.name + " Applies to " + f)
       else println(this.name + " Does not apply to " + f);
@@ -98,7 +102,9 @@ object LogicalODESolver {
     override def apply(p: Position): Tactic = new ConstructionTactic("construct next " + name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case Box(program : DifferentialProgram, formula) => {
-          val lastPartial = getLastPartialSoln(program)
+          val lastPartial = getLastPartialSoln(program).getOrElse(
+            throw new Exception("This tactic should not because apply if there are no more partial solutions left in " + program.prettyString)
+          )
 
           Some(
             debugger("Trying to perform a successive inverse cut.") &
@@ -126,8 +132,28 @@ object LogicalODESolver {
 
   }
 
-  private def getLastPartialSoln(program : DifferentialProgram) : Formula = program match {
-    case ODESystem(odes, constraint) => extractInitialConditions(Some(program))(constraint).last
+  /**
+   * A *partial solution* is a formula of the form x = \theta occuring in the evolution domain
+   * constraint of an ODE s.t. x is primed in the differential program.
+   * Positive examples of partial solutions (for x):
+   *    {x' = y, y' = x, x = theta}
+   *    {x' = v, v' = a, x = theta & v = theta2 & true}
+   *    {x' = v, v' = a, x = theta & v = theta2 & true}
+   * Negative examples of partial solutions (for x):
+   *    {v' = a, x = \theta}
+   *    {x' = v, v' = a & v = \theta & true}
+   *
+   * Partial solutions are so-called because they are part of a solution to a system of
+   * differential equations.
+   *
+   * @param program A differential program.
+   * @return The right-most "partial solution" in an ODE, or else None if the domain constraint does
+   *         not contain any partial solutions.
+   */
+  private def getLastPartialSoln(program : DifferentialProgram) : Option[Formula] = program match {
+    case ODESystem(odes, constraint) => {
+      extractInitialConditions(Some(program))(constraint).lastOption
+    }
     case _ => throw new Exception("Need to implement all cases. Not sure." + program)
   }
 
