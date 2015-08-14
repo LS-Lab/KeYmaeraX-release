@@ -27,16 +27,31 @@ final case class RenUSubst(subsDefsInput: immutable.Seq[Pair[Expression,Expressi
     map(sp => (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable]))
   private val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filterNot(sp => sp._1.isInstanceOf[Variable]).
     map(sp => SubstitutionPair(sp._1, sp._2))
-  private val usubst = USubst(subsDefs)
+  /**
+   * The uniform substitution part of this renaming uniform substitution
+   * @see [[substitution]]
+   */
+  val usubst = USubst(subsDefs)
 
   type RenUSubstRepl = Pair[Expression,Expression]
+
+  /** The uniform renaming part of this renaming uniform substitution */
+  def renaming: RenUSubst = RenUSubst(rens)
+
+  /**
+   * The uniform substitution part of this renaming uniform substitution
+   * @see [[usubst]]
+   */
+  def substitution: RenUSubst = RenUSubst(subsDefs.map(sp => Pair(sp.what, sp.repl)))
 
   /** Convert to tactic to reduce to form by successively using the respective uniform renaming and uniform substitution rules */
   def toTactic(form: Sequent): Tactic = getUSubstTactic(RenUSubst(rens)(form)) & getRenamingTactic
 
   /** Get the renaming tactic part */
   def getRenamingTactic: Tactic = rens.foldLeft(TactixLibrary.skip)((t,sp)=> t &
-    new Tactics.ApplyRule(UniformRenaming(sp._1, sp._2)) {
+    //@note for tableaux backward style, the renamings have to be reversed to get from (already renamed) conclusion back to (prerenamed) origin
+    //@note permutations would help simplify matters here since they are their own inverse.
+    new Tactics.ApplyRule(UniformRenaming(sp._2, sp._1)) {
       override def applicable(node: ProofNode): Boolean = true
     })
 
