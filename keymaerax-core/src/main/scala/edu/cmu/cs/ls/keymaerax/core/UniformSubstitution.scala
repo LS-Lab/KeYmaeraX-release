@@ -223,7 +223,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
     require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + this)
   }
 
-  private def log(msg: =>String): Unit = {}  //= println(msg)
+  //private def log(msg: =>String): Unit = {}  //= println(msg)
 
   override def toString: String = "USubst{" + subsDefs.mkString(", ") + "}"
 
@@ -350,7 +350,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
 
   /** uniform substitution on formulas */
   private[core] def usubst(formula: Formula): Formula = {
-    log("Substituting " + formula.prettyString + " using " + this)
+    //log("Substituting " + formula.prettyString + " using " + this)
     try {
       formula match {
         case app@PredOf(op, theta) if matchHead(app) =>
