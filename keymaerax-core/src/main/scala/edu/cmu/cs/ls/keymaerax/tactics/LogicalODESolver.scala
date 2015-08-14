@@ -46,7 +46,8 @@ object LogicalODESolver {
           ODETactics.diffSolveAxiomT(p) &
           ImplyRightT(p) &
           errorT("@todo Need to box assign at correct position.")
-        )
+        ),
+        ("renameAndDropImpl-show", errorT("Should've closed"))
       )
   }
 
@@ -67,6 +68,11 @@ object LogicalODESolver {
         timeVar(program).isDefined && getPrimedVariables(program).length > 2
       case _ => false
     }
+
+    /**
+     * A tactic that adds \exists x . F to any formula F of the form [{x' = \theta, c & H}]Phi ???
+     */
+    private def addExistential : Tactic = ???
 
     override def apply(p: Position): Tactic = ODETactics.inverseLipschitzGhostT(p) & onBranch(
       (BranchLabels.cutShowLbl, errorT("What to do here?")),
@@ -184,7 +190,12 @@ object LogicalODESolver {
             cutT(Some(rewritingFormula)) & onBranch(
             //Um yeah not sure what was meant here but it's definitely not G,K...
 //              (BranchLabels.cutShowLbl, dischargeEquivalence(pi, Imply(evolutionDomain, originalConclusion), newConclusion)(SuccPos(node.sequent.succ.length))),
-              (BranchLabels.cutShowLbl, LabelBranch("renameAndDropImpl-todo")),
+              (BranchLabels.cutShowLbl,
+                lastSucc(PropositionalTacticsImpl.cohideT) & LabelBranch("renameAndDropImpl-show") &
+                  debugT("About to show GK Equivalence") ~
+                  showGKEquivalenceTactic ~
+                  errorT("All goals should've closed.")
+              ),
               (BranchLabels.cutUseLbl, {
                 val equivPos = AntePos(node.sequent.ante.length)
                 assertPT(rewritingFormula, "Precond check failed: Expected equivalence")(equivPos) &
@@ -201,59 +212,50 @@ object LogicalODESolver {
     }
 
     /**
-     * Input: [pi](x = T -> p(x)) <-> [pi](q) where q = T for x in p
-     * Output: Close
+     * Proves:
+     *  [{c & x=\theta...}](x = \theta -> x >= 0) <-> [{c & x=\theta...}](\theta >= 0)
+     *
      */
-//    private def dischargeEquivalence(pi : DifferentialProgram, originalConclusion : Formula, newConclusion : Formula) : PositionTactic = new PositionTactic(name + " discharge equivalence") {
-//      override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-//        case Equiv(Box(leftProgram, leftFormula), Box(rightProgram, rightFormula)) =>
-//          leftProgram.equals(pi) && rightProgram.equals(pi) &&
-//            leftFormula.equals(originalConclusion) && rightFormula.equals(newConclusion)
-//        case _ => false
-//      }
+    def showGKEquivalenceTactic = new ConstructionTactic("Show Equivalence for GK Step in page 25 of USubst paper") {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ.head match {
+        case Equiv(Box(ODESystem(dp, h), Imply(l,r)), right) => {
+          val left = Box(ODESystem(dp, h), Imply(l,r))
+          val conjunction = Box(ODESystem(dp, h),And(l,r))
 
-//      override def apply(p: Position): Tactic =
-//        PropositionalTacticsImpl.cohideT(p) &
-//        debugT("what's up?") &
-//        EquivRightT(SuccPos(0)) &
-//        debugT("sup?")
-//    }
+          Some(Tactics.assertT(0,1) &
+            lastSucc(EquivRightT) & onBranch(
+            //To show: [a]p->q ==> [a]. Via ->R^-1, K, DW, Arith.
+            (BranchLabels.equivLeftLbl, cutT(Some(conjunction)) & onBranch(
+              (BranchLabels.cutShowLbl,
+                Tactics.assertT(1,2) &
+                  Tactics.assertT(s => s.succ.head.equals(right)) &
+                  PropositionalTacticsImpl.hideT(SuccPos(0)) &
+                  PropositionalTacticsImpl.InverseImplyRightT ~
+                    debugT("After inverse") ~
+                    PropositionalTacticsImpl.kModalModusPonensT(SuccPos(0)) ~
+                    debugT("After k modal") ~
+                    ODETactics.diffWeakenT(SuccPos(0)) ~
+                    debugT("after DW") ~
+                    arithmeticT ~
+                    Tactics.errorT("Should have closed.")
+                ),
+              (BranchLabels.cutUseLbl,
+                Tactics.assertT(2,1) &
+                  Tactics.assertT(s => s.ante.head.equals(left)) &
+                  PropositionalTacticsImpl.hideT(AntePos(0)) &
+                  Tactics.assertT(s => s.ante.length == 1 && s.ante.head.equals(conjunction)) &
+                  AxiomaticRuleTactics.boxMonotoneT &
+                  arithmeticT ~ Tactics.errorT("Should have closed.")
+                )
+            )),
+            (BranchLabels.equivRightLbl, AxiomaticRuleTactics.boxMonotoneT & arithmeticT )
+          ))
+        }
+      }
 
-//    private def dischargeEquivalence(pi : DifferentialProgram, originalConclusion : Formula, newConclusion : Formula) : PositionTactic = new PositionTactic(name + " discharge equivalence") {
-//      override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-//        case Equiv(Box(leftProgram, leftFormula), Box(rightProgram, rightFormula)) =>
-//          leftProgram.equals(pi) && rightProgram.equals(pi) &&
-//          leftFormula.equals(originalConclusion) && rightFormula.equals(newConclusion)
-//        case _ => false
-//      }
-//
-//      override def apply(p: Position): Tactic =
-//        PropositionalTacticsImpl.cohideT(p) &
-//        AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(1 :: Nil)) ~
-//        assertPT(Equiv(originalConclusion, newConclusion),
-//          "Expected to find appropriate equiv " + originalConclusion.prettyString + " " + newConclusion.prettyString)(SuccPos(0)) &
-//        PropositionalTacticsImpl.EquivRightT(SuccPos(0)) & onBranch(
-//          (BranchLabels.equivLeftLbl, TacticLibrary.arithmeticT  ~ errorT("left label")),
-//          (BranchLabels.equivRightLbl, TacticLibrary.arithmeticT ~ errorT("right label"))
-//        )
-//    }
-
-//    private def dischargeEquivalence(program : DifferentialProgram,
-//                                     originalConclusion : Formula,
-//                                     newConclusion : Formula) : PositionTactic =
-//      new PositionTactic(name + "Discharge Equivalence") {
-//        override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-//          case Equiv(Box(leftProgram, leftFormula), Box(rightProgram, rightFormula)) =>
-//            leftProgram.equals(program) && rightProgram.equals(program) &&
-//            leftFormula.equals(originalConclusion) && rightFormula.equals(newConclusion)
-//          case _ => false
-//        }
-//
-//        override def apply(p: Position): Tactic = debugT("Before equiv right") &
-//          assertPT(Equiv(Box(program, originalConclusion), Box(program, newConclusion)))(p) &
-//          PropositionalTacticsImpl.cohideT(p) &
-//          EquivRightT(SuccPos(0)) & debugT("broken...")
-//      }
+      override def applicable(node: ProofNode): Boolean =
+        node.sequent.ante.isEmpty && node.sequent.succ.length == 1
+    }
 
     private def constructNewConclusion(evolutionDomain : Formula, originalConclusion : Formula) = {
       //Compute the new conclusion.
