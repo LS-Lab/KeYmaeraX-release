@@ -80,8 +80,8 @@ object HybridProgramTacticsImpl {
 
   def boxDualityT: PositionTactic = {
     def g(f: Formula): Formula = f match {
-      case Box(prg, phi) => Equiv(f, Not(Diamond(prg, Not(phi))))
-      case Not(Diamond(prg, Not(phi))) => Equiv(Box(prg, phi), f)
+      case Box(prg, phi) => Equiv(Not(Diamond(prg, Not(phi))), f)
+      case Not(Diamond(prg, Not(phi))) => Equiv(f, Box(prg, phi))
       case _ => False
     }
 
@@ -90,7 +90,7 @@ object HybridProgramTacticsImpl {
   /* Base tactic for boxDualityT */
   private def boxDualityBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Box(prg, phi), _) =>
+      case Equiv(_, Box(prg, phi)) =>
         val aA = ProgramConst("a")
         val aP = PredOf(Function("p", None, Real, Bool), Anything)
         SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
@@ -130,8 +130,8 @@ object HybridProgramTacticsImpl {
 
   def diamondDualityT: PositionTactic = {
     def g(f: Formula): Formula = f match {
-      case Diamond(prg, phi) => Equiv(f, Not(Box(prg, Not(phi))))
-      case Not(Box(prg, Not(phi))) => Equiv(Diamond(prg, phi), f)
+      case Diamond(prg, phi) => Equiv(Not(Box(prg, Not(phi))), f)
+      case Not(Box(prg, Not(phi))) => Equiv(f, Diamond(prg, phi))
       case _ => False
     }
 
@@ -140,7 +140,7 @@ object HybridProgramTacticsImpl {
   /* Base tactic for diamondDualityT */
   private def diamondDualityBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Diamond(prg, phi), _) =>
+      case Equiv(_, Diamond(prg, phi)) =>
         val aA = ProgramConst("a")
         val aP = PredOf(Function("p", None, Real, Bool), Anything)
         SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
