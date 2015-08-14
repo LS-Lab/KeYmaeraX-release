@@ -241,7 +241,69 @@ object TacticLibrary {
    * @todo generalize to Equal using CQ instead of CE
    */
   def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
-    import FormulaConverter._
+    import PropositionalTacticsImpl._
+    private val (keyCtx:Context[Formula],keyPart) = new FormulaConverter(fact).extractContext(key)
+    //private val keyPart = new FormulaConverter(fact).subFormulaAt(key).get
+
+    //@todo s(Position) is meant to locate into PosInExpr too
+    private def at(s: Sequent, p: Position): Option[Formula] = new FormulaConverter(s(p.top)).subFormulaAt(p.inExpr)
+
+    override def applies(s: Sequent, p: Position): Boolean =
+      at(s,p).isDefined && UnificationMatch.unifiable(keyPart,at(s,p).get).isDefined
+
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val (ctx:Context[Formula],expr) = new FormulaConverter(node.sequent(p.top)).extractContext(p.inExpr)
+        val fml = expr.asInstanceOf[Formula]
+        val subst = UnificationMatch(keyPart, fml)
+        println("useAt unify: " + fml + " matches against " + keyPart + " by " + subst)
+        assert(fml == subst(keyPart), "unification matched left successfully: " + fml + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
+        //val keyCtxMatched = Context(subst(keyCtx.ctx))
+
+        Some(useAt(subst, keyCtx, keyPart, p, ctx, expr))
+      }
+
+      private def useAt[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression): Tactic = {
+        require(subst(k) == c, "correctly matched input")
+        require(new FormulaConverter(C(c)).extractContext(p.inExpr) == (C,c), "correctly split at position p")
+        require(new FormulaConverter(C.ctx).extractContext(p.inExpr) == (C,DotFormula), "correctly split at position p")
+        K.ctx match {
+          case Equiv(DotFormula, other) => //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
+            debugT("start useAt") & cutRightT(C(subst(other)))(p.topLevel) & debugT("  cutted right") & onBranch(
+              (BranchLabels.cutUseLbl, debugT("  useAt result")),
+              //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
+              //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
+              (BranchLabels.cutShowLbl, debugT("  show use") & cohideT(p.topLevel) & assertT(0,1) & debugT("  cohidden") &
+                equivifyRightT(SuccPosition(0)) & debugT("  equivified") &
+                debugT("  CE coming up") & AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr) &
+                commuteEquivRightT(SuccPosition(0)) & debugT("  using fact tactic") & factTactic & debugT("done useAt"))
+              //@todo error if factTactic is not applicable (factTactic | errorT)
+            ) & debugT("end useAt")
+          //@note same as above just with commuteEquivRightT before factTactic
+          case Equiv(other, DotFormula) => //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
+            debugT("start useAt") & cutRightT(C(subst(other)))(p.topLevel) & debugT("  cutted right") & onBranch(
+              (BranchLabels.cutUseLbl, debugT("  useAt result")),
+              //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
+              //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
+              (BranchLabels.cutShowLbl, debugT("  show use") & cohideT(p.topLevel) & assertT(0,1) & debugT("  cohidden") &
+                equivifyRightT(SuccPosition(0)) & debugT("  equivified") &
+                debugT("  CE coming up") & AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr) &
+                debugT("  using fact tactic") & factTactic & debugT("done useAt"))
+              //@todo error if factTactic is not applicable (factTactic | errorT)
+            ) & debugT("end useAt")
+
+          case Equal(DotTerm, other) => assert(false, "equal not implemented yet"); ???
+          case Equal(other, DotTerm) => assert(false, "equal not implemented yet"); ???
+          case Imply(prereq, stuff) => assert(false, "implicational facts not implemented yet"); ???
+        }
+      }
+    }
+
+  }
+
+  private def useAtEquiv(fact: Formula, key: PosInExpr, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
     import PropositionalTacticsImpl._
     require(fact.isInstanceOf[Equiv] || fact.isInstanceOf[Equal] || fact.isInstanceOf[Imply], "equivalence or implication fact expected")
     require(fact.isInstanceOf[Equiv], "only equivalence facts implemented so far")
@@ -256,7 +318,7 @@ object TacticLibrary {
     private def at(s: Sequent, p: Position): Option[Formula] = new FormulaConverter(s(p.topLevel)).subFormulaAt(p.inExpr)
 
     override def applies(s: Sequent, p: Position): Boolean =
-      at(s,p).isDefined && UnificationMatch(keyPart,at(s,p).get).isDefined
+      at(s,p).isDefined && UnificationMatch.unifiable(keyPart,at(s,p).get).isDefined
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
@@ -264,9 +326,7 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val (ctx:Context[Formula],expr) = new FormulaConverter(node.sequent(p.topLevel)).extractContext(p.inExpr)
         val fml = expr.asInstanceOf[Formula]
-        val matched = UnificationMatch(keyPart, fml)
-        assert(matched.isDefined, "must match if applicable already: " + fml + " matches against " + keyPart + " of " + fact)
-        val subst = matched.get
+        val subst = UnificationMatch(keyPart, fml)
         println("useAt unify: " + fml + " matches against " + keyPart + " by " + subst)
         assert(fml == subst(keyPart), "unification matched left successfully: " + fml + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
@@ -279,7 +339,7 @@ object TacticLibrary {
             debugT("  CE coming up") & AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr) &
             (if (key==PosInExpr(0::Nil)) commuteEquivRightT(SuccPosition(0)) else NilT) & debugT("  using fact tactic") & factTactic & debugT("done useAt"))
           //@todo error if factTactic is not applicable (factTactic | errorT)
-         ) & debugT("end useAt"))
+        ) & debugT("end useAt"))
       }
     }
 
@@ -293,12 +353,10 @@ object TacticLibrary {
    * @param form the sequent to reduce this proof node to by a Uniform Substitution
    */
   def US(form: Sequent): Tactic = new ConstructionTactic("US") {
-    def applicable(node: ProofNode) = UnificationMatch(form,node.sequent).isDefined
+    def applicable(node: ProofNode) = UnificationMatch.unifiable(form,node.sequent).isDefined
 
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      val matched = UnificationMatch(form, node.sequent)
-      assert(matched.isDefined, "must match if applicable already: " + node.sequent + " matches against " + form)
-      val subst = matched.get
+      val subst = UnificationMatch(form, node.sequent)
       println("US unify: " + node.sequent + " matches against form " + form + " by " + subst)
       assert(node.sequent == subst(form), "unification matched successfully: " + node.sequent + " is " + subst(form) + " which is " + form + " instantiated by " + subst)
       Some(subst.toTactic(form))

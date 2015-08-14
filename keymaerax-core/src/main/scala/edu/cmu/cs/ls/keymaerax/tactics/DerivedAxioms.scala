@@ -204,6 +204,20 @@ object DerivedAxioms {
 
   lazy val vacuousDiamondAssignNondetT = derivedAxiomT(vacuousDiamondAssignNondetAxiom)
 
+  /**
+   * {{{Axiom "\forall->\exists".
+   *    (\forall x p(x)) -> (\exists x p(x))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val forallThenExistsAxiom = derivedAxiom("\\forall->\\exists",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(\\forall x p(x)) -> (\\exists x p(x))".asFormula)),
+    useAt("all instantiate")(SuccPosition(0, 0::Nil)) &
+      useAt("exists generalize")(SuccPosition(0, 1::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
 
   //  lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",
 //    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)))
