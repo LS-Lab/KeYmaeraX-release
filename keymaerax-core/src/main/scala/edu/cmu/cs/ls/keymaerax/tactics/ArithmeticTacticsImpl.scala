@@ -193,8 +193,8 @@ object ArithmeticTacticsImpl {
   def NegateEqualsT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       // construct axiom instance: s=t <-> !(s!=t)
-      case Equal(f, g) => Equiv(fml, Not(NotEqual(f, g)))
-      case Not(NotEqual(f, g)) => Equiv(Equal(f, g), fml)
+      case Equal(f, g) => Equiv(Not(NotEqual(f, g)), fml)
+      case Not(NotEqual(f, g)) => Equiv(fml, Equal(f, g))
       case _ => False
     }
     uncoverAxiomT("= negate", axiomInstance, _ => NegateEqualsBaseT)
@@ -203,7 +203,7 @@ object ArithmeticTacticsImpl {
   private def NegateEqualsBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = {
       val (sort, f, g) = fml match {
-        case Equiv(Equal(ff, gg), _) => (ff.sort, ff, gg)
+        case Equiv(_, Equal(ff, gg)) => (ff.sort, ff, gg)
         case Not(NotEqual(ff, gg)) => (ff.sort, ff, gg)
       }
       // TODO check that axiom is of the expected form s=t <-> !(s != t)
@@ -221,8 +221,8 @@ object ArithmeticTacticsImpl {
   def NegateLessThanT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       // construct axiom instance: s<t <-> !(s>=t)
-      case Less(f, g) => Equiv(fml, Not(GreaterEqual(f, g)))
-      case Not(GreaterEqual(f, g)) => Equiv(Less(f, g), fml)
+      case Less(f, g) => Equiv(Not(GreaterEqual(f, g)), fml)
+      case Not(GreaterEqual(f, g)) => Equiv(fml, Less(f, g))
       case _ => False
     }
     uncoverAxiomT("< negate", axiomInstance, _ => NegateLessThanBaseT)
@@ -231,7 +231,7 @@ object ArithmeticTacticsImpl {
   def NegateLessThanBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = {
       val (sort, f, g) = fml match {
-        case Equiv(Less(ff, gg), _) => (ff.sort, ff, gg)
+        case Equiv(_, Less(ff, gg)) => (ff.sort, ff, gg)
         case Equiv(Not(GreaterEqual(ff, gg)), _) => (ff.sort, ff, gg)
       }
       val aF = FuncOf(Function("f", None, Unit, sort), Nothing)
