@@ -28,7 +28,7 @@ object DerivedAxioms {
   val derivedAxiomDB = new FileLemmaDB
   type LemmaID = String
 
-  private val AUTO_INSERT = false
+  private val AUTO_INSERT = true
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
   private[tactics] def derivedAxiom(name: String, fact: Provable): Lemma = {

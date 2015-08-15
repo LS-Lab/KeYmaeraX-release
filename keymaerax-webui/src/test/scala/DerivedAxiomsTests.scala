@@ -136,7 +136,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     byUS("all dual")
   )
 
-  lazy val dummyallDualAxiom2 = derivedAxiom("all dual dummy",
+  lazy val dummyallDualAxiom2 = derivedAxiom("all dual dummy 2",
     Sequent(Nil, IndexedSeq(), IndexedSeq("(!\\exists y (!q(y))) <-> \\forall y q(y)".asFormula)),
     byUS("all dual")
   )
@@ -166,4 +166,25 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     useAt("^' derive power",PosInExpr(1::0::Nil))(SuccPosition(0, 0::Nil)) &
       byUS("= reflexive")
   )
+
+  def check(axiom: String, base: Formula, expAnte: Option[Formula], expSucc: Option[Formula], where: Position, in: PosInExpr = PosInExpr(0::Nil)) = {
+    val helper = new ProvabilityTestHelper((x) => println(x))
+    val s =
+      if (where.isAnte) Sequent(Nil, IndexedSeq(base), IndexedSeq())
+      else Sequent(Nil, IndexedSeq(), IndexedSeq(base))
+    val result = helper.runTactic(useAt(axiom, in)(where), new RootNode(s))
+
+    result.openGoals() should have size 1
+    expAnte match {
+      case Some(f) => result.openGoals().head.sequent.ante should contain only f
+      case None => result.openGoals().head.sequent.ante shouldBe empty
+    }
+    expSucc match {
+      case Some(f) => result.openGoals().head.sequent.succ should contain only f
+      case None => result.openGoals().head.sequent.succ shouldBe empty
+    }
+  }
+
+  "Use at" should "all instantiate" in {check("all instantiate", "\\forall x p(x)".asFormula, Some("p(t())".asFormula), None, AntePosition(0))}
+  it should "exists generalize" in {check("exists generalize", "\\exists x p(x)".asFormula, None, Some("p(t())".asFormula), SuccPosition(0), PosInExpr(1::Nil))}
 }
