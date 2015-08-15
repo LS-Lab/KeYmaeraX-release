@@ -2,6 +2,8 @@
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
+
+import edu.cmu.cs.ls.keymaerax.core.SuccPos
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -603,6 +605,13 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result shouldBe 'closed
+  }
+
+  "= commute" should "commute things" in {
+    val s = sucSequent("2=1+1".asFormula)
+    val tactic = ArithmeticTacticsImpl.commuteEqualsT(SuccPos(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals().last.sequent.succ(0) shouldBe "1+1=2".asFormula
   }
 
 }

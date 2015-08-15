@@ -187,6 +187,29 @@ object ArithmeticTacticsImpl {
   }
 
   /**
+   * Creates a new axiom tactic for commuting over equality: f()=g()) <-> (g()=f()
+   * @return The axiom tactic.
+   */
+  def commuteEqualsT : PositionTactic = {
+    def axiomInstance(fml : Formula) = fml match {
+      case Equal(f, g) => Equiv(fml, Equal(g,f))
+    }
+    uncoverAxiomT("= commute", axiomInstance, _ => CommuteEqualsBaseT)
+  }
+  /** Base tactic for commute equals */
+  private def CommuteEqualsBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = {
+      val (sort, f, g) = fml match {
+        case Equiv(Equal(ff, gg), _) => (ff.sort, ff, gg)
+      }
+      val aF = FuncOf(Function("f", None, Unit, sort), Nothing)
+      val aG = FuncOf(Function("g", None, Unit, sort), Nothing)
+      SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
+    }
+    axiomLookupBaseT("= commute", subst, _ => NilPT, (f, ax) => ax)
+  }
+
+  /**
    * Creates a new axiom tactic for negating equality: s=t <-> !(s!=t)
    * @return The axiom tactic.
    */
