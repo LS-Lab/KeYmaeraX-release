@@ -290,7 +290,7 @@ Axiom "all eliminate".
   (\forall x p(??)) -> p(??)
 End.
 
-/* @Derived */
+/* @Derived! */
 Axiom "exists generalize".
   p(t()) -> (\exists x p(x))
 End.

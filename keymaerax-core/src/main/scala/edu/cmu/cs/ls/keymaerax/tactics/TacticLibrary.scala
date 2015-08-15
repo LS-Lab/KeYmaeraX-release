@@ -308,6 +308,9 @@ object TacticLibrary {
           ) & debugT("end useAt")
 
         K.ctx match {
+          case DotFormula =>
+            TactixLibrary.US(Sequent(Nil, IndexedSeq(), IndexedSeq(k.asInstanceOf[Formula]))) & factTactic
+
           case Equiv(DotFormula, other) =>
             equivStep(other, commuteEquivRightT(SuccPosition(0)) & factTactic)
 
