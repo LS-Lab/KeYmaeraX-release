@@ -1299,7 +1299,7 @@ case class CoHide2(pos1: AntePos, pos2: SuccPos) extends TwoPositionRule {
 
 
 /**
- * Cut in the given formula c in place of p.
+ * Cut in the given formula c in place of p on the right.
  * {{{
  * G |- c, D    G |- c->p, D
  * ------------------------- (Cut right)
@@ -1318,10 +1318,10 @@ case class CutRight(c: Formula, pos: SuccPos) extends Rule {
 }
 
 /**
- * Cut in the given formula c in place of p
+ * Cut in the given formula c in place of p on the left.
  * {{{
  * c, G |- D    G |- p->c, D
- * -------------------------
+ * ------------------------- (Cut Left)
  *        p, G |- D
  * }}}
  * Forward Hilbert style rules can move further away, implicationally, from the sequent implication.
