@@ -252,10 +252,12 @@ object TacticLibrary {
     //@todo s(Position) is meant to locate into PosInExpr too
 //    private def at(s: Sequent, p: Position): Option[Formula] = new FormulaConverter(s(p.top)).subFormulaAt(p.inExpr)
     private def at(s: Sequent, p: Position): Option[Expression] =
-      try {Some(new FormulaConverter(s(p.top)).extractContext(p.inExpr)._2)} catch {case _: IllegalArgumentException => None}
+      try {Some(new FormulaConverter(s(p.top)).extractContext(p.inExpr)._2)} catch {
+        case e: NoSuchElementException   => println("useAt ill-position " + p + " in " + s(p.top) + " since " + e); None
+        case e: IllegalArgumentException => println("useAt ill-position " + p + " in " + s(p.top) + " since " + e); None}
 
-    override def applies(s: Sequent, p: Position): Boolean =
-      at(s,p).isDefined && UnificationMatch.unifiable(keyPart,at(s,p).get).isDefined
+    override def applies(s: Sequent, p: Position): Boolean = {val part = at(s,p);
+      part.isDefined && UnificationMatch.unifiable(keyPart,part.get).isDefined}
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
