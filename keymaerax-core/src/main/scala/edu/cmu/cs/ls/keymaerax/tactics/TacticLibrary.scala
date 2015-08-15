@@ -217,6 +217,10 @@ object TacticLibrary {
 //    }
   }
 
+  /*******************************************************************
+    * unification and matching based auto-tactics
+    *******************************************************************/
+
   /**
    * useAt(fact)(pos) uses the given fact at the given position in the sequent.
    * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
@@ -277,6 +281,7 @@ object TacticLibrary {
        * @param c the formula c at position p in context C{_} to be replaced by subst(k)
        * @tparam T
        * @return
+       * @author Andre Platzer
        */
       private def useAt[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: Tactic): Tactic = {
         require(subst(k) == c, "correctly matched input")
@@ -337,6 +342,7 @@ object TacticLibrary {
 
   }
 
+  @deprecated("Use more general useAt instead")
   private def useAtEquiv(fact: Formula, key: PosInExpr, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
     import PropositionalTacticsImpl._
     require(fact.isInstanceOf[Equiv] || fact.isInstanceOf[Equal] || fact.isInstanceOf[Imply], "equivalence or implication fact expected")

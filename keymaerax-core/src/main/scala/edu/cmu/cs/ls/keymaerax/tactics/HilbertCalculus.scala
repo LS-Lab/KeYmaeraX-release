@@ -65,6 +65,8 @@ object HilbertCalculus {
   lazy val Dtimes             : PositionTactic = useAt("*' derive product")
   /** Dquotient: /' derives a quotient */
   lazy val Dquotient          : PositionTactic = useAt("/' derive quotient")
+  /** Dpower: ^' derives a power */
+  lazy val Dpower             : PositionTactic = useAt("^' derive power", PosInExpr(1::0::Nil))
   /** Dcompose: o' derives a function composition by chain rule */
   //lazy val Dcompose           : PositionTactic = ???
 
