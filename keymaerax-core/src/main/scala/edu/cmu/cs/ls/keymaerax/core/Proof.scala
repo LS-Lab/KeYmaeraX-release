@@ -84,7 +84,7 @@ object SeqPos {
    * @see SeqPos#pos
    */
   def apply(signedPos: Int): SeqPos =
-    if (signedPos>0) {SuccPos(signedPos-1)} else {assert(signedPos<0);AntePos(-signedPos-1)}
+    if (signedPos>0) {SuccPos(signedPos-1)} else {assert(signedPos<0, "nonzero positions");AntePos(-signedPos-1)}
 
 }
 
@@ -1305,6 +1305,8 @@ case class CoHide2(pos1: AntePos, pos2: SuccPos) extends TwoPositionRule {
  * ------------------------- (Cut right)
  *        G |- p, D
  * }}}
+ * Forward Hilbert style rules can move further away, implicationally, from the sequent implication.
+ * Backwards tableaux style sequent rules can move closer, implicationally, toward the sequent implication.
  * @derived(cut(c->p) & <(ImplyLeft & <(CloseId, HideRight), HideRight))
  */
 case class CutRight(c: Formula, pos: SuccPos) extends Rule {
@@ -1322,6 +1324,8 @@ case class CutRight(c: Formula, pos: SuccPos) extends Rule {
  * -------------------------
  *        p, G |- D
  * }}}
+ * Forward Hilbert style rules can move further away, implicationally, from the sequent implication.
+ * Backwards tableaux style sequent rules can move closer, implicationally, toward the sequent implication.
  * @note this would perhaps surprising that inconsistent posititioning within this rule, unlike in ImplyLeft?
  * @derived(cut(p->c) & <(ImplyLeft & <(HideLeft, CloseId), HideLeft))
  */
