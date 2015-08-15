@@ -296,7 +296,7 @@ object TacticLibrary {
             equivStep(other, factTactic)
 
           case Equal(DotTerm, other) =>
-            equivStep(other, commuteEqualT(SuccPosition(0)) & factTactic)
+            equivStep(other, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & factTactic)
 
           case Equal(other, DotTerm) =>
             equivStep(other, factTactic)

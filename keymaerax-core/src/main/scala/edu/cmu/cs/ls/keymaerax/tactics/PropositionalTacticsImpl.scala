@@ -438,9 +438,6 @@ object PropositionalTacticsImpl {
     }
   }
 
-  //@todo use "= commute" to commute left and right side of an equality
-  def commuteEqualT: PositionTactic = ???
-
   /**
    * Premise: a |- b
    * Conclusion: |- a -> b

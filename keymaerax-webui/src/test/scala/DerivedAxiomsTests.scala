@@ -84,7 +84,8 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove y-variant of all dual 2" in {check(dummyallDualAxiom2)}
   it should "prove y-variant of exists dual" in {check(dummyexistsDualAxiom)}
   it should "prove +0' dummy" in {check(dummyDplus0)}
-  it should "prove +*' dummy" in {check(dummyDplustimesAxiom)}
+  it should "prove +*' reduce dummy" in {check(dummyDplustimesreduceAxiom)}
+  it should "prove +*' expand dummy" in {check(dummyDplustimesexpandAxiom)}
 
   "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveT)}
   it should "prove !!" in {check(doubleNegationT)}
@@ -119,10 +120,17 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
       byUS("= reflexive")
   )
 
-  lazy val dummyDplustimesAxiom = derivedAxiom("+*' dummy",
+  lazy val dummyDplustimesreduceAxiom = derivedAxiom("+*' reduce dummy",
     Sequent(Nil, IndexedSeq(), IndexedSeq("(f(??) + (g(??)*h(??)))' = (f(??)') + ((g(??)')*h(??) + g(??)*(h(??)'))".asFormula)),
     useAt("*' derive product", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
       useAt("+' derive sum", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil)) &
+      byUS("= reflexive")
+  )
+
+  lazy val dummyDplustimesexpandAxiom = derivedAxiom("+*' expand dummy",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(f(??) + (g(??)*h(??)))' = (f(??)') + ((g(??)')*h(??) + g(??)*(h(??)'))".asFormula)),
+    useAt("+' derive sum")(SuccPosition(0, 0::Nil)) &
+    useAt("*' derive product")(SuccPosition(0, 0::1::Nil)) &
       byUS("= reflexive")
   )
 }
