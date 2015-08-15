@@ -199,6 +199,21 @@ object DerivedAxioms {
   lazy val assignbEquationalT = derivedAxiomT(assignbEquationalAxiom)
 
   /**
+   * {{{Axiom "[:=] vacuous assign".
+   *    [v:=t();]p() <-> p()
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val vacuousAssignbAxiom = derivedAxiom("[:=] vacuous assign",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("[v:=t();]p() <-> p()".asFormula)),
+    useAt("[:=] assign")(SuccPosition(0, 0::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val vacuousAssignbT = derivedAxiomT(vacuousAssignbAxiom)
+
+  /**
    * {{{Axiom "<:=> vacuous assign".
    *    <v:=t();>p() <-> p()
    * End.

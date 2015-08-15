@@ -79,6 +79,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove <:=> assign" in {check(assigndAxiom)}
   it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
   it should "prove [:=] equational" in {check(assignbEquationalAxiom)}
+  it should "prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
   it should "prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}
   it should "prove <':=> differential assign" in {check(assignDAxiom)}
   it should "prove <*:> assign nondet" in {check(nondetassigndAxiom)}
@@ -105,6 +106,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove box dual" in {check(boxDualT)}
   it should "prove <:=> assign" in {check(assigndT)}
   it should "prove [:=] equational" in {check(assignbEquationalT)}
+  it should "prove [:=] vacuous assign" in {check(vacuousAssignbT)}
   it should "prove <:=> vacuous assign" in {check(vacuousAssigndT)}
   it should "prove <':=> differential assign" in {check(assignDT)}
   it should "prove vacuous exists" in {check(vacuousExistsT)}

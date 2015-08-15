@@ -359,6 +359,7 @@ Axiom "[:=] assign equational".
   [v:=t();]p(v) <-> \forall v (v=t() -> p(v))
 End.
 
+/* @derived! */
 Axiom "[:=] vacuous assign".
   [v:=t();]p() <-> p()
 End.
