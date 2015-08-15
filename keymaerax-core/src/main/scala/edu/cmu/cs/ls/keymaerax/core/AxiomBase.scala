@@ -299,7 +299,7 @@ Axiom "vacuous all quantifier".
   (\forall x p()) <-> p()
 End.
 
-/* @Derived */
+/* @Derived! */
 Axiom "vacuous exists quantifier".
   (\exists x p()) <-> p()
 End.
@@ -308,7 +308,7 @@ Axiom "all dual".
   (!\exists x (!p(x))) <-> (\forall x p(x))
 End.
 
-/* @Derived */
+/* @Derived! */
 Axiom "exists dual".
   (!\forall x (!p(x))) <-> (\exists x p(x))
 End.
@@ -340,7 +340,7 @@ Axiom "<> dual".
   (![a;](!p(??))) <-> <a;>p(??)
 End.
 
-/* @Derived */
+/* @Derived! */
 Axiom "[] dual".
   (!<a;>(!p(??))) <-> [a;]p(??)
 End.
@@ -349,7 +349,7 @@ Axiom "[:=] assign".
   [v:=t();]p(v) <-> p(t())
 End.
 
-/* @derived */
+/* @derived! */
 Axiom "<:=> assign".
   <v:=t();>p(v) <-> p(t())
 End.
@@ -363,7 +363,7 @@ Axiom "[:=] vacuous assign".
   [v:=t();]p() <-> p()
 End.
 
-/* @derived */
+/* @derived! */
 Axiom "<:=> vacuous assign".
   <v:=t();>p() <-> p()
 End.
@@ -372,7 +372,7 @@ Axiom "[':=] differential assign".
   [v':=t();]p(v') <-> p(t())
 End.
 
-/* @derived */
+/* @derived! */
 Axiom "<':=> differential assign".
   <v':=t();>p(v') <-> p(t())
 End.
@@ -381,7 +381,7 @@ Axiom "[:*] assign nondet".
   [x:=*;]p(x) <-> (\forall x p(x))
 End.
 
-/* @derived */
+/* @derived! */
 Axiom "<:*> assign nondet".
   <x:=*;>p(x) <-> (\exists x p(x))
 End.
@@ -390,7 +390,7 @@ Axiom "[?] test".
   [?H();]p() <-> (H() -> p())
 End.
 
-/* @Derived */
+/* @Derived! */
 Axiom "<?> test".
   <?H();>p() <-> (H() & p())
 End.
@@ -399,7 +399,7 @@ Axiom "[++] choice".
   [a;++b;]p(??) <-> ([a;]p(??) & [b;]p(??))
 End.
 
-/* @Derived */
+/* @Derived! */
 Axiom "<++> choice".
    <a;++b;>p(??) <-> (<a;>p(??) | <b;>p(??))
 End.
@@ -408,7 +408,7 @@ Axiom "[;] compose".
   [a;b;]p(??) <-> [a;][b;]p(??)
 End.
 
-/* @Derived */
+/* @Derived! */
 Axiom "<;> compose".
   <a;b;>p(??) <-> <a;><b;>p(??)
 End.
