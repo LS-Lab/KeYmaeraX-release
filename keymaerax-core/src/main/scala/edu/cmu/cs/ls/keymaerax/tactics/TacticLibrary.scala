@@ -263,10 +263,22 @@ object TacticLibrary {
         assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
 
-        Some(useAt(subst, keyCtx, keyPart, p, ctx, expr))
+        Some(useAt(subst, keyCtx, keyPart, p, ctx, expr, factTactic))
       }
 
-      private def useAt[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression): Tactic = {
+      /**
+       * useAt(K{k})(C{c}) uses, already under the given substitution subst, the key k from context K{k}
+       * in place of c at position p in context C{_}.
+       * @param subst the substitution subst=unify(k,c)
+       * @param K the context of fact in which key k occurs
+       * @param k the key from context K{_} to use in place of c
+       * @param p the position at which this useAt is applied to
+       * @param C the context C{_} around the position p at which K{k} will be used
+       * @param c the formula c at position p in context C{_} to be replaced by subst(k)
+       * @tparam T
+       * @return
+       */
+      private def useAt[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: Tactic): Tactic = {
         require(subst(k) == c, "correctly matched input")
         require(new FormulaConverter(C(c)).extractContext(p.inExpr) == (C,c), "correctly split at position p")
         require(List((C,DotFormula),(C,DotTerm)).contains(new FormulaConverter(C.ctx).extractContext(p.inExpr)), "correctly split at position p")
@@ -312,8 +324,13 @@ object TacticLibrary {
               (BranchLabels.cutShowLbl, cohideT(p.top) & factTactic)
             )
 
-          case Imply(prereq, stuff) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
-            assert(false, "implicational facts not implemented yet " + K.ctx); ???
+          case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
+            //@todo check positioning etc.
+            useAt(subst, new Context(remainder), k, p, C, c, cutRightT(subst(prereq))(SuccPos(0)) & onBranch(
+              //@note the roles of cutUseLbl and cutShowLbl are really swapped here, since the implication on cutShowLbl will be handled by factTactic
+              (BranchLabels.cutUseLbl, TactixLibrary.master),
+              (BranchLabels.cutShowLbl, /*PropositionalTacticsImpl.InverseImplyRightT &*/ factTactic)
+            ))
         }
       }
     }

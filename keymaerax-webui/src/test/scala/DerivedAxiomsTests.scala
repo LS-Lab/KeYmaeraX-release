@@ -86,6 +86,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove +0' dummy" in {check(dummyDplus0)}
   it should "prove +*' reduce dummy" in {check(dummyDplustimesreduceAxiom)}
   it should "prove +*' expand dummy" in {check(dummyDplustimesexpandAxiom)}
+  it should "prove ^' consequence dummy" in {check(dummyDpowerconsequence)}
 
   "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveT)}
   it should "prove !!" in {check(doubleNegationT)}
@@ -131,6 +132,12 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     Sequent(Nil, IndexedSeq(), IndexedSeq("(f(??) + (g(??)*h(??)))' = (f(??)') + ((g(??)')*h(??) + g(??)*(h(??)'))".asFormula)),
     useAt("+' derive sum")(SuccPosition(0, 0::Nil)) &
     useAt("*' derive product")(SuccPosition(0, 0::1::Nil)) &
+      byUS("= reflexive")
+  )
+
+  lazy val dummyDpowerconsequence = derivedAxiom("^' dummy",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(x^3)' = (3*x^(3-1))*(x)'".asFormula)),
+    useAt("^' derive power",PosInExpr(1::0::Nil))(SuccPosition(0, 0::Nil)) &
       byUS("= reflexive")
   )
 }
