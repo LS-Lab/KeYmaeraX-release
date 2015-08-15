@@ -50,6 +50,7 @@ object HereP extends PosInExpr
   abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
     require (index >= 0, "nonnegative index " + index)
     def isAnte: Boolean
+    def isSucc: Boolean = !isAnte
     def getIndex: Int = index
 
     /**

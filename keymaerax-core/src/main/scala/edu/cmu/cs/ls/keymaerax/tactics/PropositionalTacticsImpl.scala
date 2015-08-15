@@ -440,7 +440,7 @@ object PropositionalTacticsImpl {
 
   /**
    * {{{
-   *   a -> b
+   *   |- a -> b
    * ----------
    *   a |- b
    * }}}

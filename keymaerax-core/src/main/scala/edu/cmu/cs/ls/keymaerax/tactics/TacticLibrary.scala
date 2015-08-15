@@ -238,7 +238,7 @@ object TacticLibrary {
    * @param key the part of the Formula fact to unify the indicated position of the sequent with
    * @param factTactic the tactic to use to prove the instance of the fact obtained after unification
    * @todo key==HereP could call byUS(fact)
-   * @todo generalize to Equal using CQ instead of CE
+   * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
    */
   def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
     import PropositionalTacticsImpl._
@@ -274,17 +274,17 @@ object TacticLibrary {
         /** Equivalence rewriting step */
         def equivStep(other: Expression, factTactic: Tactic): Tactic =
         //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
-          debugT("start useAt") & cutRightT(C(subst(other)))(p.topLevel) & debugT("  cutted right") & onBranch(
-            (BranchLabels.cutUseLbl, debugT("  useAt result")),
+          debugT("start useAt") & cutRightT(C(subst(other)))(p.top) & debugT("  cutted right") & onBranch(
+            //(BranchLabels.cutUseLbl, debugT("  useAt result")),
             //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
             //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-            (BranchLabels.cutShowLbl, debugT("  show use") & cohideT(p.topLevel) & assertT(0,1) & debugT("  cohidden") &
-              equivifyRightT(SuccPosition(0)) & debugT("  equivified") &
-              debugT("  CE coming up") & (
+            (BranchLabels.cutShowLbl, debugT("    show use") & cohideT(p.top) & assertT(0,1) & debugT("    cohidden") &
+              equivifyRightT(SuccPosition(0)) & debugT("    equivified") &
+              debugT("    CE coming up") & (
               if (other.kind==FormulaKind) AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr)
               else if (other.kind==TermKind) AxiomaticRuleTactics.equationCongruenceT(p.inExpr)
               else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-              debugT("  using fact tactic") & factTactic & debugT("done useAt"))
+              debugT("    using fact tactic") & factTactic & debugT("  done useAt"))
             //@todo error if factTactic is not applicable (factTactic | errorT)
           ) & debugT("end useAt")
 
@@ -301,7 +301,19 @@ object TacticLibrary {
           case Equal(other, DotTerm) =>
             equivStep(other, factTactic)
 
-          case Imply(prereq, stuff) => assert(false, "implicational facts not implemented yet"); ???
+          //@todo not sure if the following two cases really work as intended
+          case Imply(other, DotFormula) if p.isSucc && p.isTopLevel =>
+            cutRightT(subst(other))(p.top) & onBranch(
+              (BranchLabels.cutShowLbl, cohideT(p.top) & factTactic)
+            )
+
+          case Imply(DotFormula, other) if p.isAnte && p.isTopLevel =>
+            cutLeftT(subst(other))(p.top) & onBranch(
+              (BranchLabels.cutShowLbl, cohideT(p.top) & factTactic)
+            )
+
+          case Imply(prereq, stuff) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
+            assert(false, "implicational facts not implemented yet " + K.ctx); ???
         }
       }
     }

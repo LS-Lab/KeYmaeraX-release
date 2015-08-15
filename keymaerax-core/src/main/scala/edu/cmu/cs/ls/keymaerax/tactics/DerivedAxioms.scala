@@ -213,9 +213,13 @@ object DerivedAxioms {
    */
   lazy val forallThenExistsAxiom = derivedAxiom("\\forall->\\exists",
     Sequent(Nil, IndexedSeq(), IndexedSeq("(\\forall x p(x)) -> (\\exists x p(x))".asFormula)),
-    useAt("all instantiate")(SuccPosition(0, 0::Nil)) &
-      useAt("exists generalize")(SuccPosition(0, 1::Nil)) &
-      byUS(equivReflexiveAxiom)
+    //      useAt("all instantiate")(SuccPosition(0, 0::Nil)) &
+    //      useAt("exists generalize")(SuccPosition(0, 1::Nil)) &
+    //      byUS(equivReflexiveAxiom)
+    implyR(SuccPosition(0)) &
+      useAt("exists generalize", PosInExpr(1::Nil))(SuccPosition(0)) &
+      useAt("all instantiate")(AntePosition(0)) &
+      closeId
   )
 
 
