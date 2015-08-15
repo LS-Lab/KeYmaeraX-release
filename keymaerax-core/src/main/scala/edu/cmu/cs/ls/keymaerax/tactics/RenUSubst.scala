@@ -22,19 +22,21 @@ import scala.collection.immutable._
  * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
  */
 final case class RenUSubst(subsDefsInput: immutable.Seq[Pair[Expression,Expression]]) extends (Expression => Expression) {
-  applicable()
-  /** unique left hand sides in subsDefs */
-  private def applicable(): Unit = {
-    // check that we never replace n by something and then again replacing the same n by something
-    val lefts: List[Expression] = subsDefsInput.map(_._1).toList
-    scala.Predef.require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefsInput)
-  }
-
   /** automatically filter out identity substitution no-ops */
   private val rens: immutable.Seq[Pair[Variable,Variable]] = subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable]).
     map(sp => (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable]))
   private val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filterNot(sp => sp._1.isInstanceOf[Variable]).
     map(sp => SubstitutionPair(sp._1, sp._2))
+
+  //@note order to ensure toString already works in error message
+  applicable()
+  /** unique left hand sides in subsDefs */
+  private def applicable(): Unit = {
+    // check that we never replace n by something and then again replacing the same n by something
+    val lefts: List[Expression] = subsDefsInput.map(_._1).toList
+    scala.Predef.require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees\n" + this)
+  }
+
   /**
    * The uniform substitution part of this renaming uniform substitution
    * @see [[substitution]]

@@ -136,7 +136,6 @@ object DerivedAxioms {
    *   (!\forall x (!p(x))) <-> (\exists x p(x))
    * End.
    * }}}
-   * @todo reorient
    * @Derived
    */
   lazy val existsDualAxiom = derivedAxiom("exists dual",
@@ -149,15 +148,192 @@ object DerivedAxioms {
 
   lazy val existsDualT = derivedAxiomT(existsDualAxiom)
 
+  /**
+   * {{{Axiom "[] dual".
+   *    (!<a;>(!p(??))) <-> [a;]p(??)
+   * End.
+   * }}}
+   * @note almost same proof as "exists dual"
+   * @Derived
+   */
+  lazy val boxDualAxiom = derivedAxiom("[] dual",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(!<a;>(!p(??))) <-> [a;]p(??)".asFormula)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::1::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val boxDualT = derivedAxiomT(boxDualAxiom)
+
+  /**
+   * {{{Axiom "<:=> assign".
+   *    <v:=t();>p(v) <-> p(t())
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val assigndAxiom = derivedAxiom("<:=> assign",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("<v:=t();>p(v) <-> p(t())".asFormula)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+      useAt("[:=] assign")(SuccPosition(0, 0::0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val assigndT = derivedAxiomT(assigndAxiom)
+
+  /**
+   * {{{Axiom "[:=] assign equational".
+   *    [v:=t();]p(v) <-> \forall v (v=t() -> p(v))
+   * End.
+   * }}}
+   * @Derived
+   * @todo
+   */
+  lazy val assignbEquationalAxiom = derivedAxiom("[:=] assign equational",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("[v:=t();]p(v) <-> \\forall v (v=t() -> p(v))".asFormula)),
+    skip
+  )
+
+  lazy val assignbEquationalT = derivedAxiomT(assignbEquationalAxiom)
+
+  /**
+   * {{{Axiom "<:=> vacuous assign".
+   *    <v:=t();>p() <-> p()
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val vacuousAssigndAxiom = derivedAxiom("<:=> vacuous assign",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("<v:=t();>p() <-> p()".asFormula)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+      useAt("[:=] vacuous assign")(SuccPosition(0, 0::0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val vacuousAssigndT = derivedAxiomT(vacuousAssigndAxiom)
+
+  /**
+   * {{{Axiom "<':=> differential assign".
+   *    <v':=t();>p(v') <-> p(t())
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val assignDAxiom = derivedAxiom("<':=> differential assign",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("<v':=t();>p(v') <-> p(t())".asFormula)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+      useAt("[':=] differential assign")(SuccPosition(0, 0::0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val assignDT = derivedAxiomT(assignDAxiom)
+
+  /**
+   * {{{Axiom "<:*> assign nondet".
+   *    <x:=*;>p(x) <-> (\exists x p(x))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val nondetassigndAxiom = derivedAxiom("<*:> assign nondet",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("<x:=*;>p(x) <-> (\\exists x p(x))".asFormula)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+      useAt("[:*] assign nondet")(SuccPosition(0, 0::0::Nil)) &
+      useAt("all dual", PosInExpr(1::Nil))(SuccPosition(0, 0::0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::0::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val nondetassigndT = derivedAxiomT(nondetassigndAxiom)
+
+  /**
+   * {{{Axiom "<?> test".
+   *    <?H();>p() <-> (H() & p())
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val testdAxiom = derivedAxiom("<?> test",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("<?H();>p() <-> (H() & p())".asFormula)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+      useAt("[?] test")(SuccPosition(0, 0::0::Nil)) &
+      prop
+  )
+
+  lazy val testdT = derivedAxiomT(testdAxiom)
+
+  /**
+   * {{{Axiom "<++> choice".
+   *    <a;++b;>p(??) <-> (<a;>p(??) | <b;>p(??))
+   * End.
+   * }}}
+   * @todo first show de Morgan
+   */
+  lazy val choicedAxiom = derivedAxiom("<++> choice",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(??) <-> (<a;>p(??) | <b;>p(??))".asFormula)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+      useAt("[++] choice")(SuccPosition(0, 0::0::Nil)) &
+      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::0::Nil)) &
+      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
+      prop
+  )
+
+  /**
+   * {{{Axiom "<;> compose".
+   *    <a;b;>p(??) <-> <a;><b;>p(??)
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val composedAxiom = derivedAxiom("<;> compose",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("<a;b;>p(??) <-> <a;><b;>p(??)".asFormula)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+      useAt("[;] compose")(SuccPosition(0, 0::0::Nil)) &
+      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
+      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 1::0::1::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  /**
+   * {{{Axiom "<*> iterate".
+   *    <{a;}*>p(??) <-> (p(??) | <a;><{a;}*> p(??))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val iteratedAxiom = derivedAxiom("<*> iterate",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("<{a;}*>p(??) <-> (p(??) | <a;><{a;}*> p(??))".asFormula)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+      useAt("[*] iterate")(SuccPosition(0, 0::0::Nil)) &
+      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::1::1::Nil)) &
+      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 1::1::0::1::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
   //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
   //private def useAt(lem: ApplyRule[LookupLemma]): PositionTactic = TactixLibrary.useAt(lem.rule.lemma.fact)
+
+  /**
+   * {{{Axiom "exists generalize".
+   *    p(t()) -> (\exists x p(x))
+   * End.
+   * }}}
+   * @Derived
+   * @todo
+   */
 
   /**
    * {{{Axiom "vacuous exists quantifier".
    *    (\exists x p()) <-> p()
    * End.
    * }}}
-   * @todo reorient
    * @Derived
    */
   lazy val vacuousExistsAxiom = derivedAxiom("vacuous exists quantifier",
@@ -174,7 +350,6 @@ object DerivedAxioms {
    * {{{Axiom "V[:*] vacuous assign nondet".
    *    [x:=*;]p() <-> p()
    * End.
-   * }}}
    * @todo reorient
    * @Derived
    */

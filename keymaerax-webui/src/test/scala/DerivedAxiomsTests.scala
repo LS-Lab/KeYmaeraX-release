@@ -75,6 +75,17 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
+  it should "prove box dual" in {check(boxDualAxiom)}
+  it should "prove <:=> assign" in {check(assigndAxiom)}
+  it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
+  it should "prove [:=] equational" in {check(assignbEquationalAxiom)}
+  it should "prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}
+  it should "prove <':=> differential assign" in {check(assignDAxiom)}
+  it should "prove <*:> assign nondet" in {check(nondetassigndAxiom)}
+  it should "prove <?> test" in {check(testdAxiom)}
+  it should "prove <++> choice" in {check(choicedAxiom)}
+  it should "prove <;> compose" in {check(composedAxiom)}
+  it should "prove <*> iterate" in {check(iteratedAxiom)}
   it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom)}
@@ -91,11 +102,24 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveT)}
   it should "prove !!" in {check(doubleNegationT)}
   it should "prove exists dual" in {check(existsDualT)}
+  it should "prove box dual" in {check(boxDualT)}
+  it should "prove <:=> assign" in {check(assigndT)}
+  it should "prove [:=] equational" in {check(assignbEquationalT)}
+  it should "prove <:=> vacuous assign" in {check(vacuousAssigndT)}
+  it should "prove <':=> differential assign" in {check(assignDT)}
   it should "prove vacuous exists" in {check(vacuousExistsT)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetT)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetT)}
   it should "prove abs" in {check(abs)}
 
+
+  lazy val dummyassigndVvariant = derivedAxiom("<:=> assign",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("<v:=t();>p(v) <-> p(t())".asFormula)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+      useAt("[:=] assign")(SuccPosition(0, 0::0::Nil)) &
+      useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
 
   lazy val dummyexistsDualAxiom = derivedAxiom("exists dual dummy",
     Sequent(Nil, IndexedSeq(), IndexedSeq("(!\\forall y (!p(y))) <-> \\exists y p(y)".asFormula)),
