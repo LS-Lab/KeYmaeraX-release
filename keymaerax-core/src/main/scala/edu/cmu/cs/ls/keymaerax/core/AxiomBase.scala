@@ -418,12 +418,12 @@ Axiom "[*] iterate".
   [{a;}*]p(??) <-> (p(??) & [a;][{a;}*] p(??))
 End.
 
-/* @Derived */
+/* @Derived! */
 Axiom "<*> iterate".
   <{a;}*>p(??) <-> (p(??) | <a;><{a;}*> p(??))
 End.
 
-/* @Derived */
+/* @Derived! */
 Axiom "Domain Constraint Conjunction Reordering".
   [{c & (H(??) & q(??))}]p(??) <-> [{c & (q(??) & H(??))}]p(??)
 End.
@@ -517,8 +517,7 @@ End.
  * DERIVATION FOR FORMULAS
  */
 
-/* @todo added and probably not nec. */
-/* @derived by CE */
+/* @derived! by CE */
 Axiom "->' derive imply".
   (p(??) -> q(??))' <-> (!p(??) | q(??))'
 End.
@@ -638,7 +637,7 @@ End.
 
 /**
  * Boolean algebra
- * @derived
+ * @derived!
  */
  Axiom "& associative".
   ((p() & q()) & r()) <-> (p() & (q() & r()))
@@ -702,11 +701,11 @@ Axiom "* closed".
 End.
 
 Axiom "<".
-  s<t <-> 0 < t-s
+  (s<t) <-> (0 < t-s)
 End.
 
 Axiom ">".
-  s>t <-> t<s
+  (s>t) <-> (t<s)
 End.
 */
 

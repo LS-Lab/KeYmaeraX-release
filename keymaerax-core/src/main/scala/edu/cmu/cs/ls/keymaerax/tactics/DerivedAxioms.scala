@@ -394,6 +394,79 @@ object DerivedAxioms {
 
   lazy val vacuousDiamondAssignNondetT = derivedAxiomT(vacuousDiamondAssignNondetAxiom)
 
+
+  /**
+   * {{{Axiom "Domain Constraint Conjunction Reordering".
+   *    [{c & (H(??) & q(??))}]p(??) <-> [{c & (q(??) & H(??))}]p(??)
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val domainCommute = derivedAxiom("Domain Constraint Conjunction Reordering",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("[{c & (H(??) & q(??))}]p(??) <-> [{c & (q(??) & H(??))}]p(??)".asFormula)),
+    useAt(andCommute)(SuccPosition(0, 0::0::1::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val domainCommuteT = derivedAxiomT(domainCommute)
+
+  /**
+   * {{{Axiom "& commute".
+   *    (p() & q()) <-> (q() & p())
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val andCommute = derivedAxiom("& commute",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(p() & q()) <-> (q() & p())".asFormula)),
+    prop
+  )
+
+  lazy val andCommuteT = derivedAxiomT(andCommute)
+
+  /**
+   * {{{Axiom "& associative".
+   *    ((p() & q()) & r()) <-> (p() & (q() & r()))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val andAssoc = derivedAxiom("& associative",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("((p() & q()) & r()) <-> (p() & (q() & r()))".asFormula)),
+    prop
+  )
+
+  lazy val andAssocT = derivedAxiomT(andAssoc)
+
+  /**
+   * {{{Axiom "-> expand".
+   *    (p() -> q()) <-> ((!p()) | q())
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val implyExpand = derivedAxiom("-> expand",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(p() -> q()) <-> ((!p()) | q())".asFormula)),
+    prop
+  )
+
+  lazy val implyExpandT = derivedAxiomT(implyExpand)
+
+  /**
+   * {{{Axiom "->' derive imply".
+   *    (p(??) -> q(??))' <-> (!p(??) | q(??))'
+   * End.
+   * }}}
+   * @Derived by CE
+   */
+  lazy val Dimply = derivedAxiom("->' derive imply",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(p(??) -> q(??))' <-> (!p(??) | q(??))'".asFormula)),
+    useAt(implyExpand)(SuccPosition(0, 0::0::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val DimplyT = derivedAxiomT(Dimply)
+
   /**
    * {{{Axiom "\forall->\exists".
    *    (\forall x p(x)) -> (\exists x p(x))
