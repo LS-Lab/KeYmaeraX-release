@@ -11,8 +11,9 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
  * Created by smitsch on 7/03/15.
  * @author Stefan Mitsch
  */
-object KeYmaeraXLemmaParser extends (String => (String, Formula, (String, String))) {
-  private type Lemma = (String, Formula, (String, String))
+object KeYmaeraXLemmaParser extends (String => (String, Formula, Evidence)) {
+  /** the lemma name, the lemma conclusion, and the supporting evidence */
+  private type Lemma = (String, Formula, Evidence)
 
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
@@ -46,7 +47,7 @@ object KeYmaeraXLemmaParser extends (String => (String, Formula, (String, String
       throw new IllegalArgumentException("Expected only one lemma")
   }
 
-  def parseNextLemma(input: TokenStream): (String, Formula, (String, String), TokenStream) = {
+  def parseNextLemma(input: TokenStream): (String, Formula, Evidence, TokenStream) = {
     require(input.head.tok.equals(LEMMA_BEGIN), "expected ALP file to begin with Lemma block.")
     require(input.tail.head.tok.isInstanceOf[LEMMA_AXIOM_NAME], "expected ALP block to have a string as a name")
 
@@ -60,9 +61,9 @@ object KeYmaeraXLemmaParser extends (String => (String, Formula, (String, String
 
     val lemma = KeYmaeraXParser.formulaTokenParser(lemmaTokens :+ Token(EOF, UnknownLocation))
 
-    val (toolInput, toolOutput, remainder) = parseEvidence(remainderTokens.tail)
+    val (evidence, remainder) = parseEvidence(remainderTokens.tail)
 
-    (name, lemma, (toolInput, toolOutput), remainder)
+    (name, lemma, evidence, remainder)
   }
 
   /**
@@ -70,45 +71,54 @@ object KeYmaeraXLemmaParser extends (String => (String, Formula, (String, String
    * @param input Token string for the lemma file.
    * @return A list of evidence (tool input/output).
    */
-  def parseEvidence(input: TokenStream): (String, String, TokenStream) = {
+  def parseEvidence(input: TokenStream): (Evidence, TokenStream) = {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
     require(input.head.tok.equals(TOOL_BEGIN), "expected Tool block but found " + input.head)
-    val (nextInput, nextOutput, remainder) = parseNextEvidence(input)
+    val (evidence, remainder) = parseNextEvidence(input)
     if(remainder.length == 1 && remainder.head.tok.equals(EOF))
-      (nextInput, nextOutput, remainder)
+      (evidence, remainder)
     else
       throw new IllegalArgumentException("Expected only one tool evidence")
   }
 
-  def parseNextEvidence(input: TokenStream): (String, String, TokenStream) = {
+  def parseNextEvidence(input: TokenStream): (Evidence, TokenStream) = {
     require(input.head.tok.equals(TOOL_BEGIN), "expected to begin with Tool block.")
 
     //Find the End. token and exclude it.
     val (toolTokens, remainderTokens) =
-      input.tail.tail.span(x => !x.tok.equals(END_BLOCK)) //1st element is TOOL_BEGIN, 2nd is "input".
+      input.tail.tail.span(x => !x.tok.equals(END_BLOCK)) //1st element is TOOL_BEGIN, 2nd is a tool evidence key.
 
-    val (toolInput, toolOutput) = parseToolInputOutput(toolTokens)
+    val evidence = parseToolEvidenceLines(toolTokens)
 
-    (toolInput, toolOutput, remainderTokens.tail)
+    (ToolEvidence(evidence), remainderTokens.tail)
   }
 
-  def parseToolInputOutput(input: TokenStream): (String, String) = {
-    require(input.head.tok.equals(TOOL_INPUT), "expected to begin with input.")
-    require(input.tail.head.tok match { case TOOL_IO(_) => true case _ => false }, "expected actual input.")
-    require(input.tail.tail.head.tok.equals(TOOL_OUTPUT), "expected to follow with output.")
-    require(input.tail.tail.tail.head.tok match { case TOOL_IO(_) => true case _ => false }, "expected actual output.")
+  def parseToolEvidenceLines(input: TokenStream): Map[String, String] = {
+    require(input.head.tok match { case IDENT(_, _) => true case _ => false }, "expected to begin with key.")
+    require(input.tail.head.tok match { case TOOL_VALUE(_) => true case _ => false }, "expected actual value.")
 
-    val toolInput = input.tail.head match {
-      case Token(TOOL_IO(x),_) => x
-      case _ => throw new AssertionError("Require should have failed.")
+    var evidence = Map[String, String]()
+    var line = input
+
+    while (line.nonEmpty &&
+      (line.head.tok match { case IDENT(_, _) => true case _ => false }) &&
+      (line.tail.head.tok match { case TOOL_VALUE(_) => true case _ => false })) {
+      val key = line.head match {
+        case Token(IDENT(x, None),_) => x
+        case Token(IDENT(x, Some(i)),_) => x + "_" + i
+        case _ => throw new AssertionError("Require should have failed.")
+      }
+
+      val value = line.tail.head match {
+        case Token(TOOL_VALUE(x),_) => x
+        case _ => throw new AssertionError("Require should have failed.")
+      }
+
+      evidence = evidence + (key -> value)
+      line = line.tail.tail
     }
 
-    val toolOutput = input.tail.tail.tail.head match {
-      case Token(TOOL_IO(x),_) => x
-      case _ => throw new AssertionError("Require should have failed.")
-    }
-
-    (toolInput, toolOutput)
+    evidence
   }
 
 }

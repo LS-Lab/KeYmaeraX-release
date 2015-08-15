@@ -220,18 +220,14 @@ object LEMMA_BEGIN extends Terminal("Lemma") {
 object TOOL_BEGIN extends Terminal("Tool") {
   override def regexp = """Tool""".r
 }
-case class TOOL_IO(var s: String) extends Terminal("<string>") {
-  override def regexp = TOOL_IO_PAT.regexp
+case class TOOL_VALUE(var s: String) extends Terminal("<string>") {
+  override def regexp = TOOL_VALUE_PAT.regexp
 }
-object TOOL_IO_PAT {
-  def regexp = """\"(.*)\"""".r
+object TOOL_VALUE_PAT {
+  // values are nested into quadruple ", because they can contain single, double, or triple " themselves (arbitrary Scala code)
+  def regexp = "\"{4}(([^\"]|\"(?!\"\"\")|\"\"(?!\"\")|\"\"\"(?!\"))*)\"{4}".r
+//  def regexp = "\"([^\"]*)\"".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
-}
-object TOOL_INPUT extends Terminal("input") {
-  override def regexp = """input""".r
-}
-object TOOL_OUTPUT extends Terminal("output") {
-  override def regexp = """output""".r
 }
 ///////////
 
@@ -464,19 +460,11 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
         case _ => throw new Exception("Encountered delimited string in non-axiom lexing mode.")
       }
       //Lemma file cases (2)
-      case TOOL_INPUT.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(TOOL_INPUT, loc)
-        case _ => throw new Exception("Encountered ``input`` in non-lemma lexing mode.")
-      }
-      case TOOL_OUTPUT.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(TOOL_OUTPUT, loc)
-        case _ => throw new Exception("Encountered ``output`` in non-lemma lexing mode.")
-      }
-      case TOOL_IO_PAT.startPattern(str) => mode match {
+      case TOOL_VALUE_PAT.startPattern(str, _) => mode match {
         case LemmaFileMode() =>
-          //A tool input/output looks like "blah" but only blah gets grouped, so there are two
+          //A tool value looks like """"blah"""" but only blah gets grouped, so there are eight
           // extra characters to account for.
-          consumeColumns(str.length + 2, TOOL_IO(str), loc)
+          consumeColumns(str.length + 8, TOOL_VALUE(str), loc)
         case _ => throw new Exception("Encountered delimited string in non-lemma lexing mode.")
       }
 

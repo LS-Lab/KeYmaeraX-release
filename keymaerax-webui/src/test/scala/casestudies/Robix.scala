@@ -270,19 +270,20 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val inputModel = KeYmaeraXProblemParser(scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafety.key").mkString)
 
-
+    val qq = "\"\"\"\""
     val expectedProofFileContent =
-      s"""Lemma "passivesafety.key".
-        |  (${KeYmaeraXPrettyPrinter(inputModel)}) <-> true
-        |End.
-        |Tool.
-        |  input "${scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafety.key").mkString}"
-        |  tactic "${scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/PassiveSafetyTacticGenerator.scala").mkString}"
-        |  proof ""
-        |End.
-        |""".stripMargin
+      "Lemma \"passivesafety\".\n" +
+        s"  ${KeYmaeraXPrettyPrinter(inputModel)}\n" +
+        "End.\n\n" +
+        "Tool.\n"+
+        s"  tool ${qq}KeYmaera X$qq\n" +
+        s"  model $qq${scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafety.key").mkString}$qq\n" +
+        s"  tactic $qq${scala.io.Source.fromFile("keymaerax-webui/src/test/resources/examples/casestudies/robix/PassiveSafetyTacticGenerator.scala").mkString}$qq\n"+
+        s"  proof $qq$qq\n"+
+        "End."
 
-    val proofFileContent = scala.io.Source.fromFile(outputFileName).mkString
+    // drop evidence lines, those are different in every test due to temporary file name
+    val proofFileContent = scala.io.Source.fromFile(outputFileName).getLines().toList.drop(4).mkString("\n")
     proofFileContent shouldBe expectedProofFileContent
   }
 
