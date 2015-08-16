@@ -243,7 +243,6 @@ object TacticLibrary {
    * @param fact the Formula to use to simplify at the indicated position of the sequent
    * @param key the part of the Formula fact to unify the indicated position of the sequent with
    * @param factTactic the tactic to use to prove the instance of the fact obtained after unification
-   * @todo key==HereP could call byUS(fact)
    * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
    */
   def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
@@ -305,6 +304,7 @@ object TacticLibrary {
 
         K.ctx match {
           case DotFormula =>
+            //@note this should be similar to byUS(fact) using factTactic to prove fact after instantiation
             TactixLibrary.US(Sequent(Nil, IndexedSeq(), IndexedSeq(k.asInstanceOf[Formula]))) & factTactic
 
           case Equiv(DotFormula, other) =>
@@ -327,7 +327,7 @@ object TacticLibrary {
 
           case Imply(DotFormula, other) if p.isAnte && p.isTopLevel =>
             cutLeftT(subst(other))(p.top) & onBranch(
-              (BranchLabels.cutShowLbl, cohideT(p.top) & factTactic)
+              (BranchLabels.cutShowLbl, lastSucc(cohideT) & factTactic)
             )
 
           case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
