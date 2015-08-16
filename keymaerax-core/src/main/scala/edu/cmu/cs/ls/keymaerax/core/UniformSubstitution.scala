@@ -264,6 +264,9 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
     }
   }
 
+  /** Union of uniform substitutions, i.e., both replacement lists merged. */
+  def ++(other: USubst): USubst = USubst(this.subsDefsInput ++ other.subsDefsInput)
+
   /**
    * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).
    * That is the (new) free variables introduced by this substitution, i.e.
