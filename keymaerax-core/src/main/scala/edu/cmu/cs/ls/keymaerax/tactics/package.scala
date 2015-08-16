@@ -112,20 +112,20 @@ package edu.cmu.cs.ls.keymaerax
  * {{{
  * import TactixLibrary._
  * import DerivedAxioms._
- * // Proof by pointing of  |- <v:=g();>q(v) <-> q(g())
+ * // Proof by pointing of  |- <v:=2*v+1;>q(v) <-> q(2*v+1)
  * val proof = TactixLibrary.proveBy(
- *   Sequent(Nil, IndexedSeq(), IndexedSeq("<v:=g();>q(v) <-> q(g())".asFormula)),
+ *   Sequent(Nil, IndexedSeq(), IndexedSeq("<v:=2*v+1;>q(v) <-> q(2*v+1)".asFormula)),
  *   // use "<> dual" axiom backwards at the indicated position on
- *   // |- __<v:=g();>q(v)__ <-> q(g())
+ *   // |- __<v:=2*v+1;>q(v)__ <-> q(2*v+1)
  *   useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
  *   // use "[:=] assign" axiom forward at the indicated position on
- *   // |- !__[v:=g();]!q(v)__ <-> q(g())
+ *   // |- !__[v:=2*v+1;]!q(v)__ <-> q(2*v+1)
  *   useAt("[:=] assign")(SuccPosition(0, 0::0::Nil)) &
  *   // use double negation at the indicated position on
- *   // |- __!!q(g())__ <-> q(g())
+ *   // |- __!!q(2*v+1)__ <-> q(2*v+1)
  *   useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
  *   // close by (an instance of) reflexivity |- p() <-> p()
- *   // |- q(g()) <-> q(g())
+ *   // |- q(2*v+1) <-> q(2*v+1)
  *   byUS(equivReflexiveAxiom)
  * )
  * }}}
@@ -155,6 +155,7 @@ package edu.cmu.cs.ls.keymaerax
  *   prop
  * )
  * }}}
+ * More proofs by pointing are in [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  *
  * @todo Expand descriptions
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary]]
