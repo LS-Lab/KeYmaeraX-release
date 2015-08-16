@@ -4,6 +4,8 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic, ApplyRule}
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 
@@ -189,11 +191,12 @@ object DerivedAxioms {
    * End.
    * }}}
    * @Derived
-   * @todo
    */
   lazy val assignbEquationalAxiom = derivedAxiom("[:=] assign equational",
     Sequent(Nil, IndexedSeq(), IndexedSeq("[v:=t();]p(v) <-> \\forall v (v=t() -> p(v))".asFormula)),
-    skip
+    useAt("[:=] assign")(SuccPosition(0, 0::Nil)) &
+      commuteEquivRightT(SuccPos(0)) &
+      byUS(allSubstitute)
   )
 
   lazy val assignbEquationalT = derivedAxiomT(assignbEquationalAxiom)
@@ -356,6 +359,23 @@ object DerivedAxioms {
         useAt("all instantiate", PosInExpr(0::Nil))(AntePosition(1, Nil)) &
         prop
   )
+
+  /**
+   * {{{Axiom "all substitute".
+   *    (\forall x (x=t() -> p(x))) <-> p(t())
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val allSubstitute = derivedAxiom("all substitute",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(\\forall x (x=t() -> p(x))) <-> p(t())".asFormula)),
+    equivR(SuccPos(0)) & onBranch(
+      (equivLeftLbl, useAt("all instantiate")(AntePos(0)) & prop),
+      (equivRightLbl, allR(SuccPos(0)) &
+        useAt("const formula congruence", PosInExpr(1::0::Nil))(SuccPos(0)) & close)
+    )
+  )
+
 
   /**
    * {{{Axiom "vacuous exists quantifier".

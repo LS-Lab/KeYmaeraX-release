@@ -12,6 +12,14 @@ import edu.cmu.cs.ls.keymaerax.core._
 import scala.collection.immutable
 import scala.collection.immutable._
 
+object RenUSubst {
+  private def renamingPartOnly(subsDefsInput: immutable.Seq[Pair[Expression,Expression]]): immutable.Seq[Pair[Variable,Variable]] =
+    subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable]).
+      map(sp => (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable]))
+  private[tactics] def renamingPart(subsDefsInput: immutable.Seq[Pair[Expression,Expression]]): RenUSubst =
+    new RenUSubst(renamingPartOnly(subsDefsInput))
+}
+
 /**
  * Renaming Uniform Substitution, combining URename and USubst.
  * Liberal list of SubstitutionPair represented as merely a list of Pair,
@@ -23,8 +31,7 @@ import scala.collection.immutable._
  */
 final case class RenUSubst(subsDefsInput: immutable.Seq[Pair[Expression,Expression]]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops */
-  private val rens: immutable.Seq[Pair[Variable,Variable]] = subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable]).
-    map(sp => (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable]))
+  private val rens: immutable.Seq[Pair[Variable,Variable]] = RenUSubst.renamingPartOnly(subsDefsInput)
   private val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filterNot(sp => sp._1.isInstanceOf[Variable]).
     map(sp => SubstitutionPair(sp._1, sp._2))
 

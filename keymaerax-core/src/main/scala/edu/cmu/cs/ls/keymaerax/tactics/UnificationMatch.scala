@@ -51,25 +51,25 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
 
   //@note To circumvent shortcomings of renaming-unaware unification algorithm, the following code unifies for renaming, renames, and then reunifies the renamed outcomes for substitution
   def apply(e1: Term, e2: Term): Subst = {try {
-    val ren = Subst(unify(e1,e2)).renaming
+    val ren = RenUSubst.renamingPart(unify(e1,e2))
     Subst(unify(ren(e1),e2) ++ ren.subsDefsInput)
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + " with " + e2.prettyString)}
   } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
 
   def apply(e1: Formula, e2: Formula): Subst = {try {
-    val ren = Subst(unify(e1,e2)).renaming
+    val ren = RenUSubst.renamingPart(unify(e1,e2))
     Subst(unify(ren(e1),e2) ++ ren.subsDefsInput)
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + " with " + e2.prettyString)}
   } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
 
   def apply(e1: Program, e2: Program): Subst = {try {
-    val ren = Subst(unify(e1,e2)).renaming
+    val ren = RenUSubst.renamingPart(unify(e1,e2))
     Subst(unify(ren(e1),e2) ++ ren.subsDefsInput)
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + " with " + e2.prettyString)}
   } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
 
   def apply(e1: Sequent, e2: Sequent): Subst = {try {
-    val ren = Subst(unify(e1,e2)).renaming
+    val ren = RenUSubst.renamingPart(unify(e1,e2))
     Subst(unify(ren(e1),e2) ++ ren.subsDefsInput)
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.toString + " with " + e2.toString)}
   } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
