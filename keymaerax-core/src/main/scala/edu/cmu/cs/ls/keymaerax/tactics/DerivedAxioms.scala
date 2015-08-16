@@ -344,8 +344,13 @@ object DerivedAxioms {
    */
   lazy val existsGeneralize = derivedAxiom("exists generalize",
     Sequent(Nil, IndexedSeq(), IndexedSeq("p(t()) -> (\\exists x p(x))".asFormula)),
+//    useAt("exists dual", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil)) &
+//      useAt("all instantiate", PosInExpr(0::Nil))(SuccPosition(0, 1::0::Nil)) &
+//      prop
       useAt("exists dual", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil)) &
-        useAt("all instantiate", PosInExpr(1::Nil))(SuccPosition(0, 1::0::Nil)) &
+        implyR(SuccPos(0)) &
+        notR(SuccPos(0)) &
+        useAt("all instantiate", PosInExpr(0::Nil))(AntePosition(1, Nil)) &
         prop
   )
 
