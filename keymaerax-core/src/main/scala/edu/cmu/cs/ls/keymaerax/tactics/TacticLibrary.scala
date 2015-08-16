@@ -73,6 +73,7 @@ object TacticLibrary {
       }
     }
 
+    //@todo duplicate compared to FormulaConverter.subFormulaAt
     def getFormula(s: Sequent, p: Position): Formula = {
       if (p.isTopLevel) {
         if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
@@ -246,17 +247,11 @@ object TacticLibrary {
    */
   def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
     import PropositionalTacticsImpl._
+    import FormulaConverter._
     private val (keyCtx:Context[_],keyPart) = new FormulaConverter(fact).extractContext(key)
     //private val keyPart = new FormulaConverter(fact).subFormulaAt(key).get
 
-    //@todo s(Position) is meant to locate into PosInExpr too
-//    private def at(s: Sequent, p: Position): Option[Formula] = new FormulaConverter(s(p.top)).subFormulaAt(p.inExpr)
-    private def at(s: Sequent, p: Position): Option[Expression] =
-      try {Some(new FormulaConverter(s(p.top)).extractContext(p.inExpr)._2)} catch {
-        case e: NoSuchElementException   => println("useAt ill-position " + p + " in " + s(p.top) + " since " + e); None
-        case e: IllegalArgumentException => println("useAt ill-position " + p + " in " + s(p.top) + " since " + e); None}
-
-    override def applies(s: Sequent, p: Position): Boolean = {val part = at(s,p);
+    override def applies(s: Sequent, p: Position): Boolean = {val part = s(p.top).at(p.inExpr);
       part.isDefined && UnificationMatch.unifiable(keyPart,part.get).isDefined}
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
@@ -341,6 +336,8 @@ object TacticLibrary {
               (BranchLabels.cutUseLbl, TactixLibrary.master),
               (BranchLabels.cutShowLbl, /*PropositionalTacticsImpl.InverseImplyRightT &*/ factTactic)
             ))
+
+          case Forall(vars, remainder) => ???
         }
       }
     }

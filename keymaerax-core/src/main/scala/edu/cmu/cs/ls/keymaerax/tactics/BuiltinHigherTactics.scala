@@ -35,6 +35,7 @@ object BuiltinHigherTactics {
       import FOQuantifierTacticsImpl.skolemizeT
       val f = getFormula(s, p)
       val res = f match {
+          //@todo shouldn't those check for p.isTopLevel?
         case Not(_) => if(p.isAnte) Some(NotLeftT(p)) else Some(NotRightT(p))
         case And(_, _) => if(p.isAnte) Some(AndLeftT(p)) else if(beta) Some(AndRightT(p)) else None
         case Or(_, _) => if(p.isAnte) if(beta) Some(OrLeftT(p)) else None else Some(OrRightT(p))

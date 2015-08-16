@@ -39,10 +39,21 @@ class FormulaConverter(val fml: Formula) {
     }
   }
 
+  /** Subexpression at indicated position */
+  //@todo same for Sequent
+  def apply(pos: PosInExpr): Expression = extractContext(pos)._2
+  /** Subexpression at indicated position */
+  def at(pos: PosInExpr): Option[Expression] =
+    try {Some(extractContext(pos)._2)} catch {
+      case e: NoSuchElementException   => println("ill-position " + pos + " in " + fml + " since " + e); None
+      case e: IllegalArgumentException => println("ill-position " + pos + " in " + fml + " since " + e); None}
+  def at(p: Position): Option[Expression] = at(p.inExpr)
+
   /**
    * Returns the subformula of fml at position pos.
    * @param pos The position pointing to the subformula.
    * @return The subformula.
+   * @todo duplicate compared to FormulaConverter.subFormulaAt and PositionTactic.formulaAtPosition and TacticLibrary.getFormula
    */
   def subFormulaAt(pos: PosInExpr): Option[Formula] = {
     if (pos.pos.isEmpty) Some(fml)
