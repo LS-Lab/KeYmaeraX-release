@@ -20,10 +20,13 @@ import scala.collection.immutable._
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  */
 object TactixLibrary {
-  /** step: makes one proof step to simplify the formula at the indicated position (unless @invariant needed) */
-  def step                    : PositionTactic = TacticLibrary.step
+//  /** step: makes one sequent proof step to simplify the formula at the indicated position (unless @invariant needed) */
+//  def step                    : PositionTactic = TacticLibrary.step
 
-  /** Normalize to sequent form, keeping branching factor down by precedence */
+  /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
+  lazy val step: PositionTactic = HilbertCalculus.stepAt
+
+    /** Normalize to sequent form, keeping branching factor down by precedence */
   def normalize               : Tactic = (alphaRule | ls(allR) | la(existsL)
     | close
     | betaRule
@@ -34,6 +37,11 @@ object TactixLibrary {
   def master                  : Tactic = master(new NoneGenerate(), "Mathematica")
   def master(qeTool: String)  : Tactic = master(new NoneGenerate(), qeTool)
   def master(gen: Generator[Formula] = new NoneGenerate(), qeTool: String = "Mathematica"): Tactic = TacticLibrary.master(gen, true, qeTool)
+
+  /** US(form) reduce the proof to a proof of form by a suitable uniform substitution obtained by unification */
+  def US(form: Sequent): Tactic = TacticLibrary.US(form)
+  /** US: uniform substitution */
+  def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula])): Tactic = PropositionalTacticsImpl.uniformSubstT(subst, delta)
 
   /** useAt(fact, tactic)(pos) uses the given fact (that'll be proved by tactic after unification) at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(fact: Formula, key: PosInExpr, tactic: Tactic): PositionTactic = TacticLibrary.useAt(fact, key, tactic)
@@ -63,6 +71,8 @@ object TactixLibrary {
   def byUS(axiom: String)     : Tactic =
     byUS(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0))
 
+
+  // conditional tactics
 
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic = SearchTacticsImpl.onBranch(s1, spec:_*)
 
@@ -212,11 +222,6 @@ object TactixLibrary {
   // Bigger Tactics.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  /** US(form) reduce the proof to a proof of form by a suitable uniform substitution obtained by unification */
-  def US(form: Sequent): Tactic = TacticLibrary.US(form)
-  /** US: uniform substitution */
-  def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula])): Tactic = PropositionalTacticsImpl.uniformSubstT(subst, delta)
-
   // Utility Tactics
   /** nil: skip is a no-op that has no effect */
   def nil : Tactic = Tactics.NilT
@@ -224,6 +229,7 @@ object TactixLibrary {
 
   /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term. */
   def abbrv(name: Variable): PositionTactic = EqualityRewritingImpl.abbrv(name)
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Contract Tactics and Debugging Tactics
