@@ -41,7 +41,7 @@ final case class RenUSubst(subsDefsInput: immutable.Seq[Pair[Expression,Expressi
   private def applicable(): Unit = {
     // check that we never replace n by something and then again replacing the same n by something
     val lefts: List[Expression] = subsDefsInput.map(_._1).toList
-    scala.Predef.require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees\n" + this)
+    if (lefts.distinct.size != lefts.size) throw new ProverException("no duplicate substitutions with same substitutees\n" + this)
   }
 
   /**

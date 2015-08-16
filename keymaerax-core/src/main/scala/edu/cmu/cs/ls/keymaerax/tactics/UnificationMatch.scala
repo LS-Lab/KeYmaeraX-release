@@ -70,6 +70,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
 
   def apply(e1: Sequent, e2: Sequent): Subst = {try {
     val ren = RenUSubst.renamingPart(unify(e1,e2))
+    //println("Unifying " + e1 + " and " + e2 + "\nwith renaming " + ren + " gives " + ren(e1) + " led to\n" + unify(ren(e1),e2) + " and ")
     Subst(unify(ren(e1),e2) ++ ren.subsDefsInput)
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.toString + " with " + e2.toString)}
   } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
