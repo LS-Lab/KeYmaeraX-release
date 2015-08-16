@@ -56,8 +56,12 @@ private object NameConversion {
     //   KeYmaera + name
     val identifier : String = ns match {
       //@note special function
-      //@todo detect conversely when sent back from Mathematica
       case Function("abs",None,Real,Real) => "Abs"
+      case Function("Abs",None,Real,Real) => throw new IllegalArgumentException("Refuse translating Abs to Mathematica to avoid confusion with abs")
+      case Function("min",None,Tuple(Real,Real),Real) => "Min"
+      case Function("Min",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Min to Mathematica to avoid confusion with min")
+      case Function("max",None,Tuple(Real,Real),Real) => "Max"
+      case Function("Max",None,Tuple(Real,Real),Real) => throw new IllegalArgumentException("Refuse translating Max to Mathematica to avoid confusion with max")
 //      case n: Function if n.external => n.name
       case _ => PREFIX + maskIdentifier(ns.name)
     }
@@ -124,7 +128,13 @@ private object NameConversion {
       Function(maskedName.replace(PREFIX, ""), None, Real, Real) //TODO get the (co)domain correct.
     }
     else {
-      Function(maskedName, None, Real, Real) //TODO get the (co)domain correct. //TODO again we need to be very careful, as in the symmetric variable case.
+       maskedName match {
+         //@note special function
+         case "Abs" => Function("abs",None,Real,Real)
+         case "Min" => Function("min",None,Tuple(Real,Real),Real)
+         case "Max" => Function("max",None,Tuple(Real,Real),Real)
+         case _ => Function(maskedName, None, Real, Real) //TODO get the (co)domain correct. //TODO again we need to be very careful, as in the symmetric variable case.
+       }
     }
   }
 }
