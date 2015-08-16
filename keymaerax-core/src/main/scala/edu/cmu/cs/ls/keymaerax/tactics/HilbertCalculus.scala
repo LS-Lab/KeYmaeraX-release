@@ -193,7 +193,11 @@ object HilbertCalculus {
           case _: GreaterEqual => ???
           //@note for conceptual simplicity, use propositional and Skolem sequent rules, too
           case _ if p.isTopLevel => if(p.isAnte) Some(TactixLibrary.notL)   else Some(TactixLibrary.notR)
-          //@todo could add deMorgan
+          case _: Not       => Some(useAt(DerivedAxioms.doubleNegationAxiom))
+          case _: And       => Some(useAt(DerivedAxioms.notAnd))
+          case _: Or        => Some(useAt(DerivedAxioms.notOr))
+          case _: Imply     => Some(useAt(DerivedAxioms.notImply))
+          case _: Equiv     => Some(useAt(DerivedAxioms.notEquiv))
         }
         //@note for conceptual simplicity, use propositional and Skolem sequent rules, too
         case _: Not   if p.isTopLevel => assert(false, "already above"); if(p.isAnte) Some(TactixLibrary.notL)   else Some(TactixLibrary.notR)

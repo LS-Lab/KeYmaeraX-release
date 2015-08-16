@@ -93,6 +93,10 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom)}
   it should "prove & commute" in {check(andCommute)}
   it should "prove & assoc" in {check(andAssoc)}
+  it should "prove !& deMorgan" in {check(notAnd)}
+  it should "prove !| deMorgan" in {check(notOr)}
+  it should "prove !-> deMorgan" in {check(notImply)}
+  it should "prove !<-> deMorgan" in {check(notEquiv)}
   it should "prove domain commute" in {check(domainCommute)}
   it should "prove -> expand" in {check(implyExpand)}
   it should "prove ->'" in {check(Dimply)}

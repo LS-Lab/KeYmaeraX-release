@@ -328,8 +328,11 @@ object DerivedAxioms {
       useAt("[*] iterate")(SuccPosition(0, 0::0::Nil)) &
       useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::1::1::Nil)) &
       useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
+      HilbertCalculus.stepAt(SuccPosition(0, 0::Nil)) &
       useAt(doubleNegationAxiom)(SuccPosition(0, 1::1::0::1::Nil)) &
-      byUS(equivReflexiveAxiom)
+      prop
+      //useAt(doubleNegationAxiom)(SuccPosition(0, 1::1::0::1::Nil)) &
+      //byUS(equivReflexiveAxiom)
   )
 
   //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
@@ -447,6 +450,62 @@ object DerivedAxioms {
   )
 
   lazy val andAssocT = derivedAxiomT(andAssoc)
+
+  /**
+   * {{{Axiom "!& deMorgan".
+   *    (!(p() & q())) <-> ((!p()) | (!q()))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val notAnd = derivedAxiom("!& deMorgan",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(!(p() & q())) <-> ((!p()) | (!q()))".asFormula)),
+    prop
+  )
+
+  lazy val notAndT = derivedAxiomT(notAnd)
+
+  /**
+   * {{{Axiom "!| deMorgan".
+   *    (!(p() | q())) <-> ((!p()) & (!q()))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val notOr = derivedAxiom("!| deMorgan",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(!(p() | q())) <-> ((!p()) & (!q()))".asFormula)),
+    prop
+  )
+
+  lazy val notOrT = derivedAxiomT(notOr)
+
+  /**
+   * {{{Axiom "!-> deMorgan".
+   *    (!(p() -> q())) <-> ((p()) & (!q()))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val notImply = derivedAxiom("!-> deMorgan",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(!(p() -> q())) <-> ((p()) & (!q()))".asFormula)),
+    prop
+  )
+
+  lazy val notImplyT = derivedAxiomT(notImply)
+
+  /**
+   * {{{Axiom "!<-> deMorgan".
+   *    (!(p() <-> q())) <-> (((p()) & (!q())) | ((!p()) & (q())))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val notEquiv = derivedAxiom("!<-> deMorgan",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(!(p() <-> q())) <-> (((p()) & (!q())) | ((!p()) & (q())))".asFormula)),
+    prop
+  )
+
+  lazy val notEquivT = derivedAxiomT(notEquiv)
 
   /**
    * {{{Axiom "-> expand".
