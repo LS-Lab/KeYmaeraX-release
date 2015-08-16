@@ -50,6 +50,10 @@ final case class RenUSubst(subsDefsInput: immutable.Seq[Pair[Expression,Expressi
    */
   val usubst = USubst(subsDefs)
 
+  /** Union of renaming uniform substitutions, i.e., both replacement lists merged. */
+  def ++(other: RenUSubst): RenUSubst = RenUSubst(this.subsDefsInput ++ other.subsDefsInput)
+
+
   type RenUSubstRepl = Pair[Expression,Expression]
 
   /** The uniform renaming part of this renaming uniform substitution */
