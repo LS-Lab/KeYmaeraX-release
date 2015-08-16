@@ -56,7 +56,7 @@ object DerivedAxioms {
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
   private[tactics] def derivedAxiom(name: String, derived: Sequent, tactic: Tactic): Lemma = {
     //@todo optimize: no need to prove if already filed in derivedAxiomDB anyhow
-    val witness = tactic2Provable(derived, tactic)
+    val witness = TactixLibrary.proveBy(derived, tactic)
     assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + name + " got\n" + witness)
     derivedAxiom(name, witness)
   }
@@ -68,18 +68,6 @@ object DerivedAxioms {
     new ApplyRule(lemmaRule) {
       override def applicable(node: ProofNode): Boolean = node.sequent.sameSequentAs(lemma.fact.conclusion)
     }
-  }
-
-  /**
-   * Convert a tactic for a goal to the resulting Provable
-   * @see [[TactixLibrary.by(Provable)]]
-   */
-  private[tactics] def tactic2Provable(goal: Sequent, tactic: Tactic): Provable = {
-    val rootNode = new RootNode(goal)
-    //@todo what/howto ensure it's been initialized already
-    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
-    println("tactic2Provable " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().foreach(x => println("Open Goal: " + x.sequent.toString()))))
-    rootNode.provableWitness
   }
 
   private val x = Variable("x_", None, Real)

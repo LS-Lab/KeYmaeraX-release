@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, ByProvable, PositionTactic, Tactic}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 
 import scala.collection.immutable._
 
@@ -74,7 +74,15 @@ object TactixLibrary {
 
   // conditional tactics
 
+  /**
+   * onBranch((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and t2 on lbl2
+   * @see [[BranchLabels]]
+   * @see [[]]
+   */
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic = SearchTacticsImpl.onBranch(s1, spec:_*)
+
+  /** Call the current branch s */
+  def label(s: String): Tactic = new LabelBranch(s)
 
   // Locating applicable positions for PositionTactics
 
@@ -283,4 +291,19 @@ object TactixLibrary {
       | (la(TacticLibrary.eqThenHideIfChanged)*)
       | betaRule)*)
       | RCF)
+
+
+  // Global Utility Functions
+  /**
+   * Prove the new goal by the given tactic, returning the resulting Provable
+   * @see [[TactixLibrary.by(Provable)]]
+   */
+  def proveBy(goal: Sequent, tactic: Tactic): Provable = {
+    val rootNode = new RootNode(goal)
+    //@todo what/howto ensure it's been initialized already
+    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
+    println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().map(x => "Open Goal: " + x.sequent).mkString(("\n"))))
+    rootNode.provableWitness
+  }
+
 }
