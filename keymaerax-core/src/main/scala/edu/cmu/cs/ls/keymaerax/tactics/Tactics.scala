@@ -756,6 +756,7 @@ object Tactics {
     }
 
     //@todo duplicate compared to FormulaConverter.subFormulaAt
+    @deprecated("Use FormulaConverter.subFormulaT instead")
     def formulaAtPosition(sequent : Sequent, position : Position) : Option[Formula] = {
       var formula : Option[Formula] = None
       val fn = new ExpressionTraversalFunction {

@@ -74,6 +74,7 @@ object TacticLibrary {
     }
 
     //@todo duplicate compared to FormulaConverter.subFormulaAt
+    @deprecated("Use FormulaConverter.subFormulaT instead")
     def getFormula(s: Sequent, p: Position): Formula = {
       if (p.isTopLevel) {
         if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
@@ -344,48 +345,48 @@ object TacticLibrary {
 
   }
 
-  @deprecated("Use more general useAt instead")
-  private def useAtEquiv(fact: Formula, key: PosInExpr, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
-    import PropositionalTacticsImpl._
-    require(fact.isInstanceOf[Equiv] || fact.isInstanceOf[Equal] || fact.isInstanceOf[Imply], "equivalence or implication fact expected")
-    require(fact.isInstanceOf[Equiv], "only equivalence facts implemented so far")
-    private val Equiv(left,right) = fact
-    private val (keyPart,otherPart) = key match {
-      case PosInExpr(0::Nil) => (left, right)
-      case PosInExpr(1::Nil) => (right, left)
-      case _ => throw new IllegalArgumentException("Not yet implemented for " + key)
-    }
-
-    //@todo s(Position) is meant to locate into PosInExpr too
-    private def at(s: Sequent, p: Position): Option[Formula] = new FormulaConverter(s(p.topLevel)).subFormulaAt(p.inExpr)
-
-    override def applies(s: Sequent, p: Position): Boolean =
-      at(s,p).isDefined && UnificationMatch.unifiable(keyPart,at(s,p).get).isDefined
-
-    def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      override def applicable(node : ProofNode) = applies(node.sequent, p)
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val (ctx:Context[Formula],expr) = new FormulaConverter(node.sequent(p.topLevel)).extractContext(p.inExpr)
-        val fml = expr.asInstanceOf[Formula]
-        val subst = UnificationMatch(keyPart, fml)
-        println("useAt unify: " + fml + " matches against " + keyPart + " by " + subst)
-        assert(fml == subst(keyPart), "unification matched left successfully: " + fml + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
-        //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
-        Some(debugT("start useAt") & cutRightT(ctx(subst(otherPart)))(p.topLevel) & debugT("  cutted right") & onBranch(
-          (BranchLabels.cutUseLbl, debugT("  useAt result")),
-          //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
-          //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-          (BranchLabels.cutShowLbl, debugT("  show use") & cohideT(p.topLevel) & assertT(0,1) & debugT("  cohidden") &
-            equivifyRightT(SuccPosition(0)) & debugT("  equivified") &
-            debugT("  CE coming up") & AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr) &
-            (if (key==PosInExpr(0::Nil)) commuteEquivRightT(SuccPosition(0)) else NilT) & debugT("  using fact tactic") & factTactic & debugT("done useAt"))
-          //@todo error if factTactic is not applicable (factTactic | errorT)
-        ) & debugT("end useAt"))
-      }
-    }
-
-  }
+//  @deprecated("Use more general useAt instead")
+//  private def useAtEquiv(fact: Formula, key: PosInExpr, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
+//    import PropositionalTacticsImpl._
+//    require(fact.isInstanceOf[Equiv] || fact.isInstanceOf[Equal] || fact.isInstanceOf[Imply], "equivalence or implication fact expected")
+//    require(fact.isInstanceOf[Equiv], "only equivalence facts implemented so far")
+//    private val Equiv(left,right) = fact
+//    private val (keyPart,otherPart) = key match {
+//      case PosInExpr(0::Nil) => (left, right)
+//      case PosInExpr(1::Nil) => (right, left)
+//      case _ => throw new IllegalArgumentException("Not yet implemented for " + key)
+//    }
+//
+//    //@todo s(Position) is meant to locate into PosInExpr too
+//    private def at(s: Sequent, p: Position): Option[Formula] = new FormulaConverter(s(p.topLevel)).subFormulaAt(p.inExpr)
+//
+//    override def applies(s: Sequent, p: Position): Boolean =
+//      at(s,p).isDefined && UnificationMatch.unifiable(keyPart,at(s,p).get).isDefined
+//
+//    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+//      override def applicable(node : ProofNode) = applies(node.sequent, p)
+//
+//      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+//        val (ctx:Context[Formula],expr) = new FormulaConverter(node.sequent(p.topLevel)).extractContext(p.inExpr)
+//        val fml = expr.asInstanceOf[Formula]
+//        val subst = UnificationMatch(keyPart, fml)
+//        println("useAt unify: " + fml + " matches against " + keyPart + " by " + subst)
+//        assert(fml == subst(keyPart), "unification matched left successfully: " + fml + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
+//        //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
+//        Some(debugT("start useAt") & cutRightT(ctx(subst(otherPart)))(p.topLevel) & debugT("  cutted right") & onBranch(
+//          (BranchLabels.cutUseLbl, debugT("  useAt result")),
+//          //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
+//          //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
+//          (BranchLabels.cutShowLbl, debugT("  show use") & cohideT(p.topLevel) & assertT(0,1) & debugT("  cohidden") &
+//            equivifyRightT(SuccPosition(0)) & debugT("  equivified") &
+//            debugT("  CE coming up") & AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr) &
+//            (if (key==PosInExpr(0::Nil)) commuteEquivRightT(SuccPosition(0)) else NilT) & debugT("  using fact tactic") & factTactic & debugT("done useAt"))
+//          //@todo error if factTactic is not applicable (factTactic | errorT)
+//        ) & debugT("end useAt"))
+//      }
+//    }
+//
+//  }
 
   /**
    * US(form) uses a suitable uniform substitution to reduce the proof to instead proving form.

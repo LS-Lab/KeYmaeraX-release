@@ -27,7 +27,7 @@ object TactixLibrary {
   lazy val step: PositionTactic = HilbertCalculus.stepAt
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
-  def normalize               : Tactic = (alphaRule | ls(allR) | la(existsL)
+  def normalize               : Tactic = (alphaRule | closeId | ls(allR) | la(existsL)
     | close
     | betaRule
     | l(step))*
