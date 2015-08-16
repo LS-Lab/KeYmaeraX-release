@@ -36,6 +36,8 @@ object HilbertCalculus {
   lazy val composeb           : PositionTactic = useAt("[;] compose")
   /** iterateb: [*] prove a property of a loop by unrolling it once */
   lazy val iterateb           : PositionTactic = useAt("[*] iterate")
+  /** dualb: [^d] handle dual game */
+  lazy val dualb              : PositionTactic = ???  //useAt("[d] dual")
 
   /** assignd: <:=> simplify assignment by substitution or equation */
   lazy val assignd            : PositionTactic = useAt("<:=> assign equational") //@todo or "[:=] assign" if no clash
@@ -51,6 +53,8 @@ object HilbertCalculus {
   lazy val composed           : PositionTactic = useAt("<;> compose")
   /** iterated: <*> prove a property of a loop by unrolling it once */
   lazy val iterated           : PositionTactic = useAt("<*> iterate")
+  /** duald: <^d> handle dual game */
+  lazy val duald              : PositionTactic = useAt("<d> dual")
 
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
 //  def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
@@ -140,6 +144,7 @@ object HilbertCalculus {
           case ode:ODESystem if ODETactics.isDiffSolvable(sub.asInstanceOf[Formula])=> Some(diffSolve)
           case _: Compose   => Some(composeb)
           case _: Choice    => Some(choiceb)
+          case _: Dual      => Some(dualb)
           case _ => None
         }
         case Diamond(a, _) => a match {
@@ -149,6 +154,7 @@ object HilbertCalculus {
           case ode:ODESystem if ODETactics.isDiffSolvable(sub.asInstanceOf[Formula])=> ???
           case _: Compose   => Some(composed)
           case _: Choice    => Some(choiced)
+          case _: Dual      => Some(duald)
           case _ => None
         }
         case DifferentialFormula(f) => f match {
