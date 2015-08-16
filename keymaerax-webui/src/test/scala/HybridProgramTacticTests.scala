@@ -888,6 +888,19 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall x x>0".asFormula
   }
 
+  it should "not prove unsound" in {
+    val tactic = locateSucc(HybridProgramTacticsImpl.boxVacuousT)
+    val s = sucSequent("[x:=0;][x:=1;++y:=2;]x<0".asFormula)
+//    a [SubstitutionClashException] should be thrownBy helper.runTactic(tactic, new RootNode(s))
+    // SubstitutionClashException occurs internally, but is not visible to test
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 2
+    result.openGoals()(0).sequent.ante shouldBe empty
+    result.openGoals()(0).sequent.succ should contain only "[x:=1;++y:=2;]x<0".asFormula
+    result.openGoals()(1).sequent.ante shouldBe empty
+    result.openGoals()(1).sequent.succ should contain only "[x:=1;++y:=2;]x<0 -> [x:=0;][x:=1;++y:=2;]x<0".asFormula
+  }
+
   "[]split conjunction" should "split a box conjunction" in {
     val tactic = locateSucc(HybridProgramTacticsImpl.boxSplitConjunctionT)
     val s = sucSequent("[x:=2;](x>0 & x>1)".asFormula)
