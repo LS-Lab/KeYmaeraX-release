@@ -223,6 +223,8 @@ object TacticLibrary {
     * unification and matching based auto-tactics
     *******************************************************************/
 
+  type Subst = UnificationMatch.Subst
+
   /**
    * useAt(fact)(pos) uses the given fact at the given position in the sequent.
    * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
@@ -243,9 +245,12 @@ object TacticLibrary {
    * @param fact the Formula to use to simplify at the indicated position of the sequent
    * @param key the part of the Formula fact to unify the indicated position of the sequent with
    * @param factTactic the tactic to use to prove the instance of the fact obtained after unification
+   * @param inst Transformation for instantiating additional unmatched symbols that do not occur in fact(key).
+   *   Defaults to identity transformation, i.e., no change in substitution found by unification.
+   *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
    * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
    */
-  def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
+  def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic, inst: Subst=>Subst = (us=>us)): PositionTactic = new PositionTactic("useAt") {
     import PropositionalTacticsImpl._
     import FormulaConverter._
     private val (keyCtx:Context[_],keyPart) = new FormulaConverter(fact).extractContext(key)
@@ -259,7 +264,7 @@ object TacticLibrary {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val (ctx,expr) = new FormulaConverter(node.sequent(p.top)).extractContext(p.inExpr)
-        val subst = UnificationMatch(keyPart, expr)
+        val subst = inst(UnificationMatch(keyPart, expr))
         println("useAt unify: " + expr + " matches against " + keyPart + " by " + subst)
         assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))

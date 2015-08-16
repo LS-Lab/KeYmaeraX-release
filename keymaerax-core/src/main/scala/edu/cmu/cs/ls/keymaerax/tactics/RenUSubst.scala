@@ -47,8 +47,9 @@ final case class RenUSubst(subsDefsInput: immutable.Seq[Pair[Expression,Expressi
   /**
    * The uniform substitution part of this renaming uniform substitution
    * @see [[substitution]]
+   * @note lazy val and postponing applicable() until actual use case would make it possible for useAt(inst) to modify before exception. Not sure that's worth it though.
    */
-  val usubst = USubst(subsDefs)
+  lazy val usubst = USubst(subsDefs)
 
   /** Union of renaming uniform substitutions, i.e., both replacement lists merged. */
   def ++(other: RenUSubst): RenUSubst = RenUSubst(this.subsDefsInput ++ other.subsDefsInput)

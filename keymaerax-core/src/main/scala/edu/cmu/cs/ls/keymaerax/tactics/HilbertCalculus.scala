@@ -4,6 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper._
@@ -20,7 +21,7 @@ import edu.cmu.cs.ls.keymaerax.tools.Tool
  */
 object HilbertCalculus {
   import TactixLibrary.useAt
-//  // modalities
+  // modalities
   /** assignb: [:=] simplify assignment by substitution or equation */
   lazy val assignb            : PositionTactic = useAt("[:=] assign equational") //@todo or "[:=] assign" if no clash
   /** randomb: [:*] simplify nondeterministic assignment to universal quantifier */
@@ -66,18 +67,27 @@ object HilbertCalculus {
 //  // differential equations
   /** DW: Differential Weakening to use evolution domain constraint (equivalence form) */
   lazy val DW                 : PositionTactic = useAt("DW differential weakening")
-//  /** DC: Differential Cut a new invariant for a differential equation */
-//  def DC(invariant: Formula)  : PositionTactic = TacticLibrary.diffCutT(invariant)
+  /** DC: Differential Cut a new invariant for a differential equation */
+  def DC(invariant: Formula)  : PositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
+    (us:Subst)=>us++RenUSubst(Seq((FuncOf(Function("r",None,Real,Real),Anything), invariant)))
+  )
   /** DE: Differential Effect exposes the effect of a differential equation on its differential symbols */
   lazy val DE                 : PositionTactic = ODETactics.diffEffectT
-//  /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
-//  def DI                      : PositionTactic = TacticLibrary.diffInvariant
-//  /** DG: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b */
-//  def DG(y:Variable, a:Term, b:Term) : PositionTactic = ODETactics.diffAuxiliaryT(y,a,b)
-//  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
+  /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
+  //@todo Dconstify usually needed for DI
+  def DI                      : PositionTactic = useAt("DI differential invariant")//TacticLibrary.diffInvariant
+  /** DG: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b */
+  def DG(y:Variable, a:Term, b:Term) : PositionTactic = useAt("DG differential ghost", PosInExpr(1::0::Nil),
+    (us:Subst)=>us++RenUSubst(Seq(
+      (Variable("y",None,Real), y),
+      (FuncOf(Function("t",None,Real,Real),DotTerm), a),
+      (FuncOf(Function("s",None,Real,Real),DotTerm), b)))
+  )
+
+  //  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
 //  def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
-//  /** DS: Differential Solution solves a differential equation */
-//  def DS                      : PositionTactic = ???
+  /** DS: Differential Solution solves a differential equation */
+  def DS                      : PositionTactic = useAt("DS& differential equation solution")
   /** Dassignb: Substitute a differential assignment */
   lazy val Dassignb           : PositionTactic = useAt("[':=] differential assign")
   /** Dplus: +' derives a sum */
