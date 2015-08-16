@@ -688,6 +688,7 @@ object KeYmaeraXParser extends Parser {
   /** Follow(kind(expr)): Can la follow an expression of the kind of expr? */
   private def followsExpression(expr: Expression, la: Terminal): Boolean = expr match {
     case _: Variable => followsIdentifier(la) || /*if elaborated to program*/ followsProgram(la)
+    case _: DifferentialSymbol => followsTerm(la) || la==ASSIGN
     case FuncOf(_,_) => followsTerm(la) || /*elaboratable(FormulaKind, t)!=None &&*/ followsFormula(la) //@todo line irrelevant since followsTerm subsumes followsFormula
     case _: Term => followsTerm(la)
     case And(Equal(_:DifferentialSymbol, _), _) => followsFormula(la) || /*if elaborated to ODE*/ followsProgram(la)
