@@ -1320,7 +1320,7 @@ case class CutRight(c: Formula, pos: SuccPos) extends Rule {
 /**
  * Cut in the given formula c in place of p on the left.
  * {{{
- * c, G |- D    G |- p->c, D
+ * c, G |- D    G |- D, p->c
  * ------------------------- (Cut Left)
  *        p, G |- D
  * }}}
