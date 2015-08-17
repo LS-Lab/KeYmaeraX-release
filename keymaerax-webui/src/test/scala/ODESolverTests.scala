@@ -298,6 +298,27 @@ class ODESolutionTactic extends TacticTestSuite {
     result.openGoals() should have size 1
   }
 
+  it should "solve simplest using max (with hiding in diffSolution)" in { /* works best */
+  val s = testHelper.SequentFactory.sequent(Nil, "max(0,r)=r".asFormula :: Nil, "[{r' = 0}](r>=0)".asFormula :: Nil)
+    val tactic = EqualityRewritingImpl.abbrv(Variable("max0"))(AntePosition(0, PosInExpr(0 :: Nil))) &
+      debugT("here") &
+      locateSucc(ODETactics.diffSolution(None, TactixLibrary.la(hideT, "max0 = max(0,r)"))) &
+      debugT("there")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+  }
+
+  it should "solve simplest using max (with abbrv issue)" in {
+  /* doesn't work because of identical max in succedent */
+  val s = testHelper.SequentFactory.sequent(Nil, "max(0,r)=r".asFormula :: Nil, "[{r' = 0}](max(0,r)=r)".asFormula :: Nil)
+    val tactic = EqualityRewritingImpl.abbrv(Variable("max0"))(AntePosition(0, PosInExpr(0 :: Nil))) &
+      debugT("here") &
+      locateSucc(ODETactics.diffSolution(None, TactixLibrary.la(hideT, "max0 = max(0,r)"))) &
+      debugT("there")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+  }
+
   /* Other non-minimal tests */
   it should "solve simplest using max" in { /* works */
   val s = testHelper.SequentFactory.sequent(Nil, "max(0,r)=r".asFormula :: Nil, "[{r' = 0}](max(0,r)=r)".asFormula :: Nil)
@@ -334,5 +355,25 @@ class GhostOfLipschitz extends TacticTestSuite {
     val tactic = ODETactics.inverseLipschitzGhostT(SuccPos(0))
     helper.runTactic(tactic,node)
     helper.report(node)
+  }
+}
+
+class DGPlusPlus extends TacticTestSuite {
+  "DG++" should "work when no variables are different" in {
+    val f = "\\forall y [{y' = x*v, x' = z, h' = -y, t' = 0*t + 1 & x=  0 & y = 0 & a=0 & t=0}]1=1".asFormula //nonsense
+    val node = helper.formulaToNode(f)
+    val tactic = edu.cmu.cs.ls.keymaerax.tactics.ODETactics.DiffGhostPlusPlusSystemT(SuccPos(0))
+    helper.runTactic(tactic, node)
+    node.openGoals().length shouldBe 1
+    node.openGoals().last.sequent.succ.last shouldBe "[{x' = z, h' = -y, t' = 0*t + 1 & x=  0 & y = 0 & a=0 & t=0}]1=1".asFormula
+  }
+
+  it should "work for ACAS X system after a , commute" in {
+    val f = "\\forall r [{r'=-rv(), dhd'=ao(), h'=-dhd, t'=0*t+1 & 1=1}]2=2".asFormula //nonsense
+    val node = helper.formulaToNode(f)
+    val tactic = edu.cmu.cs.ls.keymaerax.tactics.ODETactics.DiffGhostPlusPlusSystemT(SuccPos(0))
+    helper.runTactic(tactic, node)
+    node.openGoals().length shouldBe 1
+    node.openGoals().last.sequent.succ.last shouldBe "[{dhd'=ao(), h'=-dhd, t'=0*t+1 & 1=1}]2=2".asFormula
   }
 }
