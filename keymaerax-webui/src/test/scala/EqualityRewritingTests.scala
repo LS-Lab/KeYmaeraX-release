@@ -265,4 +265,25 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     result.openGoals().head.sequent.ante should contain only ("z = min(a,b)".asFormula, "z<c".asFormula, "x>y".asFormula, "5<z".asFormula)
     result.openGoals().head.sequent.succ should contain only ("z+2=7".asFormula, "a<b".asFormula, "[b:=2;]min(a,b)<9".asFormula)
   }
+
+  it should "abbreviate min(a,b) to z everywhere (except at bound occurrences) and pick a name automatically" in {
+    val s = sequent(Nil, "min(a,b) < c".asFormula :: "x>y".asFormula :: "5 < min(a,b)".asFormula :: Nil,
+      "min(a,b) + 2 = 7".asFormula :: "a<b".asFormula :: "[b:=2;]min(a,b) < 9".asFormula :: Nil)
+    val tactic = EqualityRewritingImpl.abbrv("min(a,b)".asTerm)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("min_0 = min(a,b)".asFormula, "min_0<c".asFormula, "x>y".asFormula, "5<min_0".asFormula)
+    result.openGoals().head.sequent.succ should contain only ("min_0+2=7".asFormula, "a<b".asFormula, "[b:=2;]min(a,b)<9".asFormula)
+  }
+
+  it should "abbreviate any argument even if not contained in the sequent and pick a name automatically" in {
+    val s = sequent(Nil, "x>y".asFormula :: Nil, "a<b".asFormula :: Nil)
+    val tactic = EqualityRewritingImpl.abbrv("f()+g()".asTerm)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("Term = f()+g()".asFormula, "x>y".asFormula)
+    result.openGoals().head.sequent.succ should contain only "a<b".asFormula
+  }
 }
