@@ -241,16 +241,10 @@ private[core] object AxiomBase {
     assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
 
     //@TODO these should be re-enabled.
-//    assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,t0)), "all instantiate")
+    assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,t0)), "all instantiate")
 //    assert(axs("all distribute") == Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x)))), "all distribute")
     // soundness-critical that these are for p() not for p(x) or p(??)
     assert(axs("vacuous all quantifier") == Equiv(Forall(immutable.IndexedSeq(x), p0), p0), "vacuous all quantifier")
-    assert(axs("vacuous exists quantifier") == Equiv(Exists(immutable.IndexedSeq(x), p0), p0), "vacuous exists quantifier")
-
-    assert(axs("min") == Equiv(Equal(FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(f0, g0)), h0),
-      Or(And(LessEqual(f0, g0), Equal(h0, f0)), And(Greater(f0, g0), Equal(h0, g0)))), "min")
-    assert(axs("max") == Equiv(Equal(FuncOf(Function("max", None, Tuple(Real, Real), Real), Pair(f0, g0)), h0),
-      Or(And(GreaterEqual(f0, g0), Equal(h0, f0)), And(Less(f0, g0), Equal(h0, g0)))), "max")
 
     true
   }
@@ -290,27 +284,12 @@ Axiom "all eliminate".
   (\forall x p(??)) -> p(??)
 End.
 
-/* @Derived! */
-Axiom "exists generalize".
-  p(t()) -> (\exists x p(x))
-End.
-
 Axiom "vacuous all quantifier".
   (\forall x p()) <-> p()
 End.
 
-/* @Derived! */
-Axiom "vacuous exists quantifier".
-  (\exists x p()) <-> p()
-End.
-
 Axiom "all dual".
   (!\exists x (!p(x))) <-> (\forall x p(x))
-End.
-
-/* @Derived! */
-Axiom "exists dual".
-  (!\forall x (!p(x))) <-> (\exists x p(x))
 End.
 
 /*
@@ -340,92 +319,32 @@ Axiom "<> dual".
   (![a;](!p(??))) <-> <a;>p(??)
 End.
 
-/* @Derived! */
-Axiom "[] dual".
-  (!<a;>(!p(??))) <-> [a;]p(??)
-End.
-
 Axiom "[:=] assign".
   [v:=t();]p(v) <-> p(t())
-End.
-
-/* @derived! */
-Axiom "<:=> assign".
-  <v:=t();>p(v) <-> p(t())
-End.
-
-/* @derived! */
-Axiom "[:=] assign equational".
-  [v:=t();]p(v) <-> \forall v (v=t() -> p(v))
-End.
-
-/* @derived! */
-Axiom "[:=] vacuous assign".
-  [v:=t();]p() <-> p()
-End.
-
-/* @derived! */
-Axiom "<:=> vacuous assign".
-  <v:=t();>p() <-> p()
 End.
 
 Axiom "[':=] differential assign".
   [v':=t();]p(v') <-> p(t())
 End.
 
-/* @derived! */
-Axiom "<':=> differential assign".
-  <v':=t();>p(v') <-> p(t())
-End.
-
 Axiom "[:*] assign nondet".
   [x:=*;]p(x) <-> (\forall x p(x))
-End.
-
-/* @derived! */
-Axiom "<:*> assign nondet".
-  <x:=*;>p(x) <-> (\exists x p(x))
 End.
 
 Axiom "[?] test".
   [?H();]p() <-> (H() -> p())
 End.
 
-/* @Derived! */
-Axiom "<?> test".
-  <?H();>p() <-> (H() & p())
-End.
-
 Axiom "[++] choice".
   [a;++b;]p(??) <-> ([a;]p(??) & [b;]p(??))
-End.
-
-/* @Derived! */
-Axiom "<++> choice".
-   <a;++b;>p(??) <-> (<a;>p(??) | <b;>p(??))
 End.
 
 Axiom "[;] compose".
   [a;b;]p(??) <-> [a;][b;]p(??)
 End.
 
-/* @Derived! */
-Axiom "<;> compose".
-  <a;b;>p(??) <-> <a;><b;>p(??)
-End.
-
 Axiom "[*] iterate".
   [{a;}*]p(??) <-> (p(??) & [a;][{a;}*] p(??))
-End.
-
-/* @Derived! */
-Axiom "<*> iterate".
-  <{a;}*>p(??) <-> (p(??) | <a;><{a;}*> p(??))
-End.
-
-/* @Derived! */
-Axiom "Domain Constraint Conjunction Reordering".
-  [{c & (H(??) & q(??))}]p(??) <-> [{c & (q(??) & H(??))}]p(??)
 End.
 
 /**
@@ -484,18 +403,8 @@ Axiom ", commute".
   [{c,d & H(??)}]p(??) <-> [{d,c & H(??)}]p(??)
 End.
 
-/* @Derived! */
-Axiom "DS differential equation solution".
-  [{x'=c()}]p(x) <-> \forall t (t>=0 -> [x:=x+(c()*t);]p(x))
-End.
-
 Axiom "DS& differential equation solution".
   [{x'=c()&q(x)}]p(x) <-> \forall t (t>=0 -> ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) -> [x:=x+(c()*t);]p(x)))
-End.
-
-/* @derived! (DS differential equation solution + duality) */
-Axiom "Dsol differential equation solution".
- <{x'=c()}>p(x) <-> \exists t (t>=0 & <x:=x+(c()*t);>p(x))
 End.
 
 /* @Derived! */
@@ -516,11 +425,6 @@ End.
 /**
  * DERIVATION FOR FORMULAS
  */
-
-/* @derived! by CE */
-Axiom "->' derive imply".
-  (p(??) -> q(??))' <-> (!p(??) | q(??))'
-End.
 
 Axiom "&' derive and".
   (p(??) & q(??))' <-> ((p(??)') & (q(??)'))
@@ -636,14 +540,6 @@ Axiom "I induction".
 End.
 
 /**
- * Boolean algebra
- * @derived!
- */
- Axiom "& associative".
-  ((p() & q()) & r()) <-> (p() & (q() & r()))
- End.
-
-/**
  * Real arithmetic
  */
 
@@ -731,21 +627,6 @@ End.
 
 Axiom "> flip".
   (f() > g()) <-> (g() < f())
-End.
-
-/* @derived! */
-Axiom "abs".
-  (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))
-End.
-
-/* @derived! */
-Axiom "max".
-  (max(f(), g()) = h()) <-> ((f()>=g() & h()=f()) | (f()<g() & h()=g()))
-End.
-
-/* @derived! */
-Axiom "min".
-  (min(f(), g()) = h()) <-> ((f()<=g() & h()=f()) | (f()>g() & h()=g()))
 End.
 """
 }
