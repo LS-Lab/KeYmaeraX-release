@@ -107,7 +107,7 @@ object HilbertCalculus {
   /** Dconst: c()' derives a constant */
   lazy val Dconst             : PositionTactic = useAt("c()' derive constant fn")
   /** Dvariable: x' derives a variable */
-  lazy val Dvariable          : PositionTactic = useAt("x' derive variable")
+  lazy val Dvariable          : PositionTactic = useAt("x' derive variable", PosInExpr(0::0::Nil))
 
   /** Dand: &' derives a conjunction */
   lazy val Dand               : PositionTactic = useAt("&' derive and")

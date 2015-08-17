@@ -347,7 +347,11 @@ object TacticLibrary {
               (BranchLabels.cutShowLbl, /*PropositionalTacticsImpl.InverseImplyRightT &*/ factTactic)
             ))
 
-          case Forall(vars, remainder) => ???
+          case Forall(vars, remainder) if vars.length==1 =>
+            useAt(subst, new Context(remainder), k, p, C, c, instantiateQuanT(vars.head, subst(vars.head))(SuccPos(0)))
+
+            //@todo unfold by step*
+          case Box(a, remainder) => ???
         }
       }
     }

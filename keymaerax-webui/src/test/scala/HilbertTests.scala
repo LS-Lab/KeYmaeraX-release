@@ -65,6 +65,15 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ).isProved shouldBe true
   }
 
+  it should "prove (x+2*y)'=x'+2*y'" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
+    Dplus(SuccPosition(0, 0::Nil)) &
+      Dvariable(SuccPosition(0, 0::0::Nil)) &
+      useAt(Dlinear)(SuccPosition(0, 0::1::Nil)) & // Dtimes(SuccPosition(0, 0::1::Nil))
+      byUS("= reflexive")
+    ).isProved shouldBe true
+  }
+
   it should "prove x>=5 -> [{x'=2}]x>=5" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) &

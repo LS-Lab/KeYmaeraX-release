@@ -103,6 +103,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
   it should "prove DS no domain" in {check(DSnodomain)}
   it should "prove DSol no domain" in {check(DSdnodomain)}
+  it should "prove 'linear" in {check(Dlinear)}
   it should "prove abs" in {check(absDef)}
   it should "prove min" in {check(minDef)}
   it should "prove max" in {check(maxDef)}

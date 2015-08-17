@@ -620,6 +620,30 @@ object DerivedAxioms {
   lazy val trueAndT = derivedAxiomT(trueAnd)
 
   /**
+   * {{{Axiom "0*".
+   *    (0*f()) = 0
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val zeroTimes = derivedAxiom("0*",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(0*f()) = 0".asFormula)),
+    QE
+  )
+
+  /**
+   * {{{Axiom "0+".
+   *    (0+f()) = f()
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val zeroPlus = derivedAxiom("0+",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(0+f()) = f()".asFormula)),
+    QE
+  )
+
+  /**
    * {{{Axiom "DS differential equation solution".
    *    [{x'=c()}]p(x) <-> \forall t (t>=0 -> [x:=x+(c()*t);]p(x))
    * End.
@@ -678,6 +702,22 @@ object DerivedAxioms {
 //      (Axiom("all dual"), 1)
 //      (Close(AntePos(0),SuccPos(0)), 1)
 //  )
+
+  /**
+   * {{{Axiom "' linear".
+   *    (c()*f(??))' = c()*(f(??))'
+   * End.
+   * }}}
+   */
+  lazy val Dlinear = derivedAxiom("' linear",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(c()*f(??))' = c()*(f(??))'".asFormula)),
+    useAt("*' derive product")(SuccPosition(0, 0::Nil)) &
+      useAt("c()' derive constant fn")(SuccPosition(0, 0::0::0::Nil)) &
+      useAt(zeroTimes)(SuccPosition(0, 0::0::Nil)) &
+      useAt(zeroPlus)(SuccPosition(0, 0::Nil)) &
+      byUS("= reflexive")
+  )
+  lazy val DlinearT = derivedAxiomT(Dlinear)
 
   /**
    * {{{Axiom "abs".
