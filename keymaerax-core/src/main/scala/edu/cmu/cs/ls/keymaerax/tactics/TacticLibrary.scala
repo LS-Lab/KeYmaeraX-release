@@ -256,8 +256,12 @@ object TacticLibrary {
     private val (keyCtx:Context[_],keyPart) = new FormulaConverter(fact).extractContext(key)
     //private val keyPart = new FormulaConverter(fact).subFormulaAt(key).get
 
-    override def applies(s: Sequent, p: Position): Boolean = {val part = s(p.top).at(p.inExpr);
-      part.isDefined && UnificationMatch.unifiable(keyPart,part.get).isDefined}
+    override def applies(s: Sequent, p: Position): Boolean = try {
+      val part = s(p.top).at(p.inExpr);
+      if (!part.isDefined) false
+      UnificationMatch(keyPart,part.get)
+      true
+    } catch {case e: ProverException => println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s(p.top).at(p.inExpr))); false}
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
@@ -401,7 +405,10 @@ object TacticLibrary {
    * @param form the sequent to reduce this proof node to by a Uniform Substitution
    */
   def US(form: Sequent): Tactic = new ConstructionTactic("US") {
-    def applicable(node: ProofNode) = UnificationMatch.unifiable(form,node.sequent).isDefined
+    def applicable(node: ProofNode) = try {
+      UnificationMatch(form,node.sequent)
+      true
+    } catch {case e: ProverException => println(e.inContext("US(" + form + ")\n(" + node.sequent + ")")); false}
 
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       val subst = UnificationMatch(form, node.sequent)
@@ -554,7 +561,8 @@ object TacticLibrary {
           val qPhi =
             if (vars.isEmpty) phi //Forall(Variable("$abstractiondummy", None, Real)::Nil, phi)
             else
-              vars.to[scala.collection.immutable.SortedSet]. //sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
+            //@todo what about DifferentialSymbols in boundVars? Decided to filter out since not soundness-critical.
+              vars.filter(v=>v.isInstanceOf[Variable]).to[scala.collection.immutable.SortedSet]. //sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
                 foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
           //val numQuantifiers = if (vars.isEmpty) 1 else vars.length

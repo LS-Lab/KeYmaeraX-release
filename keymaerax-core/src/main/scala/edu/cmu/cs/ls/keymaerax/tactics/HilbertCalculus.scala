@@ -75,7 +75,7 @@ object HilbertCalculus {
   lazy val DE                 : PositionTactic = ODETactics.diffEffectT
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
   //@todo Dconstify usually needed for DI
-  def DI                      : PositionTactic = useAt("DI differential invariant")//TacticLibrary.diffInvariant
+  def DI                      : PositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
   /** DG: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b */
   def DG(y:Variable, a:Term, b:Term) : PositionTactic = useAt("DG differential ghost", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq(
@@ -132,6 +132,8 @@ object HilbertCalculus {
   /** Dexists: \exists' derives an exists quantifier */
   lazy val Dexists            : PositionTactic = useAt("exists' derive exists")
 
+  //lazy val ind
+
   /**
    * Make the canonical simplifying proof step based at the indicated position
    * except when a decision needs to be made (e.g. invariants for loops or for differential equations).
@@ -150,7 +152,7 @@ object HilbertCalculus {
           case _: Assign    => Some(assignb)
           case _: AssignAny => Some(randomb)
           case _: Test      => Some(testb)
-          case ode:ODESystem if ODETactics.isDiffSolvable(sub.asInstanceOf[Formula])=> Some(diffSolve)
+          case ode:ODESystem if ODETactics.isDiffSolvable(sub.get.asInstanceOf[Formula])=> Some(diffSolve)
           case _: Compose   => Some(composeb)
           case _: Choice    => Some(choiceb)
           case _: Dual      => Some(dualb)
@@ -160,7 +162,7 @@ object HilbertCalculus {
           case _: Assign    => Some(assignd)
           case _: AssignAny => Some(randomd)
           case _: Test      => Some(testd)
-          case ode:ODESystem if ODETactics.isDiffSolvable(sub.asInstanceOf[Formula])=> ???
+          case ode:ODESystem if ODETactics.isDiffSolvable(sub.get.asInstanceOf[Formula])=> ???
           case _: Compose   => Some(composed)
           case _: Choice    => Some(choiced)
           case _: Dual      => Some(duald)

@@ -32,10 +32,10 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
   } else throw new UnificationException(e1.prettyString, e2.prettyString, "have different kinds " + e1.kind + " and " + e2.kind)
 
   /** Compute some unifier if unifiable else None */
-  def unifiable(e1: Expression, e2: Expression): Option[Subst] = try {Some(apply(e1, e2))} catch {case e: UnificationException => println("Expression unifiable " + e); None}
+  def unifiable(e1: Expression, e2: Expression): Option[Subst] = try {Some(apply(e1, e2))} catch {case e: UnificationException => println("Expression un-unifiable " + e); None}
 
   /** Compute some unifier if unifiable else None */
-  def unifiable(e1: Sequent, e2: Sequent): Option[Subst] = try {Some(apply(e1, e2))} catch {case e: UnificationException => println("Sequent unifiable " + e); None}
+  def unifiable(e1: Sequent, e2: Sequent): Option[Subst] = try {Some(apply(e1, e2))} catch {case e: UnificationException => println("Sequent un-unifiable " + e); None}
 
   //  def apply(t1: Term, t2: Term): Option[Subst] = {try { Some(Subst(unify(t1,t2))) } catch { case _: UnificationException => None }
 //  } ensuring (r => r.isEmpty || r.get(t1) == t2, "unifier match makes " + t1 + " and " + t2 + " equal")
@@ -116,6 +116,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     case PredOf(f:Function, t)            => e2 match {
       case PredOf(g, t2) if f == g => unify(t, t2)
       // otherwise DotTerm abstraction of all occurrences of the argument
+        //@todo stutter  if nit free
       case _ => List(SubstRepl(PredOf(f,DotTerm), SubstitutionHelper.replaceFree(e2)(t,DotTerm)))
     }
     case PredicationalOf(f:Function, DotFormula) => if (e1==e2) id else List(SubstRepl(e1, e2))

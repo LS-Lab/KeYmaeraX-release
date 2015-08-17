@@ -22,5 +22,8 @@ object BranchLabels {
   val axiomShowLbl = "Show axiom"
   val axiomUseLbl = "Use axiom"
 
+  val leftLbl = "Left case"
+  val rightLbl = "Right case"
+
   val knowledgeSubclassContinue = "Knowledge subclass continue"
 }

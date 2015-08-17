@@ -93,7 +93,7 @@ object TactixLibrary {
   /**
    * onBranch((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and t2 on lbl2
    * @see [[BranchLabels]]
-   * @see [[]]
+   * @see [[label()]]
    */
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic = SearchTacticsImpl.onBranch(s1, spec:_*)
 
