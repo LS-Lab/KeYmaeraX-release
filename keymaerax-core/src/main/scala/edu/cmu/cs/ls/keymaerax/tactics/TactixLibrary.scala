@@ -22,10 +22,10 @@ import scala.collection.immutable._
  */
 object TactixLibrary {
 //  /** step: makes one sequent proof step to simplify the formula at the indicated position (unless @invariant needed) */
-//  def step                    : PositionTactic = TacticLibrary.step
+  val step                    : PositionTactic = TacticLibrary.step
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  lazy val step: PositionTactic = HilbertCalculus.stepAt
+  lazy val stepAt: PositionTactic = HilbertCalculus.stepAt
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
   def normalize               : Tactic = (alphaRule | closeId | ls(allR) | la(existsL)
