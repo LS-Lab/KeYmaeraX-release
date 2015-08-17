@@ -7,9 +7,9 @@ package edu.cmu.cs.ls.keymaerax.tactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
+import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{lastAnte, lastSucc, onBranch}
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.getTerm
 import AxiomaticRuleTactics.{equivalenceCongruenceT,boxMonotoneT,diamondMonotoneT}
 import ContextTactics.{cutInContext,cutImplyInContext}
@@ -18,13 +18,26 @@ import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 object AxiomTactic {
   /**
+   * Looks up a formula in a sequent.
+   * @param sequent The sequent.
+   * @param p The position in the sequent.
+   * @return The formula at that position, if found.
+   */
+  private def getFormula(sequent: Sequent, p: Position) = sequent(p).subFormulaAt(p.inExpr) match {
+    case Some(f) => f
+    case None => throw new IllegalStateException("Position" + p + " does not refer to a formula")
+  }
+
+  /**
    * Axiom lookup imports an axiom into the antecedent.
    */
   def axiomT(id: String): Tactic = Axiom.axioms.get(id) match {
-    case Some(_) => new Tactics.ApplyRule(Axiom(id)) {
-      override def applicable(node: ProofNode): Boolean = true
-    }
-    case _ => throw new IllegalArgumentException("Unknown axiom " + id)
+    case Some(_) => new Tactics.ApplyRule(Axiom(id)) { override def applicable(node: ProofNode): Boolean = true }
+    case None =>
+      DerivedAxioms.derivedAxiomTactic(id) match {
+        case Some(t) => t
+        case None => throw new IllegalArgumentException("Unknown axiom '" + id + "' cannot be derived")
+      }
   }
 
   /**
@@ -170,7 +183,11 @@ object AxiomTactic {
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       val axiom = Axiom.axioms.get(axiomName) match {
         case Some(ax) => ax
-        case None => throw new IllegalArgumentException("Axiom " + axiomName + " cannot be found in the axiom base")
+        case None =>
+          DerivedAxioms.derivedAxiomFormula(axiomName) match {
+            case Some(ax) => ax
+            case None => throw new IllegalArgumentException("Unknown axiom '" + axiomName + "' cannot be derived")
+          }
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)

@@ -82,7 +82,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
   it should "prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}
   it should "prove <':=> differential assign" in {check(assignDAxiom)}
-  it should "prove <*:> assign nondet" in {check(nondetassigndAxiom)}
+  it should "prove <:*> assign nondet" in {check(nondetassigndAxiom)}
   it should "prove <?> test" in {check(testdAxiom)}
   it should "prove <++> choice" in {check(choicedAxiom)}
   it should "prove <;> compose" in {check(composedAxiom)}
@@ -124,9 +124,15 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove [:=] vacuous assign" in {check(vacuousAssignbT)}
   it should "prove <:=> vacuous assign" in {check(vacuousAssigndT)}
   it should "prove <':=> differential assign" in {check(assignDT)}
+  it should "prove <++> choice" in {check(choicedT)}
+  it should "prove <;> compose" in {check(composedT)}
+  it should "prove <*> iterate" in {check(iteratedT)}
+  it should "prove exists generalize" in {check(existsGeneralizeT)}
+  it should "prove all substitute" in {check(allSubstituteT)}
   it should "prove vacuous exists" in {check(vacuousExistsT)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetT)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetT)}
+  it should "prove \\forall->\\exists" in {check(forallThenExistsT)}
   it should "prove abs" in {check(absT)}
   it should "prove min" in {check(minT)}
   it should "prove max" in {check(maxT)}
