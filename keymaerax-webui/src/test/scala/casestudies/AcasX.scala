@@ -277,7 +277,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           la(instantiateT(Variable("ro"), Number(0))) &
           la(instantiateT(Variable("ho"), Number(0))) & la(ImplyLeftT) && (
           hideT(SuccPosition(0)) & debugT("Use case 1") &
-            abbrv(Variable("max0"))(SuccPosition(0).first.first.first.second.second.first) & debugT("abbrv") &
+            abbrv(Variable("max0"))(SuccPosition(0, PosInExpr(0::0::0::1::1::0::Nil))) & debugT("abbrv") &
             /* super super fragile, any better way of doing this? e.g., ("max(0,w*(dhf-dhd))".asTerm) */
             MinMaxT(AntePosition(9, PosInExpr(1 :: Nil))) & arith,
           AbsT(AntePosition(9, PosInExpr(0 :: 0 :: Nil))) &
@@ -286,25 +286,26 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           ),
         AxiomCloseT
         )),
-      (indStepLbl, debugT("Step") & ls(ImplyRightT) & ls(boxSeqGenT(invariant)) & /*debugT("before abbrv2") &
-        abbrv(Variable("max0"))(SuccPosition(0).first.first.first.second.second.first) & debugT("abbrv2") &*/ onBranch(
+      (indStepLbl, debugT("Step") & ls(ImplyRightT) & ls(boxSeqGenT(invariant)) & onBranch(
         (cutShowLbl, debugT("Generalization Holds") &
           ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) && (
           debugT("1.1") & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) & ls(skolemizeT) & AxiomCloseT, /* closed */
           debugT("1.2") & ls(boxSeqT) & ls(boxNDetAssign) & ls(skolemizeT) & ls(boxSeqT) & ls(boxChoiceT) & hideT(AntePosition(1)) &
             debugT("1.2.1") & ls(AndRightT) & /* both branches are the same */
             ls(substitutionBoxAssignT) & ls(boxTestT) & debugT("1.2.2") & ls(ImplyRightT) & ls(boxNDetAssign) & ls(skolemizeT) &
-            ls(AndRightT) && (ls(AndRightT) && (cohideT(SuccPosition(0)) & arith, AxiomCloseT), AxiomCloseT)
+            ls(AndRightT) && (ls(AndRightT) && (debugT("cohide") & cohideT(SuccPosition(0)) & arith, AxiomCloseT), AxiomCloseT)
             /* last line used to be handled by arith, but Max broke that */
+            /* Would like to replace cohide by: ls(cohideT, "-1=-1|-1=1") OR ls(cohideT, "1=-1|1=1") (BUT two different branches)*/
           )),
         (cutUseLbl, debugT("Generalization Strong Enough") &
-          debugT("Goal 69 (Solving)") /* & ls(LogicalODESolver.solveT) */ /*& ls(diffSolution(None))*/ /* & debugT("Diff. Solution") &
+          debugT("Goal 69 (Solving)") &
+          abbrv(Variable("max0"))(AntePosition(0, PosInExpr(0::1::0::0::0::0::0::0::0::1::1::0::Nil))) & debugT("abbrv2") &
+          ls(diffSolution(None, la(hideT, "max0=max((0,w*(dhf-dhd)))"))) & debugT("Diff. Solution") &
           /* cutting in the side condition that we expect from diff. solution. Remove once diff. solution produces it */
           cutT(Some("\\forall tside (0<=tside & tside<=kxtime_5 -> (w*(dhd_2()+ao*tside)>=w*dhf|w*ao>=a))".asFormula)) &
           onBranch(
-            (cutShowLbl, debugT("Ignore this branch - cut cannot be shown") /* TODO Counts as open goal */),
-            (cutUseLbl, debugT("bla")
-              /* repeat cut so that we can instantiate twice */
+            (cutShowLbl, lastSucc(cohideT) & debugT("Ignore this branch - cut cannot be shown") /* TODO Counts as open goal */),
+            (cutUseLbl, debugT("bla") & /* repeat cut so that we can instantiate twice */
               cutT(Some("\\forall tside (0<=tside & tside<=kxtime_5 -> (w*(dhd_2()+ao*tside)>=w*dhf|w*ao>=a))".asFormula)) & onBranch(
                 (cutShowLbl, AxiomCloseT),
                 (cutUseLbl,
@@ -312,44 +313,37 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     ls(AndRightT) && (
                       AxiomCloseT,
                       debugT("Before skolemization") & (ls(skolemizeT)*) & debugT("After skolemization") & ls(ImplyRightT) & ls(OrRightT) &
-                        // here we'd want to access the previously introduced skolem symbol and the time introduced by diffSolution
-                        // goal 90
-                        la(instantiateT(Variable("t"),
-                          // t_22+t_23: kxtime_5 == t_22, t_0 == t_23
-                          "kxtime_5 + t_0".asTerm)) &
-                        la(instantiateT(Variable("ro"),
-                          // rv*(t_22+t_23)
-                          "rv*(kxtime_5 + t_0)".asTerm)) &
+                        // here we'd want to access the previously introduced skolem symbol and the time introduced by diffSolution; goal 90
+                        la(instantiateT(Variable("t"), "kxtime_5 + t_0".asTerm)) & // t_22+t_23: kxtime_5 == t_22, t_0 == t_23
+                        la(instantiateT(Variable("ro"), "rv*(kxtime_5 + t_0)".asTerm)) & // rv*(t_22+t_23)
                         debugT("Before CUT") &
-                        // here we'd also want to access symbols created during the proof
-                        // CUT 1: (0 <= t_0+kxtime_5 & t_0+kxtime_5 < Max(0, w*(dhf-dhd))/a) | t_0+kxtime_5 >= Max(0, w*(dhf-dhd))/a
-                        // TODO: This cut should be done way later. We need a proper use of quantifiers
-                        cutT(Some("(0 <= t_0+kxtime_5 & t_0+kxtime_5 < w*(dhf-dhd)/a) | (0 <= t_0+kxtime_5 & t_0+kxtime_5 >= w*(dhf-dhd)/a)".asFormula)) & onBranch(
-                        (cutShowLbl, debugT("Show Cut") & lastAnte(hideT) & hideT(SuccPosition(1)) & hideT(SuccPosition(0)) &
+                        // CUT: "(0 <= t_0+kxtime_5 & t_0+kxtime_5 < Max(0, w*(dhf-dhd))/a) | t_0+kxtime_5 >= Max(0, w*(dhf-dhd))/a"
+                        cutT(Some("(0 <= t_0+kxtime_5 & t_0+kxtime_5 < max0) | t_0+kxtime_5 >= max0".asFormula)) & onBranch(
+                        (cutShowLbl, debugT("Show Cut") & lastAnte(hideT) & hideT(AntePosition(0)) &
+                          hideT(SuccPosition(1)) & hideT(SuccPosition(0)) & debugT("Show Cut 2") &
                           ls(OrRightT) & lastAnte(OrLeftT) & (la(AndLeftT)*) & (ls(AndRightT)*) & (arith | debugT("Should be closed") & Tactics.stopT)),
-                        (cutUseLbl, debugT("Use Cut") & /* OrLeftT on formula of CUT 1 */ lastAnte(OrLeftT) && (
-                          // goal 110
-                          debugT("Goal 110") & locateAnte(instantiateT(Variable("ho"), "w*a/2*(t_0+kxtime_5)^2 + dhd*(t_0+kxtime_5)".asTerm), { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false }) &
-                            // OrLeftT on ???
-                            ((AxiomCloseT | l(NonBranchingPropositionalT))*) & la(ImplyLeftT, "0<=kxtime_5+t_0&kxtime_5+t_0 < w*(dhf-dhd)/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=w*a/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=0&kxtime_5+t_0>=w*(dhf-dhd)/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&(w*(dhf-dhd)<=0&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=dhf*(kxtime_5+t_0)|w*(dhf-dhd)>0&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=dhf*(kxtime_5+t_0)-w*(w*(dhf-dhd))^2/(2*a))->r-rv*(kxtime_5+t_0) < -rp|r-rv*(kxtime_5+t_0)>rp|w*h < w*(w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5))-hp") && (
+                        (cutUseLbl, debugT("Use Cut") & hideT(AntePosition(0)) & lastAnte(OrLeftT) && (
+                          debugT("Goal 110") &
+                            locateAnte(instantiateT(Variable("ho"), "w*a/2*(t_0+kxtime_5)^2 + dhd*(t_0+kxtime_5)".asTerm), { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false }) &
+                            debugT("instantiate ho") &
+                            la(ImplyLeftT, "0<=kxtime_5+t_0&kxtime_5+t_0 < max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=w*a/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=dhf*(kxtime_5+t_0)-w*max0^2/(2*a)->abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5))-hp") && (
                             (ls(OrRightT)*) & lastSucc(hideT) & (ls(AndRightT)*) & (AxiomCloseT | arith | debugT("Shouldn't get here")),
-                            la(OrLeftT, "0<=t_0&t_0 < w*(dhf-dhd_3)/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=0&t_0>=w*(dhf-dhd_3)/a&ro_0=rv*t_0&(w*(dhf-dhd_3)<=0&ho_0=dhf*t_0|w*(dhf-dhd_3)>0&ho_0=dhf*t_0-w*(w*(dhf-dhd_3))^2/(2*a))") && (
+                            debugT("cut 3") /* la(OrLeftT, "0<=t_0&t_0 < w*(dhf-dhd_3)/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=0&t_0>=w*(dhf-dhd_3)/a&ro_0=rv*t_0&(w*(dhf-dhd_3)<=0&ho_0=dhf*t_0|w*(dhf-dhd_3)>0&ho_0=dhf*t_0-w*(w*(dhf-dhd_3))^2/(2*a))") && (
                               debugT("Goal 124") & lastAnte(OrLeftT) && (
                                 hideT(SuccPosition(0)) & (arith | debugT("This should close") & Tactics.stopT),
                                 debugT("Goal 135") & lastSucc(hideT) & lastSucc(hideT) & (la(AndLeftT)*) & debugT("Goal 145") & la(OrLeftT, "w*dhd_3>=w*dhf|w*ao>=a") && (
                                   debugT("Goal 146") & crushw,
                                   debugT("Goal 148") & crushw
-                                  )
-                                ),
+                                )
+                              ),
                               debugT("Goal 125") & lastAnte(OrLeftT) && (
                                 debugT("Goal 280") & arith,
                                 debugT("Goal 281") & (la(AndLeftT)*) & (la(OrLeftT)*) & arith
-                                )
                               )
-                            ),
+                            ) */ ),
                           // goal 111
                           // we don't have Max, so instead of instantiating ho with dhf*(t_0+kxtime_5) - w*(Max(0, w*(dhf-dhd))^2/(2*a) we first cut
-                          debugT("Goal 111") &
+                          debugT("Goal 111") /*&
                             cutT(Some("w*(dhf-dhd) > 0 | w*(dhf-dhd) <= 0".asFormula)) & onBranch(
                             (cutShowLbl, lastSucc(cohideT) & arith),
                             (cutUseLbl, lastAnte(OrLeftT) && (
@@ -420,18 +414,18 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
                               ))
                           )
+                          )*/
                           )
-                          )
+                        )
                       )
-                      ),
-                    arith
-                    ) /* End AndRight */
-                  ) /* End cutUseLbl of ODE cut */
-              ) /* End cutUseLbl of 1st ODE cut */
-              ) /* End onBranch of ODE cut */
-          ) /* End onBranch of 1st ODE cut */
-          ) */
-      )) )
+                    ), arith /* End AndRight */
+                  )
+                ) /* End cutUseLbl of 2nd ODE cut */
+              ) /* End onBranch 2nd ODE cut */
+            ) /* End cutUseLbl of 1st ODE cut */
+          ) /* End onBranch 1st ODE cut */
+        ) /* End cutUseLbl "Generalization strong enough" */
+      )) /* End indStepLbl */
     )
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
