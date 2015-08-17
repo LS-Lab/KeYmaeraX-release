@@ -43,9 +43,9 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   override def afterEach() = {
-    Tactics.Z3Scheduler.get.shutdown()
-    Tactics.MathematicaScheduler.shutdown()
-    Tactics.KeYmaeraScheduler.shutdown()
+    if (Tactics.Z3Scheduler != null && Tactics.Z3Scheduler.isDefined) Tactics.Z3Scheduler.get.shutdown()
+    if (Tactics.MathematicaScheduler != null) Tactics.MathematicaScheduler.shutdown()
+    if (Tactics.KeYmaeraScheduler != null) Tactics.KeYmaeraScheduler.shutdown()
     Tactics.Z3Scheduler = null
     Tactics.MathematicaScheduler = null
     Tactics.KeYmaeraScheduler = null
