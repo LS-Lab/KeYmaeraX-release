@@ -336,3 +336,23 @@ class GhostOfLipschitz extends TacticTestSuite {
     helper.report(node)
   }
 }
+
+class DGPlusPlus extends TacticTestSuite {
+  "DG++" should "work when no variables are different" in {
+    val f = "\\forall y [{y' = x*v, x' = z, h' = -y, t' = 0*t + 1 & x=  0 & y = 0 & a=0 & t=0}]1=1".asFormula //nonsense
+    val node = helper.formulaToNode(f)
+    val tactic = edu.cmu.cs.ls.keymaerax.tactics.ODETactics.DiffGhostPlusPlusSystemT(SuccPos(0))
+    helper.runTactic(tactic, node)
+    node.openGoals().length shouldBe 1
+    node.openGoals().last.sequent.succ.last shouldBe "[{x' = z, h' = -y, t' = 0*t + 1 & x=  0 & y = 0 & a=0 & t=0}]1=1".asFormula
+  }
+
+  it should "work for ACAS X system after a , commute" in {
+    val f = "\\forall r [{r'=-rv(), dhd'=ao(), h'=-dhd, t'=0*t+1 & 1=1}]2=2".asFormula //nonsense
+    val node = helper.formulaToNode(f)
+    val tactic = edu.cmu.cs.ls.keymaerax.tactics.ODETactics.DiffGhostPlusPlusSystemT(SuccPos(0))
+    helper.runTactic(tactic, node)
+    node.openGoals().length shouldBe 1
+    node.openGoals().last.sequent.succ.last shouldBe "[{dhd'=ao(), h'=-dhd, t'=0*t+1 & 1=1}]2=2".asFormula
+  }
+}
