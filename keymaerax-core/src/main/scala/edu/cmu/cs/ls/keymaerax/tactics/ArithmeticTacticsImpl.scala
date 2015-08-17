@@ -612,7 +612,7 @@ object ArithmeticTacticsImpl {
         case Equal(s1, s2) if s1 == s2 =>
           val aS = FuncOf(Function("s", None, Unit, Real), Nothing)
           val subst = SubstitutionPair(aS, s1) :: Nil
-          Some(uniformSubstT(subst, Map(node.sequent(p) -> Equal(aS, aS))) & AxiomTactic.axiomT("= reflexive"))
+          Some(uniformSubstT(subst, Map(node.sequent(p) -> Equal(aS, aS))) & cohideT(p) & AxiomTactic.axiomT("= reflexive"))
         case _ => throw new IllegalStateException("Impossible by EqualReflexiveT.applies")
       }
     }

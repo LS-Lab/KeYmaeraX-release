@@ -591,6 +591,14 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     result shouldBe 'closed
   }
 
+  it should "close a=a by reflexivity if not sole formula in sequent" in {
+    val s = sequent(Nil, Nil, "2>1".asFormula :: "a=a".asFormula :: Nil)
+    val tactic = ArithmeticTacticsImpl.EqualReflexiveT(SuccPosition(1))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result shouldBe 'closed
+  }
+
   it should "close 2=2 by reflexivity" in {
     val s = sucSequent("2=2".asFormula)
     val tactic = ArithmeticTacticsImpl.EqualReflexiveT(SuccPosition(0))
