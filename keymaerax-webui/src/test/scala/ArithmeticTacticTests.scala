@@ -614,4 +614,25 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     result.openGoals().last.sequent.succ(0) shouldBe "1+1=2".asFormula
   }
 
+  "abs(-5) > 4" should "be provable with QE in Mathematica" in {
+    val s = sucSequent("abs(-5) > 4".asFormula)
+    val tactic = ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 0
+  }
+
+  "max(1,3) = 3" should "be provable with QE in Mathematica" in {
+    val s = sucSequent("max(1,3) = 3".asFormula)
+    val tactic = ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 0
+  }
+
+  "min(1,3) = 1" should "be provable with QE in Mathematica" in {
+    val s = sucSequent("min(1,3) = 1".asFormula)
+    val tactic = ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 0
+  }
+
 }
