@@ -153,7 +153,8 @@ object EqualityRewritingImpl {
         // prevent endless self rewriting (e.g., 0=0) -> compute dependencies first to figure out what to rewrite when
         !what.isInstanceOf[Number] && what != repl &&
         StaticSemantics.symbols(what).intersect(StaticSemantics.symbols(repl)).isEmpty &&
-          positionsOf(what, s).filter(pos => pos.isAnte != p.isAnte || pos.index != p.index).nonEmpty
+          positionsOf(what, s).exists(pos => (pos.isAnte != p.isAnte || pos.index != p.index) &&
+            StaticSemanticsTools.boundAt(s(pos), pos.inExpr).intersect(StaticSemantics.freeVars(what)).isEmpty)
       case _ => false
     })
 
@@ -166,7 +167,8 @@ object EqualityRewritingImpl {
           assert(!what.isInstanceOf[Number] && what != repl)
           // positions are not stable, so we need to search over and over again (we even need to search eqPos, since it
           // may shift)
-          val occurrences = positionsOf(what, node.sequent).filter(pos => pos.isAnte != p.isAnte || pos.index != p.index)
+          val occurrences = positionsOf(what, node.sequent).filter(pos => pos.isAnte != p.isAnte || pos.index != p.index).
+            filter(pos => StaticSemanticsTools.boundAt(node.sequent(pos), pos.inExpr).intersect(StaticSemantics.freeVars(what)).isEmpty)
           if (exhaustive) {
             Some(constFormulaCongruenceT(p, left=left, exhaustive=false)(occurrences.head) &
               (locateAnte(eqPos(name, left, exhaustive), _ == eq) | NilT))
