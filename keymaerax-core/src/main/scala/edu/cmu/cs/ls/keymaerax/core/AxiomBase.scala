@@ -479,6 +479,15 @@ Axiom "DG differential Lipschitz ghost system".
   <- (\exists L [{c&H(??)}] (\forall a \forall b \forall u \forall v (a>=b -> [y:=a;u:=g(??);y:=b;v:=g(??);] (-L*(a-b) <= u-v & u-v <= L*(a-b)))))
 End.
 
+Axiom "DG++ System".
+  ([{x'=f(x), c & H(??)}]p(??))  ->  (\forall y [{y'=g(??), x'=f(x), c & H(??)}]p(??))
+End.
+
+Axiom "DG++".
+  ([{x'=f(x) & H(??)}]p(??))  ->  (\forall y [{x'=f(x),y'=g(??) & H(??)}]p(??))
+End.
+
+
 /* Formatter axioms for diff eqs. @todo unused except in tactics implementation of itself */
 Axiom ", commute".
   [{c,d & H(??)}]p(??) <-> [{d,c & H(??)}]p(??)
