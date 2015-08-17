@@ -206,6 +206,12 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   override def toString: String = {assert(pref.isEmpty);
     ante.map(_.prettyString).mkString(", ") + "\n  ==>  " + succ.map(_.prettyString).mkString(", ")}
 
+  /** Pretty-print sequent */
+  def prettyString: String =
+    (1 to ante.length).map(i => -i + ":  " + ante(i-1).prettyString + "\t" + ante(i-1).getClass.getSimpleName).mkString("\n") +
+      "\n  ==>  \n" +
+    (1 to succ.length).map(i => +i + ":  " + succ(i-1).prettyString + "\t" + succ(i-1).getClass.getSimpleName).mkString("\n")
+
 }
 
 

@@ -113,9 +113,10 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   def name: String
   def index: Option[Int]
 
+  /** Compare named symbols lexicographically: by name, index, category. */
   def compare(other: NamedSymbol): Int = {
     val cmp = name.compare(other.name)
-    if (cmp != 0) cmp else index.getOrElse(-1) - other.index.getOrElse(-1)
+    if (cmp != 0) cmp else {val cmp2 = index.getOrElse(-1) - other.index.getOrElse(-1); if (cmp2 != 0) cmp2 else getClass().getSimpleName.compareTo(other.getClass.getSimpleName)}
   } ensuring(r => r!=0 || this==other, "no different categories of symbols with same name " + this + " compared to " + other)
 
   /** Get name with index of this NamedSymbol. */

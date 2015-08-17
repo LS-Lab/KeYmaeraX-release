@@ -56,7 +56,7 @@ object DerivedAxioms {
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
   private[tactics] def derivedAxiom(name: String, derived: Sequent, tactic: Tactic): Lemma = {
     //@todo optimize: no need to prove if already filed in derivedAxiomDB anyhow
-    val witness = tactic2Provable(derived, tactic)
+    val witness = TactixLibrary.proveBy(derived, tactic)
     assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + name + " got\n" + witness)
     derivedAxiom(name, witness)
   }
@@ -68,18 +68,6 @@ object DerivedAxioms {
     new ApplyRule(lemmaRule) {
       override def applicable(node: ProofNode): Boolean = node.sequent.sameSequentAs(lemma.fact.conclusion)
     }
-  }
-
-  /**
-   * Convert a tactic for a goal to the resulting Provable
-   * @see [[TactixLibrary.by(Provable)]]
-   */
-  private[tactics] def tactic2Provable(goal: Sequent, tactic: Tactic): Provable = {
-    val rootNode = new RootNode(goal)
-    //@todo what/howto ensure it's been initialized already
-    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
-    println("tactic2Provable " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().foreach(x => println("Open Goal: " + x.sequent.toString()))))
-    rootNode.provableWitness
   }
 
   private val x = Variable("x_", None, Real)
@@ -575,6 +563,130 @@ object DerivedAxioms {
       closeId
   )
 
+  /**
+   * {{{Axiom "->true".
+   *    (p()->true) <-> true
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val impliesTrue = derivedAxiom("->true",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(p()->true) <-> true".asFormula)),
+    prop
+  )
+
+  lazy val impliesTrueT = derivedAxiomT(impliesTrue)
+
+  /**
+   * {{{Axiom "true->".
+   *    (true->p()) <-> p()
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val trueImplies = derivedAxiom("true->",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(true->p()) <-> p()".asFormula)),
+    prop
+  )
+
+  lazy val trueImpliesT = derivedAxiomT(trueImplies)
+
+  /**
+   * {{{Axiom "&true".
+   *    (p()&true) <-> p()
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val andTrue = derivedAxiom("&true",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(p()&true) <-> p()".asFormula)),
+    prop
+  )
+
+  lazy val andTrueT = derivedAxiomT(andTrue)
+
+  /**
+   * {{{Axiom "true&".
+   *    (true&p()) <-> p()
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val trueAnd = derivedAxiom("true&",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(true&p()) <-> p()".asFormula)),
+    prop
+  )
+
+  lazy val trueAndT = derivedAxiomT(trueAnd)
+
+  /**
+   * {{{Axiom "0*".
+   *    (0*f()) = 0
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val zeroTimes = derivedAxiom("0*",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(0*f()) = 0".asFormula)),
+    QE
+  )
+
+  /**
+   * {{{Axiom "0+".
+   *    (0+f()) = f()
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val zeroPlus = derivedAxiom("0+",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(0+f()) = f()".asFormula)),
+    QE
+  )
+
+  /**
+   * {{{Axiom "DS differential equation solution".
+   *    [{x'=c()}]p(x) <-> \forall t (t>=0 -> [x:=x+(c()*t);]p(x))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val DSnodomain = derivedAxiom("DS differential equation solution",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=c()}]p(x) <-> \\forall t (t>=0 -> [x:=x+(c()*t);]p(x))".asFormula)),
+    useAt("DS& differential equation solution")(SuccPosition(0, 0::Nil)) &
+      useAt(impliesTrue)(SuccPosition(0, 0::0::1::0::0::Nil)) &
+      useAt("vacuous all quantifier")(SuccPosition(0, 0::0::1::0::Nil)) &
+      useAt(trueImplies)(SuccPosition(0, 0::0::1::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  /**
+   * {{{Axiom "Dsol differential equation solution".
+   *    <{x'=c()}>p(x) <-> \exists t (t>=0 & <x:=x+(c()*t);>p(x))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val DSdnodomain = derivedAxiom("Dsol differential equation solution",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("<{x'=c()}>p(x) <-> \\exists t (t>=0 & <x:=x+(c()*t);>p(x))".asFormula)),
+    useAt("Dsol& differential equation solution")(SuccPosition(0, 0::Nil)) &
+      useAt(impliesTrue)(SuccPosition(0, 0::0::1::0::0::Nil)) &
+      useAt("vacuous all quantifier")(SuccPosition(0, 0::0::1::0::Nil)) &
+      useAt(trueAnd)(SuccPosition(0, 0::0::1::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  /**
+   * {{{Axiom "Dsol& differential equation solution".
+   *    <{x'=c()&q(x)}>p(x) <-> \exists t (t>=0 & ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))
+   * End.
+   * }}}
+   * @todo duality from DS&
+   */
+  lazy val DSd = derivedAxiom("Dsol& differential equation solution",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("<{x'=c()&q(x)}>p(x) <-> \\exists t (t>=0 & ((\\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))".asFormula)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+      step(SuccPosition(0, 0::Nil))
+  )
 
   //  lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",
 //    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)))
@@ -592,17 +704,61 @@ object DerivedAxioms {
 //  )
 
   /**
+   * {{{Axiom "' linear".
+   *    (c()*f(??))' = c()*(f(??))'
+   * End.
+   * }}}
+   */
+  lazy val Dlinear = derivedAxiom("' linear",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(c()*f(??))' = c()*(f(??))'".asFormula)),
+    useAt("*' derive product")(SuccPosition(0, 0::Nil)) &
+      useAt("c()' derive constant fn")(SuccPosition(0, 0::0::0::Nil)) &
+      useAt(zeroTimes)(SuccPosition(0, 0::0::Nil)) &
+      useAt(zeroPlus)(SuccPosition(0, 0::Nil)) &
+      byUS("= reflexive")
+  )
+  lazy val DlinearT = derivedAxiomT(Dlinear)
+
+  /**
    * {{{Axiom "abs".
    *   (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))
    * End.
    * }}}
    * @Derived from built-in arithmetic abs in [[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]
    */
-  lazy val abs = derivedAxiom("abs",
+  lazy val absDef = derivedAxiom("abs",
     Sequent(Nil, IndexedSeq(), IndexedSeq("(abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))".asFormula)),
     TactixLibrary.QE //TactixLibrary.master
   )
 
-  lazy val absT = derivedAxiomT(abs)
+  lazy val absT = derivedAxiomT(absDef)
+
+  /**
+   * {{{Axiom "min".
+   *    (min(f(), g()) = h()) <-> ((f()<=g() & h()=f()) | (f()>g() & h()=g()))
+   * End.
+   * }}}
+   * @Derived from built-in arithmetic abs in [[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]
+   */
+  lazy val minDef = derivedAxiom("min",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(min(f(), g()) = h()) <-> ((f()<=g() & h()=f()) | (f()>g() & h()=g()))".asFormula)),
+    TactixLibrary.QE //TactixLibrary.master
+  )
+
+  lazy val minT = derivedAxiomT(minDef)
+
+  /**
+   * {{{Axiom "max".
+   *    (max(f(), g()) = h()) <-> ((f()>=g() & h()=f()) | (f()<g() & h()=g()))
+   * End.
+   * }}}
+   * @Derived from built-in arithmetic abs in [[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]
+   */
+  lazy val maxDef = derivedAxiom("max",
+    Sequent(Nil, IndexedSeq(), IndexedSeq("(max(f(), g()) = h()) <-> ((f()>=g() & h()=f()) | (f()<g() & h()=g()))".asFormula)),
+    TactixLibrary.QE //TactixLibrary.master
+  )
+
+  lazy val maxT = derivedAxiomT(maxDef)
 
 }

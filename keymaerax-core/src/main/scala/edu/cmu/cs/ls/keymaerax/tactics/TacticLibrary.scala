@@ -223,6 +223,8 @@ object TacticLibrary {
     * unification and matching based auto-tactics
     *******************************************************************/
 
+  type Subst = UnificationMatch.Subst
+
   /**
    * useAt(fact)(pos) uses the given fact at the given position in the sequent.
    * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
@@ -243,23 +245,30 @@ object TacticLibrary {
    * @param fact the Formula to use to simplify at the indicated position of the sequent
    * @param key the part of the Formula fact to unify the indicated position of the sequent with
    * @param factTactic the tactic to use to prove the instance of the fact obtained after unification
+   * @param inst Transformation for instantiating additional unmatched symbols that do not occur in fact(key).
+   *   Defaults to identity transformation, i.e., no change in substitution found by unification.
+   *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
    * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
    */
-  def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic): PositionTactic = new PositionTactic("useAt") {
+  def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic, inst: Subst=>Subst = (us=>us)): PositionTactic = new PositionTactic("useAt") {
     import PropositionalTacticsImpl._
     import FormulaConverter._
     private val (keyCtx:Context[_],keyPart) = new FormulaConverter(fact).extractContext(key)
     //private val keyPart = new FormulaConverter(fact).subFormulaAt(key).get
 
-    override def applies(s: Sequent, p: Position): Boolean = {val part = s(p.top).at(p.inExpr);
-      part.isDefined && UnificationMatch.unifiable(keyPart,part.get).isDefined}
+    override def applies(s: Sequent, p: Position): Boolean = try {
+      val part = s(p.top).at(p.inExpr);
+      if (!part.isDefined) false
+      UnificationMatch(keyPart,part.get)
+      true
+    } catch {case e: ProverException => println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s(p.top).at(p.inExpr))); false}
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val (ctx,expr) = new FormulaConverter(node.sequent(p.top)).extractContext(p.inExpr)
-        val subst = UnificationMatch(keyPart, expr)
+        val subst = inst(UnificationMatch(keyPart, expr))
         println("useAt unify: " + expr + " matches against " + keyPart + " by " + subst)
         assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
@@ -338,7 +347,11 @@ object TacticLibrary {
               (BranchLabels.cutShowLbl, /*PropositionalTacticsImpl.InverseImplyRightT &*/ factTactic)
             ))
 
-          case Forall(vars, remainder) => ???
+          case Forall(vars, remainder) if vars.length==1 =>
+            useAt(subst, new Context(remainder), k, p, C, c, instantiateQuanT(vars.head, subst(vars.head))(SuccPos(0)))
+
+            //@todo unfold by step*
+          case Box(a, remainder) => ???
         }
       }
     }
@@ -396,7 +409,10 @@ object TacticLibrary {
    * @param form the sequent to reduce this proof node to by a Uniform Substitution
    */
   def US(form: Sequent): Tactic = new ConstructionTactic("US") {
-    def applicable(node: ProofNode) = UnificationMatch.unifiable(form,node.sequent).isDefined
+    def applicable(node: ProofNode) = try {
+      UnificationMatch(form,node.sequent)
+      true
+    } catch {case e: ProverException => println(e.inContext("US(" + form + ")\n(" + node.sequent + ")")); false}
 
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       val subst = UnificationMatch(form, node.sequent)
@@ -549,7 +565,8 @@ object TacticLibrary {
           val qPhi =
             if (vars.isEmpty) phi //Forall(Variable("$abstractiondummy", None, Real)::Nil, phi)
             else
-              vars.to[scala.collection.immutable.SortedSet]. //sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
+            //@todo what about DifferentialSymbols in boundVars? Decided to filter out since not soundness-critical.
+              vars.filter(v=>v.isInstanceOf[Variable]).to[scala.collection.immutable.SortedSet]. //sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
                 foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
           //val numQuantifiers = if (vars.isEmpty) 1 else vars.length

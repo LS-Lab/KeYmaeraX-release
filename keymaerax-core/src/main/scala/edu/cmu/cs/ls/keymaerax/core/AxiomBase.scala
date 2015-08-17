@@ -78,7 +78,7 @@ private[core] object AxiomBase {
        * Premise f_(??) = g_(??)
        * Conclusion ctxT_(f_(??)) = ctxT_(g_(??))
        * End.
-       * @derived("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
+       * @derived ("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
        */
       ("CT term congruence",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany))),
@@ -354,7 +354,7 @@ Axiom "<:=> assign".
   <v:=t();>p(v) <-> p(t())
 End.
 
-/* @derived */
+/* @derived! */
 Axiom "[:=] assign equational".
   [v:=t();]p(v) <-> \forall v (v=t() -> p(v))
 End.
@@ -484,7 +484,7 @@ Axiom ", commute".
   [{c,d & H(??)}]p(??) <-> [{d,c & H(??)}]p(??)
 End.
 
-/* @Derived */
+/* @Derived! */
 Axiom "DS differential equation solution".
   [{x'=c()}]p(x) <-> \forall t (t>=0 -> [x:=x+(c()*t);]p(x))
 End.
@@ -493,12 +493,12 @@ Axiom "DS& differential equation solution".
   [{x'=c()&q(x)}]p(x) <-> \forall t (t>=0 -> ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) -> [x:=x+(c()*t);]p(x)))
 End.
 
-/* @derived(DS differential equation solution + duality) */
+/* @derived! (DS differential equation solution + duality) */
 Axiom "Dsol differential equation solution".
  <{x'=c()}>p(x) <-> \exists t (t>=0 & <x:=x+(c()*t);>p(x))
 End.
 
-/* @Derived */
+/* @Derived! */
 Axiom "Dsol& differential equation solution".
   <{x'=c()&q(x)}>p(x) <-> \exists t (t>=0 & ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))
 End.
@@ -733,14 +733,17 @@ Axiom "> flip".
   (f() > g()) <-> (g() < f())
 End.
 
+/* @derived! */
 Axiom "abs".
   (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))
 End.
 
+/* @derived! */
 Axiom "max".
   (max(f(), g()) = h()) <-> ((f()>=g() & h()=f()) | (f()<g() & h()=g()))
 End.
 
+/* @derived! */
 Axiom "min".
   (min(f(), g()) = h()) <-> ((f()<=g() & h()=f()) | (f()>g() & h()=g()))
 End.

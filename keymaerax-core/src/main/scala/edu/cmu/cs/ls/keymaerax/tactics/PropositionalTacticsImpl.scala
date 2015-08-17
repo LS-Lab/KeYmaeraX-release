@@ -71,7 +71,7 @@ object PropositionalTacticsImpl {
 
     def apply(pos: Position): Tactic = new Tactics.ApplyRule(AndRight(pos)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-    }
+    } & (LabelBranch(BranchLabels.leftLbl), LabelBranch(BranchLabels.rightLbl))
   }
 
   def OrT: PositionTactic = new PositionTactic("Or") {

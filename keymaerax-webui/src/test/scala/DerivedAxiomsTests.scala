@@ -6,7 +6,6 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms._
-import DerivedAxioms.abs
 
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics._
@@ -102,7 +101,12 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove -> expand" in {check(implyExpand)}
   it should "prove ->'" in {check(Dimply)}
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
-  it should "prove abs" in {check(abs)}
+  it should "prove DS no domain" in {check(DSnodomain)}
+  it should "prove DSol no domain" in {check(DSdnodomain)}
+  it should "prove 'linear" in {check(Dlinear)}
+  it should "prove abs" in {check(absDef)}
+  it should "prove min" in {check(minDef)}
+  it should "prove max" in {check(maxDef)}
   it should "prove y-variant of all dual" in {check(dummyallDualAxiom)}
   it should "prove y-variant of all dual 2" in {check(dummyallDualAxiom2)}
   it should "prove y-variant of exists dual" in {check(dummyexistsDualAxiom)}
@@ -123,7 +127,9 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove vacuous exists" in {check(vacuousExistsT)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetT)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetT)}
-  it should "prove abs" in {check(abs)}
+  it should "prove abs" in {check(absT)}
+  it should "prove min" in {check(minT)}
+  it should "prove max" in {check(maxT)}
 
 
   lazy val dummyassigndVvariant = derivedAxiom("<:=> assign",
