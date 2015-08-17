@@ -591,6 +591,14 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     result shouldBe 'closed
   }
 
+  it should "close a=a by reflexivity if not sole formula in sequent" in {
+    val s = sequent(Nil, Nil, "2>1".asFormula :: "a=a".asFormula :: Nil)
+    val tactic = ArithmeticTacticsImpl.EqualReflexiveT(SuccPosition(1))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result shouldBe 'closed
+  }
+
   it should "close 2=2 by reflexivity" in {
     val s = sucSequent("2=2".asFormula)
     val tactic = ArithmeticTacticsImpl.EqualReflexiveT(SuccPosition(0))
@@ -612,6 +620,27 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val tactic = ArithmeticTacticsImpl.commuteEqualsT(SuccPos(0))
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals().last.sequent.succ(0) shouldBe "1+1=2".asFormula
+  }
+
+  "abs(-5) > 4" should "be provable with QE in Mathematica" in {
+    val s = sucSequent("abs(-5) > 4".asFormula)
+    val tactic = ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 0
+  }
+
+  "max(1,3) = 3" should "be provable with QE in Mathematica" in {
+    val s = sucSequent("max(1,3) = 3".asFormula)
+    val tactic = ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 0
+  }
+
+  "min(1,3) = 1" should "be provable with QE in Mathematica" in {
+    val s = sucSequent("min(1,3) = 1".asFormula)
+    val tactic = ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 0
   }
 
 }

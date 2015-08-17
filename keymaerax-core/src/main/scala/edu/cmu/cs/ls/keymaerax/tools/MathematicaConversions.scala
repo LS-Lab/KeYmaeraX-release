@@ -485,7 +485,12 @@ object KeYmaeraToMathematica {
    * Converts a KeYmaera terms to a Mathematica expression.
    */
   def convertTerm(t : Term) : MExpr = {
-    require(t.sort == Real || t.sort == Unit, "Mathematica can only deal with reals not with sort " + t.sort)
+    def flattenSort(s: Sort): List[Sort] = s match {
+      case Tuple(ls, rs) => ls :: rs :: Nil
+      case _ => s :: Nil
+    }
+
+    require(t.sort == Real || t.sort == Unit || flattenSort(t.sort).forall(_ == Real), "Mathematica can only deal with reals not with sort " + t.sort)
     t match {
       case FuncOf(fn, child) => convertFnApply(fn, child)
       case Neg(c) => new MExpr(MathematicaSymbols.MINUSSIGN, Array[MExpr](convertTerm(c)))
@@ -497,6 +502,7 @@ object KeYmaeraToMathematica {
       case Differential(c) => convertDerivative(c)
       case DifferentialSymbol(c) => convertDerivative(c)
       case Number(n) => new MExpr(n.underlying())
+      case Pair(l, r) => convertPair(l, r)
       case t: Variable => convertNS(t)
     }
   }
@@ -553,6 +559,11 @@ object KeYmaeraToMathematica {
     new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), args)
   }
 
+  /** Converts a pair of terms to Mathematica */
+  def convertPair(l: Term, r: Term): MExpr = {
+    //@todo handle nested pairs (flatten to a list?)
+    new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(l), convertTerm(r)))
+  }
   
   /**
    * Converts a named symbol into Mathematica

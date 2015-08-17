@@ -358,10 +358,9 @@ object DerivedAxioms {
   lazy val allSubstitute = derivedAxiom("all substitute",
     Sequent(Nil, IndexedSeq(), IndexedSeq("(\\forall x (x=t() -> p(x))) <-> p(t())".asFormula)),
     equivR(SuccPos(0)) & onBranch(
-      //@todo unifications fail here and may have to be constructed manually. Or proved from sequent calculus
-      (equivLeftLbl, useAt("all instantiate")(AntePos(0)) & prop),
-      (equivRightLbl, allR(SuccPos(0)) &
-        useAt("const formula congruence", PosInExpr(1::0::Nil))(SuccPos(0)) & close)
+      //@note unifications fail here -> proved from sequent calculus
+      (equivLeftLbl, allL(Variable("x"), "t()".asTerm)(AntePos(0)) & implyL(AntePos(0)) && (equalReflexive(SuccPos(1)), close)),
+      (equivRightLbl, allR(SuccPos(0)) & implyR(SuccPos(0)) & EqualityRewritingImpl.constFormulaCongruenceT(AntePos(1), left=true)(SuccPos(0)) & close)
     )
   )
 

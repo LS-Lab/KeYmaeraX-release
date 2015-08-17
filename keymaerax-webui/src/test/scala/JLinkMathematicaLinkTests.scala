@@ -60,4 +60,16 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
     val expected = Some("x=x0() + t*y".asFormula)
     link.diffSol(eq, t, Map(x->x0)) should be (expected)
   }
+
+  "abs(-5) > 4" should "be provable with QE" in {
+    link.qe("abs(-5) > 4".asFormula) shouldBe True
+  }
+
+  "min(1,3) = 1" should "be provable with QE" in {
+    link.qe("min(1,3) = 1".asFormula) shouldBe True
+  }
+
+  "max(1,3) = 3" should "be provable with QE" in {
+    link.qe("max(1,3) = 3".asFormula) shouldBe True
+  }
 }

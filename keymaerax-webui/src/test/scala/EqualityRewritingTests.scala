@@ -158,6 +158,13 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     tactic.applicable(new RootNode(s)) shouldBe false
   }
 
+  it should "not try to rewrite bound occurrences" in {
+    //@note would clash anyway, but tactic shouldn't even try
+    val s = sequent(Nil, "a=1".asFormula :: Nil, "[a:=2;]a=1".asFormula :: Nil)
+    val tactic = eqLeft(exhaustive=true)(AntePosition(0))
+    tactic.applicable(new RootNode(s)) shouldBe false
+  }
+
   "Equivalence rewriting" should "rewrite if lhs occurs in succedent" in {
     val s = sequent(Nil, "x>=0 <-> y>=0".asFormula :: Nil, "x>=0".asFormula :: Nil)
     val tactic = EqualityRewritingImpl.equivRewriting(AntePosition(0), SuccPosition(0))
@@ -236,5 +243,26 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only "z = min(a,b)".asFormula
     result.openGoals().head.sequent.succ should contain only "z < c".asFormula
+  }
+
+  it should "not abbreviate in places where at least one of the arguments is bound" in {
+    val s = sequent(Nil, "min(a,b) < c".asFormula :: Nil, "[a:=0;]min(a,b) < c".asFormula :: Nil)
+    val tactic = EqualityRewritingImpl.abbrv(Variable("z"))(AntePosition(0).first)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("z = min(a,b)".asFormula, "z < c".asFormula)
+    result.openGoals().head.sequent.succ should contain only "[a:=0;]min(a,b) < c".asFormula
+  }
+
+  it should "abbreviate min(a,b) to z everywhere (except at bound occurrences)" in {
+    val s = sequent(Nil, "min(a,b) < c".asFormula :: "x>y".asFormula :: "5 < min(a,b)".asFormula :: Nil,
+      "min(a,b) + 2 = 7".asFormula :: "a<b".asFormula :: "[b:=2;]min(a,b) < 9".asFormula :: Nil)
+    val tactic = EqualityRewritingImpl.abbrv(Variable("z"))(AntePosition(0).first)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("z = min(a,b)".asFormula, "z<c".asFormula, "x>y".asFormula, "5<z".asFormula)
+    result.openGoals().head.sequent.succ should contain only ("z+2=7".asFormula, "a<b".asFormula, "[b:=2;]min(a,b)<9".asFormula)
   }
 }

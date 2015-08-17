@@ -22,6 +22,7 @@ import AxiomaticRuleTactics.goedelT
 import TacticLibrary.TacticHelper.{getFormula, getTerm}
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, Tool}
 
+import scala.collection.immutable
 import scala.collection.immutable.List
 import scala.language.postfixOps
 
@@ -64,6 +65,10 @@ object ArithmeticTacticsImpl {
 
   private def isQeApplicable(f: Formula): Boolean = {
     var qeAble = true
+
+    //@todo different tools? problem: isQeApplicable is called when the tool is not known yet
+    val specialFunctions: immutable.Set[String] = immutable.Set("abs", "min", "max")
+
     val fn = new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
         e match {
@@ -78,7 +83,7 @@ object ArithmeticTacticsImpl {
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
         e match {
           case FuncOf(Function(_, _, Unit, _), Nothing) => true
-          case FuncOf(fun, _) => qeAble = false // check if fun is an external function
+          case FuncOf(fun, _) => specialFunctions.contains(fun.asString) // check if fun is an external (special) function
           case Differential(_) => qeAble = false
           case _ =>
         }
@@ -607,7 +612,7 @@ object ArithmeticTacticsImpl {
         case Equal(s1, s2) if s1 == s2 =>
           val aS = FuncOf(Function("s", None, Unit, Real), Nothing)
           val subst = SubstitutionPair(aS, s1) :: Nil
-          Some(uniformSubstT(subst, Map(node.sequent(p) -> Equal(aS, aS))) & AxiomTactic.axiomT("= reflexive"))
+          Some(uniformSubstT(subst, Map(node.sequent(p) -> Equal(aS, aS))) & cohideT(p) & AxiomTactic.axiomT("= reflexive"))
         case _ => throw new IllegalStateException("Impossible by EqualReflexiveT.applies")
       }
     }

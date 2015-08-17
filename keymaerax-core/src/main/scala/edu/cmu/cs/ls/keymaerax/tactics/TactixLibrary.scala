@@ -216,6 +216,9 @@ object TactixLibrary {
   //@todo could change type to invariants: Formula* if considered more readable
   def diffInvariant(invariants: List[Formula]): PositionTactic = ODETactics.diffInvariant(invariants)
 
+  // real closed fields
+  def equalReflexive: PositionTactic = ArithmeticTacticsImpl.EqualReflexiveT
+
   // rules
 
   /** G: Goedel rule proves the postcondition of a box in isolation (hybrid systems) */
