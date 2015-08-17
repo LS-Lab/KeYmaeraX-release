@@ -873,7 +873,7 @@ object ODETactics {
           assert(!remaining.isEmpty, "Only non-empty lists of remaining invariants are applicable")
           val cut = remaining.head
           Some(diffCutT(cut)(p) & onBranch(
-            (BranchLabels.cutShowLbl, diffInvariantT(p)),
+            (BranchLabels.cutShowLbl, diffIntroduceConstantT(p) ~ diffInvariantT(p)),
             (BranchLabels.cutUseLbl, diffInvariant(remaining.tail)(p))))
         case _ => None
       }
