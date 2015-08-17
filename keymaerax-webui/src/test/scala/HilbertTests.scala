@@ -77,10 +77,9 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "prove x>=5 -> [{x'=2}]x>=5" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) &
-        DI(1) & (step(1) & step(1)) & onBranch(
-        (BranchLabels.leftLbl, prop),
-        (BranchLabels.rightLbl, DE(1) & Dassignb(SuccPosition(0, 1::Nil)) &
-          TacticLibrary.abstractionT(1) & QE)
+        DI(1) & (step(1) & step(1)) && (
+        prop,
+        DE(1) & Dassignb(SuccPosition(0, 1::Nil)) & TacticLibrary.abstractionT(1) & QE
       )
     ).isProved shouldBe true
   }
