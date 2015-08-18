@@ -287,7 +287,10 @@ object SearchTacticsImpl {
       for (i <- s.ante.indices) {
         val topPos = AntePosition(i)
         if (cond(s(topPos))) key match {
-          case Some(keyCond) => return findKey(posT, s, i, keyCond, (idx, p) => AntePosition(idx, p))
+          case Some(keyCond) => findKey(posT, s, i, keyCond, (idx, p) => AntePosition(idx, p)) match {
+            case Some(p) => return Some(p)
+            case None => // continue searching
+          }
           case None => if (posT.applies(s, topPos)) return Some(topPos)
         }
       }
@@ -318,7 +321,10 @@ object SearchTacticsImpl {
       for (i <- s.succ.indices) {
         val topPos = SuccPosition(i)
         if (cond(s(topPos))) key match {
-          case Some(keyCond) => return findKey(posT, s, i, keyCond, (idx, p) => SuccPosition(idx, p))
+          case Some(keyCond) => findKey(posT, s, i, keyCond, (idx, p) => SuccPosition(idx, p)) match {
+            case Some(p) => return Some(p)
+            case None => // continue searching
+          }
           case None => if (posT.applies(s, topPos)) return Some(topPos)
         }
       }
