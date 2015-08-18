@@ -287,7 +287,7 @@ object SearchTacticsImpl {
       for (i <- s.ante.indices) {
         val topPos = AntePosition(i)
         if (cond(s(topPos))) key match {
-          case Some(keyCond) => return findKey(posT, s, i, keyCond)
+          case Some(keyCond) => return findKey(posT, s, i, keyCond, (idx, p) => AntePosition(idx, p))
           case None => if (posT.applies(s, topPos)) return Some(topPos)
         }
       }
@@ -318,7 +318,7 @@ object SearchTacticsImpl {
       for (i <- s.succ.indices) {
         val topPos = SuccPosition(i)
         if (cond(s(topPos))) key match {
-          case Some(keyCond) => return findKey(posT, s, i, keyCond)
+          case Some(keyCond) => return findKey(posT, s, i, keyCond, (idx, p) => SuccPosition(idx, p))
           case None => if (posT.applies(s, topPos)) return Some(topPos)
         }
       }
@@ -327,25 +327,26 @@ object SearchTacticsImpl {
   }
 
   /** Finds a position inside the formula s(i) where the specified position tactic is applicable and the specified condition holds */
-  private def findKey(posT: PositionTactic, s: Sequent, i: Int, keyCond: Expression => Boolean): Option[Position] = {
+  private def findKey(posT: PositionTactic, s: Sequent, i: Int, keyCond: Expression => Boolean,
+                      posFactory: (Int, PosInExpr) => Position): Option[Position] = {
     var posInExpr: Option[PosInExpr] = None
     ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-        if (keyCond(e) && posT.applies(s, SuccPosition(i, p))) {
+        if (keyCond(e) && posT.applies(s, posFactory(i, p))) {
           posInExpr = Some(p)
           Left(Some(ExpressionTraversal.stop))
         } else Left(None)
       }
 
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-        if (keyCond(e) && posT.applies(s, SuccPosition(i, p))) {
+        if (keyCond(e) && posT.applies(s, posFactory(i, p))) {
           posInExpr = Some(p)
           Left(Some(ExpressionTraversal.stop))
         } else Left(None)
       }
-    }, s(SuccPosition(i)))
+    }, s(posFactory(i, HereP)))
     posInExpr match {
-      case Some(p) => Some(SuccPosition(i, p))
+      case Some(p) => Some(posFactory(i, p))
       case None => None
     }
   }
