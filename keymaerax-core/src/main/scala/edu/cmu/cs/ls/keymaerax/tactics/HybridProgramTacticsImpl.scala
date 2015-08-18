@@ -294,10 +294,10 @@ object HybridProgramTacticsImpl {
    * @author Stefan Mitsch
    */
   def boxAssignEqualT: PositionTactic = new PositionTactic("[:=] assign equational") {
-    override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case Box(Assign(Variable(_, _,_), _), _) => true
       case _ => false
-    })
+    }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
@@ -305,7 +305,7 @@ object HybridProgramTacticsImpl {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         import scala.language.postfixOps
 
-        val f = node.sequent(p)
+        val f = getFormula(node.sequent, p)
         // construct a new name for the quantified variable
         val (newV1, newV2) = f match {
           case Box(Assign(v: Variable, _), _) =>
@@ -314,7 +314,7 @@ object HybridProgramTacticsImpl {
           case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
 
-        node.sequent(p) match {
+        f match {
           case Box(Assign(v: Variable, _), phi: Modal)
             if loopsAndODEsOf(phi).exists(p => StaticSemantics.symbols(p).contains(v) &&
             !NameCategorizer.freeVariables(p).contains(v)) => Some(
