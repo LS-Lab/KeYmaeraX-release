@@ -732,7 +732,7 @@ object Tactics {
    * Takes a position tactic and ???
    * @todo split into type-safe LeftPositionTactic(AntePos) and RightPositionTactic(SuccPos)
    */
-  abstract class PositionTactic(val name: String) {
+  abstract class PositionTactic(val name: String) extends (Position => Tactic) {
     def applies(s: Sequent, p: Position): Boolean
 
     def apply(signedPos: Int): Tactic = apply(Position.seqPos2Position(SeqPos(signedPos)))
