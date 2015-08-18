@@ -139,6 +139,8 @@ class ProofStepInfo(var infos: Map[String, String])
 /**
  * Proof Search Data Structure for tactics.
  * A proof node for the tactics trying to prove the given subgoal of Provable.
+ * ProofNode(parent, provable, subgoal) sets out to prove the given subgoal of provable for the parent proof node.
+ * Once that proof finished, the final proof certificate obtained after proof search can be extracted via [[provableWitness]].
  * @param parent The parent's proof node that this ProofNode is trying to help finish a full proof for.
  * @param provable The Provable that this ProofNode is trying to help prove by closing the given subgoal.
  * @param subgoal The subgoal of provable that this ProofNode is trying to prove.
