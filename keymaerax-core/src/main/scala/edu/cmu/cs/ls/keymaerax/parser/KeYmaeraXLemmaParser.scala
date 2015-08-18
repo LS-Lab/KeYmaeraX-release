@@ -11,9 +11,9 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
  * Created by smitsch on 7/03/15.
  * @author Stefan Mitsch
  */
-object KeYmaeraXLemmaParser extends (String => (String, Formula, Evidence)) {
+object KeYmaeraXLemmaParser extends (String => (Option[String], Formula, Evidence)) {
   /** the lemma name, the lemma conclusion, and the supporting evidence */
-  private type Lemma = (String, Formula, Evidence)
+  private type Lemma = (Option[String], Formula, Evidence)
 
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
@@ -47,12 +47,13 @@ object KeYmaeraXLemmaParser extends (String => (String, Formula, Evidence)) {
       throw new IllegalArgumentException("Expected only one lemma")
   }
 
-  def parseNextLemma(input: TokenStream): (String, Formula, Evidence, TokenStream) = {
+  def parseNextLemma(input: TokenStream): (Option[String], Formula, Evidence, TokenStream) = {
     require(input.head.tok.equals(LEMMA_BEGIN), "expected ALP file to begin with Lemma block.")
     require(input.tail.head.tok.isInstanceOf[LEMMA_AXIOM_NAME], "expected ALP block to have a string as a name")
 
     val name = input.tail.head match {
-      case Token(LEMMA_AXIOM_NAME(x),_) => x
+      case Token(LEMMA_AXIOM_NAME(x),_) if x != "" => Some(x)
+      case Token(LEMMA_AXIOM_NAME(x),_) if x == "" => None
       case _ => throw new AssertionError("Require should have failed.")
     }
     //Find the End. token and exclude it.
