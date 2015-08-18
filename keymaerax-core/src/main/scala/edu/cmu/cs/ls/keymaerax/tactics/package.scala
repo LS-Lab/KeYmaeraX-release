@@ -33,6 +33,7 @@ package edu.cmu.cs.ls.keymaerax
  * Also see [[edu.cmu.cs.ls.keymaerax.core]].
  *
  * {{{
+ *  import edu.cmu.cs.ls.keymaerax.core._
  *  // explicit proof certificate construction of |- !!p() <-> p()
  *  val proof = (Provable.startProof(
  *    Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)))
