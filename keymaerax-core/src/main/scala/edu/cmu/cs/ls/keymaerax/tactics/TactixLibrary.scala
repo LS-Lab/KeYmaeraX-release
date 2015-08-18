@@ -109,11 +109,17 @@ object TactixLibrary {
   // Locating applicable positions for PositionTactics
 
   /** Locate applicable position in succedent that is on the right */
-  def ls(tactic: PositionTactic, fml: String = ""): Tactic = SearchTacticsImpl.locateSucc(tactic, if (fml == "") _ => true else _ == fml.asFormula)
+  def ls(tactic: PositionTactic, fml: String = "", key: Option[Expression] = None): Tactic =
+    SearchTacticsImpl.locateSucc(tactic,
+      if (fml == "") _ => true else _ == fml.asFormula,
+      if (key.isDefined) Some(_ == key.get) else Some(_ => true))
   /** Locate applicable position in succedent that is on the right */
   def lR(tactic: PositionTactic): Tactic = ls(tactic)
   /** Locate applicable position in antecedent that is on the left */
-  def la(tactic: PositionTactic, fml: String = ""): Tactic = SearchTacticsImpl.locateAnte(tactic, if (fml == "") _ => true else _ == fml.asFormula)
+  def la(tactic: PositionTactic, fml: String = "", key: Option[Expression] = None): Tactic =
+    SearchTacticsImpl.locateAnte(tactic,
+      if (fml == "") _ => true else _ == fml.asFormula,
+      if (key.isDefined) Some(_ == key.get) else Some(_ => true))
   /** Locate applicable position in antecedent that is on the left */
   def lL(tactic: PositionTactic): Tactic = la(tactic)
   /** Locate applicable position in antecedent or succedent */
