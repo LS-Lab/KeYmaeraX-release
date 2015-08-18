@@ -17,7 +17,7 @@ package edu.cmu.cs.ls.keymaerax
  * The Provables that tactics produce can be extracted with [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.proveBy()]]
  *
  * =Proof Styles=
- * KeYmaera X supports many different proof styles, which can aso be mixed.
+ * KeYmaera X supports many different proof styles, including combinations of the following styles:
  *
  * 1. Explicit proof certificates directly program the proof rules from the core.
  *
@@ -112,7 +112,8 @@ package edu.cmu.cs.ls.keymaerax
  * Proof by pointing matches the highlighted position against the highlighted position
  * in the fact and does what it takes to use that knowledge.
  * There are multiple variations of proof by pointing in [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.useAt]]
- * and [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.by]]
+ * and [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.byUS]].
+ * The above proof by pointing implements directly in KeYmaera X:
  *
  * {{{
  * import TactixLibrary._
@@ -138,25 +139,6 @@ package edu.cmu.cs.ls.keymaerax
  * [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.stepAt]] also uses proof by pointing
  * but figures out the appropriate fact to use on its own.
  *
- * Likewise, for proving
- *
- * `  x>5 |- !([x:=x+1; ++ x:=0;]x>=6) | x<2 `
- *
- * it is enough to point to the highlighted position
- *
- * `  x>5 |- !(__[x:=x+1; ++ x:=0;]x>=6__) | x<2 `
- *
- * and using the "[++] choice" axiom fact
- *
- * `  __[a;++b;]p(??)__ <-> [a;]p(??) & [b;]p(??) `
- *
- * to reduce the proof to a proof of
- *
- * `  x>5 |- !([x:=x+1;]x>6 & [x:=0;]x>=6) | x<2 `
- *
- * which is, in turn, easy to prove by pointing to the assignments using "[:=] assign" axioms
- * and ultimately asking propositional logic.
- *
  * {{{
  * import TactixLibrary._
  * // Proof by pointing of  |- &lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))
@@ -179,6 +161,24 @@ package edu.cmu.cs.ls.keymaerax
  *   prop
  * )
  * }}}
+ *
+ * Likewise, for proving
+ *
+ * `  x>5 |- !([x:=x+1; ++ x:=0;]x>=6) | x<2 `
+ *
+ * it is enough to point to the highlighted position
+ *
+ * `  x>5 |- !(__[x:=x+1; ++ x:=0;]x>=6__) | x<2 `
+ *
+ * and using the "[++] choice" axiom fact
+ * `  __[a;++b;]p(??)__ <-> [a;]p(??) & [b;]p(??) `
+ * to reduce the proof to a proof of
+ *
+ * `  x>5 |- !([x:=x+1;]x>6 & [x:=0;]x>=6) | x<2 `
+ *
+ * which is, in turn, easy to prove by pointing to the assignments using "[:=] assign" axioms
+ * and ultimately asking propositional logic.
+ *
  * More proofs by pointing are in [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  *
  * @todo Expand descriptions
