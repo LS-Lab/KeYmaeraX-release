@@ -1065,7 +1065,8 @@ object ODETactics {
       val s = theS(fml)
       val xRenamed = if (x.name != aX.name || x.index != aX.index) AlphaConversionHelper.replace(axiom)(aX, x) else axiom
       val tRenamed = if(t.name != aT.name || t.index != aT.index) AlphaConversionHelper.replace(xRenamed)(aT, t) else xRenamed
-      if(s.name != aS.name || s.index != aS.index) AlphaConversionHelper.replace(tRenamed)(aS, s) else tRenamed
+      val result = if(s.name != aS.name || s.index != aS.index) AlphaConversionHelper.replace(tRenamed)(aS, s) else tRenamed
+      result
     }
 
     axiomLookupBaseT("DS& differential equation solution", subst, alpha, axiomInstance)
@@ -1220,6 +1221,7 @@ object ODETactics {
 
     axiomLookupBaseT("DG++", subst, alpha, axiomInstance)
   }
+  //The commented out code below should be equivalent to the code above...
 //  def DiffGhostPPT : PositionTactic = {
 //    def axiomInstance(fml : Formula) = fml match {
 //      case Forall(y :: Nil, Box(ODESystem(DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)), h), p)) =>

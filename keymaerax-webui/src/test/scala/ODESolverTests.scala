@@ -377,20 +377,11 @@ class DGPlusPlus extends TacticTestSuite {
     node.openGoals().last.sequent.succ.last shouldBe "[{dhd'=ao(), h'=-dhd, t'=0*t+1 & 1=1}]2=2".asFormula
   }
 
-//  "NO COMMIT FOR ME" should "blah" in {
-//    val f = "\\forall x 1=1".asFormula
-//    val succf = "1 = 1".asFormula
-//    val n = new RootNode(new Sequent(immutable.Seq(), immutable.IndexedSeq(f), immutable.IndexedSeq(succf)))
-//    val t = FOQuantifierTacticsImpl.allEliminateT(AntePos(0))
-//    helper.runTactic(t, n)
-//    helper.report(n)
-//  }
-
   it should "be useful to the ode solver" in {
-    val f = "[{p' = v, v' = a, t' = 0*t + 1 & p=1&v=2&a=3}]1=1".asFormula
+    val f = "[{z' = z + 1, p' = p + 1, v' = a, t' = 0*t + 1 & p=1&v=2&a=3}]1=1".asFormula
     val n = helper.formulaToNode(f)
-    val t = LogicalODESolver.successiveInverseDiffGhost(SuccPos(0))
-    helper.runTactic(t & t , n)
+    val t = LogicalODESolver.successiveInverseDiffGhost(SuccPos(0)) & LogicalODESolver.successiveInverseDiffGhost(SuccPos(0))
+    helper.runTactic(t , n)
     helper.report(n)
   }
 

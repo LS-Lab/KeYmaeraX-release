@@ -41,23 +41,23 @@ object LogicalODESolver {
       (stepTacticT(p) *) &
       cutTimeLB(p) &
       ODETactics.diffWeakenAxiomT(p) & //the axiom, not the proof rule.
-      renameAndDropImpl(p) & onBranch(
-        ("renameAndDropImpl-output",
-          (successiveInverseCut(p) *) &
-          (successiveInverseDiffGhost(p) *) &
-          ODETactics.diffSolveAxiomT(p) &
-          ImplyRightT(p) &
-          errorT("@todo Need to box assign at correct position.")
-        ),
-        ("renameAndDropImpl-show", errorT("Should've closed"))
-      )
+      renameAndDropImpl(p) &
+      (successiveInverseCut(p) *) &
+      (successiveInverseDiffGhost(p) *) &
+      ODETactics.diffSolveConstraintT(p) &
+      FOQuantifierTacticsImpl.skolemizeT(p) &
+      ImplyRightT(p) & ImplyRightT(p) & debugT("After imply right") &
+      HybridProgramTacticsImpl.boxAssignT(p) &
+      arithmeticT ~
+      errorT("Should have closed.")
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // tactics for the advanced solver
-  // The advanced solver is the same as the simple solver, but instead of diffWeaken it does successive inverse ghosts
-  // and inverse cuts until finally only time remains, and then solves just for t' = 0*t + 1. This allows the selection
-  // of only specific points in time.
+  // The advanced solver is the <strike>same as the</strike> nothing like the simple solver.
+  // Instead of diffWeaken it does successive inverse ghosts and inverse cuts until finally only
+  // time remains, and then solves just for t' = 0*t + 1. This allows the selection of only specific
+  // points in time.
   //////////////////////////////////////////////////////////////////////////////////////////////////
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -97,7 +97,7 @@ object LogicalODESolver {
                 onBranch(
                   // positioning in the cutSUse branch is justified by applies check that succ length = 1
                   (BranchLabels.cutShowLbl, hideT(p) & ghostTactic(p) & debugT("[successiveInverseDiffGhost] output")),
-                  (BranchLabels.cutUseLbl, /*FOQuantifierTacticsImpl.allEliminateT(cutUsePos) & AxiomCloseT ~ errorT("Should have closed")*/ NilT)
+                  (BranchLabels.cutUseLbl, FOQuantifierTacticsImpl.allEliminateT(cutUsePos) & AxiomCloseT ~ errorT("Should have closed"))
                 )
             )
           }
@@ -219,17 +219,17 @@ object LogicalODESolver {
             //Um yeah not sure what was meant here but it's definitely not G,K...
 //              (BranchLabels.cutShowLbl, dischargeEquivalence(pi, Imply(evolutionDomain, originalConclusion), newConclusion)(SuccPos(node.sequent.succ.length))),
               (BranchLabels.cutShowLbl,
-                lastSucc(PropositionalTacticsImpl.cohideT) & LabelBranch("renameAndDropImpl-show") &
-                  debugT("About to show GK Equivalence") ~
+                lastSucc(PropositionalTacticsImpl.cohideT) &
+                  debugT("[LODE Solver] About to show GK Equivalence") ~
                   showGKEquivalenceTactic ~
-                  errorT("All goals should've closed.")
+                  errorT("[LODE Solver] All goals should've closed.")
               ),
               (BranchLabels.cutUseLbl, {
                 val equivPos = AntePos(node.sequent.ante.length)
                 assertPT(rewritingFormula, "Precond check failed: Expected equivalence")(equivPos) &
                 EqualityRewritingImpl.equivRewriting(equivPos, p) ~
-                assertPT(Box(pi, newConclusion), "Postcond check failed: Expected new conclusion")(p) &
-                LabelBranch("renameAndDropImpl-output")
+                assertPT(Box(pi, newConclusion), "Postcond check failed: Expected new conclusion")(p)
+                /* Output */
               })
             )
           )
