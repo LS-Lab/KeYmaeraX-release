@@ -79,9 +79,9 @@ class FileLemmaDB extends LemmaDB {
 
   private def saveProof(file: File, lemma: Lemma, id: String): Unit = {
     //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
-    assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "illegal lemma form")
+    assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "expected lemma form should have no antecedent and exactly one succedent formula " + lemma)
     assert(KeYmaeraXLemmaParser(lemma.toString) == (lemma.name, lemma.fact.conclusion.succ.head, lemma.evidence.head),
-      "reparse of printed lemma is not original lemma")
+      "reparse of printed lemma should be identical to original lemma " + lemma)
 
     val pw = new PrintWriter(file)
     pw.write(lemma.toString)
@@ -93,7 +93,7 @@ class FileLemmaDB extends LemmaDB {
       throw new IllegalStateException("Lemma in DB differed from lemma in memory -> deleted")
     }
     // assertion duplicates condition and throw statement
-    assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemma, "Lemma stored in DB differs from lemma in memory")
+    assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemma, "Lemma stored in DB should be identical to lemma in memory " + lemma)
   }
 
 }
