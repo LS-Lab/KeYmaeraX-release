@@ -172,7 +172,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
   private def unifyODE(e1: DifferentialProgram, e2: DifferentialProgram): List[SubstRepl] = e1 match {
     case AtomicODE(xp, t) => e2 match {case AtomicODE(xp2,t2) => unifyVar(xp,xp2) ++ unify(t,t2) case _ => ununifiable(e1,e2)}
     case c: DifferentialProgramConst => if (e1==e2) id else List(SubstRepl(e1, e2))
-    case DifferentialProduct(a, b)   => e2 match {case DifferentialProduct(a2,b2) => unify(a,a2) ++ unify(b,b2) case _ => ununifiable(e1,e2)}
+    case DifferentialProduct(a, b)   => e2 match {case DifferentialProduct(a2,b2) => unifyODE(a,a2) ++ unifyODE(b,b2) case _ => ununifiable(e1,e2)}
   }
 
   private def unify(s1: Sequent, s2: Sequent): List[SubstRepl] =
