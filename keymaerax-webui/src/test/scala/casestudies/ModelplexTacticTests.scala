@@ -115,9 +115,6 @@ class ModelplexTacticTests extends TacticTestSuite {
     val tactic = modelplexInPlace(useOptOne=true, Some(Variable("c", Some(1), Real)))(SuccPosition(0))
     val result = helper.runTactic(tactic, new RootNode(s))
 
-    // with diamond test, before local QE
-//    val expected = "-1<=f&f<=(m-l)/ep&(f()=f&(c_1=0&\\exists t.(t>=0&(\\forall s.(0<=s&s<=t->0<=s*f()+l&1*s+c_1<=ep)&(fpost=f()&lpost=t*f()+l&cpost=1*t+c_1)))))".asFormula
-
     // with diamond test, after local QE
     val expected = "-1<=f&f<=(m-l)/ep&(c_1=0&(t>=0&(((c_1<ep&(t<0|((t=0&l>=0)|(0<t&t<=-1*c_1+ep&(l>=0&f>=-1*l*t^-1))))|((c_1=ep&(t<0|(t=0&l>=0)))|(c_1>ep&t<0)))&(fpost=f&lpost=t*f+l&cpost=1*t+c_1)))))".asFormula
 
@@ -276,18 +273,6 @@ class ModelplexTacticTests extends TacticTestSuite {
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
     val result = helper.runTactic(tactic, new RootNode(s))
 
-    // with Modelplex diamond test
-//    val expected = ("-B<=al&al<=A & " +
-//      "(-B<=al&al<=A -> " +
-//      "(xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf)<xl+vl^2/(2*B) & " +
-//      "(xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf)<xl+vl^2/(2*B) -> " +
-//      "-B<=af&af<=A & " +
-//      "(-B<=af&af<=A -> " +
-//      "xf_post()=xf&vf_post()=vf&af_post()=af&xl_post()=xl&vl_post()=vl&al_post()=al&t_post()=0))) | " +
-//      "((vf=0&(vf=0->xf_post()=xf&vf_post()=vf&af_post()=0&xl_post()=xl&vl_post()=vl&al_post()=al&t_post()=0)) | " +
-//      "(-B<=af&af<=-b&(-B<=af&af<=-b -> " +
-//      "xf_post()=xf&vf_post()=vf&af_post()=af&xl_post()=xl&vl_post()=vl&al_post()=al&t_post()=0))))").asFormula
-
     // with ordinary diamond test
     val expected = ("-B<=alpost_0() & alpost_0()<=A & " +
       "((xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf)<xl+vl^2/(2*B) & " +
@@ -322,13 +307,6 @@ class ModelplexTacticTests extends TacticTestSuite {
     result.openGoals().flatMap(_.sequent.succ) should contain only expected
 
     report(expected, result, "Local lane controller ")
-  }
-
-  ignore should "find correct model monitor condition" in {
-    val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-mx.key"))
-    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
-    val result = helper.runTactic(tactic, new RootNode(s))
-    result.openGoals() should have size 1
   }
 
   "ETCS safety lemma modelplex in place" should "find correct controller monitor condition" in {
@@ -373,8 +351,8 @@ class ModelplexTacticTests extends TacticTestSuite {
         |
         |      /* brake on current curve or remain stopped */
         |      {
-        |        {a := -B; r:=r; }
-        |      ++{?v = 0; a := 0; w := 0; r:=r; }
+        |        {a := -B; }
+        |      ++{?v = 0; a := 0; w := 0; }
         |      /* or choose a new safe curve */
         |    	 ++{a :=*; ?-B <= a & a <= A;
         |
@@ -386,8 +364,8 @@ class ModelplexTacticTests extends TacticTestSuite {
         |      yo :=*;
         |
         |    	 /* use that curve, if it is a safe one (admissible velocities) */
-        |    	 ? Abs(x-xo) > v^2/(2*B) + V()*v/B + (A/B + 1) * (A/2 * ep^2 + ep*(v+V()))
-        |    	 | Abs(y-yo) > v^2/(2*B) + V()*v/B + (A/B + 1) * (A/2 * ep^2 + ep*(v+V()));
+        |    	 ? abs(x-xo) > v^2/(2*B) + V()*v/B + (A/B + 1) * (A/2 * ep^2 + ep*(v+V()))
+        |    	 | abs(y-yo) > v^2/(2*B) + V()*v/B + (A/B + 1) * (A/2 * ep^2 + ep*(v+V()));
         |    	 }
         |    	 };
         |
@@ -508,7 +486,7 @@ class ModelplexTacticTests extends TacticTestSuite {
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
 
     val expectedAnte = "true".asFormula
-    val expectedSucc = "h>=hrefpost_0()&hrefpost_0()>0&((kp < 0&v=0&hrefpost_0()>=h|kp < 0&v>0&2*h*kp+v*(kd+y)=2*hrefpost_0()*kp&h*y>h*kd+2*v|kp < 0&v < 0&2*hrefpost_0()*kp+v*y=2*h*kp+kd*v&2*v+h*(kd+y)>0|kp>0&v=0&hrefpost_0()=h|kp>0&v>0&(2*h*kp+v*(kd+y)=2*hrefpost_0()*kp&h*y>h*kd+2*v&kd+2*sqrkp<=0|2*h*kp+v*(kd+y)=2*hrefpost_0()*kp&kd+2*sqrkp < 0&2*v+h*(kd+y) < 0|2*hrefpost_0()*kp+v*y=2*h*kp+kd*v&kd+2*sqrkp < 0&2*v+h*(kd+y) < 0|2*h*kp+v*(kd+y)=2*hrefpost_0()*kp&kd>2*sqrkp&2*v+h*(kd+y)>0&h*y>=h*kd+2*v)|kp>0&v < 0&(2*h*kp+v*(kd+y)=2*hrefpost_0()*kp&kd>2*sqrkp&h*y < h*kd+2*v|2*hrefpost_0()*kp+v*y=2*h*kp+kd*v&kd>=2*sqrkp&h*y < h*kd+2*v|2*hrefpost_0()*kp+v*y=2*h*kp+kd*v&kd>2*sqrkp&2*v+h*(kd+y)>0&h*y>=h*kd+2*v|2*hrefpost_0()*kp+v*y=2*h*kp+kd*v&h*y>h*kd+2*v&2*v+h*(kd+y)>=0&kd+2*sqrkp < 0))&(y^2=kd^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*hrefpost_0()*kp^2+hrefpost_0()^2*kp^2+h*kd*kp*v-hrefpost_0()*kd*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd|h*(kd+y)<=0|h>hrefpost_0())|kp < 0&v < 0&(h*y<=h*kd+2*v|2*v+h*(kd+y)<=0|2*h*kp+kd*v!=2*hrefpost_0()*kp+v*y)|kp < 0&v>0&(h*y<=h*kd+2*v|2*v+h*(kd+y)<=0|2*h*kp+v*(kd+y)!=2*hrefpost_0()*kp)|kp>0&v=0&(h!=hrefpost_0()&(kd>=2*sqrkp&h*y>=h*kd|h*(kd+y)>=0&kd+2*sqrkp < 0)|kd=2*sqrkp&h*y>=h*kd|kd < 2*sqrkp&kd+2*sqrkp>0|h>hrefpost_0()|kd>2*sqrkp&h*(kd+y)<=0|kd+2*sqrkp<=0&h*y<=h*kd)|kp>0&v < 0&(2*hrefpost_0()*kp+v*y!=2*h*kp+kd*v&(h*y>=h*kd+2*v|kd<=2*sqrkp)|kd < 2*sqrkp|kd>2*sqrkp&(h*y < h*kd+2*v&(2*hrefpost_0()*kp+v*y < 2*h*kp+kd*v&2*h*kp+v*(kd+y) < 2*hrefpost_0()*kp|2*hrefpost_0()*kp+v*y>2*h*kp+kd*v|2*h*kp+v*(kd+y)>2*hrefpost_0()*kp)|2*v+h*(kd+y)<=0)|h*y>=h*kd+2*v&kd<=2*sqrkp|kd+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd+y)!=2*hrefpost_0()*kp&(kd+2*sqrkp>=0|2*v+h*(kd+y)>=0)|kd>=2*sqrkp|kd+2*sqrkp < 0&2*v+h*(kd+y) < 0&(2*hrefpost_0()*kp+v*y < 2*h*kp+kd*v|2*h*kp+v*(kd+y) < 2*hrefpost_0()*kp|2*hrefpost_0()*kp+v*y>2*h*kp+kd*v&2*h*kp+v*(kd+y)>2*hrefpost_0()*kp)|kd+2*sqrkp>0|h*y<=h*kd+2*v))&y^2=kd^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*hrefpost_0()*kp^2+hrefpost_0()^2*kp^2+h*kd*kp*v-hrefpost_0()*kd*kp*v+kp*v^2=0)&hrefpost()=hrefpost_0()".asFormula
+    val expectedSucc = "h>=hrefpost_0()&hrefpost_0()>0&((kp < 0&v=0&hrefpost_0()>=h|kp < 0&v>0&2*h*kp+v*(kd()+y)=2*hrefpost_0()*kp&h*y>h*kd()+2*v|kp < 0&v < 0&2*hrefpost_0()*kp+v*y=2*h*kp+kd()*v&2*v+h*(kd()+y)>0|kp>0&v=0&hrefpost_0()=h|kp>0&v>0&(2*h*kp+v*(kd()+y)=2*hrefpost_0()*kp&h*y>h*kd()+2*v&kd()+2*sqrkp<=0|2*h*kp+v*(kd()+y)=2*hrefpost_0()*kp&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*hrefpost_0()*kp+v*y=2*h*kp+kd()*v&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*(kd()+y)=2*hrefpost_0()*kp&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v)|kp>0&v < 0&(2*h*kp+v*(kd()+y)=2*hrefpost_0()*kp&kd()>2*sqrkp&h*y < h*kd()+2*v|2*hrefpost_0()*kp+v*y=2*h*kp+kd()*v&kd()>=2*sqrkp&h*y < h*kd()+2*v|2*hrefpost_0()*kp+v*y=2*h*kp+kd()*v&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v|2*hrefpost_0()*kp+v*y=2*h*kp+kd()*v&h*y>h*kd()+2*v&2*v+h*(kd()+y)>=0&kd()+2*sqrkp < 0))&(y^2=kd()^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*hrefpost_0()*kp^2+hrefpost_0()^2*kp^2+h*kd()*kp*v-hrefpost_0()*kd()*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd()|h*(kd()+y)<=0|h>hrefpost_0())|kp < 0&v < 0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+kd()*v!=2*hrefpost_0()*kp+v*y)|kp < 0&v>0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+v*(kd()+y)!=2*hrefpost_0()*kp)|kp>0&v=0&(h!=hrefpost_0()&(kd()>=2*sqrkp&h*y>=h*kd()|h*(kd()+y)>=0&kd()+2*sqrkp < 0)|kd()=2*sqrkp&h*y>=h*kd()|kd() < 2*sqrkp&kd()+2*sqrkp>0|h>hrefpost_0()|kd()>2*sqrkp&h*(kd()+y)<=0|kd()+2*sqrkp<=0&h*y<=h*kd())|kp>0&v < 0&(2*hrefpost_0()*kp+v*y!=2*h*kp+kd()*v&(h*y>=h*kd()+2*v|kd()<=2*sqrkp)|kd() < 2*sqrkp|kd()>2*sqrkp&(h*y < h*kd()+2*v&(2*hrefpost_0()*kp+v*y < 2*h*kp+kd()*v&2*h*kp+v*(kd()+y) < 2*hrefpost_0()*kp|2*hrefpost_0()*kp+v*y>2*h*kp+kd()*v|2*h*kp+v*(kd()+y)>2*hrefpost_0()*kp)|2*v+h*(kd()+y)<=0)|h*y>=h*kd()+2*v&kd()<=2*sqrkp|kd()+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd()+y)!=2*hrefpost_0()*kp&(kd()+2*sqrkp>=0|2*v+h*(kd()+y)>=0)|kd()>=2*sqrkp|kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0&(2*hrefpost_0()*kp+v*y < 2*h*kp+kd()*v|2*h*kp+v*(kd()+y) < 2*hrefpost_0()*kp|2*hrefpost_0()*kp+v*y>2*h*kp+kd()*v&2*h*kp+v*(kd()+y)>2*hrefpost_0()*kp)|kd()+2*sqrkp>0|h*y<=h*kd()+2*v))&y^2=kd()^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*hrefpost_0()*kp^2+hrefpost_0()^2*kp^2+h*kd()*kp*v-hrefpost_0()*kd()*kp*v+kp*v^2=0)&hrefpost()=hrefpost_0()".asFormula
 
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only expectedAnte
@@ -520,35 +498,18 @@ class ModelplexTacticTests extends TacticTestSuite {
     val tactic = locateSucc(modelplexInPlace(useOptOne=true))
     val result = helper.runTactic(tactic, new RootNode(s))
 
-    // with Modelplex diamond test
-//    val expected = ("(x1_post()=x1&v1_post()=v1&a1_post()=-B&t_post()=0&vsl_post()=vsl&xsl_post()=xsl) | " +
-//      "(vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) & " +
-//      "(vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) -> " +
-//      "x1_post()=x1&v1_post()=v1&a1_post()=-B&t_post()=0&vsl_post()=vsl&xsl_post()=xsl)) | " +
-//      "((xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) & " +
-//      "(xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) -> " +
-//      "-B<=a1&a1<=A&(-B<=a1&a1<=A->(x1_post()=x1&v1_post()=v1&a1_post()=a1&t_post()=0&vsl_post()=vsl&xsl_post()=xsl) | " +
-//      "(vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) & " +
-//      "(vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) -> " +
-//      "x1_post()=x1&v1_post()=v1&a1_post()=a1&t_post()=0&vsl_post()=vsl&xsl_post()=xsl))))) | " +
-//      "(x1>=xsl&(x1>=xsl->-B<=a1&a1<=A&a1<=(v1-vsl)/ep & (-B<=a1&a1<=A&a1<=(v1-vsl)/ep -> " +
-//      "(x1_post()=x1&v1_post()=v1&a1_post()=a1&t_post()=0&vsl_post()=vsl&xsl_post()=xsl) | " +
-//      "(vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) & " +
-//      "(vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) -> " +
-//      "x1_post()=x1&v1_post()=v1&a1_post()=a1&t_post()=0&vsl_post()=vsl&xsl_post()=xsl))))))").asFormula
-
     // with ordinary diamond test
-    val expected = ("(x1_post()=x1&v1_post()=v1&a1_post()=-B&t_post()=0&vsl_post()=vsl&xsl_post()=xsl) | " +
-      "(vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) & " +
-      "(x1_post()=x1&v1_post()=v1&a1_post()=-B&t_post()=0&vsl_post()=vsl&xsl_post()=xsl)) | " +
-      "((xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1)&(-B<=a1&a1<=A & " +
-      "((x1_post()=x1&v1_post()=v1&a1_post()=a1&t_post()=0&vsl_post()=vsl&xsl_post()=xsl) | " +
-      "(vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) & " +
-      "(x1_post()=x1&v1_post()=v1&a1_post()=a1&t_post()=0&vsl_post()=vsl&xsl_post()=xsl))))) | " +
-      "(x1>=xsl&(-B<=a1&a1<=A&a1<=(v1-vsl)/ep & " +
-      "((x1_post()=x1&v1_post()=v1&a1_post()=a1&t_post()=0&vsl_post()=vsl&xsl_post()=xsl) | " +
-      "(vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) & " +
-      "(x1_post()=x1&v1_post()=v1&a1_post()=a1&t_post()=0&vsl_post()=vsl&xsl_post()=xsl))))))").asFormula
+    val expected = ("(x1post()=x1&v1post()=v1&a1post()=-B&tpost()=0&vslpost()=vsl&xslpost()=xsl) | " +
+      "(vslpost_0()>=0&xslpost_0()>=x1+(v1^2-vslpost_0()^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) & " +
+      "(x1post()=x1&v1post()=v1&a1post()=-B&tpost()=0&vslpost()=vslpost_0()&xslpost()=xslpost_0())) | " +
+      "((xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1)&(-B<=a1post_0()&a1post_0()<=A & " +
+      "((x1post()=x1&v1post()=v1&a1post()=a1post_0()&tpost()=0&vslpost()=vsl&xslpost()=xsl) | " +
+      "(vslpost_0()>=0&xslpost_0()>=x1+(v1^2-vslpost_0()^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) & " +
+      "(x1post()=x1&v1post()=v1&a1post()=a1post_0()&tpost()=0&vslpost()=vslpost_0()&xslpost()=xslpost_0()))))) | " +
+      "(x1>=xsl&(-B<=a1post_0()&a1post_0()<=A&a1post_0()<=(v1-vsl)/ep & " +
+      "((x1post()=x1&v1post()=v1&a1post()=a1post_0()&tpost()=0&vslpost()=vsl&xslpost()=xsl) | " +
+      "(vslpost_0()>=0&xslpost_0()>=x1+(v1^2-vslpost_0()^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1) & " +
+      "(x1post()=x1&v1post()=v1&a1post()=a1post_0()&tpost()=0&vslpost()=vslpost_0()&xslpost()=xslpost_0()))))))").asFormula
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only
@@ -557,39 +518,6 @@ class ModelplexTacticTests extends TacticTestSuite {
 
     report(expected, result, "VSL controller")
   }
-
-  ignore should "find correct model monitor condition" in {
-    val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/iccps12/vsl-mx.key"))
-    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
-    val result = helper.runTactic(tactic, new RootNode(s))
-    result.openGoals() should have size 1
-  }
-
-  /*
-  ignore should "find correct model monitor condition when manually guided" in {
-    val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/iccps12/vsl-mx.key"))
-    val p = SuccPosition(0)
-    val tactic = debugT("Start") &
-      locateT(diamondSeqT :: Nil)(p) &
-      locateT(diamondChoiceT :: Nil)(p) &
-      locateT(substitutionDiamondAssignT :: Nil)(p) &
-      locateT(diamondSeqT :: Nil)(p) &
-      locateT(diamondChoiceT :: Nil)(p) &
-      locateT(diamondSeqT :: Nil)(p) &
-      locateT(substitutionDiamondAssignT :: Nil)(p) &
-      locateT(substitutionDiamondAssignT :: Nil)(p) &
-      locateT(diamondSeqT :: Nil)(p) &
-      locateT(diamondModelplexTestT :: Nil)(p) &
-      locateT(diamondSeqT :: Nil)(p) &
-      locateT(diamondAssignEqualT :: Nil)(p) &
-      locateT(v2vAssignT :: Nil)(p) &
-      locateT(diamondDiffSolve3DT :: Nil)(p) &
-      debugT("Result")
-
-    val result = helper.runTactic(tactic, new RootNode(s))
-    result.openGoals() should have size 1
-  }
-  */
 
   "Quadcopter modelplex in place" should "find correct controller monitor condition" in {
     val in = getClass.getResourceAsStream("examples/casestudies/modelplex/quadcopter/simplepid.key")

@@ -655,4 +655,24 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
 
     result shouldBe 'closed
   }
+
+  it should "instantiate after boxes and diamonds" in {
+    val s = sucSequent("x<y & [x:=y;]<?x>2;>\\exists z z=1".asFormula)
+    val tactic = FOQuantifierTacticsImpl.instantiateT(Variable("z"), Variable("a"))(SuccPosition(0, PosInExpr(1::1::1::Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "x<y & [x:=y;]<?x>2;>a=1".asFormula
+  }
+
+  it should "instantiate a Modelplex example" in {
+    val s = sucSequent("-1<=fpost_0()&fpost_0()<=(m-l)/ep&(cpost_0()=0&[c_0:=cpost_0();]\\exists t (t>=0&(\\forall s (0<=s&s<=t-><c_0:=c_0+s;><l:=l+fpost_0()*s;>(0<=l&c_0<=ep))&<c_0:=c_0+t;><l:=l+fpost_0()*t;>(fpost()=fpost_0()&lpost()=l&cpost()=c_0))))".asFormula)
+    val tactic = FOQuantifierTacticsImpl.instantiateT(Variable("t"), FuncOf(Function("tpost", None, Unit, Real), Nothing))(SuccPosition(0, PosInExpr(1::1::1::Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "-1<=fpost_0()&fpost_0()<=(m-l)/ep&(cpost_0()=0&[c_0:=cpost_0();](tpost()>=0&(\\forall s (0<=s&s<=tpost()-><c_0:=c_0+s;><l:=l+fpost_0()*s;>(0<=l&c_0<=ep))&<c_0:=c_0+tpost();><l:=l+fpost_0()*tpost();>(fpost()=fpost_0()&lpost()=l&cpost()=c_0))))".asFormula
+  }
 }

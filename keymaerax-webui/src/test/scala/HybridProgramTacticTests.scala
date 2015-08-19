@@ -177,6 +177,26 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sucSequent("\\forall x_0 (x_0=z -> [y:=y_0;{x:=x_0;y:=y+1; ++ x:=x_0-1;}]x<=y)".asFormula)))
   }
 
+  it should "assign in the middle of a formula" in {
+    val s = sucSequent("-1<=fpost_0()&fpost_0()<=(m-l)/ep&(cpost_0()=0&[c_0:=cpost_0();]<{l'=fpost_0(),c_0'=1&0<=l&c_0<=ep}>(fpost=fpost_0()&lpost=l&cpost=c_0))".asFormula)
+    val tactic = locateSucc(boxAssignEqualT, _ => true, Some(_ == "[c_0:=cpost_0();]<{l'=fpost_0(),c_0'=1&0<=l&c_0<=ep}>(fpost=fpost_0()&lpost=l&cpost=c_0)".asFormula))
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "-1<=fpost_0()&fpost_0()<=(m-l)/ep&(cpost_0()=0& \\forall c_2 (c_2=cpost_0() -> [c_1:=c_2;]<{l'=fpost_0(),c_1'=1&0<=l&c_1<=ep}>(fpost=fpost_0()&lpost=l&cpost=c_1)))".asFormula
+  }
+
+  "Diamond assign equational" should "work in front of an ODE" in {
+    val s = sucSequent("<c:=0;><{x'=v,c'=1 & c<=ep}>(x<=5)".asFormula)
+    val tactic = locateSucc(diamondAssignEqualT)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\exists c_1 (c_1=0 & [c_0:=c_1;]<{x'=v,c_0'=1 & c_0<=ep}>(x<=5))".asFormula
+  }
+
   "Combined box assign tactics" should "handle assignment in front of an ODE" in {
     import TacticLibrary.boxAssignT
     val s = sucSequent("[x:=1;][{x'=1}]x>0".asFormula)
@@ -502,29 +522,32 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sucSequent("[{z:=z+2;}*]z>0".asFormula))
   }
 
-  // TODO stuttering now creates boxes
-  ignore should "work on diamond ODEs" in {
-    import HybridProgramTacticsImpl.v2vAssignT
+  it should "work on diamond ODEs" in {
     val tactic = locateSucc(v2vAssignT)
-    getProofSequent(tactic, new RootNode(sucSequent("<y:=z;><{y'=2}>y>0".asFormula))) should be (
-      sucSequent("<{z'=2}>z>0".asFormula))
+    val result = helper.runTactic(tactic, new RootNode(sucSequent("[y:=z;]<{y'=2}>y>0".asFormula)))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "<{z'=2}>z>0".asFormula
   }
 
-  // TODO stuttering now creates boxes
-  ignore should "work on diamond ODEs inside formulas" in {
-    import HybridProgramTacticsImpl.v2vAssignT
+  it should "work on diamond ODEs inside formulas" in {
     val tactic = v2vAssignT(SuccPosition(0, PosInExpr(1::Nil)))
-    getProofSequent(tactic, new RootNode(sucSequent("x>y & <y:=z;><{y'=2}>y>0".asFormula))) should be (
-      sucSequent("x>y & <{z'=2}>z>0".asFormula))
+    val result = helper.runTactic(tactic, new RootNode(sucSequent("x>y & [y:=z;]<{y'=2}>y>0".asFormula)))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "x>y & <{z'=2}>z>0".asFormula
   }
 
-  // TODO stuttering now creates boxes
-  ignore should "work on diamond loops" in {
-    val s = sucSequent("<y:=z;><{y:=y+2;}*>y>0".asFormula)
-    import HybridProgramTacticsImpl.v2vAssignT
+  it should "work on diamond loops" in {
+    val s = sucSequent("[y:=z;]<{y:=y+2;}*>y>0".asFormula)
     val tactic = locateSucc(v2vAssignT)
-    getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("<{z:=z+2;}*>z>0".asFormula))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "<{z:=z+2;}*>z>0".asFormula
   }
 
   it should "work inside formulas" in {

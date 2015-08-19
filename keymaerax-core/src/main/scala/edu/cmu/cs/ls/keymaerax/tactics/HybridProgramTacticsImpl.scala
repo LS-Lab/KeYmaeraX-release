@@ -250,14 +250,48 @@ object HybridProgramTacticsImpl {
   }
 
   /**
-   * Creates a new axiom tactic for diamond assignment equational [x := t;].
-   * @return The axiom tactic.
+   * Creates a new axiom tactic for diamond assignment equational &lt;x := t;&gt;. The tactic may introduce
+   * stuttering assignments, if necessary (e.g., when followed by a loop or ODE).
+   * @example{{{
+   *           |- \exists x (x=2+y & x>y)
+   *           --------------------------diamondAssignEqualT(SuccPos(0))
+   *           |- <x:=2+y>(x>y)
+   * }}}
+   * @example{{{
+   *           |- \exists x (x=2 & [x_0:=x]<{x_0'=3}>(x_0>y))
+   *           ----------------------------------------------diamondAssignEqualT(SuccPos(0))
+   *           |- <x:=2><{x'=3}>(x>y)
+   * }}}
+   * @return The tactic to apply the equational assign axiom.
    * @author Stefan Mitsch
-   * // TODO provide only one implementation for both box and diamond
    */
-  def diamondAssignEqualT: PositionTactic = new PositionTactic("<:=> assign equational") {
+  def diamondAssignEqualT: PositionTactic = assignEqualT("<:=> assign equational", Diamond.unapply, diamondAssignWithoutAlphaT)
+
+  /**
+   * Creates a new axiom tactic for box assignment equational [x := t;]. The tactic may introduce stuttering
+   * assignments, if necessary (e.g., when followed by a loop or ODE).
+   * @example{{{
+   *           |- \forall x (x=2+y -> x>y)
+   *           ---------------------------boxAssignEqualT(SuccPos(0))
+   *           |- [x:=2+y](x>y)
+   * }}}
+   * @example{{{
+   *           |- \forall x (x=2 -> [x_0:=x][{x_0'=3}](x_0>y))
+   *           -----------------------------------------------boxAssignEqualT(SuccPos(0))
+   *           |- [x:=2][{x'=3}](x>y)
+   * }}}
+   * @return The axiom tactic to apply the equational assign axiom.
+   * @author Stefan Mitsch
+   */
+  def boxAssignEqualT: PositionTactic = assignEqualT("[:=] assign equational", Box.unapply, boxAssignWithoutAlphaT)
+
+  /** Generic implementation for box/diamond assign equational */
+  private def assignEqualT[T: Manifest](name: String, mod: T => Option[(Program, Formula)],
+                                        baseAssignT: (Variable, Boolean) => Position => Tactic): PositionTactic = new PositionTactic(name) {
+    val BDModality = new ModalityUnapplyer(mod)
+
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Diamond(Assign(Variable(_, _,_), _), _) => true
+      case BDModality(Assign(Variable(_, _,_), _), _) => true
       case _ => false
     }
 
@@ -265,78 +299,38 @@ object HybridProgramTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import scala.language.postfixOps
-
         val f = getFormula(node.sequent, p)
         // construct a new name for the quantified variable
         val (newV1, newV2) = f match {
-          case Diamond(Assign(v: Variable, _), _) =>
+          case BDModality(Assign(v: Variable, _), _) =>
             val tIdx = freshIndexInFormula(v.name, f)
             (Variable(v.name, tIdx, v.sort), Variable(v.name, Some(tIdx.get + 1), v.sort))
-          case _ => throw new IllegalStateException("Checked by applies to never happen")
+          case _ => throw new IllegalStateException("Impossible by assignEqualT.applies")
         }
 
         f match {
-          case Diamond(Assign(v: Variable, _), phi: Modal)
+          case BDModality(Assign(v: Variable, _), phi: Modal)
             if loopsAndODEsOf(phi).exists(p => StaticSemantics.symbols(p).contains(v) &&
               !NameCategorizer.freeVariables(p).contains(v)) => Some(
-            alphaRenamingT(v, newV1)(p.second) & diamondAssignWithoutAlphaT(newV2, checkNewV = false)(p)
+            alphaRenamingT(v, newV1)(p.second) & baseAssignT(newV2, false)(p)
           )
-          case _ => Some(diamondAssignWithoutAlphaT(newV1)(p))
+          case _ => Some(baseAssignT(newV1, true)(p))
         }
       }
     }
-  }
 
-  /**
-   * Creates a new axiom tactic for box assignment equational [x := t;].
-   * @return The axiom tactic.
-   * @author Stefan Mitsch
-   */
-  def boxAssignEqualT: PositionTactic = new PositionTactic("[:=] assign equational") {
-    override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
-      case Box(Assign(Variable(_, _,_), _), _) => true
-      case _ => false
-    })
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import scala.language.postfixOps
-
-        val f = node.sequent(p)
-        // construct a new name for the quantified variable
-        val (newV1, newV2) = f match {
-          case Box(Assign(v: Variable, _), _) =>
-            val tIdx = TacticHelper.freshIndexInFormula(v.name, f)
-            (Variable(v.name, tIdx, v.sort), Variable(v.name, Some(tIdx.get + 1), v.sort))
-          case _ => throw new IllegalStateException("Checked by applies to never happen")
+    private def loopsAndODEsOf(fml: Formula): List[Program] = {
+      val result: mutable.MutableList[Program] = mutable.MutableList()
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+          case Loop(_) => result += e; Left(None)
+          case AtomicODE(_, _) => result += e; Left(None)
+          case ODESystem(_, _) => result += e; Left(None)
+          case _ => Left(None)
         }
-
-        node.sequent(p) match {
-          case Box(Assign(v: Variable, _), phi: Modal)
-            if loopsAndODEsOf(phi).exists(p => StaticSemantics.symbols(p).contains(v) &&
-            !NameCategorizer.freeVariables(p).contains(v)) => Some(
-              alphaRenamingT(v, newV1)(p.second) & boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
-            )
-          case _ => Some(boxAssignWithoutAlphaT(newV1)(p))
-        }
-      }
+      }, fml)
+      result.toList
     }
-  }
-
-  private def loopsAndODEsOf(fml: Formula): List[Program] = {
-    val result: mutable.MutableList[Program] = mutable.MutableList()
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
-        case Loop(_) => result += e; Left(None)
-        case AtomicODE(_, _) => result += e; Left(None)
-        case ODESystem(_, _) => result += e; Left(None)
-        case _ => Left(None)
-      }
-    }, fml)
-    result.toList
   }
 
   /**

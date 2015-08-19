@@ -329,7 +329,7 @@ object KeYmaeraX {
 
       //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
       assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "Illegal lemma form")
-      assert(KeYmaeraXLemmaParser(lemma.toString) == (lemma.name.getOrElse(""), lemma.fact.conclusion.succ.head, lemma.evidence.head),
+      assert(KeYmaeraXLemmaParser(lemma.toString) == (lemma.name, lemma.fact.conclusion.succ.head, lemma.evidence.head),
         "reparse of printed lemma is not original lemma")
 
       pw.write(stampHead(options))

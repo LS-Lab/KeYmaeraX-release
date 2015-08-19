@@ -45,7 +45,7 @@ class FileLemmaDB extends LemmaDB {
       val fact = Provable.toolFact(new Sequent(Nil,
         immutable.IndexedSeq(),
         immutable.IndexedSeq(formula)))
-      Some(Lemma(fact, evidence :: Nil, Some(name)))
+      Some(Lemma(fact, evidence :: Nil, name))
     } else None
   }
 
@@ -63,7 +63,7 @@ class FileLemmaDB extends LemmaDB {
           (newId, newFile)
       }
     }
-    saveProof(file, lemma)
+    saveProof(file, lemma, id)
     id
   }
 
@@ -77,18 +77,23 @@ class FileLemmaDB extends LemmaDB {
     else (id, f)
   }
 
-  private def saveProof(file: File, lemma: Lemma): Unit = {
-    val f = lemma.fact.conclusion.succ.head
-
+  private def saveProof(file: File, lemma: Lemma, id: String): Unit = {
     //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
     assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "illegal lemma form")
-    assert(KeYmaeraXLemmaParser(lemma.toString) == (lemma.name.getOrElse(""), lemma.fact.conclusion.succ.head, lemma.evidence.head),
+    assert(KeYmaeraXLemmaParser(lemma.toString) == (lemma.name, lemma.fact.conclusion.succ.head, lemma.evidence.head),
       "reparse of printed lemma is not original lemma")
 
     val pw = new PrintWriter(file)
     pw.write(lemma.toString)
-    //@TODO Code Review: Read and parse file again. Compare with f.
     pw.close()
+
+    val lemmaFromDB = get(id)
+    if (lemmaFromDB.isEmpty || lemmaFromDB.get != lemma) {
+      file.delete()
+      throw new IllegalStateException("Lemma in DB differed from lemma in memory -> deleted")
+    }
+    // assertion duplicates condition and throw statement
+    assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemma, "Lemma stored in DB differs from lemma in memory")
   }
 
 }
