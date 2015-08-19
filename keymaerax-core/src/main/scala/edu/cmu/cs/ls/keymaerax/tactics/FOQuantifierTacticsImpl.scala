@@ -6,8 +6,8 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
-import BindingAssessment.allNames
 import edu.cmu.cs.ls.keymaerax.tactics.AlphaConversionHelper._
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{boxMonotoneT, diamondMonotoneT}
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverAxiomT,axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.v2vAssignT
@@ -299,13 +299,12 @@ object FOQuantifierTacticsImpl {
         }
 
         if (stutteringAt.nonEmpty) {
-          val pPos = stutteringAt.map(p => if (pos.isAnte) new AntePosition(pos.index, p) else new SuccPosition(pos.index, p))
-          val assignPos = stutteringAt.map(p => if (pos.isAnte) new AntePosition(pos.index, PosInExpr(p.pos.tail)) else new SuccPosition(pos.index, PosInExpr(p.pos.tail)))
-          val alpha = pPos.foldRight(NilT)((p, r) => r & (alphaRenamingT(quantified.name, quantified.index, quantified.name, quantified.index)(p) | NilT))
+          val pPos = stutteringAt.map(p => pos.subPos(p))
+          val assignPos = stutteringAt.map(p => pos.subPos(PosInExpr(p.pos.tail)))
+          val alpha = pPos.foldRight(NilT)((p, r) => r & (alphaRenamingT(quantified, quantified)(p) | NilT))
           val v2v =
             if (quantStillPresentAfterAround) assignPos.foldRight(NilT)((p, r) => r & (v2vAssignT(
-              if (p.isAnte) new AntePosition(p.index, PosInExpr(0 :: p.inExpr.pos))
-              else new SuccPosition(p.index, PosInExpr(0 :: p.inExpr.pos))) | NilT))
+              p.topLevel.subPos(PosInExpr(0 :: p.inExpr.pos))) | NilT))
             else assignPos.foldRight(NilT)((p, r) => r & (v2vAssignT(p) | NilT))
           alpha & around & v2v
         } else around
@@ -468,11 +467,13 @@ object FOQuantifierTacticsImpl {
           // will branch and one of these branches will close by identity. on the other branch, we have to hide
           TacticLibrary.debugT(s"Start unpeeling in exists at $p") &
             // list all cases explicitly, hide appropriate formulas in order to not blow up branching
-            ( (lastAnte(NotLeftT) & NotRightT(SuccPosition(0)) & assertT(1, 1)) |
+            (( (lastAnte(NotLeftT) & NotRightT(SuccPosition(0)) & assertT(1, 1)) |
               (lastAnte(AndLeftT) & lastSucc(AndRightT) && (AxiomCloseT | hideT(AntePosition(1)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1)) |
               (lastSucc(OrRightT) & lastAnte(OrLeftT) && (AxiomCloseT | hideT(SuccPosition(1)), AxiomCloseT | hideT(SuccPosition(0))) & assertT(1, 1)) |
-              (lastSucc(ImplyRightT) & ImplyLeftT(AntePosition(0)) && (AxiomCloseT | hideT(SuccPosition(0)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1))
-              )*p.inExpr.pos.length &
+              (lastSucc(ImplyRightT) & ImplyLeftT(AntePosition(0)) && (AxiomCloseT | hideT(SuccPosition(0)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1)) |
+              boxMonotoneT | diamondMonotoneT
+              ) & TacticLibrary.debugT("Unpeeled one layer"))*p.inExpr.pos.length &
+          TacticLibrary.debugT("Unpeeling finished, now closing by existential generalization") &
             locateAnte(existentialGenPosT(quantified, where), _ == fToGen) & AxiomCloseT
         }
       }
