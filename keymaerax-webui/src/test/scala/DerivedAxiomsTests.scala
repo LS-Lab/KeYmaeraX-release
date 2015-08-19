@@ -106,6 +106,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove DS no domain" in {check(DSnodomain)}
   it should "prove DSol no domain" in {check(DSdnodomain)}
   it should "prove 'linear" in {check(Dlinear)}
+  it should "prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "prove abs" in {check(absDef)}
   it should "prove min" in {check(minDef)}
   it should "prove max" in {check(maxDef)}
@@ -137,6 +138,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetT)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetT)}
   it should "prove \\forall->\\exists" in {check(forallThenExistsT)}
+  it should "prove DG differential pre-ghost" in {check(DGpreghostT)}
   it should "prove abs" in {check(absT)}
   it should "prove min" in {check(minT)}
   it should "prove max" in {check(maxT)}

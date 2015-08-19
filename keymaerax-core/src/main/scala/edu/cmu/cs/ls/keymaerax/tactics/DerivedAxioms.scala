@@ -155,6 +155,7 @@ object DerivedAxioms {
     case "DS differential equation solution" => Some(DSnodomainF, DSnodomainT)
     case "Dsol differential equation solution" => Some(DSdnodomainF, DSdnodomainT)
     case "' linear" => Some(DlinearF, DlinearT)
+    case "DG differential pre-ghost" => Some(DGpreghostF, DGpreghostT)
     case "abs" => Some(absF, absT)
     case "min" => Some(minF, minT)
     case "max" => Some(maxF, maxT)
@@ -897,6 +898,24 @@ object DerivedAxioms {
 //      (Axiom("all dual"), 1)
 //      (Close(AntePos(0),SuccPos(0)), 1)
 //  )
+
+
+  /**
+   * {{{Axiom "DG differential pre-ghost".
+   *    [{c&H(??)}]p(??) <-> \exists y [{y'=(t()*y)+s(),c&H(??)}]p(??)
+   *    // [x'=f(x)&q(x);]p(x) <-> \exists y [{y'=(a(x)*y)+b(x), x'=f(x))&q(x)}]p(x) THEORY
+   * End.
+   * }}}
+   * Pre Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work.
+   */
+  lazy val DGpreghostF = "[{c&H(??)}]p(??) <-> \\exists y [{y'=(t()*y)+s(),c&H(??)}]p(??)".asFormula
+  lazy val DGpreghost = derivedAxiom("DG differential pre-ghost",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DGpreghostF)),
+    useAt("DG differential ghost")(SuccPosition(0, 0::Nil)) &
+      useAt(", commute")(SuccPosition(0, 0::0::Nil)) &
+      byUS(equivReflexiveAxiom)
+  )
+  lazy val DGpreghostT = derivedAxiomT(DGpreghost)
 
   /**
    * {{{Axiom "' linear".
