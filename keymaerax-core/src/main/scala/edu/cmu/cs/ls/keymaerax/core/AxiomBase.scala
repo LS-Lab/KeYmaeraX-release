@@ -208,7 +208,6 @@ private[core] object AxiomBase {
     val a = ProgramConst("a")
     val b = ProgramConst("b")
 
-    //@todo should not use strange names, better x and q
     val v = Variable("v", None, Real)
     val H0 = PredOf(Function("H", None, Unit, Bool), Nothing)
 
@@ -240,9 +239,7 @@ private[core] object AxiomBase {
     assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(pany, qny)), And(DifferentialFormula(pany), DifferentialFormula(qny))) || axs("|' derive or") == Imply(And(DifferentialFormula(pany), DifferentialFormula(qny)), DifferentialFormula(Or(pany, qny))), "|' derive or")
     assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
 
-    //@TODO these should be re-enabled.
     assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,t0)), "all instantiate")
-//    assert(axs("all distribute") == Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x)))), "all distribute")
     // soundness-critical that these are for p() not for p(x) or p(??)
     assert(axs("vacuous all quantifier") == Equiv(Forall(immutable.IndexedSeq(x), p0), p0), "vacuous all quantifier")
 
@@ -265,7 +262,6 @@ private[core] object AxiomBase {
    * @see "Andre Platzer. Dynamic logics of dynamical systems. arXiv 1205.4788, May 2012."
    * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
-   * @todo more consistent naming scheme.
    */
   private[core] def loadAxiomString() : String =
 """
