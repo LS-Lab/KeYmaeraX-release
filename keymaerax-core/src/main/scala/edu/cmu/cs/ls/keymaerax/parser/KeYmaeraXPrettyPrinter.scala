@@ -44,7 +44,6 @@ object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
 class KeYmaeraXPrinter extends PrettyPrinter {
-//  private val verboseParens = true
 
   import OpSpec.op
   import OpSpec.statementSemicolon
@@ -103,10 +102,11 @@ class KeYmaeraXPrinter extends PrettyPrinter {
    */
   protected def skipParensRight(t: BinaryComposite): Boolean = false
 
+
   /**@NOTE The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ... */
   private val LEXSPACE: String = " "
 
-  private def pp(term: Term): String = term match {
+  private def pp(term: Term): String = emit(term match {
     case DotTerm|Anything|Nothing=> op(term).opcode
     case x: Variable            => x.asString
     case DifferentialSymbol(x)  => pp(x) + op(term).opcode
@@ -122,9 +122,9 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       (if (skipParensLeft(t)) pp(t.left) else "(" + pp(t.left) + ")") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "(" + pp(t.right) + ")")
-  }
+  })
 
-  private def pp(formula: Formula): String = formula match {
+  private def pp(formula: Formula): String = emit(formula match {
     case True|False|DotFormula  => op(formula).opcode
     case PredOf(p, c)           => p.asString + "(" + pp(c) + ")"
     case PredicationalOf(p, c)  => p.asString + "{" + pp(c) + "}"
@@ -140,9 +140,9 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       (if (skipParensLeft(t)) pp(t.left) else "(" + pp(t.left) + ")") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "(" + pp(t.right) + ")")
-  }
+  })
 
-  private def pp(program: Program): String = program match {
+  private def pp(program: Program): String = emit(program match {
     case a: ProgramConst        => statement(a.asString)
     case Assign(x, e)           => statement(pp(x) + op(program).opcode + pp(e))
     case AssignAny(x)           => statement(pp(x) + op(program).opcode)
@@ -163,9 +163,9 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
-  }
+  })
 
-  private def ppODE(program: DifferentialProgram): String = program match {
+  private def ppODE(program: DifferentialProgram): String = emit(program match {
     case a: DifferentialProgramConst => a.asString
     case AtomicODE(xp, e)       => pp(xp) + op(program).opcode + pp(e)
     case t: DifferentialProduct =>
@@ -173,7 +173,10 @@ class KeYmaeraXPrinter extends PrettyPrinter {
         op(t).opcode +
         (if (skipParensRight(t)) ppODE(t.right) else "{" + ppODE(t.right) + "}")
     case ODESystem(ode, f)      => assert(false, "ODESystem does not occur recursively"); ??? //{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
-  }
+  })
+
+  /** Emit the string s as a result of the pretty-printer for an expression */
+  protected def emit(s: String): String = s
 
   /** Formatting the atomic statement s */
   private def statement(s: String): String = if (statementSemicolon) s + ";" else s
