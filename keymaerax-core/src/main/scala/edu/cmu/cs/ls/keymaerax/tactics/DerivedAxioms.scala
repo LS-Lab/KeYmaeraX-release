@@ -221,6 +221,48 @@ object DerivedAxioms {
   lazy val existsDualT = derivedAxiomT(existsDualAxiom)
 
   /**
+   * {{{Axiom "all eliminate".
+   *    (\forall x p(??)) -> p(??)
+   * End.
+   * }}}
+   * @note will clash unlike the converse proof.
+   */
+  lazy val allEliminateF = "(\\forall x p(??)) -> p(??)".asFormula
+  lazy val allEliminateAxiom = derivedAxiom("all eliminate",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(allEliminateF)),
+    US(SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), PredOf(Function("p",None,Real,Bool),Anything))::Nil)
+    //byUS("all instantiate")
+  )
+  lazy val allEliminateT = derivedAxiomT(allEliminateAxiom)
+
+  /**
+   * {{{Axiom "all distribute".
+   *   (\forall x (p(x)->q(x))) -> ((\forall x p(x))->(\forall x q(x)))
+   * }}}
+   *
+   */
+  // Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x))))
+  lazy val allDistributeF = "(\\forall x (p(x)->q(x))) -> ((\\forall x p(x))->(\\forall x q(x)))".asFormula
+  lazy val allDistributeAxiom = derivedAxiom("all distribute",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(allDistributeF)),
+    implyR(1) & implyR(1) &
+      allR(1) &
+      allL(Variable("x",None,Real), Variable("x",None,Real))(-1) &
+      allL(Variable("x",None,Real), Variable("x",None,Real))(-2) &
+      prop
+  )
+  lazy val allDistributeT = derivedAxiomT(allDistributeAxiom)
+
+  /**
+   * {{{Axiom "all quantifier scope".
+   *    (\forall x (p(x) & q())) <-> ((\forall x p(x)) & q())
+   * End.
+   * }}}
+   * @todo follows from "all distribute" and "all vacuous"
+   */
+
+
+  /**
    * {{{Axiom "[] dual".
    *    (!<a;>(!p(??))) <-> [a;]p(??)
    * End.

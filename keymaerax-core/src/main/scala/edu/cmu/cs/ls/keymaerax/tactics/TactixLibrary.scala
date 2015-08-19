@@ -44,7 +44,7 @@ object TactixLibrary {
   /** US(form) reduce the proof to a proof of form by a suitable uniform substitution obtained by unification */
   def US(form: Sequent): Tactic = TacticLibrary.US(form)
   /** US: uniform substitution */
-  def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula])): Tactic = PropositionalTacticsImpl.uniformSubstT(subst, delta)
+  def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula]) = Map()): Tactic = PropositionalTacticsImpl.uniformSubstT(subst, delta)
 
   type Subst = UnificationMatch.Subst
   //def Subst(subsDefs: immutable.Seq[(Expression,Expression)]): Subst = RenUSubst(subsDefs)

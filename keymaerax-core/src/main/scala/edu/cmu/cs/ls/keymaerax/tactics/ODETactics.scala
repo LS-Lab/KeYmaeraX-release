@@ -1065,7 +1065,8 @@ object ODETactics {
       val s = theS(fml)
       val xRenamed = if (x.name != aX.name || x.index != aX.index) AlphaConversionHelper.replace(axiom)(aX, x) else axiom
       val tRenamed = if(t.name != aT.name || t.index != aT.index) AlphaConversionHelper.replace(xRenamed)(aT, t) else xRenamed
-      if(s.name != aS.name || s.index != aS.index) AlphaConversionHelper.replace(tRenamed)(aS, s) else tRenamed
+      val result = if(s.name != aS.name || s.index != aS.index) AlphaConversionHelper.replace(tRenamed)(aS, s) else tRenamed
+      result
     }
 
     axiomLookupBaseT("DS& differential equation solution", subst, alpha, axiomInstance)
@@ -1147,15 +1148,30 @@ object ODETactics {
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // DG++
   //////////////////////////////////////////////////////////////////////////////////////////////////
-  def DiggGhostPPT : PositionTactic = {
+  def DiffGhostPPT : PositionTactic = {
     def axiomInstance(fml : Formula) = fml match {
-      case Forall(y :: Nil, Box(ODESystem(DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)), h), p)) =>
-        Imply(Box(ODESystem(AtomicODE(x,f), h), p), fml)
+      case Forall(y :: Nil, Box(ODESystem(product : DifferentialProduct, h), phi)) =>
+        Imply(Box(ODESystem(removeY(y, product).get, h), phi), fml)
+    }
+    /**
+     * Helper for axiomInstance -- removes the equation y' = ... from the product p.
+     */
+    def removeY(y : Variable, p : DifferentialProgram) : Option[DifferentialProgram] = p match {
+      case DifferentialProduct(l,r) => (removeY(y, l), removeY(y, r)) match {
+        case (Some(newL), Some(newR)) => Some(DifferentialProduct(newL, newR))
+        case (Some(newL), None)       => Some(newL)
+        case (None, Some(newR))       => Some(newR)
+        case (None, None)             => None
+      }
+      case atom:AtomicODE => if(atom.xp.x.equals(y)) None else Some(atom)
     }
 
     uncoverAxiomT("DG++", axiomInstance, DiffGhostPPBaseT)
   }
 
+  /**
+   *   ([{x'=f(x), c & H(??)}]p(??))  ->  (\forall y [{y'=g(??), x'=f(x), c & H(??)}]p(??))
+   */
   def DiffGhostPPBaseT(unusedFml : Formula) : PositionTactic = {
     val aX = Variable("x", None, Real)
     val aY = Variable("y", None, Real)
@@ -1166,9 +1182,12 @@ object ODETactics {
 
     def subst(fml : Formula) : List[SubstitutionPair] = fml match {
       case Imply(_, Forall(y :: Nil,
-      Box(ODESystem(DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)), h), p))) =>
+      Box(ODESystem(
+      DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)),
+      h
+      ), p))) =>
       {
-        SubstitutionPair(aH, h) ::
+          SubstitutionPair(aH, h) ::
           SubstitutionPair(aF, f) ::
           SubstitutionPair(aG, g) ::
           SubstitutionPair(aP, p) :: Nil
@@ -1177,7 +1196,10 @@ object ODETactics {
 
     def alpha(fml : Formula) = fml match {
       case Imply(_, Forall(y :: Nil,
-      Box(ODESystem(DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)), h), p))) =>
+      Box(ODESystem(
+      DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)),
+      h
+      ), p))) =>
       {
         TacticHelper.axiomAlphaT(x.x, aX) & TacticHelper.axiomAlphaT(y, aY)
       }
@@ -1186,7 +1208,10 @@ object ODETactics {
 
     def axiomInstance(fml : Formula, axiom : Formula) = fml match {
       case Imply(_, Forall(y :: Nil,
-      Box(ODESystem(DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)), h), p))) =>
+      Box(ODESystem(
+      DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)),
+      h
+      ), p))) =>
       {
         assert(y.equals(alsoY.x), "Quantified variable " + y + " should be the same as second primed variable " + alsoY)
         val afterY = AlphaConversionHelper.replace(axiom)(aY, y)
@@ -1196,6 +1221,56 @@ object ODETactics {
 
     axiomLookupBaseT("DG++", subst, alpha, axiomInstance)
   }
+  //The commented out code below should be equivalent to the code above...
+//  def DiffGhostPPT : PositionTactic = {
+//    def axiomInstance(fml : Formula) = fml match {
+//      case Forall(y :: Nil, Box(ODESystem(DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)), h), p)) =>
+//        Imply(Box(ODESystem(AtomicODE(x,f), h), p), fml)
+//    }
+//
+//    uncoverAxiomT("DG++", axiomInstance, DiffGhostPPBaseT)
+//  }
+//
+//  def DiffGhostPPBaseT(unusedFml : Formula) : PositionTactic = {
+//    val aX = Variable("x", None, Real)
+//    val aY = Variable("y", None, Real)
+//    val aF = FuncOf(Function("f", None, Real, Real), Anything)
+//    val aG = FuncOf(Function("g", None, Real, Real), Anything)
+//    val aH = PredOf(Function("H", None, Real, Bool), Anything)
+//    val aP = PredOf(Function("p", None, Real, Bool), Anything)
+//
+//    def subst(fml : Formula) : List[SubstitutionPair] = fml match {
+//      case Imply(_, Forall(y :: Nil,
+//      Box(ODESystem(DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)), h), p))) =>
+//      {
+//        SubstitutionPair(aH, h) ::
+//        SubstitutionPair(aF, f) ::
+//        SubstitutionPair(aG, g) ::
+//        SubstitutionPair(aP, p) :: Nil
+//      }
+//    }
+//
+//    def alpha(fml : Formula) = fml match {
+//      case Imply(_, Forall(y :: Nil,
+//      Box(ODESystem(DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)), h), p))) =>
+//      {
+//        TacticHelper.axiomAlphaT(x.x, aX) & TacticHelper.axiomAlphaT(y, aY)
+//      }
+//      case _ => ???
+//    }
+//
+//    def axiomInstance(fml : Formula, axiom : Formula) = fml match {
+//      case Imply(_, Forall(y :: Nil,
+//      Box(ODESystem(DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)), h), p))) =>
+//      {
+//        assert(y.equals(alsoY.x), "Quantified variable " + y + " should be the same as second primed variable " + alsoY)
+//        val afterY = AlphaConversionHelper.replace(axiom)(aY, y)
+//        AlphaConversionHelper.replace(afterY)(aX, x.x)
+//      }
+//    }
+//
+//    axiomLookupBaseT("DG++", subst, alpha, axiomInstance)
+//  }
 
 
   def DiffGhostPlusPlusSystemT : PositionTactic = {
@@ -1219,6 +1294,9 @@ object ODETactics {
     uncoverAxiomT("DG++ System", axiomInstance, DiffGhostPlusPlusSystemBaseT)
   }
 
+  /**
+   *   ([{x'=f(x), c & H(??)}]p(??))  ->  (\forall y [{y'=g(??), x'=f(x), c & H(??)}]p(??))
+   */
   def DiffGhostPlusPlusSystemBaseT(unusedFml : Formula) : PositionTactic = {
     val aX = Variable("x", None, Real)
     val aY = Variable("y", None, Real)

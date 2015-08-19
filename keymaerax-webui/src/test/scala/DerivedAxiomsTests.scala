@@ -22,6 +22,7 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
  * Tests provability of the derived axioms.
  * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
+ * @todo add a reflection-based test at the end that checks all lazy val in DerivedAxioms, even if that does not fail separately it gives exhaustiveness.
  */
 class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
@@ -74,6 +75,8 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
+  it should "prove all eliminate" in {check(allEliminateAxiom)}
+  it should "prove all distribute" in {check(allDistributeAxiom)}
   it should "prove box dual" in {check(boxDualAxiom)}
   it should "prove <:=> assign" in {check(assigndAxiom)}
   it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
@@ -118,6 +121,8 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveT)}
   it should "prove !!" in {check(doubleNegationT)}
   it should "prove exists dual" in {check(existsDualT)}
+  it should "prove all eliminate" in {check(allEliminateT)}
+  it should "prove all distribute" in {check(allDistributeT)}
   it should "prove box dual" in {check(boxDualT)}
   it should "prove <:=> assign" in {check(assigndT)}
   it should "prove [:=] equational" in {check(assignbEquationalT)}

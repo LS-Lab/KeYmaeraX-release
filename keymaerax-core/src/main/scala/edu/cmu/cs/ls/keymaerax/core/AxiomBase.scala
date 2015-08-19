@@ -292,12 +292,6 @@ Axiom "all dual".
   (!\exists x (!p(x))) <-> (\forall x p(x))
 End.
 
-/*
-Axiom "all quantifier scope".
-  (\forall x (p(x) & q())) <-> ((\forall x p(x)) & q())
-End.
-*/
-
 /**
  * CONGRUENCE AXIOMS (for constant terms)
  */
@@ -379,7 +373,7 @@ Axiom "DG differential ghost".
   /* [x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}]p(x) THEORY */
 End.
 
-/* Inverse Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work. */
+/* Inverse Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work. @todo derive from DG by commute , */
 Axiom "DG differential pre-ghost".
   [{c&H(??)}]p(??) <-> \exists y [{y'=(t()*y)+s(),c&H(??)}]p(??)
   /* [x'=f(x)&q(x);]p(x) <-> \exists y [{y'=(a(x)*y)+b(x), x'=f(x))&q(x)}]p(x) THEORY */
@@ -403,7 +397,7 @@ Axiom "DG++ System".
 End.
 
 Axiom "DG++".
-  ([{x'=f(x) & H(??)}]p(??))  ->  (\forall y [{x'=f(x),y'=g(??) & H(??)}]p(??))
+  ([{x'=f(x) & H(??)}]p(??))  ->  (\forall y [{y'=g(??),x'=f(x) & H(??)}]p(??))
 End.
 
 
