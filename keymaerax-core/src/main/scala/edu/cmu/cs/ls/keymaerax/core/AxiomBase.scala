@@ -334,8 +334,7 @@ Axiom "DC differential cut".
 End.
 
 Axiom "DE differential effect".
-  /* [x'=f(x)&q(x);]p(x) <-> [x'=f(x)&q(x);][x':=f(x);]p(x)  @TODO sound but incomplete */
-  /* @TODO [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
+  /* [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
   /* @NOTE Generalized argument compared to theory as in DE differential effect (system) */
   [{x'=f(x)&q(x)}]p(??) <-> [{x'=f(x)&q(x)}][x':=f(x);]p(??)
 End.
@@ -349,12 +348,6 @@ End.
 Axiom "DG differential ghost".
   [{c&H(??)}]p(??) <-> \exists y [{c,y'=(t()*y)+s()&H(??)}]p(??)
   /* [x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}]p(x) THEORY */
-End.
-
-/* Inverse Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work. @todo derive from DG by commute , */
-Axiom "DG differential pre-ghost".
-  [{c&H(??)}]p(??) <-> \exists y [{y'=(t()*y)+s(),c&H(??)}]p(??)
-  /* [x'=f(x)&q(x);]p(x) <-> \exists y [{y'=(a(x)*y)+b(x), x'=f(x))&q(x)}]p(x) THEORY */
 End.
 
 /* DG differential ghost, general Lipschitz case */
@@ -379,7 +372,7 @@ Axiom "DG++".
 End.
 
 
-/* Formatter axioms for diff eqs. @todo unused except in tactics implementation of itself */
+/* Formatter axioms for diff eqs. @note almost unused except in tactics implementation of itself */
 Axiom ", commute".
   [{c,d & H(??)}]p(??) <-> [{d,c & H(??)}]p(??)
 End.

@@ -27,7 +27,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) {
       val (decls, axiomTokens) = KeYmaeraXDeclarationsParser(tokens)
       val axioms = parseAxioms(axiomTokens)
       //@note axiom file does not declare symbols
-//      assert(axioms.forall(ax => KeYmaeraXDeclarationsParser.typeAnalysis(decls, ax._2)), "type analysis of axioms")
+//      assert(KeYmaeraXParser.LAX || axioms.forall(ax => KeYmaeraXDeclarationsParser.typeAnalysis(decls, ax._2)), "type analysis of axioms")
       axioms
     } catch {case e: ParseException => throw e.inContext("axiom file"/*input*/)}
   }
