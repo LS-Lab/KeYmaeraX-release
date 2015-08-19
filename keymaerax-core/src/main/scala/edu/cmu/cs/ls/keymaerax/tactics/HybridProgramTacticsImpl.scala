@@ -250,6 +250,66 @@ object HybridProgramTacticsImpl {
   }
 
   /**
+   * Returns a position tactic to apply the := assign dual axiom, which turns a diamond assignment into a box assignment
+   * and vice versa.
+   * @example{{{
+   *           |- [x:=2;]x=2
+   *           -------------assignDual(SuccPosition(0))
+   *           |- <x:=2;>x=2
+   * }}}
+   * @example{{{
+   *           |- <x:=2;>x=2
+   *           -------------assignDual(SuccPosition(0))
+   *           |- [x:=2;]x=2
+   * }}}
+   * @return The tactic to apply the := assign dual axiom.
+   */
+  def assignDualT: PositionTactic = {
+    def g(f: Formula): Formula = f match {
+      case Diamond(prg@Assign(_, _), phi) => Equiv(f, Box(prg, phi))
+      case Box(prg@Assign(_, _), phi) => Equiv(Diamond(prg, phi), f)
+      case _ => False
+    }
+    uncoverAxiomT(":= assign dual", g, _ => assignDualBaseT)
+  }
+  /** Base tactic for assign dual */
+  private def assignDualBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(Diamond(Assign(v, t), p), _) =>
+        val aT = FuncOf(Function("t", None, Unit, v.sort), Nothing)
+        val aP = PredOf(Function("p", None, v.sort, Bool), DotTerm) // p(.)
+        SubstitutionPair(aT, t) :: SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v, DotTerm)) :: Nil
+    }
+
+    def alpha(fml: Formula): PositionTactic = fml match {
+      case Equiv(Diamond(Assign(v, _), _), _) =>
+        val aV = Variable("v", None, v.sort)
+        if (v.name != aV.name || v.index != aV.index) {
+          new PositionTactic("Alpha") {
+            override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+              case Equiv(Diamond(Assign(_, _), _), _) => true
+              case _ => false
+            }
+
+            override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = Some(globalAlphaRenamingT(v, aV))
+              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            }
+          }
+        } else NilPT
+    }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
+      case Equiv(Diamond(Assign(v, _), _), _) =>
+        val aV = Variable("v", None, v.sort)
+        if (v.name == aV.name && v.index == aV.index) axiom
+        else replace(axiom)(aV, v)
+    }
+
+    axiomLookupBaseT(":= assign dual", subst, alpha, axiomInstance)
+  }
+
+  /**
    * Creates a new axiom tactic for diamond assignment equational &lt;x := t;&gt;. The tactic may introduce
    * stuttering assignments, if necessary (e.g., when followed by a loop or ODE).
    * @example{{{

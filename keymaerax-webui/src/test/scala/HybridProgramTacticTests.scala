@@ -197,6 +197,26 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().head.sequent.succ should contain only "\\exists c_1 (c_1=0 & [c_0:=c_1;]<{x'=v,c_0'=1 & c_0<=ep}>(x<=5))".asFormula
   }
 
+  "Assign dual" should "turn <x:=2>x=2 into [x:=2]x=2" in {
+    val s = sucSequent("<x:=2;>x=2".asFormula)
+    val tactic = locateSucc(assignDualT)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "[x:=2;]x=2".asFormula
+  }
+
+  it should "turn [x:=2]x=2 into <x:=2>x=2" in {
+    val s = sucSequent("[x:=2;]x=2".asFormula)
+    val tactic = locateSucc(assignDualT)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "<x:=2;>x=2".asFormula
+  }
+
   "Combined box assign tactics" should "handle assignment in front of an ODE" in {
     import TacticLibrary.boxAssignT
     val s = sucSequent("[x:=1;][{x'=1}]x>0".asFormula)

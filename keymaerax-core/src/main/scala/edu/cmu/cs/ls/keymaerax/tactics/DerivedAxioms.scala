@@ -121,6 +121,7 @@ object DerivedAxioms {
     case "exists dual" => Some(existsDualF, existsDualT)
     case "[] dual" => Some(boxDualF, boxDualT)
     case "<:=> assign" => Some(assigndF, assigndT)
+    case ":= assign dual" => Some(assignDualF, assignDualT)
     case "[:=] assign equational" => Some(assignbEquationalF, assignbEquationalT)
     case "[:=] vacuous assign" => Some(vacuousAssignbF, vacuousAssignbT)
     case "<:=> vacuous assign" => Some(vacuousAssigndF, vacuousAssigndT)
@@ -298,6 +299,23 @@ object DerivedAxioms {
   )
 
   lazy val assigndT = derivedAxiomT(assigndAxiom)
+
+  /**
+   * {{{Axiom ":= assign dual".
+   *    <v:=t();>p(v) <-> [v:=t();]p(v)
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val assignDualF = "<v:=t();>p(v) <-> [v:=t();]p(v)".asFormula
+  lazy val assignDualAxiom = derivedAxiom(":= assign dual",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(assignDualF)),
+      useAt("<:=> assign")(SuccPosition(0, PosInExpr(0::Nil))) &
+      useAt("[:=] assign")(SuccPosition(0, PosInExpr(1::Nil))) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val assignDualT = derivedAxiomT(assignDualAxiom)
 
   /**
    * {{{Axiom "[:=] assign equational".

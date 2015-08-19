@@ -90,7 +90,10 @@ object KeYmaeraXDeclarationsParser {
           case Some(d) => d
           case None => throw new ParseException("undefined symbol " + f, UnknownLocation, "type analysis")
         }
-        f.sort == sort && f.domain == domain
+        f.sort == sort && (domain match {
+          case Some(d) => f.domain == d
+          case None => throw new ParseException(f.name + " is declared as non-function, but used as function", UnknownLocation, "type analysis")
+        })
       case _ => true
     }) &&
     StaticSemantics.vars(expr).toSymbolSet.forall(x => x match {
@@ -266,7 +269,7 @@ object KeYmaeraXDeclarationsParser {
       processDeclarations(remainders, sortDeclarations.updated(nextDecl._1, nextDecl._2))
     }
     else {
-      Map()
+      sortDeclarations
     }
 
 }
