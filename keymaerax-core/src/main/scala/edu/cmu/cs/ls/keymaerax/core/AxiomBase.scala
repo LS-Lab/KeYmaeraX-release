@@ -124,8 +124,8 @@ private[core] object AxiomBase {
           Sequent(immutable.Seq(), immutable.IndexedSeq(Exists(immutable.Seq(x), px)), immutable.IndexedSeq(Exists(immutable.Seq(x), qx))))),
       /**
        * Rule "[] monotone".
-       * Premise p(x) ==> q(x)
-       * Conclusion [a;]p(x) ==> [a;]q(x)
+       * Premise p(??) ==> q(??)
+       * Conclusion [a;]p(??) ==> [a;]q(??)
        * End.
        */
       ("[] monotone",
@@ -133,8 +133,8 @@ private[core] object AxiomBase {
           Sequent(immutable.Seq(), immutable.IndexedSeq(Box(a, pany)), immutable.IndexedSeq(Box(a, qany))))),
       /**
        * Rule "<> monotone".
-       * Premise p(x) ==> q(x)
-       * Conclusion <a;>p(x) ==> <a;>q(x)
+       * Premise p(??) ==> q(??)
+       * Conclusion <a;>p(??) ==> <a;>q(??)
        * End.
        */
       ("<> monotone",
@@ -151,8 +151,8 @@ private[core] object AxiomBase {
       /* UNSOUND FOR HYBRID GAMES */
       /**
        * Rule "Goedel".
-       * Premise p(x)
-       * Conclusion [a;]p(x)
+       * Premise p(??)
+       * Conclusion [a;]p(??)
        * End.
        * @NOTE Unsound for hybrid games
        * @TODO Add [a;]true -> to conclusion to make it sound for hybrid games (and then equivalent to [] monotone)
