@@ -846,8 +846,14 @@ object TacticLibrary {
       }
 
       private def initialValueTactic(formulas: IndexedSeq[Formula], factory: (Int, PosInExpr) => Position) = {
-        (0 to formulas.length-1).map(i => {
-          val pos = factory(i, HereP); (abstractionT(pos) | NilT) & (skolemizeT(pos) | NilT)
+        formulas.zipWithIndex.map( pair => pair._1 match {
+          case Imply(l,r) => {
+            val posLeft = factory(pair._2, HereP.first);
+            val posRight = factory(pair._2, HereP.second);
+            debugAtT("before left")(posLeft) & (abstractionT(posLeft) | NilT) & (skolemizeT(posLeft) | NilT) &
+            debugAtT("after left")(posLeft) & (abstractionT(posRight) | NilT) & (skolemizeT(posRight) | NilT)
+          }
+          case _ => val pos = factory(pair._2, HereP); (abstractionT(pos) | NilT) & (skolemizeT(pos) | NilT)
         }).foldLeft(Tactics.NilT)((a, b) => a & b)
       }
     }

@@ -1214,8 +1214,9 @@ object ODETactics {
       ), p))) =>
       {
         assert(y.equals(alsoY.x), "Quantified variable " + y + " should be the same as second primed variable " + alsoY)
-        val afterY = AlphaConversionHelper.replace(axiom)(aY, y)
-        AlphaConversionHelper.replace(afterY)(aX, x.x)
+        val afterX = AlphaConversionHelper.replace(axiom)(aX, x.x)
+        AlphaConversionHelper.replace(afterX)(aY, y)
+
       }
     }
 
