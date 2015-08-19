@@ -973,4 +973,34 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().head.sequent.ante shouldBe empty
     result.openGoals().head.sequent.succ should contain only "[{h'=v,v'=kp()*(href()-h)-kd()*v,z'=kd()*z+0&true}]((h^2*kp()^2-2*h*href()*kp()^2+href()^2*kp()^2+h*kd()*kp()*v-href()*kd()*kp()*v+kp()*v^2)*(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+href()^2*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)*z=(h0_1()^2*kp()^2-2*h0_1()*href()*kp()^2+h0_1()*kd()*kp()*v0_1()-href()*kd()*kp()*v0_1()+kp()*v0_1()^2)^2*z0_1()) & [{h'=v,v'=kp()*(href()-h)-kd()*v,z'=kd()*z+0&true}]z>0".asFormula
   }
+
+  "Abstraction" should "work on top-level" in {
+    val s = sucSequent("[x:=2;]x>0".asFormula)
+    val tactic = TacticLibrary.abstractionT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\forall x x>0".asFormula
+  }
+
+  it should "work in context" in {
+    val s = sucSequent("x>0 & z=1 -> [z:=y;][x:=2;]x>0".asFormula)
+    val tactic = TacticLibrary.abstractionT(SuccPosition(0, PosInExpr(1::1::Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "x>0 & z=1 -> [z:=y;]\\forall x x>0".asFormula
+  }
+
+  it should "not introduce a quantifier when the variables are not bound" in {
+    val s = sucSequent("[x:=2;]y>0".asFormula)
+    val tactic = TacticLibrary.abstractionT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "y>0".asFormula
+  }
 }

@@ -12,7 +12,7 @@ import scala.collection.immutable.Seq
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
-import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.onesidedCongruenceT
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{onesidedCongruenceT, boxMonotoneT, diamondMonotoneT, forallGeneralizationT}
 import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.cohide2T
 import ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
@@ -548,14 +548,73 @@ object TacticLibrary {
 
   def universalClosure(f: Formula): Formula = FOQuantifierTacticsImpl.universalClosure(f)
 
+  /**
+   * Returns a tactic to abstract a box modality to a formula that quantifies over the bound variables in the program
+   * of that modality.
+   * @example{{{
+   *           |- \forall x x>0
+   *         ------------------abstractionT(SuccPosition(0))
+   *           |- [x:=2;]x>0
+   * }}}
+   * @example{{{
+   *           |- x>0 & z=1 -> [z:=y;]\forall x x>0
+   *         --------------------------------------abstractionT(SuccPosition(0, PosInExpr(1::1::Nil))
+   *           |- x>0 & z=1 -> [z:=y;][x:=2;]x>0
+   * }}}
+   * @example{{{
+   *           |- x>0
+   *         ---------------abstractionT(SuccPosition(0))
+   *           |- [y:=2;]x>0
+   * }}}
+   * @return the abstraction tactic.
+   */
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && (s(p).subFormulaAt(p.inExpr) match {
+      case Some(Box(_, _)) => true
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p).subFormulaAt(p.inExpr) match {
+        case Some(b@Box(prg, phi)) =>
+          val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.to[Seq]
+          //else throw new IllegalArgumentException("Cannot handle non-concrete programs")
+          val qPhi =
+            if (vars.isEmpty) phi //Forall(Variable("$abstractiondummy", None, Real)::Nil, phi)
+            else
+            //@todo what about DifferentialSymbols in boundVars? Decided to filter out since not soundness-critical.
+              vars.filter(v=>v.isInstanceOf[Variable]).to[scala.collection.immutable.SortedSet]. //sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
+                foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
+
+          Some(ContextTactics.cutImplyInContext(Imply(qPhi, b), p) & onBranch(
+            (cutShowLbl, lastSucc(ImplyRightT) & /* hide duplicated formula */ lastSucc(hideT) & assertT(1, 1) &
+              //@todo move into congruence tactic (see also [[FOQuantifierTacticsImpl.instantiateExistentialQuanT]])
+              TacticLibrary.debugT(s"Start unpeeling in abstraction at $p") &
+              // list all cases explicitly, hide appropriate formulas in order to not blow up branching
+              (( (lastAnte(NotLeftT) & NotRightT(SuccPosition(0)) & assertT(1, 1)) |
+                (lastAnte(AndLeftT) & lastSucc(AndRightT) && (AxiomCloseT | hideT(AntePosition(1)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1)) |
+                (lastSucc(OrRightT) & lastAnte(OrLeftT) && (AxiomCloseT | hideT(SuccPosition(1)), AxiomCloseT | hideT(SuccPosition(0))) & assertT(1, 1)) |
+                (lastSucc(ImplyRightT) & ImplyLeftT(AntePosition(0)) && (AxiomCloseT | hideT(SuccPosition(0)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1)) |
+                boxMonotoneT | diamondMonotoneT
+                //@todo universal and existential quantifiers
+                ) & TacticLibrary.debugT("Unpeeled one layer"))*p.inExpr.pos.length &
+              assertT(1, 1) & //@todo check that qPhi and b are in the expected positions
+              lastSucc(topLevelAbstractionT) & AxiomCloseT),
+            (cutUseLbl, lastAnte(ImplyLeftT) & (hideT(p.topLevel) /* result remains open */, AxiomCloseT))
+          ))
+      }
+    }
+  }
+
+  private def topLevelAbstractionT: PositionTactic = new PositionTactic("Abstraction") {
     override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && !p.isAnte && (s(p) match {
       case Box(_,_) => true
       case _ => false
     })
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      require(!p.isAnte, "No abstraction in antecedent")
+      assert(!p.isAnte, "no abstraction in antecedent")
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
@@ -573,11 +632,17 @@ object TacticLibrary {
 
           Some(cutT(Some(Imply(qPhi, Box(prg, qPhi)))) & onBranch(
             (cutUseLbl, lastAnte(ImplyLeftT) &&(
-              hideT(p) /* result */,
+              hideT(p) /* result */ ,
               cohide2T(AntePosition(node.sequent.ante.length), p.topLevel) &
                 assertT(1, 1) & lastAnte(assertPT(Box(prg, qPhi))) & lastSucc(assertPT(b)) & (boxMonotoneT | NilT) &
-                assertT(1, 1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & (lastAnte(instantiateT)*vars.length) &
-                assertT(1, 1) & assertT(s => s.ante.head match { case Forall(_,_) => phi match { case Forall(_,_) => true case _  => false } case _ => true }) &
+                assertT(1, 1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & (lastAnte(instantiateT) * vars.length) &
+                assertT(1, 1) & assertT(s => s.ante.head match {
+                case Forall(_, _) => phi match {
+                  case Forall(_, _) => true
+                  case _ => false
+                }
+                case _ => true
+              }) &
                 (AxiomCloseT | debugT("Abstraction cut use: Axiom close failed unexpectedly") & stopT)
               )),
             (cutShowLbl, hideT(p) & lastSucc(ImplyRightT) & lastSucc(boxVacuousT) &
