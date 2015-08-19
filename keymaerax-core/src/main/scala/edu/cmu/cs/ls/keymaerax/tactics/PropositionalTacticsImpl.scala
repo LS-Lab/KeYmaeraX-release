@@ -379,17 +379,17 @@ object PropositionalTacticsImpl {
    *              in order to construct the origin of the uniform substitution.
    * @return an instance of a tactic that performs the given uniform substitution
    */
-  def uniformSubstT(subst: List[SubstitutionPair], delta: (Map[Formula, Formula])): Tactic = new ConstructionTactic("Uniform Substitution") {
+  def uniformSubstT(subst: List[SubstitutionPair], delta: (Map[Formula, Formula]) = Map()): Tactic = new ConstructionTactic("Uniform Substitution") {
     def applicable(pn: ProofNode) = true
 
     def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = {
       val ante = for (f <- p.sequent.ante) yield delta.get(f) match {
         case Some(frm) => frm
-        case _ => f
+        case None => f
       }
       val succ = for (f <- p.sequent.succ) yield delta.get(f) match {
         case Some(frm) => frm
-        case _ => f
+        case None => f
       }
       Some(new Tactics.ApplyRule(UniformSubstitutionRule(USubst(subst), Sequent(p.sequent.pref, ante, succ))) {
         override def applicable(node: ProofNode): Boolean = true
