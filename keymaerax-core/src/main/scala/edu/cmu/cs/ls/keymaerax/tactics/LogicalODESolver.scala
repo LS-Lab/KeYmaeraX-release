@@ -64,22 +64,48 @@ object LogicalODESolver {
   // Successive inverse diff ghosts
   //////////////////////////////////////////////////////////////////////////////////////////////////
   def successiveInverseDiffGhost : PositionTactic =
-  new PositionTactic("Successive " + ODETactics.inverseDiffAuxiliaryT.name) {
+  new PositionTactic("[LODE Solver] successiveInverseDiffGhost") {
     override def applies(s: Sequent, p: Position): Boolean = TacticHelper.getFormula(s, p) match {
-      case Box(ODESystem(program : DifferentialProgram, _), _) =>
-        timeVar(program).isDefined && getPrimedVariables(program).length > 2
+      case Box(ODESystem(program : DifferentialProgram, _), _) => {
+        val t = timeVar(program)
+        val primedVars = getPrimedVariables(program)
+        //The last condition is necessary and an important bit of preprocessing -- the time var has
+        //to be moved from the head to the tail.
+        primedVars.length > 1 && t.isDefined &&
+        // time var needs to be in the back because DG++ system peels off from the back.
+        t.get.equals(primedVars.last) &&
+        // Cleaning up after this tactic requires knowing the structure of the succedent.
+        s.succ.length == 1
+      }
       case _ => false
     }
 
-    /**
-     * A tactic that adds \exists x . F to any formula F of the form [{x' = \theta, c & H}]Phi ???
-     */
-    private def addExistential : Tactic = ???
+    override def apply(p: Position): Tactic = new ConstructionTactic("construct " + name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val atApplicationPos = TacticHelper.getFormula(node.sequent, p)
 
-    override def apply(p: Position): Tactic = ODETactics.inverseLipschitzGhostT(p) & onBranch(
-      (BranchLabels.cutShowLbl, errorT("What to do here?")),
-      (BranchLabels.cutUseLbl, errorT("What to do in use?"))
-    )
+        atApplicationPos match {
+          case Box(ODESystem(program : DifferentialProgram, _), _) => {
+            val pvs = getPrimedVariables(program)
+            val nextVariable : Variable = pvs.head
+            val cutUsePos = AntePos(node.sequent.ante.length)
+            // We can't use the system variant in the 2 variable case.
+            val ghostTactic =
+              if(pvs.length > 2)  ODETactics.DiffGhostPlusPlusSystemT else ODETactics.DiffGhostPPT
+            Some(
+              PropositionalTacticsImpl.cutT(Some(Forall(nextVariable :: Nil, atApplicationPos))) &
+                onBranch(
+                  // positioning in the cutSUse branch is justified by applies check that succ length = 1
+                  (BranchLabels.cutShowLbl, hideT(p) & ghostTactic(p) & debugT("[successiveInverseDiffGhost] output")),
+                  (BranchLabels.cutUseLbl, /*FOQuantifierTacticsImpl.allEliminateT(cutUsePos) & AxiomCloseT ~ errorT("Should have closed")*/ NilT)
+                )
+            )
+          }
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -478,9 +504,10 @@ object LogicalODESolver {
     case None => true
   }
   private def getPrimedVariables(ode : DifferentialProgram) : List[Variable] = ode match {
-    case _: AtomicDifferentialProgram => ???
+    case AtomicODE(pv, term) => pv.x :: Nil
     case ODESystem(ode, constraint) => getPrimedVariables(ode)
     case DifferentialProduct(l,r) => getPrimedVariables(l) ++ getPrimedVariables(r)
+    case _: AtomicDifferentialProgram => ???
   }
 
   /**

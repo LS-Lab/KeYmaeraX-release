@@ -175,6 +175,8 @@ object AxiomTactic {
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
+      def DGPPBreakPt = ifT(_ => axiomName.equals("DG++"), errorT("stopping here in DG++"))
+
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val fml = getFormula(node.sequent, p)
         Some(

@@ -484,7 +484,7 @@ Axiom "DG++ System".
 End.
 
 Axiom "DG++".
-  ([{x'=f(x) & H(??)}]p(??))  ->  (\forall y [{x'=f(x),y'=g(??) & H(??)}]p(??))
+  ([{x'=f(x) & H(??)}]p(??))  ->  (\forall y [{y'=g(??),x'=f(x) & H(??)}]p(??))
 End.
 
 
