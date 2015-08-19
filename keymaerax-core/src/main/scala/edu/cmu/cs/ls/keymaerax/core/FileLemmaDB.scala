@@ -41,7 +41,7 @@ class FileLemmaDB extends LemmaDB {
     if (file.exists()) {
       val (name, formula, evidence) = KeYmaeraXLemmaParser(scala.io.Source.fromFile(file).mkString)
       // @note this means, all lemma DB implementations have to be part of the core
-      // TODO Code Review: Any way of checking/certifying this to remove it from the core?
+      //@TODO Code Review: Any way of checking/certifying this to remove it from the core?
       val fact = Provable.toolFact(new Sequent(Nil,
         immutable.IndexedSeq(),
         immutable.IndexedSeq(formula)))
