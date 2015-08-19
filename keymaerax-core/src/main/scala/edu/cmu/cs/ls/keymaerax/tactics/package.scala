@@ -17,7 +17,7 @@ package edu.cmu.cs.ls.keymaerax
  * The Provables that tactics produce can be extracted with [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.proveBy()]]
  *
  * =Proof Styles=
- * KeYmaera X supports many different proof styles, which can aso be mixed.
+ * KeYmaera X supports many different proof styles, including combinations of the following styles:
  *
  * 1. Explicit proof certificates directly program the proof rules from the core.
  *
@@ -33,6 +33,7 @@ package edu.cmu.cs.ls.keymaerax
  * Also see [[edu.cmu.cs.ls.keymaerax.core]].
  *
  * {{{
+ *  import edu.cmu.cs.ls.keymaerax.core._
  *  // explicit proof certificate construction of |- !!p() <-> p()
  *  val proof = (Provable.startProof(
  *    Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)))
@@ -87,36 +88,41 @@ package edu.cmu.cs.ls.keymaerax
  * Proof by pointing works by pointing to a position in the sequent and using a given fact at that position.
  * For example, for proving
  *
- * `  x>5 |- !([x:=x+1; ++ x:=0;]x>=6) | x<2 `
+ * `   __<v:=2*v+1;>v!=0__ <-> 2*v+1!=0 `
  *
  * it is enough to point to the highlighted position
+ * using the "<> dual" axiom fact
+ * `  ![a;]!p(??) <-> __<a;>p(??)__ `
+ * at the highlighted position to reduce the proof to a proof of
  *
- * `  x>5 |- !(__[x:=x+1; ++ x:=0;]x>=6__) | x<2 `
+ * `  !__[v:=2*v+1;]!(v!=0)__ <-> 2*v+1!=0 `
  *
- * and using the "[++] choice" axiom fact
+ * which is, in turn, easy to prove by pointing to the highlighted position using the "[:=] assign" axiom
+ * `  __[x:=t();]p(x)__ <-> p(t())`
+ * at the highlighted position to reduce the proof to
  *
- * `  __[a;++b;]p(??)__ <-> [a;]p(??) & [b;]p(??) `
+ * `  __!!(2*v+1!=0)__ <-> 2*v+1!=0 `
  *
- * to reduce the proof to a proof of
+ * Finally, using double negation `__!!p()__ <-> p()` at the highlighted position yields the following
  *
- * `  x>5 |- !([x:=x+1;]x>6 & [x:=0;]x>=6) | x<2 `
+ * `  __2*v+1!=0 <-> 2*v+1!=0__ `
  *
- * which is, in turn, easy to prove by pointing to the assignments using "[:=] assign" axioms
- * and ultimately asking propositional logic.
+ * which easily proves by reflexivity `__p() <-> p()__`.
  *
  * Proof by pointing matches the highlighted position against the highlighted position
  * in the fact and does what it takes to use that knowledge.
  * There are multiple variations of proof by pointing in [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.useAt]]
- * and [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.by]]
+ * and [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.byUS]].
+ * The above proof by pointing implements directly in KeYmaera X:
  *
  * {{{
  * import TactixLibrary._
  * import DerivedAxioms._
- * // Proof by pointing of  |- <v:=2*v+1;>q(v) <-> q(2*v+1)
+ * // Proof by pointing of  |- &lt;v:=2*v+1;&gt;v!=0 <-> 2*v+1!=0
  * val proof = TactixLibrary.proveBy(
- *   Sequent(Nil, IndexedSeq(), IndexedSeq("<v:=2*v+1;>q(v) <-> q(2*v+1)".asFormula)),
+ *   Sequent(Nil, IndexedSeq(), IndexedSeq("&lt;v:=2*v+1;&gtlq(v) <-> q(2*v+1)".asFormula)),
  *   // use "<> dual" axiom backwards at the indicated position on
- *   // |- __<v:=2*v+1;>q(v)__ <-> q(2*v+1)
+ *   // |- __&lt;v:=2*v+1;&gt;q(v)__ <-> q(2*v+1)
  *   useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
  *   // use "[:=] assign" axiom forward at the indicated position on
  *   // |- !__[v:=2*v+1;]!q(v)__ <-> q(2*v+1)
@@ -130,31 +136,49 @@ package edu.cmu.cs.ls.keymaerax
  * )
  * }}}
  *
- * [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.step]] also uses proof by pointing
+ * [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.stepAt]] also uses proof by pointing
  * but figures out the appropriate fact to use on its own.
  *
  * {{{
  * import TactixLibrary._
- * // Proof by pointing of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
+ * // Proof by pointing of  |- &lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))
  * val proof = TactixLibrary.proveBy(
- *   Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
+ *   Sequent(Nil, IndexedSeq(), IndexedSeq("&lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))".asFormula)),
  *   // use "<> dual" axiom backwards at the indicated position on
- *   // |- __<a;++b;>p(x)__  <->  <a;>p(x) | <b;>p(x)
+ *   // |- __&lt;a;++b;&gt;p(x)__  <->  &lt;a;&gt;p(x) | &lt;b;&gt;p(x)
  *   useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
  *   // use "[++] choice" axiom forward at the indicated position on
- *   // |- !__[a;++b;]!p(x)__  <->  <a;>p(x) | <b;>p(x)
+ *   // |- !__[a;++b;]!p(x)__  <->  &lt;a;&gt;p(x) | &lt;b;&gt;p(x)
  *   useAt("[++] choice")(SuccPosition(0, 0::0::Nil)) &
  *   // use "<> dual" axiom forward at the indicated position on
- *   // |- !([a;]!p(x) & [b;]!p(x))  <->  __<a;>p(x)__ | <b;>p(x)
+ *   // |- !([a;]!p(x) & [b;]!p(x))  <->  __&lt;a;&gt;p(x)__ | &lt;b;&gt;p(x)
  *   useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::0::Nil)) &
  *   // use "<> dual" axiom forward at the indicated position on
- *   // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | __<b;>p(x)__
+ *   // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | __&lt;b;&gt;p(x)__
  *   useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
  *   // use propositional logic to show
  *   // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | ![b;]!p(x)
  *   prop
  * )
  * }}}
+ *
+ * Likewise, for proving
+ *
+ * `  x>5 |- !([x:=x+1; ++ x:=0;]x>=6) | x<2 `
+ *
+ * it is enough to point to the highlighted position
+ *
+ * `  x>5 |- !(__[x:=x+1; ++ x:=0;]x>=6__) | x<2 `
+ *
+ * and using the "[++] choice" axiom fact
+ * `  __[a;++b;]p(??)__ <-> [a;]p(??) & [b;]p(??) `
+ * to reduce the proof to a proof of
+ *
+ * `  x>5 |- !([x:=x+1;]x>6 & [x:=0;]x>=6) | x<2 `
+ *
+ * which is, in turn, easy to prove by pointing to the assignments using "[:=] assign" axioms
+ * and ultimately asking propositional logic.
+ *
  * More proofs by pointing are in [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  *
  * @todo Expand descriptions

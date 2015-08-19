@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext.ApplicableAtFormula
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
@@ -264,24 +265,33 @@ object SearchTacticsImpl {
   }
 
   /**
-   * Locates a position in the antecedent where the specified position tactic is applicable and the specified condition
-   * on the formula in that position holds.
+   * Locates a position in the antecedent where the specified position tactic is applicable, the specified condition
+   * on the formula in that position holds, and the key inside the formula in that position is true.
    * @param posT The position tactic.
    * @param cond The condition, default is true
+   * @param key The key, default is None (meaning look for top-level formula).
    * @return A new tactic that applies said tactic at the specified position.
    */
-  def locateAnte(posT: PositionTactic, cond: Formula => Boolean = _ => true): Tactic =
+  def locateAnte(posT: PositionTactic, cond: Formula => Boolean = _ => true, key: Option[Expression => Boolean] = None): Tactic =
       new ApplyPositionTactic("locateAnte (" + posT.name + ")", posT) {
     override def applicable(p: ProofNode): Boolean = {
       val pos = findPosition(p.sequent)
-      pos.isDefined && cond(p.sequent(pos.get))
+      pos.isDefined && cond(p.sequent(pos.get)) && (key match {
+        case Some(keyCond) if p.sequent(pos.get).isFormulaAt(pos.get.inExpr) => keyCond(p.sequent(pos.get).subFormulaAt(pos.get.inExpr).get)
+        case Some(keyCond) if p.sequent(pos.get).isTermAt(pos.get.inExpr) => keyCond(p.sequent(pos.get).termAt(pos.get.inExpr))
+        case None => true
+      })
     }
 
     override def findPosition(s: Sequent): Option[Position] = {
-      for (i <- 0 until s.ante.length) {
-        val pos = AntePosition(i)
-        if (cond(s(pos)) && posT.applies(s, pos)) {
-          return Some(pos)
+      for (i <- s.ante.indices) {
+        val topPos = AntePosition(i)
+        if (cond(s(topPos))) key match {
+          case Some(keyCond) => findKey(posT, s, i, keyCond, (idx, p) => AntePosition(idx, p)) match {
+            case Some(p) => return Some(p)
+            case None => // continue searching
+          }
+          case None => if (posT.applies(s, topPos)) return Some(topPos)
         }
       }
       None
@@ -289,27 +299,61 @@ object SearchTacticsImpl {
   }
 
   /**
-   * Locates a position in the succedent where the specified position tactic is applicable and the specified condition
-   * on the formula in that position holds.
+   * Locates a position in the succedent where the specified position tactic is applicable, the specified condition
+   * on the formula in that position holds, and the key inside the position is true.
    * @param posT The position tactic.
    * @param cond The condition, default is true.
+   * @param key The key, default is None (meaning look for top-level formula).
    * @return A new tactic that applies said tactic at the specified position.
    */
-  def locateSucc(posT: PositionTactic, cond: Formula => Boolean = _ => true): Tactic =
+  def locateSucc(posT: PositionTactic, cond: Formula => Boolean = _ => true, key: Option[Expression => Boolean] = None): Tactic =
       new ApplyPositionTactic("locateSucc (" + posT.name + ")", posT) {
     override def applicable(p: ProofNode): Boolean = {
       val pos = findPosition(p.sequent)
-      pos.isDefined && cond(p.sequent(pos.get))
+      pos.isDefined && cond(p.sequent(pos.get)) && (key match {
+        case Some(keyCond) if p.sequent(pos.get).isFormulaAt(pos.get.inExpr) => keyCond(p.sequent(pos.get).subFormulaAt(pos.get.inExpr).get)
+        case Some(keyCond) if p.sequent(pos.get).isTermAt(pos.get.inExpr) => keyCond(p.sequent(pos.get).termAt(pos.get.inExpr))
+        case None => true
+      })
     }
 
     override def findPosition(s: Sequent): Option[Position] = {
-      for (i <- 0 until s.succ.length) {
-        val pos = SuccPosition(i)
-        if (cond(s(pos)) && posT.applies(s, pos) && cond(s(pos))) {
-          return Some(pos)
+      for (i <- s.succ.indices) {
+        val topPos = SuccPosition(i)
+        if (cond(s(topPos))) key match {
+          case Some(keyCond) => findKey(posT, s, i, keyCond, (idx, p) => SuccPosition(idx, p)) match {
+            case Some(p) => return Some(p)
+            case None => // continue searching
+          }
+          case None => if (posT.applies(s, topPos)) return Some(topPos)
         }
       }
       None
+    }
+  }
+
+  /** Finds a position inside the formula s(i) where the specified position tactic is applicable and the specified condition holds */
+  private def findKey(posT: PositionTactic, s: Sequent, i: Int, keyCond: Expression => Boolean,
+                      posFactory: (Int, PosInExpr) => Position): Option[Position] = {
+    var posInExpr: Option[PosInExpr] = None
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+        if (keyCond(e) && posT.applies(s, posFactory(i, p))) {
+          posInExpr = Some(p)
+          Left(Some(ExpressionTraversal.stop))
+        } else Left(None)
+      }
+
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+        if (keyCond(e) && posT.applies(s, posFactory(i, p))) {
+          posInExpr = Some(p)
+          Left(Some(ExpressionTraversal.stop))
+        } else Left(None)
+      }
+    }, s(posFactory(i, HereP)))
+    posInExpr match {
+      case Some(p) => Some(posFactory(i, p))
+      case None => None
     }
   }
 

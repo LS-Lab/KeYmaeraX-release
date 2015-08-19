@@ -350,6 +350,23 @@ object Provable {
  *  // proof of finGoal
  *  println(proof.proved)
  * }}}
+ * @example Branching proofs in backward tableaux sequent order are straight-forward,
+ *          yet might become more readable when closing branches right-to-left to keep explicit subgoals:
+ * {{{
+ *  // explicit proof certificate construction of |- !!p() <-> p()
+ *  val proof = (Provable.startProof(
+ *    Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)))
+ *    (EquivRight(SuccPos(0)), 0)
+ *    // right branch
+ *      (NotRight(SuccPos(0)), 1)
+ *      (NotLeft(AntePos(1)), 1)
+ *      (Close(AntePos(0),SuccPos(0)), 1)
+ *    // left branch
+ *      (NotLeft(AntePos(0)), 0)
+ *      (NotRight(SuccPos(1)), 0)
+ *      (Close(AntePos(0),SuccPos(0)), 0)
+ *  )
+ * }}}
  */
 final case class Provable private (conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
   if (Provable.DEBUG && subgoals.distinct.size != subgoals.size) print("INFO: repeated subgoals may warrant set construction or compactification in Provable " + this)

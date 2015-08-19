@@ -19,6 +19,8 @@ import scala.collection.immutable._
  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
+ * @see [[TacticLibrary]]
+ * @see [[HilbertCalculus]]
  */
 object TactixLibrary {
 //  /** step: makes one sequent proof step to simplify the formula at the indicated position (unless @invariant needed) */
@@ -42,7 +44,7 @@ object TactixLibrary {
   /** US(form) reduce the proof to a proof of form by a suitable uniform substitution obtained by unification */
   def US(form: Sequent): Tactic = TacticLibrary.US(form)
   /** US: uniform substitution */
-  def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula])): Tactic = PropositionalTacticsImpl.uniformSubstT(subst, delta)
+  def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula]) = Map()): Tactic = PropositionalTacticsImpl.uniformSubstT(subst, delta)
 
   type Subst = UnificationMatch.Subst
   //def Subst(subsDefs: immutable.Seq[(Expression,Expression)]): Subst = RenUSubst(subsDefs)
@@ -69,9 +71,13 @@ object TactixLibrary {
   def useAt(lem: Lemma)       : PositionTactic = useAt(lem.fact, PosInExpr(0::Nil))
   /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: String, key: PosInExpr, inst: Subst=>Subst): PositionTactic =
-    useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key, inst)
+    if (Axiom.axioms.contains(axiom)) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key, inst)
+    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR((axiom)), 0), key, inst)
+    else throw new IllegalArgumentException("Unknown axiom " + axiom)
   def useAt(axiom: String, key: PosInExpr): PositionTactic =
-    useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
+    if (Axiom.axioms.contains(axiom)) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
+    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0), key)
+    else throw new IllegalArgumentException("Unknown axiom " + axiom)
   def useAt(axiom: String, inst: Subst=>Subst): PositionTactic = useAt(axiom, PosInExpr(0::Nil), inst)
   def useAt(axiom: String): PositionTactic = useAt(axiom, PosInExpr(0::Nil))
 
@@ -85,7 +91,9 @@ object TactixLibrary {
   def byUS(lemma: Lemma)      : Tactic  = byUS(lemma.fact)
   /** byUS(axiom) proves by a uniform substitution instance of axiom */
   def byUS(axiom: String)     : Tactic =
-    byUS(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0))
+    if (Axiom.axioms.contains(axiom)) byUS(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0))
+    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) byUS(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0))
+    else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
 
   // conditional tactics
@@ -103,11 +111,17 @@ object TactixLibrary {
   // Locating applicable positions for PositionTactics
 
   /** Locate applicable position in succedent that is on the right */
-  def ls(tactic: PositionTactic, fml: String = ""): Tactic = SearchTacticsImpl.locateSucc(tactic, if (fml == "") _ => true else _ == fml.asFormula)
+  def ls(tactic: PositionTactic, fml: String = "", key: Option[Expression] = None): Tactic =
+    SearchTacticsImpl.locateSucc(tactic,
+      if (fml == "") _ => true else _ == fml.asFormula,
+      if (key.isDefined) Some(_ == key.get) else None)
   /** Locate applicable position in succedent that is on the right */
   def lR(tactic: PositionTactic): Tactic = ls(tactic)
   /** Locate applicable position in antecedent that is on the left */
-  def la(tactic: PositionTactic, fml: String = ""): Tactic = SearchTacticsImpl.locateAnte(tactic, if (fml == "") _ => true else _ == fml.asFormula)
+  def la(tactic: PositionTactic, fml: String = "", key: Option[Expression] = None): Tactic =
+    SearchTacticsImpl.locateAnte(tactic,
+      if (fml == "") _ => true else _ == fml.asFormula,
+      if (key.isDefined) Some(_ == key.get) else None)
   /** Locate applicable position in antecedent that is on the left */
   def lL(tactic: PositionTactic): Tactic = la(tactic)
   /** Locate applicable position in antecedent or succedent */

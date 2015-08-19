@@ -504,6 +504,36 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     result.openGoals().head.sequent.succ should contain only "abs_0>=5".asFormula
   }
 
+  it should "expand abs(x) in succedent using locateSucc" in {
+    val s = sucSequent("abs(x) >= 5".asFormula)
+    val tactic = TactixLibrary.ls(ArithmeticTacticsImpl.AbsT, "abs(x) >= 5", Some("abs(x)".asTerm))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "x>=0&abs_0=x | x<0&abs_0=-x".asFormula
+    result.openGoals().head.sequent.succ should contain only "abs_0>=5".asFormula
+  }
+
+  it should "expand abs(x) in succedent using locateSucc on the first applicable position" in {
+    val s = sucSequent("abs(x) >= 5".asFormula)
+    val tactic = TactixLibrary.ls(ArithmeticTacticsImpl.AbsT, "", Some("abs(x)".asTerm))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "x>=0&abs_0=x | x<0&abs_0=-x".asFormula
+    result.openGoals().head.sequent.succ should contain only "abs_0>=5".asFormula
+  }
+
+  it should "expand abs(x) in a more complicated example in succedent using locateSucc on the first applicable position" in {
+    val s = sucSequent("abs(x) >= 5 | abs(y) < 2".asFormula)
+    val tactic = TactixLibrary.ls(ArithmeticTacticsImpl.AbsT, "", Some("abs(x)".asTerm))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "x>=0&abs_0=x | x<0&abs_0=-x".asFormula
+    result.openGoals().head.sequent.succ should contain only "abs_0>=5 | abs(y) < 2".asFormula
+  }
+
   it should "expand abs(x) in antecedent" in {
     val s = sequent(Nil, immutable.IndexedSeq("abs(x) >= 5".asFormula), immutable.IndexedSeq())
     val tactic = ArithmeticTacticsImpl.AbsT(AntePosition(0, PosInExpr(0 :: Nil)))
@@ -511,6 +541,16 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only ("x>=0&abs_0=x | x<0&abs_0=-x".asFormula, "abs_0>=5".asFormula)
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
+  it should "expand abs(x) in antecedent using locateAnte on the first applicable position" in {
+    val s = sequent(Nil, immutable.IndexedSeq("z=2".asFormula, "abs(x-0) >= 5 | x>5".asFormula), immutable.IndexedSeq())
+    val tactic = TactixLibrary.la(ArithmeticTacticsImpl.AbsT, "", Some("abs(x-0)".asTerm))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("z=2".asFormula, "x-0>=0&abs_0=x-0 | x-0<0&abs_0=-(x-0)".asFormula, "abs_0>=5 | x>5".asFormula)
     result.openGoals().head.sequent.succ shouldBe empty
   }
 

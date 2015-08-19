@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.replaceInContext
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT, skolemizeT}
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cutT, EquivLeftT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{lastSucc,locateAnte}
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, PositionTactic, Tactic, NilPT, NilT}
 import PropositionalTacticsImpl._
 import BranchLabels._
@@ -227,19 +228,48 @@ object EqualityRewritingImpl {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val t = getTerm(node.sequent, p)
-        Some(cutT(Some(Exists(abbrvV :: Nil, Equal(abbrvV, t)))) & onBranch(
-          (cutShowLbl, lastSucc(cohideT) &
-            //@note cannot use instantiateT, because during \exists generalize we don't know which part of z=z we should generalize
-            cutT(Some(Equiv(Exists(abbrvV :: Nil, Equal(abbrvV, t)), Equal(t, t)))) & onBranch(
-              (cutShowLbl, lastSucc(EquivRightT) & onBranch(
-                (equivLeftLbl, AxiomCloseT),
-                (equivRightLbl, FOQuantifierTacticsImpl.existentialGenPosT(abbrvV, HereP.first :: Nil)(AntePosition(0)) & AxiomCloseT)
-              )),
-              (cutUseLbl, equivRewriting(AntePosition(0), SuccPosition(0)) & EqualReflexiveT(SuccPosition(0)))
-            )),
-          (cutUseLbl, lastAnte(skolemizeT) & lastAnte(eqRight(exhaustive = true)))
-        ))
+        Some(abbrv(t, Some(abbrvV)))
       }
+    }
+  }
+
+  /**
+   * Abbreviates a term to a variable.
+   * @example{{{
+   *   max_0 = max(c,d) |- a+b <= max_0+e
+   *   ----------------------------------------abbrv("max(c,d)".asTerm)
+   *                    |- a+b <= max(c, d) + e
+   * }}}
+   * @param abbrvV The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
+   * @return The tactic.
+   */
+  def abbrv(t: Term, abbrvV: Option[Variable] = None): Tactic = new ConstructionTactic("abbrv") {
+    override def applicable(node: ProofNode): Boolean = abbrvV match {
+      case Some(v) => !TacticHelper.names(node.sequent).contains(v)
+      case None => true
+    }
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+      val v = abbrvV match {
+        case Some(vv) => vv
+        case None => t match {
+          case FuncOf(Function(n, _, _, sort), _) => Variable(n, TacticHelper.freshIndexInSequent(n, node.sequent), sort)
+          case Variable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, node.sequent), sort)
+          case _ => Variable(t.kind.toString, TacticHelper.freshIndexInSequent(t.kind.toString, node.sequent), t.sort)
+        }
+      }
+      Some(cutT(Some(Exists(v :: Nil, Equal(v, t)))) & onBranch(
+        (cutShowLbl, lastSucc(cohideT) &
+          //@note cannot use instantiateT, because during \exists generalize we don't know which part of z=z we should generalize
+          cutT(Some(Equiv(Exists(v :: Nil, Equal(v, t)), Equal(t, t)))) & onBranch(
+          (cutShowLbl, lastSucc(EquivRightT) & onBranch(
+            (equivLeftLbl, AxiomCloseT),
+            (equivRightLbl, FOQuantifierTacticsImpl.existentialGenPosT(v, HereP.first :: Nil)(AntePosition(0)) & AxiomCloseT)
+          )),
+          (cutUseLbl, equivRewriting(AntePosition(0), SuccPosition(0)) & EqualReflexiveT(SuccPosition(0)))
+        )),
+        (cutUseLbl, lastAnte(skolemizeT) & lastAnte(eqRight(exhaustive = true)))
+      ))
     }
   }
 

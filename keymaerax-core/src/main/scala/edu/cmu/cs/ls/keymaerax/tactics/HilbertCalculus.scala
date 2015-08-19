@@ -23,7 +23,7 @@ object HilbertCalculus {
   import TactixLibrary.useAt
   // modalities
   /** assignb: [:=] simplify assignment by substitution or equation */
-  lazy val assignb            : PositionTactic = useAt("[:=] assign equational") //@todo or "[:=] assign" if no clash
+  lazy val assignb            : PositionTactic = TacticLibrary.boxAssignT // useAt("[:=] assign equational") //@todo or "[:=] assign" if no clash
   /** randomb: [:*] simplify nondeterministic assignment to universal quantifier */
   lazy val randomb            : PositionTactic = useAt("[:*] assign nondet")
   /** testb: [?] simplifies test to an implication */
