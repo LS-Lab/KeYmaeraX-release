@@ -5,18 +5,16 @@
 
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms._
-
-import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
-import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Tool}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms._
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
+import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ProvabilityTestHelper
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.core._
-import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 /**
  * Tests provability of the derived axioms.

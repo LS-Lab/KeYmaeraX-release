@@ -20,10 +20,10 @@ import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, Evidence}
  * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
  */
 final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[String] = None) {
-  assert(fact.isProved, "Lemma provable is not actually proved")
-  //@todo allow more general forms of lemmas?
-  assert(fact.conclusion.ante.isEmpty, "Antecedent is not empty")
-  assert(fact.conclusion.succ.size == 1, "Succedent contains not exactly one formula")
+  assert(fact.isProved, "Only provable facts can be added as lemmas " + fact)
+  //@note could allow more general forms of lemmas.
+  assert(fact.conclusion.ante.isEmpty, "Currently only lemmas with empty antecedents are allowed " + fact)
+  assert(fact.conclusion.succ.size == 1, "Currently only lemmas with exactly one formula in the succedent are allowed " + fact)
 
   override def toString: String = {
     val lemmaName = name match {
