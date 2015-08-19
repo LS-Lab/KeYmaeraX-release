@@ -155,7 +155,7 @@ object KeYmaeraXParser extends Parser {
   }
 
   /** Semantic analysis of expressions after parsing, returning errors if any or None. */
-  private def semanticAnalysis(e: Expression): Option[String] = {
+  def semanticAnalysis(e: Expression): Option[String] = {
     val symbols = StaticSemantics.symbols(e)
     val names = symbols.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol]))
     assert(!DEBUG || (names.size == symbols.size) == (symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).distinct.length == symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).length), "equivalent ways of checking uniqueness via set conversion or list distinctness")

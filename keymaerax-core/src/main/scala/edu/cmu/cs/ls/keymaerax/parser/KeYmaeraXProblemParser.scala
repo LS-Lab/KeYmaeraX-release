@@ -18,6 +18,7 @@ object KeYmaeraXProblemParser {
   catch {case e: ParseException => throw e.inContext(input)}
 
   def parseProblem(tokens: List[Token]) :  (Map[(String, Option[Int]), (Option[Sort], Sort)], Formula) = {
+    val parser = KeYmaeraXParser
     val (decls, remainingTokens) = KeYmaeraXDeclarationsParser(tokens)
     assert(remainingTokens.nonEmpty)
     assert(remainingTokens.head.tok.equals(PROBLEM_BLOCK))
@@ -26,9 +27,14 @@ object KeYmaeraXProblemParser {
     assert(eof.length == 2 && eof.head.tok.equals(END_BLOCK) && eof.last.tok.equals(EOF),
       "Expected .kyx file to end with .<EOF> but found " + eof)
 
-    val problem : Formula = KeYmaeraXParser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {
+    val problem : Formula = parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {
       case f : Formula => f
       case expr : Expression => throw new ParseException("Expected problem to parse to a Formula, but found " + expr, UnknownLocation, "problem block")
+    }
+
+    parser.semanticAnalysis(problem) match {
+      case None =>
+      case Some(error) => throw new ParseException("Semantic analysis error", UnknownLocation, "parsed: " + parser.printer.stringify(problem) + "\n" + error)
     }
 
     require(KeYmaeraXDeclarationsParser.typeAnalysis(decls, problem), "type analysis")
@@ -76,24 +82,21 @@ object KeYmaeraXDeclarationsParser {
    * @param decls the type declarations known from the context
    * @param expr the expression parsed
    * @return whether expr conforms to the types declared in decls.
-   * @todo distinguish whether it was in ProgramVariables or in Functions block, which is not currently recorded in decls.
    */
   def typeAnalysis(decls: Map[(String, Option[Int]), (Option[Sort], Sort)], expr: Expression): Boolean = {
-    if (KeYmaeraXParser.LAX) true
-    else StaticSemantics.signature(expr).forall(f => f match {
+    StaticSemantics.signature(expr).forall(f => f match {
       case f:Function =>
         val (domain,sort) = decls.get((f.name,f.index)) match {
           case Some(d) => d
           case None => throw new ParseException("undefined symbol " + f, UnknownLocation, "type analysis")
         }
-        f.sort == sort &&
-          (if (f.domain==Unit) domain==None else domain==Some(f.domain))
+        f.sort == sort && f.domain == domain
       case _ => true
     }) &&
     StaticSemantics.vars(expr).toSymbolSet.forall(x => x match {
       case x: Variable =>
-        val (None,sort) = decls.get((x.name,x.index)) match {
-          case Some(d) => d
+        val sort = decls.get((x.name,x.index)) match {
+          case Some((None,d)) => d
           case None => throw new ParseException("undefined symbol " + x, UnknownLocation, "type analysis")
         }
         x.sort == sort
