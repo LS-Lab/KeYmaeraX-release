@@ -271,10 +271,10 @@ object AxiomaticRuleTactics {
         val s = USubst(SubstitutionPair(PredOf(pX, Anything), replace(p)(x, aX)) :: Nil)
 
         Some(
-          globalAlphaRenamingT(x.name, x.index, aX.name, aX.index) &
+          globalAlphaRenamingT(x, aX) &
           new ApplyRule(AxiomaticRule("all generalization", s)) {
             override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-          } /* TODO this step will not work, since aX not bound anymore */& globalAlphaRenamingT(aX.name, aX.index, x.name, x.index)
+          } /* TODO this step will not work, since aX not bound anymore */& globalAlphaRenamingT(aX, x)
         )
     }
   }
