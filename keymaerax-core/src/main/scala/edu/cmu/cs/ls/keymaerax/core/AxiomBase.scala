@@ -106,22 +106,30 @@ private[core] object AxiomBase {
           Sequent(immutable.Seq(), immutable.IndexedSeq(PredicationalOf(context, pany)), immutable.IndexedSeq(PredicationalOf(context, qany))))),
       /**
        * Rule "all monotone".
+       * Premise p(??) ==> q(??)
+       * Conclusion \forall x p(??) ==> \forall x q(??)
+       * End.
+       * @note Could also be simplified to Rule "all monotone".
        * Premise p(x) ==> q(x)
        * Conclusion \forall x p(x) ==> \forall x q(x)
        * End.
        */
       ("all monotone",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(px), immutable.IndexedSeq(qx)),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(Forall(immutable.Seq(x), px)), immutable.IndexedSeq(Forall(immutable.Seq(x), qx))))),
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany)),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(Forall(immutable.Seq(x), pany)), immutable.IndexedSeq(Forall(immutable.Seq(x), qany))))),
       /**
        * Rule "exists monotone".
+       * Premise p(??) ==> q(??)
+       * Conclusion \exists x p(??) ==> \exists x q(??)
+       * End.
+       * @note Could also be simplified to Rule "exists monotone".
        * Premise p(x) ==> q(x)
        * Conclusion \exists x p(x) ==> \exists x q(x)
        * End.
        */
       ("exists monotone",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(px), immutable.IndexedSeq(qx)),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(Exists(immutable.Seq(x), px)), immutable.IndexedSeq(Exists(immutable.Seq(x), qx))))),
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany)),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(Exists(immutable.Seq(x), pany)), immutable.IndexedSeq(Exists(immutable.Seq(x), qany))))),
       /**
        * Rule "[] monotone".
        * Premise p(??) ==> q(??)

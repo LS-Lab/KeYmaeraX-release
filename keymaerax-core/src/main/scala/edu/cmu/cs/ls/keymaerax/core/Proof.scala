@@ -117,7 +117,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
     }
   }
 
-  //@todo enable quicker apply(AntePos) and apply(SeqPos) after resolving ambiguous implicit conversion from tactics.Position.
+  //@todo enable quicker apply(AntePos) and apply(SuccPos) after resolving ambiguous implicit conversion from tactics.Position.
 //  /**
 //   * Retrieves the formula in sequent at a given succedent position.
 //   * @param pos the succedent position of the formula
@@ -947,8 +947,7 @@ object AxiomaticRule {
  */
 final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   val name: String = "Axiomatic Rule " + id + " instance"
-  //@todo disable LAX_MODE after tactics have been adapted to Anything. Sound for current axiomatic rules, but generally problematic.
-  require(subst.freeVars.isEmpty || LAX_MODE, "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
+  require(subst.freeVars.isEmpty, "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
 
   override def toString: String = name + "(" + subst + ")"
 
