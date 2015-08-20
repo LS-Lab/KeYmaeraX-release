@@ -217,8 +217,55 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().head.sequent.succ should contain only "<x:=2;>x=2".asFormula
   }
 
+  "Combined box assign base tactics" should "handle assignment in front of an ODE" in {
+    val s = sucSequent("[x:=1;][{x'=1}]x>0".asFormula)
+    val assignT = locateSucc(boxAssignBaseT)
+    val result = helper.runTactic(assignT, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall x_1 (x_1=1 -> [{x_1'=1}]x_1>0)".asFormula
+  }
+
+  it should "handle arbitrary assignments to variables not mentioned in subsequent formulas" in {
+    val tactic = locateSucc(boxAssignBaseT)
+    val result = helper.runTactic(tactic, new RootNode(sucSequent("[y_0:=y;][{y'=2}]y>0".asFormula)))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y_1 (y_1=y -> [{y'=2}]y>0)".asFormula
+  }
+
+  it should "handle arbitrary assignments and not fail continuation" in {
+    val tactic = boxAssignBaseT(SuccPosition(0)) & skolemizeT(SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(sucSequent("[x_0:=x;][{x'=2}]x>0".asFormula)))
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x_1=x -> [{x'=2}]x>0".asFormula
+  }
+
+  it should "handle assignment in front of a loop" in {
+    val s = sucSequent("[x:=1;][{x:=x+1;}*]x>0".asFormula)
+    val result = helper.runTactic(locateSucc(boxAssignBaseT), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall x_1 (x_1=1 -> [{x_1:=x_1+1;}*]x_1>0)".asFormula
+  }
+
+  it should "be applicable in the antecedent" in {
+    val s = sequent(Nil, "[x:=x+1;]x>0".asFormula :: Nil, Nil)
+    val assignT = locateAnte(boxAssignBaseT)
+    getProofSequent(assignT, new RootNode(s)) should be (sequent(Nil, "\\forall x_0 (x_0=x+1 -> x_0>0)".asFormula :: Nil, Nil))
+  }
+
+  it should "work in context" in {
+    val s = sucSequent("x>0 & y=2 -> [x:=y;]x>1".asFormula)
+    val result = helper.runTactic(boxAssignBaseT(SuccPosition(0, PosInExpr(1::Nil))), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "x>0 & y=2 -> \\forall x_0 (x_0=y -> x_0>1)".asFormula
+  }
+
   "Combined box assign tactics" should "handle assignment in front of an ODE" in {
-    import TacticLibrary.boxAssignT
     val s = sucSequent("[x:=1;][{x'=1}]x>0".asFormula)
     val assignT = locateSucc(boxAssignT)
     val result = helper.runTactic(assignT, new RootNode(s))
@@ -228,7 +275,6 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "handle arbitrary assignments to variables not mentioned in subsequent formulas" in {
-    import HybridProgramTacticsImpl.boxAssignT
     val tactic = locateSucc(boxAssignT)
     val result = helper.runTactic(tactic, new RootNode(sucSequent("[y_0:=y;][{y'=2}]y>0".asFormula)))
     result.openGoals() should have size 1
@@ -237,7 +283,6 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "handle arbitrary assignments and not fail continuation" in {
-    import HybridProgramTacticsImpl.boxAssignT
     val tactic = locateSucc(boxAssignT) & locateSucc(diffWeakenT)
     val result = helper.runTactic(tactic, new RootNode(sucSequent("[x_0:=x;][{x'=2}]x>0".asFormula)))
 
@@ -247,7 +292,6 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "handle assignment in front of a loop" in {
-    import TacticLibrary.boxAssignT
     val s = sucSequent("[x:=1;][{x:=x+1;}*]x>0".asFormula)
     val assignT = locateSucc(boxAssignT)
     val result = helper.runTactic(assignT, new RootNode(s))
@@ -257,7 +301,6 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "be applicable in the antecedent" in {
-    import TacticLibrary.boxAssignT
     val s = sequent(Nil, "[x:=x+1;]x>0".asFormula :: Nil, Nil)
     val assignT = locateAnte(boxAssignT)
     getProofSequent(assignT, new RootNode(s)) should be (sequent(Nil, "\\forall x_0 (x_0=x+1 -> x_0>0)".asFormula :: Nil, Nil))
@@ -265,7 +308,6 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   // TODO not yet implemented
   ignore should "use the appropriate axiom variant" in {
-    import TacticLibrary.boxAssignT
     val s = sequent(Nil, "[x:=1;]x>0".asFormula :: Nil, Nil)
     getProofSequent(locateAnte(boxAssignT), new RootNode(s)) should be (sequent(Nil, "1>0".asFormula :: Nil, Nil))
     val t = sucSequent("[x:=1;]x>0".asFormula)
@@ -278,7 +320,6 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "use the skolemization method asked for" in {
-    import HybridProgramTacticsImpl.boxAssignT
     val s = sucSequent("[x:=1;]x>0".asFormula)
     val result1 = helper.runTactic(locateSucc(boxAssignT(FOQuantifierTacticsImpl.skolemizeT)), new RootNode(s))
     result1.openGoals() should have size 1

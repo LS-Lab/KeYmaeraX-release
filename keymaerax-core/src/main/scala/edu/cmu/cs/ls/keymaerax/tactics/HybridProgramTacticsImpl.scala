@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.boxMonotoneT
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverAxiomT, axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
+import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.existsDualT
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT,AxiomCloseT,ImplyLeftT,ImplyRightT,
   ImplyToAndT, cutT, hideT, cohideT, cohide2T, kModalModusPonensT, modusPonensT, uniformSubstT}
@@ -210,40 +211,83 @@ object HybridProgramTacticsImpl {
   }
 
   /**
-   * Creates a new axiom tactic for box assignment [x := t;]. Uses the box assignment tactic most appropriate
-   * for the specific position.
+   * Creates a new axiom tactic for (equational) box assignment [x := t();]p(x) <-> \forall x x=t -> p(x) with
+   * subsequent convenience steps for skolemization. Uses conventional skolemization to fresh variables.
+   * @example{{{
+   *         x_1=2 |- x_1>0
+   *         -------------------boxAssignT(SuccPosition(0))
+   *               |- [x:=2;]x>0
+   * }}}
    * @return The axiom tactic.
    * @author Stefan Mitsch
    */
   def boxAssignT: PositionTactic = boxAssignT(FOQuantifierTacticsImpl.skolemizeT)
-  def boxAssignT(skolemizeHow: Boolean => PositionTactic): PositionTactic =
-      new PositionTactic("[:=] assign equational") {
-    override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
-      case Box(Assign(Variable(_, _, _), _), _) => true
+
+  /**
+   * * Creates a new axiom tactic for (equational) box assignment [x := t();]p(x) <-> \forall x x=t -> p(x) with
+   * subsequent convenience steps for skolemization, using the provided skolemization method.
+   * * @example{{{
+   *         x_1=2 |- x_1>0
+   *         -------------------boxAssignT(skolemizeT)(SuccPosition(0))
+   *               |- [x:=2;]x>0
+   * }}}
+   * @example{{{
+   *         x_1()=2 |- x_1()>0
+   *         ---------------------boxAssignT(skolemizeToFnT)(SuccPosition(0))
+   *                 |- [x:=2;]x>0
+   * }}}
+   * @see [[FOQuantifierTacticsImpl.skolemizeT()]]
+   * @see [[FOQuantifierTacticsImpl.skolemizeToFnT]]
+   * @param skolemMethod The skolemization method
+   * @return The tactic for box assignment.
+   */
+  def boxAssignT(skolemMethod: Boolean => PositionTactic): PositionTactic = new PositionTactic("[:=] assign equational") {
+    override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && boxAssignBaseT.applies(s, p)
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+        if (p.isAnte) Some(boxAssignEqualT(p))
+        else Some(boxAssignBaseT(p) & skolemMethod(true)(p) & ImplyRightT(p))
+    }
+  }
+
+  /**
+   * Creates a new axiom tactic for (equational) box assignment [x := t();]p(x) <-> \forall x x=t -> p(x).
+   * @example{{{
+   *           |- \forall x x=2 -> x>0
+   *         -------------------------boxAssignBaseT(SuccPosition(0))
+   *           |- [x:=2;]x>0
+   * }}}
+   * @return The tactic.
+   */
+  def boxAssignBaseT: PositionTactic = new PositionTactic("[:=] assign equational") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
+      case Some(Box(Assign(Variable(_, _, _), _), _)) => true
       case _ => false
-    })
+    }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
+      //@todo condition for when equational is mandatory -> for now: always
       def assignEqualMandatory(v: Variable, t: Term, rest: Formula) = allNames(t).contains(v) || (rest match {
         case Box(_: DifferentialProgram, _) => true
         case Box(_: Loop, _) => true
         case _ => /* false requires substitution of variables */ true
       })
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case Box(Assign(v: Variable, t: Term), phi) if assignEqualMandatory(v, t, phi) =>
-          if (p.isAnte) Some(boxAssignEqualT(p))
-          // TODO could use v2vAssignT without Skolemize and ImplyRight first
-          else Some(boxAssignEqualT(p) & skolemizeHow(true)(p) & ImplyRightT(p) &
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p).subFormulaAt(p.inExpr) match {
+        case Some(Box(Assign(v: Variable, t: Term), phi)) if assignEqualMandatory(v, t, phi) =>
+          Some(boxAssignEqualT(p) &
             // remove stuttering assignment that may have been introduced, but don't work on assignments that were
             // already present in the original model.
             // (still not perfect, i.e., may handle multiple assignments at once: e.g., x:=x;x:=x;)
-            ifElseT(n => getFormula(n.sequent, p) match {
-              case Box(Assign(v2: Variable, v3: Variable), _) => v.name == v2.name && v.name == v3.name
-              case _ => false }, v2vAssignT(p), NilT))
-        case Box(Assign(v: Variable, t: Term), phi) if !assignEqualMandatory(v, t, phi) =>
+            ifElseT(n => n.sequent(p).subFormulaAt(p.inExpr.first.second) match {
+              case Some(Box(Assign(v2: Variable, v3: Variable), _)) => v.name == v2.name && v.name == v3.name
+              case _ => false }, v2vAssignT(p.first.second), NilT))
+        case Some(Box(Assign(v: Variable, t: Term), phi)) if !assignEqualMandatory(v, t, phi) =>
           Some(substitutionBoxAssignT(p))
         }
       }
