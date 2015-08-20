@@ -389,7 +389,12 @@ class DGPlusPlus extends TacticTestSuite {
     val f = "[{v' = a, t' = 0*t + 1 & p=1&v=2&a=3}]1=1".asFormula
     val n = helper.formulaToNode(f)
     val t = LogicalODESolver.successiveInverseDiffGhost(SuccPos(0))
-    helper.runTactic(t , n)
+    val result = helper.runTactic(t , n)
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "[{t' = 0*t + 1 & p=1&v=2&a=3}]1=1".asFormula
+
     helper.report(n)
   }
 

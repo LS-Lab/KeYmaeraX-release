@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, Tactic, Posi
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
-import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.{diamondDiffSolveT, diamondDiffSolve2DT, diffIntroduceConstantT}
+import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.{diamondDiffSolve2DT, diffIntroduceConstantT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{onBranch,locateAnte,locateSucc}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT,cutT,hideT}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.{getFormula,isFormula}
@@ -142,7 +142,7 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
             (locateSucc(diamondSeqT) | locateSucc(diamondChoiceT) | locateSucc(diamondNDetAssign) |
              locateSucc(diamondModelplexTestT) | locateSucc(diamondAssignEqualT) |
              locateSucc(substitutionDiamondAssignT) | locateSucc(v2vAssignT) |
-             locateSucc(diamondDiffSolveT) | locateSucc(diamondDiffSolve2DT)) &
+             locateSucc(diamondDiffSolve2DT)) &
             debugT("After  HP") &
             ((locateSucc(mxPropositionalRightT) | locateSucc(optimizationOneAt()) | locateAnte(PropositionalLeftT) |
               locateAnte(optimizationOneAt()))*)
@@ -198,30 +198,28 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     }
   }
 
-  def hp(useOptOne: Boolean, time: Option[Variable]) = locateT(
+  def hp(useOptOne: Boolean, time: Option[Variable]): PositionTactic = locateT(
     diamondSeqT ::
     diamondChoiceT ::
     (diamondNDetAssign & (if (useOptOne) optimizationOne() else NilPT)) ::
-//    diamondModelplexTestT ::
     diamondTestT ::
     substitutionDiamondAssignT ::
     v2vAssignT ::
     (diamondAssignEqualT & (if (useOptOne) optimizationOne() else NilPT)) ::
-    mxDiamondDiffSolveT ::
-//    (diamondDiffSolve2DT /*& (if (useOptOne && time.isDefined) optimizationOne(Some(Variable("t", None, Real), time.get)) else NilPT)*/) ::
+//    mxDiamondDiffSolveT ::
     (mxDiamondDiffSolve2DT & (if (useOptOne) optimizationOne() else NilPT)) ::
     Nil)
 
-  private def mxDiamondDiffSolveT: PositionTactic = new PositionTactic("<'> differential solution") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Diamond(ODESystem(AtomicODE(DifferentialSymbol(_), _), _), _) => true
-      case _ => false
-    }
+//  def mxDiamondDiffSolveT: PositionTactic = new PositionTactic("<'> differential solution") {
+//    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+//      case Diamond(ODESystem(AtomicODE(DifferentialSymbol(_), _), _), _) => true
+//      case _ => false
+//    }
+//
+//    override def apply(p: Position): Tactic = (diffIntroduceConstantT & diamondDiffSolveT)(p)
+//  }
 
-    override def apply(p: Position): Tactic = (diffIntroduceConstantT & diamondDiffSolveT)(p)
-  }
-
-  private def mxDiamondDiffSolve2DT: PositionTactic = new PositionTactic("<','> differential solution") {
+  def mxDiamondDiffSolve2DT: PositionTactic = new PositionTactic("<','> differential solution") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case Diamond(ODESystem(DifferentialProduct(
       AtomicODE(DifferentialSymbol(_), _),
@@ -232,7 +230,7 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     override def apply(p: Position): Tactic = (diffIntroduceConstantT & diamondDiffSolve2DT)(p)
   }
 
-  def locateT(tactics: List[PositionTactic]) = new PositionTactic("Modelplex Locate") {
+  def locateT(tactics: List[PositionTactic]): PositionTactic = new PositionTactic("Modelplex Locate") {
     override def applies(s: Sequent, p: Position): Boolean = locate(tactics, s, p) != NilT
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {

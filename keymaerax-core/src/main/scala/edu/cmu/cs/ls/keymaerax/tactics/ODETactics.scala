@@ -41,217 +41,6 @@ object ODETactics {
    * for a solution, and proves that the returned solution is indeed correct.
    * @return The newly created tactic.
    */
-  def diamondDiffSolveT: PositionTactic = new PositionTactic("<'> differential solution") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Diamond(ODESystem(AtomicODE(_, _), _), _) => true
-      case _ => false
-    }
-
-    override def apply(p: Position): Tactic = new Tactic("") {
-      def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-
-      def apply(tool: Tool, node: ProofNode) = {
-        val t = constructTactic(p)
-        t.scheduler = Tactics.MathematicaScheduler
-        t.continuation = continuation
-        t.dispatch(this, node)
-      }
-    }
-
-    private def constructTactic(p: Position) = new ConstructionTactic(name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-
-      private def primedSymbols(ode: DifferentialProgram) = {
-        var primedSymbols = Set[Variable]()
-        ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
-            case DifferentialSymbol(ps) => primedSymbols += ps; Left(None)
-            case Differential(_) => throw new IllegalArgumentException("Only derivatives of variables supported")
-            case _ => Left(None)
-          }
-        }, ode)
-        primedSymbols
-      }
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        def createTactic(ode: DifferentialProgram, solution: Term, time: Variable, iv: Map[Variable, Variable],
-                         diffEqPos: Position) = {
-          val ivfn = iv.map(e => (e._1, FuncOf(Function(e._2.name, e._2.index, Unit, e._2.sort), Nothing)))
-          val iiv = iv.map(_.swap).map(e => (FuncOf(Function(e._1.name, e._1.index, Unit, e._1.sort), Nothing), e._2))
-          val ivLessSol = iiv.foldRight(solution)((iv, sol) => SubstitutionHelper.replaceFree(sol)(iv._1, iv._2))
-
-          def g(t: Term, x: Term): Term = ode match {
-            case ODESystem(AtomicODE(DifferentialSymbol(origX), _), _) =>
-              SubstitutionHelper.replaceFree(SubstitutionHelper.replaceFree(ivLessSol)(time, t))(origX, x)
-          }
-
-          val t = Variable("t", None, Real)
-          val s = Variable("s", None, Real)
-          val (x, checkInit, checkInitFn, checkStep, odeF, solF) = getFormula(node.sequent, p) match {
-            case f@Diamond(ODESystem(AtomicODE(DifferentialSymbol(x), c), h), phi) =>
-              val checkInit = Equal(g(Number(0), x), x)
-              val checkInitFn = Equal(g(Number(0), ivfn(x)), x)
-              val checkStep = Box(ODESystem(AtomicODE(DifferentialSymbol(t), Number(1)), True),
-                Equal(Differential(g(t, ivfn(x))), SubstitutionHelper.replaceFree(c)(x, g(t, ivfn(x)))))
-              val sol = Exists(t::Nil, And(
-                GreaterEqual(t, Number(0)),
-                And(
-                  Forall(s::Nil, Imply(
-                    And(LessEqual(Number(0), s), LessEqual(s, t)),
-                    Diamond(Assign(x, g(s, x)), h)
-                  )),
-                  Diamond(Assign(x, g(t, x)), phi)
-                )
-              ))
-              (x, checkInit, checkInitFn, checkStep, f, sol)
-          }
-
-          val odeSolEquiv = Equiv(odeF, solF)
-          val solFFn = SubstitutionHelper.replaceFree(solF)(x, ivfn(x))
-
-          val baseT = new PositionTactic("Base Foo") {
-            override def applies(s: Sequent, p: Position): Boolean = true
-
-            override def apply(p: Position): Tactic = new ConstructionTactic(name) {
-              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-                val lookupODE = findFormulaByStructure(node.sequent, odeF) match {
-                  case Some(fml) => fml
-                  case None => odeF
-                }
-                val lookupSol = findFormulaByStructure(node.sequent, solFFn) match {
-                  case Some(fml) => fml
-                  case None => solF
-                }
-                val checkInitCtx = checkInit.renameAllByExample(odeF, lookupODE)
-                val (checkInitCtxFn, lookupSolFFn, subst) = lookupODE match {
-                  case Diamond(ODESystem(AtomicODE(DifferentialSymbol(y), _), _), _) =>
-                    (Equal(g(Number(0), ivfn(x)), y),
-                      SubstitutionHelper.replaceFree(lookupSol)(y, ivfn(x)),
-                      SubstitutionPair(ivfn(x), y) :: Nil)
-                }
-
-                val desiredSubstResult = Map[Formula, Formula](Imply(checkInitCtx, Equiv(lookupODE, lookupSol)) -> Imply(checkInitCtxFn, Equiv(lookupODE, lookupSolFFn)))
-
-                Some(cutT(Some(Equiv(lookupODE, lookupSol))) & onBranch(
-                  (cutShowLbl, lastSucc(cohideT) & cutT(Some(checkInitCtx)) & onBranch(
-                    (cutShowLbl, /* show solution holds initially */ lastSucc(cohideT) & arithmeticT),
-                    (cutUseLbl, cutT(Some(Imply(checkInitCtx, Equiv(lookupODE, lookupSol)))) & onBranch(
-                      (cutShowLbl, lastSucc(cohideT) & uniformSubstT(subst, desiredSubstResult) &
-                        cutT(Some(Imply(checkStep, Imply(checkInitCtxFn, Equiv(lookupODE, lookupSolFFn))))) & onBranch(
-                        (cutShowLbl, lastSucc(cohideT) & lastSucc(diamondDiffSolveBaseT(g(_, ivfn(x))))),
-                        (cutUseLbl, /* show solution */ lastAnte(ImplyLeftT) && (
-                          debugT("Show solution") & lastSucc(cohideT) & debugT("Deriving syntactically") &
-                            SyntacticDerivationInContext.SyntacticDerivationT(SuccPosition(0).second) & debugT("Syntactic derivation done") &
-                            lastSucc(diffEffectSystemT) & debugT("Differential effect") &
-                            goedelT & lastSucc(boxDerivativeAssignT) & (arithmeticT | debugT("Solution not provable") & stopT),
-                          AxiomCloseT
-                          ))
-                      )),
-                      (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
-                    ))
-                  )),
-                  (cutUseLbl, lastAnte(EquivLeftT) & lastAnte(AndLeftT) & (AxiomCloseT |
-                    lastAnte(NotLeftT) & lastAnte(NotLeftT) & AxiomCloseT
-                    ))
-                ))
-              }
-
-              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-            }
-          }
-
-          Some(cutInContext(odeSolEquiv, p) & onBranch(
-            (cutShowLbl, lastSucc(cohideT) & lastSucc(EquivRightT) &
-              assertT(1,1) & lastSucc(peelT(AntePosition(0), p.inExpr, baseT))
-              ),
-            (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
-          ))
-        }
-
-        val diffEq = getFormula(node.sequent, p) match {
-          case Diamond(ode: DifferentialProgram, _) => ode
-          case _ => throw new IllegalStateException("Checked by applies to never happen")
-        }
-
-        val iv = primedSymbols(diffEq).map(v => v -> freshNamedSymbol(v, node.sequent(p))).toMap
-        val ivm = iv.map(e =>  (e._1, Function(e._2.name, e._2.index, Unit, e._2.sort)))
-
-        val time = Variable("t", None, Real)
-        val theSolution = tool match {
-          case x: Mathematica => x.diffSol(diffEq, time, ivm)
-          case _ => None
-        }
-
-        val diffEqPos = SuccPosition(p.index)
-        theSolution match {
-          case Some(Equal(_, s)) => createTactic(diffEq, s, time, iv, diffEqPos)
-          case _ => None
-        }
-      }
-    }
-  }
-
-  /**
-   * Returns a tactic for the diamond ODE solution axiom.
-   * @param g The symbolic solution of the ODE.
-   * @return The newly created tactic.
-   */
-  def diamondDiffSolveBaseT(g: Term => Term): PositionTactic = new PositionTactic("<'> differential solution") {
-    def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && (s(p) match {
-      case Imply(_, Imply(_, Equiv(
-      Diamond(ODESystem(AtomicODE(DifferentialSymbol(_), _), _), _),
-      Exists(_, _)))) => true
-      case _ => false
-    })
-
-    def apply(pos: Position): Tactic = new ConstructionTactic(name) {
-      override def applicable(node : ProofNode): Boolean = applies(node.sequent, pos)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos) match {
-        case fml@Imply(_, Imply(_, Equiv(
-        Diamond(ODESystem(AtomicODE(DifferentialSymbol(x), c), h), p),
-        Exists(_, _)))) =>
-          val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
-          val aH = PredOf(Function("H", None, Real, Bool), DotTerm)
-          val aF = FuncOf(Function("f", None, Real, Real), DotTerm)
-          val aG = FuncOf(Function("g", None, Real, Real), DotTerm)
-          val subst = SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(x, DotTerm)) ::
-            SubstitutionPair(aH, SubstitutionHelper.replaceFree(h)(x, DotTerm)) ::
-            SubstitutionPair(aF, SubstitutionHelper.replaceFree(c)(x, DotTerm)) ::
-            SubstitutionPair(aG, g(DotTerm)) :: Nil
-
-          val aX = Variable("x", None, Real)
-          val alphaT = new PositionTactic("Alpha") {
-            override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-              case Imply(_, Imply(_, Equiv(_, Exists(_, _)))) => true
-              case _ => false
-            }
-
-            override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-                Some(globalAlphaRenamingT(x, aX))
-
-              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-            }
-          }
-
-          val axiom = Axiom.axioms.get("<'> differential solution") match {
-            case Some(f) => f
-          }
-
-          val (axiomAfterAlpha, alpha) =
-            if (x.name != aX.name || x.index != aX.index) (replace(axiom)(aX, x), alphaT(SuccPosition(0)))
-            else (axiom, NilT)
-
-          Some(
-            uniformSubstT(subst, Map(fml -> axiomAfterAlpha)) &
-              assertT(0, 1) &
-              alpha &
-              AxiomTactic.axiomT("<'> differential solution")
-          )
-      }
-    }
-  }
-
   def diamondDiffSolve2DT: PositionTactic = new PositionTactic("<','> differential solution") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case Diamond(ODESystem(DifferentialProduct(
@@ -348,14 +137,11 @@ object ODETactics {
 
             override def apply(p: Position): Tactic = new ConstructionTactic(name) {
               override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-                val lookupODE = findFormulaByStructure(node.sequent, odeF) match {
-                  case Some(fml) => fml
-                  case None => odeF
+                val (lookupODE, lookupSol) = node.sequent.succ.head match {
+                  case Equiv(ode@Diamond(_, _), sol@Exists(_, _)) => (ode, sol)
+                  case Equiv(sol@Exists(_, _), ode@Diamond(_, _)) => (ode, sol)
                 }
-                val lookupSol = findFormulaByStructure(node.sequent, solFFn) match {
-                  case Some(fml) => fml
-                  case None => solF
-                }
+
                 val checkInitCtx = checkInit.renameAllByExample(odeF, lookupODE)
                 val (checkInitCtxFn, lookupSolFFn, subst) = lookupODE match {
                   case Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(yy), _), AtomicODE(DifferentialSymbol(xx), _)), _), _) =>
@@ -366,30 +152,35 @@ object ODETactics {
 
                 val desiredSubstResult = Map[Formula, Formula](Imply(checkInitCtx, Equiv(lookupODE, lookupSol)) -> Imply(checkInitCtxFn, Equiv(lookupODE, lookupSolFFn)))
 
-                Some(cutT(Some(Equiv(lookupODE, lookupSol))) & onBranch(
-                  (cutShowLbl, lastSucc(cohideT) & cutT(Some(checkInitCtx)) & onBranch(
-                    (cutShowLbl, /* show solution holds initially */ lastSucc(cohideT) & (arithmeticT | debugT("Unable to prove solution holds initially") & stopT)),
+                Some(
+                  cutT(Some(checkInitCtx)) & onBranch(
+                    (cutShowLbl, lastSucc(cohideT) & debugT("Checking solution holds initially") &
+                      (arithmeticT | debugT("Unable to prove solution holds initially"))),
                     (cutUseLbl, cutT(Some(Imply(checkInitCtx, Equiv(lookupODE, lookupSol)))) & onBranch(
-                      (cutShowLbl, lastSucc(cohideT) & uniformSubstT(subst, desiredSubstResult) &
+                      (cutShowLbl, lastSucc(cohideT) &
+                        debugT("Checking equiv under the assumption of solution holds initially") &
+                        uniformSubstT(subst, desiredSubstResult) &
+                        debugT("Substituted for desired result") &
                         cutT(Some(Imply(checkStep, Imply(checkInitCtxFn, Equiv(lookupODE, lookupSolFFn))))) & onBranch(
-                        (cutShowLbl, lastSucc(cohideT) & debugT("About to call base tactic") & lastSucc(diamondDiffSolve2DBaseT(gx(_, ivfn(x)), gy(_, ivfn(y))))),
+                        (cutShowLbl, lastSucc(cohideT) & debugT("About to call base tactic") &
+                          lastSucc(diamondDiffSolve2DBaseT(gx(_, ivfn(x)), gy(_, ivfn(y))))),
                         (cutUseLbl, /* show solution */ lastAnte(ImplyLeftT) && (
                           debugT("Show solution") & lastSucc(cohideT) & debugT("Deriving syntactically") &
                             SyntacticDerivationInContext.SyntacticDerivationT(SuccPosition(0).second) & debugT("Syntactic derivation done") &
-                            lastSucc(diffEffectSystemT) & debugT("Diff effect result") &
+                            lastSucc(diffEffectT) & debugT("Diff effect result") &
                             boxDerivativeAssignT(SuccPosition(0).second) & debugT("Derivative assignment result") &
                             lastSucc(diffWeakenT) & debugT("Diff weaken result") &
-                            /*goedelT & lastSucc(boxDerivativeAssignT) &*/ (arithmeticT | debugT("Solution not provable") & stopT),
-                          AxiomCloseT | debugT("Unable to prove by axiom") & stopT
+                            (arithmeticT | debugT("Solution not provable")),
+                          AxiomCloseT | debugT("Unable to prove by axiom")
                           ))
                       )),
-                      (cutUseLbl, lastAnte(ImplyLeftT) & (AxiomCloseT | debugT("Unable to prove by axiom 2") & stopT))
+                      (cutUseLbl, lastAnte(ImplyLeftT) & (
+                        AxiomCloseT |
+                        (lastAnte(EquivLeftT) & lastAnte(AndLeftT) & lastSucc(EquivRightT) & (AxiomCloseT | locateAnte(NotLeftT)*2 & AxiomCloseT)) |
+                        debugT("Unable to prove by axiom 2")))
                     ))
-                  )),
-                  (cutUseLbl, lastAnte(EquivLeftT) & lastAnte(AndLeftT) & (AxiomCloseT |
-                    lastAnte(NotLeftT) & lastAnte(NotLeftT) & AxiomCloseT
-                    ))
-                ))
+                  )
+                )
               }
 
               override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
@@ -398,7 +189,8 @@ object ODETactics {
 
           Some(cutInContext(odeSolEquiv, p) & onBranch(
             (cutShowLbl, lastSucc(cohideT) & lastSucc(EquivRightT) &
-              assertT(1,1) & lastSucc(peelT(AntePosition(0), p.inExpr, baseT))
+              assertT(1,1) & AxiomaticRuleTactics.onesidedCongruenceT(p.inExpr) &
+              assertT(0,1) & baseT(SuccPosition(0))
               ),
             (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
           ))
@@ -436,24 +228,18 @@ object ODETactics {
    */
   def diamondDiffSolve2DBaseT(gx: Term => Term, gy: Term => Term): PositionTactic = new PositionTactic("<','> differential solution") {
     def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && (s(p) match {
-      case Imply(_, Imply(
-      _,
-      Equiv(
-      Diamond(ODESystem(
-        DifferentialProduct(AtomicODE(DifferentialSymbol(_), _), AtomicODE(DifferentialSymbol(_), _)), _), _),
-      Exists(_, _)))) => true
+      case Imply(_, Imply(_, Equiv(
+        Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(_), _), AtomicODE(DifferentialSymbol(_), _)), _), _),
+        Exists(_, _)))) => true
       case _ => false
     })
 
     def apply(pos: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode): Boolean = applies(node.sequent, pos)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos) match {
-        case fml@Imply(_, Imply(
-        _,
-        Equiv(
-        Diamond(ODESystem(
-          DifferentialProduct(AtomicODE(DifferentialSymbol(y), d), AtomicODE(DifferentialSymbol(x), c)), h), p),
-        Exists(_, _)))) =>
+        case fml@Imply(_, Imply(_, Equiv(
+          Diamond(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(y), d), AtomicODE(DifferentialSymbol(x), c)), h), p),
+          Exists(_, _)))) =>
           val aP = PredOf(Function("p", None, Real, Bool), Anything)
           val aH = PredOf(Function("H", None, Real, Bool), Anything)
           val aFx = FuncOf(Function("fx", None, Real, Real), DotTerm)
@@ -1172,56 +958,45 @@ object ODETactics {
   /**
    *   ([{x'=f(x), c & H(??)}]p(??))  ->  (\forall y [{y'=g(??), x'=f(x), c & H(??)}]p(??))
    */
-  def DiffGhostPPBaseT(unusedFml : Formula) : PositionTactic = {
-    val aX = Variable("x", None, Real)
-    val aY = Variable("y", None, Real)
-    val aF = FuncOf(Function("f", None, Real, Real), Anything)
-    val aG = FuncOf(Function("g", None, Real, Real), Anything)
-    val aH = PredOf(Function("H", None, Real, Bool), Anything)
-    val aP = PredOf(Function("p", None, Real, Bool), Anything)
-
-    def subst(fml : Formula) : List[SubstitutionPair] = fml match {
-      case Imply(_, Forall(y :: Nil,
-      Box(ODESystem(
-      DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)),
-      h
-      ), p))) =>
-      {
-          SubstitutionPair(aH, h) ::
-          SubstitutionPair(aF, f) ::
-          SubstitutionPair(aG, g) ::
-          SubstitutionPair(aP, p) :: Nil
-      }
+  def DiffGhostPPBaseT(unusedFml : Formula) : PositionTactic = new PositionTactic("DG++") {
+    //@note cannot use axiomLookupBaseT because we need special case alpha renaming
+    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
+      case Some(Imply(_, Forall(_, Box(ODESystem(DifferentialProduct(AtomicODE(_, _), AtomicODE(_, _)), _), _)))) => true
+      case _ => false
     }
 
-    def alpha(fml : Formula) = fml match {
-      case Imply(_, Forall(y :: Nil,
-      Box(ODESystem(
-      DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)),
-      h
-      ), p))) =>
-      {
-        TacticHelper.axiomAlphaT(x.x, aX) & TacticHelper.axiomAlphaT(y, aY)
+    override def apply(p: Position): Tactic = new ConstructionTactic("DG++") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p).subFormulaAt(p.inExpr) match {
+        case Some(fml@Imply(_, Forall(y :: Nil, Box(ODESystem(DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)), h), p))) ) =>
+          val aX = Variable("x", None, Real)
+          val aY = Variable("y", None, Real)
+          val aF = FuncOf(Function("f", None, Real, Real), Anything)
+          val aG = FuncOf(Function("g", None, Real, Real), Anything)
+          val aH = PredOf(Function("H", None, Real, Bool), Anything)
+          val aP = PredOf(Function("p", None, Real, Bool), Anything)
+
+          val subst = SubstitutionPair(aH, h) ::
+            SubstitutionPair(aF, f) ::
+            SubstitutionPair(aG, g) ::
+            SubstitutionPair(aP, p) :: Nil
+
+          val axiom = Axiom.axioms.get("DG++").get
+          val axiomInstance = AlphaConversionHelper.replace(AlphaConversionHelper.replace(axiom)(aX, x.x))(aY, y)
+
+          val alpha = lastSucc(TacticHelper.axiomAlphaT(x.x, aX)) & alphaRenamingT(y, aY)(SuccPosition(0, PosInExpr(1::Nil)))
+
+          Some(
+            TacticLibrary.debugT("axiomLookupBaseT on DG++") &
+              uniformSubstT(subst, Map(fml -> axiomInstance)) &
+              assertT(0, 1) & lastSucc(assertPT(axiomInstance, "Unexpected uniform substitution result")) &
+              alpha & TacticLibrary.debugT("alpha renaming succeeded for axiom GD++") &
+              lastSucc(assertPT(axiom, "Unexpected axiom form in succedent")) & AxiomTactic.axiomT("DG++")
+          )
       }
-      case _ => ???
     }
-
-    def axiomInstance(fml : Formula, axiom : Formula) = fml match {
-      case Imply(_, Forall(y :: Nil,
-      Box(ODESystem(
-      DifferentialProduct(AtomicODE(alsoY, g), AtomicODE(x, f)),
-      h
-      ), p))) =>
-      {
-        assert(y.equals(alsoY.x), "Quantified variable " + y + " should be the same as second primed variable " + alsoY)
-        val afterX = AlphaConversionHelper.replace(axiom)(aX, x.x)
-        AlphaConversionHelper.replace(afterX)(aY, y)
-
-      }
-    }
-
-    axiomLookupBaseT("DG++", subst, alpha, axiomInstance)
   }
+
   //The commented out code below should be equivalent to the code above...
 //  def DiffGhostPPT : PositionTactic = {
 //    def axiomInstance(fml : Formula) = fml match {
