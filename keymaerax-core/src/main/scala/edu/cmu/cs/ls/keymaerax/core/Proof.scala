@@ -1036,7 +1036,6 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
     if (!StaticSemantics(f).bv.intersect(SetLattice(Set[NamedSymbol](what, DifferentialSymbol(what)))).isEmpty) {
       // old name is bound somewhere in f -> lazy check by ensuring that new name is admissible (does not occur)
       f match {
-        case Imply(l,r) => Imply(ghostify(l), ghostify(r))
         case Forall(vars, _) if vars.contains(what) => apply(f)
         case Exists(vars, _) if vars.contains(what) => apply(f)
         case Box(Assign(x, y), _) if x == y && x == repl => apply(f)
