@@ -891,7 +891,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  */
 
 /**
- * Uniform Substitution Rule.
+ * US: Uniform Substitution Rule.
  * Applies a given uniform substitution to the given original premise (origin).
  * Pseudo application in sequent calculus to conclusion that fits to the Hilbert calculus application (origin->conclusion).
  * This rule interfaces forward Hilbert calculus rule application with backward sequent calculus pseudo-application
@@ -903,14 +903,15 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  * }}}
  * @param subst the uniform substitution to be applied to origin.
  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
- * @note this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
+ * @note In sequent calculus, this Hilbert-calculus rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
  * @author Andre Platzer
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+ * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
  */
 case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule {
   val name: String = "Uniform Substitution"
 
-  private def log(msg: =>Any): Unit = {} //println(msg)
+  //private def log(msg: =>Any): Unit = {} //println(msg)
 
   override def toString: String = subst.toString   // name + "(" + subst + ")"
 
@@ -921,19 +922,52 @@ case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule 
    */
   def apply(conclusion: Sequent): immutable.List[Sequent] =
     try {
-      log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
+      //log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
       if (subst(origin) == conclusion) immutable.List(origin)
-      else throw new CoreException(this + "\non premise   " + origin + "\nresulted in  " + subst(origin) + "\nbut expected " + conclusion)
+      else throw new InapplicableRuleException(this + "\non premise   " + origin + "\nresulted in  " + subst(origin) + "\nbut expected " + conclusion, this, conclusion)
       /*("From\n  " + origin + "\nuniform substitution\n  " + subst +
         "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))*/
-    } catch {
-      case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion)
-    }
+    } catch { case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion) }
 }
 
 
+/*********************************************************************************
+  * Lookup Axioms
+  *********************************************************************************
+  */
+
+/** Finite list of axioms. */
+object Axiom {
+  /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. */
+  val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms
+}
+/**
+ * Look up an axiom named id.
+ * Sound axioms are valid formulas of differential dynamic logic.
+ * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Axiom.axioms]].
+ * @author nfulton
+ * @author Andre Platzer
+ * @author smitsch
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+ * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
+ * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
+ */
+case class Axiom(id: String) extends Rule with ClosingRule {
+  val name: String = "Axiom " + id
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    Axiom.axioms.get(id) match {
+      case Some(f) => immutable.List(new Sequent(s.pref, s.ante, s.succ.filter(_ != f)))
+        if (s.ante.isEmpty && s.succ.size == 1 && s.succ.contains(f)) Nil
+        else throw new InapplicableRuleException("Axiom " + f + " is not sole formula in:\n", this, s)
+      case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"), this, s)
+    }
+  } ensuring (r => r.isEmpty, "axiom lookup should close")
+}
+
+
+/** Finite list of axiomatic rules. */
 object AxiomaticRule {
-  // immutable list of locally sound axiomatic proof rules (premise, conclusion)
+  /** immutable list of locally sound axiomatic proof rules (premise, conclusion) */
   val rules: immutable.Map[String, (Sequent, Sequent)] = AxiomBase.loadAxiomaticRules()
 }
 
@@ -943,7 +977,7 @@ object AxiomaticRule {
  * Axiomatic proof rules are employed after forming their uniform substitution instances.
  * All available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
  * @author Andre Platzer
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  */
 final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   val name: String = "Axiomatic Rule " + id + " instance"
@@ -966,9 +1000,7 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
       if (subst(ruleconclusion) == conclusion) immutable.List(subst(rulepremise))
       else throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion +
         "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
-    } catch {
-      case exc: SubstitutionClashException => throw exc.inContext(this + " for intended conclusion\n" + conclusion)
-    }
+    } catch { case exc: SubstitutionClashException => throw exc.inContext(this + " for intended conclusion\n" + conclusion) }
 
 }
 
@@ -1109,38 +1141,6 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
         taboos.intersect(v.toSet), v.toString, s.toString)
   }
 
-}
-
-/*********************************************************************************
- * Lookup Axioms
- *********************************************************************************
- */
-
-/** Finite list of axioms. */
-object Axiom {
-  // immutable list of sound axioms
-  val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms
-}
-/**
- * Look up an axiom named id.
- * Sound axioms are valid formulas of differential dynamic logic.
- * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Axiom.axioms]].
- * @author nfulton
- * @author Andre Platzer
- * @author smitsch
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
- * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
- */
-case class Axiom(id: String) extends Rule with ClosingRule {
-  val name: String = "Axiom " + id
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    Axiom.axioms.get(id) match {
-      case Some(f) => immutable.List(new Sequent(s.pref, s.ante, s.succ.filter(_ != f)))
-        if (s.ante.isEmpty && s.succ.size == 1 && s.succ.contains(f)) Nil
-        else throw new InapplicableRuleException("Axiom " + f + " is not sole formula in:\n", this, s)
-      case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"), this, s)
-    }
-  } ensuring (r => r.isEmpty, "axiom lookup should close")
 }
 
 /*********************************************************************************

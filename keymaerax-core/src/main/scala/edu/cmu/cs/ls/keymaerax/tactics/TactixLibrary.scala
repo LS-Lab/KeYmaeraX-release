@@ -21,6 +21,7 @@ import scala.collection.immutable._
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see [[TacticLibrary]]
  * @see [[HilbertCalculus]]
+ * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
  */
 object TactixLibrary {
 //  /** step: makes one sequent proof step to simplify the formula at the indicated position (unless @invariant needed) */
