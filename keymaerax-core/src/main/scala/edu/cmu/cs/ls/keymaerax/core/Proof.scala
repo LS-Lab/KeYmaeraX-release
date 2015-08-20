@@ -908,7 +908,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
  */
-case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule {
+final case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule {
   val name: String = "Uniform Substitution"
 
   //private def log(msg: =>Any): Unit = {} //println(msg)
@@ -952,7 +952,7 @@ object Axiom {
  * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  */
-case class Axiom(id: String) extends Rule with ClosingRule {
+final case class Axiom(id: String) extends Rule with ClosingRule {
   val name: String = "Axiom " + id
   def apply(s: Sequent): immutable.List[Sequent] = {
     Axiom.axioms.get(id) match {
@@ -1012,12 +1012,12 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
  * @requires repl is fresh in the sequent.
  * @author Andre Platzer
  */
-case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
+final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   require(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
   val name: String = "Uniform Renaming"
   private val renaming: URename = URename(what, repl)
 
-  override def toString: String = name + "(" + what + "~>" + repl + ")"
+  override def toString: String = renaming.toString //name + "(" + what + "~>" + repl + ")"
 
   def apply(s: Sequent): immutable.List[Sequent] = List(renaming(s))
 }
