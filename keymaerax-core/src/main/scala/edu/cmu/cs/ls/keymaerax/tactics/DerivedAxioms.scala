@@ -249,8 +249,8 @@ object DerivedAxioms {
     Sequent(Nil, IndexedSeq(), IndexedSeq(allDistributeF)),
     implyR(1) & implyR(1) &
       allR(1) &
-      allL(Variable("x",None,Real), Variable("x",None,Real))(-1) &
-      allL(Variable("x",None,Real), Variable("x",None,Real))(-2) &
+      allL(Variable("x",None,Real), Variable("x",Some(0),Real))(-2) &
+      allL(Variable("x",None,Real), Variable("x",Some(0),Real))(-1) &
       prop
   )
   lazy val allDistributeT = derivedAxiomT(allDistributeAxiom)
