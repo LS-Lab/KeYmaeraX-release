@@ -3,6 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 import com.wolfram.jlink.Expr
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import testHelper.ProvabilityTestHelper
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -30,6 +31,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   def snum(n : String) = Number(new BigDecimal(n))
 
   override def beforeEach() = {
+    PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter)
     ml = new JLinkMathematicaLink()
     ml.init(mathematicaConfig("linkName"), None) //@todo jlink
   }
@@ -172,10 +174,11 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   "Mathematica -> KeYmaera" should "convert inequalities" in {
-    round trip Forall(Seq(x), Greater(x,y))
-    round trip Forall(Seq(x), GreaterEqual(x,y))
-    round trip Forall(Seq(x), LessEqual(x,y))
-    round trip Forall(Seq(x), Less(x,y))
+    round trip "\\forall x x>y".asFormula
+    round trip "\\forall x x>=y".asFormula
+    round trip "\\forall x x<=y".asFormula
+    round trip "\\forall x x<y".asFormula
+    round trip "\\forall x (x<=y & (y<=z & z<0))".asFormula // converter associates like this
   }
 
   it should "convert parameterless Apply()" in {
