@@ -1,6 +1,5 @@
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
@@ -116,7 +115,7 @@ class ModelplexTacticTests extends TacticTestSuite {
     val result = helper.runTactic(tactic, new RootNode(s))
 
     // with diamond test, after local QE
-    val expected = "-1<=f&f<=(m-l)/ep&(c_1=0&(t>=0&(((c_1<ep&(t<0|((t=0&l>=0)|(0<t&t<=-1*c_1+ep&(l>=0&f>=-1*l*t^-1))))|((c_1=ep&(t<0|(t=0&l>=0)))|(c_1>ep&t<0)))&(fpost=f&lpost=t*f+l&cpost=1*t+c_1)))))".asFormula
+    val expected = "-1<=fpost_0()&fpost_0()<=(m-l)/ep&(cpost_0()=0&(ep=cpost()&(l=0&(tpost_0()=0&(cpost_0()=ep&(fpost_0() < 0&(fpost()=fpost_0()&lpost()=0)|(fpost_0()=0&(fpost()=0&lpost()=0)|fpost_0()>0&(fpost()=fpost_0()&lpost()=0))))|tpost_0()>0&(cpost_0()=-1*tpost_0()+ep&(fpost_0()=0&(fpost()=0&lpost()=0)|fpost_0()>0&(fpost()=fpost_0()&lpost()=fpost_0()*tpost_0()))))|l>0&(tpost_0()=0&(cpost_0()=ep&(fpost_0() < 0&(fpost()=fpost_0()&lpost()=l)|(fpost_0()=0&(fpost()=0&lpost()=l)|fpost_0()>0&(fpost()=fpost_0()&lpost()=l))))|tpost_0()>0&(cpost_0()=-1*tpost_0()+ep&(-1*tpost_0()^-1*l<=fpost_0()&fpost_0() < 0&(fpost()=fpost_0()&lpost()=fpost_0()*tpost_0()+l)|(fpost_0()=0&(fpost()=0&lpost()=l)|fpost_0()>0&(fpost()=fpost_0()&lpost()=fpost_0()*tpost_0()+l))))))|ep>cpost()&(l=0&(tpost_0()=0&(cpost_0()=cpost()&(fpost_0() < 0&(fpost()=fpost_0()&lpost()=0)|(fpost_0()=0&(fpost()=0&lpost()=0)|fpost_0()>0&(fpost()=fpost_0()&lpost()=0))))|tpost_0()>0&(cpost_0()=cpost()+-1*tpost_0()&(fpost_0()=0&(fpost()=0&lpost()=0)|fpost_0()>0&(fpost()=fpost_0()&lpost()=fpost_0()*tpost_0()))))|l>0&(tpost_0()=0&(cpost_0()=cpost()&(fpost_0() < 0&(fpost()=fpost_0()&lpost()=l)|(fpost_0()=0&(fpost()=0&lpost()=l)|fpost_0()>0&(fpost()=fpost_0()&lpost()=l))))|tpost_0()>0&(cpost_0()=cpost()+-1*tpost_0()&(-1*tpost_0()^-1*l<=fpost_0()&fpost_0() < 0&(fpost()=fpost_0()&lpost()=fpost_0()*tpost_0()+l)|(fpost_0()=0&(fpost()=0&lpost()=l)|fpost_0()>0&(fpost()=fpost_0()&lpost()=fpost_0()*tpost_0()+l))))))))".asFormula
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "0<=l & l<=m & 0<ep".asFormula
