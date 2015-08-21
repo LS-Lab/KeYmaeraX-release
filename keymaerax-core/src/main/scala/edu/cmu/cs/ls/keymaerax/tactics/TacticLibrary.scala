@@ -587,17 +587,8 @@ object TacticLibrary {
 
           Some(ContextTactics.cutImplyInContext(Imply(qPhi, b), p) & onBranch(
             (cutShowLbl, lastSucc(cohideT) & lastSucc(ImplyRightT) & assertT(1, 1) &
-              //@todo move into congruence tactic (see also [[FOQuantifierTacticsImpl.instantiateExistentialQuanT]])`
-              TacticLibrary.debugT(s"Start unpeeling in abstraction at $p") &
-              // list all cases explicitly, hide appropriate formulas in order to not blow up branching
-              (( (lastAnte(NotLeftT) & NotRightT(SuccPosition(0)) & assertT(1, 1)) |
-                (lastAnte(AndLeftT) & lastSucc(AndRightT) && (AxiomCloseT | hideT(AntePosition(1)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1)) |
-                (lastSucc(OrRightT) & lastAnte(OrLeftT) && (AxiomCloseT | hideT(SuccPosition(1)), AxiomCloseT | hideT(SuccPosition(0))) & assertT(1, 1)) |
-                (lastSucc(ImplyRightT) & ImplyLeftT(AntePosition(0)) && (AxiomCloseT | hideT(SuccPosition(0)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1)) |
-                boxMonotoneT | diamondMonotoneT
-                //@todo universal and existential quantifiers
-                ) & TacticLibrary.debugT("Unpeeled one layer"))*p.inExpr.pos.length &
-              assertT(1, 1) & //@todo check that qPhi and b are in the expected positions
+              AxiomaticRuleTactics.propositionalCongruenceT(p.inExpr) &
+              assertT(1, 1) & assertT(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionT") &
               lastSucc(topLevelAbstractionT) & AxiomCloseT),
             (cutUseLbl, lastAnte(ImplyLeftT) & (hideT(p.topLevel) /* result remains open */, AxiomCloseT))
           ))
