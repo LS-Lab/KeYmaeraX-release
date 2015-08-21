@@ -227,7 +227,7 @@ object DerivedAxioms {
    *    (\forall x p(??)) -> p(??)
    * End.
    * }}}
-   * @note will clash unlike the converse proof.
+   * @todo will clash unlike the converse proof.
    */
   lazy val allEliminateF = "(\\forall x p(??)) -> p(??)".asFormula
   lazy val allEliminateAxiom = derivedAxiom("all eliminate",

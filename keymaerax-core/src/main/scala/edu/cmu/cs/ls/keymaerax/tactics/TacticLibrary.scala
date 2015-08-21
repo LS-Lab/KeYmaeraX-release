@@ -12,16 +12,14 @@ import scala.collection.immutable.Seq
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
-import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{onesidedCongruenceT, boxMonotoneT, diamondMonotoneT, forallGeneralizationT}
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{onesidedCongruenceT, boxMonotoneT, diamondMonotoneT}
 import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.cohide2T
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cohideT, cohide2T}
 import ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
-import AxiomaticRuleTactics.boxMonotoneT
 import FOQuantifierTacticsImpl.instantiateT
 import PropositionalTacticsImpl.NonBranchingPropositionalT
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import HybridProgramTacticsImpl.boxVacuousT
-import AlphaConversionHelper.replace
 import BranchLabels._
 
 import BuiltinHigherTactics._
@@ -588,8 +586,8 @@ object TacticLibrary {
                 foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
           Some(ContextTactics.cutImplyInContext(Imply(qPhi, b), p) & onBranch(
-            (cutShowLbl, lastSucc(ImplyRightT) & /* hide duplicated formula */ lastSucc(hideT) & assertT(1, 1) &
-              //@todo move into congruence tactic (see also [[FOQuantifierTacticsImpl.instantiateExistentialQuanT]])
+            (cutShowLbl, lastSucc(cohideT) & lastSucc(ImplyRightT) & assertT(1, 1) &
+              //@todo move into congruence tactic (see also [[FOQuantifierTacticsImpl.instantiateExistentialQuanT]])`
               TacticLibrary.debugT(s"Start unpeeling in abstraction at $p") &
               // list all cases explicitly, hide appropriate formulas in order to not blow up branching
               (( (lastAnte(NotLeftT) & NotRightT(SuccPosition(0)) & assertT(1, 1)) |

@@ -198,6 +198,7 @@ object MathematicaToKeYmaera {
     else if(isThing(e, MathematicaSymbols.GREATER_EQUALS)) convertGreaterEqual(e)
     else if(isThing(e, MathematicaSymbols.LESS))           convertLessThan(e)
     else if(isThing(e, MathematicaSymbols.LESS_EQUALS))    convertLessEqual(e)
+    else if(isThing(e, MathematicaSymbols.INEQUALITY))     convertInequality(e)
 
     else if(isThing(e, MathematicaSymbols.RULE)) convertRule(e)
 
@@ -316,44 +317,44 @@ object MathematicaToKeYmaera {
   def convertEquals(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
-    val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => Equal(pair._1,pair._2))
-    staggeredFormauls.reduce((l,r) => And(l,r))
+    staggeredPairs.map(pair => Equal(pair._1,pair._2)).reduce(And)
   }
   def convertNotEquals(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
-    val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => NotEqual(pair._1,pair._2))
-    staggeredFormauls.reduce((l,r) => And(l,r))
+    staggeredPairs.map(pair => NotEqual(pair._1,pair._2)).reduce(And)
   }
   def convertGreaterEqual(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
-    val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => GreaterEqual(pair._1,pair._2))
-    staggeredFormauls.reduce((l,r) => And(l,r))
+    staggeredPairs.map(pair => GreaterEqual(pair._1,pair._2)).reduce(And)
   }
   def convertLessEqual(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
-    val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => LessEqual(pair._1,pair._2))
-    staggeredFormauls.reduce((l,r) => And(l,r))
+    staggeredPairs.map(pair => LessEqual(pair._1,pair._2)).reduce(And)
   }
   def convertLessThan(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
-    val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => Less(pair._1,pair._2))
-    staggeredFormauls.reduce((l,r) => And(l,r))
+    staggeredPairs.map(pair => Less(pair._1,pair._2)).reduce(And)
   }
   def convertGreaterThan(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
-    val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => Greater(pair._1,pair._2))
-    staggeredFormauls.reduce((l,r) => And(l,r))
+    staggeredPairs.map(pair => Greater(pair._1,pair._2)).reduce(And)
+  }
+  /** converts expressions of the form a <= b < c < 0 */
+  def convertInequality(e: MExpr): Formula = {
+    def extractInequalities(exprs: Array[Expr]): List[(MExpr, MExpr, MExpr)] = {
+      require(exprs.length >= 3 && exprs.length % 2 == 1, "Need pairs of expressions separated by operators")
+      if (exprs.length == 3) (exprs(0), exprs(1), exprs(2)) :: Nil
+      else (exprs(0), exprs(1), exprs(2)) :: extractInequalities(exprs.tail.tail)
+    }
+
+    extractInequalities(e.args()).
+      map({case (arg1, op, arg2) => new MExpr(op, Array[MExpr](arg1, arg2))}).
+      map(fromMathematica(_).asInstanceOf[Formula]).reduce(And)
   }
   def makeOverlappingPairs[T](s : Seq[T]):Seq[(T,T)] = {
     if(s.size == 2) {

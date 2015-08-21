@@ -41,9 +41,9 @@ private[core] object AxiomBase {
    */
   private[core] def loadAxiomaticRules() : immutable.Map[String, (Sequent, Sequent)] = {
     val x = Variable("x_", None, Real)
-    val px = PredOf(Function("p_", None, Real, Bool), x)
+    //val px = PredOf(Function("p_", None, Real, Bool), x)
     val pany = PredOf(Function("p_", None, Real, Bool), Anything)
-    val qx = PredOf(Function("q_", None, Real, Bool), x)
+    //val qx = PredOf(Function("q_", None, Real, Bool), x)
     val qany = PredOf(Function("q_", None, Real, Bool), Anything)
     val fany = FuncOf(Function("f_", None, Real, Real), Anything)
     val gany = FuncOf(Function("g_", None, Real, Real), Anything)
@@ -52,7 +52,7 @@ private[core] object AxiomBase {
     // Sort of predicational is really (Real->Bool)->Bool except sort system doesn't know that type.
     val context = Function("ctx_", None, Bool, Bool) // predicational symbol
     val a = ProgramConst("a_")
-    val fmlany = PredOf(Function("F_", None, Real, Bool), Anything)
+    //val fmlany = PredOf(Function("F_", None, Real, Bool), Anything)
 
     Map(
       /**
@@ -109,6 +109,7 @@ private[core] object AxiomBase {
        * Premise p(??) ==> q(??)
        * Conclusion [a;]p(??) ==> [a;]q(??)
        * End.
+       * @derived useAt("<> dual") & by("<> monotone")
        */
       ("[] monotone",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany)),
@@ -162,9 +163,7 @@ private[core] object AxiomBase {
       assert(res.length == res.map(k => k._1).distinct.length, "No duplicate axiom names during parse")
 
       res.map(k => (k._1 -> k._2)).toMap
-    } catch {
-      case e: Exception => e.printStackTrace(); println("Problem while reading axioms " + e); sys.exit(10)
-    }
+    } catch { case e: Exception => e.printStackTrace(); println("Problem while reading axioms " + e); sys.exit(10) }
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
   /** Redundant code checking expected form of axioms */
@@ -391,9 +390,9 @@ End.
  */
 
 Axiom "DE differential effect (system)".
-    /* @NOTE Soundness: AtomicODE requires explicit-form so f(??) cannot verbatim mention differentials/differential symbols */
-    /* @NOTE Completeness: reassociate needed in DifferentialProduct data structures */
-    [{x'=f(??),c&H(??)}]p(??) <-> [{c,x'=f(??)&H(??)}][x':=f(??);]p(??)
+  /* @NOTE Soundness: AtomicODE requires explicit-form so f(??) cannot verbatim mention differentials/differential symbols */
+  /* @NOTE Completeness: reassociate needed in DifferentialProduct data structures */
+  [{x'=f(??),c&H(??)}]p(??) <-> [{c,x'=f(??)&H(??)}][x':=f(??);]p(??)
 End.
 
 /**
@@ -409,16 +408,14 @@ Axiom "|' derive or".
   /* sic! */
 End.
 
-/*
 Axiom "forall' derive forall".
   (\forall x p(??))' <-> (\forall x (p(??)'))
 End.
 
 Axiom "exists' derive exists".
   (\exists x p(??))' <-> (\forall x (p(??)'))
-   sic!
+  /* sic! */
 End.
-*/
 
 Axiom "c()' derive constant fn".
   c()' = 0
@@ -485,10 +482,7 @@ Axiom "x' derive variable".
   \forall x_ ((x_)' = x_')
 End.
 
-/**
- * EXCLUSIVELY FOR HYBRID PROGRAMS.
- * UNSOUND FOR HYBRID GAMES.
- */
+/** EXCLUSIVELY FOR HYBRID PROGRAMS. UNSOUND FOR HYBRID GAMES. */
 
 /* @NOTE requires removing axioms unsound for hybrid games */
 /*Axiom "<d> dual".
