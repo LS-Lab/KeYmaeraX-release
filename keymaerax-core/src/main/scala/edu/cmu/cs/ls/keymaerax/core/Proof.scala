@@ -20,8 +20,6 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
 
-import edu.cmu.cs.ls.keymaerax.parser.ToolEvidence  // external
-
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
 
@@ -1160,13 +1158,12 @@ object RCF {
    * @param t The tool.
    * @param f The formula.
    * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
-   * @todo Change structure around such that quantifier elimination tools already come back with whatever evidence they can provide.
    */
   def proveArithmetic(t: QETool, f: Formula): Lemma = {
     require(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
 
     // Quantifier elimination determines (quantifier-free) equivalent of f.
-    val (equivalent, input, output) = t.qeInOut(f)
+    val (equivalent, evidence) = t.qeEvidence(f)
 
     // soundness-critical
     val fact = Provable.toolFact(new Sequent(
@@ -1174,7 +1171,7 @@ object RCF {
       immutable.IndexedSeq(),
       immutable.IndexedSeq(Equiv(f, equivalent))))
 
-    Lemma(fact, new ToolEvidence(immutable.Map("input" -> input, "output" -> output)) :: Nil)
+    Lemma(fact, evidence :: Nil)
   }
 }
 

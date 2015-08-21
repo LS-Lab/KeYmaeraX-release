@@ -4,7 +4,6 @@
 */
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.debugT
