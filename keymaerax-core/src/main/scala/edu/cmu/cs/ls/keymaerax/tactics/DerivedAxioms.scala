@@ -233,7 +233,6 @@ object DerivedAxioms {
   lazy val allEliminateAxiom = derivedAxiom("all eliminate",
     Sequent(Nil, IndexedSeq(), IndexedSeq(allEliminateF)),
     US(SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), PredOf(Function("p",None,Real,Bool),Anything))::Nil)
-    //byUS("all instantiate")
   )
   lazy val allEliminateT = derivedAxiomT(allEliminateAxiom)
 
@@ -241,7 +240,6 @@ object DerivedAxioms {
    * {{{Axiom "all distribute".
    *   (\forall x (p(x)->q(x))) -> ((\forall x p(x))->(\forall x q(x)))
    * }}}
-   *
    */
   // Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x))))
   lazy val allDistributeF = "(\\forall x (p(x)->q(x))) -> ((\\forall x p(x))->(\\forall x q(x)))".asFormula
