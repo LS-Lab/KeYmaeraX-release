@@ -9,15 +9,15 @@ KeYmaera X is built up from a small trusted core. The core contains a finite lis
 
 ==API Documentation==
 
-Main documentation for KeYmaera X API:
+Main documentation entry points for KeYmaera X API:
 
-    [[http://keymaerax.org/doc/dL-grammar.md concrete syntax for input language Differential Dynamic Logic]]
+1. [[http://keymaerax.org/doc/dL-grammar.md concrete syntax for input language Differential Dynamic Logic]]
 
-    [[edu.cmu.cs.ls.keymaerax.core]] KeYmaera X kernel, proof certificates, main data structures
+2. [[edu.cmu.cs.ls.keymaerax.core]] KeYmaera X kernel, proof certificates, main data structures
 
-    [[edu.cmu.cs.ls.keymaerax.parser]] Parser and pretty printer with concrete syntax and notation
+3. [[edu.cmu.cs.ls.keymaerax.parser]] Parser and pretty printer with concrete syntax and notation
 
-    [[edu.cmu.cs.ls.keymaerax.tactics]] Tactic library with
+4. [[edu.cmu.cs.ls.keymaerax.tactics]] Tactic library with
     [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary]] Main tactic library for most common cases
     
-    [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]] command-line launcher for KeYmaera X use `-help` to obtain instructions on command-line arguments
+5. [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]] command-line launcher for KeYmaera X use `-help` to obtain instructions on command-line arguments
