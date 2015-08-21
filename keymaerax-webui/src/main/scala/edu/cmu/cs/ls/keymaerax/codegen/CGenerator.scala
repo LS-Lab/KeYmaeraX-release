@@ -1,7 +1,7 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-* See LICENSE.txt for the conditions of this license.
-*/
+ * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+ * See LICENSE.txt for the conditions of this license.
+ */
 package edu.cmu.cs.ls.keymaerax.codegen
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -32,15 +32,19 @@ object CGenerator extends CodeGenerator {
     val names = StaticSemantics.symbols(expr).toList.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers for code generation")
     val relevantVars = getRelevantVars(expr, vars)
+    val relevantPostVars = getRelevantPostVars(expr, vars)
+    val relevantPostVarsZero = getRelevantPostVarsZero(expr, relevantPostVars)
     if(vars.toSet.diff(relevantVars.toSet).nonEmpty)
       println("[warn] -vars contains unknown variables {" + vars.toSet.diff(relevantVars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "}, which will be ignored")
     if(relevantVars.toSet.diff(vars.toSet).nonEmpty)
       println("[info] post variables {" + relevantVars.toSet.diff(vars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "} will be added as parameters")
-    val calledFuncs = getCalledFuncs(expr, relevantVars)
+    val calledFuncs = getCalledFuncs(expr, relevantVars:::relevantPostVarsZero)
     val funcHead = "/* monitor */\n" +
       "bool monitor (" + parameterDeclaration(cDataType, relevantVars) + ")"
     val funcBody = compileToC(expr, calledFuncs)
-    infoC(fileName) + includeLib + FuncCallDeclaration(calledFuncs, cDataType) + funcHead + " {\n" + "  return " + funcBody + ";" + "\n}\n\n"
+    infoC(fileName) + includeLib + FuncCallDeclaration(calledFuncs, cDataType) + funcHead + " {\n" +
+      {if(relevantPostVarsZero.nonEmpty) "  /* Initial states for post variables */\n" + defineRelevantPostVarsZero(expr, relevantPostVarsZero, cDataType) + "\n"} +
+      "  return " + funcBody + ";" + "\n}\n\n"
     //@note gcc -Wall -Wextra -Werror -std=c99 -pedantic absolutely wants "newline at end of file" -Wnewline-eof
   }
 
@@ -61,7 +65,7 @@ object CGenerator extends CodeGenerator {
    * @param vars      given list of variables which needs to be declared as parameters
    * @return          a lit of parameter declarations
    */
-  private def parameterDeclaration(cDataType: String, vars: List[Variable]) : String = vars.map(v => cDataType + " " + nameIdentifier(v)).mkString(", ")
+  private def parameterDeclaration(cDataType: String, vars: List[NamedSymbol]) : String = vars.map(v => cDataType + " " + nameIdentifier(v)).mkString(", ")
 
   /**
    * Get a list of variables relevant to (occur in) the given expression,
@@ -72,28 +76,99 @@ object CGenerator extends CodeGenerator {
    * @param vars  a list of variables
    * @return      a list of variables relevant to e, including post variables and the variables occured as nullary function
    */
-  private def getRelevantVars(e: Expression, vars: List[Variable]) : List[Variable] = {
+  private def getRelevantVars(e: Expression, vars: List[Variable]) : List[NamedSymbol] = getRelevantOriVars(e, vars) ::: getRelevantPostVars(e, vars)
+
+  /**
+   * Get a list of variables relevant to (occur in) the given expression,
+   * which includes the variable used as a nullary function
+   *
+   * @param e     expression
+   * @param vars  a list of variables
+   * @return      a list of variables relevant to e, including the variables occured as nullary function
+   */
+  private def getRelevantOriVars(e: Expression, vars: List[Variable]) : List[Variable] = {
     val allSymbolNames = StaticSemantics.symbols(e).toList
-    var relevantVars = List[Variable]()
+    var relevantOriVars = List[Variable]()
     for(i <- vars.indices) {
       assert(!nameIdentifier(vars.apply(i)).equals("abs"), "[Error] Cannot use abs as variable name, abs is predefined function for absolute value.")
       if(allSymbolNames.contains(vars.apply(i)))
-        // variable occurs in the expression, add it to the return list
-        relevantVars = vars.apply(i) :: relevantVars
+      // variable occurs in the expression, add it to the return list
+        relevantOriVars = vars.apply(i) :: relevantOriVars
       if(allSymbolNames.contains(Function(nameIdentifier(vars.apply(i)), None, Unit, Real)))
-        // variable occur as nullary function, add it to the return list as a variable
-        relevantVars = Variable(nameIdentifier(vars.apply(i))) :: relevantVars
-      if(allSymbolNames.contains(Variable(getPostNameIdentifier(vars.apply(i)))) && !vars.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
-        // post variable occurs in the expression as variable, add it to the return list as a variable
-        relevantVars = Variable(getPostNameIdentifier(vars.apply(i))) :: relevantVars
-      if(allSymbolNames.contains(Function(getPostNameIdentifier(vars.apply(i)), None, Unit, Real)) && !vars.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
-        // post variable occurs in the expression as nullary function, add it to the return list as a variable
-        relevantVars = Variable(getPostNameIdentifier(vars.apply(i))) :: relevantVars
+      // variable occur as nullary function, add it to the return list as a variable
+        relevantOriVars = Variable(nameIdentifier(vars.apply(i))) :: relevantOriVars
     }
-    assert(relevantVars.distinct.size == relevantVars.size,
-      "Duplicated name_index identifiers found in {" + relevantVars.map(v => KeYmaeraXPrettyPrinter(v)).mkString(", ") + "}")
+    assert(relevantOriVars.distinct.size == relevantOriVars.size,
+      "Duplicated name_index identifiers found in {" + relevantOriVars.map(v => KeYmaeraXPrettyPrinter(v)).mkString(", ") + "}")
     // reverse the list to get the correct order
-    relevantVars.reverse
+    relevantOriVars.reverse
+  }
+
+  /**
+   * Get a list of post variables relevant to (occur in) the given expression,
+   * which includes the post variables that are used as nullary function in the expression
+   *
+   * @param e     expression
+   * @param vars  a list of variables
+   * @return      a list of post variables relevant to e
+   */
+  private def getRelevantPostVars(e: Expression, vars: List[Variable]) : List[NamedSymbol] = {
+    val allSymbolNames = StaticSemantics.symbols(e).toList
+    var relevantPostVars = List[Variable]()
+    for(i <- vars.indices) {
+      assert(!nameIdentifier(vars.apply(i)).equals("abs"), "[Error] Cannot use abs as variable name, abs is predefined function for absolute value.")
+      if(allSymbolNames.contains(Variable(getPostNameIdentifier(vars.apply(i)))) && !vars.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
+      // post variable occurs in the expression as variable, add it to the return list as a variable
+        relevantPostVars = Variable(getPostNameIdentifier(vars.apply(i))) :: relevantPostVars
+      if(allSymbolNames.contains(Function(getPostNameIdentifier(vars.apply(i)), None, Unit, Real)) && !vars.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
+      // post variable occurs in the expression as nullary function, add it to the return list as a variable
+        relevantPostVars = Variable(getPostNameIdentifier(vars.apply(i))) :: relevantPostVars
+    }
+    assert(relevantPostVars.distinct.size == relevantPostVars.size,
+      "Duplicated name_index identifiers found for postVars in {" + relevantPostVars.map(v => KeYmaeraXPrettyPrinter(v)).mkString(", ") + "}")
+    // reverse the list to get the correct order
+    relevantPostVars.reverse
+  }
+
+  /**
+   * Get a list of post variables index 0 relevant to (occur in) the given expression,
+   *
+   * @param e     expression
+   * @param postVars  a list of post variables
+   * @return      a list of post variables index 0 relevant to e
+   */
+  private def getRelevantPostVarsZero(e: Expression, postVars: List[NamedSymbol]) : List[NamedSymbol] = {
+    val allSymbolNames = StaticSemantics.symbols(e).toList
+    var relevantPostVarsZero = List[NamedSymbol]()
+    for (i <- postVars.indices) {
+      assert(allSymbolNames.contains(postVars.apply(i)) || allSymbolNames.contains(Function(nameIdentifier(postVars.apply(i)), None, Unit, Real)),
+        "[Error] postVar " + nameIdentifier(postVars.apply(i)) + " must occur in " + KeYmaeraXPrettyPrinter(e))
+      assert(postVars.apply(i).name.endsWith("post"), "[Warning] Must use postVar to define postVar_0")
+      if (postVars.apply(i).index.isEmpty && allSymbolNames.contains(Function(nameIdentifier(postVars.apply(i)), Some(0), Unit, Real)))
+        relevantPostVarsZero = Function(nameIdentifier(postVars.apply(i)), Some(0), Unit, Real) :: relevantPostVarsZero
+    }
+    assert(relevantPostVarsZero.distinct.size == relevantPostVarsZero.size,
+      "Duplicated name_index identifiers found for postVars_0 in {" + relevantPostVarsZero.map(v => KeYmaeraXPrettyPrinter(v)).mkString(", ") + "}")
+    // reverse the list to get the correct order
+    relevantPostVarsZero.reverse
+  }
+
+  /**
+   * Generate C code for definition of post variable index 0
+   * @param e     expression
+   * @param postVarsZero  a list of post variables index 0
+   * @param cDataType     data type
+   * @return      C code for the definition of postVar_0 = postVar
+   */
+  private def defineRelevantPostVarsZero(e: Expression, postVarsZero: List[NamedSymbol], cDataType: String) : String = {
+    val allSymbolNames = StaticSemantics.symbols(e).toList
+    var postVarsZeroDefinition = ""
+    for(i <- postVarsZero.indices) {
+      assert(allSymbolNames.contains(postVarsZero.apply(i)) || allSymbolNames.contains(Function(nameIdentifier(postVarsZero.apply(i)), None, Unit, Real)),
+        "[Error] postVar_0 " + nameIdentifier(postVarsZero.apply(i)) + " must occur in " + KeYmaeraXPrettyPrinter(e))
+      postVarsZeroDefinition += "  " + cDataType + " " + nameIdentifier(postVarsZero.apply(i)) + " = " + postVarsZero.apply(i).name + "\n"
+    }
+    postVarsZeroDefinition
   }
 
   /** C Identifier corresponding to a NamedSymbol */
@@ -118,7 +193,7 @@ object CGenerator extends CodeGenerator {
    * @param vars  a list of variables
    * @return      a set of names that does not occur in relevant variables, thus need to be generated as function calls
    */
-  private def getCalledFuncs(expr: Expression, vars: List[Variable]): Set[NamedSymbol] =
+  private def getCalledFuncs(expr: Expression, vars: List[NamedSymbol]): Set[NamedSymbol] =
     StaticSemantics.symbols(expr).toSet.filterNot((absFun: NamedSymbol) => {absFun == Function("abs", None, Real, Real)})
       .diff(vars.toSet).diff(vars.map(v => Function(nameIdentifier(v), None, Unit, Real)).toSet)
 
