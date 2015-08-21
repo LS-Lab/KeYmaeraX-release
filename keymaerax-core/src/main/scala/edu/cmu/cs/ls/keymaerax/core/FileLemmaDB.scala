@@ -84,6 +84,7 @@ class FileLemmaDB extends LemmaDB {
       "reparse of printed lemma should be identical to original lemma " + lemma)
 
     val pw = new PrintWriter(file)
+    pw.write("/** KeYmaera X " + VERSION + " */")
     pw.write(lemma.toString)
     pw.close()
 
