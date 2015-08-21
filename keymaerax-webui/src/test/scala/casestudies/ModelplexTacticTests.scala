@@ -318,25 +318,7 @@ class ModelplexTacticTests extends TacticTestSuite {
     report(result.openGoals().head.sequent.succ.head, result, "ETCS controller")
   }
 
-  "RSS passive safety modelplex in place" should "find correct controller monitor condition" in {
-    val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/rss13/passivesafety-ctrl.key"))
-    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
-    val result = helper.runTactic(tactic, new RootNode(s))
-
-    // with ordinary diamond test
-    val expected = ("(xpost()=x&ypost()=y&vpost()=v&apost()=-B&wpost()=w&dxpost()=dx&dypost()=dy&rpost()=r&oxpost()=ox&oypost()=oy&tpost()=0) | " +
-      "((v=0&(xpost()=x&ypost()=y&vpost()=v&apost()=0&wpost()=0&dxpost()=dx&dypost()=dy&rpost()=r&oxpost()=ox&oypost()=oy&tpost()=0)) | " +
-      "(-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&((Abs(x-oxpost_0())>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-oypost_0())>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(xpost()=x&ypost()=y&vpost()=v&apost()=apost_0()&wpost()=wpost_0()&dxpost()=dx&dypost()=dy&rpost()=rpost_0()&oxpost()=oxpost_0()&oypost()=oypost_0()&tpost()=0))))))").asFormula
-
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) should contain only
-      "v>=0 & (Abs(x-ox)>v^2/(2*B) + V()*(v/B) | Abs(y-oy)>v^2/(2*B) + V()*(v/B)) & r!=0 & dx^2+dy^2=1 & A>=0 & B>0 & ep>0".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only expected
-
-    report(expected, result, "RSS controller")
-  }
-
-  it should "generate the correct Modelplex property from the input model" in {
+  "RSS passive safety modelplex in place" should "generate the correct Modelplex property from the input model" in {
     val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("a"), Variable("r"), Variable("xo"),
@@ -372,24 +354,6 @@ class ModelplexTacticTests extends TacticTestSuite {
       """.stripMargin.asFormula
   }
 
-  it should "find a reduced correct controller monitor condition" in {
-    val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/rss13/passivesafety-ctrl-reduced.key"))
-    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
-    val result = helper.runTactic(tactic, new RootNode(s))
-
-    // with ordinary diamond test
-    val expectedAnte = "v>=0 & (Abs(x-ox)>v^2/(2*B) + V()*(v/B) | Abs(y-oy)>v^2/(2*B) + V()*(v/B)) & r!=0 & dx^2+dy^2=1 & A>=0 & B>0 & ep>0".asFormula
-    val expectedSucc = ("(apost()=-B&rpost()=r) | " +
-      "(v=0&(apost()=0&rpost()=r) | " +
-      "(-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&((Abs(x-oxpost_0())>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-oypost_0())>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(apost()=apost_0()&rpost()=rpost_0()))))))").asFormula
-
-    result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante should contain only expectedAnte
-    result.openGoals().head.sequent.succ should contain only expectedSucc
-
-    report(expectedSucc, result, "RSS controller")
-  }
-
   it should "find the correct controller monitor condition from the input model" in {
     val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
@@ -407,25 +371,6 @@ class ModelplexTacticTests extends TacticTestSuite {
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only expectedAnte
     result.openGoals().head.sequent.succ should contain only expectedSucc
-  }
-
-  ignore should "find correct controller monitor condition without intermediate Optimization 1" in {
-    val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/rss13/passivesafety-ctrl.key"))
-    val tactic = modelplexInPlace(useOptOne=false)(SuccPosition(0)) &
-      (optimizationOne()(SuccPosition(0))*)
-    val result = helper.runTactic(tactic, new RootNode(s))
-
-    // with ordinary diamond test
-    val expected = ("(xpost()=x&ypost()=y&vpost()=v&apost()=-B&wpost()=w&dxpost()=dx&dypost()=dy&rpost()=r&oxpost()=ox&oypost()=oy&tpost()=0) | " +
-      "((v=0&(xpost()=x&ypost()=y&vpost()=v&apost()=0&wpost()=0&dxpost()=dx&dypost()=dy&rpost()=r&oxpost()=ox&oypost()=oy&tpost()=0)) | " +
-      "(-B<=a&a<=A&(r!=0&(w*r=v&((Abs(x-ox)>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V()))|Abs(y-oy)>v^2/(2*B)+V()*(v/B)+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(xpost()=x&ypost()=y&vpost()=v&apost()=a&wpost()=w&dxpost()=dx&dypost()=dy&rpost()=r&oxpost()=ox&oypost()=oy&tpost()=0))))))").asFormula
-
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) should contain only
-      "v>=0 & (Abs(x-ox)>v^2/(2*B) + V()*(v/B) | Abs(y-oy)>v^2/(2*B) + V()*(v/B)) & r!=0 & dx^2+dy^2=1 & A>=0 & B>0 & ep>0".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only expected
-
-    report(expected, result, "RSS controller without intermediate Optimization 1")
   }
 
   it should "work using the command line interface" in {
