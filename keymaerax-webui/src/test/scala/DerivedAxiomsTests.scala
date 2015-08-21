@@ -89,6 +89,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove <++> choice" in {check(choicedAxiom)}
   it should "prove <;> compose" in {check(composedAxiom)}
   it should "prove <*> iterate" in {check(iteratedAxiom)}
+  it should "prove <*> approx" in {check(loopApproxd)}
   it should "prove exists generalize" in {check(existsGeneralize)}
   it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}

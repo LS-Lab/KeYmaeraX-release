@@ -4,6 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.diamondMonotoneT
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic, ApplyRule}
@@ -130,6 +131,7 @@ object DerivedAxioms {
     case "<++> choice" => Some(choicedF, choicedT)
     case "<;> compose" => Some(composedF, composedT)
     case "<*> iterate" => Some(iteratedF, iteratedT)
+    case "<*> approx" => Some(loopApproxdF, loopApproxdT)
     case "exists generalize" => Some(existsGeneralizeF, existsGeneralizeT)
     case "all substitute" => Some(allSubstituteF, allSubstituteT)
     case "vacuous exists quantifier" => Some(vacuousExistsF, vacuousExistsT)
@@ -482,6 +484,27 @@ object DerivedAxioms {
   )
 
   lazy val iteratedT = derivedAxiomT(iteratedAxiom)
+
+  /**
+   * {{{Axiom "<*> approx".
+   *    <a;>p(??) -> <{a;}*>p(??)
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val loopApproxdF = "<a;>p(??) -> <{a;}*>p(??)".asFormula
+  lazy val loopApproxd = derivedAxiom("<*> approx",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(loopApproxdF)),
+    useAt("<*> iterate")(SuccPosition(0, PosInExpr(1::Nil))) &
+    useAt("<*> iterate")(SuccPosition(0, PosInExpr(1::1::1::Nil))) &
+    cut("<a;>p(??) -> <a;>(p(??) | <a;><{a;}*>p(??))".asFormula) & onBranch(
+      (cutShowLbl, hideT(SuccPosition(0)) & ls(implyR) & diamondMonotoneT & prop),
+      (cutUseLbl, prop)
+    )
+  )
+
+  lazy val loopApproxdT = derivedAxiomT(loopApproxd)
+
 
   //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
   //private def useAt(lem: ApplyRule[LookupLemma]): PositionTactic = TactixLibrary.useAt(lem.rule.lemma.fact)
