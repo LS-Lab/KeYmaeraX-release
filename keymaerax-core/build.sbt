@@ -1,8 +1,10 @@
 name := "KeYmaeraX Core"
 
-version := "4.0a1"
+version := "4.0a4"
 
 scalaVersion := "2.10.4"
+
+scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
 ////////////////////////////////////////////////////////////////////////////////
 // Mathematica Interop
@@ -14,6 +16,7 @@ unmanagedJars in Compile += file("/Applications/Mathematica.app/Contents/SystemF
 unmanagedJars in Compile += file("/Applications/Mathematica.app/SystemFiles/Links/JLink/JLink.jar")
 
 // Linux
+unmanagedJars in Compile += file("/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/JLink.jar")
+
 unmanagedJars in Compile += file("/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink/JLink.jar")
 
-unmanagedJars in Compile += file("/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/JLink.jar")

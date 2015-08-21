@@ -1,5 +1,7 @@
 name := "KeYmaeraX"
 
+scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
+
 libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.10.4"
 
 libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.10.4"
