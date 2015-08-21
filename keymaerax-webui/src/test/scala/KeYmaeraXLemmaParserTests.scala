@@ -3,9 +3,9 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
+import edu.cmu.cs.ls.keymaerax.core.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLemmaParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.ToolEvidence
 import org.scalatest.{FlatSpec, Matchers}
 
 /**

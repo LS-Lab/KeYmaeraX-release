@@ -10,6 +10,8 @@ import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 
+import scala.collection.immutable
+
 /**
  * An abstract interface to Mathematica link implementations.
  * The link may be used syncrhonously or asychronously.
@@ -170,15 +172,15 @@ class JLinkMathematicaLink extends MathematicaLink {
   def cancel = ???
 
   def qe(f : Formula) : Formula = {
-    qeInOut(f)._1
+    qeEvidence(f)._1
   }
 
-  def qeInOut(f : Formula) : (Formula, String, String) = {
+  def qeEvidence(f : Formula) : (Formula, Evidence) = {
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "Reduce"),
       Array(toMathematica(f), new MExpr(listExpr, new Array[MExpr](0)), new MExpr(Expr.SYMBOL, "Reals")))
     val (output, result) = run(input)
     result match {
-      case f : Formula => (f, input.toString, output)
+      case f : Formula => (f, new ToolEvidence(immutable.Map("input" -> input.toString, "output" -> output)))
       case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
     }
   }

@@ -13,7 +13,6 @@ import scala.collection.immutable
 import scala.collection.immutable._
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{ToolEvidence, Evidence}
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 

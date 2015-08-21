@@ -25,5 +25,5 @@ trait QETool {
    * @return An equivalent quantifier-free formula, with tool input and output.
    * @todo rename to quantifiereElimination(Formula): Evidence
    */
-  def qeInOut(formula: Formula): (Formula, String, String)
+  def qeEvidence(formula: Formula): (Formula, Evidence)
 }

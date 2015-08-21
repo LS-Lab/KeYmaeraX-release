@@ -7,8 +7,11 @@ package edu.cmu.cs.ls.keymaerax.tactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.AlphaConversionHelper.replace
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction, TraverseToPosition}
-import edu.cmu.cs.ls.keymaerax.tactics.SubstitutionHelper.replaceFree
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ApplyRule, ConstructionTactic, Tactic, NilT}
+import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT, skolemizeT}
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{lastAnte, lastSucc}
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndLeftT, AndRightT, AxiomCloseT, hideT,
+  ImplyLeftT, ImplyRightT, NotLeftT, NotRightT, OrLeftT, OrRightT}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.globalAlphaRenamingT
 import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
@@ -52,6 +55,56 @@ object AxiomaticRuleTactics {
           })
         } else throw new IllegalStateException("Formula context expected")/*Some(NilT)*/
     }
+  }
+
+  /**
+   * Returns a tactic for CE one-sided congruence with purely propositional unpeeling. Useful when unpeeled fact is not
+   * an equivalence, as needed by CE. May perform better than CE for small contexts.
+   * @see[[AxiomaticRuleTactics.equivalenceCongruenceT()]]
+   * @example{{{
+   *                  z=1 |- z>0
+   *         --------------------------propositionalCongruenceT(PosInExpr(1::Nil))
+   *           x>0 -> z=1 |- x>0 -> z>0
+   * }}}
+   * @param at Points to the position to unpeel.
+   * @return The tactic.
+   */
+  def propositionalCongruenceT(at: PosInExpr): Tactic = new ConstructionTactic("CE congruence") {
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+      //@todo would want to use result symbol of skolemizeT, for now we have to guess it
+      val instWithGuessedSkolem = new PositionTactic("Instantiate with guessed skolem") {
+        override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
+          case Some(Forall(_ :: Nil, _)) =>  p.isAnte
+          case Some(Exists(_ :: Nil, _)) => !p.isAnte
+          case _ => false
+        }
+
+        override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p).subFormulaAt(p.inExpr) match {
+            case Some(Forall(v :: Nil, _)) if  p.isAnte => Some(instantiateT(v, Variable(v.name, v.index match { case None => Some(0) case Some(i) => Some(i+1) }, v.sort))(p))
+            case Some(Exists(v :: Nil, _)) if !p.isAnte => Some(instantiateT(v, Variable(v.name, v.index match { case None => Some(0) case Some(i) => Some(i+1) }, v.sort))(p))
+          }
+        }
+      }
+
+      // we know that we have the same operator in antecedent and succedent with the same lhs -> we know that one
+      // will branch and one of these branches will close by identity. on the other branch, we have to hide
+      Some(TacticLibrary.debugT(s"Start unpeeling towards $at") &
+        // list all cases explicitly, hide appropriate formulas in order to not blow up branching
+        (( (lastAnte(NotLeftT) & NotRightT(SuccPosition(0)) & assertT(1, 1)) |
+          (lastAnte(AndLeftT) & lastSucc(AndRightT) && (AxiomCloseT | hideT(AntePosition(1)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1)) |
+          (lastSucc(OrRightT) & lastAnte(OrLeftT) && (AxiomCloseT | hideT(SuccPosition(1)), AxiomCloseT | hideT(SuccPosition(0))) & assertT(1, 1)) |
+          (lastSucc(ImplyRightT) & ImplyLeftT(AntePosition(0)) && (AxiomCloseT | hideT(SuccPosition(0)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1)) |
+          boxMonotoneT | diamondMonotoneT |
+          (lastSucc(skolemizeT) & lastAnte(instWithGuessedSkolem)) |
+          (lastAnte(skolemizeT) & lastSucc(instWithGuessedSkolem))
+          ) & TacticLibrary.debugT("Unpeeled one layer"))*at.pos.length &
+        TacticLibrary.debugT("Unpeeling finished"))
+    }
+
+    override def applicable(node: ProofNode): Boolean = node.sequent.ante.length == 1 && node.sequent.succ.length == 1 &&
+      node.sequent.ante.head.extractContext(at)._1 == node.sequent.succ.head.extractContext(at)._1
   }
 
   /**

@@ -8,7 +8,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, Evidence}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 
 /**
  * Lemmas are named Provables, supported by some evidence of how they came about.
@@ -37,3 +37,12 @@ final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[St
   }
 
 }
+
+/** Correctness evidence for lemmas */
+sealed trait Evidence
+case class ProofEvidence(/*proof : List[LoadedBranch]*/) extends Evidence
+case class ToolEvidence(info : Map[String,String]) extends Evidence {
+  override def toString: String =
+    "Tool.\n  " + info.map(entry => entry._1 + " \"\"\"\"" + entry._2 + "\"\"\"\"").mkString("\n  ") + "\nEnd."
+}
+case class ExternalEvidence(/*file:File*/) extends Evidence

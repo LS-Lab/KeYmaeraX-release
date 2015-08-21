@@ -27,9 +27,6 @@ import scala.util.Random
  */
 object KeYmaeraX {
 
-  /** KeYmaera X version number */
-  val VERSION = "4.0a4"
-
   private type OptionMap = Map[Symbol, Any]
 
   /** Usage -help information, formatted to 80 characters width. */

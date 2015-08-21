@@ -7,9 +7,9 @@ package edu.cmu.cs.ls.keymaerax.tactics
 import java.io.PrintWriter
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal, TraverseToPosition}
 import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.localQuantifierElimination
+import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
@@ -22,7 +22,6 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{NilT,NilPT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import scala.collection.immutable
-import scala.collection.immutable.SortedSet
 import scala.compat.Platform
 import scala.language.postfixOps
 
@@ -180,8 +179,8 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
 
   /** ModelPlex proof tactic for monitor synthesis (in-place version) */
   def modelplexInPlace(useOptOne: Boolean, time: Option[Variable] = None) = new PositionTactic("Modelplex In-Place") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Imply(_, Diamond(_, _)) => true
+    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
+      case Some(Imply(_, Diamond(_, _))) => true
       case _ => false
     }
 
@@ -208,6 +207,7 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     (diamondAssignEqualT & (if (useOptOne) optimizationOne() else NilPT)) ::
 //    mxDiamondDiffSolveT ::
     (mxDiamondDiffSolve2DT & (if (useOptOne) optimizationOne() else NilPT)) ::
+    boxAssignBaseT ::
     Nil)
 
 //  def mxDiamondDiffSolveT: PositionTactic = new PositionTactic("<'> differential solution") {

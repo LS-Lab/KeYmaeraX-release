@@ -471,7 +471,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) extend
   //////////////////////////////////////////////////////////////////////////////
   def stringifyEvidence(e:Evidence) = e match {
     case e : ProofEvidence => ??? //TODO
-    case e : ExternalEvidence => "External.\n\t" + e.file.toString() + "\nEnd."
+    case e : ExternalEvidence => "External.\n\t" + /*e.file.toString() +*/ "\nEnd."
     case e : ToolEvidence => "Tool.\n\t" + e.info.map( p => p._1 + "\t\"" + p._2 + "\"").mkString("\n\t") + "\nEnd."
   }
   

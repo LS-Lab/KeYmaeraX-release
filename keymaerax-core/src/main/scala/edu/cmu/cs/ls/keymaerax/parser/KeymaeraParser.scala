@@ -1289,7 +1289,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     lazy val proofParser = {
       lazy val pattern = "Proof." ~> ProofLanguageParser.proofParser <~ "End."
       log(pattern)("Proof evidence") ^^ {
-        case proof => new ProofEvidence(proof)
+        case proof => new ProofEvidence()
       }
     }
     
@@ -1317,7 +1317,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     lazy val externalInfoParser = {
       lazy val pattern = "External." ~> """.*""".r <~ "End."
       log(pattern)("External Proof") ^^ {
-        case file => new ExternalEvidence(new File(file))
+        case file => new ExternalEvidence(/*new File(file)*/)
       }
     }
   }

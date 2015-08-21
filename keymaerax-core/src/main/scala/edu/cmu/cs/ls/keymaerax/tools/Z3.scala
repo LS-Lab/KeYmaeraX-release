@@ -4,7 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import edu.cmu.cs.ls.keymaerax.core.{Formula, QETool}
+import edu.cmu.cs.ls.keymaerax.core.{Evidence, Formula, QETool}
 
 /**
  * Z3 quantifier elimination tool.
@@ -17,5 +17,5 @@ class Z3 extends ToolBase("Z3") with QETool {
   private val z3 = new Z3Solver
 
   override def qe(formula: Formula): Formula = z3.qe(formula)
-  override def qeInOut(formula: Formula): (Formula, String, String) = z3.qeInOut(formula)
+  override def qeEvidence(formula: Formula): (Formula, Evidence) = z3.qeEvidence(formula)
 }

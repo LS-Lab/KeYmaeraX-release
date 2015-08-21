@@ -48,7 +48,7 @@ object ArithmeticTacticsImpl {
           override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = tool match {
             case x: Mathematica =>
               val f = getFormula(node.sequent, p)
-              val (solution, _, _) = x.qeInOut(f)
+              val (solution, _) = x.qeEvidence(f)
               val result = Equiv(f, solution)
               Some(cutInContext(result, p) & onBranch(
                 (cutShowLbl, lastSucc(cohideT) & equivalenceCongruenceT(p.inExpr) & quantifierEliminationT(tool.name)),

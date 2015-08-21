@@ -8,8 +8,9 @@ import java.io.{FileWriter, FileOutputStream, File, InputStream}
 import java.nio.channels.Channels
 import java.util.Locale
 
-import edu.cmu.cs.ls.keymaerax.core.{False, True, Term, Formula}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, ParseException, KeYmaeraXParser}
+import scala.collection.immutable
 import scala.sys.process._
 
 /**
@@ -75,10 +76,10 @@ class PolyaSolver extends SMTSolver {
   }
 
   def qe(f : Formula) : Formula = {
-    qeInOut(f)._1
+    qeEvidence(f)._1
   }
 
-  def qeInOut(f : Formula) : (Formula, String, String) = {
+  def qeEvidence(f : Formula) : (Formula, Evidence) = {
     var smtCode = toSMT(f).getVariableList + "(assert (not " + toSMT(f).getFormula + "))"
     smtCode += "\n(check-sat)\n"
     println("[Solving with Polya...] \n" + smtCode)
@@ -90,7 +91,7 @@ class PolyaSolver extends SMTSolver {
     val cmd = pathToPolya + " " + smtFile.getAbsolutePath
     val (output, result) = run(cmd)
     result match {
-      case f : Formula => (f, cmd, KeYmaeraXPrettyPrinter(f))
+      case f : Formula => (f, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> output)))
       case _ => throw new Exception("Expected a formula from QE call but got a non-formula expression.")
     }
   }

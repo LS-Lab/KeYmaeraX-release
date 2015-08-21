@@ -155,4 +155,7 @@ package edu.cmu.cs.ls.keymaerax
  * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
  * @see [[edu.cmu.cs.ls.keymaerax.core.Lemma]]
  */
-package object core {}
+package object core {
+  /** KeYmaera X version number */
+  val VERSION = "4.0a4"
+}
