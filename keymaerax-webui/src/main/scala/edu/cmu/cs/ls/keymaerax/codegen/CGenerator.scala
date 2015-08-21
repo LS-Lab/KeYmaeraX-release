@@ -166,7 +166,7 @@ object CGenerator extends CodeGenerator {
     for(i <- postVarsZero.indices) {
       assert(allSymbolNames.contains(postVarsZero.apply(i)) || allSymbolNames.contains(Function(nameIdentifier(postVarsZero.apply(i)), None, Unit, Real)),
         "[Error] postVar_0 " + nameIdentifier(postVarsZero.apply(i)) + " must occur in " + KeYmaeraXPrettyPrinter(e))
-      postVarsZeroDefinition += "  " + cDataType + " " + nameIdentifier(postVarsZero.apply(i)) + " = " + postVarsZero.apply(i).name + "\n"
+      postVarsZeroDefinition += "  " + cDataType + " " + nameIdentifier(postVarsZero.apply(i)) + " = " + postVarsZero.apply(i).name + ";\n"
     }
     postVarsZeroDefinition
   }
