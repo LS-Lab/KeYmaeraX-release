@@ -1068,6 +1068,7 @@ object HybridProgramTacticsImpl {
       case Box(Loop(a), p) => Imply(And(p, Box(Loop(a), Imply(p, Box(a, p)))), fml)
       case _ => False
     }
+    //@todo Unsound for hybrid games, use ind induction rule instead but augment fml with trivial constant expressions then*/
     uncoverAxiomT("I induction", axiomInstance, _ => boxInductionBaseT)
   }
   /** Base tactic for box induction */
