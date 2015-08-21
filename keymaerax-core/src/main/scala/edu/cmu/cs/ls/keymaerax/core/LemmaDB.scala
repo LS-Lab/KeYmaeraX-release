@@ -14,6 +14,23 @@ package edu.cmu.cs.ls.keymaerax.core
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
  * @see Lemma
+ * @example Storing and using a lemma
+ * {{{
+ * val lemmaDB = new FileLemmaDB
+ * // prove a lemma
+ * val proved = TactixLibrary.proveBy(
+ *    Sequent(Nil, IndexedSeq(), IndexedSeq("true | x>5".asFormula)),
+ *    orR(1) & close
+ *  )
+ * // store a lemma
+ * val evidence = ToolEvidence(immutable.Map("input" -> proved.toString, "output" -> "true")) :: Nil))
+ * val lemmaID = LookupLemma.addLemma(
+ *   lemmaDB,
+ *   Lemma(proved, evidence, Some("Lemma <?> test"))
+ * )
+ * // use a lemma
+ * LookupLemma(lemmaDB, lemmaID)
+ * }}}
  */
 trait LemmaDB {
 
