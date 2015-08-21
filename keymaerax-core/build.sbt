@@ -1,6 +1,6 @@
 name := "KeYmaeraX Core"
 
-version := "4.0a1"
+version := "4.0a4"
 
 scalaVersion := "2.10.4"
 

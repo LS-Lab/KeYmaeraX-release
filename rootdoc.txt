@@ -1,23 +1,23 @@
 ==KeYmaera X: An Axiomatic Tactical Theorem Prover==
 ================================================
 
-KeYmaera X is a theorem prover for differential dynamic logic (dL), a logic for specifying and verifying properties of hybrid systems with mixed discrete and continuous dynamics. Reasoning about complicated hybrid systems requires support for sophisticated proof techniques, efficient computation, and a user interface that crystallizes salient properties of the system. KeYmaera X allows users to specify custom proof search techniques as tactics, execute tactics in parallel, and interface with partial proofs via an extensible user interface.
-
-KeYmaera X is built up from a small trusted core. The core contains a finite list of locally sound dL axioms that are instantiated using a uniform substitution proof rule. Isolating all soundness-critical reasoning in this axiomatic core obviates the otherwise intractable task of ensuring that proof search algorithms are implemented correctly. This enables advanced proof search features---such as aggressive, speculative proof search and user-defined tactics built using a flexible tactic language---without correctness concerns that could undermine the usefulness of automated analysis.
+[[http://keymaeraX.org/ KeYmaera X]] is a theorem prover for [[http://www.cs.cmu.edu/~aplatzer/logic/dL.html differential dynamic logic]] (dL), a logic for specifying and verifying properties of hybrid systems with mixed discrete and continuous dynamics. Reasoning about complicated hybrid systems requires support for sophisticated proof techniques, efficient computation, and a user interface that crystallizes salient properties of the system. KeYmaera X allows users to specify custom proof search techniques as tactics, execute tactics in parallel, and interface with partial proofs via an extensible user interface.
 
   [[http://keymaeraX.org/]]
 
-==API Documentation==
+==Package Structure==
 
 Main documentation entry points for KeYmaera X API:
 
-1. [[http://keymaerax.org/doc/dL-grammar.md concrete syntax for input language Differential Dynamic Logic]]
+  - `[[edu.cmu.cs.ls.keymaerax.core]]` - KeYmaera X kernel, proof certificates, main data structures
 
-2. [[edu.cmu.cs.ls.keymaerax.core]] KeYmaera X kernel, proof certificates, main data structures
+  - `[[edu.cmu.cs.ls.keymaerax.parser]]` - Parser and pretty printer with concrete syntax and notation
 
-3. [[edu.cmu.cs.ls.keymaerax.parser]] Parser and pretty printer with concrete syntax and notation
+      - [[http://keymaerax.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
 
-4. [[edu.cmu.cs.ls.keymaerax.tactics]] Tactic library with
-    [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary]] Main tactic library for most common cases
+  - `[[edu.cmu.cs.ls.keymaerax.tactics]]` - Tactic library 
+      - `[[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary]]` - Main tactic library for most common cases
+
+  - `[[edu.cmu.cs.ls.keymaerax.tools]]` - Arithmetic back-ends
     
-5. [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]] command-line launcher for KeYmaera X use `-help` to obtain instructions on command-line arguments
+  - `[[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]` - Command-line launcher for KeYmaera X supports command-line argument `-help` to obtain usage information
