@@ -743,6 +743,7 @@ object Tactics {
    * @todo split into type-safe LeftPositionTactic(AntePos) and RightPositionTactic(SuccPos)
    */
   abstract class PositionTactic(val name: String) extends (Position => Tactic) {
+    /** Checks whether this position tactic will be applicable at the indicated position of the given sequent */
     def applies(s: Sequent, p: Position): Boolean
 
     /** Apply this PositionTactic at the indicated Position to obtain a tactic to use at any ProofNode */
@@ -787,6 +788,7 @@ object Tactics {
     }
   }
 
+
   abstract class ApplyPositionTactic(name: String, val t: PositionTactic) extends Tactic("Position tactic " + name + "(" + t.name + ")") {
     def apply(tool: Tool, node: ProofNode) {
       findPosition(node) match {
@@ -828,7 +830,7 @@ object Tactics {
   /**
    * Base tactic that directly uses the given Provable.
    * Provable2Tactic conversion.
-   * @see [[DerivedAxioms.tactic2Provable(Sequent,Tactic)]]
+   * @see [[TactixLibrary.proveBy(Sequent,Tactic)]]
    */
   case class ByProvable(provable: Provable) extends Tactic("By provable " + provable) {
 
