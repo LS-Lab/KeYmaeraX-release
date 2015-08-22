@@ -558,6 +558,34 @@ object ODETactics {
     axiomLookupBaseT("DW differential weakening", subst, _ => NilPT, (f, ax) => ax)
   }
 
+  /**
+   * Returns a tactic for differential skip.
+   * @example{{{
+   *           |- [{x'=1 & v>0}]v>=0
+   *         -----------------------diffSkipT(AtomicODE(DifferentialSymbol(Variable("x")), Number(1)))(SuccPosition(0))
+   *           |- v>0 -> v>=0
+   * }}}
+   * @return
+   */
+  def diffSkipT(ode: DifferentialProgram): PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case Imply(q, p) => Imply(Box(ODESystem(ode, q), p), fml)
+      case _ => False
+    }
+    uncoverAxiomT("DX differential skip", axiomInstance, _ => diffSkipBaseT)
+  }
+  /** Base tactic for differential skip */
+  private def diffSkipBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Imply(Box(ODESystem(c, h), p), Imply(hh, pp)) =>
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
+        val aC = DifferentialProgramConst("c")
+        val aH = PredOf(Function("H", None, Real, Bool), Anything)
+        SubstitutionPair(aP, p) :: SubstitutionPair(aC, c) :: SubstitutionPair(aH, h) :: Nil
+    }
+    axiomLookupBaseT("DX differential skip", subst, _ => NilPT, (f, ax) => ax)
+  }
+
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Inverse Differential Cuts
   // Used for linear ordinary differential equation solver, when removing domain constraints form the ODE.

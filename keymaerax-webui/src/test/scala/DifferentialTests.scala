@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
-import ODETactics.{diffWeakenT, diffWeakenAxiomT, diffSolution, diamondDiffWeakenAxiomT}
+import ODETactics.{diffSkipT, diffWeakenT, diffWeakenAxiomT, diffSolution, diamondDiffWeakenAxiomT}
 import testHelper.SequentFactory._
 import testHelper.ProofFactory._
 
@@ -151,6 +151,33 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       sucSequent("x>0 & [{x'=1 & y>2}](y>2 -> y>0)".asFormula))
 
     // TODO tactic with abstraction etc.
+  }
+
+  "DX differential skip" should "introduce a differential equation when asked" in {
+    val s = sucSequent("x>0 -> x>=0".asFormula)
+    val result = helper.runTactic(locateSucc(diffSkipT(AtomicODE(DifferentialSymbol(Variable("x")), Number(1)))), new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "[{x'=1 & x>0}]x>=0".asFormula
+  }
+
+  it should "work with differential constants and other place holders" in {
+    val s = sucSequent("H(??) -> p(??)".asFormula)
+    val result = helper.runTactic(diffSkipT(DifferentialProgramConst("c"))(SuccPosition(0)), new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "[{c & H(??)}]p(??)".asFormula
+  }
+
+  it should "work with differential constants and other place holders in context" in {
+    val s = sucSequent("!(H(??) -> !p(??)) -> <{c&H(??)}>p(??)".asFormula)
+    val result = helper.runTactic(diffSkipT(DifferentialProgramConst("c"))(SuccPosition(0, PosInExpr(0::0::Nil))), new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "![{c & H(??)}]!p(??) -> <{c&H(??)}>p(??)".asFormula
   }
 
   "differential cut" should "cut in a simple formula" in {
