@@ -243,18 +243,26 @@ object Tactics {
 
   type Continuation = (Tactic, Status, Seq[ProofNode]) => Unit
 
+  /**
+   * A schedulable tactic that can be applied to try to prove a ProofNode.
+   */
   abstract class Tactic(val name : String) extends Stats {
 
-    var scheduler: ExecutionEngine = KeYmaeraScheduler // scheduler of this tactics
+    /** The scheduler that is running this tactic */
+    var scheduler: ExecutionEngine = KeYmaeraScheduler
 
-    var limit  : Limits = defaultLimits // limit
+    /** The resource limits to which this tactic is restricted */
+    var limit  : Limits = defaultLimits
 
-    var continuation : Continuation = stop // continuation function to execute after apply returns
+    /** Continuation function to execute after applying this tactic returns */
+    var continuation : Continuation = stop
 
     override def toString: String = name
 
-    def applicable(node : ProofNode) : Boolean // true if this tactics is applicable to the proof node
-    def apply  (tool : Tool, node : ProofNode) // apply tactics to given node using the given tool (e.g., a specific mathematica kernel)
+    /** Returns true if this tactics is applicable to the proof node */
+    def applicable(node : ProofNode) : Boolean
+    /** Apply this tactic to the given node using the given tool (e.g., a specific mathematica kernel) */
+    def apply  (tool : Tool, node : ProofNode)
 
     def inheritStats(s : Stats) { // adopt stats (e.g., from privious tactic)
       tacs          = s.tacs
@@ -331,21 +339,22 @@ object Tactics {
     }
 
     /**
-     * Called whenever a new tactic is dispatched.
-     * @param t - parent tactic
+     * Dispatch this tactic as a child of the parent tactic to the given proof node within the given resource limits.
+     * @param parent - parent tactic
      */
-    def dispatch(t : Tactic, l : Limits, node : ProofNode) {
-      inheritStats(t)
+    def dispatch(parent : Tactic, l : Limits, node : ProofNode) {
+      inheritStats(parent)
       limit = l
-      this.root = if(t != this && t.root == None) Some(t) else t.root
-      require(t.root != Some(this), "Cannot have loops in tactic tree")
+      this.root = if(parent != this && parent.root == None) Some(parent) else parent.root
+      require(parent.root != Some(this), "Cannot have loops in tactic tree")
       registerRunningTactic(this)
       if (scheduler == null)
-        throw new IllegalStateException("Cannot schedule tactics " + this + " in absence of an appropriate scheduler")
+        throw new IllegalStateException("Cannot schedule tactics " + this + " in absence of an appropriate scheduler. Create and initialize the scheduler first.")
       scheduler.dispatch(new TacticWrapper(this, node))
     }
 
-    def dispatch(t : Tactic, node : ProofNode) { dispatch(t, t.limit, node) } // convenience wrapper for dispatch
+    /** Dispatch this tactic as a child of parent to the given proof node within the parent's limits. */
+    def dispatch(parent : Tactic, node : ProofNode) { dispatch(parent, parent.limit, node) }
 
     def checkStats(res : Status) : Status = limit.checkStats(this)(res)
 
@@ -729,13 +738,18 @@ object Tactics {
   }
 
   /**
-   * Takes a position tactic and ???
+   * A PositionTactic applied to a position results in a tactic that can be applied to a ProofNode.
+   * {{{PositionTactic: Position => Tactic}}}
    * @todo split into type-safe LeftPositionTactic(AntePos) and RightPositionTactic(SuccPos)
    */
   abstract class PositionTactic(val name: String) extends (Position => Tactic) {
     def applies(s: Sequent, p: Position): Boolean
 
+    /** Apply this PositionTactic at the indicated Position to obtain a tactic to use at any ProofNode */
     def apply(signedPos: Int): Tactic = apply(Position.seqPos2Position(SeqPos(signedPos)))
+    /** Apply this PositionTactic at the indicated Position to obtain a tactic to use at any ProofNode */
+    def apply(signedPos: Int, posInExpr: List[Int]): Tactic = apply(Position.seqPos2Position(SeqPos(signedPos), posInExpr))
+    /** Apply this PositionTactic at the indicated Position to obtain a tactic to use at any ProofNode */
     def apply(p: Position): Tactic
 
     /**
