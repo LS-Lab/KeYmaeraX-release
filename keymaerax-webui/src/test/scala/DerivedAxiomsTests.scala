@@ -76,6 +76,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove all eliminate" in {check(allEliminateAxiom)}
   it should "prove all distribute" in {check(allDistributeAxiom)}
   it should "prove box dual" in {check(boxDualAxiom)}
+  it should "prove []~><> propagation" in {check{boxDiamondPropagation}}
   it should "prove <:=> assign" in {check(assigndAxiom)}
   it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
   it should "prove := assign dual" in {check(assignDualAxiom)}

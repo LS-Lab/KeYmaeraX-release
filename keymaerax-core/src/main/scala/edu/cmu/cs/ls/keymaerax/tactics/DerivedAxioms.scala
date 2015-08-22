@@ -284,6 +284,30 @@ object DerivedAxioms {
   lazy val boxDualT = derivedAxiomT(boxDualAxiom)
 
   /**
+   * {{{Axiom "".
+   *    [a;]p(??) & <a;>q(??) -> <a;>(p(??) & q(??))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val boxDiamondPropagationF = "([a;]p(??) & <a;>q(??)) -> <a;>(p(??) & q(??))".asFormula
+  lazy val boxDiamondPropagation = derivedAxiom("[]~><> propagation",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(boxDiamondPropagationF)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::1::Nil))) &
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
+    cut("[a;]p(??) & [a;]!(p(??)&q(??)) -> [a;]!q(??)".asFormula) & onBranch(
+      (cutShowLbl, hide(SuccPosition(0)) &
+        cut("[a;](p(??) & !(p(??)&q(??)))".asFormula) & onBranch(
+          (cutShowLbl, implyR(SuccPosition(0)) & splitb(SuccPosition(0)) & prop),
+          (cutUseLbl, implyR(SuccPosition(0)) & hide(AntePosition(1)) & boxMonotoneT & prop)
+        )),
+      (cutUseLbl, prop)
+    )
+  )
+
+  lazy val boxDiamondPropagationT = derivedAxiomT(boxDiamondPropagation)
+
+  /**
    * {{{Axiom "<:=> assign".
    *    <v:=t();>p(v) <-> p(t())
    * End.

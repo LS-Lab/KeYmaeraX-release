@@ -187,6 +187,8 @@ object TactixLibrary {
   def composeb                : PositionTactic = TacticLibrary.boxSeqT
   /** iterateb: [*] prove a property of a loop by unrolling it once */
   def iterateb                : PositionTactic = ???
+  /** splitb: splits [a](p&q) into [a]p & [a]q */
+  def splitb                  : PositionTactic = HybridProgramTacticsImpl.boxSplitConjunctionT
   /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
   def loop(invariant: Formula) = I(invariant)
