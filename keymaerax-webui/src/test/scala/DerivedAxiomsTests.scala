@@ -108,6 +108,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove DSol no domain" in {check(DSdnodomain)}
   it should "prove 'linear" in {check(Dlinear)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
+  it should "DX diamond differential skip" in {check(Dskipd)}
   it should "prove abs" in {check(absDef)}
   it should "prove min" in {check(minDef)}
   it should "prove max" in {check(maxDef)}

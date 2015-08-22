@@ -854,6 +854,23 @@ object DerivedAxioms {
   lazy val zeroPlusT = derivedAxiomT(zeroPlus)
 
   /**
+   * {{{Axiom "DS diamond differential skip".
+   *    <{c&H(??)}>p(??) <- H(??)&p(??)
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val DskipdF = "<{c&H(??)}>p(??) <- H(??)&p(??)".asFormula
+  lazy val Dskipd = derivedAxiom("DX diamond differential skip",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DskipdF)),
+    useAt("!! double negation", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::Nil))) &
+    useAt("!& deMorgan")(SuccPosition(0, PosInExpr(0::0::Nil))) &
+    useAt("-> expand", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::0::Nil))) &
+    ODETactics.diffSkipT(DifferentialProgramConst("c"))(SuccPosition(0, PosInExpr(0::0::Nil))) &
+    useAt("<> dual")(SuccPosition(0, PosInExpr(0::Nil))) & implyR(SuccPosition(0)) & close
+  )
+
+  /**
    * {{{Axiom "DS differential equation solution".
    *    [{x'=c()}]p(x) <-> \forall t (t>=0 -> [x:=x+(c()*t);]p(x))
    * End.
