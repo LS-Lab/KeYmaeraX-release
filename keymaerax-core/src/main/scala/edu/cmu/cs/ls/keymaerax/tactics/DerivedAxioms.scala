@@ -4,10 +4,10 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.diamondMonotoneT
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{boxMonotoneT, diamondMonotoneT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic, ApplyRule}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, ApplyRule}
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 
 import scala.collection.immutable
@@ -145,6 +145,7 @@ object DerivedAxioms {
     case "!-> deMorgan" => Some(notImplyF, notImplyT)
     case "!<-> deMorgan" => Some(notEquivF, notEquivT)
     case "-> expand" => Some(implyExpandF, implyExpandT)
+    case "-> tautology" => Some(implyTautologyF, implyTautologyT)
     case "->' derive imply" => Some(DimplyF, DimplyT)
     case "\\forall->\\exists" => Some(forallThenExistsF, forallThenExistsT)
     case "->true" => Some(impliesTrueF, impliesTrueT)
@@ -725,6 +726,21 @@ object DerivedAxioms {
   )
 
   lazy val implyExpandT = derivedAxiomT(implyExpand)
+
+  /**
+   * {{{Axiom "-> tautology".
+   *    (p() -> (q() -> p()&q())) <-> true
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val implyTautologyF = "(p() -> (q() -> p()&q())) <-> true".asFormula
+  lazy val implyTautology = derivedAxiom("-> tautology",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(implyTautologyF)),
+    prop
+  )
+
+  lazy val implyTautologyT = derivedAxiomT(implyTautology)
 
   /**
    * {{{Axiom "->' derive imply".

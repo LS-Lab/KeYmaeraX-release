@@ -102,6 +102,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove !<-> deMorgan" in {check(notEquiv)}
   it should "prove domain commute" in {check(domainCommute)}
   it should "prove -> expand" in {check(implyExpand)}
+  it should "prove -> tautology" in {check{implyTautology}}
   it should "prove ->'" in {check(Dimply)}
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
   it should "prove DS no domain" in {check(DSnodomain)}
