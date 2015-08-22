@@ -741,6 +741,11 @@ object Tactics {
    * A PositionTactic applied to a position results in a tactic that can be applied to a ProofNode.
    * {{{PositionTactic: Position => Tactic}}}
    * @todo split into type-safe LeftPositionTactic(AntePos) and RightPositionTactic(SuccPos)
+   * @todo duplicate into 3 independent classes?
+   *       abstract class LeftPositionTactic extends (AntePosition => Tactic) { def &(o:LeftPositionTactic) ... }
+   *       abstract class RightPositionTactic extends (SuccPosition => Tactic) { def &(o:RightPositionTactic) ... }
+   *       abstract class PositionTactic extends (Position => Tactic) { def &(o:PositionTactic) ... }
+   * Downside: that will lead to dynamic checking for PositionTactic & LeftPositionTactic.
    */
   abstract class PositionTactic(val name: String) extends (Position => Tactic) {
     /** Checks whether this position tactic will be applicable at the indicated position of the given sequent */
