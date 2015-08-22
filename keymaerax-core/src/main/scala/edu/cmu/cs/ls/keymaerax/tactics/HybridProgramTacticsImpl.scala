@@ -1318,9 +1318,9 @@ object HybridProgramTacticsImpl {
                         (cutShowLbl,
                           debugT("Show f5, get f2 by KMP") &
                           lastSucc(cohideT) & lastSucc(kModalModusPonensT) &
-                          debugT("Show f2") & lastSucc(abstractionT) & (lastSucc(skolemizeT)*) &
-                          // PC4 (just propositional stuff)
-                          lastSucc(ImplyRightT)*2 & lastSucc(AndRightT) & AxiomCloseT
+                          debugT("Show f2") &
+                            TactixLibrary.useAt("-> tautology")(SuccPosition(0, PosInExpr(1::Nil))) &
+                            TactixLibrary.V(SuccPosition(0)) & TactixLibrary.close
                           ),
                         (cutUseLbl,
                           debugAtT("Use f5, modus ponens with assumption")(AntePosition(2)) &
