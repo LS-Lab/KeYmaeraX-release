@@ -106,11 +106,11 @@ object SetLattice {
    * @return sl ++ sl' where sl' is the lattice containing the primes of the variables in sl.
    */
   def extendToDifferentialSymbols(sl : SetLattice[NamedSymbol]) : SetLattice[NamedSymbol] = sl match {
-    case CoSet(excluded, symbols) if excluded == topVarsDiffVars().asInstanceOf[CoSet[NamedSymbol]].excluded =>
-      // V\cup V' already closed under adding '.
-      //@note Its overapproximation topVarsDiffVars is also closed since DotTerm, DotFormula are not variables
-      CoSet(excluded, extendToDifferentialSymbols(symbols))
     case FiniteLattice(set) => SetLattice(extendToDifferentialSymbols(set))
+    case CoSet(excluded, symbols) if !excluded.exists(x=>x.isInstanceOf[DifferentialSymbol]) =>
+      //@note if no differential symbols were excluded (such as in V\cup V' or topVarsDiffVars),
+      //@note then the lattice is already closed under ' so only literal symbols are augmented with '
+      CoSet(excluded, extendToDifferentialSymbols(symbols))
     case sl:CoSet[NamedSymbol] =>
       assert(false, "Extension to differentialSymbols are not yet implemented if sl isInfinite: " + sl); ???
   }
