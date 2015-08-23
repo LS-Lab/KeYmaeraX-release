@@ -417,15 +417,6 @@ Axiom "|' derive or".
   /* sic! */
 End.
 
-Axiom "forall' derive forall".
-  (\forall x p(??))' <-> (\forall x (p(??)'))
-End.
-
-Axiom "exists' derive exists".
-  (\exists x p(??))' <-> (\forall x (p(??)'))
-  /* sic! */
-End.
-
 Axiom "c()' derive constant fn".
   c()' = 0
 End.
@@ -606,4 +597,14 @@ Axiom "> flip".
   (f() > g()) <-> (g() < f())
 End.
 """
+  /*
+  Axiom "forall' derive forall".
+  (\forall x p(??))' <-> (\forall x (p(??)'))
+End.
+
+Axiom "exists' derive exists".
+  (\exists x p(??))' <-> (\forall x (p(??)'))
+  /* sic! */
+End.
+   */
 }
