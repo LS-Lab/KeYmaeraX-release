@@ -530,7 +530,7 @@ object DifferentialProduct {
     case a: AtomicDifferentialProgram => a :: Nil
   }
 
-  /** The list of all differential symbols in ode */
+  /** The list of all literal differential symbols in ode */
   private def differentialSymbols(ode: DifferentialProgram): immutable.List[DifferentialSymbol] = ode match {
     case p: DifferentialProduct => differentialSymbols(p.left) ++ differentialSymbols(p.right)
     case AtomicODE(xp, _) => xp :: Nil
