@@ -111,21 +111,24 @@ object TactixLibrary {
 
   // Locating applicable positions for PositionTactics
 
-  /** Locate applicable position in succedent that is on the right */
+  /** Locate applicable position in succedent on the right in which fml occurs verbatim */
   def ls(tactic: PositionTactic, fml: String = "", key: Option[Expression] = None): Tactic =
     SearchTacticsImpl.locateSucc(tactic,
-      if (fml == "") _ => true else _ == fml.asFormula,
+      if (fml == "") (_ => true) else _ == fml.asFormula,
       if (key.isDefined) Some(_ == key.get) else None)
-  /** Locate applicable position in succedent that is on the right */
+  /** Locate applicable position in succedent on the right */
   def lR(tactic: PositionTactic): Tactic = ls(tactic)
-  /** Locate applicable position in antecedent that is on the left */
+  /** Locate applicable position in antecedent on the left in which fml occurs verbatim  */
   def la(tactic: PositionTactic, fml: String = "", key: Option[Expression] = None): Tactic =
     SearchTacticsImpl.locateAnte(tactic,
       if (fml == "") _ => true else _ == fml.asFormula,
       if (key.isDefined) Some(_ == key.get) else None)
-  /** Locate applicable position in antecedent that is on the left */
+  /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
+  //@todo implement using = SearchTacticsImpl.locateSucc(tactic, UnificationMatcher.unifiable(s(pos), parser(shape))!=None)
+  def la(tactic: PositionTactic, shape: String): Tactic = ???
+  /** Locate applicable position in antecedent on the left */
   def lL(tactic: PositionTactic): Tactic = la(tactic)
-  /** Locate applicable position in antecedent or succedent */
+  /** Locate applicable position in left or right in antecedent or succedent */
   def l(tactic: PositionTactic): Tactic  = TacticLibrary.locateAnteSucc(tactic)
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -187,6 +190,8 @@ object TactixLibrary {
   def composeb                : PositionTactic = TacticLibrary.boxSeqT
   /** iterateb: [*] prove a property of a loop by unrolling it once */
   def iterateb                : PositionTactic = ???
+  /** splitb: splits [a](p&q) into [a]p & [a]q */
+  def splitb                  : PositionTactic = HybridProgramTacticsImpl.boxSplitConjunctionT
   /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
   def loop(invariant: Formula) = I(invariant)

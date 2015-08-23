@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{lastAnte, lastSucc, onBranch}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.getTerm
-import AxiomaticRuleTactics.{equivalenceCongruenceT,boxMonotoneT,diamondMonotoneT}
+import AxiomaticRuleTactics.{equivalenceCongruenceT,boxMonotoneT,diamondMonotoneT, propositionalCongruenceT}
 import ContextTactics.{cutInContext,cutImplyInContext}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
@@ -70,26 +70,26 @@ object AxiomTactic {
             ))
           case inst@Imply(f, g) if p.isAnte =>
             Some(cutImplyInContext(inst, p) & onBranch(
-              (cutShowLbl, lastSucc(cohideT) & lastSucc(ImplyRightT) & (boxMonotoneT | diamondMonotoneT | NilT) &
-                assertT(1, 1) & lastAnte(assertPT(f, "Unexpected formula in ante")) & lastSucc(assertPT(g, "Unexpected formula in succ")) &
+              (cutShowLbl, lastSucc(cohideT) & lastSucc(ImplyRightT) & (propositionalCongruenceT(p.inExpr) | NilT) &
+                assertT(1, 1) & lastAnte(assertPT(f, name + ": unexpected formula in ante")) & lastSucc(assertPT(g, name + ": unexpected formula in succ")) &
                 cutT(Some(inst)) & onBranch(
                 (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getFormula(node.sequent, p)))),
                 (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
               )),
               (cutUseLbl, lastAnte(ImplyLeftT) &&(
                 AxiomCloseT,
-                (assertPT(node.sequent(p), "hiding original instance") & hideT)(p.topLevel)))
+                (assertPT(node.sequent(p), name + ": hiding original instance") & hideT)(p.topLevel)))
             ))
           case inst@Imply(f, g) if !p.isAnte =>
             Some(cutImplyInContext(inst, p) & onBranch(
-              (cutShowLbl, lastSucc(cohideT) & lastSucc(ImplyRightT) & (boxMonotoneT | diamondMonotoneT | NilT) &
-                assertT(1, 1) & lastAnte(assertPT(f, "Unexpected formula in ante")) & lastSucc(assertPT(g, "Unexpected formula in succ")) &
+              (cutShowLbl, lastSucc(cohideT) & lastSucc(ImplyRightT) & (propositionalCongruenceT(p.inExpr) | NilT) &
+                assertT(1, 1) & lastAnte(assertPT(f, name + ": unexpected formula in ante")) & lastSucc(assertPT(g, name + ": unexpected formula in succ")) &
                 cutT(Some(inst)) & onBranch(
                 (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getFormula(node.sequent, p)))),
                 (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
               )),
               (cutUseLbl, lastAnte(ImplyLeftT) &&(
-                (assertPT(node.sequent(p), "hiding original instance") & hideT)(p.topLevel),
+                (assertPT(node.sequent(p), name + ": hiding original instance") & hideT)(p.topLevel),
                 AxiomCloseT)
                 )
             ))
@@ -199,9 +199,9 @@ object AxiomTactic {
         Some(
           TacticLibrary.debugT("axiomLookupBaseT on " + axiomName) &
           uniformSubstT(subst(fml), Map(fml -> axiomInstance(fml, axiom))) &
-            assertT(0, 1) & lastSucc(assertPT(axiomInstance(fml, axiom), "Unexpected uniform substitution result")) &
+            assertT(0, 1) & lastSucc(assertPT(axiomInstance(fml, axiom), name + ": unexpected uniform substitution result")) &
             lastSucc(alpha(fml)) & TacticLibrary.debugT("alpha renaming succeeded for axiom " + axiomName) &
-            lastSucc(assertPT(axiom, "Unexpected axiom form in succedent")) & AxiomTactic.axiomT(axiomName)
+            lastSucc(assertPT(axiom, name + ": unexpected axiom form in succedent")) & AxiomTactic.axiomT(axiomName)
         )
       }
     }

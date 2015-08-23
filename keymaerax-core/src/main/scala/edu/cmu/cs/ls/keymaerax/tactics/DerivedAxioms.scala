@@ -4,9 +4,10 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{boxMonotoneT, diamondMonotoneT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic, ApplyRule}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, ApplyRule}
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 
 import scala.collection.immutable
@@ -130,6 +131,7 @@ object DerivedAxioms {
     case "<++> choice" => Some(choicedF, choicedT)
     case "<;> compose" => Some(composedF, composedT)
     case "<*> iterate" => Some(iteratedF, iteratedT)
+    case "<*> approx" => Some(loopApproxdF, loopApproxdT)
     case "exists generalize" => Some(existsGeneralizeF, existsGeneralizeT)
     case "all substitute" => Some(allSubstituteF, allSubstituteT)
     case "vacuous exists quantifier" => Some(vacuousExistsF, vacuousExistsT)
@@ -143,6 +145,7 @@ object DerivedAxioms {
     case "!-> deMorgan" => Some(notImplyF, notImplyT)
     case "!<-> deMorgan" => Some(notEquivF, notEquivT)
     case "-> expand" => Some(implyExpandF, implyExpandT)
+    case "-> tautology" => Some(implyTautologyF, implyTautologyT)
     case "->' derive imply" => Some(DimplyF, DimplyT)
     case "\\forall->\\exists" => Some(forallThenExistsF, forallThenExistsT)
     case "->true" => Some(impliesTrueF, impliesTrueT)
@@ -279,6 +282,30 @@ object DerivedAxioms {
   )
 
   lazy val boxDualT = derivedAxiomT(boxDualAxiom)
+
+  /**
+   * {{{Axiom "".
+   *    [a;]p(??) & <a;>q(??) -> <a;>(p(??) & q(??))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val boxDiamondPropagationF = "([a;]p(??) & <a;>q(??)) -> <a;>(p(??) & q(??))".asFormula
+  lazy val boxDiamondPropagation = derivedAxiom("[]~><> propagation",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(boxDiamondPropagationF)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::1::Nil))) &
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
+    cut("[a;]p(??) & [a;]!(p(??)&q(??)) -> [a;]!q(??)".asFormula) & onBranch(
+      (cutShowLbl, hide(SuccPosition(0)) &
+        cut("[a;](p(??) & !(p(??)&q(??)))".asFormula) & onBranch(
+          (cutShowLbl, implyR(SuccPosition(0)) & splitb(SuccPosition(0)) & prop),
+          (cutUseLbl, implyR(SuccPosition(0)) & hide(AntePosition(1)) & boxMonotoneT & prop)
+        )),
+      (cutUseLbl, prop)
+    )
+  )
+
+  lazy val boxDiamondPropagationT = derivedAxiomT(boxDiamondPropagation)
 
   /**
    * {{{Axiom "<:=> assign".
@@ -482,6 +509,27 @@ object DerivedAxioms {
   )
 
   lazy val iteratedT = derivedAxiomT(iteratedAxiom)
+
+  /**
+   * {{{Axiom "<*> approx".
+   *    <a;>p(??) -> <{a;}*>p(??)
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val loopApproxdF = "<a;>p(??) -> <{a;}*>p(??)".asFormula
+  lazy val loopApproxd = derivedAxiom("<*> approx",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(loopApproxdF)),
+    useAt("<*> iterate")(SuccPosition(0, PosInExpr(1::Nil))) &
+    useAt("<*> iterate")(SuccPosition(0, PosInExpr(1::1::1::Nil))) &
+    cut("<a;>p(??) -> <a;>(p(??) | <a;><{a;}*>p(??))".asFormula) & onBranch(
+      (cutShowLbl, hideT(SuccPosition(0)) & ls(implyR) & diamondMonotoneT & prop),
+      (cutUseLbl, prop)
+    )
+  )
+
+  lazy val loopApproxdT = derivedAxiomT(loopApproxd)
+
 
   //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
   //private def useAt(lem: ApplyRule[LookupLemma]): PositionTactic = TactixLibrary.useAt(lem.rule.lemma.fact)
@@ -704,6 +752,21 @@ object DerivedAxioms {
   lazy val implyExpandT = derivedAxiomT(implyExpand)
 
   /**
+   * {{{Axiom "-> tautology".
+   *    (p() -> (q() -> p()&q())) <-> true
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val implyTautologyF = "(p() -> (q() -> p()&q())) <-> true".asFormula
+  lazy val implyTautology = derivedAxiom("-> tautology",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(implyTautologyF)),
+    prop
+  )
+
+  lazy val implyTautologyT = derivedAxiomT(implyTautology)
+
+  /**
    * {{{Axiom "->' derive imply".
    *    (p(??) -> q(??))' <-> (!p(??) | q(??))'
    * End.
@@ -829,6 +892,23 @@ object DerivedAxioms {
   )
 
   lazy val zeroPlusT = derivedAxiomT(zeroPlus)
+
+  /**
+   * {{{Axiom "DS diamond differential skip".
+   *    <{c&H(??)}>p(??) <- H(??)&p(??)
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val DskipdF = "<{c&H(??)}>p(??) <- H(??)&p(??)".asFormula
+  lazy val Dskipd = derivedAxiom("DX diamond differential skip",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DskipdF)),
+    useAt("!! double negation", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::Nil))) &
+    useAt("!& deMorgan")(SuccPosition(0, PosInExpr(0::0::Nil))) &
+    useAt("-> expand", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::0::Nil))) &
+    ODETactics.diffSkipT(DifferentialProgramConst("c"))(SuccPosition(0, PosInExpr(0::0::Nil))) &
+    useAt("<> dual")(SuccPosition(0, PosInExpr(0::Nil))) & implyR(SuccPosition(0)) & close
+  )
 
   /**
    * {{{Axiom "DS differential equation solution".

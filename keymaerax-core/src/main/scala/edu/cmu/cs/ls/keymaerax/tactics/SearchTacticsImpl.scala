@@ -306,11 +306,12 @@ object SearchTacticsImpl {
    * @param key The key, default is None (meaning look for top-level formula).
    * @return A new tactic that applies said tactic at the specified position.
    */
-  def locateSucc(posT: PositionTactic, cond: Formula => Boolean = _ => true, key: Option[Expression => Boolean] = None): Tactic =
+  def locateSucc(posT: PositionTactic, cond: Formula => Boolean = (_ => true), key: Option[Expression => Boolean] = None): Tactic =
       new ApplyPositionTactic("locateSucc (" + posT.name + ")", posT) {
     override def applicable(p: ProofNode): Boolean = {
       val pos = findPosition(p.sequent)
       pos.isDefined && cond(p.sequent(pos.get)) && (key match {
+        //@todo the following two cases can be merged by using  p.sequent(pos.get.top).at(pos.get.inExpr), which in turn should be part of a SequentConverter(pos.get) implicit def
         case Some(keyCond) if p.sequent(pos.get).isFormulaAt(pos.get.inExpr) => keyCond(p.sequent(pos.get).subFormulaAt(pos.get.inExpr).get)
         case Some(keyCond) if p.sequent(pos.get).isTermAt(pos.get.inExpr) => keyCond(p.sequent(pos.get).termAt(pos.get.inExpr))
         case None => true

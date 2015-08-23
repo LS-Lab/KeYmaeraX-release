@@ -76,6 +76,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove all eliminate" in {check(allEliminateAxiom)}
   it should "prove all distribute" in {check(allDistributeAxiom)}
   it should "prove box dual" in {check(boxDualAxiom)}
+  it should "prove []~><> propagation" in {check{boxDiamondPropagation}}
   it should "prove <:=> assign" in {check(assigndAxiom)}
   it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
   it should "prove := assign dual" in {check(assignDualAxiom)}
@@ -89,6 +90,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove <++> choice" in {check(choicedAxiom)}
   it should "prove <;> compose" in {check(composedAxiom)}
   it should "prove <*> iterate" in {check(iteratedAxiom)}
+  it should "prove <*> approx" in {check(loopApproxd)}
   it should "prove exists generalize" in {check(existsGeneralize)}
   it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
@@ -101,12 +103,14 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove !<-> deMorgan" in {check(notEquiv)}
   it should "prove domain commute" in {check(domainCommute)}
   it should "prove -> expand" in {check(implyExpand)}
+  it should "prove -> tautology" in {check{implyTautology}}
   it should "prove ->'" in {check(Dimply)}
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
   it should "prove DS no domain" in {check(DSnodomain)}
   it should "prove DSol no domain" in {check(DSdnodomain)}
   it should "prove 'linear" in {check(Dlinear)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
+  it should "DX diamond differential skip" in {check(Dskipd)}
   it should "prove abs" in {check(absDef)}
   it should "prove min" in {check(minDef)}
   it should "prove max" in {check(maxDef)}

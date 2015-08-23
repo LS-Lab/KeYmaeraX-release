@@ -386,6 +386,15 @@ Axiom "Dsol& differential equation solution".
 End.
 
 /**
+ * ModelPlex axioms
+ */
+
+/** @Derived from DW (not implementable for technical reasons - abstraction of c, ??) */
+Axiom "DX differential skip".
+  [{c&H(??)}]p(??) -> (H(??)->p(??))
+End.
+
+/**
  * DIFFERENTIAL INVARIANTS for SYSTEMS
  */
 
