@@ -14,7 +14,6 @@ package edu.cmu.cs.ls.keymaerax.core
 // require favoring immutable Seqs for soundness
 
 import scala.collection.immutable
-
 import scala.math._
 
 /**
@@ -95,6 +94,8 @@ trait BinaryComposite extends Composite {
 
 /** Function/predicate/predicational application */
 sealed trait ApplicationOf extends Expression {
+  require(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
+  require(sort == func.sort, "sort of application is the sort of the function")
   def func : Function
   def child : Expression
 }
@@ -106,9 +107,10 @@ sealed trait ApplicationOf extends Expression {
 sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
 //  require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
 //    "non-empty names without underscores (except at end for internal names): " + name)
-  if(!(!name.isEmpty && !name.substring(0, name.length-1).contains("_")))
-    print("WARNING: non-empty names without underscores (except at end for internal names): " + name)
+  require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
+    "WARNING: non-empty names without underscores (except at end for internal names): " + name)
   require(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols: " + name)
+  require(index.getOrElse(0)>=0, "nonnegative index if any " + this)
 
   def name: String
   def index: Option[Int]
@@ -116,14 +118,17 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   /** Compare named symbols lexicographically: by name, index, category. */
   def compare(other: NamedSymbol): Int = {
     val cmp = name.compare(other.name)
-    if (cmp != 0) cmp else {val cmp2 = index.getOrElse(-1) - other.index.getOrElse(-1); if (cmp2 != 0) cmp2 else getClass().getSimpleName.compareTo(other.getClass.getSimpleName)}
+    if (cmp != 0) cmp else {
+      val cmp2 = index.getOrElse(-1) - other.index.getOrElse(-1)
+      if (cmp2 != 0) cmp2 else getClass.getSimpleName.compareTo(other.getClass.getSimpleName)
+    }
   } ensuring(r => r!=0 || this==other, "no different categories of symbols with same name " + this + " compared to " + other)
 
   /** Get name with index of this NamedSymbol. */
-  def asString: String = (index match {
+  def asString: String = index match {
     case None => name
     case Some(idx) => name + "_" + idx
-  })
+  }
 
   /** Full string with names and full types */
   def fullString: String = asString + ":" + sort
@@ -170,7 +175,7 @@ sealed case class DifferentialSymbol(x: Variable)
 /** Number literal */
 case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 
-/** Function symbol or predicate symbol or predicational symbol */
+/** Function symbol or predicate symbol or predicational symbol name_index:domain->sort */
 sealed case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort)
   extends Expression with NamedSymbol {
   def kind: Kind = FunctionKind
@@ -199,10 +204,10 @@ object Anything extends NamedSymbol with AtomicTerm with RTerm {
   override def prettyString: String = "??"
 }
 
-/** Function symbol applied to argument child */
+/** Function symbol applied to argument child func(child) */
 case class FuncOf(func: Function, child: Term) extends AtomicTerm with ApplicationOf {
+  /** The sort of an ApplicationOf is the sort of func */
   def sort: Sort = func.sort
-  require(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
 }
 
 /** Composite terms */
@@ -311,13 +316,14 @@ object DotFormula extends NamedSymbol with AtomicFormula {
   def index: Option[Int] = None
 }
 
-/** Predicate symbol applied to argument child */
+/** Predicate symbol applied to argument child func(child) */
 case class PredOf(func: Function, child: Term) extends AtomicFormula with ApplicationOf {
+  //@note redundant requires since ApplicationOf.sort and Formula.requires will check this already.
   require(func.sort == Bool, "expected predicate sort Bool found " + func.sort + " in " + this)
-  require(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
 }
 /** Predicational or quantifier symbol applied to argument formula child */
 case class PredicationalOf(func: Function, child: Formula) extends AtomicFormula with ApplicationOf {
+  //@note redundant requires since ApplicationOf.sort and Formula.requires will check this already.
   require(func.sort == Bool, "expected argument sort Bool: " + this)
   require(func.domain == Bool, "expected domain simplifies to Bool: " + this)
 }
@@ -349,33 +355,29 @@ case class Equiv(left: Formula, right:Formula) extends BinaryCompositeFormula
 
 /** Quantified formulas */
 sealed trait Quantified extends /*Unary?*/CompositeFormula {
+  require(vars.nonEmpty, "quantifiers bind at least one variable")
+  require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
+  require(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
+  /** The variables quantified here */
   def vars: immutable.Seq[Variable]
   def child: Formula
 }
 /** \forall vars universally quantified formula */
-case class Forall(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified {
-  require(vars.nonEmpty, "quantifiers bind at least one variable")
-  require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
-  require(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
-}
+case class Forall(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified
 /** \exists vars existentially quantified formula */
-case class Exists(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified {
-  require(vars.nonEmpty, "quantifiers bind at least one variable")
-  require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
-  require(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
-}
+case class Exists(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified
 
 /** Modal formulas */
 sealed trait Modal extends CompositeFormula {
   def program: Program
   def child: Formula
 }
-/** box modality all runs of program satisfy child */
+/** box modality all runs of program satisfy child [program]child */
 case class Box(program: Program, child: Formula) extends CompositeFormula with Modal
-/** diamond modality some run of program satisfies child */
+/** diamond modality some run of program satisfies child <program>child */
 case class Diamond(program: Program, child: Formula) extends CompositeFormula with Modal
 
-/** Differential formula are differentials of formulas in analogy to differential terms */
+/** Differential formula are differentials of formulas in analogy to differential terms (child)' */
 case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula
 
 /*********************************************************************************
@@ -403,11 +405,11 @@ sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProg
 
 /** x:=e assignment */
 case class Assign(x: Variable, e: Term) extends AtomicProgram {
-  require(e.sort == x.sort, "assignment of compatible sort")
+  require(e.sort == x.sort, "assignment of compatible sort " + this)
 }
 /** x':=e differential assignment */
 case class DiffAssign(xp: DifferentialSymbol, e: Term) extends AtomicProgram {
-  require(e.sort == Real, "differential assignment of real sort")
+  require(e.sort == Real, "differential assignment of real sort " + this)
 }
 /** x:=* nondeterministic assignment */
 case class AssignAny(x: Variable) extends AtomicProgram
@@ -484,8 +486,6 @@ final class DifferentialProduct private(val left: DifferentialProgram, val right
   }
 
   override def hashCode: Int = 3 * left.hashCode() + right.hashCode()
-
-  override def toString = getClass.getSimpleName + "(" + left + ", " + right + ")"
 }
 
 object DifferentialProduct {
@@ -498,11 +498,7 @@ object DifferentialProduct {
   def apply(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = {
     require(!left.isInstanceOf[ODESystem], "Left should not be its own ODESystem: " + left + " with " + right)
     require(!right.isInstanceOf[ODESystem], "Right should not be its own ODESystem: " + left + " with " + right)
-    //So that a breakpoint can be inserted.
-    val hasDuplicates = differentialSymbols(left).intersect(differentialSymbols(right)).nonEmpty
-    if(hasDuplicates) {
-      require(!hasDuplicates, "No duplicate differential equations when composing differential equations " + left + " and " + right)
-    }
+    require(differentialSymbols(left).intersect(differentialSymbols(right)).isEmpty, "No duplicate differential equations when composing differential equations " + left + " and " + right)
     reassociate(left, right)
   } ensuring(r => differentialSymbols(r).length == differentialSymbols(r).distinct.length,
     "No undetected duplicate differential equations when composing differential equations " + left + " and " + right + " to form " + reassociate(left, right))
@@ -514,7 +510,7 @@ object DifferentialProduct {
 
   //@tailrec
   private def reassociate(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = (left match {
-    // reassociate
+    // reassociate so that there's no more differential product on the left
     case DifferentialProduct(ll, lr) =>
       assert(ll.isInstanceOf[AtomicDifferentialProgram], "reassociation has succeeded on the left")
       reassociate(ll, reassociate(lr, right))
@@ -531,10 +527,12 @@ object DifferentialProduct {
   }
 
   /** The list of all literal differential symbols in ode */
-  private def differentialSymbols(ode: DifferentialProgram): immutable.List[DifferentialSymbol] = ode match {
+  //@note Differential symbols can only occur on the left of AtomicODEs anyhow.
+  private def differentialSymbols(ode: DifferentialProgram): immutable.List[DifferentialSymbol] = {ode match {
     case p: DifferentialProduct => differentialSymbols(p.left) ++ differentialSymbols(p.right)
     case AtomicODE(xp, _) => xp :: Nil
     case a: DifferentialProgramConst => Nil
-  }
+  }} ensuring(r => r==StaticSemantics.symbols(ode).toList.filter(x=>x.isInstanceOf[DifferentialSymbol]),
+    "StaticSemantics should agree since differential symbols only occur on the left-hand side of differential equations")
 
 }

@@ -41,9 +41,7 @@ private[core] object AxiomBase {
    */
   private[core] def loadAxiomaticRules() : immutable.Map[String, (Sequent, Sequent)] = {
     val x = Variable("x_", None, Real)
-    //val px = PredOf(Function("p_", None, Real, Bool), x)
     val pany = PredOf(Function("p_", None, Real, Bool), Anything)
-    //val qx = PredOf(Function("q_", None, Real, Bool), x)
     val qany = PredOf(Function("q_", None, Real, Bool), Anything)
     val fany = FuncOf(Function("f_", None, Real, Real), Anything)
     val gany = FuncOf(Function("g_", None, Real, Real), Anything)
@@ -52,7 +50,6 @@ private[core] object AxiomBase {
     // Sort of predicational is really (Real->Bool)->Bool except sort system doesn't know that type.
     val context = Function("ctx_", None, Bool, Bool) // predicational symbol
     val a = ProgramConst("a_")
-    //val fmlany = PredOf(Function("F_", None, Real, Bool), Anything)
 
     Map(
       /**
@@ -69,6 +66,7 @@ private[core] object AxiomBase {
        * Premise p(??)
        * Conclusion \forall x p(??)
        * End.
+       * @Note generalization of p(x) to p(??) as in Theorem 14
        */
       ("all generalization",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany)),
@@ -101,6 +99,13 @@ private[core] object AxiomBase {
       ("CE congruence",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
+      /**
+       * Rule "CE congruence".
+       * Premise p_(??) <-> q_(??)
+       * Conclusion ctxF_(p_(??)) |- ctxF_(q_(??))
+       * End.
+       * @derived EquivifyRight, cut, prop
+       */
       ("CO one-sided congruence",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(PredicationalOf(context, pany)), immutable.IndexedSeq(PredicationalOf(context, qany))))),
@@ -110,6 +115,7 @@ private[core] object AxiomBase {
        * Conclusion [a;]p(??) ==> [a;]q(??)
        * End.
        * @derived useAt("<> dual") & by("<> monotone")
+       * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
       ("[] monotone",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany)),
@@ -119,6 +125,7 @@ private[core] object AxiomBase {
        * Premise p(??) ==> q(??)
        * Conclusion <a;>p(??) ==> <a;>q(??)
        * End.
+       * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
       ("<> monotone",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany)),
@@ -127,6 +134,7 @@ private[core] object AxiomBase {
        * Rule "ind induction".
        * Premise p(??) ==> [a;]p(??)
        * Conclusion p(??) ==> [a*]p(??)
+       * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
       ("ind induction",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany))),
@@ -176,9 +184,9 @@ private[core] object AxiomBase {
     val pany = PredOf(p, Anything)
     val q = Function("q", None, Real, Bool)
     val q0 = PredOf(Function("q", None, Unit, Bool), Nothing)
-    val qny = PredOf(Function("q", None, Real, Bool), Anything)
+    val qany = PredOf(Function("q", None, Real, Bool), Anything)
     val r = Function("r", None, Real, Bool)
-    val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
+    val c = FuncOf(Function("c", None, Unit, Real), Nothing)
     val f = Function("f", None, Real, Real)
     val f0 = FuncOf(Function("f", None, Unit, Real), Nothing)
     val fany = FuncOf(Function("f", None, Real, Real), Anything)
@@ -202,7 +210,7 @@ private[core] object AxiomBase {
     assert(axs("[;] compose") == Equiv(Box(Compose(a,b), pany), Box(a, Box(b, pany))), "[;] compose")
     assert(axs("[*] iterate") == Equiv(Box(Loop(a), pany), And(pany, Box(a, Box(Loop(a), pany)))), "[*] iterate")
     //@note only sound for hybrid systems not for hybrid games
-    assert(axs("K modal modus ponens") == Imply(Box(a, Imply(pany,qny)), Imply(Box(a, pany), Box(a, qny))), "K modal modus ponens")
+    assert(axs("K modal modus ponens") == Imply(Box(a, Imply(pany,qany)), Imply(Box(a, pany), Box(a, qany))), "K modal modus ponens")
     //@note could also have accepted axiom I for hybrid systems but not for hybrid games
     assert(axs("V vacuous") == Imply(p0, Box(a, p0)), "V vacuous")
 
@@ -211,13 +219,13 @@ private[core] object AxiomBase {
       Equiv(Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), PredOf(q,x)), PredOf(p,x)),
         Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), And(PredOf(q,x), PredOf(r,x))), PredOf(p,x)))), "DC differential cut") */
 
-    assert(axs("c()' derive constant fn") == Equal(Differential(aC), Number(0)), "c()' derive constant fn")
+    assert(axs("c()' derive constant fn") == Equal(Differential(c), Number(0)), "c()' derive constant fn")
     assert(axs("+' derive sum") == Equal(Differential(Plus(fany, gany)), Plus(Differential(fany), Differential(gany))), "+' derive sum")
     assert(axs("-' derive minus") == Equal(Differential(Minus(fany, gany)), Minus(Differential(fany), Differential(gany))), "-' derive minus")
     assert(axs("*' derive product") == Equal(Differential(Times(fany, gany)), Plus(Times(Differential(fany), gany), Times(fany, Differential(gany)))), "*' derive product")
     assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(fany, gany)), Equal(Differential(fany), Differential(gany))), "!=' derive !=")
-    assert(axs("&' derive and") == Equiv(DifferentialFormula(And(pany, qny)), And(DifferentialFormula(pany), DifferentialFormula(qny))), "&' derive and")
-    assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(pany, qny)), And(DifferentialFormula(pany), DifferentialFormula(qny))) || axs("|' derive or") == Imply(And(DifferentialFormula(pany), DifferentialFormula(qny)), DifferentialFormula(Or(pany, qny))), "|' derive or")
+    assert(axs("&' derive and") == Equiv(DifferentialFormula(And(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))), "&' derive and")
+    assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))) || axs("|' derive or") == Imply(And(DifferentialFormula(pany), DifferentialFormula(qany)), DifferentialFormula(Or(pany, qany))), "|' derive or")
     assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
 
     assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,t0)), "all instantiate")
@@ -256,7 +264,7 @@ Axiom /*\\foralli */ "all instantiate".
   (\forall x p(x)) -> p(t())
 End.
 
-/* consequence of "all instantiate" */
+/* consequence of "all instantiate" @note generalized "all instantiate" */
 Axiom "all eliminate".
   (\forall x p(??)) -> p(??)
 End.
@@ -352,7 +360,7 @@ End.
 /* DG differential ghost, general Lipschitz case */
 /*Axiom "DG differential Lipschitz ghost".
   ([x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=g(x,y)&q(x)}]p(x))
-  <- (\exists L \forall x \forall y \forall z (y>=z -> (-L*(y-x) <= g(x,y)-g(x,z) & g(x,y)-g(x,z) <= L*(y-z))))
+  <- (\exists L \forall x \forall y \forall z (abs(g(x,y)-g(x,z)) <= L*abs(y-z)))
 End.*/
 
 /* DG differential ghost, general Lipschitz case, system case */
@@ -360,6 +368,7 @@ Axiom "DG differential Lipschitz ghost system".
   /* @see "DG differential Lipschitz ghost" THEORY */
   ([{c&H(??)}]p(??) <-> (\exists y [{y'=g(??),c&H(??)}]p(??)))
   <- (\exists L [{c&H(??)}] (\forall a \forall b \forall u \forall v (a>=b -> [y:=a;u:=g(??);y:=b;v:=g(??);] (-L*(a-b) <= u-v & u-v <= L*(a-b)))))
+  /* <- (\exists L [{c&H(??)}] (\forall a \forall b \forall u \forall v ([y:=a;u:=g(??);y:=b;v:=g(??);] (abs(u-v) <= L*abs(a-b))))) */
 End.
 
 Axiom "DG++ System".
@@ -371,7 +380,7 @@ Axiom "DG++".
 End.
 
 
-/* Formatter axioms for diff eqs. @note almost unused except in tactics implementation of itself */
+/* Formatter axioms for diff eqs. */
 Axiom ", commute".
   [{c,d & H(??)}]p(??) <-> [{d,c & H(??)}]p(??)
 End.

@@ -93,19 +93,19 @@ object StaticSemantics {
     case DotTerm => assert(!DotTerm.isInstanceOf[Variable], "DotTerm cannot be a variable (!)"); bottom
     // homomorphic cases
     case FuncOf(f, arg) => freeVars(arg)
-    case Neg(e) => freeVars(e)
-    case Plus(l, r) => freeVars(l) ++ freeVars(r)
-    case Minus(l, r) => freeVars(l) ++ freeVars(r)
-    case Times(l, r) => freeVars(l) ++ freeVars(r)
+    case Neg(e)       => freeVars(e)
+    case Plus(l, r)   => freeVars(l) ++ freeVars(r)
+    case Minus(l, r)  => freeVars(l) ++ freeVars(r)
+    case Times(l, r)  => freeVars(l) ++ freeVars(r)
     case Divide(l, r) => freeVars(l) ++ freeVars(r)
-    case Power(l, r) => freeVars(l) ++ freeVars(r)
+    case Power(l, r)  => freeVars(l) ++ freeVars(r)
     // special cases
-    case Differential(e) => val fv = freeVars(e); SetLattice.extendToDifferentialSymbols(fv)
+    case Differential(e) => SetLattice.extendToDifferentialSymbols(freeVars(e))
     // unofficial
-    case Pair(l, r) => freeVars(l) ++ freeVars(r)
-    case Nothing => bottom
+    case Pair(l, r)   => freeVars(l) ++ freeVars(r)
+    case Nothing      => bottom
     // Anything represents the list of all variables, which are, thus, free
-    case Anything => topVarsDiffVars()
+    case Anything     => topVarsDiffVars()
   }
 
   /**
@@ -163,11 +163,10 @@ object StaticSemantics {
     case LessEqual(l, r)    => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
     case Less(l, r)         => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
 
-    case PredOf(p, arg) => VCF(fv = freeVars(arg), bv = bottom)
-    // DotFormula is like a reserved Predicational
-    //@note DotFormula is a zero-parameter predicational, thus bv=topVarsDiffVars() not bv=bottom
-    case DotFormula => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
+    case PredOf(p, arg)     => VCF(fv = freeVars(arg), bv = bottom)
     case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
+    //@note DotFormula is like a reserved zero-parameter Predicational
+    case DotFormula         => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
 
     // homomorphic cases
     case Not(g)      => val vg = fmlVars(g); VCF(fv = vg.fv, bv = vg.bv)
@@ -181,15 +180,17 @@ object StaticSemantics {
     case Exists(vars, g) => val vg = fmlVars(g); VCF(fv = vg.fv -- vars, bv = vg.bv ++ vars)
 
     // modality bounding cases omit must-bound vars from fv and add (may-)bound vars to bv
-    case Box(p, g)     => val vp = StaticSemantics(p)
+    case Box(p, g)     =>
+      val vp = StaticSemantics(p)
       val vg = fmlVars(g)
       VCF(fv = vp.fv ++ (vg.fv -- vp.mbv), bv = vp.bv ++ vg.bv)
-    case Diamond(p, g) => val vp = StaticSemantics(p)
+    case Diamond(p, g) =>
+      val vp = StaticSemantics(p)
       val vg = fmlVars(g)
       VCF(fv = vp.fv ++ (vg.fv -- vp.mbv), bv = vp.bv ++ vg.bv)
 
     // special cases
-    // NOTE DifferentialFormula in analogy to Differential
+    //@note DifferentialFormula in analogy to Differential
     case DifferentialFormula(df) =>
       val vdf = fmlVars(df)
       VCF(fv = SetLattice.extendToDifferentialSymbols(vdf.fv), bv = vdf.bv)
@@ -200,7 +201,6 @@ object StaticSemantics {
   private def progVars(program: Program): VCP = {
     program match {
       // base cases
-      //@note program constant a does not literally occur since it is not a free or bound variables.
       case a: ProgramConst             => VCP(fv = topVarsDiffVars(), bv = topVarsDiffVars(), mbv = bottom)
       case a: DifferentialProgramConst => VCP(fv = topVarsDiffVars(), bv = topVarsDiffVars(), mbv = bottom)
       case Assign(x, e) => VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))
@@ -219,9 +219,9 @@ object StaticSemantics {
       case Dual(a) => val va = progVars(a); VCP(fv = va.fv, bv = va.bv, mbv = va.mbv)
 
       // special cases
-      // NOTE x:=* not mentioned in Definition 9
+      //@note x:=* in analogy to x:=e
       case AssignAny(x) => VCP(fv = bottom, bv = SetLattice(x), mbv = SetLattice(x))
-      // NOTE system of ODE cases not mentioned in Definition 9
+      //@note system generalization of x'=e&h
       case ODESystem(a, h) => val va = progVars(a)
         VCP(fv = va.fv ++ StaticSemantics(h).fv, bv = va.bv, mbv = va.mbv)
       case DifferentialProduct(a, b) => val va = progVars(a); val vb = progVars(b)
@@ -248,7 +248,7 @@ object StaticSemantics {
   }
 
   /**
-   * The signature of a term, i.e., set of function symbols occurring in it.
+   * The signature of a term, i.e., set of (non-logical) function symbols occurring in it.
    * Disregarding number literals.
    */
   def signature(term: Term): immutable.Set[NamedSymbol] = term match {
@@ -256,8 +256,8 @@ object StaticSemantics {
     case _: Variable => Set.empty
     case _: DifferentialSymbol => Set.empty
     case _: Number => Set.empty
-    case DotTerm => Set(DotTerm)
     case FuncOf(f, arg) => Set(f) ++ signature(arg)
+    case DotTerm => Set(DotTerm)
     // homomorphic cases
     case Neg(e) => signature(e)
     case Plus(l, r)   => signature(l) ++ signature(r)
@@ -275,7 +275,7 @@ object StaticSemantics {
   }
 
   /**
-   * The signature of a formula, i.e., set of function, predicate, and atomic program 
+   * The signature of a formula, i.e., set of (non-logical) function, predicate, and atomic program
    * symbols occurring in it.
    */
   def signature(formula: Formula): immutable.Set[NamedSymbol] = formula match {
@@ -317,17 +317,17 @@ object StaticSemantics {
     // base cases
     case ap: ProgramConst => Set(ap)
     case ap: DifferentialProgramConst => Set(ap)
-    case Assign(x, e) => signature(e)
+    case Assign(x, e)     => signature(e)
     case DiffAssign(xp, e) => signature(e)
-    case AssignAny(x) => Set.empty
-    case Test(f) => signature(f)
+    case AssignAny(x)     => Set.empty
+    case Test(f)          => signature(f)
     case AtomicODE(xp, e) => signature(e)
     // homomorphic cases
-    case Choice(a, b) => signature(a) ++ signature(b)
-    case Compose(a, b) => signature(a) ++ signature(b)
-    case Loop(a) => signature(a)
-    case Dual(a) => signature(a)
-    case ODESystem(a, h) => signature(a) ++ signature(h)
+    case Choice(a, b)     => signature(a) ++ signature(b)
+    case Compose(a, b)    => signature(a) ++ signature(b)
+    case Loop(a)          => signature(a)
+    case Dual(a)          => signature(a)
+    case ODESystem(a, h)  => signature(a) ++ signature(h)
     case DifferentialProduct(a, b) => signature(a) ++ signature(b)
   }
 
@@ -356,6 +356,7 @@ object StaticSemantics {
    * Any (non-logical) symbol occurring verbatim in program, whether free or bound variable or function or predicate or program constant.
    */
   def symbols(p: Program): immutable.Set[NamedSymbol] = {
+    //@note stat.mbv subset of stat.bv so no point in adding them
     val stat = StaticSemantics(p); signature(p) ++ stat.fv.toSymbolSet ++ stat.bv.toSymbolSet
   }
 
@@ -365,27 +366,23 @@ object StaticSemantics {
    * The set FV(a) of free variables of a sequent.
    */
   def freeVars(s: Sequent): SetLattice[NamedSymbol] =
-    s.ante.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ freeVars(b)) ++
-      s.succ.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ freeVars(b))
+    (s.ante ++ s.succ).foldLeft(bottom[NamedSymbol])((a,b)=>a ++ freeVars(b))
 
   /**
    * The set BV(a) of bound variables of a sequent.
    */
   def boundVars(s: Sequent): SetLattice[NamedSymbol] =
-    s.ante.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ boundVars(b)) ++
-      s.succ.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ boundVars(b))
+    (s.ante ++ s.succ).foldLeft(bottom[NamedSymbol])((a,b)=>a ++ boundVars(b))
 
   /**
    * The signature of a sequent.
    */
   def signature(s: Sequent): immutable.Set[NamedSymbol] =
-    s.ante.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ signature(b)) ++
-      s.succ.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ signature(b))
+    (s.ante ++ s.succ).foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ signature(b))
 
   /**
    * Any symbol occurring verbatim in a sequent, whether free or bound variable or function or predicate or program constant
    */
   def symbols(s: Sequent): immutable.Set[NamedSymbol] =
-    s.ante.foldLeft(Set[NamedSymbol]())((a,b)=>a ++ symbols(b)) ++
-      s.succ.foldLeft(Set[NamedSymbol]())((a,b)=>a ++ symbols(b))
+    (s.ante ++ s.succ).foldLeft(Set[NamedSymbol]())((a,b)=>a ++ symbols(b))
 }

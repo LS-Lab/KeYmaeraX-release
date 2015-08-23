@@ -52,8 +52,9 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    */
   def freeVars: SetLattice[NamedSymbol] = repl match {
     case replt: Term => what match {
-      case FuncOf(f: Function, Anything) => bottom[NamedSymbol] // Anything locally binds all variables
+      case FuncOf(f: Function, Anything) => bottom // Anything locally binds all variables
       case FuncOf(f: Function, DotTerm) =>
+        //@note DotTerm is not a Variable so the following assertions are redundant
         assert(!StaticSemantics.freeVars(replt).contains(DotTerm)/* || StaticSemantics(replt).isInfinite*/, "DotTerm is no variable")
         assert(!(StaticSemantics.freeVars(replt) -- Set(DotTerm)).contains(DotTerm), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replt) -- Set(DotTerm)) + " leading to unnecessary clashes")
         assert(StaticSemantics.freeVars(replt) -- Set(DotTerm) == StaticSemantics.freeVars(replt), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
@@ -61,8 +62,9 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       case _: Term => StaticSemantics.freeVars(repl)
     }
     case replf: Formula => what match {
-      case PredOf(p: Function, Anything) => bottom[NamedSymbol] // Anything locally binds all variables
+      case PredOf(p: Function, Anything) => bottom // Anything locally binds all variables
       case PredOf(p: Function, DotTerm) =>
+        //@note DotTerm is not a Variable so the following assertions are redundant
         assert(!StaticSemantics.freeVars(replf).contains(DotTerm) /*|| StaticSemantics(replf).fv.isInfinite*/, "DotTerm is no variable")
         assert(!(StaticSemantics.freeVars(replf) -- Set(DotTerm)).contains(DotTerm), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(DotTerm)) + " leading to unnecessary clashes")
         assert(StaticSemantics.freeVars(replf) -- Set(DotTerm) == StaticSemantics.freeVars(replf), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
@@ -74,7 +76,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       case _: Formula => StaticSemantics.freeVars(repl)
     }
     case replp: Program => what match {
-      case _: ProgramConst | _: DifferentialProgramConst => bottom[NamedSymbol] // program constants are always admissible, since their meaning doesn't depend on state
+      case _: ProgramConst | _: DifferentialProgramConst => bottom // program constants are always admissible, since their meaning doesn't depend on state
       case _ => throw new IllegalStateException("Disallowed substitution shape " + this)
     }
   }
@@ -100,9 +102,8 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
   }
 
   /**
-   * The key characteristic expression constituent that this SubstitutionPair is matching on.
-   * @return only the lead / key part that this SubstitutionPair is matching on,
-   *         which may not be its head.
+   * Occurrences of what symbol this SubstitutionPair will be replacing.
+   * @return Function/predicate/predicational or DotTerm or (Differential)ProgramConst whose occurrences we will replace.
    */
   private[core] def matchKey: NamedSymbol = what match {
     case DotTerm => DotTerm
@@ -111,14 +112,15 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case Anything => Anything
     case Nothing => assert(repl == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing // it makes no sense to substitute Nothing
     case a: DifferentialProgramConst => a
-    case a: ProgramConst => a
-    case DotFormula => DotFormula
+    case a: ProgramConst             => a
+    case DotFormula                  => DotFormula
     case PredicationalOf(p: Function, DotFormula) => p
     case _ => throw new IllegalArgumentException("Nonsubstitutable expression " + this)
   }
 
   /**
-   * Check whether we match on the term other, i.e. both have the same head.
+   * Check whether we match on the term other, i.e. both have the same head so the occurrence in other
+   * should be replaced according to this SubstitutionPair.
    */
   private[core] def sameHead(other: Expression): Boolean = what match {
     case FuncOf(lf, arg) =>
@@ -227,6 +229,36 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
 
   override def toString: String = "USubst{" + subsDefs.mkString(", ") + "}"
 
+
+  /**
+   * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).
+   * That is the (new) free variables introduced by this substitution, i.e.
+   * free variables of all repl that are not bound as arguments in what.
+   * @return union of the freeVars of all our substitution pairs.
+   */
+  def freeVars: SetLattice[NamedSymbol] = {
+    subsDefs.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ b.freeVars)
+  } ensuring(r => r == subsDefs.map(_.freeVars).
+    foldLeft(bottom[NamedSymbol])((a,b)=>a++b), "free variables identical, whether computed with map or with fold")
+
+  /**
+   * The signature of the replacement introduced by this substitution.
+   * @return union of the freeVars of all our substitution pairs.
+   */
+  def signature: immutable.Set[NamedSymbol] = {
+    subsDefs.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ b.signature)
+  } ensuring(r => r == subsDefs.map(_.signature).
+    foldLeft(Set.empty[NamedSymbol])((a,b)=>a++b), "signature identical, whether computed with map or with fold")
+
+  /**
+   * The key characteristic expression constituents that this Substitution is matching on.
+   * @return union of the matchKeys of all our substitution pairs.
+   */
+  private[core] def matchKeys: immutable.List[NamedSymbol] = {
+    subsDefs.foldLeft(immutable.List[NamedSymbol]())((a,b)=>a ++ immutable.List(b.matchKey))
+  }
+
+
   // apply calls usubst, augmenting with contract and exception context handling
 
   def apply(e: Expression): Expression = e match {
@@ -267,33 +299,6 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   /** Union of uniform substitutions, i.e., both replacement lists merged. */
   def ++(other: USubst): USubst = USubst(this.subsDefsInput ++ other.subsDefsInput)
 
-  /**
-   * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).
-   * That is the (new) free variables introduced by this substitution, i.e.
-   * free variables of all repl that are not bound as arguments in what.
-   * @return union of the freeVars of all our substitution pairs.
-   */
-  def freeVars: SetLattice[NamedSymbol] = {
-    subsDefs.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ b.freeVars)
-  } ensuring(r => r == subsDefs.map(_.freeVars).
-      foldLeft(bottom[NamedSymbol])((a,b)=>a++b), "free variables identical, whether computed with map or with fold")
-
-  /**
-   * The signature of the replacement introduced by this substitution.
-   * @return union of the freeVars of all our substitution pairs.
-   */
-  def signature: immutable.Set[NamedSymbol] = {
-    subsDefs.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ b.signature)
-  } ensuring(r => r == subsDefs.map(_.signature).
-    foldLeft(Set.empty[NamedSymbol])((a,b)=>a++b), "signature identical, whether computed with map or with fold")
-
-  /**
-   * The key characteristic expression constituents that this Substitution is matching on.
-   * @return union of the matchKeys of all our substitution pairs.
-   */
-  def matchKeys: immutable.List[NamedSymbol] = {
-    subsDefs.foldLeft(immutable.List[NamedSymbol]())((a,b)=>a ++ immutable.List(b.matchKey))
-  }
 
   /**
    * Whether this substitution matches to replace the given expression e,
@@ -315,11 +320,12 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
           xp
         case app@FuncOf(of, theta) if matchHead(app) =>
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[FuncOf] && sp.sameHead(app))
-          val FuncOf(rf, rArg) = subs.what
-          assert(rf == of, "match on same function heads")
-          assert(rArg == DotTerm || rArg == Nothing || rArg == Anything)
+          val FuncOf(wf, wArg) = subs.what
+          assert(wf == of, "match on same function heads")
+          assert(wArg == DotTerm || wArg == Nothing || wArg == Anything)
           // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
-          USubst(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(subs.repl.asInstanceOf[Term])
+          //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
+          USubst(SubstitutionPair(wArg, usubst(theta)) :: Nil).usubst(subs.repl.asInstanceOf[Term])
         case app@FuncOf(g:Function, theta) if !matchHead(app) => FuncOf(g, usubst(theta))
         case Anything =>
           assert(!subsDefs.exists(_.what == Anything), "Substitution of anything not supported " + this)
@@ -358,19 +364,20 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       formula match {
         case app@PredOf(op, theta) if matchHead(app) =>
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredOf] && sp.sameHead(app))
-          val PredOf(rp, rArg) = subs.what
-          assert(rp == op, "match only if same head")
-          assert(rArg == DotTerm || rArg == Nothing || rArg == Anything)
+          val PredOf(wp, wArg) = subs.what
+          assert(wp == op, "match only if same head")
+          assert(wArg == DotTerm || wArg == Nothing || wArg == Anything)
           // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
-          USubst(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
+          //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
+          USubst(SubstitutionPair(wArg, usubst(theta)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
         case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
         case app@PredicationalOf(op, fml) if matchHead(app) =>
           requireAdmissible(topVarsDiffVars[NamedSymbol](), fml, formula)
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredicationalOf] && sp.sameHead(app))
-          val PredicationalOf(rp, rArg) = subs.what
-          assert(rp == op, "match only if same head")
-          assert(rArg == DotFormula)
-          USubst(SubstitutionPair(rArg, usubst(fml)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
+          val PredicationalOf(wp, wArg) = subs.what
+          assert(wp == op, "match only if same head")
+          assert(wArg == DotFormula)
+          USubst(SubstitutionPair(wArg, usubst(fml)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
         case app@PredicationalOf(q, fml) if !matchHead(app) =>
           requireAdmissible(topVarsDiffVars[NamedSymbol](), fml, formula)
           PredicationalOf(q, usubst(fml))
@@ -379,6 +386,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         case DotFormula if !subsDefs.exists(_.what == DotFormula) => DotFormula
         case True | False => formula
 
+        // pseudo-homomorphic cases
         case Equal(l, r)        => Equal(usubst(l), usubst(r))
         case NotEqual(l, r)     => NotEqual(usubst(l), usubst(r))
         case GreaterEqual(l, r) => GreaterEqual(usubst(l), usubst(r))
@@ -387,7 +395,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         case Less(l, r)         => Less(usubst(l), usubst(r))
 
         // homomorphic cases
-        case Not(g) => Not(usubst(g))
+        case Not(g)      => Not(usubst(g))
         case And(l, r)   => And(usubst(l), usubst(r))
         case Or(l, r)    => Or(usubst(l), usubst(r))
         case Imply(l, r) => Imply(usubst(l), usubst(r))
@@ -425,23 +433,26 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         case a: ProgramConst if subsDefs.exists(_.what == a) =>
           subsDefs.find(_.what == a).get.repl.asInstanceOf[Program]
         case a: ProgramConst if !subsDefs.exists(_.what == a) => a
-        case Assign(x, e) => Assign(x, usubst(e))
+        case Assign(x, e)      => Assign(x, usubst(e))
         case DiffAssign(xp, e) => DiffAssign(xp, usubst(e))
-        case a: AssignAny => a
-        case Test(f) => Test(usubst(f))
+        case a: AssignAny      => a
+        case Test(f)           => Test(usubst(f))
         //case IfThen(cond, thenT) => IfThen(usubst(cond), usubst(thenT))
-        case ode: DifferentialProgram =>
+        case ODESystem(ode, h) =>
           //@note This case is a mixture of AtomicODE and ProgramConst. Only admissibility wrt BV still bound in the result (after substitution of DifferentialProgramConst) but admissible within the whole system simultaneously.
           //@note Conceptually easiest (albeit suboptimally efficient): pre-substitute without taboos to determine BV, then check admissibility during the proper substitution w.r.t. those BV as in other cases.
           requireAdmissible(StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv, ode, program)
           // requires within usubst(ode, odeBV) are checking redundantly
-          usubstODE(ode, StaticSemantics(ode).bv)
-        case Choice(a, b) => Choice(usubst(a), usubst(b))
-        case Compose(a, b) => requireAdmissible(StaticSemantics(usubst(a)).bv, b, program)
+          //@note usubstODE(ode, StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv) would be sound just more permissive
+          requireAdmissible(StaticSemantics(ode).bv, h, program)
+          // admissibility within ODE a will be checked recursively by usubstODE
+          ODESystem(usubstODE(ode, StaticSemantics(ode).bv), usubst(h))
+        case Choice(a, b)      => Choice(usubst(a), usubst(b))
+        case Compose(a, b)     => requireAdmissible(StaticSemantics(usubst(a)).bv, b, program)
           Compose(usubst(a), usubst(b))
-        case Loop(a) => requireAdmissible(StaticSemantics(usubst(a)).bv, a, program)
+        case Loop(a)           => requireAdmissible(StaticSemantics(usubst(a)).bv, a, program)
           Loop(usubst(a))
-        case Dual(a) => Dual(usubst(a))
+        case Dual(a)           => Dual(usubst(a))
       }
     } catch {
       case ex: IllegalArgumentException =>
@@ -458,9 +469,6 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    */
   private def usubstODE(ode: DifferentialProgram, odeBV: SetLattice[NamedSymbol]): DifferentialProgram = {
     ode match {
-      case ODESystem(a, h) => requireAdmissible(odeBV, h, ode)
-        // admissibility within ODE a will be checked recursively by usubstODE
-        ODESystem(usubstODE(a, odeBV), usubst(h))
       case AtomicODE(xp: DifferentialSymbol, e) => requireAdmissible(odeBV, e, ode)
         AtomicODE(xp, usubst(e))
       case c: DifferentialProgramConst if subsDefs.exists(_.what == c) =>
@@ -502,6 +510,8 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       def intersectsU(sigma: SubstitutionPair): Boolean =
         sigma.freeVars.intersect(U) != bottom
 
+    // The substitution pairs whose FV intersect U should not occur
+    //@note This checks more symbols than those that occur
     subsDefs.filter(intersectsU).flatMap(sigma => StaticSemantics.signature(sigma.what)).forall(fn => !occurrences.contains(fn))
   } ensuring(r =>
     // U-admissible iff FV(restrict this to occurrences) /\ U = empty
