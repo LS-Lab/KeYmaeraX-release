@@ -1011,6 +1011,67 @@ object DerivedAxioms {
   )
   lazy val DlinearT = derivedAxiomT(Dlinear)
 
+  // real arithmetic
+
+  /* Unused so far @todo use f(), g() etc instead of r,s
+Axiom "+ associative".
+  (r + s) + t = r + (s + t)
+End.
+
+Axiom "* associative".
+  (r * s) * t = r * (s * t)
+End.
+
+Axiom "+ commutative".
+  s+t = t+s
+End.
+
+Axiom "* commutative".
+  s*t = t*s
+End.
+
+Axiom "distributive".
+  r*(s+t) = (r*s) + (r*t)
+End.
+
+Axiom "+ identity".
+  s + 0 = s
+End.
+
+Axiom "* identity".
+  s * 1 = s
+End.
+
+Axiom "+ inverse".
+  s + (-s) = 0
+End.
+
+Axiom "* inverse".
+  s != 0 -> s * (s^-1) = 1
+End.
+
+Axiom "positivity".
+  0 < s | 0 = s | 0 < -s
+End.
+
+Axiom "+ closed".
+  (0 < s & 0 < t) -> 0 < s+t
+End.
+
+Axiom "* closed".
+  (0 < s & 0 < t) -> 0 < s*t
+End.
+
+Axiom "<".
+  (s<t) <-> (0 < t-s)
+End.
+
+Axiom ">".
+  (s>t) <-> (t<s)
+End.
+*/
+
+
   /**
    * {{{Axiom "abs".
    *   (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))

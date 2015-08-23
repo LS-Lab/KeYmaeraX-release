@@ -30,16 +30,26 @@ Changes to the KeYmaera X Kernel will have to be reviewed periodically in simila
 
 If there are any questions about the KeYmaera X Kernel code review or any suggestions on how it could be improved, please ask.
 
+Extended Code Review:
+In addition to the above files, an extended code review also considers
+R9) KeYmaeraXPrettyPrinter.scala
+R10) tools package
+
 Andre
 
 [1] André Platzer. 
-A uniform substitution calculus for differential dynamic logic. http://arxiv.org/abs/1503.01981
+A uniform substitution calculus for differential dynamic logic.
+In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015.
+Extended version arXiv http://arxiv.org/abs/1503.01981
 
 [2] André Platzer. 
 Differential dynamic logic for hybrid systems. 
 Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
 http://www.cs.cmu.edu/~aplatzer/pub/freedL.pdf
 
+[3] André Platzer. 
+Differential game logic. 
+ACM Trans. Comput. Log.
 
 ------------------------------------------------------------------
 Code Review: KeYmaera X Core: 2015-05-01
