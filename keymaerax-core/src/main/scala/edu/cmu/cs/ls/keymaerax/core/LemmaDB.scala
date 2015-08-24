@@ -54,10 +54,10 @@ trait LemmaDB {
 
   /**
    * Adds a new lemma to this lemma DB, with a unique name or None, which will automatically assign a name.
-   * @param lemma The lemma to add.
-   * @return The lemma ID.
+   * @param lemma The lemma whose Provable will be inserted under its name.
+   * @return Internal lemma identifier.
    * @requires if (lemma.name==Some(n)) then !contains(n)
    * @ensures  if (lemma.name==Some(n)) then \result==n  (usually)
    */
-  private[core] def add(lemma: Lemma): LemmaID
+  def add(lemma: Lemma): LemmaID
 }

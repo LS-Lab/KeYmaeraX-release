@@ -49,7 +49,7 @@ class FileLemmaDB extends LemmaDB {
     } else None
   }
 
-  private[core] override def add(lemma: Lemma): LemmaID = {
+  override def add(lemma: Lemma): LemmaID = {
     require(lemma.fact.isProved, "Only proved lemmas are currently supported, no open subgoals")
     val (id, file) = this.synchronized {
       // synchronize to make sure concurrent uses use new file names

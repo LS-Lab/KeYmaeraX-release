@@ -1127,13 +1127,13 @@ final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
  * {{{
  * G |- p(x), D
- * ---------------------------- (Skolemize) provided x not in G,D
- * G |- \forall x . p(x), D
+ * ----------------------- (Skolemize) provided x not in G,D
+ * G |- \forall x p(x), D
  * }}}
  * {{{
- * G, p(x) |- D
- * ---------------------------- (Skolemize) provided x not in G,D
- * G, \exists x . p(x) |- D
+ *           G, p(x) |- D
+ * ------------------------ (Skolemize) provided x not in G,D
+ * G, \exists x p(x) |- D
  * }}}
  * @note Could replace by uniform substitution rule application mechanism for rule "all generalization"
  * along with tactics expanding scope of quantifier with axiom "all quantifier scope" at the cost of propositional repacking and unpacking.
@@ -1147,6 +1147,7 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
   override def apply(s: Sequent): immutable.List[Sequent] = {
     // all symbols anywhere else in the sequent, i.e. except at the quantifier position
     // note: this skolemization will be by identity, not to a new name, so no clashes can be caused from s(pos)
+    //@note Taboos are the symbols in the remaining sequent, i.e. after replacing pos with innocent True
     val taboos = StaticSemantics.symbols(s.updated(pos, True))
     val (v,phi) = s(pos) match {
       case Forall(qv, qphi) if pos.isSucc => (qv, qphi)
@@ -1199,18 +1200,6 @@ object RCF {
  *********************************************************************************
  */
 
-/** Lemma mechanism */
-object LookupLemma {
-  /**
-   * Add given new lemma to the given lemma database.
-   * @param lemmaDB Lemma database to insert into.
-   * @param lemma The lemma whose Provable will be inserted under its name.
-   * @return Internal lemma identifier.
-   * @requires if (lemma.name==Some(n)) then !lemmaDB.contains(n)
-   */
-  def addLemma(lemmaDB: LemmaDB, lemma: Lemma): String = lemmaDB.add(lemma)
-
-}
 /**
  * Lookup a lemma that has been proved previously or by an external arithmetic tool.
  * @author nfulton
@@ -1399,9 +1388,9 @@ case class EquivifyRight(pos: SuccPos) extends RightRule {
 /**
  * Commute equivalence left
  * {{{
- * G, b<->a |-  D
+ * b<->a, G |-  D
  * -------------
- * G, a<->b |-  D
+ * a<->b, G |-  D
  * }}}
  * @derived
  */
@@ -1418,7 +1407,7 @@ case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
  * {{{
  * G |- b<->a, D
  * -------------
- * G |- a<->b,  D
+ * G |- a<->b, D
  * }}}
  * @derived
  */
