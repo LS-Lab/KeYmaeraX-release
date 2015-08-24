@@ -10,7 +10,7 @@
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
- * @note Code Review: 2015-05-01
+ * @note Code Review: 2015-08-24
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -343,6 +343,7 @@ End.
 Axiom "DE differential effect".
   /* [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
   /* @NOTE Generalized argument compared to theory as in DE differential effect (system) */
+  /* @NOTE In systems, f(x) cannot have ' by data structure invariant */
   [{x'=f(x)&q(x)}]p(??) <-> [{x'=f(x)&q(x)}][x':=f(x);]p(??)
 End.
 

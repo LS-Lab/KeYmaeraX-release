@@ -5,7 +5,7 @@
 /**
  * Set Lattices.
  * @author smitsch
- * @note Code Review: 2015-05-01
+ * @note Code Review: 2015-08-24
  */
 package edu.cmu.cs.ls.keymaerax.core
 
