@@ -193,10 +193,10 @@ object HilbertCalculus {
           case FuncOf(_,Nothing) => Some(Dconst)
         }
         case Not(f)         => f match {
-          case _: Box       => Some(useAt("[] dual"))
-          case _: Diamond   => Some(useAt("<> dual"))
-          case _: Forall    => Some(useAt("all dual"))
-          case _: Exists    => Some(useAt("exists dual"))
+          case _: Box       => Some(useAt("![]"))
+          case _: Diamond   => Some(useAt("!<>"))
+          case _: Forall    => Some(useAt("!all"))
+          case _: Exists    => Some(useAt("!exists"))
           case _: Equal     => ???
           case _: NotEqual  => Some(useAt("= negate"))
           case _: Less      => Some(useAt("< negate"))
