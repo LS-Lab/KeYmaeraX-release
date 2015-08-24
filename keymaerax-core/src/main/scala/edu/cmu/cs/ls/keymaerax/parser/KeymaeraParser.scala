@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.tactics.{ProofNode, ConfigurableGenerate}
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.lexical._

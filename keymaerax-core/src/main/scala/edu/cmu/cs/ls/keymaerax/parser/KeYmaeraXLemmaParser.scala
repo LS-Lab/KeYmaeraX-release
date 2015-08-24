@@ -4,8 +4,9 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{ToolEvidence, Evidence, Formula}
+import edu.cmu.cs.ls.keymaerax.core.{Evidence, Formula}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 /**
  * Created by smitsch on 7/03/15.

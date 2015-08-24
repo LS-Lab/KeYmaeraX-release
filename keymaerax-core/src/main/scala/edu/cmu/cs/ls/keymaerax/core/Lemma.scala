@@ -41,9 +41,4 @@ final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[St
 
 /** "Weak" Correctness evidence for lemmas */
 trait Evidence
-case class ProofEvidence(/*proof : List[LoadedBranch]*/) extends Evidence
-case class ToolEvidence(info : Map[String,String]) extends Evidence {
-  override def toString: String =
-    "Tool.\n  " + info.map(entry => entry._1 + " \"\"\"\"" + entry._2 + "\"\"\"\"").mkString("\n  ") + "\nEnd."
-}
-case class ExternalEvidence(/*file:File*/) extends Evidence
+

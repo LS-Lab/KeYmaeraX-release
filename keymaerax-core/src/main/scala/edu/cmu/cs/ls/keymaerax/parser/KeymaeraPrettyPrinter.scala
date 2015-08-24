@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 
 object KeYmaeraPrettyPrinter extends KeYmaeraPrettyPrinter(ParseSymbols) {

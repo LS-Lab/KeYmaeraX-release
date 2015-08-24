@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, ApplyRule}
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 import scala.annotation.switch
 import scala.collection.immutable

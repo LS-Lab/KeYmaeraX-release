@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.debugT
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.{assignb, closeId, composeb, cut, ls, onBranch}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
-import edu.cmu.cs.ls.keymaerax.tools.{Tool, Mathematica}
+import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, Tool, Mathematica}
 import testHelper.ProvabilityTestHelper
 
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
@@ -40,7 +40,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val f = TacticLibrary.universalClosure("(x > 0 & y > x) -> x >= 0".asFormula)
     val lemmaDB = new FileLemmaDB
     val res = RCF.proveArithmetic(math, f)
-    val id = LookupLemma.addLemma(lemmaDB, res)
+    val id = lemmaDB.add(res)
 
     (res.fact.conclusion.succ.head match {
       case Equiv(_, True) => true
@@ -55,7 +55,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val f = TacticLibrary.universalClosure("(x > 0 & y = x+1 & y > x) -> (x >= 0 & y > 0)".asFormula)
     val lemmaDB = new FileLemmaDB
     val res = RCF.proveArithmetic(math, f)
-    val id = LookupLemma.addLemma(lemmaDB, res)
+    val id = lemmaDB.add(res)
 
     (res.fact.conclusion.succ.head match {
           case Equiv(_, True) => true
@@ -70,7 +70,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val f = TacticLibrary.universalClosure("(x > 0 & y = x+1 & y > x) -> (y > 0)".asFormula)
     val lemmaDB = new FileLemmaDB
     val res = RCF.proveArithmetic(math, f)
-    val id = LookupLemma.addLemma(lemmaDB, res)
+    val id = lemmaDB.add(res)
 
     (res.fact.conclusion.succ.head match {
         case Equiv(_, True) => true
@@ -85,7 +85,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val f = TacticLibrary.universalClosure("(x > 0 & y = x+1 & x+1 > x) -> (x+1 > 0)".asFormula)
     val lemmaDB = new FileLemmaDB
     val res = RCF.proveArithmetic(math, f)
-    val id = LookupLemma.addLemma(lemmaDB, res)
+    val id = lemmaDB.add(res)
 
     (res.fact.conclusion.succ.head match {
           case Equiv(_, True) => true
@@ -109,7 +109,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     // cannot use lemma names for testing, because running the test multiple times results in duplicate lemmas
     val lemma = Lemma(r1.provableWitness, evidence /*, Some("My first lemma")*/)
     // add lemma into DB, which creates an ID for it. use the ID to apply the lemma
-    val lemmaID = LookupLemma.addLemma(lemmaDB, lemma)
+    val lemmaID = lemmaDB.add(lemma)
 
     val h = "[y:=3; x:=2;]x=2".asFormula
     val t = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(h))
