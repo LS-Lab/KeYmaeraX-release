@@ -388,11 +388,6 @@ Axiom "DS& differential equation solution".
   [{x'=c()&q(x)}]p(x) <-> \forall t (t>=0 -> ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) -> [x:=x+(c()*t);]p(x)))
 End.
 
-/* @Derived! */
-Axiom "Dsol& differential equation solution".
-  <{x'=c()&q(x)}>p(x) <-> \exists t (t>=0 & ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))
-End.
-
 /** @Derived from DW (not implementable for technical reasons - abstraction of c, ??) */
 Axiom "DX differential skip".
   [{c&H(??)}]p(??) -> (H(??)->p(??))
