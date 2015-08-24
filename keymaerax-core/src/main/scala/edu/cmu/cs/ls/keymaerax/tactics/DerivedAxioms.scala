@@ -120,6 +120,8 @@ object DerivedAxioms {
     case "<-> reflexive" => Some(equivReflexiveF, equivReflexiveT)
     case "!! double negation" => Some(doubleNegationF, doubleNegationT)
     case "exists dual" => Some(existsDualF, existsDualT)
+    case "!exists" => Some(notExistsF, notExistsT)
+    case "!all" => Some(notAllF, notAllT)
     case "[] dual" => Some(boxDualF, boxDualT)
     case "<:=> assign" => Some(assigndF, assigndT)
     case ":= assign dual" => Some(assignDualF, assignDualT)
@@ -156,6 +158,7 @@ object DerivedAxioms {
     case "0*" => Some(zeroTimesF, zeroTimesT)
     case "0+" => Some(zeroPlusF, zeroPlusT)
     case "DS differential equation solution" => Some(DSnodomainF, DSnodomainT)
+    case "Dsol& differential equation solution" => Some(DSddomainF, DSddomainT)
     case "Dsol differential equation solution" => Some(DSdnodomainF, DSdnodomainT)
     case "' linear" => Some(DlinearF, DlinearT)
     case "DG differential pre-ghost" => Some(DGpreghostF, DGpreghostT)
@@ -231,6 +234,74 @@ object DerivedAxioms {
   )
 
   lazy val existsDualT = derivedAxiomT(existsDualAxiom)
+
+  /**
+   * {{{Axiom "!exists".
+   *   (!\exists x (p(x))) <-> \forall x (!p(x))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val notExistsF = "(!\\exists x (p(x))) <-> \\forall x (!p(x))".asFormula
+  lazy val notExists = derivedAxiom("!exists",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notAllF)),
+    useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::0::Nil) &
+      useAt("exists dual")(1, 0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val notExistsT = derivedAxiomT(notExists)
+
+  /**
+   * {{{Axiom "!all".
+   *   (!\forall x (p(x))) <-> \exists x (!p(x))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val notAllF = "(!\\forall x (p(x))) <-> \\exists x (!p(x))".asFormula
+  lazy val notAll = derivedAxiom("!all",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notAllF)),
+    useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::0::Nil) &
+    useAt("exists dual")(1, 0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val notAllT = derivedAxiomT(notAll)
+
+  /**
+   * {{{Axiom "![]".
+   *   ![a;]p(x) <-> <a;>!p(x)
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val notBoxF = "(![a;]p(x)) <-> (<a;>!p(x))".asFormula
+  lazy val notBox = derivedAxiom("![]",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notBoxF)),
+    useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::1::Nil) &
+      useAt("<> dual")(1, 0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val notBoxT = derivedAxiomT(notBox)
+
+  /**
+   * {{{Axiom "!<>".
+   *   !<a;>p(x) <-> [a;]!p(x)
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val notDiamondF = "(!<a;>p(x)) <-> ([a;]!p(x))".asFormula
+  lazy val notDiamond = derivedAxiom("!<>",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notDiamondF)),
+    useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::1::Nil) &
+      useAt("[] dual")(1, 0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  lazy val notDiamondT = derivedAxiomT(notDiamond)
 
   /**
    * {{{Axiom "all eliminate".
@@ -961,16 +1032,21 @@ object DerivedAxioms {
    *    <{x'=c()&q(x)}>p(x) <-> \exists t (t>=0 & ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))
    * End.
    * }}}
-   * @todo complete proof
    */
-  lazy val DSd = derivedAxiom("Dsol& differential equation solution",
-    Sequent(Nil, IndexedSeq(), IndexedSeq("<{x'=c()&q(x)}>p(x) <-> \\exists t (t>=0 & ((\\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))".asFormula)),
+  lazy val DSddomainF = "<{x'=c()&q(x)}>p(x) <-> \\exists t (t>=0 & ((\\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))".asFormula
+  lazy val DSddomain = derivedAxiom("Dsol& differential equation solution",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DSddomainF)),
     useAt("<> dual", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("DS& differential equation solution")(1, 0::0::Nil) &
-      useAt("exists dual")(1, 0::Nil) & //step(1, 0::Nil) &
+      useAt("!all")(1, 0::Nil) & //step(1, 0::Nil) &
       useAt("!-> deMorgan")(1, 0::0::Nil) &
+      useAt("!-> deMorgan")(1, 0::0::1::Nil) &
+      useAt("<> dual")(1, 0::0::1::1::Nil) &
+      //useAt("& associative", PosInExpr(1::Nil))(1, 0::0::Nil) &
       byUS("<-> reflexive")
   )
+
+  lazy val DSddomainT = derivedAxiomT(DSddomain)
 
   //  lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",
 //    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x q(x) <-> !(\\forall x (!q(x)))".asFormula)))

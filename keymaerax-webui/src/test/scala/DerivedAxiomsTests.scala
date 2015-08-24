@@ -74,6 +74,10 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
   it should "prove all eliminate" in {check(allEliminateAxiom)}
+  it should "prove !exists" in {check(notExists)}
+  it should "prove !all" in {check(notAll)}
+  it should "prove ![]" in {check(notBox)}
+  it should "prove !<>" in {check(notDiamond)}
   it should "prove all distribute" in {check(allDistributeAxiom)}
   it should "prove box dual" in {check(boxDualAxiom)}
   it should "prove []~><> propagation" in {check{boxDiamondPropagation}}
@@ -108,7 +112,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
   it should "prove DS no domain" in {check(DSnodomain)}
   it should "prove DSol no domain" in {check(DSdnodomain)}
-  it should "prove Dsol& differential equation solution" in {check(DSd)}
+  it should "prove Dsol& differential equation solution" in {check(DSddomain)}
   it should "prove 'linear" in {check(Dlinear)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "prove DX diamond differential skip" in {check(Dskipd)}
