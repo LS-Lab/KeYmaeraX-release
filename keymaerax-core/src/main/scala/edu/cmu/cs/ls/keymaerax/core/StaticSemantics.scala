@@ -5,7 +5,7 @@
 /**
  * The static semantics of differential dynamic logic.
  * @author Andre Platzer
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015. arXiv 1503.01981, 2015."
  * @note Code Review: 2015-05-01
  */
 package edu.cmu.cs.ls.keymaerax.core
