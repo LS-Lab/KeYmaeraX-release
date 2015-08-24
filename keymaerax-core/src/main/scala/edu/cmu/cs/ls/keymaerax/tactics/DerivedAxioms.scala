@@ -961,12 +961,15 @@ object DerivedAxioms {
    *    <{x'=c()&q(x)}>p(x) <-> \exists t (t>=0 & ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))
    * End.
    * }}}
-   * @todo duality from DS&
+   * @todo complete proof
    */
   lazy val DSd = derivedAxiom("Dsol& differential equation solution",
     Sequent(Nil, IndexedSeq(), IndexedSeq("<{x'=c()&q(x)}>p(x) <-> \\exists t (t>=0 & ((\\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))".asFormula)),
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
-      step(SuccPosition(0, 0::Nil))
+    useAt("<> dual", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("DS& differential equation solution")(1, 0::0::Nil) &
+      useAt("exists dual")(1, 0::Nil) & //step(1, 0::Nil) &
+      useAt("!-> deMorgan")(1, 0::0::Nil) &
+      byUS("<-> reflexive")
   )
 
   //  lazy val existsDualAxiom: LookupLemma = derivedAxiom("exists dual",

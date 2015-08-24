@@ -108,9 +108,10 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
   it should "prove DS no domain" in {check(DSnodomain)}
   it should "prove DSol no domain" in {check(DSdnodomain)}
+  it should "prove Dsol& differential equation solution" in {check(DSd)}
   it should "prove 'linear" in {check(Dlinear)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
-  it should "DX diamond differential skip" in {check(Dskipd)}
+  it should "prove DX diamond differential skip" in {check(Dskipd)}
   it should "prove = reflexive" in {check(equalReflex)}
   it should "prove = commute" in {check(equalCommute)}
   it should "prove <=" in {check(lessEqual)}
