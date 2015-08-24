@@ -24,8 +24,7 @@ package edu.cmu.cs.ls.keymaerax.core
  *  )
  * // store a lemma
  * val evidence = ToolEvidence(immutable.Map("input" -> proved.toString, "output" -> "true")) :: Nil))
- * val lemmaID = LookupLemma.addLemma(
- *   lemmaDB,
+ * val lemmaID = lemmaDB.add(
  *   Lemma(proved, evidence, Some("Lemma <?> test"))
  * )
  * // use a lemma

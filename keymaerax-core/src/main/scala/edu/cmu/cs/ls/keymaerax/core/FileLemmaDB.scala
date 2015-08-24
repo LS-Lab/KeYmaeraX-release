@@ -24,6 +24,7 @@ import edu.cmu.cs.ls.keymaerax.parser._
  *
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
+ * @todo Code Review: move out of core and replace with String->Lemma
  */
 class FileLemmaDB extends LemmaDB {
 
