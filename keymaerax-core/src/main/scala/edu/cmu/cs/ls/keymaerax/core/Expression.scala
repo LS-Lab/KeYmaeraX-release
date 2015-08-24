@@ -532,7 +532,7 @@ object DifferentialProduct {
     case p: DifferentialProduct => differentialSymbols(p.left) ++ differentialSymbols(p.right)
     case AtomicODE(xp, _) => xp :: Nil
     case a: DifferentialProgramConst => Nil
-  }} ensuring(r => r==StaticSemantics.symbols(ode).toList.filter(x=>x.isInstanceOf[DifferentialSymbol]),
+  }} ensuring(r => r.toSet==StaticSemantics.symbols(ode).filter(x=>x.isInstanceOf[DifferentialSymbol]),
     "StaticSemantics should agree since differential symbols only occur on the left-hand side of differential equations " + StaticSemantics.symbols(ode).toList.filter(x=>x.isInstanceOf[DifferentialSymbol]))
 
 }
