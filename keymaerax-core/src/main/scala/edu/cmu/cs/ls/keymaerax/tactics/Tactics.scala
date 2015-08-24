@@ -262,7 +262,7 @@ object Tactics {
     /** Returns true if this tactics is applicable to the proof node */
     def applicable(node : ProofNode) : Boolean
     /** Apply this tactic to the given node using the given tool (e.g., a specific mathematica kernel) */
-    def apply  (tool : Tool, node : ProofNode)
+    def apply  (tool : Tool, node : ProofNode): Unit
 
     def inheritStats(s : Stats) { // adopt stats (e.g., from privious tactic)
       tacs          = s.tacs

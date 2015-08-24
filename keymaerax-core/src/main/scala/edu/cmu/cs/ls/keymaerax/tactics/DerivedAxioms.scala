@@ -48,7 +48,7 @@ object DerivedAxioms {
         if (derivedAxiomDB.get(name) == Some(lemma)) lemma.name.get
         else throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(name))
       } else {
-        LookupLemma.addLemma(derivedAxiomDB, lemma)
+        derivedAxiomDB.add(lemma)
       }
       derivedAxiomDB.get(lemmaID).get
     }

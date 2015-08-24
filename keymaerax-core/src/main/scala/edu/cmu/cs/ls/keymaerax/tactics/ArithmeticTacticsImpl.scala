@@ -121,7 +121,7 @@ object ArithmeticTacticsImpl {
                 // TODO make lemma DB configurable
                 val lemmaDB = new FileLemmaDB()
                 val lemma = RCF.proveArithmetic(qe, node.sequent.succ.head)
-                val id = LookupLemma.addLemma(lemmaDB, lemma)
+                val id = lemmaDB.add(lemma)
 
                 lemma.fact.conclusion.succ.head match {
                   case lemmaFml@Equiv(res, True) => {
