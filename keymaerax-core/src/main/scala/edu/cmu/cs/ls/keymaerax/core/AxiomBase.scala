@@ -379,7 +379,6 @@ Axiom "DG++".
   ([{x'=f(x) & H(??)}]p(??))  ->  (\forall y [{y'=g(??),x'=f(x) & H(??)}]p(??))
 End.
 
-
 /* Formatter axioms for diff eqs. */
 Axiom ", commute".
   [{c,d & H(??)}]p(??) <-> [{d,c & H(??)}]p(??)
@@ -393,10 +392,6 @@ End.
 Axiom "Dsol& differential equation solution".
   <{x'=c()&q(x)}>p(x) <-> \exists t (t>=0 & ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))
 End.
-
-/**
- * ModelPlex axioms
- */
 
 /** @Derived from DW (not implementable for technical reasons - abstraction of c, ??) */
 Axiom "DX differential skip".
