@@ -132,7 +132,7 @@ class TacticExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) e
             tool.shutdown()
             runnable = false
           } else {
-            tool.check_and_recover()
+            tool.restart()
           }
       }
     }

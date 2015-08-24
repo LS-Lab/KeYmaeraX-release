@@ -40,10 +40,10 @@ trait MathematicaLink extends QETool with DiffSolutionTool {
    */
   def cancel : Boolean
 
-  def toMathematica(expr : KExpr) =
+  def toMathematica(expr : KExpr): MExpr =
     KeYmaeraToMathematica.fromKeYmaera(expr)
 
-  def toKeYmaera(expr : MExpr) =
+  def toKeYmaera(expr : MExpr): KExpr =
     MathematicaToKeYmaera.fromMathematica(expr)
 }
 
@@ -73,8 +73,9 @@ class JLinkMathematicaLink extends MathematicaLink {
   /**
    * Initializes the connection to Mathematica.
    * @param linkName The name of the link to use (platform-dependent, see Mathematica documentation)
+   * @return true if initialization was successful
    */
-  def init(linkName : String, jlinkLibDir : Option[String]) = {
+  def init(linkName : String, jlinkLibDir : Option[String]): Boolean = {
     if(jlinkLibDir.isDefined) {
       System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
     }
@@ -82,6 +83,8 @@ class JLinkMathematicaLink extends MathematicaLink {
       "-linkmode", "launch",
       "-linkname", linkName + " -mathlink"))
     ml.discardAnswer()
+    //@todo 6*9
+    true
   }
 
   /**

@@ -16,6 +16,12 @@ import edu.cmu.cs.ls.keymaerax.core.{Evidence, Formula, QETool}
 class Z3 extends ToolBase("Z3") with QETool {
   private val z3 = new Z3Solver
 
+  def init(config : Map[String,String]) = {initialized = true}
+
   override def qe(formula: Formula): Formula = z3.qe(formula)
   override def qeEvidence(formula: Formula): (Formula, Evidence) = z3.qeEvidence(formula)
+
+  override def restart() = {}
+
+  override def shutdown() = {}
 }

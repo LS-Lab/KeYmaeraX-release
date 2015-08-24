@@ -72,7 +72,7 @@ private object NameConversion {
       case None      => identifier
     }
     new com.wolfram.jlink.Expr(com.wolfram.jlink.Expr.SYMBOL, fullName)
-  }
+  } ensuring (r => r.symbolQ(), "symbol names expected as result")
 
   ////
   // toKeYmaera section. We decompose by function vs. variable. In each case, we
@@ -477,7 +477,7 @@ object KeYmaeraToMathematica {
   /**
    * Converts KeYmaera expressions into Mathematica expressions.
    */
-  def fromKeYmaera(e : KExpr) = e match {
+  def fromKeYmaera(e : KExpr): MExpr = e match {
     case t : Term => convertTerm(t)
     case t : Formula => convertFormula(t)
   }
@@ -486,6 +486,7 @@ object KeYmaeraToMathematica {
    * Converts a KeYmaera terms to a Mathematica expression.
    */
   def convertTerm(t : Term) : MExpr = {
+    /** Convert tuples to list of sorts */
     def flattenSort(s: Sort): List[Sort] = s match {
       case Tuple(ls, rs) => ls :: rs :: Nil
       case _ => s :: Nil
@@ -495,16 +496,25 @@ object KeYmaeraToMathematica {
     t match {
       case FuncOf(fn, child) => convertFnApply(fn, child)
       case Neg(c) => new MExpr(MathematicaSymbols.MINUSSIGN, Array[MExpr](convertTerm(c)))
-      case Plus(l, r) => convertAdd(l, r)
-      case Minus(l, r) => convertSubtract(l, r)
-      case Times(l, r) => convertMultiply(l, r)
-      case Divide(l, r) => convertDivide(l, r)
-      case Power(l, r) => convertExp(l, r)
-      case Differential(c) => convertDerivative(c)
-      case DifferentialSymbol(c) => convertDerivative(c)
+      case Plus(l, r) =>
+        new MExpr(MathematicaSymbols.PLUS, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Minus(l, r) =>
+        new MExpr(MathematicaSymbols.MINUS, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Times(l, r) =>
+        new MExpr(MathematicaSymbols.MULT, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Divide(l, r) =>
+        new MExpr(MathematicaSymbols.DIV, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Power(l, r) =>
+        new MExpr(MathematicaSymbols.EXP, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Differential(c) =>
+        new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convertTerm(c)))
+      case DifferentialSymbol(c) =>
+        new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convertTerm(c)))
       case Number(n) => new MExpr(n.underlying())
-      case Pair(l, r) => convertPair(l, r)
-      case t: Variable => convertNS(t)
+      case Pair(l, r) =>     //@todo handle nested pairs (flatten to a list?)
+        new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(l), convertTerm(r)))
+
+      case t: Variable => NameConversion.toMathematica(t)
     }
   }
   
@@ -512,16 +522,16 @@ object KeYmaeraToMathematica {
    * Converts KeYmaera formulas into Mathematica objects
    */
   def convertFormula(f : Formula) : MExpr = f match {
-    case And(l,r) => convertAnd(l,r)
-    case Equiv(l,r) => convertEquiv(l,r)
-    case Imply(l,r) => convertImply(l,r)
-    case Or(l,r) => convertOr(l,r)
-    case Equal(l,r) => convertEquals(l,r)
-    case NotEqual(l,r) => convertNotEquals(l,r)
-    case LessEqual(l,r) => convertLessEqual(l,r)
-    case Less(l,r) => convertLessThan(l,r)
-    case GreaterEqual(l,r) => convertGreaterEqual(l,r)
-    case Greater(l,r) => convertGreaterThan(l,r)
+    case And(l,r)   => new MExpr(MathematicaSymbols.AND, Array[MExpr](convertFormula(l), convertFormula(r)))
+    case Equiv(l,r) => new MExpr(MathematicaSymbols.BIIMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
+    case Imply(l,r) => new MExpr(MathematicaSymbols.IMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
+    case Or(l,r)    => new MExpr(MathematicaSymbols.OR, Array[MExpr](convertFormula(l), convertFormula(r)))
+    case Equal(l,r) => new MExpr(MathematicaSymbols.EQUALS, Array[MExpr](convertTerm(l), convertTerm(r)))
+    case NotEqual(l,r) => new MExpr(MathematicaSymbols.UNEQUAL, Array[MExpr](convertTerm(l), convertTerm(r)))
+    case LessEqual(l,r) => new MExpr(MathematicaSymbols.LESS_EQUALS, Array[MExpr](convertTerm(l), convertTerm(r)))
+    case Less(l,r)   => new MExpr(MathematicaSymbols.LESS, Array[MExpr](convertTerm(l), convertTerm(r)))
+    case GreaterEqual(l,r) => new MExpr(MathematicaSymbols.GREATER_EQUALS, Array[MExpr](convertTerm(l), convertTerm(r)))
+    case Greater(l,r) => new MExpr(MathematicaSymbols.GREATER, Array[MExpr](convertTerm(l), convertTerm(r)))
     case False => MathematicaSymbols.FALSE
     case True => MathematicaSymbols.TRUE
     case Not(phi) => new MExpr(MathematicaSymbols.NOT, Array[MExpr](convertFormula(phi)))
@@ -529,57 +539,18 @@ object KeYmaeraToMathematica {
     case Forall(vs, phi) => convertForall(vs,phi)
   }
   
-  def convertAdd(l : Term, r : Term) = {
-    val args = Array[MExpr](convertTerm(l), convertTerm(r))
-    new MExpr(MathematicaSymbols.PLUS, args)
-  }
-  def convertSubtract(l : Term, r: Term) = {
-    val args = Array[MExpr](convertTerm(l), convertTerm(r))
-    new MExpr(MathematicaSymbols.MINUS, args)
-  }
-  def convertMultiply(l : Term, r: Term) = {
-    val args = Array[MExpr](convertTerm(l), convertTerm(r))
-    new MExpr(MathematicaSymbols.MULT, args)
-  }
-  def convertDivide(l : Term, r: Term) = {
-    val args = Array[MExpr](convertTerm(l), convertTerm(r))
-    new MExpr(MathematicaSymbols.DIV, args)
-  }
-  def convertExp(l : Term, r: Term) = {
-    val args = Array[MExpr](convertTerm(l), convertTerm(r))
-    new MExpr(MathematicaSymbols.EXP, args)
-  }
-  def convertFnApply(fn: Function, child: Term) = child match {
-    case Nothing => convertNS(new Function(NameConversion.CONST_FN_PREFIX + fn.name, fn.index, fn.domain, fn.sort))
+  def convertFnApply(fn: Function, child: Term): MExpr = child match {
+    case Nothing => NameConversion.toMathematica(new Function(NameConversion.CONST_FN_PREFIX + fn.name, fn.index, fn.domain, fn.sort))
     case _ =>
-      val args = Array[MExpr](convertNS(fn), new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(child))))
+      //@todo Code Review: figure out how nested lists affect binary functions
+      val args = Array[MExpr](NameConversion.toMathematica(fn), new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(child))))
       new MExpr(MathematicaSymbols.APPLY, args)
   }
-  def convertDerivative(t:Term) = {
-    val args = Array[MExpr](convertTerm(t))
-    new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), args)
-  }
 
-  /** Converts a pair of terms to Mathematica */
-  def convertPair(l: Term, r: Term): MExpr = {
-    //@todo handle nested pairs (flatten to a list?)
-    new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(l), convertTerm(r)))
-  }
-  
-  /**
-   * Converts a named symbol into Mathematica
-   */
-  def convertNS(ns : NamedSymbol) = {
-    val result = NameConversion.toMathematica(ns)
-    if(!result.symbolQ()) {
-      throw new Exception("Expected named symbol to be a symbol, but it was not.")
-    }
-    result
-  }
-
+  /** Convert block of exists quantifiers into a single exists quantifier block */
   def convertExists(vs:Seq[NamedSymbol],f:Formula) = {
     val (vars, formula) = collectVarsExists(vs, f)
-    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(convertNS).toArray)
+    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(NameConversion.toMathematica).toArray)
     new MExpr(MathematicaSymbols.EXISTS, Array[MExpr](variables, convertFormula(formula)))
   }
   private def collectVarsExists(vsSoFar:Seq[NamedSymbol],candidate:Formula) : (Seq[NamedSymbol], Formula) = {
@@ -589,9 +560,10 @@ object KeYmaeraToMathematica {
     }
   }
 
+  /** Convert block of forall quantifiers into a single forall quantifier block */
   def convertForall(vs:Seq[NamedSymbol],f:Formula) = {
     val (vars, formula) = collectVarsForall(vs, f)
-    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(convertNS).toArray)
+    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(NameConversion.toMathematica).toArray)
     new MExpr(MathematicaSymbols.FORALL, Array[MExpr](variables, convertFormula(formula)))
   }
   private def collectVarsForall(vsSoFar:Seq[NamedSymbol],candidate:Formula) : (Seq[NamedSymbol], Formula) = {
@@ -599,48 +571,6 @@ object KeYmaeraToMathematica {
       case Forall(nextVs, nextf) =>  collectVarsForall(vsSoFar ++ nextVs, nextf)
       case _ => (vsSoFar,candidate)
     }
-  }
-  
-  def convertEquals(left:Term,right:Term) = {
-    val args = Array[MExpr](convertTerm(left), convertTerm(right))
-    new MExpr(MathematicaSymbols.EQUALS, args)
-  }
-  def convertGreaterEqual(left:Term,right:Term) = {
-    val args = Array[MExpr](convertTerm(left), convertTerm(right))
-    new MExpr(MathematicaSymbols.GREATER_EQUALS, args)
-  }
-  def convertLessEqual(left:Term,right:Term) = {
-    val args = Array[MExpr](convertTerm(left), convertTerm(right))
-    new MExpr(MathematicaSymbols.LESS_EQUALS, args)
-  }
-  def convertNotEquals(left:Term,right:Term) = {
-    val args = Array[MExpr](convertTerm(left), convertTerm(right))
-    new MExpr(MathematicaSymbols.UNEQUAL, args)
-  }
-  def convertLessThan(left:Term,right:Term) = {
-    val args = Array[MExpr](convertTerm(left), convertTerm(right))
-    new MExpr(MathematicaSymbols.LESS, args)
-  }
-  def convertGreaterThan(left:Term,right:Term) = {
-    val args = Array[MExpr](convertTerm(left), convertTerm(right))
-    new MExpr(MathematicaSymbols.GREATER, args)
-  }
-  
-  def convertAnd(left:Formula, right:Formula) = {
-    val args = Array[MExpr](convertFormula(left), convertFormula(right))
-    new MExpr(MathematicaSymbols.AND, args)
-  }
-  def convertEquiv(left:Formula, right:Formula) = {
-    val args = Array[MExpr](convertFormula(left), convertFormula(right))
-    new MExpr(MathematicaSymbols.BIIMPL, args)
-  }
-  def convertImply(left:Formula, right:Formula) = {
-    val args = Array[MExpr](convertFormula(left), convertFormula(right))
-    new MExpr(MathematicaSymbols.IMPL, args)
-  }
-  def convertOr(left:Formula, right:Formula) = {
-    val args = Array[MExpr](convertFormula(left), convertFormula(right))
-    new MExpr(MathematicaSymbols.OR, args)
   }
   
   def keyExn(e: KExpr) : Exception =
