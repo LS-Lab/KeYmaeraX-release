@@ -6,6 +6,7 @@
  * Differential Dynamic Logic pretty printer in concrete KeYmaera X notation.
  * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ * @note Code Review 2015-08-24
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -145,8 +146,8 @@ class KeYmaeraXPrinter extends PrettyPrinter {
   private def pp(program: Program): String = emit(program match {
     case a: ProgramConst        => statement(a.asString)
     case Assign(x, e)           => statement(pp(x) + op(program).opcode + pp(e))
-    case AssignAny(x)           => statement(pp(x) + op(program).opcode)
     case DiffAssign(xp, e)      => statement(pp(xp) + op(program).opcode + pp(e))
+    case AssignAny(x)           => statement(pp(x) + op(program).opcode)
     case Test(f)                => statement(op(program).opcode + pp(f))
     case ODESystem(ode, f)      => "{" + ppODE(ode) + (if (false && f==True) "" else op(program).opcode + pp(f)) + "}"
     //@note unambiguously reparse as ODE not as equation that happens to involve a differential symbol.
@@ -156,6 +157,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case t: UnaryCompositeProgram => "{" + pp(t.child) + "}" + op(program).opcode
     //case t: UnaryCompositeProgram=> (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     case t: Compose if OpSpec.statementSemicolon =>
+      //@note in statementSemicolon mode, suppress opcode of Compose since already after each statement
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         /*op(t).opcode + */
         (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
@@ -229,5 +231,6 @@ class KeYmaeraXPrecedencePrinter extends KeYmaeraXPrinter {
  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrinter.fullPrinter]]
  */
 object FullPrettyPrinter extends KeYmaeraXPrinter {
+  //@note no contract to avoid recursive checking of contracts in error messages of KeYmaeraXPrinter.apply
   override def apply(expr: Expression): String = stringify(expr)
 }
