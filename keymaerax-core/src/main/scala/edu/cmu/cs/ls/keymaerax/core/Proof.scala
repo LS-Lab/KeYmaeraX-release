@@ -12,7 +12,7 @@
  * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
- * @note Code Review: 2015-05-01
+ * @note Code Review: 2015-08-24
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -1101,11 +1101,6 @@ final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
     } } ensuring(admissible(f))
 
   /**
-   * Introduce a ghost for the target variable to remember the value of the previous variable.
-   */
-  //private def ghostifyDiamond(f: Formula) = DiamondModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
-
-  /**
    * Check whether this renaming is admissible for expression e, i.e.
    * the new name repl does not already occur (or the renaming was the identity).
    * @note identity renaming is merely allowed to enable BoundVariableRenaming to introduce stutter.
@@ -1233,9 +1228,9 @@ case class LookupLemma(lemmaDB: LemmaDB, lemmaID: String) extends Rule {
  * ------------------ (dual-free)
  *   G |- [a]true, D
  * }}}
- * @NOTE When using hybrid games axiomatization
+ * @note When using hybrid games axiomatization
  */
-case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
+final case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
   val name: String = "dual-free"
   /** Prove [a]true by showing that a is dual-free */
   override def apply(s: Sequent): immutable.List[Sequent] = {
