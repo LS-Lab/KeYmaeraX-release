@@ -500,6 +500,8 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   *********************************************************************************
   */
 
+//@todo Code Review: determine whether this categorization of proof rules is useful.
+
 /** A rule that tries closing a subgoal */
 trait ClosingRule extends Rule {}
 
@@ -563,7 +565,7 @@ case class HideLeft(pos: AntePos) extends LeftRule {
  * {{{
  *    G |- D
  * ------------- (Hide right)
- *   G |- p, D
+ *    G |- p, D
  * }}}
  */
 case class HideRight(pos: SuccPos) extends RightRule {
@@ -574,7 +576,14 @@ case class HideRight(pos: SuccPos) extends RightRule {
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
-/** Exchange left rule reorders antecedent */
+/**
+ * Exchange left rule reorders antecedent.
+ * {{{
+ * q, p, G |- D
+ * ------------- (Exchange left)
+ * p, q, G |- D
+ * }}}
+ */
 case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRule {
   val name: String = "ExchangeLeft"
   def apply(s: Sequent): immutable.List[Sequent] = {
@@ -582,7 +591,14 @@ case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRul
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
-/** Exchange right rule reorders succedent */
+/**
+ * Exchange right rule reorders succedent.
+ * {{{
+ * G |- q, p, D
+ * ------------- (Exchange right)
+ * G |- p, q, D
+ * }}}
+ */
 case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends TwoPositionRule {
   val name: String = "ExchangeRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
@@ -623,7 +639,7 @@ object ContractionLeft {
  */
 
 /**
- * Ax Axiom close / Identity rule
+ * Close / Identity rule
  * {{{
  *        *
  * ------------------ (Close)
@@ -631,16 +647,16 @@ object ContractionLeft {
  * }}}
  */
 case class Close(assume: AntePos, pos: SuccPos) extends AssumptionRule with ClosingRule {
-  val name: String = "Axiom"
+  val name: String = "Close"
   /** Close identity */
   def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(assume) == s(pos)) {assert (assume.isAnte && pos.isSucc); Nil }
     else throw new InapplicableRuleException("The referenced formulas are not identical. Cannot close goal.\n  " + s(assume) + " not the same as\n  " + s(pos), this, s)
-  } ensuring (_.isEmpty, "closed if applicable")
+  } ensuring (r => r.isEmpty, "closed if applicable")
 }
 
 /**
- * close by true
+ * Close by true
  * {{{
  *       *
  * ------------------ (close true)
@@ -653,11 +669,11 @@ case class CloseTrue(pos: SuccPos) extends RightRule with ClosingRule {
   override def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(pos) == True) {assert(pos.isSucc); Nil }
     else throw new InapplicableRuleException("CloseTrue is not applicable to " + s + " at " + pos, this, s)
-  } ensuring (s(pos) == True && pos.isSucc && _.isEmpty, "closed if applicable")
+  } ensuring (r => s(pos) == True && pos.isSucc && r.isEmpty, "closed if applicable")
 }
 
 /**
- * close by false.
+ * Close by false.
  * {{{
  *        *
  * ------------------ (close false)
@@ -670,17 +686,18 @@ case class CloseFalse(pos: AntePos) extends LeftRule with ClosingRule {
   override def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(pos) == False) { assert(pos.isAnte); Nil }
     else throw new InapplicableRuleException("CloseFalse is not applicable to " + s + " at " + pos, this, s)
-  } ensuring (s(pos) == False && pos.isAnte && _.isEmpty, "closed if applicable")
+  } ensuring (r => s(pos) == False && pos.isAnte && r.isEmpty, "closed if applicable")
 }
 
 
 /**
- * cut in the given formula c.
+ * Cut in the given formula c.
  * {{{
  * G, c |- D     G |- D, c
  * ----------------------- (cut)
- *   G |- D
+ *         G |- D
  * }}}
+ * @note c will be added at the end on the subgoals
  */
 case class Cut(c: Formula) extends Rule {
   val name: String = "cut"
@@ -954,9 +971,9 @@ final case class Axiom(id: String) extends Rule with ClosingRule {
   val name: String = "Axiom " + id
   def apply(s: Sequent): immutable.List[Sequent] = {
     Axiom.axioms.get(id) match {
-      case Some(f) => immutable.List(new Sequent(s.pref, s.ante, s.succ.filter(_ != f)))
-        if (s.ante.isEmpty && s.succ.size == 1 && s.succ.contains(f)) Nil
-        else throw new InapplicableRuleException("Axiom " + f + " is not sole formula in:\n", this, s)
+      case Some(f) =>
+        if (s.succ.contains(f)) Nil
+        else throw new InapplicableRuleException("Axiom " + f + " is not in the succedent:\n", this, s)
       case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"), this, s)
     }
   } ensuring (r => r.isEmpty, "axiom lookup should close")
@@ -1015,7 +1032,7 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
   val name: String = "Uniform Renaming"
   private val renaming: URename = URename(what, repl)
 
-  override def toString: String = renaming.toString //name + "(" + what + "~>" + repl + ")"
+  override def toString: String = renaming.toString
 
   def apply(s: Sequent): immutable.List[Sequent] = List(renaming(s))
 }

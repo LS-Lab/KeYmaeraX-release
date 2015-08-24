@@ -6,7 +6,7 @@
  * Uniform Renaming for KeYmaera X
  * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
- * @note Code Review: 2015-05-01
+ * @note Code Review: 2015-08-24
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -32,7 +32,8 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   private val affected: Set[NamedSymbol] = if (what.sort == Real) Set(what,DifferentialSymbol(what)) else Set(what)
 
   /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of what. */
-  private val semanticRenaming: Boolean = true
+  //@todo Code Review: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
+  private val semanticRenaming: Boolean = System.getProperty("LAX", "true")=="true"
 
   override def toString: String = "URename{" + what + "~>" + repl + "}"
 
@@ -98,7 +99,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
     case DotFormula         => if (semanticRenaming) DotFormula else throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
     case True | False       => formula
 
-    // homomorphic base cases
+    // pseudo-homomorphic base cases
     case Equal(l, r)        => Equal(rename(l),        rename(r))
     case NotEqual(l, r)     => NotEqual(rename(l),     rename(r))
     case GreaterEqual(l, r) => GreaterEqual(rename(l), rename(r))
