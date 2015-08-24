@@ -515,38 +515,6 @@ Axiom "I induction".
   /*@TODO Drop or Use this form instead? which is possibly more helpful: ([{a;}*](p(??) -> [a;] p(??))) -> (p(??) -> [{a;}*]p(??)) THEORY */
   (p(??) & [{a;}*](p(??) -> [a;] p(??))) -> [{a;}*]p(??)
 End.
-
-/**
- * Real arithmetic
- */
-
-Axiom "= reflexive".
-  s() = s()
-End.
-
-Axiom "= commute".
-  (f()=g()) <-> (g()=f())
-End.
-
-Axiom "<=".
-  (f()<=g()) <-> ((f()<g()) | (f()=g()))
-End.
-
-Axiom "= negate".
-  (!(f() != g())) <-> (f() = g())
-End.
-
-Axiom "< negate".
-  (!(f() >= g())) <-> (f() < g())
-End.
-
-Axiom ">= flip".
-  (f() >= g()) <-> (g() <= f())
-End.
-
-Axiom "> flip".
-  (f() > g()) <-> (g() < f())
-End.
 """
   /*
   Axiom "forall' derive forall".

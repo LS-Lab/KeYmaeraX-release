@@ -113,8 +113,9 @@ object DerivedAxioms {
    * @note For interface stability reasons (see [[AxiomTactic.axiomLookupBaseT()]])
    * @param name The name of the derived axiom.
    * @return The axiom formula and tactic, if found. None otherwise.
+   * @note Central index for looking up derived axioms by names.
    */
-  private def derivedAxiomInfo(name: String): Option[(Formula, Tactic)] = name match {
+  private def derivedAxiomInfo(name: String): Option[(Formula, ApplyRule[LookupLemma])] = {name match {
     //@note implemented as match rather than lookup in a map to retain lazy evaluation
     case "<-> reflexive" => Some(equivReflexiveF, equivReflexiveT)
     case "!! double negation" => Some(doubleNegationF, doubleNegationT)
@@ -158,11 +159,18 @@ object DerivedAxioms {
     case "Dsol differential equation solution" => Some(DSdnodomainF, DSdnodomainT)
     case "' linear" => Some(DlinearF, DlinearT)
     case "DG differential pre-ghost" => Some(DGpreghostF, DGpreghostT)
+    case "= reflexive" => Some(equalReflexiveF, equalReflexiveT)
+    case "= commute" => Some(equalCommuteF, equalCommuteT)
+    case "<=" => Some(lessEqualF, lessEqualT)
+    case "= negate" => Some(notNotEqualF, notNotEqualT)
+    case "< negate" => Some(notGreaterEqualF, notGreaterEqualT)
+    case ">= flip" => Some(flipGreaterEqualF, flipGreaterEqualT)
+    case "> flip" => Some(flipGreaterF, flipGreaterT)
     case "abs" => Some(absF, absT)
     case "min" => Some(minF, minT)
     case "max" => Some(maxF, maxT)
     case _ => None
-  }
+  } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == name, "Lookup of DerivedAxiom found correct lemma " + name)
 
   /**
    * {{{Axiom "<-> reflexive".
@@ -1012,6 +1020,91 @@ object DerivedAxioms {
   lazy val DlinearT = derivedAxiomT(Dlinear)
 
   // real arithmetic
+
+  /**
+   * {{{Axiom "= reflexive".
+   *    s() = s()
+   * End.
+   * }}}
+   */
+  lazy val equalReflexiveF = "s() = s()'".asFormula
+  lazy val equalReflex = derivedAxiom("= reflexive",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(equalReflexiveF)),
+    QE
+  )
+  lazy val equalReflexiveT = derivedAxiomT(equalReflex)
+
+  /**
+   * {{{Axiom "= commute".
+   *   (f()=g()) <-> (g()=f())
+   * End.
+   * }}}
+   */
+  lazy val equalCommuteF = "(f()=g()) <-> (g()=f())".asFormula
+  lazy val equalCommute = derivedAxiom("= commute",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(equalCommuteF)),
+    QE
+  )
+  lazy val equalCommuteT = derivedAxiomT(equalCommute)
+  /**
+   * {{{Axiom "<=".
+   *   (f()<=g()) <-> ((f()<g()) | (f()=g()))
+   * End.
+   * }}}
+   */
+  lazy val lessEqualF = "(f()<=g()) <-> ((f()<g()) | (f()=g()))".asFormula
+  lazy val lessEqual = derivedAxiom("<=",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(lessEqualF)),
+    QE
+  )
+  lazy val lessEqualT = derivedAxiomT(lessEqual)
+  /**
+   * {{{Axiom "= negate".
+   *   (!(f() != g())) <-> (f() = g())
+   * End.
+   * }}}
+   */
+  lazy val notNotEqualF = "(!(f() != g())) <-> (f() = g())".asFormula
+  lazy val notNotEqual = derivedAxiom("= negate",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notNotEqualF)),
+    QE
+  )
+  lazy val notNotEqualT = derivedAxiomT(notNotEqual)
+  /**
+   * {{{Axiom "< negate".
+   *   (!(f() >= g())) <-> (f() < g())
+   * End.
+   * }}}
+   */
+  lazy val notGreaterEqualF = "(!(f() >= g())) <-> (f() < g())".asFormula
+  lazy val notGreaterEqual = derivedAxiom("< negate",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notGreaterEqualF)),
+    QE
+  )
+  lazy val notGreaterEqualT = derivedAxiomT(notGreaterEqual)
+  /**
+   * {{{Axiom ">= flip".
+   *   (f() >= g()) <-> (g() <= f())
+   * End.
+   * }}}
+   */
+  lazy val flipGreaterEqualF = "(f() >= g()) <-> (g() <= f())".asFormula
+  lazy val flipGreaterEqual = derivedAxiom(">= flip",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(flipGreaterEqualF)),
+    QE
+  )
+  lazy val flipGreaterEqualT = derivedAxiomT(flipGreaterEqual)
+  /**
+   * {{{Axiom "> flip".
+   *   (f() > g()) <-> (g() < f())
+   * End.
+  */
+  lazy val flipGreaterF = "(f() > g()) <-> (g() < f())".asFormula
+  lazy val flipGreater = derivedAxiom("> flip",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(flipGreaterF)),
+    QE
+  )
+  lazy val flipGreaterT = derivedAxiomT(flipGreater)
 
   /* Unused so far @todo use f(), g() etc instead of r,s
 Axiom "+ associative".

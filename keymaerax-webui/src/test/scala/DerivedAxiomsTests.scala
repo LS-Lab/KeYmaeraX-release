@@ -111,6 +111,13 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove 'linear" in {check(Dlinear)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "DX diamond differential skip" in {check(Dskipd)}
+  it should "prove = reflexive" in {check(equalReflex)}
+  it should "prove = commute" in {check(equalCommute)}
+  it should "prove <=" in {check(lessEqual)}
+  it should "prove = negate" in {check(notNotEqual)}
+  it should "prove < negate" in {check(notGreaterEqual)}
+  it should "prove >= flip" in {check(flipGreaterEqual)}
+  it should "prove > flip" in {check(flipGreater)}
   it should "prove abs" in {check(absDef)}
   it should "prove min" in {check(minDef)}
   it should "prove max" in {check(maxDef)}
@@ -137,6 +144,13 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove <;> compose" in {check(composedT)}
   it should "prove <*> iterate" in {check(iteratedT)}
   it should "prove exists generalize" in {check(existsGeneralizeT)}
+  it should "prove = reflexive" in {check(equalReflexiveT)}
+  it should "prove = commute" in {check(equalCommuteT)}
+  it should "prove <=" in {check(lessEqualT)}
+  it should "prove = negate" in {check(notNotEqualT)}
+  it should "prove < negate" in {check(notGreaterEqualT)}
+  it should "prove >= flip" in {check(flipGreaterEqualT)}
+  it should "prove > flip" in {check(flipGreaterT)}
   it should "prove all substitute" in {check(allSubstituteT)}
   it should "prove vacuous exists" in {check(vacuousExistsT)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetT)}
