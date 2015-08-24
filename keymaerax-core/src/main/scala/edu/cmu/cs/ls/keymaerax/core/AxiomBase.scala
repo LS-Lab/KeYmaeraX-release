@@ -330,9 +330,9 @@ End.
  * DIFFERENTIAL EQUATION AXIOMS
  */
 
-Axiom "DW differential weakening".
-  [{c&H(??)}]p(??) <-> ([{c&H(??)}](H(??)->p(??)))
-/* [x'=f(x)&q(x);]p(x) <-> ([x'=f(x)&q(x);](q(x)->p(x))) THEORY */
+Axiom "DW".
+  [{c&H(??)}]H(??)
+/* [x'=f(x)&q(x);]q(x) THEORY */
 End.
 
 Axiom "DC differential cut".
