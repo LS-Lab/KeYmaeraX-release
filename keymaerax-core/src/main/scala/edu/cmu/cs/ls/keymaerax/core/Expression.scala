@@ -533,6 +533,6 @@ object DifferentialProduct {
     case AtomicODE(xp, _) => xp :: Nil
     case a: DifferentialProgramConst => Nil
   }} ensuring(r => r==StaticSemantics.symbols(ode).toList.filter(x=>x.isInstanceOf[DifferentialSymbol]),
-    "StaticSemantics should agree since differential symbols only occur on the left-hand side of differential equations")
+    "StaticSemantics should agree since differential symbols only occur on the left-hand side of differential equations " + StaticSemantics.symbols(ode).toList.filter(x=>x.isInstanceOf[DifferentialSymbol]))
 
 }
