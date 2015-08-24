@@ -1046,7 +1046,7 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
  * @author smitsch
  * @author Andre Platzer
  */
-case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
+final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
   require(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
   val name: String = "Bound Renaming"
 
@@ -1080,23 +1080,25 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
    * Ensures that the bound variable is literally bound on the top level, when in doubt by introducing a stutter.
    */
   private def ghostify(f: Formula): Formula =
-    if (!StaticSemantics(f).bv.intersect(SetLattice(Set[NamedSymbol](what, DifferentialSymbol(what)))).isEmpty) {
+    if (StaticSemantics(f).bv.intersect(SetLattice(Set[NamedSymbol](what, DifferentialSymbol(what)))).isEmpty) {
+      // old name is not bound anywhere in f, so no bound renaming needed/possible
+      f
+    } else {
       // old name is bound somewhere in f -> lazy check by ensuring that new name is admissible (does not occur)
       f match {
         case Forall(vars, _) if vars.contains(what) => apply(f)
         case Exists(vars, _) if vars.contains(what) => apply(f)
-        case Box(Assign(x, y), _) if x == y && x == repl => apply(f)
-        case Diamond(Assign(x, y), _) if x == y && x == repl => apply(f)
+        //@note e is not in scope of x so, unlike g, not affected by bound renaming yet
+        case Box(Assign(x, e), g) if x == repl => Box(Assign(repl, e), renaming(g))
+        case Diamond(Assign(x, e), g) if x == repl => Diamond(Assign(repl, e), renaming(g))
         case _ => if (compatibilityMode) {
           //println("LAX: BoundRenaming: Change alphaRenamingT and disable compatibilityMode" + (if (what==repl) " stutter " else "non-stutter") + "\nfor " + this + " in " + f.prettyString + " led to " + Box(Assign(repl, what), apply(f)).prettyString)
           if (Provable.DEBUG && repl != what) {println("LAX: BoundRenaming: Change alphaRenamingT and disable compatibilityMode" + (if (what==repl) " stutter " else "non-stutter") + "\nfor " + this + " in " + f.prettyString + " led to " + Box(Assign(repl, what), apply(f)).prettyString)}
-          Box(Assign(repl, what), apply(f))
+          //@note uniformly rename all occurrences of what to repl in f and prefix with an assignment [repl:=what] remembering what value 'what' used to have.
+          Box(Assign(repl, what), renaming(f))
         } else throw new BoundRenamingClashException("Bound renaming only to bound variables " +
           what + " is not bound", this.toString, f.prettyString)
-    } } ensuring(admissible(f)) else {
-      // old name is not bound anywhere in f, so no bound renaming needed/possible
-      f
-    }
+    } } ensuring(admissible(f))
 
   /**
    * Introduce a ghost for the target variable to remember the value of the previous variable.
