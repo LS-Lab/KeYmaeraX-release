@@ -9,9 +9,8 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 /**
- * Store and retrieve lemmas.
+ * Store and retrieve lemmas from a lemma database.
  *
- * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
  * @see Lemma
  * @example Storing and using a lemma

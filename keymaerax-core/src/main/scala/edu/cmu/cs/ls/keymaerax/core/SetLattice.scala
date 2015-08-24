@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
- * Set Lattices.
+ * Set Lattices are lattice of finite or cofinite sets.
  * @author smitsch
  * @note Code Review: 2015-08-24
  */

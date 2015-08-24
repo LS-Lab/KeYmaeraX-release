@@ -4,7 +4,7 @@
 */
 /**
  * Axioms of KeYmaera X and axiomatic proof rules of KeYmaera X.
- * resulting from differential dynamic logic
+ * resulting from differential dynamic logic.
  * @note Soundness-critical: Only adopt sound axioms and sound axiomatic rules.
  * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."

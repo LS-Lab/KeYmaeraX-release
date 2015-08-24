@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLemmaParser // external reference
 
 /**
  * Lemmas are named Provables, supported by some evidence of how they came about.
- * Created by smitsch on 4/28/15.
+ * The soundness-critical part in a lemma is its provable fact, which can only be obtained from the prover core.
  * @author Stefan Mitsch
  * @see LookupLemma
  * @see RCF.proveArithmetic
