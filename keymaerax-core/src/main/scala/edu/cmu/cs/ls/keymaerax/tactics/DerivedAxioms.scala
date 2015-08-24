@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, ApplyRule}
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 
+import scala.annotation.switch
 import scala.collection.immutable
 import scala.collection.immutable._
 
@@ -115,7 +116,7 @@ object DerivedAxioms {
    * @return The axiom formula and tactic, if found. None otherwise.
    * @note Central index for looking up derived axioms by names.
    */
-  private def derivedAxiomInfo(name: String): Option[(Formula, ApplyRule[LookupLemma])] = {name match {
+  private def derivedAxiomInfo(name: String): Option[(Formula, ApplyRule[LookupLemma])] = {(name: @switch) match {
     //@note implemented as match rather than lookup in a map to retain lazy evaluation
     case "<-> reflexive" => Some(equivReflexiveF, equivReflexiveT)
     case "!! double negation" => Some(doubleNegationF, doubleNegationT)
@@ -140,6 +141,10 @@ object DerivedAxioms {
     case "vacuous exists quantifier" => Some(vacuousExistsF, vacuousExistsT)
     case "V[:*] vacuous assign nondet" => Some(vacuousBoxAssignNondetF, vacuousBoxAssignNondetT)
     case "V<:*> vacuous assign nondet" => Some(vacuousDiamondAssignNondetF, vacuousDiamondAssignNondetT)
+    case "DW differential weakening" => Some(DWeakeningF, DWeakeningT)
+    case "DS differential equation solution" => Some(DSnodomainF, DSnodomainT)
+    case "Dsol& differential equation solution" => Some(DSddomainF, DSddomainT)
+    case "Dsol differential equation solution" => Some(DSdnodomainF, DSdnodomainT)
     case "Domain Constraint Conjunction Reordering" => Some(domainCommuteF, domainCommuteT)
     case "& commute" => Some(andCommuteF, andCommuteT)
     case "& associative" => Some(andAssocF, andAssocT)
@@ -157,9 +162,6 @@ object DerivedAxioms {
     case "true&" => Some(trueAndF, trueAndT)
     case "0*" => Some(zeroTimesF, zeroTimesT)
     case "0+" => Some(zeroPlusF, zeroPlusT)
-    case "DS differential equation solution" => Some(DSnodomainF, DSnodomainT)
-    case "Dsol& differential equation solution" => Some(DSddomainF, DSddomainT)
-    case "Dsol differential equation solution" => Some(DSdnodomainF, DSdnodomainT)
     case "' linear" => Some(DlinearF, DlinearT)
     case "DG differential pre-ghost" => Some(DGpreghostF, DGpreghostT)
     case "= reflexive" => Some(equalReflexiveF, equalReflexiveT)
@@ -971,6 +973,36 @@ object DerivedAxioms {
   )
 
   lazy val zeroPlusT = derivedAxiomT(zeroPlus)
+
+
+  // differential equations
+
+  /**
+   * {{{Axiom "DW differential weakening".
+   *    [{c&H(??)}]p(??) <-> ([{c&H(??)}](H(??)->p(??)))
+   *    /* [x'=f(x)&q(x);]p(x) <-> ([x'=f(x)&q(x);](q(x)->p(x))) THEORY */
+   * End.
+   * }}}
+   * @see footnote 3 in "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015. arXiv 1503.01981, 2015."
+   */
+  lazy val DWeakeningF = "[{c&H(??)}]p(??) <-> ([{c&H(??)}](H(??)->p(??)))".asFormula
+  lazy val DWeakening = derivedAxiom("DW differential weakening",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DWeakeningF)),
+    equivR(1) & onBranch(
+      (BranchLabels.equivLeftLbl,
+        cut("[{c&H(??)}](p(??)->(H(??)->p(??)))".asFormula) & onBranch(
+          (BranchLabels.cutShowLbl, cohide(2) & G & prop),
+          (BranchLabels.cutUseLbl,
+            useAt("K modal modus ponens")(-2) & implyL(-2) & (close, close) )
+        )
+        ),
+      (BranchLabels.equivRightLbl,
+        useAt("K modal modus ponens")(-1) &
+          implyL(-1) & (cohide(2) & byUS("DW"), close)
+        )
+    )
+  )
+  lazy val DWeakeningT = derivedAxiomT(DWeakening)
 
   /**
    * {{{Axiom "DS diamond differential skip".

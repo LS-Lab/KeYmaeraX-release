@@ -25,7 +25,8 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
 
   private val id: List[SubstRepl] = Nil
 
-  def apply(e1: Expression, e2: Expression): Subst = if (e1.kind==e2.kind) e1 match {
+  def apply(e1: Expression, e2: Expression): Subst = if (e1.kind==e2.kind || e1.kind==ProgramKind && e2.kind==DifferentialProgramKind)
+    e1 match {
     case t1: Term => apply(t1, e2.asInstanceOf[Term])
     case f1: Formula => apply(f1, e2.asInstanceOf[Formula])
     case p1: Program => apply(p1, e2.asInstanceOf[Program])
@@ -187,4 +188,4 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
 }
 
 case class UnificationException(e1: String, e2: String, info: String = "")
-  extends CoreException("Un-Unifiable:\n" + e1 + "\n" + e2 + "\n" + info) {}
+  extends CoreException("Un-Unifiable:\n" + e1 + " with\n" + e2 + "\n" + info) {}

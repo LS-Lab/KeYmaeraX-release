@@ -133,11 +133,14 @@ object TactixLibrary {
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Propositional tactics
+  /** Hide whether left or right */
   def hide                    : PositionTactic = TacticLibrary.hideT
   /** Hide left: weaken a formula to drop it from the antecedent */
   def hideL                   : PositionTactic = TacticLibrary.hideT
   /** Hide right: weaken a formula to drop it from the succcedent */
   def hideR                   : PositionTactic = TacticLibrary.hideT
+  /** CoHide whether left or right: drop all other formulas from the sequent */
+  def cohide                  : PositionTactic = PropositionalTacticsImpl.cohideT
   /** !L Not left: move an negation in the antecedent to the succedent */
   def notL                    : PositionTactic = TacticLibrary.NotLeftT
   /** !R Not right: move an negation in the succedent to the antecedent */
