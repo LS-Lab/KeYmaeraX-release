@@ -1027,7 +1027,7 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val equalReflexiveF = "s() = s()'".asFormula
+  lazy val equalReflexiveF = "s() = s()".asFormula
   lazy val equalReflex = derivedAxiom("= reflexive",
     Sequent(Nil, IndexedSeq(), IndexedSeq(equalReflexiveF)),
     QE
