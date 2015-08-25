@@ -24,6 +24,7 @@ object KeYmaeraToMathematica {
   /**
    * Converts KeYmaera expressions into Mathematica expressions.
    */
+  //@todo contract: convert back is identity
   def fromKeYmaera(e : KExpr): MExpr = e match {
     case t : Term => require(disjointNames(StaticSemantics.symbols(t)), "Disjoint names required for Mathematica conversion");
       convertTerm(t)

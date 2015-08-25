@@ -29,6 +29,7 @@ object MathematicaToKeYmaera {
   /**
    * Converts a Mathematica expression to a KeYmaera expression.
    */
+  //@todo contract: convert back is identity
   def fromMathematica(e : MExpr): KExpr = {
     //Exceptional states
     if (isAborted(e)) throw abortExn(e)
