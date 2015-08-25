@@ -117,7 +117,8 @@ private object MathematicaNameConversion {
       case "Abs" => Function("abs", None, Real, Real)
       case "Min" => Function("min", None, Tuple(Real, Real), Real)
       case "Max" => Function("max", None, Tuple(Real, Real), Real)
-      case _ => Function(name, index, Real, Real) //TODO get the (co)domain correct. //TODO again we need to be very careful, as in the symmetric variable case.
+      //@note This conversion only works for real-valued unary functions not for others. Term creation will catch binary argument attempts.
+      case _ => Function(name, index, Real, Real)
     }
   }
 }

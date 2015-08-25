@@ -15,8 +15,7 @@ import scala.math.BigDecimal
 
 /**
  * Converts com.wolfram.jlink.Expr -> edu.cmu...keymaerax.core.Expr
- * @TODO the correctness of quantifier handling is non-obvious
- * 
+ *
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
@@ -46,40 +45,40 @@ object MathematicaToKeYmaera {
         case exn : ExprFormatException => throw mathExnMsg(e, "Could not represent number as a big decimal: " + e.toString)
       }
     }
-    else if (e.rationalQ()) {assert(isThing(e,MathematicaSymbols.RATIONAL)); convertBinary(e, Divide.apply)}
+    else if (e.rationalQ()) {assert(hasHead(e,MathematicaSymbols.RATIONAL)); convertBinary(e, Divide.apply)}
 
     // Arith expressions
-    else if (isThing(e,MathematicaSymbols.PLUS))  convertBinary(e, Plus.apply)
-    else if (isThing(e,MathematicaSymbols.MINUS)) convertBinary(e, Minus.apply)
-    else if (isThing(e,MathematicaSymbols.MULT))  convertBinary(e, Times.apply)
-    else if (isThing(e,MathematicaSymbols.DIV))   convertBinary(e, Divide.apply)
-    else if (isThing(e,MathematicaSymbols.EXP))   convertBinary(e, Power.apply)
+    else if (hasHead(e,MathematicaSymbols.PLUS))  convertBinary(e, Plus.apply)
+    else if (hasHead(e,MathematicaSymbols.MINUS)) convertBinary(e, Minus.apply)
+    else if (hasHead(e,MathematicaSymbols.MULT))  convertBinary(e, Times.apply)
+    else if (hasHead(e,MathematicaSymbols.DIV))   convertBinary(e, Divide.apply)
+    else if (hasHead(e,MathematicaSymbols.EXP))   convertBinary(e, Power.apply)
 
     // Comparisons
-    else if (isThing(e, MathematicaSymbols.EQUALS))         convertComparison(e, Equal.apply)
-    else if (isThing(e, MathematicaSymbols.UNEQUAL))        convertComparison(e, NotEqual.apply)
-    else if (isThing(e, MathematicaSymbols.GREATER))        convertComparison(e, Greater.apply)
-    else if (isThing(e, MathematicaSymbols.GREATER_EQUALS)) convertComparison(e, GreaterEqual.apply)
-    else if (isThing(e, MathematicaSymbols.LESS))           convertComparison(e, Less.apply)
-    else if (isThing(e, MathematicaSymbols.LESS_EQUALS))    convertComparison(e, LessEqual.apply)
-    else if (isThing(e, MathematicaSymbols.INEQUALITY))     convertInequality(e)
+    else if (hasHead(e, MathematicaSymbols.EQUALS))         convertComparison(e, Equal.apply)
+    else if (hasHead(e, MathematicaSymbols.UNEQUAL))        convertComparison(e, NotEqual.apply)
+    else if (hasHead(e, MathematicaSymbols.GREATER))        convertComparison(e, Greater.apply)
+    else if (hasHead(e, MathematicaSymbols.GREATER_EQUALS)) convertComparison(e, GreaterEqual.apply)
+    else if (hasHead(e, MathematicaSymbols.LESS))           convertComparison(e, Less.apply)
+    else if (hasHead(e, MathematicaSymbols.LESS_EQUALS))    convertComparison(e, LessEqual.apply)
+    else if (hasHead(e, MathematicaSymbols.INEQUALITY))     convertInequality(e)
 
     // Formulas
-    else if (isThing(e, MathematicaSymbols.TRUE))   True
-    else if (isThing(e, MathematicaSymbols.FALSE))  False
-    else if (isThing(e, MathematicaSymbols.NOT))    convertUnary(e, Not.apply)
-    else if (isThing(e, MathematicaSymbols.AND))    convertBinary(e, And.apply)
-    else if (isThing(e, MathematicaSymbols.OR))     convertBinary(e, Or.apply)
-    else if (isThing(e, MathematicaSymbols.IMPL))   convertBinary(e, Imply.apply)
-    else if (isThing(e, MathematicaSymbols.BIIMPL)) convertBinary(e, Equiv.apply)
+    else if (hasHead(e, MathematicaSymbols.TRUE))   True
+    else if (hasHead(e, MathematicaSymbols.FALSE))  False
+    else if (hasHead(e, MathematicaSymbols.NOT))    convertUnary(e, Not.apply)
+    else if (hasHead(e, MathematicaSymbols.AND))    convertBinary(e, And.apply)
+    else if (hasHead(e, MathematicaSymbols.OR))     convertBinary(e, Or.apply)
+    else if (hasHead(e, MathematicaSymbols.IMPL))   convertBinary(e, Imply.apply)
+    else if (hasHead(e, MathematicaSymbols.BIIMPL)) convertBinary(e, Equiv.apply)
 
     //Quantifiers
-    else if (isThing(e,MathematicaSymbols.FORALL)) convertQuantifier(e, Forall.apply)
-    else if (isThing(e,MathematicaSymbols.EXISTS)) convertQuantifier(e, Exists.apply)
+    else if (hasHead(e,MathematicaSymbols.FORALL)) convertQuantifier(e, Forall.apply)
+    else if (hasHead(e,MathematicaSymbols.EXISTS)) convertQuantifier(e, Exists.apply)
 
     // Rules and List of rules
-    else if (isThing(e, MathematicaSymbols.RULE)) convertRule(e)
-    else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(isThing(_, MathematicaSymbols.RULE))))
+    else if (hasHead(e, MathematicaSymbols.RULE)) convertRule(e)
+    else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(hasHead(_, MathematicaSymbols.RULE))))
       convertRuleList(e)
 
     // Functions
@@ -162,61 +161,49 @@ object MathematicaToKeYmaera {
     }
   }
 
-  //Illustrative example of the following conversion methods:
-  //	input: a ~ b ~ c where ~ \in { =,<,>,<=,>= }
-  //	subterms: a,b,c
-  //	staggeredPairs: (a,b),(b,c)
-  //	staggeredFormuals: (a ~ b), (b ~ c)
-  //	output: (a ~ b) && (b ~ c)
-  /** converts expressions of the form a <= b < c < 0 */
-  def convertInequality(e: MExpr): Formula = {
+  /** Converts inequality chains of the form a <= b < c < 0 to conjunctions of individual inequalities a <= b & b < c & c < 0 */
+  private def convertInequality(e: MExpr): Formula = {
+    /** Extract overlapping inequalities from a chain of inequalities, so x<y=z<=d will be x<y, y=z, z<=d */
     def extractInequalities(exprs: Array[Expr]): List[(MExpr, MExpr, MExpr)] = {
       require(exprs.length >= 3 && exprs.length % 2 == 1, "Need pairs of expressions separated by operators")
       if (exprs.length == 3) (exprs(0), exprs(1), exprs(2)) :: Nil
       else (exprs(0), exprs(1), exprs(2)) :: extractInequalities(exprs.tail.tail)
     }
 
+    // conjunction of converted indidivual inequalities
     extractInequalities(e.args()).
       map({case (arg1, op, arg2) => new MExpr(op, Array[MExpr](arg1, arg2))}).
       map(fromMathematica(_).asInstanceOf[Formula]).reduce(And)
   }
-  def makeOverlappingPairs[T](s : Seq[T]):Seq[(T,T)] = {
-    if (s.size == 2) {
-      (s.head, s.last) :: Nil
-    }
-    else {
-      makeOverlappingPairs(s.tail) :+ (s.head, s.tail.head)
-    }
-  }
-  
+
   /**
+   * Whether e is thing or starts with head thing.
    * @return true if ``e" and ``thing" are .equals-related. 
-   * 
-   * This can be used in conjunction
-   * with MathematicaSymbols to test if a given expression has a syntactic form.
    */
-  def isThing(e:com.wolfram.jlink.Expr, thing:com.wolfram.jlink.Expr) = 
+  private def hasHead(e:com.wolfram.jlink.Expr, thing:com.wolfram.jlink.Expr) =
     e.equals(thing) || e.head().equals(thing)
 
-  def isAborted(e : com.wolfram.jlink.Expr) = {
+  // error catching and reporting
+
+  private def isAborted(e : com.wolfram.jlink.Expr) = {
     e.toString.equalsIgnoreCase("$Aborted") ||
     e.toString.equalsIgnoreCase("Abort[]")
   }
   
-  def isFailed(e : com.wolfram.jlink.Expr) = {
+  private def isFailed(e : com.wolfram.jlink.Expr) = {
     e.toString.equalsIgnoreCase("$Failed")
   }
 
-  def failExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationFailedException(e)
-  def abortExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationAbortedException(e)
+  private def failExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationFailedException(e)
+  private def abortExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationAbortedException(e)
 
-  def mathExnMsg(e:MExpr, s:String) : Exception =
+  private def mathExnMsg(e:MExpr, s:String) : Exception =
     new ConversionException("Conversion of " + e.toString + " failed because: " + s)
   
-  def mathExn(e:com.wolfram.jlink.Expr) : Exception = 
+  private def mathExn(e:com.wolfram.jlink.Expr) : Exception =
     new ConversionException("conversion not defined for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
   
-  def mathInfo(e : com.wolfram.jlink.Expr) : String = {
+  private def mathInfo(e : com.wolfram.jlink.Expr) : String = {
     "args:\t" + {if (e.args().size == 0) { "empty" } else {e.args().map(_.toString).reduce(_+","+_)}} +
     "\n" +
     "toString:\t" + e.toString

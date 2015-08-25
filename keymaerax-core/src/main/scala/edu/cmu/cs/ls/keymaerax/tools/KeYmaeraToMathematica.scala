@@ -25,14 +25,21 @@ object KeYmaeraToMathematica {
    * Converts KeYmaera expressions into Mathematica expressions.
    */
   def fromKeYmaera(e : KExpr): MExpr = e match {
-    case t : Term => convertTerm(t)
-    case t : Formula => convertFormula(t)
+    case t : Term => require(disjointNames(StaticSemantics.symbols(t)), "Disjoint names required for Mathematica conversion");
+      convertTerm(t)
+    case t : Formula => require(disjointNames(StaticSemantics.symbols(t)), "Disjoint names required for Mathematica conversion");
+      convertFormula(t)
+  }
+
+  private def disjointNames(symbols: Set[NamedSymbol]): Boolean = {
+    val names = symbols.map(x=>(x.name,x.index)).toList
+    names.distinct.length == names.length
   }
 
   /**
    * Converts a KeYmaera terms to a Mathematica expression.
    */
-  def convertTerm(t : Term) : MExpr = {
+  private def convertTerm(t : Term) : MExpr = {
     /** Convert tuples to list of sorts */
     def flattenSort(s: Sort): List[Sort] = s match {
       case Tuple(ls, rs) => ls :: rs :: Nil
@@ -68,7 +75,7 @@ object KeYmaeraToMathematica {
   /**
    * Converts KeYmaera formulas into Mathematica objects
    */
-  def convertFormula(f : Formula) : MExpr = f match {
+  private def convertFormula(f : Formula) : MExpr = f match {
     case And(l,r)   => new MExpr(MathematicaSymbols.AND, Array[MExpr](convertFormula(l), convertFormula(r)))
     case Equiv(l,r) => new MExpr(MathematicaSymbols.BIIMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
     case Imply(l,r) => new MExpr(MathematicaSymbols.IMPL, Array[MExpr](convertFormula(l), convertFormula(r)))
@@ -86,7 +93,7 @@ object KeYmaeraToMathematica {
     case Forall(vs, phi) => convertForall(vs,phi)
   }
 
-  def convertFnApply(fn: Function, child: Term): MExpr = child match {
+  private def convertFnApply(fn: Function, child: Term): MExpr = child match {
     case Nothing => MathematicaNameConversion.toMathematica(new Function(MathematicaNameConversion.CONST_FN_PREFIX + fn.name, fn.index, fn.domain, fn.sort))
     case _ =>
       //@todo Code Review: figure out how nested lists affect binary functions
@@ -95,7 +102,7 @@ object KeYmaeraToMathematica {
   }
 
   /** Convert block of exists quantifiers into a single exists quantifier block */
-  def convertExists(vs:Seq[NamedSymbol],f:Formula) = {
+  private def convertExists(vs:Seq[NamedSymbol],f:Formula) = {
     val (vars, formula) = collectVarsExists(vs, f)
     val variables = new MExpr(MathematicaSymbols.LIST, vars.map(MathematicaNameConversion.toMathematica).toArray)
     new MExpr(MathematicaSymbols.EXISTS, Array[MExpr](variables, convertFormula(formula)))
@@ -108,7 +115,7 @@ object KeYmaeraToMathematica {
   }
 
   /** Convert block of forall quantifiers into a single forall quantifier block */
-  def convertForall(vs:Seq[NamedSymbol],f:Formula) = {
+  private def convertForall(vs:Seq[NamedSymbol],f:Formula) = {
     val (vars, formula) = collectVarsForall(vs, f)
     val variables = new MExpr(MathematicaSymbols.LIST, vars.map(MathematicaNameConversion.toMathematica).toArray)
     new MExpr(MathematicaSymbols.FORALL, Array[MExpr](variables, convertFormula(formula)))
@@ -120,7 +127,7 @@ object KeYmaeraToMathematica {
     }
   }
 
-  def keyExn(e: KExpr) : Exception =
+  private def keyExn(e: KExpr) : Exception =
     new ConversionException("conversion not defined for KeYmaera expr: " + PrettyPrinter.printer(e))
 }
 
