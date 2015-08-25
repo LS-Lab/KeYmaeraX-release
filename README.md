@@ -40,9 +40,14 @@ Detailed instructions are available at that website as well. Briefly, type
     sbt compile
 
 to compile the source code. First-time compilation may take a while, since it downloads all necessary libraries,
-including Scala itself. The build file includes paths to the Mathematica JLink jar, for example for Mac as follows.
+including Scala itself. 
 
-    unmanagedJars in Compile += file("/Applications/Mathematica.app/SystemFiles/Links/JLink/JLink.jar")
+The build file does not include paths to the Mathematica JLink JAR, so you will need to set an environmental variable
+JLINK_JAR_LOCATION to the location of JLink.jar in the Mathematica package. You can do this in .bashrc or .profile.
+
+Example:
+
+  export JLINK_JAR_LOCATION="/Applications/Mathematica.app/SystemFiles/Links/JLink/JLink.jar"
 
 If JLink.jar is in a non-default location on your computer, add a new line to build.sbt.
 
