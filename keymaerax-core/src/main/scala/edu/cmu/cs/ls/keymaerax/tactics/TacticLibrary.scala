@@ -255,10 +255,12 @@ object TacticLibrary {
     //private val keyPart = new FormulaConverter(fact).subFormulaAt(key).get
 
     override def applies(s: Sequent, p: Position): Boolean = try {
-      val part = s(p.top).at(p.inExpr);
+      val part = s(p.top).at(p.inExpr)
       if (!part.isDefined) false
-      UnificationMatch(keyPart,part.get)
-      true
+      else {
+        UnificationMatch(keyPart,part.get)
+        true
+      }
     } catch {case e: ProverException => println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s(p.top).at(p.inExpr))); false}
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
@@ -270,7 +272,6 @@ object TacticLibrary {
         println("useAt unify: " + expr + " matches against " + keyPart + " by " + subst)
         assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
-
         Some(useAt(subst, keyCtx, keyPart, p, ctx, expr, factTactic))
       }
 
@@ -348,7 +349,7 @@ object TacticLibrary {
           case Forall(vars, remainder) if vars.length==1 =>
             useAt(subst, new Context(remainder), k, p, C, c, instantiateQuanT(vars.head, subst(vars.head))(SuccPos(0)))
 
-            //@todo unfold by step*
+            //@todo unfold box by step*
           case Box(a, remainder) => ???
         }
       }
