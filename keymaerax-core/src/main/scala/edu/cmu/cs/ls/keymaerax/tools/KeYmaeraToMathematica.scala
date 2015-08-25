@@ -21,6 +21,9 @@ object KeYmaeraToMathematica {
   type MExpr = com.wolfram.jlink.Expr
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
 
+  //@TODO Code Review: turn to false in qe calls
+  private val LAX = System.getProperty("LAX", "true")=="true"
+
   /**
    * Converts KeYmaera expressions into Mathematica expressions.
    */
@@ -61,9 +64,9 @@ object KeYmaeraToMathematica {
         new MExpr(MathematicaSymbols.DIV, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Power(l, r) =>
         new MExpr(MathematicaSymbols.EXP, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case Differential(c) =>
+      case Differential(c) if LAX =>
         new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convertTerm(c)))
-      case DifferentialSymbol(c) =>
+      case DifferentialSymbol(c) if LAX =>
         new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), Array[MExpr](convertTerm(c)))
       case Number(n) => new MExpr(n.underlying())
       case Pair(l, r) =>     //@todo handle nested pairs (flatten to a list?)

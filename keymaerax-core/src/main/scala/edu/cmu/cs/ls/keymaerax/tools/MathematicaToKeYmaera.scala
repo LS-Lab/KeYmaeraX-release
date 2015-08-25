@@ -24,7 +24,7 @@ object MathematicaToKeYmaera {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
 
   //@TODO Code Review: turn to false in qe calls
-  private val LAX = true
+  private val LAX = System.getProperty("LAX", "true")=="true"
 
   /**
    * Converts a Mathematica expression to a KeYmaera expression.
