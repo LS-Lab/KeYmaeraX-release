@@ -20,13 +20,13 @@ trait SMTSolver extends QETool {
   /**
    * @return true if the job is finished, false if it is still running.
    */
-  def ready : Boolean = ???
+  def ready : Boolean
 
   /** Cancels the current request.
     * @return True if job is successfully cancelled, or False if the new
     * status is unknown.
     */
-  def cancel : Boolean = ???
+  def cancel : Boolean
 
   lazy val smt2path: File = {
     val file = new File(System.getProperty("user.home") + File.separator +

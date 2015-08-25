@@ -10,11 +10,15 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import scala.collection.immutable.Seq
 
 /**
+ * Represents an accumulator for SMTLib file input, which is ultimately a triple of strings.
  * @author Ran Ji
  */
 class SMTLib {
+  /** Comments and description of problem */
   private var description : String = ""
+  /** Variable declaration list */
   private var variableList : String  = ""
+  /** The formula to check for validity */
   private var formula : String = ""
 
   /**
@@ -64,14 +68,13 @@ class SMTLib {
   }
 
   /**
-   * Get the SMT input in string
+   * Get the SMT input as a string, which conjectures validity of getFormula
+   * in terms of unsatisfiability of its negation.
    *
    * @return result the result string SMT input
+   * @todo only used in tests?
    */
-  def getAssertNot : String = {
-    val result : String = this.getDescription + this.getVariableList + "(assert (not " + this.getFormula + "))"
-    result
-  }
+  def getAssertNot : String = this.getDescription + this.getVariableList + "(assert (not " + this.getFormula + "))"
 }
 
 object SMTLib {
@@ -86,36 +89,42 @@ object SMTLib {
 
 class SMTConversionException(s:String) extends Exception(s)
 
+/**
+ * Convert KeYmaera expression to the SMT solver named toolId
+ */
 class KeYmaeraToSMT(toolId : String) {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
   type SExpr = SMTLib
   private val smtLib : SExpr = new SExpr // Result
   private var existingVars : Seq[String] = Nil // List of existing variables
 
+  //@todo disjoint names check as in Mathematica
+  //@todo contract: convert back is identity
   def convertToSMT(e : KExpr) : SExpr = {
     val formula = convertToString(e)
     smtLib.setFormula(formula)
     smtLib
   }
 
-  def convertToString(e : KExpr) = e match {
+  private def convertToString(e : KExpr) = e match {
     case t : Term => convertTerm(t)
     case t : Formula => convertFormula(t)
     case _ => ???
   }
 
-  def convertTerm(t : Term) : String = {
+  /** Convert term to string in SMT/lisp prefix notation */
+  private def convertTerm(t : Term) : String = {
     require(t.sort == Real || t.sort == Unit, "SMT can only deal with reals not with sort " + t.sort)
     t match {
-      case Neg(c) => "(- " + convertTerm(c) + ")"
-      case Plus(l, r) => "(+ " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case Minus(l, r) => "(- " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case Times(l, r) => "(* " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Neg(c)       => "(- " + convertTerm(c) + ")"
+      case Plus(l, r)   => "(+ " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Minus(l, r)  => "(- " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Times(l, r)  => "(* " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Divide(l, r) => "(/ " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case Power(l, r) => convertExp(l, r)
+      case Power(l, r)  => convertExp(l, r)
       case Number(n) =>
         assert(n.isValidDouble || n.isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
-        if(n.toDouble < 0)  "(- " + (0-n).underlying().toString + ")"
+        if (n.toDouble < 0)  "(- " + (0-n).underlying().toString + ")"
         else n.underlying().toString
       case t: Variable => convertVariable(t)
       case FuncOf(fn, _) => convertConstantFunction(fn)
@@ -123,25 +132,30 @@ class KeYmaeraToSMT(toolId : String) {
     }
   }
 
-  def convertVariable(t: Variable): String = {
+  private def convertVariable(t: Variable): String = {
     val varName = {
+      //@todo assert no underscore issues in names
+      //@todo this will conflate Variable("x_5",None) and Variable("x",Some(5))
       if(t.index.isEmpty) t.name
       else t.name + "_" + t.index.get
     }
     if(!existingVars.contains(varName)) {
       existingVars = existingVars :+ varName
       val vl : String = smtLib.getVariableList.concat("(declare-fun " + varName + " () Real)\n")
+      //@todo turn into one-step compilation from StaticSemantics.symbols
       smtLib.setVariableList(vl)
     }
     varName
   }
 
-  def convertConstantFunction(fun: Function) : String = {
+  private def convertConstantFunction(fun: Function) : String = {
     if(!existingVars.contains(fun.name)) {
       existingVars = existingVars :+ fun.name
+      //@todo turn into one-step compilation from StaticSemantics.symbols / .signature
       val vl : String = smtLib.getVariableList.concat("(declare-fun " + fun.name + " () Real)\n")
       smtLib.setVariableList(vl)
     }
+    //@todo index lost so will conflate names
     fun.name
   }
 
@@ -150,8 +164,10 @@ class KeYmaeraToSMT(toolId : String) {
    * @param l
    * @param r
    * @return
+   * @todo see CGenerator
+   * @todo use axiom x^(c()+1) = x*(x^c()) <- c()>=0
    */
-  def convertExp(l : Term, r : Term) : String = {
+  private def convertExp(l : Term, r : Term) : String = {
     val base = simplifyTerm(l)
     val index = simplifyTerm(r)
     if(base.equals(Number(0))) {
@@ -179,7 +195,8 @@ class KeYmaeraToSMT(toolId : String) {
     }
   }
 
-  def simplifyTerm(t: Term) : Term = {
+  private def simplifyTerm(t: Term) : Term = {
+    //@todo This code is poor man's reflection. If retained then pass Tool, not tool name.
     if (toolId == "Z3") {
       val z3 = new Z3Solver
       z3.simplify(t)
@@ -191,16 +208,16 @@ class KeYmaeraToSMT(toolId : String) {
 
   def convertFormula(f : Formula) : String = {
     f match {
-      case Not(ff) => "(not " + convertFormula(ff) + ")"
-      case And(l, r) => "(and " + convertFormula(l) + " " + convertFormula(r) + ")"
-      case Or(l, r) => "(or " + convertFormula(l) + " " + convertFormula(r) + ")"
-      case Imply(l, r) => "(=> " + convertFormula(l) + " " + convertFormula(r) + ")"
-      case Equiv(l, r) => "(equiv " + convertFormula(l) + " " + convertFormula(r) + ")"
-      case Equal(l, r) => "(= " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case NotEqual(l, r) => "(not (= " + convertTerm(l) + " " + convertTerm(r) + "))"
-      case Greater(l,r) => "(> " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Not(ff)        => "(not " + convertFormula(ff) + ")"
+      case And(l, r)      => "(and " + convertFormula(l) + " " + convertFormula(r) + ")"
+      case Or(l, r)       => "(or " + convertFormula(l) + " " + convertFormula(r) + ")"
+      case Imply(l, r)    => "(=> " + convertFormula(l) + " " + convertFormula(r) + ")"
+      case Equiv(l, r)    => "(equiv " + convertFormula(l) + " " + convertFormula(r) + ")"
+      case Equal(l, r)    => "(= " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case NotEqual(l, r) => "(not (= " + convertTerm(l) + " " + convertTerm(r) + "))" //@todo convertFormula(Not(Equal(l,r))) or ask prover?
+      case Greater(l,r)   => "(> " + convertTerm(l) + " " + convertTerm(r) + ")"
       case GreaterEqual(l,r) => "(>= " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case Less(l,r) => "(< " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Less(l,r)      => "(< " + convertTerm(l) + " " + convertTerm(r) + ")"
       case LessEqual(l,r) => "(<= " + convertTerm(l) + " " + convertTerm(r) + ")"
       case True => "true"
       case False => "false"
@@ -233,6 +250,7 @@ class KeYmaeraToSMT(toolId : String) {
     }
   }
 
+  //@todo map( ++ + " Real").mkString(" ")
   private def array2String(args : Seq[NamedSymbol]) : String = {
     if (args == null)
       return ""

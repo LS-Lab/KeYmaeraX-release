@@ -72,6 +72,8 @@ class Z3Solver extends SMTSolver {
       // Copy file to temporary directory
       z3Dest.getChannel.transferFrom(z3Source, 0, Long.MaxValue)
       val z3AbsPath = z3Temp.getAbsolutePath
+      //@todo preexisting files shouldn't be modified permissions
+      //@todo what's with Windows?
       Runtime.getRuntime.exec("chmod u+x " + z3AbsPath)
       z3Source.close()
       z3Dest.close()
@@ -85,7 +87,10 @@ class Z3Solver extends SMTSolver {
     println("[Z3 result] \n" + output + "\n")
     // TODO So far does not handle get-model or unsat-core
     val result = {
+      //@todo very dangerous code: Example output "sorry I couldn't prove its unsat, no luck today". Variable named unsat notunsat
+      //@todo investigate Z3 binding for Scala
       if (output.contains("unsat")) True
+        //@todo incorrect answer. It's not equivalent to False just because it's not unsatisfiable. Could be equivalent to x>5
       else if(output.contains("sat")) False
       else if(output.contains("unknown")) False
       else throw new SMTConversionException("Conversion of Z3 result \n" + output + "\n is not defined")
