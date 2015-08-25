@@ -42,7 +42,7 @@ private object NameConversion {
 
   private def maskIdentifier(name : String) = {
     //Ensure that none of the "special" strings occur in the variable name.
-    if(name.contains(MUNDERSCORE)) {
+    if (name.contains(MUNDERSCORE)) {
       throw new ConversionException("Please do not use the string " + MUNDERSCORE + " in your variable names.")
     }
     //Do replacements.
@@ -81,60 +81,50 @@ private object NameConversion {
   // PREFIX + base               ---> name only
   // base                        ---> external function
   ///
-  def toKeYmaera(e : com.wolfram.jlink.Expr) : NamedSymbol = {
-    if(e.args().isEmpty) variableToKeYmaera(e)
+  def toKeYmaera(e: com.wolfram.jlink.Expr): NamedSymbol = {
+    if (e.args().isEmpty) nullaryNameToKeYmaera(e)
     else functionToKeYmaera(e)
   }
   
-  private def variableToKeYmaera(e : com.wolfram.jlink.Expr) : NamedSymbol = {
+  private def unmaskName(e: com.wolfram.jlink.Expr): (String, Option[Int]) = {
     val maskedName = e.asString().replaceAll(regexOf(MUNDERSCORE), "_")
-    if(maskedName.contains(PREFIX) && maskedName.contains(SEP)) {
+    if (maskedName.contains(PREFIX) && maskedName.contains(SEP)) {
       //Get the parts of the masked name.
       val parts = maskedName.replace(PREFIX, "").split(regexOf(SEP))
-      if(parts.size != 2) throw new ConversionException("Expected " + SEP + " once only.")
+      if (parts.size != 2) throw new ConversionException("Expected " + SEP + " once only.")
       val (name, unparsedIndex) = (parts.head, parts.last)
-      
+
       val index = try {
         Integer.parseInt(unparsedIndex)
       } catch {
         case e : NumberFormatException => throw new ConversionException("Expected number for index")
       }
-      Variable(name, Some(index), Real)
+      (name, Some(index))
     }
-    else if(maskedName.contains(PREFIX) && !maskedName.contains(SEP)) {
-      Variable(maskedName.replace(PREFIX, ""), None, Real)
-    }
-    else {
-      Variable(maskedName, None, Real) //TODO um... this can happen (new quantified vars) but we need to be very careful.
+    else if (maskedName.contains(PREFIX) && !maskedName.contains(SEP)) {
+      (maskedName.replace(PREFIX, ""), None)
+    } else {
+      (maskedName, None)
     }
   }
-  
+
+  /** Returns a variable or function, depending on the prefix of the name */
+  private def nullaryNameToKeYmaera(e: com.wolfram.jlink.Expr): NamedSymbol = {
+    require(e.args().isEmpty, "Nullary names have no arguments")
+    val (name, index) = unmaskName(e)
+    if (name.startsWith(NameConversion.CONST_FN_PREFIX)) Function(name.replace(CONST_FN_PREFIX, ""), index, Unit, Real)
+    else Variable(name, index, Real)
+  }
+
   private def functionToKeYmaera(e : com.wolfram.jlink.Expr) : NamedSymbol = {
-    val maskedName = e.head().asString().replaceAll(regexOf(MUNDERSCORE), "_")
-    if(maskedName.contains(PREFIX) && maskedName.contains(SEP)) {
-      //Get the parts of the masked name.
-      val parts = maskedName.replace(PREFIX, "").split(regexOf(SEP))
-      if(parts.size != 2) throw new ConversionException("Expected " + SEP + " once only.")
-      val (name, unparsedIndex) = (parts.head, parts.last)
-      
-      val index = try {
-        Integer.parseInt(unparsedIndex)
-      } catch {
-        case e : NumberFormatException => throw new ConversionException("Expected number for index")
-      }
-      Function(name, Some(index), Real, Real) //TODO get the (co)domain correct
-    }
-    else if(maskedName.contains(PREFIX) && !maskedName.contains(SEP)) {
-      Function(maskedName.replace(PREFIX, ""), None, Real, Real) //TODO get the (co)domain correct.
-    }
-    else {
-       maskedName match {
-         //@note special function
-         case "Abs" => Function("abs",None,Real,Real)
-         case "Min" => Function("min",None,Tuple(Real,Real),Real)
-         case "Max" => Function("max",None,Tuple(Real,Real),Real)
-         case _ => Function(maskedName, None, Real, Real) //TODO get the (co)domain correct. //TODO again we need to be very careful, as in the symmetric variable case.
-       }
+    val (name, index) = unmaskName(e.head())
+    require(!name.startsWith(NameConversion.CONST_FN_PREFIX), "Proper functions are not constant functions")
+    name match {
+      //@note special function
+      case "Abs" => Function("abs", None, Real, Real)
+      case "Min" => Function("min", None, Tuple(Real, Real), Real)
+      case "Max" => Function("max", None, Tuple(Real, Real), Real)
+      case _ => Function(name, index, Real, Real) //TODO get the (co)domain correct. //TODO again we need to be very careful, as in the symmetric variable case.
     }
   }
 }
@@ -150,12 +140,19 @@ object MathematicaToKeYmaera {
   type MExpr = com.wolfram.jlink.Expr
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
 
+  //@TODO Code Review: turn to false in qe calls
+  private val LAX = true
+
   /**
    * Converts a Mathematica expression to a KeYmaera expression.
    */
   def fromMathematica(e : MExpr): KExpr = {
+    //Exceptional states
+    if (isAborted(e)) throw abortExn(e)
+    else if (isFailed(e))  throw failExn(e)
+
     //Numbers
-    if(e.numberQ() && !e.rationalQ()) {
+    else if (e.numberQ() && !e.rationalQ()) {
       try {
         val number = e.asBigDecimal()
         Number(BigDecimal(number))
@@ -165,185 +162,128 @@ object MathematicaToKeYmaera {
         case exn : ExprFormatException => throw mathExnMsg(e, "Could not represent number as a big decimal: " + e.toString)
       }
     }
-    else if(e.rationalQ()) convertDivision(e)
-    
-    //Exceptional states
-    else if(isAborted(e)) throw abortExn(e)
-    else if(isFailed(e))  throw failExn(e)
-    
-    
-    //Arith expressions
-    else if(isThing(e,MathematicaSymbols.PLUS))  convertAddition(e)
-    else if(isThing(e,MathematicaSymbols.MULT))  convertMultiplication(e)
-    else if(isThing(e,MathematicaSymbols.DIV))   convertDivision(e)
-    else if(isThing(e,MathematicaSymbols.MINUS)) convertSubtraction(e)
-    else if(isThing(e,MathematicaSymbols.EXP))   convertExponentiation(e)
-    
+    else if (e.rationalQ()) {assert(isThing(e,MathematicaSymbols.RATIONAL)); convertBinary(e, Divide.apply)}
+
+    // Arith expressions
+    else if (isThing(e,MathematicaSymbols.PLUS))  convertBinary(e, Plus.apply)
+    else if (isThing(e,MathematicaSymbols.MINUS)) convertBinary(e, Minus.apply)
+    else if (isThing(e,MathematicaSymbols.MULT))  convertBinary(e, Times.apply)
+    else if (isThing(e,MathematicaSymbols.DIV))   convertBinary(e, Divide.apply)
+    else if (isThing(e,MathematicaSymbols.EXP))   convertBinary(e, Power.apply)
+
+    // Comparisons
+    else if (isThing(e, MathematicaSymbols.EQUALS))         convertComparison(e, Equal.apply)
+    else if (isThing(e, MathematicaSymbols.UNEQUAL))        convertComparison(e, NotEqual.apply)
+    else if (isThing(e, MathematicaSymbols.GREATER))        convertComparison(e, Greater.apply)
+    else if (isThing(e, MathematicaSymbols.GREATER_EQUALS)) convertComparison(e, GreaterEqual.apply)
+    else if (isThing(e, MathematicaSymbols.LESS))           convertComparison(e, Less.apply)
+    else if (isThing(e, MathematicaSymbols.LESS_EQUALS))    convertComparison(e, LessEqual.apply)
+    else if (isThing(e, MathematicaSymbols.INEQUALITY))     convertInequality(e)
+
+    // Formulas
+    else if (isThing(e, MathematicaSymbols.TRUE))   True
+    else if (isThing(e, MathematicaSymbols.FALSE))  False
+    else if (isThing(e, MathematicaSymbols.NOT))    convertUnary(e, Not.apply)
+    else if (isThing(e, MathematicaSymbols.AND))    convertBinary(e, And.apply)
+    else if (isThing(e, MathematicaSymbols.OR))     convertBinary(e, Or.apply)
+    else if (isThing(e, MathematicaSymbols.IMPL))   convertBinary(e, Imply.apply)
+    else if (isThing(e, MathematicaSymbols.BIIMPL)) convertBinary(e, Equiv.apply)
+
     //Quantifiers
-    else if(isQuantifier(e)) convertQuantifier(e)
-    
-    //Boolean algebra
-    else if(isThing(e, MathematicaSymbols.TRUE))   True
-    else if(isThing(e, MathematicaSymbols.FALSE))  False
-    else if(isThing(e, MathematicaSymbols.AND))    convertAnd(e)
-    else if(isThing(e, MathematicaSymbols.OR))     convertOr(e)
-    else if(isThing(e, MathematicaSymbols.NOT))    convertNot(e)
-    else if(isThing(e, MathematicaSymbols.IMPL))   convertImpl(e)
-    else if(isThing(e, MathematicaSymbols.BIIMPL)) convertEquiv(e)
-    
-    //Relations
-    else if(isThing(e, MathematicaSymbols.EQUALS))         convertEquals(e)
-    else if(isThing(e, MathematicaSymbols.UNEQUAL))        convertNotEquals(e)
-    else if(isThing(e, MathematicaSymbols.GREATER))        convertGreaterThan(e)
-    else if(isThing(e, MathematicaSymbols.GREATER_EQUALS)) convertGreaterEqual(e)
-    else if(isThing(e, MathematicaSymbols.LESS))           convertLessThan(e)
-    else if(isThing(e, MathematicaSymbols.LESS_EQUALS))    convertLessEqual(e)
-    else if(isThing(e, MathematicaSymbols.INEQUALITY))     convertInequality(e)
+    else if (isThing(e,MathematicaSymbols.FORALL)) convertQuantifier(e, Forall.apply)
+    else if (isThing(e,MathematicaSymbols.EXISTS)) convertQuantifier(e, Exists.apply)
 
-    else if(isThing(e, MathematicaSymbols.RULE)) convertRule(e)
-
-    // List of rules
-    else if(e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(isThing(_, MathematicaSymbols.RULE))))
+    // Rules and List of rules
+    else if (isThing(e, MathematicaSymbols.RULE)) convertRule(e)
+    else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(isThing(_, MathematicaSymbols.RULE))))
       convertRuleList(e)
 
     // Functions
-    else if(e.head().symbolQ() && !MathematicaSymbols.keywords.contains(e.head().toString)) convertName(e)
+    else if (e.head().symbolQ() && !MathematicaSymbols.keywords.contains(e.head().toString)) convertAtomicTerm(e)
 
     //Variables. This case intentionally comes last, so that it doesn't gobble up
     //and keywords that were not declared correctly in MathematicaSymbols (should be none)
-    else if(e.symbolQ() && !MathematicaSymbols.keywords.contains(e.asString())) {
-      convertName(e)
+    else if (e.symbolQ() && !MathematicaSymbols.keywords.contains(e.asString())) {
+      convertAtomicTerm(e)
     }
     else {
       throw mathExn(e) //Other things to handle: integrate, rule, minussign, possibly some list.
     }
   }
 
-  def convertRuleList(e: MExpr): Formula = {
+  private def convertUnary[T<:Expression](e : MExpr, op: T=>T): T = {
+    val subformula = fromMathematica(e.args().head).asInstanceOf[T]
+    op(subformula)
+  }
+
+  private def convertBinary[T<:Expression](e : MExpr, op: (T,T) => T): T = {
+    val subexpressions = e.args().map(fromMathematica)
+    require(subexpressions.length >= 2, "binary operator expects 2 arguments")
+    val asTerms = subexpressions.map(_.asInstanceOf[T])
+    asTerms.reduce((l,r) => op(l,r))
+  }
+
+  private def convertComparison[S<:Expression,T<:Expression](e : MExpr, op: (S,S) => T): T = {
+    val subexpressions = e.args().map(fromMathematica)
+    require(subexpressions.length == 2, "binary operator expects 2 arguments")
+    val asTerms = subexpressions.map(_.asInstanceOf[S])
+    op(asTerms(0), asTerms(1))
+  }
+
+  private def convertQuantifier(e : com.wolfram.jlink.Expr, op:(Seq[Variable], Formula)=>Formula) = {
+    require(e.args().size == 2, "Expected args size 2.")
+
+    val quantifiedVariables = e.args().headOption.getOrElse(
+      throw new ConversionException("Found non-empty list after quantifier."))
+
+    val quantifiedVars: List[Variable] = if (quantifiedVariables.head().equals(MathematicaSymbols.LIST)) {
+      //Convert the list of quantified variables
+      quantifiedVariables.args().toList.map(n => NameConversion.toKeYmaera(n).asInstanceOf[Variable])
+    } else {
+      List(fromMathematica(quantifiedVariables).asInstanceOf[Variable])
+    }
+
+    //Recurse on the body of the expression.
+    val bodyOfQuantifier = fromMathematica(e.args().last).asInstanceOf[Formula]
+
+    // convert quantifier block into chain of single quantifiers
+    quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => op(v :: Nil, fml))
+  }
+
+
+  private def convertRuleList(e: MExpr): Formula = {
     val convertedRules = e.args().map(_.args().map(r => convertRule(r)).reduceLeft((lhs, rhs) => And(lhs, rhs)))
     if (convertedRules.isEmpty) False
     else convertedRules.reduceLeft((lhs, rhs) => Or(lhs, rhs))
   }
 
-  def convertRule(e: MExpr): Formula = {
+  private def convertRule(e: MExpr): Formula = {
+    assert(LAX, "Not converting rules yet" + e)
     // TODO is Equals correct for rules?
     Equal(fromMathematica(e.args()(0)).asInstanceOf[Term], fromMathematica(e.args()(1)).asInstanceOf[Term])
   }
   
-  def convertQuantifiedVariable(e : MExpr) : edu.cmu.cs.ls.keymaerax.core.Variable = {
-    val result = NameConversion.toKeYmaera(e)
-    result match {
-      case result : Variable => result
-      case _ => throw new ConversionException("Expected variables but found non-variable:" + result.getClass.toString)
-    }
-  }
-  
-  def convertName(e : MExpr) : KExpr = {
-    val result = NameConversion.toKeYmaera(e)
-    result match {
-      case result : Function => {
+  private def convertAtomicTerm(e: MExpr): KExpr = {
+    NameConversion.toKeYmaera(e) match {
+      case result: Function =>
         val arguments = e.args().map(fromMathematica).map(_.asInstanceOf[Term])
-        if(arguments.nonEmpty) {
-          assert(arguments.length == 1)
-//          val argumentsAsPair = arguments.reduceRight[Term](
-//            (l, r) => Pair(TupleT(l.sort, r.sort), l, r)
-//          )
-//          FuncOf(result, argumentsAsPair)
-          FuncOf(result, arguments.head)
+        if (arguments.nonEmpty) {
+          val args = if (arguments.length > 1) arguments.reduceRight[Term]((l, r) => Pair(l, r))
+          else { assert(arguments.length == 1); arguments.head }
+          FuncOf(result, args)
+        } else {
+          FuncOf(result, Nothing)
         }
-        else {
-          result
-        }
-      }
-      case _ if  result.name.startsWith(NameConversion.CONST_FN_PREFIX) =>
-        FuncOf(Function(result.name.substring(NameConversion.CONST_FN_PREFIX.length), result.index, Unit, result.sort), Nothing)
-      case _ if !result.name.startsWith(NameConversion.CONST_FN_PREFIX) => result
+      case result: Variable => result
     }
   }
 
-  def convertAddition(e : MExpr) = {
-    val subexpressions = e.args().map(fromMathematica)
-    val asTerms = subexpressions.map(_.asInstanceOf[Term])
-    asTerms.reduce((l,r) => Plus(l,r))
-  }
-  def convertDivision(e : MExpr) = {
-    val subexpressions = e.args().map(fromMathematica)
-    val asTerms = subexpressions.map(_.asInstanceOf[Term])
-    asTerms.reduce((l,r) => Divide(l,r))
-  }
-  def convertSubtraction(e : MExpr) = {
-    val subexpressions = e.args().map(fromMathematica)
-    val asTerms = subexpressions.map(_.asInstanceOf[Term])
-    asTerms.reduce((l,r) => Minus(l,r))
-  }
-  def convertMultiplication(e : MExpr) = {
-    val subexpressions = e.args().map(fromMathematica)
-    val asTerms = subexpressions.map(_.asInstanceOf[Term])
-    asTerms.reduce((l,r) => Times(l,r))
-  }
-  def convertExponentiation(e : MExpr) = {
-    val subexpressions = e.args().map(fromMathematica)
-    val asTerms = subexpressions.map(_.asInstanceOf[Term])
-    asTerms.reduce((l,r) => Power(l,r.asInstanceOf[Number]))
-  }
-  
-  def convertAnd(e : MExpr) = {
-    val subformulas = e.args().map(fromMathematica(_).asInstanceOf[Formula])
-    subformulas.reduceRight( (l,prev) => And(l,prev))
-  }
-  def convertOr(e : MExpr) = {
-    val subformulas = e.args().map(fromMathematica(_).asInstanceOf[Formula])
-    subformulas.reduceRight( (l,prev) => Or(l,prev))
-  }
-  def convertImpl(e : MExpr) = {
-    val subformulas = e.args().map(fromMathematica(_).asInstanceOf[Formula])
-    subformulas.reduceRight( (l,prev) => Imply(l,prev))
-  }
-  def convertEquiv(e : MExpr) = {
-    val subformulas = e.args().map(fromMathematica(_).asInstanceOf[Formula])
-    subformulas.reduceRight( (l,prev) => Equiv(l,prev))
-  }
-  def convertNot(e : MExpr) = {
-    val subformula = fromMathematica(e.args().head).asInstanceOf[Formula]
-    Not(subformula)
-  }
-  
   //Illustrative example of the following conversion methods:
   //	input: a ~ b ~ c where ~ \in { =,<,>,<=,>= }
   //	subterms: a,b,c
   //	staggeredPairs: (a,b),(b,c)
   //	staggeredFormuals: (a ~ b), (b ~ c)
   //	output: (a ~ b) && (b ~ c)
-  def convertEquals(e : MExpr) : Formula = {
-    val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
-    val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
-    staggeredPairs.map(pair => Equal(pair._1,pair._2)).reduce(And)
-  }
-  def convertNotEquals(e : MExpr) : Formula = {
-    val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
-    val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
-    staggeredPairs.map(pair => NotEqual(pair._1,pair._2)).reduce(And)
-  }
-  def convertGreaterEqual(e : MExpr) : Formula = {
-    val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
-    val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
-    staggeredPairs.map(pair => GreaterEqual(pair._1,pair._2)).reduce(And)
-  }
-  def convertLessEqual(e : MExpr) : Formula = {
-    val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
-    val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
-    staggeredPairs.map(pair => LessEqual(pair._1,pair._2)).reduce(And)
-  }
-  def convertLessThan(e : MExpr) : Formula = {
-    val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
-    val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
-    staggeredPairs.map(pair => Less(pair._1,pair._2)).reduce(And)
-  }
-  def convertGreaterThan(e : MExpr) : Formula = {
-    val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
-    val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
-    staggeredPairs.map(pair => Greater(pair._1,pair._2)).reduce(And)
-  }
   /** converts expressions of the form a <= b < c < 0 */
   def convertInequality(e: MExpr): Formula = {
     def extractInequalities(exprs: Array[Expr]): List[(MExpr, MExpr, MExpr)] = {
@@ -357,7 +297,7 @@ object MathematicaToKeYmaera {
       map(fromMathematica(_).asInstanceOf[Formula]).reduce(And)
   }
   def makeOverlappingPairs[T](s : Seq[T]):Seq[(T,T)] = {
-    if(s.size == 2) {
+    if (s.size == 2) {
       (s.head, s.last) :: Nil
     }
     else {
@@ -374,72 +314,6 @@ object MathematicaToKeYmaera {
   def isThing(e:com.wolfram.jlink.Expr, thing:com.wolfram.jlink.Expr) = 
     e.equals(thing) || e.head().equals(thing)
 
-  def isQuantifier(e : com.wolfram.jlink.Expr) = 
-    isThing(e,MathematicaSymbols.FORALL) || isThing(e,MathematicaSymbols.EXISTS)
-  
-  def convertQuantifier(e : com.wolfram.jlink.Expr) = {
-    if(e.args().size != 2)
-      throw new ConversionException("Expected args size 2.")
-    
-    val quantifiedVariables = e.args().headOption.getOrElse(
-        throw new ConversionException("Found non-empty list after quantifier."))
-        
-    if (quantifiedVariables.head().equals(MathematicaSymbols.LIST)) {
-      //Convert the list of quantified variables  
-      val quantifiedVars = quantifiedVariables.args().map(n => convertQuantifiedVariable(n))
-
-      //Recurse on the body of the expression.
-      val bodyAsExpr = fromMathematica(e.args().last)
-      val bodyOfQuantifier = try {
-        bodyAsExpr.asInstanceOf[Formula]
-      }
-      catch {
-        case e : Exception => 
-          throw new ConversionException("Expected a formula in the body of the quanfiier, but found a non-variable expression: " + PrettyPrinter.printer(bodyAsExpr))
-      }
-        
-      //Create the final expression.
-      if(isThing(e, MathematicaSymbols.FORALL)) {
-        //Forall(IndexedSeq() ++ quantifiedVars, bodyOfQuantifier)
-        quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => Forall(v :: Nil, fml))
-      }
-      else if(isThing(e, MathematicaSymbols.EXISTS)) {
-        //Exists(IndexedSeq() ++ quantifiedVars, bodyOfQuantifier)
-        quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => Exists(v :: Nil, fml))
-      }
-      else {
-        throw mathExnMsg(e, "Tried to convert a quantifier-free expression using convertQuantifier. The check in fromMathematica must be wrong.")
-      }
-    }
-    else if(quantifiedVariables.head().equals(MathematicaSymbols.INEQUALITY)) {
-      ???
-    }
-    else {
-      //This is similar to the first case in this if/else block, except
-      //the expression looks like ForAll[x, ...] instead of ForAll[{x}, ...].
-      val variableAsExpr = fromMathematica(quantifiedVariables)
-      val formulaAsExpr = fromMathematica(e.args().last)
-      
-      val variable = try{ variableAsExpr.asInstanceOf[Variable] } catch {
-        case exn : Exception => throw mathExnMsg(e, "expected variable in quantifier but found other expr")
-      }
-      val formula = try{formulaAsExpr.asInstanceOf[Formula]} catch {
-        case exn : Exception => throw mathExnMsg(e, "Expected formula in quantifier but found other expression.")
-      }
-      
-      //code clone
-      if(isThing(e, MathematicaSymbols.FORALL)) {
-        Forall(Seq(variable), formula)
-      }
-      else if(isThing(e, MathematicaSymbols.EXISTS)) {
-        Exists(Seq(variable), formula)
-      }
-      else {
-        throw mathExnMsg(e, "Tried to convert a quantifier-free expression using convertQuantifier. The check in fromMathematica must be wrong.")
-      }
-    }
-  }
-  
   def isAborted(e : com.wolfram.jlink.Expr) = {
     e.toString.equalsIgnoreCase("$Aborted") ||
     e.toString.equalsIgnoreCase("Abort[]")
@@ -459,7 +333,7 @@ object MathematicaToKeYmaera {
     new ConversionException("conversion not defined for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
   
   def mathInfo(e : com.wolfram.jlink.Expr) : String = {
-    "args:\t" + {if(e.args().size == 0) { "empty" } else {e.args().map(_.toString).reduce(_+","+_)}} +
+    "args:\t" + {if (e.args().size == 0) { "empty" } else {e.args().map(_.toString).reduce(_+","+_)}} +
     "\n" +
     "toString:\t" + e.toString
   }
