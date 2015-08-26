@@ -29,22 +29,22 @@ object SMTConverter {
     */
   private def generateAssertNegation(expr: Expression, toolId: String): String = {
     val (varDec, smtFormula) = generateSMT(expr, toolId)
-    varDec + "\n" + "(assert (not " + smtFormula + "))"
+    varDec + "(assert (not " + smtFormula + "))"
   }
 
   /** Convert KeYmaera X expression to SMT expression for checking if this expression can be simplified */
   def generateSimplify(expr: Expression, toolId: String): String = {
     val (varDec, smtFormula) = generateSMT(expr, toolId)
-    varDec + "\n" + "(simplify " + smtFormula + ")"
+    varDec + "(simplify " + smtFormula + ")"
   }
 
   /** Convert KeYmaera X expression to SMT form which contains: variable/function declaration and converted SMT formula */
   private def generateSMT(expr: Expression, toolId: String): (String, String) = {
-    val allSymbols = StaticSemantics.symbols(expr)
-    val names = allSymbols.toList.map(s => nameIdentifier(s))
+    val allSymbols = StaticSemantics.symbols(expr).toList.sorted
+    val names = allSymbols.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers")
     require(!(names.contains(SMT_MIN)||names.contains(SMT_MAX)||names.contains(SMT_ABS)), "Variable and function names are not expected to be " + SMT_MIN + ", " +  SMT_MAX + "or " + SMT_ABS)
-    val varDec = allSymbols.map(
+    var varDec = allSymbols.map(
       s => s match {
         case x: Variable =>
           require(x.sort==Real, "Can only deal with variable of type real, but not " + x.sort)
@@ -61,6 +61,7 @@ object SMTConverter {
       }
     ).mkString("\n")
     val smtFormula = convertToSMT(expr, toolId)
+    if(varDec.nonEmpty) varDec += "\n"
     (varDec, smtFormula)
   }
 
