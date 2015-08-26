@@ -55,7 +55,8 @@ class AdvocatusReflecti extends FlatSpec with Matchers {
     println(classOf[Provable].getDeclaredFields.map(c => c.getName + " of type " + c.getType).mkString("\n"))
     System.setSecurityManager(new SecurityManager() {
       override def checkPermission(perm: Permission) = {
-        !(perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+        if (perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+        throw new SecurityException("Illegal Access")
       }
     })
     val fld = classOf[Provable].getDeclaredFields.apply(0)
@@ -70,8 +71,9 @@ class AdvocatusReflecti extends FlatSpec with Matchers {
     println(classOf[Provable].getDeclaredFields.map(c => c.getName + " of type " + c.getType).mkString("\n"))
     System.setSecurityManager(new SecurityManager() {
       override def checkPermission(perm: Permission) = {
-        !(perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName)) &&
-          !(perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+        if (perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName) ||
+          perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+          throw new SecurityException("Illegal Access")
       }
     })
     a [SecurityException] should be thrownBy System.setSecurityManager(new SecurityManager())
@@ -155,7 +157,8 @@ class AdvocatusReflecti extends FlatSpec with Matchers {
     println("Got constructor " + cnstr)
     System.setSecurityManager(new SecurityManager() {
       override def checkPermission(perm: Permission) = {
-        !(perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+        if (perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+          throw new SecurityException("Illegal Access")
       }
     })
     a [SecurityException] should be thrownBy cnstr.setAccessible(true)
@@ -167,7 +170,8 @@ class AdvocatusReflecti extends FlatSpec with Matchers {
     println("Got constructor " + cnstr)
     System.setSecurityManager(new SecurityManager() {
       override def checkPermission(perm: Permission) = {
-        !(perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+        if (perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+          throw new SecurityException("Illegal Access")
       }
     })
     a [SecurityException] should be thrownBy System.setSecurityManager(new SecurityManager())
@@ -180,8 +184,9 @@ class AdvocatusReflecti extends FlatSpec with Matchers {
     println("Got constructor " + cnstr)
     System.setSecurityManager(new SecurityManager() {
       override def checkPermission(perm: Permission) = {
-        !(perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName)) &&
-        !(perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+        if (perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName) ||
+        perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+          throw new SecurityException("Illegal Access")
       }
     })
     a [AccessControlException] should be thrownBy System.setSecurityManager(new SecurityManager())

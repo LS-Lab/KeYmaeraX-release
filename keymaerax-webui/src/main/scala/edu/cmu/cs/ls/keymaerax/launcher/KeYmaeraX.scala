@@ -510,9 +510,10 @@ object KeYmaeraX {
   /** Activate a security manager */
   private def activateSecurity(): Unit = {
     System.setSecurityManager(new SecurityManager() {
-      override def checkPermission(perm: Permission) =
-        !(perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName)) &&
-          !(perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+      override def checkPermission(perm: Permission): Unit =
+        if (perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName) ||
+          perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+          throw new SecurityException("Access denied by KeYmaera X")
     })
   }
 
