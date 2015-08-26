@@ -1,6 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.{File, PrintWriter}
+import java.lang.reflect.ReflectPermission
+import java.security.Permission
 
 import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ClassGenerator
 import edu.cmu.cs.ls.keymaerax.core._
@@ -58,6 +60,7 @@ object KeYmaeraX {
       |  -vars     use ordered list of variables, treating others as constant functions
       |  -lax      enable lax mode with more flexible parser, printer, prover etc.
       |  -strict   enable strict mode with no flexibility in prover
+      |  -security enable security manager imposing some security restrictions
       |  -debug    enable debug mode with more exhaustive messages
       |  -nodebug  disable debug mode to suppress intermediate messages
       |  -help     Display this usage information
@@ -68,7 +71,7 @@ object KeYmaeraX {
       |""".stripMargin
 
   def main (args: Array[String]): Unit = {
-    println("KeYmaera X Prover\n" +
+    println("KeYmaera X Prover" + VERSION +"\n"
       "Use option -help for usage and license information")
     if (args.length == 0) return launchUI(args)
     if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
@@ -128,6 +131,7 @@ object KeYmaeraX {
           case "-strict" :: tail => System.setProperty("LAX", "false"); nextOption(map, tail)
           case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
           case "-nodebug" :: tail => System.setProperty("DEBUG", "false"); nextOption(map, tail)
+          case "-security" :: tail => activateSecurity(); nextOption(map, tail)
           case option :: tail => optionErrorReporter(option)
         }
       }
@@ -501,6 +505,15 @@ object KeYmaeraX {
       (if (node.isClosed) "Closed Goal: " else if (node.children.isEmpty) "Open Goal: " else "Inner Node: ") +
       "\tdebug: " + node.tacticInfo.infos.getOrElse("debug", "<none>") +
       "\n" + node.sequent.prettyString + "\n")
+  }
+
+  /** Activate a security manager */
+  private def activateSecurity(): Unit = {
+    System.setSecurityManager(new SecurityManager() {
+      override def checkPermission(perm: Permission) =
+        !(perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName)) &&
+          !(perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+    })
   }
 
   private val interactiveUsage = "Type a tactic command to apply to the current goal.\n" +
