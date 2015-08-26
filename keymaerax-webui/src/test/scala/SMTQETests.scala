@@ -12,8 +12,6 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
  * @author Ran Ji
  */
 class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
-  type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
-  type SExpr = SMTLib
   var z3: Z3Solver = null
   var polya: PolyaSolver = null
 
