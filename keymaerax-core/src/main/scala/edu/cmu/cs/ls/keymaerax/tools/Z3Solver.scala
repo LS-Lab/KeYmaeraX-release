@@ -9,7 +9,7 @@ import java.nio.channels.Channels
 import java.util.Locale
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, ParseException, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser}
 import scala.collection.immutable
 import scala.sys.process._
 
@@ -18,9 +18,6 @@ import scala.sys.process._
  * @author Ran Ji
  */
 class Z3Solver extends SMTSolver {
-
-  private val k2s = new KeYmaeraToSMT("Z3")
-  def toSMT(expr : KExpr): SExpr = k2s.convertToSMT(expr)
 
   private val pathToZ3 : String = {
     val z3TempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
@@ -103,8 +100,7 @@ class Z3Solver extends SMTSolver {
   }
 
   def qeEvidence(f : Formula) : (Formula, Evidence) = {
-    var smtCode = toSMT(f).getVariableList + "(assert (not " + toSMT(f).getFormula + "))"
-    smtCode += "\n(check-sat)\n"
+    val smtCode = SMTConverter(f, "Z3") + "\n(check-sat)\n"
     println("[Solving with Z3...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
@@ -120,7 +116,7 @@ class Z3Solver extends SMTSolver {
   }
 
   def simplify(t: Term) = {
-    val smtCode = toSMT(t).getVariableList + "(simplify " + toSMT(t).getFormula + ")"
+    val smtCode = SMTConverter.generateSimplify(t, "Z3")
 //    println("[Simplifying with Z3 ...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
@@ -129,7 +125,7 @@ class Z3Solver extends SMTSolver {
     writer.close()
     val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
     val output: String = cmd.!!
-//    println("[Z3 simplify result] \n" + output + "\n")
+    println("[Z3 simplify result] \n" + output + "\n")
     try {
       KeYmaeraXParser.termParser(output)
     } catch {

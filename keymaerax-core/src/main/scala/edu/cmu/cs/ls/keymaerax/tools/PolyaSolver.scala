@@ -19,9 +19,6 @@ import scala.sys.process._
  */
 class PolyaSolver extends SMTSolver {
 
-  private val k2s = new KeYmaeraToSMT("Polya")
-  def toSMT(expr : KExpr): SExpr = k2s.convertToSMT(expr)
-
   private val pathToPolya : String = {
     val polyaTempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
     if(!new File(polyaTempDir).exists) new File(polyaTempDir).mkdirs
@@ -80,8 +77,7 @@ class PolyaSolver extends SMTSolver {
   }
 
   def qeEvidence(f : Formula) : (Formula, Evidence) = {
-    var smtCode = toSMT(f).getVariableList + "(assert (not " + toSMT(f).getFormula + "))"
-    smtCode += "\n(check-sat)\n"
+    val smtCode = SMTConverter(f, "Polya") + "\n(check-sat)\n"
     println("[Solving with Polya...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
@@ -97,7 +93,7 @@ class PolyaSolver extends SMTSolver {
   }
 
   def simplify(t: Term) = {
-    val smtCode = toSMT(t).getVariableList + "(simplify " + toSMT(t).getFormula + ")"
+    val smtCode = SMTConverter.generateSimplify(t, "Z3")
 //    println("[Simplifying with Polya ...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
