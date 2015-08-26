@@ -33,8 +33,8 @@ If there are any questions about the KeYmaera X Kernel code review or any sugges
 
 Extended Code Review:
 In addition to the above files, an extended code review also considers
-R9) KeYmaeraXPrettyPrinter.scala
-R10) tools package
+R9) PrettyPrinter.scala, KeYmaeraXPrettyPrinter.scala, OpSpec.scala
+R10) tools package: Tool*.scala, Mathematica*.scala, KeYmaera*.scala, SMT*.scala etc.
 
 Andre
 
@@ -54,6 +54,11 @@ ACM Trans. Comput. Log.
 http://arxiv.org/abs/1408.1980
 
 ------------------------------------------------------------------
+Extended Code Review: KeYmaera X Core: 2015-08-25
+  TODO Rule.LAX_MODE=false, which affects BoundVariableRenaming and URename and RCF trusted tools
+  TODO FileLemmaDB.scala: move out of core
+  TODO Proof.scala: occasionally determine whether ClosingRule etc categorization is useful
+  TODO SMTConversions.scala: resolve issues
 Code Review: KeYmaera X Core: 2015-08-24
   TODO Proof.scala: BoundVariableRenaming.compatibilityMode should be false
   TODO Proof.scala: UniformRenaming.semanticRenaming should be false

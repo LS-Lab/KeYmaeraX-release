@@ -87,8 +87,6 @@ object SMTLib {
   }
 }
 
-class SMTConversionException(s:String) extends Exception(s)
-
 /**
  * Convert KeYmaera expression to the SMT solver named toolId
  */
