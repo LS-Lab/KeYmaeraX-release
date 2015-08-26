@@ -70,6 +70,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     Dplus(SuccPosition(0, 0::Nil)) &
       Dvariable(SuccPosition(0, 0::0::Nil)) &
       useAt(Dlinear)(SuccPosition(0, 0::1::Nil)) & // Dtimes(SuccPosition(0, 0::1::Nil))
+      Dvariable(SuccPosition(0, 0::1::1::Nil)) &
       byUS("= reflexive")
     ).isProved shouldBe true
   }

@@ -21,9 +21,14 @@ import edu.cmu.cs.ls.keymaerax.tools.Tool
  */
 object HilbertCalculus {
   import TactixLibrary.useAt
+
+  /** True when external tactic calls are okay, false when insisting on useAt technology */
+  private val EXTERNAL = true
+
   // modalities
   /** assignb: [:=] simplify assignment by substitution or equation */
-  lazy val assignb            : PositionTactic = TacticLibrary.boxAssignT // useAt("[:=] assign equational") //@todo or "[:=] assign" if no clash
+  lazy val assignb            : PositionTactic = if (!EXTERNAL) useAt("[:=] assign equational") //@todo or "[:=] assign" if no clash
+  else TacticLibrary.boxAssignT
   /** randomb: [:*] simplify nondeterministic assignment to universal quantifier */
   lazy val randomb            : PositionTactic = useAt("[:*] assign nondet")
   /** testb: [?] simplifies test to an implication */
@@ -72,7 +77,8 @@ object HilbertCalculus {
     (us:Subst)=>us++RenUSubst(Seq((FuncOf(Function("r",None,Real,Real),Anything), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation on its differential symbols */
-  lazy val DE                 : PositionTactic = ODETactics.diffEffectT
+  lazy val DE                 : PositionTactic = if (!EXTERNAL) ???
+  else ODETactics.diffEffectT
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
   //@todo Dconstify usually needed for DI
   def DI                      : PositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
@@ -107,7 +113,8 @@ object HilbertCalculus {
   /** Dconst: c()' derives a constant */
   lazy val Dconst             : PositionTactic = useAt("c()' derive constant fn")
   /** Dvariable: x' derives a variable */
-  lazy val Dvariable          : PositionTactic = useAt("x' derive variable", PosInExpr(0::0::Nil))
+  lazy val Dvariable          : PositionTactic = if (!EXTERNAL) useAt("x' derive variable", PosInExpr(0::0::Nil))
+  else SyntacticDerivationInContext.symbolizeDifferential
 
   /** Dand: &' derives a conjunction */
   lazy val Dand               : PositionTactic = useAt("&' derive and")
