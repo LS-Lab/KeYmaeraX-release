@@ -88,13 +88,13 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
       implyR(1) &
-        DC("5<=x".asFormula)(1) & //@todo needs more branching to handle DI
-        DW(1) &
-        TacticLibrary.abstractionT(1) & QE
+        DC("5<=x".asFormula)(1) & debug("after DC") & //@todo needs more branching to handle DI
+        DW(1) & debug("after DW") &
+        TacticLibrary.abstractionT(1) & debug("after abstraction") & QE
     ).isProved shouldBe true
   }
 
-  it should "prove x>=5 -> [x:=x+1;{x'=2}]x>=" in {
+  it should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
     implyR(1) & //ind
     useAt("[;] compose")(1) &

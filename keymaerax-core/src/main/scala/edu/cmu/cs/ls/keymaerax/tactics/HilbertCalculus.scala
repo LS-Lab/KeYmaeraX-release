@@ -74,7 +74,7 @@ object HilbertCalculus {
   lazy val DW                 : PositionTactic = useAt("DW differential weakening")
   /** DC: Differential Cut a new invariant for a differential equation */
   def DC(invariant: Formula)  : PositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
-    (us:Subst)=>us++RenUSubst(Seq((FuncOf(Function("r",None,Real,Real),Anything), invariant)))
+    (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation on its differential symbols */
   lazy val DE                 : PositionTactic = if (!EXTERNAL) ???
