@@ -488,11 +488,15 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   //@note If there were inherited contracts in Scala, we could augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
 
-  private[core] val LAX_MODE = true
-
+  /** Name of this proof rule */
   def name: String
 
   override def toString: String = name
+}
+
+private object Rule {
+  //@todo Code Review: LAX_MODE should be false
+  private[core] val LAX_MODE = System.getProperty("LAX", "false")=="true"
 }
 
 /*********************************************************************************
@@ -996,7 +1000,7 @@ object AxiomaticRule {
  */
 final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   val name: String = "Axiomatic Rule " + id + " instance"
-  require(subst.freeVars.isEmpty || LAX_MODE && id == "CQ equation congruence", "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
+  require(subst.freeVars.isEmpty || Rule.LAX_MODE && id == "CQ equation congruence", "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
 
   override def toString: String = name + "(" + subst + ")"
 
@@ -1054,10 +1058,6 @@ final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
 
   private val renaming = URename(what, repl)
 
-  /** @todo Code Review: change to false: This is a slight euphemism for do you mind being possibly unsound */
-  //@note turn to false after telling alphaRenamingT and globalAlphaRenamingT to add the stutter by axiom if needed
-  private val compatibilityMode = LAX_MODE
-
   override def toString: String = name + "(" + what + "~>" + repl + ")"
 
   def apply(s: Sequent): immutable.List[Sequent] =
@@ -1093,7 +1093,9 @@ final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
         //@note e is not in scope of x so, unlike g, not affected by bound renaming yet
         case Box(Assign(x, e), g) if x == repl => Box(Assign(repl, e), renaming(g))
         case Diamond(Assign(x, e), g) if x == repl => Diamond(Assign(repl, e), renaming(g))
-        case _ => if (compatibilityMode) {
+        case _ => if (Rule.LAX_MODE) {
+          /** @todo Code Review: change to false */
+          //@note turn to false after telling alphaRenamingT and globalAlphaRenamingT to add the stutter by axiom if needed
           //println("LAX: BoundRenaming: Change alphaRenamingT and disable compatibilityMode" + (if (what==repl) " stutter " else "non-stutter") + "\nfor " + this + " in " + f.prettyString + " led to " + Box(Assign(repl, what), apply(f)).prettyString)
           if (Provable.DEBUG && repl != what) {println("LAX: BoundRenaming: Change alphaRenamingT and disable compatibilityMode" + (if (what==repl) " stutter " else "non-stutter") + "\nfor " + this + " in " + f.prettyString + " led to " + Box(Assign(repl, what), apply(f)).prettyString)}
           //@note uniformly rename all occurrences of what to repl in f and prefix with an assignment [repl:=what] remembering what value 'what' used to have.
@@ -1168,7 +1170,7 @@ object RCF {
   /** List of the class names of all external tools whose answers KeYmaera X would believe */
   private val trustedTools: immutable.List[String] =
     "edu.cmu.cs.ls.keymaerax.tools.Mathematica" ::
-    "edu.cmu.cs.ls.keymaerax.tools.Z3" :: Nil
+      (if (Rule.LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.Z3" :: Nil else Nil)
 
   /**
    * Proves a formula f in real arithmetic using an external tool for quantifier elimination.

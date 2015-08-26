@@ -27,14 +27,14 @@ import scala.collection.immutable
  */
 final case class URename(what: Variable, repl: Variable) extends (Expression => Expression) {
   require(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
-  /** The variables that are not allowed to occur initially */
-  private val taboo: Set[NamedSymbol] = if (repl.sort == Real) Set(repl,DifferentialSymbol(repl)) else Set(repl)
-  /** The variables that are affected and should be gone finally */
-  private val affected: Set[NamedSymbol] = if (what.sort == Real) Set(what,DifferentialSymbol(what)) else Set(what)
+//  /** The variables that are not allowed to occur initially */
+//  private val taboo: Set[NamedSymbol] = if (repl.sort == Real) Set(repl,DifferentialSymbol(repl)) else Set(repl)
+//  /** The variables that are affected and should be gone finally */
+//  private val affected: Set[NamedSymbol] = if (what.sort == Real) Set(what,DifferentialSymbol(what)) else Set(what)
 
   /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of what. */
   //@todo Code Review: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
-  private val semanticRenaming: Boolean = false // System.getProperty("LAX", "true")=="true"
+  private val semanticRenaming: Boolean = Rule.LAX_MODE
 
   override def toString: String = "URename{" + what + "~>" + repl + "}"
 
