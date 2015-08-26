@@ -32,7 +32,7 @@ object SMTConverter {
   /** Convert KeYmaera X expression to SMT expression for checking if this expression can be simplified */
   def generateSimplify(expr: Expression, toolId: String): String = {
     val (varDec, smtFormula) = generateSMT(expr, toolId)
-    varDec + "\n" + "(simplify " + smtFormula + "))"
+    varDec + "\n" + "(simplify " + smtFormula + ")"
   }
 
   /** Convert KeYmaera X expression to SMT form which contains: variable/function declaration and converted SMT formula */
@@ -144,7 +144,7 @@ object SMTConverter {
   /** Convert possibly nested forall KeYmaera X expression to SMT */
   private def convertForall(vs: Seq[NamedSymbol], f: Formula, toolId: String) : String = {
     val (vars, formula) = collectVarsForall(vs, f)
-    "(forall " + vars.map(v => "(" + nameIdentifier(v) + " Real)").mkString(" ") + " " + convertFormula(formula, toolId) + ")"
+    "(forall " + "(" + vars.map(v => "(" + nameIdentifier(v) + " Real)").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
   }
 
   /** Collect all quantified variables used in possibly nested forall expression */
@@ -158,7 +158,7 @@ object SMTConverter {
   /** Convert possibly nested exists KeYmaera X expression to SMT */
   private def convertExists(vs: Seq[NamedSymbol], f: Formula, toolId: String) : String = {
     val (vars, formula) = collectVarsExists(vs, f)
-    "(exists " + vars.map(v => "(" + nameIdentifier(v) + " Real)").mkString(" ") + " " + convertFormula(formula, toolId) + ")"
+    "(exists " + "(" + vars.map(v => "(" + nameIdentifier(v) + " Real)").mkString(" ") + ") " + convertFormula(formula, toolId) + ")"
   }
 
   /** Collect all quantified variables used in possibly nested exists expression */
