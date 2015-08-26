@@ -41,7 +41,6 @@ object SMTConverter {
   /** Convert KeYmaera X expression to SMT form which contains: variable/function declaration and converted SMT formula */
   private def generateSMT(expr: Expression, toolId: String): (String, String) = {
     val allSymbols = StaticSemantics.symbols(expr)
-    val allSignatures = StaticSemantics.signature(expr)
     val names = allSymbols.toList.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers")
     require(!(names.contains(SMT_MIN)||names.contains(SMT_MAX)||names.contains(SMT_ABS)), "Variable and function names are not expected to be " + SMT_MIN + ", " +  SMT_MAX + "or " + SMT_ABS)
@@ -57,7 +56,7 @@ object SMTConverter {
             case "min" => "(define-fun " + SMT_MIN + " ((x1 Real) (x2 Real)) Real\n  (ite (<= x1 x2) x1 x2))"
             case "max" => "(define-fun " + SMT_MAX + " ((x1 Real) (x2 Real)) Real\n  (ite (>= x1 x2) x1 x2))"
             case "abs" => "(define-fun " + SMT_ABS + " ((x Real)) Real\n  (ite (>= x 0) x (- x)))"
-            case _ => "(declare-fun " + nameIdentifier(f) + " (" + generateFuncParameters(f.domain) +  ") " + f.sort + ")"
+            case _ => "(declare-fun " + nameIdentifier(f) + " (" + generateFuncPrmtSorts(f.domain) +  ") " + f.sort + ")"
           }
       }
     ).mkString("\n")
@@ -66,9 +65,9 @@ object SMTConverter {
   }
 
   /** Generate parameters of function in the varDec of SMT */
-  private def generateFuncParameters(t: Sort) : String = t match {
+  private def generateFuncPrmtSorts(t: Sort) : String = t match {
     case Unit => ""
-    case Tuple(l,r) => generateFuncParameters(l) + " " + generateFuncParameters(r)
+    case Tuple(l, r) => generateFuncPrmtSorts(l) + " " + generateFuncPrmtSorts(r)
     case _ => t.toString
   }
 
@@ -81,7 +80,7 @@ object SMTConverter {
 
   private def convertToSMT(expr: Expression, toolId: String) : String = expr match {
     case t: Term  => convertTerm(t, toolId)
-    case f : Formula => convertFormula(f, toolId)
+    case f: Formula => convertFormula(f, toolId)
     case _ => throw new SMTConversionException("The input expression: \n" + KeYmaeraXPrettyPrinter(expr) + "\nis expected to be formula.")
   }
 
