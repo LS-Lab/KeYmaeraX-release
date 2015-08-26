@@ -71,7 +71,7 @@ object KeYmaeraX {
       |""".stripMargin
 
   def main (args: Array[String]): Unit = {
-    println("KeYmaera X Prover" + VERSION +"\n"
+    println("KeYmaera X Prover" + VERSION +"\n"+
       "Use option -help for usage and license information")
     if (args.length == 0) return launchUI(args)
     if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
