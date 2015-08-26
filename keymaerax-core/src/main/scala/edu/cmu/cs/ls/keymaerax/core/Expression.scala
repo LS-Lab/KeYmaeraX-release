@@ -111,7 +111,7 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
 //  require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
 //    "WARNING: non-empty names without underscores (except at end for internal names): " + name)
 //  require(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols: " + name)
-  require(name.matches("""([a-zA-Z][a-zA-Z0-9]*\_?)"""), "alphanumerical identifier without primes and without underscores (except at end for internal names): " + name)
+  require(name.matches("""\\\_|\\?([a-zA-Z])*|([a-zA-Z][a-zA-Z0-9]*\_?)"""), "alphanumerical identifier without primes and without underscores (except at end for internal names): " + name)
   require(index.getOrElse(0)>=0, "nonnegative index if any " + this)
 
   def name: String
