@@ -39,6 +39,48 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
 //    polya.qe("3^0 < 1".asFormula) should be ("false".asFormula)
   }
 
+  it should "prove constant function" in {
+    z3.qe("f()=f()".asFormula) should be("true".asFormula)
+    polya.qe("f()=f()".asFormula) should be("true".asFormula)
+
+  }
+
+  it should "prove unary function" in {
+    z3.qe("f(x)=f(x)".asFormula) should be("true".asFormula)
+    //TODO Polya support
+//    polya.qe("f(x)=f(x)".asFormula) should be("true".asFormula)
+  }
+
+  it should "prove binary function" in {
+    z3.qe("f(x,y)=f(x,y)".asFormula) should be("true".asFormula)
+    //TODO Polya support
+//    polya.qe("f(x,y)=f(x,y)".asFormula) should be("true".asFormula)
+  }
+
+  it should "prove function with more parameters" in {
+    z3.qe("f(x,y,z)=f(x,y,z)".asFormula) should be("true".asFormula)
+    //TODO Polya support
+//    polya.qe("f(x,y,z)=f(x,y,z)".asFormula) should be("true".asFormula)
+  }
+
+  it should "prove absolute value" in {
+    z3.qe("abs(y)>=y".asFormula) should be("true".asFormula)
+    //TODO Polya support
+//    polya.qe("abs(y)>=y".asFormula) should be("true".asFormula)
+  }
+
+  it should "prove minimum" in {
+    z3.qe("min(x, y)<=x".asFormula) should be("true".asFormula)
+    //TODO Polya support
+//    polya.qe("min(x, y)<=x".asFormula) should be("true".asFormula)
+  }
+
+  it should "prove maximum" in {
+    z3.qe("max(x, y)>=x".asFormula) should be("true".asFormula)
+    //TODO Polya support
+//    polya.qe("max(x, y)>=x".asFormula) should be("true".asFormula)
+  }
+
   it should "prove complex qutifiers" in {
     z3.qe("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("false".asFormula)
     polya.qe("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("false".asFormula)
