@@ -49,7 +49,7 @@ case class IDENT(name: String, index: Option[Int] = None) extends Terminal(name 
   override def regexp = IDENT.regexp
 }
 object IDENT {
-  def regexp = """([a-zA-Z][a-zA-Z0-9]*\_?)""".r
+  def regexp = """([a-zA-Z][a-zA-Z0-9\_]*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 case class NUMBER(value: String) extends Terminal(value) {
