@@ -19,13 +19,14 @@ import scala.sys.process._
  */
 class PolyaSolver extends SMTSolver {
 
+  /** Get the absolute path to Polya jar */
   private val pathToPolya : String = {
     val polyaTempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
     if(!new File(polyaTempDir).exists) new File(polyaTempDir).mkdirs
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
 
     // so far only for Mac Os and linux
-    // TODO: support for other OS
+    //@todo: support for other OS
     if(new File(polyaTempDir+"polya").exists()) {
       polyaTempDir+"polya"
     } else {
@@ -60,23 +61,30 @@ class PolyaSolver extends SMTSolver {
     }
   }
 
-  def run(cmd: String) = {
-    val output : String = cmd.!!
-    println("[Polya result] \n" + output + "\n")
-    val result = {
-      if (output.contains("-1")) False
-      else if(output.contains("1")) True
-      else if(output.contains("0")) False
-      else throw new SMTConversionException("Conversion of Polya result \n" + output + "\n is not defined")
+  /**
+   * Check satisfiability with Polya
+   * @param cmd the command for running Polya with a given SMT file
+   * @return    Polya output as String and the interpretation of Polya output as KeYmaera X formula
+   */
+  def run(cmd: String) : (String, Formula)= {
+    val polyaOutput = cmd.!!
+    println("[Polya result] \n" + polyaOutput + "\n")
+    val kResult = {
+      if (polyaOutput.startsWith("-1")) False
+      else if(polyaOutput.startsWith("1")) True
+      else if(polyaOutput.startsWith("0")) False
+      else throw new SMTConversionException("Conversion of Polya result \n" + polyaOutput + "\n is not defined")
     }
-    (output, result)
+    (polyaOutput, kResult)
   }
 
-  def qe(f : Formula) : Formula = {
+  /** Return Polya QE result */
+  def qe(f: Formula) : Formula = {
     qeEvidence(f)._1
   }
 
-  def qeEvidence(f : Formula) : (Formula, Evidence) = {
+  /** Return Polya QE result and the proof evidence */
+  def qeEvidence(f: Formula) : (Formula, Evidence) = {
     val smtCode = SMTConverter(f, "Polya") + "\n(check-sat)\n"
     println("[Solving with Polya...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
@@ -85,28 +93,33 @@ class PolyaSolver extends SMTSolver {
     writer.flush()
     writer.close()
     val cmd = pathToPolya + " " + smtFile.getAbsolutePath
-    val (output, result) = run(cmd)
-    result match {
-      case f : Formula => (f, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> output)))
+    val (polyaOutput, kResult) = run(cmd)
+    kResult match {
+      case f: Formula => (f, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> polyaOutput)))
       case _ => throw new Exception("Expected a formula from QE call but got a non-formula expression.")
     }
   }
 
-  def simplify(t: Term) = {
+  /**
+   * Simplify a KeYmaera X term into a possibly simple term
+   * @param t  KeYmaera X term to be simplified
+   * @return   the simplified term, or the original term if the simplify result is not a parsable KeYmaera X term
+   */
+  def simplify(t: Term) : Term = {
     val smtCode = SMTConverter.generateSimplify(t, "Z3")
-//    println("[Simplifying with Polya ...] \n" + smtCode)
+    println("[Simplifying with Polya ...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
     writer.flush()
     writer.close()
     val cmd = pathToPolya + " " + smtFile.getAbsolutePath
-    val output: String = cmd.!!
-//    println("[Polya simplify result] \n" + output + "\n")
+    val polyaOutput = cmd.!!
+    println("[Polya simplify result] \n" + polyaOutput + "\n")
     try {
-      KeYmaeraXParser.termParser(output)
+      KeYmaeraXParser.termParser(polyaOutput)
     } catch {
-      case e: ParseException => t
+      case e: ParseException => println("[Info] Cannot parse Z3 simplified result: " + polyaOutput); t
     }
   }
 }
