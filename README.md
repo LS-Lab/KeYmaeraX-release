@@ -43,11 +43,12 @@ to compile the source code. First-time compilation may take a while, since it do
 including Scala itself. 
 
 The build file does not include paths to the Mathematica JLink JAR, so you will need to set an environmental variable
-JLINK_JAR_LOCATION to the location of JLink.jar in the Mathematica package. You can do this in .bashrc or .profile.
+JLINK_JAR_LOCATION to the location of JLink.jar in the Mathematica package. You can do this in ~/.bashrc or ~/.profile.
 
 Example:
 
   export JLINK_JAR_LOCATION="/Applications/Mathematica.app/SystemFiles/Links/JLink/JLink.jar"
+  export JLINK_JAR_LOCATION=/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/JLink.jar
 
 If JLink.jar is in a non-default location on your computer, add a new line to build.sbt.
 
