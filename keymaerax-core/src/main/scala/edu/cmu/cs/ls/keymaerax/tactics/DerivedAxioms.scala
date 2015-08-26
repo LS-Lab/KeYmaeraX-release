@@ -1218,64 +1218,184 @@ object DerivedAxioms {
   )
   lazy val flipGreaterT = derivedAxiomT(flipGreater)
 
-  /* Unused so far @todo use f(), g() etc instead of r,s
-Axiom "+ associative".
-  (r + s) + t = r + (s + t)
-End.
+  /**
+   * {{{Axiom "+ associative".
+   *    (f()+g()) + h() = f() + (g()+h())
+   * End.
+   * }}}
+   */
+  lazy val plusAssociativeF = "(f() + g()) + h() = f() + (g() + h())".asFormula
+  lazy val plusAssociative = derivedAxiom("+ associative",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(plusAssociativeF)),
+    QE
+  )
+  lazy val plusAssociativeT = derivedAxiomT(plusAssociative)
 
-Axiom "* associative".
-  (r * s) * t = r * (s * t)
-End.
+  /**
+   * {{{Axiom "* associative".
+   *    (f()*g()) * h() = f() * (g()*h())
+   * End.
+   * }}}
+   */
+  lazy val timesAssociativeF = "(f() * g()) * h() = f() * (g() * h())".asFormula
+  lazy val timesAssociative = derivedAxiom("* associative",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(timesAssociativeF)),
+    QE
+  )
+  lazy val timesAssociativeT = derivedAxiomT(timesAssociative)
 
-Axiom "+ commutative".
-  s+t = t+s
-End.
+  /**
+   * {{{Axiom "+ commutative".
+   *    f()+g() = g()+f()
+   * End.
+   * }}}
+   */
+  lazy val plusCommutativeF = "f()+g() = g()+f()".asFormula
+  lazy val plusCommutative = derivedAxiom("+ commutative",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(plusCommutativeF)),
+    QE
+  )
+  lazy val plusCommutativeT = derivedAxiomT(plusCommutative)
 
-Axiom "* commutative".
-  s*t = t*s
-End.
+  /**
+   * {{{Axiom "* commutative".
+   *    f()*g() = g()*f()
+   * End.
+   * }}}
+   */
+  lazy val timesCommutativeF = "f()*g() = g()*f()".asFormula
+  lazy val timesCommutative = derivedAxiom("* commutative",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(timesCommutativeF)),
+    QE
+  )
+  lazy val timesCommutativeT = derivedAxiomT(timesCommutative)
 
-Axiom "distributive".
-  r*(s+t) = (r*s) + (r*t)
-End.
+  /**
+   * {{{Axiom "distributive".
+   *    f()*(g()+h()) = f()*g() + f()*h()
+   * End.
+   * }}}
+   */
+  lazy val distributiveF = "f()*(g()+h()) = f()*g() + f()*h()".asFormula
+  lazy val distributive = derivedAxiom("distributive",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(distributiveF)),
+    QE
+  )
+  lazy val distributiveT = derivedAxiomT(distributive)
 
-Axiom "+ identity".
-  s + 0 = s
-End.
+  /**
+   * {{{Axiom "+ identity".
+   *    f()+0 = f()
+   * End.
+   * }}}
+   */
+  lazy val plusIdentityF = zeroPlusF
+  lazy val plusIdentity = zeroPlus
+  lazy val plusIdentityT = zeroPlusT
 
-Axiom "* identity".
-  s * 1 = s
-End.
+  /**
+   * {{{Axiom "* identity".
+   *    f()*1 = f()
+   * End.
+   * }}}
+   */
+  lazy val timesIdentityF = "f()*1 = f()".asFormula
+  lazy val timesIdentity = derivedAxiom("* identity",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(timesIdentityF)),
+    QE
+  )
+  lazy val timesIdentityT = derivedAxiomT(timesIdentity)
 
-Axiom "+ inverse".
-  s + (-s) = 0
-End.
+  /**
+   * {{{Axiom "+ inverse".
+   *    f() + (-f()) = 0
+   * End.
+   * }}}
+   */
+  lazy val plusInverseF = "f() + (-f()) = 0".asFormula
+  lazy val plusInverse = derivedAxiom("+ inverse",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(plusInverseF)),
+    QE
+  )
+  lazy val plusInverseT = derivedAxiomT(plusInverse)
 
-Axiom "* inverse".
-  s != 0 -> s * (s^-1) = 1
-End.
+  /**
+   * {{{Axiom "* inverse".
+   *    f() != 0 -> f()*(f()^-1) = 1
+   * End.
+   * }}}
+   */
+  lazy val timesInverseF = "f() != 0 -> f()*(f()^-1) = 1".asFormula
+  lazy val timesInverse = derivedAxiom("* inverse",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(timesInverseF)),
+    QE
+  )
+  lazy val timesInverseT = derivedAxiomT(timesInverse)
 
-Axiom "positivity".
-  0 < s | 0 = s | 0 < -s
-End.
+  /**
+   * {{{Axiom "positivity".
+   *    f() < 0 | f() = 0 | 0 < f()
+   * End.
+   * }}}
+   */
+  lazy val positivityF = "f() < 0 | f() = 0 | 0 < f()".asFormula
+  lazy val positivity = derivedAxiom("positivity",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(positivityF)),
+    QE
+  )
+  lazy val positivityT = derivedAxiomT(positivity)
 
-Axiom "+ closed".
-  (0 < s & 0 < t) -> 0 < s+t
-End.
+  /**
+   * {{{Axiom "+ closed".
+   *    0 < f() & 0 < g() -> 0 < f()+g()
+   * End.
+   * }}}
+   */
+  lazy val plusClosedF = "0 < f() & 0 < g() -> 0 < f()+g()".asFormula
+  lazy val plusClosed = derivedAxiom("+ closed",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(plusClosedF)),
+    QE
+  )
+  lazy val plusClosedT = derivedAxiomT(plusClosed)
 
-Axiom "* closed".
-  (0 < s & 0 < t) -> 0 < s*t
-End.
+  /**
+   * {{{Axiom "* closed".
+   *    0 < f() & 0 < g() -> 0 < f()*g()
+   * End.
+   * }}}
+   */
+  lazy val timesClosedF = "0 < f() & 0 < g() -> 0 < f()*g()".asFormula
+  lazy val timesClosed = derivedAxiom("* closed",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(timesClosedF)),
+    QE
+  )
+  lazy val timesClosedT = derivedAxiomT(timesClosed)
 
-Axiom "<".
-  (s<t) <-> (0 < t-s)
-End.
+  /**
+   * {{{Axiom "<".
+   *    f() < g() <-> 0 < g()-f()
+   * End.
+   * }}}
+   */
+  lazy val lessF = "f() < g() <-> 0 < g()-f()".asFormula
+  lazy val less = derivedAxiom("<",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(lessF)),
+    QE
+  )
+  lazy val lessT = derivedAxiomT(less)
 
-Axiom ">".
-  (s>t) <-> (t<s)
-End.
-*/
-
+  /**
+   * {{{Axiom ">".
+   *    f() > g() <-> g() < f()
+   * End.
+   * }}}
+   */
+  lazy val greaterF = "f() > g() <-> g() < f()".asFormula
+  lazy val greater = derivedAxiom(">",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(greaterF)),
+    QE
+  )
+  lazy val greaterT = derivedAxiomT(greater)
 
   /**
    * {{{Axiom "abs".

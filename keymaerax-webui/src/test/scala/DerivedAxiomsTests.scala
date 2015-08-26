@@ -124,6 +124,20 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove < negate" in {check(notGreaterEqual)}
   it should "prove >= flip" in {check(flipGreaterEqual)}
   it should "prove > flip" in {check(flipGreater)}
+  it should "prove + associative" in {check(plusAssociative)}
+  it should "prove * associative" in {check(timesAssociative)}
+  it should "prove + commutative" in {check(plusCommutative)}
+  it should "prove * commutative" in {check(timesCommutative)}
+  it should "prove distributive" in {check(distributive)}
+  it should "prove + identity" in {check(plusIdentity)}
+  it should "prove * identity" in {check(timesIdentity)}
+  it should "prove + inverse" in {check(plusInverse)}
+  it should "prove * inverse" in {check(timesInverse)}
+  it should "prove positivity" in {check(positivity)}
+  it should "prove + closed" in {check(plusClosed)}
+  it should "prove * closed" in {check(timesClosed)}
+  it should "prove <" in {check(less)}
+  it should "prove >" in {check(greater)}
   it should "prove abs" in {check(absDef)}
   it should "prove min" in {check(minDef)}
   it should "prove max" in {check(maxDef)}
