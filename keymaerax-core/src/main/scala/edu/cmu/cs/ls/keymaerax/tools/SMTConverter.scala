@@ -48,11 +48,11 @@ object SMTConverter {
     val varDec = allSymbols.map(
       s => s match {
         case x: Variable =>
-          require(x.sort==Real, "Can only deal with variable of type Real")
+          require(x.sort==Real, "Can only deal with variable of type real, but not " + x.sort)
           "(declare-fun " + nameIdentifier(x) + " () " + x.sort + ")"
           //@todo use Derived Axioms for abs/min/max
         case f: Function =>
-          require(f.sort==Real, "Can only deal with variable of type Real")
+          require(f.sort==Real, "Can only deal with function of type real, but not " + f.sort)
           nameIdentifier(f) match {
             case "min" => "(define-fun " + SMT_MIN + " ((x1 Real) (x2 Real)) Real\n  (ite (<= x1 x2) x1 x2))"
             case "max" => "(define-fun " + SMT_MAX + " ((x1 Real) (x2 Real)) Real\n  (ite (>= x1 x2) x1 x2))"
@@ -108,7 +108,7 @@ object SMTConverter {
 
   /** Convert KeYmaera X term to string in SMT notation */
   private def convertTerm(t: Term, toolId: String) : String = {
-    require(t.sort == Real || t.sort == Unit || t.sort.isInstanceOf[Tuple], "SMT can only deal with reals not with sort " + t.sort)
+    require(t.sort == Real || t.sort == Unit || t.sort.isInstanceOf[Tuple], "SMT can only deal with real, but not with sort " + t.sort)
     t match {
       case Neg(c)       => "(- " + convertTerm(c, toolId) + ")"
       case Plus(l, r)   => "(+ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
