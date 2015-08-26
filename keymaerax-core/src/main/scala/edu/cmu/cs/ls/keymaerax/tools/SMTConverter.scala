@@ -17,6 +17,9 @@ object SMTConverter {
   def apply(expr: Expression): String = generateAssertNegation(expr, "Z3")
   def apply(expr: Expression, toolId: String) = generateAssertNegation(expr, toolId)
 
+  private val SMT_ABS = "absolute"
+  private val SMT_MIN = "minimum"
+  private val SMT_MAX = "maximum"
   /**
     * Convert KeYmaera X expression to SMT expression with negated formula form
     * the result SMT expression is checked by Z3 or Polya for satisfiability
@@ -38,20 +41,35 @@ object SMTConverter {
   /** Convert KeYmaera X expression to SMT form which contains: variable/function declaration and converted SMT formula */
   private def generateSMT(expr: Expression, toolId: String): (String, String) = {
     val allSymbols = StaticSemantics.symbols(expr)
+    val allSignatures = StaticSemantics.signature(expr)
     val names = allSymbols.toList.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers")
+    require(!(names.contains(SMT_MIN)||names.contains(SMT_MAX)||names.contains(SMT_ABS)), "Variable and function names are not expected to be " + SMT_MIN + ", " +  SMT_MAX + "or " + SMT_ABS)
     val varDec = allSymbols.map(
       s => s match {
-        case x: Variable => "(declare-fun " + nameIdentifier(x) + " () Real)"
-        case f: Function if !nameIdentifier(f).equals("abs") && f.domain==Unit && f.sort==Real =>
-          "(declare-fun " + nameIdentifier(f) + " () Real)"
-        //@todo catch abs/min/max
-        //@todo handle functions with arguments
-        case _ => assert(false, "cannot happen"); ???
+        case x: Variable =>
+          require(x.sort==Real, "Can only deal with variable of type Real")
+          "(declare-fun " + nameIdentifier(x) + " () " + x.sort + ")"
+          //@todo use Derived Axioms for abs/min/max
+        case f: Function =>
+          require(f.sort==Real, "Can only deal with variable of type Real")
+          nameIdentifier(f) match {
+            case "min" => "(define-fun " + SMT_MIN + " ((x1 Real) (x2 Real)) Real\n  (ite (<= x1 x2) x1 x2))"
+            case "max" => "(define-fun " + SMT_MAX + " ((x1 Real) (x2 Real)) Real\n  (ite (>= x1 x2) x1 x2))"
+            case "abs" => "(define-fun " + SMT_ABS + " ((x Real)) Real\n  (ite (>= x 0) x (- x)))"
+            case _ => "(declare-fun " + nameIdentifier(f) + " (" + generateFuncParameters(f.domain) +  ") " + f.sort + ")"
+          }
       }
     ).mkString("\n")
     val smtFormula = convertToSMT(expr, toolId)
     (varDec, smtFormula)
+  }
+
+  /** Generate parameters of function in the varDec of SMT */
+  private def generateFuncParameters(t: Sort) : String = t match {
+    case Unit => ""
+    case Tuple(l,r) => generateFuncParameters(l) + " " + generateFuncParameters(r)
+    case _ => t.toString
   }
 
   /** Identifier corresponding to a NamedSymbol */
@@ -76,7 +94,7 @@ object SMTConverter {
       case Imply(l, r)    => "(=> " + convertFormula(l, toolId) + " " + convertFormula(r, toolId) + ")"
       case Equiv(l, r)    => "(equiv " + convertFormula(l, toolId) + " " + convertFormula(r, toolId) + ")"
       case Equal(l, r)    => "(= " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
-      case NotEqual(l, r) => "(not (= " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + "))" //@todo convertFormula(Not(Equal(l,r))) or ask prover?
+      case NotEqual(l, r) => convertFormula(Not(Equal(l, r)), toolId)
       case Greater(l,r)   => "(> " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
       case GreaterEqual(l,r) => "(>= " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
       case Less(l,r)      => "(< " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
@@ -90,7 +108,7 @@ object SMTConverter {
 
   /** Convert KeYmaera X term to string in SMT notation */
   private def convertTerm(t: Term, toolId: String) : String = {
-    require(t.sort == Real || t.sort == Unit, "SMT can only deal with reals not with sort " + t.sort)
+    require(t.sort == Real || t.sort == Unit || t.sort.isInstanceOf[Tuple], "SMT can only deal with reals not with sort " + t.sort)
     t match {
       case Neg(c)       => "(- " + convertTerm(c, toolId) + ")"
       case Plus(l, r)   => "(+ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
@@ -104,7 +122,13 @@ object SMTConverter {
         else n.underlying().toString
       case t: Variable => nameIdentifier(t)
       case FuncOf(fn, Nothing) => nameIdentifier(fn)
-      case FuncOf(fn, child) => nameIdentifier(fn) + "(" + convertTerm(child, toolId) + ")"
+      case FuncOf(fn, child) => nameIdentifier(fn) match {
+        case "min" => "(" + SMT_MIN + " " + convertTerm(child, toolId) + ")"
+        case "max" => "(" + SMT_MAX + " " + convertTerm(child, toolId) + ")"
+        case "abs" => "(" + SMT_ABS + " " + convertTerm(child, toolId) + ")"
+        case _ => "(" + nameIdentifier(fn) + " " + convertTerm(child, toolId) + ")"
+      }
+      case Pair(l, r)  => convertTerm(l, toolId) + " " + convertTerm(r, toolId)
       case _ => throw new SMTConversionException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
     }
   }

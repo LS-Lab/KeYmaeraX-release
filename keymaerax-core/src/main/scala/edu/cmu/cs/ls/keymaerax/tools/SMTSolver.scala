@@ -30,6 +30,4 @@ trait SMTSolver extends QETool {
     if (f.exists()) getUniqueSmt2File(idx + 1)
     else f
   }
-
-
 }
