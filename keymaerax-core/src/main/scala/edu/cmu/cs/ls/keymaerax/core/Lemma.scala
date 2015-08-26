@@ -20,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLemmaParser // external reference
  * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
  */
 final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[String] = None) {
-  require(fact.isProved, "Only provable facts can be added as lemmas " + fact)
+  insist(fact.isProved, "Only provable facts can be added as lemmas " + fact)
   //@note could allow more general forms of lemmas.
   require(fact.conclusion.ante.isEmpty, "Currently only lemmas with empty antecedents are allowed " + fact)
   require(fact.conclusion.succ.size == 1, "Currently only lemmas with exactly one formula in the succedent are allowed " + fact)
