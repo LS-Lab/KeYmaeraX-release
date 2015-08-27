@@ -60,7 +60,11 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "prove x>=5 -> [{x'=2}](x>=5)'" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}](x>=5)'".asFormula)),
       implyR(1) &
-        DE(1) & Dassignb(SuccPosition(0, 1::Nil)) &
+        DE(1) &
+        Dgreaterequal(1, 1::1::Nil) &
+        Dvariable(1, 1::1:: 0::Nil) &
+        Dconst(1, 1::1:: 1::Nil) &
+        Dassignb(SuccPosition(0, 1::Nil)) &
           TacticLibrary.abstractionT(1) & QE
     ).isProved shouldBe true
   }
@@ -80,7 +84,11 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       implyR(1) &
         DI(1) & (step(1) & step(1)) && (
         prop,
-        DE(1) & Dassignb(SuccPosition(0, 1::Nil)) & TacticLibrary.abstractionT(1) & QE
+        DE(1) &
+          Dgreaterequal(1, 1::1::Nil) &
+          Dvariable(1, 1::1:: 0::Nil) &
+          Dconst(1, 1::1:: 1::Nil) &
+          Dassignb(SuccPosition(0, 1::Nil)) & TacticLibrary.abstractionT(1) & QE
       )
     ).isProved shouldBe true
   }

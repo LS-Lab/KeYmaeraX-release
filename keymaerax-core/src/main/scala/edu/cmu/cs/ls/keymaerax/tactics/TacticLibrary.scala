@@ -256,7 +256,7 @@ object TacticLibrary {
 
     override def applies(s: Sequent, p: Position): Boolean = try {
       val part = s(p.top).at(p.inExpr)
-      if (!part.isDefined) false
+      if (!part.isDefined) {println("ill-positioned " + p + " in " + s + "\nin " + "useAt(" + fact + ")(" + p + ")\n(" + s + ")"); false}
       else {
         UnificationMatch(keyPart,part.get)
         true

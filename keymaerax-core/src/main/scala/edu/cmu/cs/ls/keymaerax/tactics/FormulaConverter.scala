@@ -45,8 +45,8 @@ class FormulaConverter(val fml: Formula) {
   /** Subexpression at indicated position */
   def at(pos: PosInExpr): Option[Expression] =
     try {Some(extractContext(pos)._2)} catch {
-      case e: NoSuchElementException   => println("ill-position " + pos + " in " + fml + " since " + e); None
-      case e: IllegalArgumentException => println("ill-position " + pos + " in " + fml + " since " + e); None}
+      case e: NoSuchElementException   => println("ill-positioned " + pos + " in " + fml + " since " + e); None
+      case e: IllegalArgumentException => println("ill-positioned " + pos + " in " + fml + " since " + e); None}
   def at(p: Position): Option[Expression] = at(p.inExpr)
 
   /**
