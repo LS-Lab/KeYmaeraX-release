@@ -18,6 +18,33 @@ object RenUSubst {
       map(sp => (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable]))
   private[tactics] def renamingPart(subsDefsInput: immutable.Seq[Pair[Expression,Expression]]): RenUSubst =
     new RenUSubst(renamingPartOnly(subsDefsInput))
+
+  /**
+   * Occurrences of what symbol the generalized SubstitutionPair sp will be replacing.
+   * @return Function/predicate/predicational or DotTerm or (Differential)ProgramConst whose occurrences we will replace.
+   */
+  private[tactics] def matchKey(sp: (Expression,Expression)): NamedSymbol = sp._1 match {
+    case DotTerm => DotTerm
+    case Anything => Anything
+    //case Nothing => {assert(sp._2 == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing} // it makes no sense to substitute Nothing
+    case a: DifferentialProgramConst => a
+    case a: ProgramConst             => a
+    case DotFormula                  => DotFormula
+    case PredicationalOf(p: Function, _) => p
+    // RenUSubst generalization
+    case FuncOf(f: Function, _) => f
+    case PredOf(p: Function, _) => p
+    case x: Variable => x
+    case _ => throw new ProverException("Nonsubstitutable expression " + sp)
+  }
+  /**
+   * The key characteristic expression constituents that this Substitution is matching on.
+   * @return union of the matchKeys of all our substitution pairs.
+   */
+  private[tactics] def matchKeys(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.List[NamedSymbol] = {
+    subsDefsInput.foldLeft(immutable.List[NamedSymbol]())((a,b)=>a ++ immutable.List(matchKey(b)))
+  }
+
 }
 
 /**
