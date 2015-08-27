@@ -43,7 +43,7 @@ to compile the source code. First-time compilation may take a while, since it do
 including Scala itself. 
 
 The build file does not include paths to the Mathematica JLink JAR, so you will need to set an environmental variable
-JLINK_JAR_LOCATION to the location of JLink.jar in the Mathematica package. You can do this in ~/.bashrc or ~/.profile.
+JLINK_JAR_LOCATION to the location of JLink.jar in the Mathematica package. You can do this in `~/.bashrc` or `~/.profile`.
 
 Examples: (depending on Mathematica version and OS)
 
@@ -105,7 +105,7 @@ Project Setup
 - Check `update automatically` (not checked by default), so that updates to build.sbt are reflected automatically in the project
 
 Create a new run configuration of type Application for the KeYmaera X Web UI.
-- Main class: `edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX`
+- Main class: `edu.cmu.cs.ls.keymaerax.hydra.Boot`
 - Set the working directory to the project path
 - Use the classpath of your project module
 
