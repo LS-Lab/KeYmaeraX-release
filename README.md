@@ -225,7 +225,7 @@ The goal of KeYmaera X is to implement the proof calculus of differential dynami
 Differential dynamic logic and its Hilbert-type and sequent proof calculi have been described and specified in more detail in:
 
 1. André Platzer. 
-[[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. 
+[A uniform substitution calculus for differential dynamic logic](http://dx.doi.org/10.1007/978-3-319-21401-6_32). 
 In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
 Extended version at [[http://arxiv.org/abs/1503.01981 arXiv 1503.01981]]
 
@@ -292,6 +292,6 @@ Background material and more material can be found at
 
 http://keymaeraX.org/
 
-http://symbolaris.com/pub/
+http://www.cs.cmu.edu/~aplatzer/pub/
 
 http://symbolaris.com/info/KeYmaera.html
