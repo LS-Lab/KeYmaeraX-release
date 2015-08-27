@@ -292,7 +292,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
     } catch {
       case ex: ProverException => throw ex.inContext(s.toString)
-      case ex: IllegalArgumentException =>
+      case ex: IllegalArgumentException => //@todo does this still happen?
         throw new SubstitutionClashException(toString, "undef", "undef", s.toString, "undef", ex.getMessage).initCause(ex)
     }
   }
@@ -351,9 +351,8 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         case Pair(l, r) => Pair(usubst(l), usubst(r))  
       }
     } catch {
-      case ex: IllegalArgumentException =>
+      case ex: IllegalArgumentException => //@todo does this still happen?
         throw new SubstitutionClashException(toString, "undef", "undef", term.prettyString, "undef", ex.getMessage).initCause(ex)
-        throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + term.prettyString).initCause(ex)
     }
   } ensuring(
     r => r.kind == term.kind && r.sort == term.sort, "Uniform Substitution leads to same kind and same sort " + term)
@@ -419,7 +418,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
             Diamond(usubst(p), usubst(g))
       }
     } catch {
-      case ex: IllegalArgumentException =>
+      case ex: IllegalArgumentException => //@todo does this still happen?
         throw new SubstitutionClashException(toString, "undef", "undef", formula.prettyString, "undef", ex.getMessage).initCause(ex)
       case ex: AssertionError =>
         throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + formula.prettyString).initCause(ex)
@@ -456,7 +455,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         case Dual(a)           => Dual(usubst(a))
       }
     } catch {
-      case ex: IllegalArgumentException =>
+      case ex: IllegalArgumentException => //@todo does this still happen?
         throw new SubstitutionClashException(toString, "undef", "undef", program.prettyString, "undef", ex.getMessage).initCause(ex)
       case ex: AssertionError =>
         throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + program.prettyString).initCause(ex)
