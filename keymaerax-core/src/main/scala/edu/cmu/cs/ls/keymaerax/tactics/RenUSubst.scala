@@ -32,8 +32,9 @@ object RenUSubst {
 final case class RenUSubst(subsDefsInput: immutable.Seq[Pair[Expression,Expression]]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops */
   private val rens: immutable.Seq[Pair[Variable,Variable]] = RenUSubst.renamingPartOnly(subsDefsInput)
-  private val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filterNot(sp => sp._1.isInstanceOf[Variable]).
-    map(sp => SubstitutionPair(sp._1, sp._2))
+  private val subsDefs: immutable.Seq[SubstitutionPair] = try {subsDefsInput.filterNot(sp => sp._1.isInstanceOf[Variable]).
+    map(sp => try {SubstitutionPair(sp._1, sp._2)} catch {case ex: ProverException => throw ex.inContext("(" + sp._1 + "~>" + sp._2 + ")")})
+  } catch {case ex: ProverException => throw ex.inContext("RenUSubst{" + subsDefsInput.mkString(", ") + "}")}
 
   //@note order to ensure toString already works in error message
   applicable()

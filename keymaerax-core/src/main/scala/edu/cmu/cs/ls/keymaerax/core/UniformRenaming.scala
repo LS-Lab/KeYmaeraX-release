@@ -26,7 +26,7 @@ import scala.collection.immutable
  * @author Andre Platzer
  */
 final case class URename(what: Variable, repl: Variable) extends (Expression => Expression) {
-  require(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
+  insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
 //  /** The variables that are not allowed to occur initially */
 //  private val taboo: Set[NamedSymbol] = if (repl.sort == Real) Set(repl,DifferentialSymbol(repl)) else Set(repl)
 //  /** The variables that are affected and should be gone finally */

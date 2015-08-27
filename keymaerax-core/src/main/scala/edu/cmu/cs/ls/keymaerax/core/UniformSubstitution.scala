@@ -36,9 +36,9 @@ import SetLattice.topVarsDiffVars
  * @todo rename to something like USubstRepl or so
  */
 final case class SubstitutionPair (what: Expression, repl: Expression) {
-  require(what.kind == repl.kind,
+  insist(what.kind == repl.kind,
     "substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + what.kind + " ~> " + repl.kind)
-  require(what.sort == repl.sort, "Sorts have to match in substitution pairs: " + what.sort + " != " + repl.sort)
+  insist(what.sort == repl.sort, "Sorts have to match in substitution pairs: " + what.sort + " != " + repl.sort)
   assert(what match {
     case _: Term => repl.isInstanceOf[Term]
     case _: Formula => repl.isInstanceOf[Formula]
@@ -78,7 +78,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     }
     case replp: Program => what match {
       case _: ProgramConst | _: DifferentialProgramConst => bottom // program constants are always admissible, since their meaning doesn't depend on state
-      case _ => throw new IllegalStateException("Disallowed substitution shape " + this)
+      case _ => throw new CoreException("Disallowed substitution shape " + this)
     }
   }
 
@@ -116,7 +116,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case a: ProgramConst             => a
     case DotFormula                  => DotFormula
     case PredicationalOf(p: Function, DotFormula) => p
-    case _ => throw new IllegalArgumentException("Nonsubstitutable expression " + this)
+    case _ => throw new CoreException("Nonsubstitutable expression " + this)
   }
 
   /**
@@ -220,10 +220,10 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   private def applicable(): Unit = {
     // check that we never replace n by something and then again replacing the same n by something
     val lefts = subsDefsInput.map(_.what).toList
-    require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefsInput)
+    insist(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefsInput)
     // check that we never replace p(x) by something and also p(t) by something
     val lambdaNames = matchKeys
-    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + this)
+    insist(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + this)
   }
 
   //private def log(msg: =>String): Unit = {}  //= println(msg)
@@ -493,7 +493,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    * raise informative exception if not.
    */
   private def requireAdmissible(U: SetLattice[NamedSymbol], e: Expression, context: Expression): Unit =
-//    require(admissible(U, e),
+//    insist(admissible(U, e),
 //      "Substitution clash: " + this + " not " + U + "-admissible for " + e.prettyString + " when substituting in " + context.prettyString)
     if (!admissible(U, e))
       throw new SubstitutionClashException(toString, U.prettyString, e.prettyString, context.prettyString, clashSet(U, e).prettyString, "")

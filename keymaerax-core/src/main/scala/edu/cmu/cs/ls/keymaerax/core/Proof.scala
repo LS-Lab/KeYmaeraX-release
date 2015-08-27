@@ -387,7 +387,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    * @requires(isProved)
    */
   final def proved: Sequent = {
-    require(isProved, "Only Provables that have been proved have a proven conclusion " + this)
+    insist(isProved, "Only Provables that have been proved have a proven conclusion " + this)
     if (isProved) conclusion else throw new CoreException("ASSERT: Provables with remaining subgoals are not proved yet " + this)
   }
 
@@ -429,7 +429,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    */
   final def apply(subderivation: Provable, subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
-    require(subderivation.conclusion == subgoals(subgoal), "merging Provables requires the subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconcludes " + subderivation.conclusion + "\nshould be subgoal " + subgoals(subgoal))
+    insist(subderivation.conclusion == subgoals(subgoal), "merging Provables requires the subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconcludes " + subderivation.conclusion + "\nshould be subgoal " + subgoals(subgoal))
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
     subderivation.subgoals.toList match {
       // subderivation proves given subgoal
@@ -496,7 +496,7 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
 
 private object Rule {
   //@todo Code Review: LAX_MODE should be false
-  private[core] val LAX_MODE = System.getProperty("LAX", "false")=="true"
+  private[core] val LAX_MODE = System.getProperty("LAX", "true")=="true"
 }
 
 /*********************************************************************************
@@ -1000,7 +1000,7 @@ object AxiomaticRule {
  */
 final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   val name: String = "Axiomatic Rule " + id + " instance"
-  require(subst.freeVars.isEmpty || Rule.LAX_MODE && id == "CQ equation congruence", "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
+  insist(subst.freeVars.isEmpty || Rule.LAX_MODE && id == "CQ equation congruence", "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
 
   override def toString: String = name + "(" + subst + ")"
 
@@ -1034,7 +1034,7 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
  * @see [[URename]]
  */
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
-  require(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
+  insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
   val name: String = "Uniform Renaming"
   private val renaming: URename = URename(what, repl)
 
@@ -1053,7 +1053,7 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
  * @author Andre Platzer
  */
 final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
-  require(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
+  insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
   val name: String = "Bound Renaming"
 
   private val renaming = URename(what, repl)
@@ -1179,7 +1179,7 @@ object RCF {
    * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
    */
   def proveArithmetic(t: QETool, f: Formula): Lemma = {
-    require(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
+    insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
 
     // Quantifier elimination determines (quantifier-free) equivalent of f.
     val (equivalent, evidence) = t.qeEvidence(f)
@@ -1209,7 +1209,7 @@ case class LookupLemma(lemmaDB: LemmaDB, lemmaID: String) extends Rule {
   val name: String = "Lookup Lemma"
   /** Get the lemma that this lookup lemma rule will apply */
   def lemma: Lemma = {
-    require(lemmaDB.contains(lemmaID), "Cannot lookup lemmas that have not been added to the LemmaDB")
+    insist(lemmaDB.contains(lemmaID), "Cannot lookup lemmas that have not been added to the LemmaDB")
     lemmaDB.get(lemmaID).get
   }
   def apply(s : Sequent): immutable.List[Sequent] = {

@@ -95,8 +95,8 @@ trait BinaryComposite extends Composite {
 
 /** Function/predicate/predicational application */
 sealed trait ApplicationOf extends Expression {
-  require(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
-  require(sort == func.sort, "sort of application is the sort of the function")
+  insist(child.sort == func.domain, "expected argument sort " + child.sort + " to match domain sort " + func.domain + " when applying " + func + " to " + child)
+  insist(sort == func.sort, "sort of application is the sort of the function")
   def func : Function
   def child : Expression
 }
@@ -168,7 +168,7 @@ sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort =
 /** Differential symbol x' for variable x */
 sealed case class DifferentialSymbol(x: Variable)
   extends NamedSymbol with AtomicTerm with RTerm {
-  require(x.sort == Real, "differential symbols expect real sort")
+  insist(x.sort == Real, "differential symbols expect real sort")
   def name: String = x.name
   def index: Option[Int] = x.index
   override def asString: String = x.asString + "'"
@@ -223,7 +223,7 @@ trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
 
 /** Unary Composite Real Terms, i.e. real terms composed of one real term. */
 private[core] trait RUnaryCompositeTerm extends UnaryCompositeTerm with RTerm {
-  require(child.sort == Real, "expected argument sort real: " + child.sort)
+  insist(child.sort == Real, "expected argument sort real: " + child.sort)
 }
 
 /** Binary Composite Terms, i.e. terms composed of two terms. */
@@ -234,7 +234,7 @@ trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
 
 /** Binary Composite Real Terms, i.e. real terms composed of two real terms. */
 private[core] trait RBinaryCompositeTerm extends BinaryCompositeTerm with RTerm {
-  require(left.sort == Real && right.sort == Real, "expected argument sorts real: " + left + " and " + right)
+  insist(left.sort == Real && right.sort == Real, "expected argument sorts real: " + left + " and " + right)
   def left: Term
   def right: Term
 }
@@ -287,7 +287,7 @@ trait ComparisonFormula extends AtomicFormula {
 
 /** Real comparison formula composed of two real terms. */
 private[core] trait RComparisonFormula extends ComparisonFormula {
-  require(left.sort == Real && right.sort == Real, "expected argument sorts real: " + left + " and " + right)
+  insist(left.sort == Real && right.sort == Real, "expected argument sorts real: " + left + " and " + right)
 }
 
 /** Verum formula true */
@@ -297,11 +297,11 @@ object False extends AtomicFormula
 
 /** ``=`` equality left = right */
 case class Equal(left: Term, right: Term) extends ComparisonFormula {
-  require(left.sort == right.sort, "expected identical argument sorts: " + left + " and " + right)
+  insist(left.sort == right.sort, "expected identical argument sorts: " + left + " and " + right)
 }
 /** != disequality left != right */
 case class NotEqual(left: Term, right: Term) extends ComparisonFormula {
-  require(left.sort == right.sort, "expected identical argument sorts: " + left + " and " + right)
+  insist(left.sort == right.sort, "expected identical argument sorts: " + left + " and " + right)
 }
 
 /** >= greater or equal comparison left >= right */
@@ -322,13 +322,13 @@ object DotFormula extends NamedSymbol with AtomicFormula {
 /** Predicate symbol applied to argument child func(child) */
 case class PredOf(func: Function, child: Term) extends AtomicFormula with ApplicationOf {
   //@note redundant requires since ApplicationOf.sort and Formula.requires will check this already.
-  require(func.sort == Bool, "expected predicate sort Bool found " + func.sort + " in " + this)
+  insist(func.sort == Bool, "expected predicate sort Bool found " + func.sort + " in " + this)
 }
 /** Predicational or quantifier symbol applied to argument formula child */
 case class PredicationalOf(func: Function, child: Formula) extends AtomicFormula with ApplicationOf {
   //@note redundant requires since ApplicationOf.sort and Formula.requires will check this already.
-  require(func.sort == Bool, "expected argument sort Bool: " + this)
-  require(func.domain == Bool, "expected domain simplifies to Bool: " + this)
+  insist(func.sort == Bool, "expected argument sort Bool: " + this)
+  insist(func.domain == Bool, "expected domain simplifies to Bool: " + this)
 }
 
 /** Composite formulas */
@@ -359,8 +359,8 @@ case class Equiv(left: Formula, right:Formula) extends BinaryCompositeFormula
 /** Quantified formulas */
 sealed trait Quantified extends /*Unary?*/CompositeFormula {
   require(vars.nonEmpty, "quantifiers bind at least one variable")
-  require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
-  require(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
+  insist(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
+  insist(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
   /** The variables quantified here */
   def vars: immutable.Seq[Variable]
   def child: Formula
@@ -408,11 +408,11 @@ sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProg
 
 /** x:=e assignment */
 case class Assign(x: Variable, e: Term) extends AtomicProgram {
-  require(e.sort == x.sort, "assignment of compatible sort " + this)
+  insist(e.sort == x.sort, "assignment of compatible sort " + this)
 }
 /** x':=e differential assignment */
 case class DiffAssign(xp: DifferentialSymbol, e: Term) extends AtomicProgram {
-  require(e.sort == Real, "differential assignment of real sort " + this)
+  insist(e.sort == Real, "differential assignment of real sort " + this)
 }
 /** x:=* nondeterministic assignment */
 case class AssignAny(x: Variable) extends AtomicProgram
@@ -467,11 +467,11 @@ sealed case class DifferentialProgramConst(name: String) extends NamedSymbol wit
 }
 /** x'=e atomic differential equation */
 case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferentialProgram {
-  require(e.sort == Real, "expected argument sort real " + this)
+  insist(e.sort == Real, "expected argument sort real " + this)
   /* @NOTE Soundness: AtomicODE requires explicit-form so f(?) cannot verbatim mention differentials/differential symbols,
      which is required for soundness of axiom "DE differential effect (system)" */
   //@note avoid toString call, which could cause an infinite loop coming from contracts checking in pretty printer. But should probably be taken care of.
-  require(!StaticSemantics.isDifferential(e), "Explicit-form differential equations expected, without any differentials on right-hand side: " + xp + "=" + e)
+  insist(!StaticSemantics.isDifferential(e), "Explicit-form differential equations expected, without any differentials on right-hand side: " + xp + "=" + e)
 }
 
 /**
@@ -501,7 +501,7 @@ object DifferentialProduct {
   def apply(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = {
     require(!left.isInstanceOf[ODESystem], "Left should not be its own ODESystem: " + left + " with " + right)
     require(!right.isInstanceOf[ODESystem], "Right should not be its own ODESystem: " + left + " with " + right)
-    require(differentialSymbols(left).intersect(differentialSymbols(right)).isEmpty, "No duplicate differential equations when composing differential equations " + left + " and " + right)
+    insist(differentialSymbols(left).intersect(differentialSymbols(right)).isEmpty, "No duplicate differential equations when composing differential equations " + left + " and " + right)
     reassociate(left, right)
   } ensuring(r => differentialSymbols(r).length == differentialSymbols(r).distinct.length,
     "No undetected duplicate differential equations when composing differential equations " + left + " and " + right + " to form " + reassociate(left, right))
