@@ -295,6 +295,8 @@ object HilbertCalculus {
           pos.append(PosInExpr(0::0::Nil))),
           pos.append(PosInExpr(1::1::Nil))
         )
+        case Differential(Number(_)) =>
+          useFor("c()' derive constant fn")(SuccPosition(0,pos))(de)
         case Differential(Variable(_,_,_)) =>
           useFor("x' derive variable")(SuccPosition(0,pos))(de)
       }
@@ -318,11 +320,14 @@ object HilbertCalculus {
   private def useFor(fact: Provable, key: PosInExpr): (Position => (Provable => Provable)) = pos => proof => {
     import FormulaConverter._
     import SequentConverter._
+    import TactixLibrary._
     //@todo move to early evaluation before knowing pos
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).extractContext(key)
 
+    val inst: RenUSubst=>RenUSubst = (us => us)
+
     val (ctx, expr) = proof.conclusion.splitContext(pos)
-    val subst = /*inst*/ (UnificationMatch(keyPart, expr))
+    val subst = inst(UnificationMatch(keyPart, expr))
     println("useFor unify: " + expr + " matches against " + keyPart + " by " + subst)
     assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
 
@@ -336,11 +341,11 @@ object HilbertCalculus {
           //@todo this is convoluted and inefficient compared to a direct forward proof
           //@todo commute
           TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-            useAt(fact, key)(p))
+            useAt(fact.conclusion.succ.head, /*key*/PosInExpr(1::Nil), /*ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) &*/ by(fact), inst)(p))
         case Equal(other, DotTerm) =>
           //@todo this is convoluted and inefficient compared to a direct forward proof
           TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-            useAt(fact, key)(p))
+            useAt(fact.conclusion.succ.head, /*key*/PosInExpr(1::Nil), by(fact), inst)(p))
 
       }
     }
