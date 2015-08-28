@@ -401,7 +401,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    * @note soundness-critical
    */
   final def apply(rule: Rule, subgoal: Subgoal): Provable = {
-    require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
+    require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " should be applied to an index " + subgoal + " that is within the subgoals " + subgoals)
     rule(subgoals(subgoal)) match {
       // subgoal closed by proof rule
       case Nil => new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
@@ -1043,7 +1043,7 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
     try {
       if (subst(ruleconclusion) == conclusion) immutable.List(subst(rulepremise))
       else throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion +
-        "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
+        "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion + "\nin " + this + " for intended conclusion\n" + conclusion)
     } catch { case exc: SubstitutionClashException => throw exc.inContext(this + " for intended conclusion\n" + conclusion) }
 
 }

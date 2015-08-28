@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch
 
 import scala.collection.immutable._
@@ -13,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.skolemizeT
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, Tactic, PositionTactic}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 /**
@@ -346,6 +347,9 @@ object HilbertCalculus {
     import SequentConverter._
     import TactixLibrary._
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).extractContext(key)
+    if (DEBUG) println("useFor(" + fact.conclusion.prettyString + ") key: " + keyPart + " in key context: " + keyCtx)
+
+    val HISTORY=false
 
     pos => proof => {
 
@@ -359,12 +363,50 @@ object HilbertCalculus {
         require(subst(k) == c, "correctly matched input")
         require(C(c).extractContext(p.inExpr) ==(C, c), "correctly split at position p")
         require(List((C, DotFormula), (C, DotTerm)).contains(C.ctx.extractContext(p.inExpr)), "correctly split at position p")
+
+        /** Equivalence rewriting step */
+        def equivStep(other: Expression, factTactic: Tactic): Provable = {
+          val side1: Provable = subst.toForward(fact
+          ) (
+            subst(fact.conclusion)
+            ,
+            AxiomaticRule("CQ equation congruence",
+            USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), Anything), ctx.ctx) :: Nil))
+          )
+          val side2: Provable = side1.apply(proof.conclusion.updated(p.top, Imply(C(subst(k)), C(subst(other)))),
+            EquivifyRight(p.top.asInstanceOf[SuccPos]))
+          assert(C(subst(k)) == expr, "matched expression expected")
+          Provable.startProof(proof.conclusion.updated(p.top, C(subst(k))))(
+            CutRight(C(subst(other)), p.top.asInstanceOf[SuccPos]), 0
+          ) (side2, 1) (fact, 0)
+
+//
+//          //fact(Sequent(Nil,IndexedSeq(),IndexedSeq(Equal(subst(k), subst(c)))),
+//          proof(proof.conclusion.updated(pos.top, C(subst(other))), CutRight(C(subst(other)), pos.top.asInstanceOf[SuccPos]))
+//          //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
+//          cutRightT(C(subst(other)))(p.top) & onBranch(
+//            //(BranchLabels.cutUseLbl, debugT("  useAt result")),
+//            //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
+//            //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
+//            (BranchLabels.cutShowLbl, cohideT(p.top) /*& assertT(0,1)*/ &
+//              equivifyRightT(SuccPosition(0)) & (
+//              if (other.kind == FormulaKind) AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr)
+//              else if (other.kind == TermKind) AxiomaticRuleTactics.equationCongruenceT(p.inExpr)
+//              else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
+//              factTactic)
+//            //@todo error if factTactic is not applicable (factTactic | errorT)
+//          )
+        }
+
         K.ctx match {
           case Equal(DotTerm, other) =>
             //@todo this is convoluted and inefficient compared to a direct forward proof
             //@todo commute
-            TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
+            if (HISTORY) TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
               useAt(fact.conclusion.succ.head, key.sibling, /*ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) &*/ byUS(fact), inst)(p))
+            else
+              equivStep(other, byUS(fact))
+
           case Equal(other, DotTerm) =>
             //@todo this is convoluted and inefficient compared to a direct forward proof
             TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),

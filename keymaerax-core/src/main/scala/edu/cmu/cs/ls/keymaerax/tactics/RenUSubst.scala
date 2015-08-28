@@ -97,6 +97,12 @@ final case class RenUSubst(subsDefsInput: immutable.Seq[Pair[Expression,Expressi
   /** Convert to tactic to reduce to form by successively using the respective uniform renaming and uniform substitution rules */
   def toTactic(form: Sequent): Tactic = getUSubstTactic(RenUSubst(rens)(form)) & getRenamingTactic
 
+  /** Convert to forward tactic using the respective uniform renaming and uniform substitution rules */
+  def toForward: Provable => Provable = fact => {
+    Predef.require(rens.isEmpty, "renaming conversion not yet implemented")
+    UniformSubstitutionRule.UniformSubstitutionRuleForward(fact, usubst)
+  }
+
   /** Get the renaming tactic part */
   def getRenamingTactic: Tactic = rens.foldLeft(TactixLibrary.skip)((t,sp)=> t &
     //@note for tableaux backward style, the renamings have to be reversed to get from (already renamed) conclusion back to (prerenamed) origin
