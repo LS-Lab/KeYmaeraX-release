@@ -79,13 +79,45 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ).isProved shouldBe true
   }
 
-  it should "prove (x+2*y)'=x'+2*y' by derive" in {
+  it should "prove (y)'=y forward" in {
+    val x = Variable("y")
+    TactixLibrary.proveBy(
+      Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
+      Dvariable(SuccPosition(0,0::Nil)) & byUS("= reflexive")) shouldBe 'proved
+    TactixLibrary.proveBy(
+      Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
+      Dvariable(SuccPosition(0,0::Nil)) & byUS("= reflexive")).isProved shouldBe true
+  }
+
+  it should "derive (y)'=y'" in {
+    val p =
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(y)'=y'".asFormula)),
+      derive(1,0::Nil)
+    )
+    println("PROVED " + p)
+    p shouldBe 'proved
+    p.isProved shouldBe true
+  }
+
+  it should "derive (x+y)'=x'+y'" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula)),
+      derive(1,0::Nil)
+    ).isProved shouldBe true
+  }
+
+  it should "derive (x*y)'=x'*y+x*y'" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x*y)'=x'*y+x*y'".asFormula)),
+      derive(1,0::Nil)
+    ).isProved shouldBe true
+  }
+
+  it should "derive (x+2*y)'=x'+2*y'" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
       derive(1,0::Nil)
     ).isProved shouldBe true
   }
 
-  it should "prove (5*x+2*y)'=5*x'+2*y' by derive" in {
+  it should "derive (5*x+2*y)'=5*x'+2*y'" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*x+2*y)'=5*x'+2*y'".asFormula)),
       derive(1,0::Nil)
     ).isProved shouldBe true
