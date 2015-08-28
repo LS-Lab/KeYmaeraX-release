@@ -31,6 +31,12 @@ trait PrettyPrinter extends (Expression => String) {
   def apply(expr: Expression): String
 
   /**
+   * Pretty-print sequent to a string.
+   * @ensures parser(\result) == expr
+   */
+  def apply(seq: Sequent): String
+
+  /**
    * The corresponding full-form pretty printer producing full parentheses.
    * @ensures parser(fullPrinter(expr)) == expr
    */
