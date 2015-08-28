@@ -4,6 +4,9 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
+import edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch
+
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl._
@@ -257,7 +260,7 @@ object HilbertCalculus {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        node.sequent(p) match {
+        node.sequent.at(p).get match {
           case t: Term => Some(useAt(deriveProof(t), PosInExpr(0::Nil))(p))
           case f: Formula => Some(useAt(deriveProofF(f), PosInExpr(0::Nil))(p))
         }
@@ -292,15 +295,55 @@ object HilbertCalculus {
           pos.append(PosInExpr(0::0::Nil))),
           pos.append(PosInExpr(1::1::Nil))
         )
+        case Differential(Variable(_,_,_)) =>
+          useFor("x' derive variable")(SuccPosition(0,pos))(de)
       }
-
-      //@todo in analogy to useAt but forward proof.
-      /** useFor(axiom) use the given fact forward for the selected position in the given Provable to conclude a new Provable */
-      private def useFor(axiom: String): (Position => (Provable => Provable)) = ???
 
       /** Construct a proof proving the answer of the derivative of de expanded out to variables */
       private def deriveProofF(de: Formula): Provable = ???
     }
 
+  }
+
+  private def useFor(axiom: String): (Position => (Provable => Provable)) = useFor(axiom, PosInExpr(0::Nil))
+
+  private def useFor(axiom: String, key: PosInExpr): (Position => (Provable => Provable)) =
+    if (Axiom.axioms.contains(axiom)) useFor(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
+    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0), key)
+    else throw new IllegalArgumentException("Unknown axiom " + axiom)
+
+  //def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic, inst: Subst=>Subst = (us=>us))
+  //@todo in analogy to useAt but forward proof.
+  /** useFor(axiom) use the given fact forward for the selected position in the given Provable to conclude a new Provable */
+  private def useFor(fact: Provable, key: PosInExpr): (Position => (Provable => Provable)) = pos => proof => {
+    import FormulaConverter._
+    import SequentConverter._
+    //@todo move to early evaluation before knowing pos
+    val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).extractContext(key)
+
+    val (ctx, expr) = proof.conclusion.splitContext(pos)
+    val subst = /*inst*/ (UnificationMatch(keyPart, expr))
+    println("useFor unify: " + expr + " matches against " + keyPart + " by " + subst)
+    assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
+
+    def useFor[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable =
+    {
+      require(subst(k) == c, "correctly matched input")
+      require(C(c).extractContext(p.inExpr) ==(C, c), "correctly split at position p")
+      require(List((C, DotFormula), (C, DotTerm)).contains(C.ctx.extractContext(p.inExpr)), "correctly split at position p")
+      K.ctx match {
+        case Equal(DotTerm, other) =>
+          //@todo this is convoluted and inefficient compared to a direct forward proof
+          //@todo commute
+          TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
+            useAt(fact, key)(p))
+        case Equal(other, DotTerm) =>
+          //@todo this is convoluted and inefficient compared to a direct forward proof
+          TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
+            useAt(fact, key)(p))
+
+      }
+    }
+    useFor(subst, keyCtx, keyPart, pos, ctx, expr)
   }
 }

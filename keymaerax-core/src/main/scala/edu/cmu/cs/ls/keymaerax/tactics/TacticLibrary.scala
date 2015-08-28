@@ -252,7 +252,7 @@ object TacticLibrary {
     import PropositionalTacticsImpl._
     import FormulaConverter._
     import SequentConverter._
-    private val (keyCtx:Context[_],keyPart) = new FormulaConverter(fact).extractContext(key)
+    private val (keyCtx:Context[_],keyPart) = fact.extractContext(key)
     //private val keyPart = new FormulaConverter(fact).subFormulaAt(key).get
 
     override def applies(s: Sequent, p: Position): Boolean = try {
