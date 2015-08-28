@@ -172,6 +172,9 @@ class FormulaConverter(val fml: Formula) {
    * Split formula at a position into sub-expression at that position and the context in which it occurs.
    * @param pos The position pointing to the expression.
    * @return A tuple (p(.), e) of context p(.) and sub-expression e, where p(e) is equivalent to fml.
+   * @todo bug:
+   *       Assertion failed extractContext(PosInExpr(1.1)) of (x)'=x'
+led to ((x)'=x')@Equal yet eInCtx=None
    */
   def extractContext(pos: PosInExpr): (Context[Formula], Expression) = {
     var eInCtx: Option[Expression] = None
@@ -191,7 +194,7 @@ class FormulaConverter(val fml: Formula) {
           Left(None)
         }
     }), fml) match {
-      case Some(f) => (new Context(f), eInCtx.get)
+      case Some(f) => (new Context(f), eInCtx.getOrElse(throw new ProverAssertionError("extractContext(" + pos +") of " + fml.prettyString + "\nled to " + f + " yet eInCtx=" + eInCtx)))
       case None => throw new IllegalArgumentException("Position not defined")
     }
   } ensuring(r => r._1(r._2) == fml, "context splitting of " + fml + " at " + pos + " is successful")

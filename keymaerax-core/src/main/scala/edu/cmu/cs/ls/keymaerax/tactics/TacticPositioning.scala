@@ -21,7 +21,7 @@ case class PosInExpr(pos: List[Int] = Nil) {
   /** The parent of this position, i.e., one level up */
   def parent: PosInExpr = PosInExpr(pos.dropRight(1))
   /** The sibling of this position */
-  def sibling: PosInExpr = PosInExpr(pos.dropRight(1) :+ (1-pos(pos.length-1)))
+  def sibling: PosInExpr = PosInExpr(pos.dropRight(1) :+ (1-pos.last))
 
   /** first child 0 */
   def first:  PosInExpr = new PosInExpr(pos :+ 0)

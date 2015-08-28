@@ -270,7 +270,7 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val (ctx,expr) = node.sequent.splitContext(p)
         val subst = inst(UnificationMatch(keyPart, expr))
-        println("useAt unify: " + expr + " matches against " + keyPart + " by " + subst)
+        println("useAt(" + fact.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
         assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
         Some(useAt(subst, keyCtx, keyPart, p, ctx, expr, factTactic))
@@ -307,7 +307,7 @@ object TacticLibrary {
               if (other.kind==FormulaKind) AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr)
               else if (other.kind==TermKind) AxiomaticRuleTactics.equationCongruenceT(p.inExpr)
               else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-              debugT("    using fact tactic") & factTactic & debugT("  done useAt"))
+              debugT("    using fact tactic") & factTactic & debugT("  done fact tactic"))
             //@todo error if factTactic is not applicable (factTactic | errorT)
           ) & debugT("end useAt")
 
@@ -417,7 +417,7 @@ object TacticLibrary {
 
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       val subst = UnificationMatch(form, node.sequent)
-      println("US unify: " + node.sequent + " matches against form " + form + " by " + subst)
+      println("  US(" + form.prettyString + ") unify: " + node.sequent + " matches against form " + form + " by " + subst)
       assert(node.sequent == subst(form), "unification matched successfully: " + node.sequent + " is " + subst(form) + " which is " + form + " instantiated by " + subst)
       Some(subst.toTactic(form))
 //      Some(new Tactics.ApplyRule(UniformSubstitutionRule(subst, form)) {

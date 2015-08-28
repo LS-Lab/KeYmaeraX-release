@@ -27,6 +27,7 @@ object HilbertCalculus {
 
   /** True when insisting on internal useAt technology, false when external tactic calls are okay. */
   private val INTERNAL = true
+  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
   // modalities
   /** assignb: [:=] simplify assignment by substitution or equation */
@@ -261,7 +262,7 @@ object HilbertCalculus {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         node.sequent.at(p).get match {
-          case t: Term => Some(useAt(deriveProof(t), PosInExpr(0::Nil))(p))
+          case t: Term => Some(useAt(deriveProof(t), PosInExpr(0::Nil))(p) & debug("derived"))
           case f: Formula => Some(useAt(deriveProofF(f), PosInExpr(0::Nil))(p))
         }
 
@@ -274,9 +275,13 @@ object HilbertCalculus {
           deIsDe,
               UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), de)::Nil), DerivedAxioms.equalReflex.fact.conclusion))
         assert(initial.isProved && initial.proved==deIsDe, "Proved reflexive start " + initial + " for " + de)
+        if (DEBUG) println("derive starts at " + initial)
         derive(initial, PosInExpr(1::Nil))
-      }
-      private def derive(de: Provable, pos: PosInExpr): Provable = de.conclusion.succ.head(pos) match {
+      } ensuring(r => r.isProved, "derive remains proved: " + " final derive(" + de + ")")
+
+      private def derive(de: Provable, pos: PosInExpr): Provable = {
+        if (DEBUG) println("derive(" + de.conclusion.succ.head(pos).prettyString + ")")
+        val r = de.conclusion.succ.head(pos) match {
         case Differential(Neg(_)) => derive(
           useFor("-' derive neg")(SuccPosition(0,pos))(de),
           pos.append(PosInExpr(0::Nil)))
@@ -299,7 +304,11 @@ object HilbertCalculus {
           useFor("c()' derive constant fn")(SuccPosition(0,pos))(de)
         case Differential(x:Variable) =>
           if (false&&INTERNAL) useFor("x' derive variable", PosInExpr(0::0::Nil))(SuccPosition(0,pos))(de)
-          else if (true) useFor(Axiom.axiom("x' derive var"), PosInExpr(0::Nil))(SuccPosition(0,pos))(de)
+          else if (true)
+            Axiom.axiom("x' derive var")(
+              Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x),DifferentialSymbol(x)))),
+              UniformRenaming(Variable("x_",None,Real),x))
+            //useFor(Axiom.axiom("x' derive var"), PosInExpr(0::Nil))(SuccPosition(0,pos))(de)
             //useFor("all eliminate")(SuccPosition(0))(Axiom.axiom("x' derive var"))
           //@todo this is convoluted and inefficient compared to a direct forward proof
           else {
@@ -312,7 +321,10 @@ object HilbertCalculus {
               PosInExpr(0::Nil)
             )(SuccPosition(0,1::Nil))(de)
           }
-      }
+        }
+        if (DEBUG) println("derive(" + de.conclusion.succ.head(pos).prettyString + ") = " + r)
+        r
+      } ensuring(r => r.isProved, "derive remains proved: " + "derive(" + de.conclusion.succ.head(pos).prettyString + ")")
 
       /** Construct a proof proving the answer of the derivative of de expanded out to variables */
       private def deriveProofF(de: Formula): Provable = ???
@@ -327,39 +339,40 @@ object HilbertCalculus {
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
-  //def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic, inst: Subst=>Subst = (us=>us))
   //@todo in analogy to useAt but forward proof.
   /** useFor(axiom) use the given fact forward for the selected position in the given Provable to conclude a new Provable */
-  private def useFor(fact: Provable, key: PosInExpr, inst: RenUSubst=>RenUSubst = (us => us)): (Position => (Provable => Provable)) = pos => proof => {
+  private def useFor(fact: Provable, key: PosInExpr, inst: RenUSubst=>RenUSubst = (us => us)): (Position => (Provable => Provable)) = {
     import FormulaConverter._
     import SequentConverter._
     import TactixLibrary._
-    //@todo move to early evaluation before knowing pos
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).extractContext(key)
 
-    val (ctx, expr) = proof.conclusion.splitContext(pos)
-    val subst = inst(UnificationMatch(keyPart, expr))
-    println("useFor unify: " + expr + " matches against " + keyPart + " by " + subst)
-    assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
+    pos => proof => {
 
-    def useFor[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable =
-    {
-      require(subst(k) == c, "correctly matched input")
-      require(C(c).extractContext(p.inExpr) ==(C, c), "correctly split at position p")
-      require(List((C, DotFormula), (C, DotTerm)).contains(C.ctx.extractContext(p.inExpr)), "correctly split at position p")
-      K.ctx match {
-        case Equal(DotTerm, other) =>
-          //@todo this is convoluted and inefficient compared to a direct forward proof
-          //@todo commute
-          TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-            useAt(fact.conclusion.succ.head, key.sibling, /*ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) &*/ byUS(fact), inst)(p))
-        case Equal(other, DotTerm) =>
-          //@todo this is convoluted and inefficient compared to a direct forward proof
-          TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-            useAt(fact.conclusion.succ.head, key.sibling, byUS(fact), inst)(p))
+      val (ctx, expr) = proof.conclusion.splitContext(pos)
+      val subst = inst(UnificationMatch(keyPart, expr))
+      println("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
+      assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
 
+      def useFor[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable =
+      {
+        require(subst(k) == c, "correctly matched input")
+        require(C(c).extractContext(p.inExpr) ==(C, c), "correctly split at position p")
+        require(List((C, DotFormula), (C, DotTerm)).contains(C.ctx.extractContext(p.inExpr)), "correctly split at position p")
+        K.ctx match {
+          case Equal(DotTerm, other) =>
+            //@todo this is convoluted and inefficient compared to a direct forward proof
+            //@todo commute
+            TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
+              useAt(fact.conclusion.succ.head, key.sibling, /*ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) &*/ byUS(fact), inst)(p))
+          case Equal(other, DotTerm) =>
+            //@todo this is convoluted and inefficient compared to a direct forward proof
+            TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
+              useAt(fact.conclusion.succ.head, key.sibling, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & byUS(fact), inst)(p))
+
+        }
       }
+      useFor(subst, keyCtx, keyPart, pos, ctx, expr)
     }
-    useFor(subst, keyCtx, keyPart, pos, ctx, expr)
   }
 }

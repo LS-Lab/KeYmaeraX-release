@@ -63,6 +63,7 @@ object TactixLibrary {
   }
   def useAt(fact: Provable, key: PosInExpr): PositionTactic = {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
+    require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
     useAt(fact.conclusion.succ.head, key, byUS(fact))
   }
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
