@@ -447,15 +447,32 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
   /**
    * Apply Rule Forward: Apply given proof rule forward in Hilbert style to prolong this Provable to a Provable for concludes.
-   * @param concludes the new conclusion that the rule shows to follow from this.conclusion
+   * This Provable with conclusion `G |- D` transforms as follows
+   * {{{
+   *     G1 |- D1 ... Gn |- Dn                  G1 |- D1 ... Gn |- Dn
+   *   -------------------------       =>     -------------------------
+   *            G |- D                              newConsequence
+   * }}}
+   * provided
+   * {{{
+   *            G |- D
+   *   ------------------------- rule
+   *         newConsequence
+   * }}}
+   * @param newConsequence the new conclusion that the rule shows to follow from this.conclusion
    * @param rule the proof rule to apply to concludes to reduce it to this.conclusion.
    * @return A Provable derivation that proves concludes from the same subgoals by using the given proof rule.
    * Will return a Provable with the same subgoals but an updated conclusion.
    * @note not soundness-critical since implemented in terms of other apply functions
    */
-  final def apply(concludes: Sequent, rule: Rule): Provable = {
-    Provable.startProof(concludes)(rule, 0)(this, 0)
-  } ensuring(r => r.conclusion == concludes, "New conclusion\n" + concludes + " after continuing derivations") ensuring(
+  final def apply(newConsequence: Sequent, rule: Rule): Provable = {
+    //@note the following requirement is redundant and not soundness-critical. It just gives a better error message.
+    require(rule(newConsequence)==List(this.conclusion), "Rule " + rule + " should justify " + this.conclusion + "\n-------------------\n" + newConsequence +
+      "\nThat is, applying the rule backwards to new consequence\n" + newConsequence + "\nshould result in\n" + this.conclusion + "\nwhich is the conclusion of this " + this + "\nThe rule led to " + rule(newConsequence) +
+      "\nExpected: " + edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter(this.conclusion) +
+      "\nFound:    " + rule(newConsequence).map(s=>edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter(s)).mkString(", "))
+    Provable.startProof(newConsequence)(rule, 0)(this, 0)
+  } ensuring(r => r.conclusion == newConsequence, "New conclusion\n" + newConsequence + " after continuing derivations") ensuring(
     r => r.subgoals == subgoals, "Same subgoals\n" + subgoals + " after continuing derivations")
 
   /**
