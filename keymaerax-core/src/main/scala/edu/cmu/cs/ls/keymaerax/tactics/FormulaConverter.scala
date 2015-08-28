@@ -40,7 +40,6 @@ class FormulaConverter(val fml: Formula) {
   }
 
   /** Subexpression at indicated position */
-  //@todo same for Sequent
   def apply(pos: PosInExpr): Expression = extractContext(pos)._2
   /** Subexpression at indicated position */
   def at(pos: PosInExpr): Option[Expression] =

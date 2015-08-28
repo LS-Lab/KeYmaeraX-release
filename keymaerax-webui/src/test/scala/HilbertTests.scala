@@ -96,7 +96,9 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
       implyR(1) &
-        DC("5<=x".asFormula)(1) & debug("after DC") & //@todo needs more branching to handle DI
+        DC("5<=x".asFormula)(1) & debug("after DC") &
+        //@todo needs more branching to handle DI
+        //@todo DC should not do absolute proof of implication but contextual
         DW(1) & debug("after DW") &
         TacticLibrary.abstractionT(1) & debug("after abstraction") & QE
     ).isProved shouldBe true

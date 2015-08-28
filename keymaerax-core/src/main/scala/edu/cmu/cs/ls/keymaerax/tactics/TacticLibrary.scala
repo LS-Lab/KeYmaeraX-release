@@ -251,23 +251,24 @@ object TacticLibrary {
   def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic, inst: Subst=>Subst = (us=>us)): PositionTactic = new PositionTactic("useAt") {
     import PropositionalTacticsImpl._
     import FormulaConverter._
+    import SequentConverter._
     private val (keyCtx:Context[_],keyPart) = new FormulaConverter(fact).extractContext(key)
     //private val keyPart = new FormulaConverter(fact).subFormulaAt(key).get
 
     override def applies(s: Sequent, p: Position): Boolean = try {
-      val part = s(p.top).at(p.inExpr)
+      val part = s.at(p)
       if (!part.isDefined) {println("ill-positioned " + p + " in " + s + "\nin " + "useAt(" + fact + ")(" + p + ")\n(" + s + ")"); false}
       else {
         UnificationMatch(keyPart,part.get)
         true
       }
-    } catch {case e: ProverException => println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s(p.top).at(p.inExpr))); false}
+    } catch {case e: ProverException => println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s.at(p))); false}
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val (ctx,expr) = new FormulaConverter(node.sequent(p.top)).extractContext(p.inExpr)
+        val (ctx,expr) = node.sequent.splitContext(p)
         val subst = inst(UnificationMatch(keyPart, expr))
         println("useAt unify: " + expr + " matches against " + keyPart + " by " + subst)
         assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
@@ -290,8 +291,8 @@ object TacticLibrary {
        */
       private def useAt[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: Tactic): Tactic = {
         require(subst(k) == c, "correctly matched input")
-        require(new FormulaConverter(C(c)).extractContext(p.inExpr) == (C,c), "correctly split at position p")
-        require(List((C,DotFormula),(C,DotTerm)).contains(new FormulaConverter(C.ctx).extractContext(p.inExpr)), "correctly split at position p")
+        require(C(c).extractContext(p.inExpr) == (C,c), "correctly split at position p")
+        require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.extractContext(p.inExpr)), "correctly split at position p")
 
         /** Equivalence rewriting step */
         def equivStep(other: Expression, factTactic: Tactic): Tactic =
@@ -339,6 +340,7 @@ object TacticLibrary {
             )
 
           case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
+            //@todo only prove remainder absolutely by proving prereq if that proof works out. Otherwise preserve context to prove prereq by master.
             //@todo check positioning etc.
             useAt(subst, new Context(remainder), k, p, C, c, cutRightT(subst(prereq))(SuccPos(0)) & onBranch(
               //@note the roles of cutUseLbl and cutShowLbl are really swapped here, since the implication on cutShowLbl will be handled by factTactic

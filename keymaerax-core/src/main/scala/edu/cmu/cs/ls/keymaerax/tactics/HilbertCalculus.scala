@@ -22,12 +22,12 @@ import edu.cmu.cs.ls.keymaerax.tools.Tool
 object HilbertCalculus {
   import TactixLibrary.useAt
 
-  /** True when external tactic calls are okay, false when insisting on useAt technology */
-  private val EXTERNAL = true
+  /** True when insisting on internal useAt technology, false when external tactic calls are okay. */
+  private val INTERNAL = true
 
   // modalities
   /** assignb: [:=] simplify assignment by substitution or equation */
-  lazy val assignb            : PositionTactic = if (!EXTERNAL) useAt("[:=] assign equational") //@todo or "[:=] assign" if no clash
+  lazy val assignb            : PositionTactic = if (INTERNAL) useAt("[:=] assign") | useAt("[:=] assign equational")
   else TacticLibrary.boxAssignT
   /** randomb: [:*] simplify nondeterministic assignment to universal quantifier */
   lazy val randomb            : PositionTactic = useAt("[:*] assign nondet")
@@ -42,7 +42,7 @@ object HilbertCalculus {
   /** iterateb: [*] prove a property of a loop by unrolling it once */
   lazy val iterateb           : PositionTactic = useAt("[*] iterate")
   /** dualb: [^d] handle dual game */
-  lazy val dualb              : PositionTactic = ???  //useAt("[d] dual")
+  lazy val dualb              : PositionTactic = useAt("[d] dual")
 
   /** assignd: <:=> simplify assignment by substitution or equation */
   lazy val assignd            : PositionTactic = useAt("<:=> assign equational") //@todo or "[:=] assign" if no clash
@@ -77,7 +77,7 @@ object HilbertCalculus {
     (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation on its differential symbols */
-  lazy val DE                 : PositionTactic = if (!EXTERNAL) ???
+  lazy val DE                 : PositionTactic = if (true || INTERNAL) (useAt("DE differential effect") | useAt("DE differential effect (system)"))
   else ODETactics.diffEffectT
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
   //@todo Dconstify usually needed for DI
@@ -113,7 +113,7 @@ object HilbertCalculus {
   /** Dconst: c()' derives a constant */
   lazy val Dconst             : PositionTactic = useAt("c()' derive constant fn")
   /** Dvariable: x' derives a variable */
-  lazy val Dvariable          : PositionTactic = if (!EXTERNAL) useAt("x' derive variable", PosInExpr(0::0::Nil))
+  lazy val Dvariable          : PositionTactic = if (false&&INTERNAL) useAt("x' derive variable", PosInExpr(0::0::Nil))
   else SyntacticDerivationInContext.symbolizeDifferential
 
   /** Dand: &' derives a conjunction */
@@ -241,4 +241,36 @@ object HilbertCalculus {
     }
   }
 
+  lazy val derive: PositionTactic = new PositionTactic("derive") {
+    import FormulaConverter._
+    import SequentConverter._
+    //import TactixLibrary._
+    override def applies(s: Sequent, p: Position): Boolean = s.at(p) match {
+      case Some(Differential(_)) => true
+      case Some(DifferentialFormula(_)) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        node.sequent(p) match {
+          case t: Term => Some(useAt(deriveProof(t), PosInExpr(0::Nil))(p))
+          case f: Formula => Some(useAt(deriveProofF(f), PosInExpr(0::Nil))(p))
+        }
+
+      }
+
+      /** Construct a proof proving the answer of the derivative of de expanded out to variables */
+      private def deriveProof(de: Term): Provable = {
+        Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Equal(de,de))))/*(
+          DerivedAxioms.equalReflex, SuccPos(0)
+        )*/
+      }
+      /** Construct a proof proving the answer of the derivative of de expanded out to variables */
+      private def deriveProofF(de: Formula): Provable = ???
+    }
+
+  }
 }
