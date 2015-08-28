@@ -207,7 +207,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   /** Pretty-print sequent */
   def prettyString: String =
     (1 to ante.length).map(i => -i + ":  " + ante(i-1).prettyString + "\t" + ante(i-1).getClass.getSimpleName).mkString("\n") +
-      "\n  ==>  \n" +
+      (if (ante.isEmpty) if (succ.length<=1) "  ==>  " else "  ==>  \n" else "\n  ==>  \n") +
     (1 to succ.length).map(i => +i + ":  " + succ(i-1).prettyString + "\t" + succ(i-1).getClass.getSimpleName).mkString("\n")
 
 }
