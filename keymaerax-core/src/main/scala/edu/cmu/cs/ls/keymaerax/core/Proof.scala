@@ -965,7 +965,11 @@ final case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends
         "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))*/
     } catch { case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion) }
 }
-
+object UniformSubstitutionRule {
+  /** Apply uniform substitution subst to provable forward in Hilbert-style (convenience) */
+  def UniformSubstitutionRuleForward(provable: Provable, subst: USubst): Provable =
+    provable(subst(provable.conclusion), UniformSubstitutionRule(subst, provable.conclusion))
+}
 
 /*********************************************************************************
   * Lookup Axioms
@@ -976,6 +980,10 @@ final case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends
 object Axiom {
   /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. */
   val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms
+
+  /** A Provable proving the axiom named id (convenience) */
+  def axiom(id: String): Provable =
+    Provable.startProof(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(axioms(id))))(Axiom(id), 0)
 }
 /**
  * Look up an axiom named id.
