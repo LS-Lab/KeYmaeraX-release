@@ -241,8 +241,10 @@ object HilbertCalculus {
     }
   }
 
+  /** Derive the differential expression at the indicated position */
   lazy val derive: PositionTactic = new PositionTactic("derive") {
     import FormulaConverter._
+    import TermConverter._
     import SequentConverter._
     //import TactixLibrary._
     override def applies(s: Sequent, p: Position): Boolean = s.at(p) match {
@@ -264,10 +266,38 @@ object HilbertCalculus {
 
       /** Construct a proof proving the answer of the derivative of de expanded out to variables */
       private def deriveProof(de: Term): Provable = {
-        Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Equal(de,de))))/*(
-          DerivedAxioms.equalReflex, SuccPos(0)
+        derive(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Equal(de,de))))/*(
+          DerivedAxioms.equalReflex, 0
         )*/
+          ,
+        PosInExpr(1::Nil)
+        )
       }
+      private def derive(de: Provable, pos: PosInExpr): Provable = de.conclusion.succ.head(pos) match {
+        case Differential(Neg(_)) => derive(
+          useFor("-' derive neg")(SuccPosition(0,pos))(de),
+          pos.append(PosInExpr(0::Nil)))
+        case Differential(Plus(_,_)) => derive(derive(
+          useFor("+' derive sum")(SuccPosition(0,pos))(de),
+          pos.append(PosInExpr(0::Nil))),
+          pos.append(PosInExpr(1::Nil))
+        )
+        case Differential(Minus(_,_)) => derive(derive(
+          useFor("-' derive minus")(SuccPosition(0,pos))(de),
+          pos.append(PosInExpr(0::Nil))),
+          pos.append(PosInExpr(1::Nil))
+        )
+        case Differential(Times(_,_)) => derive(derive(
+          useFor("*' derive product")(SuccPosition(0,pos))(de),
+          pos.append(PosInExpr(0::0::Nil))),
+          pos.append(PosInExpr(1::1::Nil))
+        )
+      }
+
+      //@todo in analogy to useAt but forward proof.
+      /** useFor(axiom) use the given fact forward for the selected position in the given Provable to conclude a new Provable */
+      private def useFor(axiom: String): (Position => (Provable => Provable)) = ???
+
       /** Construct a proof proving the answer of the derivative of de expanded out to variables */
       private def deriveProofF(de: Formula): Provable = ???
     }
