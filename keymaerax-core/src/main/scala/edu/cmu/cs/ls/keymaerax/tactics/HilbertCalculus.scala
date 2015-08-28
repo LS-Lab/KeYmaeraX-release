@@ -366,14 +366,20 @@ object HilbertCalculus {
 
         /** Equivalence rewriting step */
         def equivStep(other: Expression, factTactic: Tactic): Provable = {
+          //@todo use factTact turned argument into Provable=>Provable
           val side1: Provable = subst.toForward(fact
           ) (
             subst(fact.conclusion)
             ,
-            AxiomaticRule("CQ equation congruence",
-            USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), Anything), ctx.ctx) :: Nil))
+            AxiomaticRule("CT term congruence",
+              USubst(SubstitutionPair(FuncOf(Function("ctx_", None, Real, Real), DotTerm), DotTerm) ::
+                SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), subst(k)) ::
+                SubstitutionPair(FuncOf(Function("g_", None, Real, Real), Anything), subst(other)) ::
+                Nil))
+//            AxiomaticRule("CQ equation congruence",
+//            USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), Anything), C.ctx) :: Nil))
           )
-          val side2: Provable = side1.apply(proof.conclusion.updated(p.top, Imply(C(subst(k)), C(subst(other)))),
+          val side2: Provable = side1.apply(proof.conclusion.updated(p.top, Imply(C(subst(other)), C(subst(k)))),
             EquivifyRight(p.top.asInstanceOf[SuccPos]))
           assert(C(subst(k)) == expr, "matched expression expected")
           Provable.startProof(proof.conclusion.updated(p.top, C(subst(k))))(
@@ -409,9 +415,10 @@ object HilbertCalculus {
 
           case Equal(other, DotTerm) =>
             //@todo this is convoluted and inefficient compared to a direct forward proof
-            TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
+            if (HISTORY) TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
               useAt(fact.conclusion.succ.head, key.sibling, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & byUS(fact), inst)(p))
-
+            else
+              equivStep(other, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & byUS(fact))
         }
       }
       useFor(subst, keyCtx, keyPart, pos, ctx, expr)
