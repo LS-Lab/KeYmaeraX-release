@@ -467,7 +467,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    */
   final def apply(newConsequence: Sequent, rule: Rule): Provable = {
     //@note the following requirement is redundant and not soundness-critical. It just gives a better error message.
-    require(rule(newConsequence)==List(this.conclusion), "Rule " + rule + " should justify " + this.conclusion + "\n-------------------\n" + newConsequence +
+    require(rule(newConsequence)==List(this.conclusion), "Rule " + rule + " should justify\n" + this.conclusion.prettyString + "\n-----------------------------\n" + newConsequence.prettyString +
       "\nThat is, applying the rule backwards to new consequence\n" + newConsequence + "\nshould result in\n" + this.conclusion + "\nwhich is the conclusion of this " + this + "\nThe rule led to " + rule(newConsequence) +
       "\nExpected: " + edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter(this.conclusion) +
       "\nFound:    " + rule(newConsequence).map(s=>edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter(s)).mkString(", "))
