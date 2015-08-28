@@ -850,7 +850,9 @@ object Tactics {
    */
   case class ByProvable(provable: Provable) extends Tactic("By provable " + provable) {
 
-    def applicable(node : ProofNode): Boolean = node.sequent==provable.conclusion
+    def applicable(node : ProofNode): Boolean =
+      if (node.sequent==provable.conclusion) true else
+      {println("by(provable) inapplicable " + provable + " to " + node.sequent + "\nin " + "by(" + provable + ")\n(" + node.sequent + ")"); false}
 
     def apply(tool : Tool, node : ProofNode) {
       if (applicable(node)) {

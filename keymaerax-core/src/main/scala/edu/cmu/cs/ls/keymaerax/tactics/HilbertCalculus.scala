@@ -249,7 +249,7 @@ object HilbertCalculus {
     import FormulaConverter._
     import TermConverter._
     import SequentConverter._
-    //import TactixLibrary._
+    import TactixLibrary._
     override def applies(s: Sequent, p: Position): Boolean = s.at(p) match {
       case Some(Differential(_)) => true
       case Some(DifferentialFormula(_)) => true
@@ -269,12 +269,12 @@ object HilbertCalculus {
 
       /** Construct a proof proving the answer of the derivative of de expanded out to variables */
       private def deriveProof(de: Term): Provable = {
-        derive(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Equal(de,de))))/*(
-          DerivedAxioms.equalReflex, 0
-        )*/
-          ,
-        PosInExpr(1::Nil)
-        )
+        val deIsDe = Sequent(Nil, IndexedSeq(), IndexedSeq(Equal(de,de)))
+        val initial = DerivedAxioms.equalReflex.fact(
+          deIsDe,
+              UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), de)::Nil), DerivedAxioms.equalReflex.fact.conclusion))
+        assert(initial.isProved && initial.proved==deIsDe, "Proved reflexive start " + initial + " for " + de)
+        derive(initial, PosInExpr(1::Nil))
       }
       private def derive(de: Provable, pos: PosInExpr): Provable = de.conclusion.succ.head(pos) match {
         case Differential(Neg(_)) => derive(
@@ -297,8 +297,19 @@ object HilbertCalculus {
         )
         case Differential(Number(_)) =>
           useFor("c()' derive constant fn")(SuccPosition(0,pos))(de)
-        case Differential(Variable(_,_,_)) =>
-          useFor("x' derive variable")(SuccPosition(0,pos))(de)
+        case Differential(x:Variable) =>
+          if (false&&INTERNAL) useFor("x' derive variable", PosInExpr(0::0::Nil))(SuccPosition(0,pos))(de)
+          //@todo this is convoluted and inefficient compared to a direct forward proof
+          else {
+            val specialDvariable = TactixLibrary.proveBy(
+              Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
+              Dvariable(SuccPosition(0,0::Nil)) ~ byUS("= reflexive"))
+            assert(specialDvariable.isProved && specialDvariable.proved==Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))), "Proved helper")
+            useFor(
+              specialDvariable,
+              PosInExpr(0::Nil)
+            )(SuccPosition(0,1::Nil))(de)
+          }
       }
 
       /** Construct a proof proving the answer of the derivative of de expanded out to variables */
@@ -317,14 +328,12 @@ object HilbertCalculus {
   //def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic, inst: Subst=>Subst = (us=>us))
   //@todo in analogy to useAt but forward proof.
   /** useFor(axiom) use the given fact forward for the selected position in the given Provable to conclude a new Provable */
-  private def useFor(fact: Provable, key: PosInExpr): (Position => (Provable => Provable)) = pos => proof => {
+  private def useFor(fact: Provable, key: PosInExpr, inst: RenUSubst=>RenUSubst = (us => us)): (Position => (Provable => Provable)) = pos => proof => {
     import FormulaConverter._
     import SequentConverter._
     import TactixLibrary._
     //@todo move to early evaluation before knowing pos
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).extractContext(key)
-
-    val inst: RenUSubst=>RenUSubst = (us => us)
 
     val (ctx, expr) = proof.conclusion.splitContext(pos)
     val subst = inst(UnificationMatch(keyPart, expr))
@@ -341,11 +350,11 @@ object HilbertCalculus {
           //@todo this is convoluted and inefficient compared to a direct forward proof
           //@todo commute
           TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-            useAt(fact.conclusion.succ.head, /*key*/PosInExpr(1::Nil), /*ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) &*/ by(fact), inst)(p))
+            useAt(fact.conclusion.succ.head, key.sibling, /*ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) &*/ byUS(fact), inst)(p))
         case Equal(other, DotTerm) =>
           //@todo this is convoluted and inefficient compared to a direct forward proof
           TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-            useAt(fact.conclusion.succ.head, /*key*/PosInExpr(1::Nil), by(fact), inst)(p))
+            useAt(fact.conclusion.succ.head, key.sibling, byUS(fact), inst)(p))
 
       }
     }

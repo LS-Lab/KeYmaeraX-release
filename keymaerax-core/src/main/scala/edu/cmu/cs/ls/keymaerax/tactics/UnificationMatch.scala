@@ -84,7 +84,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
   private def reunify(subst: List[SubstRepl]): List[SubstRepl] = {
     // map matchKey to all substitution pairs in subst that sahre that matchKey
     var matchKeyMap = new scala.collection.mutable.HashMap[Expression,immutable.List[SubstRepl]]()
-    for (sp <- subst) {
+    for (sp <- subst.distinct) {
       val key = RenUSubst.matchKey(sp)
       matchKeyMap.get(key) match {
         case None => matchKeyMap.put(key, List(sp))
@@ -98,7 +98,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     while (!dups.isEmpty) {
       val dupkv: (Expression,immutable.List[SubstRepl]) = dups.head
       dups = dups.tail
-      println("duplicate " + dupkv)
+      println("unify duplicate " + dupkv._2.map(sp=>sp._1.prettyString + "~>" + sp._2.prettyString).mkString(", "))
       val dup = dupkv._2
       if (dup.map(sp=>sp._1).distinct.length==1) {
         // all have same left-hand side
