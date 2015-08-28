@@ -72,11 +72,11 @@ object TactixLibrary {
   def useAt(lem: Lemma)       : PositionTactic = useAt(lem.fact, PosInExpr(0::Nil))
   /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: String, key: PosInExpr, inst: Subst=>Subst): PositionTactic =
-    if (Axiom.axioms.contains(axiom)) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key, inst)
+    if (Axiom.axioms.contains(axiom)) useAt(Axiom.axiom(axiom), key, inst)
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR((axiom)), 0), key, inst)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
   def useAt(axiom: String, key: PosInExpr): PositionTactic =
-    if (Axiom.axioms.contains(axiom)) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
+    if (Axiom.axioms.contains(axiom)) useAt(Axiom.axiom(axiom), key)
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
   def useAt(axiom: String, inst: Subst=>Subst): PositionTactic = useAt(axiom, PosInExpr(0::Nil), inst)
@@ -92,7 +92,7 @@ object TactixLibrary {
   def byUS(lemma: Lemma)      : Tactic  = byUS(lemma.fact)
   /** byUS(axiom) proves by a uniform substitution instance of axiom */
   def byUS(axiom: String)     : Tactic =
-    if (Axiom.axioms.contains(axiom)) byUS(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0))
+    if (Axiom.axioms.contains(axiom)) byUS(Axiom.axiom(axiom))
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) byUS(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0))
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 

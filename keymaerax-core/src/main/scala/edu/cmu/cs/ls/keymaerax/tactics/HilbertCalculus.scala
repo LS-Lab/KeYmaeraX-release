@@ -299,6 +299,8 @@ object HilbertCalculus {
           useFor("c()' derive constant fn")(SuccPosition(0,pos))(de)
         case Differential(x:Variable) =>
           if (false&&INTERNAL) useFor("x' derive variable", PosInExpr(0::0::Nil))(SuccPosition(0,pos))(de)
+          else if (true) useFor(Axiom.axiom("x' derive var"), PosInExpr(0::Nil))(SuccPosition(0,pos))(de)
+            //useFor("all eliminate")(SuccPosition(0))(Axiom.axiom("x' derive var"))
           //@todo this is convoluted and inefficient compared to a direct forward proof
           else {
             val specialDvariable = TactixLibrary.proveBy(

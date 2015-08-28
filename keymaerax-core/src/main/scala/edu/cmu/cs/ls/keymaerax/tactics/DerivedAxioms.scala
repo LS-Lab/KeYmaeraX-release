@@ -163,6 +163,7 @@ object DerivedAxioms {
     case "true&" => Some(trueAndF, trueAndT)
     case "0*" => Some(zeroTimesF, zeroTimesT)
     case "0+" => Some(zeroPlusF, zeroPlusT)
+    case "x' derive var" => Some(DvarF, DvarT)
     case "' linear" => Some(DlinearF, DlinearT)
     case "DG differential pre-ghost" => Some(DGpreghostF, DGpreghostT)
     case "= reflexive" => Some(equalReflexiveF, equalReflexiveT)
@@ -1114,6 +1115,20 @@ object DerivedAxioms {
   )
   lazy val DGpreghostT = derivedAxiomT(DGpreghost)
 
+  /**
+   * {{{Axiom "x' derive var".
+   *    (x)' = x'
+   * End.
+   * }}}
+   * @todo derive
+   */
+  lazy val DvarF = "((x)' = x')".asFormula
+  lazy val Dvar = derivedAxiom("'x derive var",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DvarF)),
+    TacticLibrary.instantiateQuanT(Variable("x_",None,Real), Variable("x",None,Real))(1) &
+      byUS("= reflexive")
+  )
+  lazy val DvarT = derivedAxiomT(Dvar)
   /**
    * {{{Axiom "' linear".
    *    (c()*f(??))' = c()*(f(??))'
