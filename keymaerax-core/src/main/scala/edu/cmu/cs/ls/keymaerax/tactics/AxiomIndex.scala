@@ -57,6 +57,11 @@ object AxiomIndex {
     case "[;] compose" | "<;> compose" => unaryDefault
     case "[*] iterate" | "<*> iterate" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
 
+    case "DW differential weakening" => (PosInExpr(0::Nil), unknown)
+    case "DC differential cut" => (PosInExpr(1::0::Nil), PosInExpr(0::Nil)::Nil)
+    case "DE differential effect" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+    //@todo unclear recursor
+    case "DE differential effect system" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     //@todo other axioms
 
     // default position
