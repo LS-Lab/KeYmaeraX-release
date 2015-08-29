@@ -111,6 +111,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
           dup.patch(0,Nil,1)
         else
           throw new ProverException("Duplicates do not reunify " + dup)
+        println("unified duplicate to " + remaining)
         assert (remaining.length < dup.length, "reunify made progress by shrinking one list")
         if (remaining.length>=2) matchKeyMap.put(dupkv._1, remaining)
         else {

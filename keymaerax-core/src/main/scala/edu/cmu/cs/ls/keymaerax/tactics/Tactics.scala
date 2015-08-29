@@ -650,7 +650,7 @@ object Tactics {
   /**
    * Allows decision making based upon the proof node (using code).
    */
-  def ifElseT(cond : ProofNode => Boolean, thenT : Tactic, elseT : Tactic) =
+  def ifElseT(cond : ProofNode => Boolean, thenT : Tactic, elseT : Tactic): Tactic =
     new Tactic("Conditional " + thenT + " else " + elseT) {
       def applicable(node : ProofNode) = if(cond(node)) thenT.applicable(node) else elseT.applicable(node)
 
@@ -665,8 +665,21 @@ object Tactics {
       }
     }
 
-  def ifT(cond : ProofNode => Boolean, thenT : Tactic) =
+  def ifThenElseT(cond : Sequent => Boolean, thenT : Tactic, elseT : Tactic): Tactic = ifElseT((node:ProofNode)=>cond(node.sequent), thenT, elseT)
+
+  def ifT(cond : ProofNode => Boolean, thenT : Tactic): Tactic =
       ifElseT(cond, thenT, NilT)
+
+  /**
+   * Allows decision making based upon the proof node (using code).
+   */
+  def ifElseT(cond : (Sequent,Position) => Boolean, thenT: PositionTactic, elseT : PositionTactic): PositionTactic =
+    new PositionTactic("Conditional " + thenT + " else " + elseT) {
+      override def applies(s: Sequent, p: Position): Boolean = if(cond(s,p)) thenT.applies(s,p) else elseT.applies(s,p)
+      override def apply(p: Position): Tactic = ifThenElseT((s:Sequent)=>cond(s,p),thenT(p), elseT(p))
+    }
+
+  def ifT(cond : (Sequent,Position) => Boolean, thenT: PositionTactic): PositionTactic = ifElseT(cond, thenT, NilPT)
 
   /**
    * Generalizes if-else. the generator can return the "do nothing" tactic.

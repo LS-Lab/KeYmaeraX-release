@@ -174,6 +174,12 @@ object DerivedAxioms {
     case "= commute" => Some(equalCommuteF, equalCommuteT)
     case "<=" => Some(lessEqualF, lessEqualT)
     case "= negate" => Some(notNotEqualF, notNotEqualT)
+    case "! !=" => derivedAxiomInfo("= negate")
+    case "! =" => Some(notEqualF, notEqualT)
+    case "! <" => Some(notLessF, notLessT)
+    case "! <=" => Some(notLessEqualF, notLessEqualT)
+    case "! >" => Some(notGreaterF, notGreaterT)
+    case "! >=" => derivedAxiomInfo("< negate")
     case "< negate" => Some(notGreaterEqualF, notGreaterEqualT)
     case ">= flip" => Some(flipGreaterEqualF, flipGreaterEqualT)
     case "> flip" => Some(flipGreaterF, flipGreaterT)
@@ -1234,6 +1240,56 @@ object DerivedAxioms {
     QE
   )
   lazy val notNotEqualT = derivedAxiomT(notNotEqual)
+  /**
+   * {{{Axiom "! =".
+   *   !(f() = g()) <-> f() != g()
+   * End.
+   * }}}
+   */
+  lazy val notEqualF = "((!(f() = g())) <-> (f() != g())".asFormula
+  lazy val notEqual = derivedAxiom("= negate",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notEqualF)),
+    QE
+  )
+  lazy val notEqualT = derivedAxiomT(notEqual)
+  /**
+   * {{{Axiom "! >".
+   *   (!(f() > g())) <-> (f() <= g())
+   * End.
+   * }}}
+   */
+  lazy val notGreaterF = "(!(f() > g())) <-> (f() <= g())".asFormula
+  lazy val notGreater = derivedAxiom("! >",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notGreaterF)),
+    QE
+  )
+  lazy val notGreaterT = derivedAxiomT(notGreater)
+  /**
+   * {{{Axiom "! <".
+   *   (!(f() < g())) <-> (f() >= g())
+   * End.
+   * }}}
+   * @todo derive more efficiently via flip
+   */
+  lazy val notLessF = "(!(f() < g())) <-> (f() >= g())".asFormula
+  lazy val notLess = derivedAxiom("! <",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notLessF)),
+    QE
+  )
+  lazy val notLessT = derivedAxiomT(notLess)
+  /**
+   * {{{Axiom "! <=".
+   *   (!(f() <= g())) <-> (f() > g())
+   * End.
+   * }}}
+   * @todo derive more efficiently via flip
+   */
+  lazy val notLessEqualF = "(!(f() <= g())) <-> (f() > g())".asFormula
+  lazy val notLessEqual = derivedAxiom("! <",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notLessEqualF)),
+    QE
+  )
+  lazy val notLessEqualT = derivedAxiomT(notLessEqual)
   /**
    * {{{Axiom "< negate".
    *   (!(f() >= g())) <-> (f() < g())

@@ -198,6 +198,18 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
+  it should "auto-prove x>=5 -> [{x'=2&x<=10}](5<=x)" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=10}](5<=x)".asFormula)),
+      implyR(1) & diffInd(1)
+    ) shouldBe 'proved
+  }
+
+//  it should "auto-prove x>=5 -> [{x'=2&x<=10}](5<=x&x<=10)" in {
+//    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=10}](5<=x&x<=10)".asFormula)),
+//      implyR(1) & diffCut(1)
+//    ) shouldBe 'proved
+//  }
+
   it should "auto-prove x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula)),
       implyR(1) & diffInd(1)

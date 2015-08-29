@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.tools.Tool
  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
+ * @see [[HilbertCalculus.derive()]]
  */
 object HilbertCalculus extends UnifyUSCalculus {
   import TactixLibrary.QE
@@ -75,8 +76,10 @@ object HilbertCalculus extends UnifyUSCalculus {
     (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation on its differential symbols */
-  lazy val DE                 : PositionTactic = if (INTERNAL) useAt("DE differential effect") |
-    useAt("DE differential effect (system)") * getODEDim
+  lazy val DE                 : PositionTactic = if (INTERNAL)
+    ifElseT(isODESystem,
+      (useAt("DE differential effect (system)") * getODEDim),
+      useAt("DE differential effect"))
   else ODETactics.diffEffectT
   /** DI: Differential Invariant used for proving a formula to be an invariant of a differential equation @see [[diffInd()]] */
   //@todo Dconstify usually needed for DI
@@ -92,12 +95,13 @@ object HilbertCalculus extends UnifyUSCalculus {
         override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
           Some(DI(p) & (stepAt(p) & stepAt(p)) && (
             QE,
-            //@todo DW(p) if not just True
             //@note derive before DE to keep positions easier
             derive(p.append(PosInExpr(1::Nil))) &
-            DE(p) &
+              DE(p) &
               (Dassignb(p.append(PosInExpr(1::Nil))) * (s=>getODEDim(s,p))) &
-                TacticLibrary.abstractionT(p) & QE
+              //@note DW after DE to keep positions easier
+              ifT(hasODEDomain, DW)(p) &
+              TacticLibrary.abstractionT(p) & QE
             ))
       }
     }
@@ -133,7 +137,7 @@ object HilbertCalculus extends UnifyUSCalculus {
   /** Dconst: c()' derives a constant */
   lazy val Dconst             : PositionTactic = useAt("c()' derive constant fn")
   /** Dvariable: x' derives a variable */
-  lazy val Dvariable          : PositionTactic = if (false&&INTERNAL) useAt("x' derive variable", PosInExpr(0::0::Nil))
+  lazy val Dvariable          : PositionTactic = if (false&&INTERNAL) useAt("x' derive var", PosInExpr(0::Nil)) //useAt("x' derive variable", PosInExpr(0::0::Nil))
   else SyntacticDerivationInContext.symbolizeDifferential
 
   /** Dand: &' derives a conjunction */
@@ -228,12 +232,12 @@ object HilbertCalculus extends UnifyUSCalculus {
           case _: Diamond   => Some(useAt("!<>"))
           case _: Forall    => Some(useAt("!all"))
           case _: Exists    => Some(useAt("!exists"))
-          case _: Equal     => ???
-          case _: NotEqual  => Some(useAt("= negate"))
-          case _: Less      => Some(useAt("< negate"))
-          case _: LessEqual => ???
-          case _: Greater   => ???
-          case _: GreaterEqual => ???
+          case _: Equal     => Some(useAt("! ="))
+          case _: NotEqual  => Some(useAt("! !="))
+          case _: Less      => Some(useAt("! <"))
+          case _: LessEqual => Some(useAt("! <="))
+          case _: Greater   => Some(useAt("! >"))
+          case _: GreaterEqual => Some(useAt("! >="))
           //@note for conceptual simplicity, use propositional and Skolem sequent rules, too
           case _ if p.isTopLevel => if(p.isAnte) Some(TactixLibrary.notL) else Some(TactixLibrary.notR)
           case _: Not       => Some(useAt(DerivedAxioms.doubleNegationAxiom))
@@ -437,4 +441,25 @@ object HilbertCalculus extends UnifyUSCalculus {
     }
   }
 
+  /** Whether there is a proper ODE System at the indicated position of a sequent with >=2 ODEs */
+  private val isODESystem: (Sequent,Position)=>Boolean = (sequent,pos) => {
+    import SequentConverter._
+    sequent.at(pos) match {
+      case Some(Box(ODESystem(_:DifferentialProduct,_), _))     => true
+      case Some(Diamond(ODESystem(_:DifferentialProduct,_), _)) => true
+      case Some(e) => false
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
+    }
+  }
+
+  /** Whether the ODE at indicated position of a sequent has a nontrivial domain */
+  private val hasODEDomain: (Sequent,Position)=>Boolean = (sequent,pos) => {
+    import SequentConverter._
+    sequent.at(pos) match {
+      case Some(Box(ode: ODESystem, _))     => ode.constraint != True
+      case Some(Diamond(ode: ODESystem, _)) => ode.constraint != True
+      case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
+    }
+  }
 }
