@@ -29,4 +29,10 @@ class SequentConverter(val seq: Sequent) {
    * @return A tuple (p(.), e) of context p(.) and sub-expression e, where p(e) is equivalent to fml.
    */
   def splitContext(pos: Position): (Context[Formula], Expression) = new FormulaConverter(seq(pos.top)).extractContext(pos.inExpr)
+
+  /** Returns the subformula of fml at position pos */
+  def subFormulaAt(pos: Position): Option[Formula] = new FormulaConverter(seq(pos.top)).subFormulaAt(pos.inExpr)
+
+  /** Returns the term at position pos in fml. */
+  def termAt(pos: Position): Term = new FormulaConverter(seq(pos.top)).termAt(pos.inExpr)
 }

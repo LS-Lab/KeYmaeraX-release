@@ -280,14 +280,16 @@ object HilbertCalculus {
         derive(initial, PosInExpr(1::Nil))
       } ensuring(r => r.isProved, "derive remains proved: " + " final derive(" + de + ")")
 
+      private def debugF(s: => Any): (Provable=>Provable)=>(Provable=>Provable) = tac => proof => {val pr = tac(proof); println("=== " + s + " === " + pr); pr}
+      private def debugPF(s: => Any): (Position=>Provable=>Provable)=>(Position=>Provable=>Provable) = tac => pos => proof => {val pr = tac(pos)(proof); println("=== " + s + " === " + pr); pr}
       private def derive(de: Provable, pos: PosInExpr): Provable = {
-        if (DEBUG) println("derive(" + de.conclusion.succ.head(pos).prettyString + ")")
-        val r = de.conclusion.succ.head(pos) match {
+        if (DEBUG) println("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ")")
+        val r = de.conclusion.succ.head.subAt(pos) match {
         case Differential(Neg(_)) => derive(
           useFor("-' derive neg")(SuccPosition(0,pos))(de),
           pos.append(PosInExpr(0::Nil)))
         case Differential(Plus(_,_)) => derive(derive(
-          useFor("+' derive sum")(SuccPosition(0,pos))(de),
+          debugPF("derive(+')")(useFor("+' derive sum"))(SuccPosition(0,pos))(de),
           pos.append(PosInExpr(0::Nil))),
           pos.append(PosInExpr(1::Nil))
         )
@@ -297,12 +299,12 @@ object HilbertCalculus {
           pos.append(PosInExpr(1::Nil))
         )
         case Differential(Times(_,_)) => derive(derive(
-          useFor("*' derive product")(SuccPosition(0,pos))(de),
+          debugPF("derive(*')")(useFor("*' derive product"))(SuccPosition(0,pos))(de),
           pos.append(PosInExpr(0::0::Nil))),
           pos.append(PosInExpr(1::1::Nil))
         )
         case Differential(Number(_)) =>
-          useFor("c()' derive constant fn")(SuccPosition(0,pos))(de)
+          debugPF("c()'")(useFor("c()' derive constant fn"))(SuccPosition(0,pos))(de)
         case Differential(x:Variable) =>
           if (false&&INTERNAL) useFor("x' derive variable", PosInExpr(0::0::Nil))(SuccPosition(0,pos))(de)
           else if (true)
@@ -322,8 +324,9 @@ object HilbertCalculus {
               PosInExpr(0::Nil)
             )(SuccPosition(0,1::Nil))(de)
           }
+        case e => throw new MatchError("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ") don't know how to handle " + e + " at " + pos + " of " + de.conclusion)
         }
-        if (DEBUG) println("derive(" + de.conclusion.succ.head(pos).prettyString + ") = " + r)
+        if (DEBUG) println("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ")\n ~~> " + r)
         r
       } ensuring(r => r.isProved, "derive remains proved: " + "derive(" + de.conclusion.succ.head(pos).prettyString + ")")
 
@@ -347,7 +350,7 @@ object HilbertCalculus {
     import SequentConverter._
     import TactixLibrary._
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).extractContext(key)
-    if (DEBUG) println("useFor(" + fact.conclusion.prettyString + ") key: " + keyPart + " in key context: " + keyCtx)
+    if (DEBUG) println("useFor(" + fact.conclusion + ") key: " + keyPart + " in key context: " + keyCtx)
 
     val HISTORY=false
 
@@ -356,6 +359,7 @@ object HilbertCalculus {
       val (ctx, expr) = proof.conclusion.splitContext(pos)
       val subst = inst(UnificationMatch(keyPart, expr))
       println("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
+      if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof)
       assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
 
       def useFor[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable =
@@ -367,8 +371,12 @@ object HilbertCalculus {
         /** Equivalence rewriting step */
         def equivStep(other: Expression, factTactic: Tactic): Provable = {
           //@todo use factTact turned argument into Provable=>Provable
-          val side1: Provable = subst.toForward(fact
-          ) (
+          require(fact.isProved, "currently want proved facts as input only")
+          require(proof.conclusion.updated(p.top, C(subst(k)))==proof.conclusion, "expected context split")
+          // |- fact: k=o
+          val sideCT: Provable = subst.toForward(fact)
+          // |- subst(fact): subst(k)=subst(o) by US
+          /*(
             subst(fact.conclusion)
             ,
             AxiomaticRule("CT term congruence",
@@ -378,13 +386,42 @@ object HilbertCalculus {
                 Nil))
 //            AxiomaticRule("CQ equation congruence",
 //            USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), Anything), C.ctx) :: Nil))
+          )*/
+          val sideCE = sideCT(
+            Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(subst(k)), C(subst(other)))))
+            ,
+            AxiomaticRule("CQ equation congruence",
+              USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
+                SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), subst(k)) ::
+                SubstitutionPair(FuncOf(Function("g_", None, Real, Real), Anything), subst(other)) ::
+                Nil))
           )
-          val side2: Provable = side1.apply(proof.conclusion.updated(p.top, Imply(C(subst(other)), C(subst(k)))),
-            EquivifyRight(p.top.asInstanceOf[SuccPos]))
-          assert(C(subst(k)) == expr, "matched expression expected")
-          Provable.startProof(proof.conclusion.updated(p.top, C(subst(k))))(
-            CutRight(C(subst(other)), p.top.asInstanceOf[SuccPos]), 0
-          ) (side2, 1) (fact, 0)
+          // |- C{subst(k)} <-> C{subst(o)} by CQ
+//          val sideSwap = sideCE(
+//            Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(subst(other)), C(subst(k))))),
+//            CommuteEquivRight(SuccPos(0))
+//          )
+//          // |- C{subst(o)} <-> C{subst(k)} by CommuteEquivRight
+          val side2: Provable = sideCE(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(k)), C(subst(other))))),
+            EquivifyRight(SuccPos(0)))
+          // |- C{subst(k)}  -> C{subst(other)} by EquivifyRight
+          //assert(C(subst(k)) == expr, "matched expression expected")
+          val coside: Provable = side2(
+            proof.conclusion.updated(p.top, Imply(C(subst(k)), C(subst(other)))),
+            CoHideRight(p.top.asInstanceOf[SuccPos])
+          )
+          // G |- C{subst(k)}  -> C{subst(other)}, D by CoHideRight
+          val proved = {Provable.startProof(proof.conclusion.updated(p.top, C(subst(other))))(
+            CutRight(C(subst(k)), p.top.asInstanceOf[SuccPos]), 0
+          ) (coside, 1)
+          } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(other))), "prolonged conclusion"
+            ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")
+          //                           *
+          //                        ------
+          // G |- C{subst(k)}, D    coside
+          // ------------------------------ CutRight
+          // G |- C{subst(o)}, D
+          proved(proof, 0)
 
 //
 //          //fact(Sequent(Nil,IndexedSeq(),IndexedSeq(Equal(subst(k), subst(c)))),
@@ -402,7 +439,8 @@ object HilbertCalculus {
 //              factTactic)
 //            //@todo error if factTactic is not applicable (factTactic | errorT)
 //          )
-        }
+        } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(other))), "prolonged conclusion"
+          ) ensuring(r=>r.subgoals==proof.subgoals, "expected original premises")
 
         K.ctx match {
           case Equal(DotTerm, other) =>
@@ -421,7 +459,9 @@ object HilbertCalculus {
               equivStep(other, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & byUS(fact))
         }
       }
-      useFor(subst, keyCtx, keyPart, pos, ctx, expr)
+      val r = useFor(subst, keyCtx, keyPart, pos, ctx, expr)
+      if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof + "\n ~~> " + r)
+      r
     }
   }
 }
