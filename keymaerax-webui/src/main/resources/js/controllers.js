@@ -469,7 +469,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
   });
 
 keymaeraProofControllers.controller('ModelUploadCtrl',
-  function ($scope, $http, $cookies, $cookieStore, $route, Models) {
+  function ($scope, $http, $cookies, $cookieStore, $route, $modal, Models) {
 
      $scope.runPreloadedProof = function(model) {
         $http.post("/models/users/" + $scope.userId + "/model/" + model.id + "/initialize")
@@ -477,7 +477,6 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
                 console.log("yay! Take the user to the proof load page?")
             })
      };
-
 
      $scope.addModel = function() {
           var file = keyFile.files[0];
@@ -494,7 +493,13 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
                      contentType: 'application/json',
                      success: function(data) {
                          if(data.errorThrown) {
-                            alert("Model creation failed. Are you sure your model parses correctly?") //@todo show parse error.
+                            $modal.open({
+                               templateUrl: 'partials/modelloadingerror.html',
+                               controller: 'ModelUploadCtrl.ShowLoadingError',
+                               size: 'md',
+                                  resolve: {
+                                     errorMsg: function () { return data.textStatus; }
+                                   }});
                          }
                          else {
                             //Update the models list -- this should result in the view being updated?
@@ -519,7 +524,14 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
      );
 
      $scope.$emit('routeLoaded', {theview: 'models'});
-  });
+});
+
+keymaeraProofControllers.controller('ModelUploadCtrl.ShowLoadingError', function($scope, $modalInstance, errorMsg) {
+  $scope.error = errorMsg
+  $scope.cancel = function() {
+      $modalInstance.dismiss('cancel');
+  }
+});
 
 keymaeraProofControllers.controller('ModelListCtrl',
   function ($scope, $http, $cookies, $modal, $location, Models) {
