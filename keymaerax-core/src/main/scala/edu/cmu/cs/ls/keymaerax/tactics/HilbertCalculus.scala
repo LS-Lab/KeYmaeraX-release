@@ -28,7 +28,7 @@ object HilbertCalculus {
 
   /** True when insisting on internal useAt technology, false when external tactic calls are okay. */
   private val INTERNAL = true
-  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   // modalities
   /** assignb: [:=] simplify assignment by substitution or equation */
@@ -246,7 +246,7 @@ object HilbertCalculus {
     }
   }
 
-  /** Derive the differential expression at the indicated position */
+  /** Derive the differential expression at the indicated position (Hilbert computation) */
   lazy val derive: PositionTactic = new PositionTactic("derive") {
     import FormulaConverter._
     import TermConverter._
@@ -267,7 +267,7 @@ object HilbertCalculus {
             //@todo why is the following needed? useAt doesn't optimize subst=id?
             & debug("derived") & byUS("= reflexive"))
           case f: Formula => Some(useDirectAt(deriveProofF(f), PosInExpr(0::Nil))(p)
-            & debug("derived") & byUS("= reflexive"))
+            & debug("derived") & byUS("<-> reflexive"))
         }
 
       }
@@ -287,9 +287,11 @@ object HilbertCalculus {
 
       private def debugF(s: => Any): (Provable=>Provable)=>(Provable=>Provable) = tac => proof => {val pr = tac(proof); println("=== " + s + " === " + pr); pr}
       private def debugPF(s: => Any): (Position=>Provable=>Provable)=>(Position=>Provable=>Provable) = tac => pos => proof => {val pr = tac(pos)(proof); println("=== " + s + " === " + pr); pr}
+
       private def derive(de: Provable, pos: PosInExpr): Provable = {
         if (DEBUG) println("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ")")
         val r = de.conclusion.succ.head.subAt(pos) match {
+          // terms
         case Differential(Neg(_)) => derive(
           useFor("-' derive neg")(SuccPosition(0,pos))(de),
           pos.append(PosInExpr(0::Nil)))
@@ -316,6 +318,11 @@ object HilbertCalculus {
           debugPF("derive(*')")(useFor("*' derive product"))(SuccPosition(0,pos))(de),
           pos.append(PosInExpr(0::0::Nil))),
           pos.append(PosInExpr(1::1::Nil))
+        )
+        case Differential(Divide(_,_)) => derive(derive(
+          debugPF("derive(/')")(useFor("/' derive quotient"))(SuccPosition(0,pos))(de),
+          pos.append(PosInExpr(0::0::0::Nil))),
+          pos.append(PosInExpr(0::1::1::Nil))
         )
         case Differential(Number(_)) =>
           debugPF("c()'")(useFor("c()' derive constant fn"))(SuccPosition(0,pos))(de)
@@ -347,10 +354,51 @@ object HilbertCalculus {
       } ensuring(r => r.isProved, "derive remains proved: " + "derive(" + de.conclusion.succ.head(pos).prettyString + ")")
 
       /** Construct a proof proving the answer of the derivative of de expanded out to variables */
-      private def deriveProofF(de: Formula): Provable = ???
-    }
+      private def deriveProofF(de: Formula): Provable = {
+        val deIsDe = Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(de,de)))
+        val initial = DerivedAxioms.equivReflexiveAxiom.fact(
+          deIsDe,
+          UniformSubstitutionRule(USubst(SubstitutionPair(PredOf(Function("p",None,Unit,Bool),Nothing), de)::Nil), DerivedAxioms.equivReflexiveAxiom.fact.conclusion))
+        assert(initial.isProved && initial.proved==deIsDe, "Proved reflexive start " + initial + " for " + de)
+        if (DEBUG) println("derive starts at " + initial)
+        val r = deriveF(initial, PosInExpr(1::Nil))
+        if (DEBUG) println("derive(" + de.prettyString + ") = ~~> " + r + " done")
+        r
+      } ensuring(r => r.isProved, "derive remains proved: " + " final derive(" + de + ")")
 
+    private def deriveF(de: Provable, pos: PosInExpr): Provable = {
+      if (DEBUG) println("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ")")
+      def homomorphic(short: String, axiom: String): Provable = deriveF(deriveF(
+        debugPF(short)(useFor(axiom))(SuccPosition(0,pos))(de),
+        pos.append(PosInExpr(0::Nil))),
+        pos.append(PosInExpr(1::Nil))
+      )
+
+      def pseudoHomomorphic(short: String, axiom: String): Provable = derive(derive(
+        debugPF(short)(useFor(axiom))(SuccPosition(0,pos))(de),
+        pos.append(PosInExpr(0::Nil))),
+        pos.append(PosInExpr(1::Nil))
+      )
+
+      val r = de.conclusion.succ.head.subAt(pos) match {
+        // homomorphic formulas
+        case DifferentialFormula(And(_,_))   => homomorphic("derive(&')", "&' derive and")
+        case DifferentialFormula(Or(_,_))    => homomorphic("derive(|')", "|' derive or")
+        case DifferentialFormula(Imply(_,_)) => homomorphic("derive(->')", "->' derive imply")
+        // pseudo-homomorphic cases
+        case DifferentialFormula(Equal(_,_)) => pseudoHomomorphic("derive(=')", "=' derive =")
+        case DifferentialFormula(NotEqual(_,_)) => pseudoHomomorphic("derive(!=')", "!=' derive !=")
+        case DifferentialFormula(Greater(_,_)) => pseudoHomomorphic("derive(>')", ">' derive >")
+        case DifferentialFormula(GreaterEqual(_,_)) => pseudoHomomorphic("derive(>=')", ">=' derive >=")
+        case DifferentialFormula(Less(_,_)) => pseudoHomomorphic("derive(<')", "<' derive <")
+        case DifferentialFormula(LessEqual(_,_)) => pseudoHomomorphic("derive(<=')", "<=' derive <=")
+        case e => throw new MatchError("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ") don't know how to handle " + e + " at " + pos + " of " + de.conclusion)
+      }
+      if (DEBUG) println("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ")\n ~~> " + r)
+      r
+    } ensuring(r => r.isProved, "derive remains proved: " + "derive(" + de.conclusion.succ.head(pos).prettyString + ")")
   }
+  } // derive
 
   private def useFor(axiom: String): (Position => (Provable => Provable)) = useFor(axiom, PosInExpr(0::Nil))
 
@@ -386,11 +434,11 @@ object HilbertCalculus {
 
         /** Equivalence rewriting step */
         def equivStep(other: Expression, factTactic: Tactic): Provable = {
-          //@todo use factTact turned argument into Provable=>Provable
+          //@todo delete factTactic or use factTactic turned argument into Provable=>Provable
           require(fact.isProved, "currently want proved facts as input only")
           require(proof.conclusion.updated(p.top, C(subst(k)))==proof.conclusion, "expected context split")
           // |- fact: k=o
-          val sideCT: Provable = subst.toForward(fact)
+          val sideUS: Provable = subst.toForward(fact)
           // |- subst(fact): subst(k)=subst(o) by US
           /*(
             subst(fact.conclusion)
@@ -403,15 +451,22 @@ object HilbertCalculus {
 //            AxiomaticRule("CQ equation congruence",
 //            USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), Anything), C.ctx) :: Nil))
           )*/
-          val sideCE = sideCT(
+          val sideCE = sideUS(
             Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(subst(k)), C(subst(other)))))
             ,
-            AxiomaticRule("CQ equation congruence",
-              USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
-                SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), subst(k)) ::
-                SubstitutionPair(FuncOf(Function("g_", None, Real, Real), Anything), subst(other)) ::
-                Nil))
-          )
+            k.kind match {
+              case TermKind => AxiomaticRule("CQ equation congruence",
+                USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
+                  SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), subst(k)) ::
+                  SubstitutionPair(FuncOf(Function("g_", None, Real, Real), Anything), subst(other)) ::
+                  Nil))
+              case FormulaKind => AxiomaticRule("CE congruence",
+                USubst(SubstitutionPair(PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula), C.ctx) ::
+                  SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), subst(k)) ::
+                  SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), subst(other)) ::
+                  Nil))
+            }
+            )
           // |- C{subst(k)} <-> C{subst(o)} by CQ
 //          val sideSwap = sideCE(
 //            Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(subst(other)), C(subst(k))))),
@@ -463,7 +518,7 @@ object HilbertCalculus {
             //@todo this is convoluted and inefficient compared to a direct forward proof
             //@todo commute
             if (HISTORY) TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-              useAt(fact.conclusion.succ.head, key.sibling, /*ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) &*/ byUS(fact), inst)(p))
+              useAt(fact.conclusion.succ.head, key.sibling, byUS(fact), inst)(p))
             else
               equivStep(other, byUS(fact))
 
@@ -473,6 +528,21 @@ object HilbertCalculus {
               useAt(fact.conclusion.succ.head, key.sibling, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & byUS(fact), inst)(p))
             else
               equivStep(other, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & byUS(fact))
+
+          case Equiv(DotFormula, other) =>
+            //@todo this is convoluted and inefficient compared to a direct forward proof
+            //@todo commute
+            if (HISTORY) TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
+              useAt(fact.conclusion.succ.head, key.sibling, byUS(fact), inst)(p))
+            else
+              equivStep(other, byUS(fact))
+
+          case Equiv(other, DotFormula) =>
+            //@todo this is convoluted and inefficient compared to a direct forward proof
+            if (HISTORY) TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
+              useAt(fact.conclusion.succ.head, key.sibling, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & byUS(fact), inst)(p))
+            else
+              equivStep(other, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & byUS(fact))
         }
       }
       val r = useFor(subst, keyCtx, keyPart, pos, ctx, expr)
