@@ -117,6 +117,12 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ).isProved shouldBe true
   }
 
+  it should "derive (5*3+2*9)'=0*3+5*0+(0*9+2*0)" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=0*3+5*0+(0*9+2*0)".asFormula)),
+      derive(1,0::Nil)
+    ).isProved shouldBe true
+  }
+
   it should "derive (5*x+2*y)'=5*x'+2*y'" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*x+2*y)'=5*x'+2*y'".asFormula)),
       derive(1,0::Nil)

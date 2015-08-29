@@ -95,6 +95,14 @@ class FormulaConverter(val fml: Formula) {
    * @param pos The position pointing to the term.
    * @return The term.
    */
+  def subAt(pos: PosInExpr): Expression = if (isFormulaAt(pos)) subFormulaAt(pos).get else if (isTermAt(pos)) termAt(pos)
+  else throw new IllegalArgumentException("Position " + pos + " of " + fml + " cannot be located as either a subterm or a subformula")
+
+    /**
+   * Returns the term at position pos in fml.
+   * @param pos The position pointing to the term.
+   * @return The term.
+   */
   def termAt(pos: PosInExpr): Term = {
     if (pos.pos.isEmpty) throw new IllegalArgumentException(s"Formula $fml is not a term")
     else {
