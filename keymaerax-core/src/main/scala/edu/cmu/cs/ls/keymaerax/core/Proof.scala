@@ -194,15 +194,15 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   /**
    * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
    */
-  def subsequentOf(r: Sequent): Boolean = (pref == r.pref && ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet))
+  def subsequentOf(r: Sequent): Boolean = pref == r.pref && ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet)
 
   /**
    * Check whether this sequent is a equivalent to the given sequent r (considered as sets)
    */
-  def sameSequentAs(r: Sequent): Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
+  def sameSequentAs(r: Sequent): Boolean = this.subsequentOf(r) && r.subsequentOf(this)
 
   override def toString: String = {assert(pref.isEmpty);
-    ante.map(_.prettyString).mkString(", ") + "\n  ==>  " + succ.map(_.prettyString).mkString(", ")}
+    ante.map(_.prettyString).mkString(", ") + (if (ante.isEmpty) "  ==>  " else "\n  ==>  ") + succ.map(_.prettyString).mkString(", ")}
 
   /** Pretty-print sequent */
   def prettyString: String =
@@ -487,6 +487,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     r => r.subgoals == immutable.List(r.conclusion), "sub Provable is an unfinished Provable")
 
   override def toString: String = "Provable(concludes " + conclusion + (if (isProved) " proved" else "\nfrom " + subgoals.mkString(",\nwith ")) + ")"
+  def prettyString: String = "Provable(concludes " + conclusion.prettyString + (if (isProved) " proved" else "\nfrom " + subgoals.map(_.prettyString).mkString(",\nwith ")) + ")"
 }
 
 
