@@ -60,11 +60,11 @@ trait UnifyUSCalculus {
   /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: String, key: PosInExpr, inst: Subst=>Subst): PositionTactic =
     if (Axiom.axioms.contains(axiom)) useAt(Axiom.axiom(axiom), key, inst)
-    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR((axiom)), 0), key, inst)
+    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(DerivedAxioms.derivedAxiom(axiom), key, inst)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
   def useAt(axiom: String, key: PosInExpr): PositionTactic =
     if (Axiom.axioms.contains(axiom)) useAt(Axiom.axiom(axiom), key)
-    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0), key)
+    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(DerivedAxioms.derivedAxiom(axiom), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
   def useAt(axiom: String, inst: Subst=>Subst): PositionTactic = useAt(axiom, PosInExpr(0::Nil), inst)
   def useAt(axiom: String): PositionTactic = useAt(axiom, PosInExpr(0::Nil))
@@ -80,7 +80,7 @@ trait UnifyUSCalculus {
   /** byUS(axiom) proves by a uniform substitution instance of axiom */
   def byUS(axiom: String)     : Tactic =
     if (Axiom.axioms.contains(axiom)) byUS(Axiom.axiom(axiom))
-    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) byUS(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0))
+    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) byUS(DerivedAxioms.derivedAxiom(axiom))
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
   /*******************************************************************
@@ -259,8 +259,8 @@ trait UnifyUSCalculus {
 
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   def useFor(axiom: String, key: PosInExpr): (Position => (Provable => Provable)) =
-    if (Axiom.axioms.contains(axiom)) useFor(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
-    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0), key)
+    if (Axiom.axioms.contains(axiom)) useFor(Axiom.axiom(axiom), key)
+    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
   /** useFor(fact,key,inst) use the key part of the given fact forward for the selected position in the given Provable to conclude a new Provable

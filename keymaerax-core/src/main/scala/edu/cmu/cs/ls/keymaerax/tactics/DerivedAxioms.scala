@@ -34,6 +34,10 @@ object DerivedAxioms {
   val derivedAxiomDB = new FileLemmaDB
   type LemmaID = String
 
+  /** A Provable proving the derived axiom named id (convenience) */
+  def derivedAxiom(name: String): Provable =
+    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(derivedAxiomFormula(name).get)))(derivedAxiomR(name), 0)
+
   private val AUTO_INSERT = true
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
