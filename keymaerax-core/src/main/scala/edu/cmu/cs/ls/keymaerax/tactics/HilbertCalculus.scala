@@ -44,7 +44,7 @@ object HilbertCalculus extends UnifyUSCalculus {
   lazy val dualb              : PositionTactic = useAt("[d] dual")
 
   /** assignd: <:=> simplify assignment by substitution or equation */
-  lazy val assignd            : PositionTactic = useAt("<:=> assign equational") //@todo or "[:=] assign" if no clash
+  lazy val assignd            : PositionTactic = useAt("<:=> assign") | useAt("<:=> assign equational") //@todo or "[:=] assign" if no clash
   /** randomd: <:*> simplify nondeterministic assignment to existential quantifier */
   lazy val randomd            : PositionTactic = useAt("<:*> assign nondet")
   /** testd: <?> simplifies test to a conjunction */
