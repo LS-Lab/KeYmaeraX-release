@@ -47,6 +47,9 @@ object AxiomIndex {
     case "[*] iterate" | "<*> iterate" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
 
     //@todo other axioms
+
+    // default position
+    //case _ => (PosInExpr(0::Nil), Nil)
   }
 
 
