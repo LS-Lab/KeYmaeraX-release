@@ -155,6 +155,18 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
+  it should "reduce [{x'=7}](5*x>=6)' to [{x'=7}]5*x'>=0" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=7}](5*x>=6)'".asFormula)),
+      derive(1,1::Nil)
+    ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=7}]5*x'>=0".asFormula)))
+  }
+
+  it should "reduce [{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)' to [{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)'".asFormula)),
+      derive(1,1::Nil)
+    ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)))
+  }
+
   it should "prove x>=5 -> [{x'=2}]x>=5" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) &
