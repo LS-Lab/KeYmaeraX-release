@@ -416,4 +416,65 @@ trait UnifyUSCalculus {
       r
     }
   }
+
+  /*******************************************************************
+    * Computation-based auto-tactics
+    *******************************************************************/
+
+  /** Chase the expression at the indicated position forward (Hilbert computation constructing the answer by proof).
+    * Follows canonical axioms toward all their recursors while there is a unique canonical simplifier axiom.
+    * @see [[HilbertCalculus.derive]]
+    * @todo also implement a backwards chase in tableaux/sequent style
+    */
+  lazy val chase: PositionTactic = new PositionTactic("chase") {
+    import FormulaConverter._
+    import TermConverter._
+    import SequentConverter._
+    import Tactic.DEBUG
+    import AxiomIndex._
+
+    override def applies(s: Sequent, p: Position): Boolean = axiomsFor(s.at(p).getOrElse(True)).size==1
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+        Some(useDirectAt(chaseProof(node.sequent.at(p).get), PosInExpr(0::Nil))(p))
+
+      /** Construct a proof proving the answer of the chose of e */
+      private def chaseProof(e: Expression): Provable = {
+        val initial: Provable = e match {
+          case t: Term =>
+            DerivedAxioms.equalReflex.fact(
+              Sequent(Nil, IndexedSeq(), IndexedSeq(Equal(t,t))),
+              UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), t)::Nil),
+                DerivedAxioms.equalReflex.fact.conclusion))
+          case f: Formula =>
+            DerivedAxioms.equivReflexiveAxiom.fact(
+              Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(f,f))),
+              UniformSubstitutionRule(USubst(SubstitutionPair(PredOf(Function("p",None,Unit,Bool),Nothing), f)::Nil),
+                DerivedAxioms.equivReflexiveAxiom.fact.conclusion))
+        }
+        assert(initial.isProved, "Proved reflexive start " + initial + " for " + e)
+        if (DEBUG) println("chase starts at " + initial)
+        val r = chase(initial, PosInExpr(1::Nil))
+        if (DEBUG) println("chase(" + e.prettyString + ") = ~~> " + r + " done")
+        r
+      } ensuring(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
+
+      private def chase(de: Provable, pos: PosInExpr): Provable = {
+        if (DEBUG) println("chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")")
+        // generic recursor
+        val ax = axiomFor(de.conclusion.succ.head.subAt(pos))
+        val (key, recursor) = axiomIndex(ax)
+        recursor.foldLeft(debugPF(ax)(useFor(ax, key))(SuccPosition(0, pos))(de))(
+          (pf, cursor) => chase(pf, pos.append(cursor))
+        )
+      } ensuring(r => r.isProved, "chase remains proved: " + "chase(" + de.conclusion.succ.head(pos).prettyString + ")")
+    }
+  }
+
+  def debugF(s: => Any): (Provable=>Provable)=>(Provable=>Provable) = tac => proof => {val pr = tac(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}
+  def debugPF(s: => Any): (Position=>Provable=>Provable)=>(Position=>Provable=>Provable) = tac => pos => proof => {val pr = tac(pos)(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}
+
 }

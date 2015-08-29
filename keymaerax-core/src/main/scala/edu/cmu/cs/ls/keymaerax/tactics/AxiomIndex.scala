@@ -26,6 +26,7 @@ object AxiomIndex {
   def axiomIndex(axiom: String): AxiomIndex = (axiom: @switch) match {
       //@todo axiom.intern() to @switch?
     // ' recursors for derivative axioms
+    case "x' derive var"   => nullaryDefault
     case "-' derive neg"   => unaryDefault
     case "+' derive sum"   => binaryDefault
     case "-' derive minus" => binaryDefault
@@ -36,6 +37,16 @@ object AxiomIndex {
 // derived
     case "' linear" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     case "' linear right" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)
+    // recursors for derivative formula axioms
+    case "=' derive ="   => binaryDefault
+    case "!=' derive !=" => binaryDefault
+    case ">=' derive >=" => binaryDefault
+    case ">' derive >"   => binaryDefault
+    case "<=' derive <=" => binaryDefault
+    case "<' derive <"   => binaryDefault
+    case "&' derive and" => binaryDefault
+    case "|' derive or" => binaryDefault
+    case "->' derive imply" => binaryDefault
 
     // [a] modalities
     case "[:=] assign" | "<:=> assign" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
@@ -62,6 +73,8 @@ object AxiomIndex {
 
   private val odeList = "DI differential invariant" :: "DC differential cut" :: "DG differential ghost" :: Nil
   // :: "DS& differential equation solution"
+
+  private val unknown = Nil
 
   /** Return the (derived) axiom names that simplify the expression expr with simpler ones first */
   def axiomsFor(expr: Expression): List[String] = expr match {
@@ -106,6 +119,7 @@ object AxiomIndex {
       case _: Choice    => "[++] choice" :: Nil
       case _: Dual      => "[^d] dual" :: Nil
 //      case _: Loop      => "[*] iterate" :: Nil
+      case _ => unknown
     }
     case Diamond(a, _) => a match {
       case _: Assign    => "<:=> assign" :: "<:=> assign equational" :: Nil
@@ -120,6 +134,7 @@ object AxiomIndex {
       case _: Choice    => "<++> choice" :: Nil
       case _: Dual      => "<^d> dual" :: Nil
       //      case _: Loop      => "[*] iterate" :: Nil
+      case _ => unknown
     }
     case Not(f)         => f match {
       case _: Box       => "![]" :: Nil
@@ -138,5 +153,7 @@ object AxiomIndex {
       case _: Imply     => "!-> deMorgan" :: Nil
       case _: Equiv     => "!<-> deMorgan" :: Nil
     }
+    case True | False => Nil
+    case _ => unknown
   }
 }
