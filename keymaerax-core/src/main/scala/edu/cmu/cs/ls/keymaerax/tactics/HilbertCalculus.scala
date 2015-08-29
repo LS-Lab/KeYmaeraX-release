@@ -4,16 +4,11 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
-import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
-import edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.Subst
+import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl._
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper._
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.skolemizeT
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
@@ -83,9 +78,30 @@ object HilbertCalculus {
   /** DE: Differential Effect exposes the effect of a differential equation on its differential symbols */
   lazy val DE                 : PositionTactic = if (true || INTERNAL) (useAt("DE differential effect") | useAt("DE differential effect (system)"))
   else ODETactics.diffEffectT
-  /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
+  /** DI: Differential Invariant used for proving a formula to be an invariant of a differential equation @see [[diffInd()]] */
   //@todo Dconstify usually needed for DI
-  def DI                      : PositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
+  lazy val DI                 : PositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
+  /** diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE) */
+  def diffInd                 : PositionTactic = new PositionTactic("diffInd") {
+      override def applies(s: Sequent, p: Position): Boolean = p.isSucc && p.isTopLevel && (s(p) match {
+        case Box(_: ODESystem, _) => true
+        case _ => false
+      })
+      def apply(p: Position): Tactic = new ConstructionTactic(name) {
+        override def applicable(node : ProofNode) = applies(node.sequent, p)
+
+        override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+          Some(
+            DI(p) & (stepAt(p) & stepAt(p)) && (
+              QE,
+              //@todo DW(p) if not just True
+              DE(p) & derive(p.append(PosInExpr(1::1::Nil))) &
+                Dassignb(p.append(PosInExpr(1::Nil))) & TacticLibrary.abstractionT(p) & QE
+              )
+          )
+        }
+    }
+
   /** DG: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b */
   def DG(y:Variable, a:Term, b:Term) : PositionTactic = useAt("DG differential ghost", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq(
@@ -245,7 +261,7 @@ object HilbertCalculus {
     }
   }
 
-  /** Derive the differential expression at the indicated position (Hilbert computation) */
+  /** Derive the differential expression at the indicated position (Hilbert computation deriving the answer by proof). */
   lazy val derive: PositionTactic = new PositionTactic("derive") {
     import FormulaConverter._
     import TermConverter._
@@ -264,12 +280,8 @@ object HilbertCalculus {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         node.sequent.at(p).get match {
           case t: Term    => Some(useDirectAt(deriveProof(t),  PosInExpr(0::Nil))(p))
-//            //@todo why is the following needed? useAt doesn't optimize subst=id?
-//            & debugC("derived") & byUS("= reflexive"))
           case f: Formula => Some(useDirectAt(deriveProofF(f), PosInExpr(0::Nil))(p))
-//            & debugC("derived") & byUS("<-> reflexive"))
         }
-
       }
 
       /** Construct a proof proving the answer of the derivative of de expanded out to variables */
@@ -277,7 +289,7 @@ object HilbertCalculus {
         val deIsDe = Sequent(Nil, IndexedSeq(), IndexedSeq(Equal(de,de)))
         val initial = DerivedAxioms.equalReflex.fact(
           deIsDe,
-              UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), de)::Nil), DerivedAxioms.equalReflex.fact.conclusion))
+          UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), de)::Nil), DerivedAxioms.equalReflex.fact.conclusion))
         assert(initial.isProved && initial.proved==deIsDe, "Proved reflexive start " + initial + " for " + de)
         if (DEBUG) println("derive starts at " + initial)
         val r = derive(initial, PosInExpr(1::Nil))

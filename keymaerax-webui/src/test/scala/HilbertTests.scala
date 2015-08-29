@@ -181,6 +181,29 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
+  it should "prove/derive x>=5 -> [{x'=2}]x>=5" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
+      implyR(1) &
+        DI(1) & (step(1) & step(1)) && (
+        prop,
+        DE(1) & derive(1, 1::1::Nil) &
+          Dassignb(SuccPosition(0, 1::Nil)) & TacticLibrary.abstractionT(1) & QE
+        )
+    ) shouldBe 'proved
+  }
+
+  it should "auto-prove x>=5 -> [{x'=2}]x>=5" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
+      implyR(1) & diffInd(1)
+    ) shouldBe 'proved
+  }
+
+  it should "auto-prove x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula)),
+      implyR(1) & diffInd(1)
+    ) shouldBe 'proved
+  }
+
   it should "prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
       implyR(1) &
@@ -189,6 +212,16 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         //@todo DC should not do absolute proof of implication but contextual
         DW(1) & debug("after DW") &
         TacticLibrary.abstractionT(1) & debug("after abstraction") & QE
+    ) shouldBe 'proved
+  }
+
+  it should "auto-prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
+      implyR(1) &
+        DC("5<=x".asFormula)(1) && (
+        diffInd(1),
+        DW(1) & TacticLibrary.abstractionT(1) & QE
+        )
     ) shouldBe 'proved
   }
 
