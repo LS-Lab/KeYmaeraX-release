@@ -274,8 +274,21 @@ object HilbertCalculus extends UnifyUSCalculus {
     * Derive by proof
     *******************************************************************/
 
-  /** Derive the differential expression at the indicated position (Hilbert computation deriving the answer by proof). */
-  lazy val derive: PositionTactic = new PositionTactic("derive") {
+  /** Derive the differential expression at the indicated position (Hilbert computation deriving the answer by proof).
+    * @see [[UnifyUSCalculus.chase]]
+    */
+  lazy val derive: PositionTactic = if (true)
+    new PositionTactic("derive") {
+      import SequentConverter._
+
+      override def applies(s: Sequent, p: Position): Boolean = s.at(p) match {
+        case Some(Differential(_)) => true
+        case Some(DifferentialFormula(_)) => true
+        case _ => false
+      }
+      override def apply(p: Position): Tactic = chase(p)
+    }
+  else new PositionTactic("derive") {
     import FormulaConverter._
     import TermConverter._
     import SequentConverter._
@@ -311,14 +324,12 @@ object HilbertCalculus extends UnifyUSCalculus {
         r
       } ensuring(r => r.isProved, "derive remains proved: " + " final derive(" + de + ")")
 
-      private def debugF(s: => Any): (Provable=>Provable)=>(Provable=>Provable) = tac => proof => {val pr = tac(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}
-      private def debugPF(s: => Any): (Position=>Provable=>Provable)=>(Position=>Provable=>Provable) = tac => pos => proof => {val pr = tac(pos)(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}
-
       private def derive(de: Provable, pos: PosInExpr): Provable = {
         if (DEBUG) println("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ")")
         val r = de.conclusion.succ.head.subAt(pos) match {
           case Differential(x:Variable) =>
-            if (false&&INTERNAL) useFor("x' derive variable", PosInExpr(0::0::Nil))(SuccPosition(0,pos))(de)
+            if (true) useFor("x' derive var", PosInExpr(0::Nil))(SuccPosition(0,pos))(de)
+            else if (false&&INTERNAL) useFor("x' derive variable", PosInExpr(0::0::Nil))(SuccPosition(0,pos))(de)
             else if (true)
               debugPF("derive(x')")(useFor(Axiom.axiom("x' derive var")(
                 Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x),DifferentialSymbol(x)))),
