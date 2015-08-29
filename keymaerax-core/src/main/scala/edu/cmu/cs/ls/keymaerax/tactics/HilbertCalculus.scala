@@ -57,7 +57,7 @@ object HilbertCalculus {
   lazy val composed           : PositionTactic = useAt("<;> compose")
   /** iterated: <*> prove a property of a loop by unrolling it once */
   lazy val iterated           : PositionTactic = useAt("<*> iterate")
-  /** duald: <^d> handle dual game */
+  /** duald: `<^d>` handle dual game */
   lazy val duald              : PositionTactic = useAt("<d> dual")
 
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
@@ -76,30 +76,54 @@ object HilbertCalculus {
     (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation on its differential symbols */
-  lazy val DE                 : PositionTactic = if (true || INTERNAL) (useAt("DE differential effect") | useAt("DE differential effect (system)"))
+  lazy val DE                 : PositionTactic = if (INTERNAL) useAt("DE differential effect") |
+    useAt("DE differential effect (system)") * getODEDim
+  /*new PositionTactic("DE differential effect (system)") {
+      override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+        case Box(_: ODESystem, _) => true
+        case _ => false
+      }
+      def apply(p: Position): Tactic = new ConstructionTactic(name) {
+        override def applicable(node : ProofNode) = applies(node.sequent, p)
+        override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+          Some(useAt("DE differential effect (system)")(p) *
+            StaticSemantics.boundVars(node.sequent(p).asInstanceOf[Modal].program).toSymbolSet.size)
+      }
+    }*/
   else ODETactics.diffEffectT
+  /** Computing dimension of ODE at indicated position of a sequent */
+  private val getODEDim: (Sequent,Position)=>Int = (sequent,pos) => {
+    import SequentConverter._
+    def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).toSymbolSet.filter(x=>x.isInstanceOf[DifferentialSymbol]).size
+    sequent.at(pos) match {
+      case Some(Box(ode: ODESystem, _))     => odeDim(ode)
+      case Some(Diamond(ode: ODESystem, _)) => odeDim(ode)
+      case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
+    }
+  }
   /** DI: Differential Invariant used for proving a formula to be an invariant of a differential equation @see [[diffInd()]] */
   //@todo Dconstify usually needed for DI
   lazy val DI                 : PositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
   /** diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE) */
-  def diffInd                 : PositionTactic = new PositionTactic("diffInd") {
+  lazy val diffInd            : PositionTactic = new PositionTactic("diffInd") {
       override def applies(s: Sequent, p: Position): Boolean = p.isSucc && p.isTopLevel && (s(p) match {
         case Box(_: ODESystem, _) => true
         case _ => false
       })
       def apply(p: Position): Tactic = new ConstructionTactic(name) {
         override def applicable(node : ProofNode) = applies(node.sequent, p)
-
         override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-          Some(
-            DI(p) & (stepAt(p) & stepAt(p)) && (
-              QE,
-              //@todo DW(p) if not just True
-              DE(p) & derive(p.append(PosInExpr(1::1::Nil))) &
-                Dassignb(p.append(PosInExpr(1::Nil))) & TacticLibrary.abstractionT(p) & QE
-              )
-          )
-        }
+          Some(DI(p) & (stepAt(p) & stepAt(p)) && (
+            QE,
+            //@todo DW(p) if not just True
+            //@note derive before DE to keep positions easier
+            derive(p.append(PosInExpr(1::Nil))) &
+            DE(p) &
+              (Dassignb(p.append(PosInExpr(1::Nil))) * (s=>getODEDim(s,p))) &
+                TacticLibrary.abstractionT(p) & QE
+            ))
+      }
     }
 
   /** DG: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b */
@@ -113,7 +137,7 @@ object HilbertCalculus {
   //  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
 //  def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
   /** DS: Differential Solution solves a differential equation */
-  def DS                      : PositionTactic = useAt("DS& differential equation solution")
+  lazy val DS                 : PositionTactic = useAt("DS& differential equation solution")
   /** Dassignb: Substitute a differential assignment */
   lazy val Dassignb           : PositionTactic = useAt("[':=] differential assign")
   /** Dplus: +' derives a sum */
@@ -231,7 +255,7 @@ object HilbertCalculus {
           case _: Greater   => ???
           case _: GreaterEqual => ???
           //@note for conceptual simplicity, use propositional and Skolem sequent rules, too
-          case _ if p.isTopLevel => if(p.isAnte) Some(TactixLibrary.notL)   else Some(TactixLibrary.notR)
+          case _ if p.isTopLevel => if(p.isAnte) Some(TactixLibrary.notL) else Some(TactixLibrary.notR)
           case _: Not       => Some(useAt(DerivedAxioms.doubleNegationAxiom))
           case _: And       => Some(useAt(DerivedAxioms.notAnd))
           case _: Or        => Some(useAt(DerivedAxioms.notOr))
@@ -412,14 +436,23 @@ object HilbertCalculus {
   }
   } // derive
 
+  /** useFor(axiom) use the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   def useFor(axiom: String): (Position => (Provable => Provable)) = useFor(axiom, PosInExpr(0::Nil))
 
+  /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   def useFor(axiom: String, key: PosInExpr): (Position => (Provable => Provable)) =
     if (Axiom.axioms.contains(axiom)) useFor(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
-  /** useFor(axiom) use the given fact forward for the selected position in the given Provable to conclude a new Provable
+  /** useFor(fact,key,inst) use the key part of the given fact forward for the selected position in the given Provable to conclude a new Provable
+    * Forward Hilbert-style proof analogue of [[TacticLibrary.useAt()]].
+    * @author Andre Platzer
+    * @param fact the Provable whose conclusion  to use to simplify at the indicated position of the sequent
+    * @param key the part of the fact's conclusion to unify the indicated position of the sequent with
+    * @param inst Transformation for instantiating additional unmatched symbols that do not occur in `fact.conclusion(key)`.
+    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
+    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
     * @see [[TacticLibrary.useAt()]]
     */
   def useFor(fact: Provable, key: PosInExpr, inst: RenUSubst=>RenUSubst = (us => us)): (Position => (Provable => Provable)) = {

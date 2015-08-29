@@ -231,6 +231,8 @@ object TacticLibrary {
    * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
    * instance to make progress by reducing to the other side.
    *
+   * Backward Tableaux-style proof analogue of [[HilbertCalculus.useFor()]].
+
    * Tactic specification:
    * {{{
    * useAt(fact)(p)(F) = let (C,f)=F(p) in
@@ -588,6 +590,8 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p).subFormulaAt(p.inExpr) match {
         case Some(b@Box(prg, phi)) =>
           val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.to[Seq]
+          val diffies = vars.filter(v=>v.isInstanceOf[DifferentialSymbol])
+          if (!diffies.isEmpty) throw new IllegalArgumentException("abstractionT: found differential symbols " + diffies + " in " + b + "\nFirst handle those")
           //else throw new IllegalArgumentException("Cannot handle non-concrete programs")
           val qPhi =
             if (vars.isEmpty) phi //Forall(Variable("$abstractiondummy", None, Real)::Nil, phi)

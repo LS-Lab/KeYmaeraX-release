@@ -183,6 +183,8 @@ class FormulaConverter(val fml: Formula) {
    * @todo bug:
    *       Assertion failed extractContext(PosInExpr(1.1)) of (x)'=x'
 led to ((x)'=x')@Equal yet eInCtx=None
+   *  Assertion failed extractContext(PosInExpr(1.1)) of [{x'=5*y,y'=-5*x&true}](x*x+y*y>=8)'
+led to ([{x'=5*y,y'=-5*x&true}](x*x+y*y>=8)')@Box yet eInCtx=None
    */
   def extractContext(pos: PosInExpr): (Context[Formula], Expression) = {
     var eInCtx: Option[Expression] = None

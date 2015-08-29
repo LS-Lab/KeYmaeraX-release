@@ -17,6 +17,7 @@ import ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.core._
 import Config._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
+import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tools._
 import scala.Unit
 import scala.language.implicitConversions
@@ -372,6 +373,15 @@ object Tactics {
       require(n>=0, "Repeat non-negative number of times")
       if (n > 0) this & this*(n-1) else NilT
     }
+    /**
+     * repeat tactic n times
+     */
+    def *(n: Sequent=>Int): Tactic = new ConstructionTactic("Repeat(" + name + ", " + n + ")") {
+      override def applicable(node : ProofNode) = Tactic.this.applicable(node)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+        Some(Tactic.this * n(node.sequent))
+    }
+
     /**
      * apply the first tactic applicable
      */
@@ -784,6 +794,25 @@ object Tactics {
 
       //@TODO Unfortunately, this crucially relies on stable positions
       override def apply(p: Position): Tactic = PositionTactic.this.apply(p) | pt.apply(p)
+    }
+
+    /**
+     * repeat tactic n times at some position
+     */
+    def *(n: Int): PositionTactic = {
+      require(n>=0, "Repeat non-negative number of times")
+      if (n > 0) this & this*(n-1) else NilPT
+    }
+
+    /**
+     * repeat tactic n times at some position
+     */
+    def *(n: (Sequent,Position)=>Int): PositionTactic = new PositionTactic("Repeat(" + this.name + ", " + n) {
+      override def applies(s: Sequent, p: Position): Boolean =
+        PositionTactic.this.applies(s, p)
+
+      //@TODO Unfortunately, this crucially relies on stable positions
+      override def apply(p: Position): Tactic = PositionTactic.this.apply(p) * (s=>n(s,p))
     }
 
     //@todo duplicate compared to FormulaConverter.subFormulaAt
