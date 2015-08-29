@@ -163,7 +163,7 @@ object HilbertCalculus extends UnifyUSCalculus {
   /** Dexists: \exists' derives an exists quantifier */
   lazy val Dexists            : PositionTactic = useAt("exists' derive exists")
 
-  //lazy val ind
+  // def ind
 
   /*******************************************************************
     * Stepping auto-tactic
@@ -182,6 +182,7 @@ object HilbertCalculus extends UnifyUSCalculus {
 
     def getTactic(s: Sequent, p: Position): Option[PositionTactic] = {
       val sub = s(p.top).at(p)
+      //@todo simplify most cases substantially by useAt(AxiomIndex.axiomFor(sub))(p)
       if (sub.isEmpty) None else sub.get match {
         case Box(a, _) => a match {
           case _: Assign    => Some(assignb)
@@ -279,6 +280,7 @@ object HilbertCalculus extends UnifyUSCalculus {
     import TermConverter._
     import SequentConverter._
     import Tactic.DEBUG
+    import AxiomIndex._
 
     override def applies(s: Sequent, p: Position): Boolean = s.at(p) match {
       case Some(Differential(_)) => true
@@ -315,62 +317,70 @@ object HilbertCalculus extends UnifyUSCalculus {
       private def derive(de: Provable, pos: PosInExpr): Provable = {
         if (DEBUG) println("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ")")
         val r = de.conclusion.succ.head.subAt(pos) match {
-          // terms
-        case Differential(Neg(_)) => derive(
-          useFor("-' derive neg")(SuccPosition(0,pos))(de),
-          pos.append(PosInExpr(0::Nil)))
-        case Differential(Plus(_,_)) => derive(derive(
-          debugPF("derive(+')")(useFor("+' derive sum"))(SuccPosition(0,pos))(de),
-          pos.append(PosInExpr(0::Nil))),
-          pos.append(PosInExpr(1::Nil))
-        )
-        case Differential(Minus(_,_)) => derive(derive(
-          useFor("-' derive minus")(SuccPosition(0,pos))(de),
-          pos.append(PosInExpr(0::Nil))),
-          pos.append(PosInExpr(1::Nil))
-        )
-        //@note optimizations
-        case Differential(Times(num,_)) if StaticSemantics.freeVars(num).isEmpty => derive(
-          debugPF("derive(l')")(useFor("' linear"))(SuccPosition(0,pos))(de),
-          pos.append(PosInExpr(1::Nil))
-        )
-        case Differential(Times(_,num)) if StaticSemantics.freeVars(num).isEmpty => derive(
-          debugPF("derive(l')")(useFor("' linear right"))(SuccPosition(0,pos))(de),
-          pos.append(PosInExpr(0::Nil))
-        )
-        case Differential(Times(_,_)) => derive(derive(
-          debugPF("derive(*')")(useFor("*' derive product"))(SuccPosition(0,pos))(de),
-          pos.append(PosInExpr(0::0::Nil))),
-          pos.append(PosInExpr(1::1::Nil))
-        )
-        case Differential(Divide(_,_)) => derive(derive(
-          debugPF("derive(/')")(useFor("/' derive quotient"))(SuccPosition(0,pos))(de),
-          pos.append(PosInExpr(0::0::0::Nil))),
-          pos.append(PosInExpr(0::1::1::Nil))
-        )
-        case Differential(Number(_)) =>
-          debugPF("c()'")(useFor("c()' derive constant fn"))(SuccPosition(0,pos))(de)
-        case Differential(x:Variable) =>
-          if (false&&INTERNAL) useFor("x' derive variable", PosInExpr(0::0::Nil))(SuccPosition(0,pos))(de)
-          else if (true)
-            debugPF("derive(x')")(useFor(Axiom.axiom("x' derive var")(
-              Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x),DifferentialSymbol(x)))),
-              UniformRenaming(Variable("x_",None,Real),x)),
-              PosInExpr(0::Nil)
-            ))(SuccPosition(0,pos))(de)
+          case Differential(x:Variable) =>
+            if (false&&INTERNAL) useFor("x' derive variable", PosInExpr(0::0::Nil))(SuccPosition(0,pos))(de)
+            else if (true)
+              debugPF("derive(x')")(useFor(Axiom.axiom("x' derive var")(
+                Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x),DifferentialSymbol(x)))),
+                UniformRenaming(Variable("x_",None,Real),x)),
+                PosInExpr(0::Nil)
+              ))(SuccPosition(0,pos))(de)
             //useFor(Axiom.axiom("x' derive var"), PosInExpr(0::Nil))(SuccPosition(0,pos))(de)
             //useFor("all eliminate")(SuccPosition(0))(Axiom.axiom("x' derive var"))
-          //@todo this is convoluted and inefficient compared to a direct forward proof
-          else {
-            val specialDvariable = TactixLibrary.proveBy(
-              Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
-              Dvariable(SuccPosition(0,0::Nil)) ~ byUS("= reflexive"))
-            assert(specialDvariable.isProved && specialDvariable.proved==Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))), "Proved helper")
-            useFor(
-              specialDvariable,
-              PosInExpr(0::Nil)
-            )(SuccPosition(0,1::Nil))(de)
-          }
+            //@todo this is convoluted and inefficient compared to a direct forward proof
+            else {
+              val specialDvariable = TactixLibrary.proveBy(
+                Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
+                Dvariable(SuccPosition(0,0::Nil)) ~ byUS("= reflexive"))
+              assert(specialDvariable.isProved && specialDvariable.proved==Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))), "Proved helper")
+              useFor(
+                specialDvariable,
+                PosInExpr(0::Nil)
+              )(SuccPosition(0,1::Nil))(de)
+            }
+          // generic recursor
+          case t:Differential =>
+            val ax = axiomFor(t)
+            val (key,recursor) = axiomIndex(ax)
+            recursor.foldLeft(debugPF(ax)(useFor(ax, key))(SuccPosition(0,pos))(de)) (
+              (pf,cursor) => derive(pf, pos.append(cursor))
+            )
+
+//          // terms
+//        case Differential(Neg(_)) => derive(
+//          useFor("-' derive neg")(SuccPosition(0,pos))(de),
+//          pos.append(PosInExpr(0::Nil)))
+//        case Differential(Plus(_,_)) => derive(derive(
+//          debugPF("derive(+')")(useFor("+' derive sum"))(SuccPosition(0,pos))(de),
+//          pos.append(PosInExpr(0::Nil))),
+//          pos.append(PosInExpr(1::Nil))
+//        )
+//        case Differential(Minus(_,_)) => derive(derive(
+//          useFor("-' derive minus")(SuccPosition(0,pos))(de),
+//          pos.append(PosInExpr(0::Nil))),
+//          pos.append(PosInExpr(1::Nil))
+//        )
+//        //@note optimizations
+//        case Differential(Times(num,_)) if StaticSemantics.freeVars(num).isEmpty => derive(
+//          debugPF("derive(l')")(useFor("' linear"))(SuccPosition(0,pos))(de),
+//          pos.append(PosInExpr(1::Nil))
+//        )
+//        case Differential(Times(_,num)) if StaticSemantics.freeVars(num).isEmpty => derive(
+//          debugPF("derive(l')")(useFor("' linear right"))(SuccPosition(0,pos))(de),
+//          pos.append(PosInExpr(0::Nil))
+//        )
+//        case Differential(Times(_,_)) => derive(derive(
+//          debugPF("derive(*')")(useFor("*' derive product"))(SuccPosition(0,pos))(de),
+//          pos.append(PosInExpr(0::0::Nil))),
+//          pos.append(PosInExpr(1::1::Nil))
+//        )
+//        case Differential(Divide(_,_)) => derive(derive(
+//          debugPF("derive(/')")(useFor("/' derive quotient"))(SuccPosition(0,pos))(de),
+//          pos.append(PosInExpr(0::0::0::Nil))),
+//          pos.append(PosInExpr(0::1::1::Nil))
+//        )
+//        case Differential(Number(_)) =>
+//          debugPF("c()'")(useFor("c()' derive constant fn"))(SuccPosition(0,pos))(de)
         case e => throw new MatchError("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ") don't know how to handle " + e + " at " + pos + " of " + de.conclusion)
         }
         if (DEBUG) println("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ")\n ~~> " + r)

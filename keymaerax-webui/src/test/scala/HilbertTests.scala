@@ -119,8 +119,14 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
-  it should "derive (5*3+2*9)'=5*0+2*0 if optimized (left linear preferred)" in {
+  ignore should "derive (5*3+2*9)'=5*0+2*0 if optimized (left linear preferred but not const optimized)" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=5*0+2*0".asFormula)),
+      derive(1,0::Nil) & byUS("= reflexive")
+    ) shouldBe 'proved
+  }
+
+  it should "derive (5*3+2*9)'=0 if optimized (const optimized)" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=0".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
