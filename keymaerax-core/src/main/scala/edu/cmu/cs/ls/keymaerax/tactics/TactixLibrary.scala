@@ -15,6 +15,8 @@ import scala.collection.immutable._
  * Tactix: Main tactic library with simple interface.
  *
  * This library features all main tactic elements for most common cases, except sophisticated tactics.
+ * Brief documentation for the tactics is provided inline in this interface file.
+ * Following toward the implementation reveals more detailed documentation.
  *
  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
@@ -24,6 +26,8 @@ import scala.collection.immutable._
  * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
  */
 object TactixLibrary {
+  private[tactics] val DEBUG = System.getProperty("DEBUG", "false")=="true"
+
 //  /** step: makes one sequent proof step to simplify the formula at the indicated position (unless @invariant needed) */
   val step                    : PositionTactic = TacticLibrary.step
 
@@ -63,7 +67,14 @@ object TactixLibrary {
   }
   def useAt(fact: Provable, key: PosInExpr): PositionTactic = {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
+    require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
     useAt(fact.conclusion.succ.head, key, byUS(fact))
+  }
+  // like useAt(fact,key) yet literally without uniform substitution of fact
+  private[tactics] def useDirectAt(fact: Provable, key: PosInExpr): PositionTactic = {
+    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
+    require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
+    useAt(fact.conclusion.succ.head, key, by(fact))
   }
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma, key:PosInExpr, inst: Subst=>Subst): PositionTactic = useAt(lem.fact, key, inst)
@@ -72,11 +83,11 @@ object TactixLibrary {
   def useAt(lem: Lemma)       : PositionTactic = useAt(lem.fact, PosInExpr(0::Nil))
   /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: String, key: PosInExpr, inst: Subst=>Subst): PositionTactic =
-    if (Axiom.axioms.contains(axiom)) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key, inst)
+    if (Axiom.axioms.contains(axiom)) useAt(Axiom.axiom(axiom), key, inst)
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR((axiom)), 0), key, inst)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
   def useAt(axiom: String, key: PosInExpr): PositionTactic =
-    if (Axiom.axioms.contains(axiom)) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
+    if (Axiom.axioms.contains(axiom)) useAt(Axiom.axiom(axiom), key)
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
   def useAt(axiom: String, inst: Subst=>Subst): PositionTactic = useAt(axiom, PosInExpr(0::Nil), inst)
@@ -92,7 +103,7 @@ object TactixLibrary {
   def byUS(lemma: Lemma)      : Tactic  = byUS(lemma.fact)
   /** byUS(axiom) proves by a uniform substitution instance of axiom */
   def byUS(axiom: String)     : Tactic =
-    if (Axiom.axioms.contains(axiom)) byUS(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0))
+    if (Axiom.axioms.contains(axiom)) byUS(Axiom.axiom(axiom))
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) byUS(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0))
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
@@ -164,6 +175,10 @@ object TactixLibrary {
 
   /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds */
   def cut(cut : Formula)      : Tactic         = TacticLibrary.cutT(Some(cut))
+  /** cut a formula in in place of pos on the right to prove it on one branch and then assume it on the other. */
+  def cutR(cut : Formula)     : PositionTactic  = PropositionalTacticsImpl.cutRightT(cut)
+  /** cut a formula in in place of pos on the left to prove it on one branch and then assume it on the other. */
+  def cutL(cut : Formula)     : PositionTactic  = PropositionalTacticsImpl.cutLeftT(cut)
 
   // quantifiers
   /** all right: Skolemize a universal quantifier in the succedent */
@@ -344,7 +359,7 @@ object TactixLibrary {
     val rootNode = new RootNode(goal)
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
-    println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().map(x => "Open Goal: " + x.sequent).mkString(("\n"))))
+    if (!rootNode.isClosed() || DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().map(x => "Open Goal: " + x.sequent).mkString(("\n"))))
     rootNode.provableWitness
   }
 

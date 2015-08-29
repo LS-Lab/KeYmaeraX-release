@@ -9,7 +9,7 @@ import java.nio.channels.Channels
 import java.util.Locale
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, ParseException, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser}
 import scala.collection.immutable
 import scala.sys.process._
 
@@ -19,9 +19,7 @@ import scala.sys.process._
  */
 class Z3Solver extends SMTSolver {
 
-  private val k2s = new KeYmaeraToSMT("Z3")
-  def toSMT(expr : KExpr): SExpr = k2s.convertToSMT(expr)
-
+  /** Get the absolute path to Z3 jar */
   private val pathToZ3 : String = {
     val z3TempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
     if(!new File(z3TempDir).exists) new File(z3TempDir).mkdirs
@@ -72,7 +70,6 @@ class Z3Solver extends SMTSolver {
       // Copy file to temporary directory
       z3Dest.getChannel.transferFrom(z3Source, 0, Long.MaxValue)
       val z3AbsPath = z3Temp.getAbsolutePath
-      //@todo preexisting files shouldn't be modified permissions
       //@todo what's with Windows?
       Runtime.getRuntime.exec("chmod u+x " + z3AbsPath)
       z3Source.close()
@@ -82,29 +79,33 @@ class Z3Solver extends SMTSolver {
     }
   }
 
-  def run(cmd: String) = {
-    val output : String = cmd.!!
-    println("[Z3 result] \n" + output + "\n")
-    // TODO So far does not handle get-model or unsat-core
-    val result = {
-      //@todo very dangerous code: Example output "sorry I couldn't prove its unsat, no luck today". Variable named unsat notunsat
+  /**
+   * Check satisfiability with Z3
+   * @param cmd the command for running Z3 with a given SMT file
+   * @return    Z3 output as String and the interpretation of Z3 output as KeYmaera X formula
+   */
+  def run(cmd: String) : (String, Formula)= {
+    val z3Output = cmd.!!
+    println("[Z3 result] \n" + z3Output + "\n")
+    //@todo So far does not handle get-model or unsat-core
+    val kResult = {
       //@todo investigate Z3 binding for Scala
-      if (output.contains("unsat")) True
-        //@todo incorrect answer. It's not equivalent to False just because it's not unsatisfiable. Could be equivalent to x>5
-      else if(output.contains("sat")) False
-      else if(output.contains("unknown")) False
-      else throw new SMTConversionException("Conversion of Z3 result \n" + output + "\n is not defined")
+      if (z3Output.startsWith("unsat")) True
+      else if(z3Output.startsWith("sat")) False
+      else if(z3Output.startsWith("unknown")) False
+      else throw new SMTConversionException("Conversion of Z3 result \n" + z3Output + "\n is not defined")
     }
-    (output, result)
+    (z3Output, kResult)
   }
 
-  def qe(f : Formula) : Formula = {
+  /** Return Z3 QE result */
+  def qe(f: Formula) : Formula = {
     qeEvidence(f)._1
   }
 
-  def qeEvidence(f : Formula) : (Formula, Evidence) = {
-    var smtCode = toSMT(f).getVariableList + "(assert (not " + toSMT(f).getFormula + "))"
-    smtCode += "\n(check-sat)\n"
+  /** Return Z3 QE result and the proof evidence */
+  def qeEvidence(f: Formula) : (Formula, Evidence) = {
+    val smtCode = SMTConverter(f, "Z3") + "\n(check-sat)\n"
     println("[Solving with Z3...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
@@ -112,28 +113,33 @@ class Z3Solver extends SMTSolver {
     writer.flush()
     writer.close()
     val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
-    val (output, result) = run(cmd)
-    result match {
-      case f : Formula => (f, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> output)))
+    val (z3Output, kResult) = run(cmd)
+    kResult match {
+      case f: Formula => (f, new ToolEvidence(immutable.Map("input" -> smtCode, "output" -> z3Output)))
       case _ => throw new Exception("Expected a formula from QE call but got a non-formula expression.")
     }
   }
 
-  def simplify(t: Term) = {
-    val smtCode = toSMT(t).getVariableList + "(simplify " + toSMT(t).getFormula + ")"
-//    println("[Simplifying with Z3 ...] \n" + smtCode)
+  /**
+   * Simplify a KeYmaera X term into a possibly simple term
+   * @param t  KeYmaera X term to be simplified
+   * @return   the simplified term, or the original term if the simplify result is not a parsable KeYmaera X term
+   */
+  def simplify(t: Term) : Term = {
+    val smtCode = SMTConverter.generateSimplify(t, "Z3")
+    println("[Simplifying with Z3 ...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
     writer.flush()
     writer.close()
     val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
-    val output: String = cmd.!!
-//    println("[Z3 simplify result] \n" + output + "\n")
+    val z3Output = cmd.!!
+    println("[Z3 simplify result] \n" + z3Output + "\n")
     try {
-      KeYmaeraXParser.termParser(output)
+      KeYmaeraXParser.termParser(z3Output)
     } catch {
-      case e: ParseException => t
+      case e: ParseException => println("[Info] Cannot parse Z3 simplified result: " + z3Output); t
     }
   }
 }

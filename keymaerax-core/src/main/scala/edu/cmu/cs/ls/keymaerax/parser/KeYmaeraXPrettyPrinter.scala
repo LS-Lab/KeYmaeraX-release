@@ -63,6 +63,12 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       "\nExpected:   " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName
     )
 
+  /** Pretty-print sequent to a string */
+  def apply(seq: Sequent): String =
+    (1 to seq.ante.length).map(i => -i + ":  " + apply(seq.ante(i-1)) + "\t" + seq.ante(i-1).getClass.getSimpleName).mkString("\n") +
+      "\n  ==>  \n" +
+      (1 to seq.succ.length).map(i => +i + ":  " + apply(seq.succ(i-1)) + "\t" + seq.succ(i-1).getClass.getSimpleName).mkString("\n")
+
   def parser: KeYmaeraXParser.type = KeYmaeraXParser
   def fullPrinter: (Expression => String) = FullPrettyPrinter
 

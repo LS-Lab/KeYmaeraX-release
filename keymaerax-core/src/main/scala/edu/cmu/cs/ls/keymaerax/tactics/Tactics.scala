@@ -775,6 +775,17 @@ object Tactics {
       override def apply(p: Position): Tactic = PositionTactic.this.apply(p) ~ pt.apply(p)
     }
 
+    /**
+     * Alternative composition of PositionTactics applied at the same position.
+     */
+    def |(pt: PositionTactic) = new PositionTactic("Either(" + this.name + ", " + pt.name) {
+      override def applies(s: Sequent, p: Position): Boolean =
+        PositionTactic.this.applies(s, p) || pt.applies(s,p)
+
+      //@TODO Unfortunately, this crucially relies on stable positions
+      override def apply(p: Position): Tactic = PositionTactic.this.apply(p) | pt.apply(p)
+    }
+
     //@todo duplicate compared to FormulaConverter.subFormulaAt
     @deprecated("Use FormulaConverter.subFormulaT instead")
     def formulaAtPosition(sequent : Sequent, position : Position) : Option[Formula] = {
@@ -839,7 +850,9 @@ object Tactics {
    */
   case class ByProvable(provable: Provable) extends Tactic("By provable " + provable) {
 
-    def applicable(node : ProofNode): Boolean = node.sequent==provable.conclusion
+    def applicable(node : ProofNode): Boolean =
+      if (node.sequent==provable.conclusion) true else
+      {println("by(provable) inapplicable " + provable + " to " + node.sequent + "\nin " + "by(" + provable + ")\n(" + node.sequent + ")"); false}
 
     def apply(tool : Tool, node : ProofNode) {
       if (applicable(node)) {

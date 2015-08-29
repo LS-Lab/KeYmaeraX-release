@@ -4,6 +4,8 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{boxMonotoneT, diamondMonotoneT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
@@ -163,9 +165,12 @@ object DerivedAxioms {
     case "true&" => Some(trueAndF, trueAndT)
     case "0*" => Some(zeroTimesF, zeroTimesT)
     case "0+" => Some(zeroPlusF, zeroPlusT)
+    case "x' derive var" => Some(DvarF, DvarT)
     case "' linear" => Some(DlinearF, DlinearT)
+    case "' linear right" => Some(DlinearRightF, DlinearRightT)
     case "DG differential pre-ghost" => Some(DGpreghostF, DGpreghostT)
     case "= reflexive" => Some(equalReflexiveF, equalReflexiveT)
+    case "* commute" => Some(timesCommuteF, timesCommuteT)
     case "= commute" => Some(equalCommuteF, equalCommuteT)
     case "<=" => Some(lessEqualF, lessEqualT)
     case "= negate" => Some(notNotEqualF, notNotEqualT)
@@ -1115,6 +1120,26 @@ object DerivedAxioms {
   lazy val DGpreghostT = derivedAxiomT(DGpreghost)
 
   /**
+   * {{{Axiom "x' derive var".
+   *    (x_)' = x_'
+   * End.
+   * }}}
+   * @todo derive
+   */
+  lazy val DvarF = "((x_)' = x_')".asFormula
+  lazy val Dvar = derivedAxiom("'x derive var",
+    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DvarF)))
+      (CutRight("\\forall x_ ((x_)' = x_')".asFormula, SuccPos(0)), 0)
+      // right branch
+      (UniformSubstitutionRule.UniformSubstitutionRuleForward(Axiom.axiom("all eliminate"),
+        USubst(SubstitutionPair(PredOf(Function("p_",None,Real,Bool),Anything), DvarF)::Nil)), 0)
+      // left branch
+      (Axiom.axiom("x' derive variable"), 0)
+    /*TacticLibrary.instantiateQuanT(Variable("x_",None,Real), Variable("x",None,Real))(1) &
+      byUS("= reflexive")*/
+  )
+  lazy val DvarT = derivedAxiomT(Dvar)
+  /**
    * {{{Axiom "' linear".
    *    (c()*f(??))' = c()*(f(??))'
    * End.
@@ -1130,6 +1155,20 @@ object DerivedAxioms {
       byUS("= reflexive")
   )
   lazy val DlinearT = derivedAxiomT(Dlinear)
+  /**
+   * {{{Axiom "' linear right".
+   *    (f(??)*c())' = f(??)'*c()
+   * End.
+   * }}}
+   */
+  lazy val DlinearRightF = "(f(??)*c())' = (f(??))'*c()".asFormula
+  lazy val DlinearRight = derivedAxiom("' linear right",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DlinearRightF)),
+    useAt("* commute")(SuccPosition(0, 0::0::Nil)) &
+      useAt("* commute")(SuccPosition(0, 1::Nil)) &
+      by(Dlinear)
+  )
+  lazy val DlinearRightT = derivedAxiomT(DlinearRight)
 
   // real arithmetic
 
@@ -1158,6 +1197,19 @@ object DerivedAxioms {
     QE
   )
   lazy val equalCommuteT = derivedAxiomT(equalCommute)
+  /**
+   * {{{Axiom "* commute".
+   *   (f()*g()) = (g()*f())
+   * End.
+   * }}}
+   */
+  lazy val timesCommuteF = "(f()*g()) = (g()*f())".asFormula
+  lazy val timesCommute = derivedAxiom("* commute",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(timesCommuteF)),
+    QE
+  )
+  lazy val timesCommuteT = derivedAxiomT(timesCommute)
+
   /**
    * {{{Axiom "<=".
    *   (f()<=g()) <-> ((f()<g()) | (f()=g()))

@@ -4,7 +4,11 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import scala.collection.immutable._
+import scala.collection.immutable
+
 import edu.cmu.cs.ls.keymaerax.core._
+
 
 /**
  * Unification/matching algorithm for tactics.
@@ -53,28 +57,75 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
   //@note To circumvent shortcomings of renaming-unaware unification algorithm, the following code unifies for renaming, renames, and then reunifies the renamed outcomes for substitution
   def apply(e1: Term, e2: Term): Subst = {try {
     val ren = RenUSubst.renamingPart(unify(e1,e2))
-    Subst(unify(ren(e1),e2) ++ ren.subsDefsInput)
+    Subst(reunify(unify(ren(e1),e2) ++ ren.subsDefsInput))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + " with " + e2.prettyString)}
   } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
 
   def apply(e1: Formula, e2: Formula): Subst = {try {
     val ren = RenUSubst.renamingPart(unify(e1,e2))
-    Subst(unify(ren(e1),e2) ++ ren.subsDefsInput)
+    Subst(reunify(unify(ren(e1),e2) ++ ren.subsDefsInput))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + " with " + e2.prettyString)}
   } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
 
   def apply(e1: Program, e2: Program): Subst = {try {
     val ren = RenUSubst.renamingPart(unify(e1,e2))
-    Subst(unify(ren(e1),e2) ++ ren.subsDefsInput)
+    Subst(reunify(unify(ren(e1),e2) ++ ren.subsDefsInput))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + " with " + e2.prettyString)}
   } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
 
   def apply(e1: Sequent, e2: Sequent): Subst = {try {
     val ren = RenUSubst.renamingPart(unify(e1,e2))
     //println("Unifying " + e1 + " and " + e2 + "\nwith renaming " + ren + " gives " + ren(e1) + " led to\n" + unify(ren(e1),e2) + " and ")
-    Subst(unify(ren(e1),e2) ++ ren.subsDefsInput)
+    Subst(reunify(unify(ren(e1),e2) ++ ren.subsDefsInput))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.toString + " with " + e2.toString)}
   } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
+
+  /** Re-unify multiple replacements for the same what */
+  private def reunify(subst: List[SubstRepl]): List[SubstRepl] = {
+    // map matchKey to all substitution pairs in subst that sahre that matchKey
+    var matchKeyMap = new scala.collection.mutable.HashMap[Expression,immutable.List[SubstRepl]]()
+    for (sp <- subst.distinct) {
+      val key = RenUSubst.matchKey(sp)
+      matchKeyMap.get(key) match {
+        case None => matchKeyMap.put(key, List(sp))
+        case Some(list) => matchKeyMap.put(key, list :+ sp)
+      }
+    }
+    var harmless: List[SubstRepl] =
+      matchKeyMap.filter(kv => kv._2.size<=1).values.map(list=>{assert(list.length==1); list.head}).toList
+    var dups: scala.collection.mutable.HashMap[Expression,immutable.List[SubstRepl]] =
+      matchKeyMap.filter(kv => kv._2.size>=2)
+    while (!dups.isEmpty) {
+      val dupkv: (Expression,immutable.List[SubstRepl]) = dups.head
+      dups = dups.tail
+      println("unify duplicate " + dupkv._2.map(sp=>sp._1.prettyString + "~>" + sp._2.prettyString).mkString(", "))
+      val dup = dupkv._2
+      if (dup.map(sp=>sp._1).distinct.length==1) {
+        // all have same left-hand side
+        assert(dup.length>=2, "duplicates come in sizes of at least 2")
+        val remaining = if (unifiable(dup.head._2, dup.tail.head._2).isDefined)
+          // dup.head is more general, so just drop the other and hope for unification
+          dup.patch(1,Nil,1)
+        else if (unifiable(dup.tail.head._2, dup.head._2).isDefined)
+        // dup.tail.head is more general, so just drop the other and hope for unification
+          dup.patch(0,Nil,1)
+        else
+          throw new ProverException("Duplicates do not reunify " + dup)
+        assert (remaining.length < dup.length, "reunify made progress by shrinking one list")
+        if (remaining.length>=2) matchKeyMap.put(dupkv._1, remaining)
+        else {
+          // move to harmless
+          assert(remaining.length==1)
+          harmless = harmless :+ remaining.head
+          //matchKeyMap.remove(dupkv._1)
+        }
+      } else {
+        throw new ProverException("Don't currently reunify different left-hand sides " + dup)
+      }
+    }
+    assert(dups.isEmpty, "handled all duplicates")
+    harmless
+  }
 
   private def ununifiable(e1: Expression, e2: Expression): Nothing = {println(new UnificationException(e1.toString, e2.toString)); throw new UnificationException(e1.toString, e2.toString)}
 

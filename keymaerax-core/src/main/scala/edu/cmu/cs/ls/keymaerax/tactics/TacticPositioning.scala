@@ -20,6 +20,8 @@ case class PosInExpr(pos: List[Int] = Nil) {
   def child: PosInExpr = PosInExpr(pos.tail)
   /** The parent of this position, i.e., one level up */
   def parent: PosInExpr = PosInExpr(pos.dropRight(1))
+  /** The sibling of this position */
+  def sibling: PosInExpr = PosInExpr(pos.dropRight(1) :+ (1-pos.last))
 
   /** first child 0 */
   def first:  PosInExpr = new PosInExpr(pos :+ 0)
@@ -54,6 +56,9 @@ object HereP extends PosInExpr
     def isAnte: Boolean
     def isSucc: Boolean = !isAnte
     def getIndex: Int = index
+
+    /** Concatenate this with p2: Append p2 to this position */
+    def append(p2 : PosInExpr): Position
 
     /**
      * Check whether index of this position is defined in given sequent (ignoring inExpr).
@@ -122,6 +127,7 @@ object Position {
   class AntePosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
     def isAnte = true
     protected def clone(i: Int, e: PosInExpr): Position = new AntePosition(i, e)
+    def append(p2 : PosInExpr): AntePosition = new AntePosition(index, inExpr.append(p2))
     def +(i: Int) = AntePosition(index + i, inExpr)
     def first: Position = AntePosition(index, inExpr.first)
     def second: Position = AntePosition(index, inExpr.second)
@@ -137,6 +143,7 @@ object Position {
   class SuccPosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
     def isAnte = false
     protected def clone(i: Int, e: PosInExpr): Position = new SuccPosition(i, e)
+    def append(p2 : PosInExpr): SuccPosition = new SuccPosition(index, inExpr.append(p2))
     def +(i: Int) = SuccPosition(index + i, inExpr)
     def first: Position = SuccPosition(index, inExpr.first)
     def second: Position = SuccPosition(index, inExpr.second)

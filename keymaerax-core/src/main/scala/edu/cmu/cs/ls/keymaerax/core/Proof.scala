@@ -194,20 +194,20 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   /**
    * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
    */
-  def subsequentOf(r: Sequent): Boolean = (pref == r.pref && ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet))
+  def subsequentOf(r: Sequent): Boolean = pref == r.pref && ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet)
 
   /**
    * Check whether this sequent is a equivalent to the given sequent r (considered as sets)
    */
-  def sameSequentAs(r: Sequent): Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
+  def sameSequentAs(r: Sequent): Boolean = this.subsequentOf(r) && r.subsequentOf(this)
 
   override def toString: String = {assert(pref.isEmpty);
-    ante.map(_.prettyString).mkString(", ") + "\n  ==>  " + succ.map(_.prettyString).mkString(", ")}
+    ante.map(_.prettyString).mkString(", ") + (if (ante.isEmpty) "  ==>  " else "\n  ==>  ") + succ.map(_.prettyString).mkString(", ")}
 
   /** Pretty-print sequent */
   def prettyString: String =
     (1 to ante.length).map(i => -i + ":  " + ante(i-1).prettyString + "\t" + ante(i-1).getClass.getSimpleName).mkString("\n") +
-      "\n  ==>  \n" +
+      (if (ante.isEmpty) if (succ.length<=1) "  ==>  " else "  ==>  \n" else "\n  ==>  \n") +
     (1 to succ.length).map(i => +i + ":  " + succ(i-1).prettyString + "\t" + succ(i-1).getClass.getSimpleName).mkString("\n")
 
 }
@@ -387,7 +387,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    * @requires(isProved)
    */
   final def proved: Sequent = {
-    require(isProved, "Only Provables that have been proved have a proven conclusion " + this)
+    insist(isProved, "Only Provables that have been proved have a proven conclusion " + this)
     if (isProved) conclusion else throw new CoreException("ASSERT: Provables with remaining subgoals are not proved yet " + this)
   }
 
@@ -401,7 +401,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    * @note soundness-critical
    */
   final def apply(rule: Rule, subgoal: Subgoal): Provable = {
-    require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
+    require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " should be applied to an index " + subgoal + " that is within the subgoals " + subgoals)
     rule(subgoals(subgoal)) match {
       // subgoal closed by proof rule
       case Nil => new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
@@ -429,7 +429,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    */
   final def apply(subderivation: Provable, subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
-    require(subderivation.conclusion == subgoals(subgoal), "merging Provables requires the subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconcludes " + subderivation.conclusion + "\nshould be subgoal " + subgoals(subgoal))
+    insist(subderivation.conclusion == subgoals(subgoal), "merging Provables requires the subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconcludes " + subderivation.conclusion + "\nshould be subgoal " + subgoals(subgoal))
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
     subderivation.subgoals.toList match {
       // subderivation proves given subgoal
@@ -447,15 +447,32 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
   /**
    * Apply Rule Forward: Apply given proof rule forward in Hilbert style to prolong this Provable to a Provable for concludes.
-   * @param concludes the new conclusion that the rule shows to follow from this.conclusion
+   * This Provable with conclusion `G |- D` transforms as follows
+   * {{{
+   *     G1 |- D1 ... Gn |- Dn                  G1 |- D1 ... Gn |- Dn
+   *   -------------------------       =>     -------------------------
+   *            G |- D                              newConsequence
+   * }}}
+   * provided
+   * {{{
+   *            G |- D
+   *   ------------------------- rule
+   *         newConsequence
+   * }}}
+   * @param newConsequence the new conclusion that the rule shows to follow from this.conclusion
    * @param rule the proof rule to apply to concludes to reduce it to this.conclusion.
    * @return A Provable derivation that proves concludes from the same subgoals by using the given proof rule.
    * Will return a Provable with the same subgoals but an updated conclusion.
    * @note not soundness-critical since implemented in terms of other apply functions
    */
-  final def apply(concludes: Sequent, rule: Rule): Provable = {
-    Provable.startProof(concludes)(rule, 0)(this, 0)
-  } ensuring(r => r.conclusion == concludes, "New conclusion\n" + concludes + " after continuing derivations") ensuring(
+  final def apply(newConsequence: Sequent, rule: Rule): Provable = {
+    //@note the following requirement is redundant and not soundness-critical. It just gives a better error message.
+    require(rule(newConsequence)==List(this.conclusion), "Rule " + rule + " should justify\n" + this.conclusion.prettyString + "\n-----------------------------\n" + newConsequence.prettyString +
+      "\nThat is, applying the rule backwards to new consequence\n" + newConsequence + "\nshould result in\n" + this.conclusion + "\nwhich is the conclusion of this " + this + "\nThe rule led to " + rule(newConsequence) +
+      "\nExpected: " + edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter(this.conclusion) +
+      "\nFound:    " + rule(newConsequence).map(s=>edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter(s)).mkString(", "))
+    Provable.startProof(newConsequence)(rule, 0)(this, 0)
+  } ensuring(r => r.conclusion == newConsequence, "New conclusion\n" + newConsequence + " after continuing derivations") ensuring(
     r => r.subgoals == subgoals, "Same subgoals\n" + subgoals + " after continuing derivations")
 
   /**
@@ -470,6 +487,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     r => r.subgoals == immutable.List(r.conclusion), "sub Provable is an unfinished Provable")
 
   override def toString: String = "Provable(concludes " + conclusion + (if (isProved) " proved" else "\nfrom " + subgoals.mkString(",\nwith ")) + ")"
+  def prettyString: String = "Provable(concludes " + conclusion.prettyString + (if (isProved) " proved" else "\nfrom " + subgoals.map(_.prettyString).mkString(",\nwith ")) + ")"
 }
 
 
@@ -496,7 +514,7 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
 
 private object Rule {
   //@todo Code Review: LAX_MODE should be false
-  private[core] val LAX_MODE = System.getProperty("LAX", "false")=="true"
+  private[core] val LAX_MODE = System.getProperty("LAX", "true")=="true"
 }
 
 /*********************************************************************************
@@ -948,7 +966,11 @@ final case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends
         "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))*/
     } catch { case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion) }
 }
-
+object UniformSubstitutionRule {
+  /** Apply uniform substitution subst to provable forward in Hilbert-style (convenience) */
+  def UniformSubstitutionRuleForward(provable: Provable, subst: USubst): Provable =
+    provable(subst(provable.conclusion), UniformSubstitutionRule(subst, provable.conclusion))
+}
 
 /*********************************************************************************
   * Lookup Axioms
@@ -959,6 +981,10 @@ final case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends
 object Axiom {
   /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. */
   val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms
+
+  /** A Provable proving the axiom named id (convenience) */
+  def axiom(id: String): Provable =
+    Provable.startProof(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(axioms(id))))(Axiom(id), 0)
 }
 /**
  * Look up an axiom named id.
@@ -1000,7 +1026,7 @@ object AxiomaticRule {
  */
 final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   val name: String = "Axiomatic Rule " + id + " instance"
-  require(subst.freeVars.isEmpty || Rule.LAX_MODE && id == "CQ equation congruence", "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
+  insist(subst.freeVars.isEmpty || Rule.LAX_MODE && id == "CQ equation congruence", "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
 
   override def toString: String = name + "(" + subst + ")"
 
@@ -1018,7 +1044,7 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
     try {
       if (subst(ruleconclusion) == conclusion) immutable.List(subst(rulepremise))
       else throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion +
-        "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
+        "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion + "\nin " + this + " for intended conclusion\n" + conclusion)
     } catch { case exc: SubstitutionClashException => throw exc.inContext(this + " for intended conclusion\n" + conclusion) }
 
 }
@@ -1034,7 +1060,7 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
  * @see [[URename]]
  */
 final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
-  require(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
+  insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
   val name: String = "Uniform Renaming"
   private val renaming: URename = URename(what, repl)
 
@@ -1053,7 +1079,7 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
  * @author Andre Platzer
  */
 final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
-  require(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
+  insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
   val name: String = "Bound Renaming"
 
   private val renaming = URename(what, repl)
@@ -1179,7 +1205,7 @@ object RCF {
    * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
    */
   def proveArithmetic(t: QETool, f: Formula): Lemma = {
-    require(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
+    insist(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
 
     // Quantifier elimination determines (quantifier-free) equivalent of f.
     val (equivalent, evidence) = t.qeEvidence(f)
@@ -1209,7 +1235,7 @@ case class LookupLemma(lemmaDB: LemmaDB, lemmaID: String) extends Rule {
   val name: String = "Lookup Lemma"
   /** Get the lemma that this lookup lemma rule will apply */
   def lemma: Lemma = {
-    require(lemmaDB.contains(lemmaID), "Cannot lookup lemmas that have not been added to the LemmaDB")
+    insist(lemmaDB.contains(lemmaID), "Cannot lookup lemmas that have not been added to the LemmaDB")
     lemmaDB.get(lemmaID).get
   }
   def apply(s : Sequent): immutable.List[Sequent] = {

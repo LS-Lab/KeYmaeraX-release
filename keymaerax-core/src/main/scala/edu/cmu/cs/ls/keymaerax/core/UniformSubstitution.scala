@@ -36,9 +36,9 @@ import SetLattice.topVarsDiffVars
  * @todo rename to something like USubstRepl or so
  */
 final case class SubstitutionPair (what: Expression, repl: Expression) {
-  require(what.kind == repl.kind,
+  insist(what.kind == repl.kind,
     "substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + what.kind + " ~> " + repl.kind)
-  require(what.sort == repl.sort, "Sorts have to match in substitution pairs: " + what.sort + " != " + repl.sort)
+  insist(what.sort == repl.sort, "Sorts have to match in substitution pairs: " + what.sort + " != " + repl.sort)
   assert(what match {
     case _: Term => repl.isInstanceOf[Term]
     case _: Formula => repl.isInstanceOf[Formula]
@@ -78,7 +78,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     }
     case replp: Program => what match {
       case _: ProgramConst | _: DifferentialProgramConst => bottom // program constants are always admissible, since their meaning doesn't depend on state
-      case _ => throw new IllegalStateException("Disallowed substitution shape " + this)
+      case _ => throw new CoreException("Disallowed substitution shape " + this)
     }
   }
 
@@ -116,7 +116,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case a: ProgramConst             => a
     case DotFormula                  => DotFormula
     case PredicationalOf(p: Function, DotFormula) => p
-    case _ => throw new IllegalArgumentException("Nonsubstitutable expression " + this)
+    case _ => throw new CoreException("Nonsubstitutable expression " + this)
   }
 
   /**
@@ -220,10 +220,10 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   private def applicable(): Unit = {
     // check that we never replace n by something and then again replacing the same n by something
     val lefts = subsDefsInput.map(_.what).toList
-    require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefsInput)
+    insist(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefsInput)
     // check that we never replace p(x) by something and also p(t) by something
     val lambdaNames = matchKeys
-    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + this)
+    insist(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + this)
   }
 
   //private def log(msg: =>String): Unit = {}  //= println(msg)
@@ -292,7 +292,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
     } catch {
       case ex: ProverException => throw ex.inContext(s.toString)
-      case ex: IllegalArgumentException =>
+      case ex: IllegalArgumentException => //@todo does this still happen?
         throw new SubstitutionClashException(toString, "undef", "undef", s.toString, "undef", ex.getMessage).initCause(ex)
     }
   }
@@ -351,9 +351,8 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         case Pair(l, r) => Pair(usubst(l), usubst(r))  
       }
     } catch {
-      case ex: IllegalArgumentException =>
+      case ex: IllegalArgumentException => //@todo does this still happen?
         throw new SubstitutionClashException(toString, "undef", "undef", term.prettyString, "undef", ex.getMessage).initCause(ex)
-        throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + term.prettyString).initCause(ex)
     }
   } ensuring(
     r => r.kind == term.kind && r.sort == term.sort, "Uniform Substitution leads to same kind and same sort " + term)
@@ -419,7 +418,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
             Diamond(usubst(p), usubst(g))
       }
     } catch {
-      case ex: IllegalArgumentException =>
+      case ex: IllegalArgumentException => //@todo does this still happen?
         throw new SubstitutionClashException(toString, "undef", "undef", formula.prettyString, "undef", ex.getMessage).initCause(ex)
       case ex: AssertionError =>
         throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + formula.prettyString).initCause(ex)
@@ -456,7 +455,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         case Dual(a)           => Dual(usubst(a))
       }
     } catch {
-      case ex: IllegalArgumentException =>
+      case ex: IllegalArgumentException => //@todo does this still happen?
         throw new SubstitutionClashException(toString, "undef", "undef", program.prettyString, "undef", ex.getMessage).initCause(ex)
       case ex: AssertionError =>
         throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + program.prettyString).initCause(ex)
@@ -493,7 +492,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
    * raise informative exception if not.
    */
   private def requireAdmissible(U: SetLattice[NamedSymbol], e: Expression, context: Expression): Unit =
-//    require(admissible(U, e),
+//    insist(admissible(U, e),
 //      "Substitution clash: " + this + " not " + U + "-admissible for " + e.prettyString + " when substituting in " + context.prettyString)
     if (!admissible(U, e))
       throw new SubstitutionClashException(toString, U.prettyString, e.prettyString, context.prettyString, clashSet(U, e).prettyString, "")

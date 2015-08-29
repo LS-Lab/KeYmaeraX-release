@@ -40,13 +40,12 @@ class FormulaConverter(val fml: Formula) {
   }
 
   /** Subexpression at indicated position */
-  //@todo same for Sequent
   def apply(pos: PosInExpr): Expression = extractContext(pos)._2
   /** Subexpression at indicated position */
   def at(pos: PosInExpr): Option[Expression] =
     try {Some(extractContext(pos)._2)} catch {
-      case e: NoSuchElementException   => println("ill-position " + pos + " in " + fml + " since " + e); None
-      case e: IllegalArgumentException => println("ill-position " + pos + " in " + fml + " since " + e); None}
+      case e: NoSuchElementException   => println("ill-positioned " + pos + " in " + fml + " since " + e); None
+      case e: IllegalArgumentException => println("ill-positioned " + pos + " in " + fml + " since " + e); None}
   def at(p: Position): Option[Expression] = at(p.inExpr)
 
   /**
@@ -92,6 +91,14 @@ class FormulaConverter(val fml: Formula) {
   }
 
   /**
+   * Returns the term at position pos in fml.
+   * @param pos The position pointing to the term.
+   * @return The term.
+   */
+  def subAt(pos: PosInExpr): Expression = if (isFormulaAt(pos)) subFormulaAt(pos).get else if (isTermAt(pos)) termAt(pos)
+  else throw new IllegalArgumentException("Position " + pos + " of " + fml + " cannot be located as either a subterm or a subformula")
+
+    /**
    * Returns the term at position pos in fml.
    * @param pos The position pointing to the term.
    * @return The term.
@@ -173,6 +180,9 @@ class FormulaConverter(val fml: Formula) {
    * Split formula at a position into sub-expression at that position and the context in which it occurs.
    * @param pos The position pointing to the expression.
    * @return A tuple (p(.), e) of context p(.) and sub-expression e, where p(e) is equivalent to fml.
+   * @todo bug:
+   *       Assertion failed extractContext(PosInExpr(1.1)) of (x)'=x'
+led to ((x)'=x')@Equal yet eInCtx=None
    */
   def extractContext(pos: PosInExpr): (Context[Formula], Expression) = {
     var eInCtx: Option[Expression] = None
@@ -192,7 +202,7 @@ class FormulaConverter(val fml: Formula) {
           Left(None)
         }
     }), fml) match {
-      case Some(f) => (new Context(f), eInCtx.get)
+      case Some(f) => (new Context(f), eInCtx.getOrElse(throw new ProverAssertionError("extractContext(" + pos +") of " + fml.prettyString + "\nled to " + f + " yet eInCtx=" + eInCtx)))
       case None => throw new IllegalArgumentException("Position not defined")
     }
   } ensuring(r => r._1(r._2) == fml, "context splitting of " + fml + " at " + pos + " is successful")

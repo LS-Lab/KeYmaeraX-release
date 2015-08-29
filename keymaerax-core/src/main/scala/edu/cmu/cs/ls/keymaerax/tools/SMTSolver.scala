@@ -10,10 +10,10 @@ import edu.cmu.cs.ls.keymaerax.core.{QETool, Term}
 
 /**
  * Created by ran on 3/17/15.
+ * @author Ran Ji
  */
 trait SMTSolver extends QETool {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
-  type SExpr = SMTLib
 
   def run(cmd : String) : (String, KExpr)
 
@@ -30,6 +30,4 @@ trait SMTSolver extends QETool {
     if (f.exists()) getUniqueSmt2File(idx + 1)
     else f
   }
-
-
 }

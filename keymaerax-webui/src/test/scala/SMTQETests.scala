@@ -12,8 +12,6 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
  * @author Ran Ji
  */
 class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
-  type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
-  type SExpr = SMTLib
   var z3: Z3Solver = null
   var polya: PolyaSolver = null
 
@@ -39,6 +37,48 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
     z3.qe("3^0 < 1".asFormula) should be ("false".asFormula)
     // TODO returns false but for the wrong reasons (Polya returns error)
 //    polya.qe("3^0 < 1".asFormula) should be ("false".asFormula)
+  }
+
+  it should "prove constant function" in {
+    z3.qe("f()=f()".asFormula) should be("true".asFormula)
+    polya.qe("f()=f()".asFormula) should be("true".asFormula)
+
+  }
+
+  it should "prove unary function" in {
+    z3.qe("f(x)=f(x)".asFormula) should be("true".asFormula)
+    //TODO Polya support
+//    polya.qe("f(x)=f(x)".asFormula) should be("true".asFormula)
+  }
+
+  it should "prove binary function" in {
+    z3.qe("f(x,y)=f(x,y)".asFormula) should be("true".asFormula)
+    //TODO Polya support
+//    polya.qe("f(x,y)=f(x,y)".asFormula) should be("true".asFormula)
+  }
+
+  it should "prove function with more parameters" in {
+    z3.qe("f(x,y,z)=f(x,y,z)".asFormula) should be("true".asFormula)
+    //TODO Polya support
+//    polya.qe("f(x,y,z)=f(x,y,z)".asFormula) should be("true".asFormula)
+  }
+
+  it should "prove absolute value" in {
+    z3.qe("abs(y)>=y".asFormula) should be("true".asFormula)
+    //TODO Polya support
+//    polya.qe("abs(y)>=y".asFormula) should be("true".asFormula)
+  }
+
+  it should "prove minimum" in {
+    z3.qe("min(x, y)<=x".asFormula) should be("true".asFormula)
+    //TODO Polya support
+//    polya.qe("min(x, y)<=x".asFormula) should be("true".asFormula)
+  }
+
+  it should "prove maximum" in {
+    z3.qe("max(x, y)>=x".asFormula) should be("true".asFormula)
+    //TODO Polya support
+//    polya.qe("max(x, y)>=x".asFormula) should be("true".asFormula)
   }
 
   it should "prove complex qutifiers" in {

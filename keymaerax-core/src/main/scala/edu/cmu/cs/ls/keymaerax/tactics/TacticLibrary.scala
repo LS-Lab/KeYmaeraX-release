@@ -37,6 +37,9 @@ import scala.language.postfixOps
  */
 object TacticLibrary {
 
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+
+
   object TacticHelper {
     def getTerm(f : Formula, p : PosInExpr) = {
       var retVal : Option[Term] = None
@@ -246,30 +249,32 @@ object TacticLibrary {
    * @param inst Transformation for instantiating additional unmatched symbols that do not occur in fact(key).
    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
+   * @see [[HilbertCalculus.useFor]]
    * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
    */
   def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic, inst: Subst=>Subst = (us=>us)): PositionTactic = new PositionTactic("useAt") {
     import PropositionalTacticsImpl._
     import FormulaConverter._
-    private val (keyCtx:Context[_],keyPart) = new FormulaConverter(fact).extractContext(key)
+    import SequentConverter._
+    private val (keyCtx:Context[_],keyPart) = fact.extractContext(key)
     //private val keyPart = new FormulaConverter(fact).subFormulaAt(key).get
 
     override def applies(s: Sequent, p: Position): Boolean = try {
-      val part = s(p.top).at(p.inExpr)
-      if (!part.isDefined) false
+      val part = s.at(p)
+      if (!part.isDefined) {println("ill-positioned " + p + " in " + s + "\nin " + "useAt(" + fact + ")(" + p + ")\n(" + s + ")"); false}
       else {
         UnificationMatch(keyPart,part.get)
         true
       }
-    } catch {case e: ProverException => println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s(p.top).at(p.inExpr))); false}
+    } catch {case e: ProverException => println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s.at(p))); false}
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val (ctx,expr) = new FormulaConverter(node.sequent(p.top)).extractContext(p.inExpr)
+        val (ctx,expr) = node.sequent.splitContext(p)
         val subst = inst(UnificationMatch(keyPart, expr))
-        println("useAt unify: " + expr + " matches against " + keyPart + " by " + subst)
+        if (DEBUG) println("useAt(" + fact.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
         assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
         Some(useAt(subst, keyCtx, keyPart, p, ctx, expr, factTactic))
@@ -290,25 +295,26 @@ object TacticLibrary {
        */
       private def useAt[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: Tactic): Tactic = {
         require(subst(k) == c, "correctly matched input")
-        require(new FormulaConverter(C(c)).extractContext(p.inExpr) == (C,c), "correctly split at position p")
-        require(List((C,DotFormula),(C,DotTerm)).contains(new FormulaConverter(C.ctx).extractContext(p.inExpr)), "correctly split at position p")
+        require(C(c).extractContext(p.inExpr) == (C,c), "correctly split at position p")
+        require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.extractContext(p.inExpr)), "correctly split at position p")
 
         /** Equivalence rewriting step */
         def equivStep(other: Expression, factTactic: Tactic): Tactic =
         //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
-          debugT("start useAt") & cutRightT(C(subst(other)))(p.top) & debugT("  cutted right") & onBranch(
+        //@todo simplify substantially if subst=id
+          debugT("start useAt") & cutRightT(C(subst(other)))(p.top) & debugC("  cutted right") & onBranch(
             //(BranchLabels.cutUseLbl, debugT("  useAt result")),
             //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
             //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-            (BranchLabels.cutShowLbl, debugT("    show use") & cohideT(p.top) & assertT(0,1) & debugT("    cohidden") &
-              equivifyRightT(SuccPosition(0)) & debugT("    equivified") &
-              debugT("    CE coming up") & (
+            (BranchLabels.cutShowLbl, debugC("    show use") & cohideT(p.top) & assertT(0,1) & debugC("    cohidden") &
+              equivifyRightT(SuccPosition(0)) & debugC("    equivified") &
+              debugC("    CE coming up") & (
               if (other.kind==FormulaKind) AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr)
               else if (other.kind==TermKind) AxiomaticRuleTactics.equationCongruenceT(p.inExpr)
               else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-              debugT("    using fact tactic") & factTactic & debugT("  done useAt"))
+              debugC("    using fact tactic") & factTactic & debugC("  done fact tactic"))
             //@todo error if factTactic is not applicable (factTactic | errorT)
-          ) & debugT("end useAt")
+          ) & debugT("end   useAt")
 
         K.ctx match {
           case DotFormula =>
@@ -339,6 +345,7 @@ object TacticLibrary {
             )
 
           case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
+            //@todo only prove remainder absolutely by proving prereq if that proof works out. Otherwise preserve context to prove prereq by master.
             //@todo check positioning etc.
             useAt(subst, new Context(remainder), k, p, C, c, cutRightT(subst(prereq))(SuccPos(0)) & onBranch(
               //@note the roles of cutUseLbl and cutShowLbl are really swapped here, since the implication on cutShowLbl will be handled by factTactic
@@ -415,7 +422,7 @@ object TacticLibrary {
 
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       val subst = UnificationMatch(form, node.sequent)
-      println("US unify: " + node.sequent + " matches against form " + form + " by " + subst)
+      if (DEBUG) println("  US(" + form.prettyString + ") unify: " + node.sequent + " matches against form " + form + " by " + subst)
       assert(node.sequent == subst(form), "unification matched successfully: " + node.sequent + " is " + subst(form) + " which is " + form + " instantiated by " + subst)
       Some(subst.toTactic(form))
 //      Some(new Tactics.ApplyRule(UniformSubstitutionRule(subst, form)) {
@@ -438,6 +445,9 @@ object TacticLibrary {
       continuation(this, Success, Seq(node))
     }
   }
+
+  /** Conditional debug, i.e., if DEBUG is enabled only */
+  def debugC(s: => Any): Tactic = if (DEBUG) debugT(s) else NilT
 
   def debugAtT(s: => Any): PositionTactic = new PositionTactic("Debug") {
     def applies(s: Sequent, p: Position): Boolean = true
