@@ -169,7 +169,8 @@ object DerivedAxioms {
     case "true&" => Some(trueAndF, trueAndT)
     case "0*" => Some(zeroTimesF, zeroTimesT)
     case "0+" => Some(zeroPlusF, zeroPlusT)
-    case "x' derive var" => Some(DvarF, DvarT)
+//    case "x' derive var" => Some(DvarF, DvarT)
+    case "x' derive variable" => Some(DvariableF, DvariableT)
     case "' linear" => Some(DlinearF, DlinearT)
     case "' linear right" => Some(DlinearRightF, DlinearRightT)
     case "DG differential pre-ghost" => Some(DGpreghostF, DGpreghostT)
@@ -1130,25 +1131,38 @@ object DerivedAxioms {
   lazy val DGpreghostT = derivedAxiomT(DGpreghost)
 
   /**
-   * {{{Axiom "x' derive var".
-   *    (x_)' = x_'
+   * {{{Axiom "x' derive variable".
+   *    \forall x_ ((x_)' = x_')
    * End.
    * }}}
-   * @todo derive
    */
-  lazy val DvarF = "((x_)' = x_')".asFormula
-  lazy val Dvar = derivedAxiom("'x derive var",
-    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DvarF)))
-      (CutRight("\\forall x_ ((x_)' = x_')".asFormula, SuccPos(0)), 0)
-      // right branch
-      (UniformSubstitutionRule.UniformSubstitutionRuleForward(Axiom.axiom("all eliminate"),
-        USubst(SubstitutionPair(PredOf(Function("p_",None,Real,Bool),Anything), DvarF)::Nil)), 0)
-      // left branch
-      (Axiom.axiom("x' derive variable"), 0)
-    /*TacticLibrary.instantiateQuanT(Variable("x_",None,Real), Variable("x",None,Real))(1) &
-      byUS("= reflexive")*/
+  lazy val DvariableF = "\\forall x_ ((x_)' = x_')".asFormula
+  lazy val Dvariable = derivedAxiom("'x derive variable",
+    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DvariableF)))
+      (Skolemize(SuccPos(0)), 0)
+      (Axiom.axiom("x' derive var"), 0)
   )
-  lazy val DvarT = derivedAxiomT(Dvar)
+  lazy val DvariableT = derivedAxiomT(Dvariable)
+//  /**
+//   * {{{Axiom "x' derive var".
+//   *    (x_)' = x_'
+//   * End.
+//   * }}}
+//   * @todo derive
+//   */
+//  lazy val DvarF = "((x_)' = x_')".asFormula
+//  lazy val Dvar = derivedAxiom("'x derive var",
+//    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DvarF)))
+//      (CutRight("\\forall x_ ((x_)' = x_')".asFormula, SuccPos(0)), 0)
+//      // right branch
+//      (UniformSubstitutionRule.UniformSubstitutionRuleForward(Axiom.axiom("all eliminate"),
+//        USubst(SubstitutionPair(PredOf(Function("p_",None,Real,Bool),Anything), DvarF)::Nil)), 0)
+//      // left branch
+//      (Axiom.axiom("x' derive variable"), 0)
+//    /*TacticLibrary.instantiateQuanT(Variable("x_",None,Real), Variable("x",None,Real))(1) &
+//      byUS("= reflexive")*/
+//  )
+//  lazy val DvarT = derivedAxiomT(Dvar)
   /**
    * {{{Axiom "' linear".
    *    (c()*f(??))' = c()*(f(??))'

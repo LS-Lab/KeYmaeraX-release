@@ -226,7 +226,8 @@ private[core] object AxiomBase {
     assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(fany, gany)), Equal(Differential(fany), Differential(gany))), "!=' derive !=")
     assert(axs("&' derive and") == Equiv(DifferentialFormula(And(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))), "&' derive and")
     assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))) || axs("|' derive or") == Imply(And(DifferentialFormula(pany), DifferentialFormula(qany)), DifferentialFormula(Or(pany, qany))), "|' derive or")
-    assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
+    assert(axs("x' derive var") == Equal(Differential(x_), DifferentialSymbol(x_)), "x' derive var")
+    //assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
 
     assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,t0)), "all instantiate")
     // soundness-critical that these are for p() not for p(x) or p(??)
@@ -478,11 +479,7 @@ Axiom "^' derive power".
 	((f(??)^(c()))' = (c()*(f(??)^(c()-1)))*(f(??)')) <- (c() != 0)
 End.
 
-Axiom "x' derive variable".
-  \forall x_ ((x_)' = x_')
-End.
-
-Axiom "x' derive var". /* @todo derived */
+Axiom "x' derive var".
    ((x_)' = x_')
 End.
 
