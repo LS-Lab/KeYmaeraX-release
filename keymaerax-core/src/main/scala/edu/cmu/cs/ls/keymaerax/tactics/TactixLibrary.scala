@@ -24,6 +24,8 @@ import scala.collection.immutable._
  * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
  */
 object TactixLibrary {
+  private[tactics] val DEBUG = System.getProperty("DEBUG", "false")=="true"
+
 //  /** step: makes one sequent proof step to simplify the formula at the indicated position (unless @invariant needed) */
   val step                    : PositionTactic = TacticLibrary.step
 
@@ -355,7 +357,7 @@ object TactixLibrary {
     val rootNode = new RootNode(goal)
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
-    println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().map(x => "Open Goal: " + x.sequent).mkString(("\n"))))
+    if (!rootNode.isClosed() || DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().map(x => "Open Goal: " + x.sequent).mkString(("\n"))))
     rootNode.provableWitness
   }
 

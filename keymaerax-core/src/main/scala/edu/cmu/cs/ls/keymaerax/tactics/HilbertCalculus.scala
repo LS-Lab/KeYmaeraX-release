@@ -28,7 +28,6 @@ object HilbertCalculus {
 
   /** True when insisting on internal useAt technology, false when external tactic calls are okay. */
   private val INTERNAL = true
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   // modalities
   /** assignb: [:=] simplify assignment by substitution or equation */
@@ -252,6 +251,7 @@ object HilbertCalculus {
     import TermConverter._
     import SequentConverter._
     import TactixLibrary._
+
     override def applies(s: Sequent, p: Position): Boolean = s.at(p) match {
       case Some(Differential(_)) => true
       case Some(DifferentialFormula(_)) => true
@@ -265,9 +265,9 @@ object HilbertCalculus {
         node.sequent.at(p).get match {
           case t: Term    => Some(useDirectAt(deriveProof(t),  PosInExpr(0::Nil))(p)
             //@todo why is the following needed? useAt doesn't optimize subst=id?
-            & debug("derived") & byUS("= reflexive"))
+            & debugC("derived") & byUS("= reflexive"))
           case f: Formula => Some(useDirectAt(deriveProofF(f), PosInExpr(0::Nil))(p)
-            & debug("derived") & byUS("<-> reflexive"))
+            & debugC("derived") & byUS("<-> reflexive"))
         }
 
       }
@@ -285,8 +285,8 @@ object HilbertCalculus {
         r
       } ensuring(r => r.isProved, "derive remains proved: " + " final derive(" + de + ")")
 
-      private def debugF(s: => Any): (Provable=>Provable)=>(Provable=>Provable) = tac => proof => {val pr = tac(proof); println("=== " + s + " === " + pr); pr}
-      private def debugPF(s: => Any): (Position=>Provable=>Provable)=>(Position=>Provable=>Provable) = tac => pos => proof => {val pr = tac(pos)(proof); println("=== " + s + " === " + pr); pr}
+      private def debugF(s: => Any): (Provable=>Provable)=>(Provable=>Provable) = tac => proof => {val pr = tac(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}
+      private def debugPF(s: => Any): (Position=>Provable=>Provable)=>(Position=>Provable=>Provable) = tac => pos => proof => {val pr = tac(pos)(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}
 
       private def derive(de: Provable, pos: PosInExpr): Provable = {
         if (DEBUG) println("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ")")
@@ -422,7 +422,7 @@ object HilbertCalculus {
 
       val (ctx, expr) = proof.conclusion.splitContext(pos)
       val subst = inst(UnificationMatch(keyPart, expr))
-      println("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
+      if (DEBUG) println("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
       if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof)
       assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
 

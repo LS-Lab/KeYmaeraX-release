@@ -37,6 +37,9 @@ import scala.language.postfixOps
  */
 object TacticLibrary {
 
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+
+
   object TacticHelper {
     def getTerm(f : Formula, p : PosInExpr) = {
       var retVal : Option[Term] = None
@@ -270,7 +273,7 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val (ctx,expr) = node.sequent.splitContext(p)
         val subst = inst(UnificationMatch(keyPart, expr))
-        println("useAt(" + fact.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
+        if (DEBUG) println("useAt(" + fact.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
         assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
         Some(useAt(subst, keyCtx, keyPart, p, ctx, expr, factTactic))
@@ -298,19 +301,19 @@ object TacticLibrary {
         def equivStep(other: Expression, factTactic: Tactic): Tactic =
         //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
         //@todo simplify substantially if subst=id
-          debugT("start useAt") & cutRightT(C(subst(other)))(p.top) & debugT("  cutted right") & onBranch(
+          debugT("start useAt") & cutRightT(C(subst(other)))(p.top) & debugC("  cutted right") & onBranch(
             //(BranchLabels.cutUseLbl, debugT("  useAt result")),
             //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
             //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-            (BranchLabels.cutShowLbl, debugT("    show use") & cohideT(p.top) & assertT(0,1) & debugT("    cohidden") &
-              equivifyRightT(SuccPosition(0)) & debugT("    equivified") &
-              debugT("    CE coming up") & (
+            (BranchLabels.cutShowLbl, debugC("    show use") & cohideT(p.top) & assertT(0,1) & debugC("    cohidden") &
+              equivifyRightT(SuccPosition(0)) & debugC("    equivified") &
+              debugC("    CE coming up") & (
               if (other.kind==FormulaKind) AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr)
               else if (other.kind==TermKind) AxiomaticRuleTactics.equationCongruenceT(p.inExpr)
               else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-              debugT("    using fact tactic") & factTactic & debugT("  done fact tactic"))
+              debugC("    using fact tactic") & factTactic & debugC("  done fact tactic"))
             //@todo error if factTactic is not applicable (factTactic | errorT)
-          ) & debugT("end useAt")
+          ) & debugT("end   useAt")
 
         K.ctx match {
           case DotFormula =>
@@ -418,7 +421,7 @@ object TacticLibrary {
 
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       val subst = UnificationMatch(form, node.sequent)
-      println("  US(" + form.prettyString + ") unify: " + node.sequent + " matches against form " + form + " by " + subst)
+      if (DEBUG) println("  US(" + form.prettyString + ") unify: " + node.sequent + " matches against form " + form + " by " + subst)
       assert(node.sequent == subst(form), "unification matched successfully: " + node.sequent + " is " + subst(form) + " which is " + form + " instantiated by " + subst)
       Some(subst.toTactic(form))
 //      Some(new Tactics.ApplyRule(UniformSubstitutionRule(subst, form)) {
@@ -441,6 +444,9 @@ object TacticLibrary {
       continuation(this, Success, Seq(node))
     }
   }
+
+  /** Conditional debug, i.e., if DEBUG is enabled only */
+  def debugC(s: => Any): Tactic = if (DEBUG) debugT(s) else NilT
 
   def debugAtT(s: => Any): PositionTactic = new PositionTactic("Debug") {
     def applies(s: Sequent, p: Position): Boolean = true
