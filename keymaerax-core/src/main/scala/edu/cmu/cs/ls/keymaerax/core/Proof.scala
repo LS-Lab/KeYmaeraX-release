@@ -1049,6 +1049,11 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
 
 }
 
+object UniformRenaming {
+  /** Apply uniform renaming what~>repl to provable forward in Hilbert-style (convenience) */
+  def UniformRenamingForward(provable: Provable, what: Variable, repl: Variable): Provable =
+    provable(URename(what,repl)(provable.conclusion), UniformRenaming(what, repl))
+}
 
 /**
  * Uniformly rename all occurrences of what and what' to repl and repl' and vice versa.
