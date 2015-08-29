@@ -263,11 +263,11 @@ object HilbertCalculus {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         node.sequent.at(p).get match {
-          case t: Term    => Some(useDirectAt(deriveProof(t),  PosInExpr(0::Nil))(p)
-            //@todo why is the following needed? useAt doesn't optimize subst=id?
-            & debugC("derived") & byUS("= reflexive"))
-          case f: Formula => Some(useDirectAt(deriveProofF(f), PosInExpr(0::Nil))(p)
-            & debugC("derived") & byUS("<-> reflexive"))
+          case t: Term    => Some(useDirectAt(deriveProof(t),  PosInExpr(0::Nil))(p))
+//            //@todo why is the following needed? useAt doesn't optimize subst=id?
+//            & debugC("derived") & byUS("= reflexive"))
+          case f: Formula => Some(useDirectAt(deriveProofF(f), PosInExpr(0::Nil))(p))
+//            & debugC("derived") & byUS("<-> reflexive"))
         }
 
       }
@@ -400,16 +400,17 @@ object HilbertCalculus {
   }
   } // derive
 
-  private def useFor(axiom: String): (Position => (Provable => Provable)) = useFor(axiom, PosInExpr(0::Nil))
+  def useFor(axiom: String): (Position => (Provable => Provable)) = useFor(axiom, PosInExpr(0::Nil))
 
-  private def useFor(axiom: String, key: PosInExpr): (Position => (Provable => Provable)) =
+  def useFor(axiom: String, key: PosInExpr): (Position => (Provable => Provable)) =
     if (Axiom.axioms.contains(axiom)) useFor(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
-  //@todo in analogy to useAt but forward proof.
-  /** useFor(axiom) use the given fact forward for the selected position in the given Provable to conclude a new Provable */
-  private def useFor(fact: Provable, key: PosInExpr, inst: RenUSubst=>RenUSubst = (us => us)): (Position => (Provable => Provable)) = {
+  /** useFor(axiom) use the given fact forward for the selected position in the given Provable to conclude a new Provable
+    * @see [[TacticLibrary.useAt()]]
+    */
+  def useFor(fact: Provable, key: PosInExpr, inst: RenUSubst=>RenUSubst = (us => us)): (Position => (Provable => Provable)) = {
     import FormulaConverter._
     import SequentConverter._
     import TactixLibrary._

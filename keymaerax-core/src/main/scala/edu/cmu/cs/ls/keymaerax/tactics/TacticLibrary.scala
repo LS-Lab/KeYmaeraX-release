@@ -249,6 +249,7 @@ object TacticLibrary {
    * @param inst Transformation for instantiating additional unmatched symbols that do not occur in fact(key).
    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
+   * @see [[HilbertCalculus.useFor]]
    * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
    */
   def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic, inst: Subst=>Subst = (us=>us)): PositionTactic = new PositionTactic("useAt") {

@@ -91,25 +91,25 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "derive (y)'=y'" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(y)'=y'".asFormula)),
-      derive(1,0::Nil)
+      derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (x+y)'=x'+y'" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula)),
-      derive(1,0::Nil)
+      derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (x*y)'=x'*y+x*y'" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x*y)'=x'*y+x*y'".asFormula)),
-      derive(1,0::Nil)
+      derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (x+2*y)'=x'+2*y'" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
-      derive(1,0::Nil)
+      derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
@@ -121,31 +121,37 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "derive (5*3+2*9)'=5*0+2*0 if optimized (left linear preferred)" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=5*0+2*0".asFormula)),
-      derive(1,0::Nil)
+      derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (5*x+2*y)'=5*x'+2*y'" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*x+2*y)'=5*x'+2*y'".asFormula)),
-      derive(1,0::Nil)
+      derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (5*x+2*y>=6)' <-> 5*x'+2*y'>=0" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*x+2*y>=6)' <-> 5*x'+2*y'>=0".asFormula)),
-      derive(1,0::Nil)
+      derive(1,0::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)),
-      derive(1,0::Nil)
+      derive(1,0::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
   it should "derive (x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
-      derive(1,0::Nil)
+      derive(1,0::Nil) & byUS("<-> reflexive")
+    ) shouldBe 'proved
+  }
+
+  it should "derive [{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
+      derive(1,0::1::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 

@@ -15,6 +15,8 @@ import scala.collection.immutable._
  * Tactix: Main tactic library with simple interface.
  *
  * This library features all main tactic elements for most common cases, except sophisticated tactics.
+ * Brief documentation for the tactics is provided inline in this interface file.
+ * Following toward the implementation reveals more detailed documentation.
  *
  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
