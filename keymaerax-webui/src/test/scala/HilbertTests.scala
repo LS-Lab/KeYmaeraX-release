@@ -46,7 +46,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       implyR(1) &
         DW(1) &
         TacticLibrary.abstractionT(1) & allR(1) & prop
-    ).isProved shouldBe true
+    ) shouldBe 'proved
   }
 
   it should "prove x>=5 -> [{x'=2&x<=9}]x<=10" in {
@@ -54,7 +54,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       implyR(1) &
         DW(1) &
         TacticLibrary.abstractionT(1) & QE
-    ).isProved shouldBe true
+    ) shouldBe 'proved
   }
 
   it should "prove x>=5 -> [{x'=2}](x>=5)'" in {
@@ -66,7 +66,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         Dconst(1, 1::1:: 1::Nil) &
         Dassignb(SuccPosition(0, 1::Nil)) &
           TacticLibrary.abstractionT(1) & QE
-    ).isProved shouldBe true
+    ) shouldBe 'proved
   }
 
   it should "prove (x+2*y)'=x'+2*y'" in {
@@ -76,7 +76,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       useAt(Dlinear)(SuccPosition(0, 0::1::Nil)) & // Dtimes(SuccPosition(0, 0::1::Nil))
       Dvariable(SuccPosition(0, 0::1::1::Nil)) &
       byUS("= reflexive")
-    ).isProved shouldBe true
+    ) shouldBe 'proved
   }
 
   it should "prove (y)'=y forward" in {
@@ -86,47 +86,49 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       Dvariable(SuccPosition(0,0::Nil)) & byUS("= reflexive")) shouldBe 'proved
     TactixLibrary.proveBy(
       Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
-      Dvariable(SuccPosition(0,0::Nil)) & byUS("= reflexive")).isProved shouldBe true
+      Dvariable(SuccPosition(0,0::Nil)) & byUS("= reflexive")) shouldBe 'proved
   }
 
   it should "derive (y)'=y'" in {
-    val p =
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(y)'=y'".asFormula)),
       derive(1,0::Nil)
-    )
-    println("PROVED " + p)
-    p shouldBe 'proved
-    p.isProved shouldBe true
+    ) shouldBe 'proved
   }
 
   it should "derive (x+y)'=x'+y'" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula)),
       derive(1,0::Nil)
-    ).isProved shouldBe true
+    ) shouldBe 'proved
   }
 
   it should "derive (x*y)'=x'*y+x*y'" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x*y)'=x'*y+x*y'".asFormula)),
       derive(1,0::Nil)
-    ).isProved shouldBe true
+    ) shouldBe 'proved
   }
 
   it should "derive (x+2*y)'=x'+2*y'" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
       derive(1,0::Nil)
-    ).isProved shouldBe true
+    ) shouldBe 'proved
   }
 
-  it should "derive (5*3+2*9)'=0*3+5*0+(0*9+2*0)" in {
+  it should "derive (5*3+2*9)'=0*3+5*0+(0*9+2*0) unless optimized" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=0*3+5*0+(0*9+2*0)".asFormula)),
       derive(1,0::Nil)
-    ).isProved shouldBe true
+    ) shouldBe 'proved
+  }
+
+  it should "derive (5*3+2*9)'=5*0+2*0 if optimized (left linear preferred)" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=5*0+2*0".asFormula)),
+      derive(1,0::Nil)
+    ) shouldBe 'proved
   }
 
   it should "derive (5*x+2*y)'=5*x'+2*y'" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*x+2*y)'=5*x'+2*y'".asFormula)),
       derive(1,0::Nil)
-    ).isProved shouldBe true
+    ) shouldBe 'proved
   }
 
   it should "prove x>=5 -> [{x'=2}]x>=5" in {
@@ -140,7 +142,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
           Dconst(1, 1::1:: 1::Nil) &
           Dassignb(SuccPosition(0, 1::Nil)) & TacticLibrary.abstractionT(1) & QE
       )
-    ).isProved shouldBe true
+    ) shouldBe 'proved
   }
 
   it should "prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)" in {
@@ -151,7 +153,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         //@todo DC should not do absolute proof of implication but contextual
         DW(1) & debug("after DW") &
         TacticLibrary.abstractionT(1) & debug("after abstraction") & QE
-    ).isProved shouldBe true
+    ) shouldBe 'proved
   }
 
   it should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in {
@@ -162,7 +164,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     step(1) & step(1) &
     useAt("DI differential invariant")(1) &
       (l(step)*) & TacticLibrary.abstractionT(1) & master
-    ).isProved shouldBe true
+    ) shouldBe 'proved
   }
 
 }

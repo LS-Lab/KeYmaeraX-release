@@ -297,6 +297,7 @@ object TacticLibrary {
         /** Equivalence rewriting step */
         def equivStep(other: Expression, factTactic: Tactic): Tactic =
         //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
+        //@todo simplify substantially if subst=id
           debugT("start useAt") & cutRightT(C(subst(other)))(p.top) & debugT("  cutted right") & onBranch(
             //(BranchLabels.cutUseLbl, debugT("  useAt result")),
             //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right

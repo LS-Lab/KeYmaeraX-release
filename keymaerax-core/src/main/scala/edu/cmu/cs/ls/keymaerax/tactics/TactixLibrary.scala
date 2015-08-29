@@ -66,6 +66,12 @@ object TactixLibrary {
     require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
     useAt(fact.conclusion.succ.head, key, byUS(fact))
   }
+  // like useAt(fact,key) yet literally without uniform substitution of fact
+  private[tactics] def useDirectAt(fact: Provable, key: PosInExpr): PositionTactic = {
+    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
+    require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
+    useAt(fact.conclusion.succ.head, key, by(fact))
+  }
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma, key:PosInExpr, inst: Subst=>Subst): PositionTactic = useAt(lem.fact, key, inst)
   def useAt(lem: Lemma, key:PosInExpr): PositionTactic = useAt(lem.fact, key)

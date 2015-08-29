@@ -165,6 +165,7 @@ object DerivedAxioms {
     case "0+" => Some(zeroPlusF, zeroPlusT)
     case "x' derive var" => Some(DvarF, DvarT)
     case "' linear" => Some(DlinearF, DlinearT)
+    case "' linear right" => Some(DlinearRightF, DlinearRightT)
     case "DG differential pre-ghost" => Some(DGpreghostF, DGpreghostT)
     case "= reflexive" => Some(equalReflexiveF, equalReflexiveT)
     case "= commute" => Some(equalCommuteF, equalCommuteT)
@@ -1145,6 +1146,20 @@ object DerivedAxioms {
       byUS("= reflexive")
   )
   lazy val DlinearT = derivedAxiomT(Dlinear)
+  /**
+   * {{{Axiom "' linear right".
+   *    (f(??)*c())' = f(??)'*c()
+   * End.
+   * }}}
+   */
+  lazy val DlinearRightF = "(f(??)*c())' = (f(??))'*c()".asFormula
+  lazy val DlinearRight = derivedAxiom("' linear right",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DlinearRightF)),
+    useAt("* commute")(SuccPosition(0, 0::0::Nil)) &
+      useAt("* commute")(SuccPosition(0, 1::Nil)) &
+      by(Dlinear)
+  )
+  lazy val DlinearRightT = derivedAxiomT(DlinearRight)
 
   // real arithmetic
 

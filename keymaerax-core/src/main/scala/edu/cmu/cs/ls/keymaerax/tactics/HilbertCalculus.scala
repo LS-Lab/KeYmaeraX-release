@@ -263,8 +263,11 @@ object HilbertCalculus {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         node.sequent.at(p).get match {
-          case t: Term => Some(useAt(deriveProof(t), PosInExpr(0::Nil))(p) & debug("derived"))
-          case f: Formula => Some(useAt(deriveProofF(f), PosInExpr(0::Nil))(p))
+          case t: Term    => Some(useDirectAt(deriveProof(t),  PosInExpr(0::Nil))(p)
+            //@todo why is the following needed? useAt doesn't optimize subst=id?
+            & debug("derived") & byUS("= reflexive"))
+          case f: Formula => Some(useDirectAt(deriveProofF(f), PosInExpr(0::Nil))(p)
+            & debug("derived") & byUS("= reflexive"))
         }
 
       }
@@ -277,7 +280,9 @@ object HilbertCalculus {
               UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), de)::Nil), DerivedAxioms.equalReflex.fact.conclusion))
         assert(initial.isProved && initial.proved==deIsDe, "Proved reflexive start " + initial + " for " + de)
         if (DEBUG) println("derive starts at " + initial)
-        derive(initial, PosInExpr(1::Nil))
+        val r = derive(initial, PosInExpr(1::Nil))
+        if (DEBUG) println("derive(" + de.prettyString + ") = ~~> " + r + " done")
+        r
       } ensuring(r => r.isProved, "derive remains proved: " + " final derive(" + de + ")")
 
       private def debugF(s: => Any): (Provable=>Provable)=>(Provable=>Provable) = tac => proof => {val pr = tac(proof); println("=== " + s + " === " + pr); pr}
@@ -298,6 +303,15 @@ object HilbertCalculus {
           pos.append(PosInExpr(0::Nil))),
           pos.append(PosInExpr(1::Nil))
         )
+        //@note optimizations
+        case Differential(Times(num,_)) if StaticSemantics.freeVars(num).isEmpty => derive(
+          debugPF("derive(l')")(useFor("' linear"))(SuccPosition(0,pos))(de),
+          pos.append(PosInExpr(1::Nil))
+        )
+        case Differential(Times(_,num)) if StaticSemantics.freeVars(num).isEmpty => derive(
+          debugPF("derive(l')")(useFor("' linear right"))(SuccPosition(0,pos))(de),
+          pos.append(PosInExpr(0::Nil))
+        )
         case Differential(Times(_,_)) => derive(derive(
           debugPF("derive(*')")(useFor("*' derive product"))(SuccPosition(0,pos))(de),
           pos.append(PosInExpr(0::0::Nil))),
@@ -308,9 +322,11 @@ object HilbertCalculus {
         case Differential(x:Variable) =>
           if (false&&INTERNAL) useFor("x' derive variable", PosInExpr(0::0::Nil))(SuccPosition(0,pos))(de)
           else if (true)
-            Axiom.axiom("x' derive var")(
+            debugPF("derive(x')")(useFor(Axiom.axiom("x' derive var")(
               Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x),DifferentialSymbol(x)))),
-              UniformRenaming(Variable("x_",None,Real),x))
+              UniformRenaming(Variable("x_",None,Real),x)),
+              PosInExpr(0::Nil)
+            ))(SuccPosition(0,pos))(de)
             //useFor(Axiom.axiom("x' derive var"), PosInExpr(0::Nil))(SuccPosition(0,pos))(de)
             //useFor("all eliminate")(SuccPosition(0))(Axiom.axiom("x' derive var"))
           //@todo this is convoluted and inefficient compared to a direct forward proof
