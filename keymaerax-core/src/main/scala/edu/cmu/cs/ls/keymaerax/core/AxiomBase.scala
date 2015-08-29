@@ -482,6 +482,10 @@ Axiom "x' derive variable".
   \forall x_ ((x_)' = x_')
 End.
 
+Axiom "x' derive var". /* @todo derived */
+   ((x_)' = x_')
+End.
+
 /** EXCLUSIVELY FOR HYBRID PROGRAMS. UNSOUND FOR HYBRID GAMES. */
 
 /* @NOTE requires removing axioms unsound for hybrid games */
