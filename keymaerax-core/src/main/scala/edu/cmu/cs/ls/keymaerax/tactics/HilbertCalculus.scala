@@ -4,8 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.Subst
-import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
+//import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -18,8 +17,8 @@ import edu.cmu.cs.ls.keymaerax.tools.Tool
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  */
-object HilbertCalculus {
-  import TactixLibrary.useAt
+object HilbertCalculus extends UnifyUSCalculus {
+  import TactixLibrary.QE
 
   /** True when insisting on internal useAt technology, false when external tactic calls are okay. */
   private val INTERNAL = true
@@ -78,30 +77,7 @@ object HilbertCalculus {
   /** DE: Differential Effect exposes the effect of a differential equation on its differential symbols */
   lazy val DE                 : PositionTactic = if (INTERNAL) useAt("DE differential effect") |
     useAt("DE differential effect (system)") * getODEDim
-  /*new PositionTactic("DE differential effect (system)") {
-      override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-        case Box(_: ODESystem, _) => true
-        case _ => false
-      }
-      def apply(p: Position): Tactic = new ConstructionTactic(name) {
-        override def applicable(node : ProofNode) = applies(node.sequent, p)
-        override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-          Some(useAt("DE differential effect (system)")(p) *
-            StaticSemantics.boundVars(node.sequent(p).asInstanceOf[Modal].program).toSymbolSet.size)
-      }
-    }*/
   else ODETactics.diffEffectT
-  /** Computing dimension of ODE at indicated position of a sequent */
-  private val getODEDim: (Sequent,Position)=>Int = (sequent,pos) => {
-    import SequentConverter._
-    def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).toSymbolSet.filter(x=>x.isInstanceOf[DifferentialSymbol]).size
-    sequent.at(pos) match {
-      case Some(Box(ode: ODESystem, _))     => odeDim(ode)
-      case Some(Diamond(ode: ODESystem, _)) => odeDim(ode)
-      case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
-      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
-    }
-  }
   /** DI: Differential Invariant used for proving a formula to be an invariant of a differential equation @see [[diffInd()]] */
   //@todo Dconstify usually needed for DI
   lazy val DI                 : PositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
@@ -184,6 +160,10 @@ object HilbertCalculus {
   lazy val Dexists            : PositionTactic = useAt("exists' derive exists")
 
   //lazy val ind
+
+  /*******************************************************************
+    * Stepping auto-tactic
+    *******************************************************************/
 
   /**
    * Make the canonical simplifying proof step based at the indicated position
@@ -285,12 +265,16 @@ object HilbertCalculus {
     }
   }
 
+  /*******************************************************************
+    * Derive by proof
+    *******************************************************************/
+
   /** Derive the differential expression at the indicated position (Hilbert computation deriving the answer by proof). */
   lazy val derive: PositionTactic = new PositionTactic("derive") {
     import FormulaConverter._
     import TermConverter._
     import SequentConverter._
-    import TactixLibrary._
+    import Tactic.DEBUG
 
     override def applies(s: Sequent, p: Position): Boolean = s.at(p) match {
       case Some(Differential(_)) => true
@@ -436,164 +420,21 @@ object HilbertCalculus {
   }
   } // derive
 
-  /** useFor(axiom) use the given axiom forward for the selected position in the given Provable to conclude a new Provable */
-  def useFor(axiom: String): (Position => (Provable => Provable)) = useFor(axiom, PosInExpr(0::Nil))
 
-  /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
-  def useFor(axiom: String, key: PosInExpr): (Position => (Provable => Provable)) =
-    if (Axiom.axioms.contains(axiom)) useFor(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms(axiom))))(Axiom(axiom), 0), key)
-    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0), key)
-    else throw new IllegalArgumentException("Unknown axiom " + axiom)
+  /*******************************************************************
+    * Internal helpers
+    *******************************************************************/
 
-  /** useFor(fact,key,inst) use the key part of the given fact forward for the selected position in the given Provable to conclude a new Provable
-    * Forward Hilbert-style proof analogue of [[TacticLibrary.useAt()]].
-    * @author Andre Platzer
-    * @param fact the Provable whose conclusion  to use to simplify at the indicated position of the sequent
-    * @param key the part of the fact's conclusion to unify the indicated position of the sequent with
-    * @param inst Transformation for instantiating additional unmatched symbols that do not occur in `fact.conclusion(key)`.
-    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
-    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
-    * @see [[TacticLibrary.useAt()]]
-    */
-  def useFor(fact: Provable, key: PosInExpr, inst: RenUSubst=>RenUSubst = (us => us)): (Position => (Provable => Provable)) = {
-    import FormulaConverter._
+  /** Computing dimension of ODE at indicated position of a sequent */
+  private val getODEDim: (Sequent,Position)=>Int = (sequent,pos) => {
     import SequentConverter._
-    import TactixLibrary._
-    val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).extractContext(key)
-    if (DEBUG) println("useFor(" + fact.conclusion + ") key: " + keyPart + " in key context: " + keyCtx)
-
-    val HISTORY=false
-
-    pos => proof => {
-
-      val (ctx, expr) = proof.conclusion.splitContext(pos)
-      val subst = inst(UnificationMatch(keyPart, expr))
-      if (DEBUG) println("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
-      if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof)
-      assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
-
-      def useFor[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable =
-      {
-        require(subst(k) == c, "correctly matched input")
-        require(C(c).extractContext(p.inExpr) ==(C, c), "correctly split at position p")
-        require(List((C, DotFormula), (C, DotTerm)).contains(C.ctx.extractContext(p.inExpr)), "correctly split at position p")
-
-        /** Equivalence rewriting step */
-        def equivStep(other: Expression, factTactic: Tactic): Provable = {
-          //@todo delete factTactic or use factTactic turned argument into Provable=>Provable
-          require(fact.isProved, "currently want proved facts as input only")
-          require(proof.conclusion.updated(p.top, C(subst(k)))==proof.conclusion, "expected context split")
-          // |- fact: k=o
-          val sideUS: Provable = subst.toForward(fact)
-          // |- subst(fact): subst(k)=subst(o) by US
-          /*(
-            subst(fact.conclusion)
-            ,
-            AxiomaticRule("CT term congruence",
-              USubst(SubstitutionPair(FuncOf(Function("ctx_", None, Real, Real), DotTerm), DotTerm) ::
-                SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), subst(k)) ::
-                SubstitutionPair(FuncOf(Function("g_", None, Real, Real), Anything), subst(other)) ::
-                Nil))
-//            AxiomaticRule("CQ equation congruence",
-//            USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), Anything), C.ctx) :: Nil))
-          )*/
-          val sideCE = sideUS(
-            Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(subst(k)), C(subst(other)))))
-            ,
-            k.kind match {
-              case TermKind => AxiomaticRule("CQ equation congruence",
-                USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
-                  SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), subst(k)) ::
-                  SubstitutionPair(FuncOf(Function("g_", None, Real, Real), Anything), subst(other)) ::
-                  Nil))
-              case FormulaKind => AxiomaticRule("CE congruence",
-                USubst(SubstitutionPair(PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula), C.ctx) ::
-                  SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), subst(k)) ::
-                  SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), subst(other)) ::
-                  Nil))
-            }
-            )
-          // |- C{subst(k)} <-> C{subst(o)} by CQ
-//          val sideSwap = sideCE(
-//            Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(subst(other)), C(subst(k))))),
-//            CommuteEquivRight(SuccPos(0))
-//          )
-//          // |- C{subst(o)} <-> C{subst(k)} by CommuteEquivRight
-          val side2: Provable = sideCE(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(k)), C(subst(other))))),
-            EquivifyRight(SuccPos(0)))
-          // |- C{subst(k)}  -> C{subst(other)} by EquivifyRight
-          //assert(C(subst(k)) == expr, "matched expression expected")
-          val coside: Provable = side2(
-            proof.conclusion.updated(p.top, Imply(C(subst(k)), C(subst(other)))),
-            CoHideRight(p.top.asInstanceOf[SuccPos])
-          )
-          // G |- C{subst(k)}  -> C{subst(other)}, D by CoHideRight
-          val proved = {Provable.startProof(proof.conclusion.updated(p.top, C(subst(other))))(
-            CutRight(C(subst(k)), p.top.asInstanceOf[SuccPos]), 0
-          ) (coside, 1)
-          } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(other))), "prolonged conclusion"
-            ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")
-          //                           *
-          //                        ------
-          // G |- C{subst(k)}, D    coside
-          // ------------------------------ CutRight
-          // G |- C{subst(o)}, D
-          proved(proof, 0)
-
-//
-//          //fact(Sequent(Nil,IndexedSeq(),IndexedSeq(Equal(subst(k), subst(c)))),
-//          proof(proof.conclusion.updated(pos.top, C(subst(other))), CutRight(C(subst(other)), pos.top.asInstanceOf[SuccPos]))
-//          //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
-//          cutRightT(C(subst(other)))(p.top) & onBranch(
-//            //(BranchLabels.cutUseLbl, debugT("  useAt result")),
-//            //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
-//            //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-//            (BranchLabels.cutShowLbl, cohideT(p.top) /*& assertT(0,1)*/ &
-//              equivifyRightT(SuccPosition(0)) & (
-//              if (other.kind == FormulaKind) AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr)
-//              else if (other.kind == TermKind) AxiomaticRuleTactics.equationCongruenceT(p.inExpr)
-//              else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-//              factTactic)
-//            //@todo error if factTactic is not applicable (factTactic | errorT)
-//          )
-        } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(other))), "prolonged conclusion"
-          ) ensuring(r=>r.subgoals==proof.subgoals, "expected original premises")
-
-        K.ctx match {
-          case Equal(DotTerm, other) =>
-            //@todo this is convoluted and inefficient compared to a direct forward proof
-            //@todo commute
-            if (HISTORY) TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-              useAt(fact.conclusion.succ.head, key.sibling, byUS(fact), inst)(p))
-            else
-              equivStep(other, byUS(fact))
-
-          case Equal(other, DotTerm) =>
-            //@todo this is convoluted and inefficient compared to a direct forward proof
-            if (HISTORY) TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-              useAt(fact.conclusion.succ.head, key.sibling, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & byUS(fact), inst)(p))
-            else
-              equivStep(other, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & byUS(fact))
-
-          case Equiv(DotFormula, other) =>
-            //@todo this is convoluted and inefficient compared to a direct forward proof
-            //@todo commute
-            if (HISTORY) TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-              useAt(fact.conclusion.succ.head, key.sibling, byUS(fact), inst)(p))
-            else
-              equivStep(other, byUS(fact))
-
-          case Equiv(other, DotFormula) =>
-            //@todo this is convoluted and inefficient compared to a direct forward proof
-            if (HISTORY) TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-              useAt(fact.conclusion.succ.head, key.sibling, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & byUS(fact), inst)(p))
-            else
-              equivStep(other, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & byUS(fact))
-        }
-      }
-      val r = useFor(subst, keyCtx, keyPart, pos, ctx, expr)
-      if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof + "\n ~~> " + r)
-      r
+    def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).toSymbolSet.filter(x=>x.isInstanceOf[DifferentialSymbol]).size
+    sequent.at(pos) match {
+      case Some(Box(ode: ODESystem, _))     => odeDim(ode)
+      case Some(Diamond(ode: ODESystem, _)) => odeDim(ode)
+      case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
     }
   }
+
 }

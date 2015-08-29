@@ -25,8 +25,7 @@ import scala.collection.immutable._
  * @see [[HilbertCalculus]]
  * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
  */
-object TactixLibrary {
-  private[tactics] val DEBUG = System.getProperty("DEBUG", "false")=="true"
+object TactixLibrary extends UnifyUSCalculus {
 
 //  /** step: makes one sequent proof step to simplify the formula at the indicated position (unless @invariant needed) */
   val step                    : PositionTactic = TacticLibrary.step
@@ -46,67 +45,13 @@ object TactixLibrary {
   def master(qeTool: String)  : Tactic = master(new NoneGenerate(), qeTool)
   def master(gen: Generator[Formula] = new NoneGenerate(), qeTool: String = "Mathematica"): Tactic = TacticLibrary.master(gen, true, qeTool)
 
-  /** US(form) reduce the proof to a proof of form by a suitable uniform substitution obtained by unification */
-  def US(form: Sequent): Tactic = TacticLibrary.US(form)
+  /*******************************************************************
+    * unification and matching based auto-tactics
+    * @see [[UnifyUSCalculus]]
+    *******************************************************************/
+
   /** US: uniform substitution */
   def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula]) = Map()): Tactic = PropositionalTacticsImpl.uniformSubstT(subst, delta)
-
-  type Subst = UnificationMatch.Subst
-  //def Subst(subsDefs: immutable.Seq[(Expression,Expression)]): Subst = RenUSubst(subsDefs)
-
-  /** useAt(fact, tactic)(pos) uses the given fact (that'll be proved by tactic after unification) at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(fact: Formula, key: PosInExpr, tactic: Tactic, inst: Subst=>Subst): PositionTactic = TacticLibrary.useAt(fact, key, tactic, inst)
-  def useAt(fact: Formula, key: PosInExpr, tactic: Tactic): PositionTactic = TacticLibrary.useAt(fact, key, tactic)
-  /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(fact: Formula, key: PosInExpr, inst: Subst=>Subst): PositionTactic = useAt(fact, key, skip, inst)
-  def useAt(fact: Formula, key: PosInExpr): PositionTactic = useAt(fact, key, skip)
-  /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(fact: Provable, key: PosInExpr, inst: Subst=>Subst): PositionTactic = {
-    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
-    useAt(fact.conclusion.succ.head, key, byUS(fact), inst)
-  }
-  def useAt(fact: Provable, key: PosInExpr): PositionTactic = {
-    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
-    require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
-    useAt(fact.conclusion.succ.head, key, byUS(fact))
-  }
-  // like useAt(fact,key) yet literally without uniform substitution of fact
-  private[tactics] def useDirectAt(fact: Provable, key: PosInExpr): PositionTactic = {
-    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
-    require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
-    useAt(fact.conclusion.succ.head, key, by(fact))
-  }
-  /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(lem: Lemma, key:PosInExpr, inst: Subst=>Subst): PositionTactic = useAt(lem.fact, key, inst)
-  def useAt(lem: Lemma, key:PosInExpr): PositionTactic = useAt(lem.fact, key)
-  def useAt(lem: Lemma, inst: Subst=>Subst) : PositionTactic = useAt(lem.fact, PosInExpr(0::Nil), inst)
-  def useAt(lem: Lemma)       : PositionTactic = useAt(lem.fact, PosInExpr(0::Nil))
-  /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(axiom: String, key: PosInExpr, inst: Subst=>Subst): PositionTactic =
-    if (Axiom.axioms.contains(axiom)) useAt(Axiom.axiom(axiom), key, inst)
-    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR((axiom)), 0), key, inst)
-    else throw new IllegalArgumentException("Unknown axiom " + axiom)
-  def useAt(axiom: String, key: PosInExpr): PositionTactic =
-    if (Axiom.axioms.contains(axiom)) useAt(Axiom.axiom(axiom), key)
-    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0), key)
-    else throw new IllegalArgumentException("Unknown axiom " + axiom)
-  def useAt(axiom: String, inst: Subst=>Subst): PositionTactic = useAt(axiom, PosInExpr(0::Nil), inst)
-  def useAt(axiom: String): PositionTactic = useAt(axiom, PosInExpr(0::Nil))
-
-  /** by(provable) is a pseudo-tactic that uses the given Provable to continue or close the proof (if it fits to what has been proved) */
-  def by(provable: Provable)  : Tactic = new ByProvable(provable)
-  /** by(lemma) is a pseudo-tactic that uses the given Lemma to continue or close the proof (if it fits to what has been proved) */
-  def by(lemma: Lemma)        : Tactic = by(lemma.fact)
-  /** byUS(provable) proves by a uniform substitution instance of provable */
-  def byUS(provable: Provable): Tactic = US(provable.conclusion) & by(provable)
-  /** byUS(lemma) proves by a uniform substitution instance of lemma */
-  def byUS(lemma: Lemma)      : Tactic  = byUS(lemma.fact)
-  /** byUS(axiom) proves by a uniform substitution instance of axiom */
-  def byUS(axiom: String)     : Tactic =
-    if (Axiom.axioms.contains(axiom)) byUS(Axiom.axiom(axiom))
-    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) byUS(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DerivedAxioms.derivedAxiomFormula(axiom).get)))(DerivedAxioms.derivedAxiomR(axiom), 0))
-    else throw new IllegalArgumentException("Unknown axiom " + axiom)
-
 
   // conditional tactics
 
@@ -359,7 +304,7 @@ object TactixLibrary {
     val rootNode = new RootNode(goal)
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
-    if (!rootNode.isClosed() || DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().map(x => "Open Goal: " + x.sequent).mkString(("\n"))))
+    if (!rootNode.isClosed() || Tactic.DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().map(x => "Open Goal: " + x.sequent).mkString(("\n"))))
     rootNode.provableWitness
   }
 
