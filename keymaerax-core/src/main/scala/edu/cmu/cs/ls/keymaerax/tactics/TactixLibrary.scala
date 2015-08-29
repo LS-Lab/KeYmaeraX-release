@@ -171,6 +171,10 @@ object TactixLibrary {
 
   /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds */
   def cut(cut : Formula)      : Tactic         = TacticLibrary.cutT(Some(cut))
+  /** cut a formula in in place of pos on the right to prove it on one branch and then assume it on the other. */
+  def cutR(cut : Formula)     : PositionTactic  = PropositionalTacticsImpl.cutRightT(cut)
+  /** cut a formula in in place of pos on the left to prove it on one branch and then assume it on the other. */
+  def cutL(cut : Formula)     : PositionTactic  = PropositionalTacticsImpl.cutLeftT(cut)
 
   // quantifiers
   /** all right: Skolemize a universal quantifier in the succedent */
