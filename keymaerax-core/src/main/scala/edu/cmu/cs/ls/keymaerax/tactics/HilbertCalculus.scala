@@ -94,16 +94,30 @@ object HilbertCalculus extends UnifyUSCalculus {
       def apply(p: Position): Tactic = new ConstructionTactic(name) {
         override def applicable(node : ProofNode) = applies(node.sequent, p)
         override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-          Some(DI(p) & (stepAt(p) & stepAt(p)) && (
-            QE,
-            //@note derive before DE to keep positions easier
-            derive(p.append(PosInExpr(1::Nil))) &
-              DE(p) &
-              (Dassignb(p.append(PosInExpr(1::Nil))) * (s=>getODEDim(s,p))) &
-              //@note DW after DE to keep positions easier
-              ifT(hasODEDomain, DW)(p) &
-              TacticLibrary.abstractionT(p) & QE
-            ))
+          if (p.isTopLevel && p.isSucc)
+            Some(DI(p) &
+              (stepAt(p) & stepAt(p)) && (
+              QE,
+              //@note derive before DE to keep positions easier
+              derive(p.append(PosInExpr(1::Nil))) &
+                DE(p) &
+                (Dassignb(p.append(PosInExpr(1::Nil))) * (s=>getODEDim(s,p))) &
+                //@note DW after DE to keep positions easier
+                ifT(hasODEDomain, DW)(p) &
+                TacticLibrary.abstractionT(p) & QE
+              ))
+        else
+            Some((DI &
+              //@note derive before DE to keep positions easier
+              shift(PosInExpr(1::1::Nil),
+              shift(PosInExpr(1::Nil), derive) &
+                DE &
+                (shift(PosInExpr(1::Nil), Dassignb) * getODEDim) &
+                //@note DW after DE to keep positions easier
+                ifT(hasODEDomain, DW) &
+                TacticLibrary.abstractionT
+              ))(p)
+              )
       }
     }
 

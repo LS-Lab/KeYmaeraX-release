@@ -237,13 +237,27 @@ trait UnifyUSCalculus {
             )
 
           case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel) =>
-            cutRightT(C(subst(other)))(p.top) & onBranch(
+            (if (p.isSucc) cutRightT(C(subst(other)))(p.top)
+            else cutLeftT(C(subst(other)))(p.top)) & onBranch(
               (BranchLabels.cutShowLbl, cohideT(p.top) & implyR(SuccPos(0)) &
-                AxiomaticRuleTactics.propositionalCongruenceT(p.inExpr) //@todo simple approximation would be: ((Monb | Mond | allMon ...)*)
+                AxiomaticRuleTactics.propositionalCongruenceT(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
+                // gather back to a single implication for axiom-based factTactic to succeed
+                & InverseImplyRightT
                 & factTactic)
             )
 
-          case Imply(DotFormula, other) if !(p.isAnte && p.isTopLevel) => ???
+          case Imply(DotFormula, other) if !(p.isAnte && p.isTopLevel) =>
+            println("Check this useAt case")
+            // same as "case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel)"
+            (if (p.isSucc) cutRightT(C(subst(other)))(p.top)
+            else cutLeftT(C(subst(other)))(p.top)) & onBranch(
+              (BranchLabels.cutShowLbl, cohideT(p.top) & implyR(SuccPos(0)) &
+                AxiomaticRuleTactics.propositionalCongruenceT(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
+                // gather back to a single implication for axiom-based factTactic to succeed
+                & InverseImplyRightT
+                & factTactic)
+            )
+
 
           case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
             //@todo only prove remainder absolutely by proving prereq if that proof works out. Otherwise preserve context to prove prereq by master.
@@ -435,7 +449,8 @@ trait UnifyUSCalculus {
   def chaseWide(breadth: Int): PositionTactic = chaseWide(breadth, 2*breadth)
 
   private def unprog: PositionTactic = chaseWide(1,2, e => e match {
-    case Box(Assign(_,_))    => "[:=] assign" :: "[:=] assign update" :: Nil
+    case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
+    case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
     case _ => AxiomIndex.axiomsFor(e)
   })
 
