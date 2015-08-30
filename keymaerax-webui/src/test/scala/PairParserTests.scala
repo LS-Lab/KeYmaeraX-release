@@ -303,6 +303,7 @@ class PairParserTests extends FlatSpec with Matchers {
 //    ("<{x:=x+1;{x'=1}^@ ++ x:=x-1;}*>(0<=x&x<1)", "<{x:=x+1;{x'=1}^@ ++ x:=x-1;}*> (0<=x&x<1)"),
 //    ("<{{x:=x+1;{x'=1}^@ ++ x:=x-1;}^@}*^@>(0<=x&x<1)", "<{{{{x:=x+1;{{x'=1}^@}} ++ {x:=x-1;}}^@}*}^@> (0<=x&x<1)"),
 
+    ("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;} ]x>=1", unparseable),
 
     ("true", "true"),
     ("false", "false")

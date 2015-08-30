@@ -95,12 +95,17 @@ final case class RenUSubst(subsDefsInput: immutable.Seq[Pair[Expression,Expressi
   def substitution: RenUSubst = RenUSubst(subsDefs.map(sp => Pair(sp.what, sp.repl)))
 
   /** Convert to tactic to reduce to form by successively using the respective uniform renaming and uniform substitution rules */
+  // backwards style: first schedule US and then schedule rename on its result
   def toTactic(form: Sequent): Tactic = getUSubstTactic(RenUSubst(rens)(form)) & getRenamingTactic
 
   /** Convert to forward tactic using the respective uniform renaming and uniform substitution rules */
   def toForward: Provable => Provable = fact => {
-    Predef.require(rens.isEmpty, "renaming conversion not yet implemented")
-    UniformSubstitutionRule.UniformSubstitutionRuleForward(fact, usubst)
+    //Predef.require(rens.isEmpty, "renaming conversion not yet implemented")
+    // forward style: first rename fact, then US the result
+    UniformSubstitutionRule.UniformSubstitutionRuleForward(
+      rens.foldLeft(fact)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
+      ,
+      usubst)
   }
 
   /** Get the renaming tactic part */

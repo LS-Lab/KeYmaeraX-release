@@ -34,6 +34,10 @@ object DerivedAxioms {
   val derivedAxiomDB = new FileLemmaDB
   type LemmaID = String
 
+  /** A Provable proving the derived axiom named id (convenience) */
+  def derivedAxiom(name: String): Provable =
+    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(derivedAxiomFormula(name).get)))(derivedAxiomR(name), 0)
+
   private val AUTO_INSERT = true
 
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
@@ -130,7 +134,10 @@ object DerivedAxioms {
     case "<:=> assign" => Some(assigndF, assigndT)
     case ":= assign dual" => Some(assignDualF, assignDualT)
     case "[:=] assign equational" => Some(assignbEquationalF, assignbEquationalT)
+    case "[:=] assign update" => Some(assignbUpdateF, assignbUpdateT)
     case "[:=] vacuous assign" => Some(vacuousAssignbF, vacuousAssignbT)
+    case "<:=> assign equational" => ??? //Some(assigndEquationalF, assigndEquationalT)
+    case "<:=> assign update" => Some(assigndUpdateF, assigndUpdateT)
     case "<:=> vacuous assign" => Some(vacuousAssigndF, vacuousAssigndT)
     case "<':=> differential assign" => Some(assignDF, assignDT)
     case "<:*> assign nondet" => Some(nondetassigndF, nondetassigndT)
@@ -165,7 +172,8 @@ object DerivedAxioms {
     case "true&" => Some(trueAndF, trueAndT)
     case "0*" => Some(zeroTimesF, zeroTimesT)
     case "0+" => Some(zeroPlusF, zeroPlusT)
-    case "x' derive var" => Some(DvarF, DvarT)
+//    case "x' derive var" => Some(DvarF, DvarT)
+    case "x' derive variable" => Some(DvariableF, DvariableT)
     case "' linear" => Some(DlinearF, DlinearT)
     case "' linear right" => Some(DlinearRightF, DlinearRightT)
     case "DG differential pre-ghost" => Some(DGpreghostF, DGpreghostT)
@@ -174,6 +182,12 @@ object DerivedAxioms {
     case "= commute" => Some(equalCommuteF, equalCommuteT)
     case "<=" => Some(lessEqualF, lessEqualT)
     case "= negate" => Some(notNotEqualF, notNotEqualT)
+    case "! !=" => derivedAxiomInfo("= negate")
+    case "! =" => Some(notEqualF, notEqualT)
+    case "! <" => Some(notLessF, notLessT)
+    case "! <=" => Some(notLessEqualF, notLessEqualT)
+    case "! >" => Some(notGreaterF, notGreaterT)
+    case "! >=" => derivedAxiomInfo("< negate")
     case "< negate" => Some(notGreaterEqualF, notGreaterEqualT)
     case ">= flip" => Some(flipGreaterEqualF, flipGreaterEqualT)
     case "> flip" => Some(flipGreaterF, flipGreaterT)
@@ -445,6 +459,38 @@ object DerivedAxioms {
   )
 
   lazy val assignbEquationalT = derivedAxiomT(assignbEquationalAxiom)
+
+  /**
+   * {{{Axiom "[:=] assign update".
+   *    [x:=t();]p(x) <-> [x:=t();]p(x)
+   * End.
+   * }}}
+   * @Derived
+   * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+   */
+  lazy val assignbUpdateF = "[x:=t();]p(x) <-> [x:=t();]p(x)".asFormula
+  lazy val assignbUpdate = derivedAxiom("[:=] assign update",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(assignbUpdateF)),
+      byUS("<-> reflexive")
+  )
+
+  lazy val assignbUpdateT = derivedAxiomT(assignbUpdate)
+
+  /**
+   * {{{Axiom "<:=> assign update".
+   *    <x:=t();>p(x) <-> <x:=t();>p(x)
+   * End.
+   * }}}
+   * @Derived
+   * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+   */
+  lazy val assigndUpdateF = "<x:=t();>p(x) <-> <x:=t();>p(x)".asFormula
+  lazy val assigndUpdate = derivedAxiom("<:=> assign update",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(assigndUpdateF)),
+    byUS("<-> reflexive")
+  )
+
+  lazy val assigndUpdateT = derivedAxiomT(assigndUpdate)
 
   /**
    * {{{Axiom "[:=] vacuous assign".
@@ -1120,25 +1166,38 @@ object DerivedAxioms {
   lazy val DGpreghostT = derivedAxiomT(DGpreghost)
 
   /**
-   * {{{Axiom "x' derive var".
-   *    (x_)' = x_'
+   * {{{Axiom "x' derive variable".
+   *    \forall x_ ((x_)' = x_')
    * End.
    * }}}
-   * @todo derive
    */
-  lazy val DvarF = "((x_)' = x_')".asFormula
-  lazy val Dvar = derivedAxiom("'x derive var",
-    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DvarF)))
-      (CutRight("\\forall x_ ((x_)' = x_')".asFormula, SuccPos(0)), 0)
-      // right branch
-      (UniformSubstitutionRule.UniformSubstitutionRuleForward(Axiom.axiom("all eliminate"),
-        USubst(SubstitutionPair(PredOf(Function("p_",None,Real,Bool),Anything), DvarF)::Nil)), 0)
-      // left branch
-      (Axiom.axiom("x' derive variable"), 0)
-    /*TacticLibrary.instantiateQuanT(Variable("x_",None,Real), Variable("x",None,Real))(1) &
-      byUS("= reflexive")*/
+  lazy val DvariableF = "\\forall x_ ((x_)' = x_')".asFormula
+  lazy val Dvariable = derivedAxiom("x' derive variable",
+    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DvariableF)))
+      (Skolemize(SuccPos(0)), 0)
+      (Axiom.axiom("x' derive var"), 0)
   )
-  lazy val DvarT = derivedAxiomT(Dvar)
+  lazy val DvariableT = derivedAxiomT(Dvariable)
+//  /**
+//   * {{{Axiom "x' derive var".
+//   *    (x_)' = x_'
+//   * End.
+//   * }}}
+//   * @todo derive
+//   */
+//  lazy val DvarF = "((x_)' = x_')".asFormula
+//  lazy val Dvar = derivedAxiom("'x derive var",
+//    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DvarF)))
+//      (CutRight("\\forall x_ ((x_)' = x_')".asFormula, SuccPos(0)), 0)
+//      // right branch
+//      (UniformSubstitutionRule.UniformSubstitutionRuleForward(Axiom.axiom("all eliminate"),
+//        USubst(SubstitutionPair(PredOf(Function("p_",None,Real,Bool),Anything), DvarF)::Nil)), 0)
+//      // left branch
+//      (Axiom.axiom("x' derive variable"), 0)
+//    /*TacticLibrary.instantiateQuanT(Variable("x_",None,Real), Variable("x",None,Real))(1) &
+//      byUS("= reflexive")*/
+//  )
+//  lazy val DvarT = derivedAxiomT(Dvar)
   /**
    * {{{Axiom "' linear".
    *    (c()*f(??))' = c()*(f(??))'
@@ -1234,6 +1293,56 @@ object DerivedAxioms {
     QE
   )
   lazy val notNotEqualT = derivedAxiomT(notNotEqual)
+  /**
+   * {{{Axiom "! =".
+   *   !(f() = g()) <-> f() != g()
+   * End.
+   * }}}
+   */
+  lazy val notEqualF = "((!(f() = g())) <-> (f() != g())".asFormula
+  lazy val notEqual = derivedAxiom("= negate",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notEqualF)),
+    QE
+  )
+  lazy val notEqualT = derivedAxiomT(notEqual)
+  /**
+   * {{{Axiom "! >".
+   *   (!(f() > g())) <-> (f() <= g())
+   * End.
+   * }}}
+   */
+  lazy val notGreaterF = "(!(f() > g())) <-> (f() <= g())".asFormula
+  lazy val notGreater = derivedAxiom("! >",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notGreaterF)),
+    QE
+  )
+  lazy val notGreaterT = derivedAxiomT(notGreater)
+  /**
+   * {{{Axiom "! <".
+   *   (!(f() < g())) <-> (f() >= g())
+   * End.
+   * }}}
+   * @todo derive more efficiently via flip
+   */
+  lazy val notLessF = "(!(f() < g())) <-> (f() >= g())".asFormula
+  lazy val notLess = derivedAxiom("! <",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notLessF)),
+    QE
+  )
+  lazy val notLessT = derivedAxiomT(notLess)
+  /**
+   * {{{Axiom "! <=".
+   *   (!(f() <= g())) <-> (f() > g())
+   * End.
+   * }}}
+   * @todo derive more efficiently via flip
+   */
+  lazy val notLessEqualF = "(!(f() <= g())) <-> (f() > g())".asFormula
+  lazy val notLessEqual = derivedAxiom("! <",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notLessEqualF)),
+    QE
+  )
+  lazy val notLessEqualT = derivedAxiomT(notLessEqual)
   /**
    * {{{Axiom "< negate".
    *   (!(f() >= g())) <-> (f() < g())

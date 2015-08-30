@@ -114,7 +114,8 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove DS no domain" in {check(DSnodomain)}
   it should "prove DSol no domain" in {check(DSdnodomain)}
   it should "prove Dsol& differential equation solution" in {check(DSddomain)}
-  it should "prove x' derive var" in {check(Dvar)}
+//  it should "prove x' derive var" in {check(Dvar)}
+  it should "prove x' derive variable" in {check(Dvariable)}
   it should "prove 'linear" in {check(Dlinear)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "prove DX diamond differential skip" in {check(Dskipd)}

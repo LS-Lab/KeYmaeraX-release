@@ -17,6 +17,7 @@ import ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.core._
 import Config._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
+import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tools._
 import scala.Unit
 import scala.language.implicitConversions
@@ -243,6 +244,9 @@ object Tactics {
 
   type Continuation = (Tactic, Status, Seq[ProofNode]) => Unit
 
+  object Tactic {
+    private[tactics] val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  }
   /**
    * A schedulable tactic that can be applied to try to prove a ProofNode.
    */
@@ -372,6 +376,15 @@ object Tactics {
       require(n>=0, "Repeat non-negative number of times")
       if (n > 0) this & this*(n-1) else NilT
     }
+    /**
+     * repeat tactic n times
+     */
+    def *(n: Sequent=>Int): Tactic = new ConstructionTactic("Repeat(" + name + ", " + n + ")") {
+      override def applicable(node : ProofNode) = Tactic.this.applicable(node)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+        Some(Tactic.this * n(node.sequent))
+    }
+
     /**
      * apply the first tactic applicable
      */
@@ -637,7 +650,7 @@ object Tactics {
   /**
    * Allows decision making based upon the proof node (using code).
    */
-  def ifElseT(cond : ProofNode => Boolean, thenT : Tactic, elseT : Tactic) =
+  def ifElseT(cond : ProofNode => Boolean, thenT : Tactic, elseT : Tactic): Tactic =
     new Tactic("Conditional " + thenT + " else " + elseT) {
       def applicable(node : ProofNode) = if(cond(node)) thenT.applicable(node) else elseT.applicable(node)
 
@@ -652,8 +665,34 @@ object Tactics {
       }
     }
 
-  def ifT(cond : ProofNode => Boolean, thenT : Tactic) =
+  def ifThenElseT(cond : Sequent => Boolean, thenT : Tactic, elseT : Tactic): Tactic = ifElseT((node:ProofNode)=>cond(node.sequent), thenT, elseT)
+
+  def ifT(cond : ProofNode => Boolean, thenT : Tactic): Tactic =
       ifElseT(cond, thenT, NilT)
+
+  /**
+   * ifElseT(cond, thenT, elseT) does thenT if cond and otherwise does elseT.
+   */
+  def ifElseT(cond : (Sequent,Position) => Boolean, thenT: PositionTactic, elseT : PositionTactic): PositionTactic =
+    new PositionTactic("Conditional " + thenT + " else " + elseT) {
+      override def applies(s: Sequent, p: Position): Boolean = if(cond(s,p)) thenT.applies(s,p) else elseT.applies(s,p)
+      override def apply(p: Position): Tactic = ifThenElseT((s:Sequent)=>cond(s,p),thenT(p), elseT(p))
+    }
+
+  def ifT(cond : (Sequent,Position) => Boolean, thenT: PositionTactic): PositionTactic = ifElseT(cond, thenT, NilPT)
+
+  /**
+   * shift(shift, t) does t shifted from position p to shift(p)
+   */
+  def shift(shift: PosInExpr=>PosInExpr, t: PositionTactic): PositionTactic =
+    new PositionTactic("Shift " + t) {
+      override def applies(s: Sequent, p: Position): Boolean = t.applies(s,p.navigate(shift(p.inExpr)))
+      override def apply(p: Position): Tactic = t.apply(p.navigate(shift(p.inExpr)))
+    }
+  /**
+   * shift(child, t) does t to positions shifted by child
+   */
+  def shift(child: PosInExpr, t: PositionTactic): PositionTactic = shift(p=>p.append(child), t)
 
   /**
    * Generalizes if-else. the generator can return the "do nothing" tactic.
@@ -784,6 +823,25 @@ object Tactics {
 
       //@TODO Unfortunately, this crucially relies on stable positions
       override def apply(p: Position): Tactic = PositionTactic.this.apply(p) | pt.apply(p)
+    }
+
+    /**
+     * repeat tactic n times at some position
+     */
+    def *(n: Int): PositionTactic = {
+      require(n>=0, "Repeat non-negative number of times")
+      if (n > 0) this & this*(n-1) else NilPT
+    }
+
+    /**
+     * repeat tactic n times at some position
+     */
+    def *(n: (Sequent,Position)=>Int): PositionTactic = new PositionTactic("Repeat(" + this.name + ", " + n) {
+      override def applies(s: Sequent, p: Position): Boolean =
+        PositionTactic.this.applies(s, p)
+
+      //@TODO Unfortunately, this crucially relies on stable positions
+      override def apply(p: Position): Tactic = PositionTactic.this.apply(p) * (s=>n(s,p))
     }
 
     //@todo duplicate compared to FormulaConverter.subFormulaAt

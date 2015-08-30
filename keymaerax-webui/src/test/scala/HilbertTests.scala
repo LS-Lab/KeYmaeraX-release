@@ -119,8 +119,14 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
-  it should "derive (5*3+2*9)'=5*0+2*0 if optimized (left linear preferred)" in {
+  ignore should "derive (5*3+2*9)'=5*0+2*0 if optimized (left linear preferred but not const optimized)" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=5*0+2*0".asFormula)),
+      derive(1,0::Nil) & byUS("= reflexive")
+    ) shouldBe 'proved
+  }
+
+  it should "derive (5*3+2*9)'=0 if optimized (const optimized)" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=0".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
@@ -150,7 +156,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "derive [{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in {
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
       derive(1,0::1::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
@@ -198,9 +204,39 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
+  it should "auto-prove x>=5 -> [{x'=2&x<=10}](5<=x)" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=10}](5<=x)".asFormula)),
+      implyR(1) & diffInd(1)
+    ) shouldBe 'proved
+  }
+
+//  it should "auto-prove x>=5 -> [{x'=2&x<=10}](5<=x&x<=10)" in {
+//    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=10}](5<=x&x<=10)".asFormula)),
+//      implyR(1) & diffCut(1)
+//    ) shouldBe 'proved
+//  }
+
   it should "auto-prove x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula)),
       implyR(1) & diffInd(1)
+    ) shouldBe 'proved
+  }
+
+  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0 by chase" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0".asFormula)),
+      chase(1,Nil) & QE
+    ) shouldBe 'proved
+  }
+
+  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1 by chase" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula)),
+      chase(1,Nil) & QE
+    ) shouldBe 'proved
+  }
+
+  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1".asFormula)),
+      chase(1,Nil) & QE
     ) shouldBe 'proved
   }
 
@@ -215,7 +251,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
-  it should "auto-prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)" in {
+  it should "auto-prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10) with DC" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
       implyR(1) &
         DC("5<=x".asFormula)(1) && (
@@ -236,4 +272,20 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
+  it should "chase [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1".asFormula)),
+      // chaseWide(3) works like an update calculus
+      chaseWide(3)(1) &
+        QE
+    ) shouldBe 'proved
+  }
+
+  it should "auto-prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
+      implyR(1) &
+        chaseWide(3)(1) &
+        //@todo need to locate diffInd to after update prefix
+        diffInd(1, 1::Nil)
+    ) shouldBe 'proved
+  }
 }
