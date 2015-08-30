@@ -284,7 +284,8 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
       implyR(1) &
         chaseWide(3)(1) &
-        diffInd(1)
+        //@todo need to locate diffInd to after update prefix
+        diffInd(1, 1::Nil)
     ) shouldBe 'proved
   }
 }

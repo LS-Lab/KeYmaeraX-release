@@ -421,15 +421,17 @@ trait UnifyUSCalculus {
     * Computation-based auto-tactics
     *******************************************************************/
 
-  lazy val chase: PositionTactic = chaseWide(1)
+  lazy val chase: PositionTactic = chaseWide(1,3)
 
+  def chaseWide(breadth: Int): PositionTactic = chaseWide(breadth, 2*breadth)
 
   /** Chase the expression at the indicated position forward (Hilbert computation constructing the answer by proof).
     * Follows canonical axioms toward all their recursors while there is a unique canonical simplifier axiom.
     * @see [[HilbertCalculus.derive]]
     * @todo also implement a backwards chase in tableaux/sequent style
     */
-  def chaseWide(breadth: Int): PositionTactic = new PositionTactic("chase") {
+  def chaseWide(breadth: Int, giveUp: Int): PositionTactic = new PositionTactic("chase") {
+    require(breadth<=giveUp)
     import FormulaConverter._
     import TermConverter._
     import SequentConverter._
@@ -478,22 +480,22 @@ trait UnifyUSCalculus {
               (pf, cursor) => chase(pf, pos.append(cursor))
             )
           // take the first axiom among breadth that works for one useFor step
-          case l: List[String] if l.size<=breadth =>
-            def firstAxUse: Option[(Provable,List[PosInExpr])] = {
+          case l: List[String] if l.size<=giveUp =>
+            def firstAxUse(l: List[String]): Option[(Provable,List[PosInExpr])] = {
               for (ax <- l) try {
                 val (key, recursor) = axiomIndex(ax)
                 return Some((debugPF(ax)(useFor(ax, key))(SuccPosition(0, pos))(de), recursor))
               } catch {case _: ProverException => /* ignore and try next */}
               None
             }
-            firstAxUse match {
+            firstAxUse(l.take(Math.min(breadth, l.length))) match {
               case None => println("no chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")"); de
               case Some((axUse, recursor)) =>
                 recursor.foldLeft(axUse)(
                   (pf, cursor) => chase(pf, pos.append(cursor))
                 )
             }
-          case l: List[String] if l.size>breadth => println("stop chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")"); de
+          case l: List[String] if l.size>giveUp => println("stop chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")"); de
         }
       } ensuring(r => r.isProved, "chase remains proved: " + "chase(" + de.conclusion.succ.head(pos).prettyString + ")")
     }
