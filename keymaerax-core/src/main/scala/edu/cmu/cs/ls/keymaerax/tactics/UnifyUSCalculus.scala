@@ -100,7 +100,7 @@ trait UnifyUSCalculus {
     def applicable(node: ProofNode) = try {
       UnificationMatch(form,node.sequent)
       true
-    } catch {case e: ProverException => println(e.inContext("US(" + form + ")\n(" + node.sequent + ")")); false}
+    } catch {case e: ProverException => println(e.inContext("US(" + form + ")\n(" + node.sequent + ") inapplicable since un-unifiable")); false}
 
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       val subst = UnificationMatch(form, node.sequent)
@@ -225,7 +225,7 @@ trait UnifyUSCalculus {
           case Equal(other, DotTerm) =>
             equivStep(other, factTactic)
 
-          //@todo not sure if the following two cases really work as intended
+          //@todo not sure if the following two cases really work as intended, but they seem to
           case Imply(other, DotFormula) if p.isSucc && p.isTopLevel =>
             cutRightT(subst(other))(p.top) & onBranch(
               (BranchLabels.cutShowLbl, cohideT(p.top) & factTactic)
@@ -236,12 +236,21 @@ trait UnifyUSCalculus {
               (BranchLabels.cutShowLbl, lastSucc(cohideT) & factTactic)
             )
 
+          case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel) =>
+            cutRightT(C(subst(other)))(p.top) & onBranch(
+              (BranchLabels.cutShowLbl, cohideT(p.top) & implyR(SuccPos(0)) &
+                AxiomaticRuleTactics.propositionalCongruenceT(p.inExpr) //@todo simple approximation would be: ((Monb | Mond | allMon ...)*)
+                & factTactic)
+            )
+
+          case Imply(DotFormula, other) if !(p.isAnte && p.isTopLevel) => ???
+
           case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
             //@todo only prove remainder absolutely by proving prereq if that proof works out. Otherwise preserve context to prove prereq by master.
             //@todo check positioning etc.
             useAt(subst, new Context(remainder), k, p, C, c, cutRightT(subst(prereq))(SuccPos(0)) & onBranch(
               //@note the roles of cutUseLbl and cutShowLbl are really swapped here, since the implication on cutShowLbl will be handled by factTactic
-              (BranchLabels.cutUseLbl, TactixLibrary.master),
+              (BranchLabels.cutUseLbl, /* prove prereq: */ TactixLibrary.master),
               (BranchLabels.cutShowLbl, /*PropositionalTacticsImpl.InverseImplyRightT &*/ factTactic)
             ))
 
@@ -430,15 +439,15 @@ trait UnifyUSCalculus {
     * @see [[HilbertCalculus.derive]]
     * @todo also implement a backwards chase in tableaux/sequent style
     */
-  def chaseWide(breadth: Int, giveUp: Int): PositionTactic = new PositionTactic("chase") {
+  def chaseWide(breadth: Int, giveUp: Int, keys: Expression=>List[String] = AxiomIndex.axiomsFor): PositionTactic = new PositionTactic("chase") {
     require(breadth<=giveUp)
+    import AxiomIndex.axiomIndex
     import FormulaConverter._
     import TermConverter._
     import SequentConverter._
     import Tactic.DEBUG
-    import AxiomIndex._
 
-    override def applies(s: Sequent, p: Position): Boolean = axiomsFor(s.at(p).getOrElse(True)).size==1
+    override def applies(s: Sequent, p: Position): Boolean = keys(s.at(p).getOrElse(True)).size==1
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
@@ -470,7 +479,7 @@ trait UnifyUSCalculus {
       private def chase(de: Provable, pos: PosInExpr): Provable = {
         if (DEBUG) println("chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")")
         // generic recursor
-        axiomsFor(de.conclusion.succ.head.subAt(pos)) match {
+        keys(de.conclusion.succ.head.subAt(pos)) match {
           case Nil => println("no chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")"); de
           /*throw new IllegalArgumentException("No axiomFor for: " + expr)*/
           case List(ax) =>

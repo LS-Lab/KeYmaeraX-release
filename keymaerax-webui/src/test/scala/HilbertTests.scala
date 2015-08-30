@@ -267,7 +267,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     useAt("[;] compose")(1) &
     useAt("[:=] assign equational")(1) &
     step(1) & step(1) &
-    useAt("DI differential invariant")(1) &
+    useAt("DI differential invariant")(1) & //@todo diffInd(1)
       (l(step)*) & TacticLibrary.abstractionT(1) & master
     ) shouldBe 'proved
   }

@@ -214,6 +214,10 @@ object TactixLibrary extends UnifyUSCalculus {
   def CQ(inEqPos: PosInExpr)  : Tactic         = AxiomaticRuleTactics.equationCongruenceT(inEqPos)
   /** CE: Congruence: Contextual Equivalence proves an equivalence */
   def CE(inEqPos: PosInExpr)  : Tactic         = AxiomaticRuleTactics.equivalenceCongruenceT(inEqPos)
+  /** Monb: Monotone for [a;]p(x) |- [a;]q(x) */
+  lazy val Monb               : Tactic         = AxiomaticRuleTactics.boxMonotoneT
+  /** Mond: Monotone for <a;>p(x) |- <a;>q(x) */
+  lazy val Mond               : Tactic         = AxiomaticRuleTactics.diamondMonotoneT
 
 
   /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
