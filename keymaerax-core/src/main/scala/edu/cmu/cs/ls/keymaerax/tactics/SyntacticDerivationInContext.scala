@@ -519,7 +519,8 @@ object SyntacticDerivationInContext {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case fml@Equal(left@Differential(lv : Variable), right@DifferentialSymbol(rv : Variable)) => {
 
-          val axiom = Axiom.axioms.getOrElse("x' derive variable", throw new Exception("Could not find (x')<->(x)' axiom!"))
+          //@todo change to derivedAxiom
+          val axiom = DerivedAxioms.derivedAxiomFormula("x' derive variable").getOrElse(throw new Exception("Could not find (x')<->(x)' axiom!"))
           val axiomVar = Variable("x_", None, Real) //Variable as it appears in the axiom.
 
           val renameAndInstantiate =

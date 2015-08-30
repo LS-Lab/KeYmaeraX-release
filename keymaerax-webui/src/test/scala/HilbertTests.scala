@@ -222,6 +222,24 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
+  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0 by chase" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0".asFormula)),
+      chase(1,Nil) & QE
+    ) shouldBe 'proved
+  }
+
+  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1 by chase" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula)),
+      chase(1,Nil) & QE
+    ) shouldBe 'proved
+  }
+
+  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1".asFormula)),
+      chase(1,Nil) & QE
+    ) shouldBe 'proved
+  }
+
   it should "prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
       implyR(1) &
@@ -254,4 +272,19 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
+  it should "chase [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=0;x:=x+1; ++ x:=1;?x>=2;]x>=1".asFormula)),
+      // chaseWide(3) works like an update calculus
+      chaseWide(3)(1) &
+        QE
+    ) shouldBe 'proved
+  }
+
+  it should "auto-prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
+      implyR(1) &
+        chaseWide(3)(1) &
+        diffInd(1)
+    ) shouldBe 'proved
+  }
 }

@@ -421,12 +421,15 @@ trait UnifyUSCalculus {
     * Computation-based auto-tactics
     *******************************************************************/
 
+  lazy val chase: PositionTactic = chaseWide(1)
+
+
   /** Chase the expression at the indicated position forward (Hilbert computation constructing the answer by proof).
     * Follows canonical axioms toward all their recursors while there is a unique canonical simplifier axiom.
     * @see [[HilbertCalculus.derive]]
     * @todo also implement a backwards chase in tableaux/sequent style
     */
-  lazy val chase: PositionTactic = new PositionTactic("chase") {
+  def chaseWide(breadth: Int): PositionTactic = new PositionTactic("chase") {
     import FormulaConverter._
     import TermConverter._
     import SequentConverter._
@@ -465,11 +468,33 @@ trait UnifyUSCalculus {
       private def chase(de: Provable, pos: PosInExpr): Provable = {
         if (DEBUG) println("chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")")
         // generic recursor
-        val ax = axiomFor(de.conclusion.succ.head.subAt(pos))
-        val (key, recursor) = axiomIndex(ax)
-        recursor.foldLeft(debugPF(ax)(useFor(ax, key))(SuccPosition(0, pos))(de))(
-          (pf, cursor) => chase(pf, pos.append(cursor))
-        )
+        axiomsFor(de.conclusion.succ.head.subAt(pos)) match {
+          case Nil => println("no chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")"); de
+          /*throw new IllegalArgumentException("No axiomFor for: " + expr)*/
+          case List(ax) =>
+            val (key, recursor) = axiomIndex(ax)
+            val axUse = debugPF(ax)(useFor(ax, key))(SuccPosition(0, pos))(de)
+            recursor.foldLeft(axUse)(
+              (pf, cursor) => chase(pf, pos.append(cursor))
+            )
+          // take the first axiom among breadth that works for one useFor step
+          case l: List[String] if l.size<=breadth =>
+            def firstAxUse: Option[(Provable,List[PosInExpr])] = {
+              for (ax <- l) try {
+                val (key, recursor) = axiomIndex(ax)
+                return Some((debugPF(ax)(useFor(ax, key))(SuccPosition(0, pos))(de), recursor))
+              } catch {case _: ProverException => /* ignore and try next */}
+              None
+            }
+            firstAxUse match {
+              case None => println("no chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")"); de
+              case Some((axUse, recursor)) =>
+                recursor.foldLeft(axUse)(
+                  (pf, cursor) => chase(pf, pos.append(cursor))
+                )
+            }
+          case l: List[String] if l.size>breadth => println("stop chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")"); de
+        }
       } ensuring(r => r.isProved, "chase remains proved: " + "chase(" + de.conclusion.succ.head(pos).prettyString + ")")
     }
   }

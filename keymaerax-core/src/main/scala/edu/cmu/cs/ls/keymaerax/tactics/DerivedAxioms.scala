@@ -134,7 +134,10 @@ object DerivedAxioms {
     case "<:=> assign" => Some(assigndF, assigndT)
     case ":= assign dual" => Some(assignDualF, assignDualT)
     case "[:=] assign equational" => Some(assignbEquationalF, assignbEquationalT)
+    case "[:=] assign update" => Some(assignbUpdateF, assignbUpdateT)
     case "[:=] vacuous assign" => Some(vacuousAssignbF, vacuousAssignbT)
+    case "<:=> assign equational" => ??? //Some(assigndEquationalF, assigndEquationalT)
+    case "<:=> assign update" => Some(assigndUpdateF, assigndUpdateT)
     case "<:=> vacuous assign" => Some(vacuousAssigndF, vacuousAssigndT)
     case "<':=> differential assign" => Some(assignDF, assignDT)
     case "<:*> assign nondet" => Some(nondetassigndF, nondetassigndT)
@@ -456,6 +459,38 @@ object DerivedAxioms {
   )
 
   lazy val assignbEquationalT = derivedAxiomT(assignbEquationalAxiom)
+
+  /**
+   * {{{Axiom "[:=] assign update".
+   *    [x:=t();]p(x) <-> [x:=t();]p(x)
+   * End.
+   * }}}
+   * @Derived
+   * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+   */
+  lazy val assignbUpdateF = "[x:=t();]p(x) <-> [x:=t();]p(x)".asFormula
+  lazy val assignbUpdate = derivedAxiom("[:=] assign update",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(assignbUpdateF)),
+      byUS("<-> reflexive")
+  )
+
+  lazy val assignbUpdateT = derivedAxiomT(assignbUpdate)
+
+  /**
+   * {{{Axiom "<:=> assign update".
+   *    <x:=t();>p(x) <-> <x:=t();>p(x)
+   * End.
+   * }}}
+   * @Derived
+   * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+   */
+  lazy val assigndUpdateF = "<x:=t();>p(x) <-> <x:=t();>p(x)".asFormula
+  lazy val assigndUpdate = derivedAxiom("<:=> assign update",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(assigndUpdateF)),
+    byUS("<-> reflexive")
+  )
+
+  lazy val assigndUpdateT = derivedAxiomT(assigndUpdate)
 
   /**
    * {{{Axiom "[:=] vacuous assign".
@@ -1137,7 +1172,7 @@ object DerivedAxioms {
    * }}}
    */
   lazy val DvariableF = "\\forall x_ ((x_)' = x_')".asFormula
-  lazy val Dvariable = derivedAxiom("'x derive variable",
+  lazy val Dvariable = derivedAxiom("x' derive variable",
     Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DvariableF)))
       (Skolemize(SuccPos(0)), 0)
       (Axiom.axiom("x' derive var"), 0)

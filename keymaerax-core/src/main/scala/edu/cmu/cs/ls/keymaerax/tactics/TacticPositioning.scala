@@ -57,9 +57,6 @@ object HereP extends PosInExpr
     def isSucc: Boolean = !isAnte
     def getIndex: Int = index
 
-    /** Concatenate this with p2: Append p2 to this position */
-    def append(p2 : PosInExpr): Position
-
     /**
      * Check whether index of this position is defined in given sequent (ignoring inExpr).
      */
@@ -77,16 +74,18 @@ object HereP extends PosInExpr
       clone(index)
     } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr == HereP)
 
+    /** Concatenate this with p2: Append p2 to this position */
+    def append(p2 : PosInExpr): Position = subPos(p2)
+
     /**
      * @param p The additional portion to append onto PosInExpr
      * @return A subposition.
      */
-    def subPos(p : PosInExpr) = {
-      if(this.isAnte)
-        AntePosition(this.index, this.inExpr.append(p))
-      else
-        SuccPosition(this.index, this.inExpr.append(p))
+    def subPos(p : PosInExpr): Position = {navigate(this.inExpr.append(p))
     } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr.pos.equals(this.inExpr.pos ++ p.pos) && this.inExpr.isPrefixOf(r.inExpr))
+
+    /** Return a position with inExpr replaced by p */
+    def navigate(p : PosInExpr): Position
 
     /**
      * Whether this position is a top-level position of a sequent.
@@ -127,7 +126,10 @@ object Position {
   class AntePosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
     def isAnte = true
     protected def clone(i: Int, e: PosInExpr): Position = new AntePosition(i, e)
-    def append(p2 : PosInExpr): AntePosition = new AntePosition(index, inExpr.append(p2))
+    /** Return a position with inExpr replaced by p */
+    def navigate(p : PosInExpr): AntePosition = {new AntePosition(this.index, p)
+    } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr == p)
+    override def append(p2 : PosInExpr): AntePosition = navigate(inExpr.append(p2))
     def +(i: Int) = AntePosition(index + i, inExpr)
     def first: Position = AntePosition(index, inExpr.first)
     def second: Position = AntePosition(index, inExpr.second)
@@ -143,7 +145,9 @@ object Position {
   class SuccPosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
     def isAnte = false
     protected def clone(i: Int, e: PosInExpr): Position = new SuccPosition(i, e)
-    def append(p2 : PosInExpr): SuccPosition = new SuccPosition(index, inExpr.append(p2))
+    def navigate(p : PosInExpr): SuccPosition = {new SuccPosition(this.index, p)
+    } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr == p)
+    override def append(p2 : PosInExpr): SuccPosition = navigate(inExpr.append(p2))
     def +(i: Int) = SuccPosition(index + i, inExpr)
     def first: Position = SuccPosition(index, inExpr.first)
     def second: Position = SuccPosition(index, inExpr.second)

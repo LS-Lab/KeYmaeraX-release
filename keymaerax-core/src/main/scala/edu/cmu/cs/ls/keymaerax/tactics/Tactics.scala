@@ -245,7 +245,7 @@ object Tactics {
   type Continuation = (Tactic, Status, Seq[ProofNode]) => Unit
 
   object Tactic {
-    private[tactics] val DEBUG = System.getProperty("DEBUG", "false")=="true"
+    private[tactics] val DEBUG = System.getProperty("DEBUG", "true")=="true"
   }
   /**
    * A schedulable tactic that can be applied to try to prove a ProofNode.
@@ -671,7 +671,7 @@ object Tactics {
       ifElseT(cond, thenT, NilT)
 
   /**
-   * Allows decision making based upon the proof node (using code).
+   * ifElseT(cond, thenT, elseT) does thenT if cond and otherwise does elseT.
    */
   def ifElseT(cond : (Sequent,Position) => Boolean, thenT: PositionTactic, elseT : PositionTactic): PositionTactic =
     new PositionTactic("Conditional " + thenT + " else " + elseT) {
@@ -680,6 +680,19 @@ object Tactics {
     }
 
   def ifT(cond : (Sequent,Position) => Boolean, thenT: PositionTactic): PositionTactic = ifElseT(cond, thenT, NilPT)
+
+  /**
+   * shift(shift, t) does t shifted from position p to shift(p)
+   */
+  def shift(shift: PosInExpr=>PosInExpr, t: PositionTactic): PositionTactic =
+    new PositionTactic("Shift " + t) {
+      override def applies(s: Sequent, p: Position): Boolean = t.applies(s,p.navigate(shift(p.inExpr)))
+      override def apply(p: Position): Tactic = t.apply(p.navigate(shift(p.inExpr)))
+    }
+  /**
+   * shift(child, t) does t to positions shifted by child
+   */
+  def shift(child: PosInExpr, t: PositionTactic): PositionTactic = shift(p=>p.append(child), t)
 
   /**
    * Generalizes if-else. the generator can return the "do nothing" tactic.

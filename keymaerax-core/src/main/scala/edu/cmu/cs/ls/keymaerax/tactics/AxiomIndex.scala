@@ -51,14 +51,15 @@ object AxiomIndex {
     // [a] modalities
     case "[:=] assign" | "<:=> assign" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
     case "[:=] assign equational" | "<:=> assign equational" => (PosInExpr(0::Nil), PosInExpr(0::1::Nil)::Nil)
+    case "[:=] assign update" | "<:=> assign update" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     case "[:*] assign nondet" | "<:*> assign nondet" => unaryDefault
     case "[?] test"    | "<?> test"    => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     case "[++] choice" | "<++> choice" => binaryDefault
-    case "[;] compose" | "<;> compose" => unaryDefault
+    case "[;] compose" | "<;> compose" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
     case "[*] iterate" | "<*> iterate" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
 
     case "DW differential weakening" => (PosInExpr(0::Nil), unknown)
-    case "DC differential cut" => (PosInExpr(1::0::Nil), PosInExpr(0::Nil)::Nil)
+    case "DC differential cut" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
     case "DE differential effect" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     //@todo unclear recursor
     case "DE differential effect system" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
@@ -73,8 +74,12 @@ object AxiomIndex {
   private val unaryDefault = (PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)
   private val binaryDefault = (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
 
+  // lookup canonical axioms for an expression (index)
+
   /** Return the canonical (derived) axiom name that simplifies the expression expr */
-  def axiomFor(expr: Expression): String = axiomsFor(expr).head
+  def axiomFor(expr: Expression): Option[String] = axiomsFor(expr) match {
+    case first :: _ => Some(first)
+    case Nil => None /*throw new IllegalArgumentException("No axiomFor for: " + expr)*/ }
 
   private val odeList = "DI differential invariant" :: "DC differential cut" :: "DG differential ghost" :: Nil
   // :: "DS& differential equation solution"
@@ -113,7 +118,7 @@ object AxiomIndex {
       case _: Exists    => "exists' derive exists" :: Nil
     }
     case Box(a, _) => a match {
-      case _: Assign    => "[:=] assign" :: "[:=] assign equational" :: Nil
+      case _: Assign    => "[:=] assign" :: "[:=] assign equational" :: "[:=] assign update" :: Nil
       case _: AssignAny => "[:*] assign any" :: Nil
       case _: Test      => "[?] test" :: Nil
       case ODESystem(_:AtomicODE,True)   => odeList :+ "DE differential effect"
@@ -127,7 +132,7 @@ object AxiomIndex {
       case _ => unknown
     }
     case Diamond(a, _) => a match {
-      case _: Assign    => "<:=> assign" :: "<:=> assign equational" :: Nil
+      case _: Assign    => "<:=> assign" :: "<:=> assign equational" :: "<:=> assign update" :: Nil
       case _: AssignAny => "<:*> assign any" :: Nil
       case _: Test      => "<?> test" :: Nil
       //@todo diamond duals of:
