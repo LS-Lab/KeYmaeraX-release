@@ -86,8 +86,9 @@ object HilbertCalculus extends UnifyUSCalculus {
   lazy val DI                 : PositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
   /** diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE) */
   lazy val diffInd            : PositionTactic = new PositionTactic("diffInd") {
-      override def applies(s: Sequent, p: Position): Boolean = p.isSucc && p.isTopLevel && (s(p) match {
-        case Box(_: ODESystem, _) => true
+    import SequentConverter._
+      override def applies(s: Sequent, p: Position): Boolean = p.isSucc && /*p.isTopLevel &&*/ (s.at(p) match {
+        case Some(Box(_: ODESystem, _)) => true
         case _ => false
       })
       def apply(p: Position): Tactic = new ConstructionTactic(name) {

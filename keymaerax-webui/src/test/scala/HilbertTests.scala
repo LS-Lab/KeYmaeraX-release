@@ -280,6 +280,13 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
+  it should "prove x>=5 |- [x:=x+1][{x'=2}]x>=5" in {
+    proveBy(Sequent(Nil, IndexedSeq("x>=5".asFormula), IndexedSeq("[x:=x+1;][{x'=2}]x>=5".asFormula)),
+      //@todo need to locate diffInd to after update prefix
+      diffInd(1, 1::Nil)
+    ) shouldBe 'proved
+  }
+
   it should "auto-prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
       implyR(1) &

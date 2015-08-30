@@ -13,6 +13,10 @@ import scala.collection.immutable
 import scala.collection.immutable._
 
 object RenUSubst {
+  def apply(us: USubst): RenUSubst = new RenUSubst(us.subsDefsInput.
+    map(sp=>(sp.what,sp.repl)))
+  def apply(us: URename): RenUSubst = new RenUSubst(List((us.what,us.repl)))
+
   private def renamingPartOnly(subsDefsInput: immutable.Seq[Pair[Expression,Expression]]): immutable.Seq[Pair[Variable,Variable]] =
     subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable]).
       map(sp => (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable]))

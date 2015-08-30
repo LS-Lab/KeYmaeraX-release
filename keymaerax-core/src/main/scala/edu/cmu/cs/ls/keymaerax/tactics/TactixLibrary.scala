@@ -305,7 +305,9 @@ object TactixLibrary extends UnifyUSCalculus {
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
     if (!rootNode.isClosed() || Tactic.DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().map(x => "Open Goal: " + x.sequent).mkString(("\n"))))
-    rootNode.provableWitness
+    val proof = rootNode.provableWitness
+    if (Tactic.DEBUG) println("proveBy " + proof)
+    proof
   }
 
 }
