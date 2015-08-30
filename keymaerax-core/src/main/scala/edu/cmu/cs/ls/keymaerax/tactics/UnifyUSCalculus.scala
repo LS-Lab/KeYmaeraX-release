@@ -434,6 +434,11 @@ trait UnifyUSCalculus {
 
   def chaseWide(breadth: Int): PositionTactic = chaseWide(breadth, 2*breadth)
 
+  private def unprog: PositionTactic = chaseWide(1,2, e => e match {
+    case Box(Assign(_,_))    => "[:=] assign" :: "[:=] assign update" :: Nil
+    case _ => AxiomIndex.axiomsFor(e)
+  })
+
   /** Chase the expression at the indicated position forward (Hilbert computation constructing the answer by proof).
     * Follows canonical axioms toward all their recursors while there is a unique canonical simplifier axiom.
     * @see [[HilbertCalculus.derive]]
