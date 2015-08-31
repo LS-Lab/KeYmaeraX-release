@@ -151,6 +151,7 @@ object DerivedAxioms {
     case "vacuous exists quantifier" => Some(vacuousExistsF, vacuousExistsT)
     case "V[:*] vacuous assign nondet" => Some(vacuousBoxAssignNondetF, vacuousBoxAssignNondetT)
     case "V<:*> vacuous assign nondet" => Some(vacuousDiamondAssignNondetF, vacuousDiamondAssignNondetT)
+    case "DX diamond differential skip" => Some(DskipdF, DskipdT)
     case "DW differential weakening" => Some(DWeakeningF, DWeakeningT)
     case "DS differential equation solution" => Some(DSnodomainF, DSnodomainT)
     case "Dsol& differential equation solution" => Some(DSddomainF, DSddomainT)
@@ -1072,6 +1073,7 @@ object DerivedAxioms {
     ODETactics.diffSkipT(DifferentialProgramConst("c"))(SuccPosition(0, PosInExpr(0::0::Nil))) &
     useAt("<> dual")(SuccPosition(0, PosInExpr(0::Nil))) & implyR(SuccPosition(0)) & close
   )
+  lazy val DskipdT = derivedAxiomT(Dskipd)
 
   /**
    * {{{Axiom "DS differential equation solution".
