@@ -1,3 +1,10 @@
+<div class="row" ng-controller="ProofInfoCtrl">
+    <!-- The style forces the _ _ _ underline to only span the length of the text, not the entire paragraph block width. -->
+    <p class="lead" editable-text="proofName" onbeforesave="saveProofName($data)" style="display:inline-block">
+        {{proofName}}
+    </p>
+</div>
+
 <div class="row" ng-controller="TaskListCtrl">
     <div class="col-md-5">
         <tabset justified="true">

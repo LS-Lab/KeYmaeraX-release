@@ -21,6 +21,15 @@ keymaeraProofControllers.factory('Models', function () {
     };
 });
 
+keymaeraProofControllers.controller('ProofInfoCtrl',
+    function($scope, $rootScope, $http, $cookies, $modal, $routeParams) {
+        $scope.proof = {
+            proofName: "blah"
+        };
+
+        //TODO: add functions  that allow renaming.
+    }
+)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mathematica Config
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -600,6 +609,29 @@ keymaeraProofControllers.controller('ModelTacticDialogCtrl', function ($scope, $
 
 keymaeraProofControllers.controller('ModelProofCreateCtrl',
   function ($scope, $http, $cookies, $routeParams, $location) {
+   /*
+   * Creates a new proof using a default name, so that the use doesn't have to enter new input.
+   */
+    $scope.createDefaultProofForModel = function(modelId) {
+        var proofName        = "Untitled Proof"
+        var proofDescription = ""
+        var uri              = 'models/users/' + $cookies.userId + '/model/' + modelId + '/createProof'
+        var dataObj          = {proofName : proofName, proofDescription : proofDescription}
+
+        $http.post(uri, dataObj).
+            success(function(data) {
+                var proofid = data.id
+                // we may want to switch to ui.router
+                $location.path('proofs/' + proofid);
+            }).
+            error(function(data, status, headers, config) {
+                console.log('Error starting new proof for model ' +modelId)
+            });
+    };
+    $scope.createDefaultProof = function() {
+      $scope.createDefaultProofForModel($routeParams.modelId)
+    };
+
     $scope.createProof = function() {
         var proofName        = $scope.proofName ? $scope.proofName : ""
         var proofDescription = $scope.proofDescription ? $scope.proofDescription : ""
@@ -739,6 +771,11 @@ keymaeraProofControllers.controller('ProofCtrl',
         $scope.date = data.date;
     });
     $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
+
+    //Save a name edited using the inline editor.
+    $scope.saveProofName = function(newName) {
+      $http.post("proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/name/" + newName, {})
+    };
   });
 
 keymaeraProofControllers.controller('HACMSTreeCtrl',
