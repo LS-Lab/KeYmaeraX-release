@@ -448,6 +448,8 @@ trait UnifyUSCalculus {
     *
     * Chase the expression at the indicated position forward (Hilbert computation constructing the answer by proof).
     * Follows canonical axioms toward all their recursors while there is an applicable simplifier axiom according to `keys`.
+    * @note Chase is search-free and, thus, quite efficient. It directly follows the
+    *       [[AxiomIndex.axiomIndex() axiom index]] information to compute follow-up positions for the chase.
     * @param keys maps expressions to a list of axiom names to be used for those expressions.
     *             First returned axioms will be favored (if applicable) over further axioms.
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+(x'*y+x*y')>=0
@@ -471,27 +473,29 @@ trait UnifyUSCalculus {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
         Some(useDirectAt(chaseProof(node.sequent.at(p).get), PosInExpr(0::Nil))(p))
 
-      /** Construct a proof proving the answer of the chose of e */
+      /** Construct a proof proving the answer of the chase of e, so either of e=chased(e) or e<->chased(e) */
       private def chaseProof(e: Expression): Provable = {
+        // reflexive setup corresponds to no-progress chase
         val initial: Provable = e match {
-          case t: Term =>
+          case t: Term =>   // t=t
             DerivedAxioms.equalReflex.fact(
               Sequent(Nil, IndexedSeq(), IndexedSeq(Equal(t,t))),
               UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), t)::Nil),
                 DerivedAxioms.equalReflex.fact.conclusion))
-          case f: Formula =>
+          case f: Formula =>   // f<->f
             DerivedAxioms.equivReflexiveAxiom.fact(
               Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(f,f))),
               UniformSubstitutionRule(USubst(SubstitutionPair(PredOf(Function("p",None,Unit,Bool),Nothing), f)::Nil),
                 DerivedAxioms.equivReflexiveAxiom.fact.conclusion))
         }
-        assert(initial.isProved, "Proved reflexive start " + initial + " for " + e)
+        assert(initial.isProved && initial.conclusion.ante.isEmpty && initial.conclusion.succ.length==1, "Proved reflexive start " + initial + " for " + e)
         if (DEBUG) println("chase starts at " + initial)
         val r = chase(initial, PosInExpr(1::Nil))
         if (DEBUG) println("chase(" + e.prettyString + ") = ~~> " + r + " done")
         r
       } ensuring(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
 
+      /** chase the conclusions's expression at pos forward, yielding the provable after the chase. */
       private def chase(de: Provable, pos: PosInExpr): Provable = {
         if (DEBUG) println("chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")")
         // generic recursor
@@ -506,6 +510,7 @@ trait UnifyUSCalculus {
             )
           // take the first axiom among breadth that works for one useFor step
           case l: List[String] =>
+            // useFor the first applicable axiom
             def firstAxUse: Option[(Provable,List[PosInExpr])] = {
               for (ax <- l) try {
                 val (key, recursor) = axiomIndex(ax)
