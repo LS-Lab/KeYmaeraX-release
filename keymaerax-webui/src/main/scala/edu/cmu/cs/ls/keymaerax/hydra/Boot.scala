@@ -38,7 +38,7 @@ class LoadingDialog {
       if(window != null) {
         window.setVisible(false)
         window = null
-        JOptionPane.showMessageDialog(null, "Open a browser to http://localhost:8090 to access KeYmaera X.\nThe server will continue running in the background until it is\nmanually shutdown using the power button in the Web user interface.")
+//        JOptionPane.showMessageDialog(null, s"Open a browser to http://${Boot.host}:${Boot.port} to access KeYmaera X.\nThe server will continue running in the background until it is\nmanually shutdown using the power button in the Web user interface.")
       }
 //        label.setText("KeYmaeraX is running at http://localhost:8090")
 //      label.repaint()
@@ -80,7 +80,7 @@ object Boot extends App {
   val config = database.getAllConfigurations.filter(_.name.equals("serverconfig")).headOption
   val (isHosted:Boolean, host:String, port:Int) = config match {
     case Some(c) => (c.config("isHosted").equals("true"), c.config("host"), Integer.parseInt(c.config("port")))
-    case None => (false, "localhost", 8090)
+    case None => (false, "127.0.0.1", 8090)
   }
 
 
@@ -127,10 +127,10 @@ object Boot extends App {
         java.awt.Desktop.isDesktopSupported() &&
         java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE))
       {
-        java.awt.Desktop.getDesktop().browse(new java.net.URI("http://localhost:8090/"))
+        java.awt.Desktop.getDesktop().browse(new java.net.URI(s"http://${host}:${port}/"))
       }
       else if (!java.awt.GraphicsEnvironment.isHeadless()) {
-        JOptionPane.showMessageDialog(null, "Point your browser to http://localhost:8090/")
+        JOptionPane.showMessageDialog(null, s"Point your browser to http://${host}:${port}/")
 
       }
       else {
