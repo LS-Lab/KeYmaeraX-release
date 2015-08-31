@@ -81,28 +81,43 @@ object HilbertCalculus extends UnifyUSCalculus {
       (useAt("DE differential effect (system)") * getODEDim),
       useAt("DE differential effect"))
   else ODETactics.diffEffectT
-  /** DI: Differential Invariant used for proving a formula to be an invariant of a differential equation @see [[diffInd()]] */
-  //@todo Dconstify usually needed for DI
+  /** DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation @see [[diffInd()]] */
   lazy val DI                 : PositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
   /** diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE) */
   lazy val diffInd            : PositionTactic = new PositionTactic("diffInd") {
-      override def applies(s: Sequent, p: Position): Boolean = p.isSucc && p.isTopLevel && (s(p) match {
-        case Box(_: ODESystem, _) => true
+    import SequentConverter._
+      override def applies(s: Sequent, p: Position): Boolean = p.isSucc && /*p.isTopLevel &&*/ (s.at(p) match {
+        case Some(Box(_: ODESystem, _)) => true
         case _ => false
       })
       def apply(p: Position): Tactic = new ConstructionTactic(name) {
         override def applicable(node : ProofNode) = applies(node.sequent, p)
         override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-          Some(DI(p) & (stepAt(p) & stepAt(p)) && (
-            QE,
-            //@note derive before DE to keep positions easier
-            derive(p.append(PosInExpr(1::Nil))) &
-              DE(p) &
-              (Dassignb(p.append(PosInExpr(1::Nil))) * (s=>getODEDim(s,p))) &
-              //@note DW after DE to keep positions easier
-              ifT(hasODEDomain, DW)(p) &
-              TacticLibrary.abstractionT(p) & QE
-            ))
+        //@todo Dconstify usually needed for DI
+          if (p.isTopLevel && p.isSucc)
+            Some(DI(p) &
+              (stepAt(p) & stepAt(p)) && (
+              QE,
+              //@note derive before DE to keep positions easier
+              derive(p.append(PosInExpr(1::Nil))) &
+                DE(p) &
+                (Dassignb(p.append(PosInExpr(1::Nil))) * (s=>getODEDim(s,p))) &
+                //@note DW after DE to keep positions easier
+                ifT(hasODEDomain, DW)(p) &
+                TacticLibrary.abstractionT(p) & QE
+              ))
+        else
+            Some((DI &
+              //@note derive before DE to keep positions easier
+              shift(PosInExpr(1::1::Nil),
+              shift(PosInExpr(1::Nil), derive) &
+                DE &
+                (shift(PosInExpr(1::Nil), Dassignb) * getODEDim) &
+                //@note DW after DE to keep positions easier
+                ifT(hasODEDomain, DW) &
+                TacticLibrary.abstractionT
+              ))(p)
+              )
       }
     }
 
@@ -275,12 +290,11 @@ object HilbertCalculus extends UnifyUSCalculus {
     *******************************************************************/
 
   /** Derive the differential expression at the indicated position (Hilbert computation deriving the answer by proof).
+    * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+x'*y+x*y'>=0
     * @see [[UnifyUSCalculus.chase]]
     */
-  lazy val derive: PositionTactic = //if (true)
-    new PositionTactic("derive") {
+  lazy val derive: PositionTactic = new PositionTactic("derive") {
       import SequentConverter._
-
       override def applies(s: Sequent, p: Position): Boolean = s.at(p) match {
         case Some(Differential(_)) => true
         case Some(DifferentialFormula(_)) => true
@@ -288,162 +302,6 @@ object HilbertCalculus extends UnifyUSCalculus {
       }
       override def apply(p: Position): Tactic = chase(p)
     }
-//  else new PositionTactic("derive") {
-//    import FormulaConverter._
-//    import TermConverter._
-//    import SequentConverter._
-//    import Tactic.DEBUG
-//    import AxiomIndex._
-//
-//    override def applies(s: Sequent, p: Position): Boolean = s.at(p) match {
-//      case Some(Differential(_)) => true
-//      case Some(DifferentialFormula(_)) => true
-//      case _ => false
-//    }
-//
-//    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-//      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-//
-//      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-//        node.sequent.at(p).get match {
-//          case t: Term    => Some(useDirectAt(deriveProof(t),  PosInExpr(0::Nil))(p))
-//          case f: Formula => Some(useDirectAt(deriveProofF(f), PosInExpr(0::Nil))(p))
-//        }
-//      }
-//
-//      /** Construct a proof proving the answer of the derivative of de expanded out to variables */
-//      private def deriveProof(de: Term): Provable = {
-//        val deIsDe = Sequent(Nil, IndexedSeq(), IndexedSeq(Equal(de,de)))
-//        val initial = DerivedAxioms.equalReflex.fact(
-//          deIsDe,
-//          UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), de)::Nil), DerivedAxioms.equalReflex.fact.conclusion))
-//        assert(initial.isProved && initial.proved==deIsDe, "Proved reflexive start " + initial + " for " + de)
-//        if (DEBUG) println("derive starts at " + initial)
-//        val r = derive(initial, PosInExpr(1::Nil))
-//        if (DEBUG) println("derive(" + de.prettyString + ") = ~~> " + r + " done")
-//        r
-//      } ensuring(r => r.isProved, "derive remains proved: " + " final derive(" + de + ")")
-//
-//      private def derive(de: Provable, pos: PosInExpr): Provable = {
-//        if (DEBUG) println("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ")")
-//        val r = de.conclusion.succ.head.subAt(pos) match {
-//          case Differential(x:Variable) =>
-//            if (true) useFor("x' derive var", PosInExpr(0::Nil))(SuccPosition(0,pos))(de)
-//            else if (false&&INTERNAL) useFor("x' derive variable", PosInExpr(0::0::Nil))(SuccPosition(0,pos))(de)
-//            else if (true)
-//              debugPF("derive(x')")(useFor(Axiom.axiom("x' derive var")(
-//                Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x),DifferentialSymbol(x)))),
-//                UniformRenaming(Variable("x_",None,Real),x)),
-//                PosInExpr(0::Nil)
-//              ))(SuccPosition(0,pos))(de)
-//            //useFor(Axiom.axiom("x' derive var"), PosInExpr(0::Nil))(SuccPosition(0,pos))(de)
-//            //useFor("all eliminate")(SuccPosition(0))(Axiom.axiom("x' derive var"))
-//            //@todo this is convoluted and inefficient compared to a direct forward proof
-//            else {
-//              val specialDvariable = TactixLibrary.proveBy(
-//                Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
-//                Dvariable(SuccPosition(0,0::Nil)) ~ byUS("= reflexive"))
-//              assert(specialDvariable.isProved && specialDvariable.proved==Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))), "Proved helper")
-//              useFor(
-//                specialDvariable,
-//                PosInExpr(0::Nil)
-//              )(SuccPosition(0,1::Nil))(de)
-//            }
-//          // generic recursor
-//          case t:Differential =>
-//            val ax = axiomFor(t)
-//            val (key,recursor) = axiomIndex(ax)
-//            recursor.foldLeft(debugPF(ax)(useFor(ax, key))(SuccPosition(0,pos))(de)) (
-//              (pf,cursor) => derive(pf, pos.append(cursor))
-//            )
-//
-////          // terms
-////        case Differential(Neg(_)) => derive(
-////          useFor("-' derive neg")(SuccPosition(0,pos))(de),
-////          pos.append(PosInExpr(0::Nil)))
-////        case Differential(Plus(_,_)) => derive(derive(
-////          debugPF("derive(+')")(useFor("+' derive sum"))(SuccPosition(0,pos))(de),
-////          pos.append(PosInExpr(0::Nil))),
-////          pos.append(PosInExpr(1::Nil))
-////        )
-////        case Differential(Minus(_,_)) => derive(derive(
-////          useFor("-' derive minus")(SuccPosition(0,pos))(de),
-////          pos.append(PosInExpr(0::Nil))),
-////          pos.append(PosInExpr(1::Nil))
-////        )
-////        //@note optimizations
-////        case Differential(Times(num,_)) if StaticSemantics.freeVars(num).isEmpty => derive(
-////          debugPF("derive(l')")(useFor("' linear"))(SuccPosition(0,pos))(de),
-////          pos.append(PosInExpr(1::Nil))
-////        )
-////        case Differential(Times(_,num)) if StaticSemantics.freeVars(num).isEmpty => derive(
-////          debugPF("derive(l')")(useFor("' linear right"))(SuccPosition(0,pos))(de),
-////          pos.append(PosInExpr(0::Nil))
-////        )
-////        case Differential(Times(_,_)) => derive(derive(
-////          debugPF("derive(*')")(useFor("*' derive product"))(SuccPosition(0,pos))(de),
-////          pos.append(PosInExpr(0::0::Nil))),
-////          pos.append(PosInExpr(1::1::Nil))
-////        )
-////        case Differential(Divide(_,_)) => derive(derive(
-////          debugPF("derive(/')")(useFor("/' derive quotient"))(SuccPosition(0,pos))(de),
-////          pos.append(PosInExpr(0::0::0::Nil))),
-////          pos.append(PosInExpr(0::1::1::Nil))
-////        )
-////        case Differential(Number(_)) =>
-////          debugPF("c()'")(useFor("c()' derive constant fn"))(SuccPosition(0,pos))(de)
-//        case e => throw new MatchError("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ") don't know how to handle " + e + " at " + pos + " of " + de.conclusion)
-//        }
-//        if (DEBUG) println("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ")\n ~~> " + r)
-//        r
-//      } ensuring(r => r.isProved, "derive remains proved: " + "derive(" + de.conclusion.succ.head(pos).prettyString + ")")
-//
-//      /** Construct a proof proving the answer of the derivative of de expanded out to variables */
-//      private def deriveProofF(de: Formula): Provable = {
-//        val deIsDe = Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(de,de)))
-//        val initial = DerivedAxioms.equivReflexiveAxiom.fact(
-//          deIsDe,
-//          UniformSubstitutionRule(USubst(SubstitutionPair(PredOf(Function("p",None,Unit,Bool),Nothing), de)::Nil), DerivedAxioms.equivReflexiveAxiom.fact.conclusion))
-//        assert(initial.isProved && initial.proved==deIsDe, "Proved reflexive start " + initial + " for " + de)
-//        if (DEBUG) println("derive starts at " + initial)
-//        val r = deriveF(initial, PosInExpr(1::Nil))
-//        if (DEBUG) println("derive(" + de.prettyString + ") = ~~> " + r + " done")
-//        r
-//      } ensuring(r => r.isProved, "derive remains proved: " + " final derive(" + de + ")")
-//
-//    private def deriveF(de: Provable, pos: PosInExpr): Provable = {
-//      if (DEBUG) println("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ")")
-//      def homomorphic(short: String, axiom: String): Provable = deriveF(deriveF(
-//        debugPF(short)(useFor(axiom))(SuccPosition(0,pos))(de),
-//        pos.append(PosInExpr(0::Nil))),
-//        pos.append(PosInExpr(1::Nil))
-//      )
-//
-//      def pseudoHomomorphic(short: String, axiom: String): Provable = derive(derive(
-//        debugPF(short)(useFor(axiom))(SuccPosition(0,pos))(de),
-//        pos.append(PosInExpr(0::Nil))),
-//        pos.append(PosInExpr(1::Nil))
-//      )
-//
-//      val r = de.conclusion.succ.head.subAt(pos) match {
-//        // homomorphic formulas
-//        case DifferentialFormula(And(_,_))   => homomorphic("derive(&')", "&' derive and")
-//        case DifferentialFormula(Or(_,_))    => homomorphic("derive(|')", "|' derive or")
-//        case DifferentialFormula(Imply(_,_)) => homomorphic("derive(->')", "->' derive imply")
-//        // pseudo-homomorphic cases
-//        case DifferentialFormula(Equal(_,_)) => pseudoHomomorphic("derive(=')", "=' derive =")
-//        case DifferentialFormula(NotEqual(_,_)) => pseudoHomomorphic("derive(!=')", "!=' derive !=")
-//        case DifferentialFormula(Greater(_,_)) => pseudoHomomorphic("derive(>')", ">' derive >")
-//        case DifferentialFormula(GreaterEqual(_,_)) => pseudoHomomorphic("derive(>=')", ">=' derive >=")
-//        case DifferentialFormula(Less(_,_)) => pseudoHomomorphic("derive(<')", "<' derive <")
-//        case DifferentialFormula(LessEqual(_,_)) => pseudoHomomorphic("derive(<=')", "<=' derive <=")
-//        case e => throw new MatchError("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ") don't know how to handle " + e + " at " + pos + " of " + de.conclusion)
-//      }
-//      if (DEBUG) println("derive(" + de.conclusion.succ.head.subAt(pos).prettyString + ")\n ~~> " + r)
-//      r
-//    } ensuring(r => r.isProved, "derive remains proved: " + "derive(" + de.conclusion.succ.head(pos).prettyString + ")")
-//  }
-//  } // derive
 
 
   /*******************************************************************

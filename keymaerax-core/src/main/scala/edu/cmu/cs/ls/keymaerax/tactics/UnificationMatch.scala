@@ -4,6 +4,8 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
+
 import scala.collection.immutable._
 import scala.collection.immutable
 
@@ -98,7 +100,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     while (!dups.isEmpty) {
       val dupkv: (Expression,immutable.List[SubstRepl]) = dups.head
       dups = dups.tail
-      println("unify duplicate " + dupkv._2.map(sp=>sp._1.prettyString + "~>" + sp._2.prettyString).mkString(", "))
+      if (Tactic.DEBUG) print("unify duplicate " + dupkv._2.map(sp=>sp._1.prettyString + "~>" + sp._2.prettyString).mkString(", ") + "  ")
       val dup = dupkv._2
       if (dup.map(sp=>sp._1).distinct.length==1) {
         // all have same left-hand side
@@ -111,7 +113,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
           dup.patch(0,Nil,1)
         else
           throw new ProverException("Duplicates do not reunify " + dup)
-        println("unified duplicate to " + remaining)
+        if (Tactic.DEBUG) println("unified duplicate to " + remaining)
         assert (remaining.length < dup.length, "reunify made progress by shrinking one list")
         if (remaining.length>=2) matchKeyMap.put(dupkv._1, remaining)
         else {
@@ -128,9 +130,13 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     harmless
   }
 
-  private def ununifiable(e1: Expression, e2: Expression): Nothing = {println(new UnificationException(e1.toString, e2.toString)); throw new UnificationException(e1.toString, e2.toString)}
+  private def ununifiable(e1: Expression, e2: Expression): Nothing = {
+    //println(new UnificationException(e1.toString, e2.toString))
+    throw new UnificationException(e1.toString, e2.toString)}
 
-  private def ununifiable(e1: Sequent, e2: Sequent): Nothing = {println(new UnificationException(e1.toString, e2.toString)); throw new UnificationException(e1.toString, e2.toString)}
+  private def ununifiable(e1: Sequent, e2: Sequent): Nothing = {
+    //println(new UnificationException(e1.toString, e2.toString))
+    throw new UnificationException(e1.toString, e2.toString)}
 
 //  private def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] = if (x1==e2) id else ununifiable(x1,e2)
 //  private def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = if (xp1==e2) id else ununifiable(xp1,e2)
@@ -240,4 +246,4 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
 }
 
 case class UnificationException(e1: String, e2: String, info: String = "")
-  extends CoreException("Un-Unifiable:\n" + e1 + " with\n" + e2 + "\n" + info) {}
+  extends CoreException("Un-Unifiable: " + e1 + "\nfor:          " + e2 + "\n" + info) {}

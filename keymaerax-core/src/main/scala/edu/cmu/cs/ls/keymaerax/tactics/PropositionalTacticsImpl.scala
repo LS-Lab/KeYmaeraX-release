@@ -117,6 +117,10 @@ object PropositionalTacticsImpl {
     }
   }
 
+  /**
+   * @see [[ImplyRight]]
+   * @see [[InverseImplyRightT]]
+   */
   def ImplyRightT: PositionTactic = new PositionTactic("ImplyRight") {
     def applies(s: Sequent, p: Position) = !p.isAnte && p.inExpr == HereP && (s.succ(p.index) match {
       case Imply(_, _) => true
@@ -446,6 +450,7 @@ object PropositionalTacticsImpl {
    * }}}
    * @author Nathan Fulton
    *         (only used in one place. Delete if this duplicates something that already exists.)
+   * @see [[ImplyRightT]]
    * @todo could generalize to work in gamma delta context when specifying TwoPositionRule type positions.
    */
   def InverseImplyRightT : Tactic = new ConstructionTactic("inverse imply right") {

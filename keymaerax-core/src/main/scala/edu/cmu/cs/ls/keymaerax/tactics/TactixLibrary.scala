@@ -214,6 +214,10 @@ object TactixLibrary extends UnifyUSCalculus {
   def CQ(inEqPos: PosInExpr)  : Tactic         = AxiomaticRuleTactics.equationCongruenceT(inEqPos)
   /** CE: Congruence: Contextual Equivalence proves an equivalence */
   def CE(inEqPos: PosInExpr)  : Tactic         = AxiomaticRuleTactics.equivalenceCongruenceT(inEqPos)
+  /** Monb: Monotone for [a;]p(x) |- [a;]q(x) */
+  lazy val Monb               : Tactic         = AxiomaticRuleTactics.boxMonotoneT
+  /** Mond: Monotone for <a;>p(x) |- <a;>q(x) */
+  lazy val Mond               : Tactic         = AxiomaticRuleTactics.diamondMonotoneT
 
 
   /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
@@ -305,7 +309,10 @@ object TactixLibrary extends UnifyUSCalculus {
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
     if (!rootNode.isClosed() || Tactic.DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().map(x => "Open Goal: " + x.sequent).mkString(("\n"))))
-    rootNode.provableWitness
+    val proof = rootNode.provableWitness
+    if (Tactic.DEBUG) println("proveBy " + proof)
+    proof
   }
+  def proveBy(goal: Formula, tactic: Tactic): Provable = proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(goal)), tactic)
 
 }
