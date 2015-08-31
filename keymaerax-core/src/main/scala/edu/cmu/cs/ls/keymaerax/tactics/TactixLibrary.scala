@@ -313,5 +313,6 @@ object TactixLibrary extends UnifyUSCalculus {
     if (Tactic.DEBUG) println("proveBy " + proof)
     proof
   }
+  def proveBy(goal: Formula, tactic: Tactic): Provable = proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(goal)), tactic)
 
 }

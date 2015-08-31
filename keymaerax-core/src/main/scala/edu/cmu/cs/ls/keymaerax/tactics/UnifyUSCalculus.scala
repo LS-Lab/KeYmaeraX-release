@@ -136,6 +136,11 @@ trait UnifyUSCalculus {
    * @param inst Transformation for instantiating additional unmatched symbols that do not occur in fact(key).
    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
+   * @example useAt("[a;++b;]p(??)<->[a;]p(??)&[b;]p(??)", PosInExpr(0::Nil), byUS("[;] compose"))
+   * applied to the indicated 1::1::Nil of
+   * [x:=1;][{x'=22}] [x:=2*x;++x:=0;]x>=0
+   * turns it into
+   * [x:=1;][{x'=22}] ([x:=2*x;]x>=0 & [x:=0;]x>=0)
    * @see [[useFor()]]
    * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
    */
@@ -296,16 +301,18 @@ trait UnifyUSCalculus {
     * @param inst Transformation for instantiating additional unmatched symbols that do not occur in `fact.conclusion(key)`.
     *   Defaults to identity transformation, i.e., no change in substitution found by unification.
     *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
+    * @example useFor(Axiom.axiom("[;] compose"), PosInExpr(0::Nil))
+    * applied to the indicated 1::1::Nil of
+    * [x:=1;][{x'=22}] [x:=2*x;++x:=0;]x>=0
+    * turns it into
+    * [x:=1;][{x'=22}] ([x:=2*x;]x>=0 & [x:=0;]x>=0)
     * @see [[useAt()]]
     */
   def useFor(fact: Provable, key: PosInExpr, inst: RenUSubst=>RenUSubst = (us => us)): (Position => (Provable => Provable)) = {
     import FormulaConverter._
     import SequentConverter._
-    //import TactixLibrary._
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).extractContext(key)
     if (DEBUG) println("useFor(" + fact.conclusion + ") key: " + keyPart + " in key context: " + keyCtx)
-
-    val HISTORY=false
 
     pos => proof => {
 
@@ -383,55 +390,23 @@ trait UnifyUSCalculus {
           // G |- C{subst(o)}, D
           proved(proof, 0)
 
-          //
-          //          //fact(Sequent(Nil,IndexedSeq(),IndexedSeq(Equal(subst(k), subst(c)))),
-          //          proof(proof.conclusion.updated(pos.top, C(subst(other))), CutRight(C(subst(other)), pos.top.asInstanceOf[SuccPos]))
-          //          //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
-          //          cutRightT(C(subst(other)))(p.top) & onBranch(
-          //            //(BranchLabels.cutUseLbl, debugT("  useAt result")),
-          //            //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
-          //            //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-          //            (BranchLabels.cutShowLbl, cohideT(p.top) /*& assertT(0,1)*/ &
-          //              equivifyRightT(SuccPosition(0)) & (
-          //              if (other.kind == FormulaKind) AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr)
-          //              else if (other.kind == TermKind) AxiomaticRuleTactics.equationCongruenceT(p.inExpr)
-          //              else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-          //              factTactic)
-          //            //@todo error if factTactic is not applicable (factTactic | errorT)
-          //          )
         } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(other))), "prolonged conclusion"
           ) ensuring(r=>r.subgoals==proof.subgoals, "expected original premises")
 
         K.ctx match {
           case Equal(DotTerm, other) =>
-            //@todo this is convoluted and inefficient compared to a direct forward proof
-            //@todo commute
-            if (HISTORY) TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-              useAt(fact.conclusion.succ.head, key.sibling, byUS(fact), inst)(p))
-            else
-              equivStep(other, byUS(fact))
+            equivStep(other, byUS(fact))
 
           case Equal(other, DotTerm) =>
-            //@todo this is convoluted and inefficient compared to a direct forward proof
-            if (HISTORY) TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-              useAt(fact.conclusion.succ.head, key.sibling, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & byUS(fact), inst)(p))
-            else
-              equivStep(other, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & byUS(fact))
+            equivStep(other, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & byUS(fact))
 
           case Equiv(DotFormula, other) =>
-            //@todo this is convoluted and inefficient compared to a direct forward proof
-            //@todo commute
-            if (HISTORY) TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-              useAt(fact.conclusion.succ.head, key.sibling, byUS(fact), inst)(p))
-            else
-              equivStep(other, byUS(fact))
+            equivStep(other, byUS(fact))
 
           case Equiv(other, DotFormula) =>
-            //@todo this is convoluted and inefficient compared to a direct forward proof
-            if (HISTORY) TactixLibrary.proveBy(fact.conclusion.updated(pos.top, C(subst(other))),
-              useAt(fact.conclusion.succ.head, key.sibling, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & byUS(fact), inst)(p))
-            else
-              equivStep(other, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & byUS(fact))
+            equivStep(other, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & byUS(fact))
+
+          case _ => throw new ProverException("Not implemented for other cases yet, see useAt")
         }
       }
       val r = useFor(subst, keyCtx, keyPart, pos, ctx, expr)
@@ -444,6 +419,7 @@ trait UnifyUSCalculus {
     * Computation-based auto-tactics
     *******************************************************************/
 
+  /** Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices. */
   lazy val chase: PositionTactic = chaseWide(1,3)
 
   def chaseWide(breadth: Int): PositionTactic = chaseWide(breadth, 2*breadth)
@@ -456,11 +432,21 @@ trait UnifyUSCalculus {
 
   /** Chase the expression at the indicated position forward (Hilbert computation constructing the answer by proof).
     * Follows canonical axioms toward all their recursors while there is a unique canonical simplifier axiom.
+    * @param breadth how many alternative axioms to pursue locally, using the first applicable one.
+    *                Equivalent to pruning keys so that all lists longer than giveUp are replaced by Nil,
+    *                and then all lists are truncated beyond breadth.
+    * @param giveUp  how many alternatives are too much so that the chase stops without trying any for applicability.
+    *                Equivalent to pruning keys so that all lists longer than giveUp are replaced by Nil.
+    * @param keys maps expressions to a list of axiom names to be used for those expressions.
+    *             First returned axioms will be favored (if applicable) over further axioms.
+    * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+(x'*y+x*y')>=0
+    * @example When applied at Nil, turns [?x>0;x:=x+1;++?x=0;x:=1;]x>=1 into ((x>0->x+1>=1) & (x=0->1>=1))
+    * @example When applied at 1::Nil, turns [{x'=22}][?x>0;x:=x+1;++?x=0;x:=1;]x>=1 into [{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))
     * @see [[HilbertCalculus.derive]]
-    * @todo also implement a backwards chase in tableaux/sequent style
+    * @todo also implement a backwards chase in tableaux/sequent style based on useAt instead of useFor
     */
   def chaseWide(breadth: Int, giveUp: Int, keys: Expression=>List[String] = AxiomIndex.axiomsFor): PositionTactic = new PositionTactic("chase") {
-    require(breadth<=giveUp)
+    require(breadth<=giveUp, "less breadth than giveup expected: " + breadth + "<=" + giveUp)
     import AxiomIndex.axiomIndex
     import FormulaConverter._
     import TermConverter._
@@ -530,7 +516,9 @@ trait UnifyUSCalculus {
     }
   }
 
+  /** Debug output s (for forward tactics) */
   def debugF(s: => Any): (Provable=>Provable)=>(Provable=>Provable) = tac => proof => {val pr = tac(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}
+  /** Debug output s (for forward positional tactics) */
   def debugPF(s: => Any): (Position=>Provable=>Provable)=>(Position=>Provable=>Provable) = tac => pos => proof => {val pr = tac(pos)(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}
 
 }
