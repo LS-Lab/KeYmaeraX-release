@@ -448,7 +448,7 @@ trait UnifyUSCalculus {
 
   def chaseWide(breadth: Int): PositionTactic = chaseWide(breadth, 2*breadth)
 
-  private def unprog: PositionTactic = chaseWide(1,2, e => e match {
+  def unprog: PositionTactic = chaseWide(1,2, e => e match {
     case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
     case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
     case _ => AxiomIndex.axiomsFor(e)

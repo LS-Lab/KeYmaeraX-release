@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Tool}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import testHelper.ParserFactory._
 import testHelper.ProvabilityTestHelper
 
 import scala.collection.immutable._
@@ -298,5 +299,12 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         assignb(1) & // handle updates
         QE
     ) shouldBe 'proved
+  }
+
+  "Chase generalizations" should "unprog llc" in {
+    println(proveBy(parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-ctrl.key")),
+      implyR(1) & unprog(1) &
+      ls(useAt("<:=> assign"))
+    ))
   }
 }

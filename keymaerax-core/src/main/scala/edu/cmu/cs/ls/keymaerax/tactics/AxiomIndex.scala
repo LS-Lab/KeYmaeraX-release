@@ -119,7 +119,7 @@ object AxiomIndex {
     }
     case Box(a, _) => a match {
       case _: Assign    => "[:=] assign" :: "[:=] assign equational" :: "[:=] assign update" :: Nil
-      case _: AssignAny => "[:*] assign any" :: Nil
+      case _: AssignAny => "[:*] assign nondet" :: Nil
       case _: Test      => "[?] test" :: Nil
       case ODESystem(_:AtomicODE,True)   => odeList :+ "DE differential effect"
       case ODESystem(_:AtomicODE,domain) => "DW differential weaken" :: odeList ++ List("DE differential effect")
@@ -133,7 +133,7 @@ object AxiomIndex {
     }
     case Diamond(a, _) => a match {
       case _: Assign    => "<:=> assign" :: "<:=> assign equational" :: "<:=> assign update" :: Nil
-      case _: AssignAny => "<:*> assign any" :: Nil
+      case _: AssignAny => "<:*> assign nondet" :: Nil
       case _: Test      => "<?> test" :: Nil
       //@todo diamond duals of:
 //      case ODESystem(_:AtomicODE,True)   => odeList :: "DE differential effect"
