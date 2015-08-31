@@ -94,6 +94,10 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
   val json = JsArray(objects)
 }
 
+class UpdateProofNameResponse(proofId : String, newName : String) extends Response {
+  val json = JsArray()
+}
+
 /**
  *
  * @param proofs The list of proofs with their status in KeYmaera (proof, loadStatus).
