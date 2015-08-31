@@ -25,7 +25,7 @@ trait UnifyUSCalculus {
   type Subst = UnificationMatch.Subst
 
   /*******************************************************************
-    * unification and matching based auto-tactics
+    * unification and matching based auto-tactics (backward tableaux/sequent)
     *******************************************************************/
 
   /** US(form) reduce the proof to a proof of form by a suitable uniform substitution obtained by unification */
@@ -86,7 +86,7 @@ trait UnifyUSCalculus {
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
   /*******************************************************************
-    * unification and matching based auto-tactics
+    * unification and matching based auto-tactics (backward tableaux/sequent)
     *******************************************************************/
 
   /**
@@ -284,11 +284,18 @@ trait UnifyUSCalculus {
 
   }
 
+  /*******************************************************************
+    * unification and matching based auto-tactics (forward Hilbert)
+    *******************************************************************/
+
+  type ForwardTactic = (Provable => Provable)
+  type ForwardPositionTactic = (Position => ForwardTactic)
+
   /** useFor(axiom) use the given axiom forward for the selected position in the given Provable to conclude a new Provable */
-  def useFor(axiom: String): (Position => (Provable => Provable)) = useFor(axiom, PosInExpr(0::Nil))
+  def useFor(axiom: String): ForwardPositionTactic = useFor(axiom, PosInExpr(0::Nil))
 
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
-  def useFor(axiom: String, key: PosInExpr): (Position => (Provable => Provable)) =
+  def useFor(axiom: String, key: PosInExpr): ForwardPositionTactic =
     if (Axiom.axioms.contains(axiom)) useFor(Axiom.axiom(axiom), key)
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
@@ -308,7 +315,7 @@ trait UnifyUSCalculus {
     * [x:=1;][{x'=22}] ([x:=2*x;]x>=0 & [x:=0;]x>=0)
     * @see [[useAt()]]
     */
-  def useFor(fact: Provable, key: PosInExpr, inst: RenUSubst=>RenUSubst = (us => us)): (Position => (Provable => Provable)) = {
+  def useFor(fact: Provable, key: PosInExpr, inst: RenUSubst=>RenUSubst = (us => us)): ForwardPositionTactic = {
     import FormulaConverter._
     import SequentConverter._
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).extractContext(key)
@@ -420,23 +427,27 @@ trait UnifyUSCalculus {
     *******************************************************************/
 
   /** Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices. */
-  lazy val chase: PositionTactic = chaseWide(1,3)
+  lazy val chase: PositionTactic = chase(1,3)
 
-  def chaseWide(breadth: Int): PositionTactic = chaseWide(breadth, 2*breadth)
-
-  def unprog: PositionTactic = chaseWide(1,2, e => e match {
-    case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
-    case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
-    case _ => AxiomIndex.axiomsFor(e)
-  })
-
-  /** Chase the expression at the indicated position forward (Hilbert computation constructing the answer by proof).
-    * Follows canonical axioms toward all their recursors while there is a unique canonical simplifier axiom.
+  /** Chase with bounded breadth and giveUp to stop.
     * @param breadth how many alternative axioms to pursue locally, using the first applicable one.
     *                Equivalent to pruning keys so that all lists longer than giveUp are replaced by Nil,
     *                and then all lists are truncated beyond breadth.
     * @param giveUp  how many alternatives are too much so that the chase stops without trying any for applicability.
     *                Equivalent to pruning keys so that all lists longer than giveUp are replaced by Nil.
+    */
+  def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String] = AxiomIndex.axiomsFor): PositionTactic = {
+    require(breadth <= giveUp, "less breadth than giveup expected: " + breadth + "<=" + giveUp)
+    chase(e => keys(e) match {
+      case l:List[String] if l.size > giveUp => Nil
+      case l:List[String] => l.take(breadth)
+    })
+  }
+
+  /** chase: Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
+    *
+    * Chase the expression at the indicated position forward (Hilbert computation constructing the answer by proof).
+    * Follows canonical axioms toward all their recursors while there is an applicable simplifier axiom according to `keys`.
     * @param keys maps expressions to a list of axiom names to be used for those expressions.
     *             First returned axioms will be favored (if applicable) over further axioms.
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+(x'*y+x*y')>=0
@@ -445,8 +456,7 @@ trait UnifyUSCalculus {
     * @see [[HilbertCalculus.derive]]
     * @todo also implement a backwards chase in tableaux/sequent style based on useAt instead of useFor
     */
-  def chaseWide(breadth: Int, giveUp: Int, keys: Expression=>List[String] = AxiomIndex.axiomsFor): PositionTactic = new PositionTactic("chase") {
-    require(breadth<=giveUp, "less breadth than giveup expected: " + breadth + "<=" + giveUp)
+  def chase(keys: Expression=>List[String]): PositionTactic = new PositionTactic("chase") {
     import AxiomIndex.axiomIndex
     import FormulaConverter._
     import TermConverter._
@@ -495,30 +505,37 @@ trait UnifyUSCalculus {
               (pf, cursor) => chase(pf, pos.append(cursor))
             )
           // take the first axiom among breadth that works for one useFor step
-          case l: List[String] if l.size<=giveUp =>
-            def firstAxUse(l: List[String]): Option[(Provable,List[PosInExpr])] = {
+          case l: List[String] =>
+            def firstAxUse: Option[(Provable,List[PosInExpr])] = {
               for (ax <- l) try {
                 val (key, recursor) = axiomIndex(ax)
                 return Some((debugPF(ax)(useFor(ax, key))(SuccPosition(0, pos))(de), recursor))
               } catch {case _: ProverException => /* ignore and try next */}
               None
             }
-            firstAxUse(l.take(Math.min(breadth, l.length))) match {
+            firstAxUse match {
               case None => println("no chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")"); de
               case Some((axUse, recursor)) =>
                 recursor.foldLeft(axUse)(
                   (pf, cursor) => chase(pf, pos.append(cursor))
                 )
             }
-          case l: List[String] if l.size>giveUp => println("stop chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")"); de
         }
       } ensuring(r => r.isProved, "chase remains proved: " + "chase(" + de.conclusion.succ.head(pos).prettyString + ")")
     }
   }
 
+  //@todo useful enough here?
+  def unprog: PositionTactic = chase(1,2, e => e match {
+    case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
+    case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
+    case _ => AxiomIndex.axiomsFor(e)
+  })
+
+
   /** Debug output s (for forward tactics) */
-  def debugF(s: => Any): (Provable=>Provable)=>(Provable=>Provable) = tac => proof => {val pr = tac(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}
+  def debugF(s: => Any): ForwardTactic=>ForwardTactic = tac => proof => {val pr = tac(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}
   /** Debug output s (for forward positional tactics) */
-  def debugPF(s: => Any): (Position=>Provable=>Provable)=>(Position=>Provable=>Provable) = tac => pos => proof => {val pr = tac(pos)(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}
+  def debugPF(s: => Any): ForwardPositionTactic=>ForwardPositionTactic = tac => pos => proof => {val pr = tac(pos)(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}
 
 }
