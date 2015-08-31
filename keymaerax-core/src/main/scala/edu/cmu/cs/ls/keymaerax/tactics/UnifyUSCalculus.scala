@@ -446,6 +446,13 @@ trait UnifyUSCalculus {
       case l:List[String] => l.take(breadth)
     }, modifier)
   }
+  def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): ForwardPositionTactic = {
+    require(breadth <= giveUp, "less breadth than giveup expected: " + breadth + "<=" + giveUp)
+    chaseFor(e => keys(e) match {
+      case l:List[String] if l.size > giveUp => Nil
+      case l:List[String] => l.take(breadth)
+    }, modifier)
+  }
 
   /** chase: Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
     *
@@ -565,26 +572,29 @@ trait UnifyUSCalculus {
     case _ => AxiomIndex.axiomsFor(e)
   })
 
-//  def updateCalculus: PositionTactic = {
-//    var updateStack: List[Position] = Nil
-//    val chased = chase(3,3, e => e match {
-//      // no equational assignments
-//      case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
-//      case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
-//      case _ => AxiomIndex.axiomsFor(e)
-//    },
-//      (ax,pos)=> pr => {
-//        ax match {
-//          // log update applications
-//          //@todo assert that pos is no proper prefix of anything already on the stack (outside in traversal)
-//          case "[:=] assign update" | "<:=> assign update" => updateStack = pos :: updateStack
-//          case _ =>
-//        };
-//        pr
-//      }
-//    )
-//    updateStack.foldLeft(chased)((pr, pos) => useFor("[:=] assign")(pos)(pr))
-//  }
+  /** An update based calculus for a position */
+  def updateCalculus: ForwardPositionTactic = {
+    // mutable state per call
+    var updateStack: List[Position] = Nil
+    val chased: ForwardPositionTactic = chaseFor(3,3, e => e match {
+      // no equational assignments
+      case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
+      case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
+      case _ => AxiomIndex.axiomsFor(e)
+    },
+      (ax,pos)=> pr => {
+        ax match {
+          // log update applications
+          //@todo assert that pos is no proper prefix of anything already on the stack (outside in traversal)
+          case "[:=] assign update" | "<:=> assign update" => updateStack = pos :: updateStack
+          case _ =>
+        };
+        pr
+      }
+    )
+    // retroactively handle postponed assignments in inverse order, so inside-out
+    pos => pr => updateStack.foldLeft(chased(pos)(pr))((proof, p) => useFor("[:=] assign")(p)(proof))
+  }
 
   /** Debug output s (for forward tactics) */
   def debugF(s: => Any): ForwardTactic=>ForwardTactic = tac => proof => {val pr = tac(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}
