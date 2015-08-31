@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomIndex._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ByProvable, ConstructionTactic, PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch
@@ -427,7 +428,7 @@ trait UnifyUSCalculus {
     *******************************************************************/
 
   /** Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices. */
-  lazy val chase: PositionTactic = chase(1,3)
+  lazy val chase: PositionTactic = chase(3,3)
 
   /** Chase with bounded breadth and giveUp to stop.
     * @param breadth how many alternative axioms to pursue locally, using the first applicable one.
@@ -436,35 +437,38 @@ trait UnifyUSCalculus {
     * @param giveUp  how many alternatives are too much so that the chase stops without trying any for applicability.
     *                Equivalent to pruning keys so that all lists longer than giveUp are replaced by Nil.
     */
-  def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String] = AxiomIndex.axiomsFor): PositionTactic = {
+  def chase(breadth: Int, giveUp: Int): PositionTactic = chase(breadth, giveUp, AxiomIndex.axiomsFor)
+  def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String]): PositionTactic = chase(breadth, giveUp, keys, (ax,pos) => pr=>pr)
+  def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): PositionTactic = {
     require(breadth <= giveUp, "less breadth than giveup expected: " + breadth + "<=" + giveUp)
     chase(e => keys(e) match {
       case l:List[String] if l.size > giveUp => Nil
       case l:List[String] => l.take(breadth)
-    })
+    }, modifier)
   }
 
   /** chase: Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
     *
     * Chase the expression at the indicated position forward (Hilbert computation constructing the answer by proof).
     * Follows canonical axioms toward all their recursors while there is an applicable simplifier axiom according to `keys`.
-    * @note Chase is search-free and, thus, quite efficient. It directly follows the
-    *       [[AxiomIndex.axiomIndex() axiom index]] information to compute follow-up positions for the chase.
     * @param keys maps expressions to a list of axiom names to be used for those expressions.
     *             First returned axioms will be favored (if applicable) over further axioms.
+    * @param modifier will be notified after successful uses of axiom at a position with the result of the use.
+    *                 The result of modifier(ax,pos)(step) will be used instead of step for each step of the chase.
+    * @note Chase is search-free and, thus, quite efficient. It directly follows the
+    *       [[AxiomIndex.axiomIndex() axiom index]] information to compute follow-up positions for the chase.
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+(x'*y+x*y')>=0
     * @example When applied at Nil, turns [?x>0;x:=x+1;++?x=0;x:=1;]x>=1 into ((x>0->x+1>=1) & (x=0->1>=1))
     * @example When applied at 1::Nil, turns [{x'=22}][?x>0;x:=x+1;++?x=0;x:=1;]x>=1 into [{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))
     * @see [[HilbertCalculus.derive]]
+    * @see [[chaseFor()]]
     * @todo also implement a backwards chase in tableaux/sequent style based on useAt instead of useFor
     */
-  def chase(keys: Expression=>List[String]): PositionTactic = new PositionTactic("chase") {
-    import AxiomIndex.axiomIndex
-    import FormulaConverter._
-    import TermConverter._
+  def chase(keys: Expression=>List[String],
+            modifier: (String,Position)=>ForwardTactic = (ax,pos) => pr=>pr): PositionTactic = new PositionTactic("chase") {
     import SequentConverter._
-    import Tactic.DEBUG
 
+    //@note True has no applicable keys
     override def applies(s: Sequent, p: Position): Boolean = keys(s.at(p).getOrElse(True)).size==1
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
@@ -490,53 +494,97 @@ trait UnifyUSCalculus {
         }
         assert(initial.isProved && initial.conclusion.ante.isEmpty && initial.conclusion.succ.length==1, "Proved reflexive start " + initial + " for " + e)
         if (DEBUG) println("chase starts at " + initial)
-        val r = chase(initial, PosInExpr(1::Nil))
+        val r = chaseFor(keys, modifier) (SuccPosition(0, PosInExpr(1::Nil)))(initial)
         if (DEBUG) println("chase(" + e.prettyString + ") = ~~> " + r + " done")
         r
       } ensuring(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
-
-      /** chase the conclusions's expression at pos forward, yielding the provable after the chase. */
-      private def chase(de: Provable, pos: PosInExpr): Provable = {
-        if (DEBUG) println("chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")")
-        // generic recursor
-        keys(de.conclusion.succ.head.subAt(pos)) match {
-          case Nil => println("no chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")"); de
-          /*throw new IllegalArgumentException("No axiomFor for: " + expr)*/
-          case List(ax) =>
-            val (key, recursor) = axiomIndex(ax)
-            val axUse = debugPF(ax)(useFor(ax, key))(SuccPosition(0, pos))(de)
-            recursor.foldLeft(axUse)(
-              (pf, cursor) => chase(pf, pos.append(cursor))
-            )
-          // take the first axiom among breadth that works for one useFor step
-          case l: List[String] =>
-            // useFor the first applicable axiom
-            def firstAxUse: Option[(Provable,List[PosInExpr])] = {
-              for (ax <- l) try {
-                val (key, recursor) = axiomIndex(ax)
-                return Some((debugPF(ax)(useFor(ax, key))(SuccPosition(0, pos))(de), recursor))
-              } catch {case _: ProverException => /* ignore and try next */}
-              None
-            }
-            firstAxUse match {
-              case None => println("no chase(" + de.conclusion.succ.head.subAt(pos).prettyString + ")"); de
-              case Some((axUse, recursor)) =>
-                recursor.foldLeft(axUse)(
-                  (pf, cursor) => chase(pf, pos.append(cursor))
-                )
-            }
-        }
-      } ensuring(r => r.isProved, "chase remains proved: " + "chase(" + de.conclusion.succ.head(pos).prettyString + ")")
     }
   }
 
+  /** chaseFor: Chases the expression of Provables at given positions forward until it is chased away or can't be chased further without critical choices.
+    *
+    * Chase the expression at the indicated position forward (Hilbert computation constructing the answer by proof).
+    * Follows canonical axioms toward all their recursors while there is an applicable simplifier axiom according to `keys`.
+    * @param keys maps expressions to a list of axiom names to be used for those expressions.
+    *             First returned axioms will be favored (if applicable) over further axioms.
+    * @param modifier will be notified after successful uses of axiom at a position with the result of the use.
+    *                 The result of modifier(ax,pos)(step) will be used instead of step for each step of the chase.
+    * @note Chase is search-free and, thus, quite efficient. It directly follows the
+    *       [[AxiomIndex.axiomIndex() axiom index]] information to compute follow-up positions for the chase.
+    * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+(x'*y+x*y')>=0
+    * @example When applied at Nil, turns [?x>0;x:=x+1;++?x=0;x:=1;]x>=1 into ((x>0->x+1>=1) & (x=0->1>=1))
+    * @example When applied at 1::Nil, turns [{x'=22}][?x>0;x:=x+1;++?x=0;x:=1;]x>=1 into [{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))
+    * @see [[chase()derive]]
+    * @see [[HilbertCalculus.derive]]
+    */
+  def chaseFor(keys: Expression=>List[String],
+                    modifier: (String,Position)=>ForwardTactic): ForwardPositionTactic = pos => de => {
+    def doChase(de: Provable, pos: Position): Provable = {
+      import AxiomIndex.axiomIndex
+      import SequentConverter._
+      if (DEBUG) println("chase(" + de.conclusion.subAt(pos).prettyString + ")")
+      // generic recursor
+      keys(de.conclusion.subAt(pos)) match {
+        case Nil => println("no chase(" + de.conclusion.subAt(pos).prettyString + ")"); de
+        /*throw new IllegalArgumentException("No axiomFor for: " + expr)*/
+        case List(ax) =>
+          val (key, recursor) = axiomIndex(ax)
+          try {
+            val axUse = modifier(ax,pos) (useFor(ax, key)(pos)(de))
+            recursor.foldLeft(axUse)(
+              (pf, cursor) => doChase(pf, pos.append(cursor))
+            )
+          } catch {case e: ProverException => throw e.inContext("useFor(" + ax + ", " + key.prettyString + ")\nin " + "chase(" + de.conclusion.subAt(pos).prettyString + ")")}
+        // take the first axiom among breadth that works for one useFor step
+        case l: List[String] =>
+          // useFor the first applicable axiom if any, or None
+          def firstAxUse: Option[(Provable,List[PosInExpr])] = {
+            for (ax <- l) try {
+              val (key, recursor) = axiomIndex(ax)
+              return Some((modifier(ax,pos) (useFor(ax, key)(pos)(de)), recursor))
+            } catch {case _: ProverException => /* ignore and try next */}
+            None
+          }
+          firstAxUse match {
+            case None => println("no chase(" + de.conclusion.subAt(pos).prettyString + ")"); de
+            case Some((axUse, recursor)) =>
+              recursor.foldLeft(axUse)(
+                (pf, cursor) => doChase(pf, pos.append(cursor))
+              )
+          }
+      }
+    }
+    doChase(de,pos)
+  }
+
+
   //@todo useful enough here?
-  def unprog: PositionTactic = chase(1,2, e => e match {
+  def unprog: PositionTactic = chase(3,3, e => e match {
     case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
     case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
     case _ => AxiomIndex.axiomsFor(e)
   })
 
+//  def updateCalculus: PositionTactic = {
+//    var updateStack: List[Position] = Nil
+//    val chased = chase(3,3, e => e match {
+//      // no equational assignments
+//      case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
+//      case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
+//      case _ => AxiomIndex.axiomsFor(e)
+//    },
+//      (ax,pos)=> pr => {
+//        ax match {
+//          // log update applications
+//          //@todo assert that pos is no proper prefix of anything already on the stack (outside in traversal)
+//          case "[:=] assign update" | "<:=> assign update" => updateStack = pos :: updateStack
+//          case _ =>
+//        };
+//        pr
+//      }
+//    )
+//    updateStack.foldLeft(chased)((pr, pos) => useFor("[:=] assign")(pos)(pr))
+//  }
 
   /** Debug output s (for forward tactics) */
   def debugF(s: => Any): ForwardTactic=>ForwardTactic = tac => proof => {val pr = tac(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}

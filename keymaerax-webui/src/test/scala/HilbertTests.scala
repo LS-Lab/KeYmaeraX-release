@@ -224,7 +224,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
 
-  it should "prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)" in {
+  ignore should "prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
       implyR(1) &
         DC("5<=x".asFormula)(1) & debug("after DC") &
@@ -245,7 +245,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
-  it should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in {
+  ignore should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
       implyR(1) & //ind
         useAt("[;] compose")(1) &
@@ -314,6 +314,16 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     proveBy("[{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula,
       chase(1, 1 :: Nil)
     ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))".asFormula)))
+  }
+
+  it should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in {
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
+      implyR(1) & chase(1) &
+      //@todo need to locate diffInd to after update prefix
+      diffInd(1, 1::Nil) &
+        assignb(1) & // handle updates
+        QE
+    ) shouldBe 'proved
   }
 
   "Chase generalizations" should "unprog llc" in {

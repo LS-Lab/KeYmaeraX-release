@@ -37,6 +37,7 @@ case class PosInExpr(pos: List[Int] = Nil) {
   def isPrefixOf(p: PosInExpr): Boolean = p.pos.startsWith(pos)
 
   override def toString: String = "PosInExpr(" + pos.mkString(".") + ")"
+  def prettyString: String = "." + pos.mkString(".")
 }
 
 // @note observe that HereP and PosInExpr([]) will be equals, since PosInExpr is a case class
@@ -104,6 +105,7 @@ object HereP extends PosInExpr
     protected def clone(i: Int, e: PosInExpr = HereP): Position
 
     override def toString: String = (if (isAnte) "Ante" else "Succ") + "(" + getIndex + ", " + inExpr.pos.mkString(".") + ")"
+    def prettyString: String = top.getPos + "." + inExpr.pos.mkString(".")
   }
 
 @deprecated("Automated position converters should be removed ultimately.")
