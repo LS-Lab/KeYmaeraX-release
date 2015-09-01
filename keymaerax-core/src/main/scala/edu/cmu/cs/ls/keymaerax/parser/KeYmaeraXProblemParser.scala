@@ -100,7 +100,7 @@ object KeYmaeraXDeclarationsParser {
       case x: Variable =>
         val sort = decls.get((x.name,x.index)) match {
           case Some((None,d)) => d
-          case None => throw new ParseException("undefined symbol " + x, UnknownLocation, "type analysis")
+          case None => throw new ParseException("undefined symbol " + x + " with index " + x.index, UnknownLocation, "type analysis")
         }
         x.sort == sort
       case _ => true
@@ -163,8 +163,10 @@ object KeYmaeraXDeclarationsParser {
     val sortToken = ts.head
     val sort = parseSort(sortToken)
 
-    val nameToken = ts.tail.head
-    val (variableName, variableIdx) = parseName(nameToken)
+    val nameToken : IDENT = ts.tail.head.tok match {
+      case i : IDENT => i
+      case x => throw new Exception("Expected identifier token (IDENT) but found " + x.getClass().getCanonicalName())
+    }
 
     val afterName = ts.tail.tail //skip over IDENT and REAL/BOOL tokens.
     if(afterName.head.tok.equals(LPAREN)) {
@@ -173,10 +175,10 @@ object KeYmaeraXDeclarationsParser {
       assert(remainder.last.tok.equals(PERIOD),
         "Expected declaration to end with . but found " + remainder.last)
 
-      (( (variableName, variableIdx), (Some(domainSort), sort)), remainder.tail)
+      (( (nameToken.name, nameToken.index), (Some(domainSort), sort)), remainder.tail)
     }
     else if(afterName.head.tok.equals(PERIOD)) {
-      (( (variableName, variableIdx) , (None, sort) ), afterName.tail)
+      (( (nameToken.name, nameToken.index) , (None, sort) ), afterName.tail)
     }
     else {
       throw new ParseException("Expected complete declaration but could not find terminating period", afterName.head.loc, "declaration parse")
@@ -215,21 +217,6 @@ object KeYmaeraXDeclarationsParser {
       (domainSort, remainder)
     }
   }
-
-  private def parseName(nameToken : Token) : (String, Option[Int]) = nameToken.tok match {
-    case id : IDENT =>
-      val name = id.name
-      if(name.contains("_")) {
-        val parts = name.split("_", 2)
-        if(parts(1).nonEmpty)
-          (parts(0), Some(parts(1).toInt))
-        else
-          (parts(0), None) //This is just a name that ends withe a _.
-      }
-      else (name, None)
-    case _ => throw new ParseException("Expected variable name identifier but found " + nameToken, nameToken.loc, "parse name")
-  }
-
 
   private def parseSort(sortToken : Token) : Sort = sortToken.tok match {
     case edu.cmu.cs.ls.keymaerax.parser.IDENT("R", _) => edu.cmu.cs.ls.keymaerax.core.Real
