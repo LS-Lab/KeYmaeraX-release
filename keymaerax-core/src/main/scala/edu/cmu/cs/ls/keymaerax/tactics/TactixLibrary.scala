@@ -24,6 +24,7 @@ import scala.collection.immutable._
  * @see [[HilbertCalculus]]
  * @see [[UnifyUSCalculus]]
  * @see [[TacticLibrary]]
+ * @see [[DerivedAxioms]]
  * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
  */
 object TactixLibrary extends UnifyUSCalculus {
@@ -31,7 +32,7 @@ object TactixLibrary extends UnifyUSCalculus {
 //  /** step: makes one sequent proof step to simplify the formula at the indicated position (unless @invariant needed) */
   val step                    : PositionTactic = TacticLibrary.step
 
-  /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
+  /** stepAt: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   lazy val stepAt             : PositionTactic = HilbertCalculus.stepAt
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
@@ -65,7 +66,7 @@ object TactixLibrary extends UnifyUSCalculus {
    */
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic = SearchTacticsImpl.onBranch(s1, spec:_*)
 
-  /** Call the current branch s */
+  /** Call the current proof branch s */
   def label(s: String): Tactic = new LabelBranch(s)
 
   // Locating applicable positions for PositionTactics
@@ -204,12 +205,11 @@ object TactixLibrary extends UnifyUSCalculus {
   //@todo could change type to invariants: Formula* if considered more readable
   def diffInvariant(invariants: List[Formula]): PositionTactic = ODETactics.diffInvariant(invariants)
 
-  // real closed fields
-  //lazy val equalReflexive     : PositionTactic = ArithmeticTacticsImpl.EqualReflexiveT
+  // axiomatic rules
 
-  // rules
-
-  /** G: Goedel rule proves the postcondition of a box in isolation (hybrid systems) */
+  /** G: Goedel rule proves the postcondition of a box in isolation (hybrid systems)
+    * @see [[Monb]] with p(x)=True
+    */
   lazy val G                  : Tactic         = AxiomaticRuleTactics.goedelT
   /** allG: all generalization rule proves the formula after a universal quantifier in isolation */
   lazy val allG               : Tactic         = AxiomaticRuleTactics.forallGeneralizationT
@@ -219,11 +219,13 @@ object TactixLibrary extends UnifyUSCalculus {
   def CQ(inEqPos: PosInExpr)  : Tactic         = AxiomaticRuleTactics.equationCongruenceT(inEqPos)
   /** CE: Congruence: Contextual Equivalence proves an equivalence */
   def CE(inEqPos: PosInExpr)  : Tactic         = AxiomaticRuleTactics.equivalenceCongruenceT(inEqPos)
-  /** Monb: Monotone for [a;]p(x) |- [a;]q(x) */
+  /** Monb: Monotone for [a;]p(x) |- [a;]q(x) reduces to proving p(x) |- q(x) */
   lazy val Monb               : Tactic         = AxiomaticRuleTactics.boxMonotoneT
-  /** Mond: Monotone for <a;>p(x) |- <a;>q(x) */
+  /** Mond: Monotone for <a;>p(x) |- <a;>q(x) reduces to proving p(x) |- q(x) */
   lazy val Mond               : Tactic         = AxiomaticRuleTactics.diamondMonotoneT
 
+
+  // closing
 
   /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
   lazy val QE                : Tactic         = TacticLibrary.arithmeticT
@@ -238,6 +240,7 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val closeF            : PositionTactic = TacticLibrary.CloseFalseT
 
   // derived
+
   /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. */
   lazy val equivifyR          : PositionTactic = PropositionalTacticsImpl.equivifyRightT
 
@@ -246,9 +249,10 @@ object TactixLibrary extends UnifyUSCalculus {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Utility Tactics
-  /** nil: skip is a no-op that has no effect */
-  def nil : Tactic = Tactics.NilT
-  def skip : Tactic = nil
+  /** nil: skip is a no-op tactic that has no effect */
+  lazy val nil : Tactic = Tactics.NilT
+  /** nil: skip is a no-op tactic that has no effect */
+  lazy val skip : Tactic = nil
 
   /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term. */
   def abbrv(name: Variable): PositionTactic = EqualityRewritingImpl.abbrv(name)
@@ -275,7 +279,9 @@ object TactixLibrary extends UnifyUSCalculus {
     case f: Formula => Tactics.assertPT(f, msg)
   }
 
+  /** debug(s) sprinkles debug message s into the output and the ProofNode information */
   def debug(s: => Any): Tactic = TacticLibrary.debugT(s)
+  /** debugAt(s) sprinkles debug message s into the output and the ProofNode information */
   def debugAt(s: => Any): PositionTactic = TacticLibrary.debugAtT(s)
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -322,6 +328,10 @@ object TactixLibrary extends UnifyUSCalculus {
     if (Tactic.DEBUG) println("proveBy " + proof)
     proof
   }
+  /**
+   * Prove the new goal by the given tactic, returning the resulting Provable
+   * @see [[TactixLibrary.by(Provable)]]
+   */
   def proveBy(goal: Formula, tactic: Tactic): Provable = proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(goal)), tactic)
 
 }
