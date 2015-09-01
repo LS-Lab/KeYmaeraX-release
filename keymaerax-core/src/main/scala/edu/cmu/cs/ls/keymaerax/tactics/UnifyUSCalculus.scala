@@ -477,7 +477,7 @@ trait UnifyUSCalculus {
       private def chaseProof(e: Expression): Provable = {
         // reflexive setup corresponds to no-progress chase
         val initial: Provable = e match {
-          case t: Term =>   // t=t
+          case t: Term =>      // t=t
             DerivedAxioms.equalReflex.fact(
               Sequent(Nil, IndexedSeq(), IndexedSeq(Equal(t,t))),
               UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), t)::Nil),
