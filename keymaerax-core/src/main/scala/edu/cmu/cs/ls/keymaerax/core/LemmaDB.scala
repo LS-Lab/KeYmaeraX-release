@@ -9,13 +9,14 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 /**
- * Store and retrieve lemmas from a lemma database.
+ * Store and retrieve lemmas from a lemma database. Use [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory.lemmaDB]] to get
+ * an instance of a lemma database.
  *
  * @author Stefan Mitsch
  * @see Lemma
  * @example Storing and using a lemma
  * {{{
- * val lemmaDB = new FileLemmaDB
+ * val lemmaDB = LemmaDBFactory.lemmaDB
  * // prove a lemma
  * val proved = TactixLibrary.proveBy(
  *    Sequent(Nil, IndexedSeq(), IndexedSeq("true | x>5".asFormula)),

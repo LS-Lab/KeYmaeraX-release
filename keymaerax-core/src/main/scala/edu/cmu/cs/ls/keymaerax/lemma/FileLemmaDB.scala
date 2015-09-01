@@ -6,25 +6,22 @@
  * @author Stefan Mitsch
  * @note Code Review: 2015-05-01
  */
-package edu.cmu.cs.ls.keymaerax.core
+package edu.cmu.cs.ls.keymaerax.lemma
 
-import scala.collection.immutable
+import java.io.{File, PrintWriter}
 
-import java.io.File
-import java.io.PrintWriter
-
+import edu.cmu.cs.ls.keymaerax.core.{Lemma, LemmaDB}
 import edu.cmu.cs.ls.keymaerax.parser._
 
 /**
  * File-based lemma DB implementation. Stores one lemma per file in the user's KeYmaera X home directory under
  * cache/lemmadb/. Lemma file names are created automatically and in a thread-safe manner.
  *
- * Instantiate (parameter-less constructor) to get access to lemmas. All instances will have the same view on the
- * lemmas.
+ * @note Prefer LemmaDBFactory.lemmaDB over instantiating directly to get an instance of a lemma database and ensure
+ *       thread safety.
  *
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
- * @todo Code Review: move out of core and replace with String->Lemma
  */
 class FileLemmaDB extends LemmaDB {
 
@@ -40,13 +37,7 @@ class FileLemmaDB extends LemmaDB {
   override def get(lemmaID: LemmaID): Option[Lemma] = {
     val file = new File(lemmadbpath, lemmaID + ".alp")
     if (file.exists()) {
-      val (name, formula, evidence) = KeYmaeraXLemmaParser(scala.io.Source.fromFile(file).mkString)
-      // @note this means, all lemma DB implementations have to be part of the core
-      //@TODO Code Review: Any way of checking/certifying this to remove it from the core?
-      val fact = Provable.toolFact(new Sequent(Nil,
-        immutable.IndexedSeq(),
-        immutable.IndexedSeq(formula)))
-      Some(Lemma(fact, evidence :: Nil, name))
+      Some(Lemma.fromString(scala.io.Source.fromFile(file).mkString))
     } else None
   }
 
@@ -85,7 +76,7 @@ class FileLemmaDB extends LemmaDB {
       "reparse of printed lemma should be identical to original lemma " + lemma)
 
     val pw = new PrintWriter(file)
-    pw.write("/** KeYmaera X " + VERSION + " */")
+    pw.write("/** KeYmaera X " + edu.cmu.cs.ls.keymaerax.core.VERSION + " */")
     pw.write(lemma.toString)
     pw.close()
 

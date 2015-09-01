@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{boxMonotoneT, diamondMonotoneT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
@@ -30,8 +31,7 @@ object DerivedAxioms {
   import TactixLibrary._
 
   /** Database for derived axioms */
-  //@todo which lemma db to use?
-  val derivedAxiomDB = new FileLemmaDB
+  val derivedAxiomDB = LemmaDBFactory.lemmaDB
   type LemmaID = String
 
   /** A Provable proving the derived axiom named id (convenience) */

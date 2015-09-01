@@ -237,7 +237,7 @@ object Provable {
    * Create a new provable for facts provided by external tools.
    * @param goal the desired conclusion.
    * @return a Provable without subgoals.
-   * @note soundness-critical magic, only call from RCF/LemmaDB within core with true facts.
+   * @note soundness-critical magic, only call from RCF/Lemma within core with true facts.
    */
   private[core] def toolFact(goal: Sequent): Provable = {
     Provable(goal, immutable.IndexedSeq())

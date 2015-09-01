@@ -8,7 +8,27 @@
  */
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLemmaParser // external reference for contracts only
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLemmaParser
+
+import scala.collection.immutable
+
+object Lemma {
+  /**
+   * Parses a lemma from a string.
+   * @param lemma The lemma in string form.
+   * @return The lemma.
+   * @note soundness-critical, only call with true facts that come from serialized lemmas.
+   */
+  def fromString(lemma: String): Lemma = {
+    //@note should ensure that string was indeed produced by KeYmaera X
+    val (name, formula, evidence) = KeYmaeraXLemmaParser(lemma)
+    val fact = Provable.toolFact(new Sequent(Nil,
+      immutable.IndexedSeq(),
+      immutable.IndexedSeq(formula)))
+    Lemma(fact, evidence :: Nil, name)
+  } ensuring(r => KeYmaeraXLemmaParser(r.toString) == (r.name, r.fact.conclusion.succ.head, r.evidence.head),
+    "Reparse of printed parse result should be original parse result")
+}
 
 /**
  * Lemmas are named Provables, supported by some evidence of how they came about.

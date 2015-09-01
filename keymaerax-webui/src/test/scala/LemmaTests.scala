@@ -3,6 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDBFactory, FileLemmaDB}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
 import edu.cmu.cs.ls.keymaerax.tactics._
@@ -29,6 +30,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     math = new Mathematica
     math.init(mathematicaConfig)
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter)
+    LemmaDBFactory.setLemmaDB(new FileLemmaDB())
   }
 
   override def afterEach() = {
@@ -38,7 +40,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   "Tactics (Lemma)" should "learn a lemma from (x > 0 & y > x) -> x >= 0" in {
     val f = TacticLibrary.universalClosure("(x > 0 & y > x) -> x >= 0".asFormula)
-    val lemmaDB = new FileLemmaDB
+    val lemmaDB = LemmaDBFactory.lemmaDB
     val res = RCF.proveArithmetic(math, f)
     val id = lemmaDB.add(res)
 
@@ -53,7 +55,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "learn a lemma from (x > 0 & y = x+1 & y > x) -> (x >= 0 & y > 0)" in {
     val f = TacticLibrary.universalClosure("(x > 0 & y = x+1 & y > x) -> (x >= 0 & y > 0)".asFormula)
-    val lemmaDB = new FileLemmaDB
+    val lemmaDB = LemmaDBFactory.lemmaDB
     val res = RCF.proveArithmetic(math, f)
     val id = lemmaDB.add(res)
 
@@ -68,7 +70,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "learn a lemma from (x > 0 & y = x+1 & y > x) -> (y > 0)" in {
     val f = TacticLibrary.universalClosure("(x > 0 & y = x+1 & y > x) -> (y > 0)".asFormula)
-    val lemmaDB = new FileLemmaDB
+    val lemmaDB = LemmaDBFactory.lemmaDB
     val res = RCF.proveArithmetic(math, f)
     val id = lemmaDB.add(res)
 
@@ -83,7 +85,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "learn a lemma from (x > 0 & y = x+1 & x+1 > x) -> (x+1 > 0)" in {
     val f = TacticLibrary.universalClosure("(x > 0 & y = x+1 & x+1 > x) -> (x+1 > 0)".asFormula)
-    val lemmaDB = new FileLemmaDB
+    val lemmaDB = LemmaDBFactory.lemmaDB
     val res = RCF.proveArithmetic(math, f)
     val id = lemmaDB.add(res)
 
@@ -97,7 +99,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "A lemma" should "be learned and used" in {
-    val lemmaDB = new FileLemmaDB
+    val lemmaDB = LemmaDBFactory.lemmaDB
 
     val f = "[x:=2;]x=2".asFormula
     val s = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(f))
@@ -121,7 +123,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       // cut in exact shape of lemma
       cut("[x:=2;]x=2".asFormula) & onBranch(
         (cutShowLbl,
-          // hide everything exact lemma shape, then apply lemma
+          // hide everything except lemma shape, then apply lemma
           SearchTacticsImpl.lastSucc(PropositionalTacticsImpl.cohideT) & applyLemma),
         (cutUseLbl, closeId)
       ), new RootNode(t))

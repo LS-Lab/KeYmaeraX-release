@@ -4,6 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax
 
+import edu.cmu.cs.ls.keymaerax.lemma.FileLemmaDB
+
 /**
  * KeYmaera X Kernel:
  * Soundness-critical core of the Axiomatic Tactical Theorem Prover KeYmaera X
@@ -131,8 +133,7 @@ package edu.cmu.cs.ls.keymaerax
  * ==Additional Capabilities==
  * ===Lemma Mechanism===
  * A lemma database and an interface to real arithmetic decision procedures are defined in
- * [[edu.cmu.cs.ls.keymaerax.core.LemmaDB]] and [[edu.cmu.cs.ls.keymaerax.core.QETool]]
- * along with an implementation of a lemma data base using files [[edu.cmu.cs.ls.keymaerax.core.FileLemmaDB]].
+ * [[edu.cmu.cs.ls.keymaerax.core.LemmaDB]] and [[edu.cmu.cs.ls.keymaerax.core.QETool]].
  *
  * ===Error Reporting===
  * Errors from the prover core are reported as exceptions of type [[edu.cmu.cs.ls.keymaerax.core.ProverException]]
