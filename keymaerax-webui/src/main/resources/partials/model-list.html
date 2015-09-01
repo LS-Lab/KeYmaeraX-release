@@ -62,7 +62,8 @@
                 </button>
                 <ul class="dropdown-menu" role="menu" ng-model="model">
                     <li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show Proofs</a></li>
-                    <li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs/create">Start new proof</a></li>
+                    <li><a ng-controller="ModelProofCreateCtrl" ng-click="createDefaultProofForModel(model.id)">Start new proof</a></li>
+                    <!--<li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs/create">Start new proof</a></li>-->
                     <!--<li ng-if="model.tactic != ''"><a ng-click="runPreloadedProof(model)" ng-controller="ModelUploadCtrl">Prove with tactic</a></li>-->
                 </ul>
             </td>

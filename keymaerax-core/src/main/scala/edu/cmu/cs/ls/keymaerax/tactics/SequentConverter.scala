@@ -24,6 +24,11 @@ class SequentConverter(val seq: Sequent) {
   }
 
   /**
+   * Returns the expression at position pos in fml.
+   */
+  def subAt(pos: Position): Expression = new FormulaConverter(seq(pos.top)).subAt(pos.inExpr)
+
+  /**
    * Split formula at a position into sub-expression at that position and the context in which it occurs.
    * @param pos The position pointing to the expression.
    * @return A tuple (p(.), e) of context p(.) and sub-expression e, where p(e) is equivalent to fml.
@@ -35,4 +40,5 @@ class SequentConverter(val seq: Sequent) {
 
   /** Returns the term at position pos in fml. */
   def termAt(pos: Position): Term = new FormulaConverter(seq(pos.top)).termAt(pos.inExpr)
+
 }

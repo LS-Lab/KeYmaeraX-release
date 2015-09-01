@@ -624,9 +624,9 @@ object HybridProgramTacticsImpl {
    * @author Stefan Mitsch
    */
   def v2vAssignT: PositionTactic = new PositionTactic("[:=]/<:=> assign") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Box(Assign(_: Variable, v: Variable), pred) => true
-      case Diamond(Assign(_: Variable, v: Variable), pred) => true
+    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
+      case Some(Box(Assign(_: Variable, _: Variable), _)) => true
+      case Some(Diamond(Assign(_: Variable, _: Variable), _)) => true
       case _ => false
     }
 
@@ -634,11 +634,6 @@ object HybridProgramTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import scala.language.postfixOps
-        import SearchTacticsImpl.onBranch
-        import BranchLabels.cutShowLbl
-        import PropositionalTacticsImpl.EquivRightT
-
         val succLength = node.sequent.succ.length
         val anteLength = node.sequent.ante.length
 
@@ -648,15 +643,15 @@ object HybridProgramTacticsImpl {
               (cutShowLbl,
                 // TODO does not work in mixed settings such as <x:=t>[x'=2] and [x:=t]<x'=2>
                 PropositionalTacticsImpl.cohideT(SuccPosition(succLength)) & assertT(0, 1) &
-                alphaRenamingT(t.name, t.index, v.name, v.index)(SuccPosition(0, PosInExpr(1 :: p.inExpr.pos))) &
+                alphaRenamingT(t, v)(SuccPosition(0, PosInExpr(1 :: p.inExpr.pos))) &
                   EquivRightT(SuccPosition(0)) & (AxiomCloseT | debugT("v2vAssign: Axiom close failed unexpectedly") & stopT)),
               (cutUseLbl, equivRewriting(AntePosition(anteLength), p.topLevel))
             )
         )
 
-        getFormula(node.sequent, p) match {
-          case b@Box(Assign(v: Variable, t: Variable), pred) => createTactic(b, pred, v, t)
-          case d@Diamond(Assign(v: Variable, t: Variable), pred) => createTactic(d, pred, v, t)
+        node.sequent(p).subFormulaAt(p.inExpr) match {
+          case Some(b@Box(Assign(v: Variable, t: Variable), pred)) => createTactic(b, pred, v, t)
+          case Some(d@Diamond(Assign(v: Variable, t: Variable), pred)) => createTactic(d, pred, v, t)
         }
       }
     }

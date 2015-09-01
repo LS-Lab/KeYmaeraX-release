@@ -58,6 +58,7 @@ object KeYmaeraX {
       |  -cse      use common subexpression elimination in C code (not recommended)
       |  -dnf      use disjunctive normal form in Spiral code
       |  -vars     use ordered list of variables, treating others as constant functions
+      |  -kind     kind of monitor to generate, one of ctrl or model
       |  -lax      enable lax mode with more flexible parser, printer, prover etc.
       |  -strict   enable strict mode with no flexibility in prover
       |  -security enable security manager imposing some security restrictions
@@ -382,10 +383,14 @@ object KeYmaeraX {
 
     val pw = new PrintWriter(outputFileName + ".mx")
 
+    val kind =
+      if (options.contains('kind)) options.get('kind).get.asInstanceOf[Symbol]
+      else 'model
+
     val outputFml = if (options.contains('vars))
-      ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList, verifyOption)(inputModel)
+      ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList, kind, verifyOption)(inputModel)
     else
-      ModelPlex(inputModel, verifyOption)
+      ModelPlex(inputModel, kind, verifyOption)
     val output = KeYmaeraXPrettyPrinter(outputFml)
 
     val reparse = KeYmaeraXParser(output)

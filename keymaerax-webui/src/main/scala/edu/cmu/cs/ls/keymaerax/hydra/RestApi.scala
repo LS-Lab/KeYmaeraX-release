@@ -288,6 +288,15 @@ trait RestApi extends HttpService {
     }
   }}}
 
+
+  val changeProofName = path("proofs" / "user" / Segment / Segment / "name" / Segment) { (userId, proofId, newName) => { pathEnd {
+    post {
+      entity(as[String]) { params => {
+        complete(standardCompletion(new UpdateProofNameRequest(database, proofId, newName)))
+      }}
+    }
+  }}}
+
   val nodeSaturateTactics = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "run" / Segment / Segment) { (userId, proofId, nodeId, formulaId, tacticId, automation) => { pathEnd {
     post {
       entity(as[String]) { params => {
@@ -428,6 +437,7 @@ trait RestApi extends HttpService {
     proofList             ::
     openProof             ::
     proofLoadStatus       ::
+    changeProofName        ::
     proofProgressStatus   ::
     proofCheckIsProved    ::
     proofTasks            ::

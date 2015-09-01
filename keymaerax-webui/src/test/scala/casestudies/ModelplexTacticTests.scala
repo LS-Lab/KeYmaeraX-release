@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import testHelper.ParserFactory._
 import edu.cmu.cs.ls.keymaerax.tactics.ModelPlex.{modelplex, modelplexInPlace, diamondModelplexTestT,
-  locateT, optimizationOne, modelplexControllerMonitorTrafo}
+  locateT, optimizationOne, modelplexControllerMonitorTrafo, controllerMonitorT, modelMonitorT}
 import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.diamondDiffSolve2DT
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{locateSucc,lastSucc,onBranch,lastAnte}
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
@@ -78,7 +78,7 @@ class ModelplexTacticTests extends TacticTestSuite {
 
   "Watertank modelplex in place" should "find correct controller monitor condition with Optimization 1" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank-ctrl.key"))
-    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
+    val tactic = locateSucc(modelplexInPlace(useOptOne=true)(controllerMonitorT))
     val result = helper.runTactic(tactic, new RootNode(s))
 
     // with Modelplex diamond test
@@ -94,9 +94,26 @@ class ModelplexTacticTests extends TacticTestSuite {
     report(expected, result, "Watertank controller")
   }
 
+  it should "find correct controller monitor condition from model file" in {
+    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("f"), Variable("l"), Variable("c"))
+
+    val tactic = locateSucc(modelplexInPlace(useOptOne=true)(controllerMonitorT))
+    val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
+
+    val expected = "-1<=fpost_0()&fpost_0()<=(m-l)/ep&(cpost_0()=0&(cpost_0()<=ep&l>=0&lpost()=l&fpost()=fpost_0()&cpost()=cpost_0()))".asFormula
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "true".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only expected
+
+    report(expected, result, "Watertank controller")
+  }
+
   it should "find correct controller monitor condition without intermediate Optimization 1" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank-ctrl.key"))
-    val tactic = modelplexInPlace(useOptOne=false)(SuccPosition(0)) & optimizationOne()(SuccPosition(0))
+    val tactic = modelplexInPlace(useOptOne=false)(controllerMonitorT)(SuccPosition(0)) & optimizationOne()(SuccPosition(0))
     val result = helper.runTactic(tactic, new RootNode(s))
 
     // with ordinary diamond test
@@ -111,7 +128,7 @@ class ModelplexTacticTests extends TacticTestSuite {
 
   it should "find correct model monitor condition" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank-mx.key"))
-    val tactic = modelplexInPlace(useOptOne=true, Some(Variable("c", Some(1), Real)))(SuccPosition(0))
+    val tactic = modelplexInPlace(useOptOne=true, Some(Variable("c", Some(1), Real)))(modelMonitorT)(SuccPosition(0))
     val result = helper.runTactic(tactic, new RootNode(s))
 
     // with diamond test, after local QE
@@ -126,7 +143,7 @@ class ModelplexTacticTests extends TacticTestSuite {
 
   it should "find correct model monitor condition without intermediate Optimization 1" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank-mx.key"))
-    val tactic = modelplexInPlace(useOptOne=false)(SuccPosition(0)) &
+    val tactic = modelplexInPlace(useOptOne=false)(modelMonitorT)(SuccPosition(0)) &
       (optimizationOne()(SuccPosition(0))*)
     val result = helper.runTactic(tactic, new RootNode(s))
 
@@ -269,7 +286,7 @@ class ModelplexTacticTests extends TacticTestSuite {
 
   "Local lane control modelplex in place" should "find correct controller monitor condition" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-ctrl.key"))
-    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
+    val tactic = locateSucc(modelplexInPlace(useOptOne=true)(controllerMonitorT))
     val result = helper.runTactic(tactic, new RootNode(s))
 
     // with ordinary diamond test
@@ -289,7 +306,7 @@ class ModelplexTacticTests extends TacticTestSuite {
 
   ignore should "find correct controller monitor condition without intermediate Optimization 1" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-ctrl.key"))
-    val tactic = modelplexInPlace(useOptOne=false)(SuccPosition(0)) &
+    val tactic = modelplexInPlace(useOptOne=false)(controllerMonitorT)(SuccPosition(0)) &
       (optimizationOne()(SuccPosition(0))*)
     val result = helper.runTactic(tactic, new RootNode(s))
 
@@ -310,7 +327,7 @@ class ModelplexTacticTests extends TacticTestSuite {
 
   "ETCS safety lemma modelplex in place" should "find correct controller monitor condition" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/icfem08/safetylemma-ctrl.key"))
-    val tactic = locateSucc(modelplexInPlace(useOptOne=false))
+    val tactic = locateSucc(modelplexInPlace(useOptOne=false)(controllerMonitorT))
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().head.sequent.succ should have size 1
@@ -321,8 +338,8 @@ class ModelplexTacticTests extends TacticTestSuite {
   "RSS passive safety modelplex in place" should "generate the correct Modelplex property from the input model" in {
     val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("a"), Variable("r"), Variable("xo"),
-      Variable("yo"), Variable("t"), Variable("w"), Variable("dxo"), Variable("dyo")))
+    val modelplexInput = modelplexControllerMonitorTrafo(model/*, List(Variable("a"), Variable("r"), Variable("xo"),
+      Variable("yo"), Variable("t"), Variable("w"), Variable("dxo"), Variable("dyo"))*/)
 
     modelplexInput shouldBe  """
         true
@@ -357,10 +374,10 @@ class ModelplexTacticTests extends TacticTestSuite {
   it should "find the correct controller monitor condition from the input model" in {
     val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("a"), Variable("r"), Variable("t"),
-      Variable("dxo"), Variable("dyo"), Variable("xo"), Variable("yo"), Variable("w")))
+    val modelplexInput = modelplexControllerMonitorTrafo(model/*, List(Variable("a"), Variable("r"), Variable("t"),
+      Variable("dxo"), Variable("dyo"), Variable("xo"), Variable("yo"), Variable("w"))*/)
 
-    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
+    val tactic = locateSucc(modelplexInPlace(useOptOne=true)(controllerMonitorT))
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
 
     val expectedAnte = "true".asFormula
@@ -406,11 +423,11 @@ class ModelplexTacticTests extends TacticTestSuite {
   "RSS passive orientation safety modelplex in place" should "extract the correct controller monitor" in {
     val in = getClass.getResourceAsStream("examples/casestudies/robix/passiveorientationsafety.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("a"), Variable("r"),
+    val modelplexInput = modelplexControllerMonitorTrafo(model/*, List(Variable("a"), Variable("r"),
       Variable("talpha"), Variable("odx"), Variable("ody"), Variable("ox"), Variable("oy"), Variable("dx"),
-      Variable("dy"), Variable("w"), Variable("isVisible"), Variable("t")))
+      Variable("dy"), Variable("w"), Variable("isVisible"), Variable("t"))*/)
 
-    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
+    val tactic = locateSucc(modelplexInPlace(useOptOne=true)(controllerMonitorT))
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
 
     val expectedAnte = "true".asFormula
@@ -424,9 +441,9 @@ class ModelplexTacticTests extends TacticTestSuite {
   "Hybrid quadcopter" should "extract the correct controller monitor" in {
     val in = getClass.getResourceAsStream("examples/casestudies/quadcopter/hybridquadrotor.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("href")))
+    val modelplexInput = modelplexControllerMonitorTrafo(model/*, List(Variable("href"))*/)
 
-    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
+    val tactic = locateSucc(modelplexInPlace(useOptOne=true)(controllerMonitorT))
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
 
     val expectedAnte = "true".asFormula
@@ -439,7 +456,7 @@ class ModelplexTacticTests extends TacticTestSuite {
 
   "VSL modelplex in place" should "find correct controller monitor condition" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/iccps12/vsl-ctrl.key"))
-    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
+    val tactic = locateSucc(modelplexInPlace(useOptOne=true)(controllerMonitorT))
     val result = helper.runTactic(tactic, new RootNode(s))
 
     // with ordinary diamond test
@@ -466,10 +483,10 @@ class ModelplexTacticTests extends TacticTestSuite {
   "Quadcopter modelplex in place" should "find correct controller monitor condition" in {
     val in = getClass.getResourceAsStream("examples/casestudies/modelplex/quadcopter/simplepid.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, List(Variable("h"), Variable("v"), Variable("kp"),
-      Variable("kd"), Variable("href")))
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("h"), Variable("v"), Variable("kp"),
+      Variable("kd"), Variable("href"))
 
-    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
+    val tactic = locateSucc(modelplexInPlace(useOptOne=true)(controllerMonitorT))
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
 
     val expectedAnte = "true".asFormula
