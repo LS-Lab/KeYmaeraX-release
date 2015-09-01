@@ -241,6 +241,15 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val keymaeraXVersion = path("keymaeraXVersion") {
+    pathEnd {
+      get {
+        val request = new KeymaeraXVersionRequest()
+        complete(standardCompletion(request))
+      }
+    }
+  }
+
   val mathematicaConfigSuggestion = path("config" / "mathematica" / "suggest") {
     pathEnd {
       get {
@@ -455,6 +464,7 @@ trait RestApi extends HttpService {
     devAction             ::
     sequent               ::
     dashInfo              ::
+    keymaeraXVersion  ::
     mathematicaConfig ::
     mathematicaStatus ::
     mathematicaConfigSuggestion ::

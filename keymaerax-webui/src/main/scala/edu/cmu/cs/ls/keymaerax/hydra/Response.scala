@@ -306,6 +306,10 @@ class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
   val json = JsArray(objects)
 }
 
+class KeymaeraXVersionResponse(keymaeraXVersion: String) extends Response {
+  val json = JsObject("keymaeraXVersion" -> JsString(keymaeraXVersion))
+}
+
 class ConfigureMathematicaResponse(linkNamePrefix : String, jlinkLibDirPrefix : String, success : Boolean) extends Response {
   val json = JsObject(
     "linkNamePrefix" -> JsString(linkNamePrefix),
