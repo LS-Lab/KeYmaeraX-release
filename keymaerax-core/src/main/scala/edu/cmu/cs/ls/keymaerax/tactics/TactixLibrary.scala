@@ -124,6 +124,8 @@ object TactixLibrary extends UnifyUSCalculus {
   def cutR(cut : Formula)     : PositionTactic  = PropositionalTacticsImpl.cutRightT(cut)
   /** cut a formula in in place of pos on the left to prove it on one branch and then assume it on the other. */
   def cutL(cut : Formula)     : PositionTactic  = PropositionalTacticsImpl.cutLeftT(cut)
+  /** cut a formula in in place of pos to prove it on one branch and then assume it on the other (whether pos is left or right). */
+  def cutLR(cut : Formula)    : PositionTactic  = PropositionalTacticsImpl.cutLeftRight(cut)
 
   // quantifiers
   /** all right: Skolemize a universal quantifier in the succedent */
@@ -140,38 +142,38 @@ object TactixLibrary extends UnifyUSCalculus {
   // modalities
   //  def SpecificMaster(toolId : String) : Tactic = TacticLibrary.master(new NoneGenerate(), true, toolId)
   /** assignb: [:=] simplify assignment by substitution or equation */
-  def assignb                 : PositionTactic = TacticLibrary.boxAssignT
+  lazy val assignb            : PositionTactic = TacticLibrary.boxAssignT
   /** randomb: [:*] simplify nondeterministic assignment to universal quantifier */
-  def randomb                 : PositionTactic = TacticLibrary.boxNDetAssign
+  lazy val randomb            : PositionTactic = TacticLibrary.boxNDetAssign
   /** testb: [?] simplifies test to an implication */
-  def testb                   : PositionTactic = TacticLibrary.boxTestT
+  lazy val testb              : PositionTactic = TacticLibrary.boxTestT
   /** diffSolve: solve a differential equationb */
-  def diffSolve               : PositionTactic = TacticLibrary.diffSolutionT
+  lazy val diffSolve          : PositionTactic = TacticLibrary.diffSolutionT
   /** choiceb: [++] handles both cases of a nondeterministic choice separately */
-  def choiceb                 : PositionTactic = TacticLibrary.boxChoiceT
+  lazy val choiceb            : PositionTactic = TacticLibrary.boxChoiceT
   /** composeb: [;] handle both parts of a sequential composition one at a time */
-  def composeb                : PositionTactic = TacticLibrary.boxSeqT
+  lazy val composeb           : PositionTactic = TacticLibrary.boxSeqT
   /** iterateb: [*] prove a property of a loop by unrolling it once */
-  def iterateb                : PositionTactic = ???
+  lazy val iterateb           : PositionTactic = ???
   /** splitb: splits [a](p&q) into [a]p & [a]q */
-  def splitb                  : PositionTactic = HybridProgramTacticsImpl.boxSplitConjunctionT
+  lazy val splitb             : PositionTactic = HybridProgramTacticsImpl.boxSplitConjunctionT
   /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
   def loop(invariant: Formula) = I(invariant)
   /** K: modal modus ponens (hybrid systems) */
-  def K                       : PositionTactic = PropositionalTacticsImpl.kModalModusPonensT
+  lazy val K                  : PositionTactic = PropositionalTacticsImpl.kModalModusPonensT
   /** V: vacuous box will be discarded (unless it changes values of the postcondition) (hybrid systems) */
-  def V                       : PositionTactic = HybridProgramTacticsImpl.boxVacuousT
+  lazy val V                  : PositionTactic = HybridProgramTacticsImpl.boxVacuousT
 
   // differential equations
   /** DW: Differential Weakening to use evolution domain constraint (equivalence form) */
-  def DW                      : PositionTactic = TacticLibrary.diffWeakenT
+  lazy val DW                 : PositionTactic = TacticLibrary.diffWeakenT
   /** DC: Differential Cut a new invariant for a differential equation */
   def DC(invariant: Formula)  : PositionTactic = TacticLibrary.diffCutT(invariant)
   /** DE: Differential Effect exposes the effect of a differential equation on its differential symbols */
-  def DE                      : PositionTactic = ODETactics.diffEffectT
+  lazy val DE                 : PositionTactic = ODETactics.diffEffectT
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
-  def DI                      : PositionTactic = TacticLibrary.diffInvariant
+  lazy val DI                 : PositionTactic = TacticLibrary.diffInvariant
   /** DG: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b */
   def DG(y:Variable, a:Term, b:Term) : PositionTactic = ODETactics.diffAuxiliaryT(y,a,b)
   /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
@@ -179,21 +181,21 @@ object TactixLibrary extends UnifyUSCalculus {
   /** DS: Differential Solution solves a differential equation */
   def DS                      : PositionTactic = ???
   /** Dassignb: Substitute a differential assignment */
-  def Dassignb                : PositionTactic = HybridProgramTacticsImpl.boxDerivativeAssignT
+  lazy val Dassignb           : PositionTactic = HybridProgramTacticsImpl.boxDerivativeAssignT
   /** Dplus: +' derives a sum */
-  def Dplus                   : PositionTactic = SyntacticDerivationInContext.AddDerivativeT
+  lazy val Dplus              : PositionTactic = SyntacticDerivationInContext.AddDerivativeT
   /** neg: -' derives neg */
-  def Dneg                    : PositionTactic = SyntacticDerivationInContext.NegativeDerivativeT
+  lazy val Dneg               : PositionTactic = SyntacticDerivationInContext.NegativeDerivativeT
   /** Dminus: -' derives a difference */
-  def Dminus                  : PositionTactic = SyntacticDerivationInContext.SubtractDerivativeT
+  lazy val Dminus             : PositionTactic = SyntacticDerivationInContext.SubtractDerivativeT
   /** Dtimes: *' derives a product */
-  def Dtimes                  : PositionTactic = SyntacticDerivationInContext.MultiplyDerivativeT
+  lazy val Dtimes             : PositionTactic = SyntacticDerivationInContext.MultiplyDerivativeT
   /** Dquotient: /' derives a quotient */
-  def Dquotient               : PositionTactic = SyntacticDerivationInContext.DivideDerivativeT
+  lazy val Dquotient          : PositionTactic = SyntacticDerivationInContext.DivideDerivativeT
   /** Dcompose: o' derives a function composition by chain rule */
-  def Dcompose                : PositionTactic = ???
+  lazy val Dcompose           : PositionTactic = ???
   /** Dconstify: substitute non-bound occurences of x with x() */
-  def Dconstify               : PositionTactic = ODETactics.diffIntroduceConstantT
+  lazy val Dconstify          : PositionTactic = ODETactics.diffIntroduceConstantT
 
   /** Prove the given list of differential invariants in that order by DC+DI */
   //@todo could change type to invariants: Formula* if considered more readable
@@ -205,9 +207,9 @@ object TactixLibrary extends UnifyUSCalculus {
   // rules
 
   /** G: Goedel rule proves the postcondition of a box in isolation (hybrid systems) */
-  def G                       : Tactic         = AxiomaticRuleTactics.goedelT
+  lazy val G                  : Tactic         = AxiomaticRuleTactics.goedelT
   /** allG: all generalization rule proves the formula after a universal quantifier in isolation */
-  def allG                    : Tactic         = AxiomaticRuleTactics.forallGeneralizationT
+  lazy val allG               : Tactic         = AxiomaticRuleTactics.forallGeneralizationT
   /** CT: Term Congruence: Contextual Equivalence of terms proves an equality */
   def CT(inEqPos: PosInExpr)  : Tactic         = ???
   /** CQ: Equation Congruence: Contextual Equivalence of terms proves an equivalence */
@@ -221,16 +223,20 @@ object TactixLibrary extends UnifyUSCalculus {
 
 
   /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
-  def QE                      : Tactic         = TacticLibrary.arithmeticT
+  lazy val QE                : Tactic         = TacticLibrary.arithmeticT
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
-  def close                   : Tactic         = TacticLibrary.closeT
+  lazy val close             : Tactic         = TacticLibrary.closeT
   /** closeId: closes the branch when the same formula is in the antecedent and succedent */
-  def closeId                 : Tactic         = TacticLibrary.AxiomCloseT
+  lazy val closeId           : Tactic         = TacticLibrary.AxiomCloseT
   /** closeT: closes the branch when true is in the succedent */
-  def closeT                  : PositionTactic = TacticLibrary.CloseTrueT
+  lazy val closeT            : PositionTactic = TacticLibrary.CloseTrueT
   /** closeF: closes the branch when false is in the antecedent */
-  def closeF                  : PositionTactic = TacticLibrary.CloseFalseT
+  lazy val closeF            : PositionTactic = TacticLibrary.CloseFalseT
+
+  // derived
+  /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. */
+  lazy val equivifyR          : PositionTactic = PropositionalTacticsImpl.equivifyRightT
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.

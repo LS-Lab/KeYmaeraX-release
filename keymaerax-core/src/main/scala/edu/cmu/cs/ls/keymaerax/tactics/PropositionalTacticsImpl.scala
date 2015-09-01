@@ -431,6 +431,13 @@ object PropositionalTacticsImpl {
     } & (LabelBranch(BranchLabels.cutUseLbl), LabelBranch(BranchLabels.cutShowLbl))
   }
 
+  /** cutLeftRight will cutLeftT or cutRightT depending on the position */
+  def cutLeftRight(cut: Formula): PositionTactic = new PositionTactic("CutLeftRight") {
+    def applies(s: Sequent, p: Position) = p.inExpr == HereP
+
+    def apply(pos: Position): Tactic = if (pos.isAnte) cutLeftT(cut)(pos) else cutRightT(cut)(pos)
+  }
+
   def commuteEquivRightT: PositionTactic = new PositionTactic("CommuteEquivRight") {
     def applies(s: Sequent, p: Position) = !p.isAnte && p.inExpr == HereP && (s.succ(p.index) match {
       case Equiv(_, _) => true
