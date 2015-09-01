@@ -5,11 +5,8 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.AxiomIndex._
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ByProvable, ConstructionTactic, PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.collection.immutable._
