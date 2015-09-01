@@ -31,7 +31,7 @@ object TactixLibrary extends UnifyUSCalculus {
   val step                    : PositionTactic = TacticLibrary.step
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  lazy val stepAt: PositionTactic = HilbertCalculus.stepAt
+  lazy val stepAt             : PositionTactic = HilbertCalculus.stepAt
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
   def normalize               : Tactic = (alphaRule | closeId | ls(allR) | la(existsL)
@@ -90,33 +90,33 @@ object TactixLibrary extends UnifyUSCalculus {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Propositional tactics
   /** Hide whether left or right */
-  def hide                    : PositionTactic = TacticLibrary.hideT
+  lazy val hide               : PositionTactic = TacticLibrary.hideT
   /** Hide left: weaken a formula to drop it from the antecedent */
-  def hideL                   : PositionTactic = TacticLibrary.hideT
+  lazy val hideL              : PositionTactic = TacticLibrary.hideT
   /** Hide right: weaken a formula to drop it from the succcedent */
-  def hideR                   : PositionTactic = TacticLibrary.hideT
+  lazy val hideR              : PositionTactic = TacticLibrary.hideT
   /** CoHide whether left or right: drop all other formulas from the sequent */
-  def cohide                  : PositionTactic = PropositionalTacticsImpl.cohideT
+  lazy val cohide             : PositionTactic = PropositionalTacticsImpl.cohideT
   /** !L Not left: move an negation in the antecedent to the succedent */
-  def notL                    : PositionTactic = TacticLibrary.NotLeftT
+  lazy val notL               : PositionTactic = TacticLibrary.NotLeftT
   /** !R Not right: move an negation in the succedent to the antecedent */
-  def notR                    : PositionTactic = TacticLibrary.NotRightT
+  lazy val notR               : PositionTactic = TacticLibrary.NotRightT
   /** &L And left: split a conjunction in the antecedent into separate assumptions */
-  def andL                    : PositionTactic = TacticLibrary.AndLeftT
+  lazy val andL               : PositionTactic = TacticLibrary.AndLeftT
   /** &R And right: prove a conjunction in the succedent on two separate branches */
-  def andR                    : PositionTactic = TacticLibrary.AndRightT
+  lazy val andR               : PositionTactic = TacticLibrary.AndRightT
   /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches */
-  def orL                     : PositionTactic = TacticLibrary.OrLeftT
+  lazy val orL                : PositionTactic = TacticLibrary.OrLeftT
   /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively */
-  def orR                     : PositionTactic = TacticLibrary.OrRightT
+  lazy val orR                : PositionTactic = TacticLibrary.OrRightT
   /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch */
-  def implyL                  : PositionTactic = TacticLibrary.ImplyLeftT
+  lazy val implyL             : PositionTactic = TacticLibrary.ImplyLeftT
   /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side */
-  def implyR                  : PositionTactic = TacticLibrary.ImplyRightT
+  lazy val implyR             : PositionTactic = TacticLibrary.ImplyRightT
   /** <->L Equiv left: use an equivalence by considering both true or both false cases */
-  def equivL                  : PositionTactic = TacticLibrary.EquivLeftT
+  lazy val equivL             : PositionTactic = TacticLibrary.EquivLeftT
   /** <->R Equiv right: prove an equivalence by proving both implications */
-  def equivR                  : PositionTactic = TacticLibrary.EquivRightT
+  lazy val equivR             : PositionTactic = TacticLibrary.EquivRightT
 
   /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds */
   def cut(cut : Formula)      : Tactic         = TacticLibrary.cutT(Some(cut))
@@ -129,12 +129,12 @@ object TactixLibrary extends UnifyUSCalculus {
 
   // quantifiers
   /** all right: Skolemize a universal quantifier in the succedent */
-  def allR                    : PositionTactic = TacticLibrary.skolemizeT
+  lazy val allR               : PositionTactic = TacticLibrary.skolemizeT
   /** all left: instantiate a universal quantifier in the antecedent by a concrete instance */
   def allL(x: Variable, inst: Term) : PositionTactic = TacticLibrary.instantiateQuanT(x, inst)
   def allL(inst: Term)        : PositionTactic = TacticLibrary.instantiateQuanT(???, inst)
   /** exists left: Skolemize an existential quantifier in the antecedent */
-  def existsL                 : PositionTactic = TacticLibrary.skolemizeT
+  lazy val existsL            : PositionTactic = TacticLibrary.skolemizeT
   /** exists right: instantiate an existential quantifier in the succedwent by a concrete instance as a witness */
   def existsR(x: Variable, inst: Term) : PositionTactic = TacticLibrary.instantiateQuanT(x, inst)
   def existsR(inst: Term)     : PositionTactic = TacticLibrary.instantiateQuanT(???, inst)
@@ -202,7 +202,7 @@ object TactixLibrary extends UnifyUSCalculus {
   def diffInvariant(invariants: List[Formula]): PositionTactic = ODETactics.diffInvariant(invariants)
 
   // real closed fields
-  def equalReflexive: PositionTactic = ArithmeticTacticsImpl.EqualReflexiveT
+  //lazy val equalReflexive     : PositionTactic = ArithmeticTacticsImpl.EqualReflexiveT
 
   // rules
 

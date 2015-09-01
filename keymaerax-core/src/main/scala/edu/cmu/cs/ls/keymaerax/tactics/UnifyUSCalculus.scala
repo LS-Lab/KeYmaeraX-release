@@ -175,7 +175,7 @@ trait UnifyUSCalculus {
         if (DEBUG) println("useAt(" + fact.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
         assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
-        Some(useAt(subst, keyCtx, keyPart, p, ctx, expr, factTactic))
+        Some(useAt(subst, keyCtx, keyPart, p, ctx, expr, factTactic, node.sequent))
       }
 
       /**
@@ -187,24 +187,26 @@ trait UnifyUSCalculus {
        * @param p the position at which this useAt is applied to
        * @param C the context C{_} around the position p at which K{k} will be used
        * @param c the formula c at position p in context C{_} to be replaced by subst(k)
+       * @param sequent the sequent in which this useAt happens.
        * @tparam T
        * @return
        * @author Andre Platzer
        */
-      private def useAt[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: Tactic): Tactic = {
+      private def useAt[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: Tactic, sequent: Sequent): Tactic = {
         require(subst(k) == c, "correctly matched input")
         require(C(c).extractContext(p.inExpr) == (C,c), "correctly split at position p")
         require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.extractContext(p.inExpr)), "correctly split at position p")
 
         /** Equivalence rewriting step */
-        def equivStep(other: Expression, factTactic: Tactic): Tactic =
-        //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
+        def equivStep(other: Expression, factTactic: Tactic): Tactic = {
+          val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
+          //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
         //@todo simplify substantially if subst=id
           debug("start useAt") & cutLR(C(subst(other)))(p.top) & debugC("  cutted right") & onBranch(
             //(BranchLabels.cutUseLbl, debugT("  useAt result")),
             //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
             //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-            (BranchLabels.cutShowLbl, debugC("    show use") & cohide(p.top) & assertT(0,1) & debugC("    cohidden") &
+            (BranchLabels.cutShowLbl, debugC("    show use") & cohide(cutPos) & assertT(0,1) & debugC("    cohidden") &
               equivifyR(SuccPosition(0)) & debugC("    equivified") &
               debugC("    CE coming up") & (
               if (other.kind==FormulaKind) AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr)
@@ -213,6 +215,7 @@ trait UnifyUSCalculus {
               debugC("    using fact tactic") & factTactic & debugC("  done fact tactic"))
             //@todo error if factTactic is not applicable (factTactic | errorT)
           ) & debug("end   useAt")
+        }
 
         K.ctx match {
           case DotFormula =>
@@ -243,8 +246,9 @@ trait UnifyUSCalculus {
             )
 
           case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel) =>
+            val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
             cutLR(C(subst(other)))(p.top) & onBranch(
-              (BranchLabels.cutShowLbl, cohide(p.top) & implyR(SuccPos(0)) &
+              (BranchLabels.cutShowLbl, cohide(cutPos) & implyR(SuccPos(0)) &
                 AxiomaticRuleTactics.propositionalCongruenceT(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
                 // gather back to a single implication for axiom-based factTactic to succeed
                 & PropositionalTacticsImpl.InverseImplyRightT
@@ -254,8 +258,9 @@ trait UnifyUSCalculus {
           case Imply(DotFormula, other) if !(p.isAnte && p.isTopLevel) =>
             println("Check this useAt case")
             // same as "case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel)"
+            val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
             cutLR(C(subst(other)))(p.top) & onBranch(
-              (BranchLabels.cutShowLbl, cohide(p.top) & implyR(SuccPos(0)) &
+              (BranchLabels.cutShowLbl, cohide(cutPos) & implyR(SuccPos(0)) &
                 AxiomaticRuleTactics.propositionalCongruenceT(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
                 // gather back to a single implication for axiom-based factTactic to succeed
                 & PropositionalTacticsImpl.InverseImplyRightT
@@ -270,10 +275,10 @@ trait UnifyUSCalculus {
               //@note the roles of cutUseLbl and cutShowLbl are really swapped here, since the implication on cutShowLbl will be handled by factTactic
               (BranchLabels.cutUseLbl, /* prove prereq: */ TactixLibrary.master),
               (BranchLabels.cutShowLbl, /*PropositionalTacticsImpl.InverseImplyRightT &*/ factTactic)
-            ))
+            ), sequent)
 
           case Forall(vars, remainder) if vars.length==1 =>
-            useAt(subst, new Context(remainder), k, p, C, c, instantiateQuanT(vars.head, subst(vars.head))(SuccPos(0)))
+            useAt(subst, new Context(remainder), k, p, C, c, instantiateQuanT(vars.head, subst(vars.head))(SuccPos(0)), sequent)
 
           //@todo unfold box by step*
           case Box(a, remainder) => ???
@@ -283,11 +288,11 @@ trait UnifyUSCalculus {
 
   }
 
-  /** byCE(equiv) uses the equivalence or equality fact equiv for congruence reasoning at the indicated position to replace left by right (literally, no substitution)
+  /** CE(equiv) uses the equivalence or equality fact equiv for congruence reasoning at the indicated position to replace left by right (literally, no substitution)
     * Efficient unification-free version of [[useAt()]]
     * @see [[useAt()]]
     */
-  def byCE(equiv: Provable): PositionTactic = new PositionTactic("CE(Provable)") {
+  def CE(equiv: Provable): PositionTactic = new PositionTactic("CE(Provable)") {
     import SequentConverter._
     require(equiv.conclusion.ante.length==0 && equiv.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + equiv)
     private val equi = equiv.conclusion.succ.head
@@ -296,22 +301,21 @@ trait UnifyUSCalculus {
       case Equiv(l,r) => (l,r)
       case _ => throw new IllegalArgumentException("expected equivalence or equality fact " + equiv)
     }
-    override def applies(s: Sequent, p: Position): Boolean = {println("byCE(" + equiv.prettyString + ")\n at " + s.at(p)); s.at(p) == key}
+    override def applies(s: Sequent, p: Position): Boolean = s.at(p) == Some(key)
+    //{if (DEBUG) println("CE(" + equiv.prettyString + ")\nat " + s.at(p) + "\nof " + s + " at " + p + " " + (if (s.at(p) == Some(key)) "applicable" else "un-applicable"))}
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
 
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        println("byCE(" + equiv.prettyString + ")\n at " + node.sequent.at(p))
         val (ctx,c) = node.sequent.splitContext(p)
+        val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(node.sequent.succ.length + 1)}
         Some(cutLR(ctx(other))(p.top) &
           onBranch(
-            (BranchLabels.cutShowLbl, cohide(p.top) & assertT(0,1) &
+            (BranchLabels.cutShowLbl, cohide(cutPos) & //assertT(0,1) &
               equivifyR(SuccPosition(0)) & PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) &
-              debug("byCE to CE") &
               (if (other.kind==FormulaKind) AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr)
               else if (other.kind==TermKind) AxiomaticRuleTactics.equationCongruenceT(p.inExpr)
               else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-              debug("byCE using equiv") &
               by(equiv)
               )
           )
@@ -517,8 +521,8 @@ trait UnifyUSCalculus {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-        Some(useDirectAt(chaseProof(node.sequent.at(p).get), PosInExpr(0::Nil))(p))
-        //Some(byCE(chaseProof(node.sequent.at(p).get))(p))
+        //Some(useAt(chaseProof(node.sequent.at(p).get), PosInExpr(0::Nil))(p))
+        Some(CE(chaseProof(node.sequent.at(p).get))(p))
 
       /** Construct a proof proving the answer of the chase of e, so either of e=chased(e) or e<->chased(e) */
       private def chaseProof(e: Expression): Provable = {

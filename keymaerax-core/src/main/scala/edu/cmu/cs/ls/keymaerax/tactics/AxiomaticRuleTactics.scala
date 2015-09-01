@@ -196,6 +196,10 @@ object AxiomaticRuleTactics {
     }
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ.head match {
+      case Equal(lhs, rhs) if inEqPos==HereP =>
+        //@note optimization: skip CT step if context already begins at HereP
+        Some(TactixLibrary.skip)
+
       case Equal(lhs, rhs) =>
         val (ctxF, f) = extractContext(lhs)(inEqPos)
         val (ctxG, g) = extractContext(rhs)(inEqPos)
