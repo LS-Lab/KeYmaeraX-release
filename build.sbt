@@ -1,4 +1,4 @@
-scalaVersion := "2.10.4"                                                        
+scalaVersion := "2.11.6"                                                        
 
 lazy val core = (project in file("keymaerax-core"))
 
