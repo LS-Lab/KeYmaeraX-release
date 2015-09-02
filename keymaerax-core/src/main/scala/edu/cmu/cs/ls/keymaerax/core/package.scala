@@ -4,8 +4,6 @@
 */
 package edu.cmu.cs.ls.keymaerax
 
-import edu.cmu.cs.ls.keymaerax.lemma.FileLemmaDB
-
 /**
  * KeYmaera X Kernel:
  * Soundness-critical core of the Axiomatic Tactical Theorem Prover KeYmaera X
