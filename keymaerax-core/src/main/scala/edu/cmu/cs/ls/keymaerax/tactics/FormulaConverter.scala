@@ -28,7 +28,7 @@ class FormulaConverter(val fml: Formula) {
       var fAtPos: Option[Formula] = None
       ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
         override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-          fAtPos = Some(e)
+          fAtPos = if (p == pos) Some(e) else None
           Left(Some(ExpressionTraversal.stop))
         }
       }), fml)
@@ -60,7 +60,7 @@ class FormulaConverter(val fml: Formula) {
       var fAtPos: Option[Formula] = None
       ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
         override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-          fAtPos = Some(e)
+          fAtPos = if (p == pos) Some(e) else None
           Left(Some(ExpressionTraversal.stop))
         }
       }), fml)
@@ -79,7 +79,7 @@ class FormulaConverter(val fml: Formula) {
       var tAtPos: Option[Term] = None
       ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-          tAtPos = Some(e)
+          tAtPos = if (p == pos) Some(e) else None
           Left(Some(ExpressionTraversal.stop))
         }
       }), fml)
@@ -107,7 +107,7 @@ class FormulaConverter(val fml: Formula) {
       var tAtPos: Option[Term] = None
       ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-          tAtPos = Some(e)
+          tAtPos = if (p == pos) Some(e) else None
           Left(Some(ExpressionTraversal.stop))
         }
       }), fml)
