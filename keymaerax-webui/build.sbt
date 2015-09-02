@@ -2,7 +2,7 @@ name := "KeYmaeraX-Web"
 
 version := "4.0a4"
 
-scalacOptions ++= Seq("-Xno-patmat-analysis")
+//scalacOptions ++= Seq("-Xno-patmat-analysis")
 
 assemblyJarName in assembly := "keymaerax-web-" + version.value + ".jar"
 

@@ -6,7 +6,7 @@ assemblyJarName in assembly := "keymaerax-core-" + version.value + ".jar"
 
 scalaVersion := "2.11.7"
 
-scalacOptions ++= Seq("-Xno-patmat-analysis")
+//scalacOptions ++= Seq("-Xno-patmat-analysis")
 
 //parser combinators are not longer included by default.
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4"
