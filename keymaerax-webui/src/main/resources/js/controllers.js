@@ -439,6 +439,14 @@ keymaeraProofControllers.controller('DashboardCtrl',
 
          });
 
+    $http.get("/keymaeraXVersion")
+        .success(function(data) {
+            $scope.keymaeraXVersion = data.keymaeraXVersion
+        })
+        .error(function() {
+            console.error("Unhandled error when attempting to get KeYmaera X version.")
+        });
+
     $scope.mathematicaIsConfigured = true;
     $http.get("/config/mathematicaStatus")
         .success(function(data) {

@@ -83,12 +83,12 @@ sealed trait Atomic extends Expression
 sealed trait Composite extends Expression
 
 /** Unary composite expressions that are composed of one subexpression */
-trait UnaryComposite extends Composite {
+sealed trait UnaryComposite extends Composite {
   def child: Expression
 }
 
 /** Binary composite expressions that are composed of two subexpressions */
-trait BinaryComposite extends Composite {
+sealed trait BinaryComposite extends Composite {
   def left: Expression
   def right: Expression
 }
@@ -157,7 +157,7 @@ sealed trait Term extends Expression {
 sealed trait AtomicTerm extends Term with Atomic
 
 /** Real terms */
-private[core] trait RTerm extends Term {
+private[core] sealed trait RTerm extends Term {
   final def sort: Sort = Real
 }
 
@@ -217,23 +217,23 @@ case class FuncOf(func: Function, child: Term) extends AtomicTerm with Applicati
 sealed trait CompositeTerm extends Term with Composite
 
 /** Unary Composite Terms, i.e. terms composed of one real term. */
-trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
+sealed trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
   def child: Term
 }
 
 /** Unary Composite Real Terms, i.e. real terms composed of one real term. */
-private[core] trait RUnaryCompositeTerm extends UnaryCompositeTerm with RTerm {
+private[core] sealed trait RUnaryCompositeTerm extends UnaryCompositeTerm with RTerm {
   insist(child.sort == Real, "expected argument sort real: " + child.sort)
 }
 
 /** Binary Composite Terms, i.e. terms composed of two terms. */
-trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
+sealed trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
   def left: Term
   def right: Term
 }
 
 /** Binary Composite Real Terms, i.e. real terms composed of two real terms. */
-private[core] trait RBinaryCompositeTerm extends BinaryCompositeTerm with RTerm {
+private[core] sealed trait RBinaryCompositeTerm extends BinaryCompositeTerm with RTerm {
   insist(left.sort == Real && right.sort == Real, "expected argument sorts real: " + left + " and " + right)
   def left: Term
   def right: Term
@@ -280,13 +280,13 @@ sealed trait Formula extends Expression {
 sealed trait AtomicFormula extends Formula with Atomic
 
 /** Atomic comparison formula composed of two terms. */
-trait ComparisonFormula extends AtomicFormula {
+sealed trait ComparisonFormula extends AtomicFormula {
   def left: Term
   def right: Term
 }
 
 /** Real comparison formula composed of two real terms. */
-private[core] trait RComparisonFormula extends ComparisonFormula {
+private[core] sealed trait RComparisonFormula extends ComparisonFormula {
   insist(left.sort == Real && right.sort == Real, "expected argument sorts real: " + left + " and " + right)
 }
 
@@ -335,12 +335,12 @@ case class PredicationalOf(func: Function, child: Formula) extends AtomicFormula
 sealed trait CompositeFormula extends Formula with Composite
 
 /** Unary Composite Formulas, i.e. formulas composed of one formula. */
-trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula {
+sealed trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula {
   def child: Formula
 }
 
 /** Binary Composite Formulas, i.e. formulas composed of two formulas. */
-trait BinaryCompositeFormula extends BinaryComposite with CompositeFormula {
+sealed trait BinaryCompositeFormula extends BinaryComposite with CompositeFormula {
   def left: Formula
   def right: Formula
 }
@@ -423,12 +423,12 @@ case class Test(cond: Formula) extends AtomicProgram
 sealed trait CompositeProgram extends Program with Composite
 
 /** Unary Composite Programs, i.e. programs composed of one program. */
-trait UnaryCompositeProgram extends UnaryComposite with CompositeProgram {
+sealed trait UnaryCompositeProgram extends UnaryComposite with CompositeProgram {
   def child: Program
 }
 
 /** Binary Composite Programs, i.e. programs composed of two programs. */
-trait BinaryCompositeProgram extends BinaryComposite with CompositeProgram {
+sealed trait BinaryCompositeProgram extends BinaryComposite with CompositeProgram {
   def left: Program
   def right: Program
 }
