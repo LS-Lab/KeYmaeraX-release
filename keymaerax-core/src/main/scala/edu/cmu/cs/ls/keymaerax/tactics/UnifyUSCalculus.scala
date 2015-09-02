@@ -327,6 +327,7 @@ trait UnifyUSCalculus {
 
   type ForwardTactic = (Provable => Provable)
   type ForwardPositionTactic = (Position => ForwardTactic)
+  //@todo add def &() for composition and def | and def ifThenElse
 
   /** useFor(axiom) use the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   def useFor(axiom: String): ForwardPositionTactic = useFor(axiom, PosInExpr(0::Nil))
