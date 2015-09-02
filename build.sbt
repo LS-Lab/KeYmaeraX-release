@@ -1,6 +1,6 @@
 scalaVersion in ThisBuild := "2.11.7"
 
-scalacOptions in ThisBuild ++= Seq("-Xno-patmat-analysis")
+//scalacOptions in ThisBuild ++= Seq("-Xno-patmat-analysis")
 
 version := "4.0a4"
 
