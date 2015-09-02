@@ -169,13 +169,14 @@ package object core {
   /** KeYmaera X version number */
   val VERSION = "4.0b1"
 
-  /** Insist on requirement being true, throwing a `CoreException` if false.
-    *  This method is a `require` coming from the prover core that cannot be disabled.
+  /** Insist on requirement being true, throwing a [[CoreException]] if false.
+    *  This method is a require` coming from the prover core that cannot be disabled.
     *  Blame is on the caller of the method
     *  for violating the contract.
     *
     *  @param requirement   the expression to test for being true
     *  @param message       a String explaining what is expected.
+    *  @see [[scala.Predef.require()]]
     */
   @inline final def insist(requirement: Boolean, message: => Any): Unit = {
     if (!requirement)
