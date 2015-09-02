@@ -630,6 +630,7 @@ trait UnifyUSCalculus {
       }
     )
     // retroactively handle postponed assignments in inverse order, so inside-out
+        //@todo or  "<:=> assign update"
     pos => pr => updateStack.foldLeft(chased(pos)(pr))((proof, p) => useFor("[:=] assign")(p)(proof))
   }
 
