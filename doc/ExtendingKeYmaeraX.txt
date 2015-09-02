@@ -1,5 +1,14 @@
+Adding Special Functions
+========================
+
+Augmenting KeYmaera X with additional functions with special meaning is currently best done via adding appropriate function definitions with corresponding lemmas.
+
+Example: addition of abs/min/max functions in edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms.scala
+
 Adding Operators
 ================
+
+Adding new built-in operators works as follows:
 
 ==Prover Core (soundness-critical)==
 
@@ -15,3 +24,5 @@ Augment edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.findNextToken with new tok
 Define operator notation and precedence in edu.cmu.cs.ls.keymaerax.parser.OpSpec.op
 Augment edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.op with corresponding reverse operator notation lookup.
 Augment edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser first and follow set lookaheads according to grammar.
+
+Example: the addition of the Dual operator for hybrid games.
