@@ -32,13 +32,7 @@ with `->` right-associative, i.e. p()->q()->r() is p()->(q()->r()) and no preced
 
 with `++` and the invisible `;` in P P right-associative, i.e. x:=1;x:=2;x:=3; is x:=1;{x:=2;x:=3;}
 
-This grammar is to be contrasted with the abstract dL grammar in theory:
-
-    P ::= a | x:=T | x':=T | ?F | D&F | P* | P;P | P++P | (P)
-
-with the rather visible `;` in P;P right-associative (and `++` being still right-associative).
-
-==Differential programs==
+==Differential Programs==
 
     D ::= c | x'=T | D,D
 
@@ -47,3 +41,12 @@ with `D,D` right-associative, i.e. x'=1,y'=2,z'=3 is x'=1,(y'=2,z'=3)
 ==Types==
 
 It is considered an error to use the same name with different types in different places, such as in `x() -> [x:=x(x);]x()>x(x,x())`
+
+
+==Contrast to Theory==
+
+The grammar of the concrete syntax for programs is to be contrasted with the abstract dL grammar in theory:
+
+    P ::= a | x:=T | x':=T | ?F | D&F | P* | P;P | P++P | (P)
+
+with the rather visible `;` in P;P right-associative (and `++` being still right-associative).
