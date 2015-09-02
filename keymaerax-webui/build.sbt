@@ -1,18 +1,18 @@
 name := "KeYmaeraX-Web"
 
-val versionName : String = "4.0a1"
+version := "4.0a4"
 
-version := versionName
+scalacOptions ++= Seq("-Xno-patmat-analysis")
 
-assemblyJarName in assembly := "keymaerax-web-" + versionName + ".jar"
+assemblyJarName in assembly := "keymaerax-web-" + version.value + ".jar"
 
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
-libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.11.6"
+libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.11.7"
 
-libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.11.6"
+libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.11.7"
 
-libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.2.4" % "test"
+libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
 
 libraryDependencies += "org.pegdown" % "pegdown" % "1.5.0" % "test"      // (For Html Scalatest reports)
 
@@ -44,23 +44,21 @@ scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 javaOptions += "-Xss20M"
 
 libraryDependencies ++= {
-  val akkaV = "2.1.4"
-  val sprayV = "1.1.1"
+  val akkaV = "2.3.12"
+  val sprayV = "1.3.1"
   Seq(
-    "io.spray"            %%  "spray-json"    % "1.2.6",
+    "io.spray"            %%  "spray-json"    % "1.3.2",
     "io.spray"            %   "spray-can"     % sprayV,
     "io.spray"            %   "spray-routing" % sprayV,
-    "io.spray"            %   "spray-testkit" % sprayV  % "test",
+    //"io.spray"            %%   "spray-testkit" % sprayV  % "test",
     "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
-    "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test",
-    "org.specs2"          %%  "specs2"        % "2.2.3" % "test",
+    //"com.typesafe.akka"   %  "akka-testkit"  % akkaV   % "test",
+    //"org.specs2"          % "specs2-core"    % "3.6.4" % "test",
     "com.github.fge"      % "json-schema-validator" % "2.2.6" // only update to even-numbered versions please.
   )
 }
 
 //libraryDependencies += "net.liftweb" % "lift-json" % "latest.release" 
-
-Revolver.settings
 
 ////////////////////////////////////////////////////////////////////////////////
 // Continuous testing/running settgings (i.e., definiting behavior of the ~

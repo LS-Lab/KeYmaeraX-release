@@ -1,8 +1,8 @@
-scalaVersion := "2.11.6"                                                        
+scalaVersion in ThisBuild := "2.11.7"
 
-val versionName : String = "4.0a4"
+scalacOptions in ThisBuild ++= Seq("-Xno-patmat-analysis")
 
-version := versionName
+version := "4.0a4"
 
 lazy val core = (project in file("keymaerax-core"))
 
@@ -13,6 +13,6 @@ lazy val root = (project in file("."))
   .settings(unidocSettings: _*)
   .settings(
     name := "KeYmaeraX",
-    assemblyJarName := "keymaerax-" + versionName + ".jar"
+    assemblyJarName := "keymaerax-" + version.value + ".jar"
   )
   .aggregate(core, keymaerax)
