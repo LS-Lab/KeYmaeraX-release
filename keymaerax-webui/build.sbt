@@ -1,4 +1,10 @@
-name := "KeYmaeraX"
+name := "KeYmaeraX-Web"
+
+val versionName : String = "4.0a1"
+
+version := versionName
+
+assemblyJarName in assembly := "keymaerax-web-" + versionName + ".jar"
 
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 

@@ -1,6 +1,10 @@
-name := "KeYmaeraX Core"
+name := "KeYmaeraX-Core"
 
-version := "4.0a4"
+val versionName : String = "4.0a4"
+
+version := versionName
+
+assemblyJarName in assembly := "keymaerax-core-" + versionName + ".jar" 
 
 scalaVersion := "2.10.4"
 
