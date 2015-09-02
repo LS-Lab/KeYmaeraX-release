@@ -4,27 +4,31 @@
 */
 package edu.cmu.cs.ls.keymaerax
 
-import edu.cmu.cs.ls.keymaerax.lemma.FileLemmaDB
-
 /**
  * KeYmaera X Kernel:
  * Soundness-critical core of the Axiomatic Tactical Theorem Prover KeYmaera X
  * ==============================================================================================
  *
- * Defines the [[edu.cmu.cs.ls.keymaerax.core.Expression syntax]],
- * [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics static semantics]],
- * [[edu.cmu.cs.ls.keymaerax.core.USubst uniform substitutions]],
- * [[edu.cmu.cs.ls.keymaerax.core.Axiom axioms]], and
- * [[edu.cmu.cs.ls.keymaerax.core.Rule proof rules]] for constructing
- * [[edu.cmu.cs.ls.keymaerax.core.Provable proof certificates]] of
- * [[http://symbolaris.com/logic/dL.html differential dynamic logic]].
- * Provides basic [[edu.cmu.cs.ls.keymaerax.core.LemmaDB lemma data base]],
+ * The KeYmaera X Kernel defines
+ *
+ *   - Syntax of
+ * [[http://symbolaris.com/logic/dL.html differential dynamic logic]]:
+ *     - [[edu.cmu.cs.ls.keymaerax.core.Expression Syntax of dL Expressions]]
+ *     - [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics Static Semantics]]
+ *
+ *   - Proof Construction of [[edu.cmu.cs.ls.keymaerax.core.Provable proof certificates]]:
+ *     - [[edu.cmu.cs.ls.keymaerax.core.Axiom Axioms]]
+ *     - [[edu.cmu.cs.ls.keymaerax.core.USubst Uniform substitutions]]
+ *     - [[edu.cmu.cs.ls.keymaerax.core.URename Uniform renamings]]
+ *     - [[edu.cmu.cs.ls.keymaerax.core.Rule Proof rules]]
+ *
+ *   - Provides basic [[edu.cmu.cs.ls.keymaerax.core.LemmaDB lemma data base]],
  * [[edu.cmu.cs.ls.keymaerax.core.QETool real arithmetic interfaces]],
  * [[edu.cmu.cs.ls.keymaerax.core.CoreException error reporting]], and
  * [[edu.cmu.cs.ls.keymaerax.core.SetLattice set lattice management]].
  * 
  * ==Usage Overview==
- * The KeYmaera X Kernel package provides the soundness-critical core of KeYmaera X.
+ * The KeYmaera X Kernel package provides the ''soundness-critical core of KeYmaera X''.
  * It provides ways of constructing proofs that, by construction, can only be constructed using
  * the proof rules that the KeYmaera X Kernel provides.
  * The [[[[edu.cmu.cs.ls.keymaerax.tactic tactics]] that KeYmaera X provides give you a more powerful and flexible and easier way of
@@ -55,7 +59,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.FileLemmaDB
  *
  * ===Combining Proofs===
  * Multiple Provable objects for subderivations obtained from different sources can also be merged
- * into a single Provable object with [[edu.cmu.cs.ls.keymaerax.core.Provable.apply]]([[edu.cmu.cs.ls.keymaerax.core.Provable]],Int).
+ * into a single Provable object by substitution with [[edu.cmu.cs.ls.keymaerax.core.Provable.apply]]([[edu.cmu.cs.ls.keymaerax.core.Provable]],Int).
  * The above example can be continued to merge proofs as follows:
  * {{{
  *   // ... continued from above
@@ -65,12 +69,13 @@ import edu.cmu.cs.ls.keymaerax.lemma.FileLemmaDB
  *   val moreProvable = Provable.startProof(more)
  *   // construct another (partial) proof
  *   val moreProof = moreProvable(ImplyRight(SuccPos(0)), 0)(HideLeft(AntePos(0)), 0)
- *   // merge proofs by gluing their Provables together
+ *   // merge proofs by gluing their Provables together (substitution)
  *   val mergedProof = moreProof(proof, 0)
  *   // check if proof successful, i.e. no remaining subgoals
  *   if (mergedProof.isProved) println("Successfully proved " + mergedProof.proved)
  * }}}
- * More styles for proof construction are shown in [[edu.cmu.cs.ls.keymaerax.core.Provable]].
+ * [[edu.cmu.cs.ls.keymaerax.core.Provable More styles for proof construction are shown in Provable's]].
+ *
  *
  * ==Differential Dynamic Logic==
  * The language of [[http://symbolaris.com/logic/dL.html differential dynamic logic]] is described
@@ -82,11 +87,11 @@ import edu.cmu.cs.ls.keymaerax.lemma.FileLemmaDB
  * Expressions are categorized according to their kind by the syntactic categories
  * of the grammar of differential dynamic logic:
  *
- * 1. terms are of type [[edu.cmu.cs.ls.keymaerax.core.Term]] of kind [[edu.cmu.cs.ls.keymaerax.core.TermKind]]
+ *   1. terms are of type [[edu.cmu.cs.ls.keymaerax.core.Term]] of kind [[edu.cmu.cs.ls.keymaerax.core.TermKind]]
  *
- * 2. formulas are of type [[edu.cmu.cs.ls.keymaerax.core.Formula]] of kind [[edu.cmu.cs.ls.keymaerax.core.FormulaKind]]
+ *   2. formulas are of type [[edu.cmu.cs.ls.keymaerax.core.Formula]] of kind [[edu.cmu.cs.ls.keymaerax.core.FormulaKind]]
  *
- * 3. hybrid programs are of type [[edu.cmu.cs.ls.keymaerax.core.Program]] of kind [[edu.cmu.cs.ls.keymaerax.core.ProgramKind]]
+ *   3. hybrid programs are of type [[edu.cmu.cs.ls.keymaerax.core.Program]] of kind [[edu.cmu.cs.ls.keymaerax.core.ProgramKind]]
  *
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.1]]
  *
@@ -97,6 +102,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.FileLemmaDB
  * [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#boundVars(edu.cmu.cs.ls.keymaerax.core.Expression) bound variables]] that expressions have
  * as well as their [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#signature(edu.cmu.cs.ls.keymaerax.core.Expression) signatures]] (set of occurring symbols).
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.3]]
+ *
  *
  * ==Theorem Prover==
  * The KeYmaera X Prover Kernel provides [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule uniform substitutions]],
@@ -112,6 +118,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.FileLemmaDB
  * all available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
  * which both ultimately come from the file [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]].
  * See [[http://arxiv.org/pdf/1503.01981.pdf Sections 4 and 5.0]]
+ * Additional axioms are available as derived axioms and lemmas in [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]].
  *
  * ===Uniform Substitutions===
  * [[edu.cmu.cs.ls.keymaerax.core.USubst Uniform substitutions]] uniformly replace all occurrences of a given predicate p(.) by a formula in (.)
@@ -162,13 +169,14 @@ package object core {
   /** KeYmaera X version number */
   val VERSION = "4.0b1"
 
-  /** Insist on requirement being true, throwing a `CoreException` if false.
-    *  This method is a `require` coming from the prover core that cannot be disabled.
+  /** Insist on requirement being true, throwing a [[CoreException]] if false.
+    *  This method is a require` coming from the prover core that cannot be disabled.
     *  Blame is on the caller of the method
     *  for violating the contract.
     *
     *  @param requirement   the expression to test for being true
     *  @param message       a String explaining what is expected.
+    *  @see [[scala.Predef.require()]]
     */
   @inline final def insist(requirement: Boolean, message: => Any): Unit = {
     if (!requirement)

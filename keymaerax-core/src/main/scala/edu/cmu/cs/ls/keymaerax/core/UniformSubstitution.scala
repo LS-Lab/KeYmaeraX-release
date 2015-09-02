@@ -292,8 +292,8 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
     } catch {
       case ex: ProverException => throw ex.inContext(s.toString)
-      case ex: IllegalArgumentException => //@todo does this still happen?
-        throw new SubstitutionClashException(toString, "undef", "undef", s.toString, "undef", ex.getMessage).initCause(ex)
+      /*case ex: IllegalArgumentException => //@todo does this still happen?
+        throw new SubstitutionClashException(toString, "undef", "undef", s.toString, "undef", ex.getMessage).initCause(ex)*/
     }
   }
 
@@ -312,7 +312,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       
   /** uniform substitution on terms */
   private[core] def usubst(term: Term): Term = {
-    try {
+    //try {
       term match {
         // uniform substitution base cases
         case x: Variable => assert(!subsDefs.exists(_.what == x), "Substitution of variables not supported: " + x)
@@ -350,17 +350,17 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         // unofficial
         case Pair(l, r) => Pair(usubst(l), usubst(r))  
       }
-    } catch {
+    /*} catch {
       case ex: IllegalArgumentException => //@todo does this still happen?
         throw new SubstitutionClashException(toString, "undef", "undef", term.prettyString, "undef", ex.getMessage).initCause(ex)
-    }
+    }*/
   } ensuring(
     r => r.kind == term.kind && r.sort == term.sort, "Uniform Substitution leads to same kind and same sort " + term)
 
   /** uniform substitution on formulas */
   private[core] def usubst(formula: Formula): Formula = {
     //log("Substituting " + formula.prettyString + " using " + this)
-    try {
+    //try {
       formula match {
         case app@PredOf(op, theta) if matchHead(app) =>
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredOf] && sp.sameHead(app))
@@ -417,18 +417,18 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         case Diamond(p, g) => requireAdmissible(StaticSemantics(usubst(p)).bv, g, formula)
             Diamond(usubst(p), usubst(g))
       }
-    } catch {
+    /*} catch {
       case ex: IllegalArgumentException => //@todo does this still happen?
         throw new SubstitutionClashException(toString, "undef", "undef", formula.prettyString, "undef", ex.getMessage).initCause(ex)
       case ex: AssertionError =>
         throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + formula.prettyString).initCause(ex)
-    }
+    }*/
   } ensuring(
     r => r.kind == formula.kind && r.sort == formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
 
   /** uniform substitution on programs */
   private[core] def usubst(program: Program): Program = {
-    try {
+    //try {
       program match {
         case a: ProgramConst if subsDefs.exists(_.what == a) =>
           subsDefs.find(_.what == a).get.repl.asInstanceOf[Program]
@@ -454,12 +454,12 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
           Loop(usubst(a))
         case Dual(a)           => Dual(usubst(a))
       }
-    } catch {
+    /*} catch {
       case ex: IllegalArgumentException => //@todo does this still happen?
         throw new SubstitutionClashException(toString, "undef", "undef", program.prettyString, "undef", ex.getMessage).initCause(ex)
       case ex: AssertionError =>
         throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + program.prettyString).initCause(ex)
-    }
+    }*/
   } ensuring(
     r => r.kind == program.kind && r.sort == program.sort, "Uniform Substitution leads to same kind and same sort " + program)
 

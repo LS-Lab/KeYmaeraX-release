@@ -104,6 +104,13 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
 // System Configuration
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+class KeymaeraXVersionRequest() extends Request {
+  override def getResultingResponses() : List[Response] = {
+    val keymaeraXVersion = VERSION
+    new KeymaeraXVersionResponse(keymaeraXVersion) :: Nil
+  }
+}
+
 class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLibFileName : String) extends Request {
   private def isLinkNameCorrect(linkNameFile: java.io.File): Boolean = {
     linkNameFile.getName == "MathKernel" || linkNameFile.getName == "MathKernel.exe"
