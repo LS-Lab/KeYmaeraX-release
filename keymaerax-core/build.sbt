@@ -4,6 +4,9 @@ version := "4.0a4"
 
 scalaVersion := "2.11.6"
 
+//parser combinators are not longer included by default.
+libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4"
+
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
 ////////////////////////////////////////////////////////////////////////////////
