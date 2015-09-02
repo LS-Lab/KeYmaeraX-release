@@ -695,6 +695,7 @@ object KeYmaeraXParser extends Parser {
     case Equal(_:DifferentialSymbol, _) => followsFormula(la) || /*if elaborated to ODE*/ followsProgram(la)
     case f: Formula => followsFormula(la) || elaboratable(TermKind, f)!=None && followsTerm(la)
     case _: Program => followsProgram(la)
+    case _ => ???
   }
 
   /** Follow(Identifier): Can la follow after an identifier? */

@@ -857,6 +857,7 @@ object ODETactics {
         SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(x, DotTerm)) ::
         SubstitutionPair(aQ, SubstitutionHelper.replaceFree(q)(x, DotTerm)) :: Nil
       }
+      case _ => ???
     }
 
     val aX = Variable("x", None, Real)
@@ -867,11 +868,13 @@ object ODETactics {
     val aT = Variable("t", None, Real)
     def theT(fml : Formula) = fml match {
       case Equiv(_, Forall(t :: Nil, Imply(_, Imply(Forall(s :: Nil, _),_)))) => t
+      case _ => ???
     }
 
     val aS = Variable("s", None, Real)
     def theS(fml : Formula) = fml match {
       case Equiv(_, Forall(t :: Nil, Imply(_, Imply(Forall(s :: Nil, _),_)))) => s
+      case _ => ???
     }
 
     def alpha(fml: Formula): PositionTactic =
@@ -929,6 +932,7 @@ object ODETactics {
         val aS = Variable("s", None, Real)
         SubstitutionPair(aX, x) :: SubstitutionPair(aP, p) :: SubstitutionPair(aC, c) :: SubstitutionPair(aS, t) :: Nil
       }
+      case _ => ???
     }
 
     def theX(fml : Formula) : Variable = fml match {
