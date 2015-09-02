@@ -397,8 +397,12 @@ object ODETactics {
         import ExpressionTraversal.stop
         override def preP(p: PosInExpr, prg: Program): Either[Option[StopTraversal], Program] = prg match {
           // TODO could be complicated 1
-          case AtomicODE(DifferentialSymbol(v), theta) if theta == Number(1) =>
-            timeInOde = Some(v); Left(Some(stop))
+          case AtomicODE(DifferentialSymbol(v), theta) =>
+            if(theta == Number(1)) {
+              timeInOde = Some(v);
+              Left(Some(stop))
+            }
+            else Left(None)
           case _ => Left(None)
         }
       }, odes)
@@ -493,7 +497,7 @@ object ODETactics {
         val theSolution = solution match {
           case sol@Some(_) => sol
           case None => tool match {
-            case x: Mathematica if x.isInitialized => x.diffSol(diffEq, time, ivm)
+            case x: Mathematica => if(x.isInitialized) x.diffSol(diffEq, time, ivm) else None
             case _ => None
           }
         }
@@ -1021,6 +1025,7 @@ object ODETactics {
               alpha & TacticLibrary.debugT("alpha renaming succeeded for axiom GD++") &
               lastSucc(assertPT(axiom, "Unexpected axiom form in succedent")) & AxiomTactic.axiomT("DG++")
           )
+        case _ => ???
       }
     }
   }
@@ -1282,6 +1287,7 @@ object ODETactics {
         val afterU = if (!u.equals(aU)) AlphaConversionHelper.replaceBound(afterB)(aU, u) else afterB
                      if (!v.equals(aV)) AlphaConversionHelper.replaceBound(afterU)(aV, v) else afterU
       }
+      case _ => ???
     }
 
     axiomLookupBaseT("DG differential Lipschitz ghost system", subst, alpha, axiomInstance)
@@ -1441,6 +1447,7 @@ object ODETactics {
         val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
         SubstitutionPair(aP, p) :: SubstitutionPair(aH, h) ::
           SubstitutionPair(aC, c) :: SubstitutionPair(aS, s) :: SubstitutionPair(aT, t) :: Nil
+      case _ => ???
     }
 
     val aY = Variable("y", None, Real)
