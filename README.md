@@ -39,9 +39,14 @@ Detailed instructions are available at that website as well. Briefly, type
 
     sbt compile
 
-to compile the source code. First-time compilation may take a while, since it downloads all necessary libraries,
-including Scala itself. 
+to compile the source code. First-time compilation may take a while, since it downloads all necessary libraries, including Scala itself. 
 
+To run the regression test case suite, type
+
+    sbt test
+
+FAQ: Build Problems
+===================
 The build file does not include paths to the Mathematica JLink JAR, so you will need to set an environmental variable
 JLINK_JAR_LOCATION to the location of JLink.jar in the Mathematica package. You can do this in `~/.bashrc` or `~/.profile`.
 
@@ -54,11 +59,9 @@ Examples: (depending on Mathematica version and OS)
     # Linux
     export JLINK_JAR_LOCATION=/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/JLink.jar
 
-To run the regression test case suite, type
+If, at any time, you run into problems during the compilation process, use `sbt clean` for a fresh start to remove stale files. If the problems persist, use `sbt clean` followed by `sbt reload`. On a few computers you may have to edit your environment variables, e.g., `~/.bashrc` or  `~/.profile` to include something like
 
-    sbt test
-
-If you run into problems during the compilation process, use `sbt clean` for a fresh start to remove stale files.
+    export SBT_OPTS="-Xss20M -Xms8000M"
 
 The Wiki contains extended build instructions and solutions to other
 common sbt problems:
@@ -114,13 +117,15 @@ Test cases:
 - Make sure the JVM option `-Xss20M` is included in the run configuration.
 - Right click on the test folder to run all its ScalaTests.
 
+If, at any time, you run into problems during the compilation process in Intelli/J, check the `File->Project Structure->Modules->core->Dependencies` to make sure the appropriate files such as `SBT: unmanaged-jars` are checked. If the problems persist, do `File->Invalidate Caches / Restart`.
+
 Front End
 =========
 
 The Web UI web user interface front end of KeYmaera X can be started as follows:
 
     sbt assembly
-    java -jar keymaerax-webui/target/scala-2.10/KeYmaeraX-assembly-0.1-SNAPSHOT.jar -ui
+    java -jar keymaerax-webui/target/scala-2.10/keymaerax-4.0b1.jar -ui
     open http://127.0.0.1:8090/
 
 The first command builds a .JAR, and the second command runs the built .jar. If the jar won't start because of an error `no manifest found` you may have to run `sbt clean` first.
@@ -141,7 +146,7 @@ KeYmaera X is successfully started when you see the following console output
 
 To find out how to use KeYmaera X from command line, do `sbt clean assembly` and run
 
-    java -Xss20M -jar keymaerax-webui/target/scala-2.10/KeYmaeraX-assembly-0.1-SNAPSHOT.jar -help
+    java -Xss20M -jar keymaerax-webui/target/scala-2.10/keymaerax-4.0b1.jar -help
 
 Make sure you have Java 1.8 for using command line. Java 1.7 and earlier versions may not work.
 
