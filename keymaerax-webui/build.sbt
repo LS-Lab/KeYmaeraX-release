@@ -8,9 +8,9 @@ assemblyJarName in assembly := "keymaerax-web-" + versionName + ".jar"
 
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
-libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.10.4"
+libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.11.6"
 
-libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.10.4"
+libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.11.6"
 
 libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.2.4" % "test"
 

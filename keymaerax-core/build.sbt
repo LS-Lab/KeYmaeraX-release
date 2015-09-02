@@ -6,7 +6,7 @@ version := versionName
 
 assemblyJarName in assembly := "keymaerax-core-" + versionName + ".jar" 
 
-scalaVersion := "2.10.4"
+scalaVersion := "2.11.6"
 
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 

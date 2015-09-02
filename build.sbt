@@ -1,4 +1,4 @@
-scalaVersion := "2.10.4"                                                        
+scalaVersion := "2.11.6"                                                        
 
 val versionName : String = "4.0a4"
 
