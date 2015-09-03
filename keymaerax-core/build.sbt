@@ -1,8 +1,15 @@
-name := "KeYmaeraX Core"
+name := "KeYmaeraX-Core"
 
 version := "4.0a4"
 
-scalaVersion := "2.10.4"
+assemblyJarName in assembly := "keymaerax-core-" + version.value + ".jar" 
+
+scalaVersion := "2.11.7"
+
+//scalacOptions ++= Seq("-Xno-patmat-analysis")
+
+//parser combinators are not longer included by default.
+libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4"
 
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 

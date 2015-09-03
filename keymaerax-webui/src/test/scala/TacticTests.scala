@@ -381,6 +381,14 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     prove(assume) should be (Provable)
   }
 
+  import FormulaConverter._
+  import TactixLibrary._
+  it should "prove x>0 -> [x:=x+1;]x>0" in {
+    proveBy("x>0 -> [x:=x+1;]x>0".asFormula, implyR(1) & step(1) & QE) shouldBe 'proved
+  }
+
+
+
 
   def tryTactic(tactic: Tactic): ProofNode = {
     val x = Variable("x", None, Real)
