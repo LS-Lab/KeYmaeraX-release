@@ -327,7 +327,16 @@ trait UnifyUSCalculus {
 
   type ForwardTactic = (Provable => Provable)
   type ForwardPositionTactic = (Position => ForwardTactic)
-  //@todo add def &() for composition and def | and def ifThenElse
+  //@todo add the following def &() for composition and def | as implicit definitions to ForwardTactic
+  def seqCompose(first: ForwardTactic, second: ForwardTactic): ForwardTactic = first andThen second
+  def either(left: ForwardTactic, right: ForwardTactic): ForwardTactic =
+    pr => try {left(pr)} catch { case _: ProverException => right(pr) }
+  def ifThenElse(cond: Provable=>Boolean, thenT: ForwardTactic, elseT: ForwardTactic): ForwardTactic =
+    pr => if (cond(pr)) thenT(pr) else elseT(pr)
+  def seqCompose(first: ForwardPositionTactic, second: ForwardPositionTactic): ForwardPositionTactic = pos => seqCompose(first(pos), second(pos))
+  def either(left: ForwardPositionTactic, right: ForwardPositionTactic): ForwardPositionTactic = pos => either(left(pos), right(pos))
+  def ifThenElse(cond: Position=>(Provable=>Boolean), thenT: ForwardPositionTactic, elseT: ForwardPositionTactic): ForwardPositionTactic = pos => ifThenElse(cond(pos), thenT(pos), elseT(pos))
+
 
   /** useFor(axiom) use the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   def useFor(axiom: String): ForwardPositionTactic = useFor(axiom, PosInExpr(0::Nil))
