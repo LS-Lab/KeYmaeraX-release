@@ -306,6 +306,12 @@ class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
   val json = JsArray(objects)
 }
 
+class KyxConfigResponse(kyxConfig: String) extends Response {
+  val json = JsObject(
+    "kyxConfig" -> JsString(kyxConfig)
+  )
+}
+
 class KeymaeraXVersionResponse(keymaeraXVersion: String) extends Response {
   val json = JsObject("keymaeraXVersion" -> JsString(keymaeraXVersion))
 }
