@@ -11,10 +11,12 @@ import edu.cmu.cs.ls.keymaerax.core._
  * Created by smitsch on 3/23/15.
  * @author Stefan Mitsch
  */
+@deprecated("Use FormulaAugmentor instead?")
 object FormulaConverter {
   import scala.language.implicitConversions
   implicit def FormulaToFormulaConverter(f: Formula): FormulaConverter = new FormulaConverter(f)
 }
+@deprecated("Use FormulaAugmentor instead?")
 class FormulaConverter(val fml: Formula) {
 
   /**

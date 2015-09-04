@@ -11,10 +11,12 @@ import edu.cmu.cs.ls.keymaerax.core._
  * Additional implicit functions defined for sequents when imported.
  * @author Andre Platzer
  */
+@deprecated("Use SequentAugmentor instead")
 object SequentConverter {
   import scala.language.implicitConversions
   implicit def SequentToSequentConverter(s: Sequent): SequentConverter = new SequentConverter(s)
 }
+@deprecated("Use SequentAugmentor instead")
 class SequentConverter(val seq: Sequent) {
   def apply(pos: Position): Expression = new FormulaConverter(seq(pos.top)).apply(pos.inExpr)
   /** Subexpression at indicated position */
