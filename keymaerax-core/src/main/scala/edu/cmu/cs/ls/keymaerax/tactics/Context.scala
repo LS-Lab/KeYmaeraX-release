@@ -120,6 +120,9 @@ object Context {
     case Less(f,g)            if pos.head==0 => val sp = split(f, pos.child); (Less(sp._1, g), sp._2)
     case Less(f,g)            if pos.head==1 => val sp = split(g, pos.child); (Less(f, sp._1), sp._2)
     // homomorphic cases
+    //@todo would like to summarize:
+//    case f:BinaryCompositeFormula if pos.head==0 => val sp = split(f.left, pos.child); (f.type.apply(sp._1, f.right), sp._2)
+//    case f:BinaryCompositeFormula if pos.head==1 => val sp = split(f.right, pos.child); (f.type.apply(f.left, sp._1), sp._2)
     case Not(f)               if pos.head==0 => val sp = split(f, pos.child); (Not(sp._1), sp._2)
     case And(f,g)             if pos.head==0 => val sp = split(f, pos.child); (And(sp._1, g), sp._2)
     case And(f,g)             if pos.head==1 => val sp = split(g, pos.child); (And(f, sp._1), sp._2)
