@@ -199,7 +199,7 @@ object HilbertCalculus extends UnifyUSCalculus {
     override def applies(s: Sequent, p: Position): Boolean = getTactic(s, p).isDefined
 
     def getTactic(s: Sequent, p: Position): Option[PositionTactic] = {
-      val sub = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "stepAt(" + p + ")\n(" + s + ")"); return None}
+      val sub: Expression = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "stepAt(" + p + ")\n(" + s + ")"); return None}
 
       //@todo simplify most cases substantially by useAt(AxiomIndex.axiomFor(sub))(p)
       sub match {
@@ -300,7 +300,7 @@ object HilbertCalculus extends UnifyUSCalculus {
   lazy val derive: PositionTactic = new PositionTactic("derive") {
     import Augmentors._
       override def applies(s: Sequent, p: Position): Boolean = {
-        val sub = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "useAt(" + fact + ")(" + p + ")\n(" + s + ")"); return false}
+        val sub = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "derive(" + p + ")\n(" + s + ")"); return false}
         sub match {
           case Differential(_) => true
           case DifferentialFormula(_) => true
