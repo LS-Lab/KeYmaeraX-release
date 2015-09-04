@@ -527,7 +527,7 @@ trait UnifyUSCalculus {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
         //Some(useAt(chaseProof(node.sequent.at(p).get), PosInExpr(0::Nil))(p))
-        Some(CE(chaseProof(node.sequent(p)))(p))
+        Some(CE(chaseProof(node.sequent.sub(p).get))(p))
 
       /** Construct a proof proving the answer of the chase of e, so either of e=chased(e) or e<->chased(e) */
       private def chaseProof(e: Expression): Provable = {
@@ -574,10 +574,10 @@ trait UnifyUSCalculus {
     def doChase(de: Provable, pos: Position): Provable = {
       import AxiomIndex.axiomIndex
       import Augmentors._
-      if (DEBUG) println("chase(" + de.conclusion(pos).prettyString + ")")
+      if (DEBUG) println("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
       // generic recursor
-      keys(de.conclusion(pos)) match {
-        case Nil => println("no chase(" + de.conclusion(pos).prettyString + ")"); de
+      keys(de.conclusion.sub(pos).get) match {
+        case Nil => println("no chase(" + de.conclusion.sub(pos).get.prettyString + ")"); de
         /*throw new IllegalArgumentException("No axiomFor for: " + expr)*/
         case List(ax) =>
           val (key, recursor) = axiomIndex(ax)
@@ -586,7 +586,7 @@ trait UnifyUSCalculus {
             recursor.foldLeft(axUse)(
               (pf, cursor) => doChase(pf, pos.append(cursor))
             )
-          } catch {case e: ProverException => throw e.inContext("useFor(" + ax + ", " + key.prettyString + ")\nin " + "chase(" + de.conclusion(pos).prettyString + ")")}
+          } catch {case e: ProverException => throw e.inContext("useFor(" + ax + ", " + key.prettyString + ")\nin " + "chase(" + de.conclusion.sub(pos).get.prettyString + ")")}
         // take the first axiom among breadth that works for one useFor step
         case l: List[String] =>
           // useFor the first applicable axiom if any, or None
@@ -598,7 +598,7 @@ trait UnifyUSCalculus {
             None
           }
           firstAxUse match {
-            case None => println("no chase(" + de.conclusion(pos).prettyString + ")"); de
+            case None => println("no chase(" + de.conclusion.sub(pos).get.prettyString + ")"); de
             case Some((axUse, recursor)) =>
               recursor.foldLeft(axUse)(
                 (pf, cursor) => doChase(pf, pos.append(cursor))
