@@ -74,11 +74,6 @@ class ProofsForUserRequest(db : DBAbstraction, userId: String) extends Request {
 class UpdateProofNameRequest(db : DBAbstraction, proofId : String, newName : String) extends Request {
   def getResultingResponses() = {
     val proof = db.getProofInfo(proofId)
-//    if(proof.name != newName) {
-//      val newProof = new ProofPOJO(
-//        proof.proofId, proof.modelId, newName, proof.description, proof.date, proof.stepCount, proof.closed
-//      )
-//    }
     db.updateProofName(proofId, newName)
     new UpdateProofNameResponse(proofId, newName) :: Nil
   }
