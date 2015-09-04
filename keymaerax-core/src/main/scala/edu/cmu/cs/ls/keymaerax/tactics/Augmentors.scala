@@ -53,5 +53,7 @@ object Augmentors {
   implicit class SequentAugmentor(val seq: Sequent) {
     /** Subexpression at indicated position */
     def apply(pos: Position): Expression = FormulaAugmentor(seq(pos.top))(pos.inExpr)
+    /** Split into expression and itsla*  *formucontext at the indicated position */
+    def at(pos: Position): (Context[Formula], Expression) = FormulaAugmentor(seq(pos.top)).at(pos.inExpr)
   }
 }
