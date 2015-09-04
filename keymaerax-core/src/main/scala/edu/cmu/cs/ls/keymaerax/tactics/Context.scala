@@ -21,6 +21,7 @@ object Context {
   /**
    * Split `C{e}=t(pos)` expression t at position pos into the expression e at that position and the context C within which that expression occurs.
    * Thus `C{e}` will equal the original `t` and `e` occurs at position pos in `t`
+   * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
    */
   def at(t: Expression, pos: PosInExpr): (Context[Expression], Expression) = {
     val sp = t match {
@@ -31,10 +32,43 @@ object Context {
       case _ => ???  // trivial totality on possibly problematic patmats
     }
     (Context(sp._1), sp._2)
-  } ensuring(r => reassemble(r, t, pos), "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos)
+  } ensuring(r => backsubstitution(r, t, pos), "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos)
+
+  /**
+   * Split `C{e}=t(pos)` term t at position pos into the expression e at that position and the context C within which that expression occurs.
+   * Thus `C{e}` will equal the original `t` and `e` occurs at position pos in `t`
+   * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
+   */
+  def at(t: Term, pos: PosInExpr): (Context[Term], Expression) = {
+    val sp = split(t, pos)
+    (Context(sp._1), sp._2)
+  } ensuring(r => backsubstitution(r, t, pos), "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos + " gives " + Context(split(t, pos)._1)(split(t, pos)._2) + " in context " + split(t, pos))
+
+  /**
+   * Split `C{e}=f(pos)` formula f at position pos into the expression e at that position and the context C within which that expression occurs.
+   * Thus `C{e}` will equal the original `f` and `e` occurs at position pos in `f`
+   * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
+   */
+  def at(f: Formula, pos: PosInExpr): (Context[Formula], Expression) = {
+    val sp = split(f, pos)
+    (Context(sp._1), sp._2)
+  } ensuring(r => backsubstitution(r, f, pos), "Reassembling the expression at that position into the context returns the original formula: " + f + " at " + pos + " gives " + Context(split(f, pos)._1)(split(f, pos)._2) + " in context " + split(f, pos))
+
+
+  /**
+   * Split `C{e}=a(pos)` program `a` at position pos into the expression e at that position and the context C within which that expression occurs.
+   * Thus `C{e}` will equal the original `a` and `e` occurs at position pos in `a`.
+   * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
+   */
+  def at(a: Program, pos: PosInExpr): (Context[Program], Expression) = {
+    val sp = split(a, pos)
+    (Context(sp._1), sp._2)
+  } ensuring(r => backsubstitution(r, a, pos), "Reassembling the expression at that position into the context returns the original formula: " + a + " at " + pos + " gives " + Context(split(a, pos)._1)(split(a, pos)._2) + " in context " + split(a, pos))
+
+  // at implementation
 
   //@note DotProgram does not exist, so no contextual plugins here. Except possibly via noctx substitutions....
-  private def reassemble(r:(Context[Expression], Expression), t: Expression, pos: PosInExpr): Boolean = {
+  private def backsubstitution(r:(Context[Expression], Expression), t: Expression, pos: PosInExpr): Boolean = {
     if (StaticSemantics.signature(r._1.ctx).intersect(Set(noContext,noContextD)).isEmpty)
       try {
         r._1(r._2) == t
@@ -46,35 +80,6 @@ object Context {
     //@todo check that r._1.ctx.replaceAt(pos, r._2) == t
       true
   }
-  /**
-   * Split `C{e}=t(pos)` term t at position pos into the expression e at that position and the context C within which that expression occurs.
-   * Thus `C{e}` will equal the original `t` and `e` occurs at position pos in `t`
-   */
-  def at(t: Term, pos: PosInExpr): (Context[Term], Expression) = {
-    val sp = split(t, pos)
-    (Context(sp._1), sp._2)
-  } ensuring(r => reassemble(r, t, pos), "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos + " gives " + Context(split(t, pos)._1)(split(t, pos)._2) + " in context " + split(t, pos))
-
-  /**
-   * Split `C{e}=f(pos)` formula f at position pos into the expression e at that position and the context C within which that expression occurs.
-   * Thus `C{e}` will equal the original `f` and `e` occurs at position pos in `f`
-   */
-  def at(f: Formula, pos: PosInExpr): (Context[Formula], Expression) = {
-    val sp = split(f, pos)
-    (Context(sp._1), sp._2)
-  } ensuring(r => reassemble(r, f, pos), "Reassembling the expression at that position into the context returns the original formula: " + f + " at " + pos + " gives " + Context(split(f, pos)._1)(split(f, pos)._2) + " in context " + split(f, pos))
-
-
-  /**
-   * Split `C{e}=a(pos)` program `a` at position pos into the expression e at that position and the context C within which that expression occurs.
-   * Thus `C{e}` will equal the original `a` and `e` occurs at position pos in `a`.
-   */
-  def at(a: Program, pos: PosInExpr): (Context[Program], Expression) = {
-    val sp = split(a, pos)
-    (Context(sp._1), sp._2)
-  } ensuring(r => reassemble(r, a, pos), "Reassembling the expression at that position into the context returns the original formula: " + a + " at " + pos + " gives " + Context(split(a, pos)._1)(split(a, pos)._2) + " in context " + split(a, pos))
-
-  // at implementation
 
   /** @see [[StaticSemanticsTools.boundAt()]] */
   private def split(term: Term, pos: PosInExpr): (Term, Expression) = if (pos==HereP) (DotTerm,term) else {term match {
