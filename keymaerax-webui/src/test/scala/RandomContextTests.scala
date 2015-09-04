@@ -28,18 +28,23 @@ class RandomContextTests extends FlatSpec with Matchers {
   def contextShouldBe[T<:Formula](origin: T, pos: PosInExpr): Boolean = {
     val (ctx,e) = try { origin.at(pos) } catch {case e: IllegalArgumentException => println("\nInput:      " + origin +
       "\nIllposition: " + pos); (Context(DotFormula), origin)}
-      println("\n" +
+    println("\n" +
         "\nInput:      " + origin +
         "\nPosition:   " + pos +
         "\nContext:    " + ctx +
-        "\nArgument:   " + e +
-        "\nReassemble: " + (if (e.isInstanceOf[Program]) "<program>" else ctx(e)) +
+        "\nArgument:   " + e)
+    val reassemble = try { Some(ctx(e)) }
+    catch {
+      case e: SubstitutionClashException => println("Clashes can happen when reassembling ill-defined:\n" + e); None
+    }
+    println(
+        "\nReassemble: " + reassemble.getOrElse(Variable("undefined")) +
         "\nExpected:  " + origin)
-    if (!e.isInstanceOf[Program] && !programCtx(ctx)) ctx(e) shouldBe origin
+    if (reassemble.isDefined && !noCtx(ctx)) reassemble.get shouldBe origin
     true
   }
 
-  private def programCtx(r:Context[Expression]): Boolean =
+  private def noCtx(r:Context[Expression]): Boolean =
      StaticSemantics.signature(r.ctx).contains(noContext) || StaticSemantics.signature(r.ctx).contains(noContextD)
 
   //@todo DotProgram would in a sense be the appropriate context
@@ -51,11 +56,7 @@ class RandomContextTests extends FlatSpec with Matchers {
     for (i <- 1 to randomTrials) {
       val f = rand.nextFormula(randomComplexity)
       val pos = rand.nextPosition(randomComplexity).inExpr
-      try {
-        contextShouldBe(f, pos)
-      } catch {
-        case e: SubstitutionClashException => println("Clashes can happen when reassembling ill-defined:\n" + e)
-      }
+      contextShouldBe(f, pos)
       //@todo could reshuffle pos if location didn't work.
     }
   }

@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature
 
@@ -13,6 +14,10 @@ import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature
   * @see [[Augmentors]]
   */
 object Context {
+  /** Placeholder for programs. Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
+  val DotProgram = ProgramConst("DotProgram")
+  /** Placeholder for differential programs. Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
+  val DotDiffProgram = DifferentialProgramConst("DotDiffProgram")
   /**
    * Split `C{e}=t(pos)` expression t at position pos into the expression e at that position and the context C within which that expression occurs.
    * Thus `C{e}` will equal the original `t` and `e` occurs at position pos in `t`
@@ -26,12 +31,21 @@ object Context {
       case _ => ???  // trivial totality on possibly problematic patmats
     }
     (Context(sp._1), sp._2)
-  } ensuring(r => programCtx(r) || r._1(r._2) == t, "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos)
+  } ensuring(r => reassemble(r, t, pos), "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos)
 
   //@note DotProgram does not exist, so no contextual plugins here. Except possibly via noctx substitutions....
-  private def programCtx(r:(Context[Expression], Expression)): Boolean =
-    r._2.isInstanceOf[Program] || StaticSemantics.signature(r._1.ctx).contains(noContext) || StaticSemantics.signature(r._1.ctx).contains(noContextD)
-
+  private def reassemble(r:(Context[Expression], Expression), t: Expression, pos: PosInExpr): Boolean = {
+    if (StaticSemantics.signature(r._1.ctx).intersect(Set(noContext,noContextD)).isEmpty)
+      try {
+        r._1(r._2) == t
+      }
+      catch {
+        case e: SubstitutionClashException => true //@todo check that r._1.ctx.replaceAt(pos, r._2) == t
+      }
+    else
+    //@todo check that r._1.ctx.replaceAt(pos, r._2) == t
+      true
+  }
   /**
    * Split `C{e}=t(pos)` term t at position pos into the expression e at that position and the context C within which that expression occurs.
    * Thus `C{e}` will equal the original `t` and `e` occurs at position pos in `t`
@@ -39,7 +53,7 @@ object Context {
   def at(t: Term, pos: PosInExpr): (Context[Term], Expression) = {
     val sp = split(t, pos)
     (Context(sp._1), sp._2)
-  } ensuring(r => programCtx(r) || r._1(r._2) == t, "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos + " gives " + Context(split(t, pos)._1)(split(t, pos)._2) + " in context " + split(t, pos))
+  } ensuring(r => reassemble(r, t, pos), "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos + " gives " + Context(split(t, pos)._1)(split(t, pos)._2) + " in context " + split(t, pos))
 
   /**
    * Split `C{e}=f(pos)` formula f at position pos into the expression e at that position and the context C within which that expression occurs.
@@ -48,7 +62,7 @@ object Context {
   def at(f: Formula, pos: PosInExpr): (Context[Formula], Expression) = {
     val sp = split(f, pos)
     (Context(sp._1), sp._2)
-  } ensuring(r => programCtx(r) || r._1(r._2) == f, "Reassembling the expression at that position into the context returns the original formula: " + f + " at " + pos + " gives " + Context(split(f, pos)._1)(split(f, pos)._2) + " in context " + split(f, pos))
+  } ensuring(r => reassemble(r, f, pos), "Reassembling the expression at that position into the context returns the original formula: " + f + " at " + pos + " gives " + Context(split(f, pos)._1)(split(f, pos)._2) + " in context " + split(f, pos))
 
 
   /**
@@ -58,7 +72,7 @@ object Context {
   def at(a: Program, pos: PosInExpr): (Context[Program], Expression) = {
     val sp = split(a, pos)
     (Context(sp._1), sp._2)
-  } ensuring(r => programCtx(r) || r._1(r._2) == a, "Reassembling the expression at that position into the context returns the original formula: " + a + " at " + pos + " gives " + Context(split(a, pos)._1)(split(a, pos)._2) + " in context " + split(a, pos))
+  } ensuring(r => reassemble(r, a, pos), "Reassembling the expression at that position into the context returns the original formula: " + a + " at " + pos + " gives " + Context(split(a, pos)._1)(split(a, pos)._2) + " in context " + split(a, pos))
 
   // at implementation
 
@@ -122,7 +136,7 @@ object Context {
 
   //@todo DotProgram would in a sense be the appropriate context
   private val noContext = ProgramConst("noctx")
-  private def split(program: Program, pos: PosInExpr): (Program, Expression) = if (pos==HereP) (noContext, program) else {program match {
+  private def split(program: Program, pos: PosInExpr): (Program, Expression) = if (pos==HereP) (DotProgram, program) else {program match {
     case Assign(x,t)       if pos==PosInExpr(0::Nil) => (noContext, x)
     case Assign(x,t)       if pos.head==1 => val sp = split(t, pos.child); (Assign(x,sp._1), sp._2)
     case DiffAssign(xp,t)  if pos==PosInExpr(0::Nil) => (noContext, xp)
@@ -143,7 +157,7 @@ object Context {
   }} ensuring(r => r._1==noContext || r._1.getClass == program.getClass, "Context has identical top types " + program + " at " + pos)
 
   private val noContextD = DifferentialProgramConst("noctxD")
-  private def splitODE(program: DifferentialProgram, pos: PosInExpr): (DifferentialProgram, Expression) = if (pos==HereP) (noContextD, program) else {program match {
+  private def splitODE(program: DifferentialProgram, pos: PosInExpr): (DifferentialProgram, Expression) = if (pos==HereP) (DotDiffProgram, program) else {program match {
     case AtomicODE(xp,t)          if pos==PosInExpr(0::Nil) => (noContextD, xp)
     case AtomicODE(xp,t)          if pos.head==1 => val sp = split(t, pos.child); (AtomicODE(xp,sp._1), sp._2)
     case DifferentialProduct(l,r) if pos.head==0 => val sp = splitODE(l, pos.child); (DifferentialProduct(sp._1, r), sp._2)
@@ -158,17 +172,22 @@ object Context {
  * @author Stefan Mitsch
  */
 sealed case class Context[+T <: Expression](ctx: T) {
+  import Context.DotProgram
+  import Context.DotDiffProgram
   // either a term or a formula context, not both
   require(!(signature(ctx).contains(DotFormula) && signature(ctx).contains(DotTerm)), "Contexts are either DotFormula or DotTerm contexts, not both at once: " + ctx)
 
   /** Return the result of filling the dot placeholder of this context with expression e */
-  def apply(e: Expression) = e match {
+  //@todo why should this always be a formula?
+  def apply(e: Expression): Formula = e match {
     case f: Formula => instantiate(f)
     case t: Term => instantiate(t)
+    case a: Program => instantiate(a)
   }
 
   def isFormulaContext = signature(ctx).contains(DotFormula)
   def isTermContext = signature(ctx).contains(DotTerm)
+  def isProgramContext = signature(ctx).contains(DotProgram)
 
   /**
    * Instantiates the context ctx with the formula withF
@@ -190,6 +209,30 @@ sealed case class Context[+T <: Expression](ctx: T) {
     assert(!isFormulaContext, "can only instantiate terms within a term context " + this)
     val context = Function("dottingC_", None, Real, Bool)
     USubst(SubstitutionPair(PredOf(context, DotTerm), ctx) :: Nil)(PredOf(context, withT))
+  }
+
+  /**
+   * Instantiates the context ctx with the program withA
+   * @param withA The program to instantiate context ctx with.
+   * @return The instantiated context ctx{withA}.
+   */
+  def instantiate(withA: Program): Formula = {
+    assert(!isFormulaContext || isTermContext, "can only instantiate programs within a program context " + this)
+    if (withA.isInstanceOf[DifferentialProgram] && !withA.isInstanceOf[ODESystem])
+      instantiate(withA.asInstanceOf[DifferentialProgram])
+    else
+      //@todo why should this be a formula?
+      USubst(SubstitutionPair(DotProgram, withA) :: Nil)(ctx).asInstanceOf[Formula]
+  }
+
+  /**
+   * Instantiates the context ctx with the program withA
+   * @param withA The program to instantiate context ctx with.
+   * @return The instantiated context ctx{withA}.
+   */
+  def instantiate(withA: DifferentialProgram): Formula = {
+    assert(!isFormulaContext || isTermContext, "can only instantiate differential programs within a differential program context " + this)
+    USubst(SubstitutionPair(DotDiffProgram, withA) :: Nil)(ctx) .asInstanceOf[Formula]
   }
 
   override def toString = "Context{{" + ctx.prettyString + "}}"
