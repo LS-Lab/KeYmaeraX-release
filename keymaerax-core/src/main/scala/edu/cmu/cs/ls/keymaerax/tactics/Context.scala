@@ -35,7 +35,7 @@ object Context {
   def at(t: Term, pos: PosInExpr): (Context[Term], Expression) = {
     val sp = split(t, pos)
     (Context(sp._1), sp._2)
-  } ensuring(r => r._1(r._2) == t, "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos)
+  } ensuring(r => r._1(r._2) == t, "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos + " gives " + Context(split(t, pos)._1)(split(t, pos)._2) + " in context " + split(t, pos))
 
   /**
    * Split `C{e}=f(pos)` formula f at position pos into the expression e at that position and the context C within which that expression occurs.
@@ -44,7 +44,7 @@ object Context {
   def at(f: Formula, pos: PosInExpr): (Context[Formula], Expression) = {
     val sp = split(f, pos)
     (Context(sp._1), sp._2)
-  } ensuring(r => r._1(r._2) == f, "Reassembling the expression at that position into the context returns the original formula: " + f + " at " + pos)
+  } ensuring(r => r._1(r._2) == f, "Reassembling the expression at that position into the context returns the original formula: " + f + " at " + pos + " gives " + Context(split(f, pos)._1)(split(f, pos)._2) + " in context " + split(f, pos))
 
 
   /**
@@ -54,7 +54,7 @@ object Context {
   def at(a: Program, pos: PosInExpr): (Context[Program], Expression) = {
     val sp = split(a, pos)
     (Context(sp._1), sp._2)
-  } ensuring(r => r._1(r._2) == a, "Reassembling the expression at that position into the context returns the original formula: " + a + " at " + pos)
+  } ensuring(r => r._1(r._2) == a, "Reassembling the expression at that position into the context returns the original formula: " + a + " at " + pos + " gives " + Context(split(a, pos)._1)(split(a, pos)._2) + " in context " + split(a, pos))
 
   // at implementation
 
@@ -84,18 +84,18 @@ object Context {
     case PredOf(p,t)          if pos.head==0 => val sp = split(t, pos.child); (PredOf(p, sp._1), sp._2)
     case PredicationalOf(c,t) if pos.head==0 => val sp = split(t, pos.child); (PredicationalOf(c, sp._1), sp._2)
     // pseudo-homomorphic cases
-    case Equal(f,g)           if pos.head==0 => val sp = split(f, pos.child); (Equal(f, sp._1), sp._2)
-    case Equal(f,g)           if pos.head==1 => val sp = split(g, pos.child); (Equal(sp._1, g), sp._2)
-    case NotEqual(f,g)        if pos.head==0 => val sp = split(f, pos.child); (NotEqual(f, sp._1), sp._2)
-    case NotEqual(f,g)        if pos.head==1 => val sp = split(g, pos.child); (NotEqual(sp._1, g), sp._2)
-    case GreaterEqual(f,g)    if pos.head==0 => val sp = split(f, pos.child); (GreaterEqual(f, sp._1), sp._2)
-    case GreaterEqual(f,g)    if pos.head==1 => val sp = split(g, pos.child); (GreaterEqual(sp._1, g), sp._2)
-    case Greater(f,g)         if pos.head==0 => val sp = split(f, pos.child); (Greater(f, sp._1), sp._2)
-    case Greater(f,g)         if pos.head==1 => val sp = split(g, pos.child); (Greater(sp._1, g), sp._2)
-    case LessEqual(f,g)       if pos.head==0 => val sp = split(f, pos.child); (LessEqual(f, sp._1), sp._2)
-    case LessEqual(f,g)       if pos.head==1 => val sp = split(g, pos.child); (LessEqual(sp._1, g), sp._2)
-    case Less(f,g)            if pos.head==0 => val sp = split(f, pos.child); (Less(f, sp._1), sp._2)
-    case Less(f,g)            if pos.head==1 => val sp = split(g, pos.child); (Less(sp._1, g), sp._2)
+    case Equal(f,g)           if pos.head==0 => val sp = split(g, pos.child); (Equal(sp._1, g), sp._2)
+    case Equal(f,g)           if pos.head==1 => val sp = split(f, pos.child); (Equal(f, sp._1), sp._2)
+    case NotEqual(f,g)        if pos.head==0 => val sp = split(g, pos.child); (NotEqual(sp._1, g), sp._2)
+    case NotEqual(f,g)        if pos.head==1 => val sp = split(f, pos.child); (NotEqual(f, sp._1), sp._2)
+    case GreaterEqual(f,g)    if pos.head==0 => val sp = split(g, pos.child); (GreaterEqual(sp._1, g), sp._2)
+    case GreaterEqual(f,g)    if pos.head==1 => val sp = split(f, pos.child); (GreaterEqual(f, sp._1), sp._2)
+    case Greater(f,g)         if pos.head==0 => val sp = split(g, pos.child); (Greater(sp._1, g), sp._2)
+    case Greater(f,g)         if pos.head==1 => val sp = split(f, pos.child); (Greater(f, sp._1), sp._2)
+    case LessEqual(f,g)       if pos.head==0 => val sp = split(g, pos.child); (LessEqual(sp._1, g), sp._2)
+    case LessEqual(f,g)       if pos.head==1 => val sp = split(f, pos.child); (LessEqual(f, sp._1), sp._2)
+    case Less(f,g)            if pos.head==0 => val sp = split(g, pos.child); (Less(sp._1, g), sp._2)
+    case Less(f,g)            if pos.head==1 => val sp = split(f, pos.child); (Less(f, sp._1), sp._2)
     // homomorphic cases
     case Not(g)               if pos.head==0 => val sp = split(g, pos.child); (Not(sp._1), sp._2)
     case And(f,g)             if pos.head==0 => val sp = split(f, pos.child); (And(sp._1, g), sp._2)
@@ -108,10 +108,10 @@ object Context {
     case Equiv(f,g)           if pos.head==1 => val sp = split(g, pos.child); (Equiv(f, sp._1), sp._2)
     case Forall(vars, g)      if pos.head==0 => val sp = split(g, pos.child); (Forall(vars, sp._1), sp._2)
     case Exists(vars, g)      if pos.head==0 => val sp = split(g, pos.child); (Exists(vars, sp._1), sp._2)
-    case Box(a, g)            if pos.head==1 => val sp = split(g, pos.child); (Box(a, sp._1), sp._2)
-    case Diamond(a, g)        if pos.head==1 => val sp = split(g, pos.child); (Diamond(a, sp._1), sp._2)
     case Box(a, g)            if pos.head==0 => val sp = split(a, pos.child); (Box(sp._1, g), sp._2)
+    case Box(a, g)            if pos.head==1 => val sp = split(g, pos.child); (Box(a, sp._1), sp._2)
     case Diamond(a, g)        if pos.head==0 => val sp = split(a, pos.child); (Diamond(sp._1, g), sp._2)
+    case Diamond(a, g)        if pos.head==1 => val sp = split(g, pos.child); (Diamond(a, sp._1), sp._2)
     case DifferentialFormula(g) if pos.head==0 => val sp = split(g, pos.child); (DifferentialFormula(sp._1), sp._2)
     case _ => throw new IllegalArgumentException("split position " + pos + " of formula " + formula + " may not be defined")
   }} ensuring(r => r._1.getClass == formula.getClass, "Context has identical top types " + formula + " at " + pos)

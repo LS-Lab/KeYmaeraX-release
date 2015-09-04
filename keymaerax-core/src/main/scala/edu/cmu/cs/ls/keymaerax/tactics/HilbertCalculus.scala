@@ -300,7 +300,7 @@ object HilbertCalculus extends UnifyUSCalculus {
   lazy val derive: PositionTactic = new PositionTactic("derive") {
     import Augmentors._
       override def applies(s: Sequent, p: Position): Boolean = {
-        val sub = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "derive(" + p + ")\n(" + s + ")"); return false}
+        val sub: Expression = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "derive(" + p + ")\n(" + s + ")"); return false}
         sub match {
           case Differential(_) => true
           case DifferentialFormula(_) => true
