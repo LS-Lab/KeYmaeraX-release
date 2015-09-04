@@ -5,6 +5,7 @@
 package test
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.{SuccPosition, PosInExpr, Position, AntePosition}
 import scala.util.Random
 import scala.collection.immutable._
 
@@ -27,6 +28,10 @@ class RandomFormula(val rand : Random = new Random()) {
 
   def nextDotProgram(size : Int) = nextP(nextNames("z", size / 3 + 1), size, true)
 
+  def nextPosition(size : Int): Position = if (rand.nextBoolean())
+    AntePosition(rand.nextInt(size), PosInExpr(nextPos(size)))
+  else
+    SuccPosition(rand.nextInt(size), PosInExpr(nextPos(size)))
 
   def unfoldRight[A, B](seed: B)(f: B => Option[(A,B)]): List[A] = f(seed) match {
     case Some((a,b)) => a :: unfoldRight(b)(f)
@@ -40,10 +45,16 @@ class RandomFormula(val rand : Random = new Random()) {
       Some((Variable(name + n, None, Real), n-1))
       //Some(("x" + (rand.alphanumeric take 5).fold("")((s:String,t:String)=>s+t), n-1))
   }.to[IndexedSeq]
-  
+
+  private def nextPos(n : Int) : List[Int] = {
+    require(n >= 0)
+    if (n == 0 || rand.nextFloat() <= shortProbability) return Nil
+    (if (rand.nextBoolean()) 1 else 0) :: nextPos(n - 1)
+  }
+
   def nextF(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : Formula = {
 	  require(n>=0)
-	  if (n == 0 || rand.nextFloat()<=shortProbability) return return if (dots && rand.nextInt(100)>=70) {assert(dots);DotFormula} else True
+	  if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=70) {assert(dots);DotFormula} else True
       val r = rand.nextInt(if (dots) 300 else 290)
       r match {
         case 0 => False

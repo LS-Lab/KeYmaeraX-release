@@ -26,7 +26,11 @@ object Context {
       case _ => ???  // trivial totality on possibly problematic patmats
     }
     (Context(sp._1), sp._2)
-  } ensuring(r => r._1(r._2) == t, "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos)
+  } ensuring(r => programCtx(r) || r._1(r._2) == t, "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos)
+
+  //@note DotProgram does not exist, so no contextual plugins here. Except possibly via noctx substitutions....
+  private def programCtx(r:(Context[Expression], Expression)): Boolean =
+    r._2.isInstanceOf[Program] || StaticSemantics.signature(r._1.ctx).contains(noContext) || StaticSemantics.signature(r._1.ctx).contains(noContextD)
 
   /**
    * Split `C{e}=t(pos)` term t at position pos into the expression e at that position and the context C within which that expression occurs.
@@ -35,7 +39,7 @@ object Context {
   def at(t: Term, pos: PosInExpr): (Context[Term], Expression) = {
     val sp = split(t, pos)
     (Context(sp._1), sp._2)
-  } ensuring(r => r._1(r._2) == t, "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos + " gives " + Context(split(t, pos)._1)(split(t, pos)._2) + " in context " + split(t, pos))
+  } ensuring(r => programCtx(r) || r._1(r._2) == t, "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos + " gives " + Context(split(t, pos)._1)(split(t, pos)._2) + " in context " + split(t, pos))
 
   /**
    * Split `C{e}=f(pos)` formula f at position pos into the expression e at that position and the context C within which that expression occurs.
@@ -44,7 +48,7 @@ object Context {
   def at(f: Formula, pos: PosInExpr): (Context[Formula], Expression) = {
     val sp = split(f, pos)
     (Context(sp._1), sp._2)
-  } ensuring(r => r._1(r._2) == f, "Reassembling the expression at that position into the context returns the original formula: " + f + " at " + pos + " gives " + Context(split(f, pos)._1)(split(f, pos)._2) + " in context " + split(f, pos))
+  } ensuring(r => programCtx(r) || r._1(r._2) == f, "Reassembling the expression at that position into the context returns the original formula: " + f + " at " + pos + " gives " + Context(split(f, pos)._1)(split(f, pos)._2) + " in context " + split(f, pos))
 
 
   /**
@@ -54,7 +58,7 @@ object Context {
   def at(a: Program, pos: PosInExpr): (Context[Program], Expression) = {
     val sp = split(a, pos)
     (Context(sp._1), sp._2)
-  } ensuring(r => r._1(r._2) == a, "Reassembling the expression at that position into the context returns the original formula: " + a + " at " + pos + " gives " + Context(split(a, pos)._1)(split(a, pos)._2) + " in context " + split(a, pos))
+  } ensuring(r => programCtx(r) || r._1(r._2) == a, "Reassembling the expression at that position into the context returns the original formula: " + a + " at " + pos + " gives " + Context(split(a, pos)._1)(split(a, pos)._2) + " in context " + split(a, pos))
 
   // at implementation
 
@@ -136,16 +140,16 @@ object Context {
     case Loop(f)           if pos.head==0 => val sp = split(f, pos.child); (Loop(sp._1), sp._2)
     case Dual(f)           if pos.head==0 => val sp = split(f, pos.child); (Dual(sp._1), sp._2)
     case _ => throw new IllegalArgumentException("split position " + pos + " of program " + program + " may not be defined")
-  }} ensuring(r => r._1.getClass == program.getClass, "Context has identical top types " + program + " at " + pos)
+  }} ensuring(r => r._1==noContext || r._1.getClass == program.getClass, "Context has identical top types " + program + " at " + pos)
 
-  private val noContextD = DifferentialProgramConst("noctx")
+  private val noContextD = DifferentialProgramConst("noctxD")
   private def splitODE(program: DifferentialProgram, pos: PosInExpr): (DifferentialProgram, Expression) = if (pos==HereP) (noContextD, program) else {program match {
     case AtomicODE(xp,t)          if pos==PosInExpr(0::Nil) => (noContextD, xp)
     case AtomicODE(xp,t)          if pos.head==1 => val sp = split(t, pos.child); (AtomicODE(xp,sp._1), sp._2)
     case DifferentialProduct(l,r) if pos.head==0 => val sp = splitODE(l, pos.child); (DifferentialProduct(sp._1, r), sp._2)
     case DifferentialProduct(l,r) if pos.head==1 => val sp = splitODE(r, pos.child); (DifferentialProduct(l, sp._1), sp._2)
     case _ => throw new IllegalArgumentException("splitODE position " + pos + " of program " + program + " may not be defined")
-  }} ensuring(r => r._1.getClass == program.getClass, "Context has identical top types " + program + " at " + pos)
+  }} ensuring(r => r._1==noContextD || r._1.getClass == program.getClass, "Context has identical top types " + program + " at " + pos)
 }
 
 /**
@@ -172,7 +176,7 @@ sealed case class Context[+T <: Expression](ctx: T) {
    * @return The instantiated context ctx{withF}.
    */
   def instantiate(withF: Formula): Formula = {
-    assert(isFormulaContext, "can only instantiate formulas within a formula context " + this)
+    assert(!isTermContext, "can only instantiate formulas within a formula context " + this)
     val context = Function("dottingC_", None, Bool, Bool)//@TODO eisegesis  should be Function("dottingC_", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
     USubst(SubstitutionPair(PredicationalOf(context, DotFormula), ctx) :: Nil)(PredicationalOf(context, withF))
   }
@@ -183,8 +187,10 @@ sealed case class Context[+T <: Expression](ctx: T) {
    * @return The instantiated context ctx(withT).
    */
   def instantiate(withT: Term): Formula = {
-    assert(isTermContext, "can only instantiate terns within a tern context " + this)
+    assert(!isFormulaContext, "can only instantiate terms within a term context " + this)
     val context = Function("dottingC_", None, Real, Bool)
     USubst(SubstitutionPair(PredOf(context, DotTerm), ctx) :: Nil)(PredOf(context, withT))
   }
+
+  override def toString = "Context{{" + ctx.prettyString + "}}"
 }
