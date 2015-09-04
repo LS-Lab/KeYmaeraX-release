@@ -87,12 +87,11 @@ object HilbertCalculus extends UnifyUSCalculus {
   /** diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE) */
   lazy val diffInd            : PositionTactic = new PositionTactic("diffInd") {
     import Augmentors._
-      override def applies(s: Sequent, p: Position): Boolean = p.isSucc && /*p.isTopLevel &&*/ {
-        val sub = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "diffInd(" + p + ")\n(" + s + ")"); return false}
-        sub match {case Box(_: ODESystem, _) => true
-        case _ => false
-        }
-      }
+      override def applies(s: Sequent, p: Position): Boolean = p.isSucc && (s.sub(p) match {
+        case Some(Box(_: ODESystem, _)) => true
+        case Some(_) => false
+        case None => println("ill-positioned " + p + " in " + s + "\nin " + "diffInd(" + p + ")\n(" + s + ")"); return false
+      })
       def apply(p: Position): Tactic = new ConstructionTactic(name) {
         override def applicable(node : ProofNode) = applies(node.sequent, p)
         override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
@@ -199,10 +198,11 @@ object HilbertCalculus extends UnifyUSCalculus {
     override def applies(s: Sequent, p: Position): Boolean = getTactic(s, p).isDefined
 
     def getTactic(s: Sequent, p: Position): Option[PositionTactic] = {
-      val sub: Expression = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "stepAt(" + p + ")\n(" + s + ")"); return None}
+      val sub = s.sub(p)
+      if (!sub.isDefined) {println("ill-positioned " + p + " in " + s + "\nin " + "stepAt(" + p + ")\n(" + s + ")"); return None}
 
       //@todo simplify most cases substantially by useAt(AxiomIndex.axiomFor(sub))(p)
-      sub match {
+      sub.get match {
         case Box(a, _) => a match {
           case _: Assign    => Some(assignb)
           case _: AssignAny => Some(randomb)
@@ -299,15 +299,13 @@ object HilbertCalculus extends UnifyUSCalculus {
     */
   lazy val derive: PositionTactic = new PositionTactic("derive") {
     import Augmentors._
-      override def applies(s: Sequent, p: Position): Boolean = {
-        val sub: Expression = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "derive(" + p + ")\n(" + s + ")"); return false}
-        sub match {
-          case Differential(_) => true
-          case DifferentialFormula(_) => true
-          case _ => false
-        }
+      override def applies(s: Sequent, p: Position): Boolean = s.sub(p) match {
+        case Some(Differential(_)) => true
+        case Some(DifferentialFormula(_)) => true
+        case Some(_) => false
+        case None => println("ill-positioned " + p + " in " + s + "\nin " + "derive(" + p + ")\n(" + s + ")"); return false
       }
-      override def apply(p: Position): Tactic = chase(p)
+    override def apply(p: Position): Tactic = chase(p)
     }
 
 
@@ -319,33 +317,33 @@ object HilbertCalculus extends UnifyUSCalculus {
   private val getODEDim: (Sequent,Position)=>Int = (sequent,pos) => {
     import Augmentors._
     def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).toSymbolSet.filter(x=>x.isInstanceOf[DifferentialSymbol]).size
-    sequent(pos) match {
-      case Box(ode: ODESystem, _)     => odeDim(ode)
-      case Diamond(ode: ODESystem, _) => odeDim(ode)
-      case e => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
-      //case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
+    sequent.sub(pos) match {
+      case Some(Box(ode: ODESystem, _))     => odeDim(ode)
+      case Some(Diamond(ode: ODESystem, _)) => odeDim(ode)
+      case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
     }
   }
 
   /** Whether there is a proper ODE System at the indicated position of a sequent with >=2 ODEs */
   private val isODESystem: (Sequent,Position)=>Boolean = (sequent,pos) => {
     import Augmentors._
-    sequent(pos) match {
-      case Box(ODESystem(_:DifferentialProduct,_), _)     => true
-      case Diamond(ODESystem(_:DifferentialProduct,_), _) => true
-      case e => false
-//      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
+    sequent.sub(pos) match {
+      case Some(Box(ODESystem(_:DifferentialProduct,_), _))     => true
+      case Some(Diamond(ODESystem(_:DifferentialProduct,_), _)) => true
+      case Some(e) => false
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
     }
   }
 
   /** Whether the ODE at indicated position of a sequent has a nontrivial domain */
   private val hasODEDomain: (Sequent,Position)=>Boolean = (sequent,pos) => {
     import Augmentors._
-    sequent(pos) match {
-      case Box(ode: ODESystem, _)     => ode.constraint != True
-      case Diamond(ode: ODESystem, _) => ode.constraint != True
-      case e => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
-      //case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
+    sequent.sub(pos) match {
+      case Some(Box(ode: ODESystem, _))     => ode.constraint != True
+      case Some(Diamond(ode: ODESystem, _)) => ode.constraint != True
+      case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
     }
   }
 }

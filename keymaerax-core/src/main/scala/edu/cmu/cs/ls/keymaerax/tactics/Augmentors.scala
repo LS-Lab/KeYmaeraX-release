@@ -20,6 +20,8 @@ object Augmentors {
   implicit class TermAugmentor(val term: Term) {
     /** Subexpression at indicated position */
     def apply(pos: PosInExpr): Expression = at(pos)._2
+    /** Subexpression at indicated position if exists, or None */
+    def sub(pos: PosInExpr): Option[Expression] = try {Some(at(pos)._2)} catch {case e: IllegalArgumentException => None}
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Term], Expression) = Context.at(term, pos)
   }
@@ -31,6 +33,8 @@ object Augmentors {
   implicit class FormulaAugmentor(val fml: Formula) {
     /** Subexpression at indicated position */
     def apply(pos: PosInExpr): Expression = at(pos)._2
+    /** Subexpression at indicated position if exists, or None*/
+    def sub(pos: PosInExpr): Option[Expression] = try {Some(at(pos)._2)} catch {case e: IllegalArgumentException => None}
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Formula], Expression) = Context.at(fml, pos)
   }
@@ -42,6 +46,8 @@ object Augmentors {
   implicit class ProgramAugmentor(val prog: Program) {
     /** Subexpression at indicated position */
     def apply(pos: PosInExpr): Expression = at(pos)._2
+    /** Subexpression at indicated position if exists, or None*/
+    def sub(pos: PosInExpr): Option[Expression] = try {Some(at(pos)._2)} catch {case e: IllegalArgumentException => None}
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Program], Expression) = Context.at(prog, pos)
   }
@@ -53,7 +59,9 @@ object Augmentors {
   implicit class SequentAugmentor(val seq: Sequent) {
     /** Subexpression at indicated position */
     def apply(pos: Position): Expression = FormulaAugmentor(seq(pos.top))(pos.inExpr)
-    /** Split into expression and itsla*  *formucontext at the indicated position */
+    /** Subexpression at indicated position if exists, or None*/
+    def sub(pos: Position): Option[Expression] = FormulaAugmentor(seq(pos.top)).sub(pos.inExpr)
+    /** Split into expression and its *formula* context at the indicated position */
     def at(pos: Position): (Context[Formula], Expression) = FormulaAugmentor(seq(pos.top)).at(pos.inExpr)
   }
 }

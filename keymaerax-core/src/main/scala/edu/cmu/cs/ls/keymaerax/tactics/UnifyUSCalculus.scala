@@ -153,10 +153,11 @@ trait UnifyUSCalculus {
     private val (keyCtx:Context[_],keyPart) = fact.at(key)
 
     override def applies(s: Sequent, p: Position): Boolean = try {
-      val sub = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "useAt(" + fact + ")(" + p + ")\n(" + s + ")"); return false}
-      UnificationMatch(keyPart,sub)
+      val sub = s.sub(p)
+      if (!sub.isDefined) {println("ill-positioned " + p + " in " + s + "\nin " + "useAt(" + fact + ")(" + p + ")\n(" + s + ")"); return false}
+      UnificationMatch(keyPart,sub.get)
       true
-    } catch {case e: ProverException => println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s(p))); false}
+    } catch {case e: ProverException => println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s.sub(p))); false}
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
@@ -293,10 +294,7 @@ trait UnifyUSCalculus {
       case Equiv(l,r) => (l,r)
       case _ => throw new IllegalArgumentException("expected equivalence or equality fact " + equiv)
     }
-    override def applies(s: Sequent, p: Position): Boolean = {
-      val sub = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "CE(" + equiv.prettyString + ")(" + p + ")\n(" + s + ")"); return false}
-      sub == key
-    }
+    override def applies(s: Sequent, p: Position): Boolean = s.sub(p) == Some(key)
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
 
@@ -519,8 +517,9 @@ trait UnifyUSCalculus {
 
     //@note True has no applicable keys. This applicability is still an overapproximation since it does not check for clashes.
     override def applies(s: Sequent, p: Position): Boolean = {
-      val sub = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "chase\n(" + s + ")"); return false}
-      !(keys(sub).isEmpty)
+      val sub = s.sub(p)
+      if (!sub.isDefined) {println("ill-positioned " + p + " in " + s + "\nin " + "chase\n(" + s + ")"); return false}
+      !(keys(sub.get).isEmpty)
     }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
