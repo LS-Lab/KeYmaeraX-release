@@ -10,6 +10,7 @@ import scala.language.implicitConversions
 /**
  * Position within an expression as a list of subexpressions.
  * 0 is first child, 1 is second child, 2 is third child.
+ * @see [[Context.at()]]
  */
 case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
