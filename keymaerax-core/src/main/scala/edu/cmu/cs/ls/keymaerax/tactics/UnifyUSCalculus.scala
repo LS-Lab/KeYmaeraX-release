@@ -333,9 +333,9 @@ trait UnifyUSCalculus {
     pr => try {left(pr)} catch { case _: ProverException => right(pr) }
   def ifThenElse(cond: Provable=>Boolean, thenT: ForwardTactic, elseT: ForwardTactic): ForwardTactic =
     pr => if (cond(pr)) thenT(pr) else elseT(pr)
-  def seqCompose(first: ForwardPositionTactic, second: ForwardPositionTactic): ForwardPositionTactic = pos => seqCompose(first(pos), second(pos))
-  def either(left: ForwardPositionTactic, right: ForwardPositionTactic): ForwardPositionTactic = pos => either(left(pos), right(pos))
-  def ifThenElse(cond: Position=>(Provable=>Boolean), thenT: ForwardPositionTactic, elseT: ForwardPositionTactic): ForwardPositionTactic = pos => ifThenElse(cond(pos), thenT(pos), elseT(pos))
+  def seqComposeP(first: ForwardPositionTactic, second: ForwardPositionTactic): ForwardPositionTactic = pos => seqCompose(first(pos), second(pos))
+  def eitherP(left: ForwardPositionTactic, right: ForwardPositionTactic): ForwardPositionTactic = pos => either(left(pos), right(pos))
+  def ifThenElseP(cond: Position=>(Provable=>Boolean), thenT: ForwardPositionTactic, elseT: ForwardPositionTactic): ForwardPositionTactic = pos => ifThenElse(cond(pos), thenT(pos), elseT(pos))
 
 
   /** useFor(axiom) use the given axiom forward for the selected position in the given Provable to conclude a new Provable */
@@ -641,6 +641,7 @@ trait UnifyUSCalculus {
     )
     // retroactively handle postponed assignments in inverse order, so inside-out
         //@todo or  "<:=> assign update"
+        //@todo simplify since smart positions work.
     pos => pr => updateStack.foldLeft(chased(pos)(pr))((proof, p) => useFor("[:=] assign")(p)(proof))
   }
 
