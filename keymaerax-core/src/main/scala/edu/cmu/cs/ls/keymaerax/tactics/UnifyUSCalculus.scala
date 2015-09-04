@@ -144,30 +144,25 @@ trait UnifyUSCalculus {
    * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
    */
   def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic, inst: Subst=>Subst = (us=>us)): PositionTactic = new PositionTactic("useAt") {
-    import FormulaConverter._
-    import SequentConverter._
     import TactixLibrary.assertT
     import TactixLibrary.debug
     import TacticLibrary.debugC
     import TacticLibrary.instantiateQuanT
     import SearchTacticsImpl.lastSucc
-    private val (keyCtx:Context[_],keyPart) = fact.extractContext(key)
-    //private val keyPart = new FormulaConverter(fact).subFormulaAt(key).get
+    import Augmentors._
+    private val (keyCtx:Context[_],keyPart) = fact.at(key)
 
     override def applies(s: Sequent, p: Position): Boolean = try {
-      val part = s.at(p)
-      if (!part.isDefined) {println("ill-positioned " + p + " in " + s + "\nin " + "useAt(" + fact + ")(" + p + ")\n(" + s + ")"); false}
-      else {
-        UnificationMatch(keyPart,part.get)
-        true
-      }
+      val sub = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "useAt(" + fact + ")(" + p + ")\n(" + s + ")"); return false}
+      UnificationMatch(keyPart,sub)
+      true
     } catch {case e: ProverException => println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s.at(p))); false}
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val (ctx,expr) = node.sequent.splitContext(p)
+        val (ctx,expr) = node.sequent.at(p)
         val subst = inst(UnificationMatch(keyPart, expr))
         if (DEBUG) println("useAt(" + fact.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
         assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
@@ -191,8 +186,8 @@ trait UnifyUSCalculus {
        */
       private def useAt[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: Tactic, sequent: Sequent): Tactic = {
         require(subst(k) == c, "correctly matched input")
-        require(C(c).extractContext(p.inExpr) == (C,c), "correctly split at position p")
-        require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.extractContext(p.inExpr)), "correctly split at position p")
+        require(C(c).at(p.inExpr) == (C,c), "correctly split at position p")
+        require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
         /** Equivalence rewriting step */
         def equivStep(other: Expression, factTactic: Tactic): Tactic = {
@@ -290,7 +285,7 @@ trait UnifyUSCalculus {
     * @see [[useAt()]]
     */
   def CE(equiv: Provable): PositionTactic = new PositionTactic("CE(Provable)") {
-    import SequentConverter._
+    import Augmentors._
     require(equiv.conclusion.ante.length==0 && equiv.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + equiv)
     private val equi = equiv.conclusion.succ.head
     val (key,other) = equi match {
@@ -298,13 +293,15 @@ trait UnifyUSCalculus {
       case Equiv(l,r) => (l,r)
       case _ => throw new IllegalArgumentException("expected equivalence or equality fact " + equiv)
     }
-    override def applies(s: Sequent, p: Position): Boolean = s.at(p) == Some(key)
-    //{if (DEBUG) println("CE(" + equiv.prettyString + ")\nat " + s.at(p) + "\nof " + s + " at " + p + " " + (if (s.at(p) == Some(key)) "applicable" else "un-applicable"))}
+    override def applies(s: Sequent, p: Position): Boolean = {
+      val sub = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "CE(" + equiv.prettyString + ")(" + p + ")\n(" + s + ")"); return false}
+      sub == key
+    }
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
 
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val (ctx,c) = node.sequent.splitContext(p)
+        val (ctx,c) = node.sequent.at(p)
         val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(node.sequent.succ.length + 1)}
         Some(cutLR(ctx(other))(p.top) &
           onBranch(
@@ -363,14 +360,13 @@ trait UnifyUSCalculus {
     * @see [[useAt()]]
     */
   def useFor(fact: Provable, key: PosInExpr, inst: RenUSubst=>RenUSubst = (us => us)): ForwardPositionTactic = {
-    import FormulaConverter._
-    import SequentConverter._
-    val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).extractContext(key)
+    import Augmentors._
+    val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).at(key)
     if (DEBUG) println("useFor(" + fact.conclusion + ") key: " + keyPart + " in key context: " + keyCtx)
 
     pos => proof => {
 
-      val (ctx, expr) = proof.conclusion.splitContext(pos)
+      val (ctx, expr) = proof.conclusion.at(pos)
       val subst = inst(UnificationMatch(keyPart, expr))
       if (DEBUG) println("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
       if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof)
@@ -379,8 +375,8 @@ trait UnifyUSCalculus {
       def useFor[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable =
       {
         require(subst(k) == c, "correctly matched input")
-        require(C(c).extractContext(p.inExpr) ==(C, c), "correctly split at position p")
-        require(List((C, DotFormula), (C, DotTerm)).contains(C.ctx.extractContext(p.inExpr)), "correctly split at position p")
+        require(C(c).at(p.inExpr) ==(C, c), "correctly split at position p")
+        require(List((C, DotFormula), (C, DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
         /** Equivalence rewriting step */
         def equivStep(other: Expression, factTactic: Tactic): Provable = {
@@ -519,17 +515,20 @@ trait UnifyUSCalculus {
     */
   def chase(keys: Expression=>List[String],
             modifier: (String,Position)=>ForwardTactic = (ax,pos) => pr=>pr): PositionTactic = new PositionTactic("chase") {
-    import SequentConverter._
+    import Augmentors._
 
     //@note True has no applicable keys. This applicability is still an overapproximation since it does not check for clashes.
-    override def applies(s: Sequent, p: Position): Boolean = !(keys(s.at(p).getOrElse(True)).isEmpty)
+    override def applies(s: Sequent, p: Position): Boolean = {
+      val sub = try {s(p)} catch {case e: IllegalArgumentException => println("ill-positioned " + p + " in " + s + "\nin " + "chase\n(" + s + ")"); return false}
+      !(keys(sub).isEmpty)
+    }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
         //Some(useAt(chaseProof(node.sequent.at(p).get), PosInExpr(0::Nil))(p))
-        Some(CE(chaseProof(node.sequent.at(p).get))(p))
+        Some(CE(chaseProof(node.sequent(p)))(p))
 
       /** Construct a proof proving the answer of the chase of e, so either of e=chased(e) or e<->chased(e) */
       private def chaseProof(e: Expression): Provable = {
@@ -575,11 +574,11 @@ trait UnifyUSCalculus {
                     modifier: (String,Position)=>ForwardTactic): ForwardPositionTactic = pos => de => {
     def doChase(de: Provable, pos: Position): Provable = {
       import AxiomIndex.axiomIndex
-      import SequentConverter._
-      if (DEBUG) println("chase(" + de.conclusion.subAt(pos).prettyString + ")")
+      import Augmentors._
+      if (DEBUG) println("chase(" + de.conclusion(pos).prettyString + ")")
       // generic recursor
-      keys(de.conclusion.subAt(pos)) match {
-        case Nil => println("no chase(" + de.conclusion.subAt(pos).prettyString + ")"); de
+      keys(de.conclusion(pos)) match {
+        case Nil => println("no chase(" + de.conclusion(pos).prettyString + ")"); de
         /*throw new IllegalArgumentException("No axiomFor for: " + expr)*/
         case List(ax) =>
           val (key, recursor) = axiomIndex(ax)
@@ -588,7 +587,7 @@ trait UnifyUSCalculus {
             recursor.foldLeft(axUse)(
               (pf, cursor) => doChase(pf, pos.append(cursor))
             )
-          } catch {case e: ProverException => throw e.inContext("useFor(" + ax + ", " + key.prettyString + ")\nin " + "chase(" + de.conclusion.subAt(pos).prettyString + ")")}
+          } catch {case e: ProverException => throw e.inContext("useFor(" + ax + ", " + key.prettyString + ")\nin " + "chase(" + de.conclusion(pos).prettyString + ")")}
         // take the first axiom among breadth that works for one useFor step
         case l: List[String] =>
           // useFor the first applicable axiom if any, or None
@@ -600,7 +599,7 @@ trait UnifyUSCalculus {
             None
           }
           firstAxUse match {
-            case None => println("no chase(" + de.conclusion.subAt(pos).prettyString + ")"); de
+            case None => println("no chase(" + de.conclusion(pos).prettyString + ")"); de
             case Some((axUse, recursor)) =>
               recursor.foldLeft(axUse)(
                 (pf, cursor) => doChase(pf, pos.append(cursor))

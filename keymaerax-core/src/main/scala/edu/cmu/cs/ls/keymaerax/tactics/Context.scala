@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature
 /** Context management, splitting, and extraction tools.
   * @author Andre Platzer
   * @see [[PosInExpr]]
+  * @see [[Augmentors]]
   */
 object Context {
   /**
