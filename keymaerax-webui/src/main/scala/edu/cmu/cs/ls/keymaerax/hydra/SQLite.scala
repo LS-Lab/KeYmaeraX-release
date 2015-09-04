@@ -261,6 +261,12 @@ object SQLite extends DBAbstraction {
       Proofs.filter(_.proofid === proof.proofId).update(proofPojoToRow(proof))
     })
 
+  override def updateProofName(proofId : String, newName : String): Unit = {
+    sqldb.withSession(implicit session => {
+      Proofs.filter(_.proofid === proofId).map(_.name).update(Some(newName))
+    })
+  }
+
   //@todo actually these sorts of methods are rather dangerous because any schema change could mess this up.
   private def proofPojoToRow(p : ProofPOJO) : ProofsRow = new ProofsRow(Some(p.proofId), Some(p.modelId), Some(p.name), Some(p.description), Some(p.date), Some(if(p.closed) 1 else 0))
 

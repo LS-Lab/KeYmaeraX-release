@@ -226,6 +226,13 @@ object MongoDB extends DBAbstraction {
     proofs.update(MongoDBObject("_id" -> new ObjectId(proof.proofId)), update)
   }
 
+  override def updateProofName(proofId : String, newName : String) = {
+    val update = $set(
+      "name" -> newName
+    )
+    proofs.update(MongoDBObject("_id" -> new ObjectId(proofId)), update)
+  }
+
   override def getProofSteps(proofId: String) : List[String] = {
     val query = MongoDBObject("_id" -> new ObjectId(proofId))
     val results = proofs.find(query)
