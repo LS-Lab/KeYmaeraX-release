@@ -515,7 +515,7 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
                                controller: 'ModelUploadCtrl.ShowLoadingError',
                                size: 'md',
                                resolve: {
-                                  errorMsg: function () { return data; }
+                                  error: function () { return data; }
                                }});
                          }
                          else {
@@ -543,8 +543,8 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
      $scope.$emit('routeLoaded', {theview: 'models'});
 });
 
-keymaeraProofControllers.controller('ModelUploadCtrl.ShowLoadingError', function($scope, $modalInstance, $modal, errorMsg) {
-  $scope.error = errorMsg.textStatus;
+keymaeraProofControllers.controller('ModelUploadCtrl.ShowLoadingError', function($scope, $modalInstance, $modal, error) {
+  $scope.errorText = error.textStatus;
   $scope.report = function() {
     $modalInstance.dismiss('cancel');
     var modalInstance = $modal.open({
@@ -552,7 +552,7 @@ keymaeraProofControllers.controller('ModelUploadCtrl.ShowLoadingError', function
         controller: 'ErrorReportCtrl',
         size: 'md',
         resolve: {
-           errorMsg: function () { return errorMsg; }
+           error: function () { return error; }
         }
     });
   }
@@ -561,11 +561,11 @@ keymaeraProofControllers.controller('ModelUploadCtrl.ShowLoadingError', function
   }
 });
 
-keymaeraProofControllers.controller('ErrorReportCtrl', function($scope, $modalInstance, $http, errorMsg) {
+keymaeraProofControllers.controller('ErrorReportCtrl', function($scope, $modalInstance, $http, error) {
   $http.get("/kyxConfig").success(function(data) {
     $scope.kyxConfig = data.kyxConfig;
     });
-  $scope.errorMsg = errorMsg;
+  $scope.errorTrace = error.errorThrown;
   $scope.cancel = function() {
       $modalInstance.dismiss('cancel');
   }
