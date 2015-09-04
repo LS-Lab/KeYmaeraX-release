@@ -86,10 +86,11 @@ object HilbertCalculus extends UnifyUSCalculus {
   lazy val DI                 : PositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
   /** diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE) */
   lazy val diffInd            : PositionTactic = new PositionTactic("diffInd") {
-    import SequentConverter._
-      override def applies(s: Sequent, p: Position): Boolean = p.isSucc && /*p.isTopLevel &&*/ (s.at(p) match {
+    import Augmentors._
+      override def applies(s: Sequent, p: Position): Boolean = p.isSucc && (s.sub(p) match {
         case Some(Box(_: ODESystem, _)) => true
-        case _ => false
+        case Some(_) => false
+        case None => println("ill-positioned " + p + " in " + s + "\nin " + "diffInd(" + p + ")\n(" + s + ")"); return false
       })
       def apply(p: Position): Tactic = new ConstructionTactic(name) {
         override def applicable(node : ProofNode) = applies(node.sequent, p)
@@ -192,19 +193,21 @@ object HilbertCalculus extends UnifyUSCalculus {
    * @note Efficient source-level indexing implementation.
    */
   lazy val stepAt: PositionTactic = new PositionTactic("stepAt") {
-    import FormulaConverter._
+    import Augmentors._
     //import TactixLibrary._
     override def applies(s: Sequent, p: Position): Boolean = getTactic(s, p).isDefined
 
     def getTactic(s: Sequent, p: Position): Option[PositionTactic] = {
-      val sub = s(p.top).at(p)
+      val sub = s.sub(p)
+      if (!sub.isDefined) {println("ill-positioned " + p + " in " + s + "\nin " + "stepAt(" + p + ")\n(" + s + ")"); return None}
+
       //@todo simplify most cases substantially by useAt(AxiomIndex.axiomFor(sub))(p)
-      if (sub.isEmpty) None else sub.get match {
+      sub.get match {
         case Box(a, _) => a match {
           case _: Assign    => Some(assignb)
           case _: AssignAny => Some(randomb)
           case _: Test      => Some(testb)
-          case ode:ODESystem if ODETactics.isDiffSolvable(sub.get.asInstanceOf[Formula])=> Some(diffSolve)
+          case ode:ODESystem if ODETactics.isDiffSolvable(sub.asInstanceOf[Formula])=> Some(diffSolve)
           case _: Compose   => Some(composeb)
           case _: Choice    => Some(choiceb)
           case _: Dual      => Some(dualb)
@@ -214,7 +217,7 @@ object HilbertCalculus extends UnifyUSCalculus {
           case _: Assign    => Some(assignd)
           case _: AssignAny => Some(randomd)
           case _: Test      => Some(testd)
-          case ode:ODESystem if ODETactics.isDiffSolvable(sub.get.asInstanceOf[Formula])=> ???
+          case ode:ODESystem if ODETactics.isDiffSolvable(sub.asInstanceOf[Formula])=> ???
           case _: Compose   => Some(composed)
           case _: Choice    => Some(choiced)
           case _: Dual      => Some(duald)
@@ -295,13 +298,14 @@ object HilbertCalculus extends UnifyUSCalculus {
     * @see [[UnifyUSCalculus.chase]]
     */
   lazy val derive: PositionTactic = new PositionTactic("derive") {
-      import SequentConverter._
-      override def applies(s: Sequent, p: Position): Boolean = s.at(p) match {
+    import Augmentors._
+      override def applies(s: Sequent, p: Position): Boolean = s.sub(p) match {
         case Some(Differential(_)) => true
         case Some(DifferentialFormula(_)) => true
-        case _ => false
+        case Some(_) => false
+        case None => println("ill-positioned " + p + " in " + s + "\nin " + "derive(" + p + ")\n(" + s + ")"); return false
       }
-      override def apply(p: Position): Tactic = chase(p)
+    override def apply(p: Position): Tactic = chase(p)
     }
 
 
@@ -311,9 +315,9 @@ object HilbertCalculus extends UnifyUSCalculus {
 
   /** Computing dimension of ODE at indicated position of a sequent */
   private val getODEDim: (Sequent,Position)=>Int = (sequent,pos) => {
-    import SequentConverter._
+    import Augmentors._
     def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).toSymbolSet.filter(x=>x.isInstanceOf[DifferentialSymbol]).size
-    sequent.at(pos) match {
+    sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, _))     => odeDim(ode)
       case Some(Diamond(ode: ODESystem, _)) => odeDim(ode)
       case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
@@ -323,8 +327,8 @@ object HilbertCalculus extends UnifyUSCalculus {
 
   /** Whether there is a proper ODE System at the indicated position of a sequent with >=2 ODEs */
   private val isODESystem: (Sequent,Position)=>Boolean = (sequent,pos) => {
-    import SequentConverter._
-    sequent.at(pos) match {
+    import Augmentors._
+    sequent.sub(pos) match {
       case Some(Box(ODESystem(_:DifferentialProduct,_), _))     => true
       case Some(Diamond(ODESystem(_:DifferentialProduct,_), _)) => true
       case Some(e) => false
@@ -334,8 +338,8 @@ object HilbertCalculus extends UnifyUSCalculus {
 
   /** Whether the ODE at indicated position of a sequent has a nontrivial domain */
   private val hasODEDomain: (Sequent,Position)=>Boolean = (sequent,pos) => {
-    import SequentConverter._
-    sequent.at(pos) match {
+    import Augmentors._
+    sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, _))     => ode.constraint != True
       case Some(Diamond(ode: ODESystem, _)) => ode.constraint != True
       case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)

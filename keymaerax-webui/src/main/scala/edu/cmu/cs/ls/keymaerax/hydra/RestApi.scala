@@ -241,6 +241,15 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val kyxConfig = path("kyxConfig") {
+    pathEnd {
+      get {
+        val request = new KyxConfigRequest(database)
+        complete(standardCompletion(request))
+      }
+    }
+  }
+
   val keymaeraXVersion = path("keymaeraXVersion") {
     pathEnd {
       get {
@@ -464,9 +473,10 @@ trait RestApi extends HttpService {
     devAction             ::
     sequent               ::
     dashInfo              ::
-    keymaeraXVersion  ::
-    mathematicaConfig ::
-    mathematicaStatus ::
+    kyxConfig             ::
+    keymaeraXVersion      ::
+    mathematicaConfig     ::
+    mathematicaStatus     ::
     mathematicaConfigSuggestion ::
     license ::
       initializeModel :: isLocal :: shutdown ::

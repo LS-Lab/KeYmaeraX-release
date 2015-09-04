@@ -265,6 +265,10 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
+  it should "prove x>0 -> [x:=x+1;]x>0" in {
+    proveBy("x>0 -> [x:=x+1;]x>0".asFormula, stepAt(1, 1::Nil) & QE) shouldBe 'proved
+  }
+
 
 
   "Chase" should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0 by chase" in {

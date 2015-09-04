@@ -99,6 +99,20 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
 // System Configuration
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+class KyxConfigRequest(db: DBAbstraction) extends Request {
+  val newline = "\n"
+  override def getResultingResponses() : List[Response] = {
+    val mathConfig = db.getConfiguration("mathematica").config
+    // keymaera X version
+    val kyxConfig = "KeYmaera X version: " + VERSION + newline +
+      "Java version: " + System.getProperty("java.runtime.version") + " with " + System.getProperty("sun.arch.data.model") + " bits" + newline +
+      "OS: " + System.getProperty("os.name") + " " + System.getProperty("os.version") + newline +
+      "LinkName: " + mathConfig.apply("linkName") + newline +
+      "jlinkLibDir: " + mathConfig.apply("jlinkLibDir")
+    new KyxConfigResponse(kyxConfig) :: Nil
+  }
+}
+
 class KeymaeraXVersionRequest() extends Request {
   override def getResultingResponses() : List[Response] = {
     val keymaeraXVersion = VERSION

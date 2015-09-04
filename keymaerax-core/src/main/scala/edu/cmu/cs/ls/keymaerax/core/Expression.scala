@@ -186,7 +186,7 @@ sealed case class Function(name: String, index: Option[Int] = None, domain: Sort
   override def fullString: String = asString + ":" + domain + "->" + sort
 }
 
-/** Reserved function symbol \\cdot for substitutions are unlike ordinary function symbols */
+/** •: Placeholder for terms in uniform substitutions. Reserved nullary function symbol \\cdot for uniform substitutions are unlike ordinary function symbols */
 object DotTerm extends NamedSymbol with AtomicTerm with RTerm {
   def name: String = "\\cdot"
   def index: Option[Int] = None
@@ -313,7 +313,7 @@ case class LessEqual(left: Term, right: Term) extends RComparisonFormula
 /** <= less than comparison left < right */
 case class Less(left: Term, right: Term) extends RComparisonFormula
 
-/** Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
+/** ⎵: Placeholder for formulas in uniform substitutions. Reserved nullary predicational symbol _ for substitutions are unlike ordinary predicational symbols */
 object DotFormula extends NamedSymbol with AtomicFormula {
   def name: String = "\\_"
   def index: Option[Int] = None

@@ -10,11 +10,14 @@ import edu.cmu.cs.ls.keymaerax.core._
 /**
  * Created by smitsch on 3/23/15.
  * @author Stefan Mitsch
+ * @todo implement using Context._ or using FormulaAugmentor. The additional functions could stay here or move, but should have a position upgrade?
  */
+@deprecated("Use FormulaAugmentor instead?")
 object FormulaConverter {
   import scala.language.implicitConversions
   implicit def FormulaToFormulaConverter(f: Formula): FormulaConverter = new FormulaConverter(f)
 }
+@deprecated("Use FormulaAugmentor instead?")
 class FormulaConverter(val fml: Formula) {
 
   /**
@@ -28,7 +31,7 @@ class FormulaConverter(val fml: Formula) {
       var fAtPos: Option[Formula] = None
       ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
         override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-          fAtPos = Some(e)
+          fAtPos = if (p == pos) Some(e) else None
           Left(Some(ExpressionTraversal.stop))
         }
       }), fml)
@@ -60,7 +63,7 @@ class FormulaConverter(val fml: Formula) {
       var fAtPos: Option[Formula] = None
       ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
         override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-          fAtPos = Some(e)
+          fAtPos = if (p == pos) Some(e) else None
           Left(Some(ExpressionTraversal.stop))
         }
       }), fml)
@@ -79,7 +82,7 @@ class FormulaConverter(val fml: Formula) {
       var tAtPos: Option[Term] = None
       ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-          tAtPos = Some(e)
+          tAtPos = if (p == pos) Some(e) else None
           Left(Some(ExpressionTraversal.stop))
         }
       }), fml)
@@ -107,7 +110,7 @@ class FormulaConverter(val fml: Formula) {
       var tAtPos: Option[Term] = None
       ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-          tAtPos = Some(e)
+          tAtPos = if (p == pos) Some(e) else None
           Left(Some(ExpressionTraversal.stop))
         }
       }), fml)

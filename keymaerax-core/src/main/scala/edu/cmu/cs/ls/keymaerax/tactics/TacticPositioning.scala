@@ -10,6 +10,7 @@ import scala.language.implicitConversions
 /**
  * Position within an expression as a list of subexpressions.
  * 0 is first child, 1 is second child, 2 is third child.
+ * @see [[Context.at()]]
  */
 case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
@@ -108,7 +109,7 @@ object HereP extends PosInExpr
     def prettyString: String = top.getPos + "." + inExpr.pos.mkString(".")
   }
 
-@deprecated("Automated position converters should be removed ultimately.")
+@deprecated("Automated position converters should be removed.")
 object Position {
   //@deprecated("Move as implicit definition to tactics and then ultimately remove")
   //@todo could also use p.top

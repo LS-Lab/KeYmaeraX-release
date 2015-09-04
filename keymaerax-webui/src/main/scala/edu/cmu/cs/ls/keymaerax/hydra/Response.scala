@@ -12,7 +12,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import spray.json._
-import java.io.File
+import java.io.{PrintWriter, StringWriter, File}
 
 import scala.collection.mutable.ListBuffer
 
@@ -174,9 +174,11 @@ class CreatedIdResponse(id : String) extends Response {
 }
 
 class ErrorResponse(exn : Exception) extends Response {
+  val sw = new StringWriter
+  exn.printStackTrace(new PrintWriter(sw))
   val json = JsObject(
         "textStatus" -> JsString(exn.getMessage),
-        "errorThrown" -> JsString(exn.getStackTrace.toString),
+        "errorThrown" -> JsString(sw.toString),
         "type" -> JsString("error")
       )
 }
@@ -304,6 +306,12 @@ class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
   ))
 
   val json = JsArray(objects)
+}
+
+class KyxConfigResponse(kyxConfig: String) extends Response {
+  val json = JsObject(
+    "kyxConfig" -> JsString(kyxConfig)
+  )
 }
 
 class KeymaeraXVersionResponse(keymaeraXVersion: String) extends Response {
