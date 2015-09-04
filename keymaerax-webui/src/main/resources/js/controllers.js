@@ -514,9 +514,9 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
                                templateUrl: 'partials/modelloadingerror.html',
                                controller: 'ModelUploadCtrl.ShowLoadingError',
                                size: 'md',
-                                  resolve: {
-                                     errorMsg: function () { return data.textStatus; }
-                                   }});
+                               resolve: {
+                                  error: function () { return data; }
+                               }});
                          }
                          else {
                             //Update the models list -- this should result in the view being updated?
@@ -543,8 +543,29 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
      $scope.$emit('routeLoaded', {theview: 'models'});
 });
 
-keymaeraProofControllers.controller('ModelUploadCtrl.ShowLoadingError', function($scope, $modalInstance, errorMsg) {
-  $scope.error = errorMsg
+keymaeraProofControllers.controller('ModelUploadCtrl.ShowLoadingError', function($scope, $modalInstance, $modal, error) {
+  $scope.errorText = error.textStatus;
+  $scope.report = function() {
+    $modalInstance.dismiss('cancel');
+    var modalInstance = $modal.open({
+        templateUrl: 'partials/error_report.html',
+        controller: 'ErrorReportCtrl',
+        size: 'md',
+        resolve: {
+           error: function () { return error; }
+        }
+    });
+  }
+  $scope.cancel = function() {
+      $modalInstance.dismiss('cancel');
+  }
+});
+
+keymaeraProofControllers.controller('ErrorReportCtrl', function($scope, $modalInstance, $http, error) {
+  $http.get("/kyxConfig").success(function(data) {
+    $scope.kyxConfig = data.kyxConfig;
+    });
+  $scope.errorTrace = error.errorThrown;
   $scope.cancel = function() {
       $modalInstance.dismiss('cancel');
   }
