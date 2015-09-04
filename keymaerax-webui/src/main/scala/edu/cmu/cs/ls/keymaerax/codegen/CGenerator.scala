@@ -43,7 +43,7 @@ object CGenerator extends CodeGenerator {
       "bool monitor (" + parameterDeclaration(cDataType, relevantVars) + ")"
     val funcBody = compileToC(expr, calledFuncs)
     infoC(fileName) + includeLib + FuncCallDeclaration(calledFuncs, cDataType) + funcHead + " {\n" +
-      {if(relevantPostVarsZero.nonEmpty) "  /* Initial states for post variables */\n" + defineRelevantPostVarsZero(expr, relevantPostVarsZero, cDataType) + "\n"} +
+      {if(relevantPostVarsZero.nonEmpty) "  /* Initial states for post variables */\n" + defineRelevantPostVarsZero(expr, relevantPostVarsZero, cDataType) + "\n" else ""} +
       "  return " + funcBody + ";" + "\n}\n\n"
     //@note gcc -Wall -Wextra -Werror -std=c99 -pedantic absolutely wants "newline at end of file" -Wnewline-eof
   }
