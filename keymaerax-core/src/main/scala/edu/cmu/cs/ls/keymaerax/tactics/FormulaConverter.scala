@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 /**
  * Created by smitsch on 3/23/15.
  * @author Stefan Mitsch
+ * @todo implement using Context._ or using FormulaAugmentor. The additional functions could stay here or move, but should have a position upgrade?
  */
 @deprecated("Use FormulaAugmentor instead?")
 object FormulaConverter {
