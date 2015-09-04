@@ -544,35 +544,6 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
      $scope.$emit('routeLoaded', {theview: 'models'});
 });
 
-keymaeraProofControllers.controller('ErrorAlertCtrl', function($scope, $modalInstance, $modal, action, error) {
-  $scope.action = action;
-  $scope.errorText = error.textStatus;
-  $scope.report = function() {
-    $modalInstance.dismiss('cancel');
-    var modalInstance = $modal.open({
-        templateUrl: 'partials/error_report.html',
-        controller: 'ErrorReportCtrl',
-        size: 'md',
-        resolve: {
-           error: function () { return error; }
-        }
-    });
-  }
-  $scope.cancel = function() {
-      $modalInstance.dismiss('cancel');
-  }
-});
-
-keymaeraProofControllers.controller('ErrorReportCtrl', function($scope, $modalInstance, $http, error) {
-  $http.get("/kyxConfig").success(function(data) {
-    $scope.kyxConfig = data.kyxConfig;
-    });
-  $scope.errorTrace = error.errorThrown;
-  $scope.cancel = function() {
-      $modalInstance.dismiss('cancel');
-  }
-});
-
 keymaeraProofControllers.controller('ModelListCtrl',
   function ($scope, $http, $cookies, $modal, $location, Models) {
     $scope.models = [];
@@ -1044,7 +1015,14 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $http.post(uri, dataObj)
              .success(function(data) {
                 if(data.errorThrown) {
-                    alert("Error when trying to run your custom tactic: " + JSON.stringify(data))
+                   $modal.open({
+                      templateUrl: 'partials/error_alert.html',
+                      controller: 'ErrorAlertCtrl',
+                      size: 'md',
+                      resolve: {
+                          action: function () { return "running term"; },
+                          error: function () { return data; }
+                      }});
                 }
                 else {
 //                    Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTerm(data.id)
@@ -1280,6 +1258,39 @@ keymaeraProofControllers.controller('RunningTacticsCtrl',
    $scope.abort = function() {
      // TODO implement
    }
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Error controls
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+keymaeraProofControllers.controller('ErrorAlertCtrl', function($scope, $modalInstance, $modal, action, error) {
+  $scope.action = action;
+  $scope.errorText = error.textStatus;
+  $scope.report = function() {
+    $modalInstance.dismiss('cancel');
+    var modalInstance = $modal.open({
+        templateUrl: 'partials/error_report.html',
+        controller: 'ErrorReportCtrl',
+        size: 'md',
+        resolve: {
+           error: function () { return error; }
+        }
+    });
+  }
+  $scope.cancel = function() {
+      $modalInstance.dismiss('cancel');
+  }
+});
+
+keymaeraProofControllers.controller('ErrorReportCtrl', function($scope, $modalInstance, $http, error) {
+  $http.get("/kyxConfig").success(function(data) {
+    $scope.kyxConfig = data.kyxConfig;
+    });
+  $scope.errorTrace = error.errorThrown;
+  $scope.cancel = function() {
+      $modalInstance.dismiss('cancel');
+  }
 });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
