@@ -1,9 +1,11 @@
 <div class="modal-header" >
-    <h3 class="modal-title">Error when loading model</h3>
+    <h3 class="modal-title">Error loading model.</h3>
+    <h5 class="modal-title">You can report this error to KeYmaera X team by clicking <kbd>Report Error</kbd>.</h5>
 </div>
 <div class="modal-body" style="overflow: scroll; height: 200px;">
 {{error}}
 </div>
 <div class="modal-footer">
+    <button class="btn btn-primary" ng-click="report()">Report Error</button>
     <button class="btn btn-primary" ng-click="cancel()">Close</button>
 </div>
