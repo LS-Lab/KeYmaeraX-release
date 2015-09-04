@@ -511,10 +511,11 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
                      success: function(data) {
                          if(data.errorThrown) {
                             $modal.open({
-                               templateUrl: 'partials/modelloadingerror.html',
-                               controller: 'ModelUploadCtrl.ShowLoadingError',
+                               templateUrl: 'partials/error_alert.html',
+                               controller: 'ErrorAlertCtrl',
                                size: 'md',
                                resolve: {
+                                  action: function () { return "loading model"; },
                                   error: function () { return data; }
                                }});
                          }
@@ -543,7 +544,8 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
      $scope.$emit('routeLoaded', {theview: 'models'});
 });
 
-keymaeraProofControllers.controller('ModelUploadCtrl.ShowLoadingError', function($scope, $modalInstance, $modal, error) {
+keymaeraProofControllers.controller('ErrorAlertCtrl', function($scope, $modalInstance, $modal, action, error) {
+  $scope.action = action;
   $scope.errorText = error.textStatus;
   $scope.report = function() {
     $modalInstance.dismiss('cancel');
