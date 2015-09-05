@@ -610,7 +610,7 @@ trait UnifyUSCalculus {
   }
 
 
-  /** An update-based forward calculus for a position */
+  /** An update-based calculus for a position */
   def updateCalculus: PositionTactic = chase(3,3, e => e match {
       // no equational assignments
       case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
