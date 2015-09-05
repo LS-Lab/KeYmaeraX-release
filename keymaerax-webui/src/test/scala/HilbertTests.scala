@@ -330,15 +330,22 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
-  "Chase generalizations" should "modelplex llc by unprog ls(useAt)" in {
+  "Chase generalizations" should "modelplex llc by updateCalculus" in {
     println(proveBy(parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-ctrl.key")),
-      implyR(1) & unprog(1) &
-      ls(useAt("<:=> assign"))
+      implyR(1) & updateCalculus(1)
     ))
   }
 
-  it should "modelplex llc by updateCalculus after turning it backwards" in {
-    updateCalculus(SuccPosition(0, PosInExpr(1::Nil))) (Provable.startProof(parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-ctrl.key")))).
-    conclusion shouldBe false
+  it should "modelplex llc by updateCalculus implicationally" in {
+    println(proveBy(parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-ctrl.key")),
+      updateCalculus(SuccPosition(0, PosInExpr(1 :: Nil)))))
+    //@todo not sure how to test whether it's the right output
+    true shouldBe false
+
   }
+
+    /*it should "modelplex llc by updateCalculus after turning it backwards" in {
+      updateCalculus(SuccPosition(0, PosInExpr(1::Nil))) (Provable.startProof(parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-ctrl.key")))).
+      conclusion shouldBe false
+    }*/
 }

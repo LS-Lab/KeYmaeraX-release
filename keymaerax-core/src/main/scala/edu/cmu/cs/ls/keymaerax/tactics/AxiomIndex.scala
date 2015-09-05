@@ -17,6 +17,7 @@ import scala.annotation.switch
  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
+ * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
 object AxiomIndex {
 
@@ -50,12 +51,12 @@ object AxiomIndex {
 
     // [a] modalities
     case "[:=] assign" | "<:=> assign" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
-    case "[:=] assign equational" | "<:=> assign equational" => (PosInExpr(0::Nil), PosInExpr(0::1::Nil)::Nil)
-    case "[:=] assign update" | "<:=> assign update" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+    case "[:=] assign equational" | "<:=> assign equational" => (PosInExpr(0::Nil), PosInExpr(Nil)::PosInExpr(0::1::Nil)::Nil)
+    case "[:=] assign update" | "<:=> assign update" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     case "[:*] assign nondet" | "<:*> assign nondet" => unaryDefault
     case "[?] test"    | "<?> test"    => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     case "[++] choice" | "<++> choice" => binaryDefault
-    case "[;] compose" | "<;> compose" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
+    case "[;] compose" | "<;> compose" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     case "[*] iterate" | "<*> iterate" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
 
     case "DW differential weakening" => (PosInExpr(0::Nil), unknown)
