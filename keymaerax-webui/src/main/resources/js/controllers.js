@@ -1,5 +1,24 @@
 var keymaeraProofControllers = angular.module('keymaeraProofControllers', ['ngCookies', 'angularTreeview', 'ui.bootstrap']);
 
+function showCaughtErrorMessage($modal, data, message) {
+  console.error("Error was caught: " + message)
+  $modal.open({
+    templateUrl: 'partials/error_alert.html',
+    controller: 'ErrorAlertCtrl',
+    size: 'md',
+    resolve: {
+      action: function () { return message; },
+      error: function () { return data; }
+    }
+  });
+}
+function showErrorMessage($modal, message) {
+  var data = {
+    errorText: "Error was not properly handled by server, so we did not get an error info response. See server STDOUT and STDERR for more info."
+  }
+  showCaughtErrorMessage($modal, data, message)
+}
+
 keymaeraProofControllers.factory('Models', function () {
     var models = [];
 
@@ -408,8 +427,14 @@ keymaeraProofControllers.controller('DashboardCtrl.LicenseDialog', function($sco
 
   $scope.cancel = function() {
     $http.post("/licenseacceptance")
-        .success(function(data) {}) //ok
-        .error(function() { console.error("Failed to udpate database after accepting license!")});
+        .success(function(data) {
+            if(data.errorThrown) {
+                showCaughtErrorMessage($modal, data, "License Acceptance Failed")
+            }
+        }) //ok
+        .error(function() {
+            showErrorMessage($modal, "License Acceptance Failed")
+        });
     $modalInstance.dismiss('cancel');
   }
 });
@@ -436,7 +461,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
             }
          })
          .error(function() {
-
+            showErrorMessage($modal, "Failed to Query for License Acceptance.");
          });
 
     $http.get("/keymaeraXVersion")
@@ -444,7 +469,8 @@ keymaeraProofControllers.controller('DashboardCtrl',
             $scope.keymaeraXVersion = data.keymaeraXVersion
         })
         .error(function() {
-            console.error("Unhandled error when attempting to get KeYmaera X version.")
+            var message = "Unhandled error when attempting to get KeYmaera X version."
+            showErrorMessage($modal, message);
         });
 
     $scope.mathematicaIsConfigured = true;
@@ -453,7 +479,8 @@ keymaeraProofControllers.controller('DashboardCtrl',
             $scope.mathematicaIsConfigured = data.configured;
         })
         .error(function() {
-            console.error("Unhandled error when attempting to get Mathematica status.")
+            var message = "Unhandled error when attempting to get Mathematica status.";
+            showErrorMessage($modal, message);
         });
 
 
@@ -462,6 +489,9 @@ keymaeraProofControllers.controller('DashboardCtrl',
             $scope.open_proof_count = data.open_proof_count;
             $scope.all_models_count = data.all_models_count;
             $scope.proved_models_count = data.proved_models_count;
+        })
+        .error(function() {
+            showErrorMessage($modal, "Failed to get dashInfo for this uer.")
         })
 
 
@@ -480,6 +510,9 @@ keymaeraProofControllers.controller('DashboardCtrl',
         });
 
         $http.get("/shutdown")
+             .error(function() {
+                showErrorMessage($modal, "Failed to shutdown! Server may already be offline.");
+             })
     };
 
     $scope.$emit('routeLoaded', {theview: 'dashboard'});
@@ -491,7 +524,14 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
      $scope.runPreloadedProof = function(model) {
         $http.post("/models/users/" + $scope.userId + "/model/" + model.id + "/initialize")
             .success(function(data) {
-                console.log("yay! Take the user to the proof load page?")
+                if(data.errorThrown) {
+                    showCaughtErrorMessage($modal, data, "Proof Preloader")
+                } else {
+                    console.log("yay! Take the user to the proof load page?")
+                }
+            })
+            .error(function() {
+                showErrorMessage($modal, "Proof failed to load.");
             })
      };
 
@@ -574,8 +614,13 @@ keymaeraProofControllers.controller('ModelListCtrl',
     };
 
     $scope.runTactic = function (modelid) {
-      $http.post("user/" + $cookies.userId + "/model/" + modelid + "/tactic/run").success(function(data) {
-          console.log("Done running tactic")
+      $http.post("user/" + $cookies.userId + "/model/" + modelid + "/tactic/run")
+      .success(function(data) {
+          if(data.errorThrown) showCaughtErrorMessage($modal, data, "Error While Running Tactic")
+          else console.log("Done running tactic")
+      })
+      .error(function() {
+        showErrorMessage($modal, "Error While Running Tactic")
       });
     }
 
@@ -670,8 +715,13 @@ var pollProofStatus = function(proof, userId, http) {
           } else if (data.status == 'loaded') {
             console.log("Received proof status " + data.status);
             proof.loadStatus = data.status
-          } else {
+          } else if(data.status == 'Error') {
+            console.log("Error: " + data.error)
+            showCaughtErrorMessage($modal, data, "Error while polling proof status")
+          }
+          else {
             console.error("Received unknown proof status " + data.status)
+            showErrorMessage($modal, "Received unknown proof status " + data.status)
           }
       }).
       error(function(data, status, headers, config) {
@@ -912,7 +962,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
                setTimeout(function() {
                     $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTactics/' + tId)
                             .success(function(data) {
-                            if(data.errorThrown) {
+                            if(data.errorThrown || data.tacticInstStatus == 'Error') {
                               $modal.open({
                                 templateUrl: 'partials/error_alert.html',
                                 controller: 'ErrorAlertCtrl',
