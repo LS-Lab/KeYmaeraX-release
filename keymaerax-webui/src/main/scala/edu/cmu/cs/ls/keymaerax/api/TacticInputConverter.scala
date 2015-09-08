@@ -87,7 +87,7 @@ object TacticInputConverter {
       // ante|succ:N,N,...,N
       val regex = "(ante|succ):(\\d*,?)*"
       assert(param.matches(regex) && !param.endsWith(","),
-      "input string should have specified form ante|pos:N,...,N but found " + param)
+      "input string should have specified form ante|succ:N,...,N but found " + param)
       val nameAndPos = param.split(":")
       val pos = nameAndPos(1).split(",").map(_.toInt)
       val posInExpr = if (pos.length > 1) PosInExpr(pos.splitAt(1)._2.toList) else HereP
