@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 
+@deprecated("Use KeYmaeraXPrettyPrinter instead")
 object KeYmaeraPrettyPrinter extends KeYmaeraPrettyPrinter(ParseSymbols) {
 
 }
@@ -17,6 +18,7 @@ object KeYmaeraPrettyPrinter extends KeYmaeraPrettyPrinter(ParseSymbols) {
  * Usage: KeYmaeraPrettyPrinter.stringify(e);
  * @author Nathan Fulton
  */
+@deprecated("Use KeYmaeraXPrettyPrinter instead")
 class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) extends (Expression => String) {
   def apply(e:Expression) = prettyPrinter(e)
   def stringify(e:Expression) = apply(e)

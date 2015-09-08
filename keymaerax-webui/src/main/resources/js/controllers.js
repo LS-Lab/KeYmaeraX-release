@@ -511,12 +511,13 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
                      success: function(data) {
                          if(data.errorThrown) {
                             $modal.open({
-                               templateUrl: 'partials/modelloadingerror.html',
-                               controller: 'ModelUploadCtrl.ShowLoadingError',
+                               templateUrl: 'partials/error_alert.html',
+                               controller: 'ErrorAlertCtrl',
                                size: 'md',
-                                  resolve: {
-                                     errorMsg: function () { return data.textStatus; }
-                                   }});
+                               resolve: {
+                                  action: function () { return "loading model"; },
+                                  error: function () { return data; }
+                               }});
                          }
                          else {
                             //Update the models list -- this should result in the view being updated?
@@ -541,13 +542,6 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
      );
 
      $scope.$emit('routeLoaded', {theview: 'models'});
-});
-
-keymaeraProofControllers.controller('ModelUploadCtrl.ShowLoadingError', function($scope, $modalInstance, errorMsg) {
-  $scope.error = errorMsg
-  $scope.cancel = function() {
-      $modalInstance.dismiss('cancel');
-  }
 });
 
 keymaeraProofControllers.controller('ModelListCtrl',
@@ -918,10 +912,19 @@ keymaeraProofControllers.controller('TaskListCtrl',
                setTimeout(function() {
                     $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTactics/' + tId)
                             .success(function(data) {
-                        if (data.tacticInstStatus == 'Running' || data.errorThrown) {
-                          poll();
-                        } else {
-                            $scope.defer.resolve(data.tacticInstStatus)
+                            if(data.errorThrown) {
+                              $modal.open({
+                                templateUrl: 'partials/error_alert.html',
+                                controller: 'ErrorAlertCtrl',
+                                size: 'md',
+                                resolve: {
+                                  action: function () { return "finding dispatched tactics"; },
+                                  error: function () { return data; }
+                                }});
+                            } else if (data.tacticInstStatus == 'Running') {
+                                poll();
+                            } else {
+                                $scope.defer.resolve(data.tacticInstStatus)
                         }
                     })
               }, 1000);
@@ -1021,7 +1024,14 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $http.post(uri, dataObj)
              .success(function(data) {
                 if(data.errorThrown) {
-                    alert("Error when trying to run your custom tactic: " + JSON.stringify(data))
+                   $modal.open({
+                      templateUrl: 'partials/error_alert.html',
+                      controller: 'ErrorAlertCtrl',
+                      size: 'md',
+                      resolve: {
+                          action: function () { return "running term"; },
+                          error: function () { return data; }
+                      }});
                 }
                 else {
 //                    Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTerm(data.id)
@@ -1050,7 +1060,17 @@ keymaeraProofControllers.controller('TaskListCtrl',
                setTimeout(function() {
                     $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTerm/' + tId)
                          .success(function(data) {
-                            if (data.status == 'Running' || data.errorThrown) { //Errors might be thrown if the term isn't created yet...
+//                            if (data.status == 'Running' || data.errorThrown) { //Errors might be thrown if the term isn't created yet...
+                            if(data.errorThrown) {
+                              $modal.open({
+                                templateUrl: 'partials/error_alert.html',
+                                controller: 'ErrorAlertCtrl',
+                                size: 'md',
+                                resolve: {
+                                  action: function () { return "finding dispatched term"; },
+                                  error: function () { return data; }
+                                }});
+                            } else if (data.tacticInstStatus == 'Running') {
                                 poll();
                             } else {
                                 $scope.defer.resolve(data.status)
@@ -1257,6 +1277,39 @@ keymaeraProofControllers.controller('RunningTacticsCtrl',
    $scope.abort = function() {
      // TODO implement
    }
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Error controls
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+keymaeraProofControllers.controller('ErrorAlertCtrl', function($scope, $modalInstance, $modal, action, error) {
+  $scope.action = action;
+  $scope.errorText = error.textStatus;
+  $scope.report = function() {
+    $modalInstance.dismiss('cancel');
+    var modalInstance = $modal.open({
+        templateUrl: 'partials/error_report.html',
+        controller: 'ErrorReportCtrl',
+        size: 'md',
+        resolve: {
+           error: function () { return error; }
+        }
+    });
+  }
+  $scope.cancel = function() {
+      $modalInstance.dismiss('cancel');
+  }
+});
+
+keymaeraProofControllers.controller('ErrorReportCtrl', function($scope, $modalInstance, $http, error) {
+  $http.get("/kyxConfig").success(function(data) {
+    $scope.kyxConfig = data.kyxConfig;
+    });
+  $scope.errorTrace = error.errorThrown;
+  $scope.cancel = function() {
+      $modalInstance.dismiss('cancel');
+  }
 });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

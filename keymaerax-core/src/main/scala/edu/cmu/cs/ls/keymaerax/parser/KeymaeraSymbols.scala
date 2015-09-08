@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 /**
  * A list of symbols for Keymaera programs
  */
+@deprecated("Use Terminal instead")
 trait KeYmaeraSymbols {
   //**Terms
   val LEQ:String
@@ -94,6 +95,7 @@ trait KeYmaeraSymbols {
 /**
  * Standard symbol table for the Parser
  */
+@deprecated("Use Terminal instead")
 object ParseSymbols extends KeYmaeraSymbols {
   
   /** Section headers */
@@ -186,6 +188,7 @@ object ParseSymbols extends KeYmaeraSymbols {
 /**
  * Standard symbol table for the Parser
  */
+@deprecated("Use Terminal instead")
 object HTMLSymbols extends KeYmaeraSymbols {
   
   /** Section headers */

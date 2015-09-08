@@ -217,7 +217,7 @@ object SQLite extends DBAbstraction {
       val list = Proofs.filter(_.proofid === proofId)
             .list
             .map(p => new ProofPOJO(p.proofid.get, p.modelid.get, blankOk(p.name), blankOk(p.description),
-                                    blankOk(p.date), stepCount, p.closed.getOrElse(0) == 0))
+                                    blankOk(p.date), stepCount, p.closed.getOrElse(0) == 1))
       if(list.length > 1) throw new Exception()
       else if(list.length == 0) throw new Exception()
       else list.head
@@ -260,6 +260,12 @@ object SQLite extends DBAbstraction {
     sqldb.withSession(implicit session => {
       Proofs.filter(_.proofid === proof.proofId).update(proofPojoToRow(proof))
     })
+
+  override def updateProofName(proofId : String, newName : String): Unit = {
+    sqldb.withSession(implicit session => {
+      Proofs.filter(_.proofid === proofId).map(_.name).update(Some(newName))
+    })
+  }
 
   //@todo actually these sorts of methods are rather dangerous because any schema change could mess this up.
   private def proofPojoToRow(p : ProofPOJO) : ProofsRow = new ProofsRow(Some(p.proofId), Some(p.modelId), Some(p.name), Some(p.description), Some(p.date), Some(if(p.closed) 1 else 0))

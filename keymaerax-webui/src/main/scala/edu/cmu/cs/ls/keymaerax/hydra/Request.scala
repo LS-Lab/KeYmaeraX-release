@@ -74,12 +74,7 @@ class ProofsForUserRequest(db : DBAbstraction, userId: String) extends Request {
 class UpdateProofNameRequest(db : DBAbstraction, proofId : String, newName : String) extends Request {
   def getResultingResponses() = {
     val proof = db.getProofInfo(proofId)
-    if(proof.name != newName) {
-      val newProof = new ProofPOJO(
-        proof.proofId, proof.modelId, newName, proof.description, proof.date, proof.stepCount, proof.closed
-      )
-      db.updateProofInfo(newProof)
-    }
+    db.updateProofName(proofId, newName)
     new UpdateProofNameResponse(proofId, newName) :: Nil
   }
 }
@@ -103,6 +98,20 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // System Configuration
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class KyxConfigRequest(db: DBAbstraction) extends Request {
+  val newline = "\n"
+  override def getResultingResponses() : List[Response] = {
+    val mathConfig = db.getConfiguration("mathematica").config
+    // keymaera X version
+    val kyxConfig = "KeYmaera X version: " + VERSION + newline +
+      "Java version: " + System.getProperty("java.runtime.version") + " with " + System.getProperty("sun.arch.data.model") + " bits" + newline +
+      "OS: " + System.getProperty("os.name") + " " + System.getProperty("os.version") + newline +
+      "LinkName: " + mathConfig.apply("linkName") + newline +
+      "jlinkLibDir: " + mathConfig.apply("jlinkLibDir")
+    new KyxConfigResponse(kyxConfig) :: Nil
+  }
+}
 
 class KeymaeraXVersionRequest() extends Request {
   override def getResultingResponses() : List[Response] = {

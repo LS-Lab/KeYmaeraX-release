@@ -28,6 +28,7 @@ import java.io.File
  *      "assignables" (non-rigid, currently called variables)
  *      functions (terms that take arguments
  */
+@deprecated("Use KeYmaeraXParser instead")
 class KeYmaeraParser(enabledLogging: Boolean = false,
                      env: { val generator: ConfigurableGenerate[Formula]} = new { lazy val generator = new ConfigurableGenerate[Formula]()})
   extends RegexParsers with PackratParsers {
