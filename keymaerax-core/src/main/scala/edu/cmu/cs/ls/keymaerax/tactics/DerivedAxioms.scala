@@ -136,6 +136,7 @@ object DerivedAxioms {
     case "[] split" => Some(boxSplitF, boxSplitT)
     case "[] split left" => Some(boxSplitLeftF, boxSplitLeftT)
     case "[] split right" => Some(boxSplitRightF, boxSplitRightT)
+    case "<> split left" => Some(diamondSplitLeftF, diamondSplitLeftT)
     case "<:=> assign" => Some(assigndF, assigndT)
     case ":= assign dual" => Some(assignDualF, assignDualT)
     case "[:=] assign equational" => Some(assignbEquationalF, assignbEquationalT)
@@ -164,6 +165,7 @@ object DerivedAxioms {
     case "Domain Constraint Conjunction Reordering" => Some(domainCommuteF, domainCommuteT)
     case "& commute" => Some(andCommuteF, andCommuteT)
     case "& associative" => Some(andAssocF, andAssocT)
+    case "& reflexive" => Some(andReflexiveF, andReflexiveT)
     case "!& deMorgan" => Some(notAndF, notAndT)
     case "!| deMorgan" => Some(notOrF, notOrT)
     case "!-> deMorgan" => Some(notImplyF, notImplyT)
@@ -172,6 +174,8 @@ object DerivedAxioms {
     case "PC1" => Some(PC1F, PC1T)
     case "PC2" => Some(PC2F, PC2T)
     case "PC3" => Some(PC3F, PC3T)
+    case "PC9" => Some(PC9F, PC9T)
+    case "PC10" => Some(PC10F, PC10T)
     case "-> tautology" => Some(implyTautologyF, implyTautologyT)
     case "->' derive imply" => Some(DimplyF, DimplyT)
     case "\\forall->\\exists" => Some(forallThenExistsF, forallThenExistsT)
@@ -510,6 +514,35 @@ object DerivedAxioms {
     )
   )
   lazy val boxSplitLeftT = derivedAxiomT(boxSplitLeft)
+
+  /**
+   * {{{Axiom "<> split left".
+   *    <a;>(p(??)&q(??)) -> <a;>p(??)
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val diamondSplitLeftF = "<a;>(p(??)&q(??)) -> <a;>p(??)".asFormula
+  lazy val diamondSplitLeft = derivedAxiom("<> split left",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(diamondSplitLeftF)),
+    useAt("<> dual", PosInExpr(1::Nil))(1, 1::Nil) &
+    cut("<a;>(p(??)&q(??)) -> ![a;](!p(??) & (!p(??) | !q(??)))".asFormula) & onBranch(
+      (cutShowLbl, cohide(2) &
+        useAt("[] dual", PosInExpr(1::Nil))(1, 1::0::Nil) &
+        useAt("!! double negation")(1, 1::Nil) &
+        useAt("!& deMorgan")(1, 1::1::Nil) &
+        useAt("!| deMorgan")(1, 1::1::1::Nil) &
+        useAt("!! double negation")(1, 1::1::0::Nil) &
+        useAt("!! double negation")(1, 1::1::1::0::Nil) &
+        useAt("!! double negation")(1, 1::1::1::1::Nil) &
+        useAt("PC10", PosInExpr(1::Nil))(1, 1::1::Nil) &
+        implyR(1) & close),
+      (cutUseLbl, implyR(1) & notR(1) & implyL(-1) && (
+        close,
+        notL(-3) & useAt("PC9", PosInExpr(1::Nil))(1, 1::1::Nil) & useAt("& reflexive")(1, 1::Nil) & close))
+    )
+  )
+  lazy val diamondSplitLeftT = derivedAxiomT(diamondSplitLeft)
 
   /**
    * {{{Axiom "boxSplitRight".
@@ -938,6 +971,16 @@ object DerivedAxioms {
   lazy val andAssocT = derivedAxiomT(andAssoc)
 
   /**
+   * {{{Axiom "& reflexive".
+   *    p() & p() <-> p()
+   * End.
+   * }}}
+   */
+  lazy val andReflexiveF = "p() & p() <-> p()".asFormula
+  lazy val andReflexive = derivedAxiom("& reflexive", Sequent(Nil, IndexedSeq(), IndexedSeq(andReflexiveF)), prop)
+  lazy val andReflexiveT = derivedAxiomT(andReflexive)
+
+  /**
    * {{{Axiom "!& deMorgan".
    *    (!(p() & q())) <-> ((!p()) | (!q()))
    * End.
@@ -1048,6 +1091,30 @@ object DerivedAxioms {
   lazy val PC3F = "p()&q() -> ((p()->r())->(p()->q()&r())) <-> true".asFormula
   lazy val PC3 = derivedAxiom("PC3", Sequent(Nil, IndexedSeq(), IndexedSeq(PC3F)), prop)
   lazy val PC3T = derivedAxiomT(PC3)
+
+  /**
+   * {{{Axiom "PC9".
+   *    p() -> p() | q()
+   * End.
+   * }}}
+   * @Derived
+   * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC9
+   */
+  lazy val PC9F = "p() -> p() | q()".asFormula
+  lazy val PC9 = derivedAxiom("PC9", Sequent(Nil, IndexedSeq(), IndexedSeq(PC9F)), prop)
+  lazy val PC9T = derivedAxiomT(PC9)
+
+  /**
+   * {{{Axiom "PC10".
+   *    q() -> p() | q()
+   * End.
+   * }}}
+   * @Derived
+   * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC10
+   */
+  lazy val PC10F = "q() -> p() | q()".asFormula
+  lazy val PC10 = derivedAxiom("PC10", Sequent(Nil, IndexedSeq(), IndexedSeq(PC10F)), prop)
+  lazy val PC10T = derivedAxiomT(PC10)
 
   /**
    * {{{Axiom "-> tautology".
