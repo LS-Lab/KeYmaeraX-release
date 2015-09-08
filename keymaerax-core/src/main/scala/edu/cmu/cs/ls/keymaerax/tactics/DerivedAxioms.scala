@@ -171,6 +171,7 @@ object DerivedAxioms {
     case "!-> deMorgan" => Some(notImplyF, notImplyT)
     case "!<-> deMorgan" => Some(notEquivF, notEquivT)
     case "-> expand" => Some(implyExpandF, implyExpandT)
+    case "-> self" => Some(implySelfF, implySelfT)
     case "PC1" => Some(PC1F, PC1T)
     case "PC2" => Some(PC2F, PC2T)
     case "PC3" => Some(PC3F, PC3T)
@@ -501,7 +502,7 @@ object DerivedAxioms {
   lazy val boxSplitLeft = derivedAxiom("[] split left",
     Sequent(Nil, IndexedSeq(), IndexedSeq(boxSplitLeftF)),
     cut(/*(2)*/"[a;](p(??)&q(??) -> p(??))".asFormula) & onBranch(
-      (cutShowLbl, cohide(2) & useAt("PC1")(1, 1::Nil) & V(1) & close),
+      (cutShowLbl, cohide(2) & useAt("PC1")(1, 1::0::Nil) & useAt("-> self")(1, 1::Nil) & V(1) & close),
       (cutUseLbl, cut(/*(4)*/"[a;](p(??)&q(??)->p(??)) -> ([a;](p(??)&q(??)) -> [a;]p(??))".asFormula) & onBranch(
         (cutShowLbl, cohide(2) &
           uniformSubstT(
@@ -525,22 +526,7 @@ object DerivedAxioms {
   lazy val diamondSplitLeftF = "<a;>(p(??)&q(??)) -> <a;>p(??)".asFormula
   lazy val diamondSplitLeft = derivedAxiom("<> split left",
     Sequent(Nil, IndexedSeq(), IndexedSeq(diamondSplitLeftF)),
-    useAt("<> dual", PosInExpr(1::Nil))(1, 1::Nil) &
-    cut("<a;>(p(??)&q(??)) -> ![a;](!p(??) & (!p(??) | !q(??)))".asFormula) & onBranch(
-      (cutShowLbl, cohide(2) &
-        useAt("[] dual", PosInExpr(1::Nil))(1, 1::0::Nil) &
-        useAt("!! double negation")(1, 1::Nil) &
-        useAt("!& deMorgan")(1, 1::1::Nil) &
-        useAt("!| deMorgan")(1, 1::1::1::Nil) &
-        useAt("!! double negation")(1, 1::1::0::Nil) &
-        useAt("!! double negation")(1, 1::1::1::0::Nil) &
-        useAt("!! double negation")(1, 1::1::1::1::Nil) &
-        useAt("PC10", PosInExpr(1::Nil))(1, 1::1::Nil) &
-        implyR(1) & close),
-      (cutUseLbl, implyR(1) & notR(1) & implyL(-1) && (
-        close,
-        notL(-3) & useAt("PC9", PosInExpr(1::Nil))(1, 1::1::Nil) & useAt("& reflexive")(1, 1::Nil) & close))
-    )
+    useAt("PC1")(1, 0::1::Nil) & useAt("-> self")(1) & close
   )
   lazy val diamondSplitLeftT = derivedAxiomT(diamondSplitLeft)
 
@@ -556,7 +542,7 @@ object DerivedAxioms {
   lazy val boxSplitRight = derivedAxiom("[] split right",
     Sequent(Nil, IndexedSeq(), IndexedSeq(boxSplitRightF)),
     cut(/*7*/"[a;](p(??)&q(??) -> q(??))".asFormula) & onBranch(
-      (cutShowLbl, cohide(2) & useAt("PC2")(1, 1::Nil) & V(1) & close),
+      (cutShowLbl, cohide(2) & useAt("PC2")(1, 1::0::Nil) & useAt("-> self")(1, 1::Nil) & V(1) & close),
       (cutUseLbl, cut(/*(8)*/"[a;](p(??)&q(??)->q(??)) -> ([a;](p(??)&q(??)) -> [a;]q(??))".asFormula) & onBranch(
         (cutShowLbl, cohide(2) &
           uniformSubstT(
@@ -981,6 +967,16 @@ object DerivedAxioms {
   lazy val andReflexiveT = derivedAxiomT(andReflexive)
 
   /**
+   * {{{Axiom "-> self".
+   *    (p() -> p()) <-> true
+   * End.
+   * }}}
+   */
+  lazy val implySelfF = "(p() -> p()) <-> true".asFormula
+  lazy val implySelf = derivedAxiom("-> self", Sequent(Nil, IndexedSeq(), IndexedSeq(implySelfF)), prop)
+  lazy val implySelfT = derivedAxiomT(implySelf)
+
+  /**
    * {{{Axiom "!& deMorgan".
    *    (!(p() & q())) <-> ((!p()) | (!q()))
    * End.
@@ -1058,25 +1054,25 @@ object DerivedAxioms {
 
   /**
    * {{{Axiom "PC1".
-   *    (p()&q() -> p()) <-> true
+   *    p()&q() -> p()
    * End.
    * }}}
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC1
    */
-  lazy val PC1F = "(p()&q() -> p()) <-> true".asFormula
+  lazy val PC1F = "p()&q() -> p()".asFormula
   lazy val PC1 = derivedAxiom("PC1", Sequent(Nil, IndexedSeq(), IndexedSeq(PC1F)), prop)
   lazy val PC1T = derivedAxiomT(PC1)
 
   /**
    * {{{Axiom "PC2".
-   *    (p()&q() -> q()) <-> true
+   *    p()&q() -> q()
    * End.
    * }}}
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC2
    */
-  lazy val PC2F = "(p()&q() -> q()) <-> true".asFormula
+  lazy val PC2F = "p()&q() -> q()".asFormula
   lazy val PC2 = derivedAxiom("PC2", Sequent(Nil, IndexedSeq(), IndexedSeq(PC2F)), prop)
   lazy val PC2T = derivedAxiomT(PC2)
 
