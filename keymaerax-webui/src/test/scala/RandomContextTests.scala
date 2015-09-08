@@ -20,8 +20,8 @@ import test.RandomFormula
  */
 class RandomContextTests extends FlatSpec with Matchers {
   KeYmaera.init(Map.empty)
-  val randomTrials = 4000
-  val randomReps = 20
+  val randomTrials = 400
+  val randomReps = 10
   val randomComplexity = 6
   val rand = new RandomFormula()
 
