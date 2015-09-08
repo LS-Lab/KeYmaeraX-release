@@ -478,8 +478,16 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
 
     new Thread(new Runnable() {
       override def run(): Unit = {
-        KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
-          Some(tacticCompleted(db)), input, automation)
+        try {
+          KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
+            Some(tacticCompleted(db)), input, automation)
+        }
+        catch {
+          case e : Exception => db.synchronized({
+            db.updateDispatchedTacticStatus(tId, "Error")
+            throw e
+          })
+        }
       }
     }).start()
 
@@ -506,7 +514,14 @@ class RunCLTermRequest(db : DBAbstraction, userId : String, proofId : String, no
       db.updateDispatchedCLTerm(dispatchedTerm)
       //Run the tactic.
       new Thread(new Runnable() {
-        override def run(): Unit = KeYmaeraInterface.runTerm(termId, proofId, nodeId, clTerm, Some(completionContinuation(db)))
+        override def run(): Unit = try {
+          KeYmaeraInterface.runTerm(termId, proofId, nodeId, clTerm, Some(completionContinuation(db)))
+        } catch {
+          case e : Exception => {
+            //@todo update the database when an error for the running cl term. This is how it's done but for built-in tactics (I think): db.updateDispatchedTacticStatus(termId, "error")
+            throw e
+          }
+        }
       }).start()
 
       //Construct the response to this request.
