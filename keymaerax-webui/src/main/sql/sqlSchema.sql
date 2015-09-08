@@ -57,9 +57,10 @@ CREATE TABLE IF NOT EXISTS `tacticOnProof` (
 );
 
 CREATE TABLE IF NOT EXISTS `proofTacticInput` (
-  `proofTacticId` TEXT PRIMARY KEY ON CONFLICT FAIL,
+  `proofTacticId` TEXT,
   `inputOrder` INTEGER,
-  `input` TEXT
+  `input` TEXT,
+  UNIQUE (`proofTacticId`, `inputOrder`) ON CONFLICT FAIL
 );
 
 CREATE TABLE IF NOT EXISTS `CLTerms` (
