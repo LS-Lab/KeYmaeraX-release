@@ -4,13 +4,11 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+//import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
+
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl._
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper._
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.skolemizeT
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, Tactic, PositionTactic}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 /**
@@ -18,12 +16,19 @@ import edu.cmu.cs.ls.keymaerax.tools.Tool
  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
+ * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+ * @see [[HilbertCalculus.derive()]]
  */
-object HilbertCalculus {
-  import TactixLibrary.useAt
+object HilbertCalculus extends UnifyUSCalculus {
+  import TactixLibrary.QE
+
+  /** True when insisting on internal useAt technology, false when external tactic calls are okay. */
+  private val INTERNAL = true
+
   // modalities
   /** assignb: [:=] simplify assignment by substitution or equation */
-  lazy val assignb            : PositionTactic = TacticLibrary.boxAssignT // useAt("[:=] assign equational") //@todo or "[:=] assign" if no clash
+  lazy val assignb            : PositionTactic = if (INTERNAL) useAt("[:=] assign") | useAt("[:=] assign equational") | useAt("[:=] assign update")
+  else TacticLibrary.boxAssignT
   /** randomb: [:*] simplify nondeterministic assignment to universal quantifier */
   lazy val randomb            : PositionTactic = useAt("[:*] assign nondet")
   /** testb: [?] simplifies test to an implication */
@@ -37,10 +42,10 @@ object HilbertCalculus {
   /** iterateb: [*] prove a property of a loop by unrolling it once */
   lazy val iterateb           : PositionTactic = useAt("[*] iterate")
   /** dualb: [^d] handle dual game */
-  lazy val dualb              : PositionTactic = ???  //useAt("[d] dual")
+  lazy val dualb              : PositionTactic = useAt("[d] dual")
 
   /** assignd: <:=> simplify assignment by substitution or equation */
-  lazy val assignd            : PositionTactic = useAt("<:=> assign equational") //@todo or "[:=] assign" if no clash
+  lazy val assignd            : PositionTactic = useAt("<:=> assign") | useAt("<:=> assign equational") //@todo or "[:=] assign" if no clash
   /** randomd: <:*> simplify nondeterministic assignment to existential quantifier */
   lazy val randomd            : PositionTactic = useAt("<:*> assign nondet")
   /** testd: <?> simplifies test to a conjunction */
@@ -53,7 +58,7 @@ object HilbertCalculus {
   lazy val composed           : PositionTactic = useAt("<;> compose")
   /** iterated: <*> prove a property of a loop by unrolling it once */
   lazy val iterated           : PositionTactic = useAt("<*> iterate")
-  /** duald: <^d> handle dual game */
+  /** duald: `<^d>` handle dual game */
   lazy val duald              : PositionTactic = useAt("<d> dual")
 
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
@@ -69,13 +74,55 @@ object HilbertCalculus {
   lazy val DW                 : PositionTactic = useAt("DW differential weakening")
   /** DC: Differential Cut a new invariant for a differential equation */
   def DC(invariant: Formula)  : PositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
-    (us:Subst)=>us++RenUSubst(Seq((FuncOf(Function("r",None,Real,Real),Anything), invariant)))
+    (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation on its differential symbols */
-  lazy val DE                 : PositionTactic = ODETactics.diffEffectT
-  /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
-  //@todo Dconstify usually needed for DI
-  def DI                      : PositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
+  lazy val DE                 : PositionTactic = if (INTERNAL)
+    ifElseT(isODESystem,
+      (useAt("DE differential effect (system)") * getODEDim),
+      useAt("DE differential effect"))
+  else ODETactics.diffEffectT
+  /** DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation @see [[diffInd()]] */
+  lazy val DI                 : PositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
+  /** diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE) */
+  lazy val diffInd            : PositionTactic = new PositionTactic("diffInd") {
+    import Augmentors._
+      override def applies(s: Sequent, p: Position): Boolean = p.isSucc && (s.sub(p) match {
+        case Some(Box(_: ODESystem, _)) => true
+        case Some(_) => false
+        case None => println("ill-positioned " + p + " in " + s + "\nin " + "diffInd(" + p + ")\n(" + s + ")"); return false
+      })
+      def apply(p: Position): Tactic = new ConstructionTactic(name) {
+        override def applicable(node : ProofNode) = applies(node.sequent, p)
+        override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+        //@todo Dconstify usually needed for DI
+          if (p.isTopLevel && p.isSucc)
+            Some(DI(p) &
+              (stepAt(p) & stepAt(p)) && (
+              QE,
+              //@note derive before DE to keep positions easier
+              derive(p.append(PosInExpr(1::Nil))) &
+                DE(p) &
+                (Dassignb(p.append(PosInExpr(1::Nil))) * (s=>getODEDim(s,p))) &
+                //@note DW after DE to keep positions easier
+                ifT(hasODEDomain, DW)(p) &
+                TacticLibrary.abstractionT(p) & QE
+              ))
+        else
+            Some((DI &
+              //@note derive before DE to keep positions easier
+              shift(PosInExpr(1::1::Nil),
+              shift(PosInExpr(1::Nil), derive) &
+                DE &
+                (shift(PosInExpr(1::Nil), Dassignb) * getODEDim) &
+                //@note DW after DE to keep positions easier
+                ifT(hasODEDomain, DW) &
+                TacticLibrary.abstractionT
+              ))(p)
+              )
+      }
+    }
+
   /** DG: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b */
   def DG(y:Variable, a:Term, b:Term) : PositionTactic = useAt("DG differential ghost", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq(
@@ -87,7 +134,7 @@ object HilbertCalculus {
   //  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
 //  def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
   /** DS: Differential Solution solves a differential equation */
-  def DS                      : PositionTactic = useAt("DS& differential equation solution")
+  lazy val DS                 : PositionTactic = useAt("DS& differential equation solution")
   /** Dassignb: Substitute a differential assignment */
   lazy val Dassignb           : PositionTactic = useAt("[':=] differential assign")
   /** Dplus: +' derives a sum */
@@ -107,7 +154,8 @@ object HilbertCalculus {
   /** Dconst: c()' derives a constant */
   lazy val Dconst             : PositionTactic = useAt("c()' derive constant fn")
   /** Dvariable: x' derives a variable */
-  lazy val Dvariable          : PositionTactic = useAt("x' derive variable", PosInExpr(0::0::Nil))
+  lazy val Dvariable          : PositionTactic = if (false&&INTERNAL) useAt("x' derive var", PosInExpr(0::Nil)) //useAt("x' derive variable", PosInExpr(0::0::Nil))
+  else SyntacticDerivationInContext.symbolizeDifferential
 
   /** Dand: &' derives a conjunction */
   lazy val Dand               : PositionTactic = useAt("&' derive and")
@@ -132,7 +180,11 @@ object HilbertCalculus {
   /** Dexists: \exists' derives an exists quantifier */
   lazy val Dexists            : PositionTactic = useAt("exists' derive exists")
 
-  //lazy val ind
+  // def ind
+
+  /*******************************************************************
+    * Stepping auto-tactic
+    *******************************************************************/
 
   /**
    * Make the canonical simplifying proof step based at the indicated position
@@ -141,18 +193,21 @@ object HilbertCalculus {
    * @note Efficient source-level indexing implementation.
    */
   lazy val stepAt: PositionTactic = new PositionTactic("stepAt") {
-    import FormulaConverter._
+    import Augmentors._
     //import TactixLibrary._
     override def applies(s: Sequent, p: Position): Boolean = getTactic(s, p).isDefined
 
     def getTactic(s: Sequent, p: Position): Option[PositionTactic] = {
-      val sub = s(p.top).at(p)
-      if (sub.isEmpty) None else sub.get match {
+      val sub = s.sub(p)
+      if (!sub.isDefined) {println("ill-positioned " + p + " in " + s + "\nin " + "stepAt(" + p + ")\n(" + s + ")"); return None}
+
+      //@todo simplify most cases substantially by useAt(AxiomIndex.axiomFor(sub))(p)
+      sub.get match {
         case Box(a, _) => a match {
           case _: Assign    => Some(assignb)
           case _: AssignAny => Some(randomb)
           case _: Test      => Some(testb)
-          case ode:ODESystem if ODETactics.isDiffSolvable(sub.get.asInstanceOf[Formula])=> Some(diffSolve)
+          case ode:ODESystem if ODETactics.isDiffSolvable(sub.asInstanceOf[Formula])=> Some(diffSolve)
           case _: Compose   => Some(composeb)
           case _: Choice    => Some(choiceb)
           case _: Dual      => Some(dualb)
@@ -162,7 +217,7 @@ object HilbertCalculus {
           case _: Assign    => Some(assignd)
           case _: AssignAny => Some(randomd)
           case _: Test      => Some(testd)
-          case ode:ODESystem if ODETactics.isDiffSolvable(sub.get.asInstanceOf[Formula])=> ???
+          case ode:ODESystem if ODETactics.isDiffSolvable(sub.asInstanceOf[Formula])=> ???
           case _: Compose   => Some(composed)
           case _: Choice    => Some(choiced)
           case _: Dual      => Some(duald)
@@ -193,18 +248,18 @@ object HilbertCalculus {
           case FuncOf(_,Nothing) => Some(Dconst)
         }
         case Not(f)         => f match {
-          case _: Box       => Some(useAt("[] dual"))
-          case _: Diamond   => Some(useAt("<> dual"))
-          case _: Forall    => Some(useAt("all dual"))
-          case _: Exists    => Some(useAt("exists dual"))
-          case _: Equal     => ???
-          case _: NotEqual  => Some(useAt("= negate"))
-          case _: Less      => Some(useAt("< negate"))
-          case _: LessEqual => ???
-          case _: Greater   => ???
-          case _: GreaterEqual => ???
+          case _: Box       => Some(useAt("![]"))
+          case _: Diamond   => Some(useAt("!<>"))
+          case _: Forall    => Some(useAt("!all"))
+          case _: Exists    => Some(useAt("!exists"))
+          case _: Equal     => Some(useAt("! ="))
+          case _: NotEqual  => Some(useAt("! !="))
+          case _: Less      => Some(useAt("! <"))
+          case _: LessEqual => Some(useAt("! <="))
+          case _: Greater   => Some(useAt("! >"))
+          case _: GreaterEqual => Some(useAt("! >="))
           //@note for conceptual simplicity, use propositional and Skolem sequent rules, too
-          case _ if p.isTopLevel => if(p.isAnte) Some(TactixLibrary.notL)   else Some(TactixLibrary.notR)
+          case _ if p.isTopLevel => if(p.isAnte) Some(TactixLibrary.notL) else Some(TactixLibrary.notR)
           case _: Not       => Some(useAt(DerivedAxioms.doubleNegationAxiom))
           case _: And       => Some(useAt(DerivedAxioms.notAnd))
           case _: Or        => Some(useAt(DerivedAxioms.notOr))
@@ -234,4 +289,61 @@ object HilbertCalculus {
     }
   }
 
+  /*******************************************************************
+    * Derive by proof
+    *******************************************************************/
+
+  /** Derive the differential expression at the indicated position (Hilbert computation deriving the answer by proof).
+    * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+x'*y+x*y'>=0
+    * @see [[UnifyUSCalculus.chase]]
+    */
+  lazy val derive: PositionTactic = new PositionTactic("derive") {
+    import Augmentors._
+      override def applies(s: Sequent, p: Position): Boolean = s.sub(p) match {
+        case Some(Differential(_)) => true
+        case Some(DifferentialFormula(_)) => true
+        case Some(_) => false
+        case None => println("ill-positioned " + p + " in " + s + "\nin " + "derive(" + p + ")\n(" + s + ")"); return false
+      }
+    override def apply(p: Position): Tactic = chase(p)
+    }
+
+
+  /*******************************************************************
+    * Internal helpers
+    *******************************************************************/
+
+  /** Computing dimension of ODE at indicated position of a sequent */
+  private val getODEDim: (Sequent,Position)=>Int = (sequent,pos) => {
+    import Augmentors._
+    def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).toSymbolSet.filter(x=>x.isInstanceOf[DifferentialSymbol]).size
+    sequent.sub(pos) match {
+      case Some(Box(ode: ODESystem, _))     => odeDim(ode)
+      case Some(Diamond(ode: ODESystem, _)) => odeDim(ode)
+      case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
+    }
+  }
+
+  /** Whether there is a proper ODE System at the indicated position of a sequent with >=2 ODEs */
+  private val isODESystem: (Sequent,Position)=>Boolean = (sequent,pos) => {
+    import Augmentors._
+    sequent.sub(pos) match {
+      case Some(Box(ODESystem(_:DifferentialProduct,_), _))     => true
+      case Some(Diamond(ODESystem(_:DifferentialProduct,_), _)) => true
+      case Some(e) => false
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
+    }
+  }
+
+  /** Whether the ODE at indicated position of a sequent has a nontrivial domain */
+  private val hasODEDomain: (Sequent,Position)=>Boolean = (sequent,pos) => {
+    import Augmentors._
+    sequent.sub(pos) match {
+      case Some(Box(ode: ODESystem, _))     => ode.constraint != True
+      case Some(Diamond(ode: ODESystem, _)) => ode.constraint != True
+      case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
+      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
+    }
+  }
 }

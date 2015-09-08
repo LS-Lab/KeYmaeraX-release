@@ -13,18 +13,16 @@ import scala.collection.immutable.Map
 trait Tool {
   // TODO replace with constructor in tool base and dependency injection
   /**
-   * Initializes the tool.
-   * @param config The tool configuration.
+   * Initializes the tool with tool-specific configuration parameters.
    */
   def init(config : Map[String,String])
 
   def isInitialized: Boolean
 
   /**
-   * Check whether the managed tool is still alive and recover it if not.
-   * Yes, this is the mathematica kernel dies on interrupt fix-up!
+   * Check whether the managed tool is still alive and restart it if need be.
    */
-  def check_and_recover()
+  def restart()
 
   /**
    * Shutdown the tool
@@ -32,8 +30,7 @@ trait Tool {
   def shutdown()
 
   /**
-   * The name of the tool.
-   * @return The tool name.
+   * Returns the name of the tool.
    */
   def name: String
 }

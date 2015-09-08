@@ -17,6 +17,7 @@ import ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.core._
 import Config._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
+import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tools._
 import scala.Unit
 import scala.language.implicitConversions
@@ -243,18 +244,29 @@ object Tactics {
 
   type Continuation = (Tactic, Status, Seq[ProofNode]) => Unit
 
+  object Tactic {
+    private[tactics] val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  }
+  /**
+   * A schedulable tactic that can be applied to try to prove a ProofNode.
+   */
   abstract class Tactic(val name : String) extends Stats {
 
-    var scheduler: ExecutionEngine = KeYmaeraScheduler // scheduler of this tactics
+    /** The scheduler that is running this tactic */
+    var scheduler: ExecutionEngine = KeYmaeraScheduler
 
-    var limit  : Limits = defaultLimits // limit
+    /** The resource limits to which this tactic is restricted */
+    var limit  : Limits = defaultLimits
 
-    var continuation : Continuation = stop // continuation function to execute after apply returns
+    /** Continuation function to execute after applying this tactic returns */
+    var continuation : Continuation = stop
 
     override def toString: String = name
 
-    def applicable(node : ProofNode) : Boolean // true if this tactics is applicable to the proof node
-    def apply  (tool : Tool, node : ProofNode) // apply tactics to given node using the given tool (e.g., a specific mathematica kernel)
+    /** Returns true if this tactics is applicable to the proof node */
+    def applicable(node : ProofNode) : Boolean
+    /** Apply this tactic to the given node using the given tool (e.g., a specific mathematica kernel) */
+    def apply  (tool : Tool, node : ProofNode): Unit
 
     def inheritStats(s : Stats) { // adopt stats (e.g., from privious tactic)
       tacs          = s.tacs
@@ -331,21 +343,22 @@ object Tactics {
     }
 
     /**
-     * Called whenever a new tactic is dispatched.
-     * @param t - parent tactic
+     * Dispatch this tactic as a child of the parent tactic to the given proof node within the given resource limits.
+     * @param parent - parent tactic
      */
-    def dispatch(t : Tactic, l : Limits, node : ProofNode) {
-      inheritStats(t)
+    def dispatch(parent : Tactic, l : Limits, node : ProofNode) {
+      inheritStats(parent)
       limit = l
-      this.root = if(t != this && t.root == None) Some(t) else t.root
-      require(t.root != Some(this), "Cannot have loops in tactic tree")
+      this.root = if(parent != this && parent.root == None) Some(parent) else parent.root
+      require(parent.root != Some(this), "Cannot have loops in tactic tree")
       registerRunningTactic(this)
       if (scheduler == null)
-        throw new IllegalStateException("Cannot schedule tactics " + this + " in absence of an appropriate scheduler")
+        throw new IllegalStateException("Cannot schedule tactics " + this + " in absence of an appropriate scheduler. Create and initialize the scheduler first.")
       scheduler.dispatch(new TacticWrapper(this, node))
     }
 
-    def dispatch(t : Tactic, node : ProofNode) { dispatch(t, t.limit, node) } // convenience wrapper for dispatch
+    /** Dispatch this tactic as a child of parent to the given proof node within the parent's limits. */
+    def dispatch(parent : Tactic, node : ProofNode) { dispatch(parent, parent.limit, node) }
 
     def checkStats(res : Status) : Status = limit.checkStats(this)(res)
 
@@ -363,6 +376,15 @@ object Tactics {
       require(n>=0, "Repeat non-negative number of times")
       if (n > 0) this & this*(n-1) else NilT
     }
+    /**
+     * repeat tactic n times
+     */
+    def *(n: Sequent=>Int): Tactic = new ConstructionTactic("Repeat(" + name + ", " + n + ")") {
+      override def applicable(node : ProofNode) = Tactic.this.applicable(node)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+        Some(Tactic.this * n(node.sequent))
+    }
+
     /**
      * apply the first tactic applicable
      */
@@ -628,7 +650,7 @@ object Tactics {
   /**
    * Allows decision making based upon the proof node (using code).
    */
-  def ifElseT(cond : ProofNode => Boolean, thenT : Tactic, elseT : Tactic) =
+  def ifElseT(cond : ProofNode => Boolean, thenT : Tactic, elseT : Tactic): Tactic =
     new Tactic("Conditional " + thenT + " else " + elseT) {
       def applicable(node : ProofNode) = if(cond(node)) thenT.applicable(node) else elseT.applicable(node)
 
@@ -643,8 +665,34 @@ object Tactics {
       }
     }
 
-  def ifT(cond : ProofNode => Boolean, thenT : Tactic) =
+  def ifThenElseT(cond : Sequent => Boolean, thenT : Tactic, elseT : Tactic): Tactic = ifElseT((node:ProofNode)=>cond(node.sequent), thenT, elseT)
+
+  def ifT(cond : ProofNode => Boolean, thenT : Tactic): Tactic =
       ifElseT(cond, thenT, NilT)
+
+  /**
+   * ifElseT(cond, thenT, elseT) does thenT if cond and otherwise does elseT.
+   */
+  def ifElseT(cond : (Sequent,Position) => Boolean, thenT: PositionTactic, elseT : PositionTactic): PositionTactic =
+    new PositionTactic("Conditional " + thenT + " else " + elseT) {
+      override def applies(s: Sequent, p: Position): Boolean = if(cond(s,p)) thenT.applies(s,p) else elseT.applies(s,p)
+      override def apply(p: Position): Tactic = ifThenElseT((s:Sequent)=>cond(s,p),thenT(p), elseT(p))
+    }
+
+  def ifT(cond : (Sequent,Position) => Boolean, thenT: PositionTactic): PositionTactic = ifElseT(cond, thenT, NilPT)
+
+  /**
+   * shift(shift, t) does t shifted from position p to shift(p)
+   */
+  def shift(shift: PosInExpr=>PosInExpr, t: PositionTactic): PositionTactic =
+    new PositionTactic("Shift " + t) {
+      override def applies(s: Sequent, p: Position): Boolean = t.applies(s,p.navigate(shift(p.inExpr)))
+      override def apply(p: Position): Tactic = t.apply(p.navigate(shift(p.inExpr)))
+    }
+  /**
+   * shift(child, t) does t to positions shifted by child
+   */
+  def shift(child: PosInExpr, t: PositionTactic): PositionTactic = shift(p=>p.append(child), t)
 
   /**
    * Generalizes if-else. the generator can return the "do nothing" tactic.
@@ -729,13 +777,24 @@ object Tactics {
   }
 
   /**
-   * Takes a position tactic and ???
+   * A PositionTactic applied to a position results in a tactic that can be applied to a ProofNode.
+   * {{{PositionTactic: Position => Tactic}}}
    * @todo split into type-safe LeftPositionTactic(AntePos) and RightPositionTactic(SuccPos)
+   * @todo duplicate into 3 independent classes?
+   *       abstract class LeftPositionTactic extends (AntePosition => Tactic) { def &(o:LeftPositionTactic) ... }
+   *       abstract class RightPositionTactic extends (SuccPosition => Tactic) { def &(o:RightPositionTactic) ... }
+   *       abstract class PositionTactic extends (Position => Tactic) { def &(o:PositionTactic) ... }
+   * Downside: that will lead to dynamic checking for PositionTactic & LeftPositionTactic.
    */
-  abstract class PositionTactic(val name: String) {
+  abstract class PositionTactic(val name: String) extends (Position => Tactic) {
+    /** Checks whether this position tactic will be applicable at the indicated position of the given sequent */
     def applies(s: Sequent, p: Position): Boolean
 
+    /** Apply this PositionTactic at the indicated Position to obtain a tactic to use at any ProofNode */
     def apply(signedPos: Int): Tactic = apply(Position.seqPos2Position(SeqPos(signedPos)))
+    /** Apply this PositionTactic at the indicated Position to obtain a tactic to use at any ProofNode */
+    def apply(signedPos: Int, posInExpr: List[Int]): Tactic = apply(Position.seqPos2Position(SeqPos(signedPos), posInExpr))
+    /** Apply this PositionTactic at the indicated Position to obtain a tactic to use at any ProofNode */
     def apply(p: Position): Tactic
 
     /**
@@ -755,6 +814,36 @@ object Tactics {
       override def apply(p: Position): Tactic = PositionTactic.this.apply(p) ~ pt.apply(p)
     }
 
+    /**
+     * Alternative composition of PositionTactics applied at the same position.
+     */
+    def |(pt: PositionTactic) = new PositionTactic("Either(" + this.name + ", " + pt.name) {
+      override def applies(s: Sequent, p: Position): Boolean =
+        PositionTactic.this.applies(s, p) || pt.applies(s,p)
+
+      //@TODO Unfortunately, this crucially relies on stable positions
+      override def apply(p: Position): Tactic = PositionTactic.this.apply(p) | pt.apply(p)
+    }
+
+    /**
+     * repeat tactic n times at some position
+     */
+    def *(n: Int): PositionTactic = {
+      require(n>=0, "Repeat non-negative number of times")
+      if (n > 0) this & this*(n-1) else NilPT
+    }
+
+    /**
+     * repeat tactic n times at some position
+     */
+    def *(n: (Sequent,Position)=>Int): PositionTactic = new PositionTactic("Repeat(" + this.name + ", " + n) {
+      override def applies(s: Sequent, p: Position): Boolean =
+        PositionTactic.this.applies(s, p)
+
+      //@TODO Unfortunately, this crucially relies on stable positions
+      override def apply(p: Position): Tactic = PositionTactic.this.apply(p) * (s=>n(s,p))
+    }
+
     //@todo duplicate compared to FormulaConverter.subFormulaAt
     @deprecated("Use FormulaConverter.subFormulaT instead")
     def formulaAtPosition(sequent : Sequent, position : Position) : Option[Formula] = {
@@ -772,6 +861,7 @@ object Tactics {
       formula
     }
   }
+
 
   abstract class ApplyPositionTactic(name: String, val t: PositionTactic) extends Tactic("Position tactic " + name + "(" + t.name + ")") {
     def apply(tool: Tool, node: ProofNode) {
@@ -814,11 +904,13 @@ object Tactics {
   /**
    * Base tactic that directly uses the given Provable.
    * Provable2Tactic conversion.
-   * @see [[DerivedAxioms.tactic2Provable(Sequent,Tactic)]]
+   * @see [[TactixLibrary.proveBy(Sequent,Tactic)]]
    */
   case class ByProvable(provable: Provable) extends Tactic("By provable " + provable) {
 
-    def applicable(node : ProofNode): Boolean = node.sequent==provable.conclusion
+    def applicable(node : ProofNode): Boolean =
+      if (node.sequent==provable.conclusion) true else
+      {println("by(provable) inapplicable " + provable + " to " + node.sequent + "\nin " + "by(" + provable + ")\n(" + node.sequent + ")"); false}
 
     def apply(tool : Tool, node : ProofNode) {
       if (applicable(node)) {

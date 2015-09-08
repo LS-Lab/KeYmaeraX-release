@@ -6,8 +6,10 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 
+@deprecated("Use KeYmaeraXPrettyPrinter instead")
 object KeYmaeraPrettyPrinter extends KeYmaeraPrettyPrinter(ParseSymbols) {
 
 }
@@ -16,6 +18,7 @@ object KeYmaeraPrettyPrinter extends KeYmaeraPrettyPrinter(ParseSymbols) {
  * Usage: KeYmaeraPrettyPrinter.stringify(e);
  * @author Nathan Fulton
  */
+@deprecated("Use KeYmaeraXPrettyPrinter instead")
 class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) extends (Expression => String) {
   def apply(e:Expression) = prettyPrinter(e)
   def stringify(e:Expression) = apply(e)
@@ -471,7 +474,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) extend
   //////////////////////////////////////////////////////////////////////////////
   def stringifyEvidence(e:Evidence) = e match {
     case e : ProofEvidence => ??? //TODO
-    case e : ExternalEvidence => "External.\n\t" + e.file.toString() + "\nEnd."
+    case e : ExternalEvidence => "External.\n\t" + /*e.file.toString() +*/ "\nEnd."
     case e : ToolEvidence => "Tool.\n\t" + e.info.map( p => p._1 + "\t\"" + p._2 + "\"").mkString("\n\t") + "\nEnd."
   }
   

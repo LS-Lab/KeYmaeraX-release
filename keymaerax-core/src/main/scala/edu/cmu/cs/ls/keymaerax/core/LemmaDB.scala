@@ -4,16 +4,32 @@
 */
 /**
  * @author Stefan Mitsch
- * @note Code Review: 2015-05-01
+ * @note Code Review: 2015-08-24
  */
 package edu.cmu.cs.ls.keymaerax.core
 
 /**
- * Store and retrieve lemmas.
+ * Store and retrieve lemmas from a lemma database. Use [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory.lemmaDB]] to get
+ * an instance of a lemma database.
  *
- * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
  * @see Lemma
+ * @example Storing and using a lemma
+ * {{{
+ * val lemmaDB = LemmaDBFactory.lemmaDB
+ * // prove a lemma
+ * val proved = TactixLibrary.proveBy(
+ *    Sequent(Nil, IndexedSeq(), IndexedSeq("true | x>5".asFormula)),
+ *    orR(1) & close
+ *  )
+ * // store a lemma
+ * val evidence = ToolEvidence(immutable.Map("input" -> proved.toString, "output" -> "true")) :: Nil))
+ * val lemmaID = lemmaDB.add(
+ *   Lemma(proved, evidence, Some("Lemma <?> test"))
+ * )
+ * // use a lemma
+ * LookupLemma(lemmaDB, lemmaID)
+ * }}}
  */
 trait LemmaDB {
 
@@ -37,10 +53,10 @@ trait LemmaDB {
 
   /**
    * Adds a new lemma to this lemma DB, with a unique name or None, which will automatically assign a name.
-   * @param lemma The lemma to add.
-   * @return The lemma ID.
+   * @param lemma The lemma whose Provable will be inserted under its name.
+   * @return Internal lemma identifier.
    * @requires if (lemma.name==Some(n)) then !contains(n)
    * @ensures  if (lemma.name==Some(n)) then \result==n  (usually)
    */
-  private[core] def add(lemma: Lemma): LemmaID
+  def add(lemma: Lemma): LemmaID
 }

@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.equivalenceCongruenceT
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{axiomLookupBaseT, uncoverAxiomT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
@@ -48,7 +49,7 @@ object ArithmeticTacticsImpl {
           override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = tool match {
             case x: Mathematica =>
               val f = getFormula(node.sequent, p)
-              val (solution, _, _) = x.qeInOut(f)
+              val (solution, _) = x.qeEvidence(f)
               val result = Equiv(f, solution)
               Some(cutInContext(result, p) & onBranch(
                 (cutShowLbl, lastSucc(cohideT) & equivalenceCongruenceT(p.inExpr) & quantifierEliminationT(tool.name)),
@@ -118,10 +119,9 @@ object ArithmeticTacticsImpl {
           try {
             tool match {
               case qe: QETool =>
-                // TODO make lemma DB configurable
-                val lemmaDB = new FileLemmaDB()
+                val lemmaDB = LemmaDBFactory.lemmaDB
                 val lemma = RCF.proveArithmetic(qe, node.sequent.succ.head)
-                val id = LookupLemma.addLemma(lemmaDB, lemma)
+                val id = lemmaDB.add(lemma)
 
                 lemma.fact.conclusion.succ.head match {
                   case lemmaFml@Equiv(res, True) => {

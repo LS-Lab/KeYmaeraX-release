@@ -6,10 +6,11 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
-import BindingAssessment.allNames
 import edu.cmu.cs.ls.keymaerax.tactics.AlphaConversionHelper._
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{boxMonotoneT, diamondMonotoneT}
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverAxiomT,axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.v2vAssignT
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
@@ -238,23 +239,33 @@ object FOQuantifierTacticsImpl {
   }
 
   /**
-   * Creates a new tactic for universal/existential quantifier instantiation. The tactic performs self-instantiation
+   * Returns a new tactic for universal/existential quantifier instantiation. The tactic performs self-instantiation
    * with the quantified variable.
-   * @return The newly created tactic.
+   * @example{{{
+   *           |- x>0
+   *         ------------------instantiateT(SuccPosition(0))
+   *           |- \exists x x>0
+   * }}}
+   * @example{{{
+   *                     x>0 |-
+   *         ------------------instantiateT(AntePosition(0))
+   *           \forall x x>0 |-
+   * }}}
+   * @return The tactic.
    */
   def instantiateT: PositionTactic = new PositionTactic("Quantifier Instantiation") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Forall(_, _) => p.isAnte
-      case Exists(_, _) => !p.isAnte
+    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
+      case Some(Forall(_, _)) => p.isAnte
+      case Some(Exists(_, _)) => !p.isAnte
       case _ => false
     }
 
     override def apply(pos: Position): Tactic = new ConstructionTactic("Quantifier Instantiation") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
-        case Forall(vars, phi) => Some(vars.map(v => instantiateT(v, v)(pos)).fold(NilT)((a, b) => a & b))
-        case Exists(vars, phi) => Some(vars.map(v => instantiateT(v, v)(pos)).fold(NilT)((a, b) => a & b))
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos).subFormulaAt(pos.inExpr) match {
+        case Some(Forall(vars, phi)) => Some(vars.map(v => instantiateT(v, v)(pos)).fold(NilT)((a, b) => a & b))
+        case Some(Exists(vars, phi)) => Some(vars.map(v => instantiateT(v, v)(pos)).fold(NilT)((a, b) => a & b))
         case _ => None
       }
     }
@@ -267,18 +278,18 @@ object FOQuantifierTacticsImpl {
    * @return The tactic.
    */
   def instantiateT(quantified: Variable, instance: Term): PositionTactic = new PositionTactic("Quantifier Instantiation") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Forall(vars, _) => p.isAnte && vars.contains(quantified)
-      case Exists(vars, _) => !p.isAnte && vars.contains(quantified)
+    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
+      case Some(Forall(vars, _)) => p.isAnte && vars.contains(quantified)
+      case Some(Exists(vars, _)) => !p.isAnte && vars.contains(quantified)
       case _ => false
     }
 
     override def apply(pos: Position): Tactic = new ConstructionTactic("Quantifier Instantiation") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
-        case Forall(vars, _) =>
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos).subFormulaAt(pos.inExpr) match {
+        case Some(Forall(vars, _)) =>
           Some(withStuttering(node.sequent, vars.length > 1, instantiateUniversalQuanT(quantified, instance)(pos)))
-        case Exists(vars, _) =>
+        case Some(Exists(vars, _)) =>
           Some(withStuttering(node.sequent, vars.length > 1, instantiateExistentialQuanT(quantified, instance)(pos)))
         case _ => None
       }
@@ -295,17 +306,16 @@ object FOQuantifierTacticsImpl {
               case Diamond(prg, _) if /*StaticSemantics(prg).bv.contains(quantified) &&*/ !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)
               case _ => Left(None)
             }
-          }, getFormula(s, pos))
+          }, s(pos).subFormulaAt(pos.inExpr).get)
         }
 
         if (stutteringAt.nonEmpty) {
-          val pPos = stutteringAt.map(p => if (pos.isAnte) new AntePosition(pos.index, p) else new SuccPosition(pos.index, p))
-          val assignPos = stutteringAt.map(p => if (pos.isAnte) new AntePosition(pos.index, PosInExpr(p.pos.tail)) else new SuccPosition(pos.index, PosInExpr(p.pos.tail)))
-          val alpha = pPos.foldRight(NilT)((p, r) => r & (alphaRenamingT(quantified.name, quantified.index, quantified.name, quantified.index)(p) | NilT))
+          val pPos = stutteringAt.map(p => pos.subPos(p))
+          val assignPos = stutteringAt.map(p => pos.subPos(PosInExpr(p.pos.tail)))
+          val alpha = pPos.foldRight(NilT)((p, r) => r & (alphaRenamingT(quantified, quantified)(p) | NilT))
           val v2v =
             if (quantStillPresentAfterAround) assignPos.foldRight(NilT)((p, r) => r & (v2vAssignT(
-              if (p.isAnte) new AntePosition(p.index, PosInExpr(0 :: p.inExpr.pos))
-              else new SuccPosition(p.index, PosInExpr(0 :: p.inExpr.pos))) | NilT))
+              p.topLevel.subPos(PosInExpr(0 :: p.inExpr.pos))) | NilT))
             else assignPos.foldRight(NilT)((p, r) => r & (v2vAssignT(p) | NilT))
           alpha & around & v2v
         } else around
@@ -404,9 +414,31 @@ object FOQuantifierTacticsImpl {
     }
   }
 
+  /**
+   * Returns a tactic to instantiate an existentially quantified formula that occurs in positive polarity in the
+   * succedent or in negative polarity in the antecedent.
+   * @example{{{
+   *         |- y+2>0
+   *         ----------------instantiateExistentialQuanT(Variable("x"), "y+2".asTerm)(SuccPosition(0))
+   *         |- \exists x x>0
+   * }}}
+   * @example{{{
+   *                 !(y+2>0) |-
+   *         -------------------instantiateExistentialQuanT(Variable("x"), "y+2".asTerm)(AntePosition(0, PosInExpr(0::Nil)))
+   *         !(\exists x x>0) |-
+   * }}}
+   * @example{{{
+   *         y>0 -> y>0
+   *         -----------------------instantiateExistentialQuanT(Variable("x"), Variable("y"))(AntePosition(0, PosInExpr(0::Nil)))
+   *         \exists x x>0 -> y>0 |-
+   * }}}
+   * @param quantified The variable to instantiate.
+   * @param t The instance.
+   * @return The tactic which performs the instantiation.
+   */
   def instantiateExistentialQuanT(quantified: Variable, t: Term) = new PositionTactic("exists instantiate") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Exists(vars, _) => vars.contains(quantified) &&
+    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
+      case Some(Exists(vars, _)) => vars.contains(quantified) &&
         ((p.isAnte && polarityAt(s, p) == -1) || (!p.isAnte && polarityAt(s, p) == 1))
       case _ => false
     }
@@ -415,20 +447,21 @@ object FOQuantifierTacticsImpl {
       if (p.isAnte) AntePosition(p.index, PosInExpr(p.inExpr.pos.init))
       else SuccPosition(p.index, PosInExpr(p.inExpr.pos.init))
 
+    /** Computes the polarity of the formula in position p in the sequent */
     private def polarityAt(s: Sequent, p: Position): Int =
-      if (p.isTopLevel) 1 else getFormula(s, parentPosOf(p)) match {
-        case Not(_) => -polarityAt(s, parentPosOf(p))
-        case Imply(_, _) if p.inExpr.pos.last == 0 => -polarityAt(s, parentPosOf(p))
-        case Imply(_, _) if p.inExpr.pos.last == 1 => polarityAt(s, parentPosOf(p))
-        case Equiv(_, _) => 0
+      if (p.isTopLevel) 1 else s(parentPosOf(p)).subFormulaAt(parentPosOf(p).inExpr) match {
+        case Some(Not(_)) => -polarityAt(s, parentPosOf(p))
+        case Some(Imply(_, _)) if p.inExpr.pos.last == 0 => -polarityAt(s, parentPosOf(p))
+        case Some(Imply(_, _)) if p.inExpr.pos.last == 1 => polarityAt(s, parentPosOf(p))
+        case Some(Equiv(_, _)) => 0
         case _ => polarityAt(s, parentPosOf(p))
       }
 
     override def apply(p: Position) = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case Exists(vars, phi) =>
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p).subFormulaAt(p.inExpr) match {
+        case Some(Exists(vars, phi)) =>
           var varPos = List[PosInExpr]()
           ExpressionTraversal.traverse(new ExpressionTraversalFunction {
             override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
@@ -445,7 +478,7 @@ object FOQuantifierTacticsImpl {
             (cutUseLbl, lastAnte(assertPT(cutFrm)) & lastAnte(ImplyLeftT) && (hideT(p.topLevel), AxiomCloseT ~ errorT("Failed to close!"))),
             (cutShowLbl, lastSucc(assertPT(cutFrm)) & lastSucc(cohideT) & assertT(0, 1) & assertPT(cutFrm)(SuccPosition(0)) &
               ImplyRightT(SuccPosition(0)) & assertT(1, 1) &
-              generalize(replace(phi)(quantified, t), varPos))
+              generalize(varPos))
           ))
         case _ => None
       }
@@ -460,20 +493,13 @@ object FOQuantifierTacticsImpl {
         case None => throw new IllegalArgumentException(s"Did not find existential quantifier in $s at $p")
       }
 
-      private def generalize(fToGen: Formula, where: List[PosInExpr]) = {
+      private def generalize(where: List[PosInExpr]) = {
         if (p.isTopLevel) {
           existentialGenPosT(quantified, where)(AntePosition(0)) & AxiomCloseT
         } else {
-          // we know that we have the same operator in antecedent and succedent with the same lhs -> we know that one
-          // will branch and one of these branches will close by identity. on the other branch, we have to hide
-          TacticLibrary.debugT(s"Start unpeeling in exists at $p") &
-            // list all cases explicitly, hide appropriate formulas in order to not blow up branching
-            ( (lastAnte(NotLeftT) & NotRightT(SuccPosition(0)) & assertT(1, 1)) |
-              (lastAnte(AndLeftT) & lastSucc(AndRightT) && (AxiomCloseT | hideT(AntePosition(1)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1)) |
-              (lastSucc(OrRightT) & lastAnte(OrLeftT) && (AxiomCloseT | hideT(SuccPosition(1)), AxiomCloseT | hideT(SuccPosition(0))) & assertT(1, 1)) |
-              (lastSucc(ImplyRightT) & ImplyLeftT(AntePosition(0)) && (AxiomCloseT | hideT(SuccPosition(0)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1))
-              )*p.inExpr.pos.length &
-            locateAnte(existentialGenPosT(quantified, where), _ == fToGen) & AxiomCloseT
+          AxiomaticRuleTactics.propositionalCongruenceT(p.inExpr) &
+            lastAnte(existentialGenPosT(quantified, where)) &
+            (AxiomCloseT | TacticLibrary.debugT("Instantiate existential: axiom close failed"))
         }
       }
     }
@@ -484,12 +510,14 @@ object FOQuantifierTacticsImpl {
    * @param x The universally quantified variable to introduce.
    * @param t The term to generalize.
    * @return The position tactic.
-   * @example \forall z \forall x x^2 >= -z^2
-   *          ------------------------------- universalGenT(z, f())
-   *          \forall x x^2 >= -f()^2
-   * @example \forall z \forall x x^2 >= -z^2
-   *          ------------------------------- universalGenT(z, y+5)
-   *          \forall x x^2 >= -(y+5)^2
+   * @example{{{\forall z \forall x x^2 >= -z^2
+   *            ------------------------------- universalGenT(z, f())
+   *            \forall x x^2 >= -f()^2
+   * }}}
+   * @example{{{\forall z \forall x x^2 >= -z^2
+   *            ------------------------------- universalGenT(z, y+5)
+   *            \forall x x^2 >= -(y+5)^2
+   * }}}
    */
   def universalGenT(x: Option[Variable], t: Term): PositionTactic = new PositionTactic("all generalize") {
     override def applies(s: Sequent, p: Position): Boolean = x match {

@@ -17,10 +17,12 @@ import scala.collection.immutable.Map
  */
 object KeYmaera extends ToolBase("KeYmaera") {
   override def init(config : Map[String,String]) = {
-    super.init(config);
     //@todo moved this initialization outside the core. Is this the right place?
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter)
-
+    initialized = true
   }
 
+  override def restart() = {}
+
+  override def shutdown() = {}
 }

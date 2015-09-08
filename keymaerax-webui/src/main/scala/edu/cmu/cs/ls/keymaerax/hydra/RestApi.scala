@@ -241,6 +241,24 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val kyxConfig = path("kyxConfig") {
+    pathEnd {
+      get {
+        val request = new KyxConfigRequest(database)
+        complete(standardCompletion(request))
+      }
+    }
+  }
+
+  val keymaeraXVersion = path("keymaeraXVersion") {
+    pathEnd {
+      get {
+        val request = new KeymaeraXVersionRequest()
+        complete(standardCompletion(request))
+      }
+    }
+  }
+
   val mathematicaConfigSuggestion = path("config" / "mathematica" / "suggest") {
     pathEnd {
       get {
@@ -284,6 +302,15 @@ trait RestApi extends HttpService {
         val clTerm = JsonParser(params).asJsObject.fields.last._2.asInstanceOf[JsString].value
         val request = new RunCLTermRequest(database, userId, proofId, Some(nodeId), clTerm)
         complete(standardCompletion(request))
+      }}
+    }
+  }}}
+
+
+  val changeProofName = path("proofs" / "user" / Segment / Segment / "name" / Segment) { (userId, proofId, newName) => { pathEnd {
+    post {
+      entity(as[String]) { params => {
+        complete(standardCompletion(new UpdateProofNameRequest(database, proofId, newName)))
       }}
     }
   }}}
@@ -428,6 +455,7 @@ trait RestApi extends HttpService {
     proofList             ::
     openProof             ::
     proofLoadStatus       ::
+    changeProofName        ::
     proofProgressStatus   ::
     proofCheckIsProved    ::
     proofTasks            ::
@@ -445,8 +473,10 @@ trait RestApi extends HttpService {
     devAction             ::
     sequent               ::
     dashInfo              ::
-    mathematicaConfig ::
-    mathematicaStatus ::
+    kyxConfig             ::
+    keymaeraXVersion      ::
+    mathematicaConfig     ::
+    mathematicaStatus     ::
     mathematicaConfigSuggestion ::
     license ::
       initializeModel :: isLocal :: shutdown ::

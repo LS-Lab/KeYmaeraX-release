@@ -84,6 +84,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
     val tactic = locateSucc(ImplyRightT) & LogicalODESolver.solveT(SuccPos(0))
     helper.runTactic(tactic, node)
     helper.report(node)
+    fail("no actual conditions here.")
 //    node shouldBe 'closed @todo
   }
 
@@ -99,17 +100,16 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
     node shouldBe 'closed
   }
 
-  //@todo Nathan
-  ignore should "work with ACAS X input" in {
-    val ante = "(w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0)".asFormula
-    val succ = "[{r'=-rv(),dhd'=ao(),h'=-dhd&w()*dhd>=w()*dhf()|w()*ao()>=a()}]((w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0))".asFormula
+  it should "work with ACAS X input when time is explicit" in {
+    val ante = "r=rInit&dhd=dhdInit&h=hInit&t=tInit&(w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0)".asFormula
+    val succ = "[{r'=-rv(),dhd'=ao(),h'=-dhd, t' = 0*t+1  & w()*dhd>=w()*dhf()|w()*ao()>=a()}]((w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0))".asFormula
     val s = Sequent(Nil, immutable.IndexedSeq(ante), immutable.IndexedSeq(succ))
     val tactic = LogicalODESolver.solveT(SuccPos(0))
     val result = helper.runTactic(tactic, new RootNode(s))
-
-    result.openGoals() should have size 1
-    // TODO expected succedent
-    result.openGoals().head.sequent.succ should contain only "true".asFormula
+    fail("no actual conditions here.")
+//    result.openGoals() should have size 1
+//    // TODO expected succedent
+//    result.openGoals().head.sequent.succ should contain only "true".asFormula
   }
 }
 
@@ -376,4 +376,36 @@ class DGPlusPlus extends TacticTestSuite {
     node.openGoals().length shouldBe 1
     node.openGoals().last.sequent.succ.last shouldBe "[{dhd'=ao(), h'=-dhd, t'=0*t+1 & 1=1}]2=2".asFormula
   }
+
+  it should "be useful to the ode solver" in {
+    val f = "[{z' = z + 1, p' = p + 1, v' = a, t' = 0*t + 1 & p=1&v=2&a=3}]1=1".asFormula
+    val n = helper.formulaToNode(f)
+    val t = LogicalODESolver.successiveInverseDiffGhost(SuccPos(0)) & LogicalODESolver.successiveInverseDiffGhost(SuccPos(0))
+    helper.runTactic(t , n)
+    helper.report(n)
+  }
+
+  it should "be useful to the ode solver in non-system variant" in {
+    val f = "[{v' = a, t' = 0*t + 1 & p=1&v=2&a=3}]1=1".asFormula
+    val n = helper.formulaToNode(f)
+    val t = LogicalODESolver.successiveInverseDiffGhost(SuccPos(0))
+    val result = helper.runTactic(t , n)
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "[{t' = 0*t + 1 & p=1&v=2&a=3}]1=1".asFormula
+
+    helper.report(n)
+  }
+
+  ignore should "rename stuff so that x' = blah doesn't cause problems" in {
+    val f = "[{x' = v, v' = a, t' = 0*t + 1 & p=1&v=2&a=3}]1=1".asFormula
+    val n = helper.formulaToNode(f)
+    val t = LogicalODESolver.successiveInverseDiffGhost(SuccPos(0))
+    helper.runTactic(t , n)
+    helper.report(n)
+    fail("Need a test for this.")
+  }
+
 }
+

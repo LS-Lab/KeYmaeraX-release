@@ -4,13 +4,13 @@
 */
 /**
  * Axioms of KeYmaera X and axiomatic proof rules of KeYmaera X.
- * resulting from differential dynamic logic
+ * resulting from differential dynamic logic.
  * @note Soundness-critical: Only adopt sound axioms and sound axiomatic rules.
  * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
- * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
+ * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
- * @note Code Review: 2015-05-01
+ * @note Code Review: 2015-08-24
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -25,10 +25,11 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXAxiomParser
  * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
- * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
+ * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
+ * @see [[edu.cmu.cs.ls.keymaerax.tactics.AxiomIndex]]]]
  */
 private[core] object AxiomBase {
   /**
@@ -36,14 +37,12 @@ private[core] object AxiomBase {
    * @note Soundness-critical: Only return locally sound proof rules.
    * @return immutable list of locally sound axiomatic proof rules (premise, conclusion)
    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
-   * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
+   * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
    * @author Andre Platzer
    */
   private[core] def loadAxiomaticRules() : immutable.Map[String, (Sequent, Sequent)] = {
     val x = Variable("x_", None, Real)
-    val px = PredOf(Function("p_", None, Real, Bool), x)
     val pany = PredOf(Function("p_", None, Real, Bool), Anything)
-    val qx = PredOf(Function("q_", None, Real, Bool), x)
     val qany = PredOf(Function("q_", None, Real, Bool), Anything)
     val fany = FuncOf(Function("f_", None, Real, Real), Anything)
     val gany = FuncOf(Function("g_", None, Real, Real), Anything)
@@ -52,7 +51,6 @@ private[core] object AxiomBase {
     // Sort of predicational is really (Real->Bool)->Bool except sort system doesn't know that type.
     val context = Function("ctx_", None, Bool, Bool) // predicational symbol
     val a = ProgramConst("a_")
-    val fmlany = PredOf(Function("F_", None, Real, Bool), Anything)
 
     Map(
       /**
@@ -69,6 +67,7 @@ private[core] object AxiomBase {
        * Premise p(??)
        * Conclusion \forall x p(??)
        * End.
+       * @Note generalization of p(x) to p(??) as in Theorem 14
        */
       ("all generalization",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany)),
@@ -101,41 +100,33 @@ private[core] object AxiomBase {
       ("CE congruence",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
+      /**
+       * Rule "CE congruence".
+       * Premise p_(??) <-> q_(??)
+       * Conclusion ctxF_(p_(??)) |- ctxF_(q_(??))
+       * End.
+       * @derived EquivifyRight, cut, prop
+       */
       ("CO one-sided congruence",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(PredicationalOf(context, pany)), immutable.IndexedSeq(PredicationalOf(context, qany))))),
       /**
-       * Rule "all monotone".
-       * Premise p(x) ==> q(x)
-       * Conclusion \forall x p(x) ==> \forall x q(x)
-       * End.
-       */
-      ("all monotone",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(px), immutable.IndexedSeq(qx)),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(Forall(immutable.Seq(x), px)), immutable.IndexedSeq(Forall(immutable.Seq(x), qx))))),
-      /**
-       * Rule "exists monotone".
-       * Premise p(x) ==> q(x)
-       * Conclusion \exists x p(x) ==> \exists x q(x)
-       * End.
-       */
-      ("exists monotone",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(px), immutable.IndexedSeq(qx)),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(Exists(immutable.Seq(x), px)), immutable.IndexedSeq(Exists(immutable.Seq(x), qx))))),
-      /**
        * Rule "[] monotone".
-       * Premise p(x) ==> q(x)
-       * Conclusion [a;]p(x) ==> [a;]q(x)
+       * Premise p(??) ==> q(??)
+       * Conclusion [a;]p(??) ==> [a;]q(??)
        * End.
+       * @derived useAt("<> dual") & by("<> monotone")
+       * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
       ("[] monotone",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany)),
           Sequent(immutable.Seq(), immutable.IndexedSeq(Box(a, pany)), immutable.IndexedSeq(Box(a, qany))))),
       /**
        * Rule "<> monotone".
-       * Premise p(x) ==> q(x)
-       * Conclusion <a;>p(x) ==> <a;>q(x)
+       * Premise p(??) ==> q(??)
+       * Conclusion <a;>p(??) ==> <a;>q(??)
        * End.
+       * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
       ("<> monotone",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany)),
@@ -144,6 +135,7 @@ private[core] object AxiomBase {
        * Rule "ind induction".
        * Premise p(??) ==> [a;]p(??)
        * Conclusion p(??) ==> [a*]p(??)
+       * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
       ("ind induction",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany))),
@@ -151,8 +143,8 @@ private[core] object AxiomBase {
       /* UNSOUND FOR HYBRID GAMES */
       /**
        * Rule "Goedel".
-       * Premise p(x)
-       * Conclusion [a;]p(x)
+       * Premise p(??)
+       * Conclusion [a;]p(??)
        * End.
        * @NOTE Unsound for hybrid games
        * @TODO Add [a;]true -> to conclusion to make it sound for hybrid games (and then equivalent to [] monotone)
@@ -180,9 +172,7 @@ private[core] object AxiomBase {
       assert(res.length == res.map(k => k._1).distinct.length, "No duplicate axiom names during parse")
 
       res.map(k => (k._1 -> k._2)).toMap
-    } catch {
-      case e: Exception => e.printStackTrace(); println("Problem while reading axioms " + e); sys.exit(10)
-    }
+    } catch { case e: Exception => e.printStackTrace(); println("Problem while reading axioms " + e); sys.exit(10) }
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
   /** Redundant code checking expected form of axioms */
@@ -195,9 +185,9 @@ private[core] object AxiomBase {
     val pany = PredOf(p, Anything)
     val q = Function("q", None, Real, Bool)
     val q0 = PredOf(Function("q", None, Unit, Bool), Nothing)
-    val qny = PredOf(Function("q", None, Real, Bool), Anything)
+    val qany = PredOf(Function("q", None, Real, Bool), Anything)
     val r = Function("r", None, Real, Bool)
-    val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
+    val c = FuncOf(Function("c", None, Unit, Real), Nothing)
     val f = Function("f", None, Real, Real)
     val f0 = FuncOf(Function("f", None, Unit, Real), Nothing)
     val fany = FuncOf(Function("f", None, Real, Real), Anything)
@@ -208,7 +198,6 @@ private[core] object AxiomBase {
     val a = ProgramConst("a")
     val b = ProgramConst("b")
 
-    //@todo should not use strange names, better x and q
     val v = Variable("v", None, Real)
     val H0 = PredOf(Function("H", None, Unit, Bool), Nothing)
 
@@ -222,7 +211,7 @@ private[core] object AxiomBase {
     assert(axs("[;] compose") == Equiv(Box(Compose(a,b), pany), Box(a, Box(b, pany))), "[;] compose")
     assert(axs("[*] iterate") == Equiv(Box(Loop(a), pany), And(pany, Box(a, Box(Loop(a), pany)))), "[*] iterate")
     //@note only sound for hybrid systems not for hybrid games
-    assert(axs("K modal modus ponens") == Imply(Box(a, Imply(pany,qny)), Imply(Box(a, pany), Box(a, qny))), "K modal modus ponens")
+    assert(axs("K modal modus ponens") == Imply(Box(a, Imply(pany,qany)), Imply(Box(a, pany), Box(a, qany))), "K modal modus ponens")
     //@note could also have accepted axiom I for hybrid systems but not for hybrid games
     assert(axs("V vacuous") == Imply(p0, Box(a, p0)), "V vacuous")
 
@@ -231,18 +220,17 @@ private[core] object AxiomBase {
       Equiv(Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), PredOf(q,x)), PredOf(p,x)),
         Box(ODESystem(AtomicODE(xp, FuncOf(f,x)), And(PredOf(q,x), PredOf(r,x))), PredOf(p,x)))), "DC differential cut") */
 
-    assert(axs("c()' derive constant fn") == Equal(Differential(aC), Number(0)), "c()' derive constant fn")
+    assert(axs("c()' derive constant fn") == Equal(Differential(c), Number(0)), "c()' derive constant fn")
     assert(axs("+' derive sum") == Equal(Differential(Plus(fany, gany)), Plus(Differential(fany), Differential(gany))), "+' derive sum")
     assert(axs("-' derive minus") == Equal(Differential(Minus(fany, gany)), Minus(Differential(fany), Differential(gany))), "-' derive minus")
     assert(axs("*' derive product") == Equal(Differential(Times(fany, gany)), Plus(Times(Differential(fany), gany), Times(fany, Differential(gany)))), "*' derive product")
     assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(fany, gany)), Equal(Differential(fany), Differential(gany))), "!=' derive !=")
-    assert(axs("&' derive and") == Equiv(DifferentialFormula(And(pany, qny)), And(DifferentialFormula(pany), DifferentialFormula(qny))), "&' derive and")
-    assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(pany, qny)), And(DifferentialFormula(pany), DifferentialFormula(qny))) || axs("|' derive or") == Imply(And(DifferentialFormula(pany), DifferentialFormula(qny)), DifferentialFormula(Or(pany, qny))), "|' derive or")
-    assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
+    assert(axs("&' derive and") == Equiv(DifferentialFormula(And(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))), "&' derive and")
+    assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))) || axs("|' derive or") == Imply(And(DifferentialFormula(pany), DifferentialFormula(qany)), DifferentialFormula(Or(pany, qany))), "|' derive or")
+    assert(axs("x' derive var") == Equal(Differential(x_), DifferentialSymbol(x_)), "x' derive var")
+    //assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
 
-    //@TODO these should be re-enabled.
     assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,t0)), "all instantiate")
-//    assert(axs("all distribute") == Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x)))), "all distribute")
     // soundness-critical that these are for p() not for p(x) or p(??)
     assert(axs("vacuous all quantifier") == Equiv(Forall(immutable.IndexedSeq(x), p0), p0), "vacuous all quantifier")
 
@@ -263,9 +251,8 @@ private[core] object AxiomBase {
    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
    * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012."
    * @see "Andre Platzer. Dynamic logics of dynamical systems. arXiv 1205.4788, May 2012."
-   * @see "Andre Platzer. Differential game logic. ACM Trans. Comput. Log. arXiv 1408.1980"
+   * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
-   * @todo more consistent naming scheme.
    */
   private[core] def loadAxiomString() : String =
 """
@@ -279,7 +266,7 @@ Axiom /*\\foralli */ "all instantiate".
   (\forall x p(x)) -> p(t())
 End.
 
-/* consequence of "all instantiate" */
+/* consequence of "all instantiate" @note generalized "all instantiate" */
 Axiom "all eliminate".
   (\forall x p(??)) -> p(??)
 End.
@@ -291,12 +278,6 @@ End.
 Axiom "all dual".
   (!\exists x (!p(x))) <-> (\forall x p(x))
 End.
-
-/*
-Axiom "all quantifier scope".
-  (\forall x (p(x) & q())) <-> ((\forall x p(x)) & q())
-End.
-*/
 
 /**
  * CONGRUENCE AXIOMS (for constant terms)
@@ -351,9 +332,9 @@ End.
  * DIFFERENTIAL EQUATION AXIOMS
  */
 
-Axiom "DW differential weakening".
-  [{c&H(??)}]p(??) <-> ([{c&H(??)}](H(??)->p(??)))
-/* [x'=f(x)&q(x);]p(x) <-> ([x'=f(x)&q(x);](q(x)->p(x))) THEORY */
+Axiom "DW".
+  [{c&H(??)}]H(??)
+/* [x'=f(x)&q(x);]q(x) THEORY */
 End.
 
 Axiom "DC differential cut".
@@ -362,9 +343,9 @@ Axiom "DC differential cut".
 End.
 
 Axiom "DE differential effect".
-  /* [x'=f(x)&q(x);]p(x) <-> [x'=f(x)&q(x);][x':=f(x);]p(x)  @TODO sound but incomplete */
-  /* @TODO [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
+  /* [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
   /* @NOTE Generalized argument compared to theory as in DE differential effect (system) */
+  /* @NOTE In systems, f(x) cannot have ' by data structure invariant */
   [{x'=f(x)&q(x)}]p(??) <-> [{x'=f(x)&q(x)}][x':=f(x);]p(??)
 End.
 
@@ -379,16 +360,10 @@ Axiom "DG differential ghost".
   /* [x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}]p(x) THEORY */
 End.
 
-/* Inverse Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work. */
-Axiom "DG differential pre-ghost".
-  [{c&H(??)}]p(??) <-> \exists y [{y'=(t()*y)+s(),c&H(??)}]p(??)
-  /* [x'=f(x)&q(x);]p(x) <-> \exists y [{y'=(a(x)*y)+b(x), x'=f(x))&q(x)}]p(x) THEORY */
-End.
-
 /* DG differential ghost, general Lipschitz case */
 /*Axiom "DG differential Lipschitz ghost".
   ([x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=g(x,y)&q(x)}]p(x))
-  <- (\exists L \forall x \forall y \forall z (y>=z -> (-L*(y-x) <= g(x,y)-g(x,z) & g(x,y)-g(x,z) <= L*(y-z))))
+  <- (\exists L \forall x \forall y \forall z (abs(g(x,y)-g(x,z)) <= L*abs(y-z)))
 End.*/
 
 /* DG differential ghost, general Lipschitz case, system case */
@@ -396,6 +371,7 @@ Axiom "DG differential Lipschitz ghost system".
   /* @see "DG differential Lipschitz ghost" THEORY */
   ([{c&H(??)}]p(??) <-> (\exists y [{y'=g(??),c&H(??)}]p(??)))
   <- (\exists L [{c&H(??)}] (\forall a \forall b \forall u \forall v (a>=b -> [y:=a;u:=g(??);y:=b;v:=g(??);] (-L*(a-b) <= u-v & u-v <= L*(a-b)))))
+  /* <- (\exists L [{c&H(??)}] (\forall a \forall b \forall u \forall v ([y:=a;u:=g(??);y:=b;v:=g(??);] (abs(u-v) <= L*abs(a-b))))) */
 End.
 
 Axiom "DG++ System".
@@ -403,11 +379,10 @@ Axiom "DG++ System".
 End.
 
 Axiom "DG++".
-  ([{x'=f(x) & H(??)}]p(??))  ->  (\forall y [{x'=f(x),y'=g(??) & H(??)}]p(??))
+  ([{x'=f(x) & H(??)}]p(??))  ->  (\forall y [{y'=g(??),x'=f(x) & H(??)}]p(??))
 End.
 
-
-/* Formatter axioms for diff eqs. @todo unused except in tactics implementation of itself */
+/* Formatter axioms for diff eqs. */
 Axiom ", commute".
   [{c,d & H(??)}]p(??) <-> [{d,c & H(??)}]p(??)
 End.
@@ -416,9 +391,9 @@ Axiom "DS& differential equation solution".
   [{x'=c()&q(x)}]p(x) <-> \forall t (t>=0 -> ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) -> [x:=x+(c()*t);]p(x)))
 End.
 
-/* @Derived! */
-Axiom "Dsol& differential equation solution".
-  <{x'=c()&q(x)}>p(x) <-> \exists t (t>=0 & ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))
+/** @Derived from DW (not implementable for technical reasons - abstraction of c, ??) */
+Axiom "DX differential skip".
+  [{c&H(??)}]p(??) -> (H(??)->p(??))
 End.
 
 /**
@@ -426,9 +401,9 @@ End.
  */
 
 Axiom "DE differential effect (system)".
-    /* @NOTE Soundness: AtomicODE requires explicit-form so f(??) cannot verbatim mention differentials/differential symbols */
-    /* @NOTE Completeness: reassociate needed in DifferentialProduct data structures */
-    [{x'=f(??),c&H(??)}]p(??) <-> [{c,x'=f(??)&H(??)}][x':=f(??);]p(??)
+  /* @NOTE Soundness: AtomicODE requires explicit-form so f(??) cannot verbatim mention differentials/differential symbols */
+  /* @NOTE Completeness: reassociate needed in DifferentialProduct data structures */
+  [{x'=f(??),c&H(??)}]p(??) <-> [{c,x'=f(??)&H(??)}][x':=f(??);]p(??)
 End.
 
 /**
@@ -443,17 +418,6 @@ Axiom "|' derive or".
   (p(??) | q(??))' <-> ((p(??)') & (q(??)'))
   /* sic! */
 End.
-
-/*
-Axiom "forall' derive forall".
-  (\forall x p(??))' <-> (\forall x (p(??)'))
-End.
-
-Axiom "exists' derive exists".
-  (\exists x p(??))' <-> (\forall x (p(??)'))
-   sic!
-End.
-*/
 
 Axiom "c()' derive constant fn".
   c()' = 0
@@ -516,14 +480,11 @@ Axiom "^' derive power".
 	((f(??)^(c()))' = (c()*(f(??)^(c()-1)))*(f(??)')) <- (c() != 0)
 End.
 
-Axiom "x' derive variable".
-  \forall x_ ((x_)' = x_')
+Axiom "x' derive var".
+   ((x_)' = x_')
 End.
 
-/**
- * EXCLUSIVELY FOR HYBRID PROGRAMS.
- * UNSOUND FOR HYBRID GAMES.
- */
+/** EXCLUSIVELY FOR HYBRID PROGRAMS. UNSOUND FOR HYBRID GAMES. */
 
 /* @NOTE requires removing axioms unsound for hybrid games */
 /*Axiom "<d> dual".
@@ -547,95 +508,15 @@ Axiom "I induction".
   /*@TODO Drop or Use this form instead? which is possibly more helpful: ([{a;}*](p(??) -> [a;] p(??))) -> (p(??) -> [{a;}*]p(??)) THEORY */
   (p(??) & [{a;}*](p(??) -> [a;] p(??))) -> [{a;}*]p(??)
 End.
-
-/**
- * Real arithmetic
- */
-
-Axiom "= reflexive".
-  s() = s()
-End.
-
-/* Unused so far @todo use f(), g() etc instead of r,s
-Axiom "+ associative".
-  (r + s) + t = r + (s + t)
-End.
-
-Axiom "* associative".
-  (r * s) * t = r * (s * t)
-End.
-
-Axiom "+ commutative".
-  s+t = t+s
-End.
-
-Axiom "* commutative".
-  s*t = t*s
-End.
-
-Axiom "distributive".
-  r*(s+t) = (r*s) + (r*t)
-End.
-
-Axiom "+ identity".
-  s + 0 = s
-End.
-
-Axiom "* identity".
-  s * 1 = s
-End.
-
-Axiom "+ inverse".
-  s + (-s) = 0
-End.
-
-Axiom "* inverse".
-  s != 0 -> s * (s^-1) = 1
-End.
-
-Axiom "positivity".
-  0 < s | 0 = s | 0 < -s
-End.
-
-Axiom "+ closed".
-  (0 < s & 0 < t) -> 0 < s+t
-End.
-
-Axiom "* closed".
-  (0 < s & 0 < t) -> 0 < s*t
-End.
-
-Axiom "<".
-  (s<t) <-> (0 < t-s)
-End.
-
-Axiom ">".
-  (s>t) <-> (t<s)
-End.
-*/
-
-Axiom "= commute".
-  (f()=g()) <-> (g()=f())
-End.
-
-Axiom "<=".
-  (f()<=g()) <-> ((f()<g()) | (f()=g()))
-End.
-
-Axiom "= negate".
-  (!(f() != g())) <-> (f() = g())
-End.
-
-Axiom "< negate".
-  (!(f() >= g())) <-> (f() < g())
-End.
-
-Axiom ">= flip".
-  (f() >= g()) <-> (g() <= f())
-End.
-
-Axiom "> flip".
-  (f() > g()) <-> (g() < f())
-End.
 """
+  /*
+  Axiom "forall' derive forall".
+  (\forall x p(??))' <-> (\forall x (p(??)'))
+End.
+
+Axiom "exists' derive exists".
+  (\exists x p(??))' <-> (\forall x (p(??)'))
+  /* sic! */
+End.
+   */
 }

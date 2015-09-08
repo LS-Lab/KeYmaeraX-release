@@ -4,17 +4,15 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import java.io.PrintWriter
-
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal, TraverseToPosition}
 import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.localQuantifierElimination
+import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
-import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.{diamondDiffSolveT, diamondDiffSolve2DT, diffIntroduceConstantT}
+import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.{diamondDiffSolve2DT, diffIntroduceConstantT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{onBranch,locateAnte,locateSucc}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT,cutT,hideT}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.{getFormula,isFormula}
@@ -22,7 +20,6 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{NilT,NilPT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import scala.collection.immutable
-import scala.collection.immutable.SortedSet
 import scala.compat.Platform
 import scala.language.postfixOps
 
@@ -34,36 +31,40 @@ import scala.language.postfixOps
  * @see "Stefan Mitsch and André Platzer. ModelPlex: Verified runtime validation of verified cyber-physical system models.
 In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014, Toronto, ON, Canada, September 22-25, 2014. Proceedings, volume 8734 of LNCS, pages 199-214. Springer, 2014."
  */
-object ModelPlex extends (List[Variable] => (Formula => Formula)) {
+object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
 
   /**
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
-   * @todo Add a parameter to determine controller monitor versus model monitor versus prediction monitor.
    */
-  def apply(formula: Formula, checkProvable: Boolean = true): Formula = formula match {
+  def apply(formula: Formula, kind: Symbol, checkProvable: Boolean = true): Formula = formula match {
     case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
       //@todo explicitly address DifferentialSymbol instead of exception
       val vars = StaticSemantics.boundVars(controller).toSymbolSet.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
       val sortedVars = vars.sortWith((x,y)=>x<y)
-      (apply(sortedVars, checkProvable))(formula)
+      apply(sortedVars, kind, checkProvable)(formula)
     case _ => throw new IllegalArgumentException("Unsupported shape of formula " + formula)
   }
 
   /**
     * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
-    * @todo Add a parameter to determine controller monitor versus model monitor versus prediction monitor.
     */
-  def apply(vars: List[Variable]): (Formula => Formula) = apply(vars, true)
+  def apply(vars: List[Variable], kind: Symbol): (Formula => Formula) = apply(vars, kind, checkProvable=true)
 
   /**
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
-   * @todo Add a parameter to determine controller monitor versus model monitor versus prediction monitor.
+   @ param kind The kind of monitor, either 'ctrl or 'model.
    * @param checkProvable true to check the Provable proof certificates (recommended).
    */
-  def apply(vars: List[Variable], checkProvable: Boolean): (Formula => Formula) = formula => {
-    val mxInputFml = modelplexControllerMonitorTrafo(formula, vars)
+  def apply(vars: List[Variable], kind: Symbol, checkProvable: Boolean): (Formula => Formula) = formula => {
+    require(kind == 'ctrl || kind == 'model, "Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model")
+    val mxInputFml = modelplexControllerMonitorTrafo(formula/*, vars*/)
     val mxInputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
-    val tactic = locateSucc(modelplexInPlace(useOptOne=true))
+    val tactic = kind match {
+      case 'ctrl => locateSucc(modelplexInPlace(useOptOne=true)(controllerMonitorT))
+      case 'model => locateSucc(modelplexInPlace(useOptOne=true)(modelMonitorT))
+      case _ => throw new IllegalArgumentException("Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model")
+    }
+
     val proofStart = Platform.currentTime
     val rootNode = new RootNode(mxInputSequent)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
@@ -95,8 +96,8 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     }
   }
 
-  /** Construct ModelPlex Controller Monitor specification formula corresponding to given formula for monitoring the given variables. */
-  def modelplexControllerMonitorTrafo(fml: Formula, vars: List[Variable]): Formula = {
+  /** Construct ModelPlex Controller Monitor specification formula corresponding to given formula. */
+  def modelplexControllerMonitorTrafo(fml: Formula, vars: Variable*): Formula = {
     require(vars.nonEmpty, "ModelPlex expects non-empty list of variables to monitor")
     val varsSet = vars.toSet
     require(StaticSemantics.symbols(fml).intersect(
@@ -104,23 +105,13 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
         vars.toSet[Variable].map(v=>Function(v.name + "post", v.index, Unit, v.sort))
     ).isEmpty, "ModelPlex pre and post function symbols do not occur in original formula")
     fml match {
-      // models of the form (ctrl;plant)*
-      case Imply(assumptions, Box(Loop(Compose(controller, ODESystem(_, _))), _)) =>
-        //@todo explicitly address DifferentialSymbol instead of skipping
-        require(StaticSemantics.boundVars(controller).toSymbolSet.forall(v => !v.isInstanceOf[Variable] || varsSet.contains(v.asInstanceOf[Variable])),
-          "all bound variables " + StaticSemantics.boundVars(controller).prettyString + " must occur in monitor list " + vars.mkString(", ") +
-            "\nMissing: " + (StaticSemantics.boundVars(controller).toSymbolSet.toSet diff varsSet.toSet).mkString(", "))
+      case Imply(assumptions, Box(prg, _)) =>
+        assert(StaticSemantics.boundVars(prg).toSymbolSet.forall(v => !v.isInstanceOf[Variable] || vars.contains(v.asInstanceOf[Variable])),
+          "all bound variables " + StaticSemantics.boundVars(prg).prettyString + " must occur in monitor list " + vars.mkString(", ") +
+            "\nMissing: " + (StaticSemantics.boundVars(prg).toSymbolSet.toSet diff vars.toSet).mkString(", "))
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
-        //Imply(assumptions, Diamond(controller, posteqs))
         //@note suppress assumptions since at most those without bound variables are still around.
-        Imply(True, Diamond(controller, posteqs))
-      // models of the form (plant)
-      case Imply(assumptions, Box(ODESystem(_, _), _)) =>
-        //@todo require bound variables
-        val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
-        Imply(assumptions, Diamond(Test(True), posteqs))
-        //@note suppress assumptions since at most those without bound variables are still around.
-        Imply(True, Diamond(Test(True), posteqs))
+        Imply(True, Diamond(prg, posteqs))
       case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
     }
   }
@@ -142,7 +133,7 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
             (locateSucc(diamondSeqT) | locateSucc(diamondChoiceT) | locateSucc(diamondNDetAssign) |
              locateSucc(diamondModelplexTestT) | locateSucc(diamondAssignEqualT) |
              locateSucc(substitutionDiamondAssignT) | locateSucc(v2vAssignT) |
-             locateSucc(diamondDiffSolveT) | locateSucc(diamondDiffSolve2DT)) &
+             locateSucc(diamondDiffSolve2DT)) &
             debugT("After  HP") &
             ((locateSucc(mxPropositionalRightT) | locateSucc(optimizationOneAt()) | locateAnte(PropositionalLeftT) |
               locateAnte(optimizationOneAt()))*)
@@ -179,9 +170,10 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
   }
 
   /** ModelPlex proof tactic for monitor synthesis (in-place version) */
-  def modelplexInPlace(useOptOne: Boolean, time: Option[Variable] = None) = new PositionTactic("Modelplex In-Place") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Imply(_, Diamond(_, _)) => true
+  def modelplexInPlace(useOptOne: Boolean, time: Option[Variable] = None)
+                      (unprog: (Boolean, Option[Variable]) => PositionTactic) = new PositionTactic("Modelplex In-Place") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
+      case Some(Imply(_, Diamond(_, _))) => true
       case _ => false
     }
 
@@ -189,7 +181,7 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(ImplyRightT(p) & ((debugT("Before HP") & hp(useOptOne, time)(p) & debugT("After  HP"))*) &
+        Some(ImplyRightT(p) & ((debugT("Before HP") & unprog(useOptOne, time)(p) & debugT("After  HP"))*) &
           debugT("Done with transformation, now looking for quantifiers") &
           (atOutermostQuantifier(TacticLibrary.debugAtT("Local quantifier elimination") & localQuantifierElimination)(p) | NilT) &
           debugT("Modelplex done")
@@ -198,41 +190,45 @@ object ModelPlex extends (List[Variable] => (Formula => Formula)) {
     }
   }
 
-  def hp(useOptOne: Boolean, time: Option[Variable]) = locateT(
+  def controllerMonitorT(useOptOne: Boolean, time: Option[Variable]): PositionTactic = locateT(
+    TactixLibrary.useAt("<*> approx", PosInExpr(1::Nil)) ::
+    TactixLibrary.useAt("DX diamond differential skip", PosInExpr(1::Nil)) ::
     diamondSeqT ::
     diamondChoiceT ::
     (diamondNDetAssign & (if (useOptOne) optimizationOne() else NilPT)) ::
-//    diamondModelplexTestT ::
     diamondTestT ::
     substitutionDiamondAssignT ::
     v2vAssignT ::
     (diamondAssignEqualT & (if (useOptOne) optimizationOne() else NilPT)) ::
-    mxDiamondDiffSolveT ::
-//    (diamondDiffSolve2DT /*& (if (useOptOne && time.isDefined) optimizationOne(Some(Variable("t", None, Real), time.get)) else NilPT)*/) ::
     (mxDiamondDiffSolve2DT & (if (useOptOne) optimizationOne() else NilPT)) ::
+    boxAssignBaseT ::
     Nil)
 
-  private def mxDiamondDiffSolveT: PositionTactic = new PositionTactic("<'> differential solution") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Diamond(ODESystem(AtomicODE(DifferentialSymbol(_), _), _), _) => true
-      case _ => false
-    }
+  def modelMonitorT(useOptOne: Boolean, time: Option[Variable]): PositionTactic = locateT(
+    TactixLibrary.useAt("<*> approx", PosInExpr(1::Nil)) ::
+    diamondSeqT ::
+    diamondChoiceT ::
+    (diamondNDetAssign & (if (useOptOne) optimizationOne() else NilPT)) ::
+    diamondTestT ::
+    substitutionDiamondAssignT ::
+    v2vAssignT ::
+    (diamondAssignEqualT & (if (useOptOne) optimizationOne() else NilPT)) ::
+    (mxDiamondDiffSolve2DT & (if (useOptOne) optimizationOne() else NilPT)) ::
+    boxAssignBaseT ::
+    Nil)
 
-    override def apply(p: Position): Tactic = (diffIntroduceConstantT & diamondDiffSolveT)(p)
-  }
-
-  private def mxDiamondDiffSolve2DT: PositionTactic = new PositionTactic("<','> differential solution") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Diamond(ODESystem(DifferentialProduct(
+  def mxDiamondDiffSolve2DT: PositionTactic = new PositionTactic("<','> differential solution") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
+      case Some(Diamond(ODESystem(DifferentialProduct(
       AtomicODE(DifferentialSymbol(_), _),
-      AtomicODE(DifferentialSymbol(_), _)), _), _) => true
+      AtomicODE(DifferentialSymbol(_), _)), _), _)) => true
       case _ => false
     }
 
     override def apply(p: Position): Tactic = (diffIntroduceConstantT & diamondDiffSolve2DT)(p)
   }
 
-  def locateT(tactics: List[PositionTactic]) = new PositionTactic("Modelplex Locate") {
+  def locateT(tactics: List[PositionTactic]): PositionTactic = new PositionTactic("Modelplex Locate") {
     override def applies(s: Sequent, p: Position): Boolean = locate(tactics, s, p) != NilT
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {

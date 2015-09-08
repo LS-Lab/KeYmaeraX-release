@@ -5,6 +5,7 @@
 package test
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.{SuccPosition, PosInExpr, Position, AntePosition}
 import scala.util.Random
 import scala.collection.immutable._
 
@@ -27,6 +28,10 @@ class RandomFormula(val rand : Random = new Random()) {
 
   def nextDotProgram(size : Int) = nextP(nextNames("z", size / 3 + 1), size, true)
 
+  def nextPosition(size : Int): Position = if (rand.nextBoolean())
+    AntePosition(rand.nextInt(size), PosInExpr(nextPos(size)))
+  else
+    SuccPosition(rand.nextInt(size), PosInExpr(nextPos(size)))
 
   def unfoldRight[A, B](seed: B)(f: B => Option[(A,B)]): List[A] = f(seed) match {
     case Some((a,b)) => a :: unfoldRight(b)(f)
@@ -40,11 +45,17 @@ class RandomFormula(val rand : Random = new Random()) {
       Some((Variable(name + n, None, Real), n-1))
       //Some(("x" + (rand.alphanumeric take 5).fold("")((s:String,t:String)=>s+t), n-1))
   }.to[IndexedSeq]
-  
+
+  private def nextPos(n : Int) : List[Int] = {
+    require(n >= 0)
+    if (n == 0 || rand.nextFloat() <= shortProbability) return Nil
+    (if (rand.nextBoolean()) 1 else 0) :: nextPos(n - 1)
+  }
+
   def nextF(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : Formula = {
 	  require(n>=0)
-	  if (n == 0 || rand.nextFloat()<=shortProbability) return return if (dots && rand.nextInt(100)>=70) DotFormula else True
-      val r = rand.nextInt(if (dots) 290 else 300/*+1*/)
+	  if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=70) {assert(dots);DotFormula} else True
+      val r = rand.nextInt(if (dots) 300 else 290)
       r match {
         case 0 => False
         case 1 => True
@@ -64,14 +75,14 @@ class RandomFormula(val rand : Random = new Random()) {
 //case it if 110 until 170 contains it => True
         case it if 170 until 230 contains it => Box(nextP(vars, n-1, dots), nextF(vars, n-1, dots))
         case it if 230 until 290 contains it => Diamond(nextP(vars, n-1, dots), nextF(vars, n-1, dots))
-		    case it if 290 until 400 contains it => DotFormula
+		    case it if 290 until 400 contains it => assert(dots); DotFormula
         case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range " + r)
       }
   }
 
   def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : Term = {
       require(n>=0)
-      if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=50) DotTerm else Number(BigDecimal(0))
+      if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=50) {assert(dots); DotTerm} else Number(BigDecimal(0))
       // TODO IfThenElseTerm not yet supported
       val r = rand.nextInt(if (dots) 70 else 60/*+1*/)
 	    r match {
@@ -83,7 +94,7 @@ class RandomFormula(val rand : Random = new Random()) {
         case it if 40 until 50 contains it => Times(nextT(vars, n-1, dots), nextT(vars, n-1, dots))
         case it if 50 until 55 contains it => Divide(nextT(vars, n-1, dots), nextT(vars, n-1, dots))
         case it if 55 until 60 contains it => Power(nextT(vars, n-1, dots), Number(BigDecimal(rand.nextInt(6))))
-        case it if 60 until 100 contains it => DotTerm
+        case it if 60 until 100 contains it => assert(dots); DotTerm
         // TODO IfThenElseTerm not yet supported
 //        case it if 60 until 62 contains it => IfThenElseTerm(nextF(vars, n-1), nextT(vars, n-1), nextT(vars, n-1))
 		    case _ => throw new IllegalStateException("random number generator range for term generation produces the right range " + r)

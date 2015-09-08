@@ -437,9 +437,29 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val s0 = new RootNode(sequent(Nil, Nil, "a=a".asFormula :: Nil))
     helper.runTactic(arith, s0) shouldBe 'closed
   }
-  it should "NOT be provable 1" in {
+  it should "be provable 1" in { //@todo why not?
     val arith = arithmeticT
     val s1 = new RootNode(sequent(Nil, Nil, "f(x)=f(x)".asFormula :: Nil))
+    helper.runTactic(arith, s1) shouldBe 'closed
+  }
+  it should "NOT be provable 1b" in {
+    val arith = arithmeticT
+    val s1 = new RootNode(sequent(Nil, Nil, "f(x)=g(x)".asFormula :: Nil))
+    helper.runTactic(arith, s1).openGoals() should have size 1
+  }
+  it should "NOT be provable 1c" in {
+    val arith = arithmeticT
+    val s1 = new RootNode(sequent(Nil, Nil, "f(x)=f(y)".asFormula :: Nil))
+    helper.runTactic(arith, s1).openGoals() should have size 1
+  }
+  it should "NOT be provable 1d" in {
+    val arith = arithmeticT
+    val s1 = new RootNode(sequent(Nil, Nil, "f(x)=f(x_0)".asFormula :: Nil))
+    helper.runTactic(arith, s1).openGoals() should have size 1
+  }
+  it should "NOT be provable 1e" in {
+    val arith = arithmeticT
+    val s1 = new RootNode(sequent(Nil, Nil, "f(x_0)=f(x_1)".asFormula :: Nil))
     helper.runTactic(arith, s1).openGoals() should have size 1
   }
   it should "be provable 2" in {
@@ -452,14 +472,24 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val s3 = new RootNode(sequent(Nil, "f(x)=y".asFormula :: Nil, "f(x)=f(x)".asFormula :: Nil))
     helper.runTactic(arith, s3) shouldBe 'closed
   }
-  it should "NOT be provable 4" in {
+  it should "be provable 4" in { //@todo why not?
     val arith = arithmeticT
     val s4 = new RootNode(sequent(Nil, Nil, "f(x)=y".asFormula  :: "f(x)=f(x)".asFormula :: Nil))
+    helper.runTactic(arith, s4) shouldBe 'closed
+  }
+  it should "NOT be provable 4b" in {
+    val arith = arithmeticT
+    val s4 = new RootNode(sequent(Nil, Nil, "f(x)=y".asFormula  :: "f(x)=f(y)".asFormula :: Nil))
     helper.runTactic(arith, s4).openGoals() should have size 1
   }
-  it should "NOT be provable 5" in {
+  it should "be provable 5" in { //@todo why not?
     val arith = arithmeticT
     val s5 = new RootNode(sequent(Nil, "!(f(x)=f(x))".asFormula :: "!(f(x)=y)".asFormula :: Nil, Nil))
+    helper.runTactic(arith, s5) shouldBe 'closed
+  }
+  it should "NOT be provable 5b" in {
+  val arith = arithmeticT
+    val s5 = new RootNode(sequent(Nil, "!(f(x)=f(y))".asFormula :: "!(f(x)=y)".asFormula :: Nil, Nil))
     helper.runTactic(arith, s5).openGoals() should have size 1
   }
 

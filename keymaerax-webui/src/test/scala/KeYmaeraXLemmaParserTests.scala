@@ -5,7 +5,7 @@
 
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLemmaParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
@@ -41,7 +41,7 @@ class KeYmaeraXLemmaParserTests extends FlatSpec with Matchers {
       """.stripMargin
     val (name, formula, evidence) = KeYmaeraXLemmaParser(input)
 
-    name shouldBe "This is a lemma"
+    name shouldBe Some("This is a lemma")
     formula shouldBe "[x:=2;]x>0".asFormula
     evidence shouldBe new ToolEvidence(Map(
       "name" -> "KeYmaera X",
@@ -59,5 +59,30 @@ class KeYmaeraXLemmaParserTests extends FlatSpec with Matchers {
           |
           |new Example1Tactic""".stripMargin,
       "proof" -> ""))
+  }
+
+  it should "parse a lemma without name correctly" in {
+    val qq = "\"\"\"\""
+    val input =
+    // uses $qq to generate quadruple " because \" doesn't work inside """ """ strings
+      s"""
+         |Lemma "".
+         |  2>0 <-> true
+         |End.
+         |
+         |Tool.
+         |  name ${qq}Mathematica$qq
+         |  input ${qq}2>0$qq
+         |  output ${qq}true$qq
+         |End.
+      """.stripMargin
+    val (name, formula, evidence) = KeYmaeraXLemmaParser(input)
+
+    name shouldBe None
+    formula shouldBe "2>0 <-> true".asFormula
+    evidence shouldBe new ToolEvidence(Map(
+      "name" -> "Mathematica",
+      "input" -> "2>0",
+      "output" -> "true"))
   }
 }

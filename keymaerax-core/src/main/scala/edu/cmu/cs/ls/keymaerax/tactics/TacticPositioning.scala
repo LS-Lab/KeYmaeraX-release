@@ -10,6 +10,7 @@ import scala.language.implicitConversions
 /**
  * Position within an expression as a list of subexpressions.
  * 0 is first child, 1 is second child, 2 is third child.
+ * @see [[Context.at()]]
  */
 case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
@@ -20,6 +21,8 @@ case class PosInExpr(pos: List[Int] = Nil) {
   def child: PosInExpr = PosInExpr(pos.tail)
   /** The parent of this position, i.e., one level up */
   def parent: PosInExpr = PosInExpr(pos.dropRight(1))
+  /** The sibling of this position */
+  def sibling: PosInExpr = PosInExpr(pos.dropRight(1) :+ (1-pos.last))
 
   /** first child 0 */
   def first:  PosInExpr = new PosInExpr(pos :+ 0)
@@ -35,6 +38,7 @@ case class PosInExpr(pos: List[Int] = Nil) {
   def isPrefixOf(p: PosInExpr): Boolean = p.pos.startsWith(pos)
 
   override def toString: String = "PosInExpr(" + pos.mkString(".") + ")"
+  def prettyString: String = "." + pos.mkString(".")
 }
 
 // @note observe that HereP and PosInExpr([]) will be equals, since PosInExpr is a case class
@@ -72,16 +76,18 @@ object HereP extends PosInExpr
       clone(index)
     } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr == HereP)
 
+    /** Concatenate this with p2: Append p2 to this position */
+    def append(p2 : PosInExpr): Position = subPos(p2)
+
     /**
      * @param p The additional portion to append onto PosInExpr
      * @return A subposition.
      */
-    def subPos(p : PosInExpr) = {
-      if(this.isAnte)
-        AntePosition(this.index, this.inExpr.append(p))
-      else
-        SuccPosition(this.index, this.inExpr.append(p))
+    def subPos(p : PosInExpr): Position = {navigate(this.inExpr.append(p))
     } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr.pos.equals(this.inExpr.pos ++ p.pos) && this.inExpr.isPrefixOf(r.inExpr))
+
+    /** Return a position with inExpr replaced by p */
+    def navigate(p : PosInExpr): Position
 
     /**
      * Whether this position is a top-level position of a sequent.
@@ -100,9 +106,10 @@ object HereP extends PosInExpr
     protected def clone(i: Int, e: PosInExpr = HereP): Position
 
     override def toString: String = (if (isAnte) "Ante" else "Succ") + "(" + getIndex + ", " + inExpr.pos.mkString(".") + ")"
+    def prettyString: String = top.getPos + "." + inExpr.pos.mkString(".")
   }
 
-@deprecated("Automated position converters should be removed ultimately.")
+@deprecated("Automated position converters should be removed.")
 object Position {
   //@deprecated("Move as implicit definition to tactics and then ultimately remove")
   //@todo could also use p.top
@@ -116,11 +123,16 @@ object Position {
   //implicit def position2SuccPos(p: Position) : SuccPos = if (!p.isAnte) new SuccPos(p.index) else throw new IllegalArgumentException("Wrong position side " + p)
 
   implicit def seqPos2Position(p: SeqPos) : Position = if (p.isAnte) new AntePosition(p.getIndex, HereP) else new SuccPosition(p.getIndex, HereP)
+  def seqPos2Position(p: SeqPos, posInExpr: List[Int]) : Position = if (p.isAnte) new AntePosition(p.getIndex, PosInExpr(posInExpr)) else new SuccPosition(p.getIndex, PosInExpr(posInExpr))
 }
 
   class AntePosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
     def isAnte = true
     protected def clone(i: Int, e: PosInExpr): Position = new AntePosition(i, e)
+    /** Return a position with inExpr replaced by p */
+    def navigate(p : PosInExpr): AntePosition = {new AntePosition(this.index, p)
+    } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr == p)
+    override def append(p2 : PosInExpr): AntePosition = navigate(inExpr.append(p2))
     def +(i: Int) = AntePosition(index + i, inExpr)
     def first: Position = AntePosition(index, inExpr.first)
     def second: Position = AntePosition(index, inExpr.second)
@@ -136,6 +148,9 @@ object Position {
   class SuccPosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
     def isAnte = false
     protected def clone(i: Int, e: PosInExpr): Position = new SuccPosition(i, e)
+    def navigate(p : PosInExpr): SuccPosition = {new SuccPosition(this.index, p)
+    } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr == p)
+    override def append(p2 : PosInExpr): SuccPosition = navigate(inExpr.append(p2))
     def +(i: Int) = SuccPosition(index + i, inExpr)
     def first: Position = SuccPosition(index, inExpr.first)
     def second: Position = SuccPosition(index, inExpr.second)

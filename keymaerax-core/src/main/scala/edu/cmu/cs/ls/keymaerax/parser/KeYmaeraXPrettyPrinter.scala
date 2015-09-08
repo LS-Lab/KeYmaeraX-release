@@ -6,6 +6,7 @@
  * Differential Dynamic Logic pretty printer in concrete KeYmaera X notation.
  * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ * @note Code Review 2015-08-24
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -44,7 +45,6 @@ object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
 class KeYmaeraXPrinter extends PrettyPrinter {
-//  private val verboseParens = true
 
   import OpSpec.op
   import OpSpec.statementSemicolon
@@ -62,6 +62,12 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       "\nExpression: " + fullPrinter(reparse(expr, stringify(expr))) + " @ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
       "\nExpected:   " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName
     )
+
+  /** Pretty-print sequent to a string */
+  def apply(seq: Sequent): String =
+    (1 to seq.ante.length).map(i => -i + ":  " + apply(seq.ante(i-1)) + "\t" + seq.ante(i-1).getClass.getSimpleName).mkString("\n") +
+      "\n  ==>  \n" +
+      (1 to seq.succ.length).map(i => +i + ":  " + apply(seq.succ(i-1)) + "\t" + seq.succ(i-1).getClass.getSimpleName).mkString("\n")
 
   def parser: KeYmaeraXParser.type = KeYmaeraXParser
   def fullPrinter: (Expression => String) = FullPrettyPrinter
@@ -103,10 +109,11 @@ class KeYmaeraXPrinter extends PrettyPrinter {
    */
   protected def skipParensRight(t: BinaryComposite): Boolean = false
 
+
   /**@NOTE The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ... */
   private val LEXSPACE: String = " "
 
-  private def pp(term: Term): String = term match {
+  private def pp(term: Term): String = emit(term match {
     case DotTerm|Anything|Nothing=> op(term).opcode
     case x: Variable            => x.asString
     case DifferentialSymbol(x)  => pp(x) + op(term).opcode
@@ -122,9 +129,9 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       (if (skipParensLeft(t)) pp(t.left) else "(" + pp(t.left) + ")") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "(" + pp(t.right) + ")")
-  }
+  })
 
-  private def pp(formula: Formula): String = formula match {
+  private def pp(formula: Formula): String = emit(formula match {
     case True|False|DotFormula  => op(formula).opcode
     case PredOf(p, c)           => p.asString + "(" + pp(c) + ")"
     case PredicationalOf(p, c)  => p.asString + "{" + pp(c) + "}"
@@ -140,13 +147,13 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       (if (skipParensLeft(t)) pp(t.left) else "(" + pp(t.left) + ")") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "(" + pp(t.right) + ")")
-  }
+  })
 
-  private def pp(program: Program): String = program match {
+  private def pp(program: Program): String = emit(program match {
     case a: ProgramConst        => statement(a.asString)
     case Assign(x, e)           => statement(pp(x) + op(program).opcode + pp(e))
-    case AssignAny(x)           => statement(pp(x) + op(program).opcode)
     case DiffAssign(xp, e)      => statement(pp(xp) + op(program).opcode + pp(e))
+    case AssignAny(x)           => statement(pp(x) + op(program).opcode)
     case Test(f)                => statement(op(program).opcode + pp(f))
     case ODESystem(ode, f)      => "{" + ppODE(ode) + (if (false && f==True) "" else op(program).opcode + pp(f)) + "}"
     //@note unambiguously reparse as ODE not as equation that happens to involve a differential symbol.
@@ -156,6 +163,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case t: UnaryCompositeProgram => "{" + pp(t.child) + "}" + op(program).opcode
     //case t: UnaryCompositeProgram=> (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     case t: Compose if OpSpec.statementSemicolon =>
+      //@note in statementSemicolon mode, suppress opcode of Compose since already after each statement
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         /*op(t).opcode + */
         (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
@@ -163,9 +171,9 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
-  }
+  })
 
-  private def ppODE(program: DifferentialProgram): String = program match {
+  private def ppODE(program: DifferentialProgram): String = emit(program match {
     case a: DifferentialProgramConst => a.asString
     case AtomicODE(xp, e)       => pp(xp) + op(program).opcode + pp(e)
     case t: DifferentialProduct =>
@@ -173,7 +181,10 @@ class KeYmaeraXPrinter extends PrettyPrinter {
         op(t).opcode +
         (if (skipParensRight(t)) ppODE(t.right) else "{" + ppODE(t.right) + "}")
     case ODESystem(ode, f)      => assert(false, "ODESystem does not occur recursively"); ??? //{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
-  }
+  })
+
+  /** Emit the string s as a result of the pretty-printer for an expression */
+  protected def emit(s: String): String = s
 
   /** Formatting the atomic statement s */
   private def statement(s: String): String = if (statementSemicolon) s + ";" else s
@@ -226,5 +237,6 @@ class KeYmaeraXPrecedencePrinter extends KeYmaeraXPrinter {
  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrinter.fullPrinter]]
  */
 object FullPrettyPrinter extends KeYmaeraXPrinter {
+  //@note no contract to avoid recursive checking of contracts in error messages of KeYmaeraXPrinter.apply
   override def apply(expr: Expression): String = stringify(expr)
 }

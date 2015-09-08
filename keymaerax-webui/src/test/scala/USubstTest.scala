@@ -2,8 +2,11 @@
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
+package edu.cmu.cs.ls.keymaerax.core
+
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest._
 import scala.collection.immutable.List
 
@@ -20,6 +23,7 @@ object OptimisticTest extends Tag("OptimisticTest")
  */
 
 class USubstTests extends FlatSpec with Matchers {
+  KeYmaera.init(Map.empty)
 
   val randomTrials = 40*10 / 20
   val randomComplexity = 20
@@ -337,7 +341,7 @@ class USubstTests extends FlatSpec with Matchers {
           ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
-    it should "instantiate CT from y+z=z+y in more context" taggedAs USubstTest in {
+    ignore should "instantiate CT from y+z=z+y in more context" taggedAs USubstTest in {
         val term1 = "y+z".asTerm
         val term2 = "z+y".asTerm
         val fml = Equal(term1, term2)
@@ -351,7 +355,7 @@ class USubstTests extends FlatSpec with Matchers {
           ))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
-      it should "instantiate CT from y+z=z+y in random context" taggedAs USubstTest in {
+      ignore should "instantiate CT from y+z=z+y in random context" taggedAs USubstTest in {
         for (i <- 1 to randomTrials) {
           val term1 = "y+z".asTerm
           val term2 = "z+y".asTerm
@@ -368,7 +372,7 @@ class USubstTests extends FlatSpec with Matchers {
         }
       }
 
-      it should "instantiate CT from z1+z3*z2=z2*z3+z1 in random context" taggedAs USubstTest in {
+      ignore should "instantiate CT from z1+z3*z2=z2*z3+z1 in random context" taggedAs USubstTest in {
         for (i <- 1 to randomTrials) {
           val term1 = "z1+z3*z2".asTerm
           val term2 = "z2*z3+z1".asTerm
@@ -385,7 +389,7 @@ class USubstTests extends FlatSpec with Matchers {
         }
       }
 
-    it should "instantiate CT from z1*z3-z2=z2-z4/z1 in random context" taggedAs USubstTest in {
+    ignore should "instantiate CT from z1*z3-z2=z2-z4/z1 in random context" taggedAs USubstTest in {
         for (i <- 1 to randomTrials) {
           val term1 = "z1*z3-z2".asTerm
           val term2 = "z2-z4/z1".asTerm
@@ -478,7 +482,7 @@ class USubstTests extends FlatSpec with Matchers {
     }
 
 
-  it should "instantiate CT from z^2*y=-(-z)^2*-y+0" taggedAs USubstTest in {
+  ignore should "instantiate CT from z^2*y=-(-z)^2*-y+0" taggedAs USubstTest in {
         val term1 = "z^2*y".asTerm
         val term2 = "-(-z)^2*-y+0".asTerm
         val fml = Equal(term1, term2)

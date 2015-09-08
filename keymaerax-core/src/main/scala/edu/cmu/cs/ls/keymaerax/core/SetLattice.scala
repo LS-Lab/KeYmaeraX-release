@@ -3,9 +3,9 @@
 * See LICENSE.txt for the conditions of this license.
 */
 /**
- * Set Lattices.
+ * Set Lattices are lattice of finite or cofinite sets.
  * @author smitsch
- * @note Code Review: 2015-05-01
+ * @note Code Review: 2015-08-24
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -38,12 +38,15 @@ sealed trait SetLattice[A] {
   def ++(other: GenTraversableOnce[A]): SetLattice[A]
   /** Set subtraction */
   def --(other: GenTraversableOnce[A]): SetLattice[A]
+  /** Set intersection */
   def intersect(other: immutable.Set[A]): SetLattice[A]
 
   // conversions and mappings
+  /** map a function over this SetLattice */
   def map[B](fun: A => B): SetLattice[B]
 
   def toSetLattice[B >: A]: SetLattice[B]
+  /** Convert to a (finite ordinary) Set if !isInfinite */
   def toSet[B >: A]: Set[B]
   /** Set of verbatim occurring symbols in this (possibly top) SetLattice */
   def toSymbolSet[B >: A]: Set[B]
@@ -52,42 +55,45 @@ sealed trait SetLattice[A] {
 
   // binary operations with mixed cases
 
+  /* Subset of */
   def subsetOf(other: SetLattice[A]): Boolean = this match {
     case FiniteLattice(ts) => other match {
       case FiniteLattice(os) => ts.subsetOf(os)
       case os: CoSet[A] => ts.intersect(os.excluded).isEmpty /* this is a subset of that top if that doesn't exclude any of this */
     }
     case ts: CoSet[A] => other match {
-      case FiniteLattice(_) => false           /* top not a subset of anything else */
-      case os: CoSet[A] => os.excluded.subsetOf(ts.excluded) /* this top is a subset of that top if that excluded at most this's excluded */
-
+      case FiniteLattice(_) => false           /* infinite sets are not a subset of any finite set */
+      case os: CoSet[A] => os.excluded.subsetOf(ts.excluded) /* this coset is a subset of that coset if that excluded at most this's excluded */
     }
   }
   /** Set union */
-  def ++(other: SetLattice[A]): SetLattice[A] = other match {
-    case FiniteLattice(os) => this ++ os
+  def ++(other: SetLattice[A]): SetLattice[A] = { other match {
+    case FiniteLattice(os) => this ++ os  // ++(GenTraversableOnce[A])
     case os: CoSet[A] => this match {
-      case FiniteLattice(ts) => os ++ ts   // commute ++ for type reasons
-      case ts: CoSet[A] => new CoSet(ts.excluded.intersect(os.excluded), ts.symbols ++ os.symbols)
+      case FiniteLattice(ts) => os ++ ts   // commute to ++(GenTraversableOnce[A])
+      case ts: CoSet[A] => new CoSet(ts.excluded.intersect(os.excluded), ts.symbols ++ os.symbols)  // union of cosets is intersection of exceptions
     }
-  }
-  def --(other: SetLattice[A]): SetLattice[A] = other match {
-    case FiniteLattice(os) => this -- os
-    case os: CoSet[A] => this match {
-      case FiniteLattice(ts) => FiniteLattice(ts.intersect(os.excluded)) /* ts -- (top except os) == ts/\os */
-      case ts: CoSet[A] => new CoSet(os.excluded -- ts.excluded, ts.symbols -- os.symbols)
-    }
-  }
+  } } ensuring(r => this.subsetOf(r) && other.subsetOf(r), "set union has both constituents as subsets")
 
-  def intersect(other: SetLattice[A]): SetLattice[A] = other match {
+  /** Set subtraction */
+  def --(other: SetLattice[A]): SetLattice[A] = {other match {
+    case FiniteLattice(os) => this -- os   // --(GenTraversableOnce[A])
+    case os: CoSet[A] => this match {
+      case FiniteLattice(ts) => FiniteLattice(ts.intersect(os.excluded))  /* ts -- (all except os) == ts/\os, subtract everything but excluded, so retain excluded */
+      case ts: CoSet[A] => FiniteLattice(os.excluded -- ts.excluded)      /* (all \ t) \ (all \ o) == o \ t, t was excluded and all except o were then removed */
+    }
+  } } ensuring(r => r.subsetOf(this) && r.intersect(other).isEmpty, "set subtraction gives less")
+
+  /** Set intersection */
+  def intersect(other: SetLattice[A]): SetLattice[A] = { other match {
     case FiniteLattice(os) => intersect(os)
     case os: CoSet[A] => this match {
         //@note could do symmetric call as well: os.intersect(ts)
-      case FiniteLattice(ts) => FiniteLattice(ts -- os.excluded) /* ts /\ (top except os) == ts--os */
-      case ts: CoSet[A] => new CoSet(ts.excluded ++ os.excluded, ts.symbols.intersect(os.symbols)) /* (top except ts) /\ (top except os) == (top except ts++os) */
+      case FiniteLattice(ts) => FiniteLattice(ts -- os.excluded) /* ts /\ (all except os) == ts--os, only exclusions disappear upon intersection with infinite sets */
+      case ts: CoSet[A] => new CoSet(ts.excluded ++ os.excluded, ts.symbols.intersect(os.symbols)) /* (top except ts) /\ (top except os) == (top except ts++os), intersection of cosetsd is union of exceptions */
 
     }
-  }
+  } } ensuring( r=> r.subsetOf(this) && r.subsetOf(other), "intersections are subsets of both constituents")
 }
 
 object SetLattice {
@@ -106,11 +112,11 @@ object SetLattice {
    * @return sl ++ sl' where sl' is the lattice containing the primes of the variables in sl.
    */
   def extendToDifferentialSymbols(sl : SetLattice[NamedSymbol]) : SetLattice[NamedSymbol] = sl match {
-    case CoSet(excluded, symbols) if excluded == topVarsDiffVars().asInstanceOf[CoSet[NamedSymbol]].excluded =>
-      // V\cup V' already closed under adding '.
-      //@note Its overapproximation topVarsDiffVars is also closed since DotTerm, DotFormula are not variables
-      CoSet(excluded, extendToDifferentialSymbols(symbols))
     case FiniteLattice(set) => SetLattice(extendToDifferentialSymbols(set))
+    case CoSet(excluded, symbols) if !excluded.exists(x=>x.isInstanceOf[DifferentialSymbol]) =>
+      //@note if no differential symbols were excluded (such as in V\cup V' or topVarsDiffVars),
+      //@note then the lattice is already closed under ' so only literal symbols are augmented with '
+      CoSet(excluded, extendToDifferentialSymbols(symbols))
     case sl:CoSet[NamedSymbol] =>
       assert(false, "Extension to differentialSymbols are not yet implemented if sl isInfinite: " + sl); ???
   }
@@ -131,10 +137,11 @@ object SetLattice {
  * @note Implementation forwards to set.
  * @author Andre Platzer
  */
-private case class FiniteLattice[A](set: immutable.Set[A])
-  extends SetLattice[A] {
+private case class FiniteLattice[A](set: immutable.Set[A]) extends SetLattice[A] {
   def isInfinite = false
   def isEmpty: Boolean = set.isEmpty
+
+  // directly forward to representing set
 
   def contains(elem: A): Boolean = set.contains(elem)
 
@@ -164,27 +171,24 @@ private case class FiniteLattice[A](set: immutable.Set[A])
  * @tparam A The type of elements.
  * @author smitsch
  */
-private case class CoSet[A](excluded: immutable.Set[A], symbols: immutable.Set[A])
-  extends SetLattice[A] {
+private case class CoSet[A](excluded: immutable.Set[A], symbols: immutable.Set[A]) extends SetLattice[A] {
   def isInfinite = true
   def isEmpty = false
-  /* top contains everything that's not excluded */
+  /* Cosets contain everything that's not excluded */
   def contains(e: A): Boolean = !excluded.contains(e)
 
-  /* top excludes one element less now */
+  /* Coset excludes one element less now */
   def +(e: A): CoSet[A] = new CoSet(excluded - e, symbols + e)
-  def ++(other: immutable.Set[A]): CoSet[A] = new CoSet(excluded -- other, symbols ++ other)
   def ++(other: GenTraversableOnce[A]): CoSet[A] = new CoSet(excluded -- other, symbols ++ other)
   /* top now excludes one more element */
   def -(e: A): CoSet[A] = new CoSet(excluded + e, symbols - e)
-  def --(other: immutable.Set[A]): CoSet[A] = new CoSet(excluded ++ other, symbols -- other)
   def --(other: GenTraversableOnce[A]): CoSet[A] = new CoSet(excluded ++ other, symbols -- other)
-  def intersect(other: immutable.Set[A]): SetLattice[A] = FiniteLattice(other -- excluded)   /* (top except ts) /\ os == os--ts */
+  def intersect(other: immutable.Set[A]): SetLattice[A] = FiniteLattice(other -- excluded)   /* (all except ts) /\ os == os--ts */
 
   def map[B](fun: A => B): CoSet[B] = new CoSet(excluded.map(fun), symbols.map(fun))
 
   def toSetLattice[B >: A]: SetLattice[B] = new CoSet(excluded.toSet, symbols.toSet)
-  def toSet[B >: A]: Set[B] = throw new IllegalStateException("SetLattice.top has no set representation")
+  def toSet[B >: A]: Set[B] = throw new IllegalStateException("CoSets are infinite so have no finite Set representation")
   def toSymbolSet[B >: A]: Set[B] = symbols.toSet
 
   override def toString: String = "all but " + excluded.toString

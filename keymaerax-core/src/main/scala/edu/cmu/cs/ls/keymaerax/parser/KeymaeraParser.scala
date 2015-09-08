@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.tactics.{ProofNode, ConfigurableGenerate}
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.lexical._
@@ -27,6 +28,7 @@ import java.io.File
  *      "assignables" (non-rigid, currently called variables)
  *      functions (terms that take arguments
  */
+@deprecated("Use KeYmaeraXParser instead")
 class KeYmaeraParser(enabledLogging: Boolean = false,
                      env: { val generator: ConfigurableGenerate[Formula]} = new { lazy val generator = new ConfigurableGenerate[Formula]()})
   extends RegexParsers with PackratParsers {
@@ -1289,7 +1291,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     lazy val proofParser = {
       lazy val pattern = "Proof." ~> ProofLanguageParser.proofParser <~ "End."
       log(pattern)("Proof evidence") ^^ {
-        case proof => new ProofEvidence(proof)
+        case proof => new ProofEvidence()
       }
     }
     
@@ -1317,7 +1319,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     lazy val externalInfoParser = {
       lazy val pattern = "External." ~> """.*""".r <~ "End."
       log(pattern)("External Proof") ^^ {
-        case file => new ExternalEvidence(new File(file))
+        case file => new ExternalEvidence(/*new File(file)*/)
       }
     }
   }

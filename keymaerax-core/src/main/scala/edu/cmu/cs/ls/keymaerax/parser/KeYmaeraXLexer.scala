@@ -49,7 +49,8 @@ case class IDENT(name: String, index: Option[Int] = None) extends Terminal(name 
   override def regexp = IDENT.regexp
 }
 object IDENT {
-  def regexp = """([a-zA-Z][a-zA-Z0-9\_]*)""".r
+  //@note Pattern is more permissive than NamedSymbol's since Lexer's IDENT will include the index, so xy_95 is acceptable.
+  def regexp = """([a-zA-Z][a-zA-Z0-9]*\_?[0-9]*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 case class NUMBER(value: String) extends Terminal(value) {

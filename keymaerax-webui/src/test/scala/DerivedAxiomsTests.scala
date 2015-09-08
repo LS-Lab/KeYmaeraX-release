@@ -5,23 +5,22 @@
 
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms._
-
-import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
-import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Tool}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms._
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
+import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ProvabilityTestHelper
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.core._
-import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 /**
  * Tests provability of the derived axioms.
  * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
+ * @todo add a reflection-based test at the end that checks all lazy val in DerivedAxioms, even if that does not fail separately it gives exhaustiveness.
  */
 class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
@@ -74,9 +73,17 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
+  it should "prove all eliminate" in {check(allEliminateAxiom)}
+  it should "prove !exists" in {check(notExists)}
+  it should "prove !all" in {check(notAll)}
+  it should "prove ![]" in {check(notBox)}
+  it should "prove !<>" in {check(notDiamond)}
+  it should "prove all distribute" in {check(allDistributeAxiom)}
   it should "prove box dual" in {check(boxDualAxiom)}
+  it should "prove []~><> propagation" in {check{boxDiamondPropagation}}
   it should "prove <:=> assign" in {check(assigndAxiom)}
   it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
+  it should "prove := assign dual" in {check(assignDualAxiom)}
   it should "prove all substitute" in {check(allSubstitute)}
   it should "prove [:=] equational" in {check(assignbEquationalAxiom)}
   it should "prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
@@ -87,6 +94,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove <++> choice" in {check(choicedAxiom)}
   it should "prove <;> compose" in {check(composedAxiom)}
   it should "prove <*> iterate" in {check(iteratedAxiom)}
+  it should "prove <*> approx" in {check(loopApproxd)}
   it should "prove exists generalize" in {check(existsGeneralize)}
   it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
@@ -99,11 +107,39 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove !<-> deMorgan" in {check(notEquiv)}
   it should "prove domain commute" in {check(domainCommute)}
   it should "prove -> expand" in {check(implyExpand)}
+  it should "prove -> tautology" in {check{implyTautology}}
   it should "prove ->'" in {check(Dimply)}
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
+  it should "prove DW differential weakening" in {check(DWeakening)}
   it should "prove DS no domain" in {check(DSnodomain)}
   it should "prove DSol no domain" in {check(DSdnodomain)}
+  it should "prove Dsol& differential equation solution" in {check(DSddomain)}
+//  it should "prove x' derive var" in {check(Dvar)}
+  it should "prove x' derive variable" in {check(Dvariable)}
   it should "prove 'linear" in {check(Dlinear)}
+  it should "prove DG differential pre-ghost" in {check(DGpreghost)}
+  it should "prove DX diamond differential skip" in {check(Dskipd)}
+  it should "prove = reflexive" in {check(equalReflex)}
+  it should "prove = commute" in {check(equalCommute)}
+  it should "prove <=" in {check(lessEqual)}
+  it should "prove = negate" in {check(notNotEqual)}
+  it should "prove < negate" in {check(notGreaterEqual)}
+  it should "prove >= flip" in {check(flipGreaterEqual)}
+  it should "prove > flip" in {check(flipGreater)}
+  it should "prove + associative" in {check(plusAssociative)}
+  it should "prove * associative" in {check(timesAssociative)}
+  it should "prove + commutative" in {check(plusCommutative)}
+  it should "prove * commutative" in {check(timesCommutative)}
+  it should "prove distributive" in {check(distributive)}
+  it should "prove + identity" in {check(plusIdentity)}
+  it should "prove * identity" in {check(timesIdentity)}
+  it should "prove + inverse" in {check(plusInverse)}
+  it should "prove * inverse" in {check(timesInverse)}
+  it should "prove positivity" in {check(positivity)}
+  it should "prove + closed" in {check(plusClosed)}
+  it should "prove * closed" in {check(timesClosed)}
+  it should "prove <" in {check(less)}
+  it should "prove >" in {check(greater)}
   it should "prove abs" in {check(absDef)}
   it should "prove min" in {check(minDef)}
   it should "prove max" in {check(maxDef)}
@@ -118,6 +154,8 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveT)}
   it should "prove !!" in {check(doubleNegationT)}
   it should "prove exists dual" in {check(existsDualT)}
+  it should "prove all eliminate" in {check(allEliminateT)}
+  it should "prove all distribute" in {check(allDistributeT)}
   it should "prove box dual" in {check(boxDualT)}
   it should "prove <:=> assign" in {check(assigndT)}
   it should "prove [:=] equational" in {check(assignbEquationalT)}
@@ -128,11 +166,19 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove <;> compose" in {check(composedT)}
   it should "prove <*> iterate" in {check(iteratedT)}
   it should "prove exists generalize" in {check(existsGeneralizeT)}
+  it should "prove = reflexive" in {check(equalReflexiveT)}
+  it should "prove = commute" in {check(equalCommuteT)}
+  it should "prove <=" in {check(lessEqualT)}
+  it should "prove = negate" in {check(notNotEqualT)}
+  it should "prove < negate" in {check(notGreaterEqualT)}
+  it should "prove >= flip" in {check(flipGreaterEqualT)}
+  it should "prove > flip" in {check(flipGreaterT)}
   it should "prove all substitute" in {check(allSubstituteT)}
   it should "prove vacuous exists" in {check(vacuousExistsT)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetT)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetT)}
   it should "prove \\forall->\\exists" in {check(forallThenExistsT)}
+  it should "prove DG differential pre-ghost" in {check(DGpreghostT)}
   it should "prove abs" in {check(absT)}
   it should "prove min" in {check(minT)}
   it should "prove max" in {check(maxT)}

@@ -5,8 +5,8 @@
 /**
  * Uniform Renaming for KeYmaera X
  * @author Andre Platzer
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
- * @note Code Review: 2015-05-01
+ * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
+ * @note Code Review: 2015-08-24
  */
 package edu.cmu.cs.ls.keymaerax.core
 
@@ -17,22 +17,24 @@ import edu.cmu.cs.ls.keymaerax.core.StaticSemantics
 import scala.collection.immutable
 
 /**
- * Uniformly rename all occurrences of variable what (and its associated DifferentialSymbol) to repl everywhere.
+ * Uniformly rename all occurrences of what and what' to repl and repl' and vice versa.
+ * Uniformly rename all occurrences of variable what (and its associated DifferentialSymbol) to repl everywhere
+ * and vice versa uniformly rename all occurrences of variable repl (and its associated DifferentialSymbol) to what.
  * @param what What variable to replace (along with its associated DifferentialSymbol).
- * @param repl The target variable to replace what with.
- * @requires only used when repl does not occur in the input.
+ * @param repl The target variable to replace what with and vice versa.
  * @author smitsch
  * @author Andre Platzer
  */
 final case class URename(what: Variable, repl: Variable) extends (Expression => Expression) {
-  require(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
-  /** The variables that are not allowed to occur initially */
-  private val taboo: Set[NamedSymbol] = if (repl.sort == Real) Set(repl,DifferentialSymbol(repl)) else Set(repl)
-  /** The variables that are affected and should be gone finally */
-  private val affected: Set[NamedSymbol] = if (what.sort == Real) Set(what,DifferentialSymbol(what)) else Set(what)
+  insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
+//  /** The variables that are not allowed to occur initially */
+//  private val taboo: Set[NamedSymbol] = if (repl.sort == Real) Set(repl,DifferentialSymbol(repl)) else Set(repl)
+//  /** The variables that are affected and should be gone finally */
+//  private val affected: Set[NamedSymbol] = if (what.sort == Real) Set(what,DifferentialSymbol(what)) else Set(what)
 
   /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of what. */
-  private val semanticRenaming: Boolean = true
+  //@todo Code Review: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
+  private val semanticRenaming: Boolean = Rule.LAX_MODE
 
   override def toString: String = "URename{" + what + "~>" + repl + "}"
 
@@ -45,19 +47,19 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   }
 
   /** apply this uniform renaming everywhere in a term */
-  def apply(t: Term): Term = { try rename(t) catch { case ex: ProverException => throw ex.inContext(t.prettyString) }
-  } ensuring(r => StaticSemantics.symbols(t).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + t
-    ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")
+  def apply(t: Term): Term = try rename(t) catch { case ex: ProverException => throw ex.inContext(t.prettyString) }
+    /*ensuring(r => StaticSemantics.symbols(t).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + t
+    ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")*/
 
   /** apply this uniform renaming everywhere in a formula */
-  def apply(f: Formula): Formula = { try rename(f) catch { case ex: ProverException => throw ex.inContext(f.prettyString) }
-  } ensuring(r => StaticSemantics.symbols(f).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + f
-    ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")
+  def apply(f: Formula): Formula = try rename(f) catch { case ex: ProverException => throw ex.inContext(f.prettyString) }
+   /*ensuring(r => StaticSemantics.symbols(f).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + f
+    ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")*/
 
   /** apply this uniform renaming everywhere in a program */
-  def apply(p: Program): Program = { try rename(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
-  } ensuring(r => StaticSemantics.symbols(p).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + p
-    ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")
+  def apply(p: Program): Program = try rename(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
+  /* ensuring(r => StaticSemantics.symbols(p).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + p
+    ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")*/
 
   /**
    * Apply uniform renaming everywhere in the sequent.
@@ -70,7 +72,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   /** Rename a variable (that occurs in the given context for error reporting purposes) */
   private def renameVar(x: Variable, context: Expression): Variable = if (x==what) repl
-  else if (x==repl) throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", context.toString)
+  else if (x==repl) what // throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", context.toString)
   else x
 
 
@@ -98,7 +100,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
     case DotFormula         => if (semanticRenaming) DotFormula else throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
     case True | False       => formula
 
-    // homomorphic base cases
+    // pseudo-homomorphic base cases
     case Equal(l, r)        => Equal(rename(l),        rename(r))
     case NotEqual(l, r)     => NotEqual(rename(l),     rename(r))
     case GreaterEqual(l, r) => GreaterEqual(rename(l), rename(r))

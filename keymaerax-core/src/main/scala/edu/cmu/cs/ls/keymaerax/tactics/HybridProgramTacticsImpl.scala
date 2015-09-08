@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.boxMonotoneT
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverAxiomT, axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
+import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.existsDualT
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT,AxiomCloseT,ImplyLeftT,ImplyRightT,
   ImplyToAndT, cutT, hideT, cohideT, cohide2T, kModalModusPonensT, modusPonensT, uniformSubstT}
@@ -210,133 +211,230 @@ object HybridProgramTacticsImpl {
   }
 
   /**
-   * Creates a new axiom tactic for box assignment [x := t;]. Uses the box assignment tactic most appropriate
-   * for the specific position.
+   * Creates a new axiom tactic for (equational) box assignment [x := t();]p(x) <-> \forall x x=t -> p(x) with
+   * subsequent convenience steps for skolemization. Uses conventional skolemization to fresh variables.
+   * @example{{{
+   *         x_1=2 |- x_1>0
+   *         -------------------boxAssignT(SuccPosition(0))
+   *               |- [x:=2;]x>0
+   * }}}
    * @return The axiom tactic.
    * @author Stefan Mitsch
    */
   def boxAssignT: PositionTactic = boxAssignT(FOQuantifierTacticsImpl.skolemizeT)
-  def boxAssignT(skolemizeHow: Boolean => PositionTactic): PositionTactic =
-      new PositionTactic("[:=] assign equational") {
-    override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
-      case Box(Assign(Variable(_, _, _), _), _) => true
+
+  /**
+   * * Creates a new axiom tactic for (equational) box assignment [x := t();]p(x) <-> \forall x x=t -> p(x) with
+   * subsequent convenience steps for skolemization, using the provided skolemization method.
+   * * @example{{{
+   *         x_1=2 |- x_1>0
+   *         -------------------boxAssignT(skolemizeT)(SuccPosition(0))
+   *               |- [x:=2;]x>0
+   * }}}
+   * @example{{{
+   *         x_1()=2 |- x_1()>0
+   *         ---------------------boxAssignT(skolemizeToFnT)(SuccPosition(0))
+   *                 |- [x:=2;]x>0
+   * }}}
+   * @see [[FOQuantifierTacticsImpl.skolemizeT()]]
+   * @see [[FOQuantifierTacticsImpl.skolemizeToFnT]]
+   * @param skolemMethod The skolemization method
+   * @return The tactic for box assignment.
+   */
+  def boxAssignT(skolemMethod: Boolean => PositionTactic): PositionTactic = new PositionTactic("[:=] assign equational") {
+    override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && boxAssignBaseT.applies(s, p)
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+        if (p.isAnte) Some(boxAssignEqualT(p))
+        else Some(boxAssignBaseT(p) & skolemMethod(true)(p) & ImplyRightT(p))
+    }
+  }
+
+  /**
+   * Creates a new axiom tactic for (equational) box assignment [x := t();]p(x) <-> \forall x x=t -> p(x).
+   * @example{{{
+   *           |- \forall x x=2 -> x>0
+   *         -------------------------boxAssignBaseT(SuccPosition(0))
+   *           |- [x:=2;]x>0
+   * }}}
+   * @return The tactic.
+   */
+  def boxAssignBaseT: PositionTactic = new PositionTactic("[:=] assign equational") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
+      case Some(Box(Assign(Variable(_, _, _), _), _)) => true
       case _ => false
-    })
+    }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
+      //@todo condition for when equational is mandatory -> for now: always
       def assignEqualMandatory(v: Variable, t: Term, rest: Formula) = allNames(t).contains(v) || (rest match {
         case Box(_: DifferentialProgram, _) => true
         case Box(_: Loop, _) => true
         case _ => /* false requires substitution of variables */ true
       })
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case Box(Assign(v: Variable, t: Term), phi) if assignEqualMandatory(v, t, phi) =>
-          if (p.isAnte) Some(boxAssignEqualT(p))
-          // TODO could use v2vAssignT without Skolemize and ImplyRight first
-          else Some(boxAssignEqualT(p) & skolemizeHow(true)(p) & ImplyRightT(p) &
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p).subFormulaAt(p.inExpr) match {
+        case Some(Box(Assign(v: Variable, t: Term), phi)) if assignEqualMandatory(v, t, phi) =>
+          Some(boxAssignEqualT(p) &
             // remove stuttering assignment that may have been introduced, but don't work on assignments that were
             // already present in the original model.
             // (still not perfect, i.e., may handle multiple assignments at once: e.g., x:=x;x:=x;)
-            ifElseT(n => getFormula(n.sequent, p) match {
-              case Box(Assign(v2: Variable, v3: Variable), _) => v.name == v2.name && v.name == v3.name
-              case _ => false }, v2vAssignT(p), NilT))
-        case Box(Assign(v: Variable, t: Term), phi) if !assignEqualMandatory(v, t, phi) =>
+            ifElseT(n => n.sequent(p).subFormulaAt(p.inExpr.first.second) match {
+              case Some(Box(Assign(v2: Variable, v3: Variable), _)) => v.name == v2.name && v.name == v3.name
+              case _ => false }, v2vAssignT(p.first.second), NilT))
+        case Some(Box(Assign(v: Variable, t: Term), phi)) if !assignEqualMandatory(v, t, phi) =>
           Some(substitutionBoxAssignT(p))
         }
       }
   }
 
   /**
-   * Creates a new axiom tactic for diamond assignment equational [x := t;].
-   * @return The axiom tactic.
-   * @author Stefan Mitsch
-   * // TODO provide only one implementation for both box and diamond
+   * Returns a position tactic to apply the := assign dual axiom, which turns a diamond assignment into a box assignment
+   * and vice versa.
+   * @example{{{
+   *           |- [x:=2;]x=2
+   *           -------------assignDual(SuccPosition(0))
+   *           |- <x:=2;>x=2
+   * }}}
+   * @example{{{
+   *           |- <x:=2;>x=2
+   *           -------------assignDual(SuccPosition(0))
+   *           |- [x:=2;]x=2
+   * }}}
+   * @return The tactic to apply the := assign dual axiom.
    */
-  def diamondAssignEqualT: PositionTactic = new PositionTactic("<:=> assign equational") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Diamond(Assign(Variable(_, _,_), _), _) => true
-      case _ => false
+  def assignDualT: PositionTactic = {
+    def g(f: Formula): Formula = f match {
+      case Diamond(prg@Assign(_, _), phi) => Equiv(f, Box(prg, phi))
+      case Box(prg@Assign(_, _), phi) => Equiv(Diamond(prg, phi), f)
+      case _ => False
+    }
+    uncoverAxiomT(":= assign dual", g, _ => assignDualBaseT)
+  }
+  /** Base tactic for assign dual */
+  private def assignDualBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(Diamond(Assign(v, t), p), _) =>
+        val aT = FuncOf(Function("t", None, Unit, v.sort), Nothing)
+        val aP = PredOf(Function("p", None, v.sort, Bool), DotTerm) // p(.)
+        SubstitutionPair(aT, t) :: SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v, DotTerm)) :: Nil
     }
 
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    def alpha(fml: Formula): PositionTactic = fml match {
+      case Equiv(Diamond(Assign(v, _), _), _) =>
+        val aV = Variable("v", None, v.sort)
+        if (v.name != aV.name || v.index != aV.index) {
+          new PositionTactic("Alpha") {
+            override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+              case Equiv(Diamond(Assign(_, _), _), _) => true
+              case _ => false
+            }
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import scala.language.postfixOps
-
-        val f = getFormula(node.sequent, p)
-        // construct a new name for the quantified variable
-        val (newV1, newV2) = f match {
-          case Diamond(Assign(v: Variable, _), _) =>
-            val tIdx = freshIndexInFormula(v.name, f)
-            (Variable(v.name, tIdx, v.sort), Variable(v.name, Some(tIdx.get + 1), v.sort))
-          case _ => throw new IllegalStateException("Checked by applies to never happen")
-        }
-
-        f match {
-          case Diamond(Assign(v: Variable, _), phi: Modal)
-            if loopsAndODEsOf(phi).exists(p => StaticSemantics.symbols(p).contains(v) &&
-              !NameCategorizer.freeVariables(p).contains(v)) => Some(
-            alphaRenamingT(v, newV1)(p.second) & diamondAssignWithoutAlphaT(newV2, checkNewV = false)(p)
-          )
-          case _ => Some(diamondAssignWithoutAlphaT(newV1)(p))
-        }
-      }
+            override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = Some(globalAlphaRenamingT(v, aV))
+              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            }
+          }
+        } else NilPT
     }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
+      case Equiv(Diamond(Assign(v, _), _), _) =>
+        val aV = Variable("v", None, v.sort)
+        if (v.name == aV.name && v.index == aV.index) axiom
+        else replace(axiom)(aV, v)
+    }
+
+    axiomLookupBaseT(":= assign dual", subst, alpha, axiomInstance)
   }
 
   /**
-   * Creates a new axiom tactic for box assignment equational [x := t;].
-   * @return The axiom tactic.
+   * Creates a new axiom tactic for diamond assignment equational &lt;x := t;&gt;. The tactic may introduce
+   * stuttering assignments, if necessary (e.g., when followed by a loop or ODE).
+   * @example{{{
+   *           |- \exists x (x=2+y & x>y)
+   *           --------------------------diamondAssignEqualT(SuccPos(0))
+   *           |- <x:=2+y>(x>y)
+   * }}}
+   * @example{{{
+   *           |- \exists x (x=2 & [x_0:=x]<{x_0'=3}>(x_0>y))
+   *           ----------------------------------------------diamondAssignEqualT(SuccPos(0))
+   *           |- <x:=2><{x'=3}>(x>y)
+   * }}}
+   * @return The tactic to apply the equational assign axiom.
    * @author Stefan Mitsch
    */
-  def boxAssignEqualT: PositionTactic = new PositionTactic("[:=] assign equational") {
-    override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
-      case Box(Assign(Variable(_, _,_), _), _) => true
+  def diamondAssignEqualT: PositionTactic = assignEqualT("<:=> assign equational", Diamond.unapply, diamondAssignWithoutAlphaT)
+
+  /**
+   * Creates a new axiom tactic for box assignment equational [x := t;]. The tactic may introduce stuttering
+   * assignments, if necessary (e.g., when followed by a loop or ODE).
+   * @example{{{
+   *           |- \forall x (x=2+y -> x>y)
+   *           ---------------------------boxAssignEqualT(SuccPos(0))
+   *           |- [x:=2+y](x>y)
+   * }}}
+   * @example{{{
+   *           |- \forall x (x=2 -> [x_0:=x][{x_0'=3}](x_0>y))
+   *           -----------------------------------------------boxAssignEqualT(SuccPos(0))
+   *           |- [x:=2][{x'=3}](x>y)
+   * }}}
+   * @return The axiom tactic to apply the equational assign axiom.
+   * @author Stefan Mitsch
+   */
+  def boxAssignEqualT: PositionTactic = assignEqualT("[:=] assign equational", Box.unapply, boxAssignWithoutAlphaT)
+
+  /** Generic implementation for box/diamond assign equational */
+  private def assignEqualT[T: Manifest](name: String, mod: T => Option[(Program, Formula)],
+                                        baseAssignT: (Variable, Boolean) => Position => Tactic): PositionTactic = new PositionTactic(name) {
+    val BDModality = new ModalityUnapplyer(mod)
+
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case BDModality(Assign(Variable(_, _,_), _), _) => true
       case _ => false
-    })
+    }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import scala.language.postfixOps
-
-        val f = node.sequent(p)
+        val f = getFormula(node.sequent, p)
         // construct a new name for the quantified variable
         val (newV1, newV2) = f match {
-          case Box(Assign(v: Variable, _), _) =>
-            val tIdx = TacticHelper.freshIndexInFormula(v.name, f)
+          case BDModality(Assign(v: Variable, _), _) =>
+            val tIdx = freshIndexInFormula(v.name, f)
             (Variable(v.name, tIdx, v.sort), Variable(v.name, Some(tIdx.get + 1), v.sort))
-          case _ => throw new IllegalStateException("Checked by applies to never happen")
+          case _ => throw new IllegalStateException("Impossible by assignEqualT.applies")
         }
 
-        node.sequent(p) match {
-          case Box(Assign(v: Variable, _), phi: Modal)
+        f match {
+          case BDModality(Assign(v: Variable, _), phi: Modal)
             if loopsAndODEsOf(phi).exists(p => StaticSemantics.symbols(p).contains(v) &&
-            !NameCategorizer.freeVariables(p).contains(v)) => Some(
-              alphaRenamingT(v, newV1)(p.second) & boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
-            )
-          case _ => Some(boxAssignWithoutAlphaT(newV1)(p))
+              !NameCategorizer.freeVariables(p).contains(v)) => Some(
+            alphaRenamingT(v, newV1)(p.second) & baseAssignT(newV2, false)(p)
+          )
+          case _ => Some(baseAssignT(newV1, true)(p))
         }
       }
     }
-  }
 
-  private def loopsAndODEsOf(fml: Formula): List[Program] = {
-    val result: mutable.MutableList[Program] = mutable.MutableList()
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
-        case Loop(_) => result += e; Left(None)
-        case AtomicODE(_, _) => result += e; Left(None)
-        case ODESystem(_, _) => result += e; Left(None)
-        case _ => Left(None)
-      }
-    }, fml)
-    result.toList
+    private def loopsAndODEsOf(fml: Formula): List[Program] = {
+      val result: mutable.MutableList[Program] = mutable.MutableList()
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+          case Loop(_) => result += e; Left(None)
+          case AtomicODE(_, _) => result += e; Left(None)
+          case ODESystem(_, _) => result += e; Left(None)
+          case _ => Left(None)
+        }
+      }, fml)
+      result.toList
+    }
   }
 
   /**
@@ -526,9 +624,9 @@ object HybridProgramTacticsImpl {
    * @author Stefan Mitsch
    */
   def v2vAssignT: PositionTactic = new PositionTactic("[:=]/<:=> assign") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Box(Assign(_: Variable, v: Variable), pred) => true
-      case Diamond(Assign(_: Variable, v: Variable), pred) => true
+    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
+      case Some(Box(Assign(_: Variable, _: Variable), _)) => true
+      case Some(Diamond(Assign(_: Variable, _: Variable), _)) => true
       case _ => false
     }
 
@@ -536,11 +634,6 @@ object HybridProgramTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import scala.language.postfixOps
-        import SearchTacticsImpl.onBranch
-        import BranchLabels.cutShowLbl
-        import PropositionalTacticsImpl.EquivRightT
-
         val succLength = node.sequent.succ.length
         val anteLength = node.sequent.ante.length
 
@@ -550,15 +643,15 @@ object HybridProgramTacticsImpl {
               (cutShowLbl,
                 // TODO does not work in mixed settings such as <x:=t>[x'=2] and [x:=t]<x'=2>
                 PropositionalTacticsImpl.cohideT(SuccPosition(succLength)) & assertT(0, 1) &
-                alphaRenamingT(t.name, t.index, v.name, v.index)(SuccPosition(0, PosInExpr(1 :: p.inExpr.pos))) &
+                alphaRenamingT(t, v)(SuccPosition(0, PosInExpr(1 :: p.inExpr.pos))) &
                   EquivRightT(SuccPosition(0)) & (AxiomCloseT | debugT("v2vAssign: Axiom close failed unexpectedly") & stopT)),
               (cutUseLbl, equivRewriting(AntePosition(anteLength), p.topLevel))
             )
         )
 
-        getFormula(node.sequent, p) match {
-          case b@Box(Assign(v: Variable, t: Variable), pred) => createTactic(b, pred, v, t)
-          case d@Diamond(Assign(v: Variable, t: Variable), pred) => createTactic(d, pred, v, t)
+        node.sequent(p).subFormulaAt(p.inExpr) match {
+          case Some(b@Box(Assign(v: Variable, t: Variable), pred)) => createTactic(b, pred, v, t)
+          case Some(d@Diamond(Assign(v: Variable, t: Variable), pred)) => createTactic(d, pred, v, t)
         }
       }
     }
@@ -970,6 +1063,7 @@ object HybridProgramTacticsImpl {
       case Box(Loop(a), p) => Imply(And(p, Box(Loop(a), Imply(p, Box(a, p)))), fml)
       case _ => False
     }
+    //@todo Unsound for hybrid games, use ind induction rule instead but augment fml with trivial constant expressions then*/
     uncoverAxiomT("I induction", axiomInstance, _ => boxInductionBaseT)
   }
   /** Base tactic for box induction */
@@ -1219,9 +1313,9 @@ object HybridProgramTacticsImpl {
                         (cutShowLbl,
                           debugT("Show f5, get f2 by KMP") &
                           lastSucc(cohideT) & lastSucc(kModalModusPonensT) &
-                          debugT("Show f2") & lastSucc(abstractionT) & (lastSucc(skolemizeT)*) &
-                          // PC4 (just propositional stuff)
-                          lastSucc(ImplyRightT)*2 & lastSucc(AndRightT) & AxiomCloseT
+                          debugT("Show f2") &
+                            TactixLibrary.useAt("-> tautology")(SuccPosition(0, PosInExpr(1::Nil))) &
+                            TactixLibrary.V(SuccPosition(0)) & TactixLibrary.close
                           ),
                         (cutUseLbl,
                           debugAtT("Use f5, modus ponens with assumption")(AntePosition(2)) &

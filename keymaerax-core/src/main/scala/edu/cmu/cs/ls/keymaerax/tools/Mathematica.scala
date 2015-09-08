@@ -24,15 +24,16 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
       case None => throw new IllegalArgumentException("Missing configuration parameter 'linkName'")
     }
     val libDir = config.get("libDir") // doesn't need to be defined
-    jlink.init(linkName, libDir)
-    //@todo isn't this a bug because MathematicaLink.init may also work without libDir.isDefined?
-    initialized = libDir.isDefined
+    initialized = jlink.init(linkName, libDir)
   }
 
   override def shutdown() = jlink.shutdown()
 
   override def qe(formula: Formula): Formula = jlink.qe(formula)
-  override def qeInOut(formula: Formula): (Formula, String, String) = jlink.qeInOut(formula)
+  override def qeEvidence(formula: Formula): (Formula, Evidence) = jlink.qeEvidence(formula)
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,
                        iv: Predef.Map[Variable, Function]): Option[Formula] = jlink.diffSol(diffSys, diffArg, iv)
+
+  //@todo Implement Mathematica recovery actions
+  override def restart() = ???
 }

@@ -1,6 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.{File, PrintWriter}
+import java.lang.reflect.ReflectPermission
+import java.security.Permission
 
 import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ClassGenerator
 import edu.cmu.cs.ls.keymaerax.core._
@@ -9,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.ModelPlex.{modelplexControllerMonitorTrafo, modelplexInPlace}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
-import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, Mathematica, KeYmaera}
 import edu.cmu.cs.ls.keymaerax.codegen.{CseCGenerator, CGenerator, SpiralGenerator}
 
 
@@ -26,9 +28,6 @@ import scala.util.Random
  * @author Ran Ji
  */
 object KeYmaeraX {
-
-  /** KeYmaera X version number */
-  val VERSION = "4.0a4"
 
   private type OptionMap = Map[Symbol, Any]
 
@@ -59,8 +58,10 @@ object KeYmaeraX {
       |  -cse      use common subexpression elimination in C code (not recommended)
       |  -dnf      use disjunctive normal form in Spiral code
       |  -vars     use ordered list of variables, treating others as constant functions
+      |  -kind     kind of monitor to generate, one of ctrl or model
       |  -lax      enable lax mode with more flexible parser, printer, prover etc.
       |  -strict   enable strict mode with no flexibility in prover
+      |  -security enable security manager imposing some security restrictions
       |  -debug    enable debug mode with more exhaustive messages
       |  -nodebug  disable debug mode to suppress intermediate messages
       |  -help     Display this usage information
@@ -71,7 +72,7 @@ object KeYmaeraX {
       |""".stripMargin
 
   def main (args: Array[String]): Unit = {
-    println("KeYmaera X Prover\n" +
+    println("KeYmaera X Prover " + VERSION + "\n" +
       "Use option -help for usage and license information")
     if (args.length == 0) return launchUI(args)
     if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
@@ -131,6 +132,7 @@ object KeYmaeraX {
           case "-strict" :: tail => System.setProperty("LAX", "false"); nextOption(map, tail)
           case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
           case "-nodebug" :: tail => System.setProperty("DEBUG", "false"); nextOption(map, tail)
+          case "-security" :: tail => activateSecurity(); nextOption(map, tail)
           case option :: tail => optionErrorReporter(option)
         }
       }
@@ -329,7 +331,7 @@ object KeYmaeraX {
 
       //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
       assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "Illegal lemma form")
-      assert(KeYmaeraXLemmaParser(lemma.toString) == (lemma.name.getOrElse(""), lemma.fact.conclusion.succ.head, lemma.evidence.head),
+      assert(KeYmaeraXLemmaParser(lemma.toString) == (lemma.name, lemma.fact.conclusion.succ.head, lemma.evidence.head),
         "reparse of printed lemma is not original lemma")
 
       pw.write(stampHead(options))
@@ -381,10 +383,14 @@ object KeYmaeraX {
 
     val pw = new PrintWriter(outputFileName + ".mx")
 
+    val kind =
+      if (options.contains('kind)) options.get('kind).get.asInstanceOf[Symbol]
+      else 'model
+
     val outputFml = if (options.contains('vars))
-      ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList, verifyOption)(inputModel)
+      ModelPlex(options.get('vars).get.asInstanceOf[Array[Variable]].toList, kind, verifyOption)(inputModel)
     else
-      ModelPlex(inputModel, verifyOption)
+      ModelPlex(inputModel, kind, verifyOption)
     val output = KeYmaeraXPrettyPrinter(outputFml)
 
     val reparse = KeYmaeraXParser(output)
@@ -504,6 +510,16 @@ object KeYmaeraX {
       (if (node.isClosed) "Closed Goal: " else if (node.children.isEmpty) "Open Goal: " else "Inner Node: ") +
       "\tdebug: " + node.tacticInfo.infos.getOrElse("debug", "<none>") +
       "\n" + node.sequent.prettyString + "\n")
+  }
+
+  /** Activate a security manager */
+  private def activateSecurity(): Unit = {
+    System.setSecurityManager(new SecurityManager() {
+      override def checkPermission(perm: Permission): Unit =
+        if (perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName) ||
+          perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
+          throw new SecurityException("Access denied by KeYmaera X")
+    })
   }
 
   private val interactiveUsage = "Type a tactic command to apply to the current goal.\n" +

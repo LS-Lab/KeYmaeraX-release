@@ -25,7 +25,7 @@ import scala.language.postfixOps
 import scala.collection.immutable.Map
 
 /**
- * Created by smitschon 2/27/15.
+ * Tutorial test cases.
  * @author Stefan Mitsch
  */
 class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {

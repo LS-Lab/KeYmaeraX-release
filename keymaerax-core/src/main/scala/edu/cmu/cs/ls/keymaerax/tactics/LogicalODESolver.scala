@@ -41,45 +41,71 @@ object LogicalODESolver {
       (stepTacticT(p) *) &
       cutTimeLB(p) &
       ODETactics.diffWeakenAxiomT(p) & //the axiom, not the proof rule.
-      renameAndDropImpl(p) & onBranch(
-        ("renameAndDropImpl-output",
-          (successiveInverseCut(p) *) &
-          (successiveInverseDiffGhost(p) *) &
-          ODETactics.diffSolveAxiomT(p) &
-          ImplyRightT(p) &
-          errorT("@todo Need to box assign at correct position.")
-        ),
-        ("renameAndDropImpl-show", errorT("Should've closed"))
-      )
+      renameAndDropImpl(p) &
+      (successiveInverseCut(p) *) &
+      (successiveInverseDiffGhost(p) *) &
+      ODETactics.diffSolveConstraintT(p) &
+      FOQuantifierTacticsImpl.skolemizeT(p) &
+      ImplyRightT(p) & ImplyRightT(p) & debugT("After imply right") &
+      HybridProgramTacticsImpl.boxAssignT(p) &
+      arithmeticT ~
+      errorT("Should have closed.")
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // tactics for the advanced solver
-  // The advanced solver is the same as the simple solver, but instead of diffWeaken it does successive inverse ghosts
-  // and inverse cuts until finally only time remains, and then solves just for t' = 0*t + 1. This allows the selection
-  // of only specific points in time.
+  // The advanced solver is the <strike>same as the</strike> nothing like the simple solver.
+  // Instead of diffWeaken it does successive inverse ghosts and inverse cuts until finally only
+  // time remains, and then solves just for t' = 0*t + 1. This allows the selection of only specific
+  // points in time.
   //////////////////////////////////////////////////////////////////////////////////////////////////
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Successive inverse diff ghosts
   //////////////////////////////////////////////////////////////////////////////////////////////////
   def successiveInverseDiffGhost : PositionTactic =
-  new PositionTactic("Successive " + ODETactics.inverseDiffAuxiliaryT.name) {
+  new PositionTactic("[LODE Solver] successiveInverseDiffGhost") {
     override def applies(s: Sequent, p: Position): Boolean = TacticHelper.getFormula(s, p) match {
-      case Box(ODESystem(program : DifferentialProgram, _), _) =>
-        timeVar(program).isDefined && getPrimedVariables(program).length > 2
+      case Box(ODESystem(program : DifferentialProgram, _), _) => {
+        val t = timeVar(program)
+        val primedVars = getPrimedVariables(program)
+        //The last condition is necessary and an important bit of preprocessing -- the time var has
+        //to be moved from the head to the tail.
+        primedVars.length > 1 && t.isDefined &&
+        // time var needs to be in the back because DG++ system peels off from the back.
+        t.get.equals(primedVars.last) &&
+        // Cleaning up after this tactic requires knowing the structure of the succedent.
+        s.succ.length == 1
+      }
       case _ => false
     }
 
-    /**
-     * A tactic that adds \exists x . F to any formula F of the form [{x' = \theta, c & H}]Phi ???
-     */
-    private def addExistential : Tactic = ???
+    override def apply(p: Position): Tactic = new ConstructionTactic("construct " + name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val atApplicationPos = TacticHelper.getFormula(node.sequent, p)
 
-    override def apply(p: Position): Tactic = ODETactics.inverseLipschitzGhostT(p) & onBranch(
-      (BranchLabels.cutShowLbl, errorT("What to do here?")),
-      (BranchLabels.cutUseLbl, errorT("What to do in use?"))
-    )
+        atApplicationPos match {
+          case Box(ODESystem(program : DifferentialProgram, _), _) => {
+            val pvs = getPrimedVariables(program)
+            val nextVariable : Variable = pvs.head
+            val cutUsePos = AntePos(node.sequent.ante.length)
+            // We can't use the system variant in the 2 variable case.
+            val ghostTactic =
+              if(pvs.length > 2)  ODETactics.DiffGhostPlusPlusSystemT else ODETactics.DiffGhostPPT
+            Some(
+              PropositionalTacticsImpl.cutT(Some(Forall(nextVariable :: Nil, atApplicationPos))) &
+                onBranch(
+                  // positioning in the cutSUse branch is justified by applies check that succ length = 1
+                  (BranchLabels.cutShowLbl, hideT(p) & ghostTactic(p) & debugT("[successiveInverseDiffGhost] output")),
+                  (BranchLabels.cutUseLbl, FOQuantifierTacticsImpl.allEliminateT(cutUsePos) & AxiomCloseT ~ errorT("Should have closed"))
+                )
+            )
+          }
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -193,17 +219,17 @@ object LogicalODESolver {
             //Um yeah not sure what was meant here but it's definitely not G,K...
 //              (BranchLabels.cutShowLbl, dischargeEquivalence(pi, Imply(evolutionDomain, originalConclusion), newConclusion)(SuccPos(node.sequent.succ.length))),
               (BranchLabels.cutShowLbl,
-                lastSucc(PropositionalTacticsImpl.cohideT) & LabelBranch("renameAndDropImpl-show") &
-                  debugT("About to show GK Equivalence") ~
+                lastSucc(PropositionalTacticsImpl.cohideT) &
+                  debugT("[LODE Solver] About to show GK Equivalence") ~
                   showGKEquivalenceTactic ~
-                  errorT("All goals should've closed.")
+                  errorT("[LODE Solver] All goals should've closed.")
               ),
               (BranchLabels.cutUseLbl, {
                 val equivPos = AntePos(node.sequent.ante.length)
                 assertPT(rewritingFormula, "Precond check failed: Expected equivalence")(equivPos) &
                 EqualityRewritingImpl.equivRewriting(equivPos, p) ~
-                assertPT(Box(pi, newConclusion), "Postcond check failed: Expected new conclusion")(p) &
-                LabelBranch("renameAndDropImpl-output")
+                assertPT(Box(pi, newConclusion), "Postcond check failed: Expected new conclusion")(p)
+                /* Output */
               })
             )
           )
@@ -478,9 +504,10 @@ object LogicalODESolver {
     case None => true
   }
   private def getPrimedVariables(ode : DifferentialProgram) : List[Variable] = ode match {
-    case _: AtomicDifferentialProgram => ???
+    case AtomicODE(pv, term) => pv.x :: Nil
     case ODESystem(ode, constraint) => getPrimedVariables(ode)
     case DifferentialProduct(l,r) => getPrimedVariables(l) ++ getPrimedVariables(r)
+    case _: AtomicDifferentialProgram => ???
   }
 
   /**

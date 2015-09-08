@@ -21,6 +21,15 @@ keymaeraProofControllers.factory('Models', function () {
     };
 });
 
+keymaeraProofControllers.controller('ProofInfoCtrl',
+    function($scope, $rootScope, $http, $cookies, $modal, $routeParams) {
+        $scope.proof = {
+            proofName: "blah"
+        };
+
+        //TODO: add functions  that allow renaming.
+    }
+)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mathematica Config
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -430,6 +439,14 @@ keymaeraProofControllers.controller('DashboardCtrl',
 
          });
 
+    $http.get("/keymaeraXVersion")
+        .success(function(data) {
+            $scope.keymaeraXVersion = data.keymaeraXVersion
+        })
+        .error(function() {
+            console.error("Unhandled error when attempting to get KeYmaera X version.")
+        });
+
     $scope.mathematicaIsConfigured = true;
     $http.get("/config/mathematicaStatus")
         .success(function(data) {
@@ -469,7 +486,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
   });
 
 keymaeraProofControllers.controller('ModelUploadCtrl',
-  function ($scope, $http, $cookies, $cookieStore, $route, Models) {
+  function ($scope, $http, $cookies, $cookieStore, $route, $modal, Models) {
 
      $scope.runPreloadedProof = function(model) {
         $http.post("/models/users/" + $scope.userId + "/model/" + model.id + "/initialize")
@@ -477,7 +494,6 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
                 console.log("yay! Take the user to the proof load page?")
             })
      };
-
 
      $scope.addModel = function() {
           var file = keyFile.files[0];
@@ -494,7 +510,14 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
                      contentType: 'application/json',
                      success: function(data) {
                          if(data.errorThrown) {
-                            alert("Model creation failed. Are you sure your model parses correctly?") //@todo show parse error.
+                            $modal.open({
+                               templateUrl: 'partials/error_alert.html',
+                               controller: 'ErrorAlertCtrl',
+                               size: 'md',
+                               resolve: {
+                                  action: function () { return "loading model"; },
+                                  error: function () { return data; }
+                               }});
                          }
                          else {
                             //Update the models list -- this should result in the view being updated?
@@ -519,7 +542,7 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
      );
 
      $scope.$emit('routeLoaded', {theview: 'models'});
-  });
+});
 
 keymaeraProofControllers.controller('ModelListCtrl',
   function ($scope, $http, $cookies, $modal, $location, Models) {
@@ -588,6 +611,29 @@ keymaeraProofControllers.controller('ModelTacticDialogCtrl', function ($scope, $
 
 keymaeraProofControllers.controller('ModelProofCreateCtrl',
   function ($scope, $http, $cookies, $routeParams, $location) {
+   /*
+   * Creates a new proof using a default name, so that the use doesn't have to enter new input.
+   */
+    $scope.createDefaultProofForModel = function(modelId) {
+        var proofName        = "Untitled Proof"
+        var proofDescription = ""
+        var uri              = 'models/users/' + $cookies.userId + '/model/' + modelId + '/createProof'
+        var dataObj          = {proofName : proofName, proofDescription : proofDescription}
+
+        $http.post(uri, dataObj).
+            success(function(data) {
+                var proofid = data.id
+                // we may want to switch to ui.router
+                $location.path('proofs/' + proofid);
+            }).
+            error(function(data, status, headers, config) {
+                console.log('Error starting new proof for model ' +modelId)
+            });
+    };
+    $scope.createDefaultProof = function() {
+      $scope.createDefaultProofForModel($routeParams.modelId)
+    };
+
     $scope.createProof = function() {
         var proofName        = $scope.proofName ? $scope.proofName : ""
         var proofDescription = $scope.proofDescription ? $scope.proofDescription : ""
@@ -727,6 +773,11 @@ keymaeraProofControllers.controller('ProofCtrl',
         $scope.date = data.date;
     });
     $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
+
+    //Save a name edited using the inline editor.
+    $scope.saveProofName = function(newName) {
+      $http.post("proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/name/" + newName, {})
+    };
   });
 
 keymaeraProofControllers.controller('HACMSTreeCtrl',
@@ -861,10 +912,19 @@ keymaeraProofControllers.controller('TaskListCtrl',
                setTimeout(function() {
                     $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTactics/' + tId)
                             .success(function(data) {
-                        if (data.tacticInstStatus == 'Running' || data.errorThrown) {
-                          poll();
-                        } else {
-                            $scope.defer.resolve(data.tacticInstStatus)
+                            if(data.errorThrown) {
+                              $modal.open({
+                                templateUrl: 'partials/error_alert.html',
+                                controller: 'ErrorAlertCtrl',
+                                size: 'md',
+                                resolve: {
+                                  action: function () { return "finding dispatched tactics"; },
+                                  error: function () { return data; }
+                                }});
+                            } else if (data.tacticInstStatus == 'Running') {
+                                poll();
+                            } else {
+                                $scope.defer.resolve(data.tacticInstStatus)
                         }
                     })
               }, 1000);
@@ -964,7 +1024,14 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $http.post(uri, dataObj)
              .success(function(data) {
                 if(data.errorThrown) {
-                    alert("Error when trying to run your custom tactic: " + JSON.stringify(data))
+                   $modal.open({
+                      templateUrl: 'partials/error_alert.html',
+                      controller: 'ErrorAlertCtrl',
+                      size: 'md',
+                      resolve: {
+                          action: function () { return "running term"; },
+                          error: function () { return data; }
+                      }});
                 }
                 else {
 //                    Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTerm(data.id)
@@ -993,7 +1060,17 @@ keymaeraProofControllers.controller('TaskListCtrl',
                setTimeout(function() {
                     $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTerm/' + tId)
                          .success(function(data) {
-                            if (data.status == 'Running' || data.errorThrown) { //Errors might be thrown if the term isn't created yet...
+//                            if (data.status == 'Running' || data.errorThrown) { //Errors might be thrown if the term isn't created yet...
+                            if(data.errorThrown) {
+                              $modal.open({
+                                templateUrl: 'partials/error_alert.html',
+                                controller: 'ErrorAlertCtrl',
+                                size: 'md',
+                                resolve: {
+                                  action: function () { return "finding dispatched term"; },
+                                  error: function () { return data; }
+                                }});
+                            } else if (data.tacticInstStatus == 'Running') {
                                 poll();
                             } else {
                                 $scope.defer.resolve(data.status)
@@ -1200,6 +1277,39 @@ keymaeraProofControllers.controller('RunningTacticsCtrl',
    $scope.abort = function() {
      // TODO implement
    }
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Error controls
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+keymaeraProofControllers.controller('ErrorAlertCtrl', function($scope, $modalInstance, $modal, action, error) {
+  $scope.action = action;
+  $scope.errorText = error.textStatus;
+  $scope.report = function() {
+    $modalInstance.dismiss('cancel');
+    var modalInstance = $modal.open({
+        templateUrl: 'partials/error_report.html',
+        controller: 'ErrorReportCtrl',
+        size: 'md',
+        resolve: {
+           error: function () { return error; }
+        }
+    });
+  }
+  $scope.cancel = function() {
+      $modalInstance.dismiss('cancel');
+  }
+});
+
+keymaeraProofControllers.controller('ErrorReportCtrl', function($scope, $modalInstance, $http, error) {
+  $http.get("/kyxConfig").success(function(data) {
+    $scope.kyxConfig = data.kyxConfig;
+    });
+  $scope.errorTrace = error.errorThrown;
+  $scope.cancel = function() {
+      $modalInstance.dismiss('cancel');
+  }
 });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

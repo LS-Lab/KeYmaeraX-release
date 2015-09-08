@@ -71,6 +71,14 @@ class ProofsForUserRequest(db : DBAbstraction, userId: String) extends Request {
   }
 }
 
+class UpdateProofNameRequest(db : DBAbstraction, proofId : String, newName : String) extends Request {
+  def getResultingResponses() = {
+    val proof = db.getProofInfo(proofId)
+    db.updateProofName(proofId, newName)
+    new UpdateProofNameResponse(proofId, newName) :: Nil
+  }
+}
+
 /**
  * Returns an object containing all information necessary to fill out the global template (e.g., the "new events" bubble)
  * @param db
@@ -90,6 +98,27 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // System Configuration
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class KyxConfigRequest(db: DBAbstraction) extends Request {
+  val newline = "\n"
+  override def getResultingResponses() : List[Response] = {
+    val mathConfig = db.getConfiguration("mathematica").config
+    // keymaera X version
+    val kyxConfig = "KeYmaera X version: " + VERSION + newline +
+      "Java version: " + System.getProperty("java.runtime.version") + " with " + System.getProperty("sun.arch.data.model") + " bits" + newline +
+      "OS: " + System.getProperty("os.name") + " " + System.getProperty("os.version") + newline +
+      "LinkName: " + mathConfig.apply("linkName") + newline +
+      "jlinkLibDir: " + mathConfig.apply("jlinkLibDir")
+    new KyxConfigResponse(kyxConfig) :: Nil
+  }
+}
+
+class KeymaeraXVersionRequest() extends Request {
+  override def getResultingResponses() : List[Response] = {
+    val keymaeraXVersion = VERSION
+    new KeymaeraXVersionResponse(keymaeraXVersion) :: Nil
+  }
+}
 
 class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLibFileName : String) extends Request {
   private def isLinkNameCorrect(linkNameFile: java.io.File): Boolean = {

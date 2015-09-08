@@ -1,4 +1,4 @@
-var keymaeraProofApp = angular.module('keymaeraProofApp', [
+  var keymaeraProofApp = angular.module('keymaeraProofApp', [
   'ngRoute',
   'ngCookies',
   'ngSanitize',
@@ -14,9 +14,14 @@ var keymaeraProofApp = angular.module('keymaeraProofApp', [
   'formula',
   'mathjaxformula',
   'mathjaxbind',
-  'sequent'
+  'sequent',
+  'xeditable'
 ], function($rootScopeProvider) {
   $rootScopeProvider.digestTtl(1000);
+});
+
+keymaeraProofApp.run(function(editableOptions) {
+  editableOptions.theme = 'bs3';
 });
 
 keymaeraProofApp.config(['$routeProvider',

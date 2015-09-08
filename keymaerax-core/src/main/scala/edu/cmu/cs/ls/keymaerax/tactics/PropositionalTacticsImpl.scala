@@ -117,6 +117,10 @@ object PropositionalTacticsImpl {
     }
   }
 
+  /**
+   * @see [[ImplyRight]]
+   * @see [[InverseImplyRightT]]
+   */
   def ImplyRightT: PositionTactic = new PositionTactic("ImplyRight") {
     def applies(s: Sequent, p: Position) = !p.isAnte && p.inExpr == HereP && (s.succ(p.index) match {
       case Imply(_, _) => true
@@ -379,17 +383,17 @@ object PropositionalTacticsImpl {
    *              in order to construct the origin of the uniform substitution.
    * @return an instance of a tactic that performs the given uniform substitution
    */
-  def uniformSubstT(subst: List[SubstitutionPair], delta: (Map[Formula, Formula])): Tactic = new ConstructionTactic("Uniform Substitution") {
+  def uniformSubstT(subst: List[SubstitutionPair], delta: (Map[Formula, Formula]) = Map()): Tactic = new ConstructionTactic("Uniform Substitution") {
     def applicable(pn: ProofNode) = true
 
     def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = {
       val ante = for (f <- p.sequent.ante) yield delta.get(f) match {
         case Some(frm) => frm
-        case _ => f
+        case None => f
       }
       val succ = for (f <- p.sequent.succ) yield delta.get(f) match {
         case Some(frm) => frm
-        case _ => f
+        case None => f
       }
       Some(new Tactics.ApplyRule(UniformSubstitutionRule(USubst(subst), Sequent(p.sequent.pref, ante, succ))) {
         override def applicable(node: ProofNode): Boolean = true
@@ -427,6 +431,13 @@ object PropositionalTacticsImpl {
     } & (LabelBranch(BranchLabels.cutUseLbl), LabelBranch(BranchLabels.cutShowLbl))
   }
 
+  /** cutLeftRight will cutLeftT or cutRightT depending on the position */
+  def cutLeftRight(cut: Formula): PositionTactic = new PositionTactic("CutLeftRight") {
+    def applies(s: Sequent, p: Position) = p.inExpr == HereP
+
+    def apply(pos: Position): Tactic = if (pos.isAnte) cutLeftT(cut)(pos) else cutRightT(cut)(pos)
+  }
+
   def commuteEquivRightT: PositionTactic = new PositionTactic("CommuteEquivRight") {
     def applies(s: Sequent, p: Position) = !p.isAnte && p.inExpr == HereP && (s.succ(p.index) match {
       case Equiv(_, _) => true
@@ -446,6 +457,7 @@ object PropositionalTacticsImpl {
    * }}}
    * @author Nathan Fulton
    *         (only used in one place. Delete if this duplicates something that already exists.)
+   * @see [[ImplyRightT]]
    * @todo could generalize to work in gamma delta context when specifying TwoPositionRule type positions.
    */
   def InverseImplyRightT : Tactic = new ConstructionTactic("inverse imply right") {

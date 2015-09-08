@@ -4,7 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import edu.cmu.cs.ls.keymaerax.core.{Formula, QETool}
+import edu.cmu.cs.ls.keymaerax.core.{Evidence, Formula, QETool}
 
 /**
  * Polya quantifier elimination tool.
@@ -16,6 +16,12 @@ import edu.cmu.cs.ls.keymaerax.core.{Formula, QETool}
 class Polya extends ToolBase("Polya") with QETool {
   private val polya = new PolyaSolver
 
+  def init(config : Map[String,String]) = {initialized = true}
+
   override def qe(formula: Formula): Formula = polya.qe(formula)
-  override def qeInOut(formula: Formula): (Formula, String, String) = polya.qeInOut(formula)
+  override def qeEvidence(formula: Formula): (Formula, Evidence) = polya.qeEvidence(formula)
+
+  override def restart() = {}
+
+  override def shutdown() = {}
 }

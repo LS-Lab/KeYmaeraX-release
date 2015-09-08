@@ -10,6 +10,8 @@ import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 
+import scala.collection.immutable
+
 /**
  * An abstract interface to Mathematica link implementations.
  * The link may be used syncrhonously or asychronously.
@@ -38,10 +40,10 @@ trait MathematicaLink extends QETool with DiffSolutionTool {
    */
   def cancel : Boolean
 
-  def toMathematica(expr : KExpr) =
+  def toMathematica(expr : KExpr): MExpr =
     KeYmaeraToMathematica.fromKeYmaera(expr)
 
-  def toKeYmaera(expr : MExpr) =
+  def toKeYmaera(expr : MExpr): KExpr =
     MathematicaToKeYmaera.fromMathematica(expr)
 }
 
@@ -71,8 +73,9 @@ class JLinkMathematicaLink extends MathematicaLink {
   /**
    * Initializes the connection to Mathematica.
    * @param linkName The name of the link to use (platform-dependent, see Mathematica documentation)
+   * @return true if initialization was successful
    */
-  def init(linkName : String, jlinkLibDir : Option[String]) = {
+  def init(linkName : String, jlinkLibDir : Option[String]): Boolean = {
     if(jlinkLibDir.isDefined) {
       System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
     }
@@ -80,6 +83,8 @@ class JLinkMathematicaLink extends MathematicaLink {
       "-linkmode", "launch",
       "-linkname", linkName + " -mathlink"))
     ml.discardAnswer()
+    //@todo 6*9
+    true
   }
 
   /**
@@ -170,15 +175,15 @@ class JLinkMathematicaLink extends MathematicaLink {
   def cancel = ???
 
   def qe(f : Formula) : Formula = {
-    qeInOut(f)._1
+    qeEvidence(f)._1
   }
 
-  def qeInOut(f : Formula) : (Formula, String, String) = {
+  def qeEvidence(f : Formula) : (Formula, Evidence) = {
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "Reduce"),
       Array(toMathematica(f), new MExpr(listExpr, new Array[MExpr](0)), new MExpr(Expr.SYMBOL, "Reals")))
     val (output, result) = run(input)
     result match {
-      case f : Formula => (f, input.toString, output)
+      case f : Formula => (f, new ToolEvidence(immutable.Map("input" -> input.toString, "output" -> output)))
       case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
     }
   }
