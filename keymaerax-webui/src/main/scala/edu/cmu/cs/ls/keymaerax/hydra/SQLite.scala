@@ -147,6 +147,11 @@ object SQLite extends DBAbstraction {
       Tacticonproof.filter(_.prooftacticid === tactic.id).update(newRow)
     })
 
+  override def updateDispatchedTacticStatus(tacticId: String, status: String) =
+  sqldb.withSession(implicit session => {
+    Tacticonproof.filter(_.prooftacticid === tacticId).map(_.status.get).update(status)
+  })
+
   override def createUser(username: String, password: String): Unit =
     sqldb.withSession(implicit session => {
       Users.map(u => (u.email.get, u.password.get))

@@ -371,6 +371,11 @@ object MongoDB extends DBAbstraction {
     proofs.update(query, update)
   }
 
+  override def updateDispatchedTacticStatus(tId :String, status:String) = {
+    val query = MongoDBObject("dispatchedTactics._id" -> new ObjectId(tId))
+    proofs.update(query, $set("dispatchedTacitcs.status" -> status))
+  }
+
   override def updateProofOnTacticCompletion(proofId: String, tId: String): Unit = {
     val openGoals = KeYmaeraInterface.getOpenGoalCount(proofId)
 

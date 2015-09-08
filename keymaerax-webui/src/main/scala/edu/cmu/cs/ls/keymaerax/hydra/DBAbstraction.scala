@@ -38,13 +38,15 @@ object TacticKind extends Enumeration {
 
 object DispatchedTacticStatus extends Enumeration {
   type DispatchedTacticStatus = Value
-  val Prepared, Running, Finished, Aborted = Value
+  val Prepared, Running, Finished, Aborted, Error = Value
 
   def fromString(s : String) = s match {
     case "Prepared" => Prepared
     case "Running" => Running
     case "Finished" => Finished
     case "Aborted" => Aborted
+    case "error" => Error
+    case "Error" => Error
     case _ => throw new Exception("Status " + s + " not in enum.")
   }
 }
@@ -157,6 +159,7 @@ trait DBAbstraction {
                               input:Map[Int, String], auto: Option[PositionTacticAutomation.PositionTacticAutomation],
                               status:DispatchedTacticStatus.Value) : String
   def updateDispatchedTactics(tactic:DispatchedTacticPOJO)
+  def updateDispatchedTacticStatus(tacticId:String, message: String)
   def getDispatchedTactics(tId : String) : Option[DispatchedTacticPOJO]
   def getDispatchedTermOrTactic(tId : String) : Option[AbstractDispatchedPOJO]
   def updateProofOnTacticCompletion(proofId: String, tId: String)
