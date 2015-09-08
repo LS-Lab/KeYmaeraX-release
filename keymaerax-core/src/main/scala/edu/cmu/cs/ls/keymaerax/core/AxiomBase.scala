@@ -29,6 +29,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXAxiomParser
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
+ * @see [[edu.cmu.cs.ls.keymaerax.tactics.AxiomIndex]]]]
  */
 private[core] object AxiomBase {
   /**

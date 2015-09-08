@@ -38,12 +38,12 @@ object CGenerator extends CodeGenerator {
       println("[warn] -vars contains unknown variables {" + vars.toSet.diff(relevantVars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "}, which will be ignored")
     if(relevantVars.toSet.diff(vars.toSet).nonEmpty)
       println("[info] post variables {" + relevantVars.toSet.diff(vars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "} will be added as parameters")
-    val calledFuncs = getCalledFuncs(expr, relevantVars:::relevantPostVarsZero)
+    val calledFuncs = getCalledFuncs(expr, relevantVars).diff(relevantPostVarsZero.toSet)
     val funcHead = "/* monitor */\n" +
       "bool monitor (" + parameterDeclaration(cDataType, relevantVars) + ")"
     val funcBody = compileToC(expr, calledFuncs)
     infoC(fileName) + includeLib + FuncCallDeclaration(calledFuncs, cDataType) + funcHead + " {\n" +
-      {if(relevantPostVarsZero.nonEmpty) "  /* Initial states for post variables */\n" + defineRelevantPostVarsZero(expr, relevantPostVarsZero, cDataType) + "\n"} +
+      {if(relevantPostVarsZero.nonEmpty) "  /* Initial states for post variables */\n" + defineRelevantPostVarsZero(expr, relevantPostVarsZero, cDataType) + "\n" else ""} +
       "  return " + funcBody + ";" + "\n}\n\n"
     //@note gcc -Wall -Wextra -Werror -std=c99 -pedantic absolutely wants "newline at end of file" -Wnewline-eof
   }

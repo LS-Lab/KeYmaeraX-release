@@ -610,38 +610,14 @@ trait UnifyUSCalculus {
   }
 
 
-  //@todo useful enough here?
-  def unprog: PositionTactic = chase(3,3, e => e match {
-    case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
-    case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
-    case _ => AxiomIndex.axiomsFor(e)
-  })
-
-  /** An update-based forward calculus for a position */
-  def updateCalculus: ForwardPositionTactic = {
-    // mutable state per call
-    var updateStack: List[Position] = Nil
-    val chased: ForwardPositionTactic = chaseFor(3,3, e => e match {
+  /** An update-based calculus for a position */
+  def updateCalculus: PositionTactic = chase(3,3, e => e match {
       // no equational assignments
       case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
       case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
       case _ => AxiomIndex.axiomsFor(e)
-    },
-      (ax,pos)=> pr => {
-        ax match {
-          // log update applications
-          //@todo assert that pos is no proper prefix of anything already on the stack (outside in traversal)
-          case "[:=] assign update" | "<:=> assign update" => updateStack = pos :: updateStack
-          case _ =>
-        };
-        pr
-      }
-    )
-    // retroactively handle postponed assignments in inverse order, so inside-out
-        //@todo or  "<:=> assign update"
-        //@todo simplify since smart positions work.
-    pos => pr => updateStack.foldLeft(chased(pos)(pr))((proof, p) => useFor("[:=] assign")(p)(proof))
-  }
+    }
+  )
 
   /** Debug output s (for forward tactics) */
   def debugF(s: => Any): ForwardTactic=>ForwardTactic = tac => proof => {val pr = tac(proof); if (DEBUG) println("=== " + s + " === " + pr); pr}

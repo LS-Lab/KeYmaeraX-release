@@ -20,7 +20,8 @@ import test.RandomFormula
  */
 class RandomContextTests extends FlatSpec with Matchers {
   KeYmaera.init(Map.empty)
-  val randomTrials = 40000
+  val randomTrials = 4000
+  val randomReps = 20
   val randomComplexity = 6
   val rand = new RandomFormula()
 
@@ -55,9 +56,10 @@ class RandomContextTests extends FlatSpec with Matchers {
   "The positioning" should "consistently split formulas" in {
     for (i <- 1 to randomTrials) {
       val f = rand.nextFormula(randomComplexity)
-      val pos = rand.nextPosition(randomComplexity).inExpr
-      contextShouldBe(f, pos)
-      //@todo could reshuffle pos if location didn't work.
+      for (j <- 1 to randomReps) {
+        val pos = rand.nextPosition(randomComplexity).inExpr
+        contextShouldBe(f, pos)
+      }
     }
   }
 
