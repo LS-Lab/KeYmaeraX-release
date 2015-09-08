@@ -12,6 +12,7 @@ import javax.swing._
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import edu.cmu.cs.ls.keymaerax.api.ComponentConfig
+import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms
 import spray.can.Http
 
 import scala.concurrent.duration.FiniteDuration
@@ -82,7 +83,7 @@ object Boot extends App {
     case Some(c) => (c.config("isHosted").equals("true"), c.config("host"), Integer.parseInt(c.config("port")))
     case None => (false, "127.0.0.1", 8090)
   }
-
+  DerivedAxioms.prepopulateDerivedLemmaDatabase()
 
   // start a new HTTP server on port 8080 with our service actor as the handler
   val io = IO(Http)

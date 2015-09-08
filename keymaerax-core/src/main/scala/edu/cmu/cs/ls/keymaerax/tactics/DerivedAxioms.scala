@@ -62,12 +62,15 @@ object DerivedAxioms {
   }
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
-  private[tactics] def derivedAxiom(name: String, derived: Sequent, tactic: Tactic): Lemma = {
-    //@todo optimize: no need to prove if already filed in derivedAxiomDB anyhow
-    val witness = TactixLibrary.proveBy(derived, tactic)
-    assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + name + " got\n" + witness)
-    derivedAxiom(name, witness)
-  }
+  private[tactics] def derivedAxiom(name: String, derived: Sequent, tactic: Tactic): Lemma =
+    derivedAxiomDB.get(name) match {
+      case Some(lemma) => lemma
+      case None => {
+        val witness = TactixLibrary.proveBy(derived, tactic)
+        assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + name + " got\n" + witness)
+        derivedAxiom(name, witness)
+      }
+    }
 
   /** Package a Lemma for a derived axiom up as a rule */
   private[tactics] def derivedAxiomR(lemma: String): LookupLemma = {
@@ -125,6 +128,7 @@ object DerivedAxioms {
    */
   private def derivedAxiomInfo(name: String): Option[(Formula, ApplyRule[LookupLemma])] = {(name: @switch) match {
     //@note implemented as match rather than lookup in a map to retain lazy evaluation
+    //@note but we need a map when prepopulating the lemma database, so whenever adding a case to this case match also add an entry to the hashmap below.
     case "<-> reflexive" => Some(equivReflexiveF, equivReflexiveT)
     case "!! double negation" => Some(doubleNegationF, doubleNegationT)
     case "exists dual" => Some(existsDualF, existsDualT)
@@ -196,8 +200,91 @@ object DerivedAxioms {
     case "min" => Some(minF, minT)
     case "max" => Some(maxF, maxT)
     case _ => None
-  } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == name, "Lookup of DerivedAxiom found correct lemma " + name)
+  } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == name, s"Lookup of DerivedAxiom should find the correct lemma (name: ${name})")
 
+  /** populates the derived lemma database with all of the lemmas in the case statement above.*/
+  def prepopulateDerivedLemmaDatabase() = {
+    require(AUTO_INSERT, "AUTO_INSERT should be on if lemma database is being pre-populated.")
+    //@note copied from above.
+    val mapping = HashMap(
+      "<-> reflexive" -> Some(equivReflexiveF, equivReflexiveT)
+      , "!! double negation" -> Some(doubleNegationF, doubleNegationT)
+      , "exists dual" -> Some(existsDualF, existsDualT)
+//      , "!exists" -> Some(notExistsF, notExistsT)
+      , "!all" -> Some(notAllF, notAllT)
+      , "[] dual" -> Some(boxDualF, boxDualT)
+      , "<:=> assign" -> Some(assigndF, assigndT)
+      , ":= assign dual" -> Some(assignDualF, assignDualT)
+      , "[:=] assign equational" -> Some(assignbEquationalF, assignbEquationalT)
+      , "[:=] assign update" -> Some(assignbUpdateF, assignbUpdateT)
+      , "[:=] vacuous assign" -> Some(vacuousAssignbF, vacuousAssignbT)
+//      , "<:=> assign equational" -> ??? //Some(assigndEquationalF, assigndEquationalT)
+      , "<:=> assign update" -> Some(assigndUpdateF, assigndUpdateT)
+      , "<:=> vacuous assign" -> Some(vacuousAssigndF, vacuousAssigndT)
+      , "<':=> differential assign" -> Some(assignDF, assignDT)
+      , "<:*> assign nondet" -> Some(nondetassigndF, nondetassigndT)
+      , "<?> test" -> Some(testdF, testdT)
+      , "<++> choice" -> Some(choicedF, choicedT)
+      , "<;> compose" -> Some(composedF, composedT)
+      , "<*> iterate" -> Some(iteratedF, iteratedT)
+      , "<*> approx" -> Some(loopApproxdF, loopApproxdT)
+      , "exists generalize" -> Some(existsGeneralizeF, existsGeneralizeT)
+      , "all substitute" -> Some(allSubstituteF, allSubstituteT)
+      , "vacuous exists quantifier" -> Some(vacuousExistsF, vacuousExistsT)
+      , "V[:*] vacuous assign nondet" -> Some(vacuousBoxAssignNondetF, vacuousBoxAssignNondetT)
+      , "V<:*> vacuous assign nondet" -> Some(vacuousDiamondAssignNondetF, vacuousDiamondAssignNondetT)
+      , "DX diamond differential skip" -> Some(DskipdF, DskipdT)
+      , "DW differential weakening" -> Some(DWeakeningF, DWeakeningT)
+      , "DS differential equation solution" -> Some(DSnodomainF, DSnodomainT)
+      , "Dsol& differential equation solution" -> Some(DSddomainF, DSddomainT)
+      , "Dsol differential equation solution" -> Some(DSdnodomainF, DSdnodomainT)
+      , "Domain Constraint Conjunction Reordering" -> Some(domainCommuteF, domainCommuteT)
+      , "& commute" -> Some(andCommuteF, andCommuteT)
+      , "& associative" -> Some(andAssocF, andAssocT)
+      , "!& deMorgan" -> Some(notAndF, notAndT)
+      , "!| deMorgan" -> Some(notOrF, notOrT)
+      , "!-> deMorgan" -> Some(notImplyF, notImplyT)
+      , "!<-> deMorgan" -> Some(notEquivF, notEquivT)
+      , "-> expand" -> Some(implyExpandF, implyExpandT)
+      , "-> tautology" -> Some(implyTautologyF, implyTautologyT)
+      , "->' derive imply" -> Some(DimplyF, DimplyT)
+      , "\\forall->\\exists" -> Some(forallThenExistsF, forallThenExistsT)
+      , "->true" -> Some(impliesTrueF, impliesTrueT)
+      , "true->" -> Some(trueImpliesF, trueImpliesT)
+      , "&true" -> Some(andTrueF, andTrueT)
+      , "true&" -> Some(trueAndF, trueAndT)
+      , "0*" -> Some(zeroTimesF, zeroTimesT)
+      , "0+" -> Some(zeroPlusF, zeroPlusT)
+      //    , "x' derive var" -> Some(DvarF, DvarT)
+      , "x' derive variable" -> Some(DvariableF, DvariableT)
+      , "' linear" -> Some(DlinearF, DlinearT)
+//      , "' linear right" -> Some(DlinearRightF, DlinearRightT)
+      , "DG differential pre-ghost" -> Some(DGpreghostF, DGpreghostT)
+      , "= reflexive" -> Some(equalReflexiveF, equalReflexiveT)
+      , "* commute" -> Some(timesCommuteF, timesCommuteT)
+      , "= commute" -> Some(equalCommuteF, equalCommuteT)
+      , "<=" -> Some(lessEqualF, lessEqualT)
+      , "= negate" -> Some(notNotEqualF, notNotEqualT)
+//      , "! !=" -> derivedAxiomInfo("= negate")
+//      , "! =" -> Some(notEqualF, notEqualT)
+      , "! <" -> Some(notLessF, notLessT)
+//      , "! <=" -> Some(notLessEqualF, notLessEqualT)
+      , "! >" -> Some(notGreaterF, notGreaterT)
+//      , "! >=" -> derivedAxiomInfo("< negate")
+      , "< negate" -> Some(notGreaterEqualF, notGreaterEqualT)
+      , ">= flip" -> Some(flipGreaterEqualF, flipGreaterEqualT)
+      , "> flip" -> Some(flipGreaterF, flipGreaterT)
+      , "abs" -> Some(absF, absT)
+      , "min" -> Some(minF, minT)
+      , "max" -> Some(maxF, maxT)
+    )
+
+    mapping.keys.map(key => {
+      val proof: Provable = derivedAxiom(key)
+      derivedAxiom(key, proof)
+    })
+  }
+  
   /**
    * {{{Axiom "<-> reflexive".
    *  p() <-> p()
@@ -1301,7 +1388,7 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val notEqualF = "((!(f() = g())) <-> (f() != g())".asFormula
+  lazy val notEqualF = "(!(f() = g())) <-> (f() != g())".asFormula
   lazy val notEqual = derivedAxiom("= negate",
     Sequent(Nil, IndexedSeq(), IndexedSeq(notEqualF)),
     QE
