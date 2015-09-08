@@ -80,6 +80,11 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove !<>" in {check(notDiamond)}
   it should "prove all distribute" in {check(allDistributeAxiom)}
   it should "prove box dual" in {check(boxDualAxiom)}
+  it should "prove K1" in {check(K1)}
+  it should "prove K2" in {check(K2)}
+  it should "prove box split" in {check(boxSplit)}
+  it should "prove box split left" in {check(boxSplitLeft)}
+  it should "prove box split right" in {check(boxSplitRight)}
   it should "prove []~><> propagation" in {check{boxDiamondPropagation}}
   it should "prove <:=> assign" in {check(assigndAxiom)}
   it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
@@ -107,6 +112,9 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove !<-> deMorgan" in {check(notEquiv)}
   it should "prove domain commute" in {check(domainCommute)}
   it should "prove -> expand" in {check(implyExpand)}
+  it should "prove PC1" in {check(PC1)}
+  it should "prove PC2" in {check(PC2)}
+  it should "prove PC3" in {check(PC3)}
   it should "prove -> tautology" in {check{implyTautology}}
   it should "prove ->'" in {check(Dimply)}
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}

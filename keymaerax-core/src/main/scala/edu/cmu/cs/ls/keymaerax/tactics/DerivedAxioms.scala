@@ -131,6 +131,11 @@ object DerivedAxioms {
     case "!exists" => Some(notExistsF, notExistsT)
     case "!all" => Some(notAllF, notAllT)
     case "[] dual" => Some(boxDualF, boxDualT)
+    case "K1" => Some(K1F, K1T)
+    case "K2" => Some(K2F, K2T)
+    case "[] split" => Some(boxSplitF, boxSplitT)
+    case "[] split left" => Some(boxSplitLeftF, boxSplitLeftT)
+    case "[] split right" => Some(boxSplitRightF, boxSplitRightT)
     case "<:=> assign" => Some(assigndF, assigndT)
     case ":= assign dual" => Some(assignDualF, assignDualT)
     case "[:=] assign equational" => Some(assignbEquationalF, assignbEquationalT)
@@ -164,6 +169,9 @@ object DerivedAxioms {
     case "!-> deMorgan" => Some(notImplyF, notImplyT)
     case "!<-> deMorgan" => Some(notEquivF, notEquivT)
     case "-> expand" => Some(implyExpandF, implyExpandT)
+    case "PC1" => Some(PC1F, PC1T)
+    case "PC2" => Some(PC2F, PC2T)
+    case "PC3" => Some(PC3F, PC3T)
     case "-> tautology" => Some(implyTautologyF, implyTautologyT)
     case "->' derive imply" => Some(DimplyF, DimplyT)
     case "\\forall->\\exists" => Some(forallThenExistsF, forallThenExistsT)
@@ -408,6 +416,125 @@ object DerivedAxioms {
   )
 
   lazy val boxDiamondPropagationT = derivedAxiomT(boxDiamondPropagation)
+
+  /**
+   * {{{Axiom "K1".
+   *   [a;](p(??)&q(??)) -> [a;]p(??) & [a;]q(??)
+   * End.
+   * }}}
+   * @Derived
+   * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K1 p. 26
+   */
+  lazy val K1F = "[a;](p(??)&q(??)) -> [a;]p(??) & [a;]q(??)".asFormula
+  lazy val K1 = derivedAxiom("K1",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(K1F)),
+    implyR(1) & andR(1) && (
+      useAt("[] split left")(-1) & close,
+      useAt("[] split right")(-1) & close
+    )
+  )
+  lazy val K1T = derivedAxiomT(K1)
+
+  /**
+   * {{{Axiom "K2".
+   *   [a;]p(??) & [a;]q(??) -> [a;](p(??)&q(??))
+   * End.
+   * }}}
+   * @Derived
+   * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K2 p. 27
+   */
+  lazy val K2F = "[a;]p(??) & [a;]q(??) -> [a;](p(??)&q(??))".asFormula
+  lazy val K2 = derivedAxiom("K2",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(K2F)),
+    cut(/*(9)*/"([a;](q(??)->p(??)&q(??)) -> ([a;]q(??) -> [a;](p(??)&q(??))))  ->  (([a;]p(??) & [a;]q(??)) -> [a;](p(??)&q(??)))".asFormula) & onBranch(
+      (cutShowLbl, cut(/*(8)*/"([a;]p(??) -> [a;](q(??) -> p(??)&q(??)))  ->  (([a;](q(??)->p(??)&q(??)) -> ([a;]q(??) -> [a;](p(??)&q(??))))  ->  (([a;]p(??) & [a;]q(??)) -> [a;](p(??)&q(??))))".asFormula) & onBranch(
+        (cutShowLbl, cohide(3) & prop),
+        (cutUseLbl, cut(/*(5)*/"[a;]p(??) -> [a;](q(??) -> p(??)&q(??))".asFormula) & onBranch(
+          (cutShowLbl, cohide(3) & kModalModusPonensT(1) & useAt("-> tautology")(SuccPosition(0, PosInExpr(1::Nil))) & V(1) & close),
+          (cutUseLbl, modusPonensT(AntePosition(1), AntePosition(0)) & close)
+        ))
+      )),
+      (cutUseLbl, cut(/*(6)*/"[a;](q(??) -> (p(??)&q(??)))  ->  ([a;]q(??) -> [a;](p(??)&q(??)))".asFormula) & onBranch(
+        (cutShowLbl, cohide(2) &
+          uniformSubstT(
+            SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "q(??)".asFormula) ::
+            SubstitutionPair(PredOf(Function("q", None, Real, Bool), Anything), "p(??)&q(??)".asFormula) :: Nil,
+            Map(/*(6)*/"[a;](q(??) -> (p(??)&q(??)))  ->  ([a;]q(??) -> [a;](p(??)&q(??)))".asFormula -> /*K*/"[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula)) &
+          AxiomTactic.axiomT("K modal modus ponens")),
+        (cutUseLbl, modusPonensT(AntePosition(1), AntePosition(0)) & close)
+      ))
+    )
+  )
+  lazy val K2T = derivedAxiomT(K2)
+
+  /**
+   * {{{Axiom "[] split".
+   *    [a;](p(??)&q(??)) <-> [a;]p(??)&[a;]q(??)
+   * End.
+   * }}}
+   * @Derived
+   * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K3 p. 28
+   */
+  lazy val boxSplitF = "[a;](p(??)&q(??)) <-> [a;]p(??)&[a;]q(??)".asFormula
+  lazy val boxSplit = derivedAxiom("[] split",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(boxSplitF)),
+    equivR(1) & onBranch(
+      (equivLeftLbl, useAt("K1", PosInExpr(1::Nil))(1) & close),
+      (equivRightLbl, useAt("K2", PosInExpr(1::Nil))(1) & close)
+    )
+  )
+  lazy val boxSplitT = derivedAxiomT(boxSplit)
+
+  /**
+   * {{{Axiom "boxSplitLeft".
+   *    [a;](p(??)&q(??)) -> [a;]p(??)
+   * End.
+   * }}}
+   * @Derived
+   * @Note implements (1)-(5) of Cresswell, Hughes. A New Introduction to Modal Logic, K1
+   */
+  lazy val boxSplitLeftF = "[a;](p(??)&q(??)) -> [a;]p(??)".asFormula
+  lazy val boxSplitLeft = derivedAxiom("[] split left",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(boxSplitLeftF)),
+    cut(/*(2)*/"[a;](p(??)&q(??) -> p(??))".asFormula) & onBranch(
+      (cutShowLbl, cohide(2) & useAt("PC1")(1, 1::Nil) & V(1) & close),
+      (cutUseLbl, cut(/*(4)*/"[a;](p(??)&q(??)->p(??)) -> ([a;](p(??)&q(??)) -> [a;]p(??))".asFormula) & onBranch(
+        (cutShowLbl, cohide(2) &
+          uniformSubstT(
+            SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "p(??)&q(??)".asFormula) ::
+            SubstitutionPair(PredOf(Function("q", None, Real, Bool), Anything), "p(??)".asFormula) :: Nil,
+            Map(/*(4)*/"[a;](p(??)&q(??)->p(??)) -> ([a;](p(??)&q(??)) -> [a;]p(??))".asFormula -> /*K*/"[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula)
+          ) & AxiomTactic.axiomT("K modal modus ponens")),
+        (cutUseLbl, modusPonensT(AntePosition(0), AntePosition(1)) & close)
+      ))
+    )
+  )
+  lazy val boxSplitLeftT = derivedAxiomT(boxSplitLeft)
+
+  /**
+   * {{{Axiom "boxSplitRight".
+   *    [a;](p(??)&q(??)) -> q(??)
+   * End.
+   * }}}
+   * @Derived
+   * @Note implements (6)-(9) of Cresswell, Hughes. A New Introduction to Modal Logic, K1
+   */
+  lazy val boxSplitRightF = "[a;](p(??)&q(??)) -> [a;]q(??)".asFormula
+  lazy val boxSplitRight = derivedAxiom("[] split right",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(boxSplitRightF)),
+    cut(/*7*/"[a;](p(??)&q(??) -> q(??))".asFormula) & onBranch(
+      (cutShowLbl, cohide(2) & useAt("PC2")(1, 1::Nil) & V(1) & close),
+      (cutUseLbl, cut(/*(8)*/"[a;](p(??)&q(??)->q(??)) -> ([a;](p(??)&q(??)) -> [a;]q(??))".asFormula) & onBranch(
+        (cutShowLbl, cohide(2) &
+          uniformSubstT(
+            SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "p(??)&q(??)".asFormula) :: Nil,
+            Map(/*(8)*/"[a;](p(??)&q(??)->q(??)) -> ([a;](p(??)&q(??)) -> [a;]q(??))".asFormula -> /*K*/"[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula)
+          ) & AxiomTactic.axiomT("K modal modus ponens")),
+        (cutUseLbl, modusPonensT(AntePosition(0), AntePosition(1)) & close)
+      ))
+    )
+  )
+  lazy val boxSplitRightT = derivedAxiomT(boxSplitRight)
 
   /**
    * {{{Axiom "<:=> assign".
@@ -884,6 +1011,43 @@ object DerivedAxioms {
   )
 
   lazy val implyExpandT = derivedAxiomT(implyExpand)
+
+
+  /**
+   * {{{Axiom "PC1".
+   *    (p()&q() -> p()) <-> true
+   * End.
+   * }}}
+   * @Derived
+   * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC1
+   */
+  lazy val PC1F = "(p()&q() -> p()) <-> true".asFormula
+  lazy val PC1 = derivedAxiom("PC1", Sequent(Nil, IndexedSeq(), IndexedSeq(PC1F)), prop)
+  lazy val PC1T = derivedAxiomT(PC1)
+
+  /**
+   * {{{Axiom "PC2".
+   *    (p()&q() -> q()) <-> true
+   * End.
+   * }}}
+   * @Derived
+   * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC2
+   */
+  lazy val PC2F = "(p()&q() -> q()) <-> true".asFormula
+  lazy val PC2 = derivedAxiom("PC2", Sequent(Nil, IndexedSeq(), IndexedSeq(PC2F)), prop)
+  lazy val PC2T = derivedAxiomT(PC2)
+
+  /**
+   * {{{Axiom "PC3".
+   *    p()&q() -> ((p()->r())->(p()->q()&r())) <-> true
+   * End.
+   * }}}
+   * @Derived
+   * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC3
+   */
+  lazy val PC3F = "p()&q() -> ((p()->r())->(p()->q()&r())) <-> true".asFormula
+  lazy val PC3 = derivedAxiom("PC3", Sequent(Nil, IndexedSeq(), IndexedSeq(PC3F)), prop)
+  lazy val PC3T = derivedAxiomT(PC3)
 
   /**
    * {{{Axiom "-> tautology".
