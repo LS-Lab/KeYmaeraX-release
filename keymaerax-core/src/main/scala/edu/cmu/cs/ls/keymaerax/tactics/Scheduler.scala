@@ -93,6 +93,7 @@ class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends TacticToo
       } catch {
         case e: Exception =>
           // TODO report exception somewhere useful
+          //@todo pass in the tactic id and a database when running from web ui, and update status with an exception.
           e.printStackTrace()
           tactic.continuation(tactic, Failed, Seq(node))
       }
