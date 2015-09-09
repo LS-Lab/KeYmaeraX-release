@@ -60,6 +60,7 @@ object AxiomaticRuleTactics {
   /**
    * Returns a tactic for CE one-sided congruence with purely propositional unpeeling. Useful when unpeeled fact is not
    * an equivalence, as needed by CE. May perform better than CE for small contexts.
+   * @see [[UnifyUSCalculus.CE()]]
    * @see[[AxiomaticRuleTactics.equivalenceCongruenceT()]]
    * @example{{{
    *                  z=1 |- z>0

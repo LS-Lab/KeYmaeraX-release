@@ -281,9 +281,11 @@ trait UnifyUSCalculus {
 
   }
 
-  /** CE(equiv) uses the equivalence or equality fact equiv for congruence reasoning at the indicated position to replace left by right (literally, no substitution)
+  /** CE(equiv) uses the equivalence left<->right or equality left=right fact equiv for congruence reasoning
+    * at the indicated position to replace left by right (literally, no substitution)
     * Efficient unification-free version of [[useAt()]]
     * @see [[useAt()]]
+    * @see [[CE(Context)]]
     */
   def CE(equiv: Provable): PositionTactic = new PositionTactic("CE(Provable)") {
     import Augmentors._
@@ -342,6 +344,38 @@ trait UnifyUSCalculus {
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
+  /** CE(C) will wrap any equivalence left<->right or equality left=right fact it gets within context C.
+    * Uses CE or CQ as needed.
+    * @see [[CE(Provable)]]
+    * @todo likewise for Context[Term] using CT instead.
+    */
+  def CE(C: Context[Formula]): ForwardTactic = equiv => {
+    require(equiv.conclusion.ante.length==0 && equiv.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + equiv)
+    equiv.conclusion.succ.head match {
+      case Equiv(left,right) =>
+        require(C.isFormulaContext, "Formula context expected to make use of equivalences with CE " + C)
+        equiv(
+          Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(left), C(right)))),
+          AxiomaticRule("CE congruence",
+            USubst(SubstitutionPair(PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula), C.ctx) ::
+              SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), left) ::
+              SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), right) ::
+              Nil))
+        )
+      case Equal(left,right) =>
+        require(C.isTermContext, "Term context expected to make use of equalities with CE " + C)
+        equiv(
+          Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(left), C(right)))),
+          AxiomaticRule("CQ equation congruence",
+            USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
+              SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), left) ::
+              SubstitutionPair(FuncOf(Function("g_", None, Real, Real), Anything), right) ::
+              Nil))
+        )
+      case _ => throw new IllegalArgumentException("expected equivalence or equality fact " + equiv.conclusion)
+    }
+  }
+
   /** useFor(fact,key,inst) use the key part of the given fact forward for the selected position in the given Provable to conclude a new Provable
     * Forward Hilbert-style proof analogue of [[useAt()]].
     * @author Andre Platzer
@@ -376,14 +410,14 @@ trait UnifyUSCalculus {
         require(C(c).at(p.inExpr) ==(C, c), "correctly split at position p")
         require(List((C, DotFormula), (C, DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
-        /** Equivalence rewriting step */
-        def equivStep(other: Expression, factTactic: Tactic): Provable = {
-          //@todo delete factTactic or use factTactic turned argument into Provable=>Provable
+        /** Equivalence rewriting step to replace occurrence of instance of k by instance of o in context */
+        def equivStep(o: Expression, factTactic: Tactic): Provable = {
+          //@todo delete factTactic argument since unused or use factTactic turned argument into Provable=>Provable
           require(fact.isProved, "currently want proved facts as input only")
           require(proof.conclusion.updated(p.top, C(subst(k)))==proof.conclusion, "expected context split")
-          // |- fact: k=o
+          // |- fact: k=o or k<->o, respectively
           val sideUS: Provable = subst.toForward(fact)
-          // |- subst(fact): subst(k)=subst(o) by US
+          // |- subst(fact): subst(k)=subst(o) or subst(k)<->subst(o) by US
           /*(
             subst(fact.conclusion)
             ,
@@ -395,41 +429,44 @@ trait UnifyUSCalculus {
 //            AxiomaticRule("CQ equation congruence",
 //            USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), Anything), C.ctx) :: Nil))
           )*/
-          val sideCE = sideUS(
-            Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(subst(k)), C(subst(other)))))
-            ,
-            k.kind match {
-              case TermKind => AxiomaticRule("CQ equation congruence",
-                USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
-                  SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), subst(k)) ::
-                  SubstitutionPair(FuncOf(Function("g_", None, Real, Real), Anything), subst(other)) ::
-                  Nil))
-              case FormulaKind => AxiomaticRule("CE congruence",
-                USubst(SubstitutionPair(PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula), C.ctx) ::
-                  SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), subst(k)) ::
-                  SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), subst(other)) ::
-                  Nil))
-            }
-          )
-          // |- C{subst(k)} <-> C{subst(o)} by CQ
+          val sideCE: Provable = CE(C)(sideUS)
+          // |- C{subst(k)} <-> C{subst(o)} by CQ or CE, respectively
+//          sideUS(
+//            Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(subst(k)), C(subst(o)))))
+//            ,
+//            k.kind match {
+//              case TermKind => AxiomaticRule("CQ equation congruence",
+//                USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
+//                  SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), subst(k)) ::
+//                  SubstitutionPair(FuncOf(Function("g_", None, Real, Real), Anything), subst(o)) ::
+//                  Nil))
+//              case FormulaKind => AxiomaticRule("CE congruence",
+//                USubst(SubstitutionPair(PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula), C.ctx) ::
+//                  SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), subst(k)) ::
+//                  SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), subst(o)) ::
+//                  Nil))
+//            }
+//          )
+          // |- C{subst(k)} <-> C{subst(o)} by CQ or CE, respectively
+
           //          val sideSwap = sideCE(
           //            Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(subst(other)), C(subst(k))))),
           //            CommuteEquivRight(SuccPos(0))
           //          )
           //          // |- C{subst(o)} <-> C{subst(k)} by CommuteEquivRight
-          val side2: Provable = sideCE(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(k)), C(subst(other))))),
+          val side2: Provable = sideCE(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(k)), C(subst(o))))),
             EquivifyRight(SuccPos(0)))
           // |- C{subst(k)}  -> C{subst(other)} by EquivifyRight
           //assert(C(subst(k)) == expr, "matched expression expected")
           val coside: Provable = side2(
-            proof.conclusion.updated(p.top, Imply(C(subst(k)), C(subst(other)))),
+            proof.conclusion.updated(p.top, Imply(C(subst(k)), C(subst(o)))),
             CoHideRight(p.top.asInstanceOf[SuccPos])
           )
-          // G |- C{subst(k)}  -> C{subst(other)}, D by CoHideRight
-          val proved = {Provable.startProof(proof.conclusion.updated(p.top, C(subst(other))))(
+          // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
+          val proved = {Provable.startProof(proof.conclusion.updated(p.top, C(subst(o))))(
             CutRight(C(subst(k)), p.top.asInstanceOf[SuccPos]), 0
           ) (coside, 1)
-          } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(other))), "prolonged conclusion"
+          } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
             ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")
           //                           *
           //                        ------
@@ -438,21 +475,21 @@ trait UnifyUSCalculus {
           // G |- C{subst(o)}, D
           proved(proof, 0)
 
-        } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(other))), "prolonged conclusion"
+        } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
           ) ensuring(r=>r.subgoals==proof.subgoals, "expected original premises")
 
         K.ctx match {
-          case Equal(DotTerm, other) =>
-            equivStep(other, byUS(fact))
+          case Equal(DotTerm, o) =>
+            equivStep(o, byUS(fact))
 
-          case Equal(other, DotTerm) =>
-            equivStep(other, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & byUS(fact))
+          case Equal(o, DotTerm) =>
+            equivStep(o, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & byUS(fact))
 
-          case Equiv(DotFormula, other) =>
-            equivStep(other, byUS(fact))
+          case Equiv(DotFormula, o) =>
+            equivStep(o, byUS(fact))
 
-          case Equiv(other, DotFormula) =>
-            equivStep(other, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & byUS(fact))
+          case Equiv(o, DotFormula) =>
+            equivStep(o, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & byUS(fact))
 
           //@todo implies cases
 
