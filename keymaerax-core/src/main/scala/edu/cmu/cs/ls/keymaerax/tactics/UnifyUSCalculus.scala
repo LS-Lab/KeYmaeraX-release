@@ -454,6 +454,8 @@ trait UnifyUSCalculus {
           case Equiv(other, DotFormula) =>
             equivStep(other, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & byUS(fact))
 
+          //@todo implies cases
+
           case _ => throw new ProverException("Not implemented for other cases yet, see useAt")
         }
       }

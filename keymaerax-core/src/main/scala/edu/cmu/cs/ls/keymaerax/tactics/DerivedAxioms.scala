@@ -212,6 +212,7 @@ object DerivedAxioms {
     case "abs" => Some(absF, absT)
     case "min" => Some(minF, minT)
     case "max" => Some(maxF, maxT)
+    case "+<= up" => Some(intervalUpPlusF, intervalUpPlusT)
     case _ => None
   } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == name, s"Lookup of DerivedAxiom should find the correct lemma (name: ${name})")
 
@@ -290,6 +291,7 @@ object DerivedAxioms {
       , "abs" -> Some(absF, absT)
       , "min" -> Some(minF, minT)
       , "max" -> Some(maxF, maxT)
+      , "+<= up" -> Some(intervalUpPlusF, intervalUpPlusT)
     ) ensuring(r => r.forall(kv => derivedAxiomInfo(kv._1)==kv._2), "same contents as derivedAxiomInfo()")
 
     mapping.keys.map(key => {
@@ -1918,5 +1920,19 @@ object DerivedAxioms {
   )
 
   lazy val maxT = derivedAxiomT(maxDef)
+
+  /**
+   * {{{Axiom "+<= up".
+   *    (x+y<=z <- X+Y<=Z) <- (x<=X & y<=Y)
+   * End.
+   * }}}
+   */
+  lazy val intervalUpPlusF = "(x+y<=z <- X+Y<=Z) <- (x<=X & y<=Y)".asFormula
+  lazy val intervalUpPlus = derivedAxiom("+<= up",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalUpPlusF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalUpPlusT = derivedAxiomT(intervalUpPlus)
 
 }
