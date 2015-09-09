@@ -1117,7 +1117,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
                                 controller: 'ErrorAlertCtrl',
                                 size: 'md',
                                 resolve: {
-                                  action: function () { return "finding dispatched term"; },
+                                  action: function () { return "Combinator Term Execution Failed -- see server console output for a full tactic execution trace."; },
                                   error: function () { return data; }
                                 }});
                             } else if (data.tacticInstStatus == 'Running') {
