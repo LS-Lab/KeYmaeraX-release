@@ -126,7 +126,9 @@ class InverseDiffGhostTests extends TacticTestSuite {
 
   }
 
-  "Inverse Ghost" should "work when we don't have to reorder diffeq" in {
+  "Inverse Ghost" should "placeholder" in {}
+
+  ignore should "work when we don't have to reorder diffeq" in {
     val f = "\\exists x ([{x' = 0*x+v, v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0)".asFormula
 //    println(ODETactics.SystemHelpers.axiomInstance(f).prettyString)
     val node = helper.formulaToNode(f)
@@ -139,7 +141,7 @@ class InverseDiffGhostTests extends TacticTestSuite {
   }
 
 
-  it should "then work on v as well" in {
+  ignore should "then work on v as well" in {
     val f = "\\exists x ([{v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0)".asFormula
     val node = helper.formulaToNode(f)
     val tactic = ODETactics.inverseDiffAuxiliaryT(SuccPos(0))
@@ -150,7 +152,7 @@ class InverseDiffGhostTests extends TacticTestSuite {
       "[{t' = 0*t + 1 & true & t >= 0}]x>0".asFormula
   }
 
-  it should "not work when time is all that's left" in {
+  ignore should "not work when time is all that's left" in {
     ???
   }
 
