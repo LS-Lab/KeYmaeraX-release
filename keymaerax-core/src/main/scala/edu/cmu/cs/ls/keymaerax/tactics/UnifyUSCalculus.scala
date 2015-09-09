@@ -418,42 +418,8 @@ trait UnifyUSCalculus {
           // |- fact: k=o or k<->o, respectively
           val sideUS: Provable = subst.toForward(fact)
           // |- subst(fact): subst(k)=subst(o) or subst(k)<->subst(o) by US
-          /*(
-            subst(fact.conclusion)
-            ,
-            AxiomaticRule("CT term congruence",
-              USubst(SubstitutionPair(FuncOf(Function("ctx_", None, Real, Real), DotTerm), DotTerm) ::
-                SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), subst(k)) ::
-                SubstitutionPair(FuncOf(Function("g_", None, Real, Real), Anything), subst(other)) ::
-                Nil))
-//            AxiomaticRule("CQ equation congruence",
-//            USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), Anything), C.ctx) :: Nil))
-          )*/
           val sideCE: Provable = CE(C)(sideUS)
           // |- C{subst(k)} <-> C{subst(o)} by CQ or CE, respectively
-//          sideUS(
-//            Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(subst(k)), C(subst(o)))))
-//            ,
-//            k.kind match {
-//              case TermKind => AxiomaticRule("CQ equation congruence",
-//                USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
-//                  SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), subst(k)) ::
-//                  SubstitutionPair(FuncOf(Function("g_", None, Real, Real), Anything), subst(o)) ::
-//                  Nil))
-//              case FormulaKind => AxiomaticRule("CE congruence",
-//                USubst(SubstitutionPair(PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula), C.ctx) ::
-//                  SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), subst(k)) ::
-//                  SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), subst(o)) ::
-//                  Nil))
-//            }
-//          )
-          // |- C{subst(k)} <-> C{subst(o)} by CQ or CE, respectively
-
-          //          val sideSwap = sideCE(
-          //            Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(subst(other)), C(subst(k))))),
-          //            CommuteEquivRight(SuccPos(0))
-          //          )
-          //          // |- C{subst(o)} <-> C{subst(k)} by CommuteEquivRight
           val side2: Provable = sideCE(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(k)), C(subst(o))))),
             EquivifyRight(SuccPos(0)))
           // |- C{subst(k)}  -> C{subst(other)} by EquivifyRight
