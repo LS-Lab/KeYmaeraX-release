@@ -968,7 +968,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
                                 controller: 'ErrorAlertCtrl',
                                 size: 'md',
                                 resolve: {
-                                  action: function () { return "finding dispatched tactics"; },
+                                  action: function () { return "Tactic Execution Failed -- see server console output for a full tactic execution trace."; },
                                   error: function () { return data; }
                                 }});
                             } else if (data.tacticInstStatus == 'Running') {

@@ -147,9 +147,10 @@ object SQLite extends DBAbstraction {
       Tacticonproof.filter(_.prooftacticid === tactic.id).update(newRow)
     })
 
-  override def updateDispatchedTacticStatus(tacticId: String, status: String) =
+  override def updateDispatchedTacticStatus(tacticId: String, status: DispatchedTacticStatus.Value) =
   sqldb.withSession(implicit session => {
-    Tacticonproof.filter(_.prooftacticid === tacticId).map(_.status.get).update(status)
+    println(s"[HyDRA] Updating tactic status of tactic ${tacticId} to ${status.toString}")
+    Tacticonproof.filter(_.prooftacticid === tacticId).map(_.status.get).update(status.toString)
   })
 
   override def createUser(username: String, password: String): Unit =
@@ -165,6 +166,11 @@ object SQLite extends DBAbstraction {
   override def updateDispatchedCLTerm(termToUpdate: DispatchedCLTermPOJO): Unit =
     sqldb.withSession(implicit session => {
       Clterms.filter(_.termid === termToUpdate.id).update(termPojoToRow(termToUpdate))
+    })
+
+  override def updateDispatchedCLTermStatus(termId: String, status: DispatchedTacticStatus.Value) =
+    sqldb.withSession(implicit session => {
+      Clterms.filter(_.termid === termId).map(_.status.get).update(status.toString)
     })
 
   private def termPojoToRow(t : DispatchedCLTermPOJO) : CltermsRow =

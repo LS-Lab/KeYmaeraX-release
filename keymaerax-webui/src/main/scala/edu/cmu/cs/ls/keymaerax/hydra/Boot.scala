@@ -11,8 +11,8 @@ import javax.swing._
 
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
-import edu.cmu.cs.ls.keymaerax.api.ComponentConfig
-import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms
+import edu.cmu.cs.ls.keymaerax.api.{KeYmaeraInterface, ComponentConfig}
+import edu.cmu.cs.ls.keymaerax.tactics.{Tactics, DerivedAxioms}
 import spray.can.Http
 
 import scala.concurrent.duration.FiniteDuration
