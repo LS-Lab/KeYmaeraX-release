@@ -57,18 +57,21 @@ keymaeraProofControllers.controller('MathematicaConfig',
   function($scope, $rootScope, $http, $cookies, $modal, $routeParams) {
     $http.get("/config/mathematica/suggest")
       .success(function(data) {
-          $scope.mathematicaConfigSuggestion = data
+          if(data.errorThrown) showCaughtErrorMessage($modal, data, "Encountered an error when attempting to get a suggested Mathematica configuration.")
+          else $scope.mathematicaConfigSuggestion = data
       })
       .error(function() {
-          console.error("Unhandled error when attempting to get Mathematica configuration.")
+          showErrorMessage($modal, "Encountered an error when attempting to get a suggested Mathematica configuration.")
       });
 
     $http.get("/config/mathematica")
       .success(function(data) {
-          if (data.linkName !== "" && data.jlinkLibPath !== "") {
-            $scope.linkName = data.linkName;
-            $scope.jlinkLibPath = data.jlinkLibDir;
-          }
+          if(data.errorThrown) showCaughtErrorMessage($modal, data, "Failed to retreive the server's current Mathematica configuration")
+          else {
+              if (data.linkName !== "" && data.jlinkLibPath !== "") {
+                  $scope.linkName = data.linkName;
+                  $scope.jlinkLibPath = data.jlinkLibDir;
+              }
 //          else {
 //            $http.get("/config/mathematica/suggest")
 //                .success(function(data) {
@@ -76,9 +79,10 @@ keymaeraProofControllers.controller('MathematicaConfig',
 //                    $scope.jlinkLibPath = data.jlinkPath + "/" + data.jlinkName;
 //                })
 //          }
+          }
       })
       .error(function() {
-          console.error("Unhandled error when attempting to get Mathematica configuration.")
+          showErrorMessage($modal, "Failed to retreive the server's current Mathematica configuration.")
       });
 
     $scope.configureMathematica = function() {
@@ -101,6 +105,9 @@ keymaeraProofControllers.controller('MathematicaConfig',
 
                     $("#mathematicaConfigurationAlert").hide();
                     $rootScope.mathematicaIsConfigured = data.configured;
+                }
+                else if(data.errorThrown) {
+                    showCaughtErrorMessage($modal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration")
                 }
                 else {
                     var kernelNameExists = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.kernelName) > -1 &&
@@ -125,7 +132,7 @@ keymaeraProofControllers.controller('MathematicaConfig',
                 }
             })
             .error(function(data) {
-                alert("error: " + JSON.stringify(data))
+                showCaughtErrorMessage($modal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration.")
             })
     }
 
@@ -151,7 +158,7 @@ keymaeraProofControllers.controller('MathematicaConfig.UpdateDialog', function($
 
 keymaeraProofControllers.controller('DashboardCtrl.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
   $scope.cancel = function() {
-      alert("No!")
+      alert("KeYmaeraX is shut down. Please close the window and restart the server to continue using KeYmaera X.")
       $window.close();
   }
 });
