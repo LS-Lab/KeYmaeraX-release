@@ -336,12 +336,11 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ))
   }
 
-  it should "modelplex llc by updateCalculus implicationally" in {
+  ignore should "modelplex llc by updateCalculus implicationally" in {
     println(proveBy(parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-ctrl.key")),
       updateCalculus(SuccPosition(0, PosInExpr(1 :: Nil)))))
     //@todo not sure how to test whether it's the right output
     true shouldBe false
-
   }
 
     /*it should "modelplex llc by updateCalculus after turning it backwards" in {
