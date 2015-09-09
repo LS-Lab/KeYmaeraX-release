@@ -34,7 +34,8 @@ class PairParserTests extends FlatSpec with Matchers {
     for ((s1, s2) <- expectedParse) {
       println("input 1: " + s1 + "\ninput 2: " + s2)
       if (s2 == unparseable) {
-        a[ParseException] should be thrownBy parser(s1)
+        // ParseExceptions and CoreExceptions should both be allowed.
+        a[Exception] should be thrownBy parser(s1)
       } else {
         val p1 = parser(s1)
         val p2 = parser(s2)
