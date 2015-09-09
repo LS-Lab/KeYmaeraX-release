@@ -168,10 +168,6 @@ keymaeraProofControllers.controller('DashboardCtrl.ShutdownDialog', function($sc
 $scope.noModalForHelpDialogHack = true
 });
 
-
-
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -473,7 +469,8 @@ keymaeraProofControllers.controller('DashboardCtrl',
 
     $http.get("/keymaeraXVersion")
         .success(function(data) {
-            $scope.keymaeraXVersion = data.keymaeraXVersion
+            if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not get the serv'ers KeYmaera X version")
+            else  $scope.keymaeraXVersion = data.keymaeraXVersion
         })
         .error(function() {
             var message = "Unhandled error when attempting to get KeYmaera X version."
@@ -483,7 +480,9 @@ keymaeraProofControllers.controller('DashboardCtrl',
     $scope.mathematicaIsConfigured = true;
     $http.get("/config/mathematicaStatus")
         .success(function(data) {
-            $scope.mathematicaIsConfigured = data.configured;
+            if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not retreive Mathematica status")
+            else
+                $scope.mathematicaIsConfigured = data.configured;
         })
         .error(function() {
             var message = "Unhandled error when attempting to get Mathematica status.";
@@ -493,9 +492,12 @@ keymaeraProofControllers.controller('DashboardCtrl',
 
     $http.get('/users/' + $cookies.userId + '/dashinfo')
         .success(function(data) {
-            $scope.open_proof_count = data.open_proof_count;
-            $scope.all_models_count = data.all_models_count;
-            $scope.proved_models_count = data.proved_models_count;
+            if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not retreive dashboard info for user " + $cookies.userId)
+            else {
+                $scope.open_proof_count = data.open_proof_count;
+                 $scope.all_models_count = data.all_models_count;
+                $scope.proved_models_count = data.proved_models_count;
+            }
         })
         .error(function() {
             showErrorMessage($modal, "Failed to get dashInfo for this uer.")
