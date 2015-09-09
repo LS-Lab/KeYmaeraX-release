@@ -28,22 +28,22 @@ class CoreTests extends FlatSpec with Matchers {
   }
 
   it should "require explicit-form differential equation" in {
-    an[IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(x))}
+    an[CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(x))}
   }
 
   it should "require explicit-form differential equations" in {
-    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(x))}
-    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(y))}
-    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new Differential(x))}
-    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new Differential(y))}
-    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new Differential(Plus(x, y)))}
-    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), Plus(x, new Differential(Plus(x, y))))}
-    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), Plus(x, Minus(y, DifferentialSymbol(z))))}
+    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(x))}
+    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(y))}
+    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new Differential(x))}
+    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new Differential(y))}
+    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new Differential(Plus(x, y)))}
+    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), Plus(x, new Differential(Plus(x, y))))}
+    an [CoreException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), Plus(x, Minus(y, DifferentialSymbol(z))))}
   }
 
   it should "reject duplicate differential equations" in {
-    an [IllegalArgumentException] should be thrownBy {DifferentialProduct(new AtomicODE(new DifferentialSymbol(x), Number(7)), new AtomicODE(new DifferentialSymbol(new Variable("x")), Number(2)))}
-    an [IllegalArgumentException] should be thrownBy {DifferentialProduct(new AtomicODE(new DifferentialSymbol(x), Number(7)), new AtomicODE(new DifferentialSymbol(new Variable("x")), Number(7)))}
+    an [CoreException] should be thrownBy {DifferentialProduct(new AtomicODE(new DifferentialSymbol(x), Number(7)), new AtomicODE(new DifferentialSymbol(new Variable("x")), Number(2)))}
+    an [CoreException] should be thrownBy {DifferentialProduct(new AtomicODE(new DifferentialSymbol(x), Number(7)), new AtomicODE(new DifferentialSymbol(new Variable("x")), Number(7)))}
   }
 
   //@todo add core SeqPos tests
