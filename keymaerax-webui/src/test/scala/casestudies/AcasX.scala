@@ -308,11 +308,14 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           ls(boxSeqT) & ls(boxChoiceT) & ls(andR) && (
           dT("1.1") & ls(boxTestT) & ls(implyR) & ls(boxNDetAssign) & ls(skolemizeT) & AxiomCloseT, /* closed */
           dT("1.2") & ls(boxSeqT) & ls(boxNDetAssign) & ls(skolemizeT) & ls(boxSeqT) & ls(boxChoiceT) &
-            dT("1.2.1") & hide(AntePosition(1)) & ls(andR) & /* almost identical branches */
+            dT("1.2.1") &
+            la(hide, "(w=-1|w=1)&\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp)&(hp>0&rp>0&rv>=0&a>0)")
+            & ls(andR) & /* almost identical branches */
             ls(substitutionBoxAssignT) & ls(boxTestT) & dT("1.2.2") & ls(implyR) & ls(boxNDetAssign) & ls(skolemizeT) &
             ls(andR) && (ls(andR) && (dT("cohide") & cohide(SuccPosition(0)) & QE, AxiomCloseT), AxiomCloseT)
             /* last line used to be handled by QE, but Max broke that */
-            /* Would like to replace cohide by: ls(cohide, "-1=-1|-1=1") OR ls(cohide, "1=-1|1=1") (BUT two different branches)*/
+            /* Would like to replace cohide by: ls(cohide, "-1=-1|-1=1") OR ls(cohide, "1=-1|1=1") (BUT
+               two different branches)*/
           )),
         (cutUseLbl, dT("Generalization Strong Enough") &
           dT("Goal 69 (Solving)") &
@@ -332,34 +335,37 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                   ls(implyR) & (la(andL)*) & ls(andR) && (
                     ls(andR) && (
                       AxiomCloseT,
-                      dT("Before skolemization") & (ls(skolemizeT)*) & dT("After skolemization") & ls(implyR) & ls(OrRightT) &
+                      dT("Before skolemization") & (ls(skolemizeT)*) & dT("After skolemization") & ls(implyR) & ls(orR) &
                         // here we'd want to access the previously introduced skolem symbol and the time introduced by diffSolution; goal 90
                         la(instantiateT(Variable("t"), "kxtime_5 + t_0".asTerm)) & // t_22+t_23: kxtime_5 == t_22, t_0 == t_23
                         la(instantiateT(Variable("ro"), "rv*(kxtime_5 + t_0)".asTerm)) & // rv*(t_22+t_23)
                         dT("Before CUT") &
                         // CUT: "(0 <= t_0+kxtime_5 & t_0+kxtime_5 < Max(0, w*(dhf-dhd))/a) | t_0+kxtime_5 >= Max(0, w*(dhf-dhd))/a"
                         cut("(0 <= t_0+kxtime_5 & t_0+kxtime_5 < max0/a) | t_0+kxtime_5 >= max0/a".asFormula) & onBranch(
-                        (cutShowLbl, dT("Show Cut") & lastAnte(hide) & hide(AntePosition(0)) &
-                          hide(SuccPosition(1)) & hide(SuccPosition(0)) & dT("Show Cut 2") &
+                        (cutShowLbl, dT("Show Cut") & la(hide, "max0=max((0,w*(dhf-dhd)))") &
+                          la(hide, "\\forall ho (0<=kxtime_5+t_0&kxtime_5+t_0 < max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&ho=w*a/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&ho=dhf*(kxtime_5+t_0)-w*max0^2/(2*a)->abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*ho-hp)")
+                          & ls(hide, "abs(r_3-ro_0)>rp") & ls(hide, "w*h_3 < w*ho_0-hp") & dT("Show Cut 2") &
                           ls(OrRightT) & lastAnte(OrLeftT) & (la(andL)*) & (ls(andR)*) & (QE | dT("Should be closed") & Tactics.stopT)),
                         (cutUseLbl, dT("Use Cut") & /*hide(AntePosition(0)) &*/ lastAnte(OrLeftT) && (
                           dT("Goal 110") & // All this closes fine; just trying to avoid recomputing it each time
                             locateAnte(instantiateT(Variable("ho"), "w*a/2*(t_0+kxtime_5)^2 + dhd*(t_0+kxtime_5)".asTerm), { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false }) &
                             dT("instantiate ho") & ((AxiomCloseT | l(NonBranchingPropositionalT))*) &
                             la(implyL, "0<=kxtime_5+t_0&kxtime_5+t_0 < max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=w*a/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=dhf*(kxtime_5+t_0)-w*max0^2/(2*a)->abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5))-hp")
-                            && ( (ls(OrRightT)*) & dT("lastSucc") & lastSucc(hide) & (ls(andR)*) & (AxiomCloseT | absmax2 & dT("before QE") & QE | dT("Shouldn't get here")) & dT("Shouldn't get here 2"),
+                            && ( (ls(OrRightT)*) & dT("lastSucc") &
+                                 ls(hide, "kxtime_5+t_0>=max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=dhf*(kxtime_5+t_0)-w*max0^2/(2*a)")
+                                 & (ls(andR)*) & (AxiomCloseT | absmax2 & dT("before QE") & QE | dT("Shouldn't get here")) & dT("Shouldn't get here 2"),
                                  dT("cut 3") & la(OrLeftT, "0<=t_0&t_0 < max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=dhf*t_0-w*max((0,w*(dhf-dhd_3)))^2/(2*a)") && (
                               dT("Goal 124") & lastAnte(OrLeftT) && (
-                                dT("lastSucc2") & lastSucc(hide) & (absmax2 & dT("Maybe here") & QE | dT("This should close") & Tactics.stopT), // closes
+                                dT("lastSucc2") & ls(hide, "w*h_3 < w*ho_0-hp") & absmax2 & QE,
                                 dT("Goal 135") & /*lastSucc(hide) & lastSucc(hide) &*/ (la(andL)*) & dT("Goal 145") & la(OrLeftT, "w*dhd_3>=w*dhf|w*ao>=a") && (
-                                  dT("Goal 146") & absmax2 & crushw, // closes
-                                  dT("Goal 148") & absmax2 & crushw  // closes
+                                  dT("Goal 146") & absmax2 & crushw,
+                                  dT("Goal 148") & absmax2 & crushw
                                 )
                               ),
                               dT("Goal 125") & lastAnte(OrLeftT) && (
-                                dT("Goal 280") & absmax2 & QE, // closes
+                                dT("Goal 280") & absmax2 & QE,
                                 dT("Goal 281") & absmax2 & (la(hide, "\\forall tside (0<=tside&tside<=kxtime_5->w*(dhd_2()+ao*tside)>=w*dhf|w*ao>=a)")*)
-                                  & (la(andL)*) & dT("Goal 282") & (la(OrLeftT)*) & QE // generates 12 subgoals
+                                  & (la(andL)*) & dT("Goal 282") & (la(orL)*) & QE
                               )
                             ) ),
                           // goal 111
