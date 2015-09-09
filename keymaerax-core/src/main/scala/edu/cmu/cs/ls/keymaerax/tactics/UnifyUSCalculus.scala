@@ -284,6 +284,7 @@ trait UnifyUSCalculus {
   /** CE(equiv) uses the equivalence or equality fact equiv for congruence reasoning at the indicated position to replace left by right (literally, no substitution)
     * Efficient unification-free version of [[useAt()]]
     * @see [[useAt()]]
+    * @see [[AxiomaticRuleTactics.propositionalCongruenceT()]]
     */
   def CE(equiv: Provable): PositionTactic = new PositionTactic("CE(Provable)") {
     import Augmentors._

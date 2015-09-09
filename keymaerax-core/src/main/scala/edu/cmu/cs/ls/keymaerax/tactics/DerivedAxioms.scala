@@ -212,6 +212,7 @@ object DerivedAxioms {
     case "abs" => Some(absF, absT)
     case "min" => Some(minF, minT)
     case "max" => Some(maxF, maxT)
+    case "+ interval" => Some(intervalPlusF, intervalPlusT)
     case _ => None
   } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == name, s"Lookup of DerivedAxiom should find the correct lemma (name: ${name})")
 
@@ -290,7 +291,8 @@ object DerivedAxioms {
       , "abs" -> Some(absF, absT)
       , "min" -> Some(minF, minT)
       , "max" -> Some(maxF, maxT)
-    )
+      , "+ interval" -> Some(intervalPlusF, intervalPlusT)
+    ) ensuring(r => r.forall(k => derivedAxiomInfo(k._1) == k._2), "same outcomes as derivedAxiomInfo()")
 
     mapping.keys.map(key => {
       val proof: Provable = derivedAxiom(key)
@@ -1918,5 +1920,19 @@ object DerivedAxioms {
   )
 
   lazy val maxT = derivedAxiomT(maxDef)
+
+  // interval
+  /**
+   * {{{Axiom "+ interval".
+   *   x_0+y_0<=x+y&x+y<=x_1+y_1 <- (x_0<=x&x<=x_1) & (y_0<=y&y<=y_1)
+   * End.
+   * }}}
+   */
+  lazy val intervalPlusF = "(x_0+y_0<=x+y&x+y<=x_1+y_1) <- ((x_0<=x&x<=x_1) & (y_0<=y&y<=y_1))".asFormula
+  lazy val intervalPlus = derivedAxiom("+ interval",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalPlusF)),
+    QE
+  )
+  lazy val intervalPlusT = derivedAxiomT(intervalPlus)
 
 }
