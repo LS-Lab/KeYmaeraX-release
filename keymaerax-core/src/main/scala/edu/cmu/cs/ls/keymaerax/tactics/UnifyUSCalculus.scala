@@ -420,11 +420,11 @@ trait UnifyUSCalculus {
           // |- subst(fact): subst(k)=subst(o) or subst(k)<->subst(o) by US
           val sideCE: Provable = CE(C)(sideUS)
           // |- C{subst(k)} <-> C{subst(o)} by CQ or CE, respectively
-          val side2: Provable = sideCE(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(k)), C(subst(o))))),
+          val sideImply: Provable = sideCE(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(k)), C(subst(o))))),
             EquivifyRight(SuccPos(0)))
           // |- C{subst(k)}  -> C{subst(other)} by EquivifyRight
           //assert(C(subst(k)) == expr, "matched expression expected")
-          val coside: Provable = side2(
+          val coside: Provable = sideImply(
             proof.conclusion.updated(p.top, Imply(C(subst(k)), C(subst(o)))),
             CoHideRight(p.top.asInstanceOf[SuccPos])
           )
