@@ -155,7 +155,8 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
       // otherwise DotTerm abstraction of all occurrences of the argument
       case _ => List(SubstRepl(FuncOf(f,DotTerm), SubstitutionHelper.replaceFree(e2)(t,DotTerm)))
     }
-    case Anything | Nothing               => if (e1==e2) id else ununifiable(e1,e2)
+    case Anything                         => if (e1==e2) id else List(SubstRepl(Anything, e2))
+    case /*Anything |*/ Nothing           => if (e1==e2) id else ununifiable(e1,e2)
     case DotTerm                          => if (e1==e2) id else List(SubstRepl(e1, e2))
     // homomorphic cases
     case Neg(t)       => e2 match {case Neg(t2) => unify(t,t2) case _ => ununifiable(e1,e2)}

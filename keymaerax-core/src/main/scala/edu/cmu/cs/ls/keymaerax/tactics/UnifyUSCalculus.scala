@@ -4,6 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ByProvable, ConstructionTactic, PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
@@ -347,6 +348,7 @@ trait UnifyUSCalculus {
   /** CE(C) will wrap any equivalence left<->right or equality left=right fact it gets within context C.
     * Uses CE or CQ as needed.
     * @see [[CE(Provable)]]
+    * @see [[CMon(Context)]]
     * @todo likewise for Context[Term] using CT instead.
     */
   def CE(C: Context[Formula]): ForwardTactic = equiv => {
@@ -374,6 +376,140 @@ trait UnifyUSCalculus {
         )
       case _ => throw new IllegalArgumentException("expected equivalence or equality fact " + equiv.conclusion)
     }
+  }
+
+  /** CMon(C) will wrap any implication left->right fact it gets within a positive context C by monotonicity.
+    * {{{
+    *      k |- o
+    *   ------------ CMon if C{⎵} of positive polarity
+    *   C{k} |- C{o}
+    * }}}
+    * @note The direction in the conclusion switches for negative polarity C{⎵}
+    * @see [[CE(Context)]]
+    * @see [[AxiomaticRuleTactics.propositionalCongruenceT()]]
+    */
+  def CMon(C: Context[Formula]): ForwardTactic = impl => {
+    import StaticSemantics.symbols
+    require(impl.conclusion.ante.length == 1 && impl.conclusion.succ.length == 1, "expected equivalence shape without antecedent and exactly one succedent " + impl)
+    //@todo require(DotFormula only occurs with positive polarity in C)
+    val left = impl.conclusion.ante.head
+    val right = impl.conclusion.succ.head
+    require(C.isFormulaContext, "Formula context expected to make use of equivalences with CE " + C)
+    /** Monotonicity rewriting step to replace occurrence of instance of k by instance of o in context */
+    def monStep(C: Context[Formula], mon: Provable): Provable = {
+      C.ctx match {
+        case DotFormula => mon
+
+        case And(e, c) if !symbols(e).contains(DotFormula) =>
+          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+            (AndLeft(AntePos(0)), 0)
+            (AndRight(SuccPos(0)), 0)
+            (Close(AntePos(0), SuccPos(0)), 0)
+            // right branch
+            (CoHide2(AntePos(1), SuccPos(0)), 0)
+            ) (monStep(Context(c), mon), 0)
+
+        case And(c, e) if !symbols(e).contains(DotFormula) =>
+          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+            (AndLeft(AntePos(0)), 0)
+            (AndRight(SuccPos(0)), 0)
+            (Close(AntePos(1), SuccPos(0)), 1)
+            // left branch
+            (CoHide2(AntePos(0), SuccPos(0)), 0)
+            ) (monStep(Context(c), mon), 0)
+
+        case Or(e, c) if !symbols(e).contains(DotFormula) =>
+          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+            (OrRight(SuccPos(0)), 0)
+            (OrLeft(AntePos(0)), 0)
+            (Close(AntePos(0), SuccPos(0)), 0)
+            // right branch
+            (CoHide2(AntePos(0), SuccPos(1)), 0)
+            ) (monStep(Context(c), mon), 0)
+
+        case Or(c, e) if !symbols(e).contains(DotFormula) =>
+          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+            (OrRight(SuccPos(0)), 0)
+            (OrLeft(AntePos(0)), 0)
+            (Close(AntePos(0), SuccPos(1)), 1)
+            // right branch
+            (CoHide2(AntePos(0), SuccPos(0)), 0)
+            ) (monStep(Context(c), mon), 0)
+
+        case Imply(e, c) if !symbols(e).contains(DotFormula) =>
+          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+            (ImplyRight(SuccPos(0)), 0)
+            (ImplyLeft(AntePos(0)), 0)
+            (Close(AntePos(0), SuccPos(1)), 0)
+            // right branch
+            (CoHide2(AntePos(1), SuccPos(0)), 0)
+            ) (monStep(Context(c), mon), 0)
+
+        //@todo check this case
+        case Imply(c, e) if !symbols(e).contains(DotFormula) =>
+          // polarity switch so switch left/right sides
+          (Provable.startProof(Sequent(Nil, IndexedSeq(C(right)), IndexedSeq(C(left))))
+            (ImplyRight(SuccPos(0)), 0)
+            (ImplyLeft(AntePos(0)), 0)
+            (Close(AntePos(0), SuccPos(1)), 0)
+            // right branch
+            (CoHide2(AntePos(1), SuccPos(0)), 0)
+            ) (monStep(Context(c), mon), 0)
+
+        case Equiv(e, c) => assert(symbols(e).contains(DotFormula) || symbols(c).contains(DotFormula), "proper contexts have dots somewhere " + C)
+          throw new ProverException("No monotone context for equivalences " + C)
+
+        case Box(a, c) if !symbols(a).contains(DotFormula) =>
+          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+            (AxiomaticRule("[] monotone", USubst(
+              SubstitutionPair(ProgramConst("a_"), a)
+                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(left))
+                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(right))
+                :: Nil
+            )
+            ), 0)
+            ) (monStep(Context(c), mon), 0)
+
+        case Diamond(a, c) if !symbols(a).contains(DotFormula) =>
+          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+            (AxiomaticRule("<> monotone", USubst(
+              SubstitutionPair(ProgramConst("a_"), a)
+                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(left))
+                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(right))
+                :: Nil
+            )
+            ), 0)
+            ) (monStep(Context(c), mon), 0)
+
+        case m:Modal if symbols(m.program).contains(DotFormula) =>
+          throw new ProverException("No monotone context within programs " + C)
+
+        case Forall(vars, c) =>
+          //@note would also work with all distribute and all generalization instead
+          //@note would also work with Skolemize and all instantiate but disjointness is more painful
+          useFor("all eliminate", PosInExpr(1::Nil))(AntePos(0))(monStep(Context(c), mon)) (
+            Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))),
+            Skolemize(SuccPos(0))
+          )
+
+        case Exists(vars, c) =>
+          //@note would also work with exists distribute and exists generalization instead
+          //@note would also work with Skolemize and all instantiate but disjointness is more painful
+          useFor("exists eliminate", PosInExpr(0::Nil))(SuccPos(0))(monStep(Context(c), mon)) (
+            Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))),
+            Skolemize(AntePos(0))
+          )
+
+        //@todo flip polarity
+        case Not(_) => throw new ProverException("No monotone context without polarity flipping for not " + K)
+
+        case _ => throw new ProverException("Not implemented for other cases yet " + C)
+      }
+    } ensuring(r => r.conclusion == Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))), "Expected conclusion"
+      ) ensuring(r => !impl.isProved || r.isProved, "Proved if input fact proved")
+
+    monStep(C, impl)
+
   }
 
   /** useFor(fact,key,inst) use the key part of the given fact forward for the selected position in the given Provable to conclude a new Provable
@@ -419,6 +555,7 @@ trait UnifyUSCalculus {
           val sideUS: Provable = subst.toForward(fact)
           // |- subst(fact): subst(k)=subst(o) or subst(k)<->subst(o) by US
           val sideCE: Provable = CE(C)(sideUS)
+          //@todo could shortcut proof by using "CO one-sided congruence" instead of CE
           // |- C{subst(k)} <-> C{subst(o)} by CQ or CE, respectively
           val sideImply: Provable = sideCE(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(k)), C(subst(o))))),
             EquivifyRight(SuccPos(0)))
@@ -440,7 +577,6 @@ trait UnifyUSCalculus {
           // ------------------------------ CutRight
           // G |- C{subst(o)}, D
           proved(proof, 0)
-
         } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
           ) ensuring(r=>r.subgoals==proof.subgoals, "expected original premises")
 
@@ -458,14 +594,108 @@ trait UnifyUSCalculus {
             equivStep(o, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & byUS(fact))
 
           //@todo implies cases
+          case Imply(o, DotFormula) =>
+            // |- o->k
+            val deduct = inverseImplyR(fact)
+            // o |- k
+            val sideUS: Provable = subst.toForward(deduct)
+            // subst(o) |- subst(k) by US
+            val Cmon = CMon(C)(sideUS)
+            // C{subst(o)} |- C{subst(k)}
+            val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k))))),
+              ImplyRight(SuccPos(0))
+            )
+            // |- C{subst(o)} -> C{subst(k)}
+            val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(proof.conclusion.succ.length + 1)}
+            val coside: Provable = sideImply(
+            //@todo p.top may be wrong if AntePos. Hmpf.
+              proof.conclusion.updated(p.top, Imply(C(subst(o)), C(subst(k)))),
+              CoHideRight(cutPos)
+            )
+            // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
+            val proved = {if (pos.isSucc)
+              Provable.startProof(proof.conclusion.updated(pos.top, C(subst(o))))(
+                CutRight(C(subst(k)), pos.top.asInstanceOf[SuccPos]), 0
+              ) (coside, 1)
+            else
+              Provable.startProof(proof.conclusion.updated(pos.top, C(subst(k))))(
+                CutLeft(C(subst(o)), pos.top.asInstanceOf[AntePos]), 0
+              ) (coside, 1)
+            } /*ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
+              ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
+            proved(proof, 0)
 
-          case _ => throw new ProverException("Not implemented for other cases yet, see useAt")
+          //@todo check this case!
+          case Imply(DotFormula, o) =>
+            // |- k->o
+            val deduct = inverseImplyR(fact)
+            // k |- o
+            val sideUS: Provable = subst.toForward(deduct)
+            // subst(k) |- subst(o) by US
+            val Cmon = CMon(C)(sideUS)
+            // C{subst(k)} |- C{subst(o)}
+            val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k))))),
+              ImplyRight(SuccPos(0))
+            )
+            // |- C{subst(o)} -> C{subst(k)}
+            val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(proof.conclusion.succ.length + 1)}
+            val coside: Provable = sideImply(
+              proof.conclusion.updated(p.top, Imply(C(subst(o)), C(subst(k)))),
+              CoHideRight(cutPos)
+            )
+            // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
+            val proved = {Provable.startProof(proof.conclusion.updated(pos.top, C(subst(o))))(
+              //@todo CutLeft if pos is AntePos
+              CutRight(C(subst(k)), pos.top.asInstanceOf[SuccPos]), 0
+            ) (coside, 1)
+              // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
+            } /*ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
+              ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
+            proved(proof, 0)
+
+          case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
+            throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
+
+          case _ => throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
         }
       }
       val r = useFor(subst, keyCtx, keyPart, pos, ctx, expr)
       if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof + "\n ~~> " + r)
       r
     }
+  }
+
+  /**
+   * {{{
+   *   G |- a -> b, D
+   * ----------------
+   *   G, a |- b, D
+   * }}}
+   * @see [[PropositionalTacticsImpl.InverseImplyRightT]]
+   */
+  private def inverseImplyR: ForwardTactic = pr => {
+    val pos = SuccPos(0)
+    val last = AntePos(pr.conclusion.ante.length)
+    val Imply(a,b) = pr.conclusion.succ.head
+    (Provable.startProof(pr.conclusion.updated(pos, b).glue(Sequent(Nil, IndexedSeq(a), IndexedSeq())))
+      (CutRight(a, pos), 0)
+      // left branch
+      (Close(last, pos), 0)
+      // right branch
+      (HideLeft(last), 0)
+      ) (pr, 0)
+    /*(Provable.startProof(pr.conclusion.updated(pos, b).glue(Sequent(Nil, IndexedSeq(a), IndexedSeq())))
+      (Cut(Imply(a,b), pos), 0)
+      // right branch
+      (HideLeft(last), 1)
+      // left branch
+      (ImplyLeft(last), 0)
+      // left.right branch
+      (Close(last, pos), 2)
+      // left.left branch
+      (Close(last, pos), 0)
+      // right branch
+      ) (pr, 0)*/
   }
 
   /*******************************************************************

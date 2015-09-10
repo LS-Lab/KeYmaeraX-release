@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Tool}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import test.RandomFormula
 import testHelper.ParserFactory._
 import testHelper.ProvabilityTestHelper
 
@@ -24,6 +25,10 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
  */
 class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   import HilbertCalculus._
+
+  val randomTrials = 10
+  val randomComplexity = 3
+  val rand = new RandomFormula() //(-4317240407825764493L)
 
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig : Map[String, String] = helper.mathematicaConfig
@@ -347,4 +352,37 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       updateCalculus(SuccPosition(0, PosInExpr(1::Nil))) (Provable.startProof(parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-ctrl.key")))).
       conclusion shouldBe false
     }*/
+
+  "CMon" should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from x>5 |- x>2" in {
+    val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula)) (Provable.startProof(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula))))
+    done.subgoals shouldBe List(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)))
+    done.conclusion shouldBe Sequent(Nil, IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
+  }
+
+  it should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from provable x>5 |- x>2" in {
+    val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula)) (proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)), QE))
+    done shouldBe 'proved
+    done.conclusion shouldBe Sequent(Nil, IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
+  }
+
+  it should "prove C{x>5} |- C{x>2} from provable x>5 |- x>2 in random positive contexts" in {
+    val basic = proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)), QE)
+    println("Starting random contexts\n\n")
+    for (i <- 1 to randomTrials) {
+      val ctx = rand.nextFormulaContext(randomComplexity)
+      if (ctx.isFormulaContext) {
+        println("Context: " + ctx)
+        //@todo discard ctx unless positive
+        //@todo discard ctx if DotFormula within a program
+        //@todo discard ctx if DotFormula somewhere underneath an Equiv
+        try {
+          val done = CMon(ctx)(basic)
+          done shouldBe 'proved
+          done.conclusion shouldBe Sequent(Nil, IndexedSeq(ctx("x>5".asFormula)), IndexedSeq(ctx("x>2".asFormula)))
+        } catch {
+          case e: ProverException => if (e.toString.startsWith("No monotone context")) println("context discarded") else throw e
+        }
+      }
+    }
+  }
 }

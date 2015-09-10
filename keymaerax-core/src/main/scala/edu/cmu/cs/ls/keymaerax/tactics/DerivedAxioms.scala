@@ -157,6 +157,7 @@ object DerivedAxioms {
     case "<*> iterate" => Some(iteratedF, iteratedT)
     case "<*> approx" => Some(loopApproxdF, loopApproxdT)
     case "exists generalize" => Some(existsGeneralizeF, existsGeneralizeT)
+    case "exists eliminate" => Some(existsEliminateF, existsEliminateT)
     case "all substitute" => Some(allSubstituteF, allSubstituteT)
     case "vacuous exists quantifier" => Some(vacuousExistsF, vacuousExistsT)
     case "V[:*] vacuous assign nondet" => Some(vacuousBoxAssignNondetF, vacuousBoxAssignNondetT)
@@ -243,6 +244,7 @@ object DerivedAxioms {
       , "<*> iterate" -> Some(iteratedF, iteratedT)
       , "<*> approx" -> Some(loopApproxdF, loopApproxdT)
       , "exists generalize" -> Some(existsGeneralizeF, existsGeneralizeT)
+      , "exists eliminate" -> Some(existsEliminateF, existsEliminateT)
       , "all substitute" -> Some(allSubstituteF, allSubstituteT)
       , "vacuous exists quantifier" -> Some(vacuousExistsF, vacuousExistsT)
       , "V[:*] vacuous assign nondet" -> Some(vacuousBoxAssignNondetF, vacuousBoxAssignNondetT)
@@ -924,6 +926,29 @@ object DerivedAxioms {
   )
 
   lazy val existsGeneralizeT = derivedAxiomT(existsGeneralize)
+
+  /**
+   * {{{Axiom "exists eliminate".
+   *    p(??) -> (\exists x p(??))
+   * End.
+   * }}}
+   * @Derived
+   * @todo prove
+   */
+  lazy val existsEliminateF = "p(??) -> (\\exists x p(??))".asFormula
+  lazy val existsEliminate = derivedAxiom("exists eliminate",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(existsEliminateF)),
+    //    useAt("exists dual", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil)) &
+    //      useAt("all instantiate", PosInExpr(0::Nil))(SuccPosition(0, 1::0::Nil)) &
+    //      prop
+    useAt("exists dual", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil)) &
+      implyR(SuccPos(0)) &
+      notR(SuccPos(0)) &
+      useAt("all eliminate", PosInExpr(0::Nil))(AntePosition(1, Nil)) &
+      prop
+  )
+
+  lazy val existsEliminateT = derivedAxiomT(existsEliminate)
 
   /**
    * {{{Axiom "all substitute".

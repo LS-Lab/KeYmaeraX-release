@@ -944,13 +944,12 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Substitution clash" should "be reported on substitution of (maybe) bound variables" in {
     def rndSubstDefs(max: Int) = {
-      val rnd = new Random()
-      val numSubsts = rnd.nextInt(max)
-      val names = new RandomFormula(rnd).nextNames("lhs", numSubsts).map(v => FuncOf(Function(v.name, v.index, Unit, Real), Nothing))
-      names.map(SubstitutionPair(_, rndTerm(rnd.nextInt(10), rnd)))
+      val rnd = new RandomFormula()
+      val numSubsts = rnd.rand.nextInt(max)
+      val names = rnd.nextNames("lhs", numSubsts).map(v => FuncOf(Function(v.name, v.index, Unit, Real), Nothing))
+      names.map(SubstitutionPair(_, rndTerm(rnd.rand.nextInt(10), rnd)))
     }
-    def rndTerm(size: Int, rnd: Random = new Random()) = {
-      val rndF = new RandomFormula(rnd)
+    def rndTerm(size: Int, rndF: RandomFormula = new RandomFormula()) = {
       rndF.nextT(rndF.nextNames("rhs", size/3+1), size)
     }
 
