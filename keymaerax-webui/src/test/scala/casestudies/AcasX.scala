@@ -331,8 +331,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
         (cutShowLbl,
           ls(cohide, evolutionDomain) &
           dT("Ignore this branch - cut cannot be shown") /* TODO Counts as open goal */),
-        (cutUseLbl, dT("bla") & /* repeat cut so that we can instantiate twice */
-          cutEZ(evolutionDomain.asFormula, closeId) & ls(implyR) & (la(andL)*) & ls(andR) && (
+        (cutUseLbl, dT("bla") & ls(implyR) & (la(andL)*) & ls(andR) && (
           ls(andR) && (
             closeId,
             dT("Before skolemization") & (ls(skolemizeT)*) & dT("After skolemization") & ls(implyR) & ls(orR) &
@@ -348,8 +347,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                 & (la(andL)*) & (ls(andR)*) & (QE | dT("Should be closed") & Tactics.stopT)),
               (cutUseLbl, dT("Use Cut") &
                 la(orL, "0<=t_0+kxtime_5&t_0+kxtime_5 < max0/a|t_0+kxtime_5>=max0/a") && (
-                dT("Goal 110") & // All this closes fine; just trying to avoid recomputing it each time
-                  locateAnte(instantiateT(Variable("ho"), "w*a/2*(t_0+kxtime_5)^2 + dhd*(t_0+kxtime_5)".asTerm), { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false })
+                dT("Goal 110") & la(hide, evolutionDomain) &
+                  la(instantiateT(Variable("ho"), "w*a/2*(t_0+kxtime_5)^2 + dhd*(t_0+kxtime_5)".asTerm)) //, { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false })
                   & dT("instantiate ho") & ((closeId | l(NonBranchingPropositionalT))*) &
                   la(implyL, "0<=kxtime_5+t_0&kxtime_5+t_0 < max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=w*a/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=dhf*(kxtime_5+t_0)-w*max0^2/(2*a)->abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5))-hp")
                     && (
@@ -361,7 +360,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                       dT("Goal 124") &
                         la(orL,"abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5))-hp")&& (
                         dT("lSucc2") & ls(hide, "w*h_3 < w*ho_0-hp") & absmax2 & QE,
-                        dT("Goal 135") /*& ls(hide, "abs(r_3-ro_0)>rp")*/ & (la(andL)*) &
+                        dT("Goal 135") & ls(hide, "abs(r_3-ro_0)>rp") & (la(andL)*) &
                           la(orL, "w*dhd_3>=w*dhf|w*ao>=a") && (
                           dT("Goal 146") & absmax2 & crushw,
                           dT("Goal 148") & absmax2 & crushw
@@ -370,25 +369,24 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                       dT("Goal 125") &
                         la(orL,"abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5))-hp")&& (
                         dT("Goal 280") & absmax2 & QE,
-                        dT("Goal 281") & absmax2 & (la(hide, evolutionDomain)*)
-                          & (la(andL)*) & dT("Goal 282") & (la(orL)*) & QE
+                        dT("Goal 281") & absmax2 & (la(andL)*) & (la(orL)*) & QE
                       )
                     ) ),
                 // goal 111
                 dT("Goal 111") &
-                  locateAnte(instantiateT(Variable("ho"), "dhf*(t_0+kxtime_5) - w*max0^2/(2*a)".asTerm), { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false })
+                  la(instantiateT(Variable("ho"), "dhf*(t_0+kxtime_5) - w*max0^2/(2*a)".asTerm)) //, { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false })
                   & dT("Goal 120-1") &
                   la(implyL, "0<=kxtime_5+t_0&kxtime_5+t_0 < max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&dhf*(t_0+kxtime_5)-w*max0^2/(2*a)=w*a/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&dhf*(t_0+kxtime_5)-w*max0^2/(2*a)=dhf*(kxtime_5+t_0)-w*max0^2/(2*a)->abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(dhf*(t_0+kxtime_5)-w*max0^2/(2*a))-hp")
                   && (
-                  dT("Goal 122") & absmax2 & QE,
+                  dT("Goal 122") & la(hide, evolutionDomain) & absmax2 & QE,
                   dT("Goal 123") & la(orL, "0<=t_0&t_0 < max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=dhf*t_0-w*max((0,w*(dhf-dhd_3)))^2/(2*a)")
                     && (
-                    absmax2 & crushor, // takes a while (about 170 seconds)
+                    la(hide, evolutionDomain) & absmax2 & crushor, // takes a while (about 170 seconds)
                     dT("Goal 127") &
                       la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_1=0") &
                       la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_4()=0") &
-                      (la(andL)*) &
-                      la(instantiateT(Variable("tside"), Variable("kxtime", Some(5))), "\\forall tside (0<=tside&tside<=kxtime_5->w*(dhd_2()+ao*tside)>=w*dhf|w*ao>=a)") &
+                      (la(andL)*) & cutEZ(evolutionDomain.asFormula, closeId) & // repeat cut to reinstantiate
+                      la(instantiateT(Variable("tside"), Variable("kxtime", Some(5))), evolutionDomain) &
                       la(implyL, "0<=kxtime_5&kxtime_5<=kxtime_5->w*(dhd_2()+ao*kxtime_5)>=w*dhf|w*ao>=a") && (
                       absmax2 & QE,
                       dT("Goal 193") &
@@ -399,7 +397,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                           dT("Goal 214") & cut("w*ao>=a|!w*ao>=a".asFormula) & onBranch(
                             (cutShowLbl, ls(cohide, "w*ao>=a|!w*ao>=a") & QE),
                             (cutUseLbl, dT("Goal 214-2") & la(orL, "w*ao>=a|!w*ao>=a") && (
-                              QE,
+                              la(hide, evolutionDomain) & QE,
                               dT("Goal 231") & la(orL, "w*dhd_3>=w*dhf|w*ao>=a") && (
                                 dT("Goal 233") &
                                   la(instantiateT(Variable("tside"), Number(0)), evolutionDomain) &
@@ -411,7 +409,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                                 ) ),
                                 la(notL) & closeId
                           ) ) ) ),
-                          crushor
+                          la(hide, evolutionDomain) & crushor
                           )
                         )
                       )
