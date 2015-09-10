@@ -24,7 +24,8 @@ If this results in the error `Invalid or corrupt jarfile` then update to Java 1.
 
 The easiest way to run KeYmaera X from source is to install its dependencies and build it via SBT:
 
-    * Install Scala (and the JRE).
+    * Install Scala (and the Java JRE or JDK).
+    * Install Mathematica, pointing the JLINK_JAR_LOCATION environment variable to JLink.jar (see FAQ)
     * Install SBT and follow the instructions in the Building section.
 
 Building
@@ -68,6 +69,12 @@ common sbt problems:
 
 https://github.com/LS-Lab/KeYmaera4/wiki/Building-Instructions
 
+FAQ: Run Problems
+=================
+
+If KeYmaera X acts weird after an update, you should clean your local cache of lemmas by removing the directory `~/.keymaerax/cache` or even the whole `~/.keymaerax/` directory.
+
+
 Generating Scaladoc Documentation
 =================================
 
@@ -77,14 +84,14 @@ To generate Scaladoc documentation files, run:
 
 Documentation will be generated for each subproject in the 
 `target/scala-x.xx/api` directory of the subproject. 
-For instance, `keymaerax-core/target/scala-2.10/api` for the core subproject.
+For instance, `keymaerax-core/target/scala-2.11/api` for the core subproject.
 
 To generate unified scaladoc for all subprojects, run:
 
     sbt unidoc
 
 Documentation will be generated for the whole project in the `target/scala-x.xx/unidoc` directory.
-For instance `target/scala-2.10/api`.
+For instance `target/scala-2.11/api`.
 
 Main documentation to read for KeYmaera X API:
 
@@ -103,6 +110,7 @@ If you want to use the IntelliJ IDEA development environment, install it:
 - Install the Scala plugin for IntelliJ
 
 Project Setup
+- Make sure you have defined the JLINK_JAR_LOCATION environment variable (see FAQ).
 - Create a new Scala project, backed by SBT
 - Select a JDK as your project SDK, add a new one if not previously added
 - Check `update automatically` (not checked by default), so that updates to build.sbt are reflected automatically in the project
@@ -125,7 +133,7 @@ Front End
 The Web UI web user interface front end of KeYmaera X can be started as follows:
 
     sbt assembly
-    java -jar keymaerax-webui/target/scala-2.10/keymaerax-4.0b1.jar -ui
+    java -jar keymaerax-webui/target/scala-2.11/keymaerax-4.0b1.jar -ui
     open http://127.0.0.1:8090/
 
 The first command builds a .JAR, and the second command runs the built .jar. If the jar won't start because of an error `no manifest found` you may have to run `sbt clean` first.
@@ -146,7 +154,7 @@ KeYmaera X is successfully started when you see the following console output
 
 To find out how to use KeYmaera X from command line, do `sbt clean assembly` and run
 
-    java -Xss20M -jar keymaerax-webui/target/scala-2.10/keymaerax-4.0b1.jar -help
+    java -Xss20M -jar keymaerax-webui/target/scala-2.11/keymaerax-4.0b1.jar -help
 
 Make sure you have Java 1.8 for using command line. Java 1.7 and earlier versions may not work.
 
@@ -161,8 +169,10 @@ The project is split into two subprojects, `keymaerax-core` for the core functio
     keymaerax-core/src/main/scala - source code (edu.cmu.cs.ls.keymaerax)
     keymaerax-webui/src/ - Source code directory for Web UI etc.
     keymaerax-webui/src/test/scala - tests run by `sbt test`
+    keymaerax-core/target/scala-2.11/api/ - Target directory for sbt doc documentation.
     target/ - Generated files directory created by sbt on first compilation.
-    target/scala-2.10/classes/ - Target directory for sbt compilation.    
+    target/scala-2.11/classes/ - Target directory for sbt compilation.    
+    target/scala-2.11/unidoc/ - Target directory for sbt unidoc documentation.    
 
 Within the `edu.cmu.cs.ls.keymaerax` namespace, source code is separated according to functionality:
 
@@ -182,7 +192,7 @@ The additional packages in the directory `keymaerax-webui/src/main/scala` are se
 Test Cases
 ==========
 
-The full test suite can be run by
+The full test suite can be run from command line by
 
     sbt test
 
@@ -206,6 +216,8 @@ Then in sbt interactive mode run
 To inline scala console output alongside the test suite information, first do:
 
     sbt>  set logBuffered in Test := false
+
+IntelliJ IDEA can also run the test suite (see #IntelliJ IDEA).
 
 The Wiki contains an introduction to the testing framework:
 https://github.com/LS-Lab/KeYmaera4/wiki/How-to-Add-Tests

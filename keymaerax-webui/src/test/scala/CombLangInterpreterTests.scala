@@ -31,7 +31,7 @@ class CombLangInterpreterTests extends TacticTestSuite {
 
   //@todo Nathan
   it should "cut" in {
-    val t = CLInterpreter.construct(CLParser("cutT(\"1 > 0\")").get)
+    val t = CLInterpreter.construct(CLParser("CutT(\"1 > 0\")").get)
     val n = new RootNode(Sequent(Nil,scala.collection.immutable.IndexedSeq("x>1".asFormula),scala.collection.immutable.IndexedSeq("x>0".asFormula)))
     helper.runTactic(t, n)
     helper.report(n)

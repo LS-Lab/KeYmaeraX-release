@@ -417,6 +417,7 @@ object KeYmaeraInterface {
    */
   def runTactic(taskId: String, nodeId: Option[String], tacticId: String, formulaId: Option[String], tId: String,
                 callback: Option[String => ((String, Option[String], String) => Unit)] = None,
+                exnHandler: TacticExceptionListener,
                 input: Map[Int,String] = Map.empty, auto: Option[PositionTacticAutomation] = None) = {
     import TacticLibrary.{locateAnte,locateSucc,locate}
     import Tactics.repeatT
@@ -460,7 +461,9 @@ object KeYmaeraInterface {
         })
         t.updateInfo = (p: ProofNodeInfo) => p.infos += ("tactic" -> tId.toString)
         t.updateStepInfo = (p: ProofStepInfo) => p.infos += ("tactic" -> tId.toString)
-        Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(t, node))
+        val wrapper = new TacticWrapper(t, node)
+        wrapper.addListener(exnHandler)
+        Tactics.KeYmaeraScheduler.dispatch(wrapper)
       case None => None
     }
   }
@@ -468,7 +471,9 @@ object KeYmaeraInterface {
   /**
    * @throws Exception -s...
    */
-  def runTerm(termId : String, proofId : String, nodeId : Option[String], term : String, callback : Option[String => (String, Option[String], String) => Unit]) = {
+  def runTerm(termId : String, proofId : String, nodeId : Option[String], term : String,
+              callback : Option[String => (String, Option[String], String) => Unit],
+              exnHandler:  TacticExceptionListener) = {
     val (node,position) = getPosition(proofId, nodeId, None)
     val tactic = CLInterpreter.construct(CLParser(term).getOrElse(throw new Exception("failed to parse.")))
     RunningTactics.add(tactic, termId)
@@ -478,7 +483,9 @@ object KeYmaeraInterface {
     })
     tactic.updateInfo = (p : ProofNodeInfo) => p.infos += ("tactic" -> termId)
     tactic.updateStepInfo = (p : ProofStepInfo) => p.infos += ("tactic" -> termId)
-    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, node))
+    val wrapper = new TacticWrapper(tactic, node)
+    wrapper.addListener(exnHandler)
+    Tactics.KeYmaeraScheduler.dispatch(wrapper)
   }
 
   def isRunning(tacticInstanceId: String): Boolean = {

@@ -67,8 +67,9 @@ class PolyaSolver extends SMTSolver {
    * @return    Polya output as String and the interpretation of Polya output as KeYmaera X formula
    */
   def run(cmd: String) : (String, Formula)= {
-    val polyaOutput = cmd.!!
-    println("[Polya result] \n" + polyaOutput + "\n")
+    var polyaOutput = cmd.!!
+    polyaOutput = polyaOutput.stripPrefix(cmd.stripPrefix(pathToPolya + " ")+"\n")
+    println("[Polya result] \n" + polyaOutput)
     val kResult = {
       if (polyaOutput.startsWith("-1")) False
       else if(polyaOutput.startsWith("1")) True
@@ -106,7 +107,7 @@ class PolyaSolver extends SMTSolver {
    * @return   the simplified term, or the original term if the simplify result is not a parsable KeYmaera X term
    */
   def simplify(t: Term) : Term = {
-    val smtCode = SMTConverter.generateSimplify(t, "Z3")
+    val smtCode = SMTConverter.generateSimplify(t, "Polya")
     println("[Simplifying with Polya ...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
@@ -114,12 +115,13 @@ class PolyaSolver extends SMTSolver {
     writer.flush()
     writer.close()
     val cmd = pathToPolya + " " + smtFile.getAbsolutePath
-    val polyaOutput = cmd.!!
+    var polyaOutput = cmd.!!
+    polyaOutput = polyaOutput.stripPrefix(cmd.stripPrefix(pathToPolya + " ")+"\n")
     println("[Polya simplify result] \n" + polyaOutput + "\n")
     try {
       KeYmaeraXParser.termParser(polyaOutput)
     } catch {
-      case e: ParseException => println("[Info] Cannot parse Z3 simplified result: " + polyaOutput); t
+      case e: ParseException => println("[Info] Cannot parse Polya simplified result: " + polyaOutput); t
     }
   }
 }

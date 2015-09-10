@@ -102,6 +102,11 @@ object Context {
     case _ => throw new IllegalArgumentException("split position " + pos + " of term " + term + " may not be defined")
   }} ensuring(r => r._1.getClass == term.getClass, "Context has identical top types " + term + " at " + pos)
 
+//  def reconstructor[T<:Expression](e: T with BinaryComposite): (T,T)=>T = e match {
+//    case _: Plus   => Plus.apply
+//    case _: Minus  => Minus.apply
+//  }
+
   private def split(formula: Formula, pos: PosInExpr): (Formula, Expression) = if (pos==HereP) (DotFormula, formula) else {formula match {
     // base cases
     case PredOf(p,t)          if pos.head==0 => val sp = split(t, pos.child); (PredOf(p, sp._1), sp._2)
@@ -120,7 +125,7 @@ object Context {
     case Less(f,g)            if pos.head==0 => val sp = split(f, pos.child); (Less(sp._1, g), sp._2)
     case Less(f,g)            if pos.head==1 => val sp = split(g, pos.child); (Less(f, sp._1), sp._2)
     // homomorphic cases
-    //@todo would like to summarize:
+    //@todo would like to summarize: after adding a reconstructor(BinaryComposite): (Expression,Expression)=>Expression that gives And.apply,Or.apply etc back depending on argument's top.
 //    case f:BinaryCompositeFormula if pos.head==0 => val sp = split(f.left, pos.child); (f.type.apply(sp._1, f.right), sp._2)
 //    case f:BinaryCompositeFormula if pos.head==1 => val sp = split(f.right, pos.child); (f.type.apply(f.left, sp._1), sp._2)
     case Not(f)               if pos.head==0 => val sp = split(f, pos.child); (Not(sp._1), sp._2)
@@ -193,8 +198,11 @@ sealed case class Context[+T <: Expression](ctx: T) {
     case a: Program => instantiate(a)
   }
 
+  /** True if this context has a DotFormula so expects a formula as argument */
   def isFormulaContext = signature(ctx).contains(DotFormula)
+  /** True if this context has a DotTerm so expects a term as argument */
   def isTermContext = signature(ctx).contains(DotTerm)
+  /** True if this context has a DotProgram so expects a program as argument */
   def isProgramContext = signature(ctx).contains(DotProgram)
 
   /**

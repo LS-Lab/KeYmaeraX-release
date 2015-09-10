@@ -28,14 +28,14 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
   }
 
   it should "not confuse a portion of the diffeq with the evolution domain constraint" in {
-    helper.parseBareProgram("x'=y, y'=x & true;") shouldBe
+    helper.parseBareProgram("{x'=y, y'=x & true};") shouldBe
       Some(ODESystem(DifferentialProduct(
           AtomicODE(DifferentialSymbol(x), y),
           AtomicODE(DifferentialSymbol(y), x)), True))
   }
 
   it should "parse into normal form when parsing a formula" in {
-    val f = helper.parseFormula("[x'=1 & x>0;]z>=0")
+    val f = helper.parseFormula("[{x'=1 & x>0};]z>=0")
     f match {
       case Box(ODESystem(ev, _), _) => ev match {
         case _: AtomicODE => /* ok */
@@ -46,25 +46,25 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
   }
 
   it should "not confuse a portion of the diffeq system with the evolution domain constraint" in {
-    helper.parseBareProgram("x'=x, y'=y;") shouldBe Some(ODESystem(DifferentialProduct(
+    helper.parseBareProgram("{x'=x, y'=y};") shouldBe Some(ODESystem(DifferentialProduct(
           AtomicODE(DifferentialSymbol(x), x),
           AtomicODE(DifferentialSymbol(y), y)), True))
   }
 
   it should "parse an evolution domain constraint given last into the correct position" in {
-    helper.parseBareProgram("x'=y, y'=x & y>0;") shouldBe Some(ODESystem(DifferentialProduct(
+    helper.parseBareProgram("{x'=y, y'=x & y>0};") shouldBe Some(ODESystem(DifferentialProduct(
           AtomicODE(DifferentialSymbol(x), y),
           AtomicODE(DifferentialSymbol(y), x)), Greater(y, zero)))
   }
 
   it should "parse a conjunction of evolution domain constraints given last into the correct position" in {
-    helper.parseBareProgram("x'=y, y'=x & y>0 & x<0;") shouldBe Some(ODESystem(DifferentialProduct(
+    helper.parseBareProgram("{x'=y, y'=x & y>0 & x<0;") shouldBe Some(ODESystem(DifferentialProduct(
           AtomicODE(DifferentialSymbol(x), y),
           AtomicODE(DifferentialSymbol(y), x)), And(Greater(y, zero), Less(x, zero))))
   }
 
   it should "parse a single equation with a constraint as an evolution, not an AND-formula." in {
-    helper.parseBareProgram("x' = y & x >= 0;") shouldBe
+    helper.parseBareProgram("{x' = y & x >= 0};") shouldBe
       Some(ODESystem(AtomicODE(DifferentialSymbol(x), y), GreaterEqual(x, zero)))
   }
 

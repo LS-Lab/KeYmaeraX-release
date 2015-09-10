@@ -371,9 +371,9 @@ object MongoDB extends DBAbstraction {
     proofs.update(query, update)
   }
 
-  override def updateDispatchedTacticStatus(tId :String, status:String) = {
+  override def updateDispatchedTacticStatus(tId :String, status:DispatchedTacticStatus.Value) = {
     val query = MongoDBObject("dispatchedTactics._id" -> new ObjectId(tId))
-    proofs.update(query, $set("dispatchedTacitcs.status" -> status))
+    proofs.update(query, $set("dispatchedTacitcs.status" -> status.toString))
   }
 
   override def updateProofOnTacticCompletion(proofId: String, tId: String): Unit = {
@@ -430,6 +430,15 @@ object MongoDB extends DBAbstraction {
       x.getAs[String]("clTerm").orNull,
       if(x.containsField("status")) Some(DispatchedTacticStatus.withName(x.getAs[String]("status").orNull)) else None
     )).toList.headOption
+  }
+
+
+  override def updateDispatchedCLTermStatus(termId: String, status: DispatchedTacticStatus.Value) = {
+    val update = $set(
+      "status" -> Some(status.toString)
+    )
+    val query = MongoDBObject("_id" -> new ObjectId(termId))
+    dispatchedCLTerms.update(query, update)
   }
 
   override def updateDispatchedCLTerm(termToUpdate : DispatchedCLTermPOJO) = {

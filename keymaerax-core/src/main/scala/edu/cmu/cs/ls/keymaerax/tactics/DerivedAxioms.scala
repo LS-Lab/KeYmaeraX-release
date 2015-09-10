@@ -157,6 +157,7 @@ object DerivedAxioms {
     case "<*> iterate" => Some(iteratedF, iteratedT)
     case "<*> approx" => Some(loopApproxdF, loopApproxdT)
     case "exists generalize" => Some(existsGeneralizeF, existsGeneralizeT)
+    case "exists eliminate" => Some(existsEliminateF, existsEliminateT)
     case "all substitute" => Some(allSubstituteF, allSubstituteT)
     case "vacuous exists quantifier" => Some(vacuousExistsF, vacuousExistsT)
     case "V[:*] vacuous assign nondet" => Some(vacuousBoxAssignNondetF, vacuousBoxAssignNondetT)
@@ -212,6 +213,7 @@ object DerivedAxioms {
     case "abs" => Some(absF, absT)
     case "min" => Some(minF, minT)
     case "max" => Some(maxF, maxT)
+    case "+<= up" => Some(intervalUpPlusF, intervalUpPlusT)
     case _ => None
   } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == name, s"Lookup of DerivedAxiom should find the correct lemma (name: ${name})")
 
@@ -242,6 +244,7 @@ object DerivedAxioms {
       , "<*> iterate" -> Some(iteratedF, iteratedT)
       , "<*> approx" -> Some(loopApproxdF, loopApproxdT)
       , "exists generalize" -> Some(existsGeneralizeF, existsGeneralizeT)
+      , "exists eliminate" -> Some(existsEliminateF, existsEliminateT)
       , "all substitute" -> Some(allSubstituteF, allSubstituteT)
       , "vacuous exists quantifier" -> Some(vacuousExistsF, vacuousExistsT)
       , "V[:*] vacuous assign nondet" -> Some(vacuousBoxAssignNondetF, vacuousBoxAssignNondetT)
@@ -290,7 +293,8 @@ object DerivedAxioms {
       , "abs" -> Some(absF, absT)
       , "min" -> Some(minF, minT)
       , "max" -> Some(maxF, maxT)
-    )
+      , "+<= up" -> Some(intervalUpPlusF, intervalUpPlusT)
+    ) ensuring(r => r.forall(kv => derivedAxiomInfo(kv._1)==kv._2), "same contents as derivedAxiomInfo()")
 
     mapping.keys.map(key => {
       val proof: Provable = derivedAxiom(key)
@@ -922,6 +926,29 @@ object DerivedAxioms {
   )
 
   lazy val existsGeneralizeT = derivedAxiomT(existsGeneralize)
+
+  /**
+   * {{{Axiom "exists eliminate".
+   *    p(??) -> (\exists x p(??))
+   * End.
+   * }}}
+   * @Derived
+   * @todo prove
+   */
+  lazy val existsEliminateF = "p(??) -> (\\exists x p(??))".asFormula
+  lazy val existsEliminate = derivedAxiom("exists eliminate",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(existsEliminateF)),
+    //    useAt("exists dual", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil)) &
+    //      useAt("all instantiate", PosInExpr(0::Nil))(SuccPosition(0, 1::0::Nil)) &
+    //      prop
+    useAt("exists dual", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil)) &
+      implyR(SuccPos(0)) &
+      notR(SuccPos(0)) &
+      useAt("all eliminate", PosInExpr(0::Nil))(AntePosition(1, Nil)) &
+      prop
+  )
+
+  lazy val existsEliminateT = derivedAxiomT(existsEliminate)
 
   /**
    * {{{Axiom "all substitute".
@@ -1918,5 +1945,19 @@ object DerivedAxioms {
   )
 
   lazy val maxT = derivedAxiomT(maxDef)
+
+  /**
+   * {{{Axiom "+<= up".
+   *    (x+y<=z <- X+Y<=Z) <- (x<=X & y<=Y)
+   * End.
+   * }}}
+   */
+  lazy val intervalUpPlusF = "(x+y<=z <- X+Y<=Z) <- (x<=X & y<=Y)".asFormula
+  lazy val intervalUpPlus = derivedAxiom("+<= up",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalUpPlusF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalUpPlusT = derivedAxiomT(intervalUpPlus)
 
 }

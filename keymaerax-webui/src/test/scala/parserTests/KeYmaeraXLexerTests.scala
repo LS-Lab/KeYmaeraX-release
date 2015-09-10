@@ -34,7 +34,7 @@ class KeYmaeraXLexerTests extends FlatSpec with Matchers {
     val input =
       """
         |   (""".stripMargin
-    KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(LPAREN, Region(2, 4, 2, 4))
+    KeYmaeraXLexer(input).head.tok shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(LPAREN, Region(2, 4, 2, 4))
   }
 
   it should "parse forall" in {

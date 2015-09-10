@@ -100,7 +100,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
     node shouldBe 'closed
   }
 
-  it should "work with ACAS X input when time is explicit" in {
+  ignore should "work with ACAS X input when time is explicit" in {
     val ante = "r=rInit&dhd=dhdInit&h=hInit&t=tInit&(w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0)".asFormula
     val succ = "[{r'=-rv(),dhd'=ao(),h'=-dhd, t' = 0*t+1  & w()*dhd>=w()*dhf()|w()*ao()>=a()}]((w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0))".asFormula
     val s = Sequent(Nil, immutable.IndexedSeq(ante), immutable.IndexedSeq(succ))
@@ -126,7 +126,9 @@ class InverseDiffGhostTests extends TacticTestSuite {
 
   }
 
-  "Inverse Ghost" should "work when we don't have to reorder diffeq" in {
+  "Inverse Ghost" should "placeholder" in {}
+
+  ignore should "work when we don't have to reorder diffeq" in {
     val f = "\\exists x ([{x' = 0*x+v, v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0)".asFormula
 //    println(ODETactics.SystemHelpers.axiomInstance(f).prettyString)
     val node = helper.formulaToNode(f)
@@ -139,7 +141,7 @@ class InverseDiffGhostTests extends TacticTestSuite {
   }
 
 
-  it should "then work on v as well" in {
+  ignore should "then work on v as well" in {
     val f = "\\exists x ([{v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0)".asFormula
     val node = helper.formulaToNode(f)
     val tactic = ODETactics.inverseDiffAuxiliaryT(SuccPos(0))
@@ -150,7 +152,7 @@ class InverseDiffGhostTests extends TacticTestSuite {
       "[{t' = 0*t + 1 & true & t >= 0}]x>0".asFormula
   }
 
-  it should "not work when time is all that's left" in {
+  ignore should "not work when time is all that's left" in {
     ???
   }
 
