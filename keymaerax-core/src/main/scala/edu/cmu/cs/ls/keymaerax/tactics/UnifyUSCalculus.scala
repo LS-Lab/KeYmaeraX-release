@@ -397,6 +397,8 @@ trait UnifyUSCalculus {
     require(C.isFormulaContext, "Formula context expected to make use of equivalences with CE " + C)
     /** Monotonicity rewriting step to replace occurrence of instance of k by instance of o in context */
     def monStep(C: Context[Formula], mon: Provable): Provable = {
+      var negative = false  //@todo this is a hack that doesn't even quite work. Do polarity for real.
+      (
       C.ctx match {
         case DotFormula => mon
 
@@ -447,13 +449,16 @@ trait UnifyUSCalculus {
 
         //@todo check this case
         case Imply(c, e) if !symbols(e).contains(DotFormula) =>
+          negative = true
           // polarity switch so switch left/right sides
+          println("CMon check case: " + C + " to prove " + Sequent(Nil, IndexedSeq(C(right)), IndexedSeq(C(left))) + "\nfrom " + mon)
           (Provable.startProof(Sequent(Nil, IndexedSeq(C(right)), IndexedSeq(C(left))))
             (ImplyRight(SuccPos(0)), 0)
             (ImplyLeft(AntePos(0)), 0)
-            (Close(AntePos(0), SuccPos(1)), 0)
             // right branch
-            (CoHide2(AntePos(1), SuccPos(0)), 0)
+            (Close(AntePos(1), SuccPos(0)), 1)
+            // left branch
+            (CoHide2(AntePos(0), SuccPos(1)), 0)
             ) (monStep(Context(c), mon), 0)
 
         case Equiv(e, c) => assert(symbols(e).contains(DotFormula) || symbols(c).contains(DotFormula), "proper contexts have dots somewhere " + C)
@@ -505,9 +510,11 @@ trait UnifyUSCalculus {
 
         case _ => throw new ProverException("Not implemented for other cases yet " + C)
       }
-    } ensuring(r => r.conclusion == Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))), "Expected conclusion"
-      ) ensuring(r => !impl.isProved || r.isProved, "Proved if input fact proved")
-
+        ) ensuring(r => r.conclusion == (if (negative)
+        Sequent(Nil, IndexedSeq(C(right)), IndexedSeq(C(left)))
+      else Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right)))), "Expected conclusion"
+        ) ensuring(r => !impl.isProved || r.isProved, "Proved if input fact proved")
+    }
     monStep(C, impl)
 
   }
