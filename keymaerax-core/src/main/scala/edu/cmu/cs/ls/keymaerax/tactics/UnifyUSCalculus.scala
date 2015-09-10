@@ -613,10 +613,11 @@ trait UnifyUSCalculus {
               ImplyRight(SuccPos(0))
             )
             // |- C{subst(o)} -> C{subst(k)}
-            val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(proof.conclusion.succ.length + 1)}
+            val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(proof.conclusion.succ.length)}
             val coside: Provable = sideImply(
-            //@todo p.top may be wrong if AntePos. Hmpf.
-              proof.conclusion.updated(p.top, Imply(C(subst(o)), C(subst(k)))),
+              if (pos.isSucc) proof.conclusion.updated(p.top, Imply(C(subst(o)), C(subst(k))))
+              //@todo drop p.top too?
+              else proof.conclusion.glue(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k)))))),
               CoHideRight(cutPos)
             )
             // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
@@ -645,9 +646,11 @@ trait UnifyUSCalculus {
               ImplyRight(SuccPos(0))
             )
             // |- C{subst(o)} -> C{subst(k)}
-            val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(proof.conclusion.succ.length + 1)}
+            val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(proof.conclusion.succ.length)}
             val coside: Provable = sideImply(
-              proof.conclusion.updated(p.top, Imply(C(subst(o)), C(subst(k)))),
+              if (pos.isSucc) proof.conclusion.updated(p.top, Imply(C(subst(o)), C(subst(k))))
+              //@todo drop p.top too?
+              else proof.conclusion.glue(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k)))))),
               CoHideRight(cutPos)
             )
             // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
