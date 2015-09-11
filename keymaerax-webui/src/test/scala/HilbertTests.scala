@@ -398,8 +398,10 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "prove in monotone context \\exists y (_ | x<y)" in {shouldCMon(Context("\\exists y (⎵ | x<y)".asFormula))}
   it should "prove in monotone context \\exists x (_ | x<y)" in {shouldCMon(Context("\\exists x (⎵ | x<y)".asFormula))}
   it should "prove in antimonotone context _ -> y<2" in {shouldCMonA(Context("⎵ -> y<2".asFormula))}
-  it should "prove in antimonotone context (_ -> y<2) & x<10 | x=7 " in {shouldCMonA(Context("(⎵ -> y<2) & x<10 | x=7".asFormula))}
-  it should "prove in monotone context ((_ -> y<2) -> z=0) & x<10 | x=7 " in {shouldCMonA(Context("((⎵ -> y<2) -> z=0) & x<10 | x=7".asFormula))}
+  it should "prove in antimonotone context _ -> y<2 & x<10" in {shouldCMonA(Context("⎵ -> y<2 & x<10".asFormula))}
+  it should "prove in antimonotone context (_ -> y<2) & x<10" in {shouldCMonA(Context("(⎵ -> y<2) & x<10".asFormula))}
+  it should "prove in antimonotone context (_ -> y<2) & x<10 | x=7" in {shouldCMonA(Context("(⎵ -> y<2) & x<10 | x=7".asFormula))}
+  it should "prove in antiantimonotone context ((_ -> y<2) -> z=0) & x<10 | x=7 " in {shouldCMonA(Context("((⎵ -> y<2) -> z=0) & x<10 | x=7".asFormula))}
 
   lazy val basic = proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)), QE)
 

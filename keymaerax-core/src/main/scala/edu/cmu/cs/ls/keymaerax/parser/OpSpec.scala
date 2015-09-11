@@ -19,8 +19,11 @@ import scala.math.Ordered
 
 /** Operator associativity notational specification */
 sealed trait OpNotation
+/** Notational specification for nullary operators of arity 0 */
 trait NullaryNotation extends OpNotation
+/** Notational specification for unary operators of arity 1 */
 trait UnaryNotation extends OpNotation
+/** Notational specification for binary operators of arity 2 */
 trait BinaryNotation extends OpNotation
 
 /** Atomic operators of arity 0 within syntactic category */
@@ -35,7 +38,7 @@ object PostfixFormat extends UnaryNotation
 object LeftAssociative extends BinaryNotation
 /** Right-associative infix operators of arity 2, i.e. ``x^y^z=x^(y^z)`` */
 object RightAssociative extends BinaryNotation
-/** Non-associative infix operators of arity 2, i.e. explicit parentheses */
+/** Non-associative infix operators of arity 2, i.e. explicit parentheses ``a<->(b<->c)`` */
 object NonAssociative extends BinaryNotation
 /** Mixed binary operators of arity 2 */
 object MixedBinary extends BinaryNotation
@@ -44,8 +47,10 @@ object MixedBinary extends BinaryNotation
 object AtomicBinaryFormat extends BinaryNotation
 
 /**
- * Operator notation specification.
+ * Operator notation specification with precedence and associativity.
+ * @author Andre Platzer
  * @todo Could add spacing weight information to determine how much spacing is added around an operator.
+ *       Alternatively, spacing weight can be inferred from the prec numerics and how far they are apart.
  */
 trait OpSpec extends Ordered[OpSpec] {
   /** opcode operator code used for string representation */
@@ -63,6 +68,7 @@ trait OpSpec extends Ordered[OpSpec] {
   //@note violates this: two different things can have same precedence.
 }
 
+/** Nullary operator notation specification with a constructor. */
 case class UnitOpSpec(op: Terminal, prec: Int,
                                const: String => Expression) extends OpSpec {
   final def assoc = AtomicFormat
@@ -74,6 +80,7 @@ object UnitOpSpec {
     new UnitOpSpec(op, prec, s => {assert(s == op.img); const})
 }
 
+/** Unary operator notation specification with a constructor and expected argument kind. */
 case class UnaryOpSpec[T<:Expression](op: Terminal, prec: Int, assoc: UnaryNotation, kind: Kind,
                                 const: (String, T) => T) extends OpSpec
 
@@ -93,6 +100,7 @@ object UnaryOpSpec {
     new UnaryOpSpec(op, prec, assoc, kind, (s, e:T) => {assert(s == op.img); const(e.asInstanceOf[Formula])})
 }
 
+/** Binary operator notation specification with a constructor and expected argument kinds. */
 case class BinaryOpSpec[T<:Expression](op: Terminal, prec: Int, assoc: BinaryNotation, kind: (Kind,Kind),
                               const: (String, T, T) => T) extends OpSpec
 
