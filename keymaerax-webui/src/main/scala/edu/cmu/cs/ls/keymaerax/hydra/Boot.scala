@@ -89,6 +89,7 @@ object Boot extends App {
   catch {
     case e : Exception => {
       println("===> WARNING: Could not prepopulate the derived lemma database. This is a critical error -- the UI will fail to work! <===")
+      println("You should configure settings in the UI and restart KeYmaera X")
       e.printStackTrace()
     }
   }
