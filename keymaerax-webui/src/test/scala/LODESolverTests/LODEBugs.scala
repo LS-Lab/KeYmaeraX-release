@@ -10,6 +10,9 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
  * Created by nfulton on 9/11/15.
  */
 class LODESolverBugs extends TacticTestSuite {
+  /**
+   * @note this was never a bug.
+   */
   "diffSolveConstraintT" should "work for z' = 0" in {
     val formula = "[{z' = 1 & 2=2}]1=1".asFormula
     val node = helper.formulaToNode(formula)
@@ -24,7 +27,10 @@ class LODESolverBugs extends TacticTestSuite {
     s.succ.head shouldBe "\\forall T (T>=0->\\forall S (0<=S&S<=T->2=2)->[z:=z+1*T;]1=1)".asFormula
   }
 
-  it should "work for z' = 0*t + 1" in {
+  /**
+   * @note causes a clash b/c z occurs on the RHS of z'.
+   */
+  it should "work for z' = 0*z + 1" in {
     val formula = "[{z' = 0*z+1 & 2=2}]1=1".asFormula
     val node = helper.formulaToNode(formula)
 

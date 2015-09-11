@@ -20,6 +20,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT, Axio
   EquivLeftT, ImplyLeftT, uniformSubstT, NotLeftT, AndLeftT, cohideT, cohide2T, PropositionalRightT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{onBranch, lastAnte, lastSucc}
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
+import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext.ApplicableAtTerm
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol, findFormulaByStructure}
@@ -910,6 +911,18 @@ object ODETactics {
       }
     }
     uncoverAxiomT("DS differential equation solution", axiomInstance, _ => diffSolveAxiomBaseT)
+  }
+
+  def rewriteConstantTime: PositionTactic = {
+    def applicable(t:Term) : Boolean = t match {
+      case Plus(Times(n:Number, x:NamedSymbol), c) => !StaticSemantics.freeVars(c).contains(x) && n.value.toInt.equals(0)
+      case _ => false
+    }
+    def replacement(t: Term): Term = t match {
+      case Plus(Times(n:Number, x:NamedSymbol), c) => c
+      case _ => ???
+    }
+    TermRewriting(applicable, replacement, TacticLibrary.arithmeticT, "Rewrite Constant Time")
   }
 
   def diffSolveAxiomBaseT : PositionTactic = {
