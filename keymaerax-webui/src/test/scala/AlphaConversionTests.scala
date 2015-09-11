@@ -295,8 +295,7 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
   it should "throw an IllegalArgumentException with (x,t) on <x:=x+1;><x:=t+1;>x>0" in {
     val s = sucSequent("<x:=x+1;><x:=t+1;>x>0".asFormula)
-//    an [IllegalArgumentException] should be thrownBy helper.runTactic(tactic, new RootNode(s))
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (s))
+    an [AssertionError] should be thrownBy helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s))
   }
 
   // (5) Modality(BoxModality(NDetAssign(x)), phi)
