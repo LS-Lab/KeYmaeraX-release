@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT,sko
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT, arithmeticT, ImplyRightT, AndLeftT, hideT, AndRightT,
   ImplyLeftT, AxiomCloseT, OrRightT, OrLeftT, cutT, locate, NotRightT, NotLeftT}
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.{la,ls,l,QE,closeId,abs,min,max,andL,andR,orL,orR,implyR,implyL,
-  hide,cohide,cut,notL,notR}
+  hide,cohide,cut,notL,notR,DI,DW}
 import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.{AbsAxiomT,AbsT,MinMaxAxiomT,MinMaxT,EqualReflexiveT}
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.{abbrv,eqLeft}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, PositionTactic}
@@ -511,6 +511,20 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       )
   }
 
+  "true at beginning" should "be provable" in {
+    def cutEZ(c:Formula, t:Tactic) = cut(c) & onBranch(
+      (cutShowLbl, t | debugT("Cut didn't close") & Tactics.stopT)
+    )
+    val tactic = debugT("") & cutEZ("!(x>=0) | x>=0".asFormula, ls(cohide, "!(x>=0) | x>=0") & QE) &
+      la(orL, "!(x>=0) | x>=0") && (ls(DI), ls(diffSolution(None)) & QE)
+    // could be done with DI only if it wasn't for a DI bug (faster: 11 seconds vs. 18 seconds here)
+    val s2 = new RootNode(sequent(Nil, "x=y".asFormula :: Nil, "[{x'=2 & (x>=0)}](y>=0)".asFormula :: Nil))
+    helper.runTactic(tactic, s2) shouldBe 'closed
+  }
 
-
+  "Bug in DI" should "be provable" in {
+    val tactic = ls(DI) & debugT("DW")
+    val s2 = new RootNode(sequent(Nil, "x=y".asFormula :: Nil, "[{x'=2, y'=0 & (x>=0)}](y>=0)".asFormula :: Nil))
+    helper.runTactic(tactic, s2) shouldBe 'closed
+  }
 }
