@@ -52,6 +52,10 @@ class TermRewritingTests extends testHelper.TacticTestSuite {
     fail("No assertions")
   }
 
+  /**
+   * Does essentially the same thing as above, but using TermRewriting.hilbertTermRewrite instead of
+   * doing the setup manually.
+   */
   it should "work with TermRewriting setup code" in {
     val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula
     val node = helper.formulaToNode(f)
