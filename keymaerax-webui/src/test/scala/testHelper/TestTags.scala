@@ -2,7 +2,7 @@ package testHelper
 
 /**
  * @todo Figure out a way to specify timeouts for certain tags.
- * @author @nrfulton
+ * @author Nathan Fulton
  * Created by nfulton on 9/11/15.
  */
 object KeYmaeraXTestTags {
