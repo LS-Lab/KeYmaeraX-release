@@ -29,7 +29,7 @@ class TermRewritingTests extends testHelper.TacticTestSuite {
     TermRewriting.replaceSubterm(f, posInExpr, _ => Number(1)).get shouldBe "[{x' = 1 & 1=1&3=3}]2=2".asFormula
   }
 
-  "term rewriting" should "work" in {
+  "Sequent calculus Tern Rewriting" should "work" in {
     val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula
     val node = helper.formulaToNode(f)
 
@@ -41,14 +41,14 @@ class TermRewritingTests extends testHelper.TacticTestSuite {
     fail("no asssertion.")
   }
 
-//  "Term Rewriting" should "Work via the HilbertCalculus" in {
-//    val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula
-//    val node = helper.formulaToNode(f)
-//
-//    val provable = Provable.startProof(new Sequent(Nil, IndexedSeq(), IndexedSeq("0*x+1=1".asFormula)))
-//    val tactic   = HilbertCalculus.CE(provable)(SuccPosition(0, PosInExpr(0 :: 0 :: 1 :: Nil)))
-//
-//    helper.runTactic(tactic, node)
-//    fail("No assertions")
-//  }
+  "HilbertCalculus Term Rewriting" should "work" in {
+    val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula
+    val node = helper.formulaToNode(f)
+
+    val provable = Provable.startProof(new Sequent(Nil, IndexedSeq(), IndexedSeq("0*x+1=1".asFormula)))
+    val tactic   = HilbertCalculus.CE(provable)(SuccPosition(0, PosInExpr(0 :: 0 :: 1 :: Nil)))
+
+    helper.runTactic(tactic, node)
+    fail("No assertions")
+  }
 }
