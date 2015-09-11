@@ -57,7 +57,7 @@ class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
   "LICS 4a" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/lics/lics-4a.key"))
 
-    val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
+    val plant = debugT("plant") & ls(boxSeqT) & ls(boxAssignT) &
       ls(diffSolution(None)) & ls(ImplyRightT)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
