@@ -493,7 +493,7 @@ trait UnifyUSCalculus {
         case Forall(vars, c) =>
           //@note would also work with all distribute and all generalization instead
           //@note would also work with Skolemize and all instantiate but disjointness is more painful
-          useFor("all eliminate", PosInExpr(1::Nil))(AntePos(0))(monStep(Context(c), mon)) (
+          useFor("all eliminate", PosInExpr(1::Nil))(AntePosition(0))(monStep(Context(c), mon)) (
             Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))),
             Skolemize(SuccPos(0))
           )
@@ -501,7 +501,7 @@ trait UnifyUSCalculus {
         case Exists(vars, c) =>
           //@note would also work with exists distribute and exists generalization instead
           //@note would also work with Skolemize and all instantiate but disjointness is more painful
-          useFor("exists eliminate", PosInExpr(0::Nil))(SuccPos(0))(monStep(Context(c), mon)) (
+          useFor("exists eliminate", PosInExpr(0::Nil))(SuccPosition(0))(monStep(Context(c), mon)) (
             Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))),
             Skolemize(AntePos(0))
           )

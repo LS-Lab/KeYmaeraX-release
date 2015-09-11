@@ -243,6 +243,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "auto-prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10) with DC" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
       implyR(1) &
+        //@todo the problem is that DI should be used in show prereq branch of useAt instead of defaulting to master
         DC("5<=x".asFormula)(1) && (
         debug("DC to DI") & diffInd(1),
         debug("DC to DW") & DW(1) & TacticLibrary.abstractionT(1) & QE
@@ -353,7 +354,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       conclusion shouldBe false
     }*/
 
-  "CMon" should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from x>5 |- x>2" in {
+  "CMon monotonicity" should "prove x<99 -> y<2 & x>5 |- x<99 -> y<2 & x>2 from x>5 |- x>2" in {
     val done = CMon(Context("x<99 -> y<2 & ⎵".asFormula)) (Provable.startProof(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula))))
     done.subgoals shouldBe List(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)))
     done.conclusion shouldBe Sequent(Nil, IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
