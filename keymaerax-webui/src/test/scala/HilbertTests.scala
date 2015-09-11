@@ -426,4 +426,17 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       }
     }
   }
+
+  "Term Rewriting" should "Work via the HilbertCalculus" in {
+    val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula
+    val node = helper.formulaToNode(f)
+
+    val provable = Provable.startProof(new Sequent(Nil, IndexedSeq(),
+      IndexedSeq("0*x+1=1".asFormula)))
+    val tactic   = HilbertCalculus.CE(provable)(SuccPosition(0,
+      PosInExpr(0 :: 0 :: 1 :: Nil)))
+
+    helper.runTactic(tactic, node)
+    fail("No assertions")
+  }
 }

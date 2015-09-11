@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics
  * Tactics framework providing base tactics, tactic combinators,
  * tactics execution and scheduling and continuations engine,
  * as well as presupplied proof search strategies.
- *                                    [[edu.cmu.cs.ls.keymaera.type ]]
+ *
  * The KeYmaera X Tactic provides
  *
  *   - Tactic library
