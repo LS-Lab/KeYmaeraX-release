@@ -81,7 +81,7 @@ object TermRewriting {
         case None => false
       }
 
-    override def applies(t: Term): Boolean = true
+    override def applies(t: Term): Boolean = applicabilityPredicate(t)
   }
 
   /** Default to sequent-style, b/c it's safest with current tactics framework */
