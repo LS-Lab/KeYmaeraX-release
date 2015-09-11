@@ -17,6 +17,8 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
  * @todo write a similar test that recursively crawls all declared fields starting from Provable in search for something mutable and screams when found.
 */
 class AdvocatusReflecti extends FlatSpec with Matchers {
+  sequential
+  
   val verum = new Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(True))
   val falsum = new Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(False))
 
