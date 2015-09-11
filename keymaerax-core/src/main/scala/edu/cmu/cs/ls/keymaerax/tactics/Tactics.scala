@@ -31,6 +31,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
  */
 
 /**
+ * Scheduled Tactics
+ * =================
+ *
  * Programming Guide
  * ==================
  * Tactics follow a continuation-style programming model. That is, each
