@@ -296,7 +296,7 @@ object DerivedAxioms {
       , "+<= up" -> Some(intervalUpPlusF, intervalUpPlusT)
     ) ensuring(r => r.forall(kv => derivedAxiomInfo(kv._1)==kv._2), "same contents as derivedAxiomInfo()")
 
-    mapping.keys.map(key => {
+    derivedAxiomMap.keys.map(key => {
       val proof: Provable = derivedAxiom(key)
       derivedAxiom(key, proof)
     })
