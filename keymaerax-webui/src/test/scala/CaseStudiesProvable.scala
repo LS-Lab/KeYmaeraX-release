@@ -91,7 +91,7 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
-  "ETCS-essentials" should "be provable with Mathematica" in {
+  "ETCS-essentials" should "be provable with Mathematica" taggedAs(KeYmaeraXTestTags.CheckinTest) in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-essentials.key"))
     helper.runTactic(master(new Generate("v^2<=2*b*(m-z)".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
@@ -208,7 +208,7 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
-  "simple car" should "not fail due to new ^' tactic" taggedAs(KeYmaeraXTestTags.CaseStudyTest, KeYmaeraXTestTags.CheckinTest) in {
+  "simple car" should "not fail due to new ^' tactic" in {
 //    val sequent = new Sequent(Nil, immutable.IndexedSeq(
 //      "2!=0".asFormula, "(kxtime_1^2)'=2*kxtime_1^(2-1)*(kxtime_1)'".asFormula
 //    ),immutable.IndexedSeq(
@@ -225,7 +225,7 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
 
 
   //@todo
-  "Simple car" should "be provable" in {
+  "Simple car" should "be provable" taggedAs(KeYmaeraXTestTags.CaseStudyTest, KeYmaeraXTestTags.CheckinTest) in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/simplecar.key"))
 
     val plantTactic = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolutionT) & arithmeticT
