@@ -311,9 +311,9 @@ trait UnifyUSCalculus {
         Some(cutLR(ctx(other))(p.top) &
           onBranch(
             (BranchLabels.cutShowLbl, cohide(cutPos) & //assertT(0,1) &
-              equivifyR(SuccPosition(0)) & PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) &
-              (if (other.kind==FormulaKind) AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr)
-              else if (other.kind==TermKind) AxiomaticRuleTactics.equationCongruenceT(p.inExpr)
+              equivifyR(SuccPosition(0)) & commuteEquivR(SuccPosition(0)) &
+              (if (other.kind==FormulaKind) TactixLibrary.CE(p.inExpr)
+              else if (other.kind==TermKind) CQ(p.inExpr)
               else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
               by(equiv)
               )

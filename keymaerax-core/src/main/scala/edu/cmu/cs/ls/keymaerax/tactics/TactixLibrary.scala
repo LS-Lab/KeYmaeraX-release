@@ -254,6 +254,8 @@ object TactixLibrary extends UnifyUSCalculus {
 
   /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. */
   lazy val equivifyR          : PositionTactic = PropositionalTacticsImpl.equivifyRightT
+  /** Commute an equivalence on the right. */
+  lazy val commuteEquivR      : PositionTactic = PropositionalTacticsImpl.commuteEquivRightT
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
