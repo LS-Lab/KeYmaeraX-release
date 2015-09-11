@@ -109,7 +109,7 @@ object TacticLibrary {
           }
         }), if (p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex))
         if (t != null) t
-        else throw new IllegalArgumentException("Sequent " + s + " at position " + p + " is not a term")
+        else throw new IllegalArgumentException("Sequent " + s.prettyString + " at position " + p + " is not a term")
       }
       catch {
         case e : IndexOutOfBoundsException => throw new Exception("Index out of bounds when accessing position " + p.toString() + " in sequent: " + s)

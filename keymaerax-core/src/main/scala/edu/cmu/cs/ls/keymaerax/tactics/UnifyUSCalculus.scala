@@ -263,6 +263,7 @@ trait UnifyUSCalculus {
 
 
           case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
+            //@todo could do: if prereq provable by master then use remainder directly. Otherwise use CMon to show C{prereq} implies ....
             //@todo only prove remainder absolutely by proving prereq if that proof works out. Otherwise preserve context to prove prereq by master.
             //@todo check positioning etc.
             useAt(subst, new Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPos(0)) & onBranch(

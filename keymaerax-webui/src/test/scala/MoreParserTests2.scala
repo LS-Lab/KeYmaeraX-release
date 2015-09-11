@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
+
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
@@ -8,6 +10,7 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
 /**
  */
 class MoreParserTests2 extends FlatSpec with Matchers {
+  KeYmaera.init(Map.empty)
   val parser = KeYmaeraXParser
   val pp = KeYmaeraXPrettyPrinter
 
