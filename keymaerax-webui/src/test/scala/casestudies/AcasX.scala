@@ -524,7 +524,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   "Bug in DI" should "be provable" in {
     val tactic = ls(DI) & debugT("DW")
-    val s2 = new RootNode(sequent(Nil, "x=y".asFormula :: Nil, "[{x'=2, y'=0 & (x>=0)}](y>=0)".asFormula :: Nil))
+    val s2 = new RootNode(sequent(Nil, "x=y".asFormula :: Nil, "[{x'=2 & (x>=0)}](y>=0)".asFormula :: Nil))
+    // closes fine if we add y'=0 explicitly
     helper.runTactic(tactic, s2) shouldBe 'closed
   }
 }
