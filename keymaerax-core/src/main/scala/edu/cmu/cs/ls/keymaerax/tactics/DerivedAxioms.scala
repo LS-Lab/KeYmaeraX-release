@@ -128,7 +128,7 @@ object DerivedAxioms {
    */
   private def derivedAxiomInfo(name: String): Option[(Formula, ApplyRule[LookupLemma])] = {(name: @switch) match {
     //@note implemented as match rather than lookup in a map to retain lazy evaluation
-    //@note but we need a map when prepopulating the lemma database, so whenever adding a case to this case match also add an entry to the hashmap below.
+    //@note Every entry should be added to derivedAxiomMap (we need a map when prepopulating the lemma database, so whenever adding a case to this case match also add an entry to the hashmap below.)
     case "<-> reflexive" => Some(equivReflexiveF, equivReflexiveT)
     case "!! double negation" => Some(doubleNegationF, doubleNegationT)
     case "exists dual" => Some(existsDualF, existsDualT)
@@ -220,8 +220,8 @@ object DerivedAxioms {
   /** populates the derived lemma database with all of the lemmas in the case statement above.*/
   def prepopulateDerivedLemmaDatabase() = {
     require(AUTO_INSERT, "AUTO_INSERT should be on if lemma database is being pre-populated.")
-    //@note copied from above.
-    val mapping = HashMap(
+    //@note copied from derivedAxiomInfo.
+    val derivedAxiomMap = HashMap(
       "<-> reflexive" -> Some(equivReflexiveF, equivReflexiveT)
       , "!! double negation" -> Some(doubleNegationF, doubleNegationT)
       , "exists dual" -> Some(existsDualF, existsDualT)
@@ -244,7 +244,7 @@ object DerivedAxioms {
       , "<*> iterate" -> Some(iteratedF, iteratedT)
       , "<*> approx" -> Some(loopApproxdF, loopApproxdT)
       , "exists generalize" -> Some(existsGeneralizeF, existsGeneralizeT)
-      , "exists eliminate" -> Some(existsEliminateF, existsEliminateT)
+      //@todo , "exists eliminate" -> Some(existsEliminateF, existsEliminateT)
       , "all substitute" -> Some(allSubstituteF, allSubstituteT)
       , "vacuous exists quantifier" -> Some(vacuousExistsF, vacuousExistsT)
       , "V[:*] vacuous assign nondet" -> Some(vacuousBoxAssignNondetF, vacuousBoxAssignNondetT)
