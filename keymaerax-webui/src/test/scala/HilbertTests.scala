@@ -366,7 +366,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     done.conclusion shouldBe Sequent(Nil, IndexedSeq("x<99 -> y<2 & x>5".asFormula), IndexedSeq("x<99 -> y<2 & x>2".asFormula))
   }
 
-  private def shouldCMon(ctx: Context[Formula], basic: Provable = basic): Unit = {
+  private def shouldCMon(ctx: Context[Formula], basic: Provable = basicImpl): Unit = {
     require(basic.isProved)
     require(basic.conclusion.ante.length==1 && basic.conclusion.succ.length==1)
     val done = CMon(ctx)(basic)
@@ -374,7 +374,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     done.conclusion shouldBe Sequent(Nil, IndexedSeq(ctx(basic.conclusion.ante.head)), IndexedSeq(ctx(basic.conclusion.succ.head)))
   }
 
-  private def shouldCMonA(ctx: Context[Formula], basic: Provable = basic): Unit = {
+  private def shouldCMonA(ctx: Context[Formula], basic: Provable = basicImpl): Unit = {
     require(basic.isProved)
     require(basic.conclusion.ante.length==1 && basic.conclusion.succ.length==1)
     val done = CMon(ctx)(basic)
@@ -404,7 +404,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "prove in antimonotone context (_ -> y<2) & x<10 | x=7" in {shouldCMonA(Context("(⎵ -> y<2) & x<10 | x=7".asFormula))}
   it should "prove in antiantimonotone context ((_ -> y<2) -> z=0) & x<10 | x=7 " in {shouldCMonA(Context("((⎵ -> y<2) -> z=0) & x<10 | x=7".asFormula))}
 
-  lazy val basic = proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)), QE)
+  lazy val basicImpl = proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)), QE)
 
 
   it should "prove C{x>5} |- C{x>2} from provable x>5 |- x>2 in random positive contexts" in {
@@ -417,7 +417,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         //@todo discard ctx if DotFormula within a program
         //@todo discard ctx if DotFormula somewhere underneath an Equiv
         try {
-          val done = CMon(ctx)(basic)
+          val done = CMon(ctx)(basicImpl)
           done shouldBe 'proved
           done.conclusion shouldBe Sequent(Nil, IndexedSeq(ctx("x>5".asFormula)), IndexedSeq(ctx("x>2".asFormula)))
         } catch {
@@ -427,6 +427,51 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
   }
 
+  lazy val basicEq = TactixLibrary.proveBy("0*x+1=1".asFormula, QE)
+  lazy val basicEquiv = TactixLibrary.proveBy("x^2<4 <-> -2<x&x<2".asFormula, QE)
+
+  private def shouldReduceTo(input: Formula, pos: Position, result: Formula, fact: Provable = basicEq): Unit =
+    TactixLibrary.proveBy(input, HilbertCalculus.CE(basicEq)(pos)).subgoals shouldBe (
+      List(new Sequent(Nil, IndexedSeq(), IndexedSeq(result)))
+      )
+
+  "CE(Provable) equation magic" should "reduce 0*x+1<=3 to 1<=3" in {
+    shouldReduceTo("0*x+1<=3".asFormula, SuccPosition(0, PosInExpr(0::Nil)), "1<=3".asFormula)
+  }
+
+  it should "reduce x<5 & 0*x+1<=3 | x>=2 to x<5 & 1<=3 | x>=2" in {
+    shouldReduceTo("x<5 & 0*x+1<=3 | x>=2".asFormula, SuccPosition(0, PosInExpr(0::1::0::Nil)), "x<5 & 1<=3 | x>=2".asFormula)
+  }
+
+  it should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" in {
+    shouldReduceTo("x<5 & \\forall x 0*x+1<=3 | x>=2".asFormula, SuccPosition(0, PosInExpr(0::1::0::0::Nil)), "x<5 & \\forall x 1<=3 | x>=2".asFormula)
+  }
+
+  it should "reduce [{x' = 0*x+1 & 5=5}]x>=2 to [{x' = 1 & 5=5}]x>=2" in {
+    shouldReduceTo("[{x' = 0*x+1 & 5=5}]x>=2".asFormula, SuccPosition(0, PosInExpr(0::0::1::Nil)), "[{x' = 1 & 5=5}]x>=2".asFormula)
+  }
+
+  "CE(Provable) equivalence magic" should "reduce x^2<4 to -2<x&x<2" in {
+    shouldReduceTo("x^2<4".asFormula, SuccPosition(0, PosInExpr(Nil)), "-2<x&x<2".asFormula, basicEquiv)
+  }
+
+  it should "reduce !(x^2<4) to !(-2<x&x<2)" in {
+    shouldReduceTo("!x^2<4".asFormula, SuccPosition(0, PosInExpr(0::Nil)), "!(-2<x&x<2)".asFormula, basicEquiv)
+  }
+
+  it should "reduce x<5 & x^2<4 | x>=2 to x<5 & (-2<x&x<2) | x>=2" in {
+    shouldReduceTo("x<5 & x^2<4| x>=2".asFormula, SuccPosition(0, PosInExpr(0::1::Nil)), "x<5 & (-2<x&x<2) | x>=2".asFormula, basicEquiv)
+  }
+
+  it should "reduce x<5 & \\forall x x^2<4 | x>=2 to x<5 & \\forall x (-2<x&x<2) | x>=2" in {
+    shouldReduceTo("x<5 & \\forall x x^2<4| x>=2".asFormula, SuccPosition(0, PosInExpr(0::1::0::Nil)), "x<5 & \\forall x (-2<x&x<2) | x>=2".asFormula, basicEquiv)
+  }
+
+  it should "reduce [{x' = 5*x & x^2<4}]x>=1 to [{x' = 5*x & -2<x&x<2}]x>=1" in {
+    shouldReduceTo("[{x' = 5*x & x^2<4}]x>=1".asFormula, SuccPosition(0, PosInExpr(0::0::1::Nil)), "[{x' = 5*x & -2<x&x<2}]x>=1".asFormula, basicEquiv)
+  }
+
+  //@author nfulton
   "Term Rewriting" should "Work via the HilbertCalculus" in {
     val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula
     val node = helper.formulaToNode(f)

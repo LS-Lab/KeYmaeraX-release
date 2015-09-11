@@ -289,6 +289,8 @@ trait UnifyUSCalculus {
     * Efficient unification-free version of [[useAt()]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
+    * @see [[TactixLibrary.CE()]]
+    * @see [[TactixLibrary.CQ()]]
     */
   def CE(equiv: Provable): PositionTactic = new PositionTactic("CE(Provable)") {
     import Augmentors._

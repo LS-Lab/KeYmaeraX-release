@@ -224,11 +224,11 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val G                  : Tactic         = AxiomaticRuleTactics.goedelT
   /** allG: all generalization rule proves the formula after a universal quantifier in isolation */
   lazy val allG               : Tactic         = AxiomaticRuleTactics.forallGeneralizationT
-  /** CT: Term Congruence: Contextual Equivalence of terms proves an equality */
+  /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality to an equality */
   def CT(inEqPos: PosInExpr)  : Tactic         = ???
-  /** CQ: Equation Congruence: Contextual Equivalence of terms proves an equivalence */
+  /** CQ: Equation Congruence: Contextual Equivalence of terms at the indicated position to reduce an equivalence to an equation */
   def CQ(inEqPos: PosInExpr)  : Tactic         = AxiomaticRuleTactics.equationCongruenceT(inEqPos)
-  /** CE: Congruence: Contextual Equivalence proves an equivalence */
+  /** CE: Congruence: Contextual Equivalence at the indicated position to reduce an equivalence to an equivalence @see [[]] */
   def CE(inEqPos: PosInExpr)  : Tactic         = AxiomaticRuleTactics.equivalenceCongruenceT(inEqPos)
   /** Monb: Monotone for [a;]p(x) |- [a;]q(x) reduces to proving p(x) |- q(x) */
   lazy val Monb               : Tactic         = AxiomaticRuleTactics.boxMonotoneT

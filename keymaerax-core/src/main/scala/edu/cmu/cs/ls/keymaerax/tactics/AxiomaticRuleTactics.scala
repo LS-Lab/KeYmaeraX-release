@@ -26,6 +26,7 @@ object AxiomaticRuleTactics {
   /**
    * Creates a new tactic for CE equivalence congruence rewriting.
    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
+   * @see [[HilbertCalculus.CE()]]
    */
   def equivalenceCongruenceT(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CE congruence") { outer =>
     override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&

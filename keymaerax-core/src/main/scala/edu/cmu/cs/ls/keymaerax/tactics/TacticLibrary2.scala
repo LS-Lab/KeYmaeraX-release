@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core.Formula
  * @author smitsch
  * Created by smitsch on 12/23/14.
  */
+@deprecated("Use TactixLibrary instead.")
 class TacticLibrary2(env : { val generator: Generator[Formula] }) {
   /**
    * Default tactics with invariant generation injected.
