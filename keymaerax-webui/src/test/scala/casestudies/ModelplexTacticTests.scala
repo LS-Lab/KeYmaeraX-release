@@ -22,7 +22,7 @@ import scala.language.postfixOps
  * Created by smitsch on 3/8/15.
  * @author Stefan Mitsch
  */
-class ModelplexTacticTests extends TacticTestSuite {
+class ModelplexTacticTests extends testHelper.TacticTestSuite {
 
   def monitorSize(f: Formula): Int = {
     var numOperators = 0
