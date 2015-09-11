@@ -83,7 +83,15 @@ object Boot extends App {
     case Some(c) => (c.config("isHosted").equals("true"), c.config("host"), Integer.parseInt(c.config("port")))
     case None => (false, "127.0.0.1", 8090)
   }
-  DerivedAxioms.prepopulateDerivedLemmaDatabase()
+  try {
+    DerivedAxioms.prepopulateDerivedLemmaDatabase()
+  }
+  catch {
+    case e : Exception => {
+      println("===> WARNING: Could not prepopulate the derived lemma database. This is a critical error -- the UI will fail to work! <===")
+      e.printStackTrace()
+    }
+  }
 
   // start a new HTTP server on port 8080 with our service actor as the handler
   val io = IO(Http)
