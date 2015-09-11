@@ -12,11 +12,18 @@ import scala.collection.immutable._
 /**
  * Random formula generator and random term generator and random program generator
  * for testing purposes.
+ * Each use of RandomFormula will print a random seed with which the same random tests can be repeated.
+ * {{{
+ *   val rand = RandomFormula()
+ *   // will print something like RandomFormula(-4317240407825764493L) on screen
+ *   // The same sequence of pseudo-random formulas can, thus, be regenerated again from
+ *   val sameRand = RandomFormula(-4317240407825764493L)
+ * }}}
  * @author Andre Platzer
  * @param seed the random seed, for repeatable random testing purposes.
  */
 class RandomFormula(val seed: Long = new Random().nextLong()) {
-  println("RandomFormula(" + seed + ") seed to regenerate\n\n")
+  println("RandomFormula(" + seed + "L) seed to regenerate\n\n")
   val rand: Random = new Random(seed)
   private val shortProbability = 0.10
   private val randomReps = 500
