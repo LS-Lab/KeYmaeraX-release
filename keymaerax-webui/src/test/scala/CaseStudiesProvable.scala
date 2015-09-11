@@ -91,7 +91,7 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
-  "ETCS-essentials" should "be provable with Mathematica" in {
+  "ETCS-essentials" should "be provable with Mathematica" taggedAs(KeYmaeraXTestTags.CheckinTest) in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-essentials.key"))
     helper.runTactic(master(new Generate("v^2<=2*b*(m-z)".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
