@@ -23,7 +23,7 @@ object TermRewriting {
   }
 
   /**
-   * Rewrites f{t} to f{replacementTerm(t)} assuming that t=s is a tautology of FOLR.
+   * Rewrites f{t} to f{replacementTerm(t)} assuming that t=s is provable by equivT.
    * @param replacementTerm the term that replaces f@termPosition.
    * @param applicabilityPredicate The applicability function on terms
    * @param equivT A proof that f <-> f{replacementTerm}
@@ -62,7 +62,14 @@ object TermRewriting {
       override def applies(t: Term): Boolean = applicabilityPredicate(t)
     }
 
-  def hilbtertTermRewrite(applicabilityPredicate: Term => Boolean, replacementTerm: Term => Term, name : String) : PositionTactic =
+  /**
+   *
+   * @param applicabilityPredicate
+   * @param replacementTerm
+   * @param name
+   * @return A tactic that rewrites f{t} to f{replacementTerm(t)} assuming t=s is a provable by an internally chosen tactic.
+   */
+  def hilbertTermRewrite(applicabilityPredicate: Term => Boolean, replacementTerm: Term => Term, name : String) : PositionTactic =
   new PositionTactic(s"Hilbert-ish rewriteTerm ($name)") with ApplicableAtTerm {
     override def apply(p: Position): Tactic = new ConstructionTactic("Construct " + name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
