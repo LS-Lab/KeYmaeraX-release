@@ -1,13 +1,14 @@
+package LODESolverTests
+
 /**
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics._
-import org.scalatest.{PrivateMethodTester, FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
+import edu.cmu.cs.ls.keymaerax.tactics._
+import org.scalatest.PrivateMethodTester
 
 import scala.collection.immutable
 
