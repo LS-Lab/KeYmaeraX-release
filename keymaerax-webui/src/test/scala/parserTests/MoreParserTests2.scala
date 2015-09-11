@@ -1,11 +1,11 @@
-package edu.cmu.cs.ls.keymaerax.parser
+package parserTests
 
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
-
-import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
+import org.scalatest.{FlatSpec, Matchers}
+
+import scala.collection.immutable._
 
 /**
  */

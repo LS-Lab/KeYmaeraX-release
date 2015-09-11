@@ -2,12 +2,13 @@
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
-package edu.cmu.cs.ls.keymaerax.parser
+package parserTests
 
-import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
+
+import scala.collection.immutable._
 
 /**
  * Tests the parser on manually lexed inputs
