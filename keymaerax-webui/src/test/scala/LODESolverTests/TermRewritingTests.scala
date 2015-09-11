@@ -41,12 +41,27 @@ class TermRewritingTests extends testHelper.TacticTestSuite {
     fail("no asssertion.")
   }
 
-  "HilbertCalculus Term Rewriting" should "work" in {
+  "HilbertCalculus.CE" should "work with custom setup code" in {
     val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula
     val node = helper.formulaToNode(f)
 
     val provable = Provable.startProof(new Sequent(Nil, IndexedSeq(), IndexedSeq("0*x+1=1".asFormula)))
     val tactic   = HilbertCalculus.CE(provable)(SuccPosition(0, PosInExpr(0 :: 0 :: 1 :: Nil)))
+
+    helper.runTactic(tactic, node)
+    fail("No assertions")
+  }
+
+  it should "work with TermRewriting setup code" in {
+    val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula
+    val node = helper.formulaToNode(f)
+
+    val provable = Provable.startProof(new Sequent(Nil, IndexedSeq(), IndexedSeq("0*x+1=1".asFormula)))
+    val tactic   = TermRewriting.hilbertTermRewrite(
+      (t:Term) => t match {case Plus(Times(n:Number, x), m) => n.value.toInt==0 case _ => false},
+      (t:Term) => t match {case Plus(Times(n, x), m) => m case _ => ???},
+      "Prove that 0*x+m = m"
+    )(SuccPosition(0, PosInExpr(0 :: 0 :: 1 :: Nil)))
 
     helper.runTactic(tactic, node)
     fail("No assertions")
