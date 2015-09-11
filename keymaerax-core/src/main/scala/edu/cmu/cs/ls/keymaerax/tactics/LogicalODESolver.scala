@@ -69,13 +69,10 @@ object LogicalODESolver {
       case Box(ODESystem(program : DifferentialProgram, _), _) => {
         val t = timeVar(program)
         val primedVars = getPrimedVariables(program)
-        //The last condition is necessary and an important bit of preprocessing -- the time var has
-        //to be moved from the head to the tail.
-        primedVars.length > 1 && t.isDefined &&
-        // time var needs to be in the back because DG++ system peels off from the back.
-        t.get.equals(primedVars.last) &&
-        // Cleaning up after this tactic requires knowing the structure of the succedent.
-        s.succ.length == 1
+        primedVars.length > 1 && // When primedVars = 1 we should move to solving for time.
+        t.isDefined && // We need a time variable b/c it must be moved from the head to the tail (?)
+        t.get.equals(primedVars.last) && // time var needs to be in the back because DG++ system peels off from the back.
+        s.succ.length == 1 // Cleaning up after this tactic requires knowing the structure of the succedent.
       }
       case _ => false
     }
@@ -89,13 +86,18 @@ object LogicalODESolver {
             val pvs = getPrimedVariables(program)
             val nextVariable : Variable = pvs.head
             val cutUsePos = AntePos(node.sequent.ante.length)
-            // We can't use the system variant in the 2 variable case.
-            val ghostTactic =
-              if(pvs.length > 2)  ODETactics.DiffGhostPlusPlusSystemT else ODETactics.DiffGhostPPT
+
+            // ghostTactic chooses the correct diffGhost++ tactic based up whether this is a system w/
+            // 3 or more primed variables.
+            val (ghostTactic, usingSystemAxiom) =
+              if(pvs.length > 2)  (ODETactics.DiffGhostPlusPlusSystemT, true)
+              else                (ODETactics.DiffGhostPPT, false)
+
             Some(
+              debugT(s"[successiveInverseDiffGhost] begin (system axiom used: ${usingSystemAxiom})") &
               PropositionalTacticsImpl.cutT(Some(Forall(nextVariable :: Nil, atApplicationPos))) &
                 onBranch(
-                  // positioning in the cutSUse branch is justified by applies check that succ length = 1
+                  // positioning in the cutShow branch is justified by applies check that succ length = 1
                   (BranchLabels.cutShowLbl, hideT(p) & ghostTactic(p) & debugT("[successiveInverseDiffGhost] output")),
                   (BranchLabels.cutUseLbl, FOQuantifierTacticsImpl.allEliminateT(cutUsePos) & AxiomCloseT ~ errorT("Should have closed"))
                 )
