@@ -838,7 +838,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser.programParser("x'=5&x>2") shouldBe (ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), Greater(Variable("x"),Number(2))))
   }
 
-  it should "perhaps always parse x'=5,y'=7&x>2 as a program" in {
+  ignore should "perhaps always parse x'=5,y'=7&x>2 as a program" in {
     parser.programParser("x'=5,y'=7&x>2") shouldBe (ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(7))), Greater(Variable("x"),Number(2))))
     try {
       parser("x'=5,y'=7&x>2") shouldBe (ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(7))), Greater(Variable("x"),Number(2))))
@@ -851,8 +851,8 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser.programParser("{x'=5,y'=7&x>2}") shouldBe (ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(7))), Greater(Variable("x"),Number(2))))
   }
 
-  it should "not parse x'=5,y'=7&x>2 as a formula" in {
-    a [ParseException] should be thrownBy parser.formulaParser("x'=5,y'=7&x>2")
+  ignore should "not parse x'=5,y'=7&x>2 as a formula" in {
+    a[ParseException] should be thrownBy parser.formulaParser("x'=5,y'=7&x>2")
   }
 
   it should "parse (<a;b;>p(x))&q()" in {
