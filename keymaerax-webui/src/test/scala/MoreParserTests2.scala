@@ -75,8 +75,8 @@ class MoreParserTests2 extends FlatSpec with Matchers {
 
   it should "parse x'=5&x>2&x>3 as an equation system" in {
     val x = Variable("x")
-    parser.formulaParser("x'=5&x>2&x>3") shouldBe And(And(Equal(DifferentialSymbol(x), Number(5)), Greater(x, Number(2))), Greater(x, Number(3)))
-    parser("x'=5&x>2&x>3") shouldBe And(And(Equal(DifferentialSymbol(x), Number(5)), Greater(x, Number(2))), Greater(x, Number(3)))
+    parser.formulaParser("x'=5&x>2&x>3") shouldBe And(Equal(DifferentialSymbol(x), Number(5)), And(Greater(x, Number(2)), Greater(x, Number(3))))
+    parser("x'=5&x>2&x>3") shouldBe And(Equal(DifferentialSymbol(x), Number(5)), And(Greater(x, Number(2)), Greater(x, Number(3))))
   }
 
   it should "parse [{x'=5&x>2&x>3}]x>0 as an ODESystem with one evolution domain constraint" in {
