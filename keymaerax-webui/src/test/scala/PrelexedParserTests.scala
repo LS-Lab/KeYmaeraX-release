@@ -2,8 +2,6 @@
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
-package parserTests
-
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
