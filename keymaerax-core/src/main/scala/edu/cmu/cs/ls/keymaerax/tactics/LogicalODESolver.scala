@@ -46,12 +46,20 @@ object LogicalODESolver {
       (successiveInverseDiffGhost(p) *) &
       locateTerm(ODETactics.rewriteConstantTime) & //0*t+1 --> 1
       ODETactics.diffSolveConstraintT(p) &
-      FOQuantifierTacticsImpl.skolemizeT(p) &
-      ImplyRightT(p) & ImplyRightT(p) & debugT("After imply right") &
-      HybridProgramTacticsImpl.boxAssignT(p) &
-      arithmeticT ~
-      errorT("Should have closed.")
+      reduceToArithmetic(p) // separated out for testing purposes
   }
+
+  /**
+   * These final steps of the LogicalODESolver should always just work,
+   * and have been separated out so that they can be more easily executed
+   * from test cases.
+   */
+  def reduceToArithmetic(p : Position) : Tactic =
+    FOQuantifierTacticsImpl.skolemizeT(p) &
+    ImplyRightT(p) & ImplyRightT(p) & debugT("After imply right") &
+    HybridProgramTacticsImpl.boxAssignT(p) &
+    arithmeticT ~
+    errorT("Should have closed.")
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // tactics for the advanced solver
