@@ -66,6 +66,7 @@ object AxiomIndex {
     case "DE differential effect system" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     //@todo other axioms
 
+    case "+<= up" => (PosInExpr(1::Nil), PosInExpr(0::1::Nil)::Nil)
     // default position
     //case _ => (PosInExpr(0::Nil), Nil)
   }
