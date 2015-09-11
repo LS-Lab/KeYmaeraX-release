@@ -1,7 +1,9 @@
+package testHelper
+
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
-* See LICENSE.txt for the conditions of this license.
-*/
+ * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+ * See LICENSE.txt for the conditions of this license.
+ */
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.tactics.Position
@@ -42,7 +44,7 @@ trait TacticTestSuite extends FlatSpec with Matchers with BeforeAndAfterEach {
       Tactics.MathematicaScheduler = null
     }
   }
-  
+
   protected def formulaAtExpr(node : ProofNode, position : Position) : Option[Formula] = {
     var formula : Option[Formula] = None
     val fn = new ExpressionTraversalFunction {

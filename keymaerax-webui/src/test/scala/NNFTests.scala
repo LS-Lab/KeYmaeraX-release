@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.NNFRewrite._
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class NNFTests extends TacticTestSuite {
+class NNFTests extends testHelper.TacticTestSuite {
   "Double negation elimination" should "eliminate" in {
     val node = helper.formulaToNode("!(!(1=1))".asFormula)
     val tactic = helper.positionTacticToTactic(rewriteDoubleNegationEliminationT)

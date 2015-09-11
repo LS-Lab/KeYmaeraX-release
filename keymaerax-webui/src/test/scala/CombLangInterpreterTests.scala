@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.tacticsinterface.{CLInterpreter, CLParser}
 /**
  * Created by nfulton on 2/26/15.
  */
-class CombLangInterpreterTests extends TacticTestSuite {
+class CombLangInterpreterTests extends testHelper.TacticTestSuite {
   "CLInterpreter" should "not choke" in {
     val t = CLInterpreter.construct(CLParser("NilT & NilT").get)
     val n = new RootNode(

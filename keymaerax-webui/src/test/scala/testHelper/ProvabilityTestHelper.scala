@@ -269,4 +269,15 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
     if (defaultCfg.contains("linkName") && defaultCfg.contains("libDir")) defaultCfg
     else throw new Exception("Mathematica not installed at one of the default locations")
   }
+
+
+  /**
+   *
+   * @param node A node with exactly one open goal.
+   * @return the sequent associated with the only remaining goal.
+   */
+  def remainingSequent(node : ProofNode) : Sequent = {
+    assert(node.openGoals().length == 1)
+    node.openGoals().head.sequent
+  }
 }
