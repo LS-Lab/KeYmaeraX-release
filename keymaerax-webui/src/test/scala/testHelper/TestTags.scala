@@ -1,6 +1,8 @@
 package testHelper
 
 /**
+ * @todo Figure out a way to specify timeouts for certain tags.
+ * @author @nrfulton
  * Created by nfulton on 9/11/15.
  */
 object KeYmaeraXTestTags {
@@ -12,7 +14,7 @@ object KeYmaeraXTestTags {
   object SlowTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.SlowTest")
 
   /**
-   * A small core of very fasts tests that could be run before each check-in.
+   * A small core of very fasts tests that could be run before each check-in or even every compile.
    * Each test should run in under :30 seconds
    * Set runs in a minute or two.
    */
@@ -20,6 +22,7 @@ object KeYmaeraXTestTags {
 
   /**
    * A test that summarizes all of the tests occuring in a package or file.
+   * These tests definitely get run before *pushing* any code to GitHub in a normal development process.
    * Set runs in under 15 minutes.
    */
   object SummaryTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.SummaryTest")
