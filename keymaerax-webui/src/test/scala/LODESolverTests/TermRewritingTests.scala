@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 import edu.cmu.cs.ls.keymaerax.tactics._
+import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable.IndexedSeq
 
@@ -29,7 +30,7 @@ class TermRewritingTests extends testHelper.TacticTestSuite {
     TermRewriting.replaceSubterm(f, posInExpr, _ => Number(1)).get shouldBe "[{x' = 1 & 1=1&3=3}]2=2".asFormula
   }
 
-  "Sequent calculus Tern Rewriting" should "work" in {
+  "Sequent calculus Tern Rewriting" should "work" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
     val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula
     val node = helper.formulaToNode(f)
 
@@ -56,7 +57,7 @@ class TermRewritingTests extends testHelper.TacticTestSuite {
    * Does essentially the same thing as above, but using TermRewriting.hilbertTermRewrite instead of
    * doing the setup manually.
    */
-  it should "work with TermRewriting setup code" in {
+  it should "work with TermRewriting setup code" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
     val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula
     val node = helper.formulaToNode(f)
 
