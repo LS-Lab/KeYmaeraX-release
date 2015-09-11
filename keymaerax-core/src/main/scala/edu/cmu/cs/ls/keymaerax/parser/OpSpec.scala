@@ -148,11 +148,11 @@ object OpSpec {
   val sPair         = BinaryOpSpec[Term](COMMA,   888, RightAssociative, binterm, Pair.apply _)
   val sDifferential = UnaryOpSpec[Term] (PRIME,    10, PostfixFormat, unterm, Differential.apply _)
   val sNeg          = UnaryOpSpec[Term] (MINUS,    11, PrefixFormat, unterm, Neg.apply _)
-  val sPower        = BinaryOpSpec[Term](POWER,    20, RightAssociative, binterm, Power.apply _)
+  val sPower        = BinaryOpSpec[Term](POWER,    20, RightAssociative/*!*/, binterm, Power.apply _)
   val sTimes        = BinaryOpSpec[Term](STAR,     40, LeftAssociative, binterm, Times.apply _)
-  val sDivide       = BinaryOpSpec[Term](SLASH,    40, LeftAssociative, binterm, Divide.apply _)
+  val sDivide       = BinaryOpSpec[Term](SLASH,    40, LeftAssociative/*!*/, binterm, Divide.apply _)
   val sPlus         = BinaryOpSpec[Term](PLUS,     50, LeftAssociative, binterm, Plus.apply _)
-  val sMinus        = BinaryOpSpec[Term](MINUS,    50, LeftAssociative, binterm, Minus.apply _)
+  val sMinus        = BinaryOpSpec[Term](MINUS,    50, LeftAssociative/*!*/, binterm, Minus.apply _)
 
   // formulas
   private val unfml = (FormulaKind)
@@ -178,11 +178,11 @@ object OpSpec {
   val sBox          = BinaryOpSpec[Expression](PSEUDO, 95, MixedBinary, modalfml, (_:String, a:Expression, f:Expression) => Box(a.asInstanceOf[Program], f.asInstanceOf[Formula]))
   val sDiamond      = BinaryOpSpec[Expression](PSEUDO, 95, MixedBinary, modalfml, (_:String, a:Expression, f:Expression) => Diamond(a.asInstanceOf[Program], f.asInstanceOf[Formula]))
   val sNot          = UnaryOpSpec[Formula] (NOT,      100, PrefixFormat, unfml, Not.apply _)
-  val sAnd          = BinaryOpSpec[Formula](AMP,      110, LeftAssociative, binfml, And.apply _)
-  val sOr           = BinaryOpSpec[Formula](OR,       120, LeftAssociative, binfml, Or.apply _)
-  val sImply        = BinaryOpSpec[Formula](IMPLY,    130, RightAssociative, binfml, Imply.apply _)
+  val sAnd          = BinaryOpSpec[Formula](AMP,      110, RightAssociative, binfml, And.apply _)
+  val sOr           = BinaryOpSpec[Formula](OR,       120, RightAssociative, binfml, Or.apply _)
+  val sImply        = BinaryOpSpec[Formula](IMPLY,    130, RightAssociative/*!*/, binfml, Imply.apply _)
   val sRevImply     = BinaryOpSpec[Formula](REVIMPLY, 130, LeftAssociative, binfml, (l:Formula, r:Formula) => Imply(r, l)) /* swaps arguments */
-  val sEquiv        = BinaryOpSpec[Formula](EQUIV,    130, NonAssociative, binfml, Equiv.apply _)
+  val sEquiv        = BinaryOpSpec[Formula](EQUIV,    140, NonAssociative/*!*/, binfml, Equiv.apply _)
 
   // programs
   private val unprog = ProgramKind
