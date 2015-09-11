@@ -268,6 +268,7 @@ trait UnifyUSCalculus {
             //@todo check positioning etc.
             useAt(subst, new Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPos(0)) & onBranch(
               //@note the roles of cutUseLbl and cutShowLbl are really swapped here, since the implication on cutShowLbl will be handled by factTactic
+              //@todo don't work on prereq? Or make it customizable?
               (BranchLabels.cutUseLbl, /* prove prereq: */ TactixLibrary.master),
               (BranchLabels.cutShowLbl, /*PropositionalTacticsImpl.InverseImplyRightT &*/ factTactic)
             ), sequent)
@@ -490,13 +491,18 @@ trait UnifyUSCalculus {
         case m:Modal if symbols(m.program).contains(DotFormula) =>
           throw new ProverException("No monotone context within programs " + C)
 
-        case Forall(vars, c) =>
+        case Forall(vars, c) => //if !StaticSemantics.freeVars(subst(c)).toSymbolSet.intersect(vars.toSet).isEmpty =>
           //@note would also work with all distribute and all generalization instead
           //@note would also work with Skolemize and all instantiate but disjointness is more painful
           useFor("all eliminate", PosInExpr(1::Nil))(AntePosition(0))(monStep(Context(c), mon)) (
             Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))),
             Skolemize(SuccPos(0))
           )
+
+        /*case Forall(vars, c) if StaticSemantics.freeVars(subst(c)).toSymbolSet.intersect(vars.toSet).isEmpty =>
+          useFor("vacuous all quantifier")(SuccPosition(0))(
+            useFor("vacuous all quantifier")(AntePosition(0))(monStep(Context(c), mon))
+          )*/
 
         case Exists(vars, c) =>
           //@note would also work with exists distribute and exists generalization instead
@@ -617,18 +623,19 @@ trait UnifyUSCalculus {
             val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(proof.conclusion.succ.length)}
             val coside: Provable = sideImply(
               if (pos.isSucc) proof.conclusion.updated(p.top, Imply(C(subst(o)), C(subst(k))))
-              //@todo drop p.top too?
-              else proof.conclusion.glue(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k)))))),
+              //@note drop p.top too and glue
+              else Sequent(Nil, proof.conclusion.ante.patch(p.top.getIndex,Nil,1), proof.conclusion.succ).
+                glue(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k)))))),
               CoHideRight(cutPos)
             )
-            // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
+            // G |- C{subst(o)}  -> C{subst(k)}, D by CoHideRight
             val proved = {if (pos.isSucc)
               Provable.startProof(proof.conclusion.updated(pos.top, C(subst(o))))(
                 CutRight(C(subst(k)), pos.top.asInstanceOf[SuccPos]), 0
               ) (coside, 1)
             else
-              Provable.startProof(proof.conclusion.updated(pos.top, C(subst(k))))(
-                CutLeft(C(subst(o)), pos.top.asInstanceOf[AntePos]), 0
+              Provable.startProof(proof.conclusion.updated(pos.top, C(subst(o))))(
+                CutLeft(C(subst(k)), pos.top.asInstanceOf[AntePos]), 0
               ) (coside, 1)
             } /*ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
               ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
@@ -650,8 +657,9 @@ trait UnifyUSCalculus {
             val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(proof.conclusion.succ.length)}
             val coside: Provable = sideImply(
               if (pos.isSucc) proof.conclusion.updated(p.top, Imply(C(subst(o)), C(subst(k))))
-              //@todo drop p.top too?
-              else proof.conclusion.glue(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k)))))),
+              //@note drop p.top too and glue
+              else Sequent(Nil, proof.conclusion.ante.patch(p.top.getIndex,Nil,1), proof.conclusion.succ).
+                glue(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k)))))),
               CoHideRight(cutPos)
             )
             // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight

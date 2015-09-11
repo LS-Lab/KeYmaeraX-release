@@ -240,7 +240,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
-  it should "auto-prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10) with DC" in {
+  ignore should "auto-prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10) with DC" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
       implyR(1) &
         //@todo the problem is that DI should be used in show prereq branch of useAt instead of defaulting to master
