@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.{Z3, Mathematica, KeYmaera}
-import testHelper.ProvabilityTestHelper
+import testHelper.{KeYmaeraXTestTags, ProvabilityTestHelper}
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import scala.collection.immutable
 import scala.collection.immutable.Map
@@ -208,7 +208,7 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
-  "simple car" should "not fail due to new ^' tactic" in {
+  "simple car" should "not fail due to new ^' tactic" taggedAs(KeYmaeraXTestTags.CaseStudyTest, KeYmaeraXTestTags.CheckinTest) in {
 //    val sequent = new Sequent(Nil, immutable.IndexedSeq(
 //      "2!=0".asFormula, "(kxtime_1^2)'=2*kxtime_1^(2-1)*(kxtime_1)'".asFormula
 //    ),immutable.IndexedSeq(
