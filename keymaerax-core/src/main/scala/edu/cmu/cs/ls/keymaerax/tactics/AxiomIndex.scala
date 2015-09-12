@@ -54,7 +54,8 @@ object AxiomIndex {
     case "|' derive or" => binaryDefault
     case "->' derive imply" => binaryDefault
 
-    // [a] modalities
+    // [a] modalities and <a> modalities
+    case "<> dual" | "[] dual" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
     case "[:=] assign" | "<:=> assign" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
     case "[:=] assign equational" | "<:=> assign equational" => (PosInExpr(0::Nil), PosInExpr(Nil)::PosInExpr(0::1::Nil)::Nil)
     case "[:=] assign update" | "<:=> assign update" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
@@ -70,10 +71,18 @@ object AxiomIndex {
     //@todo unclear recursor
     case "DE differential effect system" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     //@todo other axioms
+
       // derived axioms
 
+    case "!& deMorgan" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
+    case "!| deMorgan" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
+    case "!-> deMorgan" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
+    case "!<-> deMorgan" => (PosInExpr(0::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::PosInExpr(1::0::Nil)::PosInExpr(1::1::Nil)::Nil)
+
     case "<*> approx" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
+    case "DX diamond differential skip" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
     case "<*> stuck" => (PosInExpr(0::Nil), Nil)
+    case "<'> stuck" => (PosInExpr(0::Nil), Nil)
     case "+<= up" => (PosInExpr(1::Nil), PosInExpr(0::1::Nil)::Nil)
 
     // default position
