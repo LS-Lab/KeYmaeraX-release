@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Tool}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import test.RandomFormula
+import testHelper.KeYmaeraXTestTags.{SummaryTest, CheckinTest}
 import testHelper.ParserFactory._
 import testHelper.ProvabilityTestHelper
 
@@ -113,7 +114,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
-  it should "derive (x+2*y)'=x'+2*y'" in {
+  it should "derive (x+2*y)'=x'+2*y'" taggedAs(CheckinTest) in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
@@ -173,7 +174,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=7}]5*x'>=0".asFormula)))
   }
 
-  it should "reduce [{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)' to [{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)" in {
+  it should "reduce [{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)' to [{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)" taggedAs(SummaryTest) in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)'".asFormula)),
       derive(1,1::Nil)
     ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)))
@@ -204,7 +205,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
-  it should "auto-prove x>=5 -> [{x'=2}]x>=5" in {
+  it should "auto-prove x>=5 -> [{x'=2}]x>=5" taggedAs(SummaryTest) in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) & diffInd(1)
     ) shouldBe 'proved
@@ -314,13 +315,13 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
-  it should "chase [{x'=22}](2*x+x*y>=5)'" in {
+  it should "chase [{x'=22}](2*x+x*y>=5)'" taggedAs(CheckinTest) in {
     proveBy("[{x'=22}](2*x+x*y>=5)'".asFormula,
       chase(1, 1 :: Nil)
     ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula)))
   }
 
-  it should "chase [{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1" in {
+  it should "chase [{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1" taggedAs(CheckinTest) in {
     proveBy("[{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula,
       chase(1, 1 :: Nil)
     ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))".asFormula)))
@@ -431,7 +432,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   lazy val basicEquiv = TactixLibrary.proveBy("x^2<4 <-> -2<x&x<2".asFormula, QE)
 
   private def shouldReduceTo(input: Formula, pos: Position, result: Formula, fact: Provable = basicEq): Unit =
-    TactixLibrary.proveBy(input, HilbertCalculus.CE(basicEq)(pos)).subgoals shouldBe (
+    TactixLibrary.proveBy(input, HilbertCalculus.CE(fact)(pos)).subgoals shouldBe (
       List(new Sequent(Nil, IndexedSeq(), IndexedSeq(result)))
       )
 
@@ -443,13 +444,22 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     shouldReduceTo("x<5 & 0*x+1<=3 | x>=2".asFormula, SuccPosition(0, PosInExpr(0::1::0::Nil)), "x<5 & 1<=3 | x>=2".asFormula)
   }
 
+  it should "reduce \\forall x 0*x+1<=3 to \\forall x 1<=3" in {
+    shouldReduceTo("\\forall x 0*x+1<=3".asFormula, SuccPosition(0, PosInExpr(0::0::Nil)), "\\forall x 1<=3".asFormula)
+  }
+
   it should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" in {
     shouldReduceTo("x<5 & \\forall x 0*x+1<=3 | x>=2".asFormula, SuccPosition(0, PosInExpr(0::1::0::0::Nil)), "x<5 & \\forall x 1<=3 | x>=2".asFormula)
+  }
+
+  it should "reduce [x:=7;]0*x+1<=3 to [x:=7;]1<=3" in {
+    shouldReduceTo("[x:=7;]0*x+1<=3".asFormula, SuccPosition(0, PosInExpr(1::1::Nil)), "[x:=7;]1<=3".asFormula)
   }
 
   it should "reduce [{x' = 0*x+1 & 5=5}]x>=2 to [{x' = 1 & 5=5}]x>=2" in {
     shouldReduceTo("[{x' = 0*x+1 & 5=5}]x>=2".asFormula, SuccPosition(0, PosInExpr(0::0::1::Nil)), "[{x' = 1 & 5=5}]x>=2".asFormula)
   }
+
 
   "CE(Provable) equivalence magic" should "reduce x^2<4 to -2<x&x<2" in {
     shouldReduceTo("x^2<4".asFormula, SuccPosition(0, PosInExpr(Nil)), "-2<x&x<2".asFormula, basicEquiv)
@@ -468,7 +478,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "reduce [{x' = 5*x & x^2<4}]x>=1 to [{x' = 5*x & -2<x&x<2}]x>=1" in {
-    shouldReduceTo("[{x' = 5*x & x^2<4}]x>=1".asFormula, SuccPosition(0, PosInExpr(0::0::1::Nil)), "[{x' = 5*x & -2<x&x<2}]x>=1".asFormula, basicEquiv)
+    shouldReduceTo("[{x' = 5*x & x^2<4}]x>=1".asFormula, SuccPosition(0, PosInExpr(0::1::Nil)), "[{x' = 5*x & -2<x&x<2}]x>=1".asFormula, basicEquiv)
   }
 
 }

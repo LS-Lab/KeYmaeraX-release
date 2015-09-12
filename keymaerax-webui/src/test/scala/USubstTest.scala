@@ -8,14 +8,12 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest._
+import testHelper.KeYmaeraXTestTags.{OptimisticTest, SummaryTest, CheckinTest, USubstTest}
 import scala.collection.immutable.List
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 import test._
-
-object USubstTest extends Tag("USubstTest")
-object OptimisticTest extends Tag("OptimisticTest")
 
 /**
  * @author Andre Platzer
@@ -99,7 +97,7 @@ class USubstTests extends FlatSpec with Matchers {
   }
 
 
-  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs USubstTest in {
+  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs(USubstTest,CheckinTest) in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = Equiv(
       Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
@@ -112,7 +110,7 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
   
-  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" taggedAs USubstTest in {
+  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" taggedAs(USubstTest,CheckinTest) in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = Equiv(
       Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
@@ -149,7 +147,7 @@ class USubstTests extends FlatSpec with Matchers {
     UniformSubstitutionRule(s, Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
   }
 
-  it should "clash when using vacuous all quantifier \\forall x . for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs USubstTest in {
+  it should "clash when using vacuous all quantifier \\forall x . for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(USubstTest,SummaryTest) in {
     val fml = GreaterEqual(x, Number(0))
     val prem = Axiom.axioms("vacuous all quantifier")
     val conc = Forall(Seq(x), fml)
@@ -159,7 +157,7 @@ class USubstTests extends FlatSpec with Matchers {
     Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
   
-  it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs USubstTest in {
+  it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs(USubstTest,SummaryTest) in {
     val fml = GreaterEqual(x, Number(0))
     val prem = Axiom.axioms("V vacuous")
     val prog = Assign(x, Minus(x, Number(1)))
@@ -193,7 +191,7 @@ class USubstTests extends FlatSpec with Matchers {
 
   // uniform substitution of rules
 
-  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs USubstTest in {
+  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs(USubstTest,SummaryTest) in {
     val fml = GreaterEqual(Power(Neg(x), Number(2)), Number(0))
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, fml)
@@ -213,7 +211,7 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Box(prog, fml)))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
   
-  it should "instantiate nontrivial binding structures in [] congruence" taggedAs USubstTest in {
+  it should "instantiate nontrivial binding structures in [] congruence" taggedAs(USubstTest,CheckinTest) in {
     val prem = "(-x)^2>=y <-> x^2>=y".asFormula
     val conc = "[{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;](-x)^2>=y <-> [{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;]x^2>=y".asFormula
 

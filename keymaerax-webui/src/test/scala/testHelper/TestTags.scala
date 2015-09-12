@@ -1,5 +1,7 @@
 package testHelper
 
+import org.scalatest.Tag
+
 /**
  * Test categories.
  * @todo Figure out a way to specify timeouts for certain tags.
@@ -55,5 +57,10 @@ object KeYmaeraXTestTags {
    */
   object DeploymentTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.Deployment")
 
+  /** Uniform substitution tests */
+  object USubstTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.USubstTest")
+
+  /** Tests that are overly optimistic about the capabilities and might want to be ignored. */
+  object OptimisticTest extends Tag("edu.cmu.cs.ls.keymaerax.tags.OptimisticTest")
 
 }
