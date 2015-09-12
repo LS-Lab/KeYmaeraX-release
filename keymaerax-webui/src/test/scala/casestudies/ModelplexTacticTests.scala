@@ -70,6 +70,7 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     import TactixLibrary.chase
     import TactixLibrary.proveBy
     import TactixLibrary.useAt
+    import TactixLibrary.lin
     import scala.collection._
 
     val in = //getClass.getResourceAsStream("examples/casestudies/modelplex/simple.key")
@@ -117,19 +118,18 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
         }
       )
 
+      val modelPlexRecursor = new PositionTactic("lazy modelPlex recursor") {
+        override def applies(s: Sequent, p: Position): Boolean = true
+        //@note indirect/postponed/lazy call to modelPlex is required to prevent infinite recursion in tactic construction
+        override def apply(p: Position): Tactic = modelPlex(new ListBuffer())(p)
+      }
+
       new PositionTactic("ModelPlex") {
         override def applies(s: Sequent, p: Position): Boolean = true
         override def apply(p: Position): Tactic =
           (debugAtT("huhu") & uncontrol & debugAtT("uncontrolled") &
-            // retroactively handle postponed loops in inverse order, so inside-out
-            Tactics.ignorePosition(Tactics.foldLazyLeft(loopStack.toList.map(prependPos(_,p.inExpr)))(
-              (debugAtT("one loop") & (/*useAt("<:=> assign") |*/ useAt("<*> approx") | useAt("DX diamond differential skip")) & debugAtT("delooped")) & new PositionTactic("lazy modelPlex recursor") {
-                override def applies(s: Sequent, p: Position): Boolean = true
-                //@note indirect/postponed/lazy call to modelPlex is required to prevent infinite recursion in tactic construction
-                override def apply(p: Position): Tactic = modelPlex(new ListBuffer())(p)
-              }
-            ))) (p)
-
+            (lin((useAt("<*> approx") | useAt("DX diamond differential skip")) & modelPlexRecursor)*)
+            ) (p)
       }
     }
 
@@ -138,6 +138,11 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "true -> ???".asFormula
   }
+
+
+
+
+
 
   it should "find correct controller monitor by updateCalculus implicationally" in {
     import TactixLibrary.chase
