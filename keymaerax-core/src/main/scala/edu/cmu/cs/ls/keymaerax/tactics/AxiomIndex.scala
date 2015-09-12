@@ -23,7 +23,12 @@ object AxiomIndex {
 
   type AxiomIndex = (PosInExpr, List[PosInExpr])
 
-  /** Return (derived) axiom index with key for matching and list of recursors on other sibling, i.e., after useAt/useFor */
+  /**
+   * Return (derived) axiom index with key for matching and list of recursors on other sibling, i.e., after useAt/useFor
+   * @see [[UnifyUSCalculus.chase()]]
+   * @see [[UnifyUSCalculus.chaseFor()]]
+   * @todo copy documentation from chase
+   */
   def axiomIndex(axiom: String): AxiomIndex = (axiom: @switch) match {
       //@todo axiom.intern() to @switch?
     // ' recursors for derivative axioms
@@ -65,8 +70,12 @@ object AxiomIndex {
     //@todo unclear recursor
     case "DE differential effect system" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     //@todo other axioms
+      // derived axioms
 
+    case "<*> approx" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
+    case "<*> stuck" => (PosInExpr(0::Nil), Nil)
     case "+<= up" => (PosInExpr(1::Nil), PosInExpr(0::1::Nil)::Nil)
+
     // default position
     //case _ => (PosInExpr(0::Nil), Nil)
   }

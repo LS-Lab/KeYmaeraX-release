@@ -213,6 +213,7 @@ object DerivedAxioms {
     case "abs" => Some(absF, absT)
     case "min" => Some(minF, minT)
     case "max" => Some(maxF, maxT)
+    case "<*> stuck" => Some(loopStuckF, loopStuckT)
     case "+<= up" => Some(intervalUpPlusF, intervalUpPlusT)
     case _ => None
   } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == name, s"Lookup of DerivedAxiom should find the correct lemma (name: ${name})")
@@ -293,6 +294,7 @@ object DerivedAxioms {
       , "abs" -> Some(absF, absT)
       , "min" -> Some(minF, minT)
       , "max" -> Some(maxF, maxT)
+      , "<*> stuck" -> Some(loopStuckF, loopStuckT)
       , "+<= up" -> Some(intervalUpPlusF, intervalUpPlusT)
     ) ensuring(r => r.forall(kv => derivedAxiomInfo(kv._1)==kv._2), "same contents as derivedAxiomInfo()")
 
@@ -1945,6 +1947,23 @@ object DerivedAxioms {
   )
 
   lazy val maxT = derivedAxiomT(maxDef)
+
+  /**
+   * {{{Axiom "<*> stuck".
+   *    <{a;}*>p(??) <-> <{a;}*>p(??)
+   * End.
+   * }}}
+   * @Derived
+   * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+   */
+  lazy val loopStuckF = "<{a;}*>p(??) <-> <{a;}*>p(??)".asFormula
+  lazy val loopStuck = derivedAxiom("<*> stuck",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(loopStuckF)),
+    byUS("<-> reflexive")
+  )
+
+  lazy val loopStuckT = derivedAxiomT(loopStuck)
+
 
   /**
    * {{{Axiom "+<= up".
