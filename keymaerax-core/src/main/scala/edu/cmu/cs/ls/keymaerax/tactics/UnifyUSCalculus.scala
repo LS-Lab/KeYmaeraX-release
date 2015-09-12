@@ -6,8 +6,9 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ByProvable, ConstructionTactic, PositionTactic, Tactic}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.assertT
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.collection.immutable._
@@ -18,6 +19,8 @@ import scala.collection.immutable._
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see [[AxiomIndex.axiomIndex()]]
+ * @see [[HilbertCalculus]]
+ * @see [[TactixLibrary]]
  */
 trait UnifyUSCalculus {
   import Tactic.DEBUG
@@ -203,8 +206,8 @@ trait UnifyUSCalculus {
             (BranchLabels.cutShowLbl, debugC("    show use") & cohide(cutPos) & assertT(0,1) & debugC("    cohidden") &
               equivifyR(SuccPosition(0)) & debugC("    equivified") &
               debugC("    CE coming up") & (
-              if (other.kind==FormulaKind) AxiomaticRuleTactics.equivalenceCongruenceT(p.inExpr)
-              else if (other.kind==TermKind) AxiomaticRuleTactics.equationCongruenceT(p.inExpr)
+              if (other.kind==FormulaKind) CE(p.inExpr)
+              else if (other.kind==TermKind) CQ(p.inExpr)
               else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
               debugC("    using fact tactic") & factTactic & debugC("  done fact tactic"))
             //@todo error if factTactic is not applicable (factTactic | errorT)
@@ -284,13 +287,82 @@ trait UnifyUSCalculus {
 
   }
 
+  /**
+   * CQ(pos) at the indicated position within an equivalence reduces contextual equivalence to argument equality.
+   * @param inEqPos the position *within* the two sides of the equivalence at which the context DotTerm happens.
+   * @see [[UnifyUSCalculus.CE(PosInExpr)]]
+   */
+  def CQ(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CQ congruence") {outer =>
+    import Augmentors._
+    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length==1 &&
+      (node.sequent.succ.head match {
+        case Equiv(p, q) => p.at(inEqPos)._1 == q.at(inEqPos)._1
+        case _ => false
+      })
+
+    private val f_ = FuncOf(Function("f_", None, Real, Real), Anything)
+    private val g_ = FuncOf(Function("g_", None, Real, Real), Anything)
+    private val c_ = PredOf(Function("ctx_", None, Real, Bool), DotTerm)
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ.head match {
+      case Equiv(l, r) =>
+        val (ctxF, f) = l.at(inEqPos)
+        val (ctxG, g) = r.at(inEqPos)
+        //@note Could skip the construction of ctxQ but it's part of the .at construction anyways.
+        assert(!DEBUG || ctxF == ctxG, "same context if applicable (implied by AxiomaticRule applying successfully)")
+        assert(!DEBUG || ctxF.ctx == ctxG.ctx, "same context formula if applicable (implied by AxiomaticRule applying successfully)")
+        require(ctxF.isTermContext, "Formula context expected for CQ")
+        Some(new ApplyRule(AxiomaticRule("CQ equation congruence",
+          USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil)
+        )) {
+          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+        })
+    }
+  }
+
+  /**
+   * CE(pos) at the indicated position within an equivalence reduces contextual equivalence to argument equivalence.
+   * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
+   * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
+   * @see [[UnifyUSCalculus.CE(Provable)]]
+   */
+  def CE(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CE congruence") {outer =>
+    import Augmentors._
+    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length==1 &&
+      (node.sequent.succ.head match {
+        case Equiv(p, q) => p.at(inEqPos)._1 == q.at(inEqPos)._1
+        case _ => false
+      })
+
+    private val p_ = PredOf(Function("p_", None, Real, Bool), Anything)
+    private val q_ = PredOf(Function("q_", None, Real, Bool), Anything)
+    private val c_ = PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula)
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ.head match {
+      case Equiv(l, r) if inEqPos==HereP =>
+        //@note optimization: skip CE step if context already begins at HereP
+        Some(TactixLibrary.skip)
+
+      case Equiv(l, r) =>
+        val (ctxP, p) = l.at(inEqPos)
+        val (ctxQ, q) = r.at(inEqPos)
+        //@note Could skip the construction of ctxQ but it's part of the .at construction anyways.
+        assert(!DEBUG || ctxP == ctxQ, "same context if applicable (implied by AxiomaticRule applying successfully)")
+        assert(!DEBUG || ctxP.ctx == ctxQ.ctx, "same context formula if applicable (implied by AxiomaticRule applying successfully)")
+        require(ctxP.isFormulaContext, "Formula context expected for CE")
+        Some(new ApplyRule(AxiomaticRule("CE congruence",
+          USubst(SubstitutionPair(c_, ctxP.ctx) :: SubstitutionPair(p_, p) :: SubstitutionPair(q_, q) :: Nil)
+        )) {
+          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+        })
+    }
+  }
+
   /** CE(equiv) uses the equivalence left<->right or equality left=right fact equiv for congruence reasoning
     * at the indicated position to replace left by right (literally, no substitution)
     * Efficient unification-free version of [[useAt()]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
-    * @see [[TactixLibrary.CE()]]
-    * @see [[TactixLibrary.CQ()]]
+    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
+    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     */
   def CE(equiv: Provable): PositionTactic = new PositionTactic("CE(Provable)") {
     import Augmentors._
@@ -312,7 +384,7 @@ trait UnifyUSCalculus {
           onBranch(
             (BranchLabels.cutShowLbl, cohide(cutPos) & //assertT(0,1) &
               equivifyR(SuccPosition(0)) & commuteEquivR(SuccPosition(0)) &
-              (if (other.kind==FormulaKind) TactixLibrary.CE(p.inExpr)
+              (if (other.kind==FormulaKind) CE(p.inExpr)
               else if (other.kind==TermKind) CQ(p.inExpr)
               else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
               by(equiv)
@@ -822,14 +894,14 @@ trait UnifyUSCalculus {
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+(x'*y+x*y')>=0
     * @example When applied at Nil, turns [?x>0;x:=x+1;++?x=0;x:=1;]x>=1 into ((x>0->x+1>=1) & (x=0->1>=1))
     * @example When applied at 1::Nil, turns [{x'=22}][?x>0;x:=x+1;++?x=0;x:=1;]x>=1 into [{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))
-    * @see [[chase()derive]]
+    * @see [[chase()]]
     * @see [[HilbertCalculus.derive]]
     */
   def chaseFor(keys: Expression=>List[String],
                     modifier: (String,Position)=>ForwardTactic): ForwardPositionTactic = pos => de => {
+    import AxiomIndex.axiomIndex
+    import Augmentors._
     def doChase(de: Provable, pos: Position): Provable = {
-      import AxiomIndex.axiomIndex
-      import Augmentors._
       if (DEBUG) println("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
       // generic recursor
       keys(de.conclusion.sub(pos).get) match {
@@ -861,7 +933,7 @@ trait UnifyUSCalculus {
               )
           }
       }
-    }
+    } ensuring(r => r.subgoals==de.subgoals, "chase keeps subgoals unchanged: " + " final chase(" + de.conclusion.sub(pos).get.prettyString + ")")
     doChase(de,pos)
   }
 
