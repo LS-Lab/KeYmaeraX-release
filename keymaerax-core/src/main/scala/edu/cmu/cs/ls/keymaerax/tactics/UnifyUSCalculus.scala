@@ -289,10 +289,13 @@ trait UnifyUSCalculus {
 
   /**
    * CQ(pos) at the indicated position within an equivalence reduces contextual equivalence to argument equality.
+   * This tactic will use [[CE()]] under the hood as needed.
    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotTerm happens.
    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
    */
   def CQ(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CQ congruence") {outer =>
+    import StaticSemantics._
+    import StaticSemanticsTools._
     import Augmentors._
     override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length==1 &&
       (node.sequent.succ.head match {
@@ -311,11 +314,20 @@ trait UnifyUSCalculus {
         assert(!DEBUG || ctxF == ctxG, "same context if applicable (implied by AxiomaticRule applying successfully)")
         assert(!DEBUG || ctxF.ctx == ctxG.ctx, "same context formula if applicable (implied by AxiomaticRule applying successfully)")
         require(ctxF.isTermContext, "Formula context expected for CQ")
-        Some(new ApplyRule(AxiomaticRule("CQ equation congruence",
-          USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil)
-        )) {
-          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
+        if (DEBUG) println("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
+        if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty)
+          Some(new ApplyRule(AxiomaticRule("CQ equation congruence",
+            USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil)
+          )) {
+            override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+          })
+        else {
+          if (DEBUG) println("CQ: Split " + l + " around " + inEqPos)
+          val (fmlPos,termPos) : (PosInExpr,PosInExpr) = Context.splitPos(l, inEqPos)
+          if (DEBUG) println("CQ: Split " + l + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + l.at(fmlPos)._1 + " and " + Context.at(l.at(fmlPos)._2,termPos)._1)
+          //@todo could optimize to build directly since ctx already known
+          Some(CE(fmlPos) & CQ(termPos))
+        }
     }
   }
 
@@ -373,7 +385,8 @@ trait UnifyUSCalculus {
       case Equiv(l,r) => (l,r)
       case _ => throw new IllegalArgumentException("expected equivalence or equality fact " + equiv)
     }
-    override def applies(s: Sequent, p: Position): Boolean = s.sub(p) == Some(key)
+    override def applies(s: Sequent, p: Position): Boolean = if (s.sub(p) == Some(key)) true
+      else {if (DEBUG) println("In-applicable CE(" + equiv + ") at " + s.sub(p) + " which is " + p + " at " + s); false}
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
 
