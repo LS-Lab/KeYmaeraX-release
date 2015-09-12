@@ -1,17 +1,12 @@
 package testHelper
 
 /**
+ * Test categories.
  * @todo Figure out a way to specify timeouts for certain tags.
  * @author Nathan Fulton
  * Created by nfulton on 9/11/15.
  */
 object KeYmaeraXTestTags {
-
-  /**
-   * Usually tests that call QE or test a lot of cases.
-   * Set runs for unbounded amount of time.
-   */
-  object SlowTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.SlowTest")
 
   /**
    * A small core of very fasts tests that could be run before each check-in or even every compile.
@@ -26,6 +21,17 @@ object KeYmaeraXTestTags {
    * Set runs in under 15 minutes.
    */
   object SummaryTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.SummaryTest")
+
+  /**
+   * Average set of tests that run usually.
+   */
+  object UsualTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.UsualTest")
+
+  /**
+   * Usually tests that call QE or test a lot of cases.
+   * Set runs for unbounded amount of time.
+   */
+  object SlowTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.SlowTest")
 
   /**
    * Case Study tests are (typically long-running) tests that run an entire case study, sometimes

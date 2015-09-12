@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import testHelper.KeYmaeraXTestTags.CheckinTest
 import testHelper.ProvabilityTestHelper
 
 import scala.collection.immutable._
@@ -22,6 +23,7 @@ import scala.collection.immutable._
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  * @todo add a reflection-based test at the end that checks all lazy val in DerivedAxioms, even if that does not fail separately it gives exhaustiveness.
  */
+//@todo @CheckinTest
 class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))
