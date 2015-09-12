@@ -460,6 +460,10 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     shouldReduceTo("[x:=7;?0*x+1<=3;]x<9".asFormula, SuccPosition(0, PosInExpr(0::1::0::0::Nil)), "[x:=7;?1<=3;]x<9".asFormula)
   }
 
+  it should "reduce [x:=0*x+1;]x<9 to [x:=1;]x<9" in {
+    shouldReduceTo("[x:=0*x+1;]x<9".asFormula, SuccPosition(0, PosInExpr(0::1::Nil)), "[x:=1;]x<9".asFormula)
+  }
+
   it should "reduce [x:=7;x:=0*x+1;]x<9 to [x:=7;x:=1;]x<9" in {
     shouldReduceTo("[x:=7;x:=0*x+1;]x<9".asFormula, SuccPosition(0, PosInExpr(0::1::1::Nil)), "[x:=7;x:=1;]x<9".asFormula)
   }

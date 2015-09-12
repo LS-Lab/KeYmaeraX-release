@@ -325,6 +325,8 @@ trait UnifyUSCalculus {
           if (DEBUG) println("CQ: Split " + l + " around " + inEqPos)
           val (fmlPos,termPos) : (PosInExpr,PosInExpr) = Context.splitPos(l, inEqPos)
           if (DEBUG) println("CQ: Split " + l + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + l.at(fmlPos)._1 + " and " + Context.at(l.at(fmlPos)._2,termPos)._1)
+          if (l.at(fmlPos)._2.isInstanceOf[Modal]) println(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
+          if (fmlPos==HereP) throw new IllegalStateException("CQ split void, would cause infinite loop unless stopped")
           //@todo could optimize to build directly since ctx already known
           Some(CE(fmlPos) & CQ(termPos))
         }
