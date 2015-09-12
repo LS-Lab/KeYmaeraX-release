@@ -72,9 +72,22 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     import TactixLibrary.useAt
     import scala.collection._
 
-    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/simple.key")
+    val in = //getClass.getResourceAsStream("examples/casestudies/modelplex/simple.key")
+      getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("f"))
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("f"), Variable("l"), Variable("c"))
+
+    // child position needed to nibble off the <-> from the chase (maybe ought to be in chase itself???)
+    def posChild(pos: Position): Position = if (pos.isAnte)
+      AntePosition(pos.index, pos.inExpr.child)
+    else
+      SuccPosition(pos.index, pos.inExpr.child)
+
+    // prepend position where uncontrol/modelPlex chase was started off in the first place
+    def prependPos(pos: Position, prep: PosInExpr): Position = if (pos.isAnte)
+      AntePosition(pos.index, prep.append(pos.inExpr))
+    else
+      SuccPosition(pos.index, prep.append(pos.inExpr))
 
     // mutable state per call
     def modelPlex(loopStack: mutable.ListBuffer[Position]): PositionTactic = {
@@ -85,37 +98,45 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
         // remove loops
         case Diamond(Loop(_), _) => "<*> stuck" :: Nil //"<*> approx" :: Nil
         // remove ODEs for controller monitor
-        case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
+        case Diamond(ODESystem(_, _), _) => "<'> stuck" :: Nil
         case _ => AxiomIndex.axiomsFor(e)
       },
         (ax, pos) => pr => {
-          println("uncontrol " + ax + " at " + pos)
+          println("uncontrol using " + ax + " at " + pos)
           ax match {
             // log loop applications
-            //@todo assert that pos is no proper prefix of anything already on the stack (outside in traversal)
-            case "<*> stuck" => pos +=: loopStack  // this means prepend pos to stack
-              println("Stuck at stack " + loopStack)
+            case "<*> stuck" => posChild(pos) +=: loopStack  // this means prepend pos to stack
+              println("Stuck with <*> at stack " + loopStack)
+            case "<'> stuck" => posChild(pos) +=: loopStack
+              println("Stuck with <'> at stack " + loopStack)
+//            case "<:=> assign update" => pos +=: loopStack
+//              println("Stuck with <:=> at stack " + loopStack)
             case _ =>
           };
           pr
         }
       )
 
-      // retroactively handle postponed loops in inverse order, so inside-out
-      debugAtT("huhu") & uncontrol & debugAtT("uncontrolled") &
-        Tactics.ignorePosition(Tactics.foldLazyLeft(loopStack.toList)(
-          (debugAtT("one loop") & useAt("<*> approx") & debugAtT("delooped")) & new PositionTactic("lazy modelPlex recursor") {
-            override def applies(s: Sequent, p: Position): Boolean = true
-            //@note indirect/postponed/lazy call to modelPlex is required to prevent infinite recursion in tactic construction
-            override def apply(p: Position): Tactic = modelPlex(new ListBuffer())(p)
-          }
-        ))
+      new PositionTactic("ModelPlex") {
+        override def applies(s: Sequent, p: Position): Boolean = true
+        override def apply(p: Position): Tactic =
+          (debugAtT("huhu") & uncontrol & debugAtT("uncontrolled") &
+            // retroactively handle postponed loops in inverse order, so inside-out
+            Tactics.ignorePosition(Tactics.foldLazyLeft(loopStack.toList.map(prependPos(_,p.inExpr)))(
+              (debugAtT("one loop") & (/*useAt("<:=> assign") |*/ useAt("<*> approx") | useAt("DX diamond differential skip")) & debugAtT("delooped")) & new PositionTactic("lazy modelPlex recursor") {
+                override def applies(s: Sequent, p: Position): Boolean = true
+                //@note indirect/postponed/lazy call to modelPlex is required to prevent infinite recursion in tactic construction
+                override def apply(p: Position): Tactic = modelPlex(new ListBuffer())(p)
+              }
+            ))) (p)
+
+      }
     }
 
     val result = proveBy(modelplexInput, modelPlex(new ListBuffer[Position]())(SuccPosition(0, PosInExpr(1 :: Nil))))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "true -> ".asFormula
+    result.subgoals.head.succ should contain only "true -> ???".asFormula
   }
 
   it should "find correct controller monitor by updateCalculus implicationally" in {
