@@ -14,8 +14,9 @@ import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{locateSucc,lastSucc,on
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
 import TacticLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, PositionTactic, LabelBranch, NilT}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import scala.collection.immutable
+import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
 
 /**
@@ -69,44 +70,49 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     import TactixLibrary.chase
     import TactixLibrary.proveBy
     import TactixLibrary.useAt
+    import scala.collection._
 
     val in = getClass.getResourceAsStream("examples/casestudies/modelplex/simple.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("f"))
 
     // mutable state per call
-    var loopStack: List[Position] = Nil
-
-    def uncontrol: PositionTactic = chase(3,3, e => e match {
-      // no equational assignments
-      case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
-      case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
-      // remove loops
-      case Diamond(Loop(_), _) => "<*> stuck" :: Nil //"<*> approx" :: Nil
-      // remove ODEs for controller monitor
-      case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
-      case _ => AxiomIndex.axiomsFor(e)
-    },
-      (ax,pos)=> pr => {
-        println("uncontrol " + ax + " at " + pos)
-        ax match {
-          // log loop applications
-          //@todo assert that pos is no proper prefix of anything already on the stack (outside in traversal)
-          case "<*> stuck" => loopStack = pos :: loopStack
-            println("Stuck at stack " + loopStack)
-          case _ =>
-        };
-        pr
-      }
-    )
-
-    // retroactively handle postponed loops in inverse order, so inside-out
-    def modelPlex: PositionTactic = debugAtT("huhu") & uncontrol & debugAtT("uncontrolled") &
-      Tactics.ignorePosition(Tactics.foldLazyLeft(loopStack)(
-        (debugAtT("one loop") & useAt("<*> approx") & debugAtT("delooped")) & modelPlex)
+    def modelPlex(loopStack: mutable.ListBuffer[Position]): PositionTactic = {
+      def uncontrol: PositionTactic = chase(3, 3, e => e match {
+        // no equational assignments
+        case Box(Assign(_, _), _) => "[:=] assign" :: "[:=] assign update" :: Nil
+        case Diamond(Assign(_, _), _) => "<:=> assign" :: "<:=> assign update" :: Nil
+        // remove loops
+        case Diamond(Loop(_), _) => "<*> stuck" :: Nil //"<*> approx" :: Nil
+        // remove ODEs for controller monitor
+        case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
+        case _ => AxiomIndex.axiomsFor(e)
+      },
+        (ax, pos) => pr => {
+          println("uncontrol " + ax + " at " + pos)
+          ax match {
+            // log loop applications
+            //@todo assert that pos is no proper prefix of anything already on the stack (outside in traversal)
+            case "<*> stuck" => pos +=: loopStack  // this means prepend pos to stack
+              println("Stuck at stack " + loopStack)
+            case _ =>
+          };
+          pr
+        }
       )
 
-    val result = proveBy(modelplexInput, modelPlex(SuccPosition(0, PosInExpr(1 :: Nil))))
+      // retroactively handle postponed loops in inverse order, so inside-out
+      debugAtT("huhu") & uncontrol & debugAtT("uncontrolled") &
+        Tactics.ignorePosition(Tactics.foldLazyLeft(loopStack.toList)(
+          (debugAtT("one loop") & useAt("<*> approx") & debugAtT("delooped")) & new PositionTactic("lazy modelPlex recursor") {
+            override def applies(s: Sequent, p: Position): Boolean = true
+            //@note indirect/postponed/lazy call to modelPlex is required to prevent infinite recursion in tactic construction
+            override def apply(p: Position): Tactic = modelPlex(new ListBuffer())(p)
+          }
+        ))
+    }
+
+    val result = proveBy(modelplexInput, modelPlex(new ListBuffer[Position]())(SuccPosition(0, PosInExpr(1 :: Nil))))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "true -> ".asFormula
