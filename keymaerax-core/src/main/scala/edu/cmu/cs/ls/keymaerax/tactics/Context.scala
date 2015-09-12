@@ -65,6 +65,26 @@ object Context {
     (Context(sp._1), sp._2)
   } ensuring(r => backsubstitution(r, a, pos), "Reassembling the expression at that position into the context returns the original formula: " + a + " at " + pos + " gives " + Context(split(a, pos)._1)(split(a, pos)._2) + " in context " + split(a, pos))
 
+
+  /**
+   * Split the given position into formula position and term position within that formula.
+   * @return ._1 will be the formula position of the atomic formula around pos and
+   *         ._2 will be the term position that pos refers to within that atomic formula.
+   * @todo horribly slow implementation by marching from the right and researching from the left.
+   *       Trigger at transition to split(Term) would be much faster.
+   */
+  def splitPos(f: Formula, pos: PosInExpr): (PosInExpr, PosInExpr) = {
+    var fPos: List[Int] = pos.pos
+    var tPos: List[Int] = Nil
+    while (!at(f, PosInExpr(fPos))._1.isFormulaContext) {
+      assert(!fPos.isEmpty, "If there is an outer formula context, there'll be a formula context around the position")
+      tPos = fPos.last :: tPos
+      fPos = fPos.dropRight(1)
+    }
+    (PosInExpr(fPos),PosInExpr(tPos))
+  } ensuring(r => r._1.append(r._2) == pos, "Concatenating split positions retains original position"
+    ) ensuring(r => at(f,r._1)._1.isFormulaContext && at(at(f,r._1)._2,r._2)._1.isTermContext, "Split into formula and term context")
+
   // at implementation
 
   //@note DotProgram does not exist, so no contextual plugins here. Except possibly via noctx substitutions....
@@ -155,6 +175,7 @@ object Context {
     case DiffAssign(xp,t)  if pos==PosInExpr(0::Nil) => (noContext, xp)
     case DiffAssign(xp,t)  if pos.head==1 => val sp = split(t, pos.child); (DiffAssign(xp,sp._1), sp._2)
     case AssignAny(x)      if pos==PosInExpr(0::Nil) => (noContext, x)
+    case Test(f)           if pos.head==0 => val sp = split(f, pos.child); (Test(sp._1), sp._2)
 
     case ODESystem(ode, h) if pos.head==0 => val sp = splitODE(ode, pos.child); (ODESystem(sp._1, h), sp._2)
     case ODESystem(ode, h) if pos.head==1 => val sp = split(h, pos.child); (ODESystem(ode, sp._1), sp._2)
