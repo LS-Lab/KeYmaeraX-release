@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{locateSucc,lastSucc,on
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
 import TacticLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{LabelBranch, NilT}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, PositionTactic, LabelBranch, NilT}
 import scala.collection.immutable
 import scala.language.postfixOps
 
@@ -63,6 +63,79 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     result.openGoals()(0).sequent.succ should contain only "-1<=fpost_0() & fpost_0()<=(m-x)/ep".asFormula
     result.openGoals()(1).sequent.ante should contain only ("0<=x".asFormula, "x<=m".asFormula, "0<ep".asFormula, "-1<=fpost_0()".asFormula, "fpost_0()<=(m-x)/ep".asFormula)
     result.openGoals()(1).sequent.succ should contain only "tpost_0()=0 & (fpost()=fpost_0() & xpost()=x & tpost()=tpost_0())".asFormula
+  }
+
+  it should "simple: find correct controller monitor by updateCalculus implicationally" in {
+    import TactixLibrary.chase
+    import TactixLibrary.proveBy
+    import TactixLibrary.useAt
+
+    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/simple.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("f"))
+
+    // mutable state per call
+    var loopStack: List[Position] = Nil
+
+    def uncontrol: PositionTactic = chase(3,3, e => e match {
+      // no equational assignments
+      case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
+      case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
+      // remove loops
+      case Diamond(Loop(_), _) => "<*> stuck" :: Nil //"<*> approx" :: Nil
+      // remove ODEs for controller monitor
+      case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
+      case _ => AxiomIndex.axiomsFor(e)
+    },
+      (ax,pos)=> pr => {
+        println("uncontrol " + ax + " at " + pos)
+        ax match {
+          // log loop applications
+          //@todo assert that pos is no proper prefix of anything already on the stack (outside in traversal)
+          case "<*> stuck" => loopStack = pos :: loopStack
+            println("Stuck at stack " + loopStack)
+          case _ =>
+        };
+        pr
+      }
+    )
+
+    // retroactively handle postponed loops in inverse order, so inside-out
+    def modelPlex: PositionTactic = debugAtT("huhu") & uncontrol & debugAtT("uncontrolled") &
+      Tactics.ignorePosition(Tactics.foldLazyLeft(loopStack)(
+        (debugAtT("one loop") & useAt("<*> approx") & debugAtT("delooped")) & modelPlex)
+      )
+
+    val result = proveBy(modelplexInput, modelPlex(SuccPosition(0, PosInExpr(1 :: Nil))))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true -> ".asFormula
+  }
+
+  it should "find correct controller monitor by updateCalculus implicationally" in {
+    import TactixLibrary.chase
+    import TactixLibrary.proveBy
+
+    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("f"), Variable("l"), Variable("c"))
+
+    def controllerMonitor: PositionTactic = chase(3,3, e => e match {
+      // no equational assignments
+      case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
+      case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
+      // remove loops
+      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      // remove ODEs for controller monitor
+      case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
+      case _ => AxiomIndex.axiomsFor(e)
+    }
+    )
+
+    val result = proveBy(modelplexInput, controllerMonitor(SuccPosition(0, PosInExpr(1 :: Nil))))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true -> ".asFormula
   }
 
   ignore should "find correct model monitor condition" in {
