@@ -70,9 +70,8 @@ trait UnifyUSCalculus {
     if (Axiom.axioms.contains(axiom)) useAt(Axiom.axiom(axiom), key)
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(DerivedAxioms.derivedAxiom(axiom), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
-  //@todo once complete, AxiomIndex.axiomIndex(axiom)._1 can be used as default key
-  def useAt(axiom: String, inst: Subst=>Subst): PositionTactic = useAt(axiom, PosInExpr(0::Nil), inst)
-  def useAt(axiom: String): PositionTactic = useAt(axiom, PosInExpr(0::Nil))
+  def useAt(axiom: String, inst: Subst=>Subst): PositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
+  def useAt(axiom: String): PositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1)
 
   /** by(provable) is a pseudo-tactic that uses the given Provable to continue or close the proof (if it fits to what has been proved) */
   def by(provable: Provable)  : Tactic = new ByProvable(provable)
@@ -428,7 +427,7 @@ trait UnifyUSCalculus {
 
 
   /** useFor(axiom) use the given axiom forward for the selected position in the given Provable to conclude a new Provable */
-  def useFor(axiom: String): ForwardPositionTactic = useFor(axiom, PosInExpr(0::Nil))
+  def useFor(axiom: String): ForwardPositionTactic = useFor(axiom, AxiomIndex.axiomIndex(axiom)._1)
 
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   def useFor(axiom: String, key: PosInExpr): ForwardPositionTactic =
@@ -486,8 +485,10 @@ trait UnifyUSCalculus {
     val left = impl.conclusion.ante.head
     val right = impl.conclusion.succ.head
     require(C.isFormulaContext, "Formula context expected to make use of equivalences with CE " + C)
+    if (DEBUG) println("CMon(" + C + ")" + "(" + impl + ")")
     /** Monotonicity rewriting step to replace occurrence of instance of k by instance of o in context */
     def monStep(C: Context[Formula], mon: Provable): Provable = {
+      if (DEBUG) println("in monStep(" + C + ", " + mon + ")\nin CMon(" + C + ")" + "(" + impl + ")")
       var negative = false  //@todo this is a hack that doesn't even quite work. Do polarity for real.
       (
       C.ctx match {
@@ -553,7 +554,7 @@ trait UnifyUSCalculus {
             ) (monStep(Context(c), mon), 0)
 
         case Equiv(e, c) => assert(symbols(e).contains(DotFormula) || symbols(c).contains(DotFormula), "proper contexts have dots somewhere " + C)
-          throw new ProverException("No monotone context for equivalences " + C)
+          throw new ProverException("No monotone context for equivalences " + C + "\nin CMon.monStep(" + C + ", " + mon + ")")
 
         case Box(a, c) if !symbols(a).contains(DotFormula) =>
           (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
@@ -578,7 +579,7 @@ trait UnifyUSCalculus {
             ) (monStep(Context(c), mon), 0)
 
         case m:Modal if symbols(m.program).contains(DotFormula) =>
-          throw new ProverException("No monotone context within programs " + C)
+          throw new ProverException("No monotone context within programs " + C + "\nin CMon.monStep(" + C + ", " + mon + ")")
 
         case Forall(vars, c) => //if !StaticSemantics.freeVars(subst(c)).toSymbolSet.intersect(vars.toSet).isEmpty =>
           //@note would also work with all distribute and all generalization instead
@@ -602,17 +603,16 @@ trait UnifyUSCalculus {
           )
 
         //@todo flip polarity
-        case Not(_) => throw new ProverException("No monotone context without polarity flipping for not " + K)
+        case Not(_) => throw new ProverException("No monotone context without polarity flipping for not " + K + "\nin CMon.monStep(" + C + ", " + mon + ")")
 
-        case _ => throw new ProverException("Not implemented for other cases yet " + C)
+        case _ => throw new ProverException("Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ", " + mon + ")")
       }
         ) ensuring(r => r.conclusion == (if (negative)
         Sequent(Nil, IndexedSeq(C(right)), IndexedSeq(C(left)))
-      else Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right)))), "Expected conclusion"
-        ) ensuring(r => !impl.isProved || r.isProved, "Proved if input fact proved")
+      else Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right)))), "Expected conclusion " + "\nin CMon.monStep(" + C + ", " + mon + ")"
+        ) ensuring(r => !impl.isProved || r.isProved, "Proved if input fact proved" + "\nin CMon.monStep(" + C + ", " + mon + ")")
     }
     monStep(C, impl)
-
   }
 
   /** useFor(fact,key,inst) use the key part of the given fact forward for the selected position in the given Provable to conclude a new Provable
