@@ -829,11 +829,21 @@ object Tactics {
     }
 
     /**
+     * repeat tactic at this position until a fixed point is reached
+     */
+    def * : PositionTactic = new PositionTactic("Repeat(" + this.name + ")") {
+      override def applies(s: Sequent, p: Position): Boolean =
+        PositionTactic.this.applies(s, p)
+
+      override def apply(p: Position): Tactic = PositionTactic.this.apply(p)*
+    }
+
+    /**
      * repeat tactic n times at some position
      */
     def *(n: Int): PositionTactic = {
       require(n>=0, "Repeat non-negative number of times")
-      if (n > 0) this & this*(n-1) else NilPT
+      if (n > 0) this & (this.*(n-1)) else NilPT
     }
 
     /**

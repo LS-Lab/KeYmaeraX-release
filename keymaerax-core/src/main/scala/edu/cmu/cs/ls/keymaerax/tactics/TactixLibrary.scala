@@ -101,6 +101,8 @@ object TactixLibrary extends UnifyUSCalculus {
   def lL(tactic: PositionTactic): Tactic = la(tactic)
   /** Locate applicable position in left or right in antecedent or succedent */
   def l(tactic: PositionTactic): Tactic  = TacticLibrary.locateAnteSucc(tactic)
+  /** Locate applicable position within a given position */
+  def lin(tactic: PositionTactic): PositionTactic = ???
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Propositional tactics
