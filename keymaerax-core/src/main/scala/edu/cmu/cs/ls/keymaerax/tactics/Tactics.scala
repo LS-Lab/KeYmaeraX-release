@@ -248,7 +248,7 @@ object Tactics {
   type Continuation = (Tactic, Status, Seq[ProofNode]) => Unit
 
   object Tactic {
-    private[tactics] val DEBUG = System.getProperty("DEBUG", "false")=="true"
+    private[tactics] val DEBUG = System.getProperty("DEBUG", "true")=="true"
   }
   /**
    * A schedulable tactic that can be applied to try to prove a ProofNode.
@@ -865,6 +865,25 @@ object Tactics {
     }
   }
 
+  /** foldLeft(places)(tactic) uses tactic successively on all places starting from the left with places evaluated eagerly at tactic construction time */
+  def foldLeft(places: List[Position]) : PositionTactic => Tactic = tactic =>
+    places.foldLeft(NilT)((tac, pos) => debug("foldLeft step") & tac & tactic(pos))
+
+  /** foldLeft(places)(tactic) uses tactic successively on all places starting from the left with places only evaluated lazily at scheduling of tactic */
+  def foldLazyLeft(places: => List[Position]) : PositionTactic => Tactic = tactic => new ConstructionTactic("foldLazyLeft") {
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+    Some(places.foldLeft(NilT)((tac, pos) => debug("foldLeft step") & tac & tactic(pos)))
+
+    //@todo might be euphemistic
+    override def applicable(node: ProofNode): Boolean = true
+  }
+
+  /** Convert a tactic into a trivial position tactic that simply ignores the position where it's applied at */
+  def ignorePosition(tactic: Tactic): PositionTactic = new PositionTactic("ignore tactic") {
+    override def applies(s: Sequent, p: Position): Boolean = true //@todo would like tactic.applies(s) but have no node
+
+    override def apply(p: Position): Tactic = {if (Tactic.DEBUG) println("ignoring position " + p); tactic}
+  }
 
   abstract class ApplyPositionTactic(name: String, val t: PositionTactic) extends Tactic("Position tactic " + name + "(" + t.name + ")") {
     def apply(tool: Tool, node: ProofNode) {
