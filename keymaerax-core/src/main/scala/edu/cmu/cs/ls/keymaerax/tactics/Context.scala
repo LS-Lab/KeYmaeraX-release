@@ -14,6 +14,10 @@ import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature
   * @see [[Augmentors]]
   */
 object Context {
+  import Reconstructors._
+
+  /** Whether to check split results redundantly */
+  private val REDUNDANT = false
   /** Placeholder for programs. Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
   val DotProgram = ProgramConst("DotProgram")
   /** Placeholder for differential programs. Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
@@ -25,10 +29,10 @@ object Context {
    */
   def at(t: Expression, pos: PosInExpr): (Context[Expression], Expression) = {
     val sp = t match {
-      case f: Term => split(f, pos)
-      case f: Formula => split(f, pos)
-      case f: Program => split(f, pos)
-      case f: DifferentialProgram => split(f, pos)
+      case f: Term => {context(f, pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
+      case f: Formula => {context(f, pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
+      case f: Program => {context(f, pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
+      case f: DifferentialProgram => {context(f, pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
       case _ => ???  // trivial totality on possibly problematic patmats
     }
     (Context(sp._1), sp._2)
@@ -40,7 +44,7 @@ object Context {
    * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
    */
   def at(t: Term, pos: PosInExpr): (Context[Term], Expression) = {
-    val sp = split(t, pos)
+    val sp = {context(t, pos) } ensuring( r => !REDUNDANT || r==split(t,pos), "direct and generic split have same result " + t + " at " + pos)
     (Context(sp._1), sp._2)
   } ensuring(r => backsubstitution(r, t, pos), "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos + " gives " + Context(split(t, pos)._1)(split(t, pos)._2) + " in context " + split(t, pos))
 
@@ -50,7 +54,7 @@ object Context {
    * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
    */
   def at(f: Formula, pos: PosInExpr): (Context[Formula], Expression) = {
-    val sp = split(f, pos)
+    val sp = {context(f,pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
     (Context(sp._1), sp._2)
   } ensuring(r => backsubstitution(r, f, pos), "Reassembling the expression at that position into the context returns the original formula: " + f + " at " + pos + " gives " + Context(split(f, pos)._1)(split(f, pos)._2) + " in context " + split(f, pos))
 
@@ -61,7 +65,7 @@ object Context {
    * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
    */
   def at(a: Program, pos: PosInExpr): (Context[Program], Expression) = {
-    val sp = split(a, pos)
+    val sp = {context(a, pos) } ensuring( r => !REDUNDANT || r==split(a,pos), "direct and generic split have same result " + a + " at " + pos)
     (Context(sp._1), sp._2)
   } ensuring(r => backsubstitution(r, a, pos), "Reassembling the expression at that position into the context returns the original formula: " + a + " at " + pos + " gives " + Context(split(a, pos)._1)(split(a, pos)._2) + " in context " + split(a, pos))
 
@@ -101,6 +105,62 @@ object Context {
       true
   }
 
+  /** @see [[StaticSemanticsTools.boundAt()]] for same positions */
+  private def context(term: Term, pos: PosInExpr): (Term, Expression) = if (pos==HereP) (DotTerm,term) else {term match {
+    case FuncOf(f,t)     if pos.head==0 => val sp = context(t, pos.child); (FuncOf(f, sp._1), sp._2)
+    // homomorphic cases
+    case f:UnaryCompositeTerm  if pos.head==0 => val sp = context(f.child, pos.child); (reconstruct(f)(sp._1), sp._2)
+    case f:BinaryCompositeTerm if pos.head==0 => val sp = context(f.left, pos.child); (reconstruct(f)(sp._1, f.right), sp._2)
+    case f:BinaryCompositeTerm if pos.head==1 => val sp = context(f.right, pos.child); (reconstruct(f)(f.left, sp._1), sp._2)
+    case _ => throw new IllegalArgumentException("split position " + pos + " of term " + term + " may not be defined")
+  }} ensuring(r => r._1.getClass == term.getClass, "Context has identical top types " + term + " at " + pos)
+
+  private def context(formula: Formula, pos: PosInExpr): (Formula, Expression) = if (pos==HereP) (DotFormula, formula) else {formula match {
+    // base cases
+    case PredOf(p,t)          if pos.head==0 => val sp = context(t, pos.child); (PredOf(p, sp._1), sp._2)
+    case PredicationalOf(c,t) if pos.head==0 => val sp = context(t, pos.child); (PredicationalOf(c, sp._1), sp._2)
+    // pseudo-homomorphic cases
+    case f:ComparisonFormula  if pos.head==0 => val sp = context(f.left, pos.child); (reconstruct(f)(sp._1, f.right), sp._2)
+    case f:ComparisonFormula  if pos.head==1 => val sp = context(f.right, pos.child); (reconstruct(f)(f.left, sp._1), sp._2)
+    // homomorphic cases
+    case f:UnaryCompositeFormula  if pos.head==0 => val sp = context(f.child, pos.child); (reconstruct(f)(sp._1), sp._2)
+    case f:BinaryCompositeFormula if pos.head==0 => val sp = context(f.left, pos.child); (reconstruct(f)(sp._1, f.right), sp._2)
+    case f:BinaryCompositeFormula if pos.head==1 => val sp = context(f.right, pos.child); (reconstruct(f)(f.left, sp._1), sp._2)
+    case f:Quantified             if pos.head==0 => val sp = context(f.child, pos.child); (reconstruct(f)(f.vars, sp._1), sp._2)
+    case f:Modal                  if pos.head==0 => val sp = context(f.program, pos.child); (reconstruct(f)(sp._1, f.child), sp._2)
+    case f:Modal                  if pos.head==1 => val sp = context(f.child, pos.child); (reconstruct(f)(f.program, sp._1), sp._2)
+    case _ => throw new IllegalArgumentException("split position " + pos + " of formula " + formula + " may not be defined")
+  }} ensuring(r => r._1.getClass == formula.getClass, "Context has identical top types " + formula + " at " + pos)
+
+  private def context(program: Program, pos: PosInExpr): (Program, Expression) = if (pos==HereP) (DotProgram, program) else {program match {
+    case Assign(x,t)       if pos==PosInExpr(0::Nil) => (noContext, x)
+    case Assign(x,t)       if pos.head==1 => val sp = context(t, pos.child); (Assign(x,sp._1), sp._2)
+    case DiffAssign(xp,t)  if pos==PosInExpr(0::Nil) => (noContext, xp)
+    case DiffAssign(xp,t)  if pos.head==1 => val sp = context(t, pos.child); (DiffAssign(xp,sp._1), sp._2)
+    case AssignAny(x)      if pos==PosInExpr(0::Nil) => (noContext, x)
+    case Test(f)           if pos.head==0 => val sp = context(f, pos.child); (Test(sp._1), sp._2)
+
+    case ODESystem(ode, h) if pos.head==0 => val sp = contextODE(ode, pos.child); (ODESystem(sp._1, h), sp._2)
+    case ODESystem(ode, h) if pos.head==1 => val sp = context(h, pos.child); (ODESystem(ode, sp._1), sp._2)
+
+    // homomorphic cases
+    case f:UnaryCompositeProgram  if pos.head==0 => val sp = context(f.child, pos.child); (reconstruct(f)(sp._1), sp._2)
+    case f:BinaryCompositeProgram if pos.head==0 => val sp = context(f.left, pos.child); (reconstruct(f)(sp._1, f.right), sp._2)
+    case f:BinaryCompositeProgram if pos.head==1 => val sp = context(f.right, pos.child); (reconstruct(f)(f.left, sp._1), sp._2)
+    case _ => throw new IllegalArgumentException("split position " + pos + " of program " + program + " may not be defined")
+  }} ensuring(r => r._1==noContext || r._1.getClass == program.getClass, "Context has identical top types " + program + " at " + pos)
+
+  private def contextODE(program: DifferentialProgram, pos: PosInExpr): (DifferentialProgram, Expression) = if (pos==HereP) (DotDiffProgram, program) else {program match {
+    case AtomicODE(xp,t)          if pos==PosInExpr(0::Nil) => (noContextD, xp)
+    case AtomicODE(xp,t)          if pos.head==1 => val sp = context(t, pos.child); (AtomicODE(xp,sp._1), sp._2)
+    case DifferentialProduct(l,r) if pos.head==0 => val sp = contextODE(l, pos.child); (DifferentialProduct(sp._1, r), sp._2)
+    case DifferentialProduct(l,r) if pos.head==1 => val sp = contextODE(r, pos.child); (DifferentialProduct(l, sp._1), sp._2)
+    case _ => throw new IllegalArgumentException("contextODE position " + pos + " of program " + program + " may not be defined")
+  }} ensuring(r => r._1==noContextD || r._1.getClass == program.getClass, "Context has identical top types " + program + " at " + pos)
+
+
+  // direct split implementation
+
   /** @see [[StaticSemanticsTools.boundAt()]] */
   private def split(term: Term, pos: PosInExpr): (Term, Expression) = if (pos==HereP) (DotTerm,term) else {term match {
     case FuncOf(f,t)     if pos.head==0 => val sp = split(t, pos.child); (FuncOf(f, sp._1), sp._2)
@@ -122,10 +182,7 @@ object Context {
     case _ => throw new IllegalArgumentException("split position " + pos + " of term " + term + " may not be defined")
   }} ensuring(r => r._1.getClass == term.getClass, "Context has identical top types " + term + " at " + pos)
 
-//  def reconstructor[T<:Expression](e: T with BinaryComposite): (T,T)=>T = e match {
-//    case _: Plus   => Plus.apply
-//    case _: Minus  => Minus.apply
-//  }
+
 
   private def split(formula: Formula, pos: PosInExpr): (Formula, Expression) = if (pos==HereP) (DotFormula, formula) else {formula match {
     // base cases

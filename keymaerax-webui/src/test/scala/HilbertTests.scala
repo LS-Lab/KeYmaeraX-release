@@ -518,6 +518,8 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("(true&x=y) -> bla()".asFormula))
   }
 
+  // with context
+
   it should "use <*> approx to forward <x:=x+1;>x=y to <{x:=x+1;}*>x=y" in {
     useFor("<*> approx", PosInExpr(0::Nil))(SuccPosition(0, PosInExpr(Nil))) (
       Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=x+1;>x=y".asFormula)))
