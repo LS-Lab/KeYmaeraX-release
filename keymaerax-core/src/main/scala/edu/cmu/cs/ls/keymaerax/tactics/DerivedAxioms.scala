@@ -1403,7 +1403,7 @@ object DerivedAxioms {
   lazy val DWeakeningT = derivedAxiomT(DWeakening)
 
   /**
-   * {{{Axiom "DS diamond differential skip".
+   * {{{Axiom "DX diamond differential skip".
    *    <{c&H(??)}>p(??) <- H(??)&p(??)
    * End.
    * }}}

@@ -29,34 +29,17 @@ object AxiomIndex {
    * @see [[UnifyUSCalculus.chaseFor()]]
    * @todo copy documentation from chase
    */
+  private val directReduction = (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
+  private val reverseReduction = (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
   def axiomIndex(axiom: String): AxiomIndex = (axiom: @switch) match {
       //@todo axiom.intern() to @switch?
-    // ' recursors for derivative axioms
-    case "x' derive var"   => nullaryDefault
-    case "-' derive neg"   => unaryDefault
-    case "+' derive sum"   => binaryDefault
-    case "-' derive minus" => binaryDefault
-    case "*' derive product" => (PosInExpr(0::Nil), PosInExpr(0::0::Nil)::PosInExpr(1::1::Nil)::Nil)
-    case "/' derive quotient" => (PosInExpr(0::Nil), PosInExpr(0::0::0::Nil)::PosInExpr(0::1::1::Nil)::Nil)
-    case "c()' derive constant fn" => nullaryDefault
-    case "^' derive power" => (PosInExpr(1::0::Nil), PosInExpr(1::Nil)::Nil)
-// derived
-    case "' linear" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
-    case "' linear right" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)
-    // recursors for derivative formula axioms
-    case "=' derive ="   => binaryDefault
-    case "!=' derive !=" => binaryDefault
-    case ">=' derive >=" => binaryDefault
-    case ">' derive >"   => binaryDefault
-    case "<=' derive <=" => binaryDefault
-    case "<' derive <"   => binaryDefault
-    case "&' derive and" => binaryDefault
-    case "|' derive or" => binaryDefault
-    case "->' derive imply" => binaryDefault
-
+    case "all instantiate" | "all eliminate"
+         | "vacuous all quantifier" | "vacuous exists quantifier"
+         | "all dual" | "exists dual" => directReduction
+    case "const congruence" | "const formula congruence" => reverseReduction
     // [a] modalities and <a> modalities
     case "<> dual" | "[] dual" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
-    case "[:=] assign" | "<:=> assign" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
+    case "[:=] assign" | "<:=> assign" | "[':=] differential assign" | "<':=> differential assign" => directReduction
     case "[:=] assign equational" | "<:=> assign equational" => (PosInExpr(0::Nil), PosInExpr(Nil)::PosInExpr(0::1::Nil)::Nil)
     case "[:=] assign update" | "<:=> assign update" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     case "[:*] assign nondet" | "<:*> assign nondet" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(Nil)::Nil)
@@ -64,6 +47,51 @@ object AxiomIndex {
     case "[++] choice" | "<++> choice" => binaryDefault
     case "[;] compose" | "<;> compose" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     case "[*] iterate" | "<*> iterate" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+
+    case "DW"              => (PosInExpr(Nil), Nil)
+    case "DC differential cut" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
+    case "DE differential effect" | "DE differential effect (system)" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
+    case "DI differential invariant" => (PosInExpr(1::Nil), PosInExpr(1::1::Nil)::Nil)
+    case "DG differential ghost" => directReduction
+    case "DG differential Lipschitz ghost system" => directReduction
+    case "DG++ System" => ???
+    case "DG++" => ???
+    case ", commute" => (PosInExpr(0::Nil), Nil)
+    case "DS& differential equation solution" => (PosInExpr(0::Nil), PosInExpr(0::1::1::Nil)::PosInExpr(Nil)::Nil)
+    case "DX differential skip" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+    case "DX diamond differential skip" => (PosInExpr(1::Nil), PosInExpr(1::Nil)::Nil)
+
+    // ' recursors for derivative axioms
+    case "&' derive and" => binaryDefault
+    case "|' derive or" => binaryDefault
+    case "->' derive imply" => binaryDefault
+    case "forall' derive forall" | "exists' derive exists" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+    case "c()' derive constant fn" => nullaryDefault
+    // recursors for derivative formula axioms
+    case "=' derive ="   => binaryDefault
+    case ">=' derive >=" => binaryDefault
+    case ">' derive >"   => binaryDefault
+    case "<=' derive <=" => binaryDefault
+    case "<' derive <"   => binaryDefault
+    case "!=' derive !=" => binaryDefault
+    case "-' derive neg"   => unaryDefault
+    case "+' derive sum"   => binaryDefault
+    case "-' derive minus" => binaryDefault
+    case "*' derive product" => (PosInExpr(0::Nil), PosInExpr(0::0::Nil)::PosInExpr(1::1::Nil)::Nil)
+    case "/' derive quotient" => (PosInExpr(0::Nil), PosInExpr(0::0::0::Nil)::PosInExpr(0::1::1::Nil)::Nil)
+    case "^' derive power" => (PosInExpr(1::0::Nil), PosInExpr(1::Nil)::Nil)
+    case "chain rule" => (PosInExpr(1::1::0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
+    case "x' derive var"   => nullaryDefault
+
+    /* @todo Adapt for hybrid games */
+    case "V vacuous" => assert(Axiom.axioms(axiom)==Imply(PredOf(Function("p", None, Unit, Bool), Nothing), Box(ProgramConst("a"), PredOf(Function("p", None, Unit, Bool), Nothing))))
+      (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
+    case "K modal modus ponens" => (PosInExpr(1::1::Nil), PosInExpr(Nil)::Nil)
+    case "I induction" => (PosInExpr(1::Nil), /*PosInExpr(0::Nil)::*/PosInExpr(1::1::Nil)::PosInExpr(1::Nil)::Nil)
+    // derived
+    case "' linear" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+    case "' linear right" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)
+
 
     case "DW differential weakening" => (PosInExpr(0::Nil), unknown)
     case "DC differential cut" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
@@ -80,7 +108,6 @@ object AxiomIndex {
     case "!<-> deMorgan" => (PosInExpr(0::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::PosInExpr(1::0::Nil)::PosInExpr(1::1::Nil)::Nil)
 
     case "<*> approx" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
-    case "DX diamond differential skip" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
     case "<*> stuck" => (PosInExpr(0::Nil), Nil)
     case "<'> stuck" => (PosInExpr(0::Nil), Nil)
     case "+<= up" => (PosInExpr(1::Nil), PosInExpr(0::1::Nil)::Nil)
