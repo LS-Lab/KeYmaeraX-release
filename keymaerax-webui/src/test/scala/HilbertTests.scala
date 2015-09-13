@@ -497,4 +497,39 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     shouldReduceTo("[{x' = 5*x & x^2<4}]x>=1".asFormula, SuccPosition(0, PosInExpr(0::1::Nil)), "[{x' = 5*x & -2<x&x<2}]x>=1".asFormula, basicEquiv)
   }
 
+  "useFor" should "use DX to forward <x:=1;>(true&x=y) to <x:=1;><{x'=2}>x=y" in {
+    useFor("DX diamond differential skip", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(Nil))) (
+      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y)".asFormula)))
+    ).conclusion shouldBe Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y".asFormula)))
+  }
+
+  it should "use DX to forward <x:=1;><{x'=2}>x=y -> bla() to <x:=1;>(true&x=y) -> bla()" in {
+    useFor("DX diamond differential skip")(SuccPosition(0, PosInExpr(0::1::Nil))) (
+      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y -> bla()".asFormula)))
+    ).conclusion shouldBe Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula)))
+  }
+
+  it should "use DX to forward <x:=1;><{x'=2}>x=y <-> bla() to <x:=1;>(true&x=y) -> bla()" in {
+    useFor("DX diamond differential skip")(SuccPosition(0, PosInExpr(0::1::Nil))) (
+      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y <-> bla()".asFormula)))
+    ).conclusion shouldBe Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y) -> bla()".asFormula)))
+  }
+
+  it should "use <*> approx to forward <x:=1;><x:=x+1;>x=y to <x:=1;><{x:=x+1;}*>x=y" in {
+    useFor("<*> approx", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(Nil))) (
+      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y".asFormula)))
+    ).conclusion shouldBe Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><{x:=x+1;}*>x=y".asFormula)))
+  }
+
+  it should "use <*> approx to forward <x:=1;><{x:=x+1;}*>x=y -> bla() to <x:=1;><x:=x+1;>x=y -> bla()" in {
+    useFor("<*> approx")(SuccPosition(0, PosInExpr(0::1::Nil))) (
+      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><{x:=x+1;}*>x=y -> bla()".asFormula)))
+    ).conclusion shouldBe Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y -> bla()".asFormula)))
+  }
+
+  it should "use <*> approx to forward <x:=1;><{x:=x+1;}*>x=y <-> bla() to <x:=1;><x:=x+1;>x=y -> bla()" in {
+    useFor("<*> approx")(SuccPosition(0, PosInExpr(0::1::Nil))) (
+      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><{x:=x+1;}*>x=y <-> bla()".asFormula)))
+    ).conclusion shouldBe Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y -> bla()".asFormula)))
+  }
 }
