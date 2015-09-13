@@ -667,11 +667,23 @@ trait UnifyUSCalculus {
       if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof)
       assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
 
-      def useFor[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable =
-      {
-        require(subst(k) == c, "correctly matched input")
-        require(C(c).at(p.inExpr) ==(C, c), "correctly split at position p")
-        require(List((C, DotFormula), (C, DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
+      /** useFor(subst, K,k, p, C,c)
+        *
+        * @param subst the substitution that unifies key k with occurrence c==subst(k).
+        * @param K the context within which k occurs in fact.conclusion==K{k}
+        * @param k the key
+        * @param p the position at which occurrence c occurs in proof.conclusion
+        * @param C the context within which occurrence c occurs in proof.conclusion(p.top)==C{c}
+        * @param c the occurrence c at position p in proof.conclusion
+        * @tparam T
+        * @return The Provable following from proof by using key k of fact at p in proof.conclusion
+        */
+      def useFor[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable = {
+        assert(subst(k) == c, "correctly matched input")
+        assert(fact.conclusion.succ.head==K(k), "correctly matched key in fact")
+        assert(proof.conclusion(p.top)==C(c), "correctly matched occurrence in input proof")
+        assert(C(c).at(p.inExpr) ==(C, c), "correctly split at position p")
+        assert(List((C, DotFormula), (C, DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
         /** Equivalence rewriting step to replace occurrence of instance of key k by instance of other o in context */
         def equivStep(o: Expression, factTactic: Tactic): Provable = {
