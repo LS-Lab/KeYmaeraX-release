@@ -60,9 +60,9 @@ object RenUSubst {
  * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
  * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
  */
-final case class RenUSubst(subsDefsInput: immutable.Seq[Pair[Expression,Expression]]) extends (Expression => Expression) {
+final case class RenUSubst(subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops */
-  private val rens: immutable.Seq[Pair[Variable,Variable]] = RenUSubst.renamingPartOnly(subsDefsInput)
+  private val rens: immutable.Seq[(Variable,Variable)] = RenUSubst.renamingPartOnly(subsDefsInput)
   private val subsDefs: immutable.Seq[SubstitutionPair] = try {subsDefsInput.filterNot(sp => sp._1.isInstanceOf[Variable]).
     map(sp => try {SubstitutionPair(sp._1, sp._2)} catch {case ex: ProverException => throw ex.inContext("(" + sp._1 + "~>" + sp._2 + ")")})
   } catch {case ex: ProverException => throw ex.inContext("RenUSubst{" + subsDefsInput.mkString(", ") + "}")}

@@ -434,6 +434,11 @@ trait UnifyUSCalculus {
     if (Axiom.axioms.contains(axiom)) useFor(Axiom.axiom(axiom), key)
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
+  /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
+  def useFor(axiom: String, key: PosInExpr, inst: RenUSubst=>RenUSubst): ForwardPositionTactic =
+    if (Axiom.axioms.contains(axiom)) useFor(Axiom.axiom(axiom), key, inst)
+    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key, inst)
+    else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
   /** CE(C) will wrap any equivalence left<->right or equality left=right fact it gets within context C.
     * Uses CE or CQ as needed.
@@ -668,7 +673,7 @@ trait UnifyUSCalculus {
         require(C(c).at(p.inExpr) ==(C, c), "correctly split at position p")
         require(List((C, DotFormula), (C, DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
-        /** Equivalence rewriting step to replace occurrence of instance of k by instance of o in context */
+        /** Equivalence rewriting step to replace occurrence of instance of key k by instance of other o in context */
         def equivStep(o: Expression, factTactic: Tactic): Provable = {
           //@todo delete factTactic argument since unused or use factTactic turned argument into Provable=>Provable
           require(fact.isProved, "currently want proved facts as input only")
@@ -702,6 +707,7 @@ trait UnifyUSCalculus {
         } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
           ) ensuring(r=>r.subgoals==proof.subgoals, "expected original premises")
 
+        // in which context of the fact does the key occur
         K.ctx match {
           case Equal(DotTerm, o) =>
             equivStep(o, byUS(fact))

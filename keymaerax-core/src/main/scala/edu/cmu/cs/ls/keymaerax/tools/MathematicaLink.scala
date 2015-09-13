@@ -79,12 +79,16 @@ class JLinkMathematicaLink extends MathematicaLink {
     if(jlinkLibDir.isDefined) {
       System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
     }
-    ml = MathLinkFactory.createKernelLink(Array[String](
-      "-linkmode", "launch",
-      "-linkname", linkName + " -mathlink"))
-    ml.discardAnswer()
-    //@todo 6*9
-    true
+    try {
+      ml = MathLinkFactory.createKernelLink(Array[String](
+        "-linkmode", "launch",
+        "-linkname", linkName + " -mathlink"))
+      ml.discardAnswer()
+      //@todo 6*9
+      true
+    } catch {
+      case e:MathLinkException => println("Mathematica J/Link errored " + e); throw e
+    }
   }
 
   /**
