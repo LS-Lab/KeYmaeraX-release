@@ -218,6 +218,7 @@ sealed trait CompositeTerm extends Term with Composite
 
 /** Unary Composite Terms, i.e. terms composed of one real term. */
 sealed trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
+  def alike: Term=>Term
   def child: Term
 }
 
@@ -228,6 +229,7 @@ private[core] sealed trait RUnaryCompositeTerm extends UnaryCompositeTerm with R
 
 /** Binary Composite Terms, i.e. terms composed of two terms. */
 sealed trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
+  def alike: (Term,Term)=>Term
   def left: Term
   def right: Term
 }
@@ -240,24 +242,25 @@ private[core] sealed trait RBinaryCompositeTerm extends BinaryCompositeTerm with
 }
 
 /** - unary negation: minus */
-case class Neg(child: Term) extends RUnaryCompositeTerm
+case class Neg(child: Term) extends RUnaryCompositeTerm { def alike = Neg.apply }
 /** + binary addition */
-case class Plus(left: Term, right: Term) extends RBinaryCompositeTerm
+case class Plus(left: Term, right: Term) extends RBinaryCompositeTerm { def alike = Plus.apply }
 /** - binary subtraction */
-case class Minus(left: Term, right: Term) extends RBinaryCompositeTerm
+case class Minus(left: Term, right: Term) extends RBinaryCompositeTerm { def alike = Minus.apply }
 /** * binary multiplication*/
-case class Times(left: Term, right: Term) extends RBinaryCompositeTerm
+case class Times(left: Term, right: Term) extends RBinaryCompositeTerm { def alike = Times.apply }
 /** / real division */
-case class Divide(left: Term, right: Term) extends RBinaryCompositeTerm
+case class Divide(left: Term, right: Term) extends RBinaryCompositeTerm { def alike = Divide.apply }
 /** real exponentiation or power: left^right^ */
 //@note axiom("^' derive power") needs right to be a Term not just a Number
-case class Power(left: Term, right: Term) extends RBinaryCompositeTerm
+case class Power(left: Term, right: Term) extends RBinaryCompositeTerm { def alike = Power.apply }
 
 /** ' differential of a term */
-case class Differential(child: Term) extends RUnaryCompositeTerm
+case class Differential(child: Term) extends RUnaryCompositeTerm { def alike = Differential.apply }
 
 /** Pairs (left,right) for binary Function and FuncOf and PredOf */
 case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
+  def alike = Pair.apply
   def sort: Sort = Tuple(left.sort, right.sort)
 }
 
@@ -281,6 +284,7 @@ sealed trait AtomicFormula extends Formula with Atomic
 
 /** Atomic comparison formula composed of two terms. */
 sealed trait ComparisonFormula extends AtomicFormula {
+  def alike: (Term,Term)=>Formula
   def left: Term
   def right: Term
 }
@@ -298,20 +302,22 @@ object False extends AtomicFormula
 /** ``=`` equality left = right */
 case class Equal(left: Term, right: Term) extends ComparisonFormula {
   insist(left.sort == right.sort, "expected identical argument sorts: " + left + " and " + right)
+  def alike = Equal.apply
 }
 /** != disequality left != right */
 case class NotEqual(left: Term, right: Term) extends ComparisonFormula {
   insist(left.sort == right.sort, "expected identical argument sorts: " + left + " and " + right)
+  def alike = NotEqual.apply
 }
 
 /** >= greater or equal comparison left >= right */
-case class GreaterEqual(left: Term, right: Term) extends RComparisonFormula
+case class GreaterEqual(left: Term, right: Term) extends RComparisonFormula { def alike = GreaterEqual.apply }
 /** > greater than comparison left > right */
-case class Greater(left: Term, right: Term) extends RComparisonFormula
+case class Greater(left: Term, right: Term) extends RComparisonFormula { def alike = Greater.apply }
 /** < less or equal comparison left <= right */
-case class LessEqual(left: Term, right: Term) extends RComparisonFormula
+case class LessEqual(left: Term, right: Term) extends RComparisonFormula { def alike = LessEqual.apply }
 /** <= less than comparison left < right */
-case class Less(left: Term, right: Term) extends RComparisonFormula
+case class Less(left: Term, right: Term) extends RComparisonFormula { def alike = Less.apply }
 
 /** ⎵: Placeholder for formulas in uniform substitutions. Reserved nullary predicational symbol _ for substitutions are unlike ordinary predicational symbols */
 object DotFormula extends NamedSymbol with AtomicFormula {
@@ -336,52 +342,56 @@ sealed trait CompositeFormula extends Formula with Composite
 
 /** Unary Composite Formulas, i.e. formulas composed of one formula. */
 sealed trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula {
+  def alike: Formula=>Formula
   def child: Formula
 }
 
 /** Binary Composite Formulas, i.e. formulas composed of two formulas. */
 sealed trait BinaryCompositeFormula extends BinaryComposite with CompositeFormula {
+  def alike: (Formula,Formula)=>Formula
   def left: Formula
   def right: Formula
 }
 
 /** ! logical negation: not */
-case class Not(child: Formula) extends UnaryCompositeFormula
+case class Not(child: Formula) extends UnaryCompositeFormula { def alike = copy }
 /** & logical conjunction: and */
-case class And(left: Formula, right:Formula) extends BinaryCompositeFormula
+case class And(left: Formula, right:Formula) extends BinaryCompositeFormula { def alike = copy }
 /** | logical disjunction: or */
-case class Or(left: Formula, right:Formula) extends BinaryCompositeFormula
+case class Or(left: Formula, right:Formula) extends BinaryCompositeFormula { def alike = copy }
 /** -> logical implication: implies */
-case class Imply(left: Formula, right:Formula) extends BinaryCompositeFormula
+case class Imply(left: Formula, right:Formula) extends BinaryCompositeFormula { def alike = copy }
 /** <-> logical biimplication: equivalent */
-case class Equiv(left: Formula, right:Formula) extends BinaryCompositeFormula
+case class Equiv(left: Formula, right:Formula) extends BinaryCompositeFormula { def alike = copy }
 
 /** Quantified formulas */
 sealed trait Quantified extends /*Unary?*/CompositeFormula {
   require(vars.nonEmpty, "quantifiers bind at least one variable")
   insist(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
   insist(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
+  def alike: (immutable.Seq[Variable],Formula)=>Formula
   /** The variables quantified here */
   def vars: immutable.Seq[Variable]
   def child: Formula
 }
 /** \forall vars universally quantified formula */
-case class Forall(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified
+case class Forall(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified { def alike = copy }
 /** \exists vars existentially quantified formula */
-case class Exists(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified
+case class Exists(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified { def alike = copy }
 
 /** Modal formulas */
 sealed trait Modal extends CompositeFormula {
+  def alike: (Program,Formula)=>Formula
   def program: Program
   def child: Formula
 }
 /** box modality all runs of program satisfy child [program]child */
-case class Box(program: Program, child: Formula) extends CompositeFormula with Modal
+case class Box(program: Program, child: Formula) extends CompositeFormula with Modal { def alike = copy }
 /** diamond modality some run of program satisfies child <program>child */
-case class Diamond(program: Program, child: Formula) extends CompositeFormula with Modal
+case class Diamond(program: Program, child: Formula) extends CompositeFormula with Modal { def alike = copy }
 
 /** Differential formula are differentials of formulas in analogy to differential terms (child)' */
-case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula
+case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula { def alike = copy }
 
 /*********************************************************************************
   * Programs of differential dynamic logic
@@ -424,25 +434,28 @@ sealed trait CompositeProgram extends Program with Composite
 
 /** Unary Composite Programs, i.e. programs composed of one program. */
 sealed trait UnaryCompositeProgram extends UnaryComposite with CompositeProgram {
+  def alike: Program=>Program
   def child: Program
 }
 
 /** Binary Composite Programs, i.e. programs composed of two programs. */
 sealed trait BinaryCompositeProgram extends BinaryComposite with CompositeProgram {
+  def alike: (Program,Program)=>Program
   def left: Program
   def right: Program
 }
 
 
 /** left++right nondeterministic choice */
-case class Choice(left: Program, right: Program) extends BinaryCompositeProgram
+case class Choice(left: Program, right: Program) extends BinaryCompositeProgram { def alike = copy }
 /** left;right sequential composition */
-case class Compose(left: Program, right: Program) extends BinaryCompositeProgram
+case class Compose(left: Program, right: Program) extends BinaryCompositeProgram { def alike = copy }
 /** child* nondeterministic repetition */
-case class Loop(child: Program) extends UnaryCompositeProgram
+case class Loop(child: Program) extends UnaryCompositeProgram { def alike = copy }
 /** `child^d` dual program */
 case class Dual(child: Program) extends UnaryCompositeProgram {
   require(false, "Hybrid games are currently disabled")
+  def alike = copy
 }
 
 /**
