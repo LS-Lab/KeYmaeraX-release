@@ -537,8 +537,8 @@ trait UnifyUSCalculus {
             ) (monStep(Context(c), mon), 0)
 
         case Imply(e, c) if !symbols(e).contains(DotFormula) =>
-          assert(FormulaTools.posOf(C.ctx, DotFormula).isDefined, "Context should contain DotFormula")
-          polarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).get)
+          polarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(
+            throw new IllegalArgumentException("Context should contain DotFormula")))
           val (ante, succ) =
             if (polarity < 0) (IndexedSeq(C(right)), IndexedSeq(C(left))) // polarity switch so switch left/right sides
             else (IndexedSeq(C(left)), IndexedSeq(C(right)))
@@ -551,8 +551,8 @@ trait UnifyUSCalculus {
             ) (monStep(Context(c), mon), 0)
 
         case Imply(c, e) if !symbols(e).contains(DotFormula) =>
-          assert(FormulaTools.posOf(C.ctx, DotFormula).isDefined, "Context should contain DotFormula")
-          polarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).get)
+          polarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(
+            throw new IllegalArgumentException("Context should contain DotFormula")))
           val (ante, succ) =
             if (polarity < 0) (IndexedSeq(C(right)), IndexedSeq(C(left))) // polarity switch so switch left/right sides
             else (IndexedSeq(C(left)), IndexedSeq(C(right)))
@@ -734,7 +734,7 @@ trait UnifyUSCalculus {
             // C{subst(k)} |- C{subst(o)} for polarity < 0
             val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)
             //@todo need to learn to relax the context C if CMon met an equivalence here or already ask for less earlier.
-            assert(polarity != 0, "Polarity should be either positive or negative") // polarity 0: met an <->
+            assert(polarity != 0, "Polarity should be either positive or negative. Polarity 0 of equivalences not supported: " + C) // polarity 0: met an <->
             val impl = if (polarity < 0) Imply(C(subst(k)), C(subst(o))) else Imply(C(subst(o)), C(subst(k)))
 
             val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(impl)), ImplyRight(SuccPos(0)))
@@ -777,7 +777,7 @@ trait UnifyUSCalculus {
             // C{subst(k)} |- C{subst(o)} for polarity < 0
             val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)
             //@todo need to learn to relax the context C if CMon met an equivalence here or already ask for less earlier.
-            assert(polarity != 0, "Polarity should be either positive or negative") // polarity 0: met an <->
+            assert(polarity != 0, "Polarity should be either positive or negative. Polarity 0 of equivalences not supported: " + C) // polarity 0: met an <->
             val impl = if (polarity < 0) Imply(C(subst(o)), C(subst(k))) else Imply(C(subst(k)), C(subst(o)))
 
             val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(impl)),
