@@ -439,23 +439,9 @@ object FOQuantifierTacticsImpl {
   def instantiateExistentialQuanT(quantified: Variable, t: Term) = new PositionTactic("exists instantiate") {
     override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
       case Some(Exists(vars, _)) => vars.contains(quantified) &&
-        ((p.isAnte && polarityAt(s, p) == -1) || (!p.isAnte && polarityAt(s, p) == 1))
+        ((p.isAnte && FormulaTools.polarityAt(s(p), p.inExpr) == -1) || (!p.isAnte && FormulaTools.polarityAt(s(p), p.inExpr) == 1))
       case _ => false
     }
-
-    private def parentPosOf(p: Position) =
-      if (p.isAnte) AntePosition(p.index, PosInExpr(p.inExpr.pos.init))
-      else SuccPosition(p.index, PosInExpr(p.inExpr.pos.init))
-
-    /** Computes the polarity of the formula in position p in the sequent */
-    private def polarityAt(s: Sequent, p: Position): Int =
-      if (p.isTopLevel) 1 else s(parentPosOf(p)).subFormulaAt(parentPosOf(p).inExpr) match {
-        case Some(Not(_)) => -polarityAt(s, parentPosOf(p))
-        case Some(Imply(_, _)) if p.inExpr.pos.last == 0 => -polarityAt(s, parentPosOf(p))
-        case Some(Imply(_, _)) if p.inExpr.pos.last == 1 => polarityAt(s, parentPosOf(p))
-        case Some(Equiv(_, _)) => 0
-        case _ => polarityAt(s, parentPosOf(p))
-      }
 
     override def apply(p: Position) = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
