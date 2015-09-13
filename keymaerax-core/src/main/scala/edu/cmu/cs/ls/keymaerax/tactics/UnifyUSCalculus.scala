@@ -383,7 +383,8 @@ trait UnifyUSCalculus {
     val (other,key) = equi match {
       case Equal(l,r) => (l,r)
       case Equiv(l,r) => (l,r)
-      case _ => throw new IllegalArgumentException("expected equivalence or equality fact " + equiv)
+      case Imply(l,r) => throw new IllegalArgumentException("CE expects equivalence or equality fact " + equiv + "\nuse CMon() instead.")
+      case _ => throw new IllegalArgumentException("CE expects equivalence or equality fact " + equiv)
     }
     override def applies(s: Sequent, p: Position): Boolean = if (s.sub(p) == Some(key)) true
       else {if (DEBUG) println("In-applicable CE(" + equiv + ") at " + s.sub(p) + " which is " + p + " at " + s); false}
