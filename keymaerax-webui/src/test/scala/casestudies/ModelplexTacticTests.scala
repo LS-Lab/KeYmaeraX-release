@@ -76,7 +76,7 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     val in = getClass.getResourceAsStream("examples/casestudies/modelplex/simple.key")
       //getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("f"), Variable("l")/*, Variable("c")*/)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("x")/*Variable("f"), Variable("l"), Variable("c")*/)
 
     def modelPlex: PositionTactic = chase(3, 3, e => e match {
         // no equational assignments

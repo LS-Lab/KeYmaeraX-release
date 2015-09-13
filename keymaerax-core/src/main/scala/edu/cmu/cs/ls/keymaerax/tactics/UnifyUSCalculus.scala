@@ -487,7 +487,7 @@ trait UnifyUSCalculus {
     if (DEBUG) println("CMon(" + C + ")" + "(" + impl + ")")
     /** Monotonicity rewriting step to replace occurrence of instance of k by instance of o in context */
     def monStep(C: Context[Formula], mon: Provable): Provable = {
-      if (DEBUG) println("in monStep(" + C + ", " + mon + ")\nin CMon(" + C + ")" + "(" + impl + ")")
+      if (DEBUG) println("in monStep(" + C + ", " + mon + ")") //\nin CMon(" + C + ")" + "(" + impl + ")")
       var negative = false  //@todo this is a hack that doesn't even quite work. Do polarity for real.
       var weakened = false  //@todo this is a hack that doesn't even quite work.
       (
