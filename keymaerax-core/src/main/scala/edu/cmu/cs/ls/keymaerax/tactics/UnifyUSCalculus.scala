@@ -497,6 +497,7 @@ trait UnifyUSCalculus {
       var polarity = 1 // default is positive polarity
       var weakened = false  //@todo this is a hack that doesn't even quite work.
       (
+        // which context to use it in
       C.ctx match {
         case DotFormula => mon
 
@@ -568,14 +569,47 @@ trait UnifyUSCalculus {
 
         case Equiv(e, c) if !symbols(e).contains(DotFormula) =>
           //@note fallback to implication
+          // polarity(k)=-1, polarity(o)=+1
           weakened = true
-          monStep(Context(Imply(e,c)), mon)
+          // orient equivalence Equiv(c,e) such that polarity of k in that will be +1
+          // and polarity of o in that will be -1
+          val newPol = FormulaTools.polarityAt(Imply(c,e), FormulaTools.posOf(Imply(c,e), DotFormula).getOrElse(
+            throw new IllegalArgumentException("Context should contain DotFormula")))
+          if (newPol>0) {
+            // polarity of k in (Context(Imply(c,e))(k) will be +1
+            // polarity of o in (Context(Imply(c,e))(o) will be -1
+            monStep(Context(Imply(c, e)), mon)
+          } else if (newPol<0) {
+            assert(FormulaTools.polarityAt(Imply(e,c), FormulaTools.posOf(Imply(e,c), DotFormula).getOrElse(
+              throw new IllegalArgumentException("Context should contain DotFormula")))>0)
+            // polarity of k in (Context(Imply(e,c))(k) will be +1
+            // polarity of o in (Context(Imply(e,c))(o) will be -1
+            monStep(Context(Imply(e, c)), mon)
+          } else {
+            assert(false, "polarity rotations should ultimately be nonzero except with too many nested equivalences " + C); ???
+          }
 
         case Equiv(c, e) if !symbols(e).contains(DotFormula) =>
           //@note fallback to implication
+          // polarity(k)=-1, polarity(o)=+1
           weakened = true
-          //@todo this order or other?
-          monStep(Context(Imply(e,c)), mon)
+          // orient equivalence Equiv(c,e) such that polarity of k in that will be +1
+          // and polarity of o in that will be -1
+          val newPol = FormulaTools.polarityAt(Imply(c,e), FormulaTools.posOf(Imply(c,e), DotFormula).getOrElse(
+            throw new IllegalArgumentException("Context should contain DotFormula")))
+          if (newPol>0) {
+            // polarity of k in (Context(Imply(c,e))(k) will be +1
+            // polarity of o in (Context(Imply(c,e))(o) will be -1
+            monStep(Context(Imply(c, e)), mon)
+          } else if (newPol<0) {
+            assert(FormulaTools.polarityAt(Imply(e,c), FormulaTools.posOf(Imply(e,c), DotFormula).getOrElse(
+              throw new IllegalArgumentException("Context should contain DotFormula")))>0)
+            // polarity of k in (Context(Imply(e,c))(k) will be +1
+            // polarity of o in (Context(Imply(e,c))(o) will be -1
+            monStep(Context(Imply(e, c)), mon)
+          } else {
+            assert(false, "polarity rotations should ultimately be nonzero except with too many nested equivalences " + C); ???
+          }
 
         case Equiv(e, c) => assert(symbols(e).contains(DotFormula) || symbols(c).contains(DotFormula), "proper contexts have dots somewhere " + C)
           throw new ProverException("No monotone context for equivalences " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
@@ -746,7 +780,8 @@ trait UnifyUSCalculus {
             // C{subst(k)} |- C{subst(o)} for polarity < 0
             val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)
             //@todo need to learn to relax the context C if CMon met an equivalence here or already ask for less earlier.
-            assert(polarity != 0, "Polarity should be either positive or negative. Polarity 0 of equivalences not supported: " + C) // polarity 0: met an <->
+            //@todo if (polarity 0) then weaken by changing context C to have Imply instead of Equiv at appropriate place
+            //@todo assert(polarity != 0, "Polarity should be either positive or negative.\nin useFor(" + fact.conclusion.prettyString + ")\nPolarity 0 of equivalences not supported: " + C) // polarity 0: met an <->
             val impl = if (polarity < 0) Imply(C(subst(k)), C(subst(o))) else Imply(C(subst(o)), C(subst(k)))
 
             val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(impl)), ImplyRight(SuccPos(0)))
