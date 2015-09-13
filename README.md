@@ -120,11 +120,24 @@ Create a new run configuration of type Application for the KeYmaera X Web UI.
 - Set the working directory to the project path
 - Use the classpath of your project module
 
-Test cases:
+Test Cases:
 - Right click on project folder `keymaerax-webui/src/test` to mark this directory as Test Sources Root.
 - Make sure the JVM option `-Xss20M` is included in the run configuration.
 - Right click on the test folder to run all its ScalaTests.
 
+Tagged Test Suite:
+ Configurations Drop-down
+ -> Edit Configurations
+ -> Add Configuration (ScalaTest)
+ -> Select "All in package" for Test Kind
+ -> Under "test options" enter:
+      -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest
+      (or any other string in KeYmaeraXTestTags.scala)
+ -> Select "keymaerax" as SDK and classpath of module
+ -> Apply/OK
+
+IntelliJ FAQ
+============
 If, at any time, you run into problems during the compilation process in Intelli/J, check the `File->Project Structure->Modules->core->Dependencies` to make sure the appropriate files such as `SBT: unmanaged-jars` are checked. If the problems persist, do `File->Invalidate Caches / Restart`.
 
 Front End
