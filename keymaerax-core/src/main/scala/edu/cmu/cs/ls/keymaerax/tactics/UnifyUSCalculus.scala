@@ -489,7 +489,7 @@ trait UnifyUSCalculus {
     /** Monotonicity rewriting step to replace occurrence of instance of k by instance of o in context */
     def monStep(C: Context[Formula], mon: Provable): Provable = {
       if (DEBUG) println("in monStep(" + C + ", " + mon + ")") //\nin CMon(" + C + ")" + "(" + impl + ")")
-      var negative = false  //@todo this is a hack that doesn't even quite work. Do polarity for real.
+      var polarity = 1 // default is positive polarity
       var weakened = false  //@todo this is a hack that doesn't even quite work.
       (
       C.ctx match {
@@ -532,7 +532,12 @@ trait UnifyUSCalculus {
             ) (monStep(Context(c), mon), 0)
 
         case Imply(e, c) if !symbols(e).contains(DotFormula) =>
-          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+          assert(FormulaTools.posOf(C.ctx, DotFormula).isDefined, "Context should contain DotFormula")
+          polarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).get)
+          val (ante, succ) =
+            if (polarity < 0) (IndexedSeq(C(right)), IndexedSeq(C(left))) // polarity switch so switch left/right sides
+            else (IndexedSeq(C(left)), IndexedSeq(C(right)))
+          (Provable.startProof(Sequent(Nil, ante, succ))
             (ImplyRight(SuccPos(0)), 0)
             (ImplyLeft(AntePos(0)), 0)
             (Close(AntePos(0), SuccPos(1)), 0)
@@ -540,12 +545,14 @@ trait UnifyUSCalculus {
             (CoHide2(AntePos(1), SuccPos(0)), 0)
             ) (monStep(Context(c), mon), 0)
 
-        //@todo check this case
         case Imply(c, e) if !symbols(e).contains(DotFormula) =>
-          negative = true
-          // polarity switch so switch left/right sides
-          println("CMon check case: " + C + " to prove " + Sequent(Nil, IndexedSeq(C(right)), IndexedSeq(C(left))) + "\nfrom " + mon)
-          (Provable.startProof(Sequent(Nil, IndexedSeq(C(right)), IndexedSeq(C(left))))
+          assert(FormulaTools.posOf(C.ctx, DotFormula).isDefined, "Context should contain DotFormula")
+          polarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).get)
+          val (ante, succ) =
+            if (polarity < 0) (IndexedSeq(C(right)), IndexedSeq(C(left))) // polarity switch so switch left/right sides
+            else (IndexedSeq(C(left)), IndexedSeq(C(right)))
+          println("CMon check case: " + C + " to prove " + Sequent(Nil, ante, succ) + "\nfrom " + mon)
+          (Provable.startProof(Sequent(Nil, ante, succ))
             (ImplyRight(SuccPos(0)), 0)
             (ImplyLeft(AntePos(0)), 0)
             // right branch
@@ -619,7 +626,7 @@ trait UnifyUSCalculus {
 
         case _ => throw new ProverException("Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
       }
-        ) ensuring(r => weakened || r.conclusion == (if (negative)
+        ) ensuring(r => weakened || r.conclusion == (if (polarity < 0)
         Sequent(Nil, IndexedSeq(C(right)), IndexedSeq(C(left)))
       else Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right)))), "Expected conclusion " + "\nin CMon.monStep(" + C + ",\non " + mon + ")"
         ) ensuring(r => !impl.isProved || r.isProved, "Proved if input fact proved" + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
@@ -716,18 +723,23 @@ trait UnifyUSCalculus {
             val sideUS: Provable = subst.toForward(deduct)
             // subst(o) |- subst(k) by US
             val Cmon = CMon(C)(sideUS)
-            // C{subst(o)} |- C{subst(k)}
+
+            // C{subst(o)} |- C{subst(k)} for polarity > 0
+            // C{subst(k)} |- C{subst(o)} for polarity < 0
+            val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)
             //@todo need to learn to relax the context C if CMon met an equivalence here or already ask for less earlier.
-            val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k))))),
-              ImplyRight(SuccPos(0))
-            )
+            assert(polarity != 0, "Polarity should be either positive or negative") // polarity 0: met an <->
+            val impl = if (polarity < 0) Imply(C(subst(k)), C(subst(o))) else Imply(C(subst(o)), C(subst(k)))
+
+            val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(impl)), ImplyRight(SuccPos(0)))
+
             // |- C{subst(o)} -> C{subst(k)}
             val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(proof.conclusion.succ.length)}
             val coside: Provable = sideImply(
-              if (pos.isSucc) proof.conclusion.updated(p.top, Imply(C(subst(o)), C(subst(k))))
+              if (pos.isSucc) proof.conclusion.updated(p.top, impl)
               //@note drop p.top too and glue
               else Sequent(Nil, proof.conclusion.ante.patch(p.top.getIndex,Nil,1), proof.conclusion.succ).
-                glue(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k)))))),
+                glue(Sequent(Nil, IndexedSeq(), IndexedSeq(impl))),
               CoHideRight(cutPos)
             )
             // G |- C{subst(o)}  -> C{subst(k)}, D by CoHideRight
@@ -754,17 +766,24 @@ trait UnifyUSCalculus {
             val sideUS: Provable = subst.toForward(deduct)
             // subst(k) |- subst(o) by US
             val Cmon = CMon(C)(sideUS)
-            // C{subst(k)} |- C{subst(o)}
-            val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k))))),
+
+            // C{subst(o)} |- C{subst(k)} for polarity > 0
+            // C{subst(k)} |- C{subst(o)} for polarity < 0
+            val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)
+            //@todo need to learn to relax the context C if CMon met an equivalence here or already ask for less earlier.
+            assert(polarity != 0, "Polarity should be either positive or negative") // polarity 0: met an <->
+            val impl = if (polarity < 0) Imply(C(subst(o)), C(subst(k))) else Imply(C(subst(k)), C(subst(o)))
+
+            val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(impl)),
               ImplyRight(SuccPos(0))
             )
-            // |- C{subst(o)} -> C{subst(k)}
+            // |- C{subst(k)} -> C{subst(o)}
             val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(proof.conclusion.succ.length)}
             val coside: Provable = sideImply(
-              if (pos.isSucc) proof.conclusion.updated(p.top, Imply(C(subst(o)), C(subst(k))))
+              if (pos.isSucc) proof.conclusion.updated(p.top, impl)
               //@note drop p.top too and glue
               else Sequent(Nil, proof.conclusion.ante.patch(p.top.getIndex,Nil,1), proof.conclusion.succ).
-                glue(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k)))))),
+                glue(Sequent(Nil, IndexedSeq(), IndexedSeq(impl))),
               CoHideRight(cutPos)
             )
             // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
