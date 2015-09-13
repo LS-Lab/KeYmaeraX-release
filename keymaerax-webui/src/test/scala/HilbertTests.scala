@@ -498,7 +498,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "useFor" should "use DX to forward <x:=1;>(true&x=y) to <x:=1;><{x'=2}>x=y" in {
-    useFor("DX diamond differential skip", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(Nil))) (
+    useFor("DX diamond differential skip", PosInExpr(0::Nil))(SuccPosition(0, PosInExpr(Nil))) (
       Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;>(true&x=y)".asFormula)))
     ).conclusion shouldBe Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><{x'=2}>x=y".asFormula)))
   }
