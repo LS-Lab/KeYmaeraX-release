@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors.FormulaAugmentor
+import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 
 /**
  * Tactic tools for formula manipulation and extraction.
@@ -48,5 +49,21 @@ object FormulaTools {
       case (_, Equiv(_, _)) => 0
       case _ => polarityAt(formula, pos.parent)
     }
+
+  /**
+   * Returns the first (i.e., left-most) position of subFormula within formula, if any.
+   * @param formula The formula to search for containment of subformula.
+   * @param subFormula The subformula.
+   * @return The first position, or None if subformula is not contained in formula.
+   */
+  def posOf(formula: Formula, subFormula: Formula): Option[PosInExpr] = {
+    var pos: Option[PosInExpr] = None
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
+        if (e == subFormula) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
+        else Left(None)
+    }, formula)
+    pos
+  }
 
 }
