@@ -29,8 +29,6 @@ object AxiomIndex {
    * @see [[UnifyUSCalculus.chaseFor()]]
    * @todo copy documentation from chase
    */
-  private val directReduction = (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
-  private val reverseReduction = (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
   def axiomIndex(axiom: String): AxiomIndex = (axiom: @switch) match {
       //@todo axiom.intern() to @switch?
     case "all instantiate" | "all eliminate"
@@ -107,19 +105,23 @@ object AxiomIndex {
     case "!-> deMorgan" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
     case "!<-> deMorgan" => (PosInExpr(0::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::PosInExpr(1::0::Nil)::PosInExpr(1::1::Nil)::Nil)
 
+    case "[] split" => binaryDefault
+    case "[] split left" | "[] split right" => directReduction
     case "<*> approx" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
     case "<*> stuck" => (PosInExpr(0::Nil), Nil)
     case "<'> stuck" => (PosInExpr(0::Nil), Nil)
     case "+<= up" => (PosInExpr(1::Nil), PosInExpr(0::1::Nil)::Nil)
 
     // default position
-    //case _ => (PosInExpr(0::Nil), Nil)
+    case _ => println("AxiomIndex: defaulted for " + axiom); (PosInExpr(0::Nil), Nil)
   }
 
 
   private val nullaryDefault = (PosInExpr(0::Nil), Nil)
   private val unaryDefault = (PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)
   private val binaryDefault = (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
+  private val directReduction = (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
+  private val reverseReduction = (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
 
   // lookup canonical axioms for an expression (index)
 
