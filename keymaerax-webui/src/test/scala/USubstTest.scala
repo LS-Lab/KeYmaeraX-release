@@ -19,7 +19,8 @@ import test._
  * @author Andre Platzer
  * @author smitsch
  */
-
+@edu.cmu.cs.ls.keymaerax.tags.SummaryTest
+@edu.cmu.cs.ls.keymaerax.tags.USubstTest
 class USubstTests extends FlatSpec with Matchers {
   KeYmaera.init(Map.empty)
 
