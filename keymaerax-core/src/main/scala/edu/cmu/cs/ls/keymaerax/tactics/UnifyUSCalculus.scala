@@ -59,7 +59,6 @@ trait UnifyUSCalculus {
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma, key:PosInExpr, inst: Subst=>Subst): PositionTactic = useAt(lem.fact, key, inst)
   def useAt(lem: Lemma, key:PosInExpr): PositionTactic = useAt(lem.fact, key)
-  def useAt(lem: Lemma, inst: Subst=>Subst) : PositionTactic = useAt(lem.fact, PosInExpr(0::Nil), inst)
   def useAt(lem: Lemma)       : PositionTactic = useAt(lem.fact, PosInExpr(0::Nil))
   /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: String, key: PosInExpr, inst: Subst=>Subst): PositionTactic =
@@ -370,8 +369,8 @@ trait UnifyUSCalculus {
   }
 
   /** CE(equiv) uses the equivalence left<->right or equality left=right fact equiv for congruence reasoning
-    * at the indicated position to replace left by right (literally, no substitution)
-    * Efficient unification-free version of [[useAt()]]
+    * at the indicated position to replace right by left at indicated position (literally, no substitution).
+    * Efficient unification-free version of [[UnifyUSCalculus#useAt(Provable, PosInExpr):PositionTactic]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
@@ -381,7 +380,7 @@ trait UnifyUSCalculus {
     import Augmentors._
     require(equiv.conclusion.ante.length==0 && equiv.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + equiv)
     private val equi = equiv.conclusion.succ.head
-    val (key,other) = equi match {
+    val (other,key) = equi match {
       case Equal(l,r) => (l,r)
       case Equiv(l,r) => (l,r)
       case _ => throw new IllegalArgumentException("expected equivalence or equality fact " + equiv)
@@ -397,7 +396,7 @@ trait UnifyUSCalculus {
         Some(cutLR(ctx(other))(p.top) &
           onBranch(
             (BranchLabels.cutShowLbl, cohide(cutPos) & //assertT(0,1) &
-              equivifyR(SuccPosition(0)) & commuteEquivR(SuccPosition(0)) &
+              equivifyR(SuccPosition(0)) & /*commuteEquivR(SuccPosition(0)) &*/
               (if (other.kind==FormulaKind) CE(p.inExpr)
               else if (other.kind==TermKind) CQ(p.inExpr)
               else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
@@ -889,7 +888,8 @@ trait UnifyUSCalculus {
         }
         assert(initial.isProved && initial.conclusion.ante.isEmpty && initial.conclusion.succ.length==1, "Proved reflexive start " + initial + " for " + e)
         if (DEBUG) println("chase starts at " + initial)
-        val r = chaseFor(keys, modifier) (SuccPosition(0, PosInExpr(1::Nil)))(initial)
+        //@note start the chase on the left-hand side
+        val r = chaseFor(keys, modifier) (SuccPosition(0, PosInExpr(0::Nil)))(initial)
         if (DEBUG) println("chase(" + e.prettyString + ") = ~~> " + r + " done")
         r
       } ensuring(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")

@@ -428,8 +428,8 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
   }
 
-  lazy val basicEq = TactixLibrary.proveBy("0*x+1=1".asFormula, QE)
-  lazy val basicEquiv = TactixLibrary.proveBy("x^2<4 <-> -2<x&x<2".asFormula, QE)
+  lazy val basicEq = TactixLibrary.proveBy("1=0*x+1".asFormula, QE)
+  lazy val basicEquiv = TactixLibrary.proveBy("-2<x&x<2 <-> x^2<4".asFormula, QE)
 
   private def shouldReduceTo(input: Formula, pos: Position, result: Formula, fact: Provable = basicEq): Unit =
     TactixLibrary.proveBy(input, HilbertCalculus.CE(fact)(pos)).subgoals shouldBe (
