@@ -553,7 +553,7 @@ trait UnifyUSCalculus {
             ) (monStep(Context(c), mon), 0)
 
         case Equiv(e, c) => assert(symbols(e).contains(DotFormula) || symbols(c).contains(DotFormula), "proper contexts have dots somewhere " + C)
-          throw new ProverException("No monotone context for equivalences " + C + "\nin CMon.monStep(" + C + ", " + mon + ")")
+          throw new ProverException("No monotone context for equivalences " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
 
         case Box(a, c) if !symbols(a).contains(DotFormula) =>
           (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
@@ -578,7 +578,7 @@ trait UnifyUSCalculus {
             ) (monStep(Context(c), mon), 0)
 
         case m:Modal if symbols(m.program).contains(DotFormula) =>
-          throw new ProverException("No monotone context within programs " + C + "\nin CMon.monStep(" + C + ", " + mon + ")")
+          throw new ProverException("No monotone context within programs " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
 
         case Forall(vars, c) => //if !StaticSemantics.freeVars(subst(c)).toSymbolSet.intersect(vars.toSet).isEmpty =>
           //@note would also work with all distribute and all generalization instead
@@ -602,14 +602,14 @@ trait UnifyUSCalculus {
           )
 
         //@todo flip polarity
-        case Not(_) => throw new ProverException("No monotone context without polarity flipping for not " + K + "\nin CMon.monStep(" + C + ", " + mon + ")")
+        case Not(_) => throw new ProverException("No monotone context without polarity flipping for not " + K + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
 
-        case _ => throw new ProverException("Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ", " + mon + ")")
+        case _ => throw new ProverException("Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
       }
         ) ensuring(r => r.conclusion == (if (negative)
         Sequent(Nil, IndexedSeq(C(right)), IndexedSeq(C(left)))
-      else Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right)))), "Expected conclusion " + "\nin CMon.monStep(" + C + ", " + mon + ")"
-        ) ensuring(r => !impl.isProved || r.isProved, "Proved if input fact proved" + "\nin CMon.monStep(" + C + ", " + mon + ")")
+      else Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right)))), "Expected conclusion " + "\nin CMon.monStep(" + C + ",\non " + mon + ")"
+        ) ensuring(r => !impl.isProved || r.isProved, "Proved if input fact proved" + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
     }
     monStep(C, impl)
   }
