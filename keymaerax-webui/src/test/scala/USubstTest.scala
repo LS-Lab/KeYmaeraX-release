@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest._
 import testHelper.KeYmaeraXTestTags.{OptimisticTest, SummaryTest, CheckinTest, USubstTest}
+import testHelper.{USubstTest, SummaryTest}
 import scala.collection.immutable.List
 
 import scala.collection.immutable.Seq
@@ -19,7 +20,8 @@ import test._
  * @author Andre Platzer
  * @author smitsch
  */
-
+@SummaryTest
+@USubstTest
 class USubstTests extends FlatSpec with Matchers {
   KeYmaera.init(Map.empty)
 
