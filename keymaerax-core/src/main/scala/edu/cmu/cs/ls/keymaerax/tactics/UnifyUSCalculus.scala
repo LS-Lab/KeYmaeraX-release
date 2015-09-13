@@ -489,6 +489,7 @@ trait UnifyUSCalculus {
     def monStep(C: Context[Formula], mon: Provable): Provable = {
       if (DEBUG) println("in monStep(" + C + ", " + mon + ")\nin CMon(" + C + ")" + "(" + impl + ")")
       var negative = false  //@todo this is a hack that doesn't even quite work. Do polarity for real.
+      var weakened = false  //@todo this is a hack that doesn't even quite work.
       (
       C.ctx match {
         case DotFormula => mon
@@ -552,6 +553,17 @@ trait UnifyUSCalculus {
             (CoHide2(AntePos(0), SuccPos(1)), 0)
             ) (monStep(Context(c), mon), 0)
 
+        case Equiv(e, c) if !symbols(e).contains(DotFormula) =>
+          //@note fallback to implication
+          weakened = true
+          monStep(Context(Imply(e,c)), mon)
+
+        case Equiv(c, e) if !symbols(e).contains(DotFormula) =>
+          //@note fallback to implication
+          weakened = true
+          //@todo this order or other?
+          monStep(Context(Imply(e,c)), mon)
+
         case Equiv(e, c) => assert(symbols(e).contains(DotFormula) || symbols(c).contains(DotFormula), "proper contexts have dots somewhere " + C)
           throw new ProverException("No monotone context for equivalences " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
 
@@ -606,7 +618,7 @@ trait UnifyUSCalculus {
 
         case _ => throw new ProverException("Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
       }
-        ) ensuring(r => r.conclusion == (if (negative)
+        ) ensuring(r => weakened || r.conclusion == (if (negative)
         Sequent(Nil, IndexedSeq(C(right)), IndexedSeq(C(left)))
       else Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right)))), "Expected conclusion " + "\nin CMon.monStep(" + C + ",\non " + mon + ")"
         ) ensuring(r => !impl.isProved || r.isProved, "Proved if input fact proved" + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
@@ -704,6 +716,7 @@ trait UnifyUSCalculus {
             // subst(o) |- subst(k) by US
             val Cmon = CMon(C)(sideUS)
             // C{subst(o)} |- C{subst(k)}
+            //@todo need to learn to relax the context C if CMon met an equivalence here or already ask for less earlier.
             val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(C(subst(o)), C(subst(k))))),
               ImplyRight(SuccPos(0))
             )
@@ -721,10 +734,13 @@ trait UnifyUSCalculus {
               Provable.startProof(proof.conclusion.updated(pos.top, C(subst(o))))(
                 CutRight(C(subst(k)), pos.top.asInstanceOf[SuccPos]), 0
               ) (coside, 1)
+              // G |- C{subst(o)}, D by CutRight with coside
             else
+              //@todo flip o,k sides?
               Provable.startProof(proof.conclusion.updated(pos.top, C(subst(o))))(
                 CutLeft(C(subst(k)), pos.top.asInstanceOf[AntePos]), 0
               ) (coside, 1)
+              // C{subst(o)}, G |- D by CutLeft with coside
             } /*ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
               ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
             proved(proof, 0)
@@ -911,11 +927,13 @@ trait UnifyUSCalculus {
     * @example When applied at 1::Nil, turns [{x'=22}][?x>0;x:=x+1;++?x=0;x:=1;]x>=1 into [{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))
     * @see [[chase()]]
     * @see [[HilbertCalculus.derive]]
+    * @see [[UnifyUSCalculus.useFor()]]
     */
   def chaseFor(keys: Expression=>List[String],
                     modifier: (String,Position)=>ForwardTactic): ForwardPositionTactic = pos => de => {
     import AxiomIndex.axiomIndex
     import Augmentors._
+    /** Recursive chase implementation */
     def doChase(de: Provable, pos: Position): Provable = {
       if (DEBUG) println("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
       // generic recursor
