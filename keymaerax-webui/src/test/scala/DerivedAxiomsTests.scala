@@ -6,6 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
@@ -13,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags.CheckinTest
-import testHelper.ProvabilityTestHelper
+import testHelper.{KeYmaeraXTestTags, ProvabilityTestHelper}
 
 import scala.collection.immutable._
 
@@ -71,6 +72,12 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     rootNode.isClosed() shouldBe true
     rootNode.isProved() shouldBe true
   }
+
+  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs(KeYmaeraXTestTags.CheckinTest) in {
+    LemmaDBFactory.lemmaDB.deleteDatabase() //necessary. Perhaps we should add optional copy and recover.
+    DerivedAxioms.prepopulateDerivedLemmaDatabase()
+  }
+
 
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
