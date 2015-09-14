@@ -9,8 +9,6 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, USubstTest, SummaryTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest._
-import testHelper.KeYmaeraXTestTags.SummaryTest
-import testHelper.KeYmaeraXTestTags.USubstTest
 import testHelper.KeYmaeraXTestTags.{OptimisticTest, SummaryTest, CheckinTest, USubstTest}
 import scala.collection.immutable.List
 

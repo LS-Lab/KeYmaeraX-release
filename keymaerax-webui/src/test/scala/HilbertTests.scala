@@ -10,12 +10,11 @@ import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms._
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
-import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
+import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest, CheckinTest}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Tool}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import test.RandomFormula
 import testHelper.KeYmaeraXTestTags.SummaryTest
-import testHelper.KeYmaeraXTestTags.{SummaryTest, CheckinTest}
 import testHelper.ParserFactory._
 import testHelper.ProvabilityTestHelper
 
