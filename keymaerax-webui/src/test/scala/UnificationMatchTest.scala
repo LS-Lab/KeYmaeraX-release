@@ -6,6 +6,7 @@
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import scala.collection.immutable._
 import org.scalatest.{Matchers, FlatSpec}
@@ -15,6 +16,8 @@ import org.scalatest.{Matchers, FlatSpec}
  * Created by aplatzer on 7/28/15.
  * @author Andre Platzer
  */
+@SummaryTest
+@UsualTest
 class UnificationMatchTest extends FlatSpec with Matchers {
   Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
   Tactics.KeYmaeraScheduler.init(Map())

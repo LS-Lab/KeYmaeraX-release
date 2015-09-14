@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.onBranch
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.{Z3, Mathematica, KeYmaera}
 import org.scalatest.{FlatSpec, Matchers, BeforeAndAfterEach}
 import testHelper.ParserFactory._
@@ -25,6 +26,7 @@ import scala.tools.reflect.ToolBox
  * Created by smitsch on 7/22/15.
  * @author Stefan Mitsch
  */
+@SlowTest
 class Quadcopter extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))

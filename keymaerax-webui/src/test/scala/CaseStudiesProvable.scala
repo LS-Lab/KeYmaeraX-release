@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.core.{AntePos, Expression, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tags.{SlowTest, CaseStudyTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.{Z3, Mathematica, KeYmaera}
 import testHelper.{KeYmaeraXTestTags, ProvabilityTestHelper}
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
@@ -25,6 +26,9 @@ import scala.language.postfixOps
  * @author Ran Ji
  * @author Stefan Mitsch
  */
+@UsualTest
+@SlowTest
+@CaseStudyTest
 class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach with PrivateMethodTester {
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig: Map[String, String] = helper.mathematicaConfig

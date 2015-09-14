@@ -6,8 +6,11 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, USubstTest, SummaryTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest._
+import testHelper.KeYmaeraXTestTags.SummaryTest
+import testHelper.KeYmaeraXTestTags.USubstTest
 import testHelper.KeYmaeraXTestTags.{OptimisticTest, SummaryTest, CheckinTest, USubstTest}
 import scala.collection.immutable.List
 
@@ -19,8 +22,9 @@ import test._
  * @author Andre Platzer
  * @author smitsch
  */
-@edu.cmu.cs.ls.keymaerax.tags.SummaryTest
-@edu.cmu.cs.ls.keymaerax.tags.USubstTest
+@SummaryTest
+@UsualTest
+@USubstTest
 class USubstTests extends FlatSpec with Matchers {
   KeYmaera.init(Map.empty)
 

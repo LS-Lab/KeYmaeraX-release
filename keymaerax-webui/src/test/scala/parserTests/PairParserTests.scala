@@ -6,6 +6,7 @@ package parserTests
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
+import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import org.scalatest.{FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags
 
@@ -15,6 +16,7 @@ import scala.collection.immutable._
  * Tests the parser on pairs of strings that are expected to parse the same.
  * @author Andre Platzer
  */
+@SummaryTest
 class PairParserTests extends FlatSpec with Matchers {
   val pp = KeYmaeraXPrettyPrinter
   val parser = KeYmaeraXParser
