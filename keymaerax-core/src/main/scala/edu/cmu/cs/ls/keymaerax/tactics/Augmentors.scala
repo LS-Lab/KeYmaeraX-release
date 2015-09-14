@@ -24,6 +24,8 @@ object Augmentors {
     def sub(pos: PosInExpr): Option[Expression] = try {Some(at(pos)._2)} catch {case e: IllegalArgumentException => None}
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Term], Expression) = Context.at(term, pos)
+    /** Replace at position pos by repl */
+    def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(term, pos, repl)
   }
 
   /**
@@ -37,6 +39,8 @@ object Augmentors {
     def sub(pos: PosInExpr): Option[Expression] = try {Some(at(pos)._2)} catch {case e: IllegalArgumentException => None}
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Formula], Expression) = Context.at(fml, pos)
+    /** Replace at position pos by repl */
+    def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(fml, pos, repl)
   }
 
   /**
@@ -50,6 +54,8 @@ object Augmentors {
     def sub(pos: PosInExpr): Option[Expression] = try {Some(at(pos)._2)} catch {case e: IllegalArgumentException => None}
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Program], Expression) = Context.at(prog, pos)
+    /** Replace at position pos by repl */
+    def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(prog, pos, repl)
   }
 
   /**
@@ -63,5 +69,7 @@ object Augmentors {
     def sub(pos: Position): Option[Expression] = FormulaAugmentor(seq(pos.top)).sub(pos.inExpr)
     /** Split into expression and its *formula* context at the indicated position */
     def at(pos: Position): (Context[Formula], Expression) = FormulaAugmentor(seq(pos.top)).at(pos.inExpr)
+    /** Replace at position pos by repl */
+    def replaceAt(pos: Position, repl: Expression): Expression = FormulaAugmentor(seq(pos.top)).replaceAt(pos.inExpr, repl)
   }
 }

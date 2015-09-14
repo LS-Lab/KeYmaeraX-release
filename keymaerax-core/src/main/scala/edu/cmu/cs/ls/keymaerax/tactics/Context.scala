@@ -98,11 +98,10 @@ object Context {
         r._1(r._2) == t
       }
       catch {
-        case e: SubstitutionClashException => true //@todo check that r._1.ctx.replaceAt(pos, r._2) == t
+        case e: SubstitutionClashException => replaceAt(r._1.ctx, pos, r._2) == t
       }
     else
-    //@todo check that r._1.ctx.replaceAt(pos, r._2) == t
-      true
+      replaceAt(r._1.ctx, pos, r._2) == t
   }
 
   /** @see [[StaticSemanticsTools.boundAt()]] for same positions */
@@ -157,6 +156,71 @@ object Context {
     case DifferentialProduct(l,r) if pos.head==1 => val sp = contextODE(r, pos.child); (DifferentialProduct(l, sp._1), sp._2)
     case _ => throw new IllegalArgumentException("contextODE position " + pos + " of program " + program + " may not be defined")
   }} ensuring(r => r._1==noContextD || r._1.getClass == program.getClass, "Context has identical top types " + program + " at " + pos)
+
+
+
+  /** Replace within term at position pos by repl @see [[StaticSemanticsTools.boundAt()]] for same positions */
+  def replaceAt(expr: Expression, pos: PosInExpr, repl: Expression): Expression = expr match {
+    case f: Term    => replaceAt(f, pos, repl)
+    case f: Formula => replaceAt(f, pos, repl)
+    case f: Program => replaceAt(f, pos, repl)
+    case _ => ???  // trivial totality on possibly problematic patmats
+  }
+
+  /** Replace within term at position pos by repl @see [[StaticSemanticsTools.boundAt()]] for same positions */
+  def replaceAt(term: Term, pos: PosInExpr, repl: Expression): Term = if (pos==HereP) repl.asInstanceOf[Term] else term match {
+    case FuncOf(f,t)     if pos.head==0 => FuncOf(f, replaceAt(t, pos.child, repl))
+    // homomorphic cases
+    case f:UnaryCompositeTerm  if pos.head==0 => f.alike(replaceAt(f.child, pos.child, repl))
+    case f:BinaryCompositeTerm if pos.head==0 => f.alike(replaceAt(f.left, pos.child, repl), f.right)
+    case f:BinaryCompositeTerm if pos.head==1 => f.alike(f.left, replaceAt(f.right, pos.child, repl))
+    case _ => throw new IllegalArgumentException("replaceAt position " + pos + " of term " + term + " may not be defined")
+  }
+
+  /** Replace within formula at position pos by repl @see [[StaticSemanticsTools.boundAt()]] for same positions */
+  def replaceAt(formula: Formula, pos: PosInExpr, repl: Expression): Formula = if (pos==HereP) repl.asInstanceOf[Formula] else formula match {
+    // base cases
+    case PredOf(p,t)          if pos.head==0 => PredOf(p, replaceAt(t, pos.child, repl))
+    case PredicationalOf(c,t) if pos.head==0 => PredicationalOf(c, replaceAt(t, pos.child, repl))
+    // pseudo-homomorphic cases
+    case f:ComparisonFormula  if pos.head==0 => f.alike(replaceAt(f.left, pos.child, repl), f.right)
+    case f:ComparisonFormula  if pos.head==1 => f.alike(f.left, replaceAt(f.right, pos.child, repl))
+    // homomorphic cases
+    case f:UnaryCompositeFormula  if pos.head==0 => f.alike(replaceAt(f.child, pos.child, repl))
+    case f:BinaryCompositeFormula if pos.head==0 => f.alike(replaceAt(f.left, pos.child, repl), f.right)
+    case f:BinaryCompositeFormula if pos.head==1 => f.alike(f.left, replaceAt(f.left, pos.child, repl))
+    case f:Quantified             if pos.head==0 => f.alike(f.vars, replaceAt(f.child, pos.child, repl))
+    case f:Modal                  if pos.head==0 => f.alike(replaceAt(f.program, pos.child, repl), f.child)
+    case f:Modal                  if pos.head==1 => f.alike(f.program, replaceAt(f.child, pos.child, repl))
+    case _ => throw new IllegalArgumentException("replaceAt position " + pos + " of formula " + formula + " may not be defined")
+  }
+
+  /** Replace within program at position pos by repl @see [[StaticSemanticsTools.boundAt()]] for same positions */
+  def replaceAt(program: Program, pos: PosInExpr, repl:Expression): Program = if (pos==HereP) repl.asInstanceOf[Program] else program match {
+    case Assign(x,t)       if pos==PosInExpr(0::Nil) => Assign(repl.asInstanceOf[Variable], t)
+    case Assign(x,t)       if pos.head==1 => Assign(x, replaceAt(t, pos.child, repl))
+    case DiffAssign(xp,t)  if pos==PosInExpr(0::Nil) => DiffAssign(repl.asInstanceOf[DifferentialSymbol], t)
+    case DiffAssign(xp,t)  if pos.head==1 => DiffAssign(xp, replaceAt(t, pos.child, repl))
+    case AssignAny(x)      if pos==PosInExpr(0::Nil) => AssignAny(repl.asInstanceOf[Variable])
+    case Test(f)           if pos.head==0 => Test(replaceAt(f, pos.child, repl))
+
+    case ODESystem(ode, h) if pos.head==0 => ODESystem(replaceAtODE(ode, pos.child, repl), h)
+    case ODESystem(ode, h) if pos.head==1 => ODESystem(ode, replaceAt(h, pos.child, repl))
+
+    // homomorphic cases
+    case f:UnaryCompositeProgram  if pos.head==0 => f.alike(replaceAt(f.child, pos.child, repl))
+    case f:BinaryCompositeProgram if pos.head==0 => f.alike(replaceAt(f.left, pos.child, repl), f.right)
+    case f:BinaryCompositeProgram if pos.head==1 => f.alike(f.left, replaceAt(f.right, pos.child, repl))
+    case _ => throw new IllegalArgumentException("replaceAt position " + pos + " of program " + program + " may not be defined")
+  }
+
+  private def replaceAtODE(program: DifferentialProgram, pos: PosInExpr, repl:Expression): DifferentialProgram = if (pos==HereP) repl.asInstanceOf[DifferentialProgram] else program match {
+    case AtomicODE(xp,t)          if pos==PosInExpr(0::Nil) => AtomicODE(repl.asInstanceOf[DifferentialSymbol], t)
+    case AtomicODE(xp,t)          if pos.head==1 => AtomicODE(xp, replaceAt(t, pos.child, repl))
+    case DifferentialProduct(l,r) if pos.head==0 => DifferentialProduct(replaceAtODE(l, pos.child, repl), r)
+    case DifferentialProduct(l,r) if pos.head==1 => DifferentialProduct(l, replaceAtODE(r, pos.child, repl))
+    case _ => throw new IllegalArgumentException("replaceAtODE position " + pos + " of program " + program + " may not be defined")
+  }
 
 
   // direct split implementation
