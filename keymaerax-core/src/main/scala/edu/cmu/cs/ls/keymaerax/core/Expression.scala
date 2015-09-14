@@ -242,21 +242,21 @@ private[core] sealed trait RBinaryCompositeTerm extends BinaryCompositeTerm with
 }
 
 /** - unary negation: minus */
-case class Neg(child: Term) extends RUnaryCompositeTerm { def reapply = Neg.apply }
+case class Neg(child: Term) extends RUnaryCompositeTerm { def reapply = copy }
 /** + binary addition */
-case class Plus(left: Term, right: Term) extends RBinaryCompositeTerm { def reapply = Plus.apply }
+case class Plus(left: Term, right: Term) extends RBinaryCompositeTerm { def reapply = copy }
 /** - binary subtraction */
-case class Minus(left: Term, right: Term) extends RBinaryCompositeTerm { def reapply = Minus.apply }
+case class Minus(left: Term, right: Term) extends RBinaryCompositeTerm { def reapply = copy }
 /** * binary multiplication*/
-case class Times(left: Term, right: Term) extends RBinaryCompositeTerm { def reapply = Times.apply }
+case class Times(left: Term, right: Term) extends RBinaryCompositeTerm { def reapply = copy }
 /** / real division */
-case class Divide(left: Term, right: Term) extends RBinaryCompositeTerm { def reapply = Divide.apply }
+case class Divide(left: Term, right: Term) extends RBinaryCompositeTerm { def reapply = copy }
 /** real exponentiation or power: left^right^ */
 //@note axiom("^' derive power") needs right to be a Term not just a Number
-case class Power(left: Term, right: Term) extends RBinaryCompositeTerm { def reapply = Power.apply }
+case class Power(left: Term, right: Term) extends RBinaryCompositeTerm { def reapply = copy }
 
 /** ' differential of a term */
-case class Differential(child: Term) extends RUnaryCompositeTerm { def reapply = Differential.apply }
+case class Differential(child: Term) extends RUnaryCompositeTerm { def reapply = copy }
 
 /** Pairs (left,right) for binary Function and FuncOf and PredOf */
 case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
@@ -302,22 +302,22 @@ object False extends AtomicFormula
 /** ``=`` equality left = right */
 case class Equal(left: Term, right: Term) extends ComparisonFormula {
   insist(left.sort == right.sort, "expected identical argument sorts: " + left + " and " + right)
-  def reapply = Equal.apply
+  def reapply = copy
 }
 /** != disequality left != right */
 case class NotEqual(left: Term, right: Term) extends ComparisonFormula {
   insist(left.sort == right.sort, "expected identical argument sorts: " + left + " and " + right)
-  def reapply = NotEqual.apply
+  def reapply = copy
 }
 
 /** >= greater or equal comparison left >= right */
-case class GreaterEqual(left: Term, right: Term) extends RComparisonFormula { def reapply = GreaterEqual.apply }
+case class GreaterEqual(left: Term, right: Term) extends RComparisonFormula { def reapply = copy }
 /** > greater than comparison left > right */
-case class Greater(left: Term, right: Term) extends RComparisonFormula { def reapply = Greater.apply }
+case class Greater(left: Term, right: Term) extends RComparisonFormula { def reapply = copy }
 /** < less or equal comparison left <= right */
-case class LessEqual(left: Term, right: Term) extends RComparisonFormula { def reapply = LessEqual.apply }
+case class LessEqual(left: Term, right: Term) extends RComparisonFormula { def reapply = copy }
 /** <= less than comparison left < right */
-case class Less(left: Term, right: Term) extends RComparisonFormula { def reapply = Less.apply }
+case class Less(left: Term, right: Term) extends RComparisonFormula { def reapply = copy }
 
 /** ⎵: Placeholder for formulas in uniform substitutions. Reserved nullary predicational symbol _ for substitutions are unlike ordinary predicational symbols */
 object DotFormula extends NamedSymbol with AtomicFormula {
