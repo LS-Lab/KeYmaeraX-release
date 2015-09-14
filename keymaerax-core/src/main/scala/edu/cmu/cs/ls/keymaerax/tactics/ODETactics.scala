@@ -878,17 +878,50 @@ object ODETactics {
       case _ => ???
     }
 
-    def alpha(fml: Formula): PositionTactic =
-      TacticHelper.axiomAlphaT(theT(fml), aT) & TacticHelper.axiomAlphaT(theS(fml), aS) & TacticHelper.axiomAlphaT(theX(fml), aX)
+    def alpha(fml: Formula): PositionTactic = {
+      val x = theX(fml)
+      val futureFreshX = futureFresh(x, Seq(aX, aT, aS))
+//      TacticHelper.axiomAlphaT(futureFreshX, aX) &
+      TacticHelper.axiomAlphaT(theX(fml), aX) &
+      TacticHelper.axiomAlphaT(theT(fml), aT) &
+      TacticHelper.axiomAlphaT(theS(fml), aS)
+//      TacticHelper.axiomAlphaT(futureFreshX, x)
+    }
+
+    /** Returns a variable surelyFresh$x.name_newIDX that is not in the set in {x} ++ futureVariables.
+      * (The name is just changed to make sure that if we accidentally leak internal variables, the user realizes.)
+      */
+    def futureFresh(x: Variable, futureVariables : Seq[NamedSymbol]) = Variable("surelyFresh" + x.name, x.index match {
+      case None => Some(1)
+      case Some(n) => Some(n+1)
+    }) ensuring(newX => newX != x && futureVariables.foldLeft(true)((l, r) => newX != r && l))
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = {
       val x = theX(fml)
       val t = theT(fml)
       val s = theS(fml)
-      val xRenamed = if (x.name != aX.name || x.index != aX.index) AlphaConversionHelper.replace(axiom)(aX, x) else axiom
-      val tRenamed = if(t.name != aT.name || t.index != aT.index) AlphaConversionHelper.replace(xRenamed)(aT, t) else xRenamed
-      val result = if(s.name != aS.name || s.index != aS.index) AlphaConversionHelper.replace(tRenamed)(aS, s) else tRenamed
-      result
+      //This guard depends upon the ordering of the substiutions being: x,t,s.
+      if(x != aT && x != aS && t != aS) {
+        val xRenamed = if (x.name != aX.name || x.index != aX.index) AlphaConversionHelper.replace(axiom)(aX, x) else axiom
+        val tRenamed = if (t.name != aT.name || t.index != aT.index) AlphaConversionHelper.replace(xRenamed)(aT, t) else xRenamed
+        val sRenamed = if (s.name != aS.name || s.index != aS.index) AlphaConversionHelper.replace(tRenamed)(aS, s) else tRenamed
+        sRenamed
+      }
+      //This is the most common case, so we'll deal with it individually.
+      else if(x == aT) {
+        val surelyFreshX = futureFresh(x, Seq(aT, aS))
+        //Perform hte same substitution, but now replace aX with surelyFreshX and then replace surelyFreshX with x at last.
+        val xRenamed = if (surelyFreshX.name != aX.name || surelyFreshX.index != aX.index) AlphaConversionHelper.replace(axiom)(aX, surelyFreshX) else axiom
+        val tRenamed = if (t.name != aT.name || t.index != aT.index) AlphaConversionHelper.replaceBound(xRenamed)(aT, t) else xRenamed
+        val sRenamed = if (s.name != aS.name || s.index != aS.index) AlphaConversionHelper.replaceBound(tRenamed)(aS, s) else tRenamed
+        val xRenamedAgain = AlphaConversionHelper.replace(sRenamed)(surelyFreshX, x)
+        assert(!StaticSemantics.vars(xRenamedAgain).contains(surelyFreshX), "The expected output should not contain internal variables.")
+        xRenamedAgain
+      }
+      else {
+        //@todo Issue #135 solves the general problem.
+        throw new Exception(s"Cannot perform the replacement {$aX ~> $x, $aT ~> $t, $aS ~> $s} because one of the last substitutions shadows the others.")
+      }
     }
 
     axiomLookupBaseT("DS& differential equation solution", subst, alpha, axiomInstance)
