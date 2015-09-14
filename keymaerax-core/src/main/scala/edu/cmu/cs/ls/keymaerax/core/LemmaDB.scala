@@ -59,4 +59,7 @@ trait LemmaDB {
    * @ensures  if (lemma.name==Some(n)) then \result==n  (usually)
    */
   def add(lemma: Lemma): LemmaID
+
+
+  def deleteDatabase(): Unit
 }

@@ -85,7 +85,6 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
-  //@todo Ran
   it should "be provable with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-essentials-noloop.key"))
     helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
@@ -96,7 +95,6 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(master(new Generate("v^2<=2*b*(m-z)".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
-  //@todo Ran
   it should "be provable with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-essentials.key"))
     helper.runTactic(master(new Generate("v^2<=2*b*(m-z)".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
@@ -124,7 +122,6 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(master(new Generate("x <= y".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
-  //@todo Ran
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/Stuttering-allwrites.key"))
     helper.runTactic(master(new Generate("x <= y".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
@@ -135,7 +132,6 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
-  //@todo Ran
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-safety-allwrites.key"))
     helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed

@@ -44,7 +44,6 @@ object LogicalODESolver {
       renameAndDropImpl(p) &
       (successiveInverseCut(p) *) &
       (successiveInverseDiffGhost(p) *) &
-      locateTerm(ODETactics.rewriteConstantTime) & //0*t+1 --> 1
       ODETactics.diffSolveConstraintT(p) &
       reduceToArithmetic(p) // separated out for testing purposes
   }

@@ -538,6 +538,11 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=x+1;>x=y -> bla()".asFormula))
   }
 
+  it should "use <*> approx to forward bla() <-> <{x:=x+1;}*>x=y to <x:=x+1;>x=y -> bla()" in {
+    useFor("<*> approx")(SuccPosition(0, PosInExpr(1::Nil))) (
+      Provable.startProof(Sequent(Nil,IndexedSeq(), IndexedSeq("bla() <-> <{x:=x+1;}*>x=y".asFormula)))
+    ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=x+1;>x=y -> bla()".asFormula))
+  }
 
   it should "use DX to forward <x:=1;>(true&x=y) to <x:=1;><{x'=2}>x=y" in {
     useFor("DX diamond differential skip", PosInExpr(0::Nil))(SuccPosition(0, PosInExpr(1::Nil))) (
