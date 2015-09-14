@@ -28,8 +28,12 @@ class RandomContextTests extends FlatSpec with Matchers {
 
 
   def contextShouldBe[T<:Formula](origin: T, pos: PosInExpr): Boolean = {
-    val (ctx,e) = try { origin.at(pos) } catch {case e: IllegalArgumentException => println("\nInput:      " + origin +
-      "\nIllposition: " + pos); (Context(DotFormula), origin)}
+    val (ctx,e) = try { origin.at(pos) } catch {
+      case e: IllegalArgumentException => println("\nInput:      " + origin +
+      "\nIllposition: " + pos); (Context(DotFormula), origin)
+      case e: SubstitutionClashException => println("\nInput:      " + origin +
+        "\nIllposition: " + pos); (Context(DotFormula), origin)
+    }
     println("\n" +
         "\nInput:      " + origin +
         "\nPosition:   " + pos +

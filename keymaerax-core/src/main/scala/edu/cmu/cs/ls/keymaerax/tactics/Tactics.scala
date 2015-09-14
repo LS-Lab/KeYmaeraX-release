@@ -248,7 +248,7 @@ object Tactics {
   type Continuation = (Tactic, Status, Seq[ProofNode]) => Unit
 
   object Tactic {
-    private[tactics] val DEBUG = System.getProperty("DEBUG", "true")=="true"
+    private[tactics] val DEBUG = System.getProperty("DEBUG", "false")=="true"
   }
   /**
    * A schedulable tactic that can be applied to try to prove a ProofNode.

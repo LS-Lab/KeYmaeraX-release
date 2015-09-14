@@ -40,6 +40,7 @@ object FormulaTools {
    * @param formula The formula.
    * @param pos The position within formula for which the polarity is searched.
    * @return -1 for negative polarity, 1 for positive polarity, 0 for unknown polarity.
+   * @todo optimize implementation, which can be made significantly faster by a direct recursion.
    */
   def polarityAt(formula: Formula, pos: PosInExpr): Int =
     if (pos.pos.isEmpty) 1 else FormulaAugmentor(formula).at(pos.parent) match {
@@ -49,6 +50,17 @@ object FormulaTools {
       case (_, Equiv(_, _)) => 0
       case _ => polarityAt(formula, pos.parent)
     }
+
+  /**
+   * Creates a variation of this formula which has equivalences reoriented such that the polarity
+   * of the subformula at position pos in the resulting formula will be the desired polarity.
+   * @param formula The formula.
+   * @param pos The position within formula for which the polarity is searched.
+   * @return -1 for negative polarity, 1 for positive polarity, 0 for unknown polarity.
+   * @todo optimize implementation, which can be made significantly faster by a direct recursion.
+   */
+
+
 
   /**
    * Returns the first (i.e., left-most) position of subFormula within formula, if any.
