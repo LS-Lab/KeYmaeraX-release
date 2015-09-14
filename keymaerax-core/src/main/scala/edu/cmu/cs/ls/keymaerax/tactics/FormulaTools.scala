@@ -42,12 +42,16 @@ object FormulaTools {
    * @return -1 for negative polarity, 1 for positive polarity, 0 for unknown polarity.
    */
   def polarityAt(formula: Formula, pos: PosInExpr): Int =
-    if (pos.pos.isEmpty) 1 else FormulaAugmentor(formula).at(pos.parent) match {
-      case (_, Not(_)) => -polarityAt(formula, pos.parent)
-      case (_, Imply(_, _)) if pos.pos.last == 0 => -polarityAt(formula, pos.parent)
-      case (_, Imply(_, _)) if pos.pos.last == 1 => polarityAt(formula, pos.parent)
-      case (_, Equiv(_, _)) => 0
-      case _ => polarityAt(formula, pos.parent)
+    if (pos.pos.isEmpty) 1 else formula match {
+      case Not(g) => require(pos.head == 0, "Unary operator must have position head 0, but was " + pos); -polarityAt(g, pos.child)
+      case Imply(l, _) if pos.head == 0 => -polarityAt(l, pos.child)
+      case Imply(_, r) if pos.head == 1 => polarityAt(r, pos.child)
+      case Equiv(_, _) => 0
+      case f: UnaryCompositeFormula  => require(pos.head == 0, "Unary operator must have position head 0, but was " + pos); polarityAt(f.child, pos.child)
+      case f: BinaryCompositeFormula if pos.head == 0 => polarityAt(f.left, pos.child)
+      case f: BinaryCompositeFormula if pos.head == 1 => polarityAt(f.right, pos.child)
+      case f: Modal                  => require(pos.head == 1, "Modal operator must have position head 1, but was " + pos); polarityAt(f.child, pos.child)
+      case f: Quantified             => require(pos.head == 1, "Quantified must have position head 1, but was " + pos); polarityAt(f.child, pos.child)
     }
 
   /**
