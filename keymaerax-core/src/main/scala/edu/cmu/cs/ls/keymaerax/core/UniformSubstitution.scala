@@ -338,6 +338,8 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
           subsDefs.find(_.what == DotTerm).get.repl.asInstanceOf[Term]
         case DotTerm if !subsDefs.exists(_.what == DotTerm) => DotTerm
         case n: Number => n
+        //@note except for Differential, the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
+        // case f:BinaryCompositeTerm => f.reapply(usubst(f.left), usubst(f.right))
          // homomorphic cases
         case Neg(e) => Neg(usubst(e))
         case Plus(l, r)   => Plus(usubst(l),   usubst(r))
@@ -385,6 +387,9 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
           subsDefs.find(_.what == DotFormula).get.repl.asInstanceOf[Formula]
         case DotFormula if !subsDefs.exists(_.what == DotFormula) => DotFormula
         case True | False => formula
+
+        //@note except for DifferentialFormula, the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
+        // case f:BinaryCompositeTerm => f.reapply(usubst(f.left), usubst(f.right))
 
         // pseudo-homomorphic cases
         case Equal(l, r)        => Equal(usubst(l), usubst(r))
