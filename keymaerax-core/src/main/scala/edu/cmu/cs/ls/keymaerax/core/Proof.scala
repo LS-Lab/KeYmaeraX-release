@@ -1137,7 +1137,7 @@ final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
           Box(Assign(repl, what), renaming(f))
         } else throw new BoundRenamingClashException("Bound renaming only to bound variables " +
           what + " is not bound", this.toString, f.prettyString)
-    } } ensuring(admissible(f))
+    } } ensuring(admissible(f), s"ghostify will not work on $f because the symbols occuring in that formula intersect with ($repl')")
 
   /**
    * Check whether this renaming is admissible for expression e, i.e.
