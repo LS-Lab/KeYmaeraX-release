@@ -575,11 +575,11 @@ trait UnifyUSCalculus {
           // and polarity of o in that will be -1
           val newPol = FormulaTools.polarityAt(Imply(c,e), FormulaTools.posOf(Imply(c,e), DotFormula).getOrElse(
             throw new IllegalArgumentException("Context should contain DotFormula")))
-          if (newPol>0) {
+          if (newPol<0) {
             // polarity of k in (Context(Imply(c,e))(k) will be +1
             // polarity of o in (Context(Imply(c,e))(o) will be -1
             monStep(Context(Imply(c, e)), mon)
-          } else if (newPol<0) {
+          } else if (newPol>0) {
             assert(FormulaTools.polarityAt(Imply(e,c), FormulaTools.posOf(Imply(e,c), DotFormula).getOrElse(
               throw new IllegalArgumentException("Context should contain DotFormula")))>0)
             // polarity of k in (Context(Imply(e,c))(k) will be +1
@@ -597,11 +597,11 @@ trait UnifyUSCalculus {
           // and polarity of o in that will be -1
           val newPol = FormulaTools.polarityAt(Imply(c,e), FormulaTools.posOf(Imply(c,e), DotFormula).getOrElse(
             throw new IllegalArgumentException("Context should contain DotFormula")))
-          if (newPol>0) {
+          if (newPol<0) {
             // polarity of k in (Context(Imply(c,e))(k) will be +1
             // polarity of o in (Context(Imply(c,e))(o) will be -1
             monStep(Context(Imply(c, e)), mon)
-          } else if (newPol<0) {
+          } else if (newPol>0) {
             assert(FormulaTools.polarityAt(Imply(e,c), FormulaTools.posOf(Imply(e,c), DotFormula).getOrElse(
               throw new IllegalArgumentException("Context should contain DotFormula")))>0)
             // polarity of k in (Context(Imply(e,c))(k) will be +1
@@ -776,40 +776,49 @@ trait UnifyUSCalculus {
             // subst(o) |- subst(k) by US
             val Cmon = CMon(C)(sideUS)
 
-            // C{subst(o)} |- C{subst(k)} for polarity > 0
             // C{subst(k)} |- C{subst(o)} for polarity < 0
+            // C{subst(k)} |- Ci{subst(o)} for polarity = 0, where <-> in C are turned into -> in Ci
+            // C{subst(o)} |- C{subst(k)} for polarity > 0
             val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)
-            //@todo need to learn to relax the context C if CMon met an equivalence here or already ask for less earlier.
-            //@todo if (polarity 0) then weaken by changing context C to have Imply instead of Equiv at appropriate place
-            //@todo assert(polarity != 0, "Polarity should be either positive or negative.\nin useFor(" + fact.conclusion.prettyString + ")\nPolarity 0 of equivalences not supported: " + C) // polarity 0: met an <->
-            val impl = if (polarity < 0) Imply(C(subst(k)), C(subst(o))) else Imply(C(subst(o)), C(subst(k)))
+            val (kk, oo) =
+              if (polarity < 0) (C(subst(k)), C(subst(o)))
+              else if (polarity == 0) {
+                val Ci = Context(FormulaTools.makePolarityAt(C.ctx, pos.inExpr, -1))
+                (Ci(subst(k)), Ci(subst(o)))
+              } else (C(subst(o)), C(subst(k)))
 
-            val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(impl)), ImplyRight(SuccPos(0)))
+            val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(kk, oo))), ImplyRight(SuccPos(0)))
 
             // |- C{subst(o)} -> C{subst(k)}
             val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(proof.conclusion.succ.length)}
             val coside: Provable = sideImply(
-              if (pos.isSucc) proof.conclusion.updated(p.top, impl)
+              if (pos.isSucc) proof.conclusion.updated(p.top, Imply(kk, oo))
               //@note drop p.top too and glue
               else Sequent(Nil, proof.conclusion.ante.patch(p.top.getIndex,Nil,1), proof.conclusion.succ).
-                glue(Sequent(Nil, IndexedSeq(), IndexedSeq(impl))),
+                glue(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(kk, oo)))),
               CoHideRight(cutPos)
             )
             // G |- C{subst(o)}  -> C{subst(k)}, D by CoHideRight
-            val proved = {if (pos.isSucc)
-              Provable.startProof(proof.conclusion.updated(pos.top, C(subst(o))))(
-                CutRight(C(subst(k)), pos.top.asInstanceOf[SuccPos]), 0
-              ) (coside, 1)
-              // G |- C{subst(o)}, D by CutRight with coside
-            else
-              //@todo flip o,k sides?
-              Provable.startProof(proof.conclusion.updated(pos.top, C(subst(o))))(
-                CutLeft(C(subst(k)), pos.top.asInstanceOf[AntePos]), 0
-              ) (coside, 1)
-              // C{subst(o)}, G |- D by CutLeft with coside
-            } /*ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
-              ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
-            proved(proof, 0)
+            val proved = {
+              if (pos.isSucc)
+                Provable.startProof(proof.conclusion.updated(pos.top, oo))(
+                  CutRight(kk, pos.top.asInstanceOf[SuccPos]), 0
+                ) (coside, 1)
+                // G |- C{subst(o)}, D by CutRight with coside
+              else
+                //@todo flip o,k sides?
+                Provable.startProof(proof.conclusion.updated(pos.top, oo))(
+                  CutLeft(kk, pos.top.asInstanceOf[AntePos]), 0
+                ) (coside, 1)
+                // C{subst(o)}, G |- D by CutLeft with coside
+              } /*ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
+                ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
+
+            if (polarity == 0 && pos.isSucc) {
+              proved(Provable.startProof(proved.subgoals.head)(EquivifyRight(pos.top.asInstanceOf[SuccPos]), 0), 0)
+            } else if (polarity == 0 && pos.isAnte) {
+              ???
+            } else proved(proof, 0)
 
           //@todo check this case!
           case Imply(DotFormula, o) =>
@@ -823,7 +832,7 @@ trait UnifyUSCalculus {
             // C{subst(o)} |- C{subst(k)} for polarity > 0
             // C{subst(k)} |- C{subst(o)} for polarity < 0
             val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)
-            //@todo need to learn to relax the context C if CMon met an equivalence here or already ask for less earlier.
+            //@todo relax the context C if CMon met an equivalence here, see case above.
             assert(polarity != 0, "Polarity should be either positive or negative. Polarity 0 of equivalences not supported: " + C) // polarity 0: met an <->
             val impl = if (polarity < 0) Imply(C(subst(o)), C(subst(k))) else Imply(C(subst(k)), C(subst(o)))
 
