@@ -815,7 +815,12 @@ trait UnifyUSCalculus {
                 ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
 
             if (polarity == 0 && pos.isSucc) {
-              proved(Provable.startProof(proved.subgoals.head)(EquivifyRight(pos.top.asInstanceOf[SuccPos]), 0), 0)
+              val equivified = proved(Provable.startProof(proved.subgoals.head)(EquivifyRight(pos.top.asInstanceOf[SuccPos]), 0), 0)
+              //@todo is equiv always top-level, so looking at inExpr.head determines direction?
+              val commuted =
+                if (pos.inExpr.head == 1) equivified(CommuteEquivRight(pos.top.asInstanceOf[SuccPos]), 0)
+                else equivified
+              commuted(proof, 0)
             } else if (polarity == 0 && pos.isAnte) {
               ???
             } else proved(proof, 0)
