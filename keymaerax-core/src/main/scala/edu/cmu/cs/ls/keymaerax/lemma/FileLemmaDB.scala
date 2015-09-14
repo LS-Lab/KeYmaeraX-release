@@ -89,4 +89,7 @@ class FileLemmaDB extends LemmaDB {
     assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemma, "Lemma stored in DB should be identical to lemma in memory " + lemma)
   }
 
+  override def deleteDatabase(): Unit = {
+    lemmadbpath.delete()
+  }
 }

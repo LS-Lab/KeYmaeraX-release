@@ -83,6 +83,8 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
     case FuncOf(f:Function, theta)        => FuncOf(f, rename(theta))
     case Anything | Nothing | DotTerm     => term
     // homomorphic cases
+    //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
+    // case f:BinaryCompositeTerm => f.reapply(rename(f.left), rename(f.right))
     case Neg(e)       => Neg(rename(e))
     case Plus(l, r)   => Plus(rename(l),   rename(r))
     case Minus(l, r)  => Minus(rename(l),  rename(r))
@@ -99,6 +101,9 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
     case PredicationalOf(c, fml) => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
     case DotFormula         => if (semanticRenaming) DotFormula else throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
     case True | False       => formula
+
+    //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
+    // case f:BinaryCompositeFormula => f.reapply(rename(f.left), rename(f.right))
 
     // pseudo-homomorphic base cases
     case Equal(l, r)        => Equal(rename(l),        rename(r))
@@ -133,6 +138,8 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
     case AssignAny(x)                => AssignAny(renameVar(x,program))
     case Test(f)                     => Test(rename(f))
     case ODESystem(a, h)             => ODESystem(renameODE(a), rename(h))
+    //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
+    // case f:BinaryCompositeProgram => f.reapply(rename(f.left), rename(f.right))
     case Choice(a, b)                => Choice(rename(a), rename(b))
     case Compose(a, b)               => Compose(rename(a), rename(b))
     case Loop(a)                     => Loop(rename(a))
