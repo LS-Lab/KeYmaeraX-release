@@ -36,7 +36,7 @@ object FormulaTools {
   }
 
   /**
-   * Computes the polarity of the subformula at position pos in formula.
+   * Returns the polarity of the subformula at position pos in formula.
    * @param formula The formula.
    * @param pos The position within formula for which the polarity is searched.
    * @return -1 for negative polarity, 1 for positive polarity, 0 for unknown polarity.
@@ -53,6 +53,33 @@ object FormulaTools {
       case f: Modal                  => require(pos.head == 1, "Modal operator must have position head 1, but was " + pos); polarityAt(f.child, pos.child)
       case f: Quantified             => require(pos.head == 1, "Quantified must have position head 1, but was " + pos); polarityAt(f.child, pos.child)
     }
+
+  /**
+   * Returns a formula with equivalences turned into implications such that the polarity of the subformula at position
+   * pos has the specified polarity.
+   * @param formula The formula
+   * @param pos The position that should have the desired polarity.
+   * @param polarity The desired polarity, must be either 1 (positive polarity) or -1 (negative polarity).
+   * @return The formula with equivalences turned into implications.
+   */
+  def makePolarityAt(formula: Formula, pos: PosInExpr, polarity: Int): Formula = {
+    require(polarity == 1 || polarity == -1, "Polarity must be either positive or negative")
+    if (pos.pos.isEmpty && polarity == 1) formula
+    else if (pos.pos.isEmpty && polarity == -1) Not(formula)
+    else formula match {
+      case Equiv(l, r) if pos.head == 0 && polarityAt(l, pos.child) * polarity == -1 => Imply(l, r)
+      case Equiv(l, r) if pos.head == 0 && polarityAt(l, pos.child) * polarity ==  1 => Imply(r, l)
+      case Equiv(l, r) if pos.head == 0 && polarityAt(l, pos.child) * polarity ==  0 => Imply(makePolarityAt(l, pos.child, -polarity), r)
+      case Equiv(l, r) if pos.head == 1 && polarityAt(r, pos.child) * polarity == -1 => Imply(r, l)
+      case Equiv(l, r) if pos.head == 1 && polarityAt(r, pos.child) * polarity ==  1 => Imply(l, r)
+      case Equiv(l, r) if pos.head == 1 && polarityAt(r, pos.child) * polarity ==  0 => Imply(l, makePolarityAt(r, pos.child, polarity))
+      case f: UnaryCompositeFormula  => require(pos.head == 0, "Unary operator must have position head 0, but was " + pos); f.reapply(makePolarityAt(f.child, pos.child, polarity))
+      case f: BinaryCompositeFormula if pos.head == 0 => f.reapply(makePolarityAt(f.left, pos.child, polarity), f.right)
+      case f: BinaryCompositeFormula if pos.head == 1 => f.reapply(f.left, makePolarityAt(f.right, pos.child, polarity))
+      case f: Modal                  => require(pos.head == 1, "Modal operator must have position head 1, but was " + pos); f.reapply(f.program, makePolarityAt(f.child, pos.child, polarity))
+      case f: Quantified             => require(pos.head == 1, "Quantified must have position head 1, but was " + pos); f.reapply(f.vars, makePolarityAt(f.child, pos.child, polarity))
+    }
+  }
 
   /**
    * Returns the first (i.e., left-most) position of subFormula within formula, if any.
