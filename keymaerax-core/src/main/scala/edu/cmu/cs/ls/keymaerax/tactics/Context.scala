@@ -108,9 +108,9 @@ object Context {
   private def context(term: Term, pos: PosInExpr): (Term, Expression) = if (pos==HereP) (DotTerm,term) else {term match {
     case FuncOf(f,t)     if pos.head==0 => val sp = context(t, pos.child); (FuncOf(f, sp._1), sp._2)
     // homomorphic cases
-    case f:UnaryCompositeTerm  if pos.head==0 => val sp = context(f.child, pos.child); (f.alike(sp._1), sp._2)
-    case f:BinaryCompositeTerm if pos.head==0 => val sp = context(f.left, pos.child); (f.alike(sp._1, f.right), sp._2)
-    case f:BinaryCompositeTerm if pos.head==1 => val sp = context(f.right, pos.child); (f.alike(f.left, sp._1), sp._2)
+    case f:UnaryCompositeTerm  if pos.head==0 => val sp = context(f.child, pos.child); (f.reapply(sp._1), sp._2)
+    case f:BinaryCompositeTerm if pos.head==0 => val sp = context(f.left, pos.child); (f.reapply(sp._1, f.right), sp._2)
+    case f:BinaryCompositeTerm if pos.head==1 => val sp = context(f.right, pos.child); (f.reapply(f.left, sp._1), sp._2)
     case _ => throw new IllegalArgumentException("split position " + pos + " of term " + term + " may not be defined")
   }} ensuring(r => r._1.getClass == term.getClass, "Context has identical top types " + term + " at " + pos)
 
@@ -119,15 +119,15 @@ object Context {
     case PredOf(p,t)          if pos.head==0 => val sp = context(t, pos.child); (PredOf(p, sp._1), sp._2)
     case PredicationalOf(c,t) if pos.head==0 => val sp = context(t, pos.child); (PredicationalOf(c, sp._1), sp._2)
     // pseudo-homomorphic cases
-    case f:ComparisonFormula  if pos.head==0 => val sp = context(f.left, pos.child); (f.alike(sp._1, f.right), sp._2)
-    case f:ComparisonFormula  if pos.head==1 => val sp = context(f.right, pos.child); (f.alike(f.left, sp._1), sp._2)
+    case f:ComparisonFormula  if pos.head==0 => val sp = context(f.left, pos.child); (f.reapply(sp._1, f.right), sp._2)
+    case f:ComparisonFormula  if pos.head==1 => val sp = context(f.right, pos.child); (f.reapply(f.left, sp._1), sp._2)
     // homomorphic cases
-    case f:UnaryCompositeFormula  if pos.head==0 => val sp = context(f.child, pos.child); (f.alike(sp._1), sp._2)
-    case f:BinaryCompositeFormula if pos.head==0 => val sp = context(f.left, pos.child); (f.alike(sp._1, f.right), sp._2)
-    case f:BinaryCompositeFormula if pos.head==1 => val sp = context(f.right, pos.child); (f.alike(f.left, sp._1), sp._2)
-    case f:Quantified             if pos.head==0 => val sp = context(f.child, pos.child); (f.alike(f.vars, sp._1), sp._2)
-    case f:Modal                  if pos.head==0 => val sp = context(f.program, pos.child); (f.alike(sp._1, f.child), sp._2)
-    case f:Modal                  if pos.head==1 => val sp = context(f.child, pos.child); (f.alike(f.program, sp._1), sp._2)
+    case f:UnaryCompositeFormula  if pos.head==0 => val sp = context(f.child, pos.child); (f.reapply(sp._1), sp._2)
+    case f:BinaryCompositeFormula if pos.head==0 => val sp = context(f.left, pos.child); (f.reapply(sp._1, f.right), sp._2)
+    case f:BinaryCompositeFormula if pos.head==1 => val sp = context(f.right, pos.child); (f.reapply(f.left, sp._1), sp._2)
+    case f:Quantified             if pos.head==0 => val sp = context(f.child, pos.child); (f.reapply(f.vars, sp._1), sp._2)
+    case f:Modal                  if pos.head==0 => val sp = context(f.program, pos.child); (f.reapply(sp._1, f.child), sp._2)
+    case f:Modal                  if pos.head==1 => val sp = context(f.child, pos.child); (f.reapply(f.program, sp._1), sp._2)
     case _ => throw new IllegalArgumentException("split position " + pos + " of formula " + formula + " may not be defined")
   }} ensuring(r => r._1.getClass == formula.getClass, "Context has identical top types " + formula + " at " + pos)
 
@@ -143,9 +143,9 @@ object Context {
     case ODESystem(ode, h) if pos.head==1 => val sp = context(h, pos.child); (ODESystem(ode, sp._1), sp._2)
 
     // homomorphic cases
-    case f:UnaryCompositeProgram  if pos.head==0 => val sp = context(f.child, pos.child); (f.alike(sp._1), sp._2)
-    case f:BinaryCompositeProgram if pos.head==0 => val sp = context(f.left, pos.child); (f.alike(sp._1, f.right), sp._2)
-    case f:BinaryCompositeProgram if pos.head==1 => val sp = context(f.right, pos.child); (f.alike(f.left, sp._1), sp._2)
+    case f:UnaryCompositeProgram  if pos.head==0 => val sp = context(f.child, pos.child); (f.reapply(sp._1), sp._2)
+    case f:BinaryCompositeProgram if pos.head==0 => val sp = context(f.left, pos.child); (f.reapply(sp._1, f.right), sp._2)
+    case f:BinaryCompositeProgram if pos.head==1 => val sp = context(f.right, pos.child); (f.reapply(f.left, sp._1), sp._2)
     case _ => throw new IllegalArgumentException("split position " + pos + " of program " + program + " may not be defined")
   }} ensuring(r => r._1==noContext || r._1.getClass == program.getClass, "Context has identical top types " + program + " at " + pos)
 
@@ -171,9 +171,9 @@ object Context {
   def replaceAt(term: Term, pos: PosInExpr, repl: Expression): Term = if (pos==HereP) repl.asInstanceOf[Term] else term match {
     case FuncOf(f,t)     if pos.head==0 => FuncOf(f, replaceAt(t, pos.child, repl))
     // homomorphic cases
-    case f:UnaryCompositeTerm  if pos.head==0 => f.alike(replaceAt(f.child, pos.child, repl))
-    case f:BinaryCompositeTerm if pos.head==0 => f.alike(replaceAt(f.left, pos.child, repl), f.right)
-    case f:BinaryCompositeTerm if pos.head==1 => f.alike(f.left, replaceAt(f.right, pos.child, repl))
+    case f:UnaryCompositeTerm  if pos.head==0 => f.reapply(replaceAt(f.child, pos.child, repl))
+    case f:BinaryCompositeTerm if pos.head==0 => f.reapply(replaceAt(f.left, pos.child, repl), f.right)
+    case f:BinaryCompositeTerm if pos.head==1 => f.reapply(f.left, replaceAt(f.right, pos.child, repl))
     case _ => throw new IllegalArgumentException("replaceAt position " + pos + " of term " + term + " may not be defined")
   }
 
@@ -183,15 +183,15 @@ object Context {
     case PredOf(p,t)          if pos.head==0 => PredOf(p, replaceAt(t, pos.child, repl))
     case PredicationalOf(c,t) if pos.head==0 => PredicationalOf(c, replaceAt(t, pos.child, repl))
     // pseudo-homomorphic cases
-    case f:ComparisonFormula  if pos.head==0 => f.alike(replaceAt(f.left, pos.child, repl), f.right)
-    case f:ComparisonFormula  if pos.head==1 => f.alike(f.left, replaceAt(f.right, pos.child, repl))
+    case f:ComparisonFormula  if pos.head==0 => f.reapply(replaceAt(f.left, pos.child, repl), f.right)
+    case f:ComparisonFormula  if pos.head==1 => f.reapply(f.left, replaceAt(f.right, pos.child, repl))
     // homomorphic cases
-    case f:UnaryCompositeFormula  if pos.head==0 => f.alike(replaceAt(f.child, pos.child, repl))
-    case f:BinaryCompositeFormula if pos.head==0 => f.alike(replaceAt(f.left, pos.child, repl), f.right)
-    case f:BinaryCompositeFormula if pos.head==1 => f.alike(f.left, replaceAt(f.left, pos.child, repl))
-    case f:Quantified             if pos.head==0 => f.alike(f.vars, replaceAt(f.child, pos.child, repl))
-    case f:Modal                  if pos.head==0 => f.alike(replaceAt(f.program, pos.child, repl), f.child)
-    case f:Modal                  if pos.head==1 => f.alike(f.program, replaceAt(f.child, pos.child, repl))
+    case f:UnaryCompositeFormula  if pos.head==0 => f.reapply(replaceAt(f.child, pos.child, repl))
+    case f:BinaryCompositeFormula if pos.head==0 => f.reapply(replaceAt(f.left, pos.child, repl), f.right)
+    case f:BinaryCompositeFormula if pos.head==1 => f.reapply(f.left, replaceAt(f.left, pos.child, repl))
+    case f:Quantified             if pos.head==0 => f.reapply(f.vars, replaceAt(f.child, pos.child, repl))
+    case f:Modal                  if pos.head==0 => f.reapply(replaceAt(f.program, pos.child, repl), f.child)
+    case f:Modal                  if pos.head==1 => f.reapply(f.program, replaceAt(f.child, pos.child, repl))
     case _ => throw new IllegalArgumentException("replaceAt position " + pos + " of formula " + formula + " may not be defined")
   }
 
@@ -208,9 +208,9 @@ object Context {
     case ODESystem(ode, h) if pos.head==1 => ODESystem(ode, replaceAt(h, pos.child, repl))
 
     // homomorphic cases
-    case f:UnaryCompositeProgram  if pos.head==0 => f.alike(replaceAt(f.child, pos.child, repl))
-    case f:BinaryCompositeProgram if pos.head==0 => f.alike(replaceAt(f.left, pos.child, repl), f.right)
-    case f:BinaryCompositeProgram if pos.head==1 => f.alike(f.left, replaceAt(f.right, pos.child, repl))
+    case f:UnaryCompositeProgram  if pos.head==0 => f.reapply(replaceAt(f.child, pos.child, repl))
+    case f:BinaryCompositeProgram if pos.head==0 => f.reapply(replaceAt(f.left, pos.child, repl), f.right)
+    case f:BinaryCompositeProgram if pos.head==1 => f.reapply(f.left, replaceAt(f.right, pos.child, repl))
     case _ => throw new IllegalArgumentException("replaceAt position " + pos + " of program " + program + " may not be defined")
   }
 
