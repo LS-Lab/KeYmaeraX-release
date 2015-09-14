@@ -209,7 +209,7 @@ object SpiralGenerator extends CodeGenerator {
 
       // atomic terms
       case Number(n) =>
-        assert(n.isValidDouble || n.isValidLong, throw new CodeGenerationException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
+        assert(n.isDecimalDouble || n.isValidLong, throw new CodeGenerationException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
         "TReal.value(" + n.underlying().toString + ")"
       case t: Variable => nameIdentifier(t)
       case FuncOf(fn, child) =>
