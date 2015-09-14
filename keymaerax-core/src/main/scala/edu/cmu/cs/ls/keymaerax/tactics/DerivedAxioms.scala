@@ -1985,11 +1985,11 @@ object DerivedAxioms {
 
   /**
    * {{{Axiom "+<= up".
-   *    x+y<=z <- ((x<=X & y<=Y) & X+Y<=Z)
+   *    x+y<=z <- ((x<=X & y<=Y) & X+Y<=z)
    * End.
    * }}}
    */
-  lazy val intervalUpPlusF = "x+y<=z <- ((x<=X & y<=Y) & X+Y<=Z)".asFormula
+  lazy val intervalUpPlusF = "x+y<=z <- ((x<=X & y<=Y) & X+Y<=z)".asFormula
   lazy val intervalUpPlus = derivedAxiom("+<= up",
     Sequent(Nil, IndexedSeq(), IndexedSeq(intervalUpPlusF)),
     TactixLibrary.QE
