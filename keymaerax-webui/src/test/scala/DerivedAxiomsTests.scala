@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, CheckinTest}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags.CheckinTest
@@ -24,7 +25,8 @@ import scala.collection.immutable._
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  * @todo add a reflection-based test at the end that checks all lazy val in DerivedAxioms, even if that does not fail separately it gives exhaustiveness.
  */
-//@todo @CheckinTest
+@CheckinTest
+@SummaryTest
 class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))
@@ -199,6 +201,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetT)}
   it should "prove \\forall->\\exists" in {check(forallThenExistsT)}
   it should "prove DG differential pre-ghost" in {check(DGpreghostT)}
+  it should "prove DW differential weakening" in {check(DWeakeningT)}
   it should "prove abs" in {check(absT)}
   it should "prove min" in {check(minT)}
   it should "prove max" in {check(maxT)}
