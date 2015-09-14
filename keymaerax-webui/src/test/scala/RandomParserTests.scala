@@ -4,6 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import testHelper.KeYmaeraXTestTags.{SlowTest, UsualTest, SummaryTest, CheckinTest}
+
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
@@ -36,6 +38,13 @@ class RandomParserTests extends FlatSpec with Matchers {
   }
 
   "The parser" should "reparse pretty-prints of random formulas" in {
+  }
+  "The positioning" should "consistently split formulas (checkin)" taggedAs(CheckinTest) in {test(10)}
+  it should "consistently split formulas (summary)" taggedAs(SummaryTest) in {test(50,8)}
+  it should "consistently split formulas (usual)" taggedAs(UsualTest) in {test(1000,10)}
+  it should "consistently split formulas (slow)" taggedAs(SlowTest) in {test(40000,20)}
+
+  private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
       val e = rand.nextFormula(randomComplexity)
       val printed = pp.stringify(e)
@@ -46,6 +55,5 @@ class RandomParserTests extends FlatSpec with Matchers {
       println("Reparsing: " + printed)
       parseShouldBe(printed, e)
     }
-  }
 
 }

@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 
@@ -28,6 +29,7 @@ import scala.collection.immutable._
  * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
  */
 object TactixLibrary extends UnifyUSCalculus {
+  private val parser = KeYmaeraXParser
 
 //  /** step: makes one sequent proof step to simplify the formula at the indicated position (unless @invariant needed) */
   val step                    : PositionTactic = TacticLibrary.step
@@ -71,6 +73,18 @@ object TactixLibrary extends UnifyUSCalculus {
 
   // Locating applicable positions for PositionTactics
 
+
+  /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
+  def llu(tactic: PositionTactic, shape: Formula): Tactic =
+    SearchTacticsImpl.locateAnte(tactic, f => UnificationMatch.unifiable(f, shape)!=None)
+  /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
+  def llu(tactic: PositionTactic, shape: String): Tactic = llu(tactic, parser.formulaParser(shape))
+  /** Locate applicable position in succedent on the right in which something matching the given shape occurs */
+  def lru(tactic: PositionTactic, shape: Formula): Tactic =
+    SearchTacticsImpl.locateSucc(tactic, f => UnificationMatch.unifiable(f, shape)!=None)
+  /** Locate applicable position in succedent on the right in which something matching the given shape occurs */
+  def lru(tactic: PositionTactic, shape: String): Tactic = lru(tactic, parser.formulaParser(shape))
+
   /** Locate applicable position in succedent on the right in which fml occurs verbatim */
   def ls(tactic: PositionTactic, fml: String = "", key: Option[Expression] = None): Tactic =
     SearchTacticsImpl.locateSucc(tactic,
@@ -83,13 +97,12 @@ object TactixLibrary extends UnifyUSCalculus {
     SearchTacticsImpl.locateAnte(tactic,
       if (fml == "") _ => true else _ == fml.asFormula,
       if (key.isDefined) Some(_ == key.get) else None)
-  /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
-  //@todo implement using = SearchTacticsImpl.locateSucc(tactic, UnificationMatcher.unifiable(s(pos), parser(shape))!=None)
-  def la(tactic: PositionTactic, shape: String): Tactic = ???
   /** Locate applicable position in antecedent on the left */
   def lL(tactic: PositionTactic): Tactic = la(tactic)
   /** Locate applicable position in left or right in antecedent or succedent */
   def l(tactic: PositionTactic): Tactic  = TacticLibrary.locateAnteSucc(tactic)
+  /** Locate applicable position within a given position */
+  def lin(tactic: PositionTactic): PositionTactic = ???
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Propositional tactics
@@ -213,12 +226,12 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val G                  : Tactic         = AxiomaticRuleTactics.goedelT
   /** allG: all generalization rule proves the formula after a universal quantifier in isolation */
   lazy val allG               : Tactic         = AxiomaticRuleTactics.forallGeneralizationT
-  /** CT: Term Congruence: Contextual Equivalence of terms proves an equality */
+  /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality to an equality */
   def CT(inEqPos: PosInExpr)  : Tactic         = ???
-  /** CQ: Equation Congruence: Contextual Equivalence of terms proves an equivalence */
-  def CQ(inEqPos: PosInExpr)  : Tactic         = AxiomaticRuleTactics.equationCongruenceT(inEqPos)
-  /** CE: Congruence: Contextual Equivalence proves an equivalence */
-  def CE(inEqPos: PosInExpr)  : Tactic         = AxiomaticRuleTactics.equivalenceCongruenceT(inEqPos)
+  /** CQ: Equation Congruence: Contextual Equivalence of terms at the indicated position to reduce an equivalence to an equation */
+  //def CQ(inEqPos: PosInExpr)  : Tactic
+  /** CE: Congruence: Contextual Equivalence at the indicated position to reduce an equivalence to an equivalence */
+  //def CE(inEqPos: PosInExpr)  : Tactic
   /** Monb: Monotone for [a;]p(x) |- [a;]q(x) reduces to proving p(x) |- q(x) */
   lazy val Monb               : Tactic         = AxiomaticRuleTactics.boxMonotoneT
   /** Mond: Monotone for <a;>p(x) |- <a;>q(x) reduces to proving p(x) |- q(x) */
@@ -243,6 +256,8 @@ object TactixLibrary extends UnifyUSCalculus {
 
   /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. */
   lazy val equivifyR          : PositionTactic = PropositionalTacticsImpl.equivifyRightT
+  /** Commute an equivalence on the right. */
+  lazy val commuteEquivR      : PositionTactic = PropositionalTacticsImpl.commuteEquivRightT
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.

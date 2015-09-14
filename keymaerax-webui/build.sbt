@@ -78,18 +78,6 @@ watchSources <++= baseDirectory map {
 }
 
 
-//unmanagedResourceDirectories in Compile <++= baseDirectory map { 
-//  path => ((path / "src/main/scala") ** "*.txt").get 
-//}
-
-//unmanagedResourceDirectories in Compile <+= baseDirectory {_ / "src/main/scala"}
-
-//unmanagedResourceDirectories in Compile += baseDirectory.value / "src/main/scala"
-//unmanagedResourceDirectories in Test += baseDirectory.value / "src/main/scala"
-
-// def axiomSources = (baseDirectory.value / "src/main/scala" ##) ** "*.txt"
-// override def mainResources = super.mainResources +++ axiomSources
-
 ////////////////////////////////////////////////////////////////////////////////
 // Unit testing
 ////////////////////////////////////////////////////////////////////////////////
@@ -104,14 +92,8 @@ testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/te
 // Builds -- make sure you are using SBT 13.6+
 ////////////////////////////////////////////////////////////////////////////////
 
-//mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.hydra.Boot")
-
-// web UI
-//mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.Main")
-
 // command line UI
 mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX")
-
 
 test in assembly := {}
 

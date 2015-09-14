@@ -26,7 +26,9 @@ object AxiomaticRuleTactics {
   /**
    * Creates a new tactic for CE equivalence congruence rewriting.
    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
+   * @see [[UnifyUSCalculus.CE()]]
    */
+  @deprecated("Preferably use UnifyUSCalculus.CE(PosInExpr) instead")
   def equivalenceCongruenceT(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CE congruence") { outer =>
     override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
       (node.sequent.succ.head match {
@@ -60,6 +62,8 @@ object AxiomaticRuleTactics {
   /**
    * Returns a tactic for CE one-sided congruence with purely propositional unpeeling. Useful when unpeeled fact is not
    * an equivalence, as needed by CE. May perform better than CE for small contexts.
+   * @see [[UnifyUSCalculus.CMon(Context)]]
+   * @see [[UnifyUSCalculus.CE(Context)]]
    * @see[[AxiomaticRuleTactics.equivalenceCongruenceT()]]
    * @example{{{
    *                  z=1 |- z>0
@@ -139,6 +143,7 @@ object AxiomaticRuleTactics {
    * Creates a new tactic for CQ equation congruence rewriting.
    * @return The newly created tactic.
    */
+  @deprecated("Use the more powerful and reliable UnifyUSCalculus.CQ instead.")
   def equationCongruenceT(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CQ equation congruence") { outer =>
     override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
       (node.sequent.succ.head match {

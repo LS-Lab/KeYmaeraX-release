@@ -69,10 +69,25 @@ trait TacticToolBinding extends Ordered[TacticToolBinding] {
   def tactic: Tactic
 }
 
+/** Interface for classes that want to know about tactic exceptions */
+trait TacticExceptionListener {
+  /**
+   *
+   * @param tactic The tactic that threw the exception.
+   * @param exn The exception that was thrown.
+   */
+  def acceptTacticException(tactic: Tactic, exn : Exception) : Unit
+}
+
 /**
  * Executes a tactic on a tool.
  */
 class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends TacticToolBinding {
+  var listeners : List[TacticExceptionListener] = List()
+  def addListener(listener : TacticExceptionListener) : Unit =
+    listeners = listeners :+ listener
+  def removeListener(listener : TacticExceptionListener) : Unit =
+    listeners = listeners.filter(l => !l.equals(listener))
 
   def compare(that : TacticToolBinding) = this.tactic.priority - that.tactic.priority
 
@@ -91,11 +106,11 @@ class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends TacticToo
           tactic.continuation(tactic, Failed, Seq(node))
         }
       } catch {
-        case e: Exception =>
-          // TODO report exception somewhere useful
-          //@todo pass in the tactic id and a database when running from web ui, and update status with an exception.
+        case e: Exception => {
+          listeners.foreach(l => l.acceptTacticException(tactic, e))
           e.printStackTrace()
           tactic.continuation(tactic, Failed, Seq(node))
+        }
       }
     }
     tactic.unregister
@@ -121,11 +136,11 @@ class TacticExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) e
           }
         } catch {
           case ex: NoSuchElementException => scheduler.synchronized {
-              // TODO swallows useful exceptions, implement waiting for real
-              /* poll vs. wait */
-              scheduler.blocked = scheduler.blocked + 1
-              scheduler.wait()
-            }
+            // TODO swallows useful exceptions, implement waiting for real
+            /* poll vs. wait */
+            scheduler.blocked = scheduler.blocked + 1
+            scheduler.wait()
+          }
         }
       } catch {
         case ex: InterruptedException =>

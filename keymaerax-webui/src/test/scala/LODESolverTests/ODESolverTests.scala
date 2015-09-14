@@ -1,13 +1,14 @@
+package LODESolverTests
+
 /**
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics._
-import org.scalatest.{PrivateMethodTester, FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
+import edu.cmu.cs.ls.keymaerax.tactics._
+import org.scalatest.PrivateMethodTester
 
 import scala.collection.immutable
 
@@ -15,7 +16,7 @@ import scala.collection.immutable
  * @author Nathan Fulton
  * Created by nfulton on 4/23/15.
  */
-class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
+class ODESolverTests extends testHelper.TacticTestSuite with PrivateMethodTester {
   //Useful values used throughout these tests.
   val nov    = Variable("doesnotoccur", None, Real)
   val acc    = Variable("acc", None, Real) //oh wow Matchers has a publicly exposed variable named a...
@@ -100,7 +101,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
     node shouldBe 'closed
   }
 
-  it should "work with ACAS X input when time is explicit" in {
+  ignore should "work with ACAS X input when time is explicit" in {
     val ante = "r=rInit&dhd=dhdInit&h=hInit&t=tInit&(w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0)".asFormula
     val succ = "[{r'=-rv(),dhd'=ao(),h'=-dhd, t' = 0*t+1  & w()*dhd>=w()*dhf()|w()*ao()>=a()}]((w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0))".asFormula
     val s = Sequent(Nil, immutable.IndexedSeq(ante), immutable.IndexedSeq(succ))
@@ -113,7 +114,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
   }
 }
 
-class InverseDiffGhostTests extends TacticTestSuite {
+class InverseDiffGhostTests extends testHelper.TacticTestSuite {
   "Comma Commute Axiom" should "work on a binary example" in {
     val f = "[{x' = v, v' = a & t >= 0}]x>0".asFormula
     val node = helper.formulaToNode(f)
@@ -126,7 +127,9 @@ class InverseDiffGhostTests extends TacticTestSuite {
 
   }
 
-  "Inverse Ghost" should "work when we don't have to reorder diffeq" in {
+  "Inverse Ghost" should "placeholder" in {}
+
+  ignore should "work when we don't have to reorder diffeq" in {
     val f = "\\exists x ([{x' = 0*x+v, v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0)".asFormula
 //    println(ODETactics.SystemHelpers.axiomInstance(f).prettyString)
     val node = helper.formulaToNode(f)
@@ -139,7 +142,7 @@ class InverseDiffGhostTests extends TacticTestSuite {
   }
 
 
-  it should "then work on v as well" in {
+  ignore should "then work on v as well" in {
     val f = "\\exists x ([{v' = 0*v + a, t' = 0*t + 1 & true & t >= 0}]x>0)".asFormula
     val node = helper.formulaToNode(f)
     val tactic = ODETactics.inverseDiffAuxiliaryT(SuccPos(0))
@@ -150,7 +153,7 @@ class InverseDiffGhostTests extends TacticTestSuite {
       "[{t' = 0*t + 1 & true & t >= 0}]x>0".asFormula
   }
 
-  it should "not work when time is all that's left" in {
+  ignore should "not work when time is all that's left" in {
     ???
   }
 
@@ -180,7 +183,7 @@ class InverseDiffGhostTests extends TacticTestSuite {
   }
 }
 
-class InverseDiffCutTests extends TacticTestSuite {
+class InverseDiffCutTests extends testHelper.TacticTestSuite {
   ////
   // Inverse Cut Tests
   ///
@@ -212,7 +215,7 @@ class InverseDiffCutTests extends TacticTestSuite {
   }
 }
 
-class ODESolutionTactic extends TacticTestSuite {
+class ODESolutionTactic extends testHelper.TacticTestSuite {
 
   "->" should "default to correct assoc" in {
     "1=1 -> 2=2 -> 3=3".asFormula shouldBe "1=1 -> (2=2 -> 3=3)".asFormula
@@ -335,7 +338,7 @@ class ODESolutionTactic extends TacticTestSuite {
   }
 }
 
-class GhostOfLipschitz extends TacticTestSuite {
+class GhostOfLipschitz extends testHelper.TacticTestSuite {
   "Inverse Lipschitz ghost" should "work on simple example" in {
     //Make sure things occur free and bound and such a lot.
     //@todo changing v to y creates a clash...
@@ -358,7 +361,7 @@ class GhostOfLipschitz extends TacticTestSuite {
   }
 }
 
-class DGPlusPlus extends TacticTestSuite {
+class DGPlusPlus extends testHelper.TacticTestSuite {
   "DG++" should "work when no variables are different" in {
     val f = "\\forall y [{y' = x*v, x' = z, h' = -y, t' = 0*t + 1 & x=  0 & y = 0 & a=0 & t=0}]1=1".asFormula //nonsense
     val node = helper.formulaToNode(f)

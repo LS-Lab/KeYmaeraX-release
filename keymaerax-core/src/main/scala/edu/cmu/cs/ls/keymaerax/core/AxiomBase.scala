@@ -416,7 +416,16 @@ End.
 
 Axiom "|' derive or".
   (p(??) | q(??))' <-> ((p(??)') & (q(??)'))
-  /* sic! */
+  /* sic! yet <- */
+End.
+
+Axiom "forall' derive forall".
+  (\forall x p(??))' <-> (\forall x (p(??)'))
+End.
+
+Axiom "exists' derive exists".
+  (\exists x p(??))' <-> (\forall x (p(??)'))
+  /* sic! yet <- */
 End.
 
 Axiom "c()' derive constant fn".
@@ -509,14 +518,4 @@ Axiom "I induction".
   (p(??) & [{a;}*](p(??) -> [a;] p(??))) -> [{a;}*]p(??)
 End.
 """
-  /*
-  Axiom "forall' derive forall".
-  (\forall x p(??))' <-> (\forall x (p(??)'))
-End.
-
-Axiom "exists' derive exists".
-  (\exists x p(??))' <-> (\forall x (p(??)'))
-  /* sic! */
-End.
-   */
 }

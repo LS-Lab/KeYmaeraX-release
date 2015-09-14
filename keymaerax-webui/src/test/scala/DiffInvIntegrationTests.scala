@@ -15,7 +15,7 @@ import testHelper.SequentFactory._
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class DiffInvIntegrationTests extends TacticTestSuite {
+class DiffInvIntegrationTests extends testHelper.TacticTestSuite {
 
   "Assign" should "work" in {
     val f = "[a := 0;]a = 0".asFormula

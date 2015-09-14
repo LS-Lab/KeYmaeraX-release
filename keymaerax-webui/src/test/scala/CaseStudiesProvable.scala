@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.{Z3, Mathematica, KeYmaera}
-import testHelper.ProvabilityTestHelper
+import testHelper.{KeYmaeraXTestTags, ProvabilityTestHelper}
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import scala.collection.immutable
 import scala.collection.immutable.Map
@@ -91,7 +91,7 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
-  "ETCS-essentials" should "be provable with Mathematica" in {
+  "ETCS-essentials" should "be provable with Mathematica" taggedAs(KeYmaeraXTestTags.CheckinTest) in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-essentials.key"))
     helper.runTactic(master(new Generate("v^2<=2*b*(m-z)".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
@@ -225,7 +225,7 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
 
 
   //@todo
-  "Simple car" should "be provable" in {
+  "Simple car" should "be provable" taggedAs(KeYmaeraXTestTags.CaseStudyTest, KeYmaeraXTestTags.CheckinTest) in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/simplecar.key"))
 
     val plantTactic = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolutionT) & arithmeticT

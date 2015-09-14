@@ -2,14 +2,14 @@
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
-package edu.cmu.cs.ls.keymaerax.parser
+package parserTests
 
-import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
+import testHelper.KeYmaeraXTestTags
 
-import test.RandomFormula
+import scala.collection.immutable._
 
 /**
  * Tests the parser on pairs of strings that are expected to parse the same.
@@ -30,11 +30,12 @@ class PairParserTests extends FlatSpec with Matchers {
     }
   }
 
-  "The parser" should "parse table of string pairs as expected" in {
+  "The parser" should "parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
     for ((s1, s2) <- expectedParse) {
       println("input 1: " + s1 + "\ninput 2: " + s2)
       if (s2 == unparseable) {
-        a[ParseException] should be thrownBy parser(s1)
+        // ParseExceptions and CoreExceptions and AssertionErrors are simply all allowed.
+        a[Throwable] should be thrownBy parser(s1)
       } else {
         val p1 = parser(s1)
         val p2 = parser(s2)

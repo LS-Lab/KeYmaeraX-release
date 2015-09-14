@@ -14,15 +14,16 @@ import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{locateSucc,lastSucc,on
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
 import TacticLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{LabelBranch, NilT}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import scala.collection.immutable
+import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
 
 /**
  * Created by smitsch on 3/8/15.
  * @author Stefan Mitsch
  */
-class ModelplexTacticTests extends TacticTestSuite {
+class ModelplexTacticTests extends testHelper.TacticTestSuite {
 
   def monitorSize(f: Formula): Int = {
     var numOperators = 0
@@ -63,6 +64,139 @@ class ModelplexTacticTests extends TacticTestSuite {
     result.openGoals()(0).sequent.succ should contain only "-1<=fpost_0() & fpost_0()<=(m-x)/ep".asFormula
     result.openGoals()(1).sequent.ante should contain only ("0<=x".asFormula, "x<=m".asFormula, "0<ep".asFormula, "-1<=fpost_0()".asFormula, "fpost_0()<=(m-x)/ep".asFormula)
     result.openGoals()(1).sequent.succ should contain only "tpost_0()=0 & (fpost()=fpost_0() & xpost()=x & tpost()=tpost_0())".asFormula
+  }
+
+  it should "chase: find correct controller monitor by updateCalculus implicationally" in {
+    import TactixLibrary.chase
+    import TactixLibrary.proveBy
+    import TactixLibrary.useAt
+    import TactixLibrary.lin
+    import scala.collection._
+
+    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/simple.key")
+      //getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("x")/*Variable("f"), Variable("l"), Variable("c")*/)
+
+    def modelPlex: PositionTactic = chase(3, 3, e => e match {
+        // no equational assignments
+        case Box(Assign(_, _), _) => "[:=] assign" :: "[:=] assign update" :: Nil
+        case Diamond(Assign(_, _), _) => "<:=> assign" :: "<:=> assign update" :: Nil
+        // remove loops
+        case Diamond(Loop(_), _) => "<*> approx" :: Nil //"<*> approx" :: Nil
+        // remove ODEs for controller monitor
+        case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
+        case _ => AxiomIndex.axiomsFor(e)
+      })
+
+    val result = proveBy(modelplexInput, modelPlex(SuccPosition(0, PosInExpr(1 :: Nil))))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true -> ???".asFormula
+  }
+
+  it should "simple: find correct controller monitor by updateCalculus implicationally" in {
+    import TactixLibrary.chase
+    import TactixLibrary.proveBy
+    import TactixLibrary.useAt
+    import TactixLibrary.lin
+    import scala.collection._
+
+    val in = //getClass.getResourceAsStream("examples/casestudies/modelplex/simple.key")
+      getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("f"), Variable("l"), Variable("c"))
+
+    // child position needed to nibble off the <-> from the chase (maybe ought to be in chase itself???)
+    def posChild(pos: Position): Position = if (pos.isAnte)
+      AntePosition(pos.index, pos.inExpr.child)
+    else
+      SuccPosition(pos.index, pos.inExpr.child)
+
+    // prepend position where uncontrol/modelPlex chase was started off in the first place
+    def prependPos(pos: Position, prep: PosInExpr): Position = if (pos.isAnte)
+      AntePosition(pos.index, prep.append(pos.inExpr))
+    else
+      SuccPosition(pos.index, prep.append(pos.inExpr))
+
+    // mutable state per call
+    def modelPlex(loopStack: mutable.ListBuffer[Position]): PositionTactic = {
+      def uncontrol: PositionTactic = chase(3, 3, e => e match {
+        // no equational assignments
+        case Box(Assign(_, _), _) => "[:=] assign" :: "[:=] assign update" :: Nil
+        case Diamond(Assign(_, _), _) => "<:=> assign" :: "<:=> assign update" :: Nil
+        // remove loops
+        case Diamond(Loop(_), _) => "<*> stuck" :: Nil //"<*> approx" :: Nil
+        // remove ODEs for controller monitor
+        case Diamond(ODESystem(_, _), _) => "<'> stuck" :: Nil
+        case _ => AxiomIndex.axiomsFor(e)
+      },
+        (ax, pos) => pr => {
+          println("uncontrol using " + ax + " at " + pos)
+          ax match {
+            // log loop applications
+            case "<*> stuck" => posChild(pos) +=: loopStack  // this means prepend pos to stack
+              println("Stuck with <*> at stack " + loopStack)
+            case "<'> stuck" => posChild(pos) +=: loopStack
+              println("Stuck with <'> at stack " + loopStack)
+//            case "<:=> assign update" => pos +=: loopStack
+//              println("Stuck with <:=> at stack " + loopStack)
+            case _ =>
+          };
+          pr
+        }
+      )
+
+      val modelPlexRecursor = new PositionTactic("lazy modelPlex recursor") {
+        override def applies(s: Sequent, p: Position): Boolean = true
+        //@note indirect/postponed/lazy call to modelPlex is required to prevent infinite recursion in tactic construction
+        override def apply(p: Position): Tactic = modelPlex(new ListBuffer())(p)
+      }
+
+      new PositionTactic("ModelPlex") {
+        override def applies(s: Sequent, p: Position): Boolean = true
+        override def apply(p: Position): Tactic =
+          (debugAtT("huhu") & uncontrol & debugAtT("uncontrolled") &
+            (lin((useAt("<*> approx") | useAt("DX diamond differential skip")) & modelPlexRecursor)*)
+            ) (p)
+      }
+    }
+
+    val result = proveBy(modelplexInput, modelPlex(new ListBuffer[Position]())(SuccPosition(0, PosInExpr(1 :: Nil))))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true -> ???".asFormula
+  }
+
+
+
+
+
+
+  it should "find correct controller monitor by updateCalculus implicationally" in {
+    import TactixLibrary.chase
+    import TactixLibrary.proveBy
+
+    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("f"), Variable("l"), Variable("c"))
+
+    def controllerMonitor: PositionTactic = chase(3,3, e => e match {
+      // no equational assignments
+      case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
+      case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
+      // remove loops
+      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      // remove ODEs for controller monitor
+      case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
+      case _ => AxiomIndex.axiomsFor(e)
+    }
+    )
+
+    val result = proveBy(modelplexInput, controllerMonitor(SuccPosition(0, PosInExpr(1 :: Nil))))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true -> ".asFormula
   }
 
   ignore should "find correct model monitor condition" in {

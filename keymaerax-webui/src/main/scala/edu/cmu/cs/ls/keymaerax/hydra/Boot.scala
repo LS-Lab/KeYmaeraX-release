@@ -11,8 +11,8 @@ import javax.swing._
 
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
-import edu.cmu.cs.ls.keymaerax.api.ComponentConfig
-import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms
+import edu.cmu.cs.ls.keymaerax.api.{KeYmaeraInterface, ComponentConfig}
+import edu.cmu.cs.ls.keymaerax.tactics.{Tactics, DerivedAxioms}
 import spray.can.Http
 
 import scala.concurrent.duration.FiniteDuration
@@ -83,7 +83,16 @@ object Boot extends App {
     case Some(c) => (c.config("isHosted").equals("true"), c.config("host"), Integer.parseInt(c.config("port")))
     case None => (false, "127.0.0.1", 8090)
   }
-  DerivedAxioms.prepopulateDerivedLemmaDatabase()
+  try {
+    DerivedAxioms.prepopulateDerivedLemmaDatabase()
+  }
+  catch {
+    case e : Exception => {
+      println("===> WARNING: Could not prepopulate the derived lemma database. This is a critical error -- the UI will fail to work! <===")
+      println("You should configure settings in the UI and restart KeYmaera X")
+      e.printStackTrace()
+    }
+  }
 
   // start a new HTTP server on port 8080 with our service actor as the handler
   val io = IO(Http)

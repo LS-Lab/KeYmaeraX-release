@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class TermDerivationInContextTests extends TacticTestSuite {
+class TermDerivationInContextTests extends testHelper.TacticTestSuite  {
 
   "subtract" should "replace" in {
     val orig = "[x':=1;](1-1)'=0".asFormula

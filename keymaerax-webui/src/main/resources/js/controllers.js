@@ -57,18 +57,21 @@ keymaeraProofControllers.controller('MathematicaConfig',
   function($scope, $rootScope, $http, $cookies, $modal, $routeParams) {
     $http.get("/config/mathematica/suggest")
       .success(function(data) {
-          $scope.mathematicaConfigSuggestion = data
+          if(data.errorThrown) showCaughtErrorMessage($modal, data, "Encountered an error when attempting to get a suggested Mathematica configuration.")
+          else $scope.mathematicaConfigSuggestion = data
       })
       .error(function() {
-          console.error("Unhandled error when attempting to get Mathematica configuration.")
+          showErrorMessage($modal, "Encountered an error when attempting to get a suggested Mathematica configuration.")
       });
 
     $http.get("/config/mathematica")
       .success(function(data) {
-          if (data.linkName !== "" && data.jlinkLibPath !== "") {
-            $scope.linkName = data.linkName;
-            $scope.jlinkLibPath = data.jlinkLibDir;
-          }
+          if(data.errorThrown) showCaughtErrorMessage($modal, data, "Failed to retreive the server's current Mathematica configuration")
+          else {
+              if (data.linkName !== "" && data.jlinkLibPath !== "") {
+                  $scope.linkName = data.linkName;
+                  $scope.jlinkLibPath = data.jlinkLibDir;
+              }
 //          else {
 //            $http.get("/config/mathematica/suggest")
 //                .success(function(data) {
@@ -76,9 +79,10 @@ keymaeraProofControllers.controller('MathematicaConfig',
 //                    $scope.jlinkLibPath = data.jlinkPath + "/" + data.jlinkName;
 //                })
 //          }
+          }
       })
       .error(function() {
-          console.error("Unhandled error when attempting to get Mathematica configuration.")
+          showErrorMessage($modal, "Failed to retreive the server's current Mathematica configuration.")
       });
 
     $scope.configureMathematica = function() {
@@ -101,6 +105,9 @@ keymaeraProofControllers.controller('MathematicaConfig',
 
                     $("#mathematicaConfigurationAlert").hide();
                     $rootScope.mathematicaIsConfigured = data.configured;
+                }
+                else if(data.errorThrown) {
+                    showCaughtErrorMessage($modal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration")
                 }
                 else {
                     var kernelNameExists = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.kernelName) > -1 &&
@@ -125,7 +132,7 @@ keymaeraProofControllers.controller('MathematicaConfig',
                 }
             })
             .error(function(data) {
-                alert("error: " + JSON.stringify(data))
+                showCaughtErrorMessage($modal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration.")
             })
     }
 
@@ -151,7 +158,7 @@ keymaeraProofControllers.controller('MathematicaConfig.UpdateDialog', function($
 
 keymaeraProofControllers.controller('DashboardCtrl.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
   $scope.cancel = function() {
-      alert("No!")
+      alert("KeYmaeraX is shut down. Please close the window and restart the server to continue using KeYmaera X.")
       $window.close();
   }
 });
@@ -160,10 +167,6 @@ keymaeraProofControllers.controller('DashboardCtrl.ShutdownDialog', function($sc
 keymaeraProofControllers.controller('DashboardCtrl.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
 $scope.noModalForHelpDialogHack = true
 });
-
-
-
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -466,7 +469,8 @@ keymaeraProofControllers.controller('DashboardCtrl',
 
     $http.get("/keymaeraXVersion")
         .success(function(data) {
-            $scope.keymaeraXVersion = data.keymaeraXVersion
+            if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not get the serv'ers KeYmaera X version")
+            else  $scope.keymaeraXVersion = data.keymaeraXVersion
         })
         .error(function() {
             var message = "Unhandled error when attempting to get KeYmaera X version."
@@ -476,7 +480,9 @@ keymaeraProofControllers.controller('DashboardCtrl',
     $scope.mathematicaIsConfigured = true;
     $http.get("/config/mathematicaStatus")
         .success(function(data) {
-            $scope.mathematicaIsConfigured = data.configured;
+            if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not retreive Mathematica status")
+            else
+                $scope.mathematicaIsConfigured = data.configured;
         })
         .error(function() {
             var message = "Unhandled error when attempting to get Mathematica status.";
@@ -486,9 +492,12 @@ keymaeraProofControllers.controller('DashboardCtrl',
 
     $http.get('/users/' + $cookies.userId + '/dashinfo')
         .success(function(data) {
-            $scope.open_proof_count = data.open_proof_count;
-            $scope.all_models_count = data.all_models_count;
-            $scope.proved_models_count = data.proved_models_count;
+            if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not retreive dashboard info for user " + $cookies.userId)
+            else {
+                $scope.open_proof_count = data.open_proof_count;
+                 $scope.all_models_count = data.all_models_count;
+                $scope.proved_models_count = data.proved_models_count;
+            }
         })
         .error(function() {
             showErrorMessage($modal, "Failed to get dashInfo for this uer.")
@@ -498,7 +507,11 @@ keymaeraProofControllers.controller('DashboardCtrl',
     $scope.isLocal = false;
     $http.get('/isLocal')
         .success(function(data) {
+            if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not determine if the KeYmaera X server is running locally")
             $scope.isLocal = data.success;
+        })
+        .error(function() {
+            showErrorMessage($modal, "Error encountered when trying to determine if the KeYmaera X server is running locally.")
         })
 
     $scope.shutdown = function() {
@@ -565,9 +578,13 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
                                Models.getModels().shift()
                             }
                             $http.get("models/users/" + $cookies.userId).success(function(data) {
+                                if(data.errorThrown) showErrorMessage($modal, data, "Could not get models for user " + $cookies.userId)
                                 Models.addModels(data);
                                 $route.reload();
-                            });
+                            })
+                            .error(function() {
+                                showErrorMessage($modal, "Could not retrieve model list.")
+                            })
                          }
                      },
                      error: this.ajaxErrorHandler
@@ -588,8 +605,12 @@ keymaeraProofControllers.controller('ModelListCtrl',
   function ($scope, $http, $cookies, $modal, $location, Models) {
     $scope.models = [];
     $http.get("models/users/" + $cookies.userId).success(function(data) {
+        if(data.errorThrown) showErrorMessage($modal, data, "Could not get models for user " + $cookies.userId)
         $scope.models = data
-    });
+    })
+    .error(function() {
+        showErrorMessage($modal, "Could not retrieve model list")
+    })
 
     $scope.open = function (modelid) {
         var modalInstance = $modal.open({
@@ -725,7 +746,7 @@ var pollProofStatus = function(proof, userId, http) {
           }
       }).
       error(function(data, status, headers, config) {
-          console.log('Unable to poll proof status.')
+            showCaughtErrorMessage($modal, data, "Unable to poll proof status.")
       });
   }, 1000);
 }
@@ -749,6 +770,9 @@ keymaeraProofControllers.controller('ProofListCtrl',
             if (data.loadStatus == 'loading') {
               console.log("Start polling proof status");
               pollProofStatus(proof, $cookies.userId, $http);
+            }
+            if(data.loadStatus == 'Error') {
+                showCaughtErrorMessage($modal, data, "Error encountered while loading proof.")
             }
         }).
         error(function(data, status, headers, config) {
@@ -795,10 +819,15 @@ keymaeraProofControllers.controller('ModelProofsCtrl',
           console.log("Start polling proof status");
           pollProofStatus(proof, $cookies.userId, $http);
         }
+        else if(data.loadStatus == 'Error') {
+            showErrorMessage($modal, "Error encountered while attempting to load proof")
+        }
       }).
       error(function(data, status, headers, config) {
         // TODO check that it is a time out
         console.log("Start polling proof status");
+        //@TODO does this mean that there isn't necessarily an error here? Confused.
+//        showErrorMessage($modal, "Encountered error shile trying to poll proof status.")
         pollProofStatus(proof, $cookies.userId, $http);
       });
     }
@@ -839,10 +868,11 @@ $scope.treeContents = "asdf"
         var uri = "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree/"
         $http.get(uri)
             .success(function(data) {
+                if(data.errorThrown) showCaughtErrorMessage($modal, data, "Error encountered while trying to retrieve the tree.")
                 $scope.treeContents = printNode(data);
             })
             .error(function() {
-                console.log("Error encountered while trying to retrieve the tree.")
+                showErrorMessage($modal, "Error encountered while trying to retrieve the tree.")
             })
     }
 
@@ -909,11 +939,11 @@ keymaeraProofControllers.controller('TaskListCtrl',
                     });
                   } else {
                     // should never happen
-                    console.error('empty agenda even though proof is not closed (' + data.status + ')')
+                    showErrorMessage($modal, 'empty agenda even though proof is not closed (' + data.status + ')')
                   }
                 })
                 .error(function() {
-                  console.error("error retrieving proof progress")
+                  showErrorMessage($modal, "error retrieving proof progress")
                 })
             }
         }).error(function(data) {
@@ -968,7 +998,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
                                 controller: 'ErrorAlertCtrl',
                                 size: 'md',
                                 resolve: {
-                                  action: function () { return "finding dispatched tactics"; },
+                                  action: function () { return "Tactic Execution Failed -- see server console output for a full tactic execution trace."; },
                                   error: function () { return data; }
                                 }});
                             } else if (data.tacticInstStatus == 'Running') {
@@ -1017,16 +1047,21 @@ keymaeraProofControllers.controller('TaskListCtrl',
               $http.get("/proofs/" + $scope.proofId + "/sequent/" + node.id)
                   .success(function(proofNode) {
                       //TODO -- sufficient to display sequent, but may need more for interaction
-                      var agendaItem = {
-                        "nodeId": proofNode.id,
-                        "proofNode": proofNode,
-                        "readOnly": true
+                      if(proofNode.errorThrown) {
+                        showCaughtErrorMessage($modal, proofNode, "Error enoucntered while trying to get proof node.")
                       }
-                      $scope.setSelected(agendaItem);
+                      else {
+                                            var agendaItem = {
+                                              "nodeId": proofNode.id,
+                                              "proofNode": proofNode,
+                                              "readOnly": true
+                                            }
+                                            $scope.setSelected(agendaItem);
+                      }
                   })
                   .error(function() {
                       var msg = "Error: this proof is not on the Agenda and the server could not find it.";
-                      console.error(msg);
+                      showErrorMessage($modal, msg)
                   })
           }
         }
@@ -1089,7 +1124,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
                 }
              })
              .error(function() {
-                console.error("encountered error during post on runTerm.")
+                showErrorMessage($modal, "encountered error during post on runTerm.")
              })
     }
     $scope.$on('handleDispatchedTerm', function(event, tId) {
@@ -1117,7 +1152,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
                                 controller: 'ErrorAlertCtrl',
                                 size: 'md',
                                 resolve: {
-                                  action: function () { return "finding dispatched term"; },
+                                  action: function () { return "Combinator Term Execution Failed -- see server console output for a full tactic execution trace."; },
                                   error: function () { return data; }
                                 }});
                             } else if (data.tacticInstStatus == 'Running') {
@@ -1173,31 +1208,36 @@ keymaeraProofControllers.controller('TaskListCtrl',
       var uri = "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/proofhistory";
       $http.get(uri)
         .success(function(data) {
-          $scope.proofHistory = [];
-          $scope.currentProofHistoryPage = 1;
-          for (var i = 0; i < data.length; i++) {
-            var tacticName = data[i].tactic.name;
-            var tactic = Tactics.getRuleTactics()[tacticName];
-            if (tactic !== undefined) {
-              var tacticInst = {
-                id: data[i].tactic.id,
-                name: tactic.name,
-                label: tactic.label,
-                tooltip: tactic.tooltip
-              }
-              var historyItem = {
-                index: i,
-                dispatched: data[i].dispatched,
-                tactic: tacticInst
-              }
-              $scope.proofHistory.push(historyItem)
-            } else {
-              console.log("pretty printing undefined for tactic " + tacticName)
+            if(data.errorThrown) {
+                showCaughtErrorMessage($modal, data, "Error encountered while trying to get proof history.")
             }
-          }
+            else {
+              $scope.proofHistory = [];
+              $scope.currentProofHistoryPage = 1;
+              for (var i = 0; i < data.length; i++) {
+                var tacticName = data[i].tactic.name;
+                var tactic = Tactics.getRuleTactics()[tacticName];
+                if (tactic !== undefined) {
+                  var tacticInst = {
+                    id: data[i].tactic.id,
+                    name: tactic.name,
+                    label: tactic.label,
+                    tooltip: tactic.tooltip
+                  }
+                  var historyItem = {
+                    index: i,
+                    dispatched: data[i].dispatched,
+                    tactic: tacticInst
+                  }
+                  $scope.proofHistory.push(historyItem)
+                } else {
+                  showErrorMessage($modal, "pretty printing undefined for tactic " + tacticName)
+                }
+              }
+            }
         })
         .error(function() {
-          console.error("error encountered while trying to retrieve the proof history.")
+          showErrorMessage($modal, "error encountered while trying to retrieve the proof history.")
         })
     }
 
@@ -1209,7 +1249,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $scope.selectedTask = data;
       })
       .error(function() {
-        console.error("error encountered while trying to retrieve the proof history details.")
+        showErrorMessage($modal, "error encountered while trying to retrieve the proof history details.")
       })
     }
 
@@ -1239,7 +1279,7 @@ keymaeraProofControllers.controller('ProofFinishedDialogCtrl',
         $scope.validatedProofStatus = data.status
       })
       .error(function() {
-        console.error("error when validating proof")
+        showErrorMessage($modal, "error when validating proof")
       })
     }
 });
