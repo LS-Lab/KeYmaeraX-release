@@ -24,6 +24,7 @@ object Main {
     } else true
 
     if(isFirstLaunch) {
+      LemmaDatabaseInitializer.initializeFromJAR
       val java : String = javaLocation
       val keymaera : String = jarLocation
       println("Restarting KeYmaera X with sufficient stack space")
