@@ -1187,12 +1187,17 @@ object ODETactics {
       h
       ), p))) =>
       {
-        TacticHelper.axiomAlphaT(x.x, aX) & TacticHelper.axiomAlphaT(y, aY)
+        /*
+         * @todo this ordering prevents a ghostify failure in test case
+         *    ODESolveTests."Logical ODE Solver" should "work when time is explicit"
+         * But it's really unclear whether this is always the correct order.
+         */
+        TacticHelper.axiomAlphaT(y, aY) & TacticHelper.axiomAlphaT(x.x, aX)
       }
       case _ => ???
     }
 
-    def axiomInstance(fml : Formula, axiom : Formula) = fml match {
+    def axiomInstance(fml : Formula, axiom : Formula): Formula = fml match {
       case Imply(_, Forall(y :: Nil,
       Box(ODESystem(
       DifferentialProduct(AtomicODE(alsoY, g), DifferentialProduct(AtomicODE(x, f), c)),
@@ -1200,8 +1205,27 @@ object ODETactics {
       ), p))) =>
       {
         assert(y.equals(alsoY.x), "Quantified variable " + y + " should be the same as second primed variable " + alsoY)
-        val afterY = AlphaConversionHelper.replace(axiom)(aY, y)
-        AlphaConversionHelper.replace(afterY)(aX, x.x)
+
+
+        try {
+          if(y.name == aX.name) {
+            val tempY = Variable(y.name, Some(y.index.getOrElse(0)+1))
+            val afterTempY = AlphaConversionHelper.replace(axiom)(aY, tempY)
+            val afterX = AlphaConversionHelper.replace(afterTempY)(aX, x.x)
+            AlphaConversionHelper.replace(afterX)(tempY, y)
+          }
+          else {
+            val afterY = AlphaConversionHelper.replace(axiom)(aY, y)
+            val afterX = AlphaConversionHelper.replace(afterY)(aX, x.x)
+            afterX
+          }
+        }
+        catch {
+          case e : Throwable => {
+            println(s"$axiom is going to complain about replacing $aY with $y")
+            throw e
+          }
+        }
       }
     }
 
