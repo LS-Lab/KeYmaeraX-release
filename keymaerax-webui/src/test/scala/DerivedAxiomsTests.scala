@@ -76,7 +76,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs(KeYmaeraXTestTags.CheckinTest) in {
-    LemmaDBFactory.lemmaDB.deleteDatabase() //necessary. Perhaps we should add optional copy and recover.
+    LemmaDBFactory.lemmaDB.deleteDatabase() //necessary. Perhaps we should add optional copy-and-recover.
     DerivedAxioms.prepopulateDerivedLemmaDatabase()
   }
 
