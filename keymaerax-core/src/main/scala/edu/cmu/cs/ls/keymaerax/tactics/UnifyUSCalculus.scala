@@ -290,6 +290,7 @@ trait UnifyUSCalculus {
    * This tactic will use [[CE()]] under the hood as needed.
    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotTerm happens.
    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
+   * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
    */
   def CQ(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CQ congruence") {outer =>
     import StaticSemantics._
@@ -335,6 +336,7 @@ trait UnifyUSCalculus {
    * CE(pos) at the indicated position within an equivalence reduces contextual equivalence to argument equivalence.
    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
+   * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
    * @see [[UnifyUSCalculus.CE(Provable)]]
    */
   def CE(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CE congruence") {outer =>
@@ -368,26 +370,61 @@ trait UnifyUSCalculus {
     }
   }
 
-  /** CE(equiv) uses the equivalence left<->right or equality left=right fact equiv for congruence reasoning
-    * at the indicated position to replace right by left at indicated position (literally, no substitution).
+  /**
+   * CMon(pos) at the indicated position within an implication reduces contextual implication to argument implication.
+   * @param inEqPos the position *within* the two sides of the implication at which the context DotFormula happens.
+   * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
+   * @see [[UnifyUSCalculus.CE(PosInExpr)]]
+   * @see [[UnifyUSCalculus.CMon(Provable)]]
+   */
+  def CMon(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CMon congruence") {
+    import Augmentors._
+
+    override def applicable(node: ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
+      (node.sequent.succ.head match {
+        case Imply(p, q) => p.at(inEqPos)._1 == q.at(inEqPos)._1
+        case _ => false
+      })
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ.head match {
+      case Imply(l, r) if inEqPos == HereP =>
+        //@note optimization: skip CMon step if context already begins at HereP
+        Some(TactixLibrary.skip)
+      case Imply(l, r) =>
+        val (ctxP, p: Formula) = l.at(inEqPos)
+        val (ctxQ, q: Formula) = r.at(inEqPos)
+        assert(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
+        Some(implyR(1) &
+          by(CMon(ctxP)(Provable.startProof(Sequent(Nil, IndexedSeq(p), IndexedSeq(q))))) &
+          by(inverseImplyR(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(p, q)))))))
+    }
+  }
+
+  /** CE(fact) uses the equivalence left<->right or equality left=right or implication left->right fact for congruence
+    * reasoning at the indicated position to replace right by left at indicated position (literally, no substitution).
     * Efficient unification-free version of [[UnifyUSCalculus#useAt(Provable, PosInExpr):PositionTactic]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
+    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
     */
-  def CE(equiv: Provable): PositionTactic = new PositionTactic("CE(Provable)") {
+  def CE(fact: Provable): PositionTactic = new PositionTactic("CE(Provable)") {
     import Augmentors._
-    require(equiv.conclusion.ante.length==0 && equiv.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + equiv)
-    private val equi = equiv.conclusion.succ.head
-    val (other,key) = equi match {
-      case Equal(l,r) => (l,r)
-      case Equiv(l,r) => (l,r)
-      case Imply(l,r) => throw new IllegalArgumentException("CE expects equivalence or equality fact " + equiv + "\nuse CMon() instead.")
-      case _ => throw new IllegalArgumentException("CE expects equivalence or equality fact " + equiv)
+    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
+
+    def splitFact: (Expression, Expression, Tactic, (PosInExpr=>Tactic)) = fact.conclusion.succ.head match {
+      case Equal(l,r) => (l, r, equivifyR(SuccPosition(0)), CQ)
+      case Equiv(l,r) => (l, r, equivifyR(SuccPosition(0)), CE)
+      case Imply(l,r) => (l, r, skip, CMon)
+      case _ => throw new IllegalArgumentException("CE expects equivalence or equality or implication fact " + fact)
     }
-    override def applies(s: Sequent, p: Position): Boolean = if (s.sub(p) == Some(key)) true
-      else {if (DEBUG) println("In-applicable CE(" + equiv + ") at " + s.sub(p) + " which is " + p + " at " + s); false}
+    val (other, key, equivify, tactic) = splitFact
+
+    override def applies(s: Sequent, p: Position): Boolean =
+      if (s.sub(p) == Some(key)) true
+      else {if (DEBUG) println("In-applicable CE(" + fact + ") at " + s.sub(p) + " which is " + p + " at " + s); false}
+
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
 
@@ -397,11 +434,9 @@ trait UnifyUSCalculus {
         Some(cutLR(ctx(other))(p.top) &
           onBranch(
             (BranchLabels.cutShowLbl, cohide(cutPos) & //assertT(0,1) &
-              equivifyR(SuccPosition(0)) & /*commuteEquivR(SuccPosition(0)) &*/
-              (if (other.kind==FormulaKind) CE(p.inExpr)
-              else if (other.kind==TermKind) CQ(p.inExpr)
-              else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-              by(equiv)
+              equivify & /*commuteEquivR(SuccPosition(0)) &*/
+              tactic(p.inExpr) &
+              by(fact)
               )
           )
         )
