@@ -606,6 +606,33 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     report(expected, result, "VSL controller")
   }
 
+  it should "find correct controller monitor by updateCalculus implicationally" in {
+    import TactixLibrary.chase
+    import TactixLibrary.proveBy
+
+    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/iccps12/vsl.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model,
+      Variable("xsl"), Variable("vsl"), Variable("x1"), Variable("v1"), Variable("a1"), Variable("t"))
+
+    def deriveControllerMonitor: PositionTactic = chase(3,3, e => e match {
+      // no equational assignments
+      case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
+      case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
+      // remove loops
+      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      // remove ODEs for controller monitor
+      case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
+      case _ => AxiomIndex.axiomsFor(e)
+    }
+    )
+
+    val result = proveBy(modelplexInput, deriveControllerMonitor(1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true->((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=-B)&tpost()=t|xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1)&\\exists a1 ((-B<=a1&a1<=A)&((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=a1)&tpost()=t)|x1>=xsl&\\exists a1 ((-B<=a1&a1<=A&a1<=(v1-vsl)/ep)&((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=a1)&tpost()=t)|\\exists xsl \\exists vsl ((vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1))&(v1>=0&0<=ep)&((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=a1)&tpost()=0)".asFormula
+  }
+
   "Quadcopter modelplex in place" should "find correct controller monitor condition" in {
     val in = getClass.getResourceAsStream("examples/casestudies/modelplex/quadcopter/simplepid.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
