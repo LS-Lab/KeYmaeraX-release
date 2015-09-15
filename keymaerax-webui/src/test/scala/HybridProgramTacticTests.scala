@@ -197,6 +197,16 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().head.sequent.succ should contain only "\\exists c_1 (c_1=0 & [c_0:=c_1;]<{x'=v,c_0'=1 & c_0<=ep}>(x<=5))".asFormula
   }
 
+  it should "work in context" in {
+    val s = sucSequent("a=2 & (b>0 | <c:=0;>c=0)".asFormula)
+    val tactic = diamondAssignEqualT(1, 1::1::Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "a=2 & (b>0 | \\exists c_0 (c_0=0 & c_0=0))".asFormula
+  }
+
   "Assign dual" should "turn <x:=2>x=2 into [x:=2]x=2" in {
     val s = sucSequent("<x:=2;>x=2".asFormula)
     val tactic = locateSucc(assignDualT)
