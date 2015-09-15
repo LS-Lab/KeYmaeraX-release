@@ -212,6 +212,11 @@ object AxiomIndex {
       case _: Imply     => "!-> deMorgan" :: Nil
       case _: Equiv     => "!<-> deMorgan" :: Nil
     }
+    case And(f, _)   if f == True => "true&" :: Nil
+    case And(_, g)   if g == True => "&true" :: Nil
+    case Imply(f, _) if f == True => "true->" :: Nil
+    case Imply(_, g) if g == True => "->true" :: Nil
+
     case True | False => Nil
     case _ => unknown
   }
