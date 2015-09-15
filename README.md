@@ -79,7 +79,8 @@ https://github.com/LS-Lab/KeYmaera4/wiki/Building-Instructions
 FAQ: Run Problems
 =================
 
-If KeYmaera X acts weird after an update, you should clean your local cache of lemmas by removing the directory `~/.keymaerax/cache` or even the whole `~/.keymaerax/` directory.
+If KeYmaera X acts weird after an update, you should clean your local cache of lemmas by removing (or renaming) the directory `~/.keymaerax/cache` or even the whole `~/.keymaerax/` directory.
+You could also try removing or renaming keymaerax.sqlite (if this file has become corrupt, it may prevent KeYmaera from working).
 
 
 Generating Scaladoc Documentation
