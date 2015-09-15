@@ -55,44 +55,30 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     println("Number of branches (open/all): " + proof.openGoals().size + "/" + numBranches(proof))
   }
 
-  "Watertank modelplex" should "find correct controller monitor condition" in {
-    val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank-ctrl.key"))
-    val tactic = locateSucc(modelplex)
-    val result = helper.runTactic(tactic, new RootNode(s))
-    result.openGoals() should have size 2
-    result.openGoals()(0).sequent.ante should contain only ("0<=x".asFormula, "x<=m".asFormula, "0<ep".asFormula)
-    result.openGoals()(0).sequent.succ should contain only "-1<=fpost_0() & fpost_0()<=(m-x)/ep".asFormula
-    result.openGoals()(1).sequent.ante should contain only ("0<=x".asFormula, "x<=m".asFormula, "0<ep".asFormula, "-1<=fpost_0()".asFormula, "fpost_0()<=(m-x)/ep".asFormula)
-    result.openGoals()(1).sequent.succ should contain only "tpost_0()=0 & (fpost()=fpost_0() & xpost()=x & tpost()=tpost_0())".asFormula
-  }
-
-  it should "chase: find correct controller monitor by updateCalculus implicationally" in {
+  "Simple modelplex" should "chase: find correct controller monitor by updateCalculus implicationally" in {
     import TactixLibrary.chase
     import TactixLibrary.proveBy
-    import TactixLibrary.useAt
-    import TactixLibrary.lin
     import scala.collection._
 
     val in = getClass.getResourceAsStream("examples/casestudies/modelplex/simple.key")
-      //getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("x")/*Variable("f"), Variable("l"), Variable("c")*/)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("x"))
 
     def modelPlex: PositionTactic = chase(3, 3, e => e match {
-        // no equational assignments
-        case Box(Assign(_, _), _) => "[:=] assign" :: "[:=] assign update" :: Nil
-        case Diamond(Assign(_, _), _) => "<:=> assign" :: "<:=> assign update" :: Nil
-        // remove loops
-        case Diamond(Loop(_), _) => "<*> approx" :: Nil
-        // remove ODEs for controller monitor
-        case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
-        case _ => AxiomIndex.axiomsFor(e)
-      })
+      // no equational assignments
+      case Box(Assign(_, _), _) => "[:=] assign" :: "[:=] assign update" :: Nil
+      case Diamond(Assign(_, _), _) => "<:=> assign" :: "<:=> assign update" :: Nil
+      // remove loops
+      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      // remove ODEs for controller monitor
+      case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
+      case _ => AxiomIndex.axiomsFor(e)
+    })
 
     val result = proveBy(modelplexInput, modelPlex(SuccPosition(0, PosInExpr(1 :: Nil))))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "true -> <x:=1;>(true & xpost()=x)".asFormula
+    result.subgoals.head.succ should contain only "true -> xpost()=1".asFormula
   }
 
   it should "chase away a loop by updateCalculus implicationally" in {
@@ -113,83 +99,16 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     result.subgoals.head.succ should contain only "true -> xpost()=2".asFormula
   }
 
-  it should "simple: find correct controller monitor by updateCalculus implicationally" in {
-    import TactixLibrary.chase
-    import TactixLibrary.proveBy
-    import TactixLibrary.useAt
-    import TactixLibrary.lin
-    import scala.collection._
-
-    val in = //getClass.getResourceAsStream("examples/casestudies/modelplex/simple.key")
-      getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank.key")
-    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("f"), Variable("l"), Variable("c"))
-
-    // child position needed to nibble off the <-> from the chase (maybe ought to be in chase itself???)
-    def posChild(pos: Position): Position = if (pos.isAnte)
-      AntePosition(pos.index, pos.inExpr.child)
-    else
-      SuccPosition(pos.index, pos.inExpr.child)
-
-    // prepend position where uncontrol/modelPlex chase was started off in the first place
-    def prependPos(pos: Position, prep: PosInExpr): Position = if (pos.isAnte)
-      AntePosition(pos.index, prep.append(pos.inExpr))
-    else
-      SuccPosition(pos.index, prep.append(pos.inExpr))
-
-    // mutable state per call
-    def modelPlex(loopStack: mutable.ListBuffer[Position]): PositionTactic = {
-      def uncontrol: PositionTactic = chase(3, 3, e => e match {
-        // no equational assignments
-        case Box(Assign(_, _), _) => "[:=] assign" :: "[:=] assign update" :: Nil
-        case Diamond(Assign(_, _), _) => "<:=> assign" :: "<:=> assign update" :: Nil
-        // remove loops
-        case Diamond(Loop(_), _) => "<*> stuck" :: Nil //"<*> approx" :: Nil
-        // remove ODEs for controller monitor
-        case Diamond(ODESystem(_, _), _) => "<'> stuck" :: Nil
-        case _ => AxiomIndex.axiomsFor(e)
-      },
-        (ax, pos) => pr => {
-          println("uncontrol using " + ax + " at " + pos)
-          ax match {
-            // log loop applications
-            case "<*> stuck" => posChild(pos) +=: loopStack  // this means prepend pos to stack
-              println("Stuck with <*> at stack " + loopStack)
-            case "<'> stuck" => posChild(pos) +=: loopStack
-              println("Stuck with <'> at stack " + loopStack)
-//            case "<:=> assign update" => pos +=: loopStack
-//              println("Stuck with <:=> at stack " + loopStack)
-            case _ =>
-          };
-          pr
-        }
-      )
-
-      val modelPlexRecursor = new PositionTactic("lazy modelPlex recursor") {
-        override def applies(s: Sequent, p: Position): Boolean = true
-        //@note indirect/postponed/lazy call to modelPlex is required to prevent infinite recursion in tactic construction
-        override def apply(p: Position): Tactic = modelPlex(new ListBuffer())(p)
-      }
-
-      new PositionTactic("ModelPlex") {
-        override def applies(s: Sequent, p: Position): Boolean = true
-        override def apply(p: Position): Tactic =
-          (debugAtT("huhu") & uncontrol & debugAtT("uncontrolled") &
-            (lin((useAt("<*> approx") | useAt("DX diamond differential skip")) & modelPlexRecursor)*)
-            ) (p)
-      }
-    }
-
-    val result = proveBy(modelplexInput, modelPlex(new ListBuffer[Position]())(SuccPosition(0, PosInExpr(1 :: Nil))))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "true -> ???".asFormula
+  "Watertank modelplex" should "find correct controller monitor condition" in {
+    val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank-ctrl.key"))
+    val tactic = locateSucc(modelplex)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 2
+    result.openGoals()(0).sequent.ante should contain only ("0<=x".asFormula, "x<=m".asFormula, "0<ep".asFormula)
+    result.openGoals()(0).sequent.succ should contain only "-1<=fpost_0() & fpost_0()<=(m-x)/ep".asFormula
+    result.openGoals()(1).sequent.ante should contain only ("0<=x".asFormula, "x<=m".asFormula, "0<ep".asFormula, "-1<=fpost_0()".asFormula, "fpost_0()<=(m-x)/ep".asFormula)
+    result.openGoals()(1).sequent.succ should contain only "tpost_0()=0 & (fpost()=fpost_0() & xpost()=x & tpost()=tpost_0())".asFormula
   }
-
-
-
-
-
 
   it should "find correct controller monitor by updateCalculus implicationally" in {
     import TactixLibrary.chase
@@ -199,7 +118,7 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("f"), Variable("l"), Variable("c"))
 
-    def controllerMonitor: PositionTactic = chase(3,3, e => e match {
+    def deriveControllerMonitor: PositionTactic = chase(3,3, e => e match {
       // no equational assignments
       case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
       case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
@@ -211,10 +130,10 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     }
     )
 
-    val result = proveBy(modelplexInput, controllerMonitor(SuccPosition(0, PosInExpr(1 :: Nil))))
+    val result = proveBy(modelplexInput, deriveControllerMonitor(1, 1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "true -> ".asFormula
+    result.subgoals.head.succ should contain only "true->\\exists f ((-1<=f&f<=(m-l)/ep)&(0<=l&0<=ep)&(fpost()=f&lpost()=l)&cpost()=0)".asFormula
   }
 
   ignore should "find correct model monitor condition" in {
@@ -475,6 +394,33 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     result.openGoals().flatMap(_.sequent.succ) should contain only expected
 
     report(expected, result, "Local lane controller ")
+  }
+
+  it should "find correct controller monitor by updateCalculus implicationally" in {
+    import TactixLibrary.chase
+    import TactixLibrary.proveBy
+
+    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model,
+      Variable("xl"), Variable("vl"), Variable("al"), Variable("xf"), Variable("vf"), Variable("af"), Variable("t"))
+
+    def deriveControllerMonitor: PositionTactic = chase(3,3, e => e match {
+      // no equational assignments
+      case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
+      case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
+      // remove loops
+      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      // remove ODEs for controller monitor
+      case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
+      case _ => AxiomIndex.axiomsFor(e)
+    }
+    )
+
+    val result = proveBy(modelplexInput, deriveControllerMonitor(1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true->\\exists al ((-B<=al&al<=A)&(xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf) < xl+vl^2/(2*B)&\\exists af ((-B<=af&af<=A)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=al)&xfpost()=xf)&vfpost()=vf)&afpost()=af)&tpost()=0)|vf=0&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=al)&xfpost()=xf)&vfpost()=vf)&afpost()=0)&tpost()=0|\\exists af ((-B<=af&af<=-b)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=al)&xfpost()=xf)&vfpost()=vf)&afpost()=af)&tpost()=0)))".asFormula
   }
 
   "ETCS safety lemma modelplex in place" should "find correct controller monitor condition" in {
