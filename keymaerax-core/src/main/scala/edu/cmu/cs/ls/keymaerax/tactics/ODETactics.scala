@@ -946,6 +946,7 @@ object ODETactics {
     uncoverAxiomT("DS differential equation solution", axiomInstance, _ => diffSolveAxiomBaseT)
   }
 
+  /** @deprecated This tactic will not work until we can do term rewriting instead of programs. */
   def rewriteConstantTime: PositionTactic = {
     def applicable(t:Term) : Boolean = t match {
       case Plus(Times(n:Number, x:NamedSymbol), c) => !StaticSemantics.freeVars(c).contains(x) && n.value.toInt.equals(0)
