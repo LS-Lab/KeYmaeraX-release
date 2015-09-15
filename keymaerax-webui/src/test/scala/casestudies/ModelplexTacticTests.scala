@@ -83,7 +83,7 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
         case Box(Assign(_, _), _) => "[:=] assign" :: "[:=] assign update" :: Nil
         case Diamond(Assign(_, _), _) => "<:=> assign" :: "<:=> assign update" :: Nil
         // remove loops
-        case Diamond(Loop(_), _) => "<*> approx" :: Nil //"<*> approx" :: Nil
+        case Diamond(Loop(_), _) => "<*> approx" :: Nil
         // remove ODEs for controller monitor
         case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
         case _ => AxiomIndex.axiomsFor(e)
@@ -92,7 +92,25 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     val result = proveBy(modelplexInput, modelPlex(SuccPosition(0, PosInExpr(1 :: Nil))))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "true -> ???".asFormula
+    result.subgoals.head.succ should contain only "true -> <x:=1;>(true & xpost()=x)".asFormula
+  }
+
+  it should "chase away a loop by updateCalculus implicationally" in {
+    import TactixLibrary.chase
+    import TactixLibrary.proveBy
+
+    val model = KeYmaeraXProblemParser("ProgramVariables. R x. End. Problem. 0 <= x -> [{x:=2;}*](0 <= x) End.")
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("x"))
+
+    def modelPlex: PositionTactic = chase(3, 3, e => e match {
+      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      case _ => AxiomIndex.axiomsFor(e)
+    })
+
+    val result = proveBy(modelplexInput, modelPlex(SuccPosition(0, PosInExpr(1 :: Nil))))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true -> xpost()=2".asFormula
   }
 
   it should "simple: find correct controller monitor by updateCalculus implicationally" in {
