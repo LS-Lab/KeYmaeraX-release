@@ -469,6 +469,34 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
       """.stripMargin.asFormula
   }
 
+  it should "find correct controller monitor by updateCalculus implicationally" in {
+    import TactixLibrary.chase
+    import TactixLibrary.proveBy
+
+    val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model,
+      Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
+      Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
+
+    def deriveControllerMonitor: PositionTactic = chase(3,3, e => e match {
+      // no equational assignments
+      case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
+      case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
+      // remove loops
+      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      // remove ODEs for controller monitor
+      case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
+      case _ => AxiomIndex.axiomsFor(e)
+    }
+    )
+
+    val result = proveBy(modelplexInput, deriveControllerMonitor(1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true->\\exists dxo \\exists dyo (dxo^2+dyo^2<=V()^2&((0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxo)&dyopost()=dyo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=-B)&rpost()=r)&tpost()=0|v=0&(0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxo)&dyopost()=dyo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=0)&rpost()=r)&tpost()=0|\\exists a ((-B<=a&a<=A)&\\exists r (r!=0&\\exists w (w*r=v&\\exists xo \\exists yo ((abs(x-xo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|abs(y-yo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxo)&dyopost()=dyo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=a)&rpost()=r)&tpost()=0))))))".asFormula
+  }
+
   it should "find the correct controller monitor condition from the input model" in {
     val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
