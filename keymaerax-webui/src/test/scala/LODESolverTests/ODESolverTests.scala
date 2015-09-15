@@ -33,7 +33,7 @@ class ODESolverTests extends testHelper.TacticTestSuite with PrivateMethodTester
   private def getOde(s : String) = s.asFormula.asInstanceOf[Box].program.asInstanceOf[DifferentialProgram]
 
   "Weak Logical ODE Solver" should "work when time is explicit" in {
-    val f = "x = 0 & v = 1 & a = 5 & t=0 -> [{x' =v, v' = a, t' = 0*t+1}]x >= 0".asFormula
+    val f = "x = 0 & v = 1 & a = 5 & t=0 -> [{x' =v, v' = a, t' = 1}]x >= 0".asFormula
     val node = helper.formulaToNode(f)
     val tactic = locateSucc(ImplyRightT) & LogicalODESolver.weakSolveT(SuccPos(0))
     helper.runTactic(tactic, node)
@@ -80,13 +80,12 @@ class ODESolverTests extends testHelper.TacticTestSuite with PrivateMethodTester
    * @author Nathan Fulton
    */
   "Logical ODE Solver" should "work when time is explicit" in {
-    val f = "x = 0 & v = 1 & a = 5 & t=0 -> [{x' =v, v' = a, t' = 0*t+1}]x >= 0".asFormula
+    val f = "x = 0 & v = 1 & a = 5 & t=0 -> [{x' =v, v' = a, t' = 1}]x >= 0".asFormula
     val node = helper.formulaToNode(f)
     val tactic = locateSucc(ImplyRightT) & LogicalODESolver.solveT(SuccPos(0))
     helper.runTactic(tactic, node)
     helper.report(node)
-    fail("no actual conditions here.")
-//    node shouldBe 'closed @todo
+    node shouldBe 'closed
   }
 
   /**
@@ -103,7 +102,7 @@ class ODESolverTests extends testHelper.TacticTestSuite with PrivateMethodTester
 
   ignore should "work with ACAS X input when time is explicit" in {
     val ante = "r=rInit&dhd=dhdInit&h=hInit&t=tInit&(w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0)".asFormula
-    val succ = "[{r'=-rv(),dhd'=ao(),h'=-dhd, t' = 0*t+1  & w()*dhd>=w()*dhf()|w()*ao()>=a()}]((w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0))".asFormula
+    val succ = "[{r'=-rv(),dhd'=ao(),h'=-dhd, t' = 1  & w()*dhd>=w()*dhf()|w()*ao()>=a()}]((w()=-1|w()=1)&\\forall t \\forall ro \\forall ho (0<=t&t < w()*(dhf()-dhd)/a()&ro=rv()*t&ho=w()*a()/2*t^2+dhd*t|t>=0&t>=w()*(dhf()-dhd)/a()&ro=rv()*t&(w()*(dhf()-dhd)<=0&ho=dhf()*t|w()*(dhf()-dhd)>0&ho=dhf()*t-w()*(w()*(dhf()-dhd))^2/(2*a()))->r-ro < -rp|r-ro>rp|w()*h < w()*ho-hp)&(hp>0&rp>0&rv()>=0&a()>0))".asFormula
     val s = Sequent(Nil, immutable.IndexedSeq(ante), immutable.IndexedSeq(succ))
     val tactic = LogicalODESolver.solveT(SuccPos(0))
     val result = helper.runTactic(tactic, new RootNode(s))
@@ -372,12 +371,12 @@ class DGPlusPlus extends testHelper.TacticTestSuite {
   }
 
   it should "work for ACAS X system after a , commute" in {
-    val f = "\\forall r [{r'=-rv(), dhd'=ao(), h'=-dhd, t'=0*t+1 & 1=1}]2=2".asFormula //nonsense
+    val f = "\\forall r [{r'=-rv(), dhd'=ao(), h'=-dhd, t'=1 & 1=1}]2=2".asFormula //nonsense
     val node = helper.formulaToNode(f)
     val tactic = edu.cmu.cs.ls.keymaerax.tactics.ODETactics.DiffGhostPlusPlusSystemT(SuccPos(0))
     helper.runTactic(tactic, node)
     node.openGoals().length shouldBe 1
-    node.openGoals().last.sequent.succ.last shouldBe "[{dhd'=ao(), h'=-dhd, t'=0*t+1 & 1=1}]2=2".asFormula
+    node.openGoals().last.sequent.succ.last shouldBe "[{dhd'=ao(), h'=-dhd, t'=1 & 1=1}]2=2".asFormula
   }
 
   it should "be useful to the ode solver" in {

@@ -224,6 +224,16 @@ object TacticLibrary {
    * Debug tactics
    *******************************************************************/
 
+  def verboseDebugT(s: => Any):Tactic = new Tactic("VerboseDebug") {
+    override def applicable(node: ProofNode): Boolean = true
+
+    override def apply(tool: Tool, node: ProofNode): Unit = {
+      node.tacticInfo.infos += ("debug" -> s.toString)
+      println("===== " + s + " ==== " + node.openGoals.map(_.sequent).mkString(" andalso ") + " =====")
+      continuation(this, Success, Seq(node))
+    }
+  }
+
   def debugT(s: => Any): Tactic = new Tactic("Debug") {
     override def applicable(node: ProofNode): Boolean = true
 

@@ -28,7 +28,7 @@ class FileLemmaDB extends LemmaDB {
   private lazy val lemmadbpath: File = {
     val file = new File(System.getProperty("user.home") + File.separator +
       ".keymaerax" + File.separator + "cache" + File.separator + "lemmadb")
-    file.mkdirs
+    if (!file.mkdirs()) println("WARNING: FileLemmaDB cache did not get created: " + file.getAbsolutePath)
     file
   }
 
