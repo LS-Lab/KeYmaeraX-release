@@ -447,6 +447,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       "      )) & ( hp>0&rp>0&rv>=0&a>0 )").asFormula
 
     val evolutionDomain = "\\forall tside (0<=tside & tside<=kxtime_5 -> (w*(dhd_2()+ao*tside)>=w*dhf|w*ao>=a))"
+    val initDomain = "w*dhd>=w*dhf|w*ao>=a"
 
     def dT(s : String) = debugT(s)
 
@@ -521,9 +522,9 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
               (cutUseLbl, dT("After DC 2") & ls(DW) & dT("after DW") &
                 ls(implyR) & la(andL) & la(cohide, "0=1") & dT("before QE") & QE)
             ),
-          //ls(diffSolution(None, la(hide, "max0=max((0,w*(dhf-dhd)))"))) & dT("Diff. Solution") &
+          ls(diffSolution(None, la(hide, "max0=max((0,w*(dhf-dhd)))"))) & dT("Diff. Solution") &
           /* cutting in the side condition that we expect from diff. solution. Remove once diff. sol. produces it */
-            dT("bla") /*& ls(implyR) & (la(andL)*) & ls(andR) && (
+            dT("bla") & ls(implyR) & (la(andL)*) & ls(andR) && (
             ls(andR) && (
               closeId,
               dT("Before skolemization") & (ls(skolemizeT)*) & dT("After skolemization") & ls(implyR) & ls(orR) &
@@ -539,7 +540,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                   & (la(andL)*) & (ls(andR)*) & (QE | dT("Should be closed") & Tactics.stopT)),
                 (cutUseLbl, dT("Use Cut") &
                   la(orL, "0<=t_0+kxtime_5&t_0+kxtime_5 < max0/a|t_0+kxtime_5>=max0/a") && (
-                  dT("Goal 110") & la(hide, evolutionDomain) &
+                  dT("Goal 110") & la(hide, initDomain) &
                     la(instantiateT(Variable("ho"), "w*a/2*(t_0+kxtime_5)^2 + dhd*(t_0+kxtime_5)".asTerm)) //, { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false })
                     & dT("instantiate ho") & ((closeId | l(NonBranchingPropositionalT))*) &
                     la(implyL, "0<=kxtime_5+t_0&kxtime_5+t_0 < max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=w*a/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=dhf*(kxtime_5+t_0)-w*max0^2/(2*a)->abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5))-hp")
@@ -570,18 +571,14 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     & dT("Goal 120-1") &
                     la(implyL, "0<=kxtime_5+t_0&kxtime_5+t_0 < max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&dhf*(t_0+kxtime_5)-w*max0^2/(2*a)=w*a/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=max0/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&dhf*(t_0+kxtime_5)-w*max0^2/(2*a)=dhf*(kxtime_5+t_0)-w*max0^2/(2*a)->abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(dhf*(t_0+kxtime_5)-w*max0^2/(2*a))-hp")
                     && (
-                    dT("Goal 122") & la(hide, evolutionDomain) & absmax2 & QE,
+                    dT("Goal 122") & la(hide, initDomain) & absmax2 & QE,
                     dT("Goal 123") & la(orL, "0<=t_0&t_0 < max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=dhf*t_0-w*max((0,w*(dhf-dhd_3)))^2/(2*a)")
                       && (
-                      la(hide, evolutionDomain) & absmax2 & crushor, // takes a while (about 170 seconds)
+                      la(hide, initDomain) & absmax2 & crushor, // takes a while (about 170 seconds)
                       dT("Goal 127") &
                         la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_1=0") &
                         la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_4()=0") &
-                        (la(andL)*) & cutEZ(evolutionDomain.asFormula, closeId) & // repeat cut to reinstantiate
-                        la(instantiateT(Variable("tside"), Variable("kxtime", Some(5))), evolutionDomain) &
-                        la(implyL, "0<=kxtime_5&kxtime_5<=kxtime_5->w*(dhd_2()+ao*kxtime_5)>=w*dhf|w*ao>=a") && (
-                        absmax2 & QE,
-                        dT("Goal 193") &
+                        (la(andL)*) & dT("Goal 193") &
                           la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(dhf*(t_0+kxtime_5)-w*max0^2/(2*a))-hp") && (
                           dT("Goal 194") & absmax2 & crushor, // takes a while (100 seconds or so)
                           dT("Goal 195") & ls(hide, "abs(r_3-ro_0)>rp") & absmax2 &
@@ -589,29 +586,25 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                             dT("Goal 214") & cut("w*ao>=a|!w*ao>=a".asFormula) & onBranch(
                               (cutShowLbl, ls(cohide, "w*ao>=a|!w*ao>=a") & QE),
                               (cutUseLbl, dT("Goal 214-2") & la(orL, "w*ao>=a|!w*ao>=a") && (
-                                la(hide, evolutionDomain) & QE,
+                                dT("Goal 214-3") /*& la(hide, initDomain)*/ & QE,
                                 dT("Goal 231") & la(orL, "w*dhd_3>=w*dhf|w*ao>=a") && (
-                                  dT("Goal 233") &
-                                    la(instantiateT(Variable("tside"), Number(0)), evolutionDomain) &
-                                    la(implyL, "0<=0&0<=kxtime_5->w*(dhd_2()+ao*0)>=w*dhf|w*ao>=a") && (
-                                    QE,
-                                    la(orL, "w*(dhd_2()+ao*0)>=w*dhf|w*ao>=a") && (
-                                      crushor,
-                                      la(notL) & closeId
-                                      ) ),
+                                  dT("Goal 233") & la(orL, "w*dhd>=w*dhf|w*ao>=a") && (
+                                    crushor,
+                                    la(notL) & closeId
+                                  ),
                                   la(notL) & closeId
                                   ) ) ) ),
-                            la(hide, evolutionDomain) & crushor
+                            la(hide, initDomain) & crushor
                             )
                           )
-                        )
+
                       )
                     )
                   )
                   )
               )
               ), QE /* End AndRight */
-            ) */
+            )
             /* ) End cutUseLbl of 2nd ODE cut */
             /* ) End onBranch 2nd ODE cut */
              /* ) End cutUseLbl of 1st ODE cut */
