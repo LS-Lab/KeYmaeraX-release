@@ -10,12 +10,12 @@ import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms._
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
+import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Tool}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import test.RandomFormula
-import testHelper.KeYmaeraXTestTags.{SummaryTest, CheckinTest}
 import testHelper.ParserFactory._
-import testHelper.ProvabilityTestHelper
+import testHelper.{KeYmaeraXTestTags, ProvabilityTestHelper}
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -25,6 +25,8 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
  * Tests Hilbert Calculus.
  * @author Andre Platzer
  */
+@SummaryTest
+@UsualTest
 class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   import HilbertCalculus._
 
@@ -115,7 +117,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
-  it should "derive (x+2*y)'=x'+2*y'" taggedAs(CheckinTest) in {
+  it should "derive (x+2*y)'=x'+2*y'" taggedAs (KeYmaeraXTestTags.CheckinTest) in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
@@ -175,7 +177,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=7}]5*x'>=0".asFormula)))
   }
 
-  it should "reduce [{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)' to [{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)" taggedAs(SummaryTest) in {
+  it should "reduce [{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)' to [{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)'".asFormula)),
       derive(1,1::Nil)
     ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)))
@@ -206,7 +208,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
-  it should "auto-prove x>=5 -> [{x'=2}]x>=5" taggedAs(SummaryTest) in {
+  it should "auto-prove x>=5 -> [{x'=2}]x>=5" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) & diffInd(1)
     ) shouldBe 'proved
@@ -291,7 +293,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
-  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" taggedAs(SummaryTest) in {
+  it should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1 by chase" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;}}]x>=1".asFormula)),
       chase(1,Nil) & QE
     ) shouldBe 'proved
@@ -316,13 +318,13 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     ) shouldBe 'proved
   }
 
-  it should "chase [{x'=22}](2*x+x*y>=5)'" taggedAs(CheckinTest) in {
+  it should "chase [{x'=22}](2*x+x*y>=5)'" taggedAs(KeYmaeraXTestTags.CheckinTest) in {
     proveBy("[{x'=22}](2*x+x*y>=5)'".asFormula,
       chase(1, 1 :: Nil)
     ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula)))
   }
 
-  it should "chase [{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1" taggedAs(CheckinTest) in {
+  it should "chase [{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1" taggedAs(KeYmaeraXTestTags.CheckinTest) in {
     proveBy("[{x'=22}][?x>0;x:=x+1; ++ ?x=0;x:=1;]x>=1".asFormula,
       chase(1, 1 :: Nil)
     ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))".asFormula)))
@@ -441,7 +443,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     shouldReduceTo("0*x+1<=3".asFormula, SuccPosition(0, PosInExpr(0::Nil)), "1<=3".asFormula)
   }
 
-  it should "reduce x<5 & 0*x+1<=3 | x>=2 to x<5 & 1<=3 | x>=2" taggedAs(SummaryTest) in {
+  it should "reduce x<5 & 0*x+1<=3 | x>=2 to x<5 & 1<=3 | x>=2" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
     shouldReduceTo("x<5 & 0*x+1<=3 | x>=2".asFormula, SuccPosition(0, PosInExpr(0::1::0::Nil)), "x<5 & 1<=3 | x>=2".asFormula)
   }
 
@@ -449,7 +451,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     shouldReduceTo("\\forall x 0*x+1<=3".asFormula, SuccPosition(0, PosInExpr(0::0::Nil)), "\\forall x 1<=3".asFormula)
   }
 
-  it should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" taggedAs(SummaryTest) in {
+  it should "reduce x<5 & \\forall x 0*x+1<=3 | x>=2 to x<5 & \\forall x 1<=3 | x>=2" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
     shouldReduceTo("x<5 & \\forall x 0*x+1<=3 | x>=2".asFormula, SuccPosition(0, PosInExpr(0::1::0::0::Nil)), "x<5 & \\forall x 1<=3 | x>=2".asFormula)
   }
 
@@ -494,7 +496,7 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     shouldReduceTo("x<5 & \\forall x x^2<4| x>=2".asFormula, SuccPosition(0, PosInExpr(0::1::0::Nil)), "x<5 & \\forall x (-2<x&x<2) | x>=2".asFormula, basicEquiv)
   }
 
-  it should "reduce [{x' = 5*x & x^2<4}]x>=1 to [{x' = 5*x & -2<x&x<2}]x>=1" taggedAs(SummaryTest) in {
+  it should "reduce [{x' = 5*x & x^2<4}]x>=1 to [{x' = 5*x & -2<x&x<2}]x>=1" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
     shouldReduceTo("[{x' = 5*x & x^2<4}]x>=1".asFormula, SuccPosition(0, PosInExpr(0::1::Nil)), "[{x' = 5*x & -2<x&x<2}]x>=1".asFormula, basicEquiv)
   }
 

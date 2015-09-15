@@ -3,6 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
+import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, CheckinTest}
 import testHelper.KeYmaeraXTestTags._
 
 import scala.collection.immutable._
@@ -15,7 +16,8 @@ import scala.collection.immutable.Map
  * Test Provable constructions
  * @author Andre Platzer
  */
-//@todo @CheckinTest
+@CheckinTest
+@SummaryTest
 class ProvableTest extends FlatSpec with Matchers {
   "Provable" should "close trivial proofs" in {
     import scala.collection.immutable._

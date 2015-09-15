@@ -1391,11 +1391,11 @@ object DerivedAxioms {
         cut("[{c&H(??)}](p(??)->(H(??)->p(??)))".asFormula) & onBranch(
           (BranchLabels.cutShowLbl, cohide(2) & G & prop),
           (BranchLabels.cutUseLbl,
-            useAt("K modal modus ponens")(-2) & implyL(-2) & (close, close) )
+            useAt("K modal modus ponens", PosInExpr(0::Nil))(-2) & implyL(-2) & (close, close) )
         )
         ),
       (BranchLabels.equivRightLbl,
-        useAt("K modal modus ponens")(-1) &
+        useAt("K modal modus ponens", PosInExpr(0::Nil))(-1) &
           implyL(-1) & (cohide(2) & byUS("DW"), close)
         )
     )
@@ -1985,11 +1985,11 @@ object DerivedAxioms {
 
   /**
    * {{{Axiom "+<= up".
-   *    x+y<=z <- ((x<=X & y<=Y) & X+Y<=Z)
+   *    x+y<=z <- ((x<=X & y<=Y) & X+Y<=z)
    * End.
    * }}}
    */
-  lazy val intervalUpPlusF = "x+y<=z <- ((x<=X & y<=Y) & X+Y<=Z)".asFormula
+  lazy val intervalUpPlusF = "x+y<=z <- ((x<=X & y<=Y) & X+Y<=z)".asFormula
   lazy val intervalUpPlus = derivedAxiom("+<= up",
     Sequent(Nil, IndexedSeq(), IndexedSeq(intervalUpPlusF)),
     TactixLibrary.QE

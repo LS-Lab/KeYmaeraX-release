@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
+import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import org.scalatest.{FlatSpec, Matchers, PrivateMethodTester}
 
 import scala.collection.immutable._
@@ -14,6 +15,7 @@ import scala.collection.immutable._
  * Tests the parser on manually lexed inputs
  * @author Andre Platzer
  */
+@UsualTest
 class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTester {
   val parser = KeYmaeraXParser
   val pp = KeYmaeraXPrettyPrinter

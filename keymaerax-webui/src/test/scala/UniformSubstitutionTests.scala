@@ -5,6 +5,7 @@
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.SubstitutionHelper
+import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, USubstTest}
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import scala.collection.immutable.{List, Set, Seq}
 
@@ -19,7 +20,8 @@ import test._
  * Created by rjcn on 01/09/15.
  * @author Ran Ji
  */
-
+@UsualTest
+@USubstTest
 class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfterEach with PrivateMethodTester {
 
   private def V(s: String) = Variable(s, None, Real)

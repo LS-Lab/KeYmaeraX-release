@@ -2,6 +2,8 @@
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
+
+import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, CheckinTest}
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics._
@@ -10,6 +12,8 @@ import java.math.BigDecimal
 import java.io.File
 import scala.collection.immutable._
 
+@CheckinTest
+@SummaryTest
 class CoreTests extends FlatSpec with Matchers {
   
   val p = PredOf(Function("p", None, Unit, Bool), Nothing)
