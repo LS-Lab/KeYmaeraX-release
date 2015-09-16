@@ -101,7 +101,10 @@ trait UnifyUSCalculus {
     def applicable(node: ProofNode) = try {
       UnificationMatch(form,node.sequent)
       true
-    } catch {case e: ProverException => println(e.inContext("US(" + form + ")\n(" + node.sequent + ") inapplicable since un-unifiable")); false}
+    } catch {case e: ProverException =>
+      if (DEBUG) println(e.inContext("US(" + form + ")\n(" + node.sequent + ") inapplicable since un-unifiable"))
+      false
+    }
 
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       val subst = UnificationMatch(form, node.sequent)
@@ -156,10 +159,16 @@ trait UnifyUSCalculus {
 
     override def applies(s: Sequent, p: Position): Boolean = try {
       val sub = s.sub(p)
-      if (!sub.isDefined) {println("ill-positioned " + p + " in " + s + "\nin " + "useAt(" + fact + ")(" + p + ")\n(" + s + ")"); return false}
+      if (!sub.isDefined) {
+        if (DEBUG) println("ill-positioned " + p + " in " + s + "\nin " + "useAt(" + fact + ")(" + p + ")\n(" + s + ")")
+        return false
+      }
       UnificationMatch(keyPart,sub.get)
       true
-    } catch {case e: ProverException => println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s.sub(p))); false}
+    } catch {case e: ProverException =>
+      if (DEBUG) println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s.sub(p)))
+      false
+    }
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
@@ -998,7 +1007,10 @@ trait UnifyUSCalculus {
     //@note True has no applicable keys. This applicability is still an overapproximation since it does not check for clashes.
     override def applies(s: Sequent, p: Position): Boolean = {
       val sub = s.sub(p)
-      if (!sub.isDefined) {println("ill-positioned " + p + " in " + s + "\nin " + "chase\n(" + s + ")"); return false}
+      if (!sub.isDefined) {
+        if (DEBUG) println("ill-positioned " + p + " in " + s + "\nin " + "chase\n(" + s + ")")
+        return false
+      }
       !(keys(sub.get).isEmpty)
     }
 
@@ -1060,7 +1072,9 @@ trait UnifyUSCalculus {
       if (DEBUG) println("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
       // generic recursor
       keys(de.conclusion.sub(pos).get) match {
-        case Nil => println("no chase(" + de.conclusion.sub(pos).get.prettyString + ")"); de
+        case Nil =>
+          if (DEBUG) println("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+          de
         /*throw new IllegalArgumentException("No axiomFor for: " + expr)*/
         case List(ax) =>
           val (key, recursor) = axiomIndex(ax)
@@ -1081,7 +1095,9 @@ trait UnifyUSCalculus {
             None
           }
           firstAxUse match {
-            case None => println("no chase(" + de.conclusion.sub(pos).get.prettyString + ")"); de
+            case None =>
+              if (DEBUG) println("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+              de
             case Some((axUse, recursor)) =>
               recursor.foldLeft(axUse)(
                 (pf, cursor) => doChase(pf, pos.append(cursor))
