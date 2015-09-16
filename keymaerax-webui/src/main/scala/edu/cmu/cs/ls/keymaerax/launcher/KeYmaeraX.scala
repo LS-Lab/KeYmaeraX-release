@@ -4,13 +4,10 @@ import java.io.{File, PrintWriter}
 import java.lang.reflect.ReflectPermission
 import java.security.Permission
 
-import com.sun.org.apache.xalan.internal.xsltc.compiler.util.ClassGenerator
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics._
-import edu.cmu.cs.ls.keymaerax.tactics.ModelPlex.{modelplexControllerMonitorTrafo, modelplexInPlace}
-import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, Mathematica, KeYmaera}
 import edu.cmu.cs.ls.keymaerax.codegen.{CseCGenerator, CGenerator, SpiralGenerator}
 
