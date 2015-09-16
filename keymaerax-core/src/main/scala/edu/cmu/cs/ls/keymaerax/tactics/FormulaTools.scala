@@ -51,7 +51,7 @@ object FormulaTools {
       case f: BinaryCompositeFormula if pos.head == 0 => polarityAt(f.left, pos.child)
       case f: BinaryCompositeFormula if pos.head == 1 => polarityAt(f.right, pos.child)
       case f: Modal                  => require(pos.head == 1, "Modal operator must have position head 1, but was " + pos); polarityAt(f.child, pos.child)
-      case f: Quantified             => require(pos.head == 1, "Quantified must have position head 1, but was " + pos); polarityAt(f.child, pos.child)
+      case f: Quantified             => require(pos.head == 0, "Quantified must have position head 0, but was " + pos); polarityAt(f.child, pos.child)
     }
 
   /**
@@ -79,7 +79,7 @@ object FormulaTools {
       case f: BinaryCompositeFormula if pos.head == 0 => f.reapply(makePolarityAt(f.left, pos.child, polarity), f.right)
       case f: BinaryCompositeFormula if pos.head == 1 => f.reapply(f.left, makePolarityAt(f.right, pos.child, polarity))
       case f: Modal                  => require(pos.head == 1, "Modal operator must have position head 1, but was " + pos); f.reapply(f.program, makePolarityAt(f.child, pos.child, polarity))
-      case f: Quantified             => require(pos.head == 1, "Quantified must have position head 1, but was " + pos); f.reapply(f.vars, makePolarityAt(f.child, pos.child, polarity))
+      case f: Quantified             => require(pos.head == 0, "Quantified must have position head 0, but was " + pos); f.reapply(f.vars, makePolarityAt(f.child, pos.child, polarity))
     }
   }
 
