@@ -158,6 +158,8 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     case Anything                         => if (e1==e2) id else List(SubstRepl(Anything, e2))
     case /*Anything |*/ Nothing           => if (e1==e2) id else ununifiable(e1,e2)
     case DotTerm                          => if (e1==e2) id else List(SubstRepl(e1, e2))
+    //@note case o1:UnaryCompositeTerm  => e2 match {case o2:UnaryCompositeTerm  if o1.reapply==o2.reapply => unify(o1.child,o2.child) case _ => ununifiable(e1,e2)}
+    //@note case o1:BinaryCompositeTerm => e2 match {case o2:BinaryCompositeTerm if o1.reapply==o2.reapply => unify(o1.left,o2.left) ++ unify(o1.right,o2.right) case _ => ununifiable(e1,e2)}
     // homomorphic cases
     case Neg(t)       => e2 match {case Neg(t2) => unify(t,t2) case _ => ununifiable(e1,e2)}
     case Plus(l, r)   => e2 match {case Plus  (l2,r2) => unify(l,l2) ++ unify(r,r2) case _ => ununifiable(e1,e2)}

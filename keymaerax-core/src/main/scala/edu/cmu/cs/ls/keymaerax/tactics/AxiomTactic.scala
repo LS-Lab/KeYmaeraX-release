@@ -25,7 +25,7 @@ object AxiomTactic {
    */
   private def getFormula(sequent: Sequent, p: Position) = sequent(p).subFormulaAt(p.inExpr) match {
     case Some(f) => f
-    case None => throw new IllegalStateException("Position" + p + " does not refer to a formula")
+    case None => throw new IllegalStateException("Position" + p + " does not refer to a formula in " + sequent)
   }
 
   /**

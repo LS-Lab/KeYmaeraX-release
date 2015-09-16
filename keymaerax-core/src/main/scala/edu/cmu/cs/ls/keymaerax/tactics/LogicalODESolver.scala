@@ -32,19 +32,28 @@ object LogicalODESolver {
   def solveT : PositionTactic = new PositionTactic("Solve ODE") {
     override def applies(s: Sequent, p: Position): Boolean = true //@todo
 
+    val loggingPrefix = "[LODESolver Top Level] "
+
     /*
      * Note:
      * renameAndDropImpl still produces an open goal that needs to be closed, maybe with monotonicity?
      */
     override def apply(p: Position): Tactic =
       LogicalODESolver.setupTimeVarT(p) ~
-      (stepTacticT(p) *) &
+      (cutInSolnsT(p) *) &
+      verboseDebugT(s"$loggingPrefix Finished Cutting In Solutions") &
       cutTimeLB(p) &
+      verboseDebugT(s"$loggingPrefix Finished cutting in time") &
       ODETactics.diffWeakenAxiomT(p) & //the axiom, not the proof rule.
+      verboseDebugT(s"$loggingPrefix Finished diff weaken axiom") &
       renameAndDropImpl(p) &
+      verboseDebugT(s"$loggingPrefix Finished renameAndDropImpl step") &
       (successiveInverseCut(p) *) &
+      verboseDebugT(s"$loggingPrefix Finished successive inverse diff cuts") &
       (successiveInverseDiffGhost(p) *) &
+      verboseDebugT(s"$loggingPrefix Finished successive inverse diff ghosts") &
       ODETactics.diffSolveConstraintT(p) &
+      verboseDebugT(s"$loggingPrefix Finished DS& application at t' = 1 (hopefully)") &
       reduceToArithmetic(p) // separated out for testing purposes
   }
 
@@ -321,7 +330,7 @@ object LogicalODESolver {
 
     override def apply(p: Position): Tactic =
       LogicalODESolver.setupTimeVarT(p) ~
-        (stepTacticT(p) *) &
+        (cutInSolnsT(p) *) &
         cutTimeLB(p) &
         ODETactics.diffWeakenT(p) &
         arithmeticT
@@ -432,7 +441,7 @@ object LogicalODESolver {
   /**
    * @return A tactic that cuts in a solution to an ODE in a system. This should be saturated.
    */
-  private def stepTacticT : PositionTactic = new PositionTactic("Logical ODE Solver") {
+  private def cutInSolnsT : PositionTactic = new PositionTactic("Logical ODE Solver") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case Box(program : DifferentialProgram, _) => {
         val hasNextStep = atomicODEs(program).filter(ode => !timeVar(program).getOrElse( () ).equals(ode.xp.x)).find(ode => isUnsolved(ode.xp.x, program)) match {

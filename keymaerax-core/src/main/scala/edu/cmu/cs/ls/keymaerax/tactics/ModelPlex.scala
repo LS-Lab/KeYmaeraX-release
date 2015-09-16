@@ -18,8 +18,10 @@ import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT,cutT,hideT}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.{getFormula,isFormula}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{NilT,NilPT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import scala.collection.immutable
+import scala.collection.mutable
 import scala.compat.Platform
 import scala.language.postfixOps
 
@@ -111,10 +113,45 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
             "\nMissing: " + (StaticSemantics.boundVars(prg).toSymbolSet.toSet diff vars.toSet).mkString(", "))
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
         //@note suppress assumptions since at most those without bound variables are still around.
+        //@todo remove implication
         Imply(True, Diamond(prg, posteqs))
       case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
     }
   }
+
+  /**
+   * Returns a tactic to derive a controller monitor using chase. The tactic is designed to operate on input produced
+   * by modelPlexControllerMonitorTrafo.
+   * @see [[modelplexControllerMonitorTrafo]]
+   * @example{{{
+   *        |- xpost()=1
+   *        ------------------------------controllerMonitorByChase(1)
+   *        |- <{x:=1; {x'=2}}*>xpost()=x
+   * }}}
+   * In order to produce the result above, the tactic performs intermediate steps as follows.
+   * @example{{{
+   *        |- xpost()=1
+   *        ------------------------------true&
+   *        |- (true & xpost()=1)
+   *        ------------------------------<:=> assign
+   *        |- <x:=1;>(true & xpost()=x)
+   *        ------------------------------DX diamond differential skip
+   *        |- <x:=1; {x'=2}>xpost()=x
+   *        ------------------------------<*> approx
+   *        |- <{x:=1; {x'=2}}*>xpost()=x
+   * }}}
+   * @return The position tactic.
+   */
+  def controllerMonitorByChase: PositionTactic = chase(3,3, e => e match {
+    // no equational assignments
+    case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
+    case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
+    // remove loops
+    case Diamond(Loop(_), _) => "<*> approx" :: Nil
+    // remove ODEs for controller monitor
+    case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
+    case _ => AxiomIndex.axiomsFor(e)
+  })
 
   /** @todo document */
   def modelplex = new PositionTactic("Modelplex") {
@@ -328,20 +365,46 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
     outermostPos
   }
 
-  def optimizationOne(inst: Option[(Variable, Variable)] = None) = locateT(optimizationOneAt(inst)::Nil)
+  def optimizationOneWithSearch = locateT(optimizationOneWithSearchAt::Nil)
 
-  def optimizationOneAt(inst: Option[(Variable, Variable)] = None) = new PositionTactic("Optimization 1") {
-    override def applies(s: Sequent, p: Position): Boolean = isFormula(s, p) && (getFormula(s, p) match {
-      case Exists(vars, _) => !p.isAnte && vars.size == 1 && vars.forall { case _: Variable => true case _ => false }
-      case Forall(vars, _) => p.isAnte && vars.size == 1 && vars.forall { case _: Variable => true case _ => false }
+  def optimizationOneWithSearchAt = new PositionTactic("Optimization 1 with instance search") {
+    override def applies(s: Sequent, p: Position): Boolean = isFormula(s, p) && (s(p).subFormulaAt(p.inExpr) match {
+      case Some(Exists(vars, _)) => !p.isAnte && vars.size == 1
       case _ => false
     })
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case Exists(vars, phi) if !p.isAnte => inst match {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p).subFormulaAt(p.inExpr) match {
+        case Some(Exists(vars, phi)) if !p.isAnte =>
+          var equality: Option[(Variable, Term)] = None
+          ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+            override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+              case Equal(l, r) if vars.contains(l) => equality = Some(l.asInstanceOf[Variable], r); Left(Some(ExpressionTraversal.stop))
+              case Equal(l, r) if vars.contains(r) => equality = Some(r.asInstanceOf[Variable], l); Left(Some(ExpressionTraversal.stop))
+              case _ => Left(None)
+            }
+          }, phi)
+          Some(optimizationOneAt(equality)(p))
+      }
+    }
+  }
+
+  def optimizationOne(inst: Option[(Variable, Term)] = None) = locateT(optimizationOneAt(inst)::Nil)
+
+  def optimizationOneAt(inst: Option[(Variable, Term)] = None) = new PositionTactic("Optimization 1") {
+    override def applies(s: Sequent, p: Position): Boolean = isFormula(s, p) && (s(p).subFormulaAt(p.inExpr) match {
+      case Some(Exists(vars, _)) => !p.isAnte && vars.size == 1
+      case Some(Forall(vars, _)) => p.isAnte && vars.size == 1
+      case _ => false
+    })
+
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p).subFormulaAt(p.inExpr) match {
+        case Some(Exists(vars, phi)) if !p.isAnte => inst match {
           case Some(i) => Some(instantiateT(i._1, i._2)(p))
           case None => //Some(instantiateT(p))
             require(vars.size == 1)
@@ -349,7 +412,7 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
             val postFn = FuncOf(post, Nothing)
             Some(instantiateT(v, postFn)(p))
         }
-        case Forall(vars, phi) if p.isAnte => inst match {
+        case Some(Forall(vars, phi)) if p.isAnte => inst match {
           case Some(i) => Some(instantiateT(i._1, i._2)(p))
           case None => //Some(instantiateT(p))
             require(vars.size == 1)

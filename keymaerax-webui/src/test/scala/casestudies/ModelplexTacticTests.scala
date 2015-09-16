@@ -6,6 +6,9 @@ import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, Expre
 import edu.cmu.cs.ls.keymaerax.tactics.ProofNode.ProofStep
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
+import org.scalameter.{Key, Warmer, Measurer}
+import testHelper.KeYmaeraXTestTags.SlowTest
 import testHelper.ParserFactory._
 import edu.cmu.cs.ls.keymaerax.tactics.ModelPlex.{modelplex, modelplexInPlace, diamondModelplexTestT,
   locateT, optimizationOne, modelplexControllerMonitorTrafo, controllerMonitorT, modelMonitorT}
@@ -15,9 +18,11 @@ import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
 import TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
+import testHelper.ProvabilityTestHelper
 import scala.collection.immutable
-import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
+
+import org.scalameter._
 
 /**
  * Created by smitsch on 3/8/15.
@@ -25,11 +30,25 @@ import scala.language.postfixOps
  */
 class ModelplexTacticTests extends testHelper.TacticTestSuite {
 
+  /**
+   * Prove the new goal by the given tactic, returning the resulting proof node
+   * @see [[TactixLibrary.proveBy(Sequent, Tactic)]]
+   */
+  def proveUncheckedBy(goal: Sequent, tactic: Tactic): ProofNode = {
+    helper.runTactic(tactic, new RootNode(goal))
+  }
+  /**
+   * Prove the new goal by the given tactic, returning the resulting proof node
+   * @see [[TactixLibrary.proveBy(Formula, Tactic)]]
+   */
+  def proveUncheckedBy(goal: Formula, tactic: Tactic): ProofNode =
+    proveUncheckedBy(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(goal)), tactic)
+
   def monitorSize(f: Formula): Int = {
     var numOperators = 0
     ExpressionTraversal.traverse(new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-        case _ => println(e); numOperators += 1; Left(None)
+        case _ => numOperators += 1; Left(None)
       }
 
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
@@ -37,7 +56,7 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
         case Number(_) => Left(None)
         case FuncOf(_, _) => Left(None)
         case Nothing => Left(None)
-        case _ => println(e); numOperators += 1; Left(None)
+        case _ => numOperators += 1; Left(None)
       }
     }, f)
     numOperators
@@ -55,6 +74,50 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     println("Number of branches (open/all): " + proof.openGoals().size + "/" + numBranches(proof))
   }
 
+  "Simple modelplex" should "chase: find correct controller monitor by updateCalculus implicationally" in {
+    import TactixLibrary.chase
+    import TactixLibrary.proveBy
+    import scala.collection._
+
+    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/simple.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("x"))
+
+    def modelPlex: PositionTactic = chase(3, 3, e => e match {
+      // no equational assignments
+      case Box(Assign(_, _), _) => "[:=] assign" :: "[:=] assign update" :: Nil
+      case Diamond(Assign(_, _), _) => "<:=> assign" :: "<:=> assign update" :: Nil
+      // remove loops
+      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      // remove ODEs for controller monitor
+      case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
+      case _ => AxiomIndex.axiomsFor(e)
+    })
+
+    val result = proveBy(modelplexInput, modelPlex(SuccPosition(0, PosInExpr(1 :: Nil))))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true -> xpost()=1".asFormula
+  }
+
+  it should "chase away a loop by updateCalculus implicationally" in {
+    import TactixLibrary.chase
+    import TactixLibrary.proveBy
+
+    val model = KeYmaeraXProblemParser("ProgramVariables. R x. End. Problem. 0 <= x -> [{x:=2;}*](0 <= x) End.")
+    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("x"))
+
+    def modelPlex: PositionTactic = chase(3, 3, e => e match {
+      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      case _ => AxiomIndex.axiomsFor(e)
+    })
+
+    val result = proveBy(modelplexInput, modelPlex(SuccPosition(0, PosInExpr(1 :: Nil))))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true -> xpost()=2".asFormula
+  }
+
   "Watertank modelplex" should "find correct controller monitor condition" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank-ctrl.key"))
     val tactic = locateSucc(modelplex)
@@ -66,137 +129,29 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     result.openGoals()(1).sequent.succ should contain only "tpost_0()=0 & (fpost()=fpost_0() & xpost()=x & tpost()=tpost_0())".asFormula
   }
 
-  it should "chase: find correct controller monitor by updateCalculus implicationally" in {
-    import TactixLibrary.chase
-    import TactixLibrary.proveBy
-    import TactixLibrary.useAt
-    import TactixLibrary.lin
-    import scala.collection._
-
-    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/simple.key")
-      //getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank.key")
-    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("x")/*Variable("f"), Variable("l"), Variable("c")*/)
-
-    def modelPlex: PositionTactic = chase(3, 3, e => e match {
-        // no equational assignments
-        case Box(Assign(_, _), _) => "[:=] assign" :: "[:=] assign update" :: Nil
-        case Diamond(Assign(_, _), _) => "<:=> assign" :: "<:=> assign update" :: Nil
-        // remove loops
-        case Diamond(Loop(_), _) => "<*> approx" :: Nil //"<*> approx" :: Nil
-        // remove ODEs for controller monitor
-        case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
-        case _ => AxiomIndex.axiomsFor(e)
-      })
-
-    val result = proveBy(modelplexInput, modelPlex(SuccPosition(0, PosInExpr(1 :: Nil))))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "true -> ???".asFormula
-  }
-
-  it should "simple: find correct controller monitor by updateCalculus implicationally" in {
-    import TactixLibrary.chase
-    import TactixLibrary.proveBy
-    import TactixLibrary.useAt
-    import TactixLibrary.lin
-    import scala.collection._
-
-    val in = //getClass.getResourceAsStream("examples/casestudies/modelplex/simple.key")
-      getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank.key")
-    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("f"), Variable("l"), Variable("c"))
-
-    // child position needed to nibble off the <-> from the chase (maybe ought to be in chase itself???)
-    def posChild(pos: Position): Position = if (pos.isAnte)
-      AntePosition(pos.index, pos.inExpr.child)
-    else
-      SuccPosition(pos.index, pos.inExpr.child)
-
-    // prepend position where uncontrol/modelPlex chase was started off in the first place
-    def prependPos(pos: Position, prep: PosInExpr): Position = if (pos.isAnte)
-      AntePosition(pos.index, prep.append(pos.inExpr))
-    else
-      SuccPosition(pos.index, prep.append(pos.inExpr))
-
-    // mutable state per call
-    def modelPlex(loopStack: mutable.ListBuffer[Position]): PositionTactic = {
-      def uncontrol: PositionTactic = chase(3, 3, e => e match {
-        // no equational assignments
-        case Box(Assign(_, _), _) => "[:=] assign" :: "[:=] assign update" :: Nil
-        case Diamond(Assign(_, _), _) => "<:=> assign" :: "<:=> assign update" :: Nil
-        // remove loops
-        case Diamond(Loop(_), _) => "<*> stuck" :: Nil //"<*> approx" :: Nil
-        // remove ODEs for controller monitor
-        case Diamond(ODESystem(_, _), _) => "<'> stuck" :: Nil
-        case _ => AxiomIndex.axiomsFor(e)
-      },
-        (ax, pos) => pr => {
-          println("uncontrol using " + ax + " at " + pos)
-          ax match {
-            // log loop applications
-            case "<*> stuck" => posChild(pos) +=: loopStack  // this means prepend pos to stack
-              println("Stuck with <*> at stack " + loopStack)
-            case "<'> stuck" => posChild(pos) +=: loopStack
-              println("Stuck with <'> at stack " + loopStack)
-//            case "<:=> assign update" => pos +=: loopStack
-//              println("Stuck with <:=> at stack " + loopStack)
-            case _ =>
-          };
-          pr
-        }
-      )
-
-      val modelPlexRecursor = new PositionTactic("lazy modelPlex recursor") {
-        override def applies(s: Sequent, p: Position): Boolean = true
-        //@note indirect/postponed/lazy call to modelPlex is required to prevent infinite recursion in tactic construction
-        override def apply(p: Position): Tactic = modelPlex(new ListBuffer())(p)
-      }
-
-      new PositionTactic("ModelPlex") {
-        override def applies(s: Sequent, p: Position): Boolean = true
-        override def apply(p: Position): Tactic =
-          (debugAtT("huhu") & uncontrol & debugAtT("uncontrolled") &
-            (lin((useAt("<*> approx") | useAt("DX diamond differential skip")) & modelPlexRecursor)*)
-            ) (p)
-      }
-    }
-
-    val result = proveBy(modelplexInput, modelPlex(new ListBuffer[Position]())(SuccPosition(0, PosInExpr(1 :: Nil))))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "true -> ???".asFormula
-  }
-
-
-
-
-
-
   it should "find correct controller monitor by updateCalculus implicationally" in {
-    import TactixLibrary.chase
-    import TactixLibrary.proveBy
-
     val in = getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("f"), Variable("l"), Variable("c"))
 
-    def controllerMonitor: PositionTactic = chase(3,3, e => e match {
-      // no equational assignments
-      case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
-      case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
-      // remove loops
-      case Diamond(Loop(_), _) => "<*> approx" :: Nil
-      // remove ODEs for controller monitor
-      case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
-      case _ => AxiomIndex.axiomsFor(e)
-    }
-    )
+    val foResult = proveUncheckedBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
+    foResult.openGoals() should have size 1
+    foResult.openGoals().head.sequent.ante shouldBe empty
+    foResult.openGoals().head.sequent.succ should contain only "true->\\exists f ((-1<=f&f<=(m-l)/ep)&(0<=l&0<=ep)&(fpost()=f&lpost()=l)&cpost()=0)".asFormula
 
-    val result = proveBy(modelplexInput, controllerMonitor(SuccPosition(0, PosInExpr(1 :: Nil))))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "true -> ".asFormula
+    // Opt. 1
+    val opt1Result = proveUncheckedBy(foResult.openGoals().head.sequent, ModelPlex.optimizationOneWithSearch(1))
+    opt1Result.openGoals() should have size 1
+    opt1Result.openGoals().head.sequent.ante shouldBe empty
+    opt1Result.openGoals().head.sequent.succ should contain only "true->(-1<=fpost()&fpost()<=(m-l)/ep)&(0<=l&0<=ep)&(fpost()=fpost()&lpost()=l)&cpost()=0".asFormula
+
+    report(opt1Result.sequent.succ.head, opt1Result, "Water tank controller monitor (forward chase)")
+
+    // Cleanup
+//    val finalResult = proveBy(opt1Result.subgoals.head.succ.head, chase(3,3)(1))
+//    finalResult.subgoals should have size 1
+//    finalResult.subgoals.head.ante shouldBe empty
+//    finalResult.subgoals.head.succ should contain only "(-1<=fpost()&fpost()<=(m-l)/ep)&(0<=l&0<=ep) & lpost()=l & cpost()=0".asFormula
   }
 
   ignore should "find correct model monitor condition" in {
@@ -225,7 +180,7 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     result.openGoals().flatMap(_.sequent.ante) should contain only "0<=x & x<=m & 0<ep".asFormula
     result.openGoals().flatMap(_.sequent.succ) should contain only expected
 
-    report(expected, result, "Watertank controller")
+    report(expected, result, "Watertank controller monitor (backward tactic)")
   }
 
   it should "find correct controller monitor condition from model file" in {
@@ -242,7 +197,7 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     result.openGoals().flatMap(_.sequent.ante) should contain only "true".asFormula
     result.openGoals().flatMap(_.sequent.succ) should contain only expected
 
-    report(expected, result, "Watertank controller")
+    report(expected, result, "Watertank controller monitor (backward tactic)")
   }
 
   it should "find correct controller monitor condition without intermediate Optimization 1" in {
@@ -257,7 +212,7 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     result.openGoals().flatMap(_.sequent.ante) should contain only "0<=x & x<=m & 0<ep".asFormula
     result.openGoals().flatMap(_.sequent.succ) should contain only expected
 
-    report(expected, result, "Watertank controller")
+    report(expected, result, "Watertank controller monitor (backward tactic)")
   }
 
   it should "find correct model monitor condition" in {
@@ -359,65 +314,6 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     result.openGoals()(5).sequent.succ should contain only "f_post=f & l_post=t*f+l & c_post=1*t+c_1".asFormula
   }
 
-  ignore should "Local lane control modelplex find correct controller monitor condition" in {
-    val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-ctrl.key"))
-    val tactic = locateSucc(modelplex)
-    val result = helper.runTactic(tactic, new RootNode(s))
-    result.openGoals() should have size 22
-    // TODO check (are same as 13 above except that several goals are duplicated)
-  }
-
-  ignore should "work manually" in {
-    val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-ctrl.key"))
-
-    def sp(i: Int) = new SuccPosition(i)
-
-    def stayStoppedTactic(where: Int) = AndRightT(sp(where)) && (
-      LabelBranch("ContinueBrakePLast"),
-      ImplyRightT(sp(where)) & lastSucc(substitutionDiamondAssignT) & lastSucc(substitutionDiamondAssignT) & LabelBranch("ContinueBrakePMid"))
-
-    def brakeTactic(where: Int) = debugT(s"Brake $where") & AndRightT(sp(where)) && (
-      LabelBranch("ContinueAccPLast"),
-      ImplyRightT(sp(where)) & lastSucc(substitutionDiamondAssignT) & LabelBranch("ContinueAccPMid"))
-
-    def accTactic(where: Int) = debugT(s"Acc $where") & AndRightT(sp(where)) && (
-      NilT,
-      ImplyRightT(sp(where)) & lastSucc(substitutionDiamondAssignT))
-
-    val tactic = ImplyRightT(sp(0)) &
-      diamondSeqT(sp(0)) & diamondNDetAssign(sp(0)) & instantiateT(sp(0)) &
-      diamondSeqT(sp(0)) & diamondModelplexTestT(sp(0)) & AndRightT(sp(0)) && (NilT,
-      ImplyRightT(sp(0)) & diamondSeqT(sp(0)) & diamondChoiceT(sp(0)) & OrRightT(sp(0)) &
-        // first: accelerate
-      diamondSeqT(sp(0)) /* now moved to end */ & lastSucc(diamondModelplexTestT) & // continue branch at 1.1
-      // second: stay stopped
-      diamondChoiceT(sp(0)) /* now moved to end */ & lastSucc(OrRightT) &
-      diamondSeqT(sp(1)) /* now moved to end */ & lastSucc(diamondModelplexTestT) &
-      // third: brake
-      diamondSeqT(sp(1)) /* now moved to end */ & lastSucc(diamondNDetAssign) & lastSucc(instantiateT) & lastSucc(diamondModelplexTestT) &
-      // 1.1
-      AndRightT(sp(0)) && (stayStoppedTactic(1) & onBranch(
-        ("ContinueBrakePLast", brakeTactic(2)),
-        ("ContinueBrakePMid", brakeTactic(1))),
-        // accelerate
-        ImplyRightT(sp(0)) /* now moved to end */ & lastSucc(diamondSeqT) & lastSucc(diamondNDetAssign) & lastSucc(instantiateT) & lastSucc(diamondModelplexTestT) &
-        // stay stopped
-        stayStoppedTactic(0) & onBranch(
-          ("ContinueBrakePLast", brakeTactic(1) & onBranch(
-            ("ContinueAccPLast", accTactic(2)),
-            ("ContinueAccPMid", accTactic(1))
-          )),
-          ("ContinueBrakePMid", brakeTactic(0) & onBranch(
-            ("ContinueAccPLast", accTactic(1)),
-            ("ContinueAccPMid", accTactic(0))
-          ))
-        )
-        )
-      ) & (locateAnte(eqLeft(exhaustive = true))*)
-    val result = helper.runTactic(tactic, new RootNode(s))
-    result.openGoals() should have size 13
-  }
-
   "Local lane control modelplex in place" should "find correct controller monitor condition" in {
     val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc-ctrl.key"))
     val tactic = locateSucc(modelplexInPlace(useOptOne=true)(controllerMonitorT))
@@ -435,7 +331,7 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
       "xf < xl & xf + vf^2/(2*b) < xl + vl^2/(2*B) & B >= b & b > 0 & vf >= 0 & vl >= 0 & A >= 0 & ep > 0".asFormula
     result.openGoals().flatMap(_.sequent.succ) should contain only expected
 
-    report(expected, result, "Local lane controller ")
+    report(expected, result, "Local lane controller (backward tactic)")
   }
 
   ignore should "find correct controller monitor condition without intermediate Optimization 1" in {
@@ -457,6 +353,26 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     result.openGoals().flatMap(_.sequent.succ) should contain only expected
 
     report(expected, result, "Local lane controller ")
+  }
+
+  it should "find correct controller monitor by updateCalculus implicationally" in {
+    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/fm11/llc.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model,
+      Variable("xl"), Variable("vl"), Variable("al"), Variable("xf"), Variable("vf"), Variable("af"), Variable("t"))
+
+    val foResult = proveUncheckedBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
+    foResult.openGoals() should have size 1
+    foResult.openGoals().head.sequent.ante shouldBe empty
+    foResult.openGoals().head.sequent.succ should contain only "true->\\exists al ((-B<=al&al<=A)&(xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf) < xl+vl^2/(2*B)&\\exists af ((-B<=af&af<=A)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=al)&xfpost()=xf)&vfpost()=vf)&afpost()=af)&tpost()=0)|vf=0&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=al)&xfpost()=xf)&vfpost()=vf)&afpost()=0)&tpost()=0|\\exists af ((-B<=af&af<=-b)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=al)&xfpost()=xf)&vfpost()=vf)&afpost()=af)&tpost()=0)))".asFormula
+
+    // Opt. 1
+    val opt1Result = proveUncheckedBy(foResult.openGoals().head.sequent, ModelPlex.optimizationOneWithSearch(1)*)
+    opt1Result.openGoals() should have size 1
+    opt1Result.openGoals().head.sequent.ante shouldBe empty
+    opt1Result.openGoals().head.sequent.succ should contain only "true->(-B<=alpost()&alpost()<=A)&(xf+vf^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*vf) < xl+vl^2/(2*B)&(-B<=afpost()&afpost()<=A)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=alpost())&xfpost()=xf)&vfpost()=vf)&afpost()=afpost())&tpost()=0|vf=0&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=alpost())&xfpost()=xf)&vfpost()=vf)&afpost()=0)&tpost()=0|(-B<=afpost()&afpost()<=-b)&(vf>=0&vl>=0&0<=ep)&(((((xlpost()=xl&vlpost()=vl)&alpost()=alpost())&xfpost()=xf)&vfpost()=vf)&afpost()=afpost())&tpost()=0)".asFormula
+
+    report(opt1Result.openGoals().head.sequent.succ.head, opt1Result, "LLC controller monitor (forward chase)")
   }
 
   "ETCS safety lemma modelplex in place" should "find correct controller monitor condition" in {
@@ -505,11 +421,33 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
       """.stripMargin.asFormula
   }
 
+  it should "find correct controller monitor by updateCalculus implicationally" in {
+    val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model,
+      Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
+      Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
+
+    val foResult = proveUncheckedBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
+    foResult.openGoals() should have size 1
+    foResult.openGoals().head.sequent.ante shouldBe empty
+    foResult.openGoals().head.sequent.succ should contain only "true->\\exists dxo \\exists dyo (dxo^2+dyo^2<=V()^2&((0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxo)&dyopost()=dyo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=-B)&rpost()=r)&tpost()=0|v=0&(0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxo)&dyopost()=dyo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=0)&rpost()=r)&tpost()=0|\\exists a ((-B<=a&a<=A)&\\exists r (r!=0&\\exists w (w*r=v&\\exists xo \\exists yo ((abs(x-xo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|abs(y-yo)>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxo)&dyopost()=dyo)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=a)&rpost()=r)&tpost()=0))))))".asFormula
+
+    // Opt. 1
+    val opt1Result = proveUncheckedBy(foResult.openGoals().head.sequent, ModelPlex.optimizationOneWithSearch(1)*)
+    opt1Result.openGoals() should have size 1
+    opt1Result.openGoals().head.sequent.ante shouldBe empty
+    opt1Result.openGoals().head.sequent.succ should contain only "true->dxopost()^2+dyopost()^2<=V()^2&((0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=w)&apost()=-B)&rpost()=r)&tpost()=0|v=0&(0<=ep&v>=0)&(((((((((((xopost()=xo&yopost()=yo)&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=0)&apost()=0)&rpost()=r)&tpost()=0|(-B<=apost()&apost()<=A)&rpost()!=0&wpost()*rpost()=v&(abs(x-xopost())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|abs(y-yopost())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(0<=ep&v>=0)&(((((((((((xopost()=xopost()&yopost()=yopost())&dxopost()=dxopost())&dyopost()=dyopost())&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)&vpost()=v)&wpost()=wpost())&apost()=apost())&rpost()=rpost())&tpost()=0)".asFormula
+
+    report(opt1Result.openGoals().head.sequent.succ.head, opt1Result, "Robix controller monitor (forward chase)")
+  }
+
   it should "find the correct controller monitor condition from the input model" in {
     val in = getClass.getResourceAsStream("examples/casestudies/robix/passivesafetyabs.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = modelplexControllerMonitorTrafo(model/*, List(Variable("a"), Variable("r"), Variable("t"),
-      Variable("dxo"), Variable("dyo"), Variable("xo"), Variable("yo"), Variable("w"))*/)
+    val modelplexInput = modelplexControllerMonitorTrafo(model,
+      Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
+      Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
 
     val tactic = locateSucc(modelplexInPlace(useOptOne=true)(controllerMonitorT))
     val result = helper.runTactic(tactic, new RootNode(Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(modelplexInput))))
@@ -522,6 +460,8 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only expectedAnte
     result.openGoals().head.sequent.succ should contain only expectedSucc
+
+    report(expectedSucc, result, "RSS controller monitor (forward tactic)")
   }
 
   it should "work using the command line interface" in {
@@ -614,6 +554,47 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     report(expected, result, "VSL controller")
   }
 
+  it should "find correct controller monitor condition from input file" in {
+    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/iccps12/vsl.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model,
+      Variable("xsl"), Variable("vsl"), Variable("x1"), Variable("v1"), Variable("a1"), Variable("t"))
+
+    val tactic = locateSucc(modelplexInPlace(useOptOne=true)(controllerMonitorT))
+    val result = proveUncheckedBy(modelplexInput, tactic)
+
+    // with ordinary diamond test
+    val expected = "((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=-B)&tpost()=t|xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1)&(-B<=a1post_0()&a1post_0()<=A)&((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=a1post_0())&tpost()=t|x1>=xsl&(-B<=a1post_0()&a1post_0()<=A&a1post_0()<=(v1-vsl)/ep)&((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=a1post_0())&tpost()=t|(vslpost_0()>=0&xslpost_0()>=x1+(v1^2-vslpost_0()^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1))&tpost_0()=0&((((((tpost_0()<=ep&v1>=0)&xslpost()=xslpost_0())&x1post()=x1)&vslpost()=vslpost_0())&v1post()=v1)&tpost()=tpost_0())&a1=a1post()".asFormula
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "true".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only expected
+
+    report(expected, result, "VSL controller monitor by backward tactic")
+  }
+
+  it should "find correct controller monitor by updateCalculus implicationally" in {
+    val in = getClass.getResourceAsStream("examples/casestudies/modelplex/iccps12/vsl.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model,
+      Variable("xsl"), Variable("vsl"), Variable("x1"), Variable("v1"), Variable("a1"), Variable("t"))
+
+    val foResult = proveUncheckedBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
+    foResult.openGoals() should have size 1
+    foResult.openGoals().head.sequent.ante shouldBe empty
+    foResult.openGoals().head.sequent.succ should contain only "true->((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=-B)&tpost()=t|xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1)&\\exists a1 ((-B<=a1&a1<=A)&((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=a1)&tpost()=t)|x1>=xsl&\\exists a1 ((-B<=a1&a1<=A&a1<=(v1-vsl)/ep)&((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=a1)&tpost()=t)|\\exists xsl \\exists vsl ((vsl>=0&xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1))&(v1>=0&0<=ep)&((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=a1)&tpost()=0)".asFormula
+
+    // Opt. 1
+    val expected = "true->((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=-B)&tpost()=t|xsl>=x1+(v1^2-vsl^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1)&(-B<=a1post()&a1post()<=A)&((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=a1post())&tpost()=t|x1>=xsl&(-B<=a1post()&a1post()<=A&a1post()<=(v1-vsl)/ep)&((((xslpost()=xsl&vslpost()=vsl)&x1post()=x1)&v1post()=v1)&a1post()=a1post())&tpost()=t|(vslpost()>=0&xslpost()>=x1+(v1^2-vslpost()^2)/(2*B)+(A/B+1)*(A/2*ep^2+ep*v1))&(v1>=0&0<=ep)&((((xslpost()=xslpost()&vslpost()=vslpost())&x1post()=x1)&v1post()=v1)&a1post()=a1)&tpost()=0".asFormula
+    val opt1Result = proveUncheckedBy(foResult.openGoals().head.sequent, ModelPlex.optimizationOneWithSearch(1)*)
+    opt1Result.openGoals() should have size 1
+    opt1Result.openGoals().head.sequent.ante shouldBe empty
+    opt1Result.openGoals().head.sequent.succ should contain only expected
+
+    report(expected, foResult, "VSL controller monitor by forward chase (without Opt. 1)")
+    report(expected, opt1Result, "VSL controller monitor by forward chase (with Opt. 1)")
+  }
+
   "Quadcopter modelplex in place" should "find correct controller monitor condition" in {
     val in = getClass.getResourceAsStream("examples/casestudies/modelplex/quadcopter/simplepid.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
@@ -629,5 +610,60 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only expectedAnte
     result.openGoals().head.sequent.succ should contain only expectedSucc
+  }
+
+  // Performance tests
+
+  val performanceRuns = 2
+
+  private def compareControllerMonitorTactics(modelFile: String, vars: Variable*) = {
+    val in = getClass.getResourceAsStream(modelFile)
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val modelplexInput = modelplexControllerMonitorTrafo(model, vars:_*)
+
+    val chaseTime = config(
+      Key.exec.benchRuns -> performanceRuns,
+      Key.verbose -> false
+    ) withWarmer {
+      new Warmer.Default
+    } withMeasurer {
+      new Measurer.IgnoringGC
+    } measure {
+      proveUncheckedBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
+    }
+
+    val tacticTime = config(
+      Key.exec.benchRuns -> performanceRuns,
+      Key.verbose -> false
+    ) withWarmer {
+      new Warmer.Default
+    } withMeasurer {
+      new Measurer.IgnoringGC
+    } measure {
+      proveUncheckedBy(modelplexInput, modelplexInPlace(useOptOne=true)(controllerMonitorT)(1))
+    }
+
+    println(s"Averaged time over $performanceRuns runs: $chaseTime (forward chase) vs. $tacticTime (backward tactic)")
+  }
+
+  "Performance measurement" should "on water tank compare backward tactic and forward chase controller monitor performance" taggedAs SlowTest in {
+    compareControllerMonitorTactics("examples/casestudies/modelplex/watertank/watertank.key", Variable("f"), Variable("l"), Variable("c"))
+  }
+
+  it should "on LLC compare backward tactic and forward chase controller monitor performance" taggedAs SlowTest in {
+    compareControllerMonitorTactics("examples/casestudies/modelplex/fm11/llc.key",
+      Variable("xl"), Variable("vl"), Variable("al"), Variable("xf"), Variable("vf"), Variable("af"), Variable("t"))
+  }
+
+  //@todo fix Robix backward tactic first (DX differential skip comes too late)
+  ignore should "on Robix compare backward tactic and forward chase controller monitor performance" taggedAs SlowTest in {
+    compareControllerMonitorTactics("examples/casestudies/robix/passivesafetyabs.key",
+      Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
+      Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
+  }
+
+  it should "on VSL compare backward tactic and forward chase controller monitor performance" taggedAs SlowTest in {
+    compareControllerMonitorTactics("examples/casestudies/modelplex/iccps12/vsl.key",
+      Variable("xsl"), Variable("vsl"), Variable("x1"), Variable("v1"), Variable("a1"), Variable("t"))
   }
 }
