@@ -216,6 +216,7 @@ object DerivedAxioms {
     case "<*> stuck" => Some(loopStuckF, loopStuckT)
     case "<'> stuck" => Some(odeStuckF, odeStuckT)
     case "+<= up" => Some(intervalUpPlusF, intervalUpPlusT)
+    case "-<= up" => Some(intervalUpMinusF, intervalUpMinusT)
     case _ => None
   } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == name, s"Lookup of DerivedAxiom should find the correct lemma (name: ${name})")
 
@@ -298,6 +299,7 @@ object DerivedAxioms {
       , "<*> stuck" -> Some(loopStuckF, loopStuckT)
       , "<'> stuck" -> Some(odeStuckF, odeStuckT)
       , "+<= up" -> Some(intervalUpPlusF, intervalUpPlusT)
+      , "-<= up" -> Some(intervalUpMinusF, intervalUpMinusT)
     ) ensuring(r => r.forall(kv => derivedAxiomInfo(kv._1)==kv._2), "same contents as derivedAxiomInfo()")
 
     derivedAxiomMap.keys.map(key => {
@@ -1985,11 +1987,11 @@ object DerivedAxioms {
 
   /**
    * {{{Axiom "+<= up".
-   *    x+y<=z <- ((x<=X & y<=Y) & X+Y<=z)
+   *    f()+g()<=h() <- ((f()<=F() & g()<=G()) & F()+G()<=h())
    * End.
    * }}}
    */
-  lazy val intervalUpPlusF = "x+y<=z <- ((x<=X & y<=Y) & X+Y<=z)".asFormula
+  lazy val intervalUpPlusF = "f()+g()<=h() <- ((f()<=F() & g()<=G()) & F()+G()<=h())".asFormula
   lazy val intervalUpPlus = derivedAxiom("+<= up",
     Sequent(Nil, IndexedSeq(), IndexedSeq(intervalUpPlusF)),
     TactixLibrary.QE
@@ -1997,4 +1999,17 @@ object DerivedAxioms {
 
   lazy val intervalUpPlusT = derivedAxiomT(intervalUpPlus)
 
+  /**
+   * {{{Axiom "-<= up".
+   *    f()-g()<=h() <- ((f()<=F() & G()<=g()) & F()-G()<=h())
+   * End.
+   * }}}
+   */
+  lazy val intervalUpMinusF = "f()-g()<=h() <- ((f()<=F() & G()<=g()) & F()-G()<=h())".asFormula
+  lazy val intervalUpMinus = derivedAxiom("-<= up",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalUpMinusF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalUpMinusT = derivedAxiomT(intervalUpMinus)
 }
