@@ -634,12 +634,14 @@ class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String,
 
 class GetProofHistoryRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   override def getResultingResponses(): List[Response] = {
-    val steps = db.getProofSteps(proofId).map(step => db.getDispatchedTactics(step)).filter(_.isDefined).map(_.get).
-      map(step => step -> db.getTactic(step.tacticsId).getOrElse(
+    if(db.getProofInfo(proofId).stepCount!=0) {
+      val steps = db.getProofSteps(proofId).map(step => db.getDispatchedTactics(step)).filter(_.isDefined).map(_.get).
+        map(step => step -> db.getTactic(step.tacticsId).getOrElse(
         throw new IllegalStateException(s"Proof refers to unknown tactic ${step.tacticsId}")))
-    if (steps.nonEmpty) {
-      new ProofHistoryResponse(steps) :: Nil
-    } else new ErrorResponse(new Exception("Could not find a proof history associated with these ids.")) :: Nil
+      if (steps.nonEmpty) {
+        new ProofHistoryResponse(steps) :: Nil
+      } else new ErrorResponse(new Exception("Could not find a proof history associated with these ids.")) :: Nil
+    } else Nil
   }
 }
 
