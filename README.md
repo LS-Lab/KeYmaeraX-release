@@ -135,13 +135,13 @@ Test Cases:
 - Right click on the test folder to run all its ScalaTests.
 
 Tagged Test Suite:
- Configurations Drop-down
+Run Configurations Drop-down in Toolbar
  -> Edit Configurations
  -> Add Configuration (ScalaTest)
  -> Select "All in package" for Test Kind
- -> Under "test options" enter:
+ -> Under "Test options" enter:
       -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest
-      (or any other string in KeYmaeraXTestTags.scala)
+      (or any other string from KeYmaeraXTestTags.scala)
  -> Select "keymaerax" as SDK and classpath of module
  -> Apply/OK
 
