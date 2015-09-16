@@ -159,20 +159,24 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
 
         db.updateConfiguration(newConfig)
 
-        var success = false;
         try {
+          if(!(new File(linkName).exists() || !jlinkLibFile.exists())) throw new FileNotFoundException()
           ComponentConfig.keymaeraInitializer.initMathematicaFromDB() //um.
-          success = true
+          new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
         }
         catch {
-          case e : Exception => {
+          case e : FileNotFoundException => {
             db.updateConfiguration(originalConfig)
             e.printStackTrace()
-            success = false
+            new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, false) :: Nil
+          }
+
+          case e : Exception => {
+            new ErrorResponse(e) :: Nil
           }
         }
 
-        new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, success) :: Nil
+
       }
     }
     catch {
@@ -634,12 +638,14 @@ class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String,
 
 class GetProofHistoryRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   override def getResultingResponses(): List[Response] = {
-    val steps = db.getProofSteps(proofId).map(step => db.getDispatchedTactics(step)).filter(_.isDefined).map(_.get).
-      map(step => step -> db.getTactic(step.tacticsId).getOrElse(
+    if(db.getProofInfo(proofId).stepCount!=0) {
+      val steps = db.getProofSteps(proofId).map(step => db.getDispatchedTactics(step)).filter(_.isDefined).map(_.get).
+        map(step => step -> db.getTactic(step.tacticsId).getOrElse(
         throw new IllegalStateException(s"Proof refers to unknown tactic ${step.tacticsId}")))
-    if (steps.nonEmpty) {
-      new ProofHistoryResponse(steps) :: Nil
-    } else new ErrorResponse(new Exception("Could not find a proof history associated with these ids.")) :: Nil
+      if (steps.nonEmpty) {
+        new ProofHistoryResponse(steps) :: Nil
+      } else new ErrorResponse(new Exception("Could not find a proof history associated with these ids.")) :: Nil
+    } else Nil
   }
 }
 

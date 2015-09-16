@@ -101,7 +101,8 @@ object Context {
         case e: SubstitutionClashException => replaceAt(r._1.ctx, pos, r._2) == t
       }
     else
-      replaceAt(r._1.ctx, pos, r._2) == t
+      // no proper reassemble test for noContext
+      true
   }
 
   /** @see [[StaticSemanticsTools.boundAt()]] for same positions */

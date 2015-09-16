@@ -224,7 +224,7 @@ object SQLite extends DBAbstraction {
   //Proofs and Proof Nodes
   override def getProofInfo(proofId: String): ProofPOJO =
     sqldb.withSession(implicit session => {
-      val stepCount = 0 //@todo when everything else is done, do this.
+      val stepCount = getProofSteps(proofId).size
       val list = Proofs.filter(_.proofid === proofId)
             .list
             .map(p => new ProofPOJO(p.proofid.get, p.modelid.get, blankOk(p.name), blankOk(p.description),

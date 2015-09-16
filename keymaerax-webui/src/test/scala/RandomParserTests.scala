@@ -18,7 +18,7 @@ import test.RandomFormula
  * @author Andre Platzer
  */
 class RandomParserTests extends FlatSpec with Matchers {
-  val randomTrials = 40000
+  val randomTrials = 4000
   val randomComplexity = 6
   val rand = new RandomFormula()
 
@@ -37,12 +37,10 @@ class RandomParserTests extends FlatSpec with Matchers {
     }
   }
 
-  "The parser" should "reparse pretty-prints of random formulas" in {
-  }
-  "The positioning" should "consistently split formulas (checkin)" taggedAs(CheckinTest) in {test(10)}
-  it should "consistently split formulas (summary)" taggedAs(SummaryTest) in {test(50,8)}
-  it should "consistently split formulas (usual)" taggedAs(UsualTest) in {test(1000,10)}
-  it should "consistently split formulas (slow)" taggedAs(SlowTest) in {test(40000,20)}
+  "The parser" should "reparse pretty-prints of random formulas (checkin)" taggedAs(CheckinTest) in {test(10)}
+  it should "reparse pretty-prints of random formulas (summary)" taggedAs(SummaryTest) in {test(50)}
+  it should "reparse pretty-prints of random formulas (usual)" taggedAs(UsualTest) in {test(1000,10)}
+  it should "reparse pretty-prints of random formulas (slow)" taggedAs(SlowTest) in {test(randomTrials,20)}
 
   private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
