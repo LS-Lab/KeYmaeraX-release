@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.tactics.ProofNode.ProofStep
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import org.scalameter.{Key, Warmer, Measurer}
@@ -665,5 +666,21 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
   it should "on VSL compare backward tactic and forward chase controller monitor performance" taggedAs SlowTest in {
     compareControllerMonitorTactics("examples/casestudies/modelplex/iccps12/vsl.key",
       Variable("xsl"), Variable("vsl"), Variable("x1"), Variable("v1"), Variable("a1"), Variable("t"))
+  }
+
+  "Interval arithmetic" should "intervalify grotesquely simplified watertank controller monitor" in {
+    //"(-1<=fpost()&fpost()<=(m-l)/ep)&(0<=l&0<=ep)&(fpost()=fpost()&lpost()=l)&cpost()=0".asFormula
+    val input = "-1<=fpost()&fpost()*ep+(l-m)<=0".asFormula
+    def intervalify: PositionTactic = chase(3, 3, e => e match {
+      // remove ODEs for controller monitor
+      case LessEqual(Plus(_,_), _) => "+<= up" :: Nil
+      case LessEqual(Minus(_,_), _) => "-<= up" :: Nil
+      case _ => AxiomIndex.axiomsFor(e)
+    })
+
+    val result = proveBy(input, intervalify(SuccPosition(0, PosInExpr(1 :: Nil))))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true".asFormula
   }
 }

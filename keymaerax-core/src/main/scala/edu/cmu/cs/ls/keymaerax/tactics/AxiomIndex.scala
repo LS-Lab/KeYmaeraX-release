@@ -110,7 +110,7 @@ object AxiomIndex {
     case "<*> approx" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
     case "<*> stuck" => (PosInExpr(0::Nil), Nil)
     case "<'> stuck" => (PosInExpr(0::Nil), Nil)
-    case "+<= up" => (PosInExpr(1::Nil), PosInExpr(0::1::Nil)::Nil)
+    case "+<= up" | "-<= up" => (PosInExpr(1::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::Nil)
 
     // default position
     case _ => println("AxiomIndex: defaulted for " + axiom); (PosInExpr(0::Nil), Nil)
