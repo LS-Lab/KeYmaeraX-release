@@ -84,7 +84,7 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
     val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("x"))
 
-    def modelPlex: PositionTactic = chase(3, 3, e => e match {
+    def modelPlex: PositionTactic = chase(3, 3, (e:Expression) => e match {
       // no equational assignments
       case Box(Assign(_, _), _) => "[:=] assign" :: "[:=] assign update" :: Nil
       case Diamond(Assign(_, _), _) => "<:=> assign" :: "<:=> assign update" :: Nil
@@ -108,7 +108,7 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     val model = KeYmaeraXProblemParser("ProgramVariables. R x. End. Problem. 0 <= x -> [{x:=2;}*](0 <= x) End.")
     val modelplexInput = modelplexControllerMonitorTrafo(model, Variable("x"))
 
-    def modelPlex: PositionTactic = chase(3, 3, e => e match {
+    def modelPlex: PositionTactic = chase(3, 3, (e:Expression) => e match {
       case Diamond(Loop(_), _) => "<*> approx" :: Nil
       case _ => AxiomIndex.axiomsFor(e)
     })
@@ -671,12 +671,24 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
   "Interval arithmetic" should "intervalify grotesquely simplified watertank controller monitor" in {
     //"(-1<=fpost()&fpost()<=(m-l)/ep)&(0<=l&0<=ep)&(fpost()=fpost()&lpost()=l)&cpost()=0".asFormula
     val input = "-1<=fpost()&fpost()*ep+(l-m)<=0".asFormula
-    def intervalify: PositionTactic = chase(3, 3, e => e match {
+    //@todo ouch, this is an awkard implementation for give the upper bound of a term as its interval
+    def upperBound(t: Term): Term = KeYmaeraXParser.termParser(t.prettyString.toUpperCase())
+    def intervalify: PositionTactic = chaseI(3, 3, e => e match {
       // remove ODEs for controller monitor
       case LessEqual(Plus(_,_), _) => "+<= up" :: Nil
       case LessEqual(Minus(_,_), _) => "-<= up" :: Nil
       case _ => AxiomIndex.axiomsFor(e)
-    })
+    },
+      ax => us => ax match {
+        case "+<= up" | "-<= up" => us ++
+          RenUSubst(immutable.Seq((FuncOf(Function("F",None,Unit,Real),Nothing),
+            upperBound(us(FuncOf(Function("f",None,Unit,Real),Nothing)))),
+            (FuncOf(Function("G",None,Unit,Real),Nothing),
+              upperBound(us(FuncOf(Function("g",None,Unit,Real),Nothing))))
+          ))
+        case _ => us
+      }
+    )
 
     val result = proveBy(input, intervalify(SuccPosition(0, PosInExpr(1 :: Nil))))
     result.subgoals should have size 1

@@ -957,21 +957,28 @@ trait UnifyUSCalculus {
     * @param giveUp  how many alternatives are too much so that the chase stops without trying any for applicability.
     *                Equivalent to pruning keys so that all lists longer than giveUp are replaced by Nil.
     */
-  def chase(breadth: Int, giveUp: Int): PositionTactic = chase(breadth, giveUp, AxiomIndex.axiomsFor)
+  def chase(breadth: Int, giveUp: Int): PositionTactic = chase(breadth, giveUp, AxiomIndex.axiomsFor _)
   def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String]): PositionTactic = chase(breadth, giveUp, keys, (ax,pos) => pr=>pr)
-  def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): PositionTactic = {
+  def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): PositionTactic =
+    chaseI(breadth, giveUp,keys, modifier, ax=>us=>us)
+  def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[String], inst: String=>(RenUSubst=>RenUSubst)): PositionTactic =
+    chaseI(breadth, giveUp, keys, (ax,pos)=>pr=>pr, inst)
+  def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic, inst: String=>(RenUSubst=>RenUSubst)): PositionTactic = {
     require(breadth <= giveUp, "less breadth than giveup expected: " + breadth + "<=" + giveUp)
     chase(e => keys(e) match {
       case l:List[String] if l.size > giveUp => Nil
       case l:List[String] => l.take(breadth)
-    }, modifier)
+    }, modifier, inst)
   }
-  def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): ForwardPositionTactic = {
+
+  def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): ForwardPositionTactic =
+    chaseFor(breadth, giveUp,keys, modifier, ax=>us=>us)
+  def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic, inst: String=>(RenUSubst=>RenUSubst)): ForwardPositionTactic = {
     require(breadth <= giveUp, "less breadth than giveup expected: " + breadth + "<=" + giveUp)
     chaseFor(e => keys(e) match {
       case l:List[String] if l.size > giveUp => Nil
       case l:List[String] => l.take(breadth)
-    }, modifier)
+    }, modifier, inst)
   }
 
   /** chase: Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
@@ -982,6 +989,9 @@ trait UnifyUSCalculus {
     *             First returned axioms will be favored (if applicable) over further axioms.
     * @param modifier will be notified after successful uses of axiom at a position with the result of the use.
     *                 The result of modifier(ax,pos)(step) will be used instead of step for each step of the chase.
+    * @param inst Transformation for instantiating additional unmatched symbols that do not occur when using the given axiom _1.
+    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
+    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
     * @note Chase is search-free and, thus, quite efficient. It directly follows the
     *       [[AxiomIndex.axiomIndex() axiom index]] information to compute follow-up positions for the chase.
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+(x'*y+x*y')>=0
@@ -992,7 +1002,8 @@ trait UnifyUSCalculus {
     * @todo also implement a backwards chase in tableaux/sequent style based on useAt instead of useFor
     */
   def chase(keys: Expression=>List[String],
-            modifier: (String,Position)=>ForwardTactic = (ax,pos) => pr=>pr): PositionTactic = new PositionTactic("chase") {
+            modifier: (String,Position)=>ForwardTactic,
+            inst: String=>(RenUSubst=>RenUSubst) = ax=>us=>us): PositionTactic = new PositionTactic("chase") {
     import Augmentors._
 
     //@note True has no applicable keys. This applicability is still an overapproximation since it does not check for clashes.
@@ -1027,7 +1038,7 @@ trait UnifyUSCalculus {
         assert(initial.isProved && initial.conclusion.ante.isEmpty && initial.conclusion.succ.length==1, "Proved reflexive start " + initial + " for " + e)
         if (DEBUG) println("chase starts at " + initial)
         //@note start the chase on the left-hand side
-        val r = chaseFor(keys, modifier) (SuccPosition(0, PosInExpr(0::Nil)))(initial)
+        val r = chaseFor(keys, modifier, inst) (SuccPosition(0, PosInExpr(0::Nil)))(initial)
         if (DEBUG) println("chase(" + e.prettyString + ") = ~~> " + r + " done")
         r
       } ensuring(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
@@ -1042,6 +1053,9 @@ trait UnifyUSCalculus {
     *             First returned axioms will be favored (if applicable) over further axioms.
     * @param modifier will be notified after successful uses of axiom at a position with the result of the use.
     *                 The result of modifier(ax,pos)(step) will be used instead of step for each step of the chase.
+    * @param inst Transformation for instantiating additional unmatched symbols that do not occur when using the given axiom _1.
+    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
+    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
     * @note Chase is search-free and, thus, quite efficient. It directly follows the
     *       [[AxiomIndex.axiomIndex() axiom index]] information to compute follow-up positions for the chase.
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+(x'*y+x*y')>=0
@@ -1052,7 +1066,8 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.useFor()]]
     */
   def chaseFor(keys: Expression=>List[String],
-                    modifier: (String,Position)=>ForwardTactic): ForwardPositionTactic = pos => de => {
+               modifier: (String,Position)=>ForwardTactic,
+               inst: String=>(RenUSubst=>RenUSubst) = ax=>us=>us): ForwardPositionTactic = pos => de => {
     import AxiomIndex.axiomIndex
     import Augmentors._
     /** Recursive chase implementation */
@@ -1065,7 +1080,7 @@ trait UnifyUSCalculus {
         case List(ax) =>
           val (key, recursor) = axiomIndex(ax)
           try {
-            val axUse = modifier(ax,pos) (useFor(ax, key)(pos)(de))
+            val axUse = modifier(ax,pos) (useFor(ax, key, inst(ax))(pos)(de))
             recursor.foldLeft(axUse)(
               (pf, cursor) => doChase(pf, pos.append(cursor))
             )
@@ -1076,7 +1091,7 @@ trait UnifyUSCalculus {
           def firstAxUse: Option[(Provable,List[PosInExpr])] = {
             for (ax <- l) try {
               val (key, recursor) = axiomIndex(ax)
-              return Some((modifier(ax,pos) (useFor(ax, key)(pos)(de)), recursor))
+              return Some((modifier(ax,pos) (useFor(ax, key, inst(ax))(pos)(de)), recursor))
             } catch {case _: ProverException => /* ignore and try next */}
             None
           }
@@ -1093,8 +1108,8 @@ trait UnifyUSCalculus {
   }
 
 
-  /** An update-based calculus for a position */
-  def updateCalculus: PositionTactic = chase(3,3, e => e match {
+  /** An update-based calculus launched at a position */
+  def updateCalculus: PositionTactic = chase(3,3, (e:Expression) => e match {
       // no equational assignments
       case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
       case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil

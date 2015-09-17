@@ -142,7 +142,7 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
    * }}}
    * @return The position tactic.
    */
-  def controllerMonitorByChase: PositionTactic = chase(3,3, e => e match {
+  def controllerMonitorByChase: PositionTactic = chase(3,3, (e:Expression) => e match {
     // no equational assignments
     case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
     case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
