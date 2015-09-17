@@ -217,8 +217,10 @@ object DerivedAxioms {
     case "<'> stuck" => Some(odeStuckF, odeStuckT)
     case "+<= up" => Some(intervalUpPlusF, intervalUpPlusT)
     case "-<= up" => Some(intervalUpMinusF, intervalUpMinusT)
+    case "*<= up" => Some(intervalUpTimesF, intervalUpTimesT)
     case "<=+ down" => Some(intervalDownPlusF, intervalDownPlusT)
     case "<=- down" => Some(intervalDownMinusF, intervalDownMinusT)
+    case "<=* down" => Some(intervalDownTimesF, intervalDownTimesT)
     case _ => None
   } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == name, s"Lookup of DerivedAxiom should find the correct lemma (name: ${name})")
 
@@ -302,8 +304,10 @@ object DerivedAxioms {
       , "<'> stuck" -> Some(odeStuckF, odeStuckT)
       , "+<= up" -> Some(intervalUpPlusF, intervalUpPlusT)
       , "-<= up" -> Some(intervalUpMinusF, intervalUpMinusT)
+      , "*<= up" -> Some(intervalUpTimesF, intervalUpTimesT)
       , "<=+ down" -> Some(intervalDownPlusF, intervalDownPlusT)
       , "<=- down" -> Some(intervalDownMinusF, intervalDownMinusT)
+      , "<=* down" -> Some(intervalDownTimesF, intervalDownTimesT)
     ) ensuring(r => r.forall(kv => derivedAxiomInfo(kv._1)==kv._2), "same contents as derivedAxiomInfo()")
 
     derivedAxiomMap.keys.map(key => {
@@ -2017,6 +2021,22 @@ object DerivedAxioms {
 
   lazy val intervalUpMinusT = derivedAxiomT(intervalUpMinus)
 
+
+  /**
+   * {{{Axiom "*<= up".
+   *    f()*g()<=h() <- ((ff()<=f() & f()<=F() & gg()<=g() & g()<=G()) & (ff()*gg()<=h() & ff()*G()<=h() & F()*gg()<=h() & F()*G()<=h()))
+   * End.
+   * }}}
+   */
+  lazy val intervalUpTimesF = "f()*g()<=h() <- ((ff()<=f() & f()<=F() & gg()<=g() & g()<=G()) & (ff()*gg()<=h() & ff()*G()<=h() & F()*gg()<=h() & F()*G()<=h()))".asFormula
+  lazy val intervalUpTimes = derivedAxiom("*<= up",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalUpTimesF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalUpTimesT = derivedAxiomT(intervalUpTimes)
+
+
   /**
    * {{{Axiom "<=+ down".
    *    h()<=f()+g() <- ((F()<=f() & G()<=g()) & h()<=F()+G())
@@ -2044,4 +2064,20 @@ object DerivedAxioms {
   )
 
   lazy val intervalDownMinusT = derivedAxiomT(intervalDownMinus)
+
+
+  /**
+   * {{{Axiom "<=* down".
+   *    h()<=f()*g()<- ((ff()<=f() & f()<=F() & gg()<=g() & g()<=G()) & (h()<=ff()*gg() & h()<=ff()*G() & h()<=F()*gg() & h()<=F()*G()))
+   * End.
+   * }}}
+   */
+  lazy val intervalDownTimesF = "h()<=f()*g()<- ((ff()<=f() & f()<=F() & gg()<=g() & g()<=G()) & (h()<=ff()*gg() & h()<=ff()*G() & h()<=F()*gg() & h()<=F()*G()))".asFormula
+  lazy val intervalDownTimes = derivedAxiom("<=* down",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalDownTimesF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalDownTimesT = derivedAxiomT(intervalDownTimes)
+
 }
