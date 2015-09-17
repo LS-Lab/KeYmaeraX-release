@@ -21,7 +21,7 @@ object SystemWebBrowser {
         JOptionPane.showMessageDialog(null, s"Point your browser to ${location}")
       }
       else {
-        println("Launching server in headless mode.")
+        println(s"Launching server in headless mode.\nPoint your browser to ${location}")
       }
     } catch {
       case exc: java.awt.HeadlessException =>
