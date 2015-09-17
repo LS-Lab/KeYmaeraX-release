@@ -254,13 +254,20 @@ class MathematicaStatusRequest(db : DBAbstraction) extends Request {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : String, keyFileContents : String) extends Request {
+  private var createdId : Option[String] = None
+
+  def getModelId = createdId match {
+    case Some(s) => s
+    case None => throw new IllegalStateException("Requested created model ID before calling getResultingResponses, or else an error occurred during creation.")
+  }
+
   def getResultingResponses() = {
     try {
       //Return the resulting response.
       KeYmaeraXProblemParser(keyFileContents) match {
         case f : Formula => {
-          val result = db.createModel(userId, nameOfModel, keyFileContents, currentDate())
-          new BooleanResponse(result.isDefined) :: Nil
+          createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate())
+          new BooleanResponse(createdId.isDefined) :: Nil
         }
         case a => new ErrorResponse(new Exception("TODO pass back the parse error.")) :: Nil //TODO-nrf pass back useful parser error messages.
       }
@@ -299,14 +306,20 @@ class GetModelTacticRequest(db : DBAbstraction, userId : String, modelId : Strin
 
 class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, name : String, description : String)
  extends Request {
+  private var proofId : Option[String] = None
+
+  def getProofId = proofId match {
+    case Some(s) => s
+    case None => throw new IllegalStateException("The ID of the created proof was requested before getResultingResponses was called.")
+  }
   def getResultingResponses() = {
-    val proofId = db.createProofForModel(modelId, name, description, currentDate())
+    proofId = Some(db.createProofForModel(modelId, name, description, currentDate()))
 
     // Create a "task" for the model associated with this proof.
     val keyFile = db.getModel(modelId).keyFile
-    KeYmaeraInterface.addTask(proofId, keyFile)
+    KeYmaeraInterface.addTask(proofId.get, keyFile)
 
-    new CreatedIdResponse(proofId) :: Nil
+    new CreatedIdResponse(proofId.get) :: Nil
   }
 }
 
@@ -768,6 +781,16 @@ class RunModelInitializationTacticRequest(db : DBAbstraction, userId : String, m
       case None => new ErrorResponse(new Exception("Could not find an initialization tactic")) :: Nil
     }
   }
+}
+
+
+/** Runs the contents of a file as a custom tactic.
+  * @todo this implementation is a hack. Specifically, two things need to change if we're going to call this from the user interface itself:
+  * @todo getResultingResponses is blocking, which is not at all sustainable if this is called from the user interface.
+  * @todo This proofs will not reload -- this is for one-off proving only!
+  */
+class RunScalaFileRequest(db: DBAbstraction, proofId: String, proof: File) extends Request {
+  override def getResultingResponses(): List[Response] = ???
 }
 
 /////
