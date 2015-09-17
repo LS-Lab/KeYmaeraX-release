@@ -47,21 +47,21 @@ object HybridProgramTacticsImpl {
    *********************************************/
 
   class ByDualityAxiomTactic(base: PositionTactic) extends PositionTactic(base.name) {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case f@Diamond(prg, phi) => base.applies(s.updated(p, replaceAtPos(f, Box(prg, Not(phi)), p.inExpr)), p)
-      case f@Box(prg, phi) => base.applies(s.updated(p, replaceAtPos(f, Diamond(prg, Not(phi)), p.inExpr)), p)
+    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
+      case Some(Diamond(prg, phi)) => base.applies(s.updated(p, replaceAtPos(s(p), Box(prg, Not(phi)), p.inExpr)), p)
+      case Some(Box(prg, phi)) => base.applies(s.updated(p, replaceAtPos(s(p), Diamond(prg, Not(phi)), p.inExpr)), p)
       case _ => false
     }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case Diamond(prg, phi) =>
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p).subFormulaAt(p.inExpr) match {
+        case Some(Diamond(prg, phi)) =>
           Some(diamondDualityT(p) & base(p.first) &
             (boxDualityT(p.first) & rewriteDoubleNegationEliminationT(p) |
               existsDualT(p) |
               NilT))
-        case Box(prg, phi) =>
+        case Some(Box(prg, phi)) =>
           Some(boxDualityT(p) & base(p.first) & (diamondDualityT(p.first) & rewriteDoubleNegationEliminationT(p) | NilT))
         case _ => None
       }

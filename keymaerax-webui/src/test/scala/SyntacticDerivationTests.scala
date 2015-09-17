@@ -14,7 +14,7 @@ import testHelper.SequentFactory._
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class SyntacticDerivationTests extends TacticTestSuite {
+class SyntacticDerivationTests extends testHelper.TacticTestSuite {
   "abstraction" should "at least work" in {
     val f = "[s := 0;] \\forall x x=x".asFormula
     val tactic = TacticLibrary.abstractionT(SuccPos(0)) &

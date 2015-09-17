@@ -181,7 +181,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "associate correctly" in {
-    round trip "\\forall x (x<=y & (y<=z & z<0))".asFormula
+    round trip "\\forall x ((x<=y & y<=z) & z<0)".asFormula
   }
 
   it should "convert parameterless Apply()" in {

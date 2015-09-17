@@ -25,7 +25,7 @@ object AxiomTactic {
    */
   private def getFormula(sequent: Sequent, p: Position) = sequent(p).subFormulaAt(p.inExpr) match {
     case Some(f) => f
-    case None => throw new IllegalStateException("Position" + p + " does not refer to a formula")
+    case None => throw new IllegalStateException("Position" + p + " does not refer to a formula in " + sequent)
   }
 
   /**
@@ -195,12 +195,14 @@ object AxiomTactic {
       def DGPPBreakPt = ifT(_ => axiomName.equals("DG++"), stopT)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val debugMessagePrefix = "[axiomLoopBaseT on " + axiomName + "]";
         val fml = getFormula(node.sequent, p)
         Some(
-          TacticLibrary.debugT("axiomLookupBaseT on " + axiomName) &
+          TacticLibrary.debugT(debugMessagePrefix + " begin") &
           uniformSubstT(subst(fml), Map(fml -> axiomInstance(fml, axiom))) &
+            TacticLibrary.debugT(s"$debugMessagePrefix substitution succeeded.") &
             assertT(0, 1) & lastSucc(assertPT(axiomInstance(fml, axiom), name + ": unexpected uniform substitution result")) &
-            lastSucc(alpha(fml)) & TacticLibrary.debugT("alpha renaming succeeded for axiom " + axiomName) &
+            lastSucc(alpha(fml)) & TacticLibrary.debugT(s"$debugMessagePrefix alpha renaming succeeded for axiom $axiomName") &
             lastSucc(assertPT(axiom, name + ": unexpected axiom form in succedent")) & AxiomTactic.axiomT(axiomName)
         )
       }

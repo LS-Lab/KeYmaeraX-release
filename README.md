@@ -7,6 +7,13 @@ KeYmaera X is built up from a small trusted core. The core contains a finite lis
 
   http://keymaeraX.org/
 
+Dependencies
+============
+- Wolfram Mathematica (version 9.0 or greater recommended. Other versions may work)
+- Java JRE and JDK (Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0 is compatible with Java 1.8)
+- sbt (Version 0.13 or greater recommended. Other versions may work). If you are using IntelliJ, this comes with the Scala plugin.
+- Scala 2.11.7 (sbt will download this automatically)
+
 Installation
 ============
 
@@ -24,9 +31,9 @@ If this results in the error `Invalid or corrupt jarfile` then update to Java 1.
 
 The easiest way to run KeYmaera X from source is to install its dependencies and build it via SBT:
 
-    * Install Scala (and the Java JRE or JDK).
-    * Install Mathematica, pointing the JLINK_JAR_LOCATION environment variable to JLink.jar (see FAQ)
-    * Install SBT and follow the instructions in the Building section.
+    * Install the dependencies (see Dependencies section)
+    * Point the JLINK_JAR_LOCATION environment variable to Mathematic's JLink.jar file (see FAQ)
+    * Follow the build instructions in the Building section
 
 Building
 ========
@@ -72,7 +79,8 @@ https://github.com/LS-Lab/KeYmaera4/wiki/Building-Instructions
 FAQ: Run Problems
 =================
 
-If KeYmaera X acts weird after an update, you should clean your local cache of lemmas by removing the directory `~/.keymaerax/cache` or even the whole `~/.keymaerax/` directory.
+If KeYmaera X acts weird after an update, you should clean your local cache of lemmas by removing (or renaming) the directory `~/.keymaerax/cache` or even the whole `~/.keymaerax/` directory.
+You could also try removing or renaming keymaerax.sqlite (if this file has become corrupt, it may prevent KeYmaera from working).
 
 
 Generating Scaladoc Documentation
@@ -107,25 +115,39 @@ IntelliJ IDEA
 
 If you want to use the IntelliJ IDEA development environment, install it:
 - Install IntelliJ IDEA
-- Install the Scala plugin for IntelliJ
+- Install the Scala plugin for IntelliJ (the IntelliJ installer will ask you if you want to do this)
 
 Project Setup
 - Make sure you have defined the JLINK_JAR_LOCATION environment variable (see FAQ).
 - Create a new Scala project, backed by SBT
 - Select a JDK as your project SDK, add a new one if not previously added
-- Check `update automatically` (not checked by default), so that updates to build.sbt are reflected automatically in the project
+- Check `update automatically` (not checked by default), so that updates to build.sbt are reflected automatically in the project. You may also want to check the "Download and compile sources" options.
+- If the bundled version of sbt is not working for you, you can specify your own version here.
 
 Create a new run configuration of type Application for the KeYmaera X Web UI.
 - Main class: `edu.cmu.cs.ls.keymaerax.hydra.Boot`
 - Set the working directory to the project path
 - Use the classpath of your project module
 
-Test cases:
+Test Cases:
 - Right click on project folder `keymaerax-webui/src/test` to mark this directory as Test Sources Root.
 - Make sure the JVM option `-Xss20M` is included in the run configuration.
 - Right click on the test folder to run all its ScalaTests.
 
-If, at any time, you run into problems during the compilation process in Intelli/J, check the `File->Project Structure->Modules->core->Dependencies` to make sure the appropriate files such as `SBT: unmanaged-jars` are checked. If the problems persist, do `File->Invalidate Caches / Restart`.
+Tagged Test Suite:
+Run Configurations Drop-down in Toolbar
+ -> Edit Configurations
+ -> Add Configuration (ScalaTest)
+ -> Select "All in package" for Test Kind
+ -> Under "Test options" enter:
+      -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest
+      (or any other string from KeYmaeraXTestTags.scala)
+ -> Select "keymaerax" as SDK and classpath of module
+ -> Apply/OK
+
+IntelliJ FAQ
+============
+If, at any time, you run into problems during the compilation process in IntelliJ, check the `File->Project Structure->Modules->core->Dependencies` to make sure the appropriate files such as `SBT: unmanaged-jars` are checked. This is necessary for IntelliJ to find JLink.jar. If the problems persist, do `File->Invalidate Caches / Restart`.
 
 Front End
 =========

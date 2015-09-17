@@ -117,7 +117,7 @@ object SMTConverter {
       case Divide(l, r) => "(/ " + convertTerm(l, toolId) + " " + convertTerm(r, toolId) + ")"
       case Power(l, r)  => convertExp(l, r, toolId)
       case Number(n) =>
-        assert(n.isValidDouble || n.isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
+        assert(n.isDecimalDouble || n.isValidLong, throw new SMTConversionException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal numbers"))
         if (n.toDouble < 0)  "(- " + (0-n).underlying().toString + ")"
         else n.underlying().toString
       case t: Variable => nameIdentifier(t)

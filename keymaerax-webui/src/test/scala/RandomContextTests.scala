@@ -5,6 +5,7 @@
 
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Context, Position}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
+import testHelper.KeYmaeraXTestTags.{SlowTest, UsualTest, SummaryTest, CheckinTest}
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
@@ -27,8 +28,12 @@ class RandomContextTests extends FlatSpec with Matchers {
 
 
   def contextShouldBe[T<:Formula](origin: T, pos: PosInExpr): Boolean = {
-    val (ctx,e) = try { origin.at(pos) } catch {case e: IllegalArgumentException => println("\nInput:      " + origin +
-      "\nIllposition: " + pos); (Context(DotFormula), origin)}
+    val (ctx,e) = try { origin.at(pos) } catch {
+      case e: IllegalArgumentException => println("\nInput:      " + origin +
+      "\nIllposition: " + pos); (Context(DotFormula), origin)
+      case e: SubstitutionClashException => println("\nInput:      " + origin +
+        "\nIllposition: " + pos); (Context(DotFormula), origin)
+    }
     println("\n" +
         "\nInput:      " + origin +
         "\nPosition:   " + pos +
@@ -53,7 +58,12 @@ class RandomContextTests extends FlatSpec with Matchers {
   private val noContextD = DifferentialProgramConst("noctxD")
 
 
-  "The positioning" should "consistently split formulas" in {
+  "The positioning" should "consistently split formulas (checkin)" taggedAs(CheckinTest) in {test(5,2)}
+  it should "consistently split formulas (summary)" taggedAs(SummaryTest) in {test(20,8)}
+  it should "consistently split formulas (usual)" taggedAs(UsualTest) in {test(50,10)}
+  it should "consistently split formulas (slow)" taggedAs(SlowTest) in {test()}
+
+  private def test(randomTrials: Int = randomTrials, randomReps: Int = randomReps, randomComplexity: Int = randomComplexity) =
     for (i <- 1 to randomTrials) {
       val f = rand.nextFormula(randomComplexity)
       for (j <- 1 to randomReps) {
@@ -61,6 +71,5 @@ class RandomContextTests extends FlatSpec with Matchers {
         contextShouldBe(f, pos)
       }
     }
-  }
 
 }

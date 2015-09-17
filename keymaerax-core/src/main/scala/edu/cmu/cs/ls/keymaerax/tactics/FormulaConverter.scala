@@ -127,6 +127,7 @@ class FormulaConverter(val fml: Formula) {
    * @param repl The replacement.
    * @return This converter's formula with repl at position where.
    */
+  @deprecated("Incorrect, use Augmentors.FormulaAugmentor.replaceAt instead")
   def replaceAt(where: PosInExpr, repl: Term): Formula = replaceAt(termAt(where), where, repl)
 
   /**
@@ -153,6 +154,7 @@ class FormulaConverter(val fml: Formula) {
    * @param repl The replacement.
    * @return This converter's formula with repl at position where.
    */
+  @deprecated("Incorrect, use Augmentors.FormulaAugmentor.replaceAt instead")
   def replaceAt(where: PosInExpr, repl: Formula): Formula = subFormulaAt(where) match {
     case Some(f) => replaceAt(f, where, repl)
     case None => fml

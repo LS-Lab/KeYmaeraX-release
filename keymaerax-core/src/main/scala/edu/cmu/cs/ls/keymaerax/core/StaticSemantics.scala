@@ -52,7 +52,10 @@ object StaticSemantics {
    * @param bv Bound names (maybe written)
    */
   sealed case class VCF(fv: SetLattice[NamedSymbol],
-                        bv: SetLattice[NamedSymbol])
+                        bv: SetLattice[NamedSymbol]) {
+    /** union of two variable categorizer structures for formulas */
+    def ++(other: VCF): VCF = VCF(fv ++ other.fv, bv ++ other.bv)
+  }
 
   /**
    * Structure recording which names are free, bound, or must-bound
@@ -91,6 +94,8 @@ object StaticSemantics {
     case _: Number => bottom
     // Type hierarchy makes the assert superfluous, which is intentional to protect against change.
     case DotTerm => assert(!DotTerm.isInstanceOf[Variable], "DotTerm cannot be a variable (!)"); bottom
+    //@note except for Differential, the following cases are equivalent to f.reapply-style but are left explicit to enforce revisiting this case when data structure changes.
+    // case f:BinaryCompositeTerm => freeVars(f.left) ++ freeVars(f.right)
     // homomorphic cases
     case FuncOf(f, arg) => freeVars(arg)
     case Neg(e)       => freeVars(e)
@@ -168,12 +173,14 @@ object StaticSemantics {
     //@note DotFormula is like a reserved zero-parameter Predicational
     case DotFormula         => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
 
+    //@note except for DifferentialFormula, the following cases are equivalent to f.reapply-style but are left explicit to enforce revisiting this case when data structure changes.
+    // case f:BinaryCompositeFormula => fmlVars(f.left) ++ fmlVars(f.right)
     // homomorphic cases
-    case Not(g)      => val vg = fmlVars(g); VCF(fv = vg.fv, bv = vg.bv)
-    case And(l, r)   => val vl = fmlVars(l); val vr = fmlVars(r); VCF(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
-    case Or(l, r)    => val vl = fmlVars(l); val vr = fmlVars(r); VCF(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
-    case Imply(l, r) => val vl = fmlVars(l); val vr = fmlVars(r); VCF(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
-    case Equiv(l, r) => val vl = fmlVars(l); val vr = fmlVars(r); VCF(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
+    case Not(g)      => fmlVars(g)
+    case And(l, r)   => fmlVars(l) ++ fmlVars(r)
+    case Or(l, r)    => fmlVars(l) ++ fmlVars(r)
+    case Imply(l, r) => fmlVars(l) ++ fmlVars(r)
+    case Equiv(l, r) => fmlVars(l) ++ fmlVars(r)
 
     // quantifier binding cases omit bound vars from fv and add bound variables to bf
     case Forall(vars, g) => val vg = fmlVars(g); VCF(fv = vg.fv -- vars, bv = vg.bv ++ vars)
@@ -258,6 +265,8 @@ object StaticSemantics {
     case _: Number => Set.empty
     case FuncOf(f, arg) => Set(f) ++ signature(arg)
     case DotTerm => Set(DotTerm)
+    //@note the following cases are equivalent to f.reapply-style but are left explicit to enforce revisiting this case when data structure changes.
+    // case f:BinaryCompositeTerm => signature(f.left) ++ signature(f.right)
     // homomorphic cases
     case Neg(e) => signature(e)
     case Plus(l, r)   => signature(l) ++ signature(r)
@@ -284,6 +293,8 @@ object StaticSemantics {
     case PredOf(p, arg) => Set(p) ++ signature(arg)
     case PredicationalOf(p, arg) => Set(p) ++ signature(arg)
     case DotFormula => Set(DotFormula)
+    //@note the following cases are equivalent to f.reapply-style but are left explicit to enforce revisiting this case when data structure changes.
+    // case f:BinaryCompositeFormula => signature(f.left) ++ signature(f.right)
     // pseudo-homomorphic cases
     case Equal(l, r)        => signature(l) ++ signature(r)
     case NotEqual(l, r)     => signature(l) ++ signature(r)
@@ -322,6 +333,8 @@ object StaticSemantics {
     case AssignAny(x)     => Set.empty
     case Test(f)          => signature(f)
     case AtomicODE(xp, e) => signature(e)
+    //@note the following cases are equivalent to f.reapply-style but are left explicit to enforce revisiting this case when data structure changes.
+    // case f:BinaryCompositeProgram => signature(f.left) ++ signature(f.right)
     // homomorphic cases
     case Choice(a, b)     => signature(a) ++ signature(b)
     case Compose(a, b)    => signature(a) ++ signature(b)

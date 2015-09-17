@@ -109,7 +109,7 @@ object TacticLibrary {
           }
         }), if (p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex))
         if (t != null) t
-        else throw new IllegalArgumentException("Sequent " + s + " at position " + p + " is not a term")
+        else throw new IllegalArgumentException("Sequent " + s.prettyString + " at position " + p + " is not a term")
       }
       catch {
         case e : IndexOutOfBoundsException => throw new Exception("Index out of bounds when accessing position " + p.toString() + " in sequent: " + s)
@@ -223,6 +223,16 @@ object TacticLibrary {
   /*******************************************************************
    * Debug tactics
    *******************************************************************/
+
+  def verboseDebugT(s: => Any):Tactic = new Tactic("VerboseDebug") {
+    override def applicable(node: ProofNode): Boolean = true
+
+    override def apply(tool: Tool, node: ProofNode): Unit = {
+      node.tacticInfo.infos += ("debug" -> s.toString)
+      println("===== " + s + " ==== " + node.openGoals.map(_.sequent).mkString(" andalso ") + " =====")
+      continuation(this, Success, Seq(node))
+    }
+  }
 
   def debugT(s: => Any): Tactic = new Tactic("Debug") {
     override def applicable(node: ProofNode): Boolean = true

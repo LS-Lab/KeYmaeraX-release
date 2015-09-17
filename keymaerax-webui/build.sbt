@@ -4,6 +4,8 @@ version := "4.0a4"
 
 //scalacOptions ++= Seq("-Xno-patmat-analysis")
 
+resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots" // ScalaMeter
+
 assemblyJarName in assembly := "keymaerax-web-" + version.value + ".jar"
 
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
@@ -17,6 +19,8 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
 libraryDependencies += "org.pegdown" % "pegdown" % "1.5.0" % "test"      // (For Html Scalatest reports)
 
 libraryDependencies += "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test"
+
+libraryDependencies += "com.storm-enroute" %% "scalameter" % "0.7"
 
 /// mongodb driver
 
@@ -78,18 +82,6 @@ watchSources <++= baseDirectory map {
 }
 
 
-//unmanagedResourceDirectories in Compile <++= baseDirectory map { 
-//  path => ((path / "src/main/scala") ** "*.txt").get 
-//}
-
-//unmanagedResourceDirectories in Compile <+= baseDirectory {_ / "src/main/scala"}
-
-//unmanagedResourceDirectories in Compile += baseDirectory.value / "src/main/scala"
-//unmanagedResourceDirectories in Test += baseDirectory.value / "src/main/scala"
-
-// def axiomSources = (baseDirectory.value / "src/main/scala" ##) ** "*.txt"
-// override def mainResources = super.mainResources +++ axiomSources
-
 ////////////////////////////////////////////////////////////////////////////////
 // Unit testing
 ////////////////////////////////////////////////////////////////////////////////
@@ -100,18 +92,16 @@ fork in Test := true
 
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/test-reports")
 
+testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
+
+logBuffered := false
+
 ////////////////////////////////////////////////////////////////////////////////
 // Builds -- make sure you are using SBT 13.6+
 ////////////////////////////////////////////////////////////////////////////////
 
-//mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.hydra.Boot")
-
-// web UI
-//mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.Main")
-
 // command line UI
 mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX")
-
 
 test in assembly := {}
 

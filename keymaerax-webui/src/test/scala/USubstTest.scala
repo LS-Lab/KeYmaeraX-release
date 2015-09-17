@@ -6,22 +6,23 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, USubstTest, SummaryTest}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest._
+import testHelper.KeYmaeraXTestTags
 import scala.collection.immutable.List
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 import test._
 
-object USubstTest extends Tag("USubstTest")
-object OptimisticTest extends Tag("OptimisticTest")
-
 /**
  * @author Andre Platzer
  * @author smitsch
  */
-
+@SummaryTest
+@UsualTest
+@USubstTest
 class USubstTests extends FlatSpec with Matchers {
   KeYmaera.init(Map.empty)
 
@@ -99,7 +100,7 @@ class USubstTests extends FlatSpec with Matchers {
   }
 
 
-  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs USubstTest in {
+  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = Equiv(
       Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
@@ -112,7 +113,7 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
   
-  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" taggedAs USubstTest in {
+  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = Equiv(
       Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
@@ -126,7 +127,7 @@ class USubstTests extends FlatSpec with Matchers {
   }
 
   /* TODO programs where not all branches write the same variables are not yet supported */
-  ignore should "handle nontrivial binding structures" taggedAs USubstTest in {
+  ignore should "handle nontrivial binding structures" taggedAs KeYmaeraXTestTags.USubstTest in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = Equiv(
       Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
@@ -149,7 +150,7 @@ class USubstTests extends FlatSpec with Matchers {
     UniformSubstitutionRule(s, Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
   }
 
-  it should "clash when using vacuous all quantifier \\forall x . for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs USubstTest in {
+  it should "clash when using vacuous all quantifier \\forall x . for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val fml = GreaterEqual(x, Number(0))
     val prem = Axiom.axioms("vacuous all quantifier")
     val conc = Forall(Seq(x), fml)
@@ -159,7 +160,7 @@ class USubstTests extends FlatSpec with Matchers {
     Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
   
-  it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs USubstTest in {
+  it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val fml = GreaterEqual(x, Number(0))
     val prem = Axiom.axioms("V vacuous")
     val prog = Assign(x, Minus(x, Number(1)))
@@ -171,7 +172,7 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
   
-  it should "clash when using \"c()' derive constant fn\" for a substitution with free occurrences" taggedAs USubstTest in {
+  it should "clash when using \"c()' derive constant fn\" for a substitution with free occurrences" taggedAs KeYmaeraXTestTags.USubstTest in {
     val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
     val prem = "(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
     val conc = "(x)'=0".asFormula
@@ -181,7 +182,7 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
   
-  it should "clash when using \"c()' derive constant fn\" for a substitution with free differential occurrences" taggedAs USubstTest in {
+  it should "clash when using \"c()' derive constant fn\" for a substitution with free differential occurrences" taggedAs KeYmaeraXTestTags.USubstTest in {
     val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
     val prem = "(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
     val conc = "(x')'=0".asFormula
@@ -193,7 +194,7 @@ class USubstTests extends FlatSpec with Matchers {
 
   // uniform substitution of rules
 
-  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs USubstTest in {
+  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
     val fml = GreaterEqual(Power(Neg(x), Number(2)), Number(0))
     val prog = Assign(x, Minus(x, Number(1)))
     val conc = Box(prog, fml)
@@ -203,7 +204,7 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate Goedel from (-x)^2>=0 (II)" taggedAs USubstTest in {
+  it should "instantiate Goedel from (-x)^2>=0 (II)" taggedAs KeYmaeraXTestTags.USubstTest in {
     val fml = "(-x)^2>=0".asFormula
     val prog = "x:=x-1;".asProgram
     val s = USubst(
@@ -213,7 +214,7 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Box(prog, fml)))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
   
-  it should "instantiate nontrivial binding structures in [] congruence" taggedAs USubstTest in {
+  it should "instantiate nontrivial binding structures in [] congruence" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
     val prem = "(-x)^2>=y <-> x^2>=y".asFormula
     val conc = "[{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;](-x)^2>=y <-> [{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;]x^2>=y".asFormula
 
@@ -229,7 +230,7 @@ class USubstTests extends FlatSpec with Matchers {
         Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
   }
 
-  it should "instantiate random programs in [] monotone" taggedAs USubstTest in {
+  it should "instantiate random programs in [] monotone" taggedAs KeYmaeraXTestTags.USubstTest in {
     for (i <- 1 to randomTrials) {
       val prem1 = "(-z1)^2>=z4".asFormula
       val prem2 = "z4<=z1^2".asFormula
@@ -249,7 +250,7 @@ class USubstTests extends FlatSpec with Matchers {
     }
   }
 
-  it should "instantiate random programs in [] congruence" taggedAs USubstTest in {
+  it should "instantiate random programs in [] congruence" taggedAs KeYmaeraXTestTags.USubstTest in {
     for (i <- 1 to randomTrials) {
       val prem1 = "(-z1)^2>=z4".asFormula
       val prem2 = "z4<=z1^2".asFormula
@@ -270,7 +271,7 @@ class USubstTests extends FlatSpec with Matchers {
     }
   }
 
-  it should "instantiate random programs in <> congruence" taggedAs USubstTest in {
+  it should "instantiate random programs in <> congruence" taggedAs KeYmaeraXTestTags.USubstTest in {
     for (i <- 1 to randomTrials) {
       val prem1 = "(-z1)^2>=z4".asFormula
       val prem2 = "z4<=z1^2".asFormula
@@ -291,7 +292,7 @@ class USubstTests extends FlatSpec with Matchers {
     }
   }
 
-  it should "instantiate random programs in <> monotone" taggedAs USubstTest in {
+  it should "instantiate random programs in <> monotone" taggedAs KeYmaeraXTestTags.USubstTest in {
     for (i <- 1 to randomTrials) {
       val prem1 = "(-z1)^2>=z4".asFormula
       val prem2 = "z4<=z1^2".asFormula
@@ -311,7 +312,7 @@ class USubstTests extends FlatSpec with Matchers {
     }
   }
 
-  it should "instantiate random programs in Goedel" taggedAs USubstTest in {
+  it should "instantiate random programs in Goedel" taggedAs KeYmaeraXTestTags.USubstTest in {
     for (i <- 1 to randomTrials) {
       val prem = "(-z1)^2>=0".asFormula
       val prog = rand.nextProgram(randomComplexity)
@@ -327,7 +328,7 @@ class USubstTests extends FlatSpec with Matchers {
     }
   }
 
-  "Congruence rules" should "instantiate CT from y+z=z+y" taggedAs USubstTest in {
+  "Congruence rules" should "instantiate CT from y+z=z+y" taggedAs KeYmaeraXTestTags.USubstTest in {
         val term1 = "y+z".asTerm
         val term2 = "z+y".asTerm
         val fml = Equal(term1, term2)
@@ -341,7 +342,7 @@ class USubstTests extends FlatSpec with Matchers {
           ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
-    ignore should "instantiate CT from y+z=z+y in more context" taggedAs USubstTest in {
+    ignore should "instantiate CT from y+z=z+y in more context" taggedAs KeYmaeraXTestTags.USubstTest in {
         val term1 = "y+z".asTerm
         val term2 = "z+y".asTerm
         val fml = Equal(term1, term2)
@@ -355,7 +356,7 @@ class USubstTests extends FlatSpec with Matchers {
           ))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
-      ignore should "instantiate CT from y+z=z+y in random context" taggedAs USubstTest in {
+      ignore should "instantiate CT from y+z=z+y in random context" taggedAs KeYmaeraXTestTags.USubstTest in {
         for (i <- 1 to randomTrials) {
           val term1 = "y+z".asTerm
           val term2 = "z+y".asTerm
@@ -372,7 +373,7 @@ class USubstTests extends FlatSpec with Matchers {
         }
       }
 
-      ignore should "instantiate CT from z1+z3*z2=z2*z3+z1 in random context" taggedAs USubstTest in {
+      ignore should "instantiate CT from z1+z3*z2=z2*z3+z1 in random context" taggedAs KeYmaeraXTestTags.USubstTest in {
         for (i <- 1 to randomTrials) {
           val term1 = "z1+z3*z2".asTerm
           val term2 = "z2*z3+z1".asTerm
@@ -389,7 +390,7 @@ class USubstTests extends FlatSpec with Matchers {
         }
       }
 
-    ignore should "instantiate CT from z1*z3-z2=z2-z4/z1 in random context" taggedAs USubstTest in {
+    ignore should "instantiate CT from z1*z3-z2=z2-z4/z1 in random context" taggedAs KeYmaeraXTestTags.USubstTest in {
         for (i <- 1 to randomTrials) {
           val term1 = "z1*z3-z2".asTerm
           val term2 = "z2-z4/z1".asTerm
@@ -406,7 +407,7 @@ class USubstTests extends FlatSpec with Matchers {
         }
       }
 
-    it should "instantiate CQ from y+z=z+y in context y>1&.<=5" taggedAs USubstTest in {
+    it should "instantiate CQ from y+z=z+y in context y>1&.<=5" taggedAs KeYmaeraXTestTags.USubstTest in {
           val term1 = "y+z".asTerm
           val term2 = "z+y".asTerm
           val fml = Equal(term1, term2)
@@ -421,7 +422,7 @@ class USubstTests extends FlatSpec with Matchers {
             )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
         
-        it should "instantiate CQ from y+z=z+y in context \\forall x .<=5" taggedAs USubstTest in {
+        it should "instantiate CQ from y+z=z+y in context \\forall x .<=5" taggedAs KeYmaeraXTestTags.USubstTest in {
               val term1 = "y+z".asTerm
               val term2 = "z+y".asTerm
               val fml = Equal(term1, term2)
@@ -436,7 +437,7 @@ class USubstTests extends FlatSpec with Matchers {
                 )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
             }
 
-        ignore should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs OptimisticTest in {
+        ignore should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs KeYmaeraXTestTags.OptimisticTest in {
               val term1 = "y+z".asTerm
               val term2 = "z+y".asTerm
               val fml = Equal(term1, term2)
@@ -451,7 +452,7 @@ class USubstTests extends FlatSpec with Matchers {
                 )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
             }
 
-            it should "instantiate CQ from y+z=z+y in context [x:=x-1]" taggedAs USubstTest in {
+            it should "instantiate CQ from y+z=z+y in context [x:=x-1]" taggedAs KeYmaeraXTestTags.USubstTest in {
               val term1 = "y+z".asTerm
               val term2 = "z+y".asTerm
                 val fml = Equal(term1, term2)
@@ -466,7 +467,7 @@ class USubstTests extends FlatSpec with Matchers {
                   )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
               }
 
-  ignore should "?instantiate CQ from y+z=z+y in context [y:=y-1]" taggedAs OptimisticTest in {
+  ignore should "?instantiate CQ from y+z=z+y in context [y:=y-1]" taggedAs KeYmaeraXTestTags.OptimisticTest in {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
       val fml = Equal(term1, term2)
@@ -482,7 +483,7 @@ class USubstTests extends FlatSpec with Matchers {
     }
 
 
-  ignore should "instantiate CT from z^2*y=-(-z)^2*-y+0" taggedAs USubstTest in {
+  ignore should "instantiate CT from z^2*y=-(-z)^2*-y+0" taggedAs KeYmaeraXTestTags.USubstTest in {
         val term1 = "z^2*y".asTerm
         val term2 = "-(-z)^2*-y+0".asTerm
         val fml = Equal(term1, term2)
@@ -496,7 +497,7 @@ class USubstTests extends FlatSpec with Matchers {
           ))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
-      ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs OptimisticTest in {
+      ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs KeYmaeraXTestTags.OptimisticTest in {
           val term1 = "z^2*y".asTerm
           val term2 = "-(-z)^2*-y+0".asTerm
           val fml = Equal(term1, term2)
@@ -511,7 +512,7 @@ class USubstTests extends FlatSpec with Matchers {
             )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
   
-    ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs OptimisticTest in {
+    ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs KeYmaeraXTestTags.OptimisticTest in {
         val term1 = "z^2*y".asTerm
         val term2 = "-(-z)^2*-y+0".asTerm
         val fml = Equal(term1, term2)
@@ -526,7 +527,7 @@ class USubstTests extends FlatSpec with Matchers {
           )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
   
-  it should "instantiate CE from x=0 <-> x^2=0 into \\forall x context (manual test)" taggedAs USubstTest in {
+  it should "instantiate CE from x=0 <-> x^2=0 into \\forall x context (manual test)" taggedAs KeYmaeraXTestTags.USubstTest in {
     val fml1 = "x=0".asFormula
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
@@ -540,7 +541,7 @@ class USubstTests extends FlatSpec with Matchers {
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate CE from x=0 <-> x^2=0 into \\forall x context (schematic test)" taggedAs USubstTest in {
+  it should "instantiate CE from x=0 <-> x^2=0 into \\forall x context (schematic test)" taggedAs KeYmaeraXTestTags.USubstTest in {
     val fml1 = "x=0".asFormula
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
@@ -554,7 +555,7 @@ class USubstTests extends FlatSpec with Matchers {
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
   
-  it should "instantiate CE from x=0 <-> x^2=0 into [x:=5] context (schematic test)" taggedAs USubstTest in {
+  it should "instantiate CE from x=0 <-> x^2=0 into [x:=5] context (schematic test)" taggedAs KeYmaeraXTestTags.USubstTest in {
     val fml1 = "x=0".asFormula
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
@@ -569,7 +570,7 @@ class USubstTests extends FlatSpec with Matchers {
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
-  it should "instantiate CE from x=0 <-> x^2=0 into [x'=5] context (schematic test)" taggedAs USubstTest in {
+  it should "instantiate CE from x=0 <-> x^2=0 into [x'=5] context (schematic test)" taggedAs KeYmaeraXTestTags.USubstTest in {
     val fml1 = "x=0".asFormula
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
@@ -585,7 +586,7 @@ class USubstTests extends FlatSpec with Matchers {
   }
 
   
-  ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in complex contexts" taggedAs OptimisticTest in {
+  ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in complex contexts" taggedAs KeYmaeraXTestTags.OptimisticTest in {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equal(term1, term2)
@@ -601,7 +602,7 @@ class USubstTests extends FlatSpec with Matchers {
       )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
      }
   
-   it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in random contexts" taggedAs USubstTest in {
+   it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in random contexts" taggedAs KeYmaeraXTestTags.USubstTest in {
        val term1 = "z^2*y".asTerm
        val term2 = "-(-z)^2*-y+0".asTerm
        val fml = Equal(term1, term2)
@@ -616,7 +617,7 @@ class USubstTests extends FlatSpec with Matchers {
          ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
   
-  it should "instantiate CE from z^2*y>=5 <-> (-z)^2*-y+0<=-5 in random contexts" taggedAs USubstTest in {
+  it should "instantiate CE from z^2*y>=5 <-> (-z)^2*-y+0<=-5 in random contexts" taggedAs KeYmaeraXTestTags.USubstTest in {
       val fml1 = "z^2*y>=5".asFormula
       val fml2 = "(-z)^2*-y+0<=-5".asFormula
       val fml = Equiv(fml1, fml2)

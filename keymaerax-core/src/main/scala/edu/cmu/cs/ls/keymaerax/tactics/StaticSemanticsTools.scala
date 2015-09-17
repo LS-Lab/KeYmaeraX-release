@@ -86,11 +86,13 @@ object StaticSemanticsTools {
     case e@ODESystem(ode, h)      if pos.head<=1 => bindingVars(e)
     case e:UnaryCompositeProgram  if pos.head==0 => bindingVars(e) ++ boundAt(e.child, pos.child)
     case e:BinaryCompositeProgram if pos.head==0 => bindingVars(e) ++ boundAt(e.left,  pos.child)
+    case e:Compose                if pos.head==1 => bindingVars(e) ++ boundVars(e.left) ++ boundAt(e.right, pos.child)
     case e:BinaryCompositeProgram if pos.head==1 => bindingVars(e) ++ boundAt(e.right, pos.child)
     case e@Assign(x,t)            if pos.head==0 => bindingVars(e)
     case e@Assign(x,t)            if pos.head==1 => bottom
     case e@DiffAssign(xp,t)       if pos.head==0 => bindingVars(e)
     case e@DiffAssign(xp,t)       if pos.head==1 => bottom
+    case Test(f)                  if pos.head==0 => bottom
     //case e:DifferentialProduct    if pos.head==0 => boundAt(e.left,  pos.child)
     //case e:DifferentialProduct    if pos.head==1 => boundAt(e.right,  pos.child)
     //@todo the following would be suboptimal (except for AssignAny,Test,ProgramConst,DifferentialProgramConst)

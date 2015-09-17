@@ -1,10 +1,12 @@
+package parserTests
+
 /**
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXParser, KeYmaeraPrettyPrinter, KeYmaeraParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import org.scalatest.{Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import org.scalatest.{FlatSpec, Matchers}
 import test._
 
 /**

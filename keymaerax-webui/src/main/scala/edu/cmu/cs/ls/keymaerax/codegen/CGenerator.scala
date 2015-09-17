@@ -237,7 +237,7 @@ object CGenerator extends CodeGenerator {
       case Power(l, r)  => "(" + compilePower(l, r, calledFuncs) + ")"
       // atomic terms
       case Number(n) =>
-        assert(n.isValidDouble || n.isValidLong, throw new CodeGenerationException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal-precision numbers"))
+        assert(n.isDecimalDouble || n.isValidLong, throw new CodeGenerationException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal-precision numbers"))
         //@note assume the C compiler will detect representation-size errors
         //if(n.toDouble < 0)  "(" + n.underlying().toString + ")"
         //else n.underlying().toString

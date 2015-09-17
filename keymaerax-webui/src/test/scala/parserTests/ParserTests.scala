@@ -1,11 +1,14 @@
+package parserTests
+
 /**
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
-import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser._
+import org.scalatest._
+
 import scala.collection.immutable._
 
 class ParserParenTests extends FlatSpec with Matchers {

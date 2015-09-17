@@ -5,14 +5,19 @@
 
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, CheckinTest}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
-import testHelper.ProvabilityTestHelper
+import testHelper.KeYmaeraXTestTags.CheckinTest
+import testHelper.{KeYmaeraXTestTags, ProvabilityTestHelper}
 
 import scala.collection.immutable._
 
@@ -22,6 +27,8 @@ import scala.collection.immutable._
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  * @todo add a reflection-based test at the end that checks all lazy val in DerivedAxioms, even if that does not fail separately it gives exhaustiveness.
  */
+@CheckinTest
+@SummaryTest
 class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))
@@ -32,6 +39,10 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
     Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
+    if(!(new File(System.getProperty("user.home") + File.separator +
+      ".keymaerax" + File.separator + "cache" + File.separator + "lemmadb")).exists()) {
+      DerivedAxioms.prepopulateDerivedLemmaDatabase()
+    }
   }
 
   override def afterEach() = {
@@ -70,10 +81,17 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     rootNode.isProved() shouldBe true
   }
 
+  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs(KeYmaeraXTestTags.CheckinTest) in {
+    LemmaDBFactory.lemmaDB.deleteDatabase() //necessary. Perhaps we should add optional copy-and-recover.
+    DerivedAxioms.prepopulateDerivedLemmaDatabase()
+  }
+
+
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
   it should "prove all eliminate" in {check(allEliminateAxiom)}
+  it should "prove exists eliminate" in {check(existsEliminate)}
   it should "prove !exists" in {check(notExists)}
   it should "prove !all" in {check(notAll)}
   it should "prove ![]" in {check(notBox)}
@@ -164,6 +182,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove !!" in {check(doubleNegationT)}
   it should "prove exists dual" in {check(existsDualT)}
   it should "prove all eliminate" in {check(allEliminateT)}
+  it should "prove exists eliminate" in {check(existsEliminateT)}
   it should "prove all distribute" in {check(allDistributeT)}
   it should "prove box dual" in {check(boxDualT)}
   it should "prove <:=> assign" in {check(assigndT)}
@@ -188,6 +207,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetT)}
   it should "prove \\forall->\\exists" in {check(forallThenExistsT)}
   it should "prove DG differential pre-ghost" in {check(DGpreghostT)}
+  it should "prove DW differential weakening" in {check(DWeakeningT)}
   it should "prove abs" in {check(absT)}
   it should "prove min" in {check(minT)}
   it should "prove max" in {check(maxT)}

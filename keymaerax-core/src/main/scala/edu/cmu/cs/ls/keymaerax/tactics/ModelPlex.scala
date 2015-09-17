@@ -12,12 +12,13 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, Tactic, Posi
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
-import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.{diamondDiffSolve2DT, diffIntroduceConstantT}
+import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.diffIntroduceConstantT
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{onBranch,locateAnte,locateSucc}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT,cutT,hideT}
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.{getFormula,isFormula}
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.isFormula
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{NilT,NilPT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import scala.collection.immutable
 import scala.compat.Platform
@@ -57,11 +58,11 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
    */
   def apply(vars: List[Variable], kind: Symbol, checkProvable: Boolean): (Formula => Formula) = formula => {
     require(kind == 'ctrl || kind == 'model, "Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model")
-    val mxInputFml = modelplexControllerMonitorTrafo(formula/*, vars*/)
+    val mxInputFml = createMonitorSpecificationConjecture(formula/*, vars*/)
     val mxInputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
     val tactic = kind match {
-      case 'ctrl => locateSucc(modelplexInPlace(useOptOne=true)(controllerMonitorT))
-      case 'model => locateSucc(modelplexInPlace(useOptOne=true)(modelMonitorT))
+      case 'ctrl => locateSucc(modelplexAxiomaticStyle(useOptOne=true)(controllerMonitorT))
+      case 'model => locateSucc(modelplexAxiomaticStyle(useOptOne=true)(modelMonitorT))
       case _ => throw new IllegalArgumentException("Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model")
     }
 
@@ -96,8 +97,13 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
     }
   }
 
-  /** Construct ModelPlex Controller Monitor specification formula corresponding to given formula. */
-  def modelplexControllerMonitorTrafo(fml: Formula, vars: Variable*): Formula = {
+  /**
+   * Construct ModelPlex monitor specification conjecture corresponding to given formula.
+   * @param fml A formula of the form p -> [a]q, which was proven correct.
+   * @param vars A list of variables V, superset of BV(a).
+   * @see Mitsch, Platzer: ModelPlex (Definition 3, Lemma 4, Corollary 1).
+   */
+  def createMonitorSpecificationConjecture(fml: Formula, vars: Variable*): Formula = {
     require(vars.nonEmpty, "ModelPlex expects non-empty list of variables to monitor")
     val varsSet = vars.toSet
     require(StaticSemantics.symbols(fml).intersect(
@@ -111,15 +117,54 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
             "\nMissing: " + (StaticSemantics.boundVars(prg).toSymbolSet.toSet diff vars.toSet).mkString(", "))
         val posteqs = vars.map(v => Equal(FuncOf(Function(v.name + "post", v.index, Unit, v.sort), Nothing), v)).reduce(And)
         //@note suppress assumptions since at most those without bound variables are still around.
+        //@todo remove implication
         Imply(True, Diamond(prg, posteqs))
       case _ => throw new IllegalArgumentException("Unsupported shape of formula " + fml)
     }
   }
 
-  /** @todo document */
-  def modelplex = new PositionTactic("Modelplex") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      // TODO generate from phi -> [alpha*]psi
+  /**
+   * Returns a tactic to derive a controller monitor in axiomatic style using forward chase. The tactic is designed to
+   * operate on input produced by createMonitorSpecificationConjecture.
+   * @see [[createMonitorSpecificationConjecture]]
+   * @example{{{
+   *        |- xpost()=1
+   *        ------------------------------controllerMonitorByChase(1)
+   *        |- <{x:=1; {x'=2}}*>xpost()=x
+   * }}}
+   * In order to produce the result above, the tactic performs intermediate steps as follows.
+   * @example{{{
+   *        |- xpost()=1
+   *        ------------------------------true&
+   *        |- (true & xpost()=1)
+   *        ------------------------------<:=> assign
+   *        |- <x:=1;>(true & xpost()=x)
+   *        ------------------------------DX diamond differential skip
+   *        |- <x:=1; {x'=2}>xpost()=x
+   *        ------------------------------<*> approx
+   *        |- <{x:=1; {x'=2}}*>xpost()=x
+   * }}}
+   * @return The tactic.
+   */
+  def controllerMonitorByChase: PositionTactic = chase(3,3, (e:Expression) => e match {
+    // no equational assignments
+    case Box(Assign(_,_),_) => "[:=] assign" :: "[:=] assign update" :: Nil
+    case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
+    // remove loops
+    case Diamond(Loop(_), _) => "<*> approx" :: Nil
+    // remove ODEs for controller monitor
+    case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
+    case _ => AxiomIndex.axiomsFor(e)
+  })
+
+  /**
+   * ModelPlex sequent-style synthesis technique, i.e., with branching so that the tactic can operate on top-level
+   * operators. Operates on monitor specification conjectures.
+   * @see[[createMonitorSpecificationConjecture]]
+   * @return The tactic.
+   */
+  def modelplexSequentStyle: PositionTactic = new PositionTactic("Modelplex Sequent-Style") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p.top) match {
       case Imply(_, Diamond(_, _)) => true
       case _ => false
     }
@@ -131,7 +176,7 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
         Some(ImplyRightT(p) & ((AxiomCloseT |
             (debugT("Before HP") &
             (locateSucc(diamondSeqT) | locateSucc(diamondChoiceT) | locateSucc(diamondNDetAssign) |
-             locateSucc(diamondModelplexTestT) | locateSucc(diamondAssignEqualT) |
+             locateSucc(diamondTestRetainConditionT) | locateSucc(diamondAssignEqualT) |
              locateSucc(substitutionDiamondAssignT) | locateSucc(v2vAssignT) |
              locateSucc(diamondDiffSolve2DT)) &
             debugT("After  HP") &
@@ -144,10 +189,87 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
     }
   }
 
+  /**
+   * ModelPlex backward proof tactic for axiomatic-style monitor synthesis, i.e., avoids proof branching as occuring in
+   * the sequent-style synthesis technique. The tactic 'unprog' determines what kind of monitor (controller monitor,
+   * model monitor) to synthesize. Operates on monitor specification conjectures.
+   * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
+   * @param unprog A tactic for a specific monitor type (either controller monitor or model monitor).
+   * @see [[createMonitorSpecificationConjecture]]
+   * @see [[controllerMonitorT]]
+   * @see [[modelMonitorT]]
+   */
+  def modelplexAxiomaticStyle(useOptOne: Boolean)
+                             (unprog: Boolean => PositionTactic): PositionTactic = new PositionTactic("Modelplex In-Place") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p.top).subFormulaAt(p.inExpr) match {
+      case Some(Imply(_, Diamond(_, _))) => true
+      case _ => false
+    }
+
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        Some(ImplyRightT(p) & ((debugT("Before HP") & unprog(useOptOne)(p) & debugT("After  HP"))*) &
+          debugT("Done with transformation, now looking for quantifiers") &
+          (atOutermostQuantifier(TacticLibrary.debugAtT("Local quantifier elimination") & localQuantifierElimination)(p) | NilT) &
+          debugT("Modelplex done")
+        )
+      }
+    }
+  }
+
+  /**
+   * Returns a backward tactic for deriving controller monitors. Uses Opt. 1 immediately after nondeterministic
+   * assignments if useOptOne, avoids Opt. 1 at intermediate steps if !useOptOne.
+   * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
+   * @return The tactic.
+   */
+  def controllerMonitorT(useOptOne: Boolean): PositionTactic =
+    locateT(
+      TactixLibrary.useAt("<*> approx", PosInExpr(1::Nil)) ::
+      diamondSeqT ::
+      TactixLibrary.useAt("DX diamond differential skip", PosInExpr(1::Nil)) :: Nil) &
+    locateT(
+      TactixLibrary.useAt("<*> approx", PosInExpr(1::Nil)) ::
+      TactixLibrary.useAt("DX diamond differential skip", PosInExpr(1::Nil)) ::
+      diamondSeqT ::
+      diamondChoiceT ::
+      (diamondNDetAssign & (if (useOptOne) optimizationOne() else NilPT)) ::
+      diamondTestT ::
+      substitutionDiamondAssignT ::
+      v2vAssignT ::
+      (diamondAssignEqualT & (if (useOptOne) optimizationOne() else NilPT)) ::
+      (diamondDiffSolve2DT & (if (useOptOne) optimizationOne() else NilPT)) ::
+      boxAssignBaseT ::
+      Nil)
+
+  /**
+   * Returns a backward tactic for deriving model monitors. Uses Opt. 1 immediately after nondeterministic
+   * assignments if useOptOne, avoids Opt. 1 at intermediate steps if !useOptOne.
+   * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
+   * @return The tactic.
+   */
+  def modelMonitorT(useOptOne: Boolean): PositionTactic =
+    locateT(diamondSeqT :: TactixLibrary.useAt("<*> approx", PosInExpr(1::Nil)) :: Nil) &
+    locateT(
+      TactixLibrary.useAt("<*> approx", PosInExpr(1::Nil)) ::
+      diamondSeqT ::
+      diamondChoiceT ::
+      (diamondNDetAssign & (if (useOptOne) optimizationOne() else NilPT)) ::
+      diamondTestT ::
+      substitutionDiamondAssignT ::
+      v2vAssignT ::
+      (diamondAssignEqualT & (if (useOptOne) optimizationOne() else NilPT)) ::
+      (diamondDiffSolve2DT & (if (useOptOne) optimizationOne() else NilPT)) ::
+      boxAssignBaseT ::
+      Nil)
+
+  /** Propositional tactic that avoids branching in formulas without modalities. */
   private def mxPropositionalRightT = new PositionTactic("Modelplex Propositional Right") {
     override def applies(s: Sequent, p: Position): Boolean = {
       var containsPrg = false
-      s(p) match {
+      s(p.top) match {
         // only apply to formulas that contain programs
         case f: Formula => ExpressionTraversal.traverse(new ExpressionTraversalFunction {
           override def preP(p: PosInExpr, prg: Program): Either[Option[StopTraversal], Program] = {
@@ -162,85 +284,12 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(PropositionalRightT(p))
-      }
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = Some(PropositionalRightT(p))
     }
   }
 
-  /** ModelPlex proof tactic for monitor synthesis (in-place version) */
-  def modelplexInPlace(useOptOne: Boolean, time: Option[Variable] = None)
-                      (unprog: (Boolean, Option[Variable]) => PositionTactic) = new PositionTactic("Modelplex In-Place") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
-      case Some(Imply(_, Diamond(_, _))) => true
-      case _ => false
-    }
-
-    def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(ImplyRightT(p) & ((debugT("Before HP") & unprog(useOptOne, time)(p) & debugT("After  HP"))*) &
-          debugT("Done with transformation, now looking for quantifiers") &
-          (atOutermostQuantifier(TacticLibrary.debugAtT("Local quantifier elimination") & localQuantifierElimination)(p) | NilT) &
-          debugT("Modelplex done")
-        )
-      }
-    }
-  }
-
-  def controllerMonitorT(useOptOne: Boolean, time: Option[Variable]): PositionTactic = locateT(
-    TactixLibrary.useAt("<*> approx", PosInExpr(1::Nil)) ::
-    TactixLibrary.useAt("DX diamond differential skip", PosInExpr(1::Nil)) ::
-    diamondSeqT ::
-    diamondChoiceT ::
-    (diamondNDetAssign & (if (useOptOne) optimizationOne() else NilPT)) ::
-    diamondTestT ::
-    substitutionDiamondAssignT ::
-    v2vAssignT ::
-    (diamondAssignEqualT & (if (useOptOne) optimizationOne() else NilPT)) ::
-    (mxDiamondDiffSolve2DT & (if (useOptOne) optimizationOne() else NilPT)) ::
-    boxAssignBaseT ::
-    Nil)
-
-  def modelMonitorT(useOptOne: Boolean, time: Option[Variable]): PositionTactic = locateT(
-    TactixLibrary.useAt("<*> approx", PosInExpr(1::Nil)) ::
-    diamondSeqT ::
-    diamondChoiceT ::
-    (diamondNDetAssign & (if (useOptOne) optimizationOne() else NilPT)) ::
-    diamondTestT ::
-    substitutionDiamondAssignT ::
-    v2vAssignT ::
-    (diamondAssignEqualT & (if (useOptOne) optimizationOne() else NilPT)) ::
-    (mxDiamondDiffSolve2DT & (if (useOptOne) optimizationOne() else NilPT)) ::
-    boxAssignBaseT ::
-    Nil)
-
-  def mxDiamondDiffSolve2DT: PositionTactic = new PositionTactic("<','> differential solution") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p).subFormulaAt(p.inExpr) match {
-      case Some(Diamond(ODESystem(DifferentialProduct(
-      AtomicODE(DifferentialSymbol(_), _),
-      AtomicODE(DifferentialSymbol(_), _)), _), _)) => true
-      case _ => false
-    }
-
-    override def apply(p: Position): Tactic = (diffIntroduceConstantT & diamondDiffSolve2DT)(p)
-  }
-
-  def locateT(tactics: List[PositionTactic]): PositionTactic = new PositionTactic("Modelplex Locate") {
-    override def applies(s: Sequent, p: Position): Boolean = locate(tactics, s, p) != NilT
-
-    def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(locate(tactics, node.sequent, p))
-      }
-    }
-  }
-
-  private def atOutermostQuantifier(t: PositionTactic) = new PositionTactic("ModelPlex at outermost quantifier") {
+  /** Performs tactic t at the outermost quantifier underneath position p, if any. */
+  private def atOutermostQuantifier(t: PositionTactic): PositionTactic = new PositionTactic("ModelPlex at outermost quantifier") {
     override def applies(s: Sequent, p: Position): Boolean = positionOfOutermostQuantifier(s, p).isDefined
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
@@ -255,12 +304,36 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
   }
 
   /**
-   * Returns a modified test tactic < ?H>p <-> H & (H->p)
-   * @return The new tactic.
+   * Returns a tactic to solve two-dimensional differential equations. Introduces constant function symbols for
+   * variables that do not change in the ODE, before it hands over to the actual diff. solution tactic.
+   * @return The tactic.
+   * @see[[ODETactics.diamondDiffSolve2DT]]
    */
-  def diamondModelplexTestT = new PositionTactic("<?H> modelplex test") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Diamond(Test(_), _) => true
+  def diamondDiffSolve2DT: PositionTactic = new PositionTactic("<','> differential solution") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p.top).subFormulaAt(p.inExpr) match {
+      case Some(Diamond(ODESystem(DifferentialProduct(
+        AtomicODE(DifferentialSymbol(_), _),
+        AtomicODE(DifferentialSymbol(_), _)), _), _)) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = (diffIntroduceConstantT & ODETactics.diamondDiffSolve2DT)(p)
+  }
+
+  /**
+   * Returns a modified test tactic for axiom <?H>p <-> H & (H->p)
+   * @example{{{
+   *          |- x>0 & (x>0 -> [x'=x]x>0)
+   *          ---------------------------diamondTestRetainCondition
+   *          |- <?x>0>[x'=x]x>0
+   * }}}
+   * @return The tactic.
+   * @note Unused so far, for deriving prediction monitors where DI is going to rely on knowledge from prior tests.
+   */
+  def diamondTestRetainConditionT: PositionTactic = new PositionTactic("<?H> modelplex test") {
+    //@todo introduce a derived axiom
+    override def applies(s: Sequent, p: Position): Boolean = s(p.top).subFormulaAt(p.inExpr) match {
+      case Some(Diamond(Test(_), _)) => true
       case _ => false
     }
 
@@ -275,14 +348,14 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
       }), f)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        getFormula(node.sequent, p) match {
-          case Diamond(Test(h), phi) =>
+        node.sequent(p.top).subFormulaAt(p.inExpr) match {
+          case Some(Diamond(Test(h), phi)) =>
             Some(
               diamondTestT(p) &
                 cutT(constructCut(node.sequent(p))) & onBranch(
-                (cutUseLbl, debugT("use cut") & ((AxiomCloseT | locateAnte(PropositionalLeftT) | locateSucc(PropositionalRightT))*)
-                  & debugT("Modelplex: Expected axiom close, but did not close")),
-                (cutShowLbl, debugT("show cut") & hideT(p.topLevel))
+                  (cutUseLbl, debugT("use cut") & ((AxiomCloseT | locateAnte(PropositionalLeftT) | locateSucc(PropositionalRightT))*)
+                    & debugT("Modelplex: Expected axiom close, but did not close")),
+                  (cutShowLbl, debugT("show cut") & hideT(p.topLevel))
               )
             )
         }
@@ -291,11 +364,36 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
   }
 
   /**
-   * Locates the tactic that is applicable at the outermost sub-position of p.
+   * Performs a tactic from the list of tactics that is applicable somewhere underneath position p in sequent s,
+   * taking the outermost such sub-position of p.
+   * @example{{{
+   *           |- a=1 & (<x:=2;>x+y>0 & <y:=3;>x+y>0)
+   *           ---------------------------------------locateT(diamondSeqT :: diamondChoiceT :: Nil)(1)
+   *           |- a=1 & <x:=2; ++ y:=3;>x+y>0
+   * }}}
+   * @param tactics The list of tactics.
+   * @return The tactic.
+   * @see[[locate]]
+   */
+  def locateT(tactics: List[PositionTactic]): PositionTactic = new PositionTactic("Modelplex Locate") {
+    override def applies(s: Sequent, p: Position): Boolean = locate(tactics, s, p) != NilT
+
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        Some(locate(tactics, node.sequent, p))
+      }
+    }
+  }
+
+  /**
+   * Returns a tactic from the list of tactics ts that is applicable somewhere underneath position p in sequent s,
+   * taking the outermost such sub-position of p.
    * @param ts The list of tactics.
    * @param s The sequent.
    * @param p The position.
-   * @return The found tactic.
+   * @return The found tactic, pointed to the outermost sub-position of p where it is applicable.
    */
   private def locate(ts: List[PositionTactic], s: Sequent, p: Position): Tactic = {
     var outerMostPos = p
@@ -307,14 +405,15 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
           Left(Some(ExpressionTraversal.stop))
         } else Left(None)
       }
-    }, getFormula(s, p))
-    println(s"Looking for tactic at $outerMostPos: ${getFormula(s, outerMostPos)}")
+    }, s(p.top).subFormulaAt(p.inExpr).getOrElse(throw new IllegalArgumentException("Sequent " + s(p) + " is not a formula at " + p.inExpr)))
+    println(s"Looking for tactic at $outerMostPos: ${s(outerMostPos).subFormulaAt(outerMostPos.inExpr)}")
     ts.find(_.applies(s, outerMostPos)) match {
       case Some(t) => println(s"Applying ${t.name} at $outerMostPos"); t(outerMostPos)
       case _ => NilT
     }
   }
 
+  /** Returns the position of the outermost universal quantifier underneath position p in sequent s, if any. None otherwise. */
   private def positionOfOutermostQuantifier(s: Sequent, p: Position): Option[Position] = {
     var outermostPos: Option[Position] = None
     ExpressionTraversal.traverse(new ExpressionTraversalFunction {
@@ -324,54 +423,95 @@ object ModelPlex extends ((List[Variable], Symbol) => (Formula => Formula)) {
           Left(Some(ExpressionTraversal.stop))
         case _ => Left(None)
       }
-    }, getFormula(s, p))
+    }, s(p.top).subFormulaAt(p.inExpr).getOrElse(throw new IllegalArgumentException("Formula " + s(p) + " is not a formula at sub-position " + p.inExpr)))
     outermostPos
   }
 
-  def optimizationOne(inst: Option[(Variable, Variable)] = None) = locateT(optimizationOneAt(inst)::Nil)
+  /** Opt. 1 from Mitsch, Platzer: ModelPlex, i.e., instantiates existential quantifiers with an equal term phrased
+    * somewhere in the quantified formula.
+    * @example{{{
+    *           |- xpost()>0 & xpost()=xpost()
+    *           ------------------------------optimizationOneWithSearch
+    *           |- \exists x x>0 & xpost()=x
+    * }}}
+    * @see[[optimizationOneWithSearchAt]]
+    */
+  def optimizationOneWithSearch: PositionTactic = locateT(optimizationOneWithSearchAt::Nil)
 
-  def optimizationOneAt(inst: Option[(Variable, Variable)] = None) = new PositionTactic("Optimization 1") {
-    override def applies(s: Sequent, p: Position): Boolean = isFormula(s, p) && (getFormula(s, p) match {
-      case Exists(vars, _) => !p.isAnte && vars.size == 1 && vars.forall { case _: Variable => true case _ => false }
-      case Forall(vars, _) => p.isAnte && vars.size == 1 && vars.forall { case _: Variable => true case _ => false }
+  /** Opt. 1 at a specific position, i.e., instantiates the existential quantifier with an equal term phrased
+    * somewhere in the quantified formula. */
+  private def optimizationOneWithSearchAt: PositionTactic = new PositionTactic("Optimization 1 with instance search") {
+    override def applies(s: Sequent, p: Position): Boolean = isFormula(s, p) && (s(p.top).subFormulaAt(p.inExpr) match {
+      case Some(Exists(vars, _)) => !p.isAnte && vars.size == 1
       case _ => false
     })
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case Exists(vars, phi) if !p.isAnte => inst match {
-          case Some(i) => Some(instantiateT(i._1, i._2)(p))
-          case None => //Some(instantiateT(p))
-            require(vars.size == 1)
-            val (v, post) = vars.map(v => (v, Function(s"${v.name}post", Some(0), Unit, v.sort))).head
-            val postFn = FuncOf(post, Nothing)
-            Some(instantiateT(v, postFn)(p))
-        }
-        case Forall(vars, phi) if p.isAnte => inst match {
-          case Some(i) => Some(instantiateT(i._1, i._2)(p))
-          case None => //Some(instantiateT(p))
-            require(vars.size == 1)
-            val (v, post) = vars.map(v => (v, Function(s"${v.name}post", Some(0), Unit, v.sort))).head
-            val postFn = FuncOf(post, Nothing)
-            Some(instantiateT(v, postFn)(p))
-        }
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p.top).subFormulaAt(p.inExpr) match {
+        case Some(Exists(vars, phi)) if !p.isAnte =>
+          var equality: Option[(Variable, Term)] = None
+          ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+            override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+              case Equal(l, r) if vars.contains(l) => equality = Some(l.asInstanceOf[Variable], r); Left(Some(ExpressionTraversal.stop))
+              case Equal(l, r) if vars.contains(r) => equality = Some(r.asInstanceOf[Variable], l); Left(Some(ExpressionTraversal.stop))
+              case _ => Left(None)
+            }
+          }, phi)
+          Some(optimizationOneAt(equality)(p))
       }
     }
   }
 
-  private def substFromTemp(postTempFn: Term, postFn: Term) = new PositionTactic("Modelplex Subst from Temp") {
-    override def applies(s: Sequent, p: Position): Boolean = true
+  /**
+   * Opt. 1 from Mitsch, Platzer: ModelPlex, i.e., instantiates an existential quantifier with a post-variable. Since
+   * the tactic may be used in intermediate steps of ModelPlex, it uses fresh variants of the post-variable for
+   * instantiation, if asked to automatically instantiate.
+   * @example{{{
+   *           |- z>0 & xpost()=z
+   *           -----------------------------------optimizationOne(Some(Variable("x"), Variable("z")))
+   *           |- \exists x (x>0 & xpost()=x)
+   * }}}
+   * @example{{{
+   *           |- xpost_0()>0 & xpost()=xpost_0()
+   *           -----------------------------------optimizationOne(None)
+   *           |- \exists x (x>0 & xpost()=x)
+   * }}}
+   * @param inst The instance for a quantified variable. If None, the tactic will use a fresh variant of the
+   *             corresponding post-variable.
+   * @return The tactic.
+   */
+  def optimizationOne(inst: Option[(Variable, Term)] = None): PositionTactic = locateT(optimizationOneAt(inst)::Nil)
+
+  /** Opt. 1 at a specific position */
+  private def optimizationOneAt(inst: Option[(Variable, Term)] = None): PositionTactic = new PositionTactic("Optimization 1") {
+    override def applies(s: Sequent, p: Position): Boolean = isFormula(s, p) && (s(p.top).subFormulaAt(p.inExpr) match {
+      case Some(Exists(vars, _)) => !p.isAnte && vars.size == 1
+      case Some(Forall(vars, _)) => p.isAnte && vars.size == 1
+      case _ => false
+    })
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val f = getFormula(node.sequent, p)
-        val substFromTemp = SubstitutionPair(postFn, postTempFn) :: Nil
-        val concFromTemp = SubstitutionHelper.replaceFree(f)(postTempFn, postFn)
-        Some(uniformSubstT(substFromTemp, Map(f -> concFromTemp)))
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p.top).subFormulaAt(p.inExpr) match {
+        case Some(Exists(vars, phi)) if !p.isAnte => inst match {
+          case Some(i) => Some(instantiateT(i._1, i._2)(p))
+          case None =>
+            require(vars.size == 1)
+            val (v, post) = vars.map(v => (v, Function(s"${v.name}post", Some(0), Unit, v.sort))).head
+            val postFn = FuncOf(post, Nothing)
+            Some(instantiateT(v, postFn)(p))
+        }
+        case Some(Forall(vars, phi)) if p.isAnte => inst match {
+          case Some(i) => Some(instantiateT(i._1, i._2)(p))
+          case None =>
+            require(vars.size == 1)
+            val (v, post) = vars.map(v => (v, Function(s"${v.name}post", Some(0), Unit, v.sort))).head
+            val postFn = FuncOf(post, Nothing)
+            Some(instantiateT(v, postFn)(p))
+        }
       }
     }
   }

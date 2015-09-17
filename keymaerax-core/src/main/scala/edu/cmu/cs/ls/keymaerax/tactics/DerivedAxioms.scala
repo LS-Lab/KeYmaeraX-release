@@ -128,7 +128,7 @@ object DerivedAxioms {
    */
   private def derivedAxiomInfo(name: String): Option[(Formula, ApplyRule[LookupLemma])] = {(name: @switch) match {
     //@note implemented as match rather than lookup in a map to retain lazy evaluation
-    //@note but we need a map when prepopulating the lemma database, so whenever adding a case to this case match also add an entry to the hashmap below.
+    //@note Every entry should be added to derivedAxiomMap (we need a map when prepopulating the lemma database, so whenever adding a case to this case match also add an entry to the hashmap below.)
     case "<-> reflexive" => Some(equivReflexiveF, equivReflexiveT)
     case "!! double negation" => Some(doubleNegationF, doubleNegationT)
     case "exists dual" => Some(existsDualF, existsDualT)
@@ -213,15 +213,20 @@ object DerivedAxioms {
     case "abs" => Some(absF, absT)
     case "min" => Some(minF, minT)
     case "max" => Some(maxF, maxT)
+    case "<*> stuck" => Some(loopStuckF, loopStuckT)
+    case "<'> stuck" => Some(odeStuckF, odeStuckT)
     case "+<= up" => Some(intervalUpPlusF, intervalUpPlusT)
+    case "-<= up" => Some(intervalUpMinusF, intervalUpMinusT)
+    case "<=+ down" => Some(intervalDownPlusF, intervalDownPlusT)
+    case "<=- down" => Some(intervalDownMinusF, intervalDownMinusT)
     case _ => None
   } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == name, s"Lookup of DerivedAxiom should find the correct lemma (name: ${name})")
 
   /** populates the derived lemma database with all of the lemmas in the case statement above.*/
   def prepopulateDerivedLemmaDatabase() = {
     require(AUTO_INSERT, "AUTO_INSERT should be on if lemma database is being pre-populated.")
-    //@note copied from above.
-    val mapping = HashMap(
+    //@note copied from derivedAxiomInfo.
+    val derivedAxiomMap = HashMap(
       "<-> reflexive" -> Some(equivReflexiveF, equivReflexiveT)
       , "!! double negation" -> Some(doubleNegationF, doubleNegationT)
       , "exists dual" -> Some(existsDualF, existsDualT)
@@ -244,7 +249,7 @@ object DerivedAxioms {
       , "<*> iterate" -> Some(iteratedF, iteratedT)
       , "<*> approx" -> Some(loopApproxdF, loopApproxdT)
       , "exists generalize" -> Some(existsGeneralizeF, existsGeneralizeT)
-      , "exists eliminate" -> Some(existsEliminateF, existsEliminateT)
+      //@todo , "exists eliminate" -> Some(existsEliminateF, existsEliminateT)
       , "all substitute" -> Some(allSubstituteF, allSubstituteT)
       , "vacuous exists quantifier" -> Some(vacuousExistsF, vacuousExistsT)
       , "V[:*] vacuous assign nondet" -> Some(vacuousBoxAssignNondetF, vacuousBoxAssignNondetT)
@@ -293,10 +298,15 @@ object DerivedAxioms {
       , "abs" -> Some(absF, absT)
       , "min" -> Some(minF, minT)
       , "max" -> Some(maxF, maxT)
+      , "<*> stuck" -> Some(loopStuckF, loopStuckT)
+      , "<'> stuck" -> Some(odeStuckF, odeStuckT)
       , "+<= up" -> Some(intervalUpPlusF, intervalUpPlusT)
+      , "-<= up" -> Some(intervalUpMinusF, intervalUpMinusT)
+      , "<=+ down" -> Some(intervalDownPlusF, intervalDownPlusT)
+      , "<=- down" -> Some(intervalDownMinusF, intervalDownMinusT)
     ) ensuring(r => r.forall(kv => derivedAxiomInfo(kv._1)==kv._2), "same contents as derivedAxiomInfo()")
 
-    mapping.keys.map(key => {
+    derivedAxiomMap.keys.map(key => {
       val proof: Provable = derivedAxiom(key)
       derivedAxiom(key, proof)
     })
@@ -1387,11 +1397,11 @@ object DerivedAxioms {
         cut("[{c&H(??)}](p(??)->(H(??)->p(??)))".asFormula) & onBranch(
           (BranchLabels.cutShowLbl, cohide(2) & G & prop),
           (BranchLabels.cutUseLbl,
-            useAt("K modal modus ponens")(-2) & implyL(-2) & (close, close) )
+            useAt("K modal modus ponens", PosInExpr(0::Nil))(-2) & implyL(-2) & (close, close) )
         )
         ),
       (BranchLabels.equivRightLbl,
-        useAt("K modal modus ponens")(-1) &
+        useAt("K modal modus ponens", PosInExpr(0::Nil))(-1) &
           implyL(-1) & (cohide(2) & byUS("DW"), close)
         )
     )
@@ -1399,7 +1409,7 @@ object DerivedAxioms {
   lazy val DWeakeningT = derivedAxiomT(DWeakening)
 
   /**
-   * {{{Axiom "DS diamond differential skip".
+   * {{{Axiom "DX diamond differential skip".
    *    <{c&H(??)}>p(??) <- H(??)&p(??)
    * End.
    * }}}
@@ -1947,12 +1957,45 @@ object DerivedAxioms {
   lazy val maxT = derivedAxiomT(maxDef)
 
   /**
+   * {{{Axiom "<*> stuck".
+   *    <{a;}*>p(??) <-> <{a;}*>p(??)
+   * End.
+   * }}}
+   * @Derived
+   * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+   */
+  lazy val loopStuckF = "<{a;}*>p(??) <-> <{a;}*>p(??)".asFormula
+  lazy val loopStuck = derivedAxiom("<*> stuck",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(loopStuckF)),
+    byUS("<-> reflexive")
+  )
+
+  lazy val loopStuckT = derivedAxiomT(loopStuck)
+
+  /**
+   * {{{Axiom "<'> stuck".
+   *    <{c&H(??)}>p(??) <-> <{c&H(??)}>p(??)
+   * End.
+   * }}}
+   * @Derived
+   * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+   */
+  lazy val odeStuckF = "<{c&H(??)}>p(??) <-> <{c&H(??)}>p(??)".asFormula
+  lazy val odeStuck = derivedAxiom("<'> stuck",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(odeStuckF)),
+    byUS("<-> reflexive")
+  )
+
+  lazy val odeStuckT = derivedAxiomT(odeStuck)
+
+
+  /**
    * {{{Axiom "+<= up".
-   *    (x+y<=z <- X+Y<=Z) <- (x<=X & y<=Y)
+   *    f()+g()<=h() <- ((f()<=F() & g()<=G()) & F()+G()<=h())
    * End.
    * }}}
    */
-  lazy val intervalUpPlusF = "(x+y<=z <- X+Y<=Z) <- (x<=X & y<=Y)".asFormula
+  lazy val intervalUpPlusF = "f()+g()<=h() <- ((f()<=F() & g()<=G()) & F()+G()<=h())".asFormula
   lazy val intervalUpPlus = derivedAxiom("+<= up",
     Sequent(Nil, IndexedSeq(), IndexedSeq(intervalUpPlusF)),
     TactixLibrary.QE
@@ -1960,4 +2003,45 @@ object DerivedAxioms {
 
   lazy val intervalUpPlusT = derivedAxiomT(intervalUpPlus)
 
+  /**
+   * {{{Axiom "-<= up".
+   *    f()-g()<=h() <- ((f()<=F() & G()<=g()) & F()-G()<=h())
+   * End.
+   * }}}
+   */
+  lazy val intervalUpMinusF = "f()-g()<=h() <- ((f()<=F() & G()<=g()) & F()-G()<=h())".asFormula
+  lazy val intervalUpMinus = derivedAxiom("-<= up",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalUpMinusF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalUpMinusT = derivedAxiomT(intervalUpMinus)
+
+  /**
+   * {{{Axiom "<=+ down".
+   *    h()<=f()+g() <- ((F()<=f() & G()<=g()) & h()<=F()+G())
+   * End.
+   * }}}
+   */
+  lazy val intervalDownPlusF = "h()<=f()+g() <- ((F()<=f() & G()<=g()) & h()<=F()+G())".asFormula
+  lazy val intervalDownPlus = derivedAxiom("<=+ down",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalDownPlusF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalDownPlusT = derivedAxiomT(intervalDownPlus)
+
+  /**
+   * {{{Axiom "<=- down".
+   *    h()<=f()-g() <- ((F()<=f() & g()<=G()) & h()<=F()-G())
+   * End.
+   * }}}
+   */
+  lazy val intervalDownMinusF = "h()<=f()-g() <- ((F()<=f() & g()<=G()) & h()<=F()-G())".asFormula
+  lazy val intervalDownMinus = derivedAxiom("<=- down",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalDownMinusF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalDownMinusT = derivedAxiomT(intervalDownMinus)
 }

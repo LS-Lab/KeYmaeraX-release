@@ -22,6 +22,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{Propositional,N
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
@@ -36,6 +37,7 @@ import scala.collection.immutable.Map
  * @author Stefan Mitsch
  * @author Jean-Baptiste Jeannin
  */
+@SlowTest
 class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))

@@ -4,12 +4,36 @@
  */
 package edu.cmu.cs.ls.keymaerax
 
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics
+
 /**
  * Tactics framework providing base tactics, tactic combinators,
  * tactics execution and scheduling and continuations engine,
  * as well as presupplied proof search strategies.
  *
- * Main tactics are provided in [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary]]
+ * The KeYmaera X Tactic provides
+ *
+ *   - Tactic library
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary]]: Main tactic library
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.HilbertCalculus]]: Hilbert Calculus for differential dynamic logic
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus]]: Unification-based Uniform Substitution Calculus.
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary]]: Additional tactic library
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]: Derived Axioms proved from the base axioms from the core [[edu.cmu.cs.ls.keymaerax.core.Axiom]]
+ *     - Many other singleton objects define additional tactics.
+ *   - Tactic framework for [[edu.cmu.cs.ls.keymaerax.tactics.Tactics Scheduled Tactics]]
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic]]: Base type for scheduled tactics with tactic combinators.
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.Tactics.KeYmaeraScheduler]]: Tactic scheduler starting and managing scheduled tactics.
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.ProofNode]]: Proof search data structure for scheduled tactics.
+ *   - Tactic framework for Hilbert-style Forward Tactics: Tactics are functions `Provable=>Provable`
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus.ForwardTactic]]: Forward Hilbert-style tactics `Provable=>Provable`
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus.ForwardPositionTactic]]: Positional forward Hilbert-style tactics `Position=>(Provable=>Provable)`
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus]]: Forward Hilbert-style tactic combinators.
+ *   - Tactic tools
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.Position]]: Tactic positioning types.
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch]]: Unification matchers.
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.RenUSubst]]: Renaming uniform substitutions, combining uniform renaming with uniform substitution.
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.Augmentors]]: Implicit convenience additions of helper functions to formulas, terms, programs, sequents.
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.Context]]: Convenience representation of formulas used as contexts that provide ways of substituting expressions in.
  *
  * All tactics are implemented on top of [[edu.cmu.cs.ls.keymaerax.core.Provable]] proof certificates.
  * [[edu.cmu.cs.ls.keymaerax.tactics.ProofNode]] provide a useful data structure for the tactics to
@@ -29,7 +53,7 @@ package edu.cmu.cs.ls.keymaerax
  *
  * ===Explicit Proof Certificates===
  * The most explicit types of proofs can be constructed directly using the
- * [[edu.cmu.cs.ls.keymaerax.core.Provable]] certificates in KeYmaera X.
+ * [[edu.cmu.cs.ls.keymaerax.core.Provable]] certificates in KeYmaera X's kernel.
  * Also see [[edu.cmu.cs.ls.keymaerax.core]].
  *
  * {{{
@@ -50,7 +74,7 @@ package edu.cmu.cs.ls.keymaerax
  * }}}
  *
  * ===Explicit Proofs===
- * Explicit proofs construct similarly explicit proof steps, just with tactics:
+ * Explicit proofs construct similarly explicit proof steps, just with explicit tactics from [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary TactixLibrary]]:
  * {{{
  * import TactixLibrary._
  * // Explicit proof tactic for |- !!p() <-> p()

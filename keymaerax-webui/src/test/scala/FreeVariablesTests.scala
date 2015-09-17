@@ -4,6 +4,7 @@
 */
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import org.scalatest.{Matchers, FlatSpec}
 
 import scala.collection.immutable.Set
@@ -15,6 +16,7 @@ import scala.collection.immutable.Set
  * @author Stefan Mitsch
  * @author Ran Ji
  */
+@SummaryTest
 class FreeVariablesTests extends FlatSpec with Matchers {
   private def V(s: String) = Variable(s, None, Real)
 

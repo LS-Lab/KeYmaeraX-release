@@ -163,7 +163,7 @@ object ArithmeticTacticsImpl {
     private def toolIsInitialized(): Boolean = {
       // HACK access singletons, because applies/applicable does not have a tool instance parameter
       if (toolId == "Mathematica") MathematicaScheduler.isInitialized
-      else if (toolId == "Z3") Z3Scheduler.get.isInitialized
+      else if (toolId == "Z3") true
       else if (toolId == "Polya") PolyaScheduler.get.isInitialized
       else false
     }

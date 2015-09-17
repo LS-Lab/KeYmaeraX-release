@@ -28,7 +28,7 @@ class FileLemmaDB extends LemmaDB {
   private lazy val lemmadbpath: File = {
     val file = new File(System.getProperty("user.home") + File.separator +
       ".keymaerax" + File.separator + "cache" + File.separator + "lemmadb")
-    file.mkdirs
+    if (!file.exists() && !file.mkdirs()) println("WARNING: FileLemmaDB cache did not get created: " + file.getAbsolutePath)
     file
   }
 
@@ -89,4 +89,7 @@ class FileLemmaDB extends LemmaDB {
     assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemma, "Lemma stored in DB should be identical to lemma in memory " + lemma)
   }
 
+  override def deleteDatabase(): Unit = {
+    lemmadbpath.delete()
+  }
 }
