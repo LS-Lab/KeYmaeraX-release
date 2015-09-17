@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.ProofNode.ProofStep
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics._
-import org.scalameter.{Key, Warmer, Measurer}
+//import org.scalameter.{Key, Warmer, Measurer}
 import testHelper.KeYmaeraXTestTags.SlowTest
 import testHelper.ParserFactory._
 import edu.cmu.cs.ls.keymaerax.tactics.ModelPlex.{modelplexSequentStyle, modelplexAxiomaticStyle, optimizationOne,
@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import scala.collection.immutable
 import scala.language.postfixOps
 
-import org.scalameter._
+//import org.scalameter._
 
 /**
  * Created by smitsch on 3/8/15.
@@ -591,55 +591,55 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
 
   val performanceRuns = 2
 
-  private def compareControllerMonitorTactics(modelFile: String, vars: Variable*) = {
-    val in = getClass.getResourceAsStream(modelFile)
-    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = createMonitorSpecificationConjecture(model, vars:_*)
+//  private def compareControllerMonitorTactics(modelFile: String, vars: Variable*) = {
+//    val in = getClass.getResourceAsStream(modelFile)
+//    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+//    val modelplexInput = createMonitorSpecificationConjecture(model, vars:_*)
+//
+//    val chaseTime = config(
+//      Key.exec.benchRuns -> performanceRuns,
+//      Key.verbose -> false
+//    ) withWarmer {
+//      new Warmer.Default
+//    } withMeasurer {
+//      new Measurer.IgnoringGC
+//    } measure {
+//      proveUncheckedBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
+//    }
+//
+//    val tacticTime = config(
+//      Key.exec.benchRuns -> performanceRuns,
+//      Key.verbose -> false
+//    ) withWarmer {
+//      new Warmer.Default
+//    } withMeasurer {
+//      new Measurer.IgnoringGC
+//    } measure {
+//      proveUncheckedBy(modelplexInput, modelplexAxiomaticStyle(useOptOne=true)(controllerMonitorT)(1))
+//    }
+//
+//    println(s"Averaged time over $performanceRuns runs: $chaseTime (forward chase) vs. $tacticTime (backward tactic)")
+//  }
 
-    val chaseTime = config(
-      Key.exec.benchRuns -> performanceRuns,
-      Key.verbose -> false
-    ) withWarmer {
-      new Warmer.Default
-    } withMeasurer {
-      new Measurer.IgnoringGC
-    } measure {
-      proveUncheckedBy(modelplexInput, ModelPlex.controllerMonitorByChase(1, 1::Nil))
-    }
-
-    val tacticTime = config(
-      Key.exec.benchRuns -> performanceRuns,
-      Key.verbose -> false
-    ) withWarmer {
-      new Warmer.Default
-    } withMeasurer {
-      new Measurer.IgnoringGC
-    } measure {
-      proveUncheckedBy(modelplexInput, modelplexAxiomaticStyle(useOptOne=true)(controllerMonitorT)(1))
-    }
-
-    println(s"Averaged time over $performanceRuns runs: $chaseTime (forward chase) vs. $tacticTime (backward tactic)")
-  }
-
-  "Performance measurement" should "on water tank compare backward tactic and forward chase controller monitor performance" taggedAs SlowTest in {
-    compareControllerMonitorTactics("examples/casestudies/modelplex/watertank/watertank.key", Variable("f"), Variable("l"), Variable("c"))
-  }
-
-  it should "on LLC compare backward tactic and forward chase controller monitor performance" taggedAs SlowTest in {
-    compareControllerMonitorTactics("examples/casestudies/modelplex/fm11/llc.key",
-      Variable("xl"), Variable("vl"), Variable("al"), Variable("xf"), Variable("vf"), Variable("af"), Variable("t"))
-  }
-
-  it should "on Robix compare backward tactic and forward chase controller monitor performance" taggedAs SlowTest in {
-    compareControllerMonitorTactics("examples/casestudies/robix/passivesafetyabs.key",
-      Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
-      Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
-  }
-
-  it should "on VSL compare backward tactic and forward chase controller monitor performance" taggedAs SlowTest in {
-    compareControllerMonitorTactics("examples/casestudies/modelplex/iccps12/vsl.key",
-      Variable("xsl"), Variable("vsl"), Variable("x1"), Variable("v1"), Variable("a1"), Variable("t"))
-  }
+//  "Performance measurement" should "on water tank compare backward tactic and forward chase controller monitor performance" taggedAs SlowTest in {
+//    compareControllerMonitorTactics("examples/casestudies/modelplex/watertank/watertank.key", Variable("f"), Variable("l"), Variable("c"))
+//  }
+//
+//  it should "on LLC compare backward tactic and forward chase controller monitor performance" taggedAs SlowTest in {
+//    compareControllerMonitorTactics("examples/casestudies/modelplex/fm11/llc.key",
+//      Variable("xl"), Variable("vl"), Variable("al"), Variable("xf"), Variable("vf"), Variable("af"), Variable("t"))
+//  }
+//
+//  it should "on Robix compare backward tactic and forward chase controller monitor performance" taggedAs SlowTest in {
+//    compareControllerMonitorTactics("examples/casestudies/robix/passivesafetyabs.key",
+//      Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
+//      Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
+//  }
+//
+//  it should "on VSL compare backward tactic and forward chase controller monitor performance" taggedAs SlowTest in {
+//    compareControllerMonitorTactics("examples/casestudies/modelplex/iccps12/vsl.key",
+//      Variable("xsl"), Variable("vsl"), Variable("x1"), Variable("v1"), Variable("a1"), Variable("t"))
+//  }
 
   "Interval arithmetic" should "intervalify grotesquely simplified watertank controller monitor" in {
     //"(-1<=fpost()&fpost()<=(m-l)/ep)&(0<=l&0<=ep)&(fpost()=fpost()&lpost()=l)&cpost()=0".asFormula
