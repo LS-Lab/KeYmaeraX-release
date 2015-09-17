@@ -99,6 +99,8 @@ object KeYmaeraX {
           case "-codegen" :: value :: tail =>
             if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
             else optionErrorReporter("-codegen")
+          case "-ui" :: kyxFilePath :: "-tactic" :: tacticPath :: tail =>
+            launchUIWithTactic(kyxFilePath, tacticPath, tail.toArray); map ++ Map('mode -> "ui")
           case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
           // action options
           case "-out" :: value :: tail =>
@@ -493,25 +495,29 @@ object KeYmaeraX {
   }
 
   def launchUIWithTactic(kyxPath: String, tacticPath: String, uiArgs: Array[String]) : Unit = {
+    println("Launching UI and trying to prove " + kyxPath + " with tactic " + tacticPath)
     // Launch the web server if it's not already running, and then wait until the server is started.
-    if(!serverIsRunning)    Main.main(uiArgs)
-    while(!serverIsRunning) {
-      println("polling server status...");
-      wait(1000) // polling user status
-    }
+    //@todo we need a much cleaner way of checking if the stack size is correct. Until then, calling Main.main from here is very spaghetti.
+    if(!serverIsRunning())
+      throw new IllegalStateException("Server must be running in order to execute a tactic on a .key file.")
 
-    // Create the user, the model, and start the proof.
-    val db = Boot.database
+    val db = DBAbstractionObj.defaultDatabase //@todo ???
     val username = "commandLineInterface"
+
     // Create a new user; ignore any errors.
     new CreateUserRequest(db, username, "password").getResultingResponses()
 
 
     //Create the model
     val modelId = {
+      val randomName = java.util.UUID.randomUUID().toString
       val kyxFile         = new File(kyxPath)
       val kyxFileContents = Files.readAllLines(Paths.get(kyxPath)).toArray().toList.mkString("\n")
-      val modelRequest    = new CreateModelRequest(db, username, kyxFile.getName, kyxFileContents)
+      val modelRequest    = new CreateModelRequest(db, username, kyxFile.getName + "(noise: " + randomName + ")", kyxFileContents)
+
+      //The file should parse.
+      try { KeYmaeraXProblemParser(kyxFileContents) }
+      catch { case e: Throwable => System.err.println(".key file should parse!"); throw e }
 
       modelRequest.getResultingResponses()
       modelRequest.getModelId
@@ -519,7 +525,7 @@ object KeYmaeraX {
 
     // Create a new proof
     val proofId = {
-      val createPrfRequest = new CreateProofRequest(db, username, modelId, "Proof launched from CLI -- will not reload!", "")
+      val createPrfRequest = new CreateProofRequest(db, username, modelId, s"$modelId -- Proof launched from CLI -- will not reload!", "")
 
       createPrfRequest.getResultingResponses()
       createPrfRequest.getProofId
@@ -534,7 +540,7 @@ object KeYmaeraX {
     val path: String = s"/dashboard.html?#/proofs/$proofId"
     SystemWebBrowser(s"http://$host:$port/$path")
   }
-  private def serverIsRunning : Boolean = {
+  private def serverIsRunning() : Boolean = {
     try {
       new Socket("localhost", 8090)
       true
