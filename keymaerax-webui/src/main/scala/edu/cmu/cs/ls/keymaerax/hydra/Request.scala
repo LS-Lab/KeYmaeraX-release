@@ -159,20 +159,24 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
 
         db.updateConfiguration(newConfig)
 
-        var success = false;
         try {
+          if(!(new File(linkName).exists() || !jlinkLibFile.exists())) throw new FileNotFoundException()
           ComponentConfig.keymaeraInitializer.initMathematicaFromDB() //um.
-          success = true
+          new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
         }
         catch {
-          case e : Exception => {
+          case e : FileNotFoundException => {
             db.updateConfiguration(originalConfig)
             e.printStackTrace()
-            success = false
+            new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, false) :: Nil
+          }
+
+          case e : Exception => {
+            new ErrorResponse(e) :: Nil
           }
         }
 
-        new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, success) :: Nil
+
       }
     }
     catch {

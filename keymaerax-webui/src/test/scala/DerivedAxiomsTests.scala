@@ -5,6 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -37,6 +39,10 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
     Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
+    if(!(new File(System.getProperty("user.home") + File.separator +
+      ".keymaerax" + File.separator + "cache" + File.separator + "lemmadb")).exists()) {
+      DerivedAxioms.prepopulateDerivedLemmaDatabase()
+    }
   }
 
   override def afterEach() = {
