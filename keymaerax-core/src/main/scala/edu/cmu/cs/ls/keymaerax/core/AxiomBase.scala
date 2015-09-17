@@ -271,6 +271,10 @@ Axiom "all eliminate".
   (\forall x p(??)) -> p(??)
 End.
 
+Axiom "exists eliminate".
+  p(??) -> (\exists x p(??))
+End.
+
 Axiom "vacuous all quantifier".
   (\forall x p()) <-> p()
 End.

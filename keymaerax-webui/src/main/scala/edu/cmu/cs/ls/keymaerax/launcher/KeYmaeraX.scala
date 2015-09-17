@@ -2,9 +2,12 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.{File, PrintWriter}
 import java.lang.reflect.ReflectPermission
+import java.net.Socket
+import java.nio.file.{Paths, Files}
 import java.security.Permission
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics._
@@ -487,6 +490,58 @@ object KeYmaeraX {
   /** Launch the web user interface */
   def launchUI(args: Array[String]): Unit = {
     Main.main(args)
+  }
+
+  def launchUIWithTactic(kyxPath: String, tacticPath: String, uiArgs: Array[String]) : Unit = {
+    // Launch the web server if it's not already running, and then wait until the server is started.
+    if(!serverIsRunning)    Main.main(uiArgs)
+    while(!serverIsRunning) {
+      println("polling server status...");
+      wait(1000) // polling user status
+    }
+
+    // Create the user, the model, and start the proof.
+    val db = Boot.database
+    val username = "commandLineInterface"
+    // Create a new user; ignore any errors.
+    new CreateUserRequest(db, username, "password").getResultingResponses()
+
+
+    //Create the model
+    val modelId = {
+      val kyxFile         = new File(kyxPath)
+      val kyxFileContents = Files.readAllLines(Paths.get(kyxPath)).toArray().toList.mkString("\n")
+      val modelRequest    = new CreateModelRequest(db, username, kyxFile.getName, kyxFileContents)
+
+      modelRequest.getResultingResponses()
+      modelRequest.getModelId
+    }
+
+    // Create a new proof
+    val proofId = {
+      val createPrfRequest = new CreateProofRequest(db, username, modelId, "Proof launched from CLI -- will not reload!", "")
+
+      createPrfRequest.getResultingResponses()
+      createPrfRequest.getProofId
+    }
+
+    // Run the scala file on the created proof -- blocking!
+    new RunScalaFileRequest(db, proofId, new File(tacticPath)).getResultingResponses()
+
+    // Send the user's browser to the correct location.
+    val host: String = Boot.host
+    val port: Int    = Boot.port
+    val path: String = s"/dashboard.html?#/proofs/$proofId"
+    SystemWebBrowser(s"http://$host:$port/$path")
+  }
+  private def serverIsRunning : Boolean = {
+    try {
+      new Socket("localhost", 8090)
+      true
+    }
+    catch {
+      case e : Exception => false
+    }
   }
 
   // helpers
