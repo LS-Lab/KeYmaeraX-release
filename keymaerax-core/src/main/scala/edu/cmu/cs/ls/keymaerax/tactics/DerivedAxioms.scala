@@ -157,7 +157,7 @@ object DerivedAxioms {
     case "<*> iterate" => Some(iteratedF, iteratedT)
     case "<*> approx" => Some(loopApproxdF, loopApproxdT)
     case "exists generalize" => Some(existsGeneralizeF, existsGeneralizeT)
-    case "exists eliminate" => Some(existsEliminateF, existsEliminateT)
+    //case "exists eliminate" => Some(existsEliminateF, existsEliminateT)
     case "all substitute" => Some(allSubstituteF, allSubstituteT)
     case "vacuous exists quantifier" => Some(vacuousExistsF, vacuousExistsT)
     case "V[:*] vacuous assign nondet" => Some(vacuousBoxAssignNondetF, vacuousBoxAssignNondetT)
