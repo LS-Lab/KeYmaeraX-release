@@ -821,15 +821,17 @@ trait UnifyUSCalculus {
             val Cmon = CMon(C)(sideUS)
 
             // C{subst(k)} |- C{subst(o)} for polarity < 0
-            // C{subst(k)} |- Ci{subst(o)} for polarity = 0, where <-> in C are turned into -> in Ci
             // C{subst(o)} |- C{subst(k)} for polarity > 0
-            val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)
+            // C{subst(k)} |- Ci{subst(o)} for polarity = 0, where <-> in C are turned into -> in Ci
+            val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)  //@todo * (if (pos.isAnte) -1 else 1)
             val (kk, oo) =
               if (polarity < 0) (C(subst(k)), C(subst(o)))
-              else if (polarity == 0) {
+              else if (polarity > 0) (C(subst(o)), C(subst(k)))
+              else {
+                assert(polarity ==0)
                 val Ci = Context(FormulaTools.makePolarityAt(C.ctx, pos.inExpr, -1))
                 (Ci(subst(k)), Ci(subst(o)))
-              } else (C(subst(o)), C(subst(k)))
+              }
 
             val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(kk, oo))), ImplyRight(SuccPos(0)))
 
