@@ -6,6 +6,8 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.{InputStreamReader, BufferedReader, File, FileFilter,IOException,EOFException}
 import javax.swing.JOptionPane
+import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms
+
 import scala.collection.JavaConversions._
 
 /**
@@ -24,7 +26,17 @@ object Main {
     } else true
 
     if(isFirstLaunch) {
-      LemmaDatabaseInitializer.initializeFromJAR
+      try {
+        LemmaDatabaseInitializer.initializeFromJAR
+      }
+      catch {
+        case e: LemmbaDatabaseInitializationException => {
+          println("!!! ERROR: Could not initialize database !!!)")
+          e.printStackTrace()
+          println("!!! ERROR RECOVERY: Trying to generate the Lemma database by proving all derived axioms")
+          DerivedAxioms.prepopulateDerivedLemmaDatabase()
+        }
+      }
       val java : String = javaLocation
       val keymaera : String = jarLocation
       println("Restarting KeYmaera X with sufficient stack space")
