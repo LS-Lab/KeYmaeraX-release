@@ -498,8 +498,16 @@ object KeYmaeraX {
     println("Launching UI and trying to prove " + kyxPath + " with tactic " + tacticPath)
     // Launch the web server if it's not already running, and then wait until the server is started.
     //@todo we need a much cleaner way of checking if the stack size is correct. Until then, calling Main.main from here is very spaghetti.
-    if(!serverIsRunning())
-      throw new IllegalStateException("Server must be running in order to execute a tactic on a .key file.")
+//    if(!serverIsRunning())
+//      throw new IllegalStateException("Server must be running in order to execute a tactic on a .key file.")
+
+    //@todo we're assuming that the stack size is correct.
+    Main.startServer()
+    while(!serverIsRunning()) {
+      this.synchronized({ this.wait(100) })
+    }
+
+    //@todo is this ok...?
 
     val db = DBAbstractionObj.defaultDatabase //@todo ???
     val username = "commandLineInterface"
@@ -535,9 +543,9 @@ object KeYmaeraX {
     new RunScalaFileRequest(db, proofId, new File(tacticPath)).getResultingResponses()
 
     // Send the user's browser to the correct location.
-    val host: String = Boot.host
-    val port: Int    = Boot.port
-    val path: String = s"/dashboard.html?#/proofs/$proofId"
+    val host: String = "localhost" //@todo ???
+    val port: Int    = 8090 //@todo ???
+    val path: String = s"dashboard.html?#/proofs/$proofId"
     SystemWebBrowser(s"http://$host:$port/$path")
   }
   private def serverIsRunning() : Boolean = {
