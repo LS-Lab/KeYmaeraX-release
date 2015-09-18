@@ -3,7 +3,7 @@ ImplyRight
 & Loop("v >= 0 & x+v^2/(2*b) <= S")
 & onLabel(
   ("base case", ArithmeticT),
-  ("use case", ArithmeticT),
+  ("use case", ImplyRight & ArithmeticT),
   ("induction step",
     ImplyRight
     & Seq
