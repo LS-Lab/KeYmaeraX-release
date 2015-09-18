@@ -196,7 +196,7 @@ trait UnifyUSCalculus {
        * @return
        * @author Andre Platzer
        */
-      private def useAt[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: Tactic, sequent: Sequent): Tactic = {
+      private def useAt[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: Tactic, sequent: Sequent): Tactic = {
         require(subst(k) == c, "correctly matched input")
         require(C(c).at(p.inExpr) == (C,c), "correctly split at position p")
         require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
@@ -457,7 +457,7 @@ trait UnifyUSCalculus {
   }
 
   /** CE(fact) uses the equivalence left<->right or equality left=right or implication left->right fact for congruence
-    * reasoning in the given context at the indicated position to replace right by left in that context (literally, no substitution).
+    * reasoning in the given context C at the indicated position to replace right by left in that context (literally, no substitution).
     * @see [[UnifyUSCalculus.CE(Provable)]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
@@ -526,7 +526,7 @@ trait UnifyUSCalculus {
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
-  def useFor(axiom: String, key: PosInExpr, inst: RenUSubst=>RenUSubst): ForwardPositionTactic =
+  def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic =
     if (Axiom.axioms.contains(axiom)) useFor(Axiom.axiom(axiom), key, inst)
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key, inst)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
@@ -780,7 +780,7 @@ trait UnifyUSCalculus {
     * [x:=1;][{x'=22}] ([x:=2*x;]x>=0 & [x:=0;]x>=0)
     * @see [[useAt()]]
     */
-  def useFor(fact: Provable, key: PosInExpr, inst: RenUSubst=>RenUSubst = (us => us)): ForwardPositionTactic = {
+  def useFor(fact: Provable, key: PosInExpr, inst: Subst=>Subst = (us => us)): ForwardPositionTactic = {
     import Augmentors._
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).at(key)
     if (DEBUG) println("useFor(" + fact.conclusion + ") key: " + keyPart + " in key context: " + keyCtx)
@@ -804,7 +804,7 @@ trait UnifyUSCalculus {
         * @tparam T
         * @return The Provable following from proof by using key k of fact at p in proof.conclusion
         */
-      def useFor[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable = {
+      def useFor[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable = {
         assert(subst(k) == c, "correctly matched input")
         assert(fact.conclusion.succ.head==K(k), "correctly matched key in fact")
         assert(proof.conclusion(p.top)==C(c), "correctly matched occurrence in input proof")
@@ -1020,9 +1020,9 @@ trait UnifyUSCalculus {
   def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String]): PositionTactic = chase(breadth, giveUp, keys, (ax,pos) => pr=>pr)
   def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): PositionTactic =
     chaseI(breadth, giveUp,keys, modifier, ax=>us=>us)
-  def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[String], inst: String=>(RenUSubst=>RenUSubst)): PositionTactic =
+  def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[String], inst: String=>(Subst=>Subst)): PositionTactic =
     chaseI(breadth, giveUp, keys, (ax,pos)=>pr=>pr, inst)
-  def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic, inst: String=>(RenUSubst=>RenUSubst)): PositionTactic = {
+  def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic, inst: String=>(Subst=>Subst)): PositionTactic = {
     require(breadth <= giveUp, "less breadth than giveup expected: " + breadth + "<=" + giveUp)
     chase(e => keys(e) match {
       case l:List[String] if l.size > giveUp => Nil
@@ -1032,7 +1032,7 @@ trait UnifyUSCalculus {
 
   def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): ForwardPositionTactic =
     chaseFor(breadth, giveUp,keys, modifier, ax=>us=>us)
-  def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic, inst: String=>(RenUSubst=>RenUSubst)): ForwardPositionTactic = {
+  def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic, inst: String=>(Subst=>Subst)): ForwardPositionTactic = {
     require(breadth <= giveUp, "less breadth than giveup expected: " + breadth + "<=" + giveUp)
     chaseFor(e => keys(e) match {
       case l:List[String] if l.size > giveUp => Nil
@@ -1062,7 +1062,7 @@ trait UnifyUSCalculus {
     */
   def chase(keys: Expression=>List[String],
             modifier: (String,Position)=>ForwardTactic,
-            inst: String=>(RenUSubst=>RenUSubst) = ax=>us=>us): PositionTactic = new PositionTactic("chase") {
+            inst: String=>(Subst=>Subst) = ax=>us=>us): PositionTactic = new PositionTactic("chase") {
     import Augmentors._
 
     //@note True has no applicable keys. This applicability is still an overapproximation since it does not check for clashes.
@@ -1129,7 +1129,7 @@ trait UnifyUSCalculus {
     */
   def chaseFor(keys: Expression=>List[String],
                modifier: (String,Position)=>ForwardTactic,
-               inst: String=>(RenUSubst=>RenUSubst) = ax=>us=>us): ForwardPositionTactic = pos => de => {
+               inst: String=>(Subst=>Subst) = ax=>us=>us): ForwardPositionTactic = pos => de => {
     import AxiomIndex.axiomIndex
     import Augmentors._
     /** Recursive chase implementation */
