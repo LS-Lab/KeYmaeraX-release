@@ -341,6 +341,8 @@ sealed case class Context[+T <: Expression](ctx: T) {
     case a: Program => instantiate(a)
   }
 
+  def apply(c: Context[Formula]): Context[Formula] = new Context(apply(c.ctx))
+
   /** True if this context has a DotFormula so expects a formula as argument */
   def isFormulaContext = signature(ctx).contains(DotFormula)
   /** True if this context has a DotTerm so expects a term as argument */

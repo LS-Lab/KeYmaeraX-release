@@ -439,6 +439,11 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       new Sequent(Nil, IndexedSeq(), IndexedSeq(result))
       )
 
+  private def shouldReduceTo(input: Formula, pos: Position, result: Formula, fact: Provable, C: Context[Formula]): Unit =
+    TactixLibrary.proveBy(input, HilbertCalculus.CE(fact, C)(pos)).subgoals should contain only (
+      new Sequent(Nil, IndexedSeq(), IndexedSeq(result))
+      )
+
   "CE(Provable) equation magic" should "reduce 0*x+1<=3 to 1<=3" in {
     shouldReduceTo("0*x+1<=3".asFormula, SuccPosition(0, PosInExpr(0::Nil)), "1<=3".asFormula)
   }
@@ -499,6 +504,13 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "reduce [{x' = 5*x & x^2<4}]x>=1 to [{x' = 5*x & -2<x&x<2}]x>=1" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
     shouldReduceTo("[{x' = 5*x & x^2<4}]x>=1".asFormula, SuccPosition(0, PosInExpr(0::1::Nil)), "[{x' = 5*x & -2<x&x<2}]x>=1".asFormula, basicEquiv)
   }
+
+  it should "reduce x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1) to x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)" in {
+    val C = Context("x<5 & ⎵ -> [{x' = 5*x & ⎵}](⎵ & x>=1)".asFormula)
+    shouldReduceTo("x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1)".asFormula, SuccPosition(0), "x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)".asFormula, basicEquiv, C)
+  }
+
+
 
   "useFor" should "use DX to forward (true&x=y) to <{x'=2}>x=y" in {
     useFor("DX diamond differential skip", PosInExpr(0::Nil),

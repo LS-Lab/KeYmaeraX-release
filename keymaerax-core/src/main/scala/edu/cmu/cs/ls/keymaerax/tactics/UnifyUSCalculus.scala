@@ -344,6 +344,7 @@ trait UnifyUSCalculus {
   /**
    * CE(pos) at the indicated position within an equivalence reduces contextual equivalence to argument equivalence.
    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
+   * @see [[UnifyUSCalculus.CE(Context)]]
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
    * @see [[UnifyUSCalculus.CE(Provable)]]
@@ -412,11 +413,13 @@ trait UnifyUSCalculus {
   /** CE(fact) uses the equivalence left<->right or equality left=right or implication left->right fact for congruence
     * reasoning at the indicated position to replace right by left at indicated position (literally, no substitution).
     * Efficient unification-free version of [[UnifyUSCalculus#useAt(Provable, PosInExpr):PositionTactic]]
+    * @see [[UnifyUSCalculus.CE(Provable,Context)]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
+    * @example CE(fact) == CE(fact, Context("⎵".asFormula))
     */
   def CE(fact: Provable): PositionTactic = new PositionTactic("CE(Provable)") {
     import Augmentors._
@@ -432,7 +435,7 @@ trait UnifyUSCalculus {
 
     override def applies(s: Sequent, p: Position): Boolean =
       if (s.sub(p) == Some(key)) true
-      else {if (DEBUG) println("In-applicable CE(" + fact + ") at " + s.sub(p) + " which is " + p + " at " + s); false}
+      else {if (DEBUG) println("In-applicable CE(" + fact + ") at " + p + " which is " + s.sub(p) + " at " + s); false}
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
@@ -446,6 +449,50 @@ trait UnifyUSCalculus {
               equivify & /*commuteEquivR(SuccPosition(0)) &*/
               tactic(p.inExpr) &
               by(fact)
+              )
+          )
+        )
+      }
+    }
+  }
+
+  /** CE(fact) uses the equivalence left<->right or equality left=right or implication left->right fact for congruence
+    * reasoning in the given context at the indicated position to replace right by left in that context (literally, no substitution).
+    * @see [[UnifyUSCalculus.CE(Provable)]]
+    * @see [[useAt()]]
+    * @see [[CE(Context)]]
+    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
+    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
+    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
+    */
+  def CE(fact: Provable, C: Context[Formula]): PositionTactic = new PositionTactic("CE(Provable,Context)") {
+    import Augmentors._
+    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
+
+    def splitFact: (Expression, Expression, Tactic, (Context[Formula]=>ForwardTactic)) = fact.conclusion.succ.head match {
+      //@todo case Equal(l,r) => (l, r, equivifyR(SuccPosition(0)), CQ)
+      case Equiv(l,r) => (l, r, equivifyR(SuccPosition(0)), CE)
+      //@todo case Imply(l,r) => (l, r, skip, CMon)
+      case _ => throw new IllegalArgumentException("CE expects equivalence or equality or implication fact " + fact)
+    }
+    val (other, key, equivify, tactic) = splitFact
+
+    override def applies(s: Sequent, p: Position): Boolean =
+      if (s.sub(p) == Some(C(key))) true
+      else {if (DEBUG) println("In-applicable CE(" + fact + "," + C + ") at " + p + " which is " + s.sub(p) + " at " + s); false}
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
+
+      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val (posctx,c) = node.sequent.at(p)
+        val ctx = posctx(C)
+        val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(node.sequent.succ.length + 1)}
+        Some(cutLR(ctx(other))(p.top) &
+          onBranch(
+            (BranchLabels.cutShowLbl, cohide(cutPos) & //assertT(0,1) &
+              equivify & /*commuteEquivR(SuccPosition(0)) &*/
+              by(tactic(C)(fact))
               )
           )
         )
@@ -486,6 +533,7 @@ trait UnifyUSCalculus {
 
   /** CE(C) will wrap any equivalence left<->right or equality left=right fact it gets within context C.
     * Uses CE or CQ as needed.
+    * @see [[CE(PosInExpr]]
     * @see [[CE(Provable)]]
     * @see [[CMon(Context)]]
     * @todo likewise for Context[Term] using CT instead.
