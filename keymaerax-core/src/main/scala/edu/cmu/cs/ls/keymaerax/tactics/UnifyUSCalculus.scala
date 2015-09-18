@@ -470,9 +470,9 @@ trait UnifyUSCalculus {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
 
     def splitFact: (Expression, Expression, Tactic, (Context[Formula]=>ForwardTactic)) = fact.conclusion.succ.head match {
-      //@todo case Equal(l,r) => (l, r, equivifyR(SuccPosition(0)), CQ)
+      case Equal(l,r) => (l, r, equivifyR(SuccPosition(0)), CE) //@note this CE can also use CQ
       case Equiv(l,r) => (l, r, equivifyR(SuccPosition(0)), CE)
-      //@todo case Imply(l,r) => (l, r, skip, CMon)
+      case Imply(l,r) => (l, r, skip, CMon)
       case _ => throw new IllegalArgumentException("CE expects equivalence or equality or implication fact " + fact)
     }
     val (other, key, equivify, tactic) = splitFact
