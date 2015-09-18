@@ -18,6 +18,24 @@ import scala.collection.JavaConversions._
  * @todo move functionality directly into KeYmaeraX.scala?
  */
 object Main {
+  def startServer() : Unit = {
+    launcherLog("-launch -- starting KeYmaera X Web UI server HyDRA.")
+    try {
+      LemmaDatabaseInitializer.initializeFromJAR
+    }
+    catch {
+      case e: LemmbaDatabaseInitializationException => {
+        println("!!! ERROR: Could not initialize database !!!)")
+        e.printStackTrace()
+        println("!!! ERROR RECOVERY: Trying to generate the Lemma database by proving all derived axioms")
+        DerivedAxioms.prepopulateDerivedLemmaDatabase()
+      }
+    }
+    //@todo skip -ui -launch
+    edu.cmu.cs.ls.keymaerax.hydra.Boot.main(Array[String]()) //@todo not sure.
+  }
+
+
   //@todo set via -log command line option
   private var logFile = false
   def main(args : Array[String]) : Unit = {
@@ -26,26 +44,13 @@ object Main {
     } else true
 
     if(isFirstLaunch) {
-      try {
-        LemmaDatabaseInitializer.initializeFromJAR
-      }
-      catch {
-        case e: LemmbaDatabaseInitializationException => {
-          println("!!! ERROR: Could not initialize database !!!)")
-          e.printStackTrace()
-          println("!!! ERROR RECOVERY: Trying to generate the Lemma database by proving all derived axioms")
-          DerivedAxioms.prepopulateDerivedLemmaDatabase()
-        }
-      }
       val java : String = javaLocation
       val keymaera : String = jarLocation
       println("Restarting KeYmaera X with sufficient stack space")
       runCmd(java :: "-Xss20M" :: "-jar" :: keymaera :: "-ui" :: "-launch" :: Nil)
     }
     else {
-      launcherLog("-launch -- starting KeYmaera X Web UI server HyDRA.")
-      //@todo skip -ui -launch
-      edu.cmu.cs.ls.keymaerax.hydra.Boot.main(Array[String]()) //@todo not sure.
+      startServer()
     }
   }
 
