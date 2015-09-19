@@ -61,22 +61,45 @@ class PolyaSolver extends SMTSolver {
     }
   }
 
+
+  /**
+   * Get result from Polya output
+   *
+   * @param output Polya output of the form:
+   *                  command
+   *                  information
+   *                  -----
+   *                  input
+   *                  -----
+   *                  result
+   *
+   * @return result
+   */
+  private def getTruncatedResult(output: String) : String = {
+    var reversedOutput = output.reverse
+    while(reversedOutput.startsWith("\n")) {
+      reversedOutput = reversedOutput.stripPrefix("\n")
+    }
+    val reversedResult = reversedOutput.substring(0, reversedOutput.indexOf("\n"))
+    return reversedResult.reverse
+  }
+
   /**
    * Check satisfiability with Polya
    * @param cmd the command for running Polya with a given SMT file
    * @return    Polya output as String and the interpretation of Polya output as KeYmaera X formula
    */
-  def run(cmd: String) : (String, Formula)= {
-    var polyaOutput = cmd.!!
-    polyaOutput = polyaOutput.stripPrefix(cmd.stripPrefix(pathToPolya + " ")+"\n")
+  def run(cmd: String) : (String, Formula) = {
+    val polyaOutput = cmd.!!
     println("[Polya result] \n" + polyaOutput)
+    val polyaResult = getTruncatedResult(polyaOutput)
     val kResult = {
-      if (polyaOutput.startsWith("-1")) False
-      else if(polyaOutput.startsWith("1")) True
-      else if(polyaOutput.startsWith("0")) False
-      else throw new SMTConversionException("Conversion of Polya result \n" + polyaOutput + "\n is not defined")
+      if (polyaResult.startsWith("-1")) False
+      else if(polyaResult.startsWith("1")) True
+      else if(polyaResult.startsWith("0")) False
+      else throw new SMTConversionException("Conversion of Polya result \n" + polyaResult + "\n is not defined")
     }
-    (polyaOutput, kResult)
+    (polyaResult, kResult)
   }
 
   /** Return Polya QE result */
@@ -115,13 +138,13 @@ class PolyaSolver extends SMTSolver {
     writer.flush()
     writer.close()
     val cmd = pathToPolya + " " + smtFile.getAbsolutePath
-    var polyaOutput = cmd.!!
-    polyaOutput = polyaOutput.stripPrefix(cmd.stripPrefix(pathToPolya + " ")+"\n")
+    val polyaOutput = cmd.!!
     println("[Polya simplify result] \n" + polyaOutput + "\n")
+    val polyaResult = getTruncatedResult(polyaOutput)
     try {
-      KeYmaeraXParser.termParser(polyaOutput)
+      KeYmaeraXParser.termParser(polyaResult)
     } catch {
-      case e: ParseException => println("[Info] Cannot parse Polya simplified result: " + polyaOutput); t
+      case e: ParseException => println("[Info] Cannot parse Polya simplified result: " + polyaResult); t
     }
   }
 }
