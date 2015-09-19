@@ -77,6 +77,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics
  * Explicit proofs construct similarly explicit proof steps, just with explicit tactics from [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary TactixLibrary]]:
  * {{{
  * import TactixLibrary._
+ * import BranchLabels._
  * // Explicit proof tactic for |- !!p() <-> p()
  * val proof = TactixLibrary.proveBy(
  *    Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)),
@@ -144,7 +145,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics
  * import DerivedAxioms._
  * // Proof by pointing of  |- &lt;v:=2*v+1;&gt;v!=0 <-> 2*v+1!=0
  * val proof = TactixLibrary.proveBy(
- *   Sequent(Nil, IndexedSeq(), IndexedSeq("&lt;v:=2*v+1;&gtlq(v) <-> q(2*v+1)".asFormula)),
+ *   Sequent(Nil, IndexedSeq(), IndexedSeq("&lt;v:=2*v+1;&gt;q(v) <-> q(2*v+1)".asFormula)),
  *   // use "<> dual" axiom backwards at the indicated position on
  *   // |- __&lt;v:=2*v+1;&gt;q(v)__ <-> q(2*v+1)
  *   useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
@@ -205,8 +206,48 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics
  *
  * More proofs by pointing are in [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  *
+ * ===Proof by Congruence===
+ *
+ * ===Proof by Chase===
+ * Proof by chase chases the expression at the indicated position forward
+ * until it is chased away or can't be chased further without critical choices.
+ * The canonical examples use [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus.chase()]] to chase away differential forms:
+ * {{{
+ * import TactixLibrary._
+ * val proof = proveBy("[{x'=22}](2*x+x*y>=5)'".asFormula,
+ *  // chase the differential prime away in the postcondition
+ *  chase(1, 1 :: Nil)
+ *  // |- [{x'=22}]2*x'+(x'*y+x*y')>=0
+ * )
+ * // Remaining subgoals: |- [{x'=22}]2*x'+(x'*y+x*y')>=0
+ * println(proof.subgoals)
+ * }}}
+ * {{{
+ * import TactixLibrary._
+ * val proof = proveBy("[{x'=22}](2*x+x*y>=5)' <-> [{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula,
+ *   // chase the differential prime away in the left postcondition
+ *   chase(1, 0:: 1 :: Nil) &
+ *   // |- [{x'=22}]2*x'+(x'*y+x*y')>=0 <-> [{x'=22}]2*x'+(x'*y+x*y')>=0
+ *   byUS("<-> reflexive")
+ * )
+ * }}}
+ * Yet [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus.chase()]] is also useful to chase away other operators, say, modalities:
+ * {{{
+ *  import TactixLibrary._
+ * // proof by chase of |- [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1
+ * val proof = TactixLibrary.proveBy(
+ *   Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula)),
+ *   // chase the box in the succedent away
+ *   chase(1,Nil) &
+ *   // |- (x>0->2*(x+1)>=1)&(x=0->1>=1)
+ *   QE
+ * )
+ * }}}
+ *
  * @todo Expand descriptions
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary]]
- * @see [[edu.cmu.cs.ls.keymaerax.tacticsinterface]]
+ * @see [[edu.cmu.cs.ls.keymaerax.tactics.HilbertCalculus]]
+ * @see [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus]]
+ * @see [[TacticExamples]]
  */
 package object tactics {}
