@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
-import edu.cmu.cs.ls.keymaerax.tools.{Z3, Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.tools.{Polya, Z3, Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
@@ -42,12 +42,17 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     Tactics.KeYmaeraScheduler.init(Map())
     Tactics.Z3Scheduler = Some(new Interpreter(new Z3))
     Tactics.Z3Scheduler.get.init(Map())
+    Tactics.PolyaScheduler = Some(new Interpreter(new Polya))
+    Tactics.PolyaScheduler.get.init(Map())
+
   }
 
   override def afterEach() = {
     if (Tactics.Z3Scheduler != null && Tactics.Z3Scheduler.isDefined) Tactics.Z3Scheduler.get.shutdown()
+    if (Tactics.PolyaScheduler != null && Tactics.PolyaScheduler.isDefined) Tactics.PolyaScheduler.get.shutdown()
     if (Tactics.MathematicaScheduler != null) Tactics.MathematicaScheduler.shutdown()
     if (Tactics.KeYmaeraScheduler != null) Tactics.KeYmaeraScheduler.shutdown()
+    Tactics.PolyaScheduler = null
     Tactics.Z3Scheduler = null
     Tactics.MathematicaScheduler = null
     Tactics.KeYmaeraScheduler = null
@@ -67,6 +72,11 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
     helper.runTactic(master("Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Polya" in {
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
+    helper.runTactic(master("Polya"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable from the command line" in {
@@ -115,6 +125,11 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(master("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
+  it should "be provable automatically with Polya" in {
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.key"))
+    helper.runTactic(master("Polya"), new RootNode(s)) shouldBe 'closed
+  }
+
   "Example 2" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
 
@@ -142,6 +157,11 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
     helper.runTactic(master(new Generate("v>=0".asFormula), "Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Polya" in {
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
+    helper.runTactic(master(new Generate("v>=0".asFormula), "Polya"), new RootNode(s)) shouldBe 'closed
   }
 
   // TODO not implemented yet: evolution domain must hold in the beginning
@@ -245,6 +265,11 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
+  ignore should "be provable automatically with Polya" in {
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5_simplectrl.key"))
+    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), "Polya"), new RootNode(s)) shouldBe 'closed
+  }
+
   "Example 5" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
 
@@ -275,6 +300,11 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), "Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
+  ignore should "be provable automatically with Polya" in {
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
+    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), "Polya"), new RootNode(s)) shouldBe 'closed
   }
 
   "Example 6" should "be provable" in {
@@ -309,6 +339,11 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
+  ignore should "be provable automatically with Polya" in {
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.key"))
+    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), "Polya"), new RootNode(s)) shouldBe 'closed
+  }
+
   "Example 7" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.key"))
     val plant = debug("plant") & ls(composeb) & ls(assignb) & ls(diffSolve) & ls(implyR)
@@ -339,6 +374,11 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*b) <= S".asFormula), "Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
+  ignore should "be provable automatically with Polya" in {
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.key"))
+    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*b) <= S".asFormula), "Polya"), new RootNode(s)) shouldBe 'closed
   }
 
   // TODO not yet implemented: differential inequalities

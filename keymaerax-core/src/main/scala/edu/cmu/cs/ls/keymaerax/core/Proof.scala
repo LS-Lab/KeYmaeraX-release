@@ -1205,7 +1205,7 @@ object RCF {
   /** List of the class names of all external tools whose answers KeYmaera X would believe */
   private val trustedTools: immutable.List[String] =
     "edu.cmu.cs.ls.keymaerax.tools.Mathematica" ::
-      (if (Rule.LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.Z3" :: Nil else Nil)
+      (if (Rule.LAX_MODE) "edu.cmu.cs.ls.keymaerax.tools.Z3" :: "edu.cmu.cs.ls.keymaerax.tools.Polya" :: Nil else Nil)
 
   /**
    * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
