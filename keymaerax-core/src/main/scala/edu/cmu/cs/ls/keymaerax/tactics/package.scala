@@ -49,7 +49,7 @@ package edu.cmu.cs.ls.keymaerax
  *
  *     4. [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus.useAt() Proof by pointing]] points out facts and where to use them.
  *
- *     5. [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus.CE() Proof by Congruence]]
+ *     5. [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus.CE() Proof by congruence]] is based on equivalence or equality or implicational rewriting within a context.
  *
  *     6. [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus.chase() Proof by chase]] is based on chasing away operators at an indicated position.
  *
@@ -237,7 +237,7 @@ package edu.cmu.cs.ls.keymaerax
  *      stepAt(SuccPosition(0, 1::Nil)) &
  *      // |- x*(x+1)>=0 -> x*(x+1)>=0
  *      prop
- *  )
+ *    )
  * }}}
  * Proof by congruence can also make use of a fact in multiple places at once by defining an appropriate context C:
  * {{{
