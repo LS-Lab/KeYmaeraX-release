@@ -3,8 +3,6 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
-import edu.cmu.cs.ls.keymaerax.tactics.HilbertCalculus._
-import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
@@ -65,6 +63,7 @@ class TacticExamples extends FlatSpec with Matchers with BeforeAndAfterEach {
     proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula))
   }
 
+
   "Explicit Proof" should "prove !!p() <-> p()" in {
     import TactixLibrary._
     import BranchLabels._
@@ -86,6 +85,7 @@ class TacticExamples extends FlatSpec with Matchers with BeforeAndAfterEach {
     proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula))
   }
 
+
   "Proof by Search" should "prove (p() & q()) & r() <-> p() & (q() & r())" in {
     import TactixLibrary._
     // Proof by search of |- (p() & q()) & r() <-> p() & (q() & r())
@@ -96,6 +96,7 @@ class TacticExamples extends FlatSpec with Matchers with BeforeAndAfterEach {
     proof shouldBe 'proved
     proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("(p() & q()) & r() <-> p() & (q() & r())".asFormula))
   }
+
 
   "Proof by Pointing" should "prove <v:=2*v+1;>q(v) <-> q(2*v+1)" in {
     import TactixLibrary._
@@ -145,9 +146,54 @@ class TacticExamples extends FlatSpec with Matchers with BeforeAndAfterEach {
     proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula))
   }
 
-//  "Proof by Congruence" should "prove" in {
-//
-//  }
+
+  "Proof by Congruence" should "prove x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y" in {
+    import TactixLibrary._
+    // |- x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y
+    val proof = proveBy("x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y".asFormula,
+      CE(proveBy("x*(x+1)=x^2+x".asFormula, QE)) (SuccPosition(0, 1::0::1::1::Nil)) &
+        // |- x*(x+1)>=0 -> [y:=0;x:=x*(x+1);]x>=y by CE/CQ using x*(x+1)=x^2+x
+        // step uses top-level operator [;]
+      stepAt(SuccPosition(0, 1::Nil)) &
+        // |- x*(x+1)>=0 -> [y:=0;][x:=x*(x+1);]x>=y
+        // step uses top-level operator [:=]
+        stepAt(SuccPosition(0, 1::Nil)) &
+        // |- x*(x+1)>=0 -> [x:=x*(x+1);]x>=0
+        // step uses top-level [:=]
+        stepAt(SuccPosition(0, 1::Nil)) &
+        // |- x*(x+1)>=0 -> x*(x+1)>=0
+        prop
+    )
+    proof shouldBe 'proved
+    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y".asFormula))
+  }
+
+  it should "prove x^2<4 -> [{x'=9*x^2-x&x^2<4}](-2<x&x<2)" in {
+    import TactixLibrary._
+    // |- x^2<4 -> [{x'=9*x^2-x&x^2<4}](-2<x&x<2)
+    val proof = proveBy("x^2<4 -> [{x'=9*x^2-x&x^2<4}](-2<x&x<2)".asFormula,
+      CE(proveBy("-2<x&x<2<->x^2<4".asFormula, QE)) (SuccPosition(0, 1::0::1::Nil)) &
+        // |- x^2<4 -> [{x'=9*x^2-x&(-2<x&<2)}](-2<x&x<2) by CE using -2<x&x<2<->x^2<4
+        useAt("DW")(SuccPosition(0, 1::Nil)) &
+        // |- x^2<4 -> true by DW
+        prop
+    )
+    proof shouldBe 'proved
+    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("x^2<4 -> [{x'=9*x^2-x&x^2<4}](-2<x&x<2)".asFormula))
+  }
+
+  it should "reduce x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1) to x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)" in {
+    import TactixLibrary._
+    val C = Context("x<5 & ⎵ -> [{x' = 5*x & ⎵}](⎵ & x>=1)".asFormula)
+    // |- x<5 & __x^2<4__ -> [{x' = 5*x & __x^2<4__}](__x^2<4__ & x>=1)
+    val proof = proveBy("x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1)".asFormula,
+      CE(proveBy("-2<x&x<2<->x^2<4".asFormula, QE), C) (SuccPosition(0)))
+    // |- x<5 & (__-2<x&x<2__) -> [{x' = 5*x & __-2<x&x<2__}]((__-2<x&x<2__) & x>=1) by CE
+    proof.subgoals should contain only (
+      new Sequent(Nil, IndexedSeq(), IndexedSeq("x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)".asFormula))
+      )
+  }
+
 
   "Proof by Chase" should "chase the prime away in [{x'=22}](2*x+x*y>=5)'" in {
     import TactixLibrary._

@@ -65,7 +65,7 @@ object Augmentors {
   implicit class SequentAugmentor(val seq: Sequent) {
     /** Subexpression at indicated position */
     def apply(pos: Position): Expression = FormulaAugmentor(seq(pos.top))(pos.inExpr)
-    /** Subexpression at indicated position if exists, or None*/
+    /** Subexpression at indicated position if exists, or None */
     def sub(pos: Position): Option[Expression] = FormulaAugmentor(seq(pos.top)).sub(pos.inExpr)
     /** Split into expression and its *formula* context at the indicated position */
     def at(pos: Position): (Context[Formula], Expression) = FormulaAugmentor(seq(pos.top)).at(pos.inExpr)

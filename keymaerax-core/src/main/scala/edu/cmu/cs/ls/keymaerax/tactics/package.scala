@@ -4,8 +4,6 @@
  */
 package edu.cmu.cs.ls.keymaerax
 
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics
-
 /**
  * Tactics framework providing base tactics, tactic combinators,
  * tactics execution and scheduling and continuations engine,
@@ -43,13 +41,18 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics
  * =Proof Styles=
  * KeYmaera X supports many different proof styles, including combinations of the following styles:
  *
- * 1. Explicit proof certificates directly program the proof rules from the core.
+ *     1. [[edu.cmu.cs.ls.keymaerax.core.Provable Explicit proof certificates]] directly program the proof rules from the core.
  *
- * 2. Explicit proofs use tactics to describe a proof directly mentioning all or most proof steps.
+ *     2. [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.orR Explicit proofs]] use tactics to describe a proof directly mentioning all or most proof steps.
  *
- * 3. Proof by search relies mainly on proof search with occasional additional guidance.
+ *     3. [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.prop Proof by search]] relies mainly on proof search with occasional additional guidance.
  *
- * 4. Proof by pointing points out facts and where to use them.
+ *     4. [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus.useAt() Proof by pointing]] points out facts and where to use them.
+ *
+ *     5. [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus.CE() Proof by Congruence]]
+ *
+ *     6. [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus.chase() Proof by chase]] is based on chasing away operators at an indicated position.
+ *
  *
  * ===Explicit Proof Certificates===
  * The most explicit types of proofs can be constructed directly using the
@@ -73,6 +76,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics
  *  )
  * }}}
  *
+ *
  * ===Explicit Proofs===
  * Explicit proofs construct similarly explicit proof steps, just with explicit tactics from [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary TactixLibrary]]:
  * {{{
@@ -94,6 +98,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics
  * )
  * }}}
  *
+ *
  * ===Proof by Search===
  * Proof by search primarily relies on proof search procedures to conduct a proof.
  * That gives very short proofs but, of course, they are not always entirely informative about how the proof worked.
@@ -107,6 +112,10 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics
  *    prop
  * )
  * }}}
+ * Common tactics for proof by search include
+ * [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.prop()]],
+ * [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.master()]] and the like.
+ *
  *
  * ===Proof by Pointing===
  * Proof by pointing emphasizes the facts to use and is implicit about the details on how to use them exactly.
@@ -206,7 +215,42 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics
  *
  * More proofs by pointing are in [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  *
+ *
  * ===Proof by Congruence===
+ * [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus.CE() Proof by congruence]] is based on
+ * equivalence or equality or implicational rewriting within a context.
+ * This proof style can make quite quick inferences leading to significant progress using
+ * the CE, CQ, CT congruence proof rules or combinations thereof.
+ * {{{
+ *    import TactixLibrary._
+ *    // |- x*(x+1)>=0 -> [y:=0;x:=__x^2+x__;]x>=y
+ *    val proof = proveBy("x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y".asFormula,
+ *      CE(proveBy("x*(x+1)=x^2+x".asFormula, QE)) (SuccPosition(0, 1::0::1::1::Nil)) &
+ *      // |- x*(x+1)>=0 -> [y:=0;x:=__x*(x+1)__;]x>=y by CE/CQ using x*(x+1)=x^2+x at the indicated position
+ *      // step uses top-level operator [;]
+ *      stepAt(SuccPosition(0, 1::Nil)) &
+ *      // |- x*(x+1)>=0 -> [y:=0;][x:=x*(x+1);]x>=y
+ *      // step uses top-level operator [:=]
+ *      stepAt(SuccPosition(0, 1::Nil)) &
+ *      // |- x*(x+1)>=0 -> [x:=x*(x+1);]x>=0
+ *      // step uses top-level [:=]
+ *      stepAt(SuccPosition(0, 1::Nil)) &
+ *      // |- x*(x+1)>=0 -> x*(x+1)>=0
+ *      prop
+ *  )
+ * }}}
+ * Proof by congruence can also make use of a fact in multiple places at once by defining an appropriate context C:
+ * {{{
+ *   import TactixLibrary._
+ *   val C = Context("x<5 & ⎵ -> [{x' = 5*x & ⎵}](⎵ & x>=1)".asFormula)
+ *   // |- x<5 & __x^2<4__ -> [{x' = 5*x & __x^2<4__}](__x^2<4__ & x>=1)
+ *   val proof = proveBy("x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1)".asFormula,
+ *     CE(proveBy("-2<x&x<2<->x^2<4".asFormula, QE), C) (SuccPosition(0)))
+ *   )
+ *   // |- x<5 & (__-2<x&x<2__) -> [{x' = 5*x & __-2<x&x<2__}]((__-2<x&x<2__) & x>=1) by CE
+ *   println(proof.subgoals)
+ * }}}
+ *
  *
  * ===Proof by Chase===
  * Proof by chase chases the expression at the indicated position forward
@@ -233,7 +277,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics
  * }}}
  * Yet [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus.chase()]] is also useful to chase away other operators, say, modalities:
  * {{{
- *  import TactixLibrary._
+ * import TactixLibrary._
  * // proof by chase of |- [?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1
  * val proof = TactixLibrary.proveBy(
  *   Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1;x:=2*x; ++ ?x=0;x:=1;]x>=1".asFormula)),
