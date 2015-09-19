@@ -2,6 +2,8 @@
 * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
 * See LICENSE.txt for the conditions of this license.
 */
+
+import edu.cmu.cs.ls.keymaerax.core.True
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaerax.tools._
@@ -35,8 +37,7 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   "QE" should "prove reals" in {
     z3.qe("3^0 = 1".asFormula) should be ("true".asFormula)
-    // TODO returns false but for the wrong reasons (Polya returns error)
-//    polya.qe("3^0 = 1".asFormula) should be ("true".asFormula)
+    polya.qe("3^0 = 1".asFormula) should be ("true".asFormula)
   }
 
   it should "prove constant function" in {
@@ -47,20 +48,17 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "prove unary function" in {
     z3.qe("f(x)=f(x)".asFormula) should be("true".asFormula)
-    //TODO Polya support
-//    polya.qe("f(x)=f(x)".asFormula) should be("true".asFormula)
+    polya.qe("f(x)=f(x)".asFormula) should be("true".asFormula)
   }
 
   it should "prove binary function" in {
     z3.qe("f(x,y)=f(x,y)".asFormula) should be("true".asFormula)
-    //TODO Polya support
-//    polya.qe("f(x,y)=f(x,y)".asFormula) should be("true".asFormula)
+    polya.qe("f(x,y)=f(x,y)".asFormula) should be("true".asFormula)
   }
 
   it should "prove function with more parameters" in {
     z3.qe("f(x,y,z)=f(x,y,z)".asFormula) should be("true".asFormula)
-    //TODO Polya support
-//    polya.qe("f(x,y,z)=f(x,y,z)".asFormula) should be("true".asFormula)
+    polya.qe("f(x,y,z)=f(x,y,z)".asFormula) should be("true".asFormula)
   }
 
   it should "prove absolute value" in {
@@ -88,13 +86,13 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "prove complex" in {
     z3.qe("(x+y-z)^3 = 1 -> true".asFormula) should be("true".asFormula)
-//    polya.qe("(x+y-z)^3 = 1 -> true".asFormula) should be("true".asFormula)
+    polya.qe("(x+y-z)^3 = 1 -> true".asFormula) should be("true".asFormula)
   }
 
   it should "prove complex 22" in {
     z3.qe("x > 0 -> !x^2-2*x+1=0".asFormula) should be("false".asFormula)
     // TODO returns false but for the wrong reasons (Polya timeout)
-//    polya.qe("x > 0 -> !x^2-2*x+1=0".asFormula) should be("false".asFormula)
+    polya.qe("x > 0 -> !x^2-2*x+1=0".asFormula) should be("false".asFormula)
   }
 
   it should "prove complex 2" in {
@@ -105,11 +103,12 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "prove complex 3" in {
     z3.qe("c<1 & c>=0 & H>=0 & g()>0 & v^2<=2*g()*(H-h) & h>=0 & kxtime_1=0 & h_2()=h & v_2()=v & h>=0 & kxtime_4()=0 & 0>=0 -> v=(0*2-1*0)/2^2*(-1*0^2*g()+2*h+2*0*v)+1/2*((-0*0^2+-1*(2*0^1*(0*0+1)))*g()+-1*0^2*0+(0*h+2*0)+((0*0+2*(0*0+1))*v+2*0*0))".asFormula) should be ("true".asFormula)
-//    polya.qe("c<1 & c>=0 & H>=0 & g()>0 & v^2<=2*g()*(H-h) & h>=0 & kxtime_1=0 & h_2()=h & v_2()=v & h>=0 & kxtime_4()=0 & 0>=0 -> v=(0*2-1*0)/2^2*(-1*0^2*g()+2*h+2*0*v)+1/2*((-0*0^2+-1*(2*0^1*(0*0+1)))*g()+-1*0^2*0+(0*h+2*0)+((0*0+2*(0*0+1))*v+2*0*0))".asFormula) should be ("true".asFormula)
+    polya.qe("c<1 & c>=0 & H>=0 & g()>0 & v^2<=2*g()*(H-h) & h>=0 & kxtime_1=0 & h_2()=h & v_2()=v & h>=0 & kxtime_4()=0 & 0>=0 -> v=(0*2-1*0)/2^2*(-1*0^2*g()+2*h+2*0*v)+1/2*((-0*0^2+-1*(2*0^1*(0*0+1)))*g()+-1*0^2*0+(0*h+2*0)+((0*0+2*(0*0+1))*v+2*0*0))".asFormula) should be ("true".asFormula)
   }
 
   "Simplify" should "simplify term" in {
     z3.simplify("1+x-x".asTerm) should be ("1".asTerm)
+    //TODO Polya support
 //    polya.simplify("1+x-x".asTerm) should be ("1".asTerm)
   }
 }
