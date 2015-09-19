@@ -222,9 +222,15 @@ trait UnifyUSCalculus {
         }
 
         K.ctx match {
-          case DotFormula =>
+          case DotFormula if p.isTopLevel =>
             //@note this should be similar to byUS(fact) using factTactic to prove fact after instantiation
             US(Sequent(Nil, IndexedSeq(), IndexedSeq(k.asInstanceOf[Formula]))) & factTactic
+
+          case DotFormula if !p.isTopLevel =>
+            equivStep(True, equivR(SuccPosition(0)) & (
+                cohide(SuccPosition(0)) & factTactic,
+                closeT(SuccPosition(0))
+              ))
 
           case Equiv(DotFormula, other) =>
             equivStep(other, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & factTactic)
@@ -958,6 +964,9 @@ trait UnifyUSCalculus {
             proved(proof, 0)
 
           case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
+            throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
+
+          case DotFormula =>
             throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
 
           case _ => throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
