@@ -104,6 +104,8 @@ object AxiomIndex {
     case "!| deMorgan" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
     case "!-> deMorgan" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
     case "!<-> deMorgan" => (PosInExpr(0::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::PosInExpr(1::0::Nil)::PosInExpr(1::1::Nil)::Nil)
+    case "!all" | "!exists" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(Nil)::Nil)
+    case "![]" | "!<>" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
 
     case "[] split" => binaryDefault
     case "[] split left" | "[] split right" => directReduction
@@ -197,7 +199,9 @@ object AxiomIndex {
       case _ => unknown
     }
     case Not(f)         => f match {
+      case Box(_,Not(_))=> "<> dual" :: Nil
       case _: Box       => "![]" :: Nil
+      case Diamond(_,Not(_))=> "[] dual" :: Nil
       case _: Diamond   => "!<>" :: Nil
       case _: Forall    => "!all" :: Nil
       case _: Exists    => "!exists" :: Nil

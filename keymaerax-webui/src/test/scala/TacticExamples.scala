@@ -146,6 +146,32 @@ class TacticExamples extends FlatSpec with Matchers with BeforeAndAfterEach {
     proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula))
   }
 
+  it should "prove with steps <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))" in {
+    import TactixLibrary._
+    // Proof by pointing with steps of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
+    val proof = TactixLibrary.proveBy(
+      Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
+      // use "<> dual" axiom backwards at the indicated position on
+      // |- __<a;++b;>p(x)__  <->  <a;>p(x) | <b;>p(x)
+      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+        // |- !__[a;++b;]!p(x)__  <->  <a;>p(x) | <b;>p(x)
+        // step "[++] choice" axiom forward at the indicated position
+        stepAt(SuccPosition(0, 0::0::Nil)) &
+        // |- __!([a;]!p(x) & [b;]!p(x))__  <-> <a;>p(x) | <b;>p(x)
+        // step deMorgan forward at the indicated position
+        stepAt(SuccPosition(0, 0::Nil)) &
+        // |- __![a;]!p(x)__ | ![b;]!p(x)  <-> <a;>p(x) | <b;>p(x)
+        // step "<> dual" forward at the indicated position
+        stepAt(SuccPosition(0, 0::0::Nil)) &
+        // |- <a;>p(x) | __![b;]!p(x)__  <-> <a;>p(x) | <b;>p(x)
+        // step "<> dual" forward at the indicated position
+        stepAt(SuccPosition(0, 0::1::Nil)) &
+        // |- <a;>p(x) | <b;>p(x)  <-> <a;>p(x) | <b;>p(x)
+        byUS("<-> reflexive")
+    )
+    proof shouldBe 'proved
+    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula))
+  }
 
   "Proof by Congruence" should "prove x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y" in {
     import TactixLibrary._
