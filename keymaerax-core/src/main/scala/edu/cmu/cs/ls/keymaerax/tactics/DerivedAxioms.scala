@@ -2066,11 +2066,11 @@ object DerivedAxioms {
 
   /**
    * {{{Axiom "Div<= up".
-   *    f()/g()<=h() <- f()*(1/g())<=h()
+   *    f()/g()<=h() <- f()*(1/g())<=h() & g()!=0
    * End.
    * }}}
    */
-  lazy val intervalUpDivideF = "f()/g()<=h() <- (f()*(1/g())<=h())".asFormula
+  lazy val intervalUpDivideF = "f()/g()<=h() <- (f()*(1/g())<=h()) & g()!=0".asFormula
   lazy val intervalUpDivide = derivedAxiom("Div<= up",
     Sequent(Nil, IndexedSeq(), IndexedSeq(intervalUpDivideF)),
     TactixLibrary.QE
@@ -2140,11 +2140,11 @@ object DerivedAxioms {
 
   /**
    * {{{Axiom "<=Div down".
-   *    h()<=f()/g() <- h()<=f()*(1/g())
+   *    h()<=f()/g() <- h()<=f()*(1/g()) & g()!=0
    * End.
    * }}}
    */
-  lazy val intervalDownDivideF = "h()<=f()/g() <- h()<=f()*(1/g())".asFormula
+  lazy val intervalDownDivideF = "h()<=f()/g() <- h()<=f()*(1/g()) & g()!=0".asFormula
   lazy val intervalDownDivide = derivedAxiom("<=Div down",
     Sequent(Nil, IndexedSeq(), IndexedSeq(intervalDownDivideF)),
     TactixLibrary.QE
