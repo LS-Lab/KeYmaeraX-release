@@ -9,7 +9,7 @@ KeYmaera X is built up from a small trusted core. The core contains a finite lis
 
 Dependencies
 ============
-- Wolfram Mathematica (version 9.0 or greater recommended. Other versions may work)
+- Wolfram Mathematica (version 9.0 or greater recommended. Other versions may work. The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it at runtime, too.)
 - Java JRE and JDK (Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0 is compatible with Java 1.8)
 - sbt (Version 0.13 or greater recommended. Other versions may work). If you are using IntelliJ, this comes with the Scala plugin.
 - Scala 2.11.7 (sbt will download this automatically)

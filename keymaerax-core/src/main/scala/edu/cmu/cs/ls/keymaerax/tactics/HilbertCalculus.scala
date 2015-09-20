@@ -248,7 +248,9 @@ object HilbertCalculus extends UnifyUSCalculus {
           case FuncOf(_,Nothing) => Some(Dconst)
         }
         case Not(f)         => f match {
+          case Box(_,Not(_))=> Some(useAt("<> dual"))
           case _: Box       => Some(useAt("![]"))
+          case Diamond(_,Not(_))=> Some(useAt("[] dual"))
           case _: Diamond   => Some(useAt("!<>"))
           case _: Forall    => Some(useAt("!all"))
           case _: Exists    => Some(useAt("!exists"))

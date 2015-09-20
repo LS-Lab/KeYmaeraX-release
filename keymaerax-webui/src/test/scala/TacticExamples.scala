@@ -101,11 +101,11 @@ class TacticExamples extends FlatSpec with Matchers with BeforeAndAfterEach {
   "Proof by Pointing" should "prove <v:=2*v+1;>q(v) <-> q(2*v+1)" in {
     import TactixLibrary._
     import DerivedAxioms._
-    // Proof by pointing of  |- <v:=2*v+1;>v!=0 <-> 2*v+1!=0
+    // Proof by pointing of  |- <v:=2*v+1;>v!=0 <-> 2*v+1!=0
     val proof = TactixLibrary.proveBy(
       Sequent(Nil, IndexedSeq(), IndexedSeq("<v:=2*v+1;>q(v) <-> q(2*v+1)".asFormula)),
       // use "<> dual" axiom backwards at the indicated position on
-      // |- __<v:=2*v+1;>q(v)__ <-> q(2*v+1)
+      // |- __<v:=2*v+1;>q(v)__ <-> q(2*v+1)
       useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
         // use "[:=] assign" axiom forward at the indicated position on
         // |- !__[v:=2*v+1;]!q(v)__ <-> q(2*v+1)
@@ -123,20 +123,20 @@ class TacticExamples extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "prove <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))" in {
     import TactixLibrary._
-    // Proof by pointing of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
+    // Proof by pointing of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
     val proof = TactixLibrary.proveBy(
       Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
       // use "<> dual" axiom backwards at the indicated position on
-      // |- __<a;++b;>p(x)__  <->  <a;>p(x) | <b;>p(x)
+      // |- __<a;++b;>p(x)__  <->  <a;>p(x) | <b;>p(x)
       useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
         // use "[++] choice" axiom forward at the indicated position on
-        // |- !__[a;++b;]!p(x)__  <->  <a;>p(x) | <b;>p(x)
+        // |- !__[a;++b;]!p(x)__  <->  <a;>p(x) | <b;>p(x)
         useAt("[++] choice")(SuccPosition(0, 0::0::Nil)) &
         // use "<> dual" axiom forward at the indicated position on
-        // |- !([a;]!p(x) & [b;]!p(x))  <->  __<a;>p(x)__ | <b;>p(x)
+        // |- !([a;]!p(x) & [b;]!p(x))  <->  __<a;>p(x)__ | <b;>p(x)
         useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::0::Nil)) &
         // use "<> dual" axiom forward at the indicated position on
-        // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | __<b;>p(x)__
+        // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | __<b;>p(x)__
         useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
         // use propositional logic to show
         // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | ![b;]!p(x)
@@ -148,25 +148,25 @@ class TacticExamples extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "prove with steps <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))" in {
     import TactixLibrary._
-    // Proof by pointing with steps of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
+    // Proof by pointing with steps of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
     val proof = TactixLibrary.proveBy(
       Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
       // use "<> dual" axiom backwards at the indicated position on
-      // |- __<a;++b;>p(x)__  <->  <a;>p(x) | <b;>p(x)
+      // |- __<a;++b;>p(x)__  <->  <a;>p(x) | <b;>p(x)
       useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
-        // |- !__[a;++b;]!p(x)__  <->  <a;>p(x) | <b;>p(x)
+        // |- !__[a;++b;]!p(x)__  <->  <a;>p(x) | <b;>p(x)
         // step "[++] choice" axiom forward at the indicated position
         stepAt(SuccPosition(0, 0::0::Nil)) &
-        // |- __!([a;]!p(x) & [b;]!p(x))__  <-> <a;>p(x) | <b;>p(x)
+        // |- __!([a;]!p(x) & [b;]!p(x))__  <-> <a;>p(x) | <b;>p(x)
         // step deMorgan forward at the indicated position
         stepAt(SuccPosition(0, 0::Nil)) &
-        // |- __![a;]!p(x)__ | ![b;]!p(x)  <-> <a;>p(x) | <b;>p(x)
+        // |- __![a;]!p(x)__ | ![b;]!p(x)  <-> <a;>p(x) | <b;>p(x)
         // step "<> dual" forward at the indicated position
         stepAt(SuccPosition(0, 0::0::Nil)) &
-        // |- <a;>p(x) | __![b;]!p(x)__  <-> <a;>p(x) | <b;>p(x)
+        // |- <a;>p(x) | __![b;]!p(x)__  <-> <a;>p(x) | <b;>p(x)
         // step "<> dual" forward at the indicated position
         stepAt(SuccPosition(0, 0::1::Nil)) &
-        // |- <a;>p(x) | <b;>p(x)  <-> <a;>p(x) | <b;>p(x)
+        // |- <a;>p(x) | <b;>p(x)  <-> <a;>p(x) | <b;>p(x)
         byUS("<-> reflexive")
     )
     proof shouldBe 'proved

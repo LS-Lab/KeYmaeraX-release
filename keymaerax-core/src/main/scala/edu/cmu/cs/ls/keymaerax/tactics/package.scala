@@ -170,9 +170,6 @@ package edu.cmu.cs.ls.keymaerax
  * )
  * }}}
  *
- * [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.stepAt]] also uses proof by pointing
- * but figures out the appropriate fact to use on its own.
- *
  * {{{
  * import TactixLibrary._
  * // Proof by pointing of  |- &lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))
@@ -194,6 +191,32 @@ package edu.cmu.cs.ls.keymaerax
  *   // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | ![b;]!p(x)
  *   prop
  * )
+ * }}}
+ * [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.stepAt]] also uses proof by pointing
+ * but figures out the appropriate fact to use on its own. Here's a similar proof:
+ * {{{
+ *  import TactixLibrary._
+ *  // Proof by pointing with steps of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
+ *  val proof = TactixLibrary.proveBy(
+ *    Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
+ *    // use "<> dual" axiom backwards at the indicated position on
+ *    // |- __<a;++b;>p(x)__  <->  <a;>p(x) | <b;>p(x)
+ *    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+ *    // |- !__[a;++b;]!p(x)__  <->  <a;>p(x) | <b;>p(x)
+ *    // step "[++] choice" axiom forward at the indicated position
+ *    stepAt(SuccPosition(0, 0::0::Nil)) &
+ *    // |- __!([a;]!p(x) & [b;]!p(x))__  <-> <a;>p(x) | <b;>p(x)
+ *    // step deMorgan forward at the indicated position
+ *    stepAt(SuccPosition(0, 0::Nil)) &
+ *    // |- __![a;]!p(x)__ | ![b;]!p(x)  <-> <a;>p(x) | <b;>p(x)
+ *    // step "<> dual" forward at the indicated position
+ *    stepAt(SuccPosition(0, 0::0::Nil)) &
+ *    // |- <a;>p(x) | __![b;]!p(x)__  <-> <a;>p(x) | <b;>p(x)
+ *    // step "<> dual" forward at the indicated position
+ *    stepAt(SuccPosition(0, 0::1::Nil)) &
+ *    // |- <a;>p(x) | <b;>p(x)  <-> <a;>p(x) | <b;>p(x)
+ *    byUS("<-> reflexive")
+ *  )
  * }}}
  *
  * Likewise, for proving
