@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax
 /**
  * Non-soundness-critical implementation of the lemma mechanism.
  *
- * * ===Lemma Mechanism===
+ * ===Lemma Mechanism===
  * An implementation of a lemma data base using files [[edu.cmu.cs.ls.keymaerax.lemma.FileLemmaDB]].
  * A factory [[edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory]] provides instances of lemma databases.
  *
