@@ -538,7 +538,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
 
       case _ if s.isEmpty => None
-      case _ => throw new Exception(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s +"\n` beginning with character `" + s(0) + "`")
+        //@todo should be LexException inheriting
+      case _ => throw new ParseException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s +"\n` beginning with character `" + s(0) + "`=" + s(0).getNumericValue, loc, "")
     }
   }
 
