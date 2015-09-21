@@ -18,6 +18,7 @@ import scala.sys.process._
  * @author Ran Ji
  */
 class PolyaSolver extends SMTSolver {
+  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
   /** Get the absolute path to Polya jar */
   private val pathToPolya : String = {
@@ -91,7 +92,7 @@ class PolyaSolver extends SMTSolver {
    */
   def run(cmd: String) : (String, Formula) = {
     val polyaOutput = cmd.!!
-    println("[Polya result] \n" + polyaOutput)
+    if (DEBUG) println("[Polya result] \n" + polyaOutput)
     val polyaResult = getTruncatedResult(polyaOutput)
     val kResult = {
       if (polyaResult.startsWith("-1")) False
@@ -99,7 +100,7 @@ class PolyaSolver extends SMTSolver {
       else if(polyaResult.startsWith("0")) False
       else throw new SMTConversionException("Conversion of Polya result \n" + polyaResult + "\n is not defined")
     }
-    (polyaResult, kResult)
+    (polyaOutput, kResult)
   }
 
   /** Return Polya QE result */
@@ -110,7 +111,7 @@ class PolyaSolver extends SMTSolver {
   /** Return Polya QE result and the proof evidence */
   def qeEvidence(f: Formula) : (Formula, Evidence) = {
     val smtCode = SMTConverter(f, "Polya") + "\n(check-sat)\n"
-    println("[Solving with Polya...] \n" + smtCode)
+    if (DEBUG) println("[Solving with Polya...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
@@ -131,7 +132,7 @@ class PolyaSolver extends SMTSolver {
    */
   def simplify(t: Term) : Term = {
     val smtCode = SMTConverter.generateSimplify(t, "Polya")
-    println("[Simplifying with Polya ...] \n" + smtCode)
+    if (DEBUG) println("[Simplifying with Polya ...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
@@ -139,12 +140,14 @@ class PolyaSolver extends SMTSolver {
     writer.close()
     val cmd = pathToPolya + " " + smtFile.getAbsolutePath
     val polyaOutput = cmd.!!
-    println("[Polya simplify result] \n" + polyaOutput + "\n")
+    if (DEBUG) println("[Polya simplify result] \n" + polyaOutput + "\n")
     val polyaResult = getTruncatedResult(polyaOutput)
     try {
       KeYmaeraXParser.termParser(polyaResult)
     } catch {
-      case e: ParseException => println("[Info] Cannot parse Polya simplified result: " + polyaResult); t
+      case e: ParseException =>
+        if (DEBUG) println("[Info] Cannot parse Polya simplified result: " + polyaResult)
+        t
     }
   }
 }
