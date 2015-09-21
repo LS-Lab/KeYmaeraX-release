@@ -199,6 +199,7 @@ The project is split into two subprojects, `keymaerax-core` for the core functio
 Within the `edu.cmu.cs.ls.keymaerax` namespace, source code is separated according to functionality:
 
     .core    - KeYmaera X Kernel: Soundness-critical core
+    .lemma   - Lemma mechanism (non-critical)
     .parser  - Parsing and pretty printing
     .tactics - Tactic framework, including tactic implementations and the scheduler
     .tools   - Arithmetic back-ends

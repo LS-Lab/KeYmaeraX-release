@@ -17,6 +17,11 @@ Main documentation entry points for KeYmaera X API:
 
   - `[[edu.cmu.cs.ls.keymaerax.tactics]]` - Tactic library 
       - `[[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary]]` - Main tactic library for most common cases
+      - `[[edu.cmu.cs.ls.keymaerax.tactics.HilbertCalculus]]` - Hilbert Calculus for differential dynamic logic
+      - `[[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus]]` - Unification-based Uniform Substitution Calculus
+      - `[[edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary]]` - Additional tactic library
+
+  - `[[edu.cmu.cs.ls.keymaerax.lemma]]` - Lemma mechanism
 
   - `[[edu.cmu.cs.ls.keymaerax.tools]]` - Arithmetic back-ends
     

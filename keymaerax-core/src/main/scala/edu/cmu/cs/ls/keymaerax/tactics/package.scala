@@ -14,7 +14,7 @@ package edu.cmu.cs.ls.keymaerax
  *   - Tactic library
  *     - [[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary]]: Main tactic library
  *     - [[edu.cmu.cs.ls.keymaerax.tactics.HilbertCalculus]]: Hilbert Calculus for differential dynamic logic
- *     - [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus]]: Unification-based Uniform Substitution Calculus.
+ *     - [[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus]]: Unification-based Uniform Substitution Calculus
  *     - [[edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary]]: Additional tactic library
  *     - [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]: Derived Axioms proved from the base axioms from the core [[edu.cmu.cs.ls.keymaerax.core.Axiom]]
  *     - Many other singleton objects define additional tactics.
