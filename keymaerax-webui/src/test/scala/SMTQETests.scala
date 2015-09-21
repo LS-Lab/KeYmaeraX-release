@@ -97,7 +97,7 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
   // Complicated
   // ---------------------------
 
-  it should "prove complex qutifiers" in {
+  it should "prove complex quantifiers" in {
     z3.qe("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("false".asFormula)
     polya.qe("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("false".asFormula)
   }
