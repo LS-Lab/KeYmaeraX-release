@@ -680,50 +680,140 @@ object HybridProgramTacticsImpl {
   }
 
   /**
-   * Creates a new axiom tactic for box assignment [x := t;]
-   * @return The axiom tactic.
+   * Returns a tactic for box substitution assignment [x := t;]. Substitution assignment can be performed if the
+   * variable assigned to is not bound later in the formula, if it is a stuttering assignment of the form [x:=x;]p,
+   * or if x is must-bound later in the formula, except by an ODE.
+   * @example{{{
+   *           |- 2>0
+   *         ------------substitutionBoxAssignT(1)
+   *           |- [x:=2;]x>0
+   * }}}
+   * Stuttering assignments are always allowed.
+   * @example{{{
+   *           |- [{x'=2} ++ y:=3;]x>0
+   *         --------------------------------substitutionBoxAssignT(1)
+   *           |- [x:=x;][{x'=2} ++ y:=3;]x>0
+   * }}}
+   * When must-bound later in the formula, substitution assignment works, even when choices must-bound.
+   * @example{{{
+   *           |- [x:=*;]x>0
+   *         ----------------------substitutionBoxAssignT(1)
+   *           |- [x:=z;][x:=*;]x>0
+   *
+   *           |- [z:=2; {x:=5; ++ y:=3;x:=2;}]x>0
+   *         ------------------------------------substitutionBoxAssignT(1)
+   *           |- [x:=2;][z:=2; {x:=5; ++ y:=3;x:=2;}]x>0
+   * }}}
+   * @return The tactic.
+   * @see [[substitutionDiamondAssignT]]
    * @author Stefan Mitsch
    */
   def substitutionBoxAssignT = substitutionAssignT("[:=] assign", Box.unapply)
 
   /**
-   * Creates a new axiom tactic for box assignment [x := t;]
-   * @return The axiom tactic.
+   * Returns a tactic for diamond substitution assignment <x := t;>. Substitution assignment can be performed if the
+   * variable assigned to is not bound later in the formula, if it is a stuttering assignment of the form <x:=x;>p,
+   * or if x is must-bound later in the formula, except by an ODE.
+   * @example{{{
+   *           |- 2>0
+   *         ------------substitutionDiamondAssignT(1)
+   *           |- <x:=2;>x>0
+   * }}}
+   * Stuttering assignments are always allowed.
+   * @example{{{
+   *           |- [{x'=2} ++ y:=3;]x>0
+   *         --------------------------------substitutionDiamondAssignT(1)
+   *           |- <x:=x;>[{x'=2} ++ y:=3;]x>0
+   * }}}
+   * When must-bound later in the formula, substitution assignment works, even when choices must-bound.
+   * @example{{{
+   *           |- [x:=*;]x>0
+   *         ----------------------substitutionDiamondAssignT(1)
+   *           |- <x:=z;>[x:=*;]x>0
+   *
+   *           |- [z:=2; {x:=5; ++ y:=3;x:=2;}]x>0
+   *         ------------------------------------substitutionDiamondAssignT(1)
+   *           |- <x:=2;>[z:=2; {x:=5; ++ y:=3;x:=2;}]x>0
+   * }}}
+   * @return The tactic.
+   * @see [[substitutionBoxAssignT]]
    * @author Stefan Mitsch
    */
   def substitutionDiamondAssignT = substitutionAssignT("<:=> assign", Diamond.unapply)
 
   /**
-   * Creates a new axiom tactic for box/diamond assignment [x := t;], < x := t;>.
-   * @return The axiom tactic.
+   * Returns a tactic for box/diamond substitution assignment [x := t;], < x := t;>.
+   * @return The tactic.
+   * @see [[substitutionBoxAssignT]]
+   * @see [[substitutionDiamondAssignT]]
    * @author Stefan Mitsch
    */
   private def substitutionAssignT[T: Manifest](name: String, mod: T => Option[(Program, Formula)]): PositionTactic = {
     val BDModality = new ModalityUnapplyer(mod)
 
-    def axiomInstance(fml: Formula) = fml match {
+    /** Returns onMatch if term is not bound in fml or if term is equal to v, False otherwise */
+    def checkTerm(v: Variable, fml: Formula, t: Term, onMatch: Formula): Formula = {
+      require(fml match {
+        case Box(a, _)     => firstMBVAtomicProgInFml(fml, v).nonEmpty && firstMBVAtomicProgInFml(fml, v).forall({case ODESystem(_, _) => false case _ => true})
+        case Diamond(a, _) => firstMBVAtomicProgInFml(fml, v).nonEmpty && firstMBVAtomicProgInFml(fml, v).forall({case ODESystem(_, _) => false case _ => true})
+        case _ => StaticSemantics(fml).bv.contains(v) && !StaticSemantics(fml).fv.contains(v)
+      }, s"Variable $v must be must-bound in formula $fml, but not inside an ODE")
+      t match {
+        case tv: Variable if v == tv => onMatch // self assignment no-op is ok in any case
+        // next three matches: term is not bound later
+        case tv: Variable if !StaticSemantics(fml).bv.contains(tv) => onMatch
+        case _: FuncOf => onMatch
+        case _: Number => onMatch
+        case _ => False
+      }
+    } ensuring(r => r == onMatch || r == False, s"Either returns False or $onMatch")
+
+    /** Returns the first programs in fml binding v (must-bound), empty list if none. */
+    def firstMBVAtomicProgInFml(fml: Formula, v: Variable): IndexedSeq[Program] = fml match {
+      case Box(a, pred)     if firstMBVAtomicProgOf(a, v).nonEmpty => firstMBVAtomicProgOf(a, v)
+      case Box(a, pred)     if firstMBVAtomicProgOf(a, v).isEmpty  => firstMBVAtomicProgInFml(pred, v)
+      case Diamond(a, pred) if firstMBVAtomicProgOf(a, v).nonEmpty => firstMBVAtomicProgOf(a, v)
+      case Diamond(a, pred) if firstMBVAtomicProgOf(a, v).isEmpty  => firstMBVAtomicProgInFml(pred, v)
+      case _ => IndexedSeq()
+    }
+
+    /** Returns the first programs in program binding v (must-bound), empty list if none. */
+    def firstMBVAtomicProgOf(program: Program, v: Variable): IndexedSeq[Program] = {
+      var firstMBVProg: IndexedSeq[Program] = IndexedSeq()
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+          case prg@Assign(tv, _)  if v == tv => firstMBVProg = firstMBVProg :+ prg; Left(Some(ExpressionTraversal.stop))
+          case prg@AssignAny(tv)  if v == tv => firstMBVProg = firstMBVProg :+ prg; Left(Some(ExpressionTraversal.stop))
+          case prg@ODESystem(ode, _) if StaticSemantics(prg).mbv.contains(v) => firstMBVProg = firstMBVProg :+ prg; Left(Some(ExpressionTraversal.stop))
+          // nothing ever must-bound inside a loop
+          case Loop(_) => Left(Some(ExpressionTraversal.stop))
+          // must-bound only when must-bound on both branches
+          case prg@Choice(l, r) if firstMBVAtomicProgOf(l, v).nonEmpty && firstMBVAtomicProgOf(r, v).nonEmpty => firstMBVProg = firstMBVAtomicProgOf(l, v) ++ firstMBVAtomicProgOf(r, v); Left(Some(ExpressionTraversal.stop))
+          case prg@Choice(l, r) if firstMBVAtomicProgOf(l, v).isEmpty  || firstMBVAtomicProgOf(r, v).isEmpty => Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, program)
+      firstMBVProg
+    }
+
+    def axiomInstance(fml: Formula): Formula = fml match {
       case BDModality(Assign(v: Variable, t: Term), pred) =>
         val g = SubstitutionHelper.replaceFree(pred)(v, t)
         val instance = Equiv(fml, g)
-        pred match {
-          // loop and ODE are probably a little too strict here, but we have v2vBoxAssignT to handle those
-          case Box(_: DifferentialProgram, _) => t match {
-            case tv: Variable if v == tv => instance
+        t match {
+          case tv: Variable if v == tv => instance // self assignment no-op is ok in any case
+          case _ => pred match {
+            // is v must-bound by something that is not an ODE? if so, check that term is not bound, so substitution ok
+            case Box(a, _)     if firstMBVAtomicProgInFml(pred, v).nonEmpty && firstMBVAtomicProgInFml(pred, v).forall({case ODESystem(_, _) => false case _ => true}) => checkTerm(v, pred, t, instance)
+            case Box(a, _)     /* otherwise */ => False
+            case Diamond(a, _) if firstMBVAtomicProgInFml(pred, v).nonEmpty && firstMBVAtomicProgInFml(pred, v).forall({case ODESystem(_, _) => false case _ => true}) => checkTerm(v, pred, t, instance)
+            case Diamond(a, _) /* otherwise */ => False
+            // if v is not bound at all, substitution is ok
+            case _ if !StaticSemantics(pred).bv.contains(v) => instance
+            // must-bound for non-modal formulas, must be after modal cases
+            case _ if  StaticSemantics(pred).bv.contains(v) && !StaticSemantics(pred).fv.contains(v) => checkTerm(v, pred, t, instance)
             case _ => False
           }
-          case Box(_: Loop, _) => t match {
-            case tv: Variable if v == tv => instance
-            case _ => False
-          }
-          case Diamond(_: DifferentialProgram, _) => t match {
-            case tv: Variable if v == tv => instance
-            case _ => False
-          }
-          case Diamond(_: Loop, _) => t match {
-            case tv: Variable if v == tv => instance
-            case _ => False
-          }
-          case _ => instance
         }
       case _ => False
     }
@@ -753,8 +843,7 @@ object HybridProgramTacticsImpl {
 
             override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
               override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-                Some(alphaRenamingT(v.name, v.index, aV.name, aV.index)(p) ~
-                  globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
+                Some(alphaRenamingT(v, aV)(p) ~ globalAlphaRenamingT(v, aV))
 
               override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
             }
@@ -765,7 +854,7 @@ object HybridProgramTacticsImpl {
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
       case Equiv(BDModality(Assign(v: Variable, _: Term), _), _) =>
         val Equiv(lhs, rhs) = axiom
-        Equiv(if (v.name != aV.name || v.index != None) replace(lhs)(aV, v) else lhs, rhs)
+        Equiv(if (v.name != aV.name || v.index.isDefined) replace(lhs)(aV, v) else lhs, rhs)
     }
 
     axiomLookupBaseT(name, subst, alpha, axiomInstance)
