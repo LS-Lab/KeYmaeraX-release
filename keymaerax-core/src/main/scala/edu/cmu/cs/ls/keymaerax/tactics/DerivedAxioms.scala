@@ -397,9 +397,9 @@ object DerivedAxioms {
    */
   lazy val notExistsF = "(!\\exists x (p(x))) <-> \\forall x (!p(x))".asFormula
   lazy val notExists = derivedAxiom("!exists",
-    Sequent(Nil, IndexedSeq(), IndexedSeq(notAllF)),
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notExistsF)),
     useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::0::Nil) &
-      useAt("exists dual")(1, 0::Nil) &
+      useAt("all dual")(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
