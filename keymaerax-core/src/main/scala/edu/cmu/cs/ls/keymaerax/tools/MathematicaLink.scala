@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
 import com.wolfram.jlink._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
@@ -189,6 +190,16 @@ class JLinkMathematicaLink extends MathematicaLink {
     result match {
       case f : Formula => (f, new ToolEvidence(immutable.Map("input" -> input.toString, "output" -> output)))
       case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
+    }
+  }
+
+  def getCounterExample(f : Formula) : String = {
+    val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
+      Array(toMathematica(Not(f)), new MExpr(listExpr, StaticSemantics.symbols(f).toList.sorted.map(s => toMathematica(s)).toArray), new MExpr(Expr.SYMBOL, "Reals")))
+    val (output, result) = run(input)
+    result match {
+      case f : Formula => KeYmaeraXPrettyPrinter(f)
+      case _ => throw new Exception("Mathematica cannot find counter examples for: " + f)
     }
   }
 
