@@ -17,6 +17,7 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics.{TacticExceptionListener, Tactics}
@@ -26,16 +27,22 @@ import scala.io.Source
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 
+import scala.reflect.runtime._
+import scala.tools.reflect.{ToolBoxError, ToolBox}
+
+
+import scala.reflect.runtime._
+
 /**
  * A Request should handle all expensive computation as well as all
  * possible side-effects of a request (e.g. updating the database), but should
- * not modify the internal state of the HyDRA server (e.g. do not update the 
+ * not modify the internal state of the HyDRA server (e.g. do not update the
  * event queue).
  *
- * Requests objects should do work after getResultingUpdates is called, 
+ * Requests objects should do work after getResultingUpdates is called,
  * not during object construction.
  *
- * Request.getResultingUpdates might be run from a new thread. 
+ * Request.getResultingUpdates might be run from a new thread.
  */
 sealed trait Request {
   def getResultingResponses() : List[Response] //see Response.scala.
@@ -254,13 +261,20 @@ class MathematicaStatusRequest(db : DBAbstraction) extends Request {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : String, keyFileContents : String) extends Request {
+  private var createdId : Option[String] = None
+
+  def getModelId = createdId match {
+    case Some(s) => s
+    case None => throw new IllegalStateException("Requested created model ID before calling getResultingResponses, or else an error occurred during creation.")
+  }
+
   def getResultingResponses() = {
     try {
       //Return the resulting response.
       KeYmaeraXProblemParser(keyFileContents) match {
         case f : Formula => {
-          val result = db.createModel(userId, nameOfModel, keyFileContents, currentDate())
-          new BooleanResponse(result.isDefined) :: Nil
+          createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate())
+          new BooleanResponse(createdId.isDefined) :: Nil
         }
         case a => new ErrorResponse(new Exception("TODO pass back the parse error.")) :: Nil //TODO-nrf pass back useful parser error messages.
       }
@@ -299,14 +313,20 @@ class GetModelTacticRequest(db : DBAbstraction, userId : String, modelId : Strin
 
 class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, name : String, description : String)
  extends Request {
+  private var proofId : Option[String] = None
+
+  def getProofId = proofId match {
+    case Some(s) => s
+    case None => throw new IllegalStateException("The ID of the created proof was requested before getResultingResponses was called.")
+  }
   def getResultingResponses() = {
-    val proofId = db.createProofForModel(modelId, name, description, currentDate())
+    proofId = Some(db.createProofForModel(modelId, name, description, currentDate()))
 
     // Create a "task" for the model associated with this proof.
     val keyFile = db.getModel(modelId).keyFile
-    KeYmaeraInterface.addTask(proofId, keyFile)
+    KeYmaeraInterface.addTask(proofId.get, keyFile)
 
-    new CreatedIdResponse(proofId) :: Nil
+    new CreatedIdResponse(proofId.get) :: Nil
   }
 }
 
@@ -767,6 +787,64 @@ class RunModelInitializationTacticRequest(db : DBAbstraction, userId : String, m
       }
       case None => new ErrorResponse(new Exception("Could not find an initialization tactic")) :: Nil
     }
+  }
+}
+
+
+/** Runs the contents of a file as a custom tactic.
+  * @todo this implementation is a hack. Specifically, two things need to change if we're going to call this from the user interface itself:
+  * @todo getResultingResponses is blocking, which is not at all sustainable if this is called from the user interface.
+  * @todo This proofs will not reload -- this is for one-off proving only!
+  */
+class RunScalaFileRequest(db: DBAbstraction, proofId: String, proof: File) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    val tacticSource = scala.io.Source.fromFile(proof).mkString
+
+    val cm = universe.runtimeMirror(getClass.getClassLoader)
+    val tb = cm.mkToolBox()
+    val tactic = tb.eval(tb.parse(tacticSource)).asInstanceOf[Tactic]
+
+    //@todo provide a bunch of junk for all of these values, because we won't ever try to re-run this tactic.
+    val nodeID = ""
+    val tacticId = ""
+    val formulaId = Some("")
+    val input = Map[Int,String]()
+    val nodeId = Some("")
+    val automation = None
+    val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, input, automation, DispatchedTacticStatus.Prepared)
+
+    val exnHandler = new TacticExceptionListener {
+      override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = {
+        db.synchronized({
+          db.updateDispatchedTacticStatus(tId, DispatchedTacticStatus.Error)
+        })
+        println("[HyDRA] Caught exception in Request.scala after running a tactic: " + tactic.name + " with tactic ID: " + tId)
+      }
+    }
+    def tacticCompleted(db : DBAbstraction)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
+      db.synchronized {
+        // Do not change the status to finished unless the current status is different from Error.
+        // This won't prevent re-running a tactic that failed incidentally because when the tactic is
+        // re-run its current status will change to Running.
+        if (!db.getDispatchedTactics(tId).get.status.equals(DispatchedTacticStatus.Error))
+          db.updateProofOnTacticCompletion(proofId, tId)
+      }
+    }
+
+    //Run the tactic.
+    try {
+      println("About to run a Scala file with tId" + tId)
+      KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
+        Some(tacticCompleted(db)), exnHandler, input, automation);
+
+      new ErrorResponse(new Exception("Tactic DID complete successfully, but this response should never make it to the UI.")) :: Nil
+    }
+    catch {
+      case e: Exception => db.synchronized({
+        db.updateDispatchedTacticStatus(tId, DispatchedTacticStatus.Error)
+        new ErrorResponse(e) :: Nil
+      })
+    };
   }
 }
 

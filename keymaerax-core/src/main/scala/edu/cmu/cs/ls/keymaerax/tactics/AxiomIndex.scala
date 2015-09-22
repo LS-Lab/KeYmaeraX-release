@@ -104,13 +104,16 @@ object AxiomIndex {
     case "!| deMorgan" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
     case "!-> deMorgan" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
     case "!<-> deMorgan" => (PosInExpr(0::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::PosInExpr(1::0::Nil)::PosInExpr(1::1::Nil)::Nil)
+    case "!all" | "!exists" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(Nil)::Nil)
+    case "![]" | "!<>" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
 
     case "[] split" => binaryDefault
     case "[] split left" | "[] split right" => directReduction
     case "<*> approx" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
     case "<*> stuck" => (PosInExpr(0::Nil), Nil)
     case "<'> stuck" => (PosInExpr(0::Nil), Nil)
-    case "+<= up" | "-<= up" => (PosInExpr(1::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::Nil)
+
+    case "+<= up" | "-<= up" | "<=+ down" | "<=- down" => (PosInExpr(1::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::Nil)
 
     // default position
     case _ => println("AxiomIndex: defaulted for " + axiom); (PosInExpr(0::Nil), Nil)
@@ -196,7 +199,9 @@ object AxiomIndex {
       case _ => unknown
     }
     case Not(f)         => f match {
+      case Box(_,Not(_))=> "<> dual" :: Nil
       case _: Box       => "![]" :: Nil
+      case Diamond(_,Not(_))=> "[] dual" :: Nil
       case _: Diamond   => "!<>" :: Nil
       case _: Forall    => "!all" :: Nil
       case _: Exists    => "!exists" :: Nil
@@ -216,6 +221,7 @@ object AxiomIndex {
     case And(_, g)   if g == True => "&true" :: Nil
     case Imply(f, _) if f == True => "true->" :: Nil
     case Imply(_, g) if g == True => "->true" :: Nil
+    //@todo could add And(False, _) etc ....
 
     case True | False => Nil
     case _ => unknown

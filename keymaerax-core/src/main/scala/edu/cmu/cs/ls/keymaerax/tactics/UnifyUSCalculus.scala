@@ -196,7 +196,7 @@ trait UnifyUSCalculus {
        * @return
        * @author Andre Platzer
        */
-      private def useAt[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: Tactic, sequent: Sequent): Tactic = {
+      private def useAt[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: Tactic, sequent: Sequent): Tactic = {
         require(subst(k) == c, "correctly matched input")
         require(C(c).at(p.inExpr) == (C,c), "correctly split at position p")
         require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
@@ -222,9 +222,15 @@ trait UnifyUSCalculus {
         }
 
         K.ctx match {
-          case DotFormula =>
+          case DotFormula if p.isTopLevel =>
             //@note this should be similar to byUS(fact) using factTactic to prove fact after instantiation
             US(Sequent(Nil, IndexedSeq(), IndexedSeq(k.asInstanceOf[Formula]))) & factTactic
+
+          case DotFormula if !p.isTopLevel =>
+            equivStep(True, equivR(SuccPosition(0)) & (
+                cohide(SuccPosition(0)) & factTactic,
+                closeT(SuccPosition(0))
+              ))
 
           case Equiv(DotFormula, other) =>
             equivStep(other, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & factTactic)
@@ -344,6 +350,7 @@ trait UnifyUSCalculus {
   /**
    * CE(pos) at the indicated position within an equivalence reduces contextual equivalence to argument equivalence.
    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
+   * @see [[UnifyUSCalculus.CE(Context)]]
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
    * @see [[UnifyUSCalculus.CE(Provable)]]
@@ -412,11 +419,13 @@ trait UnifyUSCalculus {
   /** CE(fact) uses the equivalence left<->right or equality left=right or implication left->right fact for congruence
     * reasoning at the indicated position to replace right by left at indicated position (literally, no substitution).
     * Efficient unification-free version of [[UnifyUSCalculus#useAt(Provable, PosInExpr):PositionTactic]]
+    * @see [[UnifyUSCalculus.CE(Provable,Context)]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
+    * @example CE(fact) == CE(fact, Context("⎵".asFormula))
     */
   def CE(fact: Provable): PositionTactic = new PositionTactic("CE(Provable)") {
     import Augmentors._
@@ -432,7 +441,7 @@ trait UnifyUSCalculus {
 
     override def applies(s: Sequent, p: Position): Boolean =
       if (s.sub(p) == Some(key)) true
-      else {if (DEBUG) println("In-applicable CE(" + fact + ") at " + s.sub(p) + " which is " + p + " at " + s); false}
+      else {if (DEBUG) println("In-applicable CE(" + fact + ") at " + p + " which is " + s.sub(p) + " at " + s); false}
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
@@ -446,6 +455,50 @@ trait UnifyUSCalculus {
               equivify & /*commuteEquivR(SuccPosition(0)) &*/
               tactic(p.inExpr) &
               by(fact)
+              )
+          )
+        )
+      }
+    }
+  }
+
+  /** CE(fact) uses the equivalence left<->right or equality left=right or implication left->right fact for congruence
+    * reasoning in the given context C at the indicated position to replace right by left in that context (literally, no substitution).
+    * @see [[UnifyUSCalculus.CE(Provable)]]
+    * @see [[useAt()]]
+    * @see [[CE(Context)]]
+    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
+    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
+    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
+    */
+  def CE(fact: Provable, C: Context[Formula]): PositionTactic = new PositionTactic("CE(Provable,Context)") {
+    import Augmentors._
+    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
+
+    def splitFact: (Expression, Expression, Tactic, (Context[Formula]=>ForwardTactic)) = fact.conclusion.succ.head match {
+      case Equal(l,r) => (l, r, equivifyR(SuccPosition(0)), CE) //@note this CE can also use CQ
+      case Equiv(l,r) => (l, r, equivifyR(SuccPosition(0)), CE)
+      case Imply(l,r) => (l, r, skip, CMon)
+      case _ => throw new IllegalArgumentException("CE expects equivalence or equality or implication fact " + fact)
+    }
+    val (other, key, equivify, tactic) = splitFact
+
+    override def applies(s: Sequent, p: Position): Boolean =
+      if (s.sub(p) == Some(C(key))) true
+      else {if (DEBUG) println("In-applicable CE(" + fact + "," + C + ") at " + p + " which is " + s.sub(p) + " at " + s); false}
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
+
+      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val (posctx,c) = node.sequent.at(p)
+        val ctx = posctx(C)
+        val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(node.sequent.succ.length + 1)}
+        Some(cutLR(ctx(other))(p.top) &
+          onBranch(
+            (BranchLabels.cutShowLbl, cohide(cutPos) & //assertT(0,1) &
+              equivify & /*commuteEquivR(SuccPosition(0)) &*/
+              by(tactic(C)(fact))
               )
           )
         )
@@ -479,13 +532,14 @@ trait UnifyUSCalculus {
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
-  def useFor(axiom: String, key: PosInExpr, inst: RenUSubst=>RenUSubst): ForwardPositionTactic =
+  def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic =
     if (Axiom.axioms.contains(axiom)) useFor(Axiom.axiom(axiom), key, inst)
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key, inst)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
   /** CE(C) will wrap any equivalence left<->right or equality left=right fact it gets within context C.
     * Uses CE or CQ as needed.
+    * @see [[CE(PosInExpr]]
     * @see [[CE(Provable)]]
     * @see [[CMon(Context)]]
     * @todo likewise for Context[Term] using CT instead.
@@ -732,7 +786,7 @@ trait UnifyUSCalculus {
     * [x:=1;][{x'=22}] ([x:=2*x;]x>=0 & [x:=0;]x>=0)
     * @see [[useAt()]]
     */
-  def useFor(fact: Provable, key: PosInExpr, inst: RenUSubst=>RenUSubst = (us => us)): ForwardPositionTactic = {
+  def useFor(fact: Provable, key: PosInExpr, inst: Subst=>Subst = (us => us)): ForwardPositionTactic = {
     import Augmentors._
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).at(key)
     if (DEBUG) println("useFor(" + fact.conclusion + ") key: " + keyPart + " in key context: " + keyCtx)
@@ -756,7 +810,7 @@ trait UnifyUSCalculus {
         * @tparam T
         * @return The Provable following from proof by using key k of fact at p in proof.conclusion
         */
-      def useFor[T <: Expression](subst: RenUSubst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable = {
+      def useFor[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable = {
         assert(subst(k) == c, "correctly matched input")
         assert(fact.conclusion.succ.head==K(k), "correctly matched key in fact")
         assert(proof.conclusion(p.top)==C(c), "correctly matched occurrence in input proof")
@@ -821,15 +875,17 @@ trait UnifyUSCalculus {
             val Cmon = CMon(C)(sideUS)
 
             // C{subst(k)} |- C{subst(o)} for polarity < 0
-            // C{subst(k)} |- Ci{subst(o)} for polarity = 0, where <-> in C are turned into -> in Ci
             // C{subst(o)} |- C{subst(k)} for polarity > 0
-            val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)
+            // C{subst(k)} |- Ci{subst(o)} for polarity = 0, where <-> in C are turned into -> in Ci
+            val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)  //@todo * (if (pos.isAnte) -1 else 1)
             val (kk, oo) =
               if (polarity < 0) (C(subst(k)), C(subst(o)))
-              else if (polarity == 0) {
+              else if (polarity > 0) (C(subst(o)), C(subst(k)))
+              else {
+                assert(polarity ==0)
                 val Ci = Context(FormulaTools.makePolarityAt(C.ctx, pos.inExpr, -1))
                 (Ci(subst(k)), Ci(subst(o)))
-              } else (C(subst(o)), C(subst(k)))
+              }
 
             val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(kk, oo))), ImplyRight(SuccPos(0)))
 
@@ -910,6 +966,9 @@ trait UnifyUSCalculus {
           case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
             throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
 
+          case DotFormula =>
+            throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
+
           case _ => throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
         }
       }
@@ -966,21 +1025,28 @@ trait UnifyUSCalculus {
     * @param giveUp  how many alternatives are too much so that the chase stops without trying any for applicability.
     *                Equivalent to pruning keys so that all lists longer than giveUp are replaced by Nil.
     */
-  def chase(breadth: Int, giveUp: Int): PositionTactic = chase(breadth, giveUp, AxiomIndex.axiomsFor)
+  def chase(breadth: Int, giveUp: Int): PositionTactic = chase(breadth, giveUp, AxiomIndex.axiomsFor _)
   def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String]): PositionTactic = chase(breadth, giveUp, keys, (ax,pos) => pr=>pr)
-  def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): PositionTactic = {
+  def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): PositionTactic =
+    chaseI(breadth, giveUp,keys, modifier, ax=>us=>us)
+  def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[String], inst: String=>(Subst=>Subst)): PositionTactic =
+    chaseI(breadth, giveUp, keys, (ax,pos)=>pr=>pr, inst)
+  def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic, inst: String=>(Subst=>Subst)): PositionTactic = {
     require(breadth <= giveUp, "less breadth than giveup expected: " + breadth + "<=" + giveUp)
     chase(e => keys(e) match {
       case l:List[String] if l.size > giveUp => Nil
       case l:List[String] => l.take(breadth)
-    }, modifier)
+    }, modifier, inst)
   }
-  def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): ForwardPositionTactic = {
+
+  def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): ForwardPositionTactic =
+    chaseFor(breadth, giveUp,keys, modifier, ax=>us=>us)
+  def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic, inst: String=>(Subst=>Subst)): ForwardPositionTactic = {
     require(breadth <= giveUp, "less breadth than giveup expected: " + breadth + "<=" + giveUp)
     chaseFor(e => keys(e) match {
       case l:List[String] if l.size > giveUp => Nil
       case l:List[String] => l.take(breadth)
-    }, modifier)
+    }, modifier, inst)
   }
 
   /** chase: Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
@@ -991,6 +1057,9 @@ trait UnifyUSCalculus {
     *             First returned axioms will be favored (if applicable) over further axioms.
     * @param modifier will be notified after successful uses of axiom at a position with the result of the use.
     *                 The result of modifier(ax,pos)(step) will be used instead of step for each step of the chase.
+    * @param inst Transformation for instantiating additional unmatched symbols that do not occur when using the given axiom _1.
+    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
+    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
     * @note Chase is search-free and, thus, quite efficient. It directly follows the
     *       [[AxiomIndex.axiomIndex() axiom index]] information to compute follow-up positions for the chase.
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+(x'*y+x*y')>=0
@@ -1001,7 +1070,8 @@ trait UnifyUSCalculus {
     * @todo also implement a backwards chase in tableaux/sequent style based on useAt instead of useFor
     */
   def chase(keys: Expression=>List[String],
-            modifier: (String,Position)=>ForwardTactic = (ax,pos) => pr=>pr): PositionTactic = new PositionTactic("chase") {
+            modifier: (String,Position)=>ForwardTactic,
+            inst: String=>(Subst=>Subst) = ax=>us=>us): PositionTactic = new PositionTactic("chase") {
     import Augmentors._
 
     //@note True has no applicable keys. This applicability is still an overapproximation since it does not check for clashes.
@@ -1039,7 +1109,7 @@ trait UnifyUSCalculus {
         assert(initial.isProved && initial.conclusion.ante.isEmpty && initial.conclusion.succ.length==1, "Proved reflexive start " + initial + " for " + e)
         if (DEBUG) println("chase starts at " + initial)
         //@note start the chase on the left-hand side
-        val r = chaseFor(keys, modifier) (SuccPosition(0, PosInExpr(0::Nil)))(initial)
+        val r = chaseFor(keys, modifier, inst) (SuccPosition(0, PosInExpr(0::Nil)))(initial)
         if (DEBUG) println("chase(" + e.prettyString + ") = ~~> " + r + " done")
         r
       } ensuring(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
@@ -1054,6 +1124,9 @@ trait UnifyUSCalculus {
     *             First returned axioms will be favored (if applicable) over further axioms.
     * @param modifier will be notified after successful uses of axiom at a position with the result of the use.
     *                 The result of modifier(ax,pos)(step) will be used instead of step for each step of the chase.
+    * @param inst Transformation for instantiating additional unmatched symbols that do not occur when using the given axiom _1.
+    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
+    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
     * @note Chase is search-free and, thus, quite efficient. It directly follows the
     *       [[AxiomIndex.axiomIndex() axiom index]] information to compute follow-up positions for the chase.
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+(x'*y+x*y')>=0
@@ -1064,7 +1137,8 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.useFor()]]
     */
   def chaseFor(keys: Expression=>List[String],
-                    modifier: (String,Position)=>ForwardTactic): ForwardPositionTactic = pos => de => {
+               modifier: (String,Position)=>ForwardTactic,
+               inst: String=>(Subst=>Subst) = ax=>us=>us): ForwardPositionTactic = pos => de => {
     import AxiomIndex.axiomIndex
     import Augmentors._
     /** Recursive chase implementation */
@@ -1079,7 +1153,7 @@ trait UnifyUSCalculus {
         case List(ax) =>
           val (key, recursor) = axiomIndex(ax)
           try {
-            val axUse = modifier(ax,pos) (useFor(ax, key)(pos)(de))
+            val axUse = modifier(ax,pos) (useFor(ax, key, inst(ax))(pos)(de))
             recursor.foldLeft(axUse)(
               (pf, cursor) => doChase(pf, pos.append(cursor))
             )
@@ -1090,7 +1164,7 @@ trait UnifyUSCalculus {
           def firstAxUse: Option[(Provable,List[PosInExpr])] = {
             for (ax <- l) try {
               val (key, recursor) = axiomIndex(ax)
-              return Some((modifier(ax,pos) (useFor(ax, key)(pos)(de)), recursor))
+              return Some((modifier(ax,pos) (useFor(ax, key, inst(ax))(pos)(de)), recursor))
             } catch {case _: ProverException => /* ignore and try next */}
             None
           }
@@ -1109,8 +1183,8 @@ trait UnifyUSCalculus {
   }
 
 
-  /** An update-based calculus for a position */
-  def updateCalculus: PositionTactic = chase(3,3, e => e match {
+  /** An update-based calculus launched at a position */
+  def updateCalculus: PositionTactic = chase(3,3, (e:Expression) => e match {
       // no equational assignments
       case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
       case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil

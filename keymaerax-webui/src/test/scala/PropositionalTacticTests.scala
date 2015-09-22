@@ -119,7 +119,7 @@ class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val result = helper.runTactic(ConsolidateSequentT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante shouldBe empty
-    result.openGoals().head.sequent.succ should contain only "xa>0&xb>1&xc>2 -> ya<0|yb<1|yc<2".asFormula
+    result.openGoals().head.sequent.succ should contain only "(xa>0&xb>1)&xc>2->(ya < 0|yb < 1)|yc < 2".asFormula
   }
 
   it should "consolidate sequent from many formulas (containing conjunctions and disjunctions)" in {
@@ -127,7 +127,7 @@ class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val result = helper.runTactic(ConsolidateSequentT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante shouldBe empty
-    result.openGoals().head.sequent.succ should contain only "xa>0&xb>1&(xc>2&xd>3) -> (ya<0|yc<2)|yb<1".asFormula
+    result.openGoals().head.sequent.succ should contain only "(xa>0&xb>1)&xc>2&xd>3->(ya < 0|yc < 2)|yb < 1".asFormula
   }
 
   it should "consolidate sequent when antecedent is empty and succedent contains only 1 formula" in {
@@ -159,7 +159,7 @@ class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val result = helper.runTactic(ConsolidateSequentT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante shouldBe empty
-    result.openGoals().head.sequent.succ should contain only "xa>0&xb>1&xc>2 -> !(xa>0&xb>1&xc>2)".asFormula
+    result.openGoals().head.sequent.succ should contain only "(xa>0&xb>1)&xc>2->!((xa>0&xb>1)&xc>2)".asFormula
   }
 
   it should "consolidate sequent when both antecedent and succedent are empty" in {

@@ -2,9 +2,12 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.{File, PrintWriter}
 import java.lang.reflect.ReflectPermission
+import java.net.Socket
+import java.nio.file.{Paths, Files}
 import java.security.Permission
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics._
@@ -96,6 +99,8 @@ object KeYmaeraX {
           case "-codegen" :: value :: tail =>
             if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
             else optionErrorReporter("-codegen")
+          case "-ui" :: kyxFilePath :: "-tactic" :: tacticPath :: tail =>
+            launchUIWithTactic(kyxFilePath, tacticPath, tail.toArray); map ++ Map('mode -> "ui")
           case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
           // action options
           case "-out" :: value :: tail =>
@@ -487,6 +492,71 @@ object KeYmaeraX {
   /** Launch the web user interface */
   def launchUI(args: Array[String]): Unit = {
     Main.main(args)
+  }
+
+  def launchUIWithTactic(kyxPath: String, tacticPath: String, uiArgs: Array[String]) : Unit = {
+    throw new Exception("This feature is not currently implemented")
+//    println("Launching UI and trying to prove " + kyxPath + " with tactic " + tacticPath)
+//    // Launch the web server if it's not already running, and then wait until the server is started.
+//    //@todo we need a much cleaner way of checking if the stack size is correct. Until then, calling Main.main from here is very spaghetti.
+////    if(!serverIsRunning())
+////      throw new IllegalStateException("Server must be running in order to execute a tactic on a .key file.")
+//
+//    //@todo we're assuming that the stack size is correct.
+//    Main.startServer()
+//    while(!serverIsRunning()) {
+//      this.synchronized({ this.wait(100) })
+//    }
+//
+//    //@todo is this ok...?
+//
+//    val db = DBAbstractionObj.defaultDatabase //@todo ???
+//    val username = "commandLineInterface"
+//
+//    // Create a new user; ignore any errors.
+//    new CreateUserRequest(db, username, "password").getResultingResponses()
+//
+//
+//    //Create the model
+//    val modelId = {
+//      val randomName = java.util.UUID.randomUUID().toString
+//      val kyxFile         = new File(kyxPath)
+//      val kyxFileContents = Files.readAllLines(Paths.get(kyxPath)).toArray().toList.mkString("\n")
+//      val modelRequest    = new CreateModelRequest(db, username, kyxFile.getName + "(noise: " + randomName + ")", kyxFileContents)
+//
+//      //The file should parse.
+//      try { KeYmaeraXProblemParser(kyxFileContents) }
+//      catch { case e: Throwable => System.err.println(".key file should parse!"); throw e }
+//
+//      modelRequest.getResultingResponses()
+//      modelRequest.getModelId
+//    }
+//
+//    // Create a new proof
+//    val proofId = {
+//      val createPrfRequest = new CreateProofRequest(db, username, modelId, s"$modelId -- Proof launched from CLI -- will not reload!", "")
+//
+//      createPrfRequest.getResultingResponses()
+//      createPrfRequest.getProofId
+//    }
+//
+//    // Run the scala file on the created proof -- blocking!
+//    new RunScalaFileRequest(db, proofId, new File(tacticPath)).getResultingResponses()
+//
+//    // Send the user's browser to the correct location.
+//    val host: String = "localhost" //@todo ???
+//    val port: Int    = 8090 //@todo ???
+//    val path: String = s"dashboard.html?#/proofs/$proofId"
+//    SystemWebBrowser(s"http://$host:$port/$path")
+//  }
+//  private def serverIsRunning() : Boolean = {
+//    try {
+//      new Socket("localhost", 8090)
+//      true
+//    }
+//    catch {
+//      case e : Exception => false
+//    }
   }
 
   // helpers

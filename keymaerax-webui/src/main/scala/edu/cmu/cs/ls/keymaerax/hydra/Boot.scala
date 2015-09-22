@@ -4,15 +4,14 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.awt.event.{ActionEvent, ActionListener}
-import java.awt.{GridLayout, Label, BorderLayout}
-import java.util.EventListener
+import java.awt.{GridLayout}
 import javax.swing._
 
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
-import edu.cmu.cs.ls.keymaerax.api.{KeYmaeraInterface, ComponentConfig}
-import edu.cmu.cs.ls.keymaerax.tactics.{Tactics, DerivedAxioms}
+import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig}
+import edu.cmu.cs.ls.keymaerax.tactics.{DerivedAxioms}
+import edu.cmu.cs.ls.keymaerax.launcher.SystemWebBrowser
 import spray.can.Http
 
 import scala.concurrent.duration.FiniteDuration
@@ -130,28 +129,6 @@ object Boot extends App {
         "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
         "**********************************************************\n"
     )
-
-    // Try opening the web browser appropriately
-    try {
-      if (!java.awt.GraphicsEnvironment.isHeadless() &&
-        java.awt.Desktop.isDesktopSupported() &&
-        java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE))
-      {
-        java.awt.Desktop.getDesktop().browse(new java.net.URI(s"http://${host}:${port}/"))
-      }
-      else if (!java.awt.GraphicsEnvironment.isHeadless()) {
-        JOptionPane.showMessageDialog(null, s"Point your browser to http://${host}:${port}/")
-
-      }
-      else {
-        println("Launching server in headless mode.")
-      }
-    } catch {
-      case exc: java.awt.HeadlessException =>
-      case exc: java.lang.ClassNotFoundException =>
-      case exc: java.lang.NoSuchMethodError =>
-      case exc: Exception =>
-    }
+    SystemWebBrowser(s"http://${host}:${port}/")
   }
-
 }

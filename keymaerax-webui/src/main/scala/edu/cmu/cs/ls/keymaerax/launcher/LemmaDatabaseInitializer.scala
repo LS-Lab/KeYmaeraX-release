@@ -5,7 +5,7 @@ import java.nio.channels.Channels
 import java.nio.file.{Paths, Files}
 import java.util.zip.{ZipFile}
 
-
+import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms
 
 /**
  * @todo enforce requirement that this code is only ever used from a .JAR.
@@ -46,13 +46,20 @@ object LemmaDatabaseInitializer {
   private def copyZipFromJar(lemmaPath : String): ZipFile = {
     // Copy the .zip file into the user's lemmadb.
     val resource = this.getClass.getResourceAsStream("/lemmadb.zip")
-    val lemmas = Channels.newChannel(resource)
-    new FileOutputStream(ZIP_FILE_LOCATION).getChannel.transferFrom(lemmas, 0, Long.MaxValue)
-
+    try {
+      val lemmas = Channels.newChannel(resource)
+      new FileOutputStream(ZIP_FILE_LOCATION).getChannel.transferFrom(lemmas, 0, Long.MaxValue)
+    }
+    catch {
+      //Thrown when lemmadb.zip doesn't exist, at least
+      case e: NullPointerException => {
+        throw new LemmbaDatabaseInitializationException("lemmadb.zip was not found in the .JAR file")
+      }
+    }
     if(new File(ZIP_FILE_LOCATION).exists())
       println("Successfully copied ZIP file to " + ZIP_FILE_LOCATION)
     else
-      throw new Exception("Failed to copy the lemmas database ZIP file")
+      throw new LemmbaDatabaseInitializationException("Lemma DB exists but could not copy into the .keymaerax directory.")
 
     new ZipFile(ZIP_FILE_LOCATION)
   }
@@ -67,7 +74,7 @@ object LemmaDatabaseInitializer {
       val nextFile = entries.nextElement()
       val is = zip.getInputStream(nextFile)
 
-      val outputFileLocation: String = LEMMA_DB_PATH   + File.separator + nextFile.getName
+      val outputFileLocation: String = LEMMA_DB_PATH + File.separator + nextFile.getName
       val outputFile: File = new File(outputFileLocation)
       val outputPath = Paths.get(outputFileLocation)
 
@@ -82,3 +89,5 @@ object LemmaDatabaseInitializer {
     }
   }
 }
+
+class LemmbaDatabaseInitializationException(s: String) extends Exception(s)

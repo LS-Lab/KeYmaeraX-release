@@ -134,6 +134,8 @@ object DerivedAxioms {
     case "exists dual" => Some(existsDualF, existsDualT)
     case "!exists" => Some(notExistsF, notExistsT)
     case "!all" => Some(notAllF, notAllT)
+    case "![]" => Some(notBoxF, notBoxT)
+    case "!<>" => Some(notDiamondF, notDiamondT)
     case "[] dual" => Some(boxDualF, boxDualT)
     case "K1" => Some(K1F, K1T)
     case "K2" => Some(K2F, K2T)
@@ -157,7 +159,7 @@ object DerivedAxioms {
     case "<*> iterate" => Some(iteratedF, iteratedT)
     case "<*> approx" => Some(loopApproxdF, loopApproxdT)
     case "exists generalize" => Some(existsGeneralizeF, existsGeneralizeT)
-    case "exists eliminate" => Some(existsEliminateF, existsEliminateT)
+    //case "exists eliminate" => Some(existsEliminateF, existsEliminateT)
     case "all substitute" => Some(allSubstituteF, allSubstituteT)
     case "vacuous exists quantifier" => Some(vacuousExistsF, vacuousExistsT)
     case "V[:*] vacuous assign nondet" => Some(vacuousBoxAssignNondetF, vacuousBoxAssignNondetT)
@@ -217,6 +219,14 @@ object DerivedAxioms {
     case "<'> stuck" => Some(odeStuckF, odeStuckT)
     case "+<= up" => Some(intervalUpPlusF, intervalUpPlusT)
     case "-<= up" => Some(intervalUpMinusF, intervalUpMinusT)
+    case "*<= up" => Some(intervalUpTimesF, intervalUpTimesT)
+    case "1Div<= up" => Some(intervalUp1DivideF, intervalUp1DivideT)
+    case "Div<= up" => Some(intervalUpDivideF, intervalUpDivideT)
+    case "<=+ down" => Some(intervalDownPlusF, intervalDownPlusT)
+    case "<=- down" => Some(intervalDownMinusF, intervalDownMinusT)
+    case "<=* down" => Some(intervalDownTimesF, intervalDownTimesT)
+    case "<=1Div down" => Some(intervalDown1DivideF, intervalDown1DivideT)
+    case "<=Div down" => Some(intervalDownDivideF, intervalDownDivideT)
     case _ => None
   } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == name, s"Lookup of DerivedAxiom should find the correct lemma (name: ${name})")
 
@@ -228,8 +238,10 @@ object DerivedAxioms {
       "<-> reflexive" -> Some(equivReflexiveF, equivReflexiveT)
       , "!! double negation" -> Some(doubleNegationF, doubleNegationT)
       , "exists dual" -> Some(existsDualF, existsDualT)
-//      , "!exists" -> Some(notExistsF, notExistsT)
+      , "!exists" -> Some(notExistsF, notExistsT)
       , "!all" -> Some(notAllF, notAllT)
+      , "![]" -> Some(notBoxF, notBoxT)
+      , "!<>" -> Some(notDiamondF, notDiamondT)
       , "[] dual" -> Some(boxDualF, boxDualT)
       , "<:=> assign" -> Some(assigndF, assigndT)
       , ":= assign dual" -> Some(assignDualF, assignDualT)
@@ -300,6 +312,14 @@ object DerivedAxioms {
       , "<'> stuck" -> Some(odeStuckF, odeStuckT)
       , "+<= up" -> Some(intervalUpPlusF, intervalUpPlusT)
       , "-<= up" -> Some(intervalUpMinusF, intervalUpMinusT)
+      , "*<= up" -> Some(intervalUpTimesF, intervalUpTimesT)
+      , "1Div<= up" -> Some(intervalUp1DivideF, intervalUp1DivideT)
+      , "Div<= up" -> Some(intervalUpDivideF, intervalUpDivideT)
+      , "<=+ down" -> Some(intervalDownPlusF, intervalDownPlusT)
+      , "<=- down" -> Some(intervalDownMinusF, intervalDownMinusT)
+      , "<=* down" -> Some(intervalDownTimesF, intervalDownTimesT)
+      , "<=1Div down" -> Some(intervalDown1DivideF, intervalDown1DivideT)
+      , "<=Div down" -> Some(intervalDownDivideF, intervalDownDivideT)
     ) ensuring(r => r.forall(kv => derivedAxiomInfo(kv._1)==kv._2), "same contents as derivedAxiomInfo()")
 
     derivedAxiomMap.keys.map(key => {
@@ -377,9 +397,9 @@ object DerivedAxioms {
    */
   lazy val notExistsF = "(!\\exists x (p(x))) <-> \\forall x (!p(x))".asFormula
   lazy val notExists = derivedAxiom("!exists",
-    Sequent(Nil, IndexedSeq(), IndexedSeq(notAllF)),
+    Sequent(Nil, IndexedSeq(), IndexedSeq(notExistsF)),
     useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::0::Nil) &
-      useAt("exists dual")(1, 0::Nil) &
+      useAt("all dual")(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -2012,4 +2032,124 @@ object DerivedAxioms {
   )
 
   lazy val intervalUpMinusT = derivedAxiomT(intervalUpMinus)
+
+
+  /**
+   * {{{Axiom "*<= up".
+   *    f()*g()<=h() <- ((ff()<=f() & f()<=F() & gg()<=g() & g()<=G()) & (ff()*gg()<=h() & ff()*G()<=h() & F()*gg()<=h() & F()*G()<=h()))
+   * End.
+   * }}}
+   */
+  lazy val intervalUpTimesF = "f()*g()<=h() <- ((ff()<=f() & f()<=F() & gg()<=g() & g()<=G()) & (ff()*gg()<=h() & ff()*G()<=h() & F()*gg()<=h() & F()*G()<=h()))".asFormula
+  lazy val intervalUpTimes = derivedAxiom("*<= up",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalUpTimesF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalUpTimesT = derivedAxiomT(intervalUpTimes)
+
+
+  /**
+   * {{{Axiom "1Div<= up".
+   *    1/f()<=h() <- ((F()<=f() & F()*f()>0) & (1/F()<=h()))
+   * End.
+   * }}}
+   */
+  lazy val intervalUp1DivideF = "1/f()<=h() <- ((F()<=f() & F()*f()>0) & (1/F()<=h()))".asFormula
+  lazy val intervalUp1Divide = derivedAxiom("1Div<= up",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalUp1DivideF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalUp1DivideT = derivedAxiomT(intervalUp1Divide)
+
+
+  /**
+   * {{{Axiom "Div<= up".
+   *    f()/g()<=h() <- f()*(1/g())<=h() & g()!=0
+   * End.
+   * }}}
+   */
+  lazy val intervalUpDivideF = "f()/g()<=h() <- (f()*(1/g())<=h()) & g()!=0".asFormula
+  lazy val intervalUpDivide = derivedAxiom("Div<= up",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalUpDivideF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalUpDivideT = derivedAxiomT(intervalUpDivide)
+
+
+  /**
+   * {{{Axiom "<=+ down".
+   *    h()<=f()+g() <- ((F()<=f() & G()<=g()) & h()<=F()+G())
+   * End.
+   * }}}
+   */
+  lazy val intervalDownPlusF = "h()<=f()+g() <- ((F()<=f() & G()<=g()) & h()<=F()+G())".asFormula
+  lazy val intervalDownPlus = derivedAxiom("<=+ down",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalDownPlusF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalDownPlusT = derivedAxiomT(intervalDownPlus)
+
+  /**
+   * {{{Axiom "<=- down".
+   *    h()<=f()-g() <- ((F()<=f() & g()<=G()) & h()<=F()-G())
+   * End.
+   * }}}
+   */
+  lazy val intervalDownMinusF = "h()<=f()-g() <- ((F()<=f() & g()<=G()) & h()<=F()-G())".asFormula
+  lazy val intervalDownMinus = derivedAxiom("<=- down",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalDownMinusF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalDownMinusT = derivedAxiomT(intervalDownMinus)
+
+
+  /**
+   * {{{Axiom "<=* down".
+   *    h()<=f()*g()<- ((ff()<=f() & f()<=F() & gg()<=g() & g()<=G()) & (h()<=ff()*gg() & h()<=ff()*G() & h()<=F()*gg() & h()<=F()*G()))
+   * End.
+   * }}}
+   */
+  lazy val intervalDownTimesF = "h()<=f()*g()<- ((ff()<=f() & f()<=F() & gg()<=g() & g()<=G()) & (h()<=ff()*gg() & h()<=ff()*G() & h()<=F()*gg() & h()<=F()*G()))".asFormula
+  lazy val intervalDownTimes = derivedAxiom("<=* down",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalDownTimesF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalDownTimesT = derivedAxiomT(intervalDownTimes)
+
+
+  /**
+   * {{{Axiom "<=1Div down".
+   *    h()<=1/f() <- ((f()<=F() & F()*f()>0) & (h()<=1/F()))
+   * End.
+   * }}}
+   */
+  lazy val intervalDown1DivideF = "h()<=1/f() <- ((f()<=F() & F()*f()>0) & (h()<=1/F()))".asFormula
+  lazy val intervalDown1Divide = derivedAxiom("<=1Div down",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalDown1DivideF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalDown1DivideT = derivedAxiomT(intervalDown1Divide)
+
+
+  /**
+   * {{{Axiom "<=Div down".
+   *    h()<=f()/g() <- h()<=f()*(1/g()) & g()!=0
+   * End.
+   * }}}
+   */
+  lazy val intervalDownDivideF = "h()<=f()/g() <- h()<=f()*(1/g()) & g()!=0".asFormula
+  lazy val intervalDownDivide = derivedAxiom("<=Div down",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(intervalDownDivideF)),
+    TactixLibrary.QE
+  )
+
+  lazy val intervalDownDivideT = derivedAxiomT(intervalDownDivide)
+
 }

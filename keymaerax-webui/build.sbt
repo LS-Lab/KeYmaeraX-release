@@ -20,7 +20,7 @@ libraryDependencies += "org.pegdown" % "pegdown" % "1.5.0" % "test"      // (For
 
 libraryDependencies += "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test"
 
-libraryDependencies += "com.storm-enroute" %% "scalameter" % "0.7"
+//libraryDependencies += "com.storm-enroute" %% "scalameter" % "0.7"
 
 /// mongodb driver
 

@@ -477,21 +477,25 @@ object KeYmaeraXParser extends Parser {
         if (optok==OpSpec.sNoneUnfinished && la!=EOF) shift(st)
         else {
           assume(optok.isInstanceOf[BinaryOpSpec[_]], "binary operator expected for " + optok + " since others should have been reduced\nin " + s)
-          if (la == LPAREN || !statementSemicolon && la == LBRACE) error(st)
+          if (la==LPAREN || !statementSemicolon && la==LBRACE) error(st)
           else {
             //@todo op(st, la) : Potential problem: st is not the right parser state for la
             //@todo if statementSemicolon then the missing SEMI causes incorrect predictions of operator precedence ++ versus ;
-            if (la == EOF || la == RPAREN || la == RBRACE || la == RBOX
-              || (la == RDIA || la == RDIA) && (t1.kind == ProgramKind || t1.kind == DifferentialProgramKind)
-              || la != LBRACE && (optok < op(st, la, List(t2.kind, ExpressionKind)) || optok <= op(st, la, List(t2.kind, ExpressionKind)) && optok.assoc == LeftAssociative)) {
+            if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX
+              || (la==RDIA || la==RDIA) && (t1.kind == ProgramKind || t1.kind == DifferentialProgramKind)
+              || la!=LBRACE &&
+                (optok<op(st, la, List(t2.kind, ExpressionKind))
+                  || optok<=op(st, la, List(t2.kind, ExpressionKind)) && optok.assoc==LeftAssociative && op(st, la, List(t2.kind, ExpressionKind)).assoc==LeftAssociative)) {
               //println("\tGOT: " + tok + "\t" + "LA: " + la + "\tAfter: " + s + "\tRemaining: " + input)
               val result = elaborate(st, tok, optok.asInstanceOf[BinaryOpSpec[Expression]], t1, t2)
               if (statementSemicolon && result.isInstanceOf[AtomicProgram]) {
-                if (la == SEMI) reduce(shift(st), 4, result, r)
+                if (la==SEMI) reduce(shift(st), 4, result, r)
                 else if (result.isInstanceOf[DifferentialProgram] || result.isInstanceOf[ODESystem]) reduce(st, 3, result, r) // optional SEMI
                 else error(st)
               } else reduce(st, 3, result, r)
-            } else if (statementSemicolon && la == LBRACE || optok > op(st, la, List(t2.kind, ExpressionKind)) || optok >= op(st, la, List(t2.kind, ExpressionKind)) && optok.assoc == RightAssociative)
+            } else if (statementSemicolon && la==LBRACE
+              || optok>op(st, la, List(t2.kind, ExpressionKind))
+              || optok>=op(st, la, List(t2.kind, ExpressionKind)) && optok.assoc==RightAssociative && op(st, la, List(t2.kind, ExpressionKind)).assoc==RightAssociative)
               shift(st)
             else error(st)
           }
@@ -600,7 +604,9 @@ object KeYmaeraXParser extends Parser {
         else if (la==EOF) throw new ParseException("Empty input is not a well-formed expression ", input.head.loc, st.toString) else error(st)
 
       case _ =>
-        throw new AssertionError("Incomplete parser missing an item, so does not yet know how to handle case.\nFound: " + la + "\nAfter: " + s)
+        //@todo cases should be completed to complete the parser items, but it's easier to catch-all and report legible parse error.
+        throw new ParseException("Syntax error (or incomplete parser missing an item).\nFound: " + la, input.head.loc, st.toString)
+        //throw new AssertionError("Incomplete parser missing an item, so does not yet know how to handle case.\nFound: " + la + "\nAfter: " + s)
     }
   }
 

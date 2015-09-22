@@ -37,7 +37,7 @@ class PairParserTests extends FlatSpec with Matchers {
       println("input 1: " + s1 + "\ninput 2: " + s2)
       if (s2 == unparseable) {
         // ParseExceptions and CoreExceptions and AssertionErrors are simply all allowed.
-        a[Throwable] should be thrownBy parser(s1)
+        a[Throwable] should be thrownBy println("Parsed:  " + pp(parser(s1)))
       } else {
         val p1 = parser(s1)
         val p2 = parser(s2)
@@ -51,12 +51,25 @@ class PairParserTests extends FlatSpec with Matchers {
   private val unparseable: String = "@#%@*!!!"
   /** Left string is expected to parse like the right string parses, or not at all if right==unparseable */
   private val expectedParse /*: List[Pair[String,String]]*/ = List(
-    // from doc/dL-grammar.md
+    // from doc/dL-grammar.md or crucially important
     ("x-y-z","(x-y)-z"),
+    ("x/y/z","(x/y)/z"),
     ("x^2^4", "x^(2^4)"),
     ("p()->q()->r()", "p()->(q()->r())"),
+    ("p()<-q()<-r()", "(p()<-q())<-r()"),
+    ("p()<->q()<->r()", unparseable),
+    ("p()->q()<-r()", unparseable),
+    ("p()<-q()->r()", unparseable),
     ("x:=1;x:=2;x:=3;", "x:=1;{x:=2;x:=3;}"),
     ("[x:=1;x:=2;x:=3;]x=3", "[x:=1;{x:=2;x:=3;}]x=3"),
+    ("x:=1;++x:=2;++x:=3;", "x:=1;++{x:=2;++x:=3;}"),
+    ("[x:=1;++x:=2;++x:=3;]x=3", "[x:=1;++{x:=2;++x:=3;}]x=3"),
+
+    ("p()->q()<->r()", "(p()->q())<->r()"),
+    ("p()<->q()->r()", "p()<->(q()->r())"),
+    ("p()->q()<->r()", "(p()->q())<->r()"),
+    ("p()<->q()<-r()", "p()<->(q()<-r())"),
+
 
     // reasonably systematic
     ("x+y+z","(x+y)+z"),

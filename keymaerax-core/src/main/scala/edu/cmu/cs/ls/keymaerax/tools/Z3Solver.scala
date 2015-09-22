@@ -18,6 +18,7 @@ import scala.sys.process._
  * @author Ran Ji
  */
 class Z3Solver extends SMTSolver {
+  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
   /** Get the absolute path to Z3 jar */
   private val pathToZ3 : String = {
@@ -86,7 +87,7 @@ class Z3Solver extends SMTSolver {
    */
   def run(cmd: String) : (String, Formula)= {
     val z3Output = cmd.!!
-    println("[Z3 result] \n" + z3Output + "\n")
+    if (DEBUG) println("[Z3 result] \n" + z3Output + "\n")
     //@todo So far does not handle get-model or unsat-core
     val kResult = {
       //@todo investigate Z3 binding for Scala
@@ -106,7 +107,7 @@ class Z3Solver extends SMTSolver {
   /** Return Z3 QE result and the proof evidence */
   def qeEvidence(f: Formula) : (Formula, Evidence) = {
     val smtCode = SMTConverter(f, "Z3") + "\n(check-sat)\n"
-    println("[Solving with Z3...] \n" + smtCode)
+    if (DEBUG) println("[Solving with Z3...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
@@ -127,7 +128,7 @@ class Z3Solver extends SMTSolver {
    */
   def simplify(t: Term) : Term = {
     val smtCode = SMTConverter.generateSimplify(t, "Z3")
-    println("[Simplifying with Z3 ...] \n" + smtCode)
+    if (DEBUG) println("[Simplifying with Z3 ...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
@@ -135,11 +136,13 @@ class Z3Solver extends SMTSolver {
     writer.close()
     val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
     val z3Output = cmd.!!
-    println("[Z3 simplify result] \n" + z3Output + "\n")
+    if (DEBUG) println("[Z3 simplify result] \n" + z3Output + "\n")
     try {
       KeYmaeraXParser.termParser(z3Output)
     } catch {
-      case e: ParseException => println("[Info] Cannot parse Z3 simplified result: " + z3Output); t
+      case e: ParseException =>
+        if (DEBUG) println("[Info] Cannot parse Z3 simplified result: " + z3Output)
+        t
     }
   }
 }
