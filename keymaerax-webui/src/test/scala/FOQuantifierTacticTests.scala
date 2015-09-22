@@ -13,8 +13,8 @@ import testHelper.ProofFactory._
 import testHelper.SequentFactory._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{locateSucc,locateAnte,NotLeftT,NotRightT}
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateExistentialQuanT,
-  instantiateUniversalQuanT,instantiateT,existentialGenT,existentialGenPosT,vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT,
-  allEliminateT}
+  instantiateUniversalQuanT,instantiateT,existentialGenT,existentialGenPosT,existSubstitute,vacuousExistentialQuanT,
+  vacuousUniversalQuanT,decomposeQuanT,allEliminateT}
 
 import scala.collection.immutable.Map
 
@@ -299,6 +299,22 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     val tactic = locateAnte(existentialGenT(Variable("y", None, Real), "x".asTerm))
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x x>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "\\exists y \\forall x x>0".asFormula :: Nil, Nil))
+  }
+
+  "Existential substitute" should "instantiate single equality" in {
+    val s = sucSequent("\\exists x x=y".asFormula)
+    val result = helper.runTactic(existSubstitute(1), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "y=y".asFormula
+  }
+
+  it should "find and instantiate using equality" in {
+    val s = sucSequent("\\exists x (x>0 & x=y)".asFormula)
+    val result = helper.runTactic(existSubstitute(1), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "y>0 & y=y".asFormula
   }
 
   "Vacuous universal quantification" should "introduce universal quantifier" in {

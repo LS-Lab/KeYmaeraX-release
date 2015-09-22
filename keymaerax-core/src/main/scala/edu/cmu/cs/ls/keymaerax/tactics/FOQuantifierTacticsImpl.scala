@@ -492,6 +492,51 @@ object FOQuantifierTacticsImpl {
   }
 
   /**
+   * Returns a tactic to instantiate an existential quantifier that is known to have an equal substitute.
+   * @example{{{
+   *           |- z>0 & z=z
+   *         --------------------------existSubstitute(1)
+   *           |- \exists x (x>0 & x=z)
+   * }}}
+   * @return The tactic.
+   */
+  def existSubstitute: PositionTactic = new PositionTactic("Exist Substitute") {
+    /** Checks whether this position tactic will be applicable at the indicated position of the given sequent */
+    override def applies(s: Sequent, p: Position): Boolean = p.isSucc && (s(p).subFormulaAt(p.inExpr) match {
+      case Some(Exists(vars, pred)) => vars.size == 1 && equalTermOf(vars.head, pred).isDefined
+      case _ => false
+    })
+
+    /** Apply this PositionTactic at the indicated Position to obtain a tactic to use at any ProofNode */
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      /** Returns true if this tactics is applicable to the proof node */
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p).subFormulaAt(p.inExpr) match {
+        case Some(Exists(vars, pred)) =>
+          assert(vars.size == 1, s"Only quantifiers with 1 variable supported so far, have $vars")
+          equalTermOf(vars.head, pred) match {
+            case Some(t) => Some(instantiateExistentialQuanT(vars.head, t)(p))
+            case None => throw new IllegalArgumentException(s"Formula $pred must contain an equality mentioning variable ${vars.head}")
+          }
+      }
+    }
+
+    /** Returns the first term in formula fml that is found to be equal to the variable v */
+    private def equalTermOf(v: Variable, fml: Formula): Option[Term] = {
+      var result: Option[Term] = None
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+          case Equal(l, r) if l == v => result = Some(r); Left(Some(ExpressionTraversal.stop))
+          case Equal(l, r) if r == v => result = Some(l); Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, fml)
+      result
+    }
+  }
+
+  /**
    * Converse of all instantiate.
    * @param x The universally quantified variable to introduce.
    * @param t The term to generalize.
