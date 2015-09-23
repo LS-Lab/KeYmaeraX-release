@@ -252,6 +252,11 @@ object TactixLibrary extends UnifyUSCalculus {
   /** closeF: closes the branch when false is in the antecedent */
   lazy val closeF            : PositionTactic = TacticLibrary.CloseFalseT
 
+  // counter example
+
+  /** Generate counter example */
+  lazy val CntEx             : Tactic         = TacticLibrary.counterExampleT
+
   // derived
 
   /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. */

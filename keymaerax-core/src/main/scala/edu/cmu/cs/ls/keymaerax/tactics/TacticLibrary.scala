@@ -344,6 +344,20 @@ object TacticLibrary {
   }
 
   /**
+   * Default counterExampleT
+   * Use Mathematica
+   */
+  def counterExampleT = ArithmeticTacticsImpl.counterExampleT("Mathematica")
+
+
+  /**
+   * Alternative counterExampleT
+   * @param toolId counter example generation tool, could be: Mathematica, Z3
+   * @return
+   */
+  def counterExampleT(toolId: String) = ArithmeticTacticsImpl.counterExampleT(toolId)
+
+  /**
    * Quantifier elimination.
    */
   def quantifierEliminationT(toolId: String) = PropositionalTacticsImpl.ConsolidateSequentT &
