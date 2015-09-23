@@ -201,11 +201,16 @@ class JLinkMathematicaLink extends MathematicaLink {
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
       Array(toMathematica(Not(f)), new MExpr(listExpr, StaticSemantics.symbols(f).toList.sorted.map(s => toMathematica(s)).toArray), new MExpr(Expr.SYMBOL, "Reals")))
     val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
-    val (output, result) = run(inputWithTO)
-    result match {
-      case f : Formula => KeYmaeraXPrettyPrinter(f)
-      case _ => throw new NoCountExException("Mathematica cannot find counter examples for: " + f)
+    try {
+      val (output, result) = run(inputWithTO)
+      result match {
+        case ff : Formula => KeYmaeraXPrettyPrinter(ff)
+        case _ => throw new NoCountExException("Mathematica cannot find counter examples for: " + KeYmaeraXPrettyPrinter(f))
+      }
+    } catch {
+      case e: MathematicaComputationAbortedException => throw new NoCountExException("Within " + TIMEOUT + " seconds, Mathematica cannot find counter examples for: " + KeYmaeraXPrettyPrinter(f))
     }
+
   }
 
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Function]): Option[Formula] =
