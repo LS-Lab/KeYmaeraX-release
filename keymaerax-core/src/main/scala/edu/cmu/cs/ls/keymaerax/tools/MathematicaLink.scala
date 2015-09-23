@@ -4,6 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax.tools
 
+import java.util.{GregorianCalendar, Date}
+
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal
@@ -85,7 +87,8 @@ class JLinkMathematicaLink extends MathematicaLink {
         "-linkmode", "launch",
         "-linkname", linkName + " -mathlink"))
       ml.discardAnswer()
-      //@todo 6*9
+      if (!isActivated) throw new IllegalStateException("Mathematica is not activated or Mathematica license is expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please renew your Mathematica license and restart KeYmaera X.")
+      if (!isComputing) throw new IllegalStateException("Test computation in Mathematica failed.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
       true
     } catch {
       case e:MathLinkException => println("Mathematica J/Link errored " + e); throw e
@@ -312,5 +315,59 @@ class JLinkMathematicaLink extends MathematicaLink {
     }, f) match {
     case Some(resultF) => resultF
     case None => throw new IllegalArgumentException("Unable to defunctionalize " + f)
+  }
+
+  /** Returns the version as (Major, Minor, Release) */
+  private def getVersion: (String, String, String) = {
+    ml.evaluate("$VersionNumber")
+    ml.waitForAnswer()
+    val version = ml.getExpr
+    ml.evaluate("$ReleaseNumber")
+    ml.waitForAnswer()
+    val release = ml.getExpr
+    //@note using strings to be robust in case Wolfram decides to switch from current major:Double/minor:Int
+    val (major, minor) = { val versionParts = version.toString.split("\\."); (versionParts(0), versionParts(1)) }
+    (major, minor, release.toString)
+  }
+
+  /** Checks if Mathematica is activated by querying the license expiration date */
+  private def isActivated: Boolean = {
+    type MExpr = com.wolfram.jlink.Expr
+    //@todo this is how Mathematica 10 represents infinity, test if 9 is the same
+    val infinity = new MExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
+
+    ml.evaluate("$LicenseExpirationDate")
+    ml.waitForAnswer()
+    val licenseExpirationDate = ml.getExpr
+
+    val date: Array[MExpr] = getVersion match {
+      case ("9", _, _) => licenseExpirationDate.args
+      case ("10", _, _) => licenseExpirationDate.args.head.args
+      case (major, minor, _) => throw new NotImplementedError("Unknown Mathematica version " + major + "." + minor + ", only version 9.x and 10.x supported")
+    }
+
+    if (date == null) false
+    else try {
+      if (date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
+        //@note month in calendar is 0-based, in Mathematica it's 1-based
+        val expiration = new GregorianCalendar(date(0).asInt(), date(1).asInt() - 1, date(2).asInt())
+        val today = new Date()
+        expiration.getTime.after(today)
+      } else if (date(0).equals(infinity)) {
+        true
+      } else {
+        false
+      }
+    } catch {
+      case e: ExprFormatException => throw new IllegalStateException("Unable to determine Mathematica expiration date", e)
+    }
+  }
+
+  /** Sends a simple computation to Mathematica to ensure its actually working */
+  private def isComputing: Boolean = {
+    ml.evaluate("6*9")
+    ml.waitForAnswer()
+    val answer = ml.getExpr
+    answer.integerQ() && answer.asInt() == 54
   }
 }
