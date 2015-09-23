@@ -42,6 +42,7 @@ class KeYmaeraInitializer(env : {val db: DBAbstraction
     initTactic("keymaerax.step", "TacticLibrary.step", TacticKind.PositionTactic, TacticLibrary.step)
     initTactic("keymaerax.propositional", "TacticLibrary.propositional", TacticKind.Tactic, TacticLibrary.propositional)
     initTactic("keymaerax.arithmetic", "TacticLibrary.arithmeticT", TacticKind.Tactic, TacticLibrary.arithmeticT)
+    initTactic("keymaerax.counterExample", "TacticLibrary.counterExampleT", TacticKind.Tactic, TacticLibrary.counterExampleT)
     initTactic("dl.axiomclose", "TacticLibrary.AxiomCloseT", TacticKind.Tactic, TacticLibrary.AxiomCloseT)
 
     initTactic("dl.and-left", "TacticLibrary.AndLeftT", TacticKind.PositionTactic, TacticLibrary.AndLeftT)
