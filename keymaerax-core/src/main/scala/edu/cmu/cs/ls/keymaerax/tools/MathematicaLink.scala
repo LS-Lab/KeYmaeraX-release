@@ -58,6 +58,7 @@ trait MathematicaLink extends QETool with DiffSolutionTool {
  */
 class JLinkMathematicaLink extends MathematicaLink {
   private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private val TIMEOUT = 10
 
   var ml: KernelLink = null
 
@@ -199,7 +200,8 @@ class JLinkMathematicaLink extends MathematicaLink {
   def getCounterExample(f : Formula) : String = {
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
       Array(toMathematica(Not(f)), new MExpr(listExpr, StaticSemantics.symbols(f).toList.sorted.map(s => toMathematica(s)).toArray), new MExpr(Expr.SYMBOL, "Reals")))
-    val (output, result) = run(input)
+    val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
+    val (output, result) = run(inputWithTO)
     result match {
       case f : Formula => KeYmaeraXPrettyPrinter(f)
       case _ => throw new NoCountExException("Mathematica cannot find counter examples for: " + f)
