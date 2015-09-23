@@ -199,7 +199,7 @@ class JLinkMathematicaLink extends MathematicaLink {
     val (output, result) = run(input)
     result match {
       case f : Formula => KeYmaeraXPrettyPrinter(f)
-      case _ => throw new Exception("Mathematica cannot find counter examples for: " + f)
+      case _ => throw new NoCountExException("Mathematica cannot find counter examples for: " + f)
     }
   }
 
