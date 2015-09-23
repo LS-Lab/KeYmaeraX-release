@@ -293,22 +293,17 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val safeLemmaFormula =
       "max0=max((0,w*(dhf-dhd))) & " +
       "(w*dhd>=w*dhf|w*ao>=a) & " +
-      "kxtime_1=0 & " +
-      "r_2()=r & " +
-      "dhd_2()=dhd & " +
-      "h_2()=h & " +
-      "kxtime_4()=kxtime_1 & " +
-      "h_3=1/2*(2*h_2()+-2*dhd_2()*kxtime_5+-1*ao*kxtime_5^2) & " +
+      "h_3=1/2*(2*h+-2*dhd*kxtime_5+-1*ao*kxtime_5^2) & " +
       "(w=-1|w=1) & " +
       "(\\forall t \\forall ro \\forall ho (0<=t&t < max0/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max0/a&ro=rv*t&ho=dhf*t-w*max0^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp)) & " +
       "hp>0 & " +
-      "dhd_3=dhd_2()+ao*kxtime_5 & " +
+      "dhd_3=dhd+ao*kxtime_5 & " +
       "rp>0 & " +
-      "r_3=r_2()+-1*kxtime_5*rv & " +
+      "r_3=r+-1*kxtime_5*rv & " +
       "rv>=0 & " +
       "a>0 & " +
       "(w*dhd_3>=w*dhf|w*ao>=a) & " +
-      "kxtime_5>=kxtime_4()" +
+      "kxtime_5>=0" +
       "->" +
       "((w=-1|w=1)&\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=w*a/2*t^2+dhd_3*t|t>=max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd_3)))^2/(2*a)->abs(r_3-ro)>rp|w*h_3 < w*ho-hp))&hp>0&rp>0&rv>=0&a>0"
     val safeLemmaSeq = sequent(Nil, Nil, safeLemmaFormula.asFormula :: Nil)
@@ -364,8 +359,6 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                 && (
                 la(hide, initDomain) & absmax2 & crushor, // takes a while (about 170 seconds)
                 dT("Goal 127") &
-                  la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_1=0") &
-                  la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_4()=0") &
                   (la(andL)*) & dT("Goal 193") &
                   la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(dhf*(t_0+kxtime_5)-w*max0^2/(2*a))-hp") && (
                   dT("Goal 194") & absmax2 & crushor, // takes a while (100 seconds or so)
@@ -457,9 +450,15 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
               ls(implyR) & la(andL) & la(cohide, "0=1") & dT("before QE") & QE)
           ),
           ls(diffSolution(None, la(hide, "max0=max((0,w*(dhf-dhd)))"))) & dT("Diff. Solution") &
-            ls(implyR) & (la(andL)*) & dT("bla") & cut(safeLemmaFormula.asFormula) & onBranch(
-            (cutShowLbl, ls(cohideT, safeLemmaFormula) & applyLemma),
-            (cutUseLbl, QE)
+            ls(implyR) & (la(andL)*) &
+            la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_1=0") & la(hideT, "kxtime_1=0") &
+            la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_4()=0") & la(hideT, "kxtime_4()=0") &
+            la(TacticLibrary.eqLeft(exhaustive=true), "r_2()=r") & la(hideT, "r_2()=r") &
+            la(TacticLibrary.eqLeft(exhaustive=true), "dhd_2()=dhd") & la(hideT, "dhd_2()=dhd") &
+            la(TacticLibrary.eqLeft(exhaustive=true), "h_2()=h") & la(hideT, "h_2()=h") &
+            dT("bla") & cut(safeLemmaFormula.asFormula) & onBranch(
+            (cutShowLbl, ls(cohideT, safeLemmaFormula) & dT("apply Lemma") & applyLemma),
+            (cutUseLbl, dT("use lemma") & QE)
           )
           ) /* end orL on cutEZ */
           ) /* End cutUseLbl "Generalization strong enough" */
