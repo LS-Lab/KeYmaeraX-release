@@ -116,7 +116,7 @@ object AxiomIndex {
     case "+<= up" | "-<= up" | "<=+ down" | "<=- down" => (PosInExpr(1::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::Nil)
 
     // default position
-    case _ => println("AxiomIndex: defaulted for " + axiom); (PosInExpr(0::Nil), Nil)
+    case _ => (PosInExpr(0::Nil), Nil)
   }
 
 
