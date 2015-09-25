@@ -1,0 +1,261 @@
+<div class="row" ng-controller="ProofTreeCtrl">
+    <div class="col-md-4">
+         <div treecontrol class="tree-light"
+              tree-model="proofTree"
+              options="proofTreeOpts"
+              on-selection="showSelected(node)"
+              on-node-toggle="showToggle(node, expanded)"
+              selected-node="selectedNode">
+             {{node.name}} ({{node._id}})
+         </div>
+    </div>
+    <div class="col-md-6" id="sequent">
+
+    </div>
+</div>
+
+<!-- Proof tree controller
+================================================== -->
+<script save-content="proof-tree-ctrl-js">
+    function ProofTreeCtrl($scope) {
+        $scope.showSelected = function(node) {
+            $scope.selectedNode = node;
+            var seq = $("#sequent");
+            seq.html(translateSequent($scope.proofId, node._id, node.sequent));
+        };
+        $scope.showToggle = function(node, expanded) {
+
+        };
+        $scope.proofTreeOpts = {
+            nodeChildren: "children",
+            dirSelectable: false,
+            injectClasses: {
+                ul: "a1",
+                li: "a2",
+                iExpanded: "a3",
+                iCollapsed: "a4",
+                iLeaf: "a5",
+                label: "a6"
+            }
+        };
+    }
+</script>
+
+<script>
+// TODO remove as soon as sequent visualization is a AngularJS component
+var globalProofTree;
+
+function span(id, cont) {
+    return "<span xmlns=\"http://www.w3.org/1999/xhtml\" onmouseover=\"$(event.target).addClass('hlhover');\" onmouseout=\"$(event.target).removeClass('hlhover');\" class='hl' id='" + id + "'>" + cont + "</span>"
+}
+
+function handle(json) {
+  var items = [];
+  if(json.name == "not") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          items.push(span(json.id, "&not;" + left));
+      }
+  } else if(json.name == "and") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &#8743; " + right));
+      }
+  } else if(json.name == "or") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &#8744; " + right));
+      }
+  } else if(json.name == "imply") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " → " + right));
+      }
+  } else if(json.name == "equiv") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &#8596 " + right));
+      }
+  } else if(json.name == "lt") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &lt; " + right));
+      }
+  } else if(json.name == "leq") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &leq; " + right));
+      }
+  } else if(json.name == "equals") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " = " + right));
+      }
+  } else if(json.name == "notEquals") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &neq; " + right));
+      }
+  } else if(json.name == "geq") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &geq; " + right));
+      }
+  } else if(json.name == "gt") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &gt; " + right));
+      }
+  } else if(json.name == "neg") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          items.push(span(json.id, "-" + left));
+      }
+  } else if(json.name == "add") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " + " + right));
+      }
+  } else if(json.name == "subtract") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " - " + right));
+      }
+  } else if(json.name == "multiply") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &middot; " + right));
+      }
+  } else if(json.name == "divide") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " / " + right));
+      }
+   } else if(json.name == "exp") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " <sup>" + right + "</sup>"));
+      }
+  } else if(json.name == "boxmodality") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, "[" + left + "] " + right));
+      }
+  } else if(json.name == "Assign") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " := " + right));
+      }
+  } else if(json.name == "NDetAssign") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          items.push(span(json.id, left + ":= *"));
+      }
+  } else if(json.name == "Test") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          items.push(span(json.id, "?" + left));
+      }
+  } else if(json.name == "Loop") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          items.push(span(json.id, "{" + left + "}<sup>*</sup>" ));
+      }
+  } else if(json.name == "Sequence") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + "; " + right));
+      }
+  } else if(json.name == "Choice") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &#8746; " + right));
+      }
+  } else {
+      var chil = "";
+      if(json.hasOwnProperty("children")) {
+        var strs = [];
+        var c = json.children;
+        for(var i = 0; i < c.length; i++) {
+            strs.push(handle(c[i]));
+        }
+        chil = "(" + strs.join(", ") + ")";
+      }
+      items.push(span(json.id, json.name + chil));
+  }
+  return items.join("");
+}
+
+function translateFormula(proofId, nId, f) {
+	 return "<span id=\"" + f.id + "\"onClick=\"handleFormulaClick('" + proofId + "','" + nId + "','" + f.id + "');\">" + handle(f.formula) + "</span>";
+}
+
+function translateSequent(proofId, nId, s) {
+	var res = "";
+	s.ante.forEach(function(f) {
+	    res = res + translateFormula(proofId, nId, f) + "<br>";
+	});
+	res = res + "<span onClick=\"ApiClient.runGlobalTactic(ClientState.uid, 0, '" + proofId + "','" + nId + "', function (resp) { alert(JSON.stringify(resp)); });\"> &#8866; </span><br>";
+	s.succ.forEach(function(f) {
+	    res = res + translateFormula(proofId, nId, f) + "<br>";
+	});
+	return res;
+}
+
+function handleFormulaClick(proofId, nId, f) {
+    // TODO user id
+    var userId = 0;
+    var tacticId = 1;
+    ApiClient.runTactic(userId, tacticId, proofId, nId, f, function (resp) {
+        // TODO integrate sequent visualization into AngularJS
+        globalProofTree[0].children.push({ "_id" : resp.tacticInstId, "name" : getTacticName(resp.tacticId), "children" : [] });
+    });
+}
+
+function getTacticName(tacticId) {
+    return "Step";
+}
+</script>

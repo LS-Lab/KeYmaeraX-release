@@ -1,0 +1,15 @@
+<form novalidate class="simple-form" ng-submit="createProof()" ng-controller="ModelProofCreateCtrl">
+    <div class="input-group">
+        <label for="proofName">Proof Name</label>
+        <input type="text" ng-model="proofName" id="proofName" class="form-control" />
+    </div>
+
+    <div class="input-group">
+        <label for="proofDescription">Proof Description</label>
+        <input type="text" ng-model="proofDescription" id="proofDescription" class="form-control" />
+    </div>
+
+    <div class="input-group">
+        <input type="submit" value="Create New Proof" class="form-control" />
+    </div>
+</form>

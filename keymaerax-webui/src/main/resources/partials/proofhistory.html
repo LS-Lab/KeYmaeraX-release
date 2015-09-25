@@ -1,0 +1,11 @@
+<div>
+    <!--<p>{{proofHistory.length}} Steps</p>-->
+    <div class="list-group">
+        <a class="list-group-item" ng-repeat="item in proofHistory.slice((currentProofHistoryPage-1)*proofHistoryPageSize) | orderBy:'index' | limitTo:proofHistoryPageSize" ng-click="fetchNodeInfo(item.dispatched)">
+            <span k4-mathjaxbind="item.tactic.label"></span>
+        </a>
+    </div>
+    <pagination total-items="proofHistory.length" ng-model="currentProofHistoryPage"
+                items-per-page="proofHistoryPageSize" class="pagination-sm" rotate="false"
+                max-size="proofHistoryNumPages"></pagination>
+</div>

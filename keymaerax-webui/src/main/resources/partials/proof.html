@@ -1,0 +1,85 @@
+<div class="row" ng-controller="ProofInfoCtrl">
+    <!-- The style forces the _ _ _ underline to only span the length of the text, not the entire paragraph block width. -->
+    <p class="lead" editable-text="proofName" onbeforesave="saveProofName($data)" style="display:inline-block">
+        {{proofName}}
+    </p>
+</div>
+
+<div class="row" ng-controller="TaskListCtrl">
+    <div class="col-md-5">
+        <tabset justified="true">
+            <tab active="true">
+                <tab-heading>
+                    <i class="fa fa-list-alt"></i> Agenda
+                </tab-heading>
+                <div class="list-group">
+                    <a href="" ng-class="{'list-group-item active k4-overflow-box': selectedTask == task,'list-group-item k4-overflow-box':selectedTask !== task}" ng-repeat="task in agenda" ng-click="setSelected(task)">
+                        <div class="row list-group-item-heading">
+                            <div class="col-md-10"><span>{{task.goalLabel}}</span>
+                            </div>
+                            <div ng-if="defer" class="col-md-2" cg-busy="defer"></div>
+                        </div>
+                            <span class="list-group-item-text k4-nobreak">
+                                <span class="k4-tiny" ng-if="task.proofNode.sequent.ante.length > 0">
+                                    <k4-mathjaxformula formula="task.proofNode.sequent.ante[0].formula" delimiter="inline"></k4-mathjaxformula>
+                                </span>
+                                <span class="k4-tiny" ng-if="task.proofNode.sequent.ante.length > 2">...</span>
+                                <span class="k4-tiny" ng-if="task.proofNode.sequent.ante.length > 1">
+                                    <k4-mathjaxformula formula="task.proofNode.sequent.ante[task.proofNode.sequent.ante.length - 1].formula" delimiter="inline"></k4-mathjaxformula>
+                                </span>
+                                <span>&#8866;</span>
+                                <span class="k4-tiny" ng-if="task.proofNode.sequent.succ.length > 0">
+                                    <k4-mathjaxformula formula="task.proofNode.sequent.succ[0].formula" delimiter="inline"></k4-mathjaxformula>
+                                </span>
+                                <span class="k4-tiny" ng-if="task.proofNode.sequent.succ.length > 2">...</span>
+                                <span class="k4-tiny" ng-if="task.proofNode.sequent.succ.length > 1">
+                                    <k4-mathjaxformula formula="task.proofNode.sequent.succ[task.proofNode.sequent.succ.length - 1].formula" delimiter="inline"></k4-mathjaxformula>
+                                </span>
+                            </span>
+                    </a>
+                </div>
+            </tab>
+            <tab ng-click="fetchHistory()">
+                <tab-heading>
+                    <i class="fa fa-tasks"></i> Overview
+                </tab-heading>
+
+                <div ng-include="'partials/proofhistory.html'"></div>
+            </tab>
+            <!--<tab>-->
+                <!--<tab-heading>-->
+                    <!--<i class="fa fa-sitemap"></i> Proof Tree-->
+                <!--</tab-heading>-->
+                <!--<div ng-include="'partials/nodes-renderer.html'"></div>-->
+            <!--</tab>-->
+        </tabset>
+    </div>
+
+    <div class="col-md-7" id="sequent" ng-if="selectedTask">
+        <h4>{{selectedTask.goalLabel}}</h4>
+        <div class="row">
+            <div class="col-md-1">
+                <!-- reserve space for context menu of sequent -->
+            </div>
+            <div class="col-md-11">
+                <k4-sequent proof-id="proofId" node-id="selectedTask.nodeId" sequent="selectedTask.proofNode.sequent"
+                            read-only="selectedTask.readOnly"></k4-sequent>
+            </div>
+        </div>
+        <div class="row" ng-if="!selectedTask.readOnly">
+            <!-- The combinator language tactic input form -->
+            <form novalidate class="simple-form" ng-submit="execute()" ng-controller="TaskListCtrl">
+                <div class="input-group">
+                    <label for="clTerm">Tactic Combinator Language Term</label>
+                    <textarea ng-model="clTerm" id="clTerm" class="form-control" /></textarea>
+                </div>
+                <div class="input-group">
+                    <input type="submit" value="Run Custom Tactic" class="form-control" />
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <div ng-bind-html="hacmstree" bgcolor="grey"></div>
+</div>

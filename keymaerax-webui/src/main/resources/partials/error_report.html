@@ -1,0 +1,20 @@
+<div class="modal-header" >
+    <h4 class="modal-title">Report this error to <b>bug@keymaerax.org</b> by clicking <kbd>Report</kbd>.</h4>
+    <h5 class="modal-title">Make sure to <font color="red">copy all error information</font> shown below to the email content.</h5>
+</div>
+<div class="modal-body" style="overflow: scroll; height: 200px;">
+    ****************************<br>
+    ERROR REPORT<br>
+    ****************************<br>
+    System configuration<br>
+    <br>
+    <pre>{{kyxConfig}}</pre>
+    ----------------------------<br>
+    Error message<br>
+    <br>
+    <pre>{{errorTrace}}</pre>
+</div>
+<div class="modal-footer">
+    <button class="btn btn-primary"><a href="mailto:bug@keymaerax.org?Subject=KeYmaera X error report" style='color: white;text-decoration: none'>Report</a></button>
+    <button class="btn btn-primary" ng-click="cancel()">Close</button>
+</div>

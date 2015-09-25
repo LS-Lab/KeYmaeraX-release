@@ -1,0 +1,37 @@
+ImplyRight
+& AndLeft & AndLeft & AndLeft & AndLeft & AndLeft & AndLeft
+& Loop("v >= 0 & xm <= x & xr = (xm + S)/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S - xm)/2)^2")
+& onLabel(
+  ("base case", ArithmeticT),
+  ("use case", ImplyRight & ArithmeticT),
+  ("induction step",
+    ImplyRight
+    & Seq
+    & Choice & AndRight && (
+      Seq & Assign & Seq & Assign & Test & ImplyRight
+          & DiffCut("xm_2 <= x_0")
+          & onLabel(
+            ("Use cut",
+              DiffCut("5/4*(x_0-xr_2)^2 + (x_0-xr_2)*v/2 + v^2/4 < ((S - xm_2)/2)^2")
+              & onLabel(
+                ("Use cut", DiffWeaken & ImplyRight & ArithmeticT),
+                ("Show cut", DiffConstify & DiffInvariant)
+              )
+            ),
+            ("Show cut", DiffConstify & DiffInvariant)
+          ),
+      Seq & Assign & Assign
+          & DiffCut("xm_2 <= x_0")
+          & onLabel(
+            ("Use cut",
+              DiffCut("5/4*(x_0-xr_2)^2 + (x_0-xr_2)*v/2 + v^2/4 < ((S - xm_2)/2)^2")
+              & onLabel(
+                ("Use cut", DiffWeaken & ImplyRight & ArithmeticT),
+                ("Show cut", DiffConstify & DiffInvariant)
+              )
+            ),
+            ("Show cut", DiffConstify & DiffInvariant)
+          )
+    )
+  )
+)

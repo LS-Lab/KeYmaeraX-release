@@ -1,0 +1,83 @@
+<h2>Mathematica Configuration</h2>
+
+Your system looks as if you're running Mathematica {{mathematicaConfigSuggestion.version}} on {{mathematicaConfigSuggestion.os}}.
+
+<form ng-controller="MathematicaConfig" name="MathematicaForm">
+    <div class="form-group">
+        <h4 for="linkName">Mathematica Kernel</h4>
+
+        <div>
+        Please configure the path to the Mathematica MathKernel. On your operating system
+            ({{mathematicaConfigSuggestion.os}}), look for an executable file named
+            <code>{{mathematicaConfigSuggestion.kernelName}}</code>.</br>The path for a default
+            installation of Mathematica {{mathematicaConfigSuggestion.version}} is
+            <code>{{mathematicaConfigSuggestion.kernelPath}}{{mathematicaConfigSuggestion.kernelName}}</code>.
+        </div>
+
+        <div class="input-group">
+            <span class="input-group-addon" ng-if="linkName"><i class="fa fa-check"></i></span>
+            <span class="input-group-addon" ng-if="linkName === undefined"><i class="fa fa-wrench"></i></span>
+            <input type="text" name="linkName" id="linkName" class="form-control" ng-model="linkName"/>
+                   <!--placeholder="The default path on {{mathematicaConfigSuggestion.os}} is {{mathematicaConfigSuggestion.kernelPath}}{{mathematicaConfigSuggestion.kernelName}}"/>-->
+            <span class="input-group-btn">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="tooltip"
+                        data-placement="bottom"
+                        aria-expanded="false" ng-click="setDefaultMathKernel()"
+                        title="{{mathematicaConfigSuggestion.kernelPath}}{{mathematicaConfigSuggestion.kernelName}}">
+                    <span ng-if="linkName">Reset to </span><span ng-if="linkName === undefined">Use </span> {{mathematicaConfigSuggestion.os}} Default
+                </button>
+            </span>
+        </div>
+        <div ng-show="MathematicaForm.linkName.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i>
+            <span ng-if="!linkNameIncomplete">
+                This file does not exist on your system:
+                <span>{{linkNameOkPrefix}}</span><span><strong><em>{{linkNameWrong}}</em></strong></span><br/>
+                The segment of the path highlighted in bold-face seems wrong.
+            </span>
+            <span ng-if="linkNameIncomplete">The path exists, but it does not point to {{mathematicaConfigSuggestion.kernelName}}.</span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <h4 for="jlinkLibDir">
+            Mathematica J/Link Native Library
+        </h4>
+
+        <div>
+            Please configure the path to the J/Link native library.
+            On your operating system ({{mathematicaConfigSuggestion.os}}), look for a
+            file named <code>{{mathematicaConfigSuggestion.jlinkName}}</code>.</br>The path for a default installation of
+            Mathematica {{mathematicaConfigSuggestion.version}} is
+            <code>{{mathematicaConfigSuggestion.jlinkPath}}{{mathematicaConfigSuggestion.jlinkName}}</code>.
+        </div>
+
+        <div class="input-group">
+            <span class="input-group-addon" ng-if="jlinkLibPath"><i class="fa fa-check"></i></span>
+            <span class="input-group-addon" ng-if="jlinkLibPath === undefined"><i class="fa fa-wrench"></i></span>
+            <input type="text" name="jlinkLibDir" id="jlinkLibDir" class="form-control" ng-model="jlinkLibPath"/>
+                   <!--placeholder="The default path on {{mathematicaConfigSuggestion.os}} is {{mathematicaConfigSuggestion.jlinkPath}}{{mathematicaConfigSuggestion.jlinkName}}"/>-->
+            <span class="input-group-btn">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="tooltip"
+                        data-placement="bottom"
+                        aria-expanded="false" ng-click="setDefaultJLinkLibPath()"
+                        title="{{mathematicaConfigSuggestion.jlinkPath}}{{mathematicaConfigSuggestion.jlinkName}}">
+                    <span ng-if="jlinkLibPath">Reset to </span><span ng-if="jlinkLibPath === undefined">Use </span> {{mathematicaConfigSuggestion.os}} Default
+                </button>
+            </span>
+        </div>
+        <div ng-show="MathematicaForm.jlinkLibDir.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i>
+            <span ng-if="!jlinkPathIncomplete">
+                This file does not exist on your system:
+                <span>{{jlinkLibPathOkPrefix}}</span><span><strong><em>{{jlinkLibPathWrong}}</em></strong></span><br/>
+                The segment of the path highlighted in bold-face seems wrong.
+            </span>
+            <span ng-if="jlinkPathIncomplete">The path exists, but it does not point to {{mathematicaConfigSuggestion.jlinkName}}.</span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <div class="col-md-3 pull-right">
+        <button ng-click="configureMathematica()" class="form-control btn btn-primary">Save Configuration</button>
+        </div>
+    </div>
+</form>

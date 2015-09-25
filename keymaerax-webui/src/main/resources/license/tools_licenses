@@ -1,0 +1,29 @@
+  Tools                 Licenses
+==================================
+AngularJS               MIT
+angular.treeview        MIT
+angular-dragdrop        MIT
+angular-ui-tree         MIT
+Bootstrap               MIT
+Jasny Bootstrap         Apache v2.0
+D3.js                   BSD 3-Clause
+es5-shim                MIT
+Font Awesome            SIL OFL 1.1 and MIT
+jQuery                  MIT
+jsTree                  MIT
+MathJax                 Apache v2.0
+ngDialog                MIT
+RequireJS               BSD 3-Clause or MIT
+Scala                   BSD 3-Clause
+ScalaTest               Apache v2.0
+Pegdown                 Apache v2.0
+ScalaMock               text [https://github.com/paulbutcher/ScalaMock/blob/master/core/src/main/scala/org/scalamock/package.scala]
+Casbah                  Apache v2.0
+Slick                   Text (BSD-like) [https://github.com/slick/slick/blob/master/LICENSE.txt]
+ScalaQuery              Text (BSD-like) [https://github.com/szeiger/scala-query/blob/master/LICENSE.txt]
+SQLite JDBC             Apache v2.0
+Spray                   Apache v2.0
+JSON Schema Validator   Dual: LGPL v3.0 or Apache v2.0
+Akka                    Apache v2.0
+Z3                      MIT
+Polya                   Apache v2.0

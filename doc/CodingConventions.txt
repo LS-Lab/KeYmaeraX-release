@@ -1,0 +1,37 @@
+KeYmaera X Coding Style
+-----------------------
+Soundness-critical core:
+
+1) Code should be optimized for correctness by a strict "correctness-first" principle.
+
+2) Code should further be optimized for readability and simplicity, making it obvious what it does so that it is easier to check whether it is correct.
+
+3) Pure functional code without mutable data structures and without side effects. Algebraic datatypes via case classes are encouraged as well as value pattern matching such as: val Imply(p,q) = f.
+
+4) Requires preconditions are strictly enforced. Ample use of asserts, assumes, and ensuring postconditions are encouraged. Their string arguments should state the expected positive outcome. Unlike thrown exceptions, whose strings can talk negatively about what failed. No hidden aspects that are crucial to the understanding of the correctness of the local code is acceptable without documentation or local checking via asserts even if that causes redundant checking.
+
+  assert, assume, require, ensuring
+  
+If there is a way of running your code to obtain an incorrect answer or incorrect behavior without a requires contract failing, then your code is wrong. If you detect invalid input by requires contracts, instead, it's the fault of the program calling yours. If your assert or ensures contracts fails, then at least it prevented incorrect output from happpening.
+
+5) The code should follow the principle of least astonishment, not using  surprising or unconventional Scala features in the core. Preferably not making correctness of code depend on the order that match case are placed in, without an explicit comment indicating that.
+
+6) Let's not be dogmatic about the writing part of code. Simplicity and elegance are always preferred over lexical style. Lines that are much longer than 100 characters are discouraged, though, for readability reasons.
+
+7) Brief scaladoc compatible one-line comments /** like this */ are encouraged for documentation purposes except when more lines are needed, in which case
+ /**
+  * Comment styles should
+  * be like this instead.
+  * @param x important thingy
+  * @return whatever we give back
+  */
+  
+8) Type delimiters go short right after the name and return types should be declared (in the core), so
+  def something(x: Int, p: Function): Boolean
+  
+  instead of def something(x : Int, p : Function) : Boolean
+  
+9) For reasons of modularity, abstraction, and documentation, limit accessibility of functions and types to a need-to-know basis. Use the private[this] or private modifier if nobody needs to know/use it. Use protected and/or private[packagename] if private is too restrictive. Only use general public access for parts that are conceptually important interfaces to the rest of the system.
+Remember that test cases declared in the same package get to see private[packagename] and protected functions. And that PrivateMethodTester can be used to test private functions (albeit with some notational overhead).
+
+10) Document your source code and its intended use cases well. Seriously. Including package.scala overviews.

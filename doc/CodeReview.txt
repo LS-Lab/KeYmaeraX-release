@@ -1,0 +1,69 @@
+KeYmaera X Kernel Code Review
+
+1) The primary purpose of the code review is to establish correctness of all soundness-critical parts of the KeYmaera X theorem prover.
+
+2) The secondary purpose of the review is to identify whether there are better ways of implementing the system, but precedence will be given to point 1). Those improvements will not be performed during the code review but noted for later in a separate todo file.
+
+During the KeYmaera X Kernel Code Review, the whole source code will be reviewed for correctness and compliance with the theoretical results. We follow the principle of Cartesian Doubt and scrutinize the code until everybody present is convinced that the code is correct. The code review cannot proceed to other parts of the code until everybody has established its correctness. If anyone present during a kernel code review has any doubt about any part of the code, pertaining to its correctness, the code review cannot move on until the doubt has been settled or a flag such as 
+
+ //@todo Code Review postponed
+
+has been placed along with an explanation. The code review will only proceed successfully if everybody present clearly and independently stated that he is convinced that the code is correct.
+
+Please don't hesitate at all if some part of the code is unclear to you. It is the purpose of the code review to clarify what the KeYmaera X Kernel does and whether it is correctly doing what it should be doing. Parts of confusion about the code are likely sources of trouble. So it is crucial for the KeYmaera X project to point out possible sources of deficiencies or ambiguities.
+
+KeYmaera X Kernel Code Review
+
+R1) Expression.scala for correctness and compliance with section 2.1 [1]
+R2) StaticSemantics.scala for correctness and compliance with section 2.3 [1]
+R3) UniformSubstitution.scala for correctness and compliance with section 3.0 [1]
+R4) UniformRenaming for correctness
+R5) Proof.scala for correctness and compliance with [1,2]
+R6) AxiomBase.scala for correctness and compliance with Fig 2+3 [1,3]
+R7) SetLattice.scala for correctness
+    including a glance at Errors.scala
+R8) QETool.scala for correctness
+R9) LemmaDB.scala + FileLemmaDB.scala for correctness
+
+If you are convinced of the correct implementation of the KeYmaera X Kernel you will indicate so by signing the same commit with your secret gpg key to which only you have access. We will also be placing a tag to clearly mark the reviewed version of the code.
+
+Changes to the KeYmaera X Kernel will have to be reviewed periodically in similar ways.
+
+If there are any questions about the KeYmaera X Kernel code review or any suggestions on how it could be improved, please ask.
+
+Extended Code Review:
+In addition to the above files, an extended code review also considers
+R9) PrettyPrinter.scala, KeYmaeraXPrettyPrinter.scala, OpSpec.scala
+R10) tools package: Tool*.scala, Mathematica*.scala, KeYmaera*.scala, SMT*.scala etc.
+
+Andre
+
+[1] André Platzer. 
+A uniform substitution calculus for differential dynamic logic.
+In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015.
+Extended version arXiv http://arxiv.org/abs/1503.01981
+
+[2] André Platzer. 
+Differential dynamic logic for hybrid systems. 
+Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
+http://www.cs.cmu.edu/~aplatzer/pub/freedL.pdf
+
+[3] André Platzer. 
+Differential game logic. 
+ACM Trans. Comput. Log.
+http://arxiv.org/abs/1408.1980
+
+------------------------------------------------------------------
+Extended Code Review: KeYmaera X Core: 2015-08-25
+  TODO Rule.LAX_MODE=false, which affects BoundVariableRenaming and URename and RCF trusted tools
+  TODO FileLemmaDB.scala: move out of core
+  TODO Proof.scala: occasionally determine whether ClosingRule etc categorization is useful
+  TODO SMTConversions.scala: resolve issues
+Code Review: KeYmaera X Core: 2015-08-24
+  TODO Proof.scala: BoundVariableRenaming.compatibilityMode should be false
+  TODO Proof.scala: UniformRenaming.semanticRenaming should be false
+  TODO FileLemmaDB.scala: move out of core
+  TODO Proof.scala: occasionally determine whether ClosingRule etc categorization is useful
+Code Review: KeYmaera X Core: 2015-05-01
+  TODO Proof.scala: BoundVariableRenaming.compatibilityMode should be false
+  TODO AxiomBase.scala: Code Review confirms that DE needs ? not to have a '.

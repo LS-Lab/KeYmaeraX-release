@@ -1,0 +1,57 @@
+<h1>Your Proofs</h1>
+<div class="panel panel-default">
+    <!-- Default panel contents -->
+    <div class="panel-heading">Proofs for User</div>
+
+    <!-- Table -->
+    <table class="table table-hover">
+        <thead>
+        <tr>
+            <td>ID</td>
+            <td>Name</td>
+            <!--<td>Model Name</td>-->
+            <td>Date</td>
+            <!--<td>Proof Steps</td>-->
+            <td>Status</td>
+            <td>Actions</td>
+        </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="proof in allproofs | orderBy:'name'">
+            <td>{{ proof.id }}</td>
+            <td>{{ proof.name }}</td>
+            <!--<td>{{ proof.modelName }}</td>-->
+            <td>{{ proof.date }}</td>
+            <!--<td>{{ proof.stepCount }}</td>-->
+            <td><span ng-if="proof.status" class="fa fa-check"></span>
+                <span ng-if="proof.status"> Proved</span>
+                <span ng-if="proof.status === false" class="fa fa-pencil"></span>
+                <span ng-if="proof.status === false"> In Progress</span>
+            </td>
+            <td class="input-btn-group">
+                <a ng-if="proof.loadStatus === 'loaded'" class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="fa fa-folder-open"></span> Open</a>
+                <a ng-if="proof.loadStatus === 'notloaded'" class="btn btn-default" ng-href="" ng-click="loadProof(proof)"><span class="fa fa-refresh"></span> Load</a>
+                <a ng-if="proof.loadStatus === 'loading'" class="btn btn-default btn-disabled"><i class="fa fa-circle-o-notch fa-spin"></i> Reproving...</a>
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li>
+                        <a ng-if="proof.loadStatus === 'loaded'" class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="fa fa-folder-open"></span> Open</a>
+                        <a ng-if="proof.loadStatus === 'notloaded'" class="btn btn-default" ng-href="" ng-click="loadProof(proof)"><span class="fa fa-refresh"></span> Load</a>
+                        <a ng-if="proof.loadStatus === 'loading'" class="btn btn-default btn-disabled"><i class="fa fa-circle-o-notch fa-spin"></i> Reproving...</a>
+                    </li>
+                    <!-- these are unimplemented. <li><a href="#">Download (BROKEN)</a></li>
+                    <li><a href="#">Delete</a></li>-->
+                </ul>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- KeYmaera API
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="js/api.js"></script>

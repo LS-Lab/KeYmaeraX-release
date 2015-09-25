@@ -1,0 +1,2 @@
+These files are part of the KeYmaera X Prover.
+Copyright (c) Carnegie Mellon University, 2014-2015. Developed by Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp, and Andre Platzer.
