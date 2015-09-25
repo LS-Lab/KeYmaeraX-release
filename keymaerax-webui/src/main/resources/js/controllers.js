@@ -66,7 +66,7 @@ keymaeraProofControllers.controller('MathematicaConfig',
 
     $http.get("/config/mathematica")
       .success(function(data) {
-          if(data.errorThrown) showCaughtErrorMessage($modal, data, "Failed to retreive the server's current Mathematica configuration")
+          if(data.errorThrown) showCaughtErrorMessage($modal, data, "Failed to retrieve the server's current Mathematica configuration")
           else {
               if (data.linkName !== "" && data.jlinkLibPath !== "") {
                   $scope.linkName = data.linkName;
@@ -82,7 +82,7 @@ keymaeraProofControllers.controller('MathematicaConfig',
           }
       })
       .error(function() {
-          showErrorMessage($modal, "Failed to retreive the server's current Mathematica configuration.")
+          showErrorMessage($modal, "Failed to retrieve the server's current Mathematica configuration.")
       });
 
     $scope.configureMathematica = function() {
@@ -469,7 +469,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
 
     $http.get("/keymaeraXVersion")
         .success(function(data) {
-            if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not get the serv'ers KeYmaera X version")
+            if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not get the server's KeYmaera X version")
             else  $scope.keymaeraXVersion = data.keymaeraXVersion
         })
         .error(function() {
@@ -480,7 +480,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
     $scope.mathematicaIsConfigured = true;
     $http.get("/config/mathematicaStatus")
         .success(function(data) {
-            if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not retreive Mathematica status")
+            if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not retrieve Mathematica status")
             else
                 $scope.mathematicaIsConfigured = data.configured;
         })
@@ -492,7 +492,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
 
     $http.get('/users/' + $cookies.userId + '/dashinfo')
         .success(function(data) {
-            if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not retreive dashboard info for user " + $cookies.userId)
+            if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not retrieve dashboard info for user " + $cookies.userId)
             else {
                 $scope.open_proof_count = data.open_proof_count;
                  $scope.all_models_count = data.all_models_count;
