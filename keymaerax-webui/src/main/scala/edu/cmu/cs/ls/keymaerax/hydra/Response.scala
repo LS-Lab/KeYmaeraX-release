@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 /**
