@@ -13,5 +13,4 @@ class MathematicaComputationAbortedException(e:com.wolfram.jlink.Expr)
   extends ConversionException(e.toString)
 
 class SMTConversionException(s:String) extends ConversionException(s)
-class CounterExampleException(s:String) extends Exception(s)
 class NoCountExException(s:String) extends Exception(s)

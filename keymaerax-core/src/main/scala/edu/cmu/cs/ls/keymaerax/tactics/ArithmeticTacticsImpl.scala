@@ -21,7 +21,7 @@ import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT,cohideT,kModalModu
 import SearchTacticsImpl.{lastAnte,lastSucc,locateAnte,locateSucc,onBranch}
 import AxiomaticRuleTactics.goedelT
 import TacticLibrary.TacticHelper.{getFormula, getTerm}
-import edu.cmu.cs.ls.keymaerax.tools.{NoCountExException, CounterExampleException, Mathematica, Tool}
+import edu.cmu.cs.ls.keymaerax.tools.{NoCountExException, Mathematica, Tool}
 
 import scala.collection.immutable
 import scala.collection.immutable.List
