@@ -111,10 +111,9 @@ class CounterExampleRequest(db : DBAbstraction, userId : String, proofId : Strin
       case Some(node) => node
       case None => throw new IllegalStateException("No proofNode for " + nodeId + " in proof " + proofId)
     }
-    val f = node.sequent.succ.head
-    var mathematica = new Mathematica
+    val mathematica = new Mathematica
     mathematica.init(db.getConfiguration("mathematica").config)
-    val cntEx = ArithmeticTacticsImpl.showCounterExample(mathematica, f)
+    val cntEx = ArithmeticTacticsImpl.showCounterExample(mathematica, node)
     mathematica.shutdown()
     new CounterExampleResponse(cntEx) :: Nil
   }
