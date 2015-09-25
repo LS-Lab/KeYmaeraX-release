@@ -71,8 +71,10 @@ class Z3Solver extends SMTSolver {
       // Copy file to temporary directory
       z3Dest.getChannel.transferFrom(z3Source, 0, Long.MaxValue)
       val z3AbsPath = z3Temp.getAbsolutePath
-      //@todo what's with Windows?
-      Runtime.getRuntime.exec("chmod u+x " + z3AbsPath)
+      val permissionCmd =
+        if(osName.contains("windows")) "icacls " + z3AbsPath + " /e /p Everyone:F"
+        else "chmod u+x " + z3AbsPath
+      Runtime.getRuntime.exec(permissionCmd)
       z3Source.close()
       z3Dest.close()
       assert(new File(z3AbsPath).exists())
