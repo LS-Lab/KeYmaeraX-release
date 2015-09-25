@@ -14,7 +14,7 @@ trait ModelPlexTrait extends ((List[Variable], Symbol) => (Formula => Formula)) 
   def controllerMonitorByChase: PositionTactic
   def modelplexSequentStyle: PositionTactic
   def modelplexAxiomaticStyle(useOptOne: Boolean)(unprog: Boolean => PositionTactic): PositionTactic
-  def controllerMonitorT(useOptOne: Boolean)
+  def controllerMonitorT(useOptOne: Boolean): PositionTactic
   def modelMonitorT(useOptOne: Boolean): PositionTactic
   def diamondDiffSolve2DT: PositionTactic
   def diamondTestRetainConditionT: PositionTactic

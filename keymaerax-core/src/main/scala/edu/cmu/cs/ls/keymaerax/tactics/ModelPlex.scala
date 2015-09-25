@@ -4,24 +4,9 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal, TraverseToPosition}
-import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.localQuantifierElimination
-import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, Tactic, PositionTactic}
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl._
-import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
-import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
-import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.diffIntroduceConstantT
-import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{onBranch,locateAnte,locateSucc}
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT,cutT,hideT}
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.isFormula
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{NilT,NilPT}
-import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
-import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.tools.Tool
-import scala.collection.immutable
-import scala.compat.Platform
+import edu.cmu.cs.ls.keymaerax.core.{Variable, Term, Formula}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.PositionTactic
+
 import scala.language.postfixOps
 
 /**
@@ -33,6 +18,11 @@ import scala.language.postfixOps
 In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014, Toronto, ON, Canada, September 22-25, 2014. Proceedings, volume 8734 of LNCS, pages 199-214. Springer, 2014."
  */
 object ModelPlex extends ModelPlexTrait {
+  class ProprietaryCodeException()
+    extends Exception("This code is proprietary and is not shipped with the GPL'd portion of KeYnmaera X. Please email the KeYmaera X developers for more information about ModelPlex")
+
+  def ??? = throw new ProprietaryCodeException()
+
   override def apply(formula: Formula, kind: Symbol, checkProvable: Boolean): Formula = ???
 
   override def optimizationOneWithSearch: PositionTactic = ???
@@ -41,7 +31,7 @@ object ModelPlex extends ModelPlexTrait {
 
   override def modelplexSequentStyle: PositionTactic = ???
 
-  override def controllerMonitorT(useOptOne: Boolean): Unit = ???
+  override def controllerMonitorT(useOptOne: Boolean): PositionTactic = ???
 
   override def optimizationOne(inst: Option[(Variable, Term)]): PositionTactic = ???
 
