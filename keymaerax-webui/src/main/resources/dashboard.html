@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="keymaeraProofApp">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>KeYmaera X</title>
+
+    <script src="js/ui.js"> </script>
+
+    <!-- MathJax
+    ================================================== -->
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config(
+        {tex2jax: {inlineMath: [['\\(','\\)']]}},
+        {TeX: { extensions: ["AMSmath.js", "AMSsymbols.js"] }},
+        {"HTML-CSS": { linebreaks: { automatic: true } }},
+        {SVG: { linebreaks: { automatic: true } }}
+      );
+    </script>
+    <script type="text/javascript"
+            src="js/MathJax/MathJax.js?config=TeX-AMS_HTML">
+    </script>
+
+
+    <!-- Bootstrap core CSS -->
+    <link href="/css/bootstrap.css" rel="stylesheet" type="text/css">
+    <link href="/css/angular-busy.min.css" rel="stylesheet" type="text/css">
+    <link href="/css/jasny-bootstrap.min.css" rel="stylesheet" type="text/css">
+    <link href="/css/angular-ui-tree.min.css" rel="stylesheet" type="text/css">
+    <link href="/css/angular.treeview.css" rel="stylesheet" type="text/css">
+    <link href="/css/angular-ui-tree.min.css" rel="stylesheet" type="text/css">
+    <link href="/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <link href="/css/xeditable.css" rel="stylesheet" type="text/css">
+
+    <!-- Custom styles for this template -->
+    <link href="css/app.css" rel="stylesheet" type="text/css">
+    <link href="css/sticky-footer-navbar.css" rel="stylesheet" type="text/css">
+
+
+    <!-- plugins -->
+
+</head>
+
+<body ng-controller="DashboardCtrl">
+
+<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="index_bootstrap.html">KeYmaera X</a>
+        </div>
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav nav-pills">
+                <li ng-class="{active: theview == 'dashboard'}"><a href="dashboard.html?#/dashboard">Dashboard</a></li>
+                <li ng-class="{active: theview == 'models'}"><a href="dashboard.html?#/models">Models</a></li>
+                <!--<li><a href="#">Lemmas</a></li>-->
+                <!-- TODO nav pill shows how many updates where made to proofs since last logged in. Currently, it shows the number of OPEN proofs! -->
+                <li ng-model="open_proofs" ><a href="dashboard.html?#/proofs"><span class="badge pull-right">{{ open_proof_count }}</span> Proofs</a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                <!--<li><a href="#">Profile</a></li>-->
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Help <span class="caret"></span></a>
+                    <ul class="dropdown-menu" role="menu">
+                        <!--<li><a href="#">Examples</a></li>-->
+                        <li><a href="dashboard.html?#/tutorials">Tutorials</a></li>
+                        <li><a href="dashboard.html?#/usage">Using KeYmaera</a></li>
+                        <li><a href="dashboard.html#/mathematica">Mathematica Configuration</a></li>
+                        <li><a href="dashboard.html#/license">License</a></li>
+                        <!--<li><a href="#">Videos</a></li>-->
+                        <li class="divider"></li>
+                        <li><a href="dashboard.html?#/syntax">Hybrid Program Syntax and Semantics</a></li>
+                        <!--<li class="divider"></li>-->
+                        <!--<li><a href="#">Hybrid Program Semantics</a></li>-->
+                        <!--<li class="divider"></li>-->
+                        <!--<li><a href="dashboard.html?#/dev">Developer Actions</a></li>-->
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a ng-click="shutdown()" ng-show="isLocal"/><!--class="dropdown-toggle" data-toggle="dropdown"--><i class="fa fa-power-off"></i></a>
+                    <!--<ul class="dropdown-menu" role="menu">-->
+                        <!--<li><a  ng-controller="DashboardCtrl">Shutdown KeYmaera X</a></li>-->
+                    <!--</ul>-->
+                </li>
+            </ul>
+        </div><!--/.navbar-collapse -->
+    </div>
+</div>
+
+<div class="container">
+    <div class="alert alert-warning"  role="alert" ng-show="!mathematicaIsConfigured" id="mathematicaConfigurationAlert">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <b><i class="fa fa-exclamation-triangle"></i> Warning:</b> Mathematica is not configured.
+        Most problems <b>will not be proved</b> and all the existing proofs that use Mathematica <b>will not be reloaded</b>. <a href="dashboard.html#/mathematica"><b>Configure now.</b></a>
+    </div>
+</div>
+
+<div class="container" ng-view></div>
+
+<div class="footer">
+    <div class="container">
+        <p class="text-muted">KeYmaera X version {{keymaeraXVersion}}. &copy; <a href="http://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a>, Carnegie Mellon University 2015</p>
+    </div>
+</div>
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery-ui.min.js"></script>
+<script src="/js/bootstrap/bootstrap.js"></script>
+<script src="/js/jasny-bootstrap.min.js"></script>
+<script src="/js/angular.min.js"></script>
+<script src="/js/angular-sanitize.js"></script>
+<script src="/js/angular-cookies.js"></script>
+<script src="/js/angular-route.js"></script>
+<script src="/js/angular-busy.min.js"></script>
+<script src="/js/angular.treeview.js"></script>
+<script src="/js/angular-dragdrop.min.js"></script>
+<script src="/js/xeditable.min.js"></script> <!-- for inline editing -->
+<script src="/js/ui-bootstrap-tpls.min.js" ></script> 
+<script type="text/javascript" src="/js/angular-ui-tree.js"></script>_
+<script src="/js/app.js"></script>
+<script src="/js/controllers.js"></script>
+
+<!-- KeYmaera UI
+================================================== -->
+<script src="js/keymaera-ui/progress-meter.js"></script>
+<script src="js/keymaera-ui/proof-progress-chart.js"></script>
+<script src="js/keymaera-ui/formula.js"></script>
+<script src="js/keymaera-ui/mathjaxbind.js"></script>
+<script src="js/keymaera-ui/mathjaxformula.js"></script>
+<script src="js/keymaera-ui/sequent.js"></script>
+
+<!-- KeYmaera API -- this is deprecated.
+================================================== -->
+
+<script src="js/api.js"></script>
+</body>
+</html>

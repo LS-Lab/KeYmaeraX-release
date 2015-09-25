@@ -1,0 +1,19 @@
+ImplyRight
+& AndLeft & AndLeft & AndLeft & AndLeft
+& Loop("v >= 0 & x+v^2/(2*B) <= S")
+& onLabel(
+  ("base case", ArithmeticT),
+  ("use case", ImplyRight & ArithmeticT),
+  ("induction step",
+    ImplyRight
+    & Seq
+    & Choice & AndRight && (
+      Seq & Test & ImplyRight & Seq & NDetAssign & ForallRight & Test & ImplyRight & Seq
+          & Assign & ODESolve & ImplyRight & ArithmeticT,
+      Choice & AndRight && (
+        Seq & Test & ImplyRight & Assign & Seq & Assign & ODESolve & ImplyRight & ArithmeticT,
+        Assign & Seq & Assign & ODESolve & ImplyRight & ArithmeticT
+      )
+    )
+  )
+)

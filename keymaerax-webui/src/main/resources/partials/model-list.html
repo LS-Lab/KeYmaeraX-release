@@ -1,0 +1,80 @@
+<div class="panel panel-default">
+    <!-- Default panel contents -->
+    <div class="panel-heading">Your Models</div>
+    <div class="panel-body">
+        <div class="row">
+            <!--
+            <div class="col-md-6">
+                <p>Upload new models to KeYmaera</p>
+            </div>
+            -->
+            <div class="col-md-6">
+
+                <!-- TODO https://github.com/blueimp/jQuery-File-Upload/wiki/Basic-plugin -->
+                <form ng-controller="ModelUploadCtrl">
+                    <div class="input-group">
+                        <label for="modelName">Model Name</label>
+                        <input type="text" ng-model="modelName" class="form-control" name="modelName" id="modelName" placeholder="Model Name"/>
+                    </div>
+                    <label for="keyFile">File</label>
+                    <div class="fileinput fileinput-new input-group" data-provides="fileinput">
+
+                        <div class="form-control" data-trigger="fileinput">
+                            <i class="glyphicon glyphicon-file fileinput-exists" />
+                            <span class="fileinput-filename" />
+                        </div>
+                        <span class="input-group-addon btn btn-default btn-file">
+                            <span class="fileinput-new">Select file</span>
+                            <span class="fileinput-exists">Change</span>
+                            <input type="file" name="source" id="keyFile" class="form-control" ng-model="keyFile" />
+                        </span>
+                        <a class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
+                        <!-- TODO check that model name is not empty -->
+                        <a class="input-group-addon btn btn-default fileinput-exists" ng-click="addModel()" id="uploadbtn">Upload</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <table class="table table-hover" id="ModelList" ng-controller="ModelListCtrl">
+        <thead>
+        <tr>
+            <td>ID</td>
+            <td>Name</td>
+            <td>Description</td>
+            <td>Tactic</td>
+            <td>Actions</td>
+        </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="model in models | orderBy:'name'">
+            <td>{{ model.id.substring(0,5) + ".." + model.id.substring(model.id.length-5) }}</td>
+            <td><a href="" ng-click="open(model.id)">{{ model.name }}</a></td>
+            <td><a href="{{model.pubLink}}">{{model.title}}</a></td>
+            <td><a href="" ng-if="model.hasTactic" ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></a></td>
+            <td class="input-group-btn" ng-model="model">
+                <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show Proofs</a>
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu" role="menu" ng-model="model">
+                    <li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show Proofs</a></li>
+                    <li><a ng-controller="ModelProofCreateCtrl" ng-click="createDefaultProofForModel(model.id)">Start new proof</a></li>
+                    <!--<li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs/create">Start new proof</a></li>-->
+                    <!--<li ng-if="model.tactic != ''"><a ng-click="runPreloadedProof(model)" ng-controller="ModelUploadCtrl">Prove with tactic</a></li>-->
+                </ul>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+
+</div>
+
+<!-- File input
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="js/fileinput.js"></script>

@@ -1,0 +1,276 @@
+<div class="row" ng-controller="ProofTreeCtrl">
+    <div class="col-md-4">
+        <div class="row">
+            <div class="col-md-10">
+                 <p>Tree</p>
+                 <div treecontrol class="tree-light"
+                      tree-model="proofTree"
+                      options="proofTreeOpts"
+                      on-selection="showSelected(node)"
+                      on-node-toggle="showToggle(node, expanded)"
+                      selected-node="selectedNode">
+                     {{node.name}} ({{node._id}})
+                 </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-10" ng-controller="TabCtrl">
+                <p>Program Position</p>
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs" role="tablist" id="programPosTab">
+                    <li class="active"><a data-target="#statechart" role="tab" data-toggle="tab">Statechart</a></li>
+                    <li><a data-target="#hybridprogram" role="tab" data-toggle="tab">Hybrid Program</a></li>
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <div class="tab-pane active" id="statechart" ng-controller="StateChartCtrl"></div>
+                    <div class="tab-pane" id="hybridprogram">
+                        <!-- TODO hybrid program syntax highlighting and auto-formatting -->
+                        <pre>
+                           a := *;
+                           (?a > 0; <span style="background-color: lightgray">t := 0</span>)
+                           ++ (b := 3; ?a + b < x)
+                           ++ (b := 5)
+                           ++ (?x > 2; b := 7);
+                           {x' = v, v' = a}
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-10">
+                <p>Proof Progress</p>
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs" role="tablist" id="proofProgressTab">
+                    <li class="active"><a data-target="#currentAltProgress" role="tab" data-toggle="tab">Branch</a></li>
+                    <li><a data-target="#allAltsProgress" role="tab" data-toggle="tab">All</a></li>
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <!--<div class="tab-pane active" id="currentAltProgress" ng-controller="ProofProgressCtrl"></div>-->
+                    <k4-proof-progress-chart on-seq-click="togglePopover(event)" ng-controller="ProofProgressChartCtrl"></k4-proof-progress-chart>
+                    <div class="tab-pane" id="allAltsProgress">
+                        <table class="table k4-progress-table">
+                            <tr>
+                                <th></th>
+                                <th>[*]</th>
+                                <th>[:=]</th>
+                                <th>[++]</th>
+                                <th>[?]</th>
+                                <th>[:=]</th>
+                            </tr>
+                            <tr>
+                                <td>Current</td>
+                                <td><k4-progress-meter progress="2" total="3" width="25" height="25"></k4-progress-meter></td>
+                                <td><k4-progress-meter progress="1" total="1" width="25" height="25"></k4-progress-meter></td>
+                                <td><k4-progress-meter progress="0" total="4" width="25" height="25"></k4-progress-meter></td>
+                                <td><k4-progress-meter progress="1" total="1" width="25" height="25"></k4-progress-meter></td>
+                                <td><k4-progress-meter progress="0" total="1" width="25" height="25"></k4-progress-meter></td>
+                            </tr>
+                            <tr>
+                                <td>Alternative 1</td>
+                                <td><k4-progress-meter progress="130" total="167" width="40" height="40"></k4-progress-meter></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Alternative 2</td>
+                                <td><k4-progress-meter progress="24" total="1380" width="50" height="50"></k4-progress-meter></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        </table>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6" id="sequent">
+        <k4-sequent proofId="proofId" nId="selectedNode._id" sequent="selectedNode.sequent" />
+    </div>
+</div>
+
+<!-- Tabs
+================================================== -->
+<script>
+function TabCtrl($scope) {
+  $('#programPosTab a[data-target="#statechart"]').click(function (e) {
+      e.preventDefault()
+      $(this).tab('show')
+  });
+  $('#programPosTab a[data-target="#hybridprogram"]').click(function (e) {
+      e.preventDefault()
+      $(this).tab('show')
+  });
+}
+</script>
+
+<!-- Proof tree controller
+================================================== -->
+<script save-content="proof-tree-ctrl-js">
+    function ProofTreeCtrl($scope) {
+        $scope.showSelected = function(node) {
+            $scope.selectedNode = node;
+            var seq = $("#sequent");
+            seq.html(translateSequent($scope.proofId, node._id, node.sequent));
+        };
+        $scope.showToggle = function(node, expanded) {
+
+        };
+        $scope.proofTreeOpts = {
+            nodeChildren: "children",
+            dirSelectable: false,
+            injectClasses: {
+                ul: "a1",
+                li: "a2",
+                iExpanded: "a3",
+                iCollapsed: "a4",
+                iLeaf: "a5",
+                label: "a6"
+            }
+        };
+    }
+</script>
+
+<!-- State chart control
+================================================== -->
+<script src="js/d3/d3.min.js"></script>
+
+<style>
+
+    .node {
+    stroke: #fff;
+    fill: Gray;
+    stroke-width: 1.5px;
+    }
+
+    .currentnode {
+    stroke: #fff;
+    fill: #000;
+    stroke-width: 1.5px;
+    }
+
+    .futurenode {
+    stroke: #000;
+    fill: #fff;
+    stroke-width: 1.5px;
+    }
+
+    .othernode {
+    stroke: #999;
+    fill: #fff;
+    stroke-opacity: .6;
+    stroke-width: 1.5px;
+    }
+
+    .link {
+    stroke: #999;
+    stroke-opacity: .6;
+    }
+
+    .inactivelink {
+    stroke: #999;
+    stroke-dasharray: 5,5;
+    stroke-opacity: .6;
+    }
+
+</style>
+
+<script>
+function StateChartCtrl($scope) {
+    var color = d3.scale.category20();
+
+    var width = 230,
+        height = 60;
+
+    var force = d3.layout.force()
+        .charge(-50)
+        .linkDistance(10)
+        .gravity(0)
+        .size([width, height]);
+
+    var svg = d3.select("#statechart").append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    d3.json("examples/model1graph.json", function(error, graph) {
+      force
+          .nodes(graph.nodes)
+          .links(graph.links)
+          .start();
+
+      var link = svg.selectAll(".link")
+          .data(graph.links)
+        .enter().append("line")
+          .attr("class", function(d) { return d.class; })
+          .style("stroke-width", function(d) { return Math.sqrt(d.value); });
+
+      var node = svg.selectAll(".node")
+          .data(graph.nodes)
+        .enter().append("circle")
+          .attr("class", function(d) { return d.class; })
+          .attr("r", function(d) { if (d.group == 1 || d.group == 3) return 3; else return 6; } )
+          //.style("fill", function(d) { return color(d.group); })
+          .call(force.drag);
+
+      node.append("title")
+          .text(function(d) { return d.name; });
+
+      force.on("tick", function() {
+        link.attr("x1", function(d) { return d.source.x; })
+            .attr("y1", function(d) { return d.source.y; })
+            .attr("x2", function(d) { return d.target.x; })
+            .attr("y2", function(d) { return d.target.y; });
+
+        node.attr("cx", function(d) { return d.x; })
+            .attr("cy", function(d) { return d.y; });
+      });
+    });
+}
+</script>
+
+<!-- Proof progress control
+================================================== -->
+<script>
+function ProofProgressChartCtrl($scope) {
+    // TODO toggle popover from event created by proof progress chart
+    $scope.togglePopover = function(event) {
+        $scope.$apply(function() {
+            // called, but somehow popover is not shown
+            alert($(this));
+            $(this).popover({
+                title: "Background Progress",
+                placement: 'auto top',
+                container: 'body',
+                trigger: 'manual',
+                html : true,
+                content: function() { return $('#popover_content_wrapper').html(); }
+            });
+            $(this).popover('toggle');
+        });
+    }
+}
+</script>
+
+<!-- Background progress popup
+================================================== -->
+<link href="css/keymaera-ui/progress-meter.css" rel="stylesheet" type="text/css">
+<!-- TODO must later be generated from JavaScript -->
+<div class="hidden" id="popover_content_wrapper">
+    <div class="row">
+        <div class="col-md-3"><k4-progress-meter progress="1" total="3"></k4-progress-meter></div>
+        <div class="col-md-2">37:14</div>
+        <div class="col-md-2">[QE]</div>
+        <div class="col-md-1 glyphicon glyphicon-pause"></div>
+        <div class="col-md-1 glyphicon glyphicon-stop"></div>
+        <div class="col-md-1 glyphicon glyphicon-refresh"></div>
+    </div>
+</div>

@@ -1,0 +1,296 @@
+PRAGMA foreign_keys=OFF;
+BEGIN TRANSACTION;
+CREATE TABLE "models" ("modelId" VARCHAR(254) PRIMARY KEY,"userId" VARCHAR(254),"name" VARCHAR(254),"date" VARCHAR(254),"description" VARCHAR(254),"fileContents" VARCHAR(254),"publink" VARCHAR(254),"title" VARCHAR(254),"tactic" VARCHAR(254),constraint "users_FK_1" foreign key("userId") references "users"("email") on update NO ACTION on delete NO ACTION);
+INSERT INTO "models" VALUES('f9445278-b495-42db-bcc4-2c78c1552e62','guest','STTT Tutorial Example 1','Fri Apr 17 08:51:33 EDT 2015','A simple system in which a car starts at some nonnegative velocity and accelerates at a constant rate along a straight lane. The requirement we want to prove is that the car never travels backward in space.','
+Functions.
+  R A().
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+End.
+
+Problem.
+    v >= 0 & A() > 0 -> [ x'' = v, v'' = A(); ] v >= 0
+End.','http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=7','Uncontrolled continuous car','
+ImplyRight & ODESolve & ImplyRight & ArithmeticT');
+INSERT INTO "models" VALUES('a0b97186-927d-4ae8-a41d-e32961fd47c1','guest','STTT Tutorial Example 2','Fri Apr 17 08:51:33 EDT 2015','A hybrid system model of a car with discrete control choices: accelerate, stay stopped, or brake. The requirement to prove is that the car never travels backwards in space.','
+Functions.
+  R A.
+  R B.
+  R a().
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+End.
+
+Problem.
+    v >= 0 & A > 0 & B > 0
+ -> [
+      { {a := A ++ a := 0 ++ a := -B}; /* needed because we neither support a() := nor v''=a */ ?a()=a;
+        x'' = v, v'' = a() & v >= 0;
+      }*@invariant(v >= 0)
+    ] v >= 0
+End.','http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=8','Simple hybrid car','
+ImplyRight
+& Loop("v >= 0")
+& onLabel(
+  ("Invariant Initially Valid", ArithmeticT),
+  ("Use case", ArithmeticT),
+  ("Induction Step",
+    ImplyRight
+    & Seq
+    & Choice & AndRight && (
+      Assign & Seq & Test & ImplyRight & ODESolve & ImplyRight & ArithmeticT,
+      Choice & AndRight && (
+        Assign & Seq & Test & ImplyRight & ODESolve & ImplyRight & ArithmeticT,
+        Assign & Seq & Test & ImplyRight & ODESolve & ImplyRight & ArithmeticT
+      )
+    )
+  )
+)');
+INSERT INTO "models" VALUES('686bb20d-63b0-4322-94c4-912156eebf6a','guest','STTT Tutorial Example 5','Fri Apr 17 08:51:33 EDT 2015','A hybrid car model where the controller runs periodically at some maximum time interval between executions. The requirement to prove is that the car never runs the stop sign.','
+Functions.
+  R A.
+  R B.
+  R S.
+  R ep.
+  R a().
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+  R c.
+End.
+
+Problem.
+    v >= 0 & A > 0 & B > 0 & x+v^2/(2*B) <= S & ep > 0
+ -> [
+      { {   ?x+v^2/(2*B) + (A/B+1)*(A/2*ep^2+ep*v) <= S; a := A
+         ++ ?v=0; a := 0
+         ++ a := -B
+        };
+
+        ?a()=a; /* needed because we neither support a() := nor v''=a */
+        c := 0;
+        x'' = v, v'' = a(), c'' = 1 & v >= 0 & c <= ep;
+      }*@invariant(v >= 0 & x+v^2/(2*B) <= S)
+    ] x <= S
+End.','http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=13','Time-triggered car control','
+ImplyRight
+& AndLeft & AndLeft & AndLeft & AndLeft
+& Loop("v >= 0 & x+v^2/(2*B) <= S")
+& onLabel(
+  ("Invariant Initially Valid", ArithmeticT),
+  ("Use case", ArithmeticT),
+  ("Induction Step",
+    ImplyRight
+    & Seq
+    & Choice & AndRight && (
+      Seq & Test & ImplyRight & Assign & Seq & Test & ImplyRight & Seq & Assign & ODESolve & ImplyRight & ArithmeticT,
+      Choice & AndRight && (
+        Seq & Test & ImplyRight & Assign & Seq & Test & ImplyRight & Seq & Assign & ODESolve & ImplyRight & ArithmeticT,
+        Assign & Seq & Test & ImplyRight & Seq & Assign & ODESolve & ImplyRight & ArithmeticT
+      )
+    )
+  )
+)');
+INSERT INTO "models" VALUES('1ea15475-9ff8-407f-ac00-8ff07a413e2f','guest','STTT Tutorial Example 6','Fri Apr 17 08:51:33 EDT 2015','A hybrid car model where the controller can make non-deterministic decisions on acceleration. The requirement to prove is that the controller never runs the stop sign.','
+Functions.
+  R A.
+  R B.
+  R S.
+  R ep.
+  R a().
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+  R c.
+End.
+
+Problem.
+    v >= 0 & A > 0 & B > 0 & x+v^2/(2*B) <= S & ep > 0
+ -> [
+      { {   ?x+v^2/(2*B) + (A/B+1)*(A/2*ep^2+ep*v) <= S; a := *; ?-B <= a & a <= A
+         ++ ?v=0; a := 0
+         ++ a := -B
+        };
+
+        ?a()=a; /* needed because we neither support a() := nor v''=a */
+        c := 0;
+        x'' = v, v'' = a(), c'' = 1 & v >= 0 & c <= ep;
+      }*@invariant(v >= 0 & x+v^2/(2*B) <= S)
+    ] x <= S
+End.','http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=14','Non-deterministic acceleration','
+ImplyRight
+& AndLeft & AndLeft & AndLeft & AndLeft
+& Loop("v >= 0 & x+v^2/(2*B) <= S")
+& onLabel(
+  ("Invariant Initially Valid", ArithmeticT),
+  ("Use case", ArithmeticT),
+  ("Induction Step",
+    ImplyRight
+    & Seq
+    & Choice & AndRight && (
+      Seq & Test & ImplyRight & Seq & NDetAssign & ForallRight & Test & ImplyRight & Seq & Test & ImplyRight & Seq
+          & Assign & ODESolve & ImplyRight & ArithmeticT,
+      Choice & AndRight && (
+        Seq & Test & ImplyRight & Assign & Seq & Test & ImplyRight & Seq & Assign & ODESolve & ImplyRight & ArithmeticT,
+        Assign & Seq & Test & ImplyRight & Seq & Assign & ODESolve & ImplyRight & ArithmeticT
+      )
+    )
+  )
+)');
+INSERT INTO "models" VALUES('07f75897-8667-4a0e-990a-180ae7711e72','guest','STTT Tutorial Example 7','Fri Apr 17 08:51:33 EDT 2015','A hybrid car model with non-deterministic braking characteristics. The requirement to prove is that the car never runs a stop sign.','
+Functions.
+  R A.
+  R B.
+  R b.
+  R S.
+  R ep.
+  R a().
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R a.
+  R c.
+End.
+
+Problem.
+    v >= 0 & A > 0 & B >= b & b > 0 & x+v^2/(2*b) <= S & ep > 0
+ -> [
+      { {   ?x+v^2/(2*b) + (A/b+1)*(A/2*ep^2+ep*v) <= S; a := *; ?-B <= a & a <= A
+         ++ ?v=0; a := 0
+         ++ a := *; ?-B <=a & a <= -b
+        };
+
+        ?a()=a; /* needed because we neither support a() := nor v''=a */
+        c := 0;
+        x'' = v, v'' = a(), c'' = 1 & v >= 0 & c <= ep;
+      }*@invariant(v >= 0 & x+v^2/(2*b) <= S)
+    ] x <= S
+End.','http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=15','Non-deterministic approximation of braking','
+ImplyRight
+& AndLeft & AndLeft & AndLeft & AndLeft & AndLeft
+& Loop("v >= 0 & x+v^2/(2*b) <= S")
+& onLabel(
+  ("Invariant Initially Valid", ArithmeticT),
+  ("Use case", ArithmeticT),
+  ("Induction Step",
+    ImplyRight
+    & Seq
+    & Choice & AndRight && (
+      Seq & Test & ImplyRight & Seq & NDetAssign & ForallRight & Test & ImplyRight & Seq & Test & ImplyRight & Seq
+          & Assign & ODESolve & ImplyRight & ArithmeticT,
+      Choice & AndRight && (
+        Seq & Test & ImplyRight & Assign & Seq & Test & ImplyRight & Seq & Assign & ODESolve & ImplyRight & ArithmeticT,
+        Seq & NDetAssign & ForallRight & Test & ImplyRight & Seq & Test & ImplyRight & Seq & Assign & ODESolve
+            & ImplyRight & ArithmeticT
+      )
+    )
+  )
+)');
+INSERT INTO "models" VALUES('faa0ac94-211a-411d-bfce-fecda181af9d','guest','STTT Tutorial Example 9a','Fri Apr 17 08:51:33 EDT 2015','A simple PD control law for regulating the speed of a car. The requirement to prove is that a Lyapunov function found with other means is indeed invariant throughout the system execution.','
+Functions.
+  R Kp().
+  R Kd().
+  R xr().
+  R c().
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+End.
+
+Problem.
+    v >= 0 & c() > 0 & Kp() = 2 & Kd() = 3 & 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()
+ -> [
+      x'' = v, v'' = -Kp()*(x-xr()) - Kd()*v;
+    ] 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()
+End.','http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=16','PD controller Lyapunov function','
+ImplyRight
+& AndLeft & AndLeft & AndLeft & AndLeft
+& DiffCut("5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()")
+& onLabel(
+  ("Use cut", DiffWeaken & ImplyRight & ArithmeticT),
+  ("Show cut", DiffInvariant)
+)');
+INSERT INTO "models" VALUES('f9c33436-b26a-48df-9e03-6346fca0e3e9','guest','STTT Tutorial Example 9b','Fri Apr 17 08:51:33 EDT 2015','A PD controlled car with a trajectory generator for setting target speeds. The requirement to prove is that the car never runs a stop sign.','
+Functions.
+  R Kp().
+  R Kd().
+  R xr().
+  R xm().
+  R S().
+End.
+
+ProgramVariables.
+  R x.
+  R xm.
+  R xr.
+  R v.
+End.
+
+Problem.
+    v >= 0 & xm() <= x & x <= S() & xr() = (xm() + S())/2 & Kp() = 2 & Kd() = 3
+           & 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < ((S() - xm())/2)^2
+ -> [ { {  xm := x;
+           xr := (xm + S())/2;
+           ?5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < ((S() - xm)/2)^2
+        ++ xm := xm; xr := xr; /* noop assignments instead ?true */
+        };
+        ?xr() = xr & xm() = xm;
+        x'' = v, v'' = -Kp()*(x-xr()) - Kd()*v & v >= 0;
+      }*@invariant(v >= 0 & xm() <= x & xr() = (xm() + S())/2 & 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < ((S() - xm())/2)^2)
+    ] x <= S()
+End.','http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=16','PD controlled car','
+ImplyRight
+& AndLeft & AndLeft & AndLeft & AndLeft & AndLeft & AndLeft
+& Loop("v >= 0 & xm() <= x & xr() = (xm() + S())/2 & 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < ((S() - xm())/2)^2")
+& onLabel(
+  ("Invariant Initially Valid", ArithmeticT),
+  ("Use case", ArithmeticT),
+  ("Induction Step",
+    ImplyRight
+    & Seq
+    & Choice & AndRight && (
+      Seq & Assign & Seq & Assign & Test & ImplyRight & Seq & Test & ImplyRight
+          & DiffCut("xm() <= x_0")
+          & onLabel(
+            ("Use cut",
+              DiffCut("5/4*(x_0-xr())^2 + (x_0-xr())*v_0/2 + v_0^2/4 < ((S() - xm())/2)^2")
+              & onLabel(
+                ("Use cut", DiffWeaken & ImplyRight & ArithmeticT),
+                ("Show cut", DiffInvariant)
+              )
+            ),
+            ("Show cut", DiffInvariant)
+          ),
+      Seq & Assign & Assign & Seq & Test & ImplyRight
+          & DiffCut("xm() <= x_0")
+          & onLabel(
+            ("Use cut",
+              DiffCut("5/4*(x_0-xr())^2 + (x_0-xr())*v_0/2 + v_0^2/4 < ((S() - xm())/2)^2")
+              & onLabel(
+                ("Use cut", DiffWeaken & ImplyRight & ArithmeticT),
+                ("Show cut", DiffInvariant)
+              )
+            ),
+            ("Show cut", DiffInvariant)
+          )
+    )
+  )
+)');
+COMMIT;

@@ -1,0 +1,17 @@
+ImplyRight
+& Loop("v >= 0")
+& onLabel(
+  ("base case", ArithmeticT),
+  ("use case", ArithmeticT),
+  ("induction step",
+    ImplyRight
+    & Seq
+    & Choice & AndRight && (
+      Assign & ODESolve & ImplyRight & ArithmeticT,
+      Choice & AndRight && (
+        Assign & ODESolve & ImplyRight & ArithmeticT,
+        Assign & ODESolve & ImplyRight & ArithmeticT
+      )
+    )
+  )
+)
