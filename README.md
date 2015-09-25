@@ -212,7 +212,7 @@ The additional packages in the directory `keymaerax-webui/src/main/scala` are se
     .launcher - KeYmaera X command line launcher with main program
     .tacticsinterface - Interface to the actics exposed to the web UI and REST API. Tactic combinator parser.
 
-ScalaDoc is available at http://keymaerax.org/scaladoc
+ScalaDoc is available at: http://keymaerax.org/scaladoc
 
 Test Cases
 ==========
