@@ -2,7 +2,7 @@ scalaVersion in ThisBuild := "2.11.7"
 
 //scalacOptions in ThisBuild ++= Seq("-Xno-patmat-analysis")
 
-version := "4.0a4"
+version := "4.0b1"
 
 lazy val core = (project in file("keymaerax-core"))
 

@@ -1,6 +1,6 @@
 name := "KeYmaeraX-Core"
 
-version := "4.0a4"
+version := "4.0b1"
 
 assemblyJarName in assembly := "keymaerax-core-" + version.value + ".jar" 
 
