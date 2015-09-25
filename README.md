@@ -335,3 +335,9 @@ http://keymaeraX.org/
 http://www.cs.cmu.edu/~aplatzer/pub/
 
 http://symbolaris.com/info/KeYmaera.html
+
+
+Contact
+=======
+
+KeYmaera X developers: keymaerax@keymaerax.org
