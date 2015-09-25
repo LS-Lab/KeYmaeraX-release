@@ -241,6 +241,15 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val counterExample = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "counterExample") { (userId, proofId, nodeId) => {
+    pathEnd {
+      get {
+        val request = new CounterExampleRequest(database, userId, proofId, nodeId)
+        complete(standardCompletion(request))
+      }
+    }}
+  }
+
   val kyxConfig = path("kyxConfig") {
     pathEnd {
       get {
@@ -473,6 +482,7 @@ trait RestApi extends HttpService {
     devAction             ::
     sequent               ::
     dashInfo              ::
+    counterExample        ::
     kyxConfig             ::
     keymaeraXVersion      ::
     mathematicaConfig     ::

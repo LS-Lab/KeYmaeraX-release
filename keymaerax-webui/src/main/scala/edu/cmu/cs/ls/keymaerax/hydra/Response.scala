@@ -6,6 +6,7 @@
  * HyDRA API Responses
  *  @author Nathan Fulton
  *  @author Stefan Mitsch
+ *  @author Ran Ji
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
@@ -306,6 +307,12 @@ class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
   ))
 
   val json = JsArray(objects)
+}
+
+class CounterExampleResponse(cntEx: String) extends Response {
+  val json = JsObject(
+    "cntEx" -> JsString(cntEx)
+  )
 }
 
 class KyxConfigResponse(kyxConfig: String) extends Response {

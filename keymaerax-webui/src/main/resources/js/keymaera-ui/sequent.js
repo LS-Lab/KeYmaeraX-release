@@ -38,6 +38,18 @@ angular.module('sequent', ['ngSanitize','formula'])
                 });
             }
 
+            $scope.getCounterExample = function() {
+                $modal.open({
+                    templateUrl: 'partials/counterExample.html',
+                    controller: 'counterExampleCtrl',
+                    size: 'lg',
+                    resolve: {
+                      proofId: function() { return $scope.proofId; },
+                      nodeId: function() { return $scope.nodeId; }
+                    }
+                    });
+            }
+
             $scope.handleTurnstileClick = function() {
                 var modalInstance = $modal.open({
                   templateUrl: 'partials/proofruledialog.html',

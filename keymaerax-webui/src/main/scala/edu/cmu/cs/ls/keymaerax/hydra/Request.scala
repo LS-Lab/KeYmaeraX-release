@@ -5,6 +5,7 @@
 /**
  * HyDRA API Requests
  * @author Nathan Fulton
+ * @author Ran Ji
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
@@ -20,8 +21,9 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
-import edu.cmu.cs.ls.keymaerax.tactics.{TacticExceptionListener, Tactics}
+import edu.cmu.cs.ls.keymaerax.tactics.{ArithmeticTacticsImpl, TacticExceptionListener, Tactics}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.{CLParser, CLInterpreter}
+import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 
 import scala.io.Source
 import spray.json._
@@ -102,6 +104,21 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
   }
 }
 
+
+class CounterExampleRequest(db : DBAbstraction, userId : String, proofId : String, nodeId: String) extends Request {
+  override def getResultingResponses() : List[Response] = {
+    val node = TaskManagement.getNode(proofId, nodeId) match {
+      case Some(node) => node
+      case None => throw new IllegalStateException("No proofNode for " + nodeId + " in proof " + proofId)
+    }
+    val f = node.sequent.succ.head
+    var mathematica = new Mathematica
+    mathematica.init(db.getConfiguration("mathematica").config)
+    val cntEx = ArithmeticTacticsImpl.showCounterExample(mathematica, f)
+    mathematica.shutdown()
+    new CounterExampleResponse(cntEx) :: Nil
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // System Configuration
