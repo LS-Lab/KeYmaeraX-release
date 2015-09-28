@@ -370,13 +370,21 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             { "name" : "keymaerax.arithmetic",
               "label" : "\\(\\left(\\text{QE}\\right) \\frac{QE(\\forall X. \\Phi(X) ~\\vdash~ \\Psi(X))}{\\Phi(X_1,\\ldots,X_n) ~\\vdash~ \\Psi(X_1,\\ldots,X_n)}\\)"
             },
+        "keymaerax.defaultNoArith" :
+            { "name" : "keymaerax.defaultNoArith",
+              "label" : "KeYmaera X Master Tactic without Arithmetic"
+            },
+        "keymaerax.propositional" :
+            { "name" : "keymaerax.propositional",
+              "label" : "KeYmaera X Propositional Tactic"
+            },
         "keymaerax.default":
             { "name" : "keymaerax.default",
-              "label" : "KeYmaera Master Tactic"
+              "label" : "KeYmaera X Master Tactic"
             },
         "keymaerax.step":
             { "name": "keymaerax.step",
-              "label": "KeYmaera Step Tactic"
+              "label": "KeYmaera X Step Tactic"
             }
     };
     var userTactics = {
