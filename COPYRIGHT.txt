@@ -1,5 +1,5 @@
 KeYmaera X
-Copyright (C) 2014-2015 Andre Platzer, Nathan Fulton, Stefan Mitsch, Ran Ji
+Copyright (C) 2014-2015 Carnegie Mellon University. Developed by Andre Platzer, Nathan Fulton, Stefan Mitsch, Ran Ji
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
