@@ -21,7 +21,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverConditionalAxiomT,unc
 import TacticLibrary.TacticHelper.getTerm
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
-import scala.collection.immutable.Set
+import scala.collection.immutable.{TreeSet, SortedSet, Set}
 
 /**
  * Implementation of equality rewriting.
@@ -273,4 +273,256 @@ object EqualityRewritingImpl {
     }
   }
 
+  // PolyTerm is a term factored into a polynomial, a set of monomials wherea monial is a coefficient and
+  // product of variables raised to exponents.
+  type Monomial = (BigDecimal, Set[(Term, Int)])
+  type PolyTerm = Set[Monomial]
+
+  def zeroMon : Monomial = (BigDecimal(0), Set.empty[(Term,Int)])
+  def subtractVars(vs1: Set[(Term, Int)], vs2: Set[(Term, Int)]): Set[(Term, Int)] =
+    vs1.filter(xn => !vs2.exists(ym => xn._1 == ym._1))
+
+  def subtractPolynomials(p1: PolyTerm, p2: PolyTerm): PolyTerm =
+    p1.filter(p1 => !p2.exists(p2 => p1._2 == p2._2))
+
+  def commonVars(vs1: Set[(Term, Int)], vs2: Set[(Term, Int)]): Set[(Term, Int, Int)] =
+    vs1.flatMap((xn: (Term, Int)) => {
+      val (found: Option[(Term, Int)]) = vs2.find(ym => xn._1 == ym._1)
+      found match {
+        case None => Set.empty[(Term, Int, Int)]
+        case Some(ym: (Term, Int)) => Set.empty.+((xn._1, ym._2, xn._2))
+      }
+    })
+
+
+  def multiplyMon(mon1: Monomial, mon2: Monomial): Monomial = {
+    (mon1, mon2) match {
+      case ((c1, vs1), (c2, vs2)) =>
+        val common = commonVars(vs1, vs2).map(cvs => (cvs._1, cvs._2 + cvs._3))
+        (c1 * c2, subtractVars(vs1, common) ++ subtractVars(vs2, common) ++ common)
+    }
+  }
+
+  def syntacticDerivative(t: Term): Term =
+    t match {
+      case Differential(t1) => syntacticDerivative(syntacticDerivative(t1))
+      case Plus(t1, t2) => Plus(syntacticDerivative(t1), syntacticDerivative(t2))
+      case Minus(t1, t2) => Minus(syntacticDerivative(t1), syntacticDerivative(t2))
+      case Times(t1, t2) => Plus(Times(t1, syntacticDerivative(t2)), Times(t2, syntacticDerivative(t1)))
+      case Divide(t1, t2) => Divide(Minus(Times(syntacticDerivative(t1), t2), Times(t1, syntacticDerivative(t2))), Times(t2, t2))
+      case x@Variable(_, _, _) => DifferentialSymbol(x)
+      case Neg(t1) => Neg(syntacticDerivative(t1))
+      case Number(_) => Number(0)
+      case DifferentialSymbol(_) => ??? // @todo Decide whether it's better to introduce auxilliary variables or just fail
+    }
+
+  class BadDivision extends Exception {}
+
+  class BadPower extends Exception {}
+
+  def constPoly(x: BigDecimal): PolyTerm =
+    Set.empty.+((x, Set.empty[(Term, Int)]))
+
+  def variablePoly(x: Term): PolyTerm =
+    Set.empty.+((BigDecimal(1), Set.empty.+((x, 1))))
+
+  def makeProd(t: Term, n: BigInt): Term = {
+    (n == BigInt(0), n == BigInt(1)) match {
+      case (true, false) => Number(BigDecimal(1))
+      case (false, true) => t
+      case _ => Times(t, makeProd(t, n - 1))
+    }
+  }
+
+  def mapCommon (norm1:Set[Monomial],norm2:Set[Monomial],f:(BigDecimal,BigDecimal)=>BigDecimal):Set[Monomial] = {
+    norm1.flatMap(mon1 =>
+      norm2.find(mon2 => mon1._2 == mon2._2) match {
+        case None => Set.empty[Monomial]
+        case Some(mon2) => Set.empty.+((f(mon1._1,mon2._1), mon1._2))
+    })
+  }
+
+  def norm(t: Term): PolyTerm = {
+    t match {
+      case Times(t1: Term, t2: Term) =>
+        val normT2 = norm(t2)
+        norm(t1).flatMap(mon1 => normT2.map(mon2 => multiplyMon(mon1, mon2)))
+      case Plus(t1: Term, t2: Term) =>
+        val (norm1, norm2) = (norm(t1), norm(t2))
+        val commonMonomials = mapCommon(norm1,norm2,{case (x,y) => x+y})
+        (norm1 -- commonMonomials) ++ (norm2 -- commonMonomials) ++ commonMonomials
+      case Minus(t1: Term, t2: Term) =>
+        val (norm1, norm2) = (norm(t1), norm(t2))
+        val commonMonomials = mapCommon(norm1,norm2,{case (x,y) => x-y})
+        var negNorm2 = norm2.map({case (n,x) => (-n, x)})
+        (norm1 -- commonMonomials) ++ (negNorm2 -- commonMonomials) ++ commonMonomials
+      case Neg(t1:Term) => norm(Minus(Number(BigDecimal(0)),t1))
+      case Differential(t1) => norm(syntacticDerivative(t1))
+      case Divide(t1, Number(x)) =>
+        if (x == BigDecimal(0)) {
+          throw new BadDivision
+        }
+        else
+          norm(Times(t1, Number(1 / x)))
+      case Number(x) => constPoly(x)
+      case x@Variable(_, _, _) => variablePoly(x)
+      case x@DifferentialSymbol(_) => variablePoly(x)
+      case Power(t1, Number(x)) =>
+        x.toBigIntExact() match {
+          case None => throw new BadPower
+          case Some(n) =>
+            if (n < BigInt(0)) {
+              throw new BadPower
+            }
+            norm(makeProd(t1, n))
+        }
+      }
+  }
+
+  sealed trait NormResult {}
+  case class Normal(polyTerm: PolyTerm) extends NormResult
+  case class BadPowerResult () extends NormResult
+  case class BadDivResult () extends NormResult
+
+  def totalNorm(t:Term):NormResult = {
+    try {
+      Normal(norm(t))
+    } catch {
+      case ex:BadDivision => BadDivResult()
+      case ex:BadPower => BadPowerResult()
+    }
+  }
+
+  object VariableComparator extends Ordering[(Term,Int)] {
+    def compare(t1: (Term,Int), t2: (Term,Int)): Int = {
+      (t1, t2) match {
+        case ((v1@Variable(_, _, _),_), (v2@Variable(_, _, _),_)) =>
+          v1.compare(v2)
+        case ((DifferentialSymbol(v1),_), (DifferentialSymbol(v2),_)) =>
+          v1.compare(v2)
+      }
+    }
+  }
+
+  def sortVars(s: Set[(Term, Int)]): SortedSet[(Term, Int)] =
+  {
+    val ss : SortedSet[(Term,Int)] = TreeSet[(Term,Int)]()(VariableComparator)
+    s.foldLeft(ss)({case (ss, xn) => ss.+(xn)})
+  }
+
+  def totalDegree(mon:Monomial):Int = {
+     mon._2.foldLeft(0)({case (n1,(v,n2)) => n1+n2})
+  }
+
+  def compareSortedVars(l1:List[(Term,Int)],l2:List[(Term,Int)]) = {
+    (l1,l2) match {
+      case (Nil,Nil) => 0
+      case ((x:(Term,Int)) :: _, Nil) => x._2.compare(0)
+      case (Nil, (x:(Term,Int)) ::_) => 0.compare(x._2)
+      case ((x:(Term,Int))::xs,(y:(Term,Int))::ys) =>
+        val varCmp = compareTerms(x._1,y._1)
+        if (varCmp < 0) {
+          x._2.compare(0)
+        } else if (varCmp > 0) {
+          0.compare(y._2)
+        } else {
+          x._2.compare(y._2)
+        }
+    }
+  }
+
+  def compareVars(s1:Set[(Term,Int)],s2:Set[(Term,Int)]):Int = {
+    compareSortedVars(sortVars(s1).toList,sortVars(s2).toList)
+  }
+
+  object MonomialGrlex extends Ordering[Monomial] {
+    // Graded lexicographic ordering
+    def compare(mon1: Monomial, mon2: Monomial): Int = {
+      val sorted1 = sortVars(mon1._2).toList
+      val sorted2 = sortVars(mon2._2).toList
+      val cmpDegree = totalDegree(mon1).compare(totalDegree(mon2))
+      if (cmpDegree != 0) {
+        cmpDegree
+      } else {
+        val cmpVars = compareSortedVars(sorted1, sorted2)
+        if (cmpVars != 0) {
+          cmpVars
+        } else {
+          mon1._1.compare(mon2._1)
+        }
+      }
+    }
+  }
+
+  def compareSortedPolyTerms(l1:List[Monomial],l2:List[Monomial]):Int = {
+    (l1,l2) match {
+      case (Nil,Nil) => 0
+      case ((x:Monomial) :: _, Nil) => MonomialGrlex.compare(x, zeroMon)
+      case (Nil, (x:Monomial) ::_) => MonomialGrlex.compare(zeroMon, x)
+      case ((x:Monomial)::xs,(y:Monomial)::ys) =>
+        val varCmp = compareVars(x._2,y._2)
+        if (varCmp < 0) {
+          MonomialGrlex.compare(x,zeroMon)
+        } else if (varCmp > 0) {
+          MonomialGrlex.compare(zeroMon, y)
+        } else {
+          x._1.compare(y._1)
+        }
+    }
+  }
+
+  def compareNormalTerms(l:PolyTerm,r:PolyTerm) : Int =
+  {
+    val ls = l.foldLeft(TreeSet()(MonomialGrlex))({case (s,mon) => s.+(mon)}).toList
+    val rs = r.foldLeft(TreeSet()(MonomialGrlex))({case (s,mon) => s.+(mon)}).toList
+    compareSortedPolyTerms(ls,rs)
+  }
+
+  def compareTerms(l:Term, r:Term) : Int = {
+    (totalNorm(l), totalNorm(r)) match {
+      case (Normal(norm1), Normal(norm2)) => compareNormalTerms(norm1, norm2)
+      case (BadPowerResult(), BadPowerResult()) => 0
+      case (BadPowerResult(), _) => 1
+      case (_, BadPowerResult()) => -1
+      case (BadDivResult(), BadDivResult()) => 0
+      case (BadDivResult(), _) => 1
+      case (_, BadDivResult()) => -1
+    }
+  }
+
+  /**
+   * Applies an equality at a position everywhere in the sequent if it makes the sequent "simpler" for some definition of simpler.
+   * Hides the equality if no possible uses remain.
+   * @example{{{
+   *   |- x < 5
+   *   ----------------------------------
+   *   x = y^2 + 1 |- y^2 + 1 < 5
+   * }}}
+   */
+  def applyEq(): PositionTactic = new PositionTactic("applyEq") {
+    override def applies(s: Sequent, p:Position): Boolean = getTerm(s,p) != null // just to test that there is no exception
+
+    override def apply(p: Position): Tactic = new ConstructionTactic("abbrv") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val t = getTerm(node.sequent, p)
+        Some(applyEq(t, node))
+      }
+    }
+  }
+
+  def applyEq(t: Term, node: ProofNode): Tactic = new ConstructionTactic("applyEq") {
+    /* @todo Check that the position is (a) in the antecedent and (b) an equality.  */
+    override def applicable(node: ProofNode): Boolean = true
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+      /* @todo
+      *   (1) find the simpler side of the equality
+      *   (1.5) Normalize equations so we can find more things to substitute against
+      *   (2) replace all occurrences of the complex side with the simple side
+      *   (3) Decide whether to hide*/
+      Some(cutT(None))
+    }
+  }
 }
