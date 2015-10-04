@@ -352,29 +352,30 @@ object EqualityRewritingImpl {
     commonMonomials ++ nonCommonMonomials(p1, commonMonomials) ++ nonCommonMonomials(p2,commonMonomials)
   }
 
-  def norm(t: Term): PolyTerm = {
+  def normLoop(t: Term): PolyTerm = {
     t match {
       case Times(t1: Term, t2: Term) =>
-        val normT2 = norm(t2)
-        norm(t1).foldLeft(zeroPoly){case (acc,mon1) =>
+        val normT2 = normLoop(t2)
+        normLoop(t1).foldLeft(zeroPoly){case (acc,mon1) =>
           normT2.foldLeft(acc)({case (acc,mon2) =>
             addPolyTerms(acc,Set(multiplyMon(mon1, mon2)))})}
     case Plus(t1: Term, t2: Term) =>
-        val (norm1, norm2) = (norm(t1), norm(t2))
+        val (norm1, norm2) = (normLoop(t1), normLoop(t2))
         addPolyTerms(norm1,norm2)
       case Minus(t1: Term, t2: Term) =>
-        val (norm1, norm2) = (norm(t1), norm(t2))
+        val (norm1, norm2) = (normLoop(t1), normLoop(t2))
         val commonMonomials = mapCommon(norm1,norm2,{case (x,y) => x-y})
         var negNorm2 = norm2.map({case (n,x) => (-n, x)})
-        (norm1 -- commonMonomials) ++ (negNorm2 -- commonMonomials) ++ commonMonomials
-      case Neg(t1:Term) => norm(Minus(Number(BigDecimal(0)),t1))
-      case Differential(t1) => norm(syntacticDerivative(t1))
+        commonMonomials ++ nonCommonMonomials(norm1,commonMonomials) ++ nonCommonMonomials(norm2,commonMonomials)
+      case Neg(t1:Term) => normLoop(Minus(Number(BigDecimal(0)),t1))
+      case Differential(t1) => normLoop(syntacticDerivative(t1))
       case Divide(t1, Number(x)) =>
         if (x == BigDecimal(0)) {
           throw new BadDivision
         }
         else
-          norm(Times(t1, Number(1 / x)))
+          normLoop(Times(t1, Number(1 / x)))
+      case Divide(_,_) => throw new BadDivision
       case Number(x) => constPoly(x)
       case x@Variable(_, _, _) => variablePoly(x)
       case x@DifferentialSymbol(_) => variablePoly(x)
@@ -385,9 +386,14 @@ object EqualityRewritingImpl {
             if (n < BigInt(0)) {
               throw new BadPower
             }
-            norm(makeProd(t1, n))
+            normLoop(makeProd(t1, n))
         }
+      case Power(_,_) => throw new BadPower
       }
+  }
+
+  def norm(t:Term):PolyTerm = {
+    normLoop(t).filter({case (n,vs) => BigDecimal(0) != n})
   }
 
   sealed trait NormResult {}
@@ -425,13 +431,23 @@ object EqualityRewritingImpl {
      mon._2.foldLeft(0)({case (n1,(v,n2)) => n1+n2})
   }
 
+  def compareVars(x1:Term,x2:Term):Int = {
+    (x1,x2) match {
+      case (v1@Variable(_,_,_),v2@Variable(_,_,_)) => v1.compare(v2)
+      case (v1@DifferentialSymbol(_), v2@DifferentialSymbol(_)) =>
+        v1.compare(v2)
+      case (DifferentialSymbol(_),Variable(_,_,_)) => 1
+      case (Variable(_,_,_), DifferentialSymbol(_)) => -1
+    }
+  }
+
   def compareSortedVars(l1:List[(Term,Int)],l2:List[(Term,Int)]) = {
     (l1,l2) match {
       case (Nil,Nil) => 0
       case ((x:(Term,Int)) :: _, Nil) => x._2.compare(0)
       case (Nil, (x:(Term,Int)) ::_) => 0.compare(x._2)
       case ((x:(Term,Int))::xs,(y:(Term,Int))::ys) =>
-        val varCmp = compareTerms(x._1,y._1)
+        val varCmp = compareVars(x._1,y._1)
         if (varCmp < 0) {
           x._2.compare(0)
         } else if (varCmp > 0) {

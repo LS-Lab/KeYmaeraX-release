@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, PosInExpr, RootNode, SuccPosition, EqualityRewritingImpl,
   Interpreter, Tactics}
-import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.{Monomial, PolyTerm, constFormulaCongruenceT, eqLeft}
+import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl._
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
@@ -289,6 +289,8 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
 
   def v(str:String):Term= Variable(str, None, Real)
   def v1(str:String):(Term,Int) = (v(str),1)
+  def d(str:String):Term = DifferentialSymbol(Variable(str,None,Real))
+  def d1(str:String):(Term,Int) = (d(str),1)
   def polysWithin(p1:PolyTerm,p2:PolyTerm,tolerance:Double):Boolean = {
     val sorted1 = p1.foldLeft(TreeSet()(EqualityRewritingImpl.MonomialGrlex)){case(acc,mon) => acc.+(mon)}.toList
     val sorted2 = p2.foldLeft(TreeSet()(EqualityRewritingImpl.MonomialGrlex)){case(acc,mon) => acc.+(mon)}.toList
@@ -331,5 +333,38 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
       Set((BigDecimal(1.0/3.0), Set(v1("x"))),
         (BigDecimal(1), Set.empty[(Term,Int)]))
    polyClose(EqualityRewritingImpl.norm(input),output) should be (true)
+  }
+
+  it should "raise on non-constant exponents" in {
+    val input = "3^x".asTerm
+    a [BadPower] should be thrownBy {
+      norm(input)
+    }
+  }
+
+  it should "raise on non-constant division" in {
+    val input = "x/(3-3)".asTerm
+    a [BadDivision] should be thrownBy {
+      norm(input)
+    }
+  }
+
+  it should "handle subtraction" in {
+    val input = "(x-(x-2))".asTerm
+    val output = Set((BigDecimal(2),Set.empty[(Term,Int)]))
+    polyEq(norm(input),output) should be (true)
+  }
+
+  it should "handle negation" in {
+    val input = "-(x-(x-2))".asTerm
+    var output = Set((BigDecimal(-2),Set.empty[(Term,Int)]))
+    polyEq(norm(input),output) should be (true)
+  }
+
+  it should "handle differentiation" in {
+    val input = "(x + y)'".asTerm
+    val output = Set((BigDecimal(1), Set(d1("x"))),
+      (BigDecimal(1),Set(d1("y"))))
+    polyEq(norm(input), output) should be (true)
   }
 }
