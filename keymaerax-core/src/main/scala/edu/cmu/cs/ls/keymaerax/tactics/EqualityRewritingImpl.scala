@@ -441,19 +441,24 @@ object EqualityRewritingImpl {
     }
   }
 
-  def compareSortedVars(l1:List[(Term,Int)],l2:List[(Term,Int)]) = {
-    (l1,l2) match {
-      case (Nil,Nil) => 0
-      case ((x:(Term,Int)) :: _, Nil) => x._2.compare(0)
-      case (Nil, (x:(Term,Int)) ::_) => 0.compare(x._2)
-      case ((x:(Term,Int))::xs,(y:(Term,Int))::ys) =>
-        val varCmp = compareVars(x._1,y._1)
+  def compareSortedVars(l1:List[(Term,Int)],l2:List[(Term,Int)]):Int = {
+    (l1, l2) match {
+      case (Nil, Nil) => 0
+      case ((x: (Term, Int)) :: _, Nil) => x._2.compare(0)
+      case (Nil, (x: (Term, Int)) :: _) => 0.compare(x._2)
+      case ((x: (Term, Int)) :: xs, (y: (Term, Int)) :: ys) =>
+        val varCmp = compareVars(x._1, y._1)
         if (varCmp < 0) {
           x._2.compare(0)
         } else if (varCmp > 0) {
           0.compare(y._2)
         } else {
-          x._2.compare(y._2)
+          val expCmp = x._2.compare(y._2)
+          if (expCmp != 0) {
+            expCmp
+          } else {
+            compareSortedVars(xs, ys)
+          }
         }
     }
   }
@@ -465,13 +470,11 @@ object EqualityRewritingImpl {
   object MonomialGrlex extends Ordering[Monomial] {
     // Graded lexicographic ordering
     def compare(mon1: Monomial, mon2: Monomial): Int = {
-      val sorted1 = sortVars(mon1._2).toList
-      val sorted2 = sortVars(mon2._2).toList
       val cmpDegree = totalDegree(mon1).compare(totalDegree(mon2))
       if (cmpDegree != 0) {
         cmpDegree
       } else {
-        val cmpVars = compareSortedVars(sorted1, sorted2)
+        val cmpVars = compareVars(mon1._2, mon2._2)
         if (cmpVars != 0) {
           cmpVars
         } else {
