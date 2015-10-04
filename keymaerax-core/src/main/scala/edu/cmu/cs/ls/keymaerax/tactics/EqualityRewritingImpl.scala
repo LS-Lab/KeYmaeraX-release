@@ -279,6 +279,7 @@ object EqualityRewritingImpl {
   type PolyTerm = Set[Monomial]
 
   def zeroMon : Monomial = (BigDecimal(0), Set.empty[(Term,Int)])
+  def zeroPoly : PolyTerm = Set.empty[Monomial]
   def subtractVars(vs1: Set[(Term, Int)], vs2: Set[(Term, Int)]): Set[(Term, Int)] =
     vs1.filter(xn => !vs2.exists(ym => xn._1 == ym._1))
 
@@ -342,15 +343,25 @@ object EqualityRewritingImpl {
     })
   }
 
+  def nonCommonMonomials(p1:PolyTerm,p2:PolyTerm):PolyTerm = {
+    p1.filter(mon1 => !p2.exists(mon2 => mon1._2 == mon2._2))
+  }
+
+  def addPolyTerms(p1:PolyTerm,p2:PolyTerm):PolyTerm = {
+    val commonMonomials = mapCommon(p1, p2, { case (x, y) => x + y })
+    commonMonomials ++ nonCommonMonomials(p1, commonMonomials) ++ nonCommonMonomials(p2,commonMonomials)
+  }
+
   def norm(t: Term): PolyTerm = {
     t match {
       case Times(t1: Term, t2: Term) =>
         val normT2 = norm(t2)
-        norm(t1).flatMap(mon1 => normT2.map(mon2 => multiplyMon(mon1, mon2)))
-      case Plus(t1: Term, t2: Term) =>
+        norm(t1).foldLeft(zeroPoly){case (acc,mon1) =>
+          normT2.foldLeft(acc)({case (acc,mon2) =>
+            addPolyTerms(acc,Set(multiplyMon(mon1, mon2)))})}
+    case Plus(t1: Term, t2: Term) =>
         val (norm1, norm2) = (norm(t1), norm(t2))
-        val commonMonomials = mapCommon(norm1,norm2,{case (x,y) => x+y})
-        (norm1 -- commonMonomials) ++ (norm2 -- commonMonomials) ++ commonMonomials
+        addPolyTerms(norm1,norm2)
       case Minus(t1: Term, t2: Term) =>
         val (norm1, norm2) = (norm(t1), norm(t2))
         val commonMonomials = mapCommon(norm1,norm2,{case (x,y) => x-y})
