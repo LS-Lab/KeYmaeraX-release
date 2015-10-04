@@ -6,13 +6,13 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, PosInExpr, RootNode, SuccPosition, EqualityRewritingImpl,
   Interpreter, Tactics}
-import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.{constFormulaCongruenceT, eqLeft}
+import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.{Monomial, PolyTerm, constFormulaCongruenceT, eqLeft}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.SequentFactory._
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{TreeSet, Map}
 
 /**
  * Created by smitsch on 3/16/15.
@@ -285,5 +285,51 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only ("Term = f()+g()".asFormula, "x>y".asFormula)
     result.openGoals().head.sequent.succ should contain only "a<b".asFormula
+  }
+
+  def v(str:String):Term= Variable(str, None, Real)
+  def v1(str:String):(Term,Int) = (v(str),1)
+  def polysWithin(p1:PolyTerm,p2:PolyTerm,tolerance:Double):Boolean = {
+    val sorted1 = p1.foldLeft(TreeSet()(EqualityRewritingImpl.MonomialGrlex)){case(acc,mon) => acc.+(mon)}.toList
+    val sorted2 = p2.foldLeft(TreeSet()(EqualityRewritingImpl.MonomialGrlex)){case(acc,mon) => acc.+(mon)}.toList
+    if (sorted1.length != sorted2.length) {
+      false
+    } else {
+      sorted1.zip(sorted2).forall({case(p1,p2) =>
+        p1._1 - p2._1 <= tolerance &&
+        p1._1 - p2._1 >= -tolerance &&
+        p1._2 == p2._2})
+    }
+  }
+
+  def polyClose(p1:PolyTerm,p2:PolyTerm):Boolean = polysWithin(p1,p2,0.00001)
+  def polyEq(p1:PolyTerm, p2:PolyTerm):Boolean = polysWithin(p1,p2,0)
+
+  "term normalization" should "handle multiplications" in {
+    val input = "(x + 1)*(y + 2)".asTerm
+    val output =
+      Set ((1, Set(v1("x"), v1("y"))),
+      (2, Set(v1("x"))),
+      (1, Set(v1("y"))),
+      (2, Set()))
+    EqualityRewritingImpl.norm(input) should be (output)
+  }
+
+  it should "handle constant powers" in {
+    val input = "(x + 1)^3".asTerm
+    val output:Set[(BigDecimal,Set[(Term,Int)])] =
+      Set ((BigDecimal(1), Set((v("x"), 3))),
+        (BigDecimal(3), Set((v("x"),2))),
+        (BigDecimal(3), Set((v("x"),1))),
+        (BigDecimal(1), Set.empty[(Term,Int)]))
+    polyEq(EqualityRewritingImpl.norm(input),output) should be (true)
+  }
+
+  it should "handle constant division" in {
+    val input = "(x + 3)/3".asTerm
+    val output :Set[(BigDecimal,Set[(Term,Int)])] =
+      Set((BigDecimal(1.0/3.0), Set(v1("x"))),
+        (BigDecimal(1), Set.empty[(Term,Int)]))
+   polyClose(EqualityRewritingImpl.norm(input),output) should be (true)
   }
 }
