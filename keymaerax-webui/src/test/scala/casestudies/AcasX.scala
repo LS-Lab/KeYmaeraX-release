@@ -713,14 +713,15 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
             (cutUseLbl, dT("After DC 2") & ls(DW) & dT("after DW") &
               ls(implyR) & la(andL) & la(cohide, "0=1") & dT("before QE") & QE)
           ),
-          dT("Solving") /*& ls(diffSolution(None, la(hide, "max0=max((0,w*(dhf-dhd)))"))) & dT("Diff. Solution") &
-            ls(implyR) & (la(andL)*) &
+          ls(diffSolution(None,
+            la(hide, "maxI=max((0,w*(dhf-dhd)))") & la(hide, "maxIM=max((0,w*(dhfM-dhd)))"))) &
+            dT("Diff. Solution") & ls(implyR) & (la(andL)*) &
             la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_1=0") & la(hideT, "kxtime_1=0") &
             la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_4()=0") & la(hideT, "kxtime_4()=0") &
             la(TacticLibrary.eqLeft(exhaustive=true), "r_2()=r") & la(hideT, "r_2()=r") &
             la(TacticLibrary.eqLeft(exhaustive=true), "dhd_2()=dhd") & la(hideT, "dhd_2()=dhd") &
             la(TacticLibrary.eqLeft(exhaustive=true), "h_2()=h") & la(hideT, "h_2()=h") &
-            dT("bla") & cut(safeLemmaFormula.asFormula) & onBranch(
+            dT("bla") /*& cut(safeLemmaFormula.asFormula) & onBranch(
             (cutShowLbl, ls(cohideT, safeLemmaFormula) & dT("apply Lemma") & applyLemma),
             (cutUseLbl, dT("use lemma") & QE)
           )*/
