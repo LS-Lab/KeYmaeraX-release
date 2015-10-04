@@ -481,7 +481,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
   "ACAS X 2-sided safe implicit with lemmas" should "be provable" in {
 
     /*** Helper tactics ***/
-    /*def dT(s : String) = debugT(s)
+    def dT(s : String) = debugT(s)
 
     val crushw = la(orL, "w=-1|w=1") && (QE, QE)
     // Q: Stefan, why did you change this from w() ?
@@ -507,29 +507,33 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val crushabsmax = absmax & crushor
 
     /*** Invariants etc. ***/
-
-    val invariant = ("( (w=-1 | w=1) &"+
-      "  ("+
-      "    ("+
+    val condImplLower = "    ("+
       "      \\forall t \\forall ro \\forall ho"+
       "        ((0 <= t & t < max(0, w * (dhf - dhd)) / a &"+
       "          ro = rv * t & ho = (w * a) / 2 * t^2 + dhd * t) |"+
       "          (t >= max(0, w * (dhf - dhd)) / a &"+
       "            ro = rv * t & ho = dhf * t - w * max(0, w * (dhf - dhd))^2 / (2*a))"+
       "            -> (abs(r - ro) > rp | w * h < w * ho - hp))"+
-      "      ) |"+
-      "      ("+
-      "        \\forall t \\forall ro \\forall ho"+
+      "      )"
+    val condImplUpper = "("+
+    "        \\forall t \\forall ro \\forall ho"+
       "          ((0 <= t & t < max(0, w * (dhfM - dhd)) / aM &"+
       "            ro = rv * t & ho = (w * aM) / 2 * t^2 + dhd * t) |"+
       "            (t >= max(0, w * (dhfM - dhd)) / aM &"+
-      "              ro = rv * t & ho = (dhd + w * max(0, w * (dhfM-dhd)) * t - w * max(0, w * (dhfM - dhd))^2 / (2*aM)))"+
+      "              ro = rv * t & ho = (dhd + w * max(0, w * (dhfM-dhd))) * t - w * max(0, w * (dhfM - dhd))^2 / (2*aM))"+
       "              -> (abs(r - ro) > rp | w * h > w * ho + hp))"+
-      "        )"+
-      "    )"+
-      "  ) & (hp > 0 & rp > 0 & rv >= 0 & a > 0)").asFormula
+      "        )"
+    val condImpl = "("+ condImplLower + "|"+ condImplUpper + ")"
+    val invariantStr = "(( (w=-1 | w=1) &"+ condImpl +") & (hp > 0 & rp > 0 & rv >= 0 & a > 0 & aM > 0))"
+    val invariant = invariantStr.asFormula
 
-    val initDomain = "w*dhd>=w*dhf|w*ao>=a"*/
+    val evolutionDomain =
+      "(( w * dhd >= w * dhf  | w * ao >= a ) &" +
+      " ((w * dhd <= w * dhfM & w * ao <= aM) | w * ao <= 0))"
+
+    val initDomain = "w*dhd>=w*dhf|w*ao>=a"
+
+
 
     /*** Lower bound safe lemma and its tactic ***/
 
@@ -645,54 +649,71 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     /*** Main safe theorem and its tactic ***/
     val safeSeq = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay_2sided.key"))
-    val safeTac = ls(implyR) & la(andL) /*& ls(wipeContextInductionT(Some(invariant))) & onBranch(
+    val safeTac = ls(implyR) & la(andL) & ls(wipeContextInductionT(Some(invariant))) & onBranch(
       (indInitLbl, dT("Base case") & ls(andR) & closeId),
-      (indUseCaseLbl, dT("Use case") & ls(implyR) & (la(andL)*) & ls(andR) && (
-        la(instantiateT(Variable("t"), Number(0))) &
-          la(instantiateT(Variable("ro"), Number(0))) &
-          la(instantiateT(Variable("ho"), Number(0))) & la(implyL) && (
-          dT("Use case 1") & ls(hide, "abs(r)>rp|abs(h)>hp") &
-            /*abbrv(Variable("max0"))(SuccPosition(0, PosInExpr(0::0::0::1::1::0::Nil))) // But more fragile */
-            abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) & dT("abbrv") &
-            la(MinMaxT, "", Some("max(0,w*(dhf-dhd))".asTerm)) & QE, //MinMaxT(AntePosition(9, PosInExpr(1 :: Nil)))
-          dT("Absolute value") &
-            ls(AbsT, "", Some("abs(r)".asTerm)) &   //AbsT(SuccPosition(0, PosInExpr(0 :: 0 :: Nil))) &
-            ls(AbsT, "", Some("abs(h)".asTerm)) &   //AbsT(SuccPosition(0, PosInExpr(1 :: 0 :: Nil)))
-            la(AbsT, "", Some("abs(r-0)".asTerm)) & //AbsT(AntePosition(9, PosInExpr(0 :: 0 :: Nil))) &
-            dT("Use case 2") & QE
-          ), closeId
+      (indUseCaseLbl, dT("Use case") & ls(implyR) & (la(andL)*) & dT("andL*") & ls(andR) && (
+        dT("before orL") & la(orL, condImpl) && (
+          dT("before inst 0 lower") & la(instantiateT(Variable("t"), Number(0))) &
+            la(instantiateT(Variable("ro"), Number(0))) &
+            la(instantiateT(Variable("ho"), Number(0))) & la(implyL) && (
+            dT("Use case 1") & ls(hide, "abs(r)>rp|abs(h)>hp") &
+              abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) &
+              la(MinMaxT, "", Some("max(0,w*(dhf-dhd))".asTerm)) & dT("MinMax Lower") &
+              /*(abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) | dT("max((0,w*(dhf-dhd))) not present")) &
+              (la(MinMaxT, "", Some("max(0,w*(dhf-dhd))".asTerm)) | dT("max((0,w*(dhf-dhd))) not present")) &
+              (abbrv("max((0,w*(dhfM-dhd)))".asTerm, Some(Variable("maxIM"))) | dT("max((0,w*(dhfM-dhd))) not present")) &
+              (la(MinMaxT, "", Some("max(0,w*(dhfM-dhd))".asTerm)) | dT("max((0,w*(dhfM-dhd))) not present")) &*/
+              QE,
+            dT("Absolute value") &
+              ls(AbsT, "", Some("abs(r)".asTerm)) &
+              ls(AbsT, "", Some("abs(h)".asTerm)) &
+              la(AbsT, "", Some("abs(r-0)".asTerm)) &
+              dT("Use case 2") & QE
+            ),
+          dT("before inst 0 upper") & la(instantiateT(Variable("t"), Number(0))) &
+            la(instantiateT(Variable("ro"), Number(0))) &
+            la(instantiateT(Variable("ho"), Number(0))) & la(implyL) && (
+            dT("Use case 1") & ls(hide, "abs(r)>rp|abs(h)>hp") &
+              abbrv("max((0,w*(dhfM-dhd)))".asTerm, Some(Variable("maxIM"))) &
+              la(MinMaxT, "", Some("max(0,w*(dhfM-dhd))".asTerm)) & dT("MinMax Upper") &
+              QE,
+            dT("Absolute value") &
+              ls(AbsT, "", Some("abs(r)".asTerm)) &
+              ls(AbsT, "", Some("abs(h)".asTerm)) &
+              la(AbsT, "", Some("abs(r-0)".asTerm)) &
+              dT("Use case 2 upper") & QE
+            )), closeId
         )),
       (indStepLbl, dT("Step") & ls(implyR) & ls(boxSeqGenT(invariant)) & onBranch(
         (cutShowLbl, dT("Generalization Holds") &
           ls(boxSeqT) & ls(boxChoiceT) & ls(andR) && (
           dT("1.1") & ls(boxTestT) & ls(implyR) & ls(boxNDetAssign) & ls(skolemizeT) & closeId, /* closed */
           dT("1.2") & ls(boxSeqT) & ls(boxNDetAssign) & ls(skolemizeT) & ls(boxSeqT) & ls(boxChoiceT) & dT("1.2.1") &
-            la(hide, "((w=-1|w=1)&\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&(hp>0&rp>0&rv>=0&a>0)")
-            & ls(andR) & /* almost identical branches */
+            la(hide, invariantStr) & ls(andR) & /* almost identical branches */
             ls(substitutionBoxAssignT) & ls(boxTestT) & dT("1.2.2") & ls(implyR) & ls(boxNDetAssign) & ls(skolemizeT) &
             ls(andR) && (ls(andR) && (dT("cohide") & cohide(SuccPosition(0)) & QE, closeId), closeId)
           /* last line used to be handled by QE, but Max broke that */
           /* Would like to replace cohide by: ls(cohide, "-1=-1|-1=1") OR ls(cohide, "1=-1|1=1") (BUT different branches)*/
           )),
         (cutUseLbl, dT("Generalization Strong Enough") &
-          abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("max0"))) & dT("abbrv2") &
-          /*abbrv(Variable("max0"))(AntePosition(0, PosInExpr(0::1::0::0::0::0::0::0::0::1::1::0::Nil)))*/
-          cutEZ("!(w*dhd>=w*dhf|w*ao>=a) | (w*dhd>=w*dhf|w*ao>=a)".asFormula,
-            ls(cohide, "!(w*dhd>=w*dhf|w*ao>=a) | (w*dhd>=w*dhf|w*ao>=a)") & QE) &
-          la(orL, "!(w*dhd>=w*dhf|w*ao>=a) | (w*dhd>=w*dhf|w*ao>=a)") && (
-          la(hide, "max0=max((0,w*(dhf-dhd)))") &
-            la(hide, "((w=-1|w=1)&\\forall t \\forall ro \\forall ho (0<=t&t < max0/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max0/a&ro=rv*t&ho=dhf*t-w*max0^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&(hp>0&rp>0&rv>=0&a>0)") &
+          abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) &
+          abbrv("max((0,w*(dhfM-dhd)))".asTerm, Some(Variable("maxIM"))) & dT("abbrv2") &
+          la(hide, "maxI=max((0,w*(dhf-dhd)))") & la(hide, "maxIM=max((0,w*(dhfM-dhd)))") &
+          cutEZ(("!" + evolutionDomain + " | " + evolutionDomain).asFormula,
+            ls(cohide, "!" + evolutionDomain + " | " + evolutionDomain) & QE) &
+          la(orL, "!" + evolutionDomain + " | " + evolutionDomain) && (
+            la(hide, "((w=-1|w=1)&(\\forall t \\forall ro \\forall ho (0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp)|\\forall t \\forall ro \\forall ho (0<=t&t < maxIM/aM&ro=rv*t&ho=w*aM/2*t^2+dhd*t|t>=maxIM/aM&ro=rv*t&ho=(dhd+w*maxIM)*t-w*maxIM^2/(2*aM)->abs(r-ro)>rp|w*h>w*ho+hp)))&hp>0&rp>0&rv>=0&a>0&aM>0") &
             dT("Before DI") &
-            cutEZ("[{r'=-rv,dhd'=ao,h'=-dhd&w*dhd>=w*dhf|w*ao>=a}](0=1)".asFormula, // false as postcondition doesn't work
-              ls(hide, "[{r'=-rv,dhd'=ao,h'=-dhd&w*dhd>=w*dhf|w*ao>=a}](((w=-1|w=1)&\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&(hp>0&rp>0&rv>=0&a>0))")
+            cutEZ(("[{r'=-rv,dhd'=ao,h'=-dhd&" + evolutionDomain + "}](0=1)").asFormula, // false as postcondition doesn't work
+              ls(hide, "[{r'=-rv,dhd'=ao,h'=-dhd&" + evolutionDomain + "}]" + invariantStr)
                 & ls(DI)) &
-            la(hide, "!(w*dhd>=w*dhf|w*ao>=a)") &
+            la(hide, "!" + evolutionDomain) &
             dT("After DI") & ls(DC("0=1".asFormula)) & onBranch(
             (cutShowLbl, dT("After DC 1") & closeId),
             (cutUseLbl, dT("After DC 2") & ls(DW) & dT("after DW") &
               ls(implyR) & la(andL) & la(cohide, "0=1") & dT("before QE") & QE)
           ),
-          ls(diffSolution(None, la(hide, "max0=max((0,w*(dhf-dhd)))"))) & dT("Diff. Solution") &
+          dT("Solving") /*& ls(diffSolution(None, la(hide, "max0=max((0,w*(dhf-dhd)))"))) & dT("Diff. Solution") &
             ls(implyR) & (la(andL)*) &
             la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_1=0") & la(hideT, "kxtime_1=0") &
             la(TacticLibrary.eqLeft(exhaustive=true), "kxtime_4()=0") & la(hideT, "kxtime_4()=0") &
@@ -702,11 +723,11 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
             dT("bla") & cut(safeLemmaFormula.asFormula) & onBranch(
             (cutShowLbl, ls(cohideT, safeLemmaFormula) & dT("apply Lemma") & applyLemma),
             (cutUseLbl, dT("use lemma") & QE)
-          )
+          )*/
           ) /* end orL on cutEZ */
           ) /* End cutUseLbl "Generalization strong enough" */
       )) /* End indStepLbl */
-    )*/
+    )
 
     val safeTheorem = helper.runTactic(safeTac, new RootNode(safeSeq))
     safeTheorem shouldBe 'closed
