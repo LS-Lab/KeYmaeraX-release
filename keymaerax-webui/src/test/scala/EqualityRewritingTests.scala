@@ -403,4 +403,67 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
   it should "consider quotients to be more complicated than polynomials" in {
     compareTerms("(x+2)/(x+1)".asTerm, "x^5".asTerm) should be (1)
   }
+
+  "Smart Equality Rewriting" should "rewrite a single formula exhaustively" in {
+    val s = sequent(Nil, "x=0".asFormula::Nil, "x*y=0".asFormula :: "z>2".asFormula :: "z<x+1".asFormula :: Nil)
+    val tactic = smartEqualityRewritingT
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "x=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only ("0*y=0".asFormula, "z>2".asFormula, "z<0+1".asFormula)
+  }
+
+  it should "rewrite formulas exhaustively" in {
+    val s = sequent(Nil, "x=0".asFormula :: "z=x".asFormula :: Nil, "x*y=0".asFormula :: "z>2".asFormula :: "z<x+1".asFormula :: Nil)
+    val tactic = smartEqualityRewritingT
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only ("x=0".asFormula, "z=0".asFormula)
+    result.openGoals().flatMap(_.sequent.succ) should contain only ("0*y=0".asFormula, "z>2".asFormula, "z<0+1".asFormula)
+  }
+
+  it should "rewrite formulas exhaustively everywhere" in {
+    val s = sequent(Nil, "z=x".asFormula :: "x=0".asFormula :: Nil, "x*y=0".asFormula :: "z>2".asFormula :: "z<x+1".asFormula :: Nil)
+    val tactic = smartEqualityRewritingT
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.succ) should contain only ("x*y=0".asFormula, "x>2".asFormula, "x<x+1".asFormula)
+    result.openGoals().flatMap(_.sequent.ante) should contain only ("x=0".asFormula, "z=x".asFormula)
+  }
+
+  it should "work even if there is only one other formula" in {
+    val s = sequent(Nil, "x<5".asFormula :: "x=0".asFormula :: Nil, Nil)
+    val tactic = smartEqualityRewritingT
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only ("0<5".asFormula, "x=0".asFormula)
+    result.openGoals().flatMap(_.sequent.succ) shouldBe empty
+  }
+
+  // @todo The success of this test depends on variable naming. It seems likely that we should enhance the
+  // term ordering so the number of monomials in a polynomial matters when the total order is the same (so d+b is more
+  // complex than c)
+  it should "replace compound terms" in {
+    val s = sequent(Nil, "d+b<5".asFormula :: "d+b=c".asFormula :: Nil, Nil)
+    val tactic = smartEqualityRewritingT
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("c<5".asFormula, "d+b=c".asFormula)
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
+  // rewriting numbers is disallowed, because otherwise we run into endless rewriting
+  it should "not rewrite numbers" in {
+    val s = sequent(Nil, "0<5".asFormula :: "0=0".asFormula :: Nil, Nil)
+    val tactic = smartEqualityRewritingT
+    tactic.applicable(new RootNode(s)) shouldBe false
+  }
+
+  it should "not try to rewrite bound occurrences" in {
+    //@note would clash anyway, but tactic shouldn't even try
+    val s = sequent(Nil, "a=1".asFormula :: Nil, "[a:=2;]a=1".asFormula :: Nil)
+    val tactic = smartEqualityRewritingT
+    tactic.applicable(new RootNode(s)) shouldBe false
+  }
 }
