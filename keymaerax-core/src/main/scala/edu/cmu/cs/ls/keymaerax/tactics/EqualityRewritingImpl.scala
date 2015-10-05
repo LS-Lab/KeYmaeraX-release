@@ -138,6 +138,79 @@ object EqualityRewritingImpl {
     }
   }
 
+  def smartEqualityRewritingT:Tactic = SearchTacticsImpl.locateAnte(smartEqPos("Look for equality in antecedent and apply it"))
+
+  def positionsOf(t: Term, fml: Formula): Set[PosInExpr] = {
+    var positions: Set[PosInExpr] = Set.empty
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+        if (e == t && !positions.exists(_.isPrefixOf(p))) positions += p
+        Left(None)
+      }
+    }, fml)
+    positions
+  }
+
+  def positionsOf(t: Term, s: Sequent): Set[Position] = {
+    val ante = s.ante.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => AntePosition(i, p)) })
+    val succ = s.succ.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => SuccPosition(i, p)) })
+    (ante ++ succ).toSet
+  }
+
+  //@todo Reduce code duplication
+  //@todo See if we can make this applicable in more places without causing infinite loops.
+  /**
+   * Applies an equality at a position everywhere in the sequent if it makes the sequent "simpler" for some definition of simpler.
+   * Hides the equality if no possible uses remain.
+   * @example{{{
+   *               |- x < 5
+   *   ----------------------------------
+   *   x = y^2 + 1 |- y^2 + 1 < 5
+   * }}}
+   */
+  private def smartEqPos(name: String): PositionTactic = new PositionTactic(name) {
+    import scala.language.postfixOps
+    override def applies(s: Sequent, p: Position):Boolean = p.isAnte && (s(p) match {
+      case Equal(lhs,rhs) =>
+        val cmp = compareTerms(lhs,rhs)
+        if (cmp == 0) {
+          false
+        } else {
+          val what = if (cmp > 0) lhs else rhs
+          val repl = if (cmp > 0) rhs else lhs
+          val occurrences : Set[Position] = positionsOf(what, s).filter(pos => pos.isAnte != p.isAnte || pos.index != p.index).
+            filter(pos => StaticSemanticsTools.boundAt(s(pos), pos.inExpr).intersect(StaticSemantics.freeVars(what)).isEmpty)
+          // prevent endless self rewriting (e.g., 0=0) -> compute dependencies first to figure out what to rewrite when
+          !what.isInstanceOf[Number] && what != repl &&
+            StaticSemantics.symbols(what).intersect(StaticSemantics.symbols(repl)).isEmpty &&
+            positionsOf(what, s).exists(pos => (pos.isAnte != p.isAnte || pos.index != p.index) &&
+              StaticSemanticsTools.boundAt(s(pos), pos.inExpr).intersect(StaticSemantics.freeVars(what)).isEmpty) &&
+            occurrences.size != 0
+
+          }
+      case _ => false })
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case eq@Equal(lhs, rhs) =>
+          val cmp = compareTerms(lhs, rhs)
+          val what = if (cmp > 0) lhs else rhs
+          val repl = if (cmp > 0) rhs else lhs
+          assert(!what.isInstanceOf[Number] && what != repl && cmp != 0)
+          // positions are not stable, so we need to search over and over again (we even need to search eqPos, since it
+          // may shift)
+          val occurrences = positionsOf(what, node.sequent).filter(pos => pos.isAnte != p.isAnte || pos.index != p.index).
+            filter(pos => StaticSemanticsTools.boundAt(node.sequent(pos), pos.inExpr).intersect(StaticSemantics.freeVars(what)).isEmpty)
+          Some(constFormulaCongruenceT(p, left = cmp > 0, exhaustive = false)(occurrences.head) &
+            (locateAnte(eqPos(name, cmp > 0, true), _ == eq) | NilT))
+      }
+    }
+
+
+  }
+
+
   /**
    * Creates a new tactic to rewrite an equality.
    * @param name The name of the tactic.
@@ -520,15 +593,6 @@ object EqualityRewritingImpl {
     }
   }
 
-  /**
-   * Applies an equality at a position everywhere in the sequent if it makes the sequent "simpler" for some definition of simpler.
-   * Hides the equality if no possible uses remain.
-   * @example{{{
-   *   |- x < 5
-   *   ----------------------------------
-   *   x = y^2 + 1 |- y^2 + 1 < 5
-   * }}}
-   */
   def applyEq(): PositionTactic = new PositionTactic("applyEq") {
     override def applies(s: Sequent, p:Position): Boolean = getTerm(s,p) != null // just to test that there is no exception
 
