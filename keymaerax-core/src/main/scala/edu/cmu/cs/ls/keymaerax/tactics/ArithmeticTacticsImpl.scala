@@ -218,6 +218,31 @@ object ArithmeticTacticsImpl {
     }
   }
 
+  private def skolemize(sequent: Sequent, fml: Formula, pos: Position): Formula = {
+    var s = sequent
+    var f = fml
+
+    while (fml.isInstanceOf[Forall]) {
+      s = Skolemize(pos)(s)(pos.index)
+      f = s.succ(pos.index)
+    }
+    fml
+  }
+
+  /**
+   * Detemermine whether the given tool can find a counterexample for the given formula.
+   * @param tool The counter example generation tool
+   * @param proofNode
+   * @param position
+   * @return Whether a counterexample could be found.
+   */
+  def hasCounterexample (tool: Tool, node: ProofNode, pos: Position) : Boolean = {
+    val sequent = node.sequent
+    val fml = if (pos.isAnte) sequent.ante(pos.index) else sequent.succ(pos.index)
+    tool.name.equals("Mathematica") &&
+      !tool.asInstanceOf[Mathematica].getCounterExample(skolemize(sequent, fml, pos)).equals("false")
+  }
+
   /**
    * Shows counter example information as String
    * @param tool The counter example generation tool
@@ -229,12 +254,7 @@ object ArithmeticTacticsImpl {
     val f = node.sequent.succ.head
     if(counterExampleT(tool.name).applicable(node)) {
       if(tool.name.equals("Mathematica")) {
-        var sequent = node.sequent
-        var forallF = f
-        while(forallF.isInstanceOf[Forall]) {
-          sequent = Skolemize(SuccPos(0))(sequent).head
-          forallF = sequent.succ.head
-        }
+        val forallF = skolemize(node.sequent, f, SuccPos(0))
         try {
           val counterExample = tool.asInstanceOf[Mathematica].getCounterExample(forallF)
           if(counterExample.equals("false"))

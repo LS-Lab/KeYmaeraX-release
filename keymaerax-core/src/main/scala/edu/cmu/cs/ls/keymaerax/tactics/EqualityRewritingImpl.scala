@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT, sk
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cutT, EquivLeftT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{lastSucc,locateAnte}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, PositionTactic, Tactic, NilPT, NilT}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import PropositionalTacticsImpl._
 import BranchLabels._
 import SearchTacticsImpl.{lastAnte,onBranch}
@@ -182,13 +182,13 @@ object EqualityRewritingImpl {
             filter(pos => StaticSemanticsTools.boundAt(s(pos), pos.inExpr).intersect(StaticSemantics.freeVars(what)).isEmpty)
           // prevent endless self rewriting (e.g., 0=0) -> compute dependencies first to figure out what to rewrite when
           !what.isInstanceOf[Number] && what != repl &&
-            StaticSemantics.symbols(what).intersect(StaticSemantics.symbols(repl)).isEmpty &&
             positionsOf(what, s).exists(pos => (pos.isAnte != p.isAnte || pos.index != p.index) &&
               StaticSemanticsTools.boundAt(s(pos), pos.inExpr).intersect(StaticSemantics.freeVars(what)).isEmpty) &&
             occurrences.size != 0
 
           }
       case _ => false })
+
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
@@ -202,8 +202,16 @@ object EqualityRewritingImpl {
           // may shift)
           val occurrences = positionsOf(what, node.sequent).filter(pos => pos.isAnte != p.isAnte || pos.index != p.index).
             filter(pos => StaticSemanticsTools.boundAt(node.sequent(pos), pos.inExpr).intersect(StaticSemantics.freeVars(what)).isEmpty)
-          Some(constFormulaCongruenceT(p, left = cmp > 0, exhaustive = false)(occurrences.head) &
-            (locateAnte(eqPos(name, cmp > 0, true), _ == eq) | NilT))
+          val tactic = constFormulaCongruenceT(p, left = cmp > 0, exhaustive = false)(occurrences.head) &
+            (locateAnte(eqPos(name, cmp > 0, true), _ == eq) | NilT)
+          // Hide the equality if we think we won't need it for the rest of the proof. We test for counterexamples first because if
+          // the equality has a counterexample then we can derive false, it which case we definitely don't want to throw it out.
+          if (ArithmeticTacticsImpl.hasCounterexample(tool, node, p)) {
+            Some(tactic)
+          } else {
+            val hide = SearchTacticsImpl.locateAnte(assertPT(node.sequent(p), "Wrong position when hiding EQ") & hideT, _ == node.sequent(p))
+            Some(tactic & hide)
+          }
       }
     }
   }
