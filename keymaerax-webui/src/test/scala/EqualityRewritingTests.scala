@@ -369,39 +369,39 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
   }
 
   "term comparison" should "sort variable names lexicographically" in {
-    compareTerms("x".asTerm,"y".asTerm) should be (-1)
-    compareTerms("xx".asTerm,"xy".asTerm) should be (-1)
-    compareTerms("x".asTerm,"x".asTerm) should be (0)
-    compareTerms("xx".asTerm,"xx".asTerm) should be (0)
-    compareTerms("xy".asTerm,"xx".asTerm) should be (1)
+    compareTermComplexity("x".asTerm,"y".asTerm) should be (-1)
+    compareTermComplexity("xx".asTerm,"xy".asTerm) should be (-1)
+    compareTermComplexity("x".asTerm,"x".asTerm) should be (0)
+    compareTermComplexity("xx".asTerm,"xx".asTerm) should be (0)
+    compareTermComplexity("xy".asTerm,"xx".asTerm) should be (1)
   }
 
   it should "sort by total degree first" in {
-    compareTerms("x * y^3".asTerm, "x^2 * y".asTerm) should be (1)
+    compareTermComplexity("x * y^3".asTerm, "x^2 * y".asTerm) should be (1)
   }
 
   it should "find the leading term" in {
-    compareTerms("x + y^3 + z".asTerm, "x^2 + y^2 + z^2".asTerm) should be (1)
+    compareTermComplexity("x + y^3 + z".asTerm, "x^2 + y^2 + z^2".asTerm) should be (1)
   }
 
   it should "break ties with coefficients" in {
-     compareTerms("x".asTerm, "2 * x".asTerm) should be (-1)
+     compareTermComplexity("x".asTerm, "2 * x".asTerm) should be (-1)
   }
 
   it should "break ties with lex order" in {
-    compareTerms("x*y".asTerm,"x*z".asTerm) should be (-1)
+    compareTermComplexity("x*y".asTerm,"x*z".asTerm) should be (-1)
   }
 
   it should "consider exponentials to be more complicated than polynomials" in {
-    compareTerms("2^x".asTerm, "x^100".asTerm) should be (1)
+    compareTermComplexity("2^x".asTerm, "x^100".asTerm) should be (1)
   }
 
   it should "consider exponentials to be more complicated than quotients" in {
-    compareTerms("2^x".asTerm, "(x + 2)/(x+1)".asTerm) should be (1)
+    compareTermComplexity("2^x".asTerm, "(x + 2)/(x+1)".asTerm) should be (1)
   }
 
   it should "consider quotients to be more complicated than polynomials" in {
-    compareTerms("(x+2)/(x+1)".asTerm, "x^5".asTerm) should be (1)
+    compareTermComplexity("(x+2)/(x+1)".asTerm, "x^5".asTerm) should be (1)
   }
 
   "Smart Equality Rewriting" should "rewrite a single formula exhaustively" in {

@@ -157,8 +157,6 @@ object EqualityRewritingImpl {
     (ante ++ succ).toSet
   }
 
-  //@todo Reduce code duplication
-  //@todo See if we can make this applicable in more places without causing infinite loops.
   /**
    * Applies an equality at a position everywhere in the sequent if it makes the sequent "simpler" for some definition of simpler.
    * Hides the equality if no possible uses remain.
@@ -167,12 +165,14 @@ object EqualityRewritingImpl {
    *   ----------------------------------
    *   x = y^2 + 1 |- y^2 + 1 < 5
    * }}}
+   * @todo Check whether it's safe to apply this tactic in more cases than eqPos due to the complexity checks.
+   * @todo Hide assumptions when you're done with them, unless the assumption is strong enough to give us false.
    */
   private def smartEqPos(name: String): PositionTactic = new PositionTactic(name) {
     import scala.language.postfixOps
     override def applies(s: Sequent, p: Position):Boolean = p.isAnte && (s(p) match {
       case Equal(lhs,rhs) =>
-        val cmp = compareTerms(lhs,rhs)
+        val cmp = compareTermComplexity(lhs,rhs)
         if (cmp == 0) {
           false
         } else {
@@ -194,7 +194,7 @@ object EqualityRewritingImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case eq@Equal(lhs, rhs) =>
-          val cmp = compareTerms(lhs, rhs)
+          val cmp = compareTermComplexity(lhs, rhs)
           val what = if (cmp > 0) lhs else rhs
           val repl = if (cmp > 0) rhs else lhs
           assert(!what.isInstanceOf[Number] && what != repl && cmp != 0)
@@ -206,8 +206,6 @@ object EqualityRewritingImpl {
             (locateAnte(eqPos(name, cmp > 0, true), _ == eq) | NilT))
       }
     }
-
-
   }
 
 
@@ -250,23 +248,6 @@ object EqualityRewritingImpl {
             Some(constFormulaCongruenceT(p, left=left, exhaustive=false)(occurrences.head))
           }
       }
-    }
-
-    def positionsOf(t: Term, fml: Formula): Set[PosInExpr] = {
-      var positions: Set[PosInExpr] = Set.empty
-      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-          if (e == t && !positions.exists(_.isPrefixOf(p))) positions += p
-          Left(None)
-        }
-      }, fml)
-      positions
-    }
-
-    def positionsOf(t: Term, s: Sequent): Set[Position] = {
-      val ante = s.ante.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => AntePosition(i, p)) })
-      val succ = s.succ.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => SuccPosition(i, p)) })
-      (ante ++ succ).toSet
     }
   }
 
@@ -346,20 +327,33 @@ object EqualityRewritingImpl {
     }
   }
 
-  // PolyTerm is a term factored into a polynomial, a set of monomials wherea monial is a coefficient and
-  // product of variables raised to exponents.
+  /** To compare the complexity of terms we first normalize them to polynomials (where we include differential symbols in the
+    * set of possible variables). Since quotients and exponentials cannot be normalized to polynomials, we consider quotients
+    * more complex than polynomials and exponentials most complex of all.
+    *
+    * This comparison is based on the graded lexicographic ordering often used when computing Groebner bases with Buchberger's algorithm,
+    * though it may vary in some of the details.
+    *
+    *  The type Monomial encodes a monomial as a coefficient and a set of variables raised to positive exponents. Constant terms are encoded
+    *  as coefficients with no variables. A PolyTerm represents a polynomial over BigDecimals where the variables are program variables and
+    *  their differential symbols.
+    */
   type Monomial = (BigDecimal, Set[(Term, Int)])
   type PolyTerm = Set[Monomial]
 
-  def zeroMon : Monomial = (BigDecimal(0), Set.empty[(Term,Int)])
-  def zeroPoly : PolyTerm = Set.empty[Monomial]
-  def subtractVars(vs1: Set[(Term, Int)], vs2: Set[(Term, Int)]): Set[(Term, Int)] =
+  private def zeroMon : Monomial = (BigDecimal(0), Set.empty[(Term,Int)])
+  private def zeroPoly : PolyTerm = Set.empty[Monomial]
+
+  // Remove all variables from vs1 that appear in vs2 (possibly with different exponents)
+  private def removeVarsOf(vs1: Set[(Term, Int)], vs2: Set[(Term, Int)]): Set[(Term, Int)] =
     vs1.filter(xn => !vs2.exists(ym => xn._1 == ym._1))
 
-  def subtractPolynomials(p1: PolyTerm, p2: PolyTerm): PolyTerm =
+  // Remove all monomials from p1 that appear in p2 (possibly with different coefficients)
+  private def removeMonomialsOf(p1: PolyTerm, p2: PolyTerm): PolyTerm =
     p1.filter(p1 => !p2.exists(p2 => p1._2 == p2._2))
 
-  def commonVars(vs1: Set[(Term, Int)], vs2: Set[(Term, Int)]): Set[(Term, Int, Int)] =
+  // Compute the variables that appear in both vs1 and vs2 with their associated exponents.
+  private def commonVars(vs1: Set[(Term, Int)], vs2: Set[(Term, Int)]): Set[(Term, Int, Int)] =
     vs1.flatMap((xn: (Term, Int)) => {
       val (found: Option[(Term, Int)]) = vs2.find(ym => xn._1 == ym._1)
       found match {
@@ -368,16 +362,16 @@ object EqualityRewritingImpl {
       }
     })
 
-
-  def multiplyMon(mon1: Monomial, mon2: Monomial): Monomial = {
+  // Computes the product of two monomials
+  private def multiplyMon(mon1: Monomial, mon2: Monomial): Monomial = {
     (mon1, mon2) match {
       case ((c1, vs1), (c2, vs2)) =>
         val common = commonVars(vs1, vs2).map(cvs => (cvs._1, cvs._2 + cvs._3))
-        (c1 * c2, subtractVars(vs1, common) ++ subtractVars(vs2, common) ++ common)
+        (c1 * c2, removeVarsOf(vs1, common) ++ removeVarsOf(vs2, common) ++ common)
     }
   }
 
-  def syntacticDerivative(t: Term): Term =
+  private def syntacticDerivative(t: Term): Term =
     t match {
       case Differential(t1) => syntacticDerivative(syntacticDerivative(t1))
       case Plus(t1, t2) => Plus(syntacticDerivative(t1), syntacticDerivative(t2))
@@ -390,25 +384,29 @@ object EqualityRewritingImpl {
       case DifferentialSymbol(_) => ??? // @todo Decide whether it's better to introduce auxilliary variables or just fail
     }
 
+  // Exceptions for reporting terms that can't be turned into polynomials.
   class BadDivision extends Exception {}
-
   class BadPower extends Exception {}
 
-  def constPoly(x: BigDecimal): PolyTerm =
+  // Create a polynomial of form c for some real c.
+  private def constPoly(x: BigDecimal): PolyTerm =
     Set.empty.+((x, Set.empty[(Term, Int)]))
 
-  def variablePoly(x: Term): PolyTerm =
+  // Create a polynomial of form x (or x')/
+  private def variablePoly(x: Term): PolyTerm =
     Set.empty.+((BigDecimal(1), Set.empty.+((x, 1))))
 
-  def makeProd(t: Term, n: BigInt): Term = {
+  // Expand constant powers to iterated products.
+  private def expandPower(t: Term, n: BigInt): Term = {
     (n == BigInt(0), n == BigInt(1)) match {
       case (true, false) => Number(BigDecimal(1))
       case (false, true) => t
-      case _ => Times(t, makeProd(t, n - 1))
+      case _ => Times(t, expandPower(t, n - 1))
     }
   }
 
-  def mapCommon (norm1:Set[Monomial],norm2:Set[Monomial],f:(BigDecimal,BigDecimal)=>BigDecimal):Set[Monomial] = {
+  // Find the common elements of norm1 and norm2, combining corresponding elements with f
+  private def mapCommon (norm1: Set[Monomial], norm2: Set[Monomial], f: (BigDecimal,BigDecimal) => BigDecimal): Set[Monomial] = {
     norm1.flatMap(mon1 =>
       norm2.find(mon2 => mon1._2 == mon2._2) match {
         case None => Set.empty[Monomial]
@@ -416,16 +414,14 @@ object EqualityRewritingImpl {
     })
   }
 
-  def nonCommonMonomials(p1:PolyTerm,p2:PolyTerm):PolyTerm = {
-    p1.filter(mon1 => !p2.exists(mon2 => mon1._2 == mon2._2))
-  }
-
-  def addPolyTerms(p1:PolyTerm,p2:PolyTerm):PolyTerm = {
+  private def addPolyTerms(p1:PolyTerm,p2:PolyTerm):PolyTerm = {
     val commonMonomials = mapCommon(p1, p2, { case (x, y) => x + y })
-    commonMonomials ++ nonCommonMonomials(p1, commonMonomials) ++ nonCommonMonomials(p2,commonMonomials)
+    commonMonomials ++ removeMonomialsOf(p1, commonMonomials) ++ removeMonomialsOf(p2,commonMonomials)
   }
 
-  def normLoop(t: Term): PolyTerm = {
+  // Main loop for normalizing terms to polynomials. Throws an exception if the term has no normal form.
+  // Breaks the invariant that all coefficients are non-zero
+  private def normLoop(t: Term): PolyTerm = {
     t match {
       case Times(t1: Term, t2: Term) =>
         val normT2 = normLoop(t2)
@@ -439,7 +435,7 @@ object EqualityRewritingImpl {
         val (norm1, norm2) = (normLoop(t1), normLoop(t2))
         val commonMonomials = mapCommon(norm1,norm2,{case (x,y) => x-y})
         var negNorm2 = norm2.map({case (n,x) => (-n, x)})
-        commonMonomials ++ nonCommonMonomials(norm1,commonMonomials) ++ nonCommonMonomials(norm2,commonMonomials)
+        commonMonomials ++ removeMonomialsOf(norm1,commonMonomials) ++ removeMonomialsOf(norm2,commonMonomials)
       case Neg(t1:Term) => normLoop(Minus(Number(BigDecimal(0)),t1))
       case Differential(t1) => normLoop(syntacticDerivative(t1))
       case Divide(t1, Number(x)) =>
@@ -459,52 +455,49 @@ object EqualityRewritingImpl {
             if (n < BigInt(0)) {
               throw new BadPower
             }
-            normLoop(makeProd(t1, n))
+            normLoop(expandPower(t1, n))
         }
       case Power(_,_) => throw new BadPower
       }
   }
 
+  // Compute the normal form of a term, or throws an exception if none exists
   def norm(t:Term):PolyTerm = {
+    // Since normLoop breaks the invariant that coefficients are nonzero, we restore it here.
     normLoop(t).filter({case (n,vs) => BigDecimal(0) != n})
   }
-
+  
+  
   sealed trait NormResult {}
-  case class Normal(polyTerm: PolyTerm) extends NormResult
+  case class NormalForm (polyTerm: PolyTerm) extends NormResult
   case class BadPowerResult () extends NormResult
   case class BadDivResult () extends NormResult
 
-  def totalNorm(t:Term):NormResult = {
-    try {
-      Normal(norm(t))
-    } catch {
-      case ex:BadDivision => BadDivResult()
-      case ex:BadPower => BadPowerResult()
-    }
+  private def totalNorm(t: Term): NormResult = {
+     try {
+       NormalForm(norm(t))
+     } catch {
+       case ex: BadDivision => BadDivResult()
+       case ex: BadPower => BadPowerResult()
+     }
+   }
+
+  private object VariableComparator extends Ordering[(Term,Int)] {
+    def compare(t1: (Term,Int), t2: (Term,Int)): Int = compareVars (t1._1, t2._1)
   }
 
-  object VariableComparator extends Ordering[(Term,Int)] {
-    def compare(t1: (Term,Int), t2: (Term,Int)): Int = {
-      (t1, t2) match {
-        case ((v1@Variable(_, _, _),_), (v2@Variable(_, _, _),_)) =>
-          v1.compare(v2)
-        case ((DifferentialSymbol(v1),_), (DifferentialSymbol(v2),_)) =>
-          v1.compare(v2)
-      }
-    }
-  }
-
-  def sortVars(s: Set[(Term, Int)]): SortedSet[(Term, Int)] =
-  {
+  private def sortVars(s: Set[(Term, Int)]): SortedSet[(Term, Int)] = {
     val ss : SortedSet[(Term,Int)] = TreeSet[(Term,Int)]()(VariableComparator)
     s.foldLeft(ss)({case (ss, xn) => ss.+(xn)})
   }
 
-  def totalDegree(mon:Monomial):Int = {
+  private def totalDegree(mon:Monomial): Int = {
      mon._2.foldLeft(0)({case (n1,(v,n2)) => n1+n2})
   }
 
-  def compareVars(x1:Term,x2:Term):Int = {
+  // Compares two variables in a polynomial, ordered by complexity. We consider differential symbols more complex
+  // than program variables because it seems likely that eliminating them will usually make proofs simpler.
+  private def compareVars(x1:Term,x2:Term):Int = {
     (x1,x2) match {
       case (v1@Variable(_,_,_),v2@Variable(_,_,_)) => v1.compare(v2)
       case (v1@DifferentialSymbol(_), v2@DifferentialSymbol(_)) =>
@@ -514,7 +507,8 @@ object EqualityRewritingImpl {
     }
   }
 
-  def compareSortedVars(l1:List[(Term,Int)],l2:List[(Term,Int)]):Int = {
+  // Compares the variables of two monomials (assumes the input lists are sorted on the variables)
+  private def compareSortedVars(l1:List[(Term,Int)],l2:List[(Term,Int)]):Int = {
     (l1, l2) match {
       case (Nil, Nil) => 0
       case ((x: (Term, Int)) :: _, Nil) => x._2.compare(0)
@@ -536,18 +530,20 @@ object EqualityRewritingImpl {
     }
   }
 
-  def compareVars(s1:Set[(Term,Int)],s2:Set[(Term,Int)]):Int = {
+  private def compareMonomialVars(s1:Set[(Term,Int)],s2:Set[(Term,Int)]):Int = {
     compareSortedVars(sortVars(s1).toList,sortVars(s2).toList)
   }
 
+  // Graded lexicographic monomial ordering, commonly used when finding Groebner bases.
+  // @todo Consider a "doubly-graded" ordering (on POLYnomials) where the number of monomials comes
+  // after the total degree of the leading term
   object MonomialGrlex extends Ordering[Monomial] {
-    // Graded lexicographic ordering
     def compare(mon1: Monomial, mon2: Monomial): Int = {
       val cmpDegree = totalDegree(mon1).compare(totalDegree(mon2))
       if (cmpDegree != 0) {
         cmpDegree
       } else {
-        val cmpVars = compareVars(mon1._2, mon2._2)
+        val cmpVars = compareMonomialVars(mon1._2, mon2._2)
         if (cmpVars != 0) {
           cmpVars
         } else {
@@ -557,13 +553,14 @@ object EqualityRewritingImpl {
     }
   }
 
-  def compareSortedPolyTerms(l1:List[Monomial],l2:List[Monomial]):Int = {
+  // Compares two polynomials assuming their monomials are in sorted order
+  private def compareSortedPolyTerms(l1:List[Monomial],l2:List[Monomial]):Int = {
     (l1,l2) match {
       case (Nil,Nil) => 0
       case ((x:Monomial) :: _, Nil) => MonomialGrlex.compare(x, zeroMon)
       case (Nil, (x:Monomial) ::_) => MonomialGrlex.compare(zeroMon, x)
       case ((x:Monomial)::xs,(y:Monomial)::ys) =>
-        val varCmp = compareVars(x._2,y._2)
+        val varCmp = compareMonomialVars(x._2,y._2)
         if (varCmp < 0) {
           MonomialGrlex.compare(x,zeroMon)
         } else if (varCmp > 0) {
@@ -574,49 +571,24 @@ object EqualityRewritingImpl {
     }
   }
 
-  def compareNormalTerms(l:PolyTerm,r:PolyTerm) : Int =
-  {
+  private def compareNormalTerms(l:PolyTerm, r:PolyTerm) : Int = {
     val ls = l.foldLeft(TreeSet()(MonomialGrlex))({case (s,mon) => s.+(mon)}).toList
     val rs = r.foldLeft(TreeSet()(MonomialGrlex))({case (s,mon) => s.+(mon)}).toList
     compareSortedPolyTerms(ls,rs)
   }
 
-  def compareTerms(l:Term, r:Term) : Int = {
+  /** Compares two terms by complexity. l > r if replacing l with r would likely simplify the formula, and vice versa.
+    * If l = r, this indicates that it is unclear which term is more complex, and we should not substitute either one with
+    * the other. */
+  def compareTermComplexity(l:Term, r:Term) : Int = {
     (totalNorm(l), totalNorm(r)) match {
-      case (Normal(norm1), Normal(norm2)) => compareNormalTerms(norm1, norm2)
+      case (NormalForm(norm1), NormalForm(norm2)) => compareNormalTerms(norm1, norm2)
       case (BadPowerResult(), BadPowerResult()) => 0
       case (BadPowerResult(), _) => 1
       case (_, BadPowerResult()) => -1
       case (BadDivResult(), BadDivResult()) => 0
       case (BadDivResult(), _) => 1
       case (_, BadDivResult()) => -1
-    }
-  }
-
-  def applyEq(): PositionTactic = new PositionTactic("applyEq") {
-    override def applies(s: Sequent, p:Position): Boolean = getTerm(s,p) != null // just to test that there is no exception
-
-    override def apply(p: Position): Tactic = new ConstructionTactic("abbrv") {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val t = getTerm(node.sequent, p)
-        Some(applyEq(t, node))
-      }
-    }
-  }
-
-  def applyEq(t: Term, node: ProofNode): Tactic = new ConstructionTactic("applyEq") {
-    /* @todo Check that the position is (a) in the antecedent and (b) an equality.  */
-    override def applicable(node: ProofNode): Boolean = true
-
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      /* @todo
-      *   (1) find the simpler side of the equality
-      *   (1.5) Normalize equations so we can find more things to substitute against
-      *   (2) replace all occurrences of the complex side with the simple side
-      *   (3) Decide whether to hide*/
-      Some(cutT(None))
     }
   }
 }
