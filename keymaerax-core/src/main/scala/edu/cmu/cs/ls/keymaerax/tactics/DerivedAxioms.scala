@@ -314,12 +314,12 @@ object DerivedAxioms {
       , "-<= up" -> Some(intervalUpMinusF, intervalUpMinusT)
       , "*<= up" -> Some(intervalUpTimesF, intervalUpTimesT)
       , "1Div<= up" -> Some(intervalUp1DivideF, intervalUp1DivideT)
-//      , "Div<= up" -> Some(intervalUpDivideF, intervalUpDivideT)
+      , "Div<= up" -> Some(intervalUpDivideF, intervalUpDivideT)
       , "<=+ down" -> Some(intervalDownPlusF, intervalDownPlusT)
       , "<=- down" -> Some(intervalDownMinusF, intervalDownMinusT)
       , "<=* down" -> Some(intervalDownTimesF, intervalDownTimesT)
       , "<=1Div down" -> Some(intervalDown1DivideF, intervalDown1DivideT)
-//      , "<=Div down" -> Some(intervalDownDivideF, intervalDownDivideT)
+      , "<=Div down" -> Some(intervalDownDivideF, intervalDownDivideT)
     ) ensuring(r => r.forall(kv => derivedAxiomInfo(kv._1)==kv._2), "same contents as derivedAxiomInfo()")
 
     derivedAxiomMap.keys.map(key => {
