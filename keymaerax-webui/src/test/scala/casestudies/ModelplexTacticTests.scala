@@ -587,25 +587,6 @@ class ModelplexTacticTests extends testHelper.TacticTestSuite {
     result.openGoals().head.sequent.succ should contain only expectedSucc
   }
 
-  it should "find correct controller monitor condition (explicit)" in {
-    val in = getClass.getResourceAsStream("examples/casestudies/acasx/nodelay-explicit.key")
-    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
-    val modelplexInput = createMonitorSpecificationConjecture(model, Variable("r"), Variable("dhf"), Variable("dhd"),
-      Variable("ao"), Variable("w"), Variable("h"))
-
-    val tactic = modelplexAxiomaticStyle(intermediateOptOne=false)(controllerMonitorT)(1)
-    val result = proveUncheckedBy(modelplexInput, tactic)
-
-    val expectedSucc = "(w*dhd>=w*dhf|w*aopost()>=a)&(((rpost()=r&dhfpost()=dhf)&dhdpost()=dhd)&wpost()=w)&hpost()=h|((-1*dhfpost()>=0->(-rp<=r&r < -rp-rv*min((0,-1*dhd))/a->-1*rv^2*h < a/2*(r+rp)^2+-1*rv*dhd*(r+rp)-rv^2*hp)&(-rp-rv*min((0,-1*dhd))/a<=r&r<=rp-rv*min((0,-1*dhd))/a->-1*h < -min((0,-1*dhd))^2/(2*a)-hp)&(rp-rv*min((0,-1*dhd))/a < r&r<=rp+rv*max((0,-1*(dhfpost()-dhd)))/a->-1*rv^2*h < a/2*(r-rp)^2+-1*rv*dhd*(r-rp)-rv^2*hp)&(rp+rv*max((0,-1*(dhfpost()-dhd)))/a < r->rv=0|-1*rv*h < -1*dhfpost()*(r-rp)-rv*max((0,-1*(dhfpost()-dhd)))^2/(2*a)-rv*hp))&(-1*dhfpost() < 0->(-rp<=r&r < -rp+rv*max((0,-1*(dhfpost()-dhd)))/a->-1*rv^2*h < a/2*(r+rp)^2+-1*rv*dhd*(r+rp)-rv^2*hp)&(-rp+rv*max((0,-1*(dhfpost()-dhd)))/a<=r->rv=0&r>rp|-1*rv*h < -1*dhfpost()*(r+rp)-rv*max((0,-1*(dhfpost()-dhd)))^2/(2*a)-rv*hp)))&(-1*dhd>=-1*dhfpost()|-1*aopost()>=a)&((rpost()=r&dhdpost()=dhd)&wpost()=-1)&hpost()=h|((dhfpost()>=0->(-rp<=r&r < -rp-rv*min((0,1*dhd))/a->rv^2*h < a/2*(r+rp)^2+rv*dhd*(r+rp)-rv^2*hp)&(-rp-rv*min((0,1*dhd))/a<=r&r<=rp-rv*min((0,1*dhd))/a->h < -min((0,1*dhd))^2/(2*a)-hp)&(rp-rv*min((0,1*dhd))/a < r&r<=rp+rv*max((0,1*(dhfpost()-dhd)))/a->rv^2*h < a/2*(r-rp)^2+rv*dhd*(r-rp)-rv^2*hp)&(rp+rv*max((0,1*(dhfpost()-dhd)))/a < r->rv=0|rv*h < dhfpost()*(r-rp)-rv*max((0,1*(dhfpost()-dhd)))^2/(2*a)-rv*hp))&(dhfpost() < 0->(-rp<=r&r < -rp+rv*max((0,1*(dhfpost()-dhd)))/a->rv^2*h < a/2*(r+rp)^2+rv*dhd*(r+rp)-rv^2*hp)&(-rp+rv*max((0,1*(dhfpost()-dhd)))/a<=r->rv=0&r>rp|rv*h < dhfpost()*(r+rp)-rv*max((0,1*(dhfpost()-dhd)))^2/(2*a)-rv*hp)))&(dhd>=dhfpost()|aopost()>=a)&((rpost()=r&dhdpost()=dhd)&wpost()=1)&hpost()=h".asFormula
-
-    result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante shouldBe empty
-    result.openGoals().head.sequent.succ should contain only expectedSucc
-
-    CGenerator(result.openGoals().head.sequent.succ.head, List(Variable("r"), Variable("dhf"), Variable("dhd"),
-      Variable("ao"), Variable("w"), Variable("h"))) shouldBe "TODO"
-  }
-
   // Performance tests
 
   val performanceRuns = 2
