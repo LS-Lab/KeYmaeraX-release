@@ -16,3 +16,8 @@ lazy val root = (project in file("."))
     assemblyJarName := "keymaerax-" + version.value + ".jar"
   )
   .aggregate(core, keymaerax)
+
+
+scalacOptions in Compile ++= Seq("-doc-root-content", "rootdoc.txt")
+
+target in Compile in doc := baseDirectory.value / "api"
