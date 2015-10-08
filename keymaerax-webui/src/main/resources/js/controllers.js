@@ -1398,6 +1398,7 @@ keymaeraProofControllers.controller('counterExampleCtrl', function($scope, $moda
 keymaeraProofControllers.controller('ErrorAlertCtrl', function($scope, $modalInstance, $modal, action, error) {
   $scope.action = action;
   $scope.errorText = error.textStatus;
+  $scope.errorTrace = error.errorThrown;
   $scope.report = function() {
     $modalInstance.dismiss('cancel');
     var modalInstance = $modal.open({
@@ -1418,6 +1419,7 @@ keymaeraProofControllers.controller('ErrorReportCtrl', function($scope, $modalIn
   $http.get("/kyxConfig").success(function(data) {
     $scope.kyxConfig = data.kyxConfig;
     });
+  $scope.errorText = error.textStatus;
   $scope.errorTrace = error.errorThrown;
   $scope.cancel = function() {
       $modalInstance.dismiss('cancel');
