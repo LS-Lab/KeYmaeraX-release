@@ -361,12 +361,12 @@ class JLinkMathematicaLink extends MathematicaLink {
 
     if (date == null) None
     else try {
-      if (date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
+      if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
         //@note month in calendar is 0-based, in Mathematica it's 1-based
         val expiration = new GregorianCalendar(date(0).asInt(), date(1).asInt() - 1, date(2).asInt())
         val today = new Date()
         Some(expiration.getTime.after(today))
-      } else if (date(0).equals(infinity)) {
+      } else if (date.length >= 1 && date(0).equals(infinity)) {
         Some(true)
       } else {
         None

@@ -3,7 +3,13 @@
     <h5 class="modal-title">You can report this error to KeYmaera X team by clicking <kbd>Report Error</kbd>.</h5>
 </div>
 <div class="modal-body" style="overflow: scroll; height: 200px;">
-{{errorText}}
+    Error message<br>
+    <br>
+    <pre>{{errorText}}</pre>
+    ----------------------------<br>
+    Error trace<br>
+    <br>
+    <pre>{{errorTrace}}</pre>
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="report()">Report Error</button>

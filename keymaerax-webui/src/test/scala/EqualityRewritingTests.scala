@@ -409,7 +409,7 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     val tactic = smartEqualityRewritingT
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) should contain only "x=0".asFormula
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only ("0*y=0".asFormula, "z>2".asFormula, "z<0+1".asFormula)
   }
 
@@ -418,7 +418,7 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     val tactic = smartEqualityRewritingT
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) should contain only ("x=0".asFormula, "z=0".asFormula)
+    result.openGoals().flatMap(_.sequent.ante) should contain only ("z=0".asFormula)
     result.openGoals().flatMap(_.sequent.succ) should contain only ("0*y=0".asFormula, "z>2".asFormula, "z<0+1".asFormula)
   }
 
@@ -428,7 +428,7 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.succ) should contain only ("x*y=0".asFormula, "x>2".asFormula, "x<x+1".asFormula)
-    result.openGoals().flatMap(_.sequent.ante) should contain only ("x=0".asFormula, "z=x".asFormula)
+    result.openGoals().flatMap(_.sequent.ante) should contain only ("x=0".asFormula)
   }
 
   it should "work even if there is only one other formula" in {
@@ -436,7 +436,7 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     val tactic = smartEqualityRewritingT
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) should contain only ("0<5".asFormula, "x=0".asFormula)
+    result.openGoals().flatMap(_.sequent.ante) should contain only ("0<5".asFormula)
     result.openGoals().flatMap(_.sequent.succ) shouldBe empty
   }
 
@@ -449,7 +449,7 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante should contain only ("c<5".asFormula, "d+b=c".asFormula)
+    result.openGoals().head.sequent.ante should contain only ("c<5".asFormula)
     result.openGoals().head.sequent.succ shouldBe empty
   }
 
@@ -465,5 +465,15 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     val s = sequent(Nil, "a=1".asFormula :: Nil, "[a:=2;]a=1".asFormula :: Nil)
     val tactic = smartEqualityRewritingT
     tactic.applicable(new RootNode(s)) shouldBe false
+  }
+
+  it should "not rewrite contradictions" in {
+    val s = sequent(Nil, "x=x+1".asFormula :: Nil, "x+1=0".asFormula :: Nil)
+    var tactic = smartEqualityRewritingT
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("x=x+1")
+    result.openGoals().head.sequent.succ should contain only ("x=0")
   }
 }
