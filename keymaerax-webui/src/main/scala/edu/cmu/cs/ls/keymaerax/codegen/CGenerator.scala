@@ -31,6 +31,7 @@ object CGenerator extends CodeGenerator {
   private def generateCCode(expr: Expression, cDataType: String, vars: List[Variable], fileName: String) : String = {
     val names = StaticSemantics.symbols(expr).toList.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers for code generation")
+    if(names.toSet.intersect(reservedNames).nonEmpty)  println("[warn] Found reserved names: " + names.toSet.intersect(reservedNames).mkString(",") + ". This may cause error.")
     val relevantVars = getRelevantVars(expr, vars)
     val relevantPostVars = getRelevantPostVars(expr, vars)
     val relevantPostVarsZero = getRelevantPostVarsZero(expr, relevantPostVars)
@@ -224,6 +225,9 @@ object CGenerator extends CodeGenerator {
     case Tuple(l, r) => convertSorts(l, cDataType) + ", " + convertSorts(r, cDataType)
     case _ => t.toString
   }
+
+  /** Some reserved names, such as: main, Main */
+  private def reservedNames = Set("main", "Main")
 
   /** Check if a function is predefined
     * e.g.: abs, min, max
