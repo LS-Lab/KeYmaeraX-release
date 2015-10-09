@@ -9,8 +9,8 @@ KeYmaera X is built up from a small trusted core. The core contains a finite lis
 
 Dependencies
 ============
-- Wolfram Mathematica (version 9.0 or greater recommended. Other versions may work. The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it at runtime, too.)
-- Java JRE and JDK (Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0 is compatible with Java 1.8)
+- Wolfram Mathematica (version 9.0 or greater recommended. Other versions may work. The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.)
+- Java Development Kit JDK (Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0 is also compatible with Java 1.8)
 - sbt (Version 0.13 or greater recommended. Other versions may work). If you are using IntelliJ, this comes with the Scala plugin.
 - Scala 2.11.7 (sbt will download this automatically)
 
@@ -147,7 +147,7 @@ Run Configurations Drop-down in Toolbar
 
 IntelliJ FAQ
 ============
-If, at any time, you run into problems during the compilation process in IntelliJ, check the `File->Project Structure->Modules->core->Dependencies` to make sure the appropriate files such as `SBT: unmanaged-jars` are checked. This is necessary for IntelliJ to find JLink.jar. If the problems persist, do `File->Invalidate Caches / Restart`.
+If, at any time, you run into problems during the compilation process in IntelliJ, check the `File->Project Structure->Modules->core->Dependencies` to make sure the appropriate files such as `SBT: unmanaged-jars` are checked. This is necessary for IntelliJ to find JLink.jar. IntelliJ keeps forgetting about it, so you may have to check repeatedly. If the problems persist, do `File->Invalidate Caches / Restart`.
 
 Front End
 =========
