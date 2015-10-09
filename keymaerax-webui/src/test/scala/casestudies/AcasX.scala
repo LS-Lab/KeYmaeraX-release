@@ -5,8 +5,10 @@
 package casestudies
 
 import java.io.File
+import scala.collection.immutable
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.ODETactics._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
@@ -30,7 +32,7 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.ParserFactory._
 import testHelper.SequentFactory._
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{Nil, Map}
 
 /**
  * Created by smitsch on 3/27/15.
@@ -242,6 +244,41 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
+
+
+  "ACAS X" should "prove explicit region safety from implicit region safety and equivalence" in {
+    val acasximplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("examples/casestudies/acasx/nodelay.key")).mkString)
+    val acasxexplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("examples/casestudies/acasx/nodelay-explicit.key")).mkString)
+    val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("examples/casestudies/acasx/nodelay-equivalence.key")).mkString)
+    val shape = Context(
+      """  hp > 0 & rp > 0 & rv >= 0 & a > 0 &
+  ( (w=-1 | w=1) &
+      (
+        ⎵
+      ) /* C(w,dhf) */
+  )
+  -> [
+  {   {
+      { ?true; ++
+        {dhf :=*; {w:=-1; ++ w:=1;}
+         ?(
+            ⎵
+          ); /* C(w,dhf) */
+        }}
+        ao :=*;
+      }
+      {r' = -rv, dhd' = ao, h' = -dhd & (w * dhd >= w * dhf | w * ao >= a)}
+   }*
+  ] ((h < -hp | h > hp | r < -rp | r> rp) & ⎵)
+      """.asFormula)
+
+    TactixLibrary.proveBy(acasxexplicit, HilbertCalculus.CE(Provable.startProof(equivalence), shape)(SuccPosition(0))).
+      subgoals should contain only (
+      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(acasximplicit)),
+      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(equivalence))
+      )
+  }
+
 
 /*  "abs_test0" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/acasx/abs_test0.key"))
