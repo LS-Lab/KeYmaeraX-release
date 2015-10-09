@@ -234,6 +234,15 @@ object Provable {
     r => !r.isProved && r.subgoals == immutable.IndexedSeq(r.conclusion), "correct initial proof start")
 
   /**
+   * Begin a new proof for the desired conclusion formula from no antecedent.
+   * @param goal the desired conclusion formula for the succedent.
+   * @return a Provable whose subgoals need to be all proved in order to prove goal.
+   * @note Not soundness-critical
+   */
+  def startProof(goal : Formula): Provable =
+    startProof(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(goal)))
+
+  /**
    * Create a new provable for facts provided by external tools.
    * @param goal the desired conclusion.
    * @return a Provable without subgoals.
