@@ -485,7 +485,7 @@ trait UnifyUSCalculus {
 
     override def applies(s: Sequent, p: Position): Boolean =
       if (s.sub(p) == Some(C(key))) true
-      else {if (DEBUG) println("In-applicable CE(" + fact + "," + C + ") at " + p + " which is " + s.sub(p) + " at " + s); false}
+      else {if (DEBUG) println("In-applicable CE(" + fact + ",\n" + C + ")\nat " + p + "\nwhich is " + s.sub(p).getOrElse("none") + "\nat " + s); false}
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
