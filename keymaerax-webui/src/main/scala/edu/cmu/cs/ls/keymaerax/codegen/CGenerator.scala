@@ -41,7 +41,7 @@ object CGenerator extends CodeGenerator {
     val calledFuncs = getCalledFuncs(expr, relevantVars).diff(relevantPostVarsZero.toSet)
     val funcHead = "/* monitor */\n" +
       "bool monitor (" + parameterDeclaration(cDataType, relevantVars) + ")"
-    val funcBody = compileToC(expr, calledFuncs)
+    val funcBody = compileToC(expr, calledFuncs, cDataType)
     infoC(fileName) + includeLib + FuncCallDeclaration(calledFuncs, cDataType) + funcHead + " {\n" +
       {if(relevantPostVarsZero.nonEmpty) "  /* Initial states for post variables */\n" + defineRelevantPostVarsZero(expr, relevantPostVarsZero, cDataType) + "\n" else ""} +
       "  return " + funcBody + ";" + "\n}\n\n"
@@ -65,7 +65,7 @@ object CGenerator extends CodeGenerator {
    * @param vars      given list of variables which needs to be declared as parameters
    * @return          a lit of parameter declarations
    */
-  private def parameterDeclaration(cDataType: String, vars: List[NamedSymbol]) : String = vars.map(v => cDataType + " " + nameIdentifier(v)).mkString(", ")
+  private def parameterDeclaration(cDataType: String, vars: List[NamedSymbol]) : String = vars.map(v => convertSorts(v.sort, cDataType) + " " + nameIdentifier(v)).mkString(", ")
 
   /**
    * Get a list of variables relevant to (occur in) the given expression,
@@ -90,7 +90,7 @@ object CGenerator extends CodeGenerator {
     val allSymbolNames = StaticSemantics.symbols(e).toList
     var relevantOriVars = List[Variable]()
     for(i <- vars.indices) {
-      assert(!nameIdentifier(vars.apply(i)).equals("abs"), "[Error] Cannot use abs as variable name, abs is predefined function for absolute value.")
+      assert(!isPredefFuncs(nameIdentifier(vars.apply(i))), "[Error] Cannot use " + nameIdentifier(vars.apply(i)) + " as variable name, since it is predefined function.")
       if(allSymbolNames.contains(vars.apply(i)))
       // variable occurs in the expression, add it to the return list
         relevantOriVars = vars.apply(i) :: relevantOriVars
@@ -116,7 +116,7 @@ object CGenerator extends CodeGenerator {
     val allSymbolNames = StaticSemantics.symbols(e).toList
     var relevantPostVars = List[Variable]()
     for(i <- vars.indices) {
-      assert(!nameIdentifier(vars.apply(i)).equals("abs"), "[Error] Cannot use abs as variable name, abs is predefined function for absolute value.")
+      assert(!isPredefFuncs(nameIdentifier(vars.apply(i))), "[Error] Cannot use " + nameIdentifier(vars.apply(i)) + " as variable name, since it is predefined function.")
       if(allSymbolNames.contains(Variable(getPostNameIdentifier(vars.apply(i)))) && !vars.contains(Variable(getPostNameIdentifier(vars.apply(i)))))
       // post variable occurs in the expression as variable, add it to the return list as a variable
         relevantPostVars = Variable(getPostNameIdentifier(vars.apply(i))) :: relevantPostVars
@@ -166,7 +166,7 @@ object CGenerator extends CodeGenerator {
     for(i <- postVarsZero.indices) {
       assert(allSymbolNames.contains(postVarsZero.apply(i)) || allSymbolNames.contains(Function(nameIdentifier(postVarsZero.apply(i)), None, Unit, Real)),
         "[Error] postVar_0 " + nameIdentifier(postVarsZero.apply(i)) + " must occur in " + KeYmaeraXPrettyPrinter(e))
-      postVarsZeroDefinition += "  " + cDataType + " " + nameIdentifier(postVarsZero.apply(i)) + " = " + postVarsZero.apply(i).name + ";\n"
+      postVarsZeroDefinition += "  " + convertSorts(postVarsZero.apply(i).sort, cDataType) + " " + nameIdentifier(postVarsZero.apply(i)) + " = " + postVarsZero.apply(i).name + ";\n"
     }
     postVarsZeroDefinition
   }
@@ -194,7 +194,10 @@ object CGenerator extends CodeGenerator {
    * @return      a set of names that does not occur in relevant variables, thus need to be generated as function calls
    */
   private def getCalledFuncs(expr: Expression, vars: List[NamedSymbol]): Set[NamedSymbol] =
-    StaticSemantics.symbols(expr).toSet.filterNot((absFun: NamedSymbol) => {absFun == Function("abs", None, Real, Real)})
+    StaticSemantics.symbols(expr)
+      .filterNot((absFun: NamedSymbol) => {absFun == Function("abs", None, Real, Real)})
+      .filterNot((minFun: NamedSymbol) => {minFun == Function("min", None, Tuple(Real, Real), Real)})
+      .filterNot((maxFun: NamedSymbol) => {maxFun == Function("max", None, Tuple(Real, Real), Real)})
       .diff(vars.toSet).diff(vars.map(v => Function(nameIdentifier(v), None, Unit, Real)).toSet)
 
 
@@ -203,12 +206,49 @@ object CGenerator extends CodeGenerator {
     if(calledFuncs.nonEmpty) {
       val FuncCallDeclaration = calledFuncs.map(
         s => s match {
-          case x: Variable => cDataType + " " + nameIdentifier(x) + "()"
-          case f: Function if !nameIdentifier(f).equals("abs") && f.domain==Unit && f.sort==Real => cDataType + " " + nameIdentifier(f) + "()"
+          case x: Variable => convertSorts(x.sort, cDataType) + " " + nameIdentifier(x) + "()"
+          case f: Function if !isPredefFuncs(nameIdentifier(f)) =>
+            convertSorts(f.sort, cDataType) + " " + nameIdentifier(f) + "(" + convertSorts(f.domain, cDataType) + ")"
+          case _ => None
         }
-      ).mkString("; \n")
+      ).mkString(";\n")
       "/* function declaration */\n" + FuncCallDeclaration + ";\n\n"
     } else ""
+  }
+
+  /** convert to C Type for the given KeYmaera X Sort */
+  private def convertSorts(t: Sort, cDataType: String) : String = t match {
+    case Unit => ""
+    case Real => cDataType
+    case Bool => "bool"
+    case Tuple(l, r) => convertSorts(l, cDataType) + ", " + convertSorts(r, cDataType)
+    case _ => t.toString
+  }
+
+  /** Check if a function is predefined
+    * e.g.: abs, min, max
+    */
+  private def isPredefFuncs(funcName: String) : Boolean = funcName=="abs" || funcName=="min" || funcName=="max"
+
+  /** Convert predefined functions to corresponding C functions
+    *
+    * C 99 standard:
+    *   double fabs()
+    *   float fabsf()
+    *   long double fabsl()
+    */
+  private def convertPredefFuncs(funcName: String, cDataType: String) : String = {
+    assert(funcName=="abs" || funcName=="min" || funcName=="max")
+
+    val suffix =
+      if(cDataType == "float") "f"
+      else if(cDataType == "long double") "l"
+      else ""
+
+    if(funcName == "abs") "fabs" + suffix
+    else if(funcName == "min") "fmin" + suffix
+    else if(funcName == "max") "fmax" + suffix
+    else ""
   }
 
   /**
@@ -219,22 +259,22 @@ object CGenerator extends CodeGenerator {
    *                    which helps to determine whether a variable encountered in expression should be generated as a nullary function
    * @return            generated C code
    */
-  private def compileToC(e: Expression, calledFuncs: Set[NamedSymbol]) = e match {
-    case f : Formula => compileFormula(f, calledFuncs)
+  private def compileToC(e: Expression, calledFuncs: Set[NamedSymbol], cDataType: String) = e match {
+    case f : Formula => compileFormula(f, calledFuncs, cDataType)
     case _ => throw new CodeGenerationException("The input expression: \n" + KeYmaeraXPrettyPrinter(e) + "\nis expected to be formula.")
   }
 
 
   /** Compile a term to a C expression evaluating it (in the same arithmetic) */
-  private def compileTerm(t: Term, calledFuncs: Set[NamedSymbol]) : String = {
-    require(t.sort == Real || t.sort == Unit, "can only deal with reals not with sort " + t.sort)
+  private def compileTerm(t: Term, calledFuncs: Set[NamedSymbol], cDataType: String) : String = {
+    require(t.sort == Real || t.sort == Unit || t.sort.isInstanceOf[Tuple], "can only deal with reals not with sort " + t.sort)
     t match {
-      case Neg(c)       => "-" + "(" + compileTerm(c, calledFuncs) + ")"
-      case Plus(l, r)   => "(" + compileTerm(l, calledFuncs) + ")" + " + " + "(" + compileTerm(r, calledFuncs) + ")"
-      case Minus(l, r)  => "(" + compileTerm(l, calledFuncs) + ")" + " - " + "(" + compileTerm(r, calledFuncs) + ")"
-      case Times(l, r)  => "(" + compileTerm(l, calledFuncs) + ")" +  "*"  + "(" + compileTerm(r, calledFuncs) + ")"
-      case Divide(l, r) => "(" + compileTerm(l, calledFuncs) + ")" +  "/"  + "(" + compileTerm(r, calledFuncs) + ")"
-      case Power(l, r)  => "(" + compilePower(l, r, calledFuncs) + ")"
+      case Neg(c)       => "-" + "(" + compileTerm(c, calledFuncs, cDataType) + ")"
+      case Plus(l, r)   => "(" + compileTerm(l, calledFuncs, cDataType) + ")" + " + " + "(" + compileTerm(r, calledFuncs, cDataType) + ")"
+      case Minus(l, r)  => "(" + compileTerm(l, calledFuncs, cDataType) + ")" + " - " + "(" + compileTerm(r, calledFuncs, cDataType) + ")"
+      case Times(l, r)  => "(" + compileTerm(l, calledFuncs, cDataType) + ")" +  "*"  + "(" + compileTerm(r, calledFuncs, cDataType) + ")"
+      case Divide(l, r) => "(" + compileTerm(l, calledFuncs, cDataType) + ")" +  "/"  + "(" + compileTerm(r, calledFuncs, cDataType) + ")"
+      case Power(l, r)  => "(" + compilePower(l, r, calledFuncs, cDataType) + ")"
       // atomic terms
       case Number(n) =>
         assert(n.isDecimalDouble || n.isValidLong, throw new CodeGenerationException("Term " + KeYmaeraXPrettyPrinter(t) + " contains illegal-precision numbers"))
@@ -251,10 +291,12 @@ object CGenerator extends CodeGenerator {
         else nameIdentifier(fn)+"()"
       case FuncOf(fn, child) =>
         nameIdentifier(fn) match {
-          case "abs" => "fabsl(" + compileTerm(child, calledFuncs) + ")"
-          case _ => nameIdentifier(fn) + "(" + compileTerm(child, calledFuncs) + ")"
+          case "abs" => convertPredefFuncs("abs", cDataType) + "(" + compileTerm(child, calledFuncs, cDataType) + ")"
+          case "min" => convertPredefFuncs("min", cDataType) + "(" + compileTerm(child, calledFuncs, cDataType) + ")"
+          case "max" => convertPredefFuncs("max", cDataType) + "(" + compileTerm(child, calledFuncs, cDataType) + ")"
+          case _ => nameIdentifier(fn) + "(" + compileTerm(child, calledFuncs, cDataType) + ")"
         }
-
+      case Pair(l, r)  => compileTerm(l, calledFuncs, cDataType) + ", " + compileTerm(r, calledFuncs, cDataType)
       // otherwise exception
       case _ => throw new CodeGenerationException("Conversion of term " + KeYmaeraXPrettyPrinter(t) + " is not defined")
     }
@@ -266,7 +308,7 @@ object CGenerator extends CodeGenerator {
    * @param exp   index of the exponential
    * @return      simplified generation of exponential
    */
-  private def compilePower(base: Term, exp: Term, calledFuncs: Set[NamedSymbol]) : String = {
+  private def compilePower(base: Term, exp: Term, calledFuncs: Set[NamedSymbol], cDataType: String) : String = {
     if(base.equals(Number(0))) {
       //@todo since when is that the case?
       println("[warning] generating 0^0")
@@ -283,37 +325,37 @@ object CGenerator extends CodeGenerator {
               "1.0"
             } else if(n.intValue() > 0 ) {
               // index n is a positive integer, expand n times of *
-              val ba : String = compileTerm(base, calledFuncs)
+              val ba : String = compileTerm(base, calledFuncs, cDataType)
               var res : String = "(" + ba + ")"
               for (i <- 1 to n.intValue()-1) {
                 res += "*" + "(" + ba + ")"
               }
               res
-            } else "1.0/" + "(" + compilePower(base, Number(n.underlying().negate()), calledFuncs) + ")" // index is negative integer
-          } else "pow(" + "(" + compileTerm(base, calledFuncs) + ")" + "," + "(" + compileTerm(exp, calledFuncs) + ")" + ")" // index is not integer, use pow function in C
-        case Neg(Number(n)) => "1.0/" + "(" + compilePower(base, Number(n), calledFuncs) + ")"  // index is negative
-        case _ => "pow(" + "(" + compileTerm(base, calledFuncs) + ")" + "," + "(" + compileTerm(exp, calledFuncs) + ")" + ")"
+            } else "1.0/" + "(" + compilePower(base, Number(n.underlying().negate()), calledFuncs, cDataType) + ")" // index is negative integer
+          } else "pow(" + "(" + compileTerm(base, calledFuncs, cDataType) + ")" + "," + "(" + compileTerm(exp, calledFuncs, cDataType) + ")" + ")" // index is not integer, use pow function in C
+        case Neg(Number(n)) => "1.0/" + "(" + compilePower(base, Number(n), calledFuncs, cDataType) + ")"  // index is negative
+        case _ => "pow(" + "(" + compileTerm(base, calledFuncs, cDataType) + ")" + "," + "(" + compileTerm(exp, calledFuncs, cDataType) + ")" + ")"
       }
     }
   }
 
 
   /** Compile a formula to a C expression checking it (in the same arithmetic) */
-  private def compileFormula(f: Formula, calledFuncs: Set[NamedSymbol]) : String = {
+  private def compileFormula(f: Formula, calledFuncs: Set[NamedSymbol], cDataType: String) : String = {
     f match {
-      case Not(ff)     => "!" + "(" + compileFormula(ff, calledFuncs) + ")"
-      case And(l, r)   => "(" + compileFormula(l, calledFuncs) + ")" + "&&" + "(" + compileFormula(r, calledFuncs) + ")"
-      case Or(l, r)    => "(" + compileFormula(l, calledFuncs) + ")" + "||" + "(" + compileFormula(r, calledFuncs) + ")"
+      case Not(ff)     => "!" + "(" + compileFormula(ff, calledFuncs, cDataType) + ")"
+      case And(l, r)   => "(" + compileFormula(l, calledFuncs, cDataType) + ")" + "&&" + "(" + compileFormula(r, calledFuncs, cDataType) + ")"
+      case Or(l, r)    => "(" + compileFormula(l, calledFuncs, cDataType) + ")" + "||" + "(" + compileFormula(r, calledFuncs, cDataType) + ")"
       //@todo the following two transformations of formulas should be done by a tactic and just asserted here that these cases no longer happen.
-      case Imply(l, r) => compileFormula(Or(Not(l), r), calledFuncs)
-      case Equiv(l, r) => compileFormula(And(Imply(l, r), Imply(r, l)), calledFuncs)
+      case Imply(l, r) => compileFormula(Or(Not(l), r), calledFuncs, cDataType)
+      case Equiv(l, r) => compileFormula(And(Imply(l, r), Imply(r, l)), calledFuncs, cDataType)
       //compileFormula(Or(And(l,r),And(Not(l),Not(r))))
-      case Equal(l, r)       => "(" + compileTerm(l, calledFuncs) + ")" + "==" + "(" + compileTerm(r, calledFuncs) + ")"
-      case NotEqual(l, r)    => "(" + compileTerm(l, calledFuncs) + ")" + "!=" + "(" + compileTerm(r, calledFuncs) + ")"
-      case Greater(l,r)      => "(" + compileTerm(l, calledFuncs) + ")" + ">"  + "(" + compileTerm(r, calledFuncs) + ")"
-      case GreaterEqual(l,r) => "(" + compileTerm(l, calledFuncs) + ")" + ">=" + "(" + compileTerm(r, calledFuncs) + ")"
-      case Less(l,r)         => "(" + compileTerm(l, calledFuncs) + ")" + "<"  + "(" + compileTerm(r, calledFuncs) + ")"
-      case LessEqual(l,r)    => "(" + compileTerm(l, calledFuncs) + ")" + "<=" + "(" + compileTerm(r, calledFuncs) + ")"
+      case Equal(l, r)       => "(" + compileTerm(l, calledFuncs, cDataType) + ")" + "==" + "(" + compileTerm(r, calledFuncs, cDataType) + ")"
+      case NotEqual(l, r)    => "(" + compileTerm(l, calledFuncs, cDataType) + ")" + "!=" + "(" + compileTerm(r, calledFuncs, cDataType) + ")"
+      case Greater(l,r)      => "(" + compileTerm(l, calledFuncs, cDataType) + ")" + ">"  + "(" + compileTerm(r, calledFuncs, cDataType) + ")"
+      case GreaterEqual(l,r) => "(" + compileTerm(l, calledFuncs, cDataType) + ")" + ">=" + "(" + compileTerm(r, calledFuncs, cDataType) + ")"
+      case Less(l,r)         => "(" + compileTerm(l, calledFuncs, cDataType) + ")" + "<"  + "(" + compileTerm(r, calledFuncs, cDataType) + ")"
+      case LessEqual(l,r)    => "(" + compileTerm(l, calledFuncs, cDataType) + ")" + "<=" + "(" + compileTerm(r, calledFuncs, cDataType) + ")"
       case True              => "true"
       case False             => "false"
       case Box(_, _) | Diamond(_, _) => throw new CodeGenerationException("Conversion of Box or Diamond modality is not allowed")
