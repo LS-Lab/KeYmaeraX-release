@@ -495,6 +495,11 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
         la(MinMaxT, "", Some("max((0,w*(dhf-dhd_3)))".asTerm)) |
         dT("max(0,w*(dhf-dhd_3)) not present"))
 
+    val absmax3 =
+      la(MinMaxT, "", Some("max(0,w*(dhfM-dhd))".asTerm)) &
+      abbrv("max(0,w*(dhfM-dhd_3))".asTerm, Some(Variable("maxFM"))) &
+      la(MinMaxT, "", Some("max(0,w*(dhfM-dhd_3))".asTerm))
+
     def cutEZ(c:Formula, t:Tactic) = cut(c) & onBranch(
       (cutShowLbl, t | dT("Cut didn't close") & Tactics.stopT)
     )
@@ -502,7 +507,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     def applyLemma(formula:String, apply:Tactic) =
       cut(formula.asFormula) & onBranch(
         (cutShowLbl, ls(cohideT, formula) &
-          dT("apply Lemma" + formula) & apply2),
+          dT("apply Lemma" + formula) & apply),
         (cutUseLbl, dT("use lemma " + formula) & QE)
       )
 
@@ -559,9 +564,26 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
         "h_3=1/2*(2*h+-2*dhd*kxtime_5+-1*ao*kxtime_5^2)" +
         "->" +
         "\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=w*a/2*t^2+dhd_3*t|t>=max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd_3)))^2/(2*a)->abs(r_3-ro)>rp|w*h_3 < w*ho-hp)"
+    val safeUpLemmaFormula =
+      "maxIM=max((0,w*(dhfM-dhd))) &"+
+        "(w*dhd<=w*dhfM&w*ao<=aM|w*ao<=0) &" +
+        "(w=-1|w=1) &" +
+        "(\\forall t \\forall ro \\forall ho (0<=t&t < maxIM/aM&ro=rv*t&ho=w*aM/2*t^2+dhd*t|t>=maxIM/aM&ro=rv*t&ho=(dhd+w*maxIM)*t-w*maxIM^2/(2*aM)->abs(r-ro)>rp|w*h>w*ho+hp)) &" +
+        "hp>0 & rp>0 & rv>=0 & aM>0 &" +
+        "(w*dhd_3<=w*dhfM&w*ao<=aM|w*ao<=0) &" +
+        "kxtime_5>=0 &" +
+        "r_3=r+-1*kxtime_5*rv &" +
+        "dhd_3=dhd+ao*kxtime_5 &" +
+        "h_3=1/2*(2*h+-2*dhd*kxtime_5+-1*ao*kxtime_5^2)" +
+        "->" +
+        "\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhfM-dhd_3)))/aM&ro=rv*t&ho=w*aM/2*t^2+dhd_3*t|t>=max((0,w*(dhfM-dhd_3)))/aM&ro=rv*t&ho=(dhd_3+w*max((0,w*(dhfM-dhd_3))))*t-w*max((0,w*(dhfM-dhd_3)))^2/(2*aM)->abs(r_3-ro)>rp|w*h_3>w*ho+hp)"
+
     val safeLemmaSeq = sequent(Nil, Nil, safeLemmaFormula.asFormula :: Nil)
+    val safeUpLemmaSeq = sequent(Nil, Nil, safeUpLemmaFormula.asFormula :: Nil)
+
     val safeLemmaTac = dT("lemma") & ls(implyR) & (la(andL)*) &
-      dT("Before skolemization") & (ls(skolemizeT)*) & dT("After skolemization") & ls(implyR) & ls(orR) &
+      dT("Before skolem") & (ls(skolemizeT)*) & dT("After skolem") &
+      ls(implyR) & ls(orR) &
       //here we'd want to access previously introduced skolem symbol and time introduced by diffSolution;goal 90
       la(instantiateT(Variable("t"), "kxtime_5 + t_0".asTerm)) & // t_22+t_23: kxtime_5 == t_22, t_0 == t_23
       la(instantiateT(Variable("ro"), "rv*(kxtime_5 + t_0)".asTerm)) & // rv*(t_22+t_23)
@@ -635,18 +657,101 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       )
     )
 
-    val safeLemma = helper.runTactic(safeLemmaTac, new RootNode(safeLemmaSeq))
+    val safeUpLemmaTac = dT("lemma Up") & ls(implyR) & (la(andL)*) &
+      dT("Before skolem Up") & (ls(skolemizeT)*) & dT("After skolem Up") &
+      ls(implyR) & ls(orR) &
+      la(instantiateT(Variable("t"), "kxtime_5 + t_0".asTerm)) &
+      la(instantiateT(Variable("ro"), "rv*(kxtime_5 + t_0)".asTerm)) &
+      dT("Before CUT") &
+      cut("0<=kxtime_5+t_0&kxtime_5+t_0<maxIM/aM|kxtime_5+t_0>=maxIM/aM".asFormula) & onBranch(
+      (cutShowLbl, dT("Show Cut") & la(hide, "maxIM=max((0,w*(dhfM-dhd)))") &
+        la(hide, "\\forall ho (0<=kxtime_5+t_0&kxtime_5+t_0 < maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&ho=w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&ho=(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)->abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*ho+hp)")
+        & ls(hide, "abs(r_3-ro_0)>rp") & ls(hide, "w*h_3>w*ho_0+hp") &
+        dT("Show Cut 2") & ls(orR) &
+        la(orL, "0<=t_0&t_0 < max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=w*aM/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=(dhd_3+w*max((0,w*(dhfM-dhd_3))))*t_0-w*max((0,w*(dhfM-dhd_3)))^2/(2*aM)")
+        & (la(andL)*) & (ls(andR)*) & QE),
+      (cutUseLbl, dT("Use Cut") &
+        la(orL, "0<=kxtime_5+t_0&kxtime_5+t_0<maxIM/aM|kxtime_5+t_0>=maxIM/aM") && (
+        dT("final time in parabola") &
+          la(instantiateT(Variable("ho"), "w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)".asTerm)) &
+          dT("instantiate ho 1") &
+          la(implyL, "0<=kxtime_5+t_0&kxtime_5+t_0 < maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)=w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)=(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)->abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*(w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0))+hp")
+          && (
+          dT("left of -> 1") & ls(orR) &
+            ls(hide, "kxtime_5+t_0>=maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)=(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)") &
+            ls(hide, "abs(r_3-ro_0)>rp") & ls(hide, "w*h_3>w*ho_0+hp") &
+            la(hide, "maxIM=max((0,w*(dhfM-dhd)))") & QE,
+          dT("right of -> 1") &
+            la(orL, "0<=t_0&t_0 < max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=w*aM/2*t_0^2+dhd_3*t_0|\nt_0>=max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=(dhd_3+w*max((0,w*(dhfM-dhd_3))))*t_0-w*max((0,w*(dhfM-dhd_3)))^2/(2*aM)")
+            && (
+            la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*(w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0))+hp") &&
+              ((la(andL)*) & dT("(easy) 1 early r case") & QE,
+               (la(andL)*) & dT("(hard) 1 early h case") & QE
+              ),
+            la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*(w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0))+hp") &
+              ((la(andL)*) & dT("(easy) 1 late r case") & QE,
+               (la(andL)*) & dT("(hard) 1 late h case") &
+                 ls(hide, "abs(r_3-ro_0)>rp") & absmax3 & crushw
+              )
+            )
+          ),
+        dT("final time in straight") &
+          la(instantiateT(Variable("ho"), "(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)".asTerm)) &
+          dT("instantiate ho 2") &
+          la(implyL, "0<=kxtime_5+t_0&kxtime_5+t_0 < maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)=w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)=(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)->abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*((dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM))+hp")
+          && (
+          dT("left of -> 2") & ls(orR) &
+            ls(hide, "0<=kxtime_5+t_0&kxtime_5+t_0 < maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)=w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)") &
+            ls(hide, "abs(r_3-ro_0)>rp") & ls(hide, "w*h_3>w*ho_0+hp") &
+            la(hide, "maxIM=max((0,w*(dhfM-dhd)))") & QE,
+          dT("right of -> 2") &
+            la(orL, "0<=t_0&t_0 < max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=w*aM/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=(dhd_3+w*max((0,w*(dhfM-dhd_3))))*t_0-w*max((0,w*(dhfM-dhd_3)))^2/(2*aM)")
+            && (
+            la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*((dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM))+hp") &
+              ((la(andL)*) & dT("(easy) 2 early r case") & QE,
+               (la(andL)*) & dT("(hard) 2 early h case") &
+                 ls(hide, "abs(r_3-ro_0)>rp") & absmax3 & crushw
+              ),
+            la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*((dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM))+hp") &
+              ((la(andL)*) & dT("(easy) 2 late r case") & QE,
+               (la(andL)*) & dT("(hard) 2 late h case") &
+                 ls(hide, "abs(r_3-ro_0)>rp") & absmax3 & crushw
+              )
+            )
+          )
+        )
+      )
+    )
+
+    /*val safeLemma = helper.runTactic(safeLemmaTac, new RootNode(safeLemmaSeq))
     safeLemma shouldBe 'closed
 
     /*** Lemma machinery, TODO clean up ***/
     // create evidence (traces input into tool and output from tool)
-    val evidence = new ToolEvidence(immutable.Map("input" -> safeLemmaFormula, "output" -> "true")) :: Nil
-    // add lemma into DB, which creates an ID for it. use the ID to apply the lemma
+    val evidence = new ToolEvidence(
+      immutable.Map("input" -> safeLemmaFormula, "output" -> "true")) :: Nil*/
+    // add lemma into DB, which creates an ID for it. use ID to apply the lemma
     val lemmaDB = LemmaDBFactory.lemmaDB
-    val lemmaID = lemmaDB.add(Lemma(safeLemma.provableWitness, evidence))
+    /*val lemmaID = lemmaDB.add(Lemma(safeLemma.provableWitness, evidence))
     val safeLemmaApply = new ApplyRule(LookupLemma(lemmaDB, lemmaID)) {
-      override def applicable(node: ProofNode): Boolean = node.sequent.sameSequentAs(safeLemmaSeq)
-    } //val safeLemmaApply = dT("Lemma Apply Aborted")
+      override def applicable(node: ProofNode): Boolean =
+        node.sequent.sameSequentAs(safeLemmaSeq)
+    }*/
+
+    val safeUpLemma =
+      helper.runTactic(safeUpLemmaTac, new RootNode(safeUpLemmaSeq))
+    safeUpLemma shouldBe 'closed
+
+    /*** Lemma machinery, TODO clean up ***/
+    // create evidence (traces input into tool and output from tool)
+    val evidenceUp = new ToolEvidence(
+      immutable.Map("input" -> safeUpLemmaFormula, "output" -> "true")) :: Nil
+    // add lemma into DB, which creates an ID for it. use ID to apply the lemma
+    val lemmaUpID = lemmaDB.add(Lemma(safeUpLemma.provableWitness, evidenceUp))
+    val safeUpLemmaApply = new ApplyRule(LookupLemma(lemmaDB, lemmaUpID)) {
+      override def applicable(node: ProofNode): Boolean =
+        node.sequent.sameSequentAs(safeUpLemmaSeq)
+    }
 
     /*** Main safe theorem and its tactic ***/
     val safeSeq = parseToSequent(getClass.getResourceAsStream(
@@ -755,8 +860,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                   la(hide, "w*dhd<=w*dhfM&w*ao<=aM|w*ao<=0") &
                   la(hide, "w*dhd_3<=w*dhfM&w*ao<=aM|w*ao<=0") &
                   ls(hide, "\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhfM-dhd_3)))/aM&ro=rv*t&ho=w*aM/2*t^2+dhd_3*t|t>=max((0,w*(dhfM-dhd_3)))/aM&ro=rv*t&ho=(dhd_3+w*max((0,w*(dhfM-dhd_3))))*t-w*max((0,w*(dhfM-dhd_3)))^2/(2*aM)->abs(r_3-ro)>rp|w*h_3>w*ho+hp)") &
-                  dT("lower lemma") &
-                  applyLemma(safeLemmaFormula,safeLemmaApply),
+                  dT("lower lemma") /*&
+                  applyLemma(safeLemmaFormula,safeLemmaApply)*/,
                 la(hide, "maxI=max((0,w*(dhf-dhd)))") & la(hide, "a>0") &
                   la(hide, "w*dhd>=w*dhf|w*ao>=a") &
                   la(hide, "w*dhd_3>=w*dhf|w*ao>=a") &
@@ -771,8 +876,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       )) /* End indStepLbl */
     )
 
-    val safeTheorem = helper.runTactic(safeTac, new RootNode(safeSeq))
-    safeTheorem shouldBe 'closed
+    /* val safeTheorem = helper.runTactic(safeTac, new RootNode(safeSeq))
+    safeTheorem shouldBe 'closed */
   }
 
 /*******************/
