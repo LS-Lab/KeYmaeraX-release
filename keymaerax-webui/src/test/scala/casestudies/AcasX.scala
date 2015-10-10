@@ -58,7 +58,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     Tactics.MathematicaScheduler = null
     Tactics.KeYmaeraScheduler = null
   }
-/*
+
   "ACAS X safe implicit" should "be provable" in {
     // one goal left corresponding to ODESolve issue, with 7982464f7daa4afb29295d19528830f2eff56523, Stefan, Tue Sep 8 17:41:17 2015 +0200
     // 780 seconds on robin (about 13 min)
@@ -468,7 +468,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val safeTheorem = helper.runTactic(safeTac, new RootNode(safeSeq))
     safeTheorem shouldBe 'closed
   }
-*/
+
   "ACAS X 2-sided safe implicit with lemmas" should "be provable" in {
 
     /*** Helper tactics ***/
@@ -507,8 +507,12 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     def applyLemma(formula:String, apply:Tactic) =
       cut(formula.asFormula) & onBranch(
         (cutShowLbl, ls(cohideT, formula) &
-          dT("apply Lemma" + formula) & apply),
-        (cutUseLbl, dT("use lemma " + formula) & QE)
+          dT("apply Lemma " + formula) & apply),
+        (cutUseLbl, dT("use Lemma " + formula) &
+          la(implyL, formula) && (
+            (ls(andR)*) & closeId, // checking hyps
+            closeId // apply concl
+          ))
       )
 
     val crushabsmax = absmax & crushor
@@ -723,20 +727,20 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       )
     )
 
-    /*val safeLemma = helper.runTactic(safeLemmaTac, new RootNode(safeLemmaSeq))
+    val safeLemma = helper.runTactic(safeLemmaTac, new RootNode(safeLemmaSeq))
     safeLemma shouldBe 'closed
 
     /*** Lemma machinery, TODO clean up ***/
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(
-      immutable.Map("input" -> safeLemmaFormula, "output" -> "true")) :: Nil*/
+      immutable.Map("input" -> safeLemmaFormula, "output" -> "true")) :: Nil
     // add lemma into DB, which creates an ID for it. use ID to apply the lemma
     val lemmaDB = LemmaDBFactory.lemmaDB
-    /*val lemmaID = lemmaDB.add(Lemma(safeLemma.provableWitness, evidence))
+    val lemmaID = lemmaDB.add(Lemma(safeLemma.provableWitness, evidence))
     val safeLemmaApply = new ApplyRule(LookupLemma(lemmaDB, lemmaID)) {
       override def applicable(node: ProofNode): Boolean =
         node.sequent.sameSequentAs(safeLemmaSeq)
-    }*/
+    }
 
     val safeUpLemma =
       helper.runTactic(safeUpLemmaTac, new RootNode(safeUpLemmaSeq))
@@ -860,13 +864,14 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                   la(hide, "w*dhd<=w*dhfM&w*ao<=aM|w*ao<=0") &
                   la(hide, "w*dhd_3<=w*dhfM&w*ao<=aM|w*ao<=0") &
                   ls(hide, "\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhfM-dhd_3)))/aM&ro=rv*t&ho=w*aM/2*t^2+dhd_3*t|t>=max((0,w*(dhfM-dhd_3)))/aM&ro=rv*t&ho=(dhd_3+w*max((0,w*(dhfM-dhd_3))))*t-w*max((0,w*(dhfM-dhd_3)))^2/(2*aM)->abs(r_3-ro)>rp|w*h_3>w*ho+hp)") &
-                  dT("lower lemma") /*&
-                  applyLemma(safeLemmaFormula,safeLemmaApply)*/,
+                  dT("lower lemma") &
+                  applyLemma(safeLemmaFormula,safeLemmaApply),
                 la(hide, "maxI=max((0,w*(dhf-dhd)))") & la(hide, "a>0") &
                   la(hide, "w*dhd>=w*dhf|w*ao>=a") &
                   la(hide, "w*dhd_3>=w*dhf|w*ao>=a") &
                   ls(hide, "\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=w*a/2*t^2+dhd_3*t|t>=max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd_3)))^2/(2*a)->abs(r_3-ro)>rp|w*h_3 < w*ho-hp)") &
-                  dT("upper lemma TODO")
+                  dT("upper lemma") &
+                  applyLemma(safeUpLemmaFormula,safeUpLemmaApply)
                 )
               ),
               QE
@@ -876,8 +881,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       )) /* End indStepLbl */
     )
 
-    /* val safeTheorem = helper.runTactic(safeTac, new RootNode(safeSeq))
-    safeTheorem shouldBe 'closed */
+    val safeTheorem = helper.runTactic(safeTac, new RootNode(safeSeq))
+    safeTheorem shouldBe 'closed
   }
 
 /*******************/
