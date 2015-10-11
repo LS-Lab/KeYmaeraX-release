@@ -553,18 +553,15 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     /*** Lower bound safe lemma and its tactic ***/
 
     val safeLemmaFormula =
-      "maxI=max((0,w*(dhf-dhd))) & " +
-        "(w*dhd>=w*dhf|w*ao>=a) & " +
-        "(w=-1|w=1) & " +
-        "(\\forall t \\forall ro \\forall ho (0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp)) & " +
-        "hp>0 & " +
-        "rp>0 & " +
-        "rv>=0 & " +
-        "a>0 & " +
-        "(w*dhd_3>=w*dhf|w*ao>=a) & " +
-        "kxtime_5>=0 & " +
-        "r_3=r+-1*kxtime_5*rv & " +
-        "dhd_3=dhd+ao*kxtime_5 & " +
+      "maxI=max((0,w*(dhf-dhd))) &" +
+        "(w*dhd>=w*dhf|w*ao>=a) &" +
+        "(w=-1|w=1) &" +
+        "(\\forall t \\forall ro \\forall ho (0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp)) &" +
+        "hp>0 & rp>0 & rv>=0 & a>0 &" +
+        "(w*dhd_3>=w*dhf|w*ao>=a) &" +
+        "kxtime_5>=0 &" +
+        "r_3=r+-1*kxtime_5*rv &" +
+        "dhd_3=dhd+ao*kxtime_5 &" +
         "h_3=1/2*(2*h+-2*dhd*kxtime_5+-1*ao*kxtime_5^2)" +
         "->" +
         "\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=w*a/2*t^2+dhd_3*t|t>=max((0,w*(dhf-dhd_3)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd_3)))^2/(2*a)->abs(r_3-ro)>rp|w*h_3 < w*ho-hp)"
@@ -588,73 +585,59 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val safeLemmaTac = dT("lemma") & ls(implyR) & (la(andL)*) &
       dT("Before skolem") & (ls(skolemizeT)*) & dT("After skolem") &
       ls(implyR) & ls(orR) &
-      //here we'd want to access previously introduced skolem symbol and time introduced by diffSolution;goal 90
+      //here we'd want to access previously introduced skolem symbol and
+      // time introduced by diffSolution;goal 90
       la(instantiateT(Variable("t"), "kxtime_5 + t_0".asTerm)) & // t_22+t_23: kxtime_5 == t_22, t_0 == t_23
       la(instantiateT(Variable("ro"), "rv*(kxtime_5 + t_0)".asTerm)) & // rv*(t_22+t_23)
       dT("Before CUT") &
-      cut("(0<=t_0+kxtime_5 & t_0+kxtime_5<maxI/a) | t_0+kxtime_5 >= maxI/a".asFormula) & onBranch(
+      cut("0<=t_0+kxtime_5&t_0+kxtime_5<maxI/a|t_0+kxtime_5>=maxI/a".asFormula) & onBranch(
       (cutShowLbl, dT("Show Cut") & la(hide, "maxI=max((0,w*(dhf-dhd)))") &
         la(hide, "\\forall ho (0<=kxtime_5+t_0&kxtime_5+t_0 < maxI/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&ho=w*a/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=maxI/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&ho=dhf*(kxtime_5+t_0)-w*maxI^2/(2*a)->abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*ho-hp)")
-        & ls(hide, "abs(r_3-ro_0)>rp") & ls(hide, "w*h_3 < w*ho_0-hp") & dT("Show Cut 2") & ls(orR) &
-        la(orL, "0<=t_0&t_0 < max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=dhf*t_0-w*max((0,w*(dhf-dhd_3)))^2/(2*a)")
+        & ls(hide, "abs(r_3-ro_0)>rp") & ls(hide, "w*h_3<w*ho_0-hp") &
+        dT("Show Cut 2") & ls(orR) &
+        la(orL, "0<=t_0&t_0<max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=dhf*t_0-w*max((0,w*(dhf-dhd_3)))^2/(2*a)")
         & (la(andL)*) & (ls(andR)*) & (QE | dT("Should be closed") & Tactics.stopT)),
       (cutUseLbl, dT("Use Cut") &
         la(orL, "0<=t_0+kxtime_5&t_0+kxtime_5 < maxI/a|t_0+kxtime_5>=maxI/a") && (
-        dT("Goal 110") & la(hide, initDomain) &
-          la(instantiateT(Variable("ho"), "w*a/2*(t_0+kxtime_5)^2 + dhd*(t_0+kxtime_5)".asTerm)) //, { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false })
-          & dT("instantiate ho") & ((closeId | l(NonBranchingPropositionalT))*) &
+        dT("Goal 110") & la(hide, initDomain) & // TODO remove this hide
+          la(instantiateT(Variable("ho"), "w*a/2*(t_0+kxtime_5)^2 + dhd*(t_0+kxtime_5)".asTerm))
+          & dT("instantiate ho 1 Lo") &
           la(implyL, "0<=kxtime_5+t_0&kxtime_5+t_0 < maxI/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=w*a/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=maxI/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=dhf*(kxtime_5+t_0)-w*maxI^2/(2*a)->abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5))-hp")
           && (
-          (ls(orR)*) &
-            ls(hide, "kxtime_5+t_0>=maxI/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=dhf*(kxtime_5+t_0)-w*maxI^2/(2*a)")
-            & (ls(andR)*) & (closeId | absmax2 & dT("before QE") & QE | dT("Shouldn't get here")) & dT("Shouldn't get here 2"),
-          dT("cut 3") & la(orL, "0<=t_0&t_0 < max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=dhf*t_0-w*max((0,w*(dhf-dhd_3)))^2/(2*a)")
+          dT("left of -> 1 Lo") & ls(orR) &
+            ls(hide, "kxtime_5+t_0>=maxI/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5)=dhf*(kxtime_5+t_0)-w*maxI^2/(2*a)") &
+            ls(hide, "abs(r_3-ro_0)>rp") & ls(hide, "w*h_3<w*ho_0-hp") &
+            la(hide, "maxI=max((0,w*(dhf-dhd)))") & QE,
+          dT("right of -> 1 Lo") &
+            la(orL, "0<=t_0&t_0 < max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=dhf*t_0-w*max((0,w*(dhf-dhd_3)))^2/(2*a)")
             && (
-            dT("Goal 124") &
-              la(orL,"abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5))-hp")&& (
-              dT("lSucc2") & ls(hide, "w*h_3 < w*ho_0-hp") & absmax2 & QE,
-              dT("Goal 135") & ls(hide, "abs(r_3-ro_0)>rp") & (la(andL)*) &
-                la(orL, "w*dhd_3>=w*dhf|w*ao>=a") && (
-                dT("Goal 146") & absmax2 & crushw,
-                dT("Goal 148") & absmax2 & crushw
-                )
-              ),
-            dT("Goal 125") &
-              la(orL,"abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5))-hp")&& (
-              dT("Goal 280") & absmax2 & QE,
-              dT("Goal 281") & absmax2 & (la(andL)*) & (la(orL)*) & QE
-              )
-            ) ),
-        // goal 111
-        dT("Goal 111") &
-          la(instantiateT(Variable("ho"), "dhf*(t_0+kxtime_5) - w*maxI^2/(2*a)".asTerm)) //, { case Forall(Variable("ho", None, Real) :: Nil, _) => true case _ => false })
-          & dT("Goal 120-1") &
+            dT("1-early Lo") &
+              la(orL,"abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5))-hp")
+              && (QE, ls(hide, "abs(r_3-ro_0)>rp") & QE),
+            dT("1-late Lo") &
+              la(orL,"abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(w*a/2*(t_0+kxtime_5)^2+dhd*(t_0+kxtime_5))-hp")
+              && (QE, ls(hide, "abs(r_3-ro_0)>rp") & absmax2 & crushw)
+            )
+          ),
+        dT("final time in straight Lo") &
+          la(instantiateT(Variable("ho"), "dhf*(t_0+kxtime_5) - w*maxI^2/(2*a)".asTerm)) &
+          dT("instantiate ho 2 Lo") &
           la(implyL, "0<=kxtime_5+t_0&kxtime_5+t_0 < maxI/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&dhf*(t_0+kxtime_5)-w*maxI^2/(2*a)=w*a/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=maxI/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&dhf*(t_0+kxtime_5)-w*maxI^2/(2*a)=dhf*(kxtime_5+t_0)-w*maxI^2/(2*a)->abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(dhf*(t_0+kxtime_5)-w*maxI^2/(2*a))-hp")
           && (
-          dT("Goal 122") & la(hide, initDomain) & absmax2 & QE,
-          dT("Goal 123") & la(orL, "0<=t_0&t_0 < max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=dhf*t_0-w*max((0,w*(dhf-dhd_3)))^2/(2*a)")
+          dT("left of -> 2 Lo") & ls(orR) &
+            ls(hide, "0<=kxtime_5+t_0&kxtime_5+t_0 < maxI/a&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&dhf*(t_0+kxtime_5)-w*maxI^2/(2*a)=w*a/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)") &
+            ls(hide, "abs(r_3-ro_0)>rp") & ls(hide, "w*h_3<w*ho_0-hp") &
+            la(hide, "maxI=max((0,w*(dhf-dhd)))") & QE,
+          // also closes with: la(hide, initDomain) & absmax2 & QE
+          dT("right of -> 2 Lo") & (la(andL)*) &
+            la(orL, "0<=t_0&t_0 < max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=w*a/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhf-dhd_3)))/a&ro_0=rv*t_0&ho_0=dhf*t_0-w*max((0,w*(dhf-dhd_3)))^2/(2*a)")
             && (
-            la(hide, initDomain) & absmax2 & crushor, // takes a while (about 170 seconds)
-            dT("Goal 127") &
-              (la(andL)*) & dT("Goal 193") &
-              la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h < w*(dhf*(t_0+kxtime_5)-w*maxI^2/(2*a))-hp") && (
-              dT("Goal 194") & absmax2 & crushor, // takes a while (100 seconds or so)
-              dT("Goal 195") & ls(hide, "abs(r_3-ro_0)>rp") & absmax2 &
-                la(orL, "0>=w*(dhf-dhd_3)&max_0=0|0 < w*(dhf-dhd_3)&max_0=w*(dhf-dhd_3)") && (
-                dT("Goal 214") & cut("w*ao>=a|!w*ao>=a".asFormula) & onBranch(
-                  (cutShowLbl, ls(cohide, "w*ao>=a|!w*ao>=a") & QE),
-                  (cutUseLbl, dT("Goal 214-2") & la(orL, "w*ao>=a|!w*ao>=a") && (
-                    dT("Goal 214-3") /*& la(hide, initDomain)*/ & QE,
-                    dT("Goal 231") & la(orL, "w*dhd_3>=w*dhf|w*ao>=a") && (
-                      dT("Goal 233") & la(orL, "w*dhd>=w*dhf|w*ao>=a") && (
-                        crushor,
-                        la(notL) & closeId
-                        ),
-                      la(notL) & closeId
-                      ) ) ) ),
-                la(hide, initDomain) & crushor
-                )
-              )
+            dT("2-early Lo") &
+              la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h<w*(dhf*(t_0+kxtime_5)-w*maxI^2/(2*a))-hp")
+              && (QE, ls(hide, "abs(r_3-ro_0)>rp") & absmax2 & crushw),
+            dT("2-late Up") &
+              la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h<w*(dhf*(t_0+kxtime_5)-w*maxI^2/(2*a))-hp")
+              && (QE, ls(hide, "abs(r_3-ro_0)>rp") & absmax2 & crushw)
             )
           )
         )
@@ -672,55 +655,48 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
         la(hide, "\\forall ho (0<=kxtime_5+t_0&kxtime_5+t_0 < maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&ho=w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&ho=(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)->abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*ho+hp)")
         & ls(hide, "abs(r_3-ro_0)>rp") & ls(hide, "w*h_3>w*ho_0+hp") &
         dT("Show Cut 2") & ls(orR) &
-        la(orL, "0<=t_0&t_0 < max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=w*aM/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=(dhd_3+w*max((0,w*(dhfM-dhd_3))))*t_0-w*max((0,w*(dhfM-dhd_3)))^2/(2*aM)")
+        la(orL, "0<=t_0&t_0<max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=w*aM/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=(dhd_3+w*max((0,w*(dhfM-dhd_3))))*t_0-w*max((0,w*(dhfM-dhd_3)))^2/(2*aM)")
         & (la(andL)*) & (ls(andR)*) & QE),
       (cutUseLbl, dT("Use Cut") &
         la(orL, "0<=kxtime_5+t_0&kxtime_5+t_0<maxIM/aM|kxtime_5+t_0>=maxIM/aM") && (
-        dT("final time in parabola") &
+        dT("final time in parabola") & // add hide initDomain?
           la(instantiateT(Variable("ho"), "w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)".asTerm)) &
-          dT("instantiate ho 1") &
+          dT("instantiate ho 1 Up") &
           la(implyL, "0<=kxtime_5+t_0&kxtime_5+t_0 < maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)=w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)=(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)->abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*(w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0))+hp")
           && (
-          dT("left of -> 1") & ls(orR) &
+          dT("left of -> 1 Up") & ls(orR) &
             ls(hide, "kxtime_5+t_0>=maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)=(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)") &
             ls(hide, "abs(r_3-ro_0)>rp") & ls(hide, "w*h_3>w*ho_0+hp") &
             la(hide, "maxIM=max((0,w*(dhfM-dhd)))") & QE,
-          dT("right of -> 1") &
+          dT("right of -> 1 Up") & (la(andL)*) &
             la(orL, "0<=t_0&t_0 < max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=w*aM/2*t_0^2+dhd_3*t_0|\nt_0>=max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=(dhd_3+w*max((0,w*(dhfM-dhd_3))))*t_0-w*max((0,w*(dhfM-dhd_3)))^2/(2*aM)")
             && (
-            la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*(w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0))+hp") &&
-              ((la(andL)*) & dT("(easy) 1 early r case") & QE,
-               (la(andL)*) & dT("(hard) 1 early h case") & QE
-              ),
-            la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*(w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0))+hp") &
-              ((la(andL)*) & dT("(easy) 1 late r case") & QE,
-               (la(andL)*) & dT("(hard) 1 late h case") &
-                 ls(hide, "abs(r_3-ro_0)>rp") & absmax3 & crushw
-              )
+            dT("1-early Up") &
+              la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*(w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0))+hp")
+              && (QE, QE),
+            dT("1-late Up") &
+              la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*(w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0))+hp")
+              && (QE, ls(hide, "abs(r_3-ro_0)>rp") & absmax3 & crushw)
             )
           ),
-        dT("final time in straight") &
+        dT("final time in straight Up") &
           la(instantiateT(Variable("ho"), "(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)".asTerm)) &
-          dT("instantiate ho 2") &
+          dT("instantiate ho 2 Lo") &
           la(implyL, "0<=kxtime_5+t_0&kxtime_5+t_0 < maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)=w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)|kxtime_5+t_0>=maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)=(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)->abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*((dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM))+hp")
           && (
-          dT("left of -> 2") & ls(orR) &
+          dT("left of -> 2 Up") & ls(orR) &
             ls(hide, "0<=kxtime_5+t_0&kxtime_5+t_0 < maxIM/aM&rv*(kxtime_5+t_0)=rv*(kxtime_5+t_0)&(dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM)=w*aM/2*(kxtime_5+t_0)^2+dhd*(kxtime_5+t_0)") &
             ls(hide, "abs(r_3-ro_0)>rp") & ls(hide, "w*h_3>w*ho_0+hp") &
             la(hide, "maxIM=max((0,w*(dhfM-dhd)))") & QE,
-          dT("right of -> 2") &
+          dT("right of -> 2 Up") & (la(andL)*) &
             la(orL, "0<=t_0&t_0 < max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=w*aM/2*t_0^2+dhd_3*t_0|t_0>=max((0,w*(dhfM-dhd_3)))/aM&ro_0=rv*t_0&ho_0=(dhd_3+w*max((0,w*(dhfM-dhd_3))))*t_0-w*max((0,w*(dhfM-dhd_3)))^2/(2*aM)")
             && (
-            la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*((dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM))+hp") &
-              ((la(andL)*) & dT("(easy) 2 early r case") & QE,
-               (la(andL)*) & dT("(hard) 2 early h case") &
-                 ls(hide, "abs(r_3-ro_0)>rp") & absmax3 & crushw
-              ),
-            la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*((dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM))+hp") &
-              ((la(andL)*) & dT("(easy) 2 late r case") & QE,
-               (la(andL)*) & dT("(hard) 2 late h case") &
-                 ls(hide, "abs(r_3-ro_0)>rp") & absmax3 & crushw
-              )
+            dT("2-early Up") &
+              la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*((dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM))+hp")
+              && (QE, ls(hide, "abs(r_3-ro_0)>rp") & absmax3 & crushw),
+            dT("2-late Up") &
+              la(orL, "abs(r-rv*(kxtime_5+t_0))>rp|w*h>w*((dhd+w*maxIM)*(kxtime_5+t_0)-w*maxIM^2/(2*aM))+hp")
+              && (QE, ls(hide, "abs(r_3-ro_0)>rp") & absmax3 & crushw)
             )
           )
         )
@@ -731,11 +707,11 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     safeLemma shouldBe 'closed
 
     /*** Lemma machinery, TODO clean up ***/
+    val lemmaDB = LemmaDBFactory.lemmaDB
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(
       immutable.Map("input" -> safeLemmaFormula, "output" -> "true")) :: Nil
     // add lemma into DB, which creates an ID for it. use ID to apply the lemma
-    val lemmaDB = LemmaDBFactory.lemmaDB
     val lemmaID = lemmaDB.add(Lemma(safeLemma.provableWitness, evidence))
     val safeLemmaApply = new ApplyRule(LookupLemma(lemmaDB, lemmaID)) {
       override def applicable(node: ProofNode): Boolean =
