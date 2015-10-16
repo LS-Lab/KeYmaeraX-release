@@ -78,7 +78,7 @@ class PassiveSafetyAbsTacticGenerator extends (() => Tactic) {
       ))
     )
 
-    def hideAndEqT(xo: Variable, yo: Variable) = ls(AndRightT) && ((ls(AndRightT)*) & (AxiomCloseT | debugT("AxiomClose failed")), debugT("Hide") &
+    def hideAndEqT(xo: Variable, yo: Variable) = ls(AndRightT) && ((ls(AndRightT)*) & (CloseId | debugT("AxiomClose failed")), debugT("Hide") &
       la(eqLeft(exhaustive = true), "v0_1()=v_0", "x0_1()=x_0", "y0_1()=y_0", "xo0_1()=" + xo.prettyString, "yo0_1()=" + yo.prettyString) &
       debugT("Done equality rewriting") &
       la(hideT, "r!=0", "v>=0", "dx^2+dy^2=1", "dxo()^2+dyo()^2<=V()^2", "t_2=0", "v0_1()=v_0",
@@ -201,7 +201,7 @@ class PassiveSafetyAbsTacticGenerator extends (() => Tactic) {
     )
 
     ls(ImplyRightT) & (la(AndLeftT)*) & ls(inductionT(Some(invariant))) & onBranch(
-      (indInitLbl, debugT("Base case") & (ls(AndRightT)*) & (ls(OrRightT)*) & la(OrLeftT) & (AxiomCloseT | debugT("Robix axiom close failed unexpectedly") & Tactics.stopT)),
+      (indInitLbl, debugT("Base case") & (ls(AndRightT)*) & (ls(OrRightT)*) & la(OrLeftT) & (CloseId | debugT("Robix axiom close failed unexpectedly") & Tactics.stopT)),
       (indUseCaseLbl, debugT("Use case") & la(hideT, "abs(x-xo)>v^2/(2*B)+V()*(v/B)|abs(y-yo)>v^2/(2*B)+V()*(v/B)") & ls(ImplyRightT) & (la(AndLeftT)*) & ls(ImplyRightT) & debugT("Before ImplyL") & la(OrLeftT) && (la(OrLeftT) && (QE, AbsT(AntePosition(6).first) & QE), AbsT(AntePosition(6).first) & QE)),
       (indStepLbl, debugT("Induction step") & la(hideT, "abs(x-xo)>v^2/(2*B)+V()*(v/B)|abs(y-yo)>v^2/(2*B)+V()*(v/B)") & ls(ImplyRightT) & (la(AndLeftT)*) &
         ls(boxSeqT) &

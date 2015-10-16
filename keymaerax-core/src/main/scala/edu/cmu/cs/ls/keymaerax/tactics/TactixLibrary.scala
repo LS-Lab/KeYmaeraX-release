@@ -246,7 +246,7 @@ object TactixLibrary extends UnifyUSCalculus {
   // more
 
   /** Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post */
-  def postCut(cut: Formula)   : PositionTactic = ODETactics.diffInvariant(cut)
+  def postCut(cut: Formula)   : PositionTactic = TacticLibrary.postCut(cut)
 
 
 
@@ -257,6 +257,8 @@ object TactixLibrary extends UnifyUSCalculus {
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : Tactic         = TacticLibrary.closeT
+  /** closeId: closes the branch when the same formula is in the antecedent and succedent */
+  def close(a: AntePosition, s: SuccPosition) : Tactic = PropositionalTacticsImpl.CloseId(a,s)
   /** closeId: closes the branch when the same formula is in the antecedent and succedent */
   lazy val closeId           : Tactic         = TacticLibrary.AxiomCloseT
   /** closeT: closes the branch when true is in the succedent */

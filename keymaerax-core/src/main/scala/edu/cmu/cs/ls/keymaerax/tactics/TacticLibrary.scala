@@ -540,8 +540,8 @@ object TacticLibrary {
   def cutT(f: Option[Formula]) = PropositionalTacticsImpl.cutT(f)
 
   def closeT : Tactic = AxiomCloseT | locateSucc(CloseTrueT) | locateAnte(CloseFalseT)
-  def AxiomCloseT(a: Position, b: Position) = PropositionalTacticsImpl.AxiomCloseT(a, b)
-  def AxiomCloseT = PropositionalTacticsImpl.AxiomCloseT
+  def AxiomCloseT(a: Position, b: Position) = PropositionalTacticsImpl.CloseId(a, b)
+  def AxiomCloseT = PropositionalTacticsImpl.CloseId
   def CloseTrueT = PropositionalTacticsImpl.CloseTrueT
   def CloseFalseT = PropositionalTacticsImpl.CloseFalseT
 
@@ -719,7 +719,8 @@ object TacticLibrary {
           Some(cutR(conditio)(p) & onBranch(
             (BranchLabels.cutShowLbl, cutR(cutted)(p) & onBranch(
               (BranchLabels.cutShowLbl, hide(conditio)(conditional) & label(BranchLabels.cutShowLbl)),
-              (BranchLabels.cutUseLbl, PropositionalTacticsImpl.InverseImplyRightT())
+              (BranchLabels.cutUseLbl, PropositionalTacticsImpl.InverseImplyRight(cutical, p) &
+                useAt("K modal modus ponens")(p) & close(conditional, p))
             )),
             (BranchLabels.cutUseLbl, label(BranchLabels.cutUseLbl))
           ))

@@ -145,8 +145,8 @@ object PropositionalTacticsImpl {
         case fml@Imply(l, r) => Some(cutInContext(Equiv(fml, Not(And(l, Not(r)))), pos) & onBranch(
           (cutShowLbl, lastSucc(cohideT) & equivalenceCongruenceT(pos.inExpr) & lastSucc(EquivRightT) & onBranch(
             // use concrete positions instead of locate, so that original formulas remain untouched. makes assumptions about where formulas will appear after tactic execution
-            (equivLeftLbl, lastSucc(NotRightT) & lastAnte(AndLeftT) & lastAnte(NotLeftT) & ImplyLeftT(AntePosition(0)) & AxiomCloseT),
-            (equivRightLbl, lastAnte(NotLeftT) & ImplyRightT(SuccPosition(0)) & AndRightT(SuccPosition(0)) && (AxiomCloseT, NotRightT(SuccPosition(0)) & AxiomCloseT))
+            (equivLeftLbl, lastSucc(NotRightT) & lastAnte(AndLeftT) & lastAnte(NotLeftT) & ImplyLeftT(AntePosition(0)) & CloseId),
+            (equivRightLbl, lastAnte(NotLeftT) & ImplyRightT(SuccPosition(0)) & AndRightT(SuccPosition(0)) && (CloseId, NotRightT(SuccPosition(0)) & CloseId))
             )),
           (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), pos.topLevel))
         ))
@@ -209,14 +209,15 @@ object PropositionalTacticsImpl {
     }
   }
 
-  def AxiomCloseT(a: Position, b: Position): Tactic = new Tactics.ApplyRule(Close(a, b)) {
+  //@todo should be AntePosition, SuccPosition
+  def CloseId(a: Position, b: Position): Tactic = new Tactics.ApplyRule(Close(a, b)) {
     override def applicable(node: ProofNode): Boolean = a.isAnte && !b.isAnte &&
       getFormula(node.sequent, a) == getFormula(node.sequent, b)
   }
 
-  def AxiomCloseT: Tactic = new ConstructionTactic("AxiomClose") {
+  def CloseId: Tactic = new ConstructionTactic("Close") {
     def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = findPositions(p.sequent) match {
-      case Some((a, b)) => Some(AxiomCloseT(a, b))
+      case Some((a, b)) => Some(CloseId(a, b))
       case None => None
     }
 
@@ -277,15 +278,15 @@ object PropositionalTacticsImpl {
         Some(cutT(Some(consolidatedFml)) & onBranch(
           (cutUseLbl,
             if (s.ante.isEmpty) {
-              if (s.succ.isEmpty) lastAnte(NotLeftT) & AxiomCloseT
-              else AxiomCloseT | (lastAnte(OrLeftT) && (AxiomCloseT | NilT, AxiomCloseT))*(s.succ.length-1)
+              if (s.succ.isEmpty) lastAnte(NotLeftT) & CloseId
+              else CloseId | (lastAnte(OrLeftT) && (CloseId | NilT, CloseId))*(s.succ.length-1)
             } else {
               if (s.succ.isEmpty) lastAnte(ImplyLeftT) && (
-                AxiomCloseT | (lastSucc(AndRightT) && (AxiomCloseT | NilT, AxiomCloseT))*(s.ante.length-1),
-                lastAnte(NotLeftT) & (AxiomCloseT | (lastSucc(AndRightT) && (AxiomCloseT | NilT, AxiomCloseT))*(s.ante.length-1)))
+                CloseId | (lastSucc(AndRightT) && (CloseId | NilT, CloseId))*(s.ante.length-1),
+                lastAnte(NotLeftT) & (CloseId | (lastSucc(AndRightT) && (CloseId | NilT, CloseId))*(s.ante.length-1)))
               else lastAnte(ImplyLeftT) && (
-                AxiomCloseT | (lastSucc(AndRightT) && (AxiomCloseT | NilT, AxiomCloseT))*(s.ante.length-1),
-                AxiomCloseT | (lastAnte(OrLeftT) && (AxiomCloseT | NilT, AxiomCloseT))*(s.succ.length-1))
+                CloseId | (lastSucc(AndRightT) && (CloseId | NilT, CloseId))*(s.ante.length-1),
+                CloseId | (lastAnte(OrLeftT) && (CloseId | NilT, CloseId))*(s.succ.length-1))
             }
             ),
           (cutShowLbl, SearchTacticsImpl.lastSucc(cohideT))
@@ -344,7 +345,7 @@ object PropositionalTacticsImpl {
   def modusPonensT(assumption: Position, implication: Position): Tactic = new ConstructionTactic("Modus Ponens") {
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       val p = AntePosition(assumption.getIndex - (if(assumption.getIndex > implication.getIndex) 1 else 0))
-      Some(ImplyLeftT(implication) & (AxiomCloseT(p, SuccPosition(node.sequent.succ.length)), hideT(p)))
+      Some(ImplyLeftT(implication) & (CloseId(p, SuccPosition(node.sequent.succ.length)), hideT(p)))
     }
 
     override def applicable(node: ProofNode): Boolean = assumption.isAnte && implication.isAnte &&
@@ -468,7 +469,7 @@ object PropositionalTacticsImpl {
           (BranchLabels.cutUseLbl,
             assertT(2, 1) ~
             PropositionalTacticsImpl.modusPonensT(AntePos(0), AntePos(1)) ~
-            AxiomCloseT ~ errorT("Should have closed.")
+            CloseId ~ errorT("Should have closed.")
           ),
           (BranchLabels.cutShowLbl, hideT(SuccPos(0)) & hideT(AntePos(0)) /* This is the result. */)
         )
@@ -480,5 +481,5 @@ object PropositionalTacticsImpl {
   }
 
   //@todo Nathan
-  def InverseImplyRightT : TwoPositionRule = ???
+  def InverseImplyRight(a: AntePosition, s: SuccPosition) : Tactic = ???
 }
