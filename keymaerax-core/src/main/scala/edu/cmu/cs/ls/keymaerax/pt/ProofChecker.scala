@@ -24,10 +24,11 @@ object ProofChecker {
         ArithmeticTacticsImpl.quantifierEliminationT("Mathematica").apply(tool, node)
         Some(node.provableWitness)
       }
+
       case AndTerm(e, d) => phi match {
         case And(varphi, psi) => {
           val varphiCert = ProofChecker(e, varphi)
-          val psiCert    = ProofChecker(d, psi)
+          val psiCert = ProofChecker(d, psi)
           (varphiCert, psiCert) match {
             case (Some(varphiCert), Some(psiCert)) => {
               //This is the ^R schematic proof rule referred to in the proof.
@@ -44,6 +45,26 @@ object ProofChecker {
         }
         case _ => None
       }
+
+      case ApplicationTerm(e, psi, d) => {
+        val implCert = ProofChecker(e, Imply(psi, phi))
+        val psiCert = ProofChecker(d, psi)
+
+        if(implCert.isDefined && implCert.get.isProved && psiCert.isDefined && psiCert.get.isProved)
+          //@todo Eisegesis. Adopt implementation or adopt proof so that they are the same.
+          Some(
+            Provable.startProof(goalSequent(phi))
+              (Cut(Imply(psi, phi)), 0)
+              (HideRight(SuccPos(0)), 1)(implCert.get, 1) // hide phi and prove psi -> phi using proof produced by IH
+              (Cut(psi), 0)
+              (HideLeft(AntePos(0)), 1)(HideRight(SuccPos(0)), 1)(psiCert.get, 1) // have phi -> psi |- phi, psi. Hides antecendent and phi, and proves psi by IH.
+              (ImplyLeft(AntePos(0)), 0)
+              (Close(AntePos(0), SuccPos(1)), 0)
+              (Close(AntePos(1), SuccPos(0)), 0)
+          )
+        else None
+      }
+
     }
   }
 

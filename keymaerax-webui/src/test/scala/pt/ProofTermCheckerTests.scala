@@ -1,6 +1,6 @@
 package pt
 
-import edu.cmu.cs.ls.keymaerax.core.Formula
+import edu.cmu.cs.ls.keymaerax.core.{Imply, Formula}
 import edu.cmu.cs.ls.keymaerax.pt._
 import testHelper.TacticTestSuite
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -32,6 +32,16 @@ class ProofTermCheckerTests extends TacticTestSuite {
     val f = "0=0 & 1=1".asFormula
     val certificate = ProofChecker(AndTerm(folrConstant("0=0".asFormula), folrConstant("1=1".asFormula)), f)
     certificate.isDefined shouldBe true
-    certificate.get.isProved shouldBe true 
+    certificate.get.isProved shouldBe true
+  }
+
+  "e * d term checker" should "check j_{0=0 -> 1=1} * j_{0=0} : x > 0" in {
+    val oEo      = "1=1".asFormula
+    val zEz      = "0=0".asFormula
+    val zEzTerm  = folrConstant(zEz)
+    val implTerm = folrConstant(Imply(zEz, oEo))
+    val certificate = ProofChecker(ApplicationTerm(implTerm, zEz, zEzTerm), oEo)
+    certificate.isDefined shouldBe true
+    println(certificate.get.subgoals.mkString("\n --- \n"))
   }
 }
