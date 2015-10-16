@@ -696,6 +696,7 @@ object TacticLibrary {
    * cutUseLbl: with [a](cut->post)
    * cutShowbranch: with [a]cut
    * @author Andre Platzer
+   * @todo same for diamonds by the dual of K
    */
   def postCut(cut: Formula): PositionTactic = new PositionTactic("postCut") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
