@@ -52,15 +52,27 @@ class ProofTermCheckerTests extends TacticTestSuite {
 
   }
 
-  "e *-> d term checker" should "check j_{1=1 <-> 0=0} *-> j_{0=0} : 1=1" in {
+  "e *<- d term checker" should "check j_{1=1 <-> 0=0} *-> j_{0=0} : 1=1" in {
     val oEo      = "1=1".asFormula
     val zEz      = "0=0".asFormula
     val zEzTerm  = folrConstant(zEz)
     val equivTerm = folrConstant(core.Equiv(oEo, zEz))
-    val certificate = ProofChecker(RightEquivalence(equivTerm, zEz, zEzTerm), oEo)
+    val certificate = ProofChecker(LeftEquivalence(equivTerm, zEz, zEzTerm), oEo)
     certificate.isDefined shouldBe true
     debugCert(certificate.get)
     proves(certificate.get, oEo) shouldBe true
+
+  }
+
+  "e *-> d term checker" should "check j_{1=1 <-> 0=0} *<- j_{1=1} : 0=0" in {
+    val oEo      = "1=1".asFormula
+    val zEz      = "0=0".asFormula
+    val oEoTerm  = folrConstant(oEo)
+    val equivTerm = folrConstant(core.Equiv(oEo, zEz))
+    val certificate = ProofChecker(RightEquivalence(equivTerm, oEo, oEoTerm), zEz)
+    certificate.isDefined shouldBe true
+    debugCert(certificate.get)
+    proves(certificate.get, zEz) shouldBe true
 
   }
 }
