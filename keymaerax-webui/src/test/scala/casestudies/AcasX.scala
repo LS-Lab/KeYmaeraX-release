@@ -249,7 +249,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
   "ACAS X" should "prove explicit region safety from implicit region safety and equivalence" in {
     val acasximplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay.key")).mkString)
     val acasxexplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-explicit.key")).mkString)
-    val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-equivalence.key")).mkString)
+    val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-equivalence-direct.key")).mkString)
     val shape = Context(
       """  hp > 0 & rp > 0 & rv >= 0 & a > 0 &
   ( (w=-1 | w=1) &
