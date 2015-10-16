@@ -157,14 +157,15 @@ object ProofChecker {
         else None
       }
 
-//      case CTTerm(e, premise, usubst) => {
-//        val equalityCert = ProofChecker(e, premise)
-//        if(equalityCert.isDefined && equalityCert.get.isProved) {
-//          Provable.startProof(goalSequent(phi))
-//          ()
-//        }
-//        else None
-//      }
+      case CTTerm(e, premise, usubst) => {
+        val equalityCert = ProofChecker(e, premise)
+        if(equalityCert.isDefined && equalityCert.get.isProved) Some(
+          Provable.startProof(goalSequent(phi))
+          (AxiomaticRule("CT term congruence", usubst), 0)
+          (equalityCert.get, 0)
+        )
+        else None
+      }
     }
   }
 }

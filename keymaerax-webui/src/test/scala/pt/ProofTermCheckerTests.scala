@@ -84,7 +84,7 @@ class ProofTermCheckerTests extends TacticTestSuite {
 
 
   //[v:=t();]p(v) <-> p(t())
-  "usubst" should "check \\sigma i_{[:=] assign} : [v:=1;]v=v <-> 1=1 for appropriate usubst" in {
+  "usubst term checker" should "check \\sigma i_{[:=] assign} : [v:=1;]v=v <-> 1=1 for appropriate usubst" in {
     val axiomName = "[:=] assign"
     val axiom = Axiom.axiom("[:=] assign").conclusion.succ.last
     val instance = "[v:=1;]v=v <-> 1=1".asFormula
@@ -99,5 +99,31 @@ class ProofTermCheckerTests extends TacticTestSuite {
     val certificate = ProofChecker(UsubstTerm(instanceTerm, axiom, usubst), instance)
     certificate shouldBe defined
     proves(certificate.get, instance) shouldBe true
+  }
+
+  "CT term checker" should "check CT_\\sigma 1+1+1 = 1+2" in {
+    val goal = "1+1+1=2+1".asFormula
+    
+    val premise = Equal("1+1".asTerm, "2".asTerm)
+    val premiseTerm = folrConstant(premise)
+
+    val c = Function("ctx_", None, Real, Real)
+    val cApp = FuncOf(c, DotTerm)
+    val f = Function("f_", None, Real, Real)
+    val fApp = FuncOf(f, Anything)
+    val g = Function("g_", None, Real, Real)
+    val gApp = FuncOf(g, Anything)
+
+    val usubst = USubst(
+      SubstitutionPair(fApp, "1+1".asTerm) ::
+      SubstitutionPair(gApp, "2".asTerm) ::
+      SubstitutionPair(cApp, Plus(DotTerm, Number(1))) ::
+      Nil
+    )
+
+    val certificate = ProofChecker(CTTerm(premiseTerm, premise, usubst), goal)
+    certificate shouldBe defined
+    proves(certificate.get, goal) shouldBe true
+
   }
 }
