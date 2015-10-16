@@ -20,7 +20,7 @@ class ProofTermCheckerTests extends TacticTestSuite {
   }
   private def debugCert(cert: Provable) = println(cert.subgoals.mkString("\n --- \n"))
 
-  "Axiom checker" should "check i_{ [v:=t();]p(v) <-> p(t()) } : [v:=t();]p(v) <-> p(t())" in {
+  "Axiom checker" should "check i_{[:=] assign} : [v:=t();]p(v) <-> p(t())" in {
     val label = "[:=] assign"
     val f = "[v:=t();]p(v) <-> p(t())".asFormula
     val certificate = ProofChecker(dlConstant(label), f)
@@ -82,10 +82,22 @@ class ProofTermCheckerTests extends TacticTestSuite {
     proves(certificate.get, zEz) shouldBe true
   }
 
-//  "usubst" should "check \\sigma i_{1=1} : f()=f() where \\sigma = {f() ~> 1}" in {
-//    val oEo = "1=1".asFormula
-//    val oEoTerm = folrConstant(oEo)
-//    val sigma = USubst(SubstitutionPair("f()".asTerm, "1".asTerm) :: Nil)
-//    val certificate = ProofChecker(UsubstTerm(oEoTerm, oEo, sigma), )
-//  }
+
+  //[v:=t();]p(v) <-> p(t())
+  "usubst" should "check \\sigma i_{[:=] assign} : [v:=1;]v=v <-> 1=1 for appropriate usubst" in {
+    val axiomName = "[:=] assign"
+    val axiom = Axiom.axiom("[:=] assign").conclusion.succ.last
+    val instance = "[v:=1;]v=v <-> 1=1".asFormula
+    val usubst = USubst(
+      SubstitutionPair("t()".asTerm, "1".asTerm) ::
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Equal(DotTerm, DotTerm)) ::
+      Nil
+    )
+
+    val instanceTerm = dlConstant(axiomName)
+    val sigma = USubst(SubstitutionPair("f()".asTerm, "1".asTerm) :: Nil)
+    val certificate = ProofChecker(UsubstTerm(instanceTerm, axiom, usubst), instance)
+    certificate shouldBe defined
+    proves(certificate.get, instance) shouldBe true
+  }
 }

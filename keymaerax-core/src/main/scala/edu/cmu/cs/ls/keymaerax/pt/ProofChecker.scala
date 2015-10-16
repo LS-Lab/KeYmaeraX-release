@@ -144,18 +144,18 @@ object ProofChecker {
         else None
       }
 
-//      case UsubstTerm(e, phiPrime, usubst) => {
-//        val phiPrimeCert = ProofChecker(e, phiPrimeCert)
-//        if(phiPrimeCert.isDefined && phiPrimeCert.get.isProved) {
-//          val goalS = goalSequent(phi)
-//          Some(
-//            Provable.startProof(goalS)
-//            (UniformSubstitutionRule(usubst, goalS), 0)
-//            (phiPrimeCert.get, 0)
-//          )
-//        }
-//        else None
-//      }
+      case UsubstTerm(e, phiPrime, usubst) => {
+        val phiPrimeCert = ProofChecker(e, phiPrime)
+        if(phiPrimeCert.isDefined && phiPrimeCert.get.isProved) {
+          val goalS = goalSequent(phi)
+          Some(
+            Provable.startProof(goalS)
+            (UniformSubstitutionRule(usubst, goalSequent(phiPrime)), 0)
+            (phiPrimeCert.get, 0)
+          )
+        }
+        else None
+      }
 
 //      case CTTerm(e, premise, usubst) => {
 //        val equalityCert = ProofChecker(e, premise)
