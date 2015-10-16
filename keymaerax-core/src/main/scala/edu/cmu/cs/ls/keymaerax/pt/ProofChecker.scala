@@ -19,12 +19,12 @@ object ProofChecker {
    */
   def apply(e: ProofTerm, phi: Formula) : Option[Provable] = {
     e match {
-      case dlConstant(label) => Some(
+      case dLConstant(label) => Some(
         Provable.startProof(goalSequent(phi))
         (Axiom(label), 0)
       )
 
-      case folrConstant(f) => {
+      case FOLRConstant(f) => {
         val node = proofNode(phi)
         ArithmeticTacticsImpl.quantifierEliminationT("Mathematica").apply(tool, node)
         Some(node.provableWitness)
@@ -162,6 +162,26 @@ object ProofChecker {
         if(equalityCert.isDefined && equalityCert.get.isProved) Some(
           Provable.startProof(goalSequent(phi))
           (AxiomaticRule("CT term congruence", usubst), 0)
+          (equalityCert.get, 0)
+        )
+        else None
+      }
+
+      case CQTerm(e, premise, usubst) => {
+        val equalityCert = ProofChecker(e, premise)
+        if(equalityCert.isDefined && equalityCert.get.isProved) Some(
+          Provable.startProof(goalSequent(phi))
+          (AxiomaticRule("CQ term congruence", usubst), 0)
+          (equalityCert.get, 0)
+        )
+        else None
+      }
+
+      case CETerm(e, premise, usubst) => {
+        val equalityCert = ProofChecker(e, premise)
+        if(equalityCert.isDefined && equalityCert.get.isProved) Some(
+          Provable.startProof(goalSequent(phi))
+          (AxiomaticRule("CE congruence", usubst), 0)
           (equalityCert.get, 0)
         )
         else None

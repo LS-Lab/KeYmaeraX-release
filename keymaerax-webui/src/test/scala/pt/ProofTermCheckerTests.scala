@@ -23,28 +23,28 @@ class ProofTermCheckerTests extends TacticTestSuite {
   "Axiom checker" should "check i_{[:=] assign} : [v:=t();]p(v) <-> p(t())" in {
     val label = "[:=] assign"
     val f = "[v:=t();]p(v) <-> p(t())".asFormula
-    val certificate = ProofChecker(dlConstant(label), f)
+    val certificate = ProofChecker(dLConstant(label), f)
     certificate.isDefined shouldBe true
     proves(certificate.get, f) shouldBe true
   }
 
   "\\FOLR Tautology checker" should "check j_{0=0} : 0=0" in {
     val zEz : Formula = "0=0".asFormula
-    val certificate = ProofChecker(folrConstant(zEz), zEz)
+    val certificate = ProofChecker(FOLRConstant(zEz), zEz)
     certificate.isDefined shouldBe true
     proves(certificate.get, zEz) shouldBe true
   }
 
   it should "check j_{x^2 = 0 <-> x = 0} : x^2 = 0 <-> x = 0" in {
     val f = "x^2 = 0 <-> x = 0".asFormula
-    val certificate = ProofChecker(folrConstant(f), f)
+    val certificate = ProofChecker(FOLRConstant(f), f)
     certificate.isDefined shouldBe true
     proves(certificate.get, f) shouldBe true
   }
 
   "e ^ d term checker" should "check j_{0=0} ^ j_{1=1} : 0=0 & 1=1" in {
     val f = "0=0 & 1=1".asFormula
-    val certificate = ProofChecker(AndTerm(folrConstant("0=0".asFormula), folrConstant("1=1".asFormula)), f)
+    val certificate = ProofChecker(AndTerm(FOLRConstant("0=0".asFormula), FOLRConstant("1=1".asFormula)), f)
     certificate.isDefined shouldBe true
     proves(certificate.get, f) shouldBe true
   }
@@ -52,8 +52,8 @@ class ProofTermCheckerTests extends TacticTestSuite {
   "e * d term checker" should "check j_{0=0 -> 1=1} * j_{0=0} : 1=1" in {
     val oEo      = "1=1".asFormula
     val zEz      = "0=0".asFormula
-    val zEzTerm  = folrConstant(zEz)
-    val implTerm = folrConstant(Imply(zEz, oEo))
+    val zEzTerm  = FOLRConstant(zEz)
+    val implTerm = FOLRConstant(Imply(zEz, oEo))
     val certificate = ProofChecker(ApplicationTerm(implTerm, zEz, zEzTerm), oEo)
     certificate.isDefined shouldBe true
     proves(certificate.get, oEo) shouldBe true
@@ -63,8 +63,8 @@ class ProofTermCheckerTests extends TacticTestSuite {
   "e *<- d term checker" should "check j_{1=1 <-> 0=0} *-> j_{0=0} : 1=1" in {
     val oEo      = "1=1".asFormula
     val zEz      = "0=0".asFormula
-    val zEzTerm  = folrConstant(zEz)
-    val equivTerm = folrConstant(core.Equiv(oEo, zEz))
+    val zEzTerm  = FOLRConstant(zEz)
+    val equivTerm = FOLRConstant(core.Equiv(oEo, zEz))
     val certificate = ProofChecker(LeftEquivalence(equivTerm, zEz, zEzTerm), oEo)
     certificate.isDefined shouldBe true
     debugCert(certificate.get)
@@ -74,8 +74,8 @@ class ProofTermCheckerTests extends TacticTestSuite {
   "e *-> d term checker" should "check j_{1=1 <-> 0=0} *<- j_{1=1} : 0=0" in {
     val oEo      = "1=1".asFormula
     val zEz      = "0=0".asFormula
-    val oEoTerm  = folrConstant(oEo)
-    val equivTerm = folrConstant(core.Equiv(oEo, zEz))
+    val oEoTerm  = FOLRConstant(oEo)
+    val equivTerm = FOLRConstant(core.Equiv(oEo, zEz))
     val certificate = ProofChecker(RightEquivalence(equivTerm, oEo, oEoTerm), zEz)
     certificate.isDefined shouldBe true
     debugCert(certificate.get)
@@ -94,7 +94,7 @@ class ProofTermCheckerTests extends TacticTestSuite {
       Nil
     )
 
-    val instanceTerm = dlConstant(axiomName)
+    val instanceTerm = dLConstant(axiomName)
     val sigma = USubst(SubstitutionPair("f()".asTerm, "1".asTerm) :: Nil)
     val certificate = ProofChecker(UsubstTerm(instanceTerm, axiom, usubst), instance)
     certificate shouldBe defined
@@ -103,9 +103,9 @@ class ProofTermCheckerTests extends TacticTestSuite {
 
   "CT term checker" should "check CT_\\sigma 1+1+1 = 1+2" in {
     val goal = "1+1+1=2+1".asFormula
-    
+
     val premise = Equal("1+1".asTerm, "2".asTerm)
-    val premiseTerm = folrConstant(premise)
+    val premiseTerm = FOLRConstant(premise)
 
     val c = Function("ctx_", None, Real, Real)
     val cApp = FuncOf(c, DotTerm)
@@ -124,6 +124,5 @@ class ProofTermCheckerTests extends TacticTestSuite {
     val certificate = ProofChecker(CTTerm(premiseTerm, premise, usubst), goal)
     certificate shouldBe defined
     proves(certificate.get, goal) shouldBe true
-
   }
 }

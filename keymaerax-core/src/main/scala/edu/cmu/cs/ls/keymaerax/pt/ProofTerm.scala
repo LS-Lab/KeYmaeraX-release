@@ -6,8 +6,8 @@ import edu.cmu.cs.ls.keymaerax.core.{Equiv, Equal, NamedSymbol, USubst, Formula}
  * Created by nfulton on 10/15/15.
  */
 sealed abstract class ProofTerm()
-case class dlConstant(label: String) extends ProofTerm
-case class folrConstant(f : Formula) extends ProofTerm
+case class dLConstant(label: String) extends ProofTerm
+case class FOLRConstant(f : Formula) extends ProofTerm
 case class AndTerm(left: ProofTerm, right: ProofTerm) extends ProofTerm
 case class ApplicationTerm(left: ProofTerm, premise: Formula, right: ProofTerm) extends ProofTerm
 case class RightEquivalence(left: ProofTerm, premise: Formula, right: ProofTerm) extends ProofTerm
