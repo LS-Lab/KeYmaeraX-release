@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{List, Seq, IndexedSeq}
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
@@ -23,8 +23,6 @@ import HybridProgramTacticsImpl.boxVacuousT
 import BranchLabels._
 
 import BuiltinHigherTactics._
-
-import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
 
 /**
@@ -685,5 +683,48 @@ object TacticLibrary {
   def ClosureT(t : PositionTactic) = new PositionTactic("closure") {
     override def applies(s: Sequent, p: Position): Boolean = t.applies(s,p)
     override def apply(p: Position): Tactic = t(p)*
+  }
+
+
+  /**
+   * More tactics
+   */
+  /**
+   * Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post.
+   * The operational effect of {a;}*@invariant(f1,f2,f3) is postCut(f1) & postcut(f2) & postCut(f3).
+   * Leaves behind branches
+   * cutUseLbl: with [a](cut->post)
+   * cutShowbranch: with [a]cut
+   * @author Andre Platzer
+   */
+  def postCut(cut: Formula): PositionTactic = new PositionTactic("postCut") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
+      case Box(_, _) => true
+      case Diamond(_, _) => println("postCut not yet implemented for diamonds"); true
+      case _ => false
+    })
+
+    import TactixLibrary._
+
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Box(a, post) =>
+          // [a](cut->post) and its position in assumptions
+          val conditio = Box(a, Imply(cut, post))
+          val conditional = AntePosition(node.sequent.ante.length)
+          // [a]cut and its position in assumptions
+          val cutted = Box(a, cut)
+          val cutical = AntePosition(node.sequent.ante.length)
+          Some(cutR(conditio)(p) & onBranch(
+            (BranchLabels.cutShowLbl, cutR(cutted)(p) & onBranch(
+              (BranchLabels.cutShowLbl, hide(conditio)(conditional) & label(BranchLabels.cutShowLbl)),
+              (BranchLabels.cutUseLbl, PropositionalTacticsImpl.InverseImplyRightT())
+            )),
+            (BranchLabels.cutUseLbl, label(BranchLabels.cutUseLbl))
+          ))
+        case _ => None
+      }
+    }
   }
 }

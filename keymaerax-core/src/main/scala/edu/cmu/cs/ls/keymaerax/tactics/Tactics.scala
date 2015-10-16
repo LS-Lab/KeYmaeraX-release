@@ -252,6 +252,7 @@ object Tactics {
   }
   /**
    * A schedulable tactic that can be applied to try to prove a ProofNode.
+   * @see [[ConstructionTactic]]
    */
   abstract class Tactic(val name : String) extends Stats {
 
@@ -965,6 +966,7 @@ object Tactics {
 
   }
 
+  /** Pseudo-tactic that has no effect but labelling the proof node with s */
   object LabelBranch {
     def apply(s: String): Tactic = new LabelBranch(s)
   }

@@ -69,7 +69,9 @@ object TactixLibrary extends UnifyUSCalculus {
    */
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic = SearchTacticsImpl.onBranch(s1, spec:_*)
 
-  /** Call the current proof branch s */
+  /** Call the current proof branch s
+    * @see [[onBranch()]]
+    */
   def label(s: String): Tactic = new LabelBranch(s)
 
   // Locating applicable positions for PositionTactics
@@ -109,6 +111,8 @@ object TactixLibrary extends UnifyUSCalculus {
   // Propositional tactics
   /** Hide whether left or right */
   lazy val hide               : PositionTactic = TacticLibrary.hideT
+  /** Hide given formula at given position */
+  def hide(fml: Formula)      : PositionTactic = assertPT(fml, "hiding expects formula " + fml) & TacticLibrary.hideT
   /** Hide left: weaken a formula to drop it from the antecedent */
   lazy val hideL              : PositionTactic = TacticLibrary.hideT
   /** Hide right: weaken a formula to drop it from the succcedent */
@@ -238,6 +242,12 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val Monb               : Tactic         = AxiomaticRuleTactics.boxMonotoneT
   /** Mond: Monotone for <a;>p(x) |- <a;>q(x) reduces to proving p(x) |- q(x) */
   lazy val Mond               : Tactic         = AxiomaticRuleTactics.diamondMonotoneT
+
+  // more
+
+  /** Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post */
+  def postCut(cut: Formula)   : PositionTactic = ODETactics.diffInvariant(cut)
+
 
 
   // closing

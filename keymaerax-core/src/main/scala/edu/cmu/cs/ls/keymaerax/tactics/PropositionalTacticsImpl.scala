@@ -456,9 +456,8 @@ object PropositionalTacticsImpl {
    *   a |- b
    * }}}
    * @author Nathan Fulton
-   *         (only used in one place. Delete if this duplicates something that already exists.)
    * @see [[ImplyRightT]]
-   * @todo could generalize to work in gamma delta context when specifying TwoPositionRule type positions.
+   * @todo should generalize to work in gamma delta context when specifying TwoPositionRule type positions.
    */
   def InverseImplyRightT : Tactic = new ConstructionTactic("inverse imply right") {
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
@@ -479,4 +478,7 @@ object PropositionalTacticsImpl {
     override def applicable(node: ProofNode): Boolean =
       node.sequent.succ.length == 1 && node.sequent.ante.length == 1
   }
+
+  //@todo Nathan
+  def InverseImplyRightT : TwoPositionRule = ???
 }
