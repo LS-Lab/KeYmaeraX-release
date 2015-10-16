@@ -462,9 +462,9 @@ object PropositionalTacticsImpl {
    */
   def InverseImplyRightT(antePos: Position = AntePos(0), succPos: Position = SuccPos(0)) : Tactic = new ConstructionTactic("inverse imply right") {
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      val left = node.sequent.ante.head
-      val right = node.sequent.succ.head
-      val cutUsePos = SuccPos(node.sequent.succ.length)
+      val left = node.sequent.ante(antePos.getIndex)
+      val right = node.sequent.succ(succPos.getIndex)
+      val cutUsePos = AntePos(node.sequent.ante.length)
       Some(
         cutT(Some(Imply(left, right))) & onBranch(
           (BranchLabels.cutUseLbl,
@@ -479,6 +479,7 @@ object PropositionalTacticsImpl {
     }
 
     override def applicable(node: ProofNode): Boolean =
-      node.sequent.succ.length == 1 && node.sequent.ante.length == 1
+      node.sequent.ante.length > antePos.getIndex && node.sequent.succ.length > succPos.getIndex &&
+      antePos.isTopLevel && succPos.isTopLevel
   }
 }
