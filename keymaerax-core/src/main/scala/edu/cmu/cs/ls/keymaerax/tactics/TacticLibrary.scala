@@ -698,7 +698,7 @@ object TacticLibrary {
    * @author Andre Platzer
    * @todo same for diamonds by the dual of K
    */
-  def postCut(cut: Formula): PositionTactic = new PositionTactic("postCut") {
+  def postCut(cutf: Formula): PositionTactic = new PositionTactic("postCut") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
       case Box(_, _) => true
       case Diamond(_, _) => println("postCut not yet implemented for diamonds"); true
@@ -712,10 +712,10 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case Box(a, post) =>
           // [a](cut->post) and its position in assumptions
-          val conditio = Box(a, Imply(cut, post))
+          val conditio = Box(a, Imply(cutf, post))
           val conditional = AntePosition(node.sequent.ante.length)
           // [a]cut and its position in assumptions
-          val cutted = Box(a, cut)
+          val cutted = Box(a, cutf)
           val cutical = AntePosition(node.sequent.ante.length)
           Some(cutR(conditio)(p) & onBranch(
             (BranchLabels.cutShowLbl, cutR(cutted)(p) & onBranch(
