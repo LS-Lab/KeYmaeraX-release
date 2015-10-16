@@ -720,7 +720,7 @@ object TacticLibrary {
           Some(cutR(conditio)(p) & onBranch(
             (BranchLabels.cutShowLbl, cutR(cutted)(p) & onBranch(
               (BranchLabels.cutShowLbl, hide(conditio)(conditional) & label(BranchLabels.cutShowLbl)),
-              (BranchLabels.cutUseLbl, PropositionalTacticsImpl.InverseImplyRight(cutical, p) &
+              (BranchLabels.cutUseLbl, PropositionalTacticsImpl.InverseImplyRightT(cutical, p) &
                 useAt("K modal modus ponens")(p) & close(conditional, p))
             )),
             (BranchLabels.cutUseLbl, label(BranchLabels.cutUseLbl))

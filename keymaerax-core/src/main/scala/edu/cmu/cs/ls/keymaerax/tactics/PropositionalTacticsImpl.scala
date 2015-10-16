@@ -483,7 +483,4 @@ object PropositionalTacticsImpl {
       node.sequent.ante.length > antePos.getIndex && node.sequent.succ.length > succPos.getIndex &&
       antePos.isTopLevel && succPos.isTopLevel
   }
-
-  //@todo Nathan
-  def InverseImplyRight(a: AntePosition, s: SuccPosition) : Tactic = ???
 }
