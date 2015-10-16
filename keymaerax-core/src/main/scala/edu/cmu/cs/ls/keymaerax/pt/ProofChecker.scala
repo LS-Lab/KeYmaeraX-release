@@ -85,7 +85,7 @@ object ProofChecker {
             val node = new RootNode(readyForRewrite.subgoals.last)
             val tactic =
               EqualityRewritingImpl.equivRewriting(AntePos(0), SuccPos(0)) ~
-              PropositionalTacticsImpl.AxiomCloseT(AntePos(0), SuccPos(0))
+              TacticLibrary.AxiomCloseT(AntePos(0), SuccPos(0))
             tactic.apply(tool, node)
             node.provableWitness
           } ensuring(r => r.isProved)
