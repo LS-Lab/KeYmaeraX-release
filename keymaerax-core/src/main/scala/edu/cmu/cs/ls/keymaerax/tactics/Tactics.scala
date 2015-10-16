@@ -248,7 +248,7 @@ object Tactics {
   type Continuation = (Tactic, Status, Seq[ProofNode]) => Unit
 
   object Tactic {
-    private[tactics] val DEBUG = System.getProperty("DEBUG", "false")=="true"
+    private[tactics] val DEBUG = System.getProperty("DEBUG", "true")=="true"
   }
   /**
    * A schedulable tactic that can be applied to try to prove a ProofNode.
@@ -436,11 +436,10 @@ object Tactics {
 
   /**
    * Error tactics execution.
-   * @TODO Implement and check.
    */
   def errorT(msg: String) = new Tactic("Error") {
     def applicable(node : ProofNode) = true
-    def apply(tool : Tool, node : ProofNode) = {println(msg + "\nat " + node.sequent); throw new TacticException(msg, node)}
+    def apply(tool : Tool, node : ProofNode) = {println(msg + "\nat " + node.sequent.prettyString); throw new TacticException(msg, node)}
   }
 
   /**
@@ -462,14 +461,14 @@ object Tactics {
   def assertPT(cond : (Sequent,Position)=>Boolean, msg:String = ""): PositionTactic = new PositionTactic("Assert") {
     def applies(s: Sequent, p: Position) = true
 
-    def apply(pos: Position): Tactic = ifT(node => !cond(node.sequent, pos), errorT("Tactic Assertion failed: " + msg + " at " + pos))
+    def apply(pos: Position): Tactic = ifT(node => !cond(node.sequent, pos), errorT("Tactic Assertion failed: " + msg + "\nat " + pos))
   }
   
   /**
    * Assertion PositionTactic, which checks that the given formula is present at the position in the sequent where this tactic is applied to.
    */
   def assertPT(formulaExpectedAtPosition: Formula, msg:String): PositionTactic =
-    assertPT((s,pos)=> (if (pos.isAnte) s.ante.size > pos.index else s.succ.size > pos.index ) && s(pos)==formulaExpectedAtPosition, "Expected: " + formulaExpectedAtPosition.prettyString + " " + msg)
+    assertPT((s,pos)=> (if (pos.isAnte) s.ante.size > pos.index else s.succ.size > pos.index ) && s(pos)==formulaExpectedAtPosition, msg + "\nExpected: " + formulaExpectedAtPosition.prettyString)
 
   def assertPT(formulaExpectedAtPosition: Formula): PositionTactic = assertPT(formulaExpectedAtPosition, "")
 

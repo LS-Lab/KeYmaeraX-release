@@ -123,6 +123,8 @@ object Position {
   //implicit def position2SuccPos(p: Position) : SuccPos = if (!p.isAnte) new SuccPos(p.index) else throw new IllegalArgumentException("Wrong position side " + p)
 
   implicit def seqPos2Position(p: SeqPos) : Position = if (p.isAnte) new AntePosition(p.getIndex, HereP) else new SuccPosition(p.getIndex, HereP)
+  def antePos2Position(p: SeqPos) : AntePosition = if (p.isAnte) new AntePosition(p.getIndex, HereP) else throw new IllegalArgumentException("not ante")
+  def succPos2Position(p: SeqPos) : SuccPosition = if (p.isSucc) new SuccPosition(p.getIndex, HereP) else throw new IllegalArgumentException("not succ")
   def seqPos2Position(p: SeqPos, posInExpr: List[Int]) : Position = if (p.isAnte) new AntePosition(p.getIndex, PosInExpr(posInExpr)) else new SuccPosition(p.getIndex, PosInExpr(posInExpr))
 }
 

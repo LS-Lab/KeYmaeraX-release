@@ -716,12 +716,14 @@ object TacticLibrary {
           val conditional = AntePosition(node.sequent.ante.length)
           // [a]cut and its position in assumptions
           val cutted = Box(a, cutf)
-          val cutical = AntePosition(node.sequent.ante.length)
+          val cutical = AntePosition(node.sequent.ante.length + 1)
           Some(cutR(conditio)(p) & onBranch(
             (BranchLabels.cutShowLbl, cutR(cutted)(p) & onBranch(
               (BranchLabels.cutShowLbl, hide(conditio)(conditional) & label(BranchLabels.cutShowLbl)),
               (BranchLabels.cutUseLbl, PropositionalTacticsImpl.InverseImplyRightT(cutical, p) &
-                useAt("K modal modus ponens")(p) & close(conditional, p))
+                useAt("K modal modus ponens")(p) &
+                closeId // close(conditional, p.asInstanceOf[SuccPosition])
+                )
             )),
             (BranchLabels.cutUseLbl, label(BranchLabels.cutUseLbl))
           ))

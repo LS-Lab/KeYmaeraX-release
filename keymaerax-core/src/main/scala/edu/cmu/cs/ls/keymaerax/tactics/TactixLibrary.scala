@@ -112,7 +112,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Hide/weaken whether left or right */
   lazy val hide               : PositionTactic = TacticLibrary.hideT
   /** Hide/weaken given formula at given position */
-  def hide(fml: Formula)      : PositionTactic = assertPT(fml, "hiding expects formula " + fml) & TacticLibrary.hideT
+  def hide(fml: Formula)      : PositionTactic = assertPT(fml, "hiding expects given formula") & TacticLibrary.hideT
   /** Hide/weaken left: weaken a formula to drop it from the antecedent */
   lazy val hideL              : PositionTactic = TacticLibrary.hideT
   /** Hide/weaken right: weaken a formula to drop it from the succcedent */
@@ -259,7 +259,7 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val close             : Tactic         = TacticLibrary.closeT
   /** close: closes the branch when the same formula is in the antecedent and succedent */
   def close(a: AntePosition, s: SuccPosition) : Tactic = PropositionalTacticsImpl.CloseId(a,s)
-  def close(a: Int, s: Int)  : Tactic = close(Position.seqPos2Position(SeqPos(a)), Position.seqPos2Position(SeqPos(s)))
+  def close(a: Int, s: Int)  : Tactic = close(new AntePosition(SeqPos(a).asInstanceOf[AntePos].getIndex), new SuccPosition(SeqPos(s).asInstanceOf[SuccPos].getIndex))
   /** closeId: closes the branch when the same formula is in the antecedent and succedent */
   lazy val closeId           : Tactic         = TacticLibrary.AxiomCloseT
   /** closeT: closes the branch when true is in the succedent */
