@@ -180,6 +180,13 @@ object HilbertCalculus extends UnifyUSCalculus {
   /** Dexists: \exists' derives an exists quantifier */
   lazy val Dexists            : PositionTactic = useAt("exists' derive exists")
 
+
+
+  /** splitb: splits [a](p&q) into [a]p & [a]q */
+  lazy val splitb             : PositionTactic = useAt("[] split")
+  /** splitd: splits <a>(p|q) into <a>p | <a>q */
+  lazy val splitd             : PositionTactic = useAt("<> split")
+
   // def ind
 
   /*******************************************************************

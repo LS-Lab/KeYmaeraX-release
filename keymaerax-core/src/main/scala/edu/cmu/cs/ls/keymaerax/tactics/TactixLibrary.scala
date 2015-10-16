@@ -17,7 +17,8 @@ import scala.collection.immutable._
  *
  * This library features all main tactic elements for most common cases, except sophisticated tactics.
  * Brief documentation for the tactics is provided inline in this interface file.
- * *Following toward the implementation reveals more detailed documentation*.
+ *
+ * *Following tactics forward to their implementation reveals more detailed documentation*.
  *
  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
@@ -176,6 +177,7 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val splitb             : PositionTactic = HybridProgramTacticsImpl.boxSplitConjunctionT
   /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
+  /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def loop(invariant: Formula) = I(invariant)
   /** K: modal modus ponens (hybrid systems) */
   lazy val K                  : PositionTactic = PropositionalTacticsImpl.kModalModusPonensT
