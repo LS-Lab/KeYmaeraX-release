@@ -261,7 +261,7 @@ trait UnifyUSCalculus {
               (BranchLabels.cutShowLbl, cohide(cutPos) & implyR(SuccPos(0)) &
                 AxiomaticRuleTactics.propositionalCongruenceT(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
                 // gather back to a single implication for axiom-based factTactic to succeed
-                & PropositionalTacticsImpl.InverseImplyRightT
+                & PropositionalTacticsImpl.InverseImplyRightT()
                 & factTactic)
             )
 
@@ -273,7 +273,7 @@ trait UnifyUSCalculus {
               (BranchLabels.cutShowLbl, cohide(cutPos) & implyR(SuccPos(0)) &
                 AxiomaticRuleTactics.propositionalCongruenceT(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
                 // gather back to a single implication for axiom-based factTactic to succeed
-                & PropositionalTacticsImpl.InverseImplyRightT
+                & PropositionalTacticsImpl.InverseImplyRightT()
                 & factTactic)
             )
 

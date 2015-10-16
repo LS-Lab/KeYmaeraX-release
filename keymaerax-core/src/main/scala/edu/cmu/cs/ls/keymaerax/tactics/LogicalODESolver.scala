@@ -285,7 +285,7 @@ object LogicalODESolver {
                 Tactics.assertT(1,2) &
                   assertT(s => s.succ.head.equals(right)) &
                   hideT(SuccPos(0)) &
-                  InverseImplyRightT ~
+                  InverseImplyRightT() ~
                     debugT("After inverse") ~
                     kModalModusPonensT(SuccPos(0)) ~
                     debugT("After k modal") ~

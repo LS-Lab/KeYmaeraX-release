@@ -451,27 +451,29 @@ object PropositionalTacticsImpl {
 
   /**
    * {{{
-   *   |- a -> b
-   * ----------
-   *   a |- b
+   *   G, G' |- D, D', a -> b
+   * -------------------------
+   *   G, a, G' |- D, b, D'
    * }}}
+   * @note The positioning is weird for backward compatability reasons.
    * @author Nathan Fulton
-   *         (only used in one place. Delete if this duplicates something that already exists.)
    * @see [[ImplyRightT]]
    * @todo could generalize to work in gamma delta context when specifying TwoPositionRule type positions.
    */
-  def InverseImplyRightT : Tactic = new ConstructionTactic("inverse imply right") {
+  def InverseImplyRightT(antePos: Position = AntePos(0), succPos: Position = SuccPos(0)) : Tactic = new ConstructionTactic("inverse imply right") {
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       val left = node.sequent.ante.head
       val right = node.sequent.succ.head
+      val cutUsePos = SuccPos(node.sequent.succ.length)
       Some(
         cutT(Some(Imply(left, right))) & onBranch(
           (BranchLabels.cutUseLbl,
-            assertT(2, 1) ~
-            PropositionalTacticsImpl.modusPonensT(AntePos(0), AntePos(1)) ~
-            AxiomCloseT ~ errorT("Should have closed.")
+            PropositionalTacticsImpl.ImplyLeftT(cutUsePos) && (
+              AxiomCloseT,
+              AxiomCloseT
+            )
           ),
-          (BranchLabels.cutShowLbl, hideT(SuccPos(0)) & hideT(AntePos(0)) /* This is the result. */)
+          (BranchLabels.cutShowLbl, hideT(succPos) & hideT(antePos) /* This is the result. */)
         )
       )
     }
