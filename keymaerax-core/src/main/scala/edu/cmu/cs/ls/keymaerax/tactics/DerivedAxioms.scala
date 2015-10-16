@@ -130,6 +130,7 @@ object DerivedAxioms {
     //@note implemented as match rather than lookup in a map to retain lazy evaluation
     //@note Every entry should be added to derivedAxiomMap (we need a map when prepopulating the lemma database, so whenever adding a case to this case match also add an entry to the hashmap below.)
     case "<-> reflexive" => Some(equivReflexiveF, equivReflexiveT)
+    case "-> distributes over <->" => Some(implyDistEquivF, implyDistEquivT)
     case "!! double negation" => Some(doubleNegationF, doubleNegationT)
     case "exists dual" => Some(existsDualF, existsDualT)
     case "!exists" => Some(notExistsF, notExistsT)
@@ -237,6 +238,7 @@ object DerivedAxioms {
     //@note copied from derivedAxiomInfo.
     val derivedAxiomMap = HashMap(
       "<-> reflexive" -> Some(equivReflexiveF, equivReflexiveT)
+      , "-> distributes over <->" -> Some(implyDistEquivF, implyDistEquivT)
       , "!! double negation" -> Some(doubleNegationF, doubleNegationT)
       , "exists dual" -> Some(existsDualF, existsDualT)
       , "!exists" -> Some(notExistsF, notExistsT)
@@ -352,6 +354,21 @@ object DerivedAxioms {
   )
 
   lazy val equivReflexiveT = derivedAxiomT(equivReflexiveAxiom)
+
+  /**
+   * {{{Axiom "-> distributes over <->".
+   *  (p() -> (q()<->r())) <-> ((p()->q()) <-> (p()->r()))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val implyDistEquivF = "(p() -> (q()<->r())) <-> ((p()->q()) <-> (p()->r()))".asFormula
+  lazy val implyDistEquivAxiom = derivedAxiom("-> distributes over <->",
+   Sequent(Nil, IndexedSeq(), IndexedSeq(implyDistEquivF)),
+      prop
+  )
+
+  lazy val implyDistEquivT = derivedAxiomT(implyDistEquivAxiom)
 
   /**
    * {{{Axiom "!! double negation".

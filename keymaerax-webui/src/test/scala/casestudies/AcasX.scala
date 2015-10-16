@@ -5,6 +5,7 @@
 package casestudies
 
 import java.io.File
+
 import scala.collection.immutable
 import scala.collection.immutable._
 
@@ -16,14 +17,12 @@ import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT,skolemizeT,instantiateExistentialQuanT}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT, arithmeticT, ImplyRightT, AndLeftT, hideT, AndRightT,
   ImplyLeftT, AxiomCloseT, OrRightT, OrLeftT, cutT, locate, NotRightT, NotLeftT}
-import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.{la,ls,l,QE,closeId,abs,min,max,andL,andR,orL,orR,implyR,implyL,
-  hide,cohide,cut,notL,notR,DI,DW,DC}
+import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.{AbsAxiomT,AbsT,MinMaxAxiomT,MinMaxT,EqualReflexiveT}
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.{abbrv,eqLeft}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{Propositional,NonBranchingPropositionalT,cohideT}
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
-import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
@@ -247,7 +246,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
 
-  "ACAS X" should "prove explicit region safety from implicit region safety and equivalence" in {
+  "ACAS X" should "directly prove explicit region safety from implicit region safety and direct equivalence" in {
     val acasximplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay.key")).mkString)
     val acasxexplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-explicit.key")).mkString)
     val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-equivalence-direct.key")).mkString)
@@ -283,28 +282,75 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       )
   }
 
-  "ACAS X" should "derive sequent version of equivalence" in {
+  it should "derive distributive version of conditional equivalence" in {
     val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-equivalence.key")).mkString)
-    val Imply(And(a,w), Equiv(i,e)) = equivalence
-    val seqEquivalence = (Provable.startProof(Sequent(Nil, IndexedSeq(a, w), IndexedSeq(Equiv(i,e))))
+    val Imply(And(a, w), Equiv(e, i)) = equivalence
+    import TactixLibrary._
+    val distEquivalence = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w), e), Imply(And(a,w),i)))),
+      useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
+    distEquivalence.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
+  }
+
+  it should "derive sequent version of conditional equivalence" in {
+    val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-equivalence.key")).mkString)
+    val Imply(And(a,w), Equiv(e,i)) = equivalence
+    val seqEquivalence = (Provable.startProof(Sequent(Nil, IndexedSeq(a, w), IndexedSeq(Equiv(e,i))))
     (Cut(equivalence), 0)
     // right branch reduces to the proof of "equivalence"
     (CoHideRight(SuccPos(1)), 1)
       // left branch follows from "equivalence"
       (ImplyLeft(AntePos(2)), 0)
-      // third branch i<->e |- i<->e
+      // third branch e<->i |- e<->i
       (Close(AntePos(2), SuccPos(0)), 2)
-      // second branch a,w |- i<->e, a&w
+      // second branch a,w |- e<->i, a&w
       (AndRight(SuccPos(1)), 0)
-      // second-right branch a,w |- i<->e, w
+      // second-right branch a,w |- e<->i, w
       (Close(AntePos(1), SuccPos(1)), 2)
-      // second-left branch a,w |- i<->e, a
+      // second-left branch a,w |- e<->i, a
       (Close(AntePos(0), SuccPos(1)), 0)
       )
     seqEquivalence.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
   }
 
-/*  "abs_test0" should "be provable" in {
+  it should "prove explicit region safety from implicit region safety and conditional equivalence" in {
+    val acasximplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay_max.key")).mkString)
+    val acasxexplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-explicit.key")).mkString)
+    val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-equivalence.key")).mkString)
+    val Imply(And(a,w), Equiv(e,i)) = equivalence
+    //@note same proof of seqEquivalence as in "derive sequent version of conditional equivalence"
+    val seqEquivalence = (Provable.startProof(Sequent(Nil, IndexedSeq(a, w), IndexedSeq(Equiv(e,i)))))
+
+    val distEquivalence = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w), e), Imply(And(a,w),i)))),
+      useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
+    distEquivalence.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
+
+
+    acasxexplicit match {
+      case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == e && c2 == e =>
+      case _ => throw new IllegalArgumentException("Unexpected input shape of explicit file")
+    }
+    acasximplicit match {
+      case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == i && c2 == i =>
+      case _ => throw new IllegalArgumentException("Unexpected input shape of implicit file")
+    }
+
+    import TactixLibrary._
+    TactixLibrary.proveBy(acasxexplicit,
+      implyR(1) & andL(-1) &
+        postCut(a)(1) & onBranch(
+        (BranchLabels.cutShowLbl, V(1) & close(-1, 1)),
+        (BranchLabels.cutUseLbl, skip)
+      )
+    ).
+      subgoals should contain only (
+      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(acasximplicit)),
+      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(equivalence))
+      )
+
+  }
+
+
+    /*  "abs_test0" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/acasx/abs_test0.key"))
 
     val arith = arithmeticT

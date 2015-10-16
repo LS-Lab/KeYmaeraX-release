@@ -257,8 +257,9 @@ object TactixLibrary extends UnifyUSCalculus {
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : Tactic         = TacticLibrary.closeT
-  /** closeId: closes the branch when the same formula is in the antecedent and succedent */
+  /** close: closes the branch when the same formula is in the antecedent and succedent */
   def close(a: AntePosition, s: SuccPosition) : Tactic = PropositionalTacticsImpl.CloseId(a,s)
+  def close(a: Int, s: Int)  : Tactic = close(Position.seqPos2Position(SeqPos(a)), Position.seqPos2Position(SeqPos(s)))
   /** closeId: closes the branch when the same formula is in the antecedent and succedent */
   lazy val closeId           : Tactic         = TacticLibrary.AxiomCloseT
   /** closeT: closes the branch when true is in the succedent */
