@@ -45,7 +45,7 @@ object EqualityRewritingImpl {
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(eqPos) match {
       case Equiv(a, b) if a == node.sequent(p) && !p.isAnte =>
         Some(EquivLeftT(eqPos) & onBranch(
-          (equivLeftLbl, AndLeftT(eqPos) & AxiomCloseT),
+          (equivLeftLbl, AndLeftT(eqPos) & CloseId),
           (equivRightLbl, AndLeftT(eqPos) & hideT(p) & NotLeftT(AntePos(node.sequent.ante.length)) & hideT(AntePos(node.sequent.ante.length - 1)))
         ))
       case Equiv(a, b) if a == node.sequent(p) && p.isAnte =>
@@ -53,11 +53,11 @@ object EqualityRewritingImpl {
           (equivLeftLbl, AndLeftT(eqPos) &
             (if (p.index < eqPos.index) hideT(AntePosition(node.sequent.ante.length - 1)) & hideT(p)
              else hideT(AntePosition(node.sequent.ante.length - 1)) & hideT(AntePosition(p.index - 1)))),
-          (equivRightLbl, AndLeftT(eqPos) & lastAnte(NotLeftT) & lastAnte(NotLeftT) & AxiomCloseT)
+          (equivRightLbl, AndLeftT(eqPos) & lastAnte(NotLeftT) & lastAnte(NotLeftT) & CloseId)
         ))
       case Equiv(a, b) if b == node.sequent(p) && !p.isAnte =>
         Some(EquivLeftT(eqPos) & onBranch(
-          (equivLeftLbl, AndLeftT(eqPos) & AxiomCloseT),
+          (equivLeftLbl, AndLeftT(eqPos) & CloseId),
           (equivRightLbl, AndLeftT(eqPos) & hideT(p) & NotLeftT(eqPos) & hideT(eqPos))
         ))
       case Equiv(a, b) if b == node.sequent(p) && p.isAnte =>
@@ -65,7 +65,7 @@ object EqualityRewritingImpl {
           (equivLeftLbl, AndLeftT(eqPos) &
             (if (p.index < eqPos.index) hideT(AntePosition(node.sequent.ante.length)) & hideT(p)
              else hideT(AntePosition(node.sequent.ante.length)) & hideT(AntePosition(p.index - 1)))),
-          (equivRightLbl, AndLeftT(eqPos) & lastAnte(NotLeftT) & lastAnte(NotLeftT) & AxiomCloseT)
+          (equivRightLbl, AndLeftT(eqPos) & lastAnte(NotLeftT) & lastAnte(NotLeftT) & CloseId)
         ))
       case _ => None
     }
@@ -107,7 +107,7 @@ object EqualityRewritingImpl {
   /** Shows condition in const formula congruence */
   private def constFormulaCongruenceCondT: PositionTactic = new PositionTactic("const formula congruence cond") {
     override def applies(s: Sequent, p: Position): Boolean = true
-    override def apply(p: Position): Tactic = AxiomCloseT
+    override def apply(p: Position): Tactic = CloseId
   }
   /** Base tactic for const formula congruence */
   private def constFormulaCongruenceBaseT(isLeft: Boolean, where: PosInExpr, exhaustive: Boolean): PositionTactic = new PositionTactic("const formula congruence base") {
@@ -325,8 +325,8 @@ object EqualityRewritingImpl {
           //@note cannot use instantiateT, because during \exists generalize we don't know which part of z=z we should generalize
           cutT(Some(Equiv(Exists(v :: Nil, Equal(v, t)), Equal(t, t)))) & onBranch(
           (cutShowLbl, lastSucc(EquivRightT) & onBranch(
-            (equivLeftLbl, AxiomCloseT),
-            (equivRightLbl, FOQuantifierTacticsImpl.existentialGenPosT(v, HereP.first :: Nil)(AntePosition(0)) & AxiomCloseT)
+            (equivLeftLbl, CloseId),
+            (equivRightLbl, FOQuantifierTacticsImpl.existentialGenPosT(v, HereP.first :: Nil)(AntePosition(0)) & CloseId)
           )),
           (cutUseLbl, equivRewriting(AntePosition(0), SuccPosition(0)) & EqualReflexiveT(SuccPosition(0)))
         )),

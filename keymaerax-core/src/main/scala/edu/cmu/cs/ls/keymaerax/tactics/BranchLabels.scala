@@ -7,6 +7,8 @@ package edu.cmu.cs.ls.keymaerax.tactics
 /**
  * List of commonly used names of branch labels.
  * Created by Jan-David Quesel on 5/19/14.
+ * @see [[TactixLibrary.label()]]
+ * @see [[TactixLibrary.onBranch()]]
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.Tactics.LabelBranch]]
  */
 object BranchLabels {

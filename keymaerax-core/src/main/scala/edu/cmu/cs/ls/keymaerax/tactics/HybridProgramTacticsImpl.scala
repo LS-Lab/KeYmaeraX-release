@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.existsDualT
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT,AxiomCloseT,ImplyLeftT,ImplyRightT,
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT,CloseId,ImplyLeftT,ImplyRightT,
   ImplyToAndT, cutT, hideT, cohideT, cohide2T, kModalModusPonensT, modusPonensT, uniformSubstT}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import BindingAssessment.allNames
@@ -644,7 +644,7 @@ object HybridProgramTacticsImpl {
                 // TODO does not work in mixed settings such as <x:=t>[x'=2] and [x:=t]<x'=2>
                 PropositionalTacticsImpl.cohideT(SuccPosition(succLength)) & assertT(0, 1) &
                 alphaRenamingT(t, v)(SuccPosition(0, PosInExpr(1 :: p.inExpr.pos))) &
-                  EquivRightT(SuccPosition(0)) & (AxiomCloseT | debugT("v2vAssign: Axiom close failed unexpectedly") & stopT)),
+                  EquivRightT(SuccPosition(0)) & (CloseId | debugT("v2vAssign: Axiom close failed unexpectedly") & stopT)),
               (cutUseLbl, equivRewriting(AntePosition(anteLength), p.topLevel))
             )
         )
@@ -1241,7 +1241,7 @@ object HybridProgramTacticsImpl {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
               case x@Box(a, _) =>
                 val cPos = AntePosition(node.sequent.ante.length)
-                val b1 = ImplyLeftT(cPos) & AxiomCloseT
+                val b1 = ImplyLeftT(cPos) & CloseId
                 val b2 = hideT(p)
                 Some(cutT(Some(Imply(Box(a, f), x))) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
               case _ => None
@@ -1255,7 +1255,7 @@ object HybridProgramTacticsImpl {
           val branch2Tactic = hideT(p) &
             ImplyRightT(cutSPos) &
             ind(cutSPos, hideT(cutAPos) & LabelBranch(indStepLbl)) &
-            onBranch(("Close Next", AxiomCloseT))
+            onBranch(("Close Next", CloseId))
           getBody(node.sequent(p)) match {
             case Some(a) =>
               Some(cutT(Some(Imply(f, Box(Loop(a), f)))) &
@@ -1316,7 +1316,7 @@ object HybridProgramTacticsImpl {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
               case x@Box(a, _) =>
                 val cPos = AntePosition(node.sequent.ante.length)
-                val b1 = ImplyLeftT(cPos) & AxiomCloseT
+                val b1 = ImplyLeftT(cPos) & CloseId
                 val b2 = hideT(p)
                 Some(cutT(Some(Imply(Box(a, f), x))) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
               case _ => None
@@ -1330,7 +1330,7 @@ object HybridProgramTacticsImpl {
           val branch2Tactic = hideT(p) &
             ImplyRightT(cutSPos) &
             ind(cutSPos, LabelBranch(indStepLbl)) &
-            onBranch(("Close Next", AxiomCloseT))
+            onBranch(("Close Next", CloseId))
           getBody(node.sequent(p)) match {
             case Some(a) =>
               Some(cutT(Some(Imply(f, Box(Loop(a), f)))) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
@@ -1382,7 +1382,7 @@ object HybridProgramTacticsImpl {
 
           Some(cutT(Some(Equiv(b, And(Box(a, p), Box(a, q))))) & onBranch(
             (cutShowLbl, lastSucc(EquivRightT) & onBranch(
-              (equivLeftLbl, AxiomCloseT),
+              (equivLeftLbl, CloseId),
               (equivRightLbl,
                 debugT("Show [a]p & [a]q -> [a](p&q)") &
                 cohide2T(AntePosition(node.sequent.ante.length), SuccPosition(node.sequent.succ.length)) &
@@ -1397,7 +1397,7 @@ object HybridProgramTacticsImpl {
                         lastSucc(ImplyRightT)*3 & lastAnte(AndLeftT) &
                         modusPonensT(AntePosition(2), AntePosition(0)) &
                         modusPonensT(AntePosition(2), AntePosition(0)) &
-                        modusPonensT(AntePosition(0), AntePosition(1)) & AxiomCloseT),
+                        modusPonensT(AntePosition(0), AntePosition(1)) & CloseId),
                       (cutUseLbl, cutT(Some(f5)) & onBranch(
                         (cutShowLbl,
                           debugT("Show f5, get f2 by KMP") &
@@ -1409,7 +1409,7 @@ object HybridProgramTacticsImpl {
                         (cutUseLbl,
                           debugAtT("Use f5, modus ponens with assumption")(AntePosition(2)) &
                             modusPonensT(AntePosition(2), AntePosition(1)) &
-                            AxiomCloseT)
+                            CloseId)
                       ))
                     )),
                   (cutUseLbl,
@@ -1425,7 +1425,7 @@ object HybridProgramTacticsImpl {
                       (cutUseLbl,
                         debugAtT("Use f6, modus ponens with assumption")(AntePosition(2)) &
                         modusPonensT(AntePosition(2), AntePosition(1)) &
-                        lastAnte(ImplyLeftT) & AxiomCloseT)
+                        lastAnte(ImplyLeftT) & CloseId)
                   ))
                 ))
             )),

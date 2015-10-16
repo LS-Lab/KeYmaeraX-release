@@ -107,7 +107,7 @@ object AxiomIndex {
     case "!all" | "!exists" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(Nil)::Nil)
     case "![]" | "!<>" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
 
-    case "[] split" => binaryDefault
+    case "[] split" | "<> split" => binaryDefault
     case "[] split left" | "[] split right" => directReduction
     case "<*> approx" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
     case "<*> stuck" => (PosInExpr(0::Nil), Nil)

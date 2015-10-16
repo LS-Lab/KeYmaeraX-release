@@ -142,6 +142,7 @@ object DerivedAxioms {
     case "[] split" => Some(boxSplitF, boxSplitT)
     case "[] split left" => Some(boxSplitLeftF, boxSplitLeftT)
     case "[] split right" => Some(boxSplitRightF, boxSplitRightT)
+    case "<> split" => Some(diamondSplitF, diamondSplitT)
     case "<> split left" => Some(diamondSplitLeftF, diamondSplitLeftT)
     case "<:=> assign" => Some(assigndF, assigndT)
     case ":= assign dual" => Some(assignDualF, assignDualT)
@@ -243,6 +244,11 @@ object DerivedAxioms {
       , "![]" -> Some(notBoxF, notBoxT)
       , "!<>" -> Some(notDiamondF, notDiamondT)
       , "[] dual" -> Some(boxDualF, boxDualT)
+      , "[] split" -> Some(boxSplitF, boxSplitT)
+      , "[] split left" -> Some(boxSplitLeftF, boxSplitLeftT)
+      , "[] split right" -> Some(boxSplitRightF, boxSplitRightT)
+      , "<> split" -> Some(diamondSplitF, diamondSplitT)
+      , "<> split left" -> Some(diamondSplitLeftF, diamondSplitLeftT)
       , "<:=> assign" -> Some(assigndF, assigndT)
       , ":= assign dual" -> Some(assignDualF, assignDualT)
       , "[:=] assign equational" -> Some(assignbEquationalF, assignbEquationalT)
@@ -632,6 +638,25 @@ object DerivedAxioms {
     )
   )
   lazy val boxSplitLeftT = derivedAxiomT(boxSplitLeft)
+
+  /**
+   * {{{Axiom "<> split".
+   *    <a;>(p(??)|q(??)) <-> <a;>p(??)|<a;>q(??)
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val diamondSplitF = "<a;>(p(??)|q(??)) <-> <a;>p(??)|<a;>q(??)".asFormula
+  lazy val diamondSplit = derivedAxiom("<> split",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(diamondSplitF)),
+    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::Nil))) &
+      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::0::Nil))) &
+      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::1::Nil))) &
+      useAt("!| deMorgan")(SuccPosition(0, PosInExpr(0::0::1::Nil))) &
+      useAt("[] split")(SuccPosition(0, PosInExpr(0::0::Nil))) &
+      byUS("<-> reflexive")
+  )
+  lazy val diamondSplitT = derivedAxiomT(diamondSplit)
 
   /**
    * {{{Axiom "<> split left".
