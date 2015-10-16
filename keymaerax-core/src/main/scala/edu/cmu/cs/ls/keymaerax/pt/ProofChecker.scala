@@ -19,6 +19,11 @@ object ProofChecker {
    */
   def apply(e: ProofTerm, phi: Formula) : Option[Provable] = {
     e match {
+      case dlConstant(label) => Some(
+        Provable.startProof(goalSequent(phi))
+        (Axiom(label), 0)
+      )
+
       case folrConstant(f) => {
         val node = proofNode(phi)
         ArithmeticTacticsImpl.quantifierEliminationT("Mathematica").apply(tool, node)
@@ -138,6 +143,28 @@ object ProofChecker {
         }
         else None
       }
+
+//      case UsubstTerm(e, phiPrime, usubst) => {
+//        val phiPrimeCert = ProofChecker(e, phiPrimeCert)
+//        if(phiPrimeCert.isDefined && phiPrimeCert.get.isProved) {
+//          val goalS = goalSequent(phi)
+//          Some(
+//            Provable.startProof(goalS)
+//            (UniformSubstitutionRule(usubst, goalS), 0)
+//            (phiPrimeCert.get, 0)
+//          )
+//        }
+//        else None
+//      }
+
+//      case CTTerm(e, premise, usubst) => {
+//        val equalityCert = ProofChecker(e, premise)
+//        if(equalityCert.isDefined && equalityCert.get.isProved) {
+//          Provable.startProof(goalSequent(phi))
+//          ()
+//        }
+//        else None
+//      }
     }
   }
 }

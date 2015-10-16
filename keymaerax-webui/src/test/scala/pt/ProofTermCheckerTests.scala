@@ -1,7 +1,7 @@
 package pt
 
 import edu.cmu.cs.ls.keymaerax.core
-import edu.cmu.cs.ls.keymaerax.core.{Provable, Sequent, Imply, Formula}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt._
 import testHelper.TacticTestSuite
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -19,6 +19,14 @@ class ProofTermCheckerTests extends TacticTestSuite {
     s.succ.length == 1 && s.ante.length == 0 && s.succ.last.equals(f) && cert.isProved
   }
   private def debugCert(cert: Provable) = println(cert.subgoals.mkString("\n --- \n"))
+
+  "Axiom checker" should "check i_{ [v:=t();]p(v) <-> p(t()) } : [v:=t();]p(v) <-> p(t())" in {
+    val label = "[:=] assign"
+    val f = "[v:=t();]p(v) <-> p(t())".asFormula
+    val certificate = ProofChecker(dlConstant(label), f)
+    certificate.isDefined shouldBe true
+    proves(certificate.get, f) shouldBe true
+  }
 
   "\\FOLR Tautology checker" should "check j_{0=0} : 0=0" in {
     val zEz : Formula = "0=0".asFormula
@@ -61,7 +69,6 @@ class ProofTermCheckerTests extends TacticTestSuite {
     certificate.isDefined shouldBe true
     debugCert(certificate.get)
     proves(certificate.get, oEo) shouldBe true
-
   }
 
   "e *-> d term checker" should "check j_{1=1 <-> 0=0} *<- j_{1=1} : 0=0" in {
@@ -73,6 +80,12 @@ class ProofTermCheckerTests extends TacticTestSuite {
     certificate.isDefined shouldBe true
     debugCert(certificate.get)
     proves(certificate.get, zEz) shouldBe true
-
   }
+
+//  "usubst" should "check \\sigma i_{1=1} : f()=f() where \\sigma = {f() ~> 1}" in {
+//    val oEo = "1=1".asFormula
+//    val oEoTerm = folrConstant(oEo)
+//    val sigma = USubst(SubstitutionPair("f()".asTerm, "1".asTerm) :: Nil)
+//    val certificate = ProofChecker(UsubstTerm(oEoTerm, oEo, sigma), )
+//  }
 }
