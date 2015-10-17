@@ -172,7 +172,7 @@ object EqualityRewritingImpl {
     import scala.language.postfixOps
     override def applies(s: Sequent, p: Position):Boolean = p.isAnte && (s(p) match {
       case Equal(lhs,rhs) =>
-        val cmp = compareTermComplexity(lhs,rhs)
+        val cmp = PolynomialForm.compareTermComplexity(lhs,rhs)
         if (cmp == 0) {
           false
         } else {
@@ -189,12 +189,11 @@ object EqualityRewritingImpl {
           }
       case _ => false })
 
-
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case eq@Equal(lhs, rhs) =>
-          val cmp = compareTermComplexity(lhs, rhs)
+          val cmp = PolynomialForm.compareTermComplexity(lhs, rhs)
           val what = if (cmp > 0) lhs else rhs
           val repl = if (cmp > 0) rhs else lhs
           assert(!what.isInstanceOf[Number] && what != repl && cmp != 0)
@@ -215,7 +214,6 @@ object EqualityRewritingImpl {
       }
     }
   }
-
 
   /**
    * Creates a new tactic to rewrite an equality.
@@ -332,271 +330,6 @@ object EqualityRewritingImpl {
         )),
         (cutUseLbl, lastAnte(skolemizeT) & lastAnte(eqRight(exhaustive = true)))
       ))
-    }
-  }
-
-  /** To compare the complexity of terms we first normalize them to polynomials (where we include differential symbols in the
-    * set of possible variables). Since quotients and exponentials cannot be normalized to polynomials, we consider quotients
-    * more complex than polynomials and exponentials most complex of all.
-    *
-    * This comparison is based on the graded lexicographic ordering often used when computing Groebner bases with Buchberger's algorithm,
-    * though it may vary in some of the details.
-    *
-    *  The type Monomial encodes a monomial as a coefficient and a set of variables raised to positive exponents. Constant terms are encoded
-    *  as coefficients with no variables. A PolyTerm represents a polynomial over BigDecimals where the variables are program variables and
-    *  their differential symbols.
-    */
-  type Monomial = (BigDecimal, Set[(Term, Int)])
-  type PolyTerm = Set[Monomial]
-
-  private def zeroMon : Monomial = (BigDecimal(0), Set.empty[(Term,Int)])
-  private def zeroPoly : PolyTerm = Set.empty[Monomial]
-
-  // Remove all variables from vs1 that appear in vs2 (possibly with different exponents)
-  private def removeVarsOf(vs1: Set[(Term, Int)], vs2: Set[(Term, Int)]): Set[(Term, Int)] =
-    vs1.filter(xn => !vs2.exists(ym => xn._1 == ym._1))
-
-  // Remove all monomials from p1 that appear in p2 (possibly with different coefficients)
-  private def removeMonomialsOf(p1: PolyTerm, p2: PolyTerm): PolyTerm =
-    p1.filter(p1 => !p2.exists(p2 => p1._2 == p2._2))
-
-  // Compute the variables that appear in both vs1 and vs2 with their associated exponents.
-  private def commonVars(vs1: Set[(Term, Int)], vs2: Set[(Term, Int)]): Set[(Term, Int, Int)] =
-    vs1.flatMap((xn: (Term, Int)) => {
-      val (found: Option[(Term, Int)]) = vs2.find(ym => xn._1 == ym._1)
-      found match {
-        case None => Set.empty[(Term, Int, Int)]
-        case Some(ym: (Term, Int)) => Set.empty.+((xn._1, ym._2, xn._2))
-      }
-    })
-
-  // Computes the product of two monomials
-  private def multiplyMon(mon1: Monomial, mon2: Monomial): Monomial = {
-    (mon1, mon2) match {
-      case ((c1, vs1), (c2, vs2)) =>
-        val common = commonVars(vs1, vs2).map(cvs => (cvs._1, cvs._2 + cvs._3))
-        (c1 * c2, removeVarsOf(vs1, common) ++ removeVarsOf(vs2, common) ++ common)
-    }
-  }
-
-  private def syntacticDerivative(t: Term): Term =
-    t match {
-      case Differential(t1) => syntacticDerivative(syntacticDerivative(t1))
-      case Plus(t1, t2) => Plus(syntacticDerivative(t1), syntacticDerivative(t2))
-      case Minus(t1, t2) => Minus(syntacticDerivative(t1), syntacticDerivative(t2))
-      case Times(t1, t2) => Plus(Times(t1, syntacticDerivative(t2)), Times(t2, syntacticDerivative(t1)))
-      case Divide(t1, t2) => Divide(Minus(Times(syntacticDerivative(t1), t2), Times(t1, syntacticDerivative(t2))), Times(t2, t2))
-      case x@Variable(_, _, _) => DifferentialSymbol(x)
-      case Neg(t1) => Neg(syntacticDerivative(t1))
-      case Number(_) => Number(0)
-      case DifferentialSymbol(_) => ??? // @todo Decide whether it's better to introduce auxilliary variables or just fail
-    }
-
-  // Exceptions for reporting terms that can't be turned into polynomials.
-  class BadDivision extends Exception {}
-  class BadPower extends Exception {}
-
-  // Create a polynomial of form c for some real c.
-  private def constPoly(x: BigDecimal): PolyTerm =
-    Set.empty.+((x, Set.empty[(Term, Int)]))
-
-  // Create a polynomial of form x (or x')/
-  private def variablePoly(x: Term): PolyTerm =
-    Set.empty.+((BigDecimal(1), Set.empty.+((x, 1))))
-
-  // Expand constant powers to iterated products.
-  private def expandPower(t: Term, n: BigInt): Term = {
-    (n == BigInt(0), n == BigInt(1)) match {
-      case (true, false) => Number(BigDecimal(1))
-      case (false, true) => t
-      case _ => Times(t, expandPower(t, n - 1))
-    }
-  }
-
-  // Find the common elements of norm1 and norm2, combining corresponding elements with f
-  private def mapCommon (norm1: Set[Monomial], norm2: Set[Monomial], f: (BigDecimal,BigDecimal) => BigDecimal): Set[Monomial] = {
-    norm1.flatMap(mon1 =>
-      norm2.find(mon2 => mon1._2 == mon2._2) match {
-        case None => Set.empty[Monomial]
-        case Some(mon2) => Set.empty.+((f(mon1._1,mon2._1), mon1._2))
-    })
-  }
-
-  private def addPolyTerms(p1:PolyTerm,p2:PolyTerm):PolyTerm = {
-    val commonMonomials = mapCommon(p1, p2, { case (x, y) => x + y })
-    commonMonomials ++ removeMonomialsOf(p1, commonMonomials) ++ removeMonomialsOf(p2,commonMonomials)
-  }
-
-  // Main loop for normalizing terms to polynomials. Throws an exception if the term has no normal form.
-  // Breaks the invariant that all coefficients are non-zero
-  private def normLoop(t: Term): PolyTerm = {
-    t match {
-      case Times(t1: Term, t2: Term) =>
-        val normT2 = normLoop(t2)
-        normLoop(t1).foldLeft(zeroPoly){case (acc,mon1) =>
-          normT2.foldLeft(acc)({case (acc,mon2) =>
-            addPolyTerms(acc,Set(multiplyMon(mon1, mon2)))})}
-    case Plus(t1: Term, t2: Term) =>
-        val (norm1, norm2) = (normLoop(t1), normLoop(t2))
-        addPolyTerms(norm1,norm2)
-      case Minus(t1: Term, t2: Term) =>
-        val (norm1, norm2) = (normLoop(t1), normLoop(t2))
-        val commonMonomials = mapCommon(norm1,norm2,{case (x,y) => x-y})
-        var negNorm2 = norm2.map({case (n,x) => (-n, x)})
-        commonMonomials ++ removeMonomialsOf(norm1,commonMonomials) ++ removeMonomialsOf(norm2,commonMonomials)
-      case Neg(t1:Term) => normLoop(Minus(Number(BigDecimal(0)),t1))
-      case Differential(t1) => normLoop(syntacticDerivative(t1))
-      case Divide(t1, Number(x)) =>
-        if (x == BigDecimal(0)) {
-          throw new BadDivision
-        }
-        else
-          normLoop(Times(t1, Number(1 / x)))
-      case Divide(_,_) => throw new BadDivision
-      case Number(x) => constPoly(x)
-      case x@Variable(_, _, _) => variablePoly(x)
-      case x@DifferentialSymbol(_) => variablePoly(x)
-      case Power(t1, Number(x)) =>
-        x.toBigIntExact() match {
-          case None => throw new BadPower
-          case Some(n) =>
-            if (n < BigInt(0)) {
-              throw new BadPower
-            }
-            normLoop(expandPower(t1, n))
-        }
-      case Power(_,_) => throw new BadPower
-      }
-  }
-
-  // Compute the normal form of a term, or throws an exception if none exists
-  def norm(t:Term):PolyTerm = {
-    // Since normLoop breaks the invariant that coefficients are nonzero, we restore it here.
-    normLoop(t).filter({case (n,vs) => BigDecimal(0) != n})
-  }
-  
-  
-  sealed trait NormResult {}
-  case class NormalForm (polyTerm: PolyTerm) extends NormResult
-  case class BadPowerResult () extends NormResult
-  case class BadDivResult () extends NormResult
-
-  private def totalNorm(t: Term): NormResult = {
-     try {
-       NormalForm(norm(t))
-     } catch {
-       case ex: BadDivision => BadDivResult()
-       case ex: BadPower => BadPowerResult()
-     }
-   }
-
-  private object VariableComparator extends Ordering[(Term,Int)] {
-    def compare(t1: (Term,Int), t2: (Term,Int)): Int = compareVars (t1._1, t2._1)
-  }
-
-  private def sortVars(s: Set[(Term, Int)]): SortedSet[(Term, Int)] = {
-    val ss : SortedSet[(Term,Int)] = TreeSet[(Term,Int)]()(VariableComparator)
-    s.foldLeft(ss)({case (ss, xn) => ss.+(xn)})
-  }
-
-  private def totalDegree(mon:Monomial): Int = {
-     mon._2.foldLeft(0)({case (n1,(v,n2)) => n1+n2})
-  }
-
-  // Compares two variables in a polynomial, ordered by complexity. We consider differential symbols more complex
-  // than program variables because it seems likely that eliminating them will usually make proofs simpler.
-  private def compareVars(x1:Term,x2:Term):Int = {
-    (x1,x2) match {
-      case (v1@Variable(_,_,_),v2@Variable(_,_,_)) => v1.compare(v2)
-      case (v1@DifferentialSymbol(_), v2@DifferentialSymbol(_)) =>
-        v1.compare(v2)
-      case (DifferentialSymbol(_),Variable(_,_,_)) => 1
-      case (Variable(_,_,_), DifferentialSymbol(_)) => -1
-    }
-  }
-
-  // Compares the variables of two monomials (assumes the input lists are sorted on the variables)
-  private def compareSortedVars(l1:List[(Term,Int)],l2:List[(Term,Int)]):Int = {
-    (l1, l2) match {
-      case (Nil, Nil) => 0
-      case ((x: (Term, Int)) :: _, Nil) => x._2.compare(0)
-      case (Nil, (x: (Term, Int)) :: _) => 0.compare(x._2)
-      case ((x: (Term, Int)) :: xs, (y: (Term, Int)) :: ys) =>
-        val varCmp = compareVars(x._1, y._1)
-        if (varCmp < 0) {
-          x._2.compare(0)
-        } else if (varCmp > 0) {
-          0.compare(y._2)
-        } else {
-          val expCmp = x._2.compare(y._2)
-          if (expCmp != 0) {
-            expCmp
-          } else {
-            compareSortedVars(xs, ys)
-          }
-        }
-    }
-  }
-
-  private def compareMonomialVars(s1:Set[(Term,Int)],s2:Set[(Term,Int)]):Int = {
-    compareSortedVars(sortVars(s1).toList,sortVars(s2).toList)
-  }
-
-  // Graded lexicographic monomial ordering, commonly used when finding Groebner bases.
-  // @todo Consider a "doubly-graded" ordering (on POLYnomials) where the number of monomials comes
-  // after the total degree of the leading term
-  object MonomialGrlex extends Ordering[Monomial] {
-    def compare(mon1: Monomial, mon2: Monomial): Int = {
-      val cmpDegree = totalDegree(mon1).compare(totalDegree(mon2))
-      if (cmpDegree != 0) {
-        cmpDegree
-      } else {
-        val cmpVars = compareMonomialVars(mon1._2, mon2._2)
-        if (cmpVars != 0) {
-          cmpVars
-        } else {
-          mon1._1.compare(mon2._1)
-        }
-      }
-    }
-  }
-
-  // Compares two polynomials assuming their monomials are in sorted order
-  private def compareSortedPolyTerms(l1:List[Monomial],l2:List[Monomial]):Int = {
-    (l1,l2) match {
-      case (Nil,Nil) => 0
-      case ((x:Monomial) :: _, Nil) => MonomialGrlex.compare(x, zeroMon)
-      case (Nil, (x:Monomial) ::_) => MonomialGrlex.compare(zeroMon, x)
-      case ((x:Monomial)::xs,(y:Monomial)::ys) =>
-        val varCmp = compareMonomialVars(x._2,y._2)
-        if (varCmp < 0) {
-          MonomialGrlex.compare(x,zeroMon)
-        } else if (varCmp > 0) {
-          MonomialGrlex.compare(zeroMon, y)
-        } else {
-          x._1.compare(y._1)
-        }
-    }
-  }
-
-  private def compareNormalTerms(l:PolyTerm, r:PolyTerm) : Int = {
-    val ls = l.foldLeft(TreeSet()(MonomialGrlex))({case (s,mon) => s.+(mon)}).toList
-    val rs = r.foldLeft(TreeSet()(MonomialGrlex))({case (s,mon) => s.+(mon)}).toList
-    compareSortedPolyTerms(ls,rs)
-  }
-
-  /** Compares two terms by complexity. l > r if replacing l with r would likely simplify the formula, and vice versa.
-    * If l = r, this indicates that it is unclear which term is more complex, and we should not substitute either one with
-    * the other. */
-  def compareTermComplexity(l:Term, r:Term) : Int = {
-    (totalNorm(l), totalNorm(r)) match {
-      case (NormalForm(norm1), NormalForm(norm2)) => compareNormalTerms(norm1, norm2)
-      case (BadPowerResult(), BadPowerResult()) => 0
-      case (BadPowerResult(), _) => 1
-      case (_, BadPowerResult()) => -1
-      case (BadDivResult(), BadDivResult()) => 0
-      case (BadDivResult(), _) => 1
-      case (_, BadDivResult()) => -1
     }
   }
 }
