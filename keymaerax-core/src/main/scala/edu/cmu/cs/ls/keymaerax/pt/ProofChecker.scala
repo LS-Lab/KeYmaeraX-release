@@ -11,6 +11,8 @@ import scala.collection.immutable
  *   ProofChecker : ProofTerm * Formula => Provable
  * }}}
  * with a successful answer if the proof indeed checked successfully.
+ * Not soundness-critical, because the proof checker essentially compiles the proof term into
+ * subsequent proof rule and axiom applications in the prover core.
  * Created by nfulton on 10/15/15.
  * @see [[ProofTerm]]
  * @see [[Provable]]
