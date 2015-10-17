@@ -338,8 +338,14 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val Imply(And(a,w), Equiv(e,i)) = equivalence
     //@note same proof of seqEquivalence as in "derive sequent version of conditional equivalence"
     val seqEquivalence = (Provable.startProof(Sequent(Nil, IndexedSeq(a, w), IndexedSeq(Equiv(e,i)))))
+    val postEquivalence = (Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(
+      Equiv(Imply(w,Imply(a, And("(h < -hp | h > hp | r < -rp | r> rp)".asFormula, i))),
+        Imply(w,Imply(a, And("(h < -hp | h > hp | r < -rp | r> rp)".asFormula, e))))
+    ))))
     val acasximplicit = shape(i)
     val acasxexplicit = shape(e)
+
+    val w0 = "W(w_0)".asFormula
 
     val distEquivalence = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w), e), Imply(And(a,w),i)))),
       useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
@@ -360,7 +366,45 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       implyR(1) & andL(-1) &
         postCut(a)(1) & onBranch(
         (BranchLabels.cutShowLbl, label("") & debug("vacuous global assumptions") & V(1) & close(-1, 1)),
-        (BranchLabels.cutUseLbl, label("") & debug("true induction need") & skip)
+        (BranchLabels.cutUseLbl, label("") & debug("true induction need") &
+          postCut(w)(1) & onBranch(
+          (BranchLabels.cutShowLbl, label("") & debug("w=-1 | w=1") & assertT(And(w,e), "W&Ce")(-2) & andL(-2) &
+            loop(w)(1) & onBranch(
+            (BranchLabels.indInitLbl, closeId),
+            (BranchLabels.indStepLbl, hide(w)(-4) & hide(w)(-2) & implyR(1) & debug("step w=-1 | w=1") &
+              // could also just always generalize(w0)
+              // this is a more efficient version
+              //@todo use W(w_0) instead of W(w) or use post-postcondition
+              composeb(1) & generalize(w0)(1) & onBranch(
+              (BranchLabels.genShow, V(1) & implyR(1) & closeId),
+              (BranchLabels.genUse, composeb(1) & useAt("V[:*] vacuous assign nondet")(SuccPosition(0, 1::Nil)) &
+                choiceb(1) & andR(1) & (
+                testb(1) & implyR(1) & closeId,
+                composeb(1) & composeb(SuccPosition(0, 1::Nil)) & generalize(w0)(1) & onBranch(
+                  (BranchLabels.genUse, useAt("V[:*] vacuous assign nondet")(1) & closeId),
+                  (BranchLabels.genShow, generalize(w0)(1) & onBranch(
+                    (BranchLabels.genShow, V(1) & closeId),
+                    (BranchLabels.genUse, master)
+                  ))
+                )
+                )
+                )
+            )
+              ),
+            (BranchLabels.indUseCaseLbl, implyR(1) & closeId)
+          )
+            ),
+
+          (BranchLabels.cutUseLbl, label("") & assertT(And(w,e), "W&Ce")(-2) & andL(-2) & debug("inductive use of A&W") &
+            cutL(i)(-3) & onBranch(
+            (BranchLabels.cutShowLbl, hide(1) & by(seqEquivalence)),
+            (BranchLabels.cutUseLbl, CE(postEquivalence)(SuccPosition(0, 1::Nil))
+              & debug("proving to replace test") & skip
+              )
+          )
+            )
+        )
+          )
       )
     ).
       subgoals should contain only (
