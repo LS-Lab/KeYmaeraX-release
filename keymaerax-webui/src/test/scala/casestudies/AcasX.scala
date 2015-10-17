@@ -312,7 +312,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     seqEquivalence.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
   }
 
-  it should "prove stylized generic region p safety from region q safety and conditional equivalence" in {
+  it should "prove stylized generic region Ce safety from region Ci safety and conditional equivalence" in {
     val shape = Context(
       """  (A()) &
   ( (W(w)) &
