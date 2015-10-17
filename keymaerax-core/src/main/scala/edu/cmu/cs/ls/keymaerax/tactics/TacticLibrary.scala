@@ -690,6 +690,37 @@ object TacticLibrary {
    * More tactics
    */
   /**
+   * Generalize postcondition to C and, separately, prove that C implies postcondition .
+   * The operational effect of {a;b;}@generalize(f1) is generalize(f1)
+   * Applied to [a]B leaves behind branches
+   * genUseLbl:  with ... |- [a]C ...
+   * genShowLbl: with C |- B
+   * @author Andre Platzer
+   * @todo same for diamonds by the dual of K
+   */
+  def generalize(c: Formula): PositionTactic = new PositionTactic("generalize") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
+      case Box(_, _) => true
+      case Diamond(_, _) => println("generalize not yet implemented for diamonds"); true
+      case _ => false
+    })
+
+    import TactixLibrary._
+
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Box(a, post) =>
+          Some(cutR(Box(a, c))(p) & onBranch(
+            (BranchLabels.cutShowLbl, cohide(p.top) & implyR(1) & Monb & label(BranchLabels.genShow)),
+            (BranchLabels.cutUseLbl, label(BranchLabels.genUse))
+          ))
+        case _ => None
+      }
+    }
+  }
+
+  /**
    * Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post.
    * The operational effect of {a;}*@invariant(f1,f2,f3) is postCut(f1) & postcut(f2) & postCut(f3).
    * Leaves behind branches

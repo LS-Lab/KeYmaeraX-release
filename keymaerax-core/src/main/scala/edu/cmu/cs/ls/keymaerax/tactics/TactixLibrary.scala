@@ -112,7 +112,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Hide/weaken whether left or right */
   lazy val hide               : PositionTactic = TacticLibrary.hideT
   /** Hide/weaken given formula at given position */
-  def hide(fml: Formula)      : PositionTactic = assertPT(fml, "hiding expects given formula") ~ TacticLibrary.hideT
+  def hide(fml: Formula)      : PositionTactic = assertT(fml, "hiding expects given formula") ~ TacticLibrary.hideT
   /** Hide/weaken left: weaken a formula to drop it from the antecedent */
   lazy val hideL              : PositionTactic = TacticLibrary.hideT
   /** Hide/weaken right: weaken a formula to drop it from the succcedent */
@@ -245,6 +245,9 @@ object TactixLibrary extends UnifyUSCalculus {
 
   // more
 
+  /* Generalize postcondition to C and, separately, prove that C implies postcondition */
+  def generalize(C: Formula)  : PositionTactic = TacticLibrary.generalize(C)
+
   /** Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post */
   def postCut(cut: Formula)   : PositionTactic = TacticLibrary.postCut(cut)
 
@@ -358,9 +361,9 @@ object TactixLibrary extends UnifyUSCalculus {
     val rootNode = new RootNode(goal)
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
-    if (!rootNode.isClosed() || Tactic.DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().map(x => "Open Goal: " + x.sequent).mkString(("\n"))))
+    if (!rootNode.isClosed() || Tactic.DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n\n" + rootNode.openGoals().map(x => "Open Goal: " + x.sequent).mkString(("\n"))) + "\n")
     val proof = rootNode.provableWitness
-    if (Tactic.DEBUG) println("proveBy " + proof)
+    if (Tactic.DEBUG) println("proveBy " + proof + "\n")
     proof
   }
   /**

@@ -18,6 +18,9 @@ object BranchLabels {
   val indUseCaseLbl = "use case"  //@todo maybe renamed from "Use case" for paper consistency
   val indStepLbl = "induction step"  //@todo maybe renamed from "Induction step" for paper consistency
 
+  val genUse = "Use generalization"
+  val genShow = "Show generalization"
+
   val equivLeftLbl = "Positive equiv case"
   val equivRightLbl = "Negative equiv case"
 
