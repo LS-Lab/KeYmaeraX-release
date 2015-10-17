@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.onBranch
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 
 import TacticLibrary.{closeT, hideT, debugT, locate}
-import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT,cohideT,kModalModusPonensT,NotT,ImplyT,cutT, AxiomCloseT}
+import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT,cohideT,kModalModusPonensT,NotT,ImplyT,cutT, CloseId}
 import SearchTacticsImpl.{lastAnte,lastSucc,locateAnte,locateSucc,onBranch}
 import AxiomaticRuleTactics.goedelT
 import TacticLibrary.TacticHelper.{getFormula, getTerm}
@@ -545,7 +545,7 @@ object ArithmeticTacticsImpl {
             val ps = SuccPosition(node.sequent.succ.length)
             Some(
               cutT(Some(Imply(f, g))) & onBranch (
-                (cutUseLbl, ImplyT(pa) & (AxiomCloseT | debugT("Should not happen") & stopT)),
+                (cutUseLbl, ImplyT(pa) & (CloseId | debugT("Should not happen") & stopT)),
                 (cutShowLbl, cohideT(ps))
               )
             )
@@ -558,7 +558,7 @@ object ArithmeticTacticsImpl {
 
           cohideT(ps) & assertT(0, 1) & TacticLibrary.propositional & (
             ((prepareKMP & kModalModusPonensT(ps0) & goedelT & TacticLibrary.propositional)*)
-            | TacticLibrary.propositional) & locate(NegateEqualsT) & locate(NotT) & (AxiomCloseT | debugT("BAD 1") & stopT)
+            | TacticLibrary.propositional) & locate(NegateEqualsT) & locate(NotT) & (CloseId | debugT("BAD 1") & stopT)
         }
 
         val pa = AntePosition(node.sequent.ante.length)
@@ -577,13 +577,13 @@ object ArithmeticTacticsImpl {
               Some(
                 cutT(Some(Imply(node.sequent(p), replFormula))) & onBranch(
                   (cutShowLbl, cutShowTactic),
-                  (cutUseLbl, ImplyT(pa) && (AxiomCloseT | debugT("BAD 2") & stopT, hideT(p.topLevel))))
+                  (cutUseLbl, ImplyT(pa) && (CloseId | debugT("BAD 2") & stopT, hideT(p.topLevel))))
               )
             } else {
               Some(
                 cutT(Some(Imply(replFormula, node.sequent(p)))) & onBranch(
                   (cutShowLbl, cutShowTactic),
-                  (cutUseLbl, ImplyT(pa) && (hideT(p.topLevel), AxiomCloseT | debugT("BAD 3") & stopT)))
+                  (cutUseLbl, ImplyT(pa) && (hideT(p.topLevel), CloseId | debugT("BAD 3") & stopT)))
               )
             }
           case Not(Equal(s, t)) =>
@@ -599,12 +599,12 @@ object ArithmeticTacticsImpl {
             if (p.isAnte) Some(
               cutT(Some(Imply(node.sequent(p), replFormula))) & onBranch(
                 (cutShowLbl, cutShowTactic),
-                (cutUseLbl, ImplyT(pa) && (AxiomCloseT | debugT("BAD 4") & stopT, hideT(p.topLevel))))
+                (cutUseLbl, ImplyT(pa) && (CloseId | debugT("BAD 4") & stopT, hideT(p.topLevel))))
             )
             else Some(
               cutT(Some(Imply(replFormula, node.sequent(p)))) & onBranch(
                 (cutShowLbl, cutShowTactic),
-                (cutUseLbl, ImplyT(pa) && (hideT(p.topLevel), AxiomCloseT | debugT("BAD 5") & stopT)))
+                (cutUseLbl, ImplyT(pa) && (hideT(p.topLevel), CloseId | debugT("BAD 5") & stopT)))
             )
         }
       }
@@ -645,7 +645,7 @@ object ArithmeticTacticsImpl {
             val ps = SuccPosition(node.sequent.succ.length)
             Some(
               cutT(Some(Imply(f, g))) & onBranch (
-                (cutUseLbl, ImplyT(pa) & (AxiomCloseT | debugT("Should not happen") & stopT)),
+                (cutUseLbl, ImplyT(pa) & (CloseId | debugT("Should not happen") & stopT)),
                 (cutShowLbl, cohideT(ps))
               )
             )
@@ -658,7 +658,7 @@ object ArithmeticTacticsImpl {
 
           cohideT(ps) & assertT(0, 1) & TacticLibrary.propositional & (
             ((prepareKMP & kModalModusPonensT(ps0) & goedelT & TacticLibrary.propositional)*)
-              | TacticLibrary.propositional) & locate(NegateLessThanT) & locate(NotT) & (AxiomCloseT | debugT("BAD 1") & stopT)
+              | TacticLibrary.propositional) & locate(NegateLessThanT) & locate(NotT) & (CloseId | debugT("BAD 1") & stopT)
         }
 
         val pa = AntePosition(node.sequent.ante.length)
@@ -677,13 +677,13 @@ object ArithmeticTacticsImpl {
               Some(
                 cutT(Some(Imply(node.sequent(p), replFormula))) & onBranch(
                   (cutShowLbl, cutShowTactic),
-                  (cutUseLbl, ImplyT(pa) && (AxiomCloseT | debugT("BAD 2") & stopT, hideT(p.topLevel))))
+                  (cutUseLbl, ImplyT(pa) && (CloseId | debugT("BAD 2") & stopT, hideT(p.topLevel))))
               )
             } else {
               Some(
                 cutT(Some(Imply(replFormula, node.sequent(p)))) & onBranch(
                   (cutShowLbl, cutShowTactic),
-                  (cutUseLbl, ImplyT(pa) && (hideT(p.topLevel), AxiomCloseT | debugT("BAD 3") & stopT)))
+                  (cutUseLbl, ImplyT(pa) && (hideT(p.topLevel), CloseId | debugT("BAD 3") & stopT)))
               )
             }
           case Not(Less(s, t)) =>
@@ -699,12 +699,12 @@ object ArithmeticTacticsImpl {
             if (p.isAnte) Some(
               cutT(Some(Imply(node.sequent(p), replFormula))) & onBranch(
                 (cutShowLbl, cutShowTactic),
-                (cutUseLbl, ImplyT(pa) && (AxiomCloseT | debugT("BAD 4") & stopT, hideT(p.topLevel))))
+                (cutUseLbl, ImplyT(pa) && (CloseId | debugT("BAD 4") & stopT, hideT(p.topLevel))))
             )
             else Some(
               cutT(Some(Imply(replFormula, node.sequent(p)))) & onBranch(
                 (cutShowLbl, cutShowTactic),
-                (cutUseLbl, ImplyT(pa) && (hideT(p.topLevel), AxiomCloseT | debugT("BAD 5") & stopT)))
+                (cutUseLbl, ImplyT(pa) && (hideT(p.topLevel), CloseId | debugT("BAD 5") & stopT)))
             )
         }
       }

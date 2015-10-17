@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.skolemizeT
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.boxAssignT
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.boxDerivativeAssignT
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT, AxiomCloseT, EquivRightT, ImplyRightT, cutT,
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT, CloseId, EquivRightT, ImplyRightT, cutT,
   EquivLeftT, ImplyLeftT, uniformSubstT, NotLeftT, AndLeftT, cohideT, cohide2T, PropositionalRightT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{onBranch, lastAnte, lastSucc}
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
@@ -172,12 +172,12 @@ object ODETactics {
                             boxDerivativeAssignT(SuccPosition(0).second) & debugT("Derivative assignment result") &
                             lastSucc(diffWeakenT) & debugT("Diff weaken result") &
                             (arithmeticT | debugT("Solution not provable")),
-                          AxiomCloseT | debugT("Unable to prove by axiom")
+                          CloseId | debugT("Unable to prove by axiom")
                           ))
                       )),
                       (cutUseLbl, lastAnte(ImplyLeftT) & (
-                        AxiomCloseT |
-                        (lastAnte(EquivLeftT) & lastAnte(AndLeftT) & lastSucc(EquivRightT) & (AxiomCloseT | locateAnte(NotLeftT)*2 & AxiomCloseT)) |
+                        CloseId |
+                        (lastAnte(EquivLeftT) & lastAnte(AndLeftT) & lastSucc(EquivRightT) & (CloseId | locateAnte(NotLeftT)*2 & CloseId)) |
                         debugT("Unable to prove by axiom 2")))
                     ))
                   )
@@ -1744,7 +1744,7 @@ object ODETactics {
             def dDebugT(s : String) = debugT("[DiffInvT]" + s)
 
             val successTactic = (diffInvariantAxiomT(p) & ImplyRightT(p) & AndRightT(p) & (
-              dDebugT("left branch") & ((AxiomCloseT | PropositionalRightT(p))*) & arithmeticT,
+              dDebugT("left branch") & ((CloseId | PropositionalRightT(p))*) & arithmeticT,
               dDebugT("right branch") & (diffEffectT(p) * n) & dDebugT("differential effect complete") &
                 dDebugT("About to NNF rewrite") & NNFRewrite(p.second) && dDebugT("Finished NNF rewrite") &
                 SyntacticDerivationInContext.SyntacticDerivationT(p.second) ~ dDebugT("Done with syntactic derivation") &

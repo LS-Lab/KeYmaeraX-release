@@ -2,11 +2,13 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+
+import edu.cmu.cs.ls.keymaerax.core.{AntePos, SuccPos}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cohide2T, ConsolidateSequentT, hideT, ImplyToAndT,
-  kModalModusPonensT, modusPonensT}
+  kModalModusPonensT, modusPonensT, InverseImplyRightT}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{FlatSpec, Matchers, BeforeAndAfterEach}
@@ -192,5 +194,21 @@ class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante shouldBe empty
     result.openGoals().head.sequent.succ should contain only "[i:=5;](j>2 & !(x>0&!x>=0))".asFormula
+  }
+
+  "InverseImplyRightT" should "work when there's no sequent context" in {
+    val s = sequent(Nil, "0=0".asFormula :: Nil, "1=1".asFormula :: Nil)
+    val result = helper.runTactic(InverseImplyRightT(), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "0=0 -> 1=1".asFormula
+  }
+
+  it should "work when there is a sequent context" in {
+    val s = sequent(Nil, "x=1".asFormula :: "0=0".asFormula :: "y=2".asFormula :: Nil, "z=3".asFormula :: "blahah = 5".asFormula :: "1=1".asFormula :: "blah = 4".asFormula :: Nil)
+    val result = helper.runTactic(InverseImplyRightT(AntePos(1), SuccPos(2)), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante.length shouldBe 2
+    result.openGoals().head.sequent.succ(3) shouldBe ("0=0 -> 1=1".asFormula)
   }
 }

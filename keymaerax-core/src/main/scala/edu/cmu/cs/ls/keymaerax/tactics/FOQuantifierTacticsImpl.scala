@@ -461,7 +461,7 @@ object FOQuantifierTacticsImpl {
           val desired = createDesired(node.sequent)
           val cutFrm = Imply(desired, node.sequent(p))
           Some(cutT(Some(cutFrm)) & onBranch(
-            (cutUseLbl, lastAnte(assertPT(cutFrm)) & lastAnte(ImplyLeftT) && (hideT(p.topLevel), AxiomCloseT ~ errorT("Failed to close!"))),
+            (cutUseLbl, lastAnte(assertPT(cutFrm)) & lastAnte(ImplyLeftT) && (hideT(p.topLevel), CloseId ~ errorT("Failed to close!"))),
             (cutShowLbl, lastSucc(assertPT(cutFrm)) & lastSucc(cohideT) & assertT(0, 1) & assertPT(cutFrm)(SuccPosition(0)) &
               ImplyRightT(SuccPosition(0)) & assertT(1, 1) &
               generalize(varPos))
@@ -481,11 +481,11 @@ object FOQuantifierTacticsImpl {
 
       private def generalize(where: List[PosInExpr]) = {
         if (p.isTopLevel) {
-          existentialGenPosT(quantified, where)(AntePosition(0)) & AxiomCloseT
+          existentialGenPosT(quantified, where)(AntePosition(0)) & CloseId
         } else {
           AxiomaticRuleTactics.propositionalCongruenceT(p.inExpr) &
             lastAnte(existentialGenPosT(quantified, where)) &
-            (AxiomCloseT | TacticLibrary.debugT("Instantiate existential: axiom close failed"))
+            (CloseId | TacticLibrary.debugT("Instantiate existential: axiom close failed"))
         }
       }
     }
@@ -576,7 +576,7 @@ object FOQuantifierTacticsImpl {
         val genFml = Forall(Seq(quantified), SubstitutionHelper.replaceFree(node.sequent(p))(t, quantified))
         Some(cutT(Some(genFml)) & onBranch(
           (cutShowLbl, hideT(p)),
-          (cutUseLbl, lastAnte(instantiateT(quantified, t)) & (AxiomCloseT | TacticLibrary.debugT("Universal gen: axiom close failed unexpectedly")))
+          (cutUseLbl, lastAnte(instantiateT(quantified, t)) & (CloseId | TacticLibrary.debugT("Universal gen: axiom close failed unexpectedly")))
         ))
       }
     }

@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{List, Seq, IndexedSeq}
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
@@ -23,8 +23,6 @@ import HybridProgramTacticsImpl.boxVacuousT
 import BranchLabels._
 
 import BuiltinHigherTactics._
-
-import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
 
 /**
@@ -542,8 +540,8 @@ object TacticLibrary {
   def cutT(f: Option[Formula]) = PropositionalTacticsImpl.cutT(f)
 
   def closeT : Tactic = AxiomCloseT | locateSucc(CloseTrueT) | locateAnte(CloseFalseT)
-  def AxiomCloseT(a: Position, b: Position) = PropositionalTacticsImpl.AxiomCloseT(a, b)
-  def AxiomCloseT = PropositionalTacticsImpl.AxiomCloseT
+  def AxiomCloseT(a: Position, b: Position) = PropositionalTacticsImpl.CloseId(a, b)
+  def AxiomCloseT = PropositionalTacticsImpl.CloseId
   def CloseTrueT = PropositionalTacticsImpl.CloseTrueT
   def CloseFalseT = PropositionalTacticsImpl.CloseFalseT
 
@@ -685,5 +683,88 @@ object TacticLibrary {
   def ClosureT(t : PositionTactic) = new PositionTactic("closure") {
     override def applies(s: Sequent, p: Position): Boolean = t.applies(s,p)
     override def apply(p: Position): Tactic = t(p)*
+  }
+
+
+  /**
+   * More tactics
+   */
+  /**
+   * Generalize postcondition to C and, separately, prove that C implies postcondition .
+   * The operational effect of {a;b;}@generalize(f1) is generalize(f1)
+   * Applied to [a]B leaves behind branches
+   * genUseLbl:  with ... |- [a]C ...
+   * genShowLbl: with C |- B
+   * @author Andre Platzer
+   * @todo same for diamonds by the dual of K
+   */
+  def generalize(c: Formula): PositionTactic = new PositionTactic("generalize") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
+      case Box(_, _) => true
+      case Diamond(_, _) => println("generalize not yet implemented for diamonds"); true
+      case _ => false
+    })
+
+    import TactixLibrary._
+
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Box(a, post) =>
+          Some(cutR(Box(a, c))(p) & onBranch(
+            (BranchLabels.cutShowLbl, cohide(p.top) & implyR(1) & Monb & label(BranchLabels.genShow)),
+            (BranchLabels.cutUseLbl, label(BranchLabels.genUse))
+          ))
+        case _ => None
+      }
+    }
+  }
+
+  /**
+   * Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post.
+   * The operational effect of {a;}*@invariant(f1,f2,f3) is postCut(f1) & postcut(f2) & postCut(f3).
+   * Leaves behind branches
+   * cutUseLbl: with ... |- [a](cut->post)
+   * cutShowbranch: with ... |- [a]cut
+   * @author Andre Platzer
+   * @todo same for diamonds by the dual of K
+   */
+  def postCut(cutf: Formula): PositionTactic = new PositionTactic("postCut") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
+      case Box(_, _) => true
+      case Diamond(_, _) => println("postCut not yet implemented for diamonds"); true
+      case _ => false
+    })
+
+    import TactixLibrary._
+
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Box(a, post) =>
+          // [a](cut->post) and its position in assumptions
+          val conditioned = Box(a, Imply(cutf, post))
+          val conditional = AntePosition(node.sequent.ante.length)
+          // [a]cut and its position in assumptions
+          val cutted = Box(a, cutf)
+          val cutical = AntePosition(node.sequent.ante.length + 1)
+          Some(cutR(conditioned)(p) & onBranch(
+            (BranchLabels.cutShowLbl, label("") & implyR(p) & cutR(cutted)(p) & onBranch(
+              (BranchLabels.cutUseLbl/*cutShowLbl?*/, label("") & /*implyR(p) &*/ debugT("showing post cut") &
+                hide(conditioned)(conditional) & label(BranchLabels.cutShowLbl) & debugT("remains to show")),
+              (BranchLabels.cutShowLbl/*cutUseLbl?*/, label("") &
+                //debug("inversing implies") & PropositionalTacticsImpl.InverseImplyRightT(cutical, p)
+                //useAt("K modal modus ponens", PosInExpr(1::Nil))(p) &
+                debug("K away") &
+                useAt("K modal modus ponens", PosInExpr(0::Nil))(conditional) &
+                debug("closing by K") &
+                closeId // close(conditional, p.asInstanceOf[SuccPosition])
+                )
+            )),
+            (BranchLabels.cutUseLbl, label("") & debug("ready for use") & label(BranchLabels.cutUseLbl))
+          ))
+        case _ => None
+      }
+    }
   }
 }

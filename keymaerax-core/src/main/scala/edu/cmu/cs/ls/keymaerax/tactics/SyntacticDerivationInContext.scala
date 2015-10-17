@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{equivalenceCongruen
 import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cohideT, uniformSubstT}
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.AxiomCloseT
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.CloseId
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{onBranch,lastAnte,lastSucc,locateTerm}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._

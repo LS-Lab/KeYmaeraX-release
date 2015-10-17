@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.AlphaConversionHelper.replace
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction, TraverseToPosition}
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT, skolemizeT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{lastAnte, lastSucc}
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndLeftT, AndRightT, AxiomCloseT, hideT,
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndLeftT, AndRightT, CloseId, hideT,
   ImplyLeftT, ImplyRightT, NotLeftT, NotRightT, OrLeftT, OrRightT}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.globalAlphaRenamingT
@@ -97,9 +97,9 @@ object AxiomaticRuleTactics {
       Some(TacticLibrary.debugT(s"Start unpeeling towards $at") &
         // list all cases explicitly, hide appropriate formulas in order to not blow up branching
         (( (lastAnte(NotLeftT) & NotRightT(SuccPosition(0)) & assertT(1, 1)) |
-          (lastAnte(AndLeftT) & lastSucc(AndRightT) && (AxiomCloseT | hideT(AntePosition(1)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1)) |
-          (lastSucc(OrRightT) & lastAnte(OrLeftT) && (AxiomCloseT | hideT(SuccPosition(1)), AxiomCloseT | hideT(SuccPosition(0))) & assertT(1, 1)) |
-          (lastSucc(ImplyRightT) & ImplyLeftT(AntePosition(0)) && (AxiomCloseT | hideT(SuccPosition(0)), AxiomCloseT | hideT(AntePosition(0))) & assertT(1, 1)) |
+          (lastAnte(AndLeftT) & lastSucc(AndRightT) && (CloseId | hideT(AntePosition(1)), CloseId | hideT(AntePosition(0))) & assertT(1, 1)) |
+          (lastSucc(OrRightT) & lastAnte(OrLeftT) && (CloseId | hideT(SuccPosition(1)), CloseId | hideT(SuccPosition(0))) & assertT(1, 1)) |
+          (lastSucc(ImplyRightT) & ImplyLeftT(AntePosition(0)) && (CloseId | hideT(SuccPosition(0)), CloseId | hideT(AntePosition(0))) & assertT(1, 1)) |
           boxMonotoneT | diamondMonotoneT |
           (lastSucc(skolemizeT) & lastAnte(instWithGuessedSkolem)) |
           (lastAnte(skolemizeT) & lastSucc(instWithGuessedSkolem))
