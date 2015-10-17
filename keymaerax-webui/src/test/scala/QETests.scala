@@ -69,43 +69,43 @@ class QETests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "not be provable with counter example" in {
     val s = Sequent(Nil, IndexedSeq(), IndexedSeq("x_0>1->x_0<1".asFormula))
-    val tactic = CntEx
+    val tactic = counterEx
     helper.runTactic(tactic, new RootNode(s)).openGoals().head.sequent shouldBe s
   }
 
   it should "not be provable with counter example forall" in {
     val s = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x_0 (x_0>1->x_0<1)".asFormula))
-    val tactic = CntEx
+    val tactic = counterEx
     helper.runTactic(tactic, new RootNode(s)).openGoals().head.sequent shouldBe s
   }
 
   it should "be provable with no counter example exists" in {
     val s = Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists x_0 (x_0>1->x_0<1)".asFormula))
-    val tactic = CntEx | QE
+    val tactic = counterEx | QE
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
   it should "not be provable with counter example double" in {
     val s = Sequent(Nil, IndexedSeq(), IndexedSeq("x_0>y_0->x_0<y_0".asFormula))
-    val tactic = CntEx
+    val tactic = counterEx
     helper.runTactic(tactic, new RootNode(s)).openGoals().head.sequent shouldBe s
   }
 
   it should "not be provable with counter example forall forall" in {
     val s = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x_0 \\forall y_0 (x_0>y_0->x_0<y_0)".asFormula))
-    val tactic = CntEx
+    val tactic = counterEx
     helper.runTactic(tactic, new RootNode(s)).openGoals().head.sequent shouldBe s
   }
 
   it should "be provable with no counter example forall exists" in {
     val s = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x_0 \\exists y_0 (x_0>y_0->x_0<y_0)".asFormula))
-    val tactic = CntEx | QE
+    val tactic = counterEx | QE
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
   it should "not be provable with counter exists forall" in {
     val s = Sequent(Nil, IndexedSeq(), IndexedSeq("\\exists y_0 \\forall x_0 (x_0>y_0->x_0<y_0)".asFormula))
-    val tactic = CntEx
+    val tactic = counterEx
     helper.runTactic(tactic, new RootNode(s)).openGoals().head.sequent shouldBe s
   }
 }

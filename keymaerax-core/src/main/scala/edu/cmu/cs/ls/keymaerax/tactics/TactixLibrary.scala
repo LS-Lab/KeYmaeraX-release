@@ -273,7 +273,7 @@ object TactixLibrary extends UnifyUSCalculus {
   // counter example
 
   /** Generate counter example */
-  lazy val CntEx             : Tactic         = TacticLibrary.counterExampleT
+  lazy val counterEx         : Tactic         = TacticLibrary.counterExampleT
 
   // derived
 
