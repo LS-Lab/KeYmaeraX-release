@@ -718,15 +718,19 @@ object TacticLibrary {
           val cutted = Box(a, cutf)
           val cutical = AntePosition(node.sequent.ante.length + 1)
           Some(cutR(conditioned)(p) & onBranch(
-            (BranchLabels.cutShowLbl, implyR(p) & cutR(cutted)(p) & onBranch(
-              (BranchLabels.cutShowLbl, implyR(p) & debugT("show-show") &
+            (BranchLabels.cutShowLbl, label("") & implyR(p) & cutR(cutted)(p) & onBranch(
+              (BranchLabels.cutUseLbl/*cutShowLbl?*/, label("") & implyR(p) & debugT("showing post cut") &
                 hide(conditioned)(conditional) & label(BranchLabels.cutShowLbl) & debugT("remains to show")),
-              (BranchLabels.cutUseLbl, debug("inversing implies") & PropositionalTacticsImpl.InverseImplyRightT(cutical, p) & debug("K away") &
-                useAt("K modal modus ponens", PosInExpr(1::Nil))(p) &
+              (BranchLabels.cutShowLbl/*cutUseLbl?*/, label("") &
+                //debug("inversing implies") & PropositionalTacticsImpl.InverseImplyRightT(cutical, p)
+                //useAt("K modal modus ponens", PosInExpr(1::Nil))(p) &
+                debug("K away") &
+                useAt("K modal modus ponens", PosInExpr(0::Nil))(conditional) &
+                debug("closing by K") &
                 closeId // close(conditional, p.asInstanceOf[SuccPosition])
                 )
             )),
-            (BranchLabels.cutUseLbl, debug("ready for use") & label(BranchLabels.cutUseLbl))
+            (BranchLabels.cutUseLbl, label("") & debug("ready for use") & label(BranchLabels.cutUseLbl))
           ))
         case _ => None
       }

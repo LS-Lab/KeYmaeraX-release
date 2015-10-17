@@ -359,8 +359,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     TactixLibrary.proveBy(acasxexplicit,
       implyR(1) & andL(-1) &
         postCut(a)(1) & onBranch(
-        (BranchLabels.cutShowLbl, debug("vacuous global assumptions") & V(1) & close(-1, 1)),
-        (BranchLabels.cutUseLbl, debug("true induction need") & skip)
+        (BranchLabels.cutShowLbl, label("") & debug("vacuous global assumptions") & V(1) & close(-1, 1)),
+        (BranchLabels.cutUseLbl, label("") & debug("true induction need") & skip)
       )
     ).
       subgoals should contain only (
