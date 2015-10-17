@@ -170,6 +170,9 @@ object ProofChecker {
         else None
       }
 
+        //@todo implement by folding URename
+      case BoundRenamingTerm(e, premise, renamings) => ???
+
         //@todo There's a question whether flat usubst "triple" would be better in the long term than one specialized to the names in rule.
       case CTTerm(e, premise, usubst) => {
         val equalityCert = ProofChecker(e, premise)
