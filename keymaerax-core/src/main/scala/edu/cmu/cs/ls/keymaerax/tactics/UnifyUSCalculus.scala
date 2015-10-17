@@ -160,13 +160,13 @@ trait UnifyUSCalculus {
     override def applies(s: Sequent, p: Position): Boolean = try {
       val sub = s.sub(p)
       if (!sub.isDefined) {
-        if (DEBUG) println("ill-positioned " + p + " in " + s + "\nin " + "useAt(" + fact + ")(" + p + ")\n(" + s + ")")
+        if (DEBUG || true) println("INFO: ill-positioned " + p + " in " + s + "\nin " + "useAt(" + fact + ")(" + p + ")\n(" + s + ")")
         return false
       }
       UnificationMatch(keyPart,sub.get)
       true
     } catch {case e: ProverException =>
-      if (DEBUG) println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s.sub(p)))
+      if (DEBUG || true) println(e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s.sub(p)))
       false
     }
 
@@ -458,6 +458,25 @@ trait UnifyUSCalculus {
               )
           )
         )
+      }
+    }
+  }
+
+  /** cutAt(repl) cuts to replace the expression at the indicated position by repl.
+    * @see [[UnifyUSCalculus.CE(Provable)]]
+    */
+  def cutAt(repl: Expression): PositionTactic = new PositionTactic("cutAt") {
+    import Augmentors._
+
+    override def applies(s: Sequent, p: Position): Boolean = s.sub(p).isDefined
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
+
+      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val (ctx,c) = node.sequent.at(p)
+        val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(node.sequent.succ.length + 1)}
+        Some(cutLR(ctx(repl))(p.top))
       }
     }
   }
