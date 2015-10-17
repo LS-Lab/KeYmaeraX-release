@@ -719,7 +719,7 @@ object TacticLibrary {
           val cutical = AntePosition(node.sequent.ante.length + 1)
           Some(cutR(conditioned)(p) & onBranch(
             (BranchLabels.cutShowLbl, label("") & implyR(p) & cutR(cutted)(p) & onBranch(
-              (BranchLabels.cutUseLbl/*cutShowLbl?*/, label("") & implyR(p) & debugT("showing post cut") &
+              (BranchLabels.cutUseLbl/*cutShowLbl?*/, label("") & /*implyR(p) &*/ debugT("showing post cut") &
                 hide(conditioned)(conditional) & label(BranchLabels.cutShowLbl) & debugT("remains to show")),
               (BranchLabels.cutShowLbl/*cutUseLbl?*/, label("") &
                 //debug("inversing implies") & PropositionalTacticsImpl.InverseImplyRightT(cutical, p)
