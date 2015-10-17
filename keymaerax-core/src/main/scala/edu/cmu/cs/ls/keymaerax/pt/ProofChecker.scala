@@ -201,5 +201,5 @@ object ProofChecker {
         else None
       }
     }
-  } ensuring(r => r.isEmpty || r.get.conclusion == phi, "Resulting Provable proves given formula if defined for " + phi + " : " + e)
+  } ensuring(r => r.isEmpty || r.get.conclusion == goalSequent(phi), "Resulting Provable proves given formula if defined for " + phi + " : " + e)
 }
