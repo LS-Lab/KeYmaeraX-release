@@ -251,7 +251,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val acasxexplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-explicit.key")).mkString)
     val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-equivalence-direct.key")).mkString)
     val shape = Context(
-      """  hp > 0 & rp > 0 & rv >= 0 & a > 0 &
+      """  (hp > 0 & rp > 0 & rv >= 0 & a > 0) &
   ( (w=-1 | w=1) &
       (
         ⎵
@@ -311,6 +311,65 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       )
     seqEquivalence.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
   }
+
+  it should "prove stylized generic region p safety from region q safety and conditional equivalence" in {
+    val shape = Context(
+      """  (A()) &
+  ( (W(w)) &
+      (
+        ⎵
+      ) /* C(w,dhf) */
+  )
+  -> [
+  {   {
+      { ?true; ++
+        {dhf :=*; {w:=-1; ++ w:=1;}
+         ?(
+            ⎵
+          ); /* C(w,dhf) */
+        }}
+        ao :=*;
+      }
+      {r' = -rv, dhd' = ao, h' = -dhd & (w * dhd >= w * dhf | w * ao >= a)}
+   }*
+  ] ((h < -hp | h > hp | r < -rp | r> rp) & ⎵)
+      """.asFormula)
+    val equivalence = "A()&W(w) -> (Ce(w,dhf/*r,dhd,h,dhf,w,ao*/)<->Ci(w,dhf/*r,dhd,h,dhf,w,ao*/))".asFormula
+    val Imply(And(a,w), Equiv(e,i)) = equivalence
+    //@note same proof of seqEquivalence as in "derive sequent version of conditional equivalence"
+    val seqEquivalence = (Provable.startProof(Sequent(Nil, IndexedSeq(a, w), IndexedSeq(Equiv(e,i)))))
+    val acasximplicit = shape(i)
+    val acasxexplicit = shape(e)
+
+    val distEquivalence = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w), e), Imply(And(a,w),i)))),
+      useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
+    distEquivalence.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
+
+
+    acasxexplicit match {
+      case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == e && c2 == e =>
+      case _ => throw new IllegalArgumentException("Unexpected input shape of explicit file")
+    }
+    acasximplicit match {
+      case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == i && c2 == i =>
+      case _ => throw new IllegalArgumentException("Unexpected input shape of implicit file")
+    }
+
+    import TactixLibrary._
+    TactixLibrary.proveBy(acasxexplicit,
+      implyR(1) & andL(-1) &
+        postCut(a)(1) & onBranch(
+        (BranchLabels.cutShowLbl, debug("vacuous global assumptions") & V(1) & close(-1, 1)),
+        (BranchLabels.cutUseLbl, debug("true induction need") & skip)
+      )
+    ).
+      subgoals should contain only (
+      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(acasximplicit)),
+      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(equivalence))
+      )
+
+  }
+
 
   it should "prove explicit region safety from implicit region safety and conditional equivalence" in {
     val acasximplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay_max.key")).mkString)

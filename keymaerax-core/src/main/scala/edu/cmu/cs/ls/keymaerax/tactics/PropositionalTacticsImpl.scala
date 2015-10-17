@@ -466,6 +466,7 @@ object PropositionalTacticsImpl {
       val left = node.sequent.ante(antePos.getIndex)
       val right = node.sequent.succ(succPos.getIndex)
       val cutUsePos = AntePos(node.sequent.ante.length)
+      import TactixLibrary.hide
       Some(
         cutT(Some(Imply(left, right))) & onBranch(
           (BranchLabels.cutUseLbl,
@@ -474,7 +475,7 @@ object PropositionalTacticsImpl {
               TacticLibrary.AxiomCloseT
             )
           ),
-          (BranchLabels.cutShowLbl, hideT(succPos) & hideT(antePos) /* This is the result. */)
+          (BranchLabels.cutShowLbl, hide(right)(succPos) & hide(left)(antePos) /* This is the result. */)
         )
       )
     }

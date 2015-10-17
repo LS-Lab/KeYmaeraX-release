@@ -712,20 +712,21 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case Box(a, post) =>
           // [a](cut->post) and its position in assumptions
-          val conditio = Box(a, Imply(cutf, post))
+          val conditioned = Box(a, Imply(cutf, post))
           val conditional = AntePosition(node.sequent.ante.length)
           // [a]cut and its position in assumptions
           val cutted = Box(a, cutf)
           val cutical = AntePosition(node.sequent.ante.length + 1)
-          Some(cutR(conditio)(p) & onBranch(
-            (BranchLabels.cutShowLbl, cutR(cutted)(p) & onBranch(
-              (BranchLabels.cutShowLbl, hide(conditio)(conditional) & label(BranchLabels.cutShowLbl)),
-              (BranchLabels.cutUseLbl, PropositionalTacticsImpl.InverseImplyRightT(cutical, p) &
-                useAt("K modal modus ponens")(p) &
+          Some(cutR(conditioned)(p) & onBranch(
+            (BranchLabels.cutShowLbl, implyR(p) & cutR(cutted)(p) & onBranch(
+              (BranchLabels.cutShowLbl, implyR(p) & debugT("show-show") &
+                hide(conditioned)(conditional) & label(BranchLabels.cutShowLbl) & debugT("remains to show")),
+              (BranchLabels.cutUseLbl, debug("inversing implies") & PropositionalTacticsImpl.InverseImplyRightT(cutical, p) & debug("K away") &
+                useAt("K modal modus ponens", PosInExpr(1::Nil))(p) &
                 closeId // close(conditional, p.asInstanceOf[SuccPosition])
                 )
             )),
-            (BranchLabels.cutUseLbl, label(BranchLabels.cutUseLbl))
+            (BranchLabels.cutUseLbl, debug("ready for use") & label(BranchLabels.cutUseLbl))
           ))
         case _ => None
       }
