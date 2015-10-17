@@ -112,7 +112,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Hide/weaken whether left or right */
   lazy val hide               : PositionTactic = TacticLibrary.hideT
   /** Hide/weaken given formula at given position */
-  def hide(fml: Formula)      : PositionTactic = assertPT(fml, "hiding expects given formula") & TacticLibrary.hideT
+  def hide(fml: Formula)      : PositionTactic = assertPT(fml, "hiding expects given formula") ~ TacticLibrary.hideT
   /** Hide/weaken left: weaken a formula to drop it from the antecedent */
   lazy val hideL              : PositionTactic = TacticLibrary.hideT
   /** Hide/weaken right: weaken a formula to drop it from the succcedent */

@@ -468,7 +468,7 @@ object Tactics {
    * Assertion PositionTactic, which checks that the given formula is present at the position in the sequent where this tactic is applied to.
    */
   def assertPT(formulaExpectedAtPosition: Formula, msg:String): PositionTactic =
-    assertPT((s,pos)=> (if (pos.isAnte) s.ante.size > pos.index else s.succ.size > pos.index ) && s(pos)==formulaExpectedAtPosition, msg + "\nExpected: " + formulaExpectedAtPosition.prettyString)
+    assertPT((s,pos)=> pos.isIndexDefined(s) && s(pos)==formulaExpectedAtPosition, msg + "\nExpected: " + formulaExpectedAtPosition.prettyString)
 
   def assertPT(formulaExpectedAtPosition: Formula): PositionTactic = assertPT(formulaExpectedAtPosition, "")
 

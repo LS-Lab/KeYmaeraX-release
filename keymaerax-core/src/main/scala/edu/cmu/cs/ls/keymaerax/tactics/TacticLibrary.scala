@@ -693,8 +693,8 @@ object TacticLibrary {
    * Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post.
    * The operational effect of {a;}*@invariant(f1,f2,f3) is postCut(f1) & postcut(f2) & postCut(f3).
    * Leaves behind branches
-   * cutUseLbl: with [a](cut->post)
-   * cutShowbranch: with [a]cut
+   * cutUseLbl: with ... |- [a](cut->post)
+   * cutShowbranch: with ... |- [a]cut
    * @author Andre Platzer
    * @todo same for diamonds by the dual of K
    */
