@@ -3,7 +3,10 @@ package edu.cmu.cs.ls.keymaerax.pt
 import edu.cmu.cs.ls.keymaerax.core.{Equiv, Equal, NamedSymbol, USubst, Formula}
 
 /**
+ * A Proof Term is a syntactic internalization of a proof of a differential dynamic logic theorem.
+ * Proof Terms can be converted to Provables by the [[ProofChecker]].
  * Created by nfulton on 10/15/15.
+ * @see [[ProofChecker]]
  */
 sealed abstract class ProofTerm()
 case class dLConstant(label: String) extends ProofTerm

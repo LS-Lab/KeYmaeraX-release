@@ -6,7 +6,14 @@ import edu.cmu.cs.ls.keymaerax.tactics._
 import scala.collection.immutable
 
 /**
+ * ProofChecker maps a proof term to the Provable it proves.
+ * {{{
+ *   ProofChecker : ProofTerm * Formula => Provable
+ * }}}
+ * with a successful answer if the proof indeed checked successfully.
  * Created by nfulton on 10/15/15.
+ * @see [[ProofTerm]]
+ * @see [[Provable]]
  */
 object ProofChecker {
   private val tool = new edu.cmu.cs.ls.keymaerax.tools.Mathematica()
@@ -15,7 +22,8 @@ object ProofChecker {
   private def proofNode(phi : Formula) = new RootNode(goalSequent(phi))
 
   /**
-   * Returns true iff goal is a theorem of dL
+   * Converts proof term e for goal phi into a Provable iff e indeed justifies phi.
+   * @todo could remove phi except no more contract then
    */
   def apply(e: ProofTerm, phi: Formula) : Option[Provable] = {
     e match {
@@ -36,12 +44,14 @@ object ProofChecker {
           val psiCert = ProofChecker(d, psi)
           (varphiCert, psiCert) match {
             case (Some(varphiCert), Some(psiCert)) => {
-              //This is the ^R schematic proof rule referred to in the proof.
+              //This is the ^R schematic proof rule referred to in the theory proof.
               val andR = edu.cmu.cs.ls.keymaerax.core.AndRight(SuccPos(0))
               Some(
                 Provable.startProof(goalSequent(phi))
                   (andR, 0)
+                  // left branch
                   (varphiCert, 0)
+                //right branch
                   (psiCert, 0)
               )
             }
@@ -110,6 +120,7 @@ object ProofChecker {
       case RightEquivalence(e, psi, d) => {
         val equivCert = ProofChecker(e, Equiv(psi, phi))
         val psiCert   = ProofChecker(d, psi)
+        //@note in principle could use CommuteEquivRight to reduce to LeftEquivalence case
 
         if(equivCert.isDefined && equivCert.get.isProved && psiCert.isDefined && psiCert.get.isProved) {
           /* Game plan:
@@ -157,6 +168,7 @@ object ProofChecker {
         else None
       }
 
+        //@todo There's a question whether flat usubst "triple" would be better in the long term than one specialized to the names in rule.
       case CTTerm(e, premise, usubst) => {
         val equalityCert = ProofChecker(e, premise)
         if(equalityCert.isDefined && equalityCert.get.isProved) Some(
@@ -187,5 +199,5 @@ object ProofChecker {
         else None
       }
     }
-  }
+  } ensuring(r => r.isEmpty || r.get.conclusion == phi, "Resulting Provable proves given formula if defined for " + phi + " : " + e)
 }
