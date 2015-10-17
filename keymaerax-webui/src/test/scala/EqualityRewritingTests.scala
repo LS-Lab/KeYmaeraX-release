@@ -474,7 +474,7 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
-    result.openGoals().head.sequent.ante should contain only ("x=x+1")
-    result.openGoals().head.sequent.succ should contain only ("x=0")
+    result.openGoals().head.sequent.ante should contain only ("x=x+1".asFormula)
+    result.openGoals().head.sequent.succ should contain only ("x=0".asFormula)
   }
 }
