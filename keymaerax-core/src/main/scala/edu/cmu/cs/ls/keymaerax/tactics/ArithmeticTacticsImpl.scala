@@ -236,11 +236,26 @@ object ArithmeticTacticsImpl {
    * @param position
    * @return Whether a counterexample could be found.
    */
-  def hasCounterexample (tool: Tool, node: ProofNode, pos: Position) : Boolean = {
+  def hasCounterexample (tool: Tool, node: ProofNode, pos: Position): Boolean = {
     val sequent = node.sequent
     val fml = if (pos.isAnte) sequent.ante(pos.index) else sequent.succ(pos.index)
     tool.name.equals("Mathematica") &&
       !tool.asInstanceOf[Mathematica].getCounterExample(skolemize(sequent, fml, pos)).equals("false")
+  }
+
+  /**
+   * Detemermine whether the given tool can determine that the formula is contradictory
+   * @param tool The counter example generation tool
+   * @param proofNode
+   * @param position
+   * @return Whether a contradiction could be found
+   */
+  def isContradiction (tool: Tool, node: ProofNode, pos: Position): Boolean = {
+    val sequent = node.sequent
+    val fml = if (pos.isAnte) sequent.ante(pos.index) else sequent.succ(pos.index)
+    // fml is contradictory (never true) iff Not(fml) doesn't have a counterexample (is always true)
+    tool.name.equals("Mathematica") &&
+      tool.asInstanceOf[Mathematica].getCounterExample(skolemize(sequent, Not(fml), pos)).equals("false")
   }
 
   /**

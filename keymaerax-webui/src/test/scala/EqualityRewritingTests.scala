@@ -441,11 +441,8 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     result.openGoals().flatMap(_.sequent.succ) shouldBe empty
   }
 
-  // @todo The success of this test depends on variable naming. It seems likely that we should enhance the
-  // term ordering so the number of monomials in a polynomial matters when the total order is the same (so d+b is more
-  // complex than c)
   it should "replace compound terms" in {
-    val s = sequent(Nil, "d+b<5".asFormula :: "d+b=c".asFormula :: Nil, Nil)
+    val s = sequent(Nil, "a+b<5".asFormula :: "a+b=c".asFormula :: Nil, Nil)
     val tactic = smartEqualityRewritingT
     val result = helper.runTactic(tactic, new RootNode(s))
 

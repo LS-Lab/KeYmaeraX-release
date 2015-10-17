@@ -177,14 +177,11 @@ object PolynomialForm {
   }
 
   // Graded lexicographic monomial ordering, commonly used when finding Groebner bases.
-  // @todo Consider a "doubly-graded" ordering (on POLYnomials) where the number of monomials comes
-  // after the total degree of the leading term
   object MonomialGrlex extends Ordering[Monomial] {
     def compare(mon1: Monomial, mon2: Monomial): Int = {
       val cmpDegree = mon1.totalDegree.compare(mon2.totalDegree)
-      if (cmpDegree != 0) {
-        cmpDegree
-      } else {
+      if (cmpDegree != 0) cmpDegree
+      else {
         val cmpVars = compareMonomialVars(mon1.vars, mon2.vars)
         if (cmpVars != 0) {
           cmpVars
@@ -228,7 +225,7 @@ object PolynomialForm {
     def this (mon: Monomial) = this(Set(mon))
 
     // Compares two polynomials assuming their monomials are in sorted order
-    private def compareSortedPolyTerms(l1:List[Monomial],l2:List[Monomial]):Int = {
+    private def compareSortedPolyTermsLoop(l1:List[Monomial],l2:List[Monomial]):Int = {
       (l1,l2) match {
         case (Nil,Nil) => 0
         case ((x:Monomial) :: _, Nil) => MonomialGrlex.compare(x, Monomial.zero)
@@ -245,9 +242,24 @@ object PolynomialForm {
       }
     }
 
+    // Compares two polynomials assuming their monomials are in sorted order
+    private def compareSortedPolyTerms(l1:List[Monomial],l2:List[Monomial]):Int = {
+      val cmp = (l1,l2) match {
+        case ((x: Monomial) :: xs, (y: Monomial) :: ys) =>
+          val degreeCmp = x.totalDegree.compare(y.totalDegree)
+          if (degreeCmp != 0) degreeCmp
+          else l1.length.compare(l2.length)
+        case _ => 0
+      }
+
+      if (cmp == 0) compareSortedPolyTermsLoop(l1, l2)
+      else cmp
+    }
+
     def compareComplexity(other: Polynomial): Int = {
-      val ls = mons.foldLeft(TreeSet()(MonomialGrlex))({case (s,mon) => s.+(mon)}).toList
-      val rs = other.mons.foldLeft(TreeSet()(MonomialGrlex))({case (s,mon) => s.+(mon)}).toList
+      def moreComplex (mon1: Monomial, mon2: Monomial): Boolean = MonomialGrlex.compare(mon1, mon2) > 0
+      val ls = mons.toList.sortWith(moreComplex)
+      val rs = other.mons.toList.sortWith(moreComplex)
       compareSortedPolyTerms(ls,rs)
     }
   }
