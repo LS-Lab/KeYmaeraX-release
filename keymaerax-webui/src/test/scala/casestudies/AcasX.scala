@@ -334,18 +334,20 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
    }*
   ] ((h < -hp | h > hp | r < -rp | r> rp) & ⎵)
       """.asFormula)
+    val u = "(h < -hp | h > hp | r < -rp | r> rp)".asFormula
     val equivalence = "A()&W(w) -> (Ce(w,dhf/*r,dhd,h,dhf,w,ao*/)<->Ci(w,dhf/*r,dhd,h,dhf,w,ao*/))".asFormula
     val Imply(And(a,w), Equiv(e,i)) = equivalence
     //@note same proof of seqEquivalence as in "derive sequent version of conditional equivalence"
     val seqEquivalence = (Provable.startProof(Sequent(Nil, IndexedSeq(a, w), IndexedSeq(Equiv(e,i)))))
     val postEquivalence = (Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(
-      Equiv(Imply(w,Imply(a, And("(h < -hp | h > hp | r < -rp | r> rp)".asFormula, i))),
-        Imply(w,Imply(a, And("(h < -hp | h > hp | r < -rp | r> rp)".asFormula, e))))
+      Equiv(Imply(w,Imply(a, And(u, i))),
+            Imply(w,Imply(a, And(u, e))))
     ))))
     val acasximplicit = shape(i)
     val acasxexplicit = shape(e)
 
     val w0 = "W(w_0)".asFormula
+    val i0 = "Ci(w_0,dhf_0)".asFormula
 
     val distEquivalence = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w), e), Imply(And(a,w),i)))),
       useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
@@ -374,6 +376,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
             (BranchLabels.indStepLbl, hide(w)(-4) & hide(w)(-2) & implyR(1) & debug("step w=-1 | w=1") &
               // could also just always generalize(w0)
               // this is a more efficient version
+              //@note could have handled 2*composeb(1) at once
               //@todo use W(w_0) instead of W(w) or use post-postcondition
               composeb(1) & generalize(w0)(1) & onBranch(
               (BranchLabels.genShow, V(1) & implyR(1) & closeId),
@@ -399,7 +402,33 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
             cutL(i)(-3) & onBranch(
             (BranchLabels.cutShowLbl, hide(1) & by(seqEquivalence)),
             (BranchLabels.cutUseLbl, CE(postEquivalence)(SuccPosition(0, 1::Nil))
-              & debug("proving to replace test") & skip
+              & debug("unpack and repack to replace test") &
+              loop(And(w,And(u, i)))(1) & onBranch(
+              (BranchLabels.indInitLbl, andR(1) & closeId),
+              (BranchLabels.indStepLbl, hide(And(w,And(u,i)))(-4) & hide(i)(-3) & hide(w)(-2) & implyR(1) &
+                composeb(1) & composeb(1) & choiceb(1)  // unpack
+                //& useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil))  // gather
+                & composeb(SuccPosition(0, 1::Nil)) & composeb(SuccPosition(0, 1::1::Nil))
+                & debug("cutting away")
+                & cutAt(i0)(SuccPosition(0, 1::1::1::0::0::Nil)) & onBranch(
+                (BranchLabels.cutShowLbl, label("show patch") & debug("showing patch")
+                  & implyR(1) & andL(-3) & andR(1) & (
+                  closeId,
+                  hide(-3) & skip
+                  )
+                  ),
+                (BranchLabels.cutUseLbl, label("use patch") &
+                  // repacking
+                  useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) & useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil))
+                  //& useAt("[;] compose", PosInExpr(0::Nil))(SuccPosition(0, 1::Nil))// ungather
+                  & useAt("[++] choice", PosInExpr(1::Nil))(1) & useAt("[;] compose", PosInExpr(1::Nil))(1) & useAt("[;] compose", PosInExpr(1::Nil))(1) // repack
+                  & label("used patch") & debug("used patch")
+                  //@todo by implicit unrolling once
+                  )
+              )
+                ),
+              (BranchLabels.indUseCaseLbl, implyR(1) & closeId)
+            )
               )
           )
             )
