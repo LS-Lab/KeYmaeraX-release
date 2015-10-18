@@ -20,6 +20,9 @@ import scala.collection.immutable._
  *
  * *Following tactics forward to their implementation reveals more detailed documentation*.
  *
+ * For tactics implementing built-in rules such as sequent proof rules,
+ * elaborate documentation is in the [[edu.cmu.cs.ls.keymaerax.core.Rule prover kernel]].
+ *
  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
@@ -28,6 +31,7 @@ import scala.collection.immutable._
  * @see [[TacticLibrary]]
  * @see [[DerivedAxioms]]
  * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
+ * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
  */
 object TactixLibrary extends UnifyUSCalculus {
   private val parser = KeYmaeraXParser
@@ -57,6 +61,8 @@ object TactixLibrary extends UnifyUSCalculus {
 
   /** US: uniform substitution
     * @see [[UnifyUSCalculus]]
+    * @see [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]]
+    * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
     */
   def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula]) = Map()): Tactic = PropositionalTacticsImpl.uniformSubstT(subst, delta)
 
@@ -69,7 +75,7 @@ object TactixLibrary extends UnifyUSCalculus {
    */
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic = SearchTacticsImpl.onBranch(s1, spec:_*)
 
-  /** Call the current proof branch s
+  /** Call/label the current proof branch s
     * @see [[onBranch()]]
     */
   def label(s: String): Tactic = new LabelBranch(s)
@@ -113,44 +119,44 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val hide               : PositionTactic = TacticLibrary.hideT
   /** Hide/weaken given formula at given position */
   def hide(fml: Formula)      : PositionTactic = assertT(fml, "hiding expects given formula") ~ TacticLibrary.hideT
-  /** Hide/weaken left: weaken a formula to drop it from the antecedent */
+  /** Hide/weaken left: weaken a formula to drop it from the antecedent @see [[edu.cmu.cs.ls.keymaerax.core.HideLeft]] */
   lazy val hideL              : PositionTactic = TacticLibrary.hideT
-  /** Hide/weaken right: weaken a formula to drop it from the succcedent */
+  /** Hide/weaken right: weaken a formula to drop it from the succcedent @see [[edu.cmu.cs.ls.keymaerax.core.HideRight]] */
   lazy val hideR              : PositionTactic = TacticLibrary.hideT
-  /** CoHide/coweaken whether left or right: drop all other formulas from the sequent */
+  /** CoHide/coweaken whether left or right: drop all other formulas from the sequent @see [[edu.cmu.cs.ls.keymaerax.core.CoHideLeft]] */
   lazy val cohide             : PositionTactic = PropositionalTacticsImpl.cohideT
-  /** !L Not left: move an negation in the antecedent to the succedent */
+  /** !L Not left: move an negation in the antecedent to the succedent @see [[edu.cmu.cs.ls.keymaerax.core.NotLeft]] */
   lazy val notL               : PositionTactic = TacticLibrary.NotLeftT
-  /** !R Not right: move an negation in the succedent to the antecedent */
+  /** !R Not right: move an negation in the succedent to the antecedent @see [[edu.cmu.cs.ls.keymaerax.core.NotRight]] */
   lazy val notR               : PositionTactic = TacticLibrary.NotRightT
-  /** &L And left: split a conjunction in the antecedent into separate assumptions */
+  /** &L And left: split a conjunction in the antecedent into separate assumptions @see [[edu.cmu.cs.ls.keymaerax.core.AndLeft]] */
   lazy val andL               : PositionTactic = TacticLibrary.AndLeftT
-  /** &R And right: prove a conjunction in the succedent on two separate branches */
+  /** &R And right: prove a conjunction in the succedent on two separate branches @see [[edu.cmu.cs.ls.keymaerax.core.AndRight]] */
   lazy val andR               : PositionTactic = TacticLibrary.AndRightT
-  /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches */
+  /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches @see [[edu.cmu.cs.ls.keymaerax.core.OrLeft]] */
   lazy val orL                : PositionTactic = TacticLibrary.OrLeftT
-  /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively */
+  /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively @see [[edu.cmu.cs.ls.keymaerax.core.OrRight]] */
   lazy val orR                : PositionTactic = TacticLibrary.OrRightT
-  /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch */
+  /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch @see [[edu.cmu.cs.ls.keymaerax.core.ImplyLeft]] */
   lazy val implyL             : PositionTactic = TacticLibrary.ImplyLeftT
-  /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side */
+  /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side @see [[edu.cmu.cs.ls.keymaerax.core.ImplyRight]] */
   lazy val implyR             : PositionTactic = TacticLibrary.ImplyRightT
-  /** <->L Equiv left: use an equivalence by considering both true or both false cases */
+  /** <->L Equiv left: use an equivalence by considering both true or both false cases @see [[edu.cmu.cs.ls.keymaerax.core.EquivLeft]] */
   lazy val equivL             : PositionTactic = TacticLibrary.EquivLeftT
-  /** <->R Equiv right: prove an equivalence by proving both implications */
+  /** <->R Equiv right: prove an equivalence by proving both implications @see [[edu.cmu.cs.ls.keymaerax.core.EquivRight]] */
   lazy val equivR             : PositionTactic = TacticLibrary.EquivRightT
 
-  /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds */
+  /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds @see [[edu.cmu.cs.ls.keymaerax.core.Cut]] */
   def cut(cut : Formula)      : Tactic         = TacticLibrary.cutT(Some(cut))
-  /** cut a formula in in place of pos on the right to prove it on one branch and then assume it on the other. */
+  /** cut a formula in in place of pos on the right to prove it on one branch and then assume it on the other. @see [[edu.cmu.cs.ls.keymaerax.core.CutRight]] */
   def cutR(cut : Formula)     : PositionTactic  = PropositionalTacticsImpl.cutRightT(cut)
-  /** cut a formula in in place of pos on the left to prove it on one branch and then assume it on the other. */
+  /** cut a formula in in place of pos on the left to prove it on one branch and then assume it on the other. @see [[edu.cmu.cs.ls.keymaerax.core.CutLeft]] */
   def cutL(cut : Formula)     : PositionTactic  = PropositionalTacticsImpl.cutLeftT(cut)
-  /** cut a formula in in place of pos to prove it on one branch and then assume it on the other (whether pos is left or right). */
+  /** cut a formula in in place of pos to prove it on one branch and then assume it on the other (whether pos is left or right). @see [[edu.cmu.cs.ls.keymaerax.core.CutLeft]] @see [[edu.cmu.cs.ls.keymaerax.core.CutRight]] */
   def cutLR(cut : Formula)    : PositionTactic  = PropositionalTacticsImpl.cutLeftRight(cut)
 
   // quantifiers
-  /** all right: Skolemize a universal quantifier in the succedent */
+  /** all right: Skolemize a universal quantifier in the succedent @see [[edu.cmu.cs.ls.keymaerax.core.Skolemize]] */
   lazy val allR               : PositionTactic = TacticLibrary.skolemizeT
   /** all left: instantiate a universal quantifier in the antecedent by a concrete instance */
   def allL(x: Variable, inst: Term) : PositionTactic = TacticLibrary.instantiateQuanT(x, inst)

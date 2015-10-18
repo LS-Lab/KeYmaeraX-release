@@ -512,13 +512,20 @@ trait UnifyUSCalculus {
   }
 
 
-  /** cutAt(repl) cuts to replace the expression at the indicated position in its context by `repl`.
+  /** cutAt(repl) cuts left/right to replace the expression at the indicated position in its context C{.} by `repl`.
     * {{{
-    *    ... |- C{repl} ...
-    *   --------------------
-    *    ... |- C{c} ...
+    *   G |- C{repl}, D   G |- C{repl}->C{c}, D
+    *   ---------------------------------------
+    *   G |- C{c}, D
+    * }}}
+    * {{{
+    *   C{repl}, G |- D   G |- D, C{c}->C{repl}
+    *   ---------------------------------------
+    *   C{c}, G |- D
     * }}}
     * @see [[UnifyUSCalculus.CE(Provable)]]
+    * @see [[cutL]]
+    * @see [[cutR]]
     */
   def cutAt(repl: Expression): PositionTactic = new PositionTactic("cutAt") {
     import Augmentors._

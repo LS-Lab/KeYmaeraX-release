@@ -174,6 +174,7 @@ object DerivedAxioms {
     case "Dsol& differential equation solution" => Some(DSddomainF, DSddomainT)
     case "Dsol differential equation solution" => Some(DSdnodomainF, DSdnodomainT)
     case "Domain Constraint Conjunction Reordering" => Some(domainCommuteF, domainCommuteT)
+    case "[] post weaken" => Some(postconditionWeakenF, postconditionWeakenT)
     case "& commute" => Some(andCommuteF, andCommuteT)
     case "& associative" => Some(andAssocF, andAssocT)
     case "& reflexive" => Some(andReflexiveF, andReflexiveT)
@@ -282,6 +283,7 @@ object DerivedAxioms {
       , "Dsol& differential equation solution" -> Some(DSddomainF, DSddomainT)
       , "Dsol differential equation solution" -> Some(DSdnodomainF, DSdnodomainT)
       , "Domain Constraint Conjunction Reordering" -> Some(domainCommuteF, domainCommuteT)
+      , "[] post weaken" -> Some(postconditionWeakenF, postconditionWeakenT)
       , "& commute" -> Some(andCommuteF, andCommuteT)
       , "& associative" -> Some(andAssocF, andAssocT)
       , "!& deMorgan" -> Some(notAndF, notAndT)
@@ -1141,6 +1143,22 @@ object DerivedAxioms {
   )
 
   lazy val domainCommuteT = derivedAxiomT(domainCommute)
+
+  /**
+   * {{{Axiom "[] post weaken".
+   *   [a;]p(??)  ->  [a;](q(??)->p(??))
+   * End.
+   * }}}
+   * @Derived from M (or also from K)
+   */
+  lazy val postconditionWeakenF = "([a;]p(??))  ->  [a;](q(??)->p(??))".asFormula
+  lazy val postconditionWeaken = derivedAxiom("[] post weaken",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(postconditionWeakenF)),
+    implyR(1) & Monb & prop
+  )
+
+  lazy val postconditionWeakenT = derivedAxiomT(postconditionWeaken)
+
 
   /**
    * {{{Axiom "& commute".
