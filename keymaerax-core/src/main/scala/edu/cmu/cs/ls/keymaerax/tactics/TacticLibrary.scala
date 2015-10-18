@@ -751,7 +751,7 @@ object TacticLibrary {
           Some(cutR(conditioned)(p) & onBranch(
             (BranchLabels.cutShowLbl, label("") & implyR(p) & cutR(cutted)(p) & onBranch(
               (BranchLabels.cutUseLbl/*cutShowLbl?*/, label("") & /*implyR(p) &*/ debugT("showing post cut") &
-                hide(conditioned)(conditional) & label(BranchLabels.cutShowLbl) & debugT("remains to show")),
+                hide(conditioned)(conditional) & label(BranchLabels.cutShowLbl)),
               (BranchLabels.cutShowLbl/*cutUseLbl?*/, label("") &
                 //debug("inversing implies") & PropositionalTacticsImpl.InverseImplyRightT(cutical, p)
                 //useAt("K modal modus ponens", PosInExpr(1::Nil))(p) &
@@ -761,7 +761,7 @@ object TacticLibrary {
                 closeId // close(conditional, p.asInstanceOf[SuccPosition])
                 )
             )),
-            (BranchLabels.cutUseLbl, label("") & debug("ready for use") & label(BranchLabels.cutUseLbl))
+            (BranchLabels.cutUseLbl, label(BranchLabels.cutUseLbl))
           ))
         case _ => None
       }
