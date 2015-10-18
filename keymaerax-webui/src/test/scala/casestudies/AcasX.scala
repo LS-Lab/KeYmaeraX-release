@@ -377,13 +377,16 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     TactixLibrary.proveBy(acasxexplicit,
       implyR(1) & andL(-1) &
         postCut(a)(1) & onBranch(
-        (BranchLabels.cutShowLbl, label("") & debug("vacuous global assumptions") & V(1) & close(-1, 1)),
+        (BranchLabels.cutShowLbl, label("") & sublabel("A() vacuous") & debug("vacuous global assumptions") & V(1) & close(-1, 1)),
+
         (BranchLabels.cutUseLbl, label("") & debug("true induction need") &
+
           postCut(w)(1) & onBranch(
           (BranchLabels.cutShowLbl, label("") & debug("w=-1 | w=1") & assertT(And(w,e), "W&Ce")(-2) & andL(-2) &
             loop(w)(1) & onBranch(
-            (BranchLabels.indInitLbl, closeId),
-            (BranchLabels.indStepLbl, hide(w)(-4) & hide(w)(-2) & implyR(1) & debug("step w=-1 | w=1") &
+            (BranchLabels.indInitLbl, sublabel("W(w) init") & closeId),
+
+            (BranchLabels.indStepLbl, sublabel("W(w) step") & hide(w)(-4) & hide(w)(-2) & implyR(1) & debug("step w=-1 | w=1") &
               // could also just always generalize(w0)
               // this is a more efficient version
               //@note could have handled 2*composeb(1) at once
@@ -392,7 +395,9 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
               (BranchLabels.genShow, V(1) & implyR(1) & closeId),
               (BranchLabels.genUse, composeb(1) & useAt("V[:*] vacuous assign nondet")(SuccPosition(0, 1::Nil)) &
                 choiceb(1) & andR(1) & (
-                testb(1) & implyR(1) & closeId,
+                sublabel("& left") & testb(1) & implyR(1) & closeId
+                ,
+                sublabel("& right") &
                 composeb(1) & composeb(SuccPosition(0, 1::Nil)) & generalize(w0)(1) & onBranch(
                   (BranchLabels.genUse, useAt("V[:*] vacuous assign nondet")(1) & closeId),
                   (BranchLabels.genShow, generalize(w0)(1) & onBranch(
@@ -404,28 +409,31 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                 )
             )
               ),
-            (BranchLabels.indUseCaseLbl, implyR(1) & closeId)
+            (BranchLabels.indUseCaseLbl, sublabel("W(w) loop use") & implyR(1) & closeId)
           )
             ),
 
-          (BranchLabels.cutUseLbl, label("") & assertT(And(w,e), "W&Ce")(-2) & andL(-2) & debug("inductive use of A&W") &
+          (BranchLabels.cutUseLbl, sublabel("A()&W(w) augmented") & assertT(And(w,e), "W&Ce")(-2) & andL(-2) & debug("inductive use of A&W") &
             cutL(i)(-3) & onBranch(
-            (BranchLabels.cutShowLbl, hide(1) & by(seqEquivalence)),
-            (BranchLabels.cutUseLbl, CE(postEquivalence)(SuccPosition(0, 1::Nil))
+            (BranchLabels.cutShowLbl, hide(1) & label("by seq-equiv") & by(seqEquivalence)),
+            (BranchLabels.cutUseLbl, sublabel("Ce~>Ci reduction") &
+              CE(postEquivalence)(SuccPosition(0, 1::Nil))
               & debug("unpack and repack to replace test") &
               loop(And(w,And(u, i)))(1) & onBranch(
-              (BranchLabels.indInitLbl, andR(1) & closeId),
-              (BranchLabels.indStepLbl, hide(And(w,And(u,i)))(-4) & hide(i)(-3) & hide(w)(-2) & implyR(1) &
+              (BranchLabels.indInitLbl, sublabel("W&u*Ci init") & andR(1) & (close(-2,1) , andR(1) & (label("arith") , close(-3,1)))),
+              (BranchLabels.indStepLbl, sublabel("W&u&Ci step") & hide(And(w,And(u,i)))(-4) & hide(i)(-3) & hide(w)(-2) & implyR(1) &
                 composeb(1) & composeb(1) & choiceb(1)  // unpack
                 //& useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil))  // gather
                 & composeb(SuccPosition(0, 1::Nil)) & composeb(SuccPosition(0, 1::1::Nil))
-                & debug("cutting away")
-                & cutAt(i0)(SuccPosition(0, 1::1::1::0::0::Nil)) & onBranch(
-                (BranchLabels.cutShowLbl, label("show patch") & debug("showing patch")
+                & debug("cutting explicit dynamics away")
+                & cutAt(i0)(SuccPosition(0, 1::1::1::0::0::Nil)) & debug("cuttedAt") & onBranch(
+                (BranchLabels.cutShowLbl, sublabel("show patch") & debug("showing patch")
                   & useAt("-> distributes over &", PosInExpr(0::Nil))(1)
                   & andR(1) & (
-                  implyR(1) & andL(-3) & closeId
+                  // left branch is unchanged
+                  label("cutAt no change on left") & implyR(1) & andL(-3) & closeId
                   ,
+                  // right branch replaced implicit with explicit conditionally
                   label("CMon")
                   & useAt("& commute")(SuccPosition(0, 0::Nil))
                     & useAt("-> weaken", PosInExpr(1::Nil))(1)
@@ -438,31 +446,62 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     & (useAt("[:=] assign")(1, 1::1::Nil) & useAt("[:=] assign")(-3, 1::1::Nil))
                     & (randomb(1) & randomb(-3))
                     */
-                    & (useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0)) & useAt("[;] compose", PosInExpr(1::Nil))(AntePosition(2))) // gather
+                    // gather
+                    & (useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0)) & useAt("[;] compose", PosInExpr(1::Nil))(AntePosition(2)))
                     & postCut(And(a,w0))(1) & onBranch(
-                    (BranchLabels.cutShowLbl, hide(-3) & hide(And(w0,And(u0,i0)))(-2) & chase(1) & label("gen") & closeId),
-                    (BranchLabels.cutUseLbl, label("generalized antecedent")
+                    (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)") & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & chase(1) & label("gen") & closeId),
+                    (BranchLabels.cutUseLbl, sublabel("generalized A()&W(w0)->post")
                       & HilbertCalculus.testb(1, 1::1::Nil)
                       & useAt(distEquivImpl.conclusion.succ.head, PosInExpr(0::Nil))(1, 1::Nil)
+                      & debug("used dist equiv impl")
                       & useAt("[?] test", PosInExpr(1::Nil))(1, 1::1::Nil)
                       // drop a&w implication from postcondition again
-                      & useAt("K modal modus ponens", PosInExpr(0::Nil))(1) & implyR(1) & hide(-4)
+                      //& useAt("K modal modus ponens", PosInExpr(0::Nil))(1) & implyR(1) & hide(-4)
+                      & sublabel("[] post weaken")
+                      & debug("do [] post weaken")
+                      & useAt("[] post weaken")(1, Nil/*1::1::1::Nil*/)
                       & close(-3, 1)
                       )
                   )
                   )
                   ),
-                (BranchLabels.cutUseLbl, label("use patch") &
+                (BranchLabels.cutUseLbl, sublabel("use patch") & debug("use patch")
                   // repacking
-                  useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) & useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil))
+                  & useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) & useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil))
                   //& useAt("[;] compose", PosInExpr(0::Nil))(SuccPosition(0, 1::Nil))// ungather
-                  & useAt("[++] choice", PosInExpr(1::Nil))(1) & useAt("[;] compose", PosInExpr(1::Nil))(1) & useAt("[;] compose", PosInExpr(1::Nil))(1) // repack
+                  // repack
+                  & useAt("[++] choice", PosInExpr(1::Nil))(1) & useAt("[;] compose", PosInExpr(1::Nil))(1) & useAt("[;] compose", PosInExpr(1::Nil))(1)
                   & label("use patch") & debug("used patch")
                   //@todo by unrolling implicit once
+                  //@todo rename acasximplicit to w_0 names ....
+                  & cut(acasximplicit.asInstanceOf[Imply].right) & onBranch(
+                  (BranchLabels.cutShowLbl,
+                    sublabel("show implicit applicable") &
+                    // prove A()&(W(w)&Ci(w,dhf))
+                    andR(2) & (
+                      label("A id") & close(-1,2)
+                      ,
+                      // split W(w)&u&Ci finally
+                      andL(-2) & andL(-4) &
+                      andR(2) & (
+                        label("W(w) id") & close(-2,2)
+                        ,
+                        andR(2) & (
+                          label("arithmetic")
+                            ,
+                          label("Ci id") & close(-5,2)
+                          )
+                        )
+                      )
+                    ),
+                  (BranchLabels.cutUseLbl, sublabel("by implicit") & useAt("[*] approx")(-3) & close(-3,1))
+                )
                   )
               )
                 ),
-              (BranchLabels.indUseCaseLbl, implyR(1) & closeId)
+              (BranchLabels.indUseCaseLbl, sublabel("final use") & implyR(1)
+                & implyR(1) & implyR(1) & andL(-3)
+                & closeId)
             )
               )
           )
