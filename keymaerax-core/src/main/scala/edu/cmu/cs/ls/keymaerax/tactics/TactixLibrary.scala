@@ -77,8 +77,14 @@ object TactixLibrary extends UnifyUSCalculus {
 
   /** Call/label the current proof branch s
     * @see [[onBranch()]]
+    * @see [sublabel()]]
     */
   def label(s: String): Tactic = new LabelBranch(s)
+
+  /** Mark the current proof branch and all subbranches s
+    * @see [[label()]]
+    */
+  def sublabel(s: String): Tactic = new SubLabelBranch(s)
 
   // Locating applicable positions for PositionTactics
 
@@ -367,7 +373,7 @@ object TactixLibrary extends UnifyUSCalculus {
     val rootNode = new RootNode(goal)
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
-    if (!rootNode.isClosed() || Tactic.DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n\n" + rootNode.openGoals().map(x => "Open: " + x.tacticInfo.infos.getOrElse("branchLabel", "<unknown>") + ":\n  " + x.sequent).mkString(("\n"))) + "\n")
+    if (!rootNode.isClosed() || Tactic.DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n\n" + rootNode.openGoals().map(x => "Open: " + x.tacticInfo.infos.getOrElse("subLabel", "") + "/" + x.tacticInfo.infos.getOrElse("branchLabel", "<unknown>") + ":\n  " + x.sequent).mkString(("\n"))) + "\n")
     val proof = rootNode.provableWitness
     if (Tactic.DEBUG) println("proveBy " + proof + "\n")
     proof

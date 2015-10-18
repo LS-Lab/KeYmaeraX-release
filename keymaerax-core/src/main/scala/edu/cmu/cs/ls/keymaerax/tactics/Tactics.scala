@@ -982,6 +982,23 @@ object Tactics {
     }
   }
 
+  /** Pseudo-tactic that has no effect but sub-labelling the proof node with s */
+  object SubLabelBranch {
+    def apply(s: String): Tactic = new SubLabelBranch(s)
+  }
+  /**
+   * Pseudo-tactic that has no effect but sub-labeling the proof node and all its subnodes s
+   * @see LabelBranch
+   */
+  class SubLabelBranch(s: String) extends Tactic("Sublabel " + s) {
+    override def applicable(node: ProofNode): Boolean = true
+
+    override def apply(tool: Tool, node: ProofNode): Unit = {
+      node.tacticInfo.infos += ("subLabel" -> (node.tacticInfo.infos.getOrElse("subLabel", "") + "/" + s))
+      continuation(this, Success, Seq(node))
+    }
+  }
+
   object ProofNodeView {
     def apply(n: ProofNode): ProofNodeView = new ProofNodeView(n)
   }
