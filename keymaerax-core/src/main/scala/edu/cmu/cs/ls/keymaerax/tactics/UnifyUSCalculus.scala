@@ -301,7 +301,7 @@ trait UnifyUSCalculus {
   }
 
   /**
-   * CQ(pos) at the indicated position within an equivalence reduces contextual equivalence to argument equality.
+   * CQ(pos) at the indicated position within an equivalence reduces contextual equivalence `p(left)<->p(right)` to argument equality `left=right`.
    * This tactic will use [[CE()]] under the hood as needed.
    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotTerm happens.
    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
@@ -348,7 +348,7 @@ trait UnifyUSCalculus {
   }
 
   /**
-   * CE(pos) at the indicated position within an equivalence reduces contextual equivalence to argument equivalence.
+   * CE(pos) at the indicated position within an equivalence reduces contextual equivalence `C{left}<->C{right}`to argument equivalence `left<->right`.
    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
    * @see [[UnifyUSCalculus.CE(Context)]]
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
@@ -387,11 +387,16 @@ trait UnifyUSCalculus {
   }
 
   /**
-   * CMon(pos) at the indicated position within an implication reduces contextual implication to argument implication.
+   * CMon(pos) at the indicated position within an implication reduces contextual implication `C{o}->C{k}` to argument implication `o->k` for positive C.
+   * {{{
+   *   |- o -> k
+   *   ------------------------- for positive C{.}
+   *   |- C{o} -> C{k}
+   * }}}
    * @param inEqPos the position *within* the two sides of the implication at which the context DotFormula happens.
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
-   * @see [[UnifyUSCalculus.CMon(Provable)]]
+   * @see [[UnifyUSCalculus.CMon(Context)]]
    */
   def CMon(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CMon congruence") {
     import Augmentors._
@@ -416,8 +421,8 @@ trait UnifyUSCalculus {
     }
   }
 
-  /** CE(fact) uses the equivalence left<->right or equality left=right or implication left->right fact for congruence
-    * reasoning at the indicated position to replace right by left at indicated position (literally, no substitution).
+  /** CE(fact) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
+    * reasoning at the indicated position to replace `right` by `left` at indicated position (literally, no substitution).
     * Efficient unification-free version of [[UnifyUSCalculus#useAt(Provable, PosInExpr):PositionTactic]]
     * @see [[UnifyUSCalculus.CE(Provable,Context)]]
     * @see [[useAt()]]
@@ -462,27 +467,8 @@ trait UnifyUSCalculus {
     }
   }
 
-  /** cutAt(repl) cuts to replace the expression at the indicated position by repl.
-    * @see [[UnifyUSCalculus.CE(Provable)]]
-    */
-  def cutAt(repl: Expression): PositionTactic = new PositionTactic("cutAt") {
-    import Augmentors._
-
-    override def applies(s: Sequent, p: Position): Boolean = s.sub(p).isDefined
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
-
-      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val (ctx,c) = node.sequent.at(p)
-        val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(node.sequent.succ.length + 1)}
-        Some(cutLR(ctx(repl))(p.top))
-      }
-    }
-  }
-
-  /** CE(fact) uses the equivalence left<->right or equality left=right or implication left->right fact for congruence
-    * reasoning in the given context C at the indicated position to replace right by left in that context (literally, no substitution).
+  /** CE(fact,C) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
+    * reasoning in the given context C at the indicated position to replace `right` by `left` in that context (literally, no substitution).
     * @see [[UnifyUSCalculus.CE(Provable)]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
@@ -524,6 +510,32 @@ trait UnifyUSCalculus {
       }
     }
   }
+
+
+  /** cutAt(repl) cuts to replace the expression at the indicated position in its context by `repl`.
+    * {{{
+    *    ... |- C{repl} ...
+    *   --------------------
+    *    ... |- C{c} ...
+    * }}}
+    * @see [[UnifyUSCalculus.CE(Provable)]]
+    */
+  def cutAt(repl: Expression): PositionTactic = new PositionTactic("cutAt") {
+    import Augmentors._
+
+    override def applies(s: Sequent, p: Position): Boolean = s.sub(p).isDefined
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
+
+      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val (ctx,c) = node.sequent.at(p)
+        val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(node.sequent.succ.length + 1)}
+        Some(cutLR(ctx(repl))(p.top))
+      }
+    }
+  }
+
 
   /*******************************************************************
     * unification and matching based auto-tactics (forward Hilbert)
@@ -597,6 +609,7 @@ trait UnifyUSCalculus {
     *   C{k} |- C{o}
     * }}}
     * @note The direction in the conclusion switches for negative polarity C{⎵}
+    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
     * @see [[CE(Context)]]
     * @see [[AxiomaticRuleTactics.propositionalCongruenceT()]]
     */
@@ -754,6 +767,7 @@ trait UnifyUSCalculus {
             ) (monStep(Context(c), mon), 0)
 
         case m:Modal if symbols(m.program).contains(DotFormula) =>
+          //@todo implement good cases. For example nibble of assign on both sides. Or random. Or ....
           throw new ProverException("No monotone context within programs " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
 
         case Forall(vars, c) => //if !StaticSemantics.freeVars(subst(c)).toSymbolSet.intersect(vars.toSet).isEmpty =>

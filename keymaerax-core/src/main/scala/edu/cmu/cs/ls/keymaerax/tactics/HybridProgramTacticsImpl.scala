@@ -935,7 +935,7 @@ object HybridProgramTacticsImpl {
    * @author Stefan Mitsch
    */
   def boxNDetAssign: PositionTactic = new PositionTactic("[:=] assign equational") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
+    override def applies(s: Sequent, p: Position): Boolean = /*!p.isAnte &&*/ p.inExpr == HereP && (s(p) match {
       case Box(AssignAny(v: Variable), _) => true
       case _ => false
     })

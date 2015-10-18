@@ -130,7 +130,9 @@ object DerivedAxioms {
     //@note implemented as match rather than lookup in a map to retain lazy evaluation
     //@note Every entry should be added to derivedAxiomMap (we need a map when prepopulating the lemma database, so whenever adding a case to this case match also add an entry to the hashmap below.)
     case "<-> reflexive" => Some(equivReflexiveF, equivReflexiveT)
+    case "-> distributes over &" => Some(implyDistAndF, implyDistAndT)
     case "-> distributes over <->" => Some(implyDistEquivF, implyDistEquivT)
+    case "-> weaken" => Some(implWeakenF, implWeakenT)
     case "!! double negation" => Some(doubleNegationF, doubleNegationT)
     case "exists dual" => Some(existsDualF, existsDualT)
     case "!exists" => Some(notExistsF, notExistsT)
@@ -238,7 +240,9 @@ object DerivedAxioms {
     //@note copied from derivedAxiomInfo.
     val derivedAxiomMap = HashMap(
       "<-> reflexive" -> Some(equivReflexiveF, equivReflexiveT)
+      , "-> distributes over &" -> Some(implyDistAndF, implyDistAndT)
       , "-> distributes over <->" -> Some(implyDistEquivF, implyDistEquivT)
+      , "-> weaken" -> Some(implWeakenF, implWeakenT)
       , "!! double negation" -> Some(doubleNegationF, doubleNegationT)
       , "exists dual" -> Some(existsDualF, existsDualT)
       , "!exists" -> Some(notExistsF, notExistsT)
@@ -354,6 +358,36 @@ object DerivedAxioms {
   )
 
   lazy val equivReflexiveT = derivedAxiomT(equivReflexiveAxiom)
+
+  /**
+   * {{{Axiom "-> distributes over &".
+   *  (p() -> (q()&r())) <-> ((p()->q()) & (p()->r()))
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val implyDistAndF = "(p() -> (q()&r())) <-> ((p()->q()) & (p()->r()))".asFormula
+  lazy val implyDistAndAxiom = derivedAxiom("-> distributes over &",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(implyDistAndF)),
+    prop
+  )
+
+  lazy val implyDistAndT = derivedAxiomT(implyDistAndAxiom)
+
+  /**
+   * {{{Axiom "-> weaken".
+   *  (p() -> q()) -> (p()&c() -> q())
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val implWeakenF = "(p() -> q()) -> ((p()&c()) -> q())".asFormula
+  lazy val implWeaken = derivedAxiom("-> weaken",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(implWeakenF)),
+    prop
+  )
+
+  lazy val implWeakenT = derivedAxiomT(implWeaken)
 
   /**
    * {{{Axiom "-> distributes over <->".
