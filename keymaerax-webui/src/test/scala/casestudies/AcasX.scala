@@ -346,12 +346,22 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val acasximplicit = shape(i)
     val acasxexplicit = shape(e)
 
+    //@note _0 variations in induction :-/
     val w0 = "W(w_0)".asFormula
     val i0 = "Ci(w_0,dhf_0)".asFormula
+    val e0 = "Ce(w_0,dhf_0)".asFormula
+    val u0 = "(h_0 < -hp | h_0 > hp | r_0 < -rp | r_0> rp)".asFormula
 
+    // (A()&W(w) -> Ce(w,dhf))  <->  (A()&W(w) -> Ci(w,dhf))
     val distEquivalence = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w), e), Imply(And(a,w),i)))),
       useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
     distEquivalence.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
+    // (A()&W(w) -> Ce(w,dhf) -> q())  <->  (A()&W(w) -> Ci(w,dhf) -> q())
+    //@todo turn into a lemma:
+    val distEquivImpl = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w0), Imply(e0, "q()".asFormula)), Imply(And(a,w0),Imply(i0,"q()".asFormula))))),
+      skip) //useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
+    //@todo distEquivImpl.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
+    println("distEquivImpl " + distEquivImpl)
 
 
     acasxexplicit match {
@@ -412,9 +422,34 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                 & debug("cutting away")
                 & cutAt(i0)(SuccPosition(0, 1::1::1::0::0::Nil)) & onBranch(
                 (BranchLabels.cutShowLbl, label("show patch") & debug("showing patch")
-                  & implyR(1) & andL(-3) & andR(1) & (
-                  closeId,
-                  hide(-3) & skip
+                  & useAt("-> distributes over &", PosInExpr(0::Nil))(1)
+                  & andR(1) & (
+                  implyR(1) & andL(-3) & closeId
+                  ,
+                  label("CMon")
+                  & useAt("& commute")(SuccPosition(0, 0::Nil))
+                    & useAt("-> weaken", PosInExpr(1::Nil))(1)
+                    & label("CMon")
+                    // like CMon(PosInExpr(1::1::1::0::0::Nil)) except with context
+                    & implyR(1)
+                    /*
+                    & (choiceb(1, 1::Nil) & choiceb(-3, 1::Nil))
+                    & (useAt("[:=] assign")(1, 1::0::Nil) & useAt("[:=] assign")(-3, 1::0::Nil))
+                    & (useAt("[:=] assign")(1, 1::1::Nil) & useAt("[:=] assign")(-3, 1::1::Nil))
+                    & (randomb(1) & randomb(-3))
+                    */
+                    & (useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0)) & useAt("[;] compose", PosInExpr(1::Nil))(AntePosition(2))) // gather
+                    & postCut(And(a,w0))(1) & onBranch(
+                    (BranchLabels.cutShowLbl, hide(-3) & hide(And(w0,And(u0,i0)))(-2) & chase(1) & label("gen") & closeId),
+                    (BranchLabels.cutUseLbl, label("generalized antecedent")
+                      & HilbertCalculus.testb(1, 1::1::Nil)
+                      & useAt(distEquivImpl.conclusion.succ.head, PosInExpr(0::Nil))(1, 1::Nil)
+                      & useAt("[?] test", PosInExpr(1::Nil))(1, 1::1::Nil)
+                      // drop a&w implication from postcondition again
+                      & useAt("K modal modus ponens", PosInExpr(0::Nil))(1) & implyR(1) & hide(-4)
+                      & close(-3, 1)
+                      )
+                  )
                   )
                   ),
                 (BranchLabels.cutUseLbl, label("use patch") &
@@ -422,8 +457,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                   useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) & useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil))
                   //& useAt("[;] compose", PosInExpr(0::Nil))(SuccPosition(0, 1::Nil))// ungather
                   & useAt("[++] choice", PosInExpr(1::Nil))(1) & useAt("[;] compose", PosInExpr(1::Nil))(1) & useAt("[;] compose", PosInExpr(1::Nil))(1) // repack
-                  & label("used patch") & debug("used patch")
-                  //@todo by implicit unrolling once
+                  & label("use patch") & debug("used patch")
+                  //@todo by unrolling implicit once
                   )
               )
                 ),
