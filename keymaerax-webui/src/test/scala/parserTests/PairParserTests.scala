@@ -7,6 +7,7 @@ package parserTests
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest.{FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags
 
@@ -20,6 +21,7 @@ import scala.collection.immutable._
 class PairParserTests extends FlatSpec with Matchers {
   val pp = KeYmaeraXPrettyPrinter
   val parser = KeYmaeraXParser
+  KeYmaera.init(Map.empty)
 
   def parseShouldBe(input: String, expr: Expression) = {
     val parse = parser(input)
@@ -140,7 +142,7 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x- -y-z","(x-(-y))-z"),
     ("x*-y*z","(x*(-y))*z"),
     ("x/-y/z","(x/(-y))/z"),
-    ("x^-y^z","x^((-y)^z)"),
+    ("x^-y^z","x^(-(y^z))"),
 
     ("\\forall x p(x)&q(x)", "(\\forall x p(x))&q(x)"),
     ("\\forall x p(x)|q(x)", "(\\forall x p(x))|q(x)"),
@@ -302,6 +304,13 @@ class PairParserTests extends FlatSpec with Matchers {
       ("[ p:=1; p:=2; ++ {p:=3;}*] p>0", "[ {p:=1; p:=2;} ++ {{p:=3;}*}] p>0"),
 
   // more tests
+
+    ("-x^2", "-(x^2)"),
+    ("-x^1", "-(x^1)"),
+    ("y+x^2", "y+(x^2)"),
+    ("y-x^2", "y-(x^2)"),
+    ("y*x^2", "y*(x^2)"),
+    ("y/x^2", "y/(x^2)"),
 
     ("[{x'=1,y'=2,z'=3}]x>0", "[{x'=1,{y'=2,z'=3}}]x>0"),
     ("[{x'=1,y'=2,z'=3&x<5}]x>0", "[{x'=1,{y'=2,z'=3}&x<5}]x>0"),
