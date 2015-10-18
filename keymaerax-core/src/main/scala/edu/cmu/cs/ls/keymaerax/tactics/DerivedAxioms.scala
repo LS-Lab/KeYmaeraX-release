@@ -162,6 +162,7 @@ object DerivedAxioms {
     case "<;> compose" => Some(composedF, composedT)
     case "<*> iterate" => Some(iteratedF, iteratedT)
     case "<*> approx" => Some(loopApproxdF, loopApproxdT)
+    case "[*] approx" => Some(loopApproxbF, loopApproxbT)
     case "exists generalize" => Some(existsGeneralizeF, existsGeneralizeT)
     //case "exists eliminate" => Some(existsEliminateF, existsEliminateT)
     case "all substitute" => Some(allSubstituteF, allSubstituteT)
@@ -271,6 +272,7 @@ object DerivedAxioms {
       , "<;> compose" -> Some(composedF, composedT)
       , "<*> iterate" -> Some(iteratedF, iteratedT)
       , "<*> approx" -> Some(loopApproxdF, loopApproxdT)
+      , "[*] approx" -> Some(loopApproxbF, loopApproxbT)
       , "exists generalize" -> Some(existsGeneralizeF, existsGeneralizeT)
       //@todo , "exists eliminate" -> Some(existsEliminateF, existsEliminateT)
       , "all substitute" -> Some(allSubstituteF, allSubstituteT)
@@ -1005,6 +1007,26 @@ object DerivedAxioms {
 
   lazy val loopApproxdT = derivedAxiomT(loopApproxd)
 
+
+  /**
+   * {{{Axiom "[*] approx".
+   *    [{a;}*]p(??) -> [a;]p(??)
+   * End.
+   * }}}
+   * @Derived
+   */
+  lazy val loopApproxbF = "[{a;}*]p(??) -> [a;]p(??)".asFormula
+  lazy val loopApproxb = derivedAxiom("[*] approx",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(loopApproxbF)),
+    useAt("[*] iterate")(SuccPosition(0, PosInExpr(0::Nil))) &
+      useAt("[*] iterate")(SuccPosition(0, PosInExpr(0::1::1::Nil))) &
+      cut("[a;](p(??) & [a;][{a;}*]p(??)) -> [a;]p(??)".asFormula) & onBranch(
+      (cutShowLbl, hideT(SuccPosition(0)) & ls(implyR) & boxMonotoneT & prop),
+      (cutUseLbl, prop)
+    )
+  )
+
+  lazy val loopApproxbT = derivedAxiomT(loopApproxb)
 
   //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
   //private def useAt(lem: ApplyRule[LookupLemma]): PositionTactic = TactixLibrary.useAt(lem.rule.lemma.fact)
