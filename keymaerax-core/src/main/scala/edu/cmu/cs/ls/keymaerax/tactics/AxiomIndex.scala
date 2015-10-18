@@ -113,7 +113,7 @@ object AxiomIndex {
     case "<*> stuck" => (PosInExpr(0::Nil), Nil)
     case "<'> stuck" => (PosInExpr(0::Nil), Nil)
 
-    case "[] post weaken" => (PosInExpr(1::Nil), unknown)
+    case "[] post weaken" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
 
     case "+<= up" | "-<= up" | "<=+ down" | "<=- down" => (PosInExpr(1::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::Nil)
 
