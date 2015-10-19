@@ -147,7 +147,7 @@ object OpSpec {
   val sDifferentialSymbol = UnaryOpSpec[Term](PRIME, 0, PostfixFormat, unterm, (v:Term) => DifferentialSymbol(v.asInstanceOf[Variable]))
   val sPair         = BinaryOpSpec[Term](COMMA,   888, RightAssociative, binterm, Pair.apply _)
   val sDifferential = UnaryOpSpec[Term] (PRIME,    10, PostfixFormat, unterm, Differential.apply _)
-  val sNeg          = UnaryOpSpec[Term] (MINUS,    21, PrefixFormat, unterm, Neg.apply _)
+  val sNeg          = UnaryOpSpec[Term] (MINUS,    49, PrefixFormat, unterm, Neg.apply _)
   val sPower        = BinaryOpSpec[Term](POWER,    20, RightAssociative/*!*/, binterm, Power.apply _)
   val sTimes        = BinaryOpSpec[Term](STAR,     40, LeftAssociative, binterm, Times.apply _)
   val sDivide       = BinaryOpSpec[Term](SLASH,    40, LeftAssociative/*!*/, binterm, Divide.apply _)
