@@ -57,6 +57,7 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x-y-z","(x-y)-z"),
     ("x/y/z","(x/y)/z"),
     ("x^2^4", "x^(2^4)"),
+    ("-x^2", "-(x^2)"),
     ("p()->q()->r()", "p()->(q()->r())"),
     ("p()<-q()<-r()", "(p()<-q())<-r()"),
     ("p()<->q()<->r()", unparseable),
@@ -71,6 +72,97 @@ class PairParserTests extends FlatSpec with Matchers {
     ("p()<->q()->r()", "p()<->(q()->r())"),
     ("p()->q()<->r()", "(p()->q())<->r()"),
     ("p()<->q()<-r()", "p()<->(q()<-r())"),
+
+
+    // full table
+    // unary meets unary
+    ("-x'", "-(x')"),
+    ("-(x)'", "-((x)')"),
+    // unary meets binary left
+    ("-x+y", "(-x)+y"),
+    ("-x-y", "(-x)-y"),
+    ("-x*y", "-(x*y)"),
+    ("-x/y", "-(x/y)"),
+    ("-x^y", "-(x^y)"),
+    // unary meets binary right
+    ("x+-y", "x+(-y)"),
+    ("x--y", "x-(-y)"),
+    ("x*-y", "x*(-y)"),
+    ("x/-y", "x/(-y)"),
+    ("x^-y", "x^(-y)"),
+    // unary meets binary left
+    ("x'+y", "(x')+y"),
+    ("x'-y", "(x')-y"),
+    ("x'*y", "(x')*y"),
+    ("x'/y", "(x')/y"),
+    ("x'^y", "(x')^y"),
+    // unary meets binary right
+    ("x+y'", "x+(y')"),
+    ("x-y'", "x-(y')"),
+    ("x*y'", "x*(y')"),
+    ("x/y'", "x/(y')"),
+    ("x^y'", "x^(y')"),
+
+    // binary meets binary from left
+    ("x+y+z", "(x+y)+z"),
+    ("x+y-z", "(x+y)-z"),
+    ("x+y*z", "x+(y*z)"),
+    ("x+y/z", "x+(y/z)"),
+    ("x+y^z", "x+(y^z)"),
+    // binary meets binary from right
+    ("x+y+z", "(x+y)+z"),
+    ("x-y+z", "(x-y)+z"),
+    ("x*y+z", "(x*y)+z"),
+    ("x/y+z", "(x/y)+z"),
+    ("x^y+z", "(x^y)+z"),
+    // binary meets binary from left
+    ("x-y+z", "(x-y)+z"),
+    ("x-y-z", "(x-y)-z"),
+    ("x-y*z", "x-(y*z)"),
+    ("x-y/z", "x-(y/z)"),
+    ("x-y^z", "x-(y^z)"),
+    // binary meets binary from right
+    ("x+y-z", "(x+y)-z"),
+    ("x-y-z", "(x-y)-z"),
+    ("x*y-z", "(x*y)-z"),
+    ("x/y-z", "(x/y)-z"),
+    ("x^y-z", "(x^y)-z"),
+    // binary meets binary from left
+    ("x*y+z", "(x*y)+z"),
+    ("x*y-z", "(x*y)-z"),
+    ("x*y*z", "(x*y)*z"),
+    ("x*y/z", "(x*y)/z"),
+    ("x*y^z", "x*(y^z)"),
+    // binary meets binary from right
+    ("x+y*z", "x+(y*z)"),
+    ("x-y*z", "x-(y*z)"),
+    ("x*y*z", "(x*y)*z"),
+    ("x/y*z", "(x/y)*z"),
+    ("x^y*z", "(x^y)*z"),
+    // binary meets binary from left
+    ("x/y+z", "(x/y)+z"),
+    ("x/y-z", "(x/y)-z"),
+    ("x/y*z", "(x/y)*z"),
+    ("x/y/z", "(x/y)/z"),
+    ("x/y^z", "x/(y^z)"),
+    // binary meets binary from right
+    ("x+y/z", "x+(y/z)"),
+    ("x-y/z", "x-(y/z)"),
+    ("x*y/z", "(x*y)/z"),
+    ("x/y/z", "(x/y)/z"),
+    ("x^y/z", "(x^y)/z"),
+    // binary meets binary from left
+    ("x^y+z", "(x^y)+z"),
+    ("x^y-z", "(x^y)-z"),
+    ("x^y*z", "(x^y)*z"),
+    ("x^y/z", "(x^y)/z"),
+    ("x^y^z", "x^(y^z)"),
+    // binary meets binary from right
+    ("x+y^z", "x+(y^z)"),
+    ("x-y^z", "x-(y^z)"),
+    ("x*y^z", "x*(y^z)"),
+    ("x/y^z", "x/(y^z)"),
+    ("x^y^z", "x^(y^z)"),
 
 
     // reasonably systematic
@@ -117,16 +209,16 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x- -y-z","(x-(-y))-z"),
     ("x+y- -z","(x+y)-(-z)"),
     ("x-y- -z","(x-y)-(-z)"),
-    ("-x*y+z","((-x)*y)+z"),
+    ("-x*y+z","(-(x*y))+z"),
     ("x*-y-z","(x*(-y))-z"),
     ("x+y*-z","x+(y*(-z))"),
     ("x-y*-z","x-(y*(-z))"),
-    ("-x/y+z","((-x)/y)+z"),
+    ("-x/y+z","(-(x/y))+z"),
     ("x/-y-z","(x/(-y))-z"),
     ("-x+y/z","(-x)+(y/z)"),
     ("x-y/-z","x-(y/(-z))"),
-    ("-x*y*z","((-x)*y)*z"),
-    ("x*-y/z","(x*(-y))/z"),
+    ("-x*y*z","-((x*y)*z)"),
+    ("x*-y/z","x*(-(y/z))"),     // subtle  (x*(-y))/z
     ("x/y/-z","(x/y)/(-z)"),
     ("x/y*-z","(x/y)*(-z)"),
     ("x*-/y", unparseable),
@@ -144,8 +236,8 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x-y- -z","(x-y)-(-z)"),
     ("x- -y- -z","(x-(-y))-(-z)"),
     ("-x- -y- -z","((-x)-(-y))-(-z)"),
-    ("x*-y*z","(x*(-y))*z"),
-    ("-x*y*z","((-x)*y)*z"),
+    ("x*-y*z","x*(-(y*z))"),   // subtle (x*(-y))*z
+    ("-x*y*z","-((x*y)*z)"),        // subtle ((-x)*y)*z
     ("x*y*-z","(x*y)*(-z)"),
 
     // primes
@@ -158,7 +250,7 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x'*y*z","(x'*y)*z"),
     ("x*y'*z","(x*(y'))*z"),
     ("x*y*z'","(x*y)*(z')"),
-    ("x/-y/z","(x/(-y))/z"),
+    ("x/-y/z","x/(-(y/z))"),   // subtle "(x/(-y))/z"
     ("x^-y^z","x^(-(y^z))"),
 
     ("-x'", "-(x')"),
@@ -381,6 +473,7 @@ class PairParserTests extends FlatSpec with Matchers {
     ("y-x^2", "y-(x^2)"),
     ("y*x^2", "y*(x^2)"),
     ("y/x^2", "y/(x^2)"),
+    ("-x*y", "-(x*y)"),
 
     ("[{x'=1,y'=2,z'=3}]x>0", "[{x'=1,{y'=2,z'=3}}]x>0"),
     ("[{x'=1,y'=2,z'=3&x<5}]x>0", "[{x'=1,{y'=2,z'=3}&x<5}]x>0"),
