@@ -336,13 +336,36 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       """.asFormula)
     val u = "(h < -hp | h > hp | r < -rp | r> rp)".asFormula
     val equivalence = "A()&W(w) -> (Ce(w,dhf/*r,dhd,h,dhf,w,ao*/)<->Ci(w,dhf/*r,dhd,h,dhf,w,ao*/))".asFormula
+    val equivalenceP = Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence)))
     val Imply(And(a,w), Equiv(e,i)) = equivalence
+    // read off more lemmas from equivalence
+
     //@note same proof of seqEquivalence as in "derive sequent version of conditional equivalence"
-    val seqEquivalence = (Provable.startProof(Sequent(Nil, IndexedSeq(a, w), IndexedSeq(Equiv(e,i)))))
-    val postEquivalence = (Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(
+    val seqEquivalence = (Provable.startProof(Sequent(Nil, IndexedSeq(a, w), IndexedSeq(Equiv(e,i))))
+    (Cut(equivalence), 0)
+    // right branch reduces to the proof of "equivalence"
+    (CoHideRight(SuccPos(1)), 1)
+    // left branch follows from "equivalence"
+    (ImplyLeft(AntePos(2)), 0)
+    // third branch e<->i |- e<->i
+    (Close(AntePos(2), SuccPos(0)), 2)
+    // second branch a,w |- e<->i, a&w
+    (AndRight(SuccPos(1)), 0)
+    // second-right branch a,w |- e<->i, w
+    (Close(AntePos(1), SuccPos(1)), 2)
+    // second-left branch a,w |- e<->i, a
+    (Close(AntePos(0), SuccPos(1)), 0)
+    )
+    seqEquivalence.subgoals shouldBe equivalenceP.subgoals
+    val shuffle = TactixLibrary.proveBy("(A()&W()->(Ce()<->Ci())) -> ((W()->A()->u()&Ci()) <-> (W()->A()->u()&Ce()))".asFormula, prop)
+    shuffle shouldBe 'proved
+    // (W(w)->A->u&Ci(w,dhf)) <-> (W(w)->A->u&Ce(w,dhf))
+    val postEquivalence = TactixLibrary.proveBy(
       Equiv(Imply(w,Imply(a, And(u, i))),
             Imply(w,Imply(a, And(u, e))))
-    ))))
+      , useAt(shuffle, PosInExpr(1::Nil))(1)
+        & by(seqEquivalence))
+    postEquivalence.subgoals shouldBe equivalenceP.subgoals
     val acasximplicit = shape(i)
     val acasxexplicit = shape(e)
 
@@ -355,14 +378,19 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     // (A()&W(w) -> Ce(w,dhf))  <->  (A()&W(w) -> Ci(w,dhf))
     val distEquivalence = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w), e), Imply(And(a,w),i)))),
       useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
-    distEquivalence.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
+    distEquivalence.subgoals shouldBe equivalenceP.subgoals
+    val shuffle2 = TactixLibrary.proveBy("(A()&W()->(Ce()<->Ci())) -> ((A()&W() -> Ce() -> q()) <-> (A()&W() -> Ci() -> q()))".asFormula, prop)
+    shuffle2 shouldBe 'proved
     // (A()&W(w_0) -> Ce(w_0,dhf_0) -> q())  <->  (A()&W(w_0) -> Ci(w_0,dhf_0) -> q())
     //@todo turn into a lemma:
-    val distEquivImpl = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w0), Imply(e0, "q()".asFormula)), Imply(And(a,w0),Imply(i0,"q()".asFormula))))),
-      skip) //useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
-    //@todo distEquivImpl.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
+    val distEquivImpl = (TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w0), Imply(e0, "q()".asFormula)), Imply(And(a,w0),Imply(i0,"q()".asFormula))))),
+      // //useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
+      useAt(shuffle2, PosInExpr(1::Nil))(1)
+        & byUS(equivalenceP)))
+    distEquivImpl.subgoals shouldBe equivalenceP.subgoals
     println("distEquivImpl " + distEquivImpl)
 
+    // begin actual proof
 
     acasxexplicit match {
       case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == e && c2 == e =>
@@ -415,7 +443,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
           (BranchLabels.cutUseLbl, sublabel("A()&W(w) augmented") & assertT(And(w,e), "W&Ce")(-2) & andL(-2) & debug("inductive use of A&W") &
             cutL(i)(-3) & onBranch(
-            (BranchLabels.cutShowLbl, hide(1) & label("by seq-equiv") & by(seqEquivalence)),
+            (BranchLabels.cutShowLbl, hide(1) & label("by seq-equiv") & equivifyR(1) & by(seqEquivalence)),
             (BranchLabels.cutUseLbl, sublabel("Ce~>Ci reduction") &
               CE(postEquivalence)(SuccPosition(0, 1::Nil))
               & debug("unpack and repack to replace test") &
@@ -431,10 +459,10 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                   & useAt("-> distributes over &", PosInExpr(0::Nil))(1)
                   & andR(1) & (
                   // left branch is unchanged
-                  label("cutAt no change on left") & implyR(1) & andL(-3) & closeId
+                  sublabel("cutAt no change on left") & implyR(1) & andL(-3) & closeId
                   ,
                   // right branch replaced implicit with explicit conditionally
-                  label("CMon")
+                  sublabel("CMon++")
                     & useAt("& commute")(SuccPosition(0, 0::Nil))
                     & useAt("-> weaken", PosInExpr(1::Nil))(1)
                     & label("CMon")
@@ -448,6 +476,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     */
                     // gather
                     & (useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0)) & useAt("[;] compose", PosInExpr(1::Nil))(AntePosition(2)))
+                    & sublabel("postCut A()&W(w0)")
                     & postCut(And(a,w0))(1) & onBranch(
                     (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)") & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & chase(1) & label("gen") & closeId),
                     (BranchLabels.cutUseLbl, sublabel("generalized A()&W(w0)->post")
