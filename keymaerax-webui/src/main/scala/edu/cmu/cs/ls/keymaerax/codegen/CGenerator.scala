@@ -205,7 +205,8 @@ object CGenerator extends CodeGenerator {
   /** Declaration of function calls using the list of function call names */
   private def FuncCallDeclaration(calledFuncs: Set[NamedSymbol], cDataType: String): String = {
     if(calledFuncs.nonEmpty) {
-      val FuncCallDeclaration = calledFuncs.map(
+      // stable ordering by NamedSymbol.compare
+      val FuncCallDeclaration = calledFuncs.toList.sorted.map(
         s => s match {
           case x: Variable => convertSorts(x.sort, cDataType) + " " + nameIdentifier(x) + "()"
           case f: Function if !isPredefFuncs(nameIdentifier(f)) =>

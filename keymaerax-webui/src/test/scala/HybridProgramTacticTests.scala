@@ -359,6 +359,16 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sucSequent("\\forall y y>0".asFormula))
   }
 
+  it should "handle assignments in front of non-binding programs" in {
+    val s = Sequent(Nil, immutable.IndexedSeq(),
+      immutable.IndexedSeq("[w:=1;][?w>0;]w>0".asFormula))
+
+    val result = helper.runTactic(substitutionBoxAssignT(1), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "[?1>0;]1>0".asFormula
+  }
+
   "Substitution diamond assignment" should "work on self assignment" in {
     val assignT = locateSucc(HybridProgramTacticsImpl.substitutionDiamondAssignT)
     getProofSequent(assignT, new RootNode(sucSequent("<y:=y;>y>0".asFormula))) should be (sucSequent("y>0".asFormula))

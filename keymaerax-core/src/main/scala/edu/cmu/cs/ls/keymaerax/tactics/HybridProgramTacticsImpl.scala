@@ -803,13 +803,13 @@ object HybridProgramTacticsImpl {
         t match {
           case tv: Variable if v == tv => instance // self assignment no-op is ok in any case
           case _ => pred match {
+            // if v is not bound at all, substitution is ok
+            case _ if !StaticSemantics(pred).bv.contains(v) => instance
             // is v must-bound by something that is not an ODE? if so, check that term is not bound, so substitution ok
             case Box(a, _)     if firstMBVAtomicProgInFml(pred, v).nonEmpty && firstMBVAtomicProgInFml(pred, v).forall({case ODESystem(_, _) => false case _ => true}) => checkTerm(v, pred, t, instance)
             case Box(a, _)     /* otherwise */ => False
             case Diamond(a, _) if firstMBVAtomicProgInFml(pred, v).nonEmpty && firstMBVAtomicProgInFml(pred, v).forall({case ODESystem(_, _) => false case _ => true}) => checkTerm(v, pred, t, instance)
             case Diamond(a, _) /* otherwise */ => False
-            // if v is not bound at all, substitution is ok
-            case _ if !StaticSemantics(pred).bv.contains(v) => instance
             // must-bound for non-modal formulas, must be after modal cases
             case _ if  StaticSemantics(pred).bv.contains(v) && !StaticSemantics(pred).fv.contains(v) => checkTerm(v, pred, t, instance)
             case _ => False
