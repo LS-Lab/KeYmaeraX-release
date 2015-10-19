@@ -356,7 +356,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val distEquivalence = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w), e), Imply(And(a,w),i)))),
       useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
     distEquivalence.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
-    // (A()&W(w) -> Ce(w,dhf) -> q())  <->  (A()&W(w) -> Ci(w,dhf) -> q())
+    // (A()&W(w_0) -> Ce(w_0,dhf_0) -> q())  <->  (A()&W(w_0) -> Ci(w_0,dhf_0) -> q())
     //@todo turn into a lemma:
     val distEquivImpl = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w0), Imply(e0, "q()".asFormula)), Imply(And(a,w0),Imply(i0,"q()".asFormula))))),
       skip) //useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
@@ -398,7 +398,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                 sublabel("& left") & testb(1) & implyR(1) & closeId
                 ,
                 sublabel("& right") &
-                composeb(1) & composeb(SuccPosition(0, 1::Nil)) & generalize(w0)(1) & onBranch(
+                  composeb(1) & composeb(SuccPosition(0, 1::Nil)) & generalize(w0)(1) & onBranch(
                   (BranchLabels.genUse, useAt("V[:*] vacuous assign nondet")(1) & closeId),
                   (BranchLabels.genShow, generalize(w0)(1) & onBranch(
                     (BranchLabels.genShow, V(1) & closeId),
@@ -435,7 +435,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                   ,
                   // right branch replaced implicit with explicit conditionally
                   label("CMon")
-                  & useAt("& commute")(SuccPosition(0, 0::Nil))
+                    & useAt("& commute")(SuccPosition(0, 0::Nil))
                     & useAt("-> weaken", PosInExpr(1::Nil))(1)
                     & label("CMon")
                     // like CMon(PosInExpr(1::1::1::0::0::Nil)) except with context
@@ -452,6 +452,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)") & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & chase(1) & label("gen") & closeId),
                     (BranchLabels.cutUseLbl, sublabel("generalized A()&W(w0)->post")
                       & HilbertCalculus.testb(1, 1::1::Nil)
+                      & debug("do use dist equiv impl")
                       & useAt(distEquivImpl.conclusion.succ.head, PosInExpr(0::Nil))(1, 1::Nil)
                       & debug("used dist equiv impl")
                       & useAt("[?] test", PosInExpr(1::Nil))(1, 1::1::Nil)
@@ -477,22 +478,33 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                   & cut(acasximplicit.asInstanceOf[Imply].right) & onBranch(
                   (BranchLabels.cutShowLbl,
                     sublabel("show implicit applicable") &
-                    // prove A()&(W(w)&Ci(w,dhf))
-                    andR(2) & (
-                      label("A id") & close(-1,2)
-                      ,
-                      // split W(w)&u&Ci finally
-                      andL(-2) & andL(-4) &
-                      andR(2) & (
-                        label("W(w) id") & close(-2,2)
-                        ,
-                        andR(2) & (
-                          label("arithmetic")
+                      hide(1) &
+                      cut(acasximplicit) & onBranch(
+                      (BranchLabels.cutShowLbl, cohide(2) & sublabel("lookup lemma")),
+                      (BranchLabels.cutUseLbl,
+                        debug("show implicit applicable") &
+                          implyL(-3) & (
+                          hide(1) &
+                            // prove A()&(W(w)&Ci(w,dhf))
+                            andR(1) & (
+                            label("A id") & close(-1,1)
                             ,
-                          label("Ci id") & close(-5,2)
-                          )
+                            // split W(w)&u&Ci finally
+                            andL(-2) & andL(-3) &
+                              andR(1) & (
+                              label("W(w) id") & close(-2,1)
+                              ,
+                              andR(1) & (
+                                label("arithmetic")
+                                ,
+                                label("Ci id") & close(-4,1)
+                                )
+                              )
+                            )
+                          ,
+                          closeId)
                         )
-                      )
+                    )
                     ),
                   (BranchLabels.cutUseLbl, sublabel("by implicit") & useAt("[*] approx")(-3) & close(-3,1))
                 )
