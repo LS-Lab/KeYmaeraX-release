@@ -463,11 +463,16 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                   ,
                   // right branch replaced implicit with explicit conditionally
                   sublabel("CMon++")
+                    & debug("CMon++")
                     & useAt("& commute")(SuccPosition(0, 0::Nil))
+                    & debug("& commuted")
                     & useAt("-> weaken", PosInExpr(1::Nil))(1)
-                    & label("CMon")
+                    & debug("-> weakened")
+                    & label("CMon") & debug("CMon")
+                    & sublabel("-> weakened")
                     // like CMon(PosInExpr(1::1::1::0::0::Nil)) except with context
                     & implyR(1)
+                    & debug("->R ed")
                     /*
                     & (choiceb(1, 1::Nil) & choiceb(-3, 1::Nil))
                     & (useAt("[:=] assign")(1, 1::0::Nil) & useAt("[:=] assign")(-3, 1::0::Nil))
@@ -475,8 +480,10 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     & (randomb(1) & randomb(-3))
                     */
                     // gather
+                    & sublabel("gathering") & debug("gathering")
                     & (useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0)) & useAt("[;] compose", PosInExpr(1::Nil))(AntePosition(2)))
-                    & sublabel("postCut A()&W(w0)")
+                    & debug("gathered")
+                    & sublabel("postCut A()&W(w0)") & debug("postCut A()&W(w0")
                     & postCut(And(a,w0))(1) & onBranch(
                     (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)") & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & chase(1) & label("gen") & closeId),
                     (BranchLabels.cutUseLbl, sublabel("generalized A()&W(w0)->post")
@@ -489,7 +496,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                       //& useAt("K modal modus ponens", PosInExpr(0::Nil))(1) & implyR(1) & hide(-4)
                       & sublabel("[] post weaken")
                       & debug("do [] post weaken")
-                      & useAt("[] post weaken")(1, Nil/*1::1::1::Nil*/)
+                      & useAt("[] post weaken")(1, /*Nil*/1::1::1::Nil)
                       & close(-3, 1)
                       )
                   )
