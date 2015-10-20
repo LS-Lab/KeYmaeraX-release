@@ -27,7 +27,7 @@ case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends Belle
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr
 case class OptionalTactic(child: BelleExpr) extends BelleExpr
 case class USubstPatternTactic(options: Seq[(BelleType, BelleExpr)]) extends BelleExpr
-case class ParametricTactic(t: BelleTypeVariable, child: BelleExpr) extends BelleExpr
+case class ParametricTactic(t: BelleTypeVariable, body: BelleExpr) extends BelleExpr
 case class ParaAppTactic(fn : ParametricTactic, arg: BelleType) extends BelleExpr
 case class ProductProjection(left: BelleExpr, right: BelleExpr) extends BelleExpr
 
