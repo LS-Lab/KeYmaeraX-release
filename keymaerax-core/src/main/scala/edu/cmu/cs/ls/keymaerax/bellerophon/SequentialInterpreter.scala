@@ -6,7 +6,7 @@ import scala.annotation.tailrec
 
 /**
  * An implementation of the evaluation semantics given in the Bellerophon paper.
- * @note Written so that it is easy to step through.
+ * @note Written so that it is easy to step through with a debugger.
  * @author Nathan Fulton
  */
 class SequentialInterpreter extends Interpreter {
@@ -33,6 +33,7 @@ class SequentialInterpreter extends Interpreter {
       }
     }
     case ParallelTactic(left, right) => {
+      // one possible implementation consistent with parallel
       apply(EitherTactic(left, right), vs)
     }
     case ExactIterTactic(child, count) => {
