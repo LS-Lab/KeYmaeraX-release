@@ -56,8 +56,9 @@ class SequentialInterpreter extends Interpreter {
       }
     }
     case USubstPatternTactic(options) => {
-      val firstMatch = options.find(pi => TypeChecker.findSubst(pi._1, toBelleProvables(vs).map(_.p)).isDefined)
-      firstMatch match {
+      val vsAsProvables : Seq[Provable] = toBelleProvables(vs).map(_.p)
+      val firstUsubstMatch = options.find(pi => TypeChecker.findSubst(pi._1, vsAsProvables).isDefined)
+      firstUsubstMatch match {
         case Some(pair) => apply(pair._2, vs)
         case None => throw BelleError("USubst case distinction failed.")
       }
