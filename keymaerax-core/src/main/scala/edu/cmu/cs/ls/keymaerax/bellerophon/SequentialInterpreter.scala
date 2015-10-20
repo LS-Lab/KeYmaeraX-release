@@ -87,10 +87,12 @@ class SequentialInterpreter extends Interpreter {
                                     values: Seq[BelleProvable],
                                     annotation: BelleType): Seq[BelleValue] =
   {
-    if(TypeChecker.findSubst(annotation, values.map(_.p)).isDefined)
-      values
-    else
-      tailrecSaturate(child, toBelleProvables(apply(child, values)), annotation)
+    val oneStep = toBelleProvables(apply(child, values))
+    if(oneStep == values) {
+      if(TypeChecker.findSubst(annotation, values.map(_.p)).isDefined) values
+      else throw BelleError("Result should have matched result type annotation after reaching fixed point.")
+    }
+    else tailrecSaturate(child, oneStep, annotation)
   }
 
 
