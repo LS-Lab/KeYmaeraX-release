@@ -26,10 +26,10 @@ case class ExactIterTactic(child: BelleExpr, count: Int) extends BelleExpr
 case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends BelleExpr
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr
 case class OptionalTactic(child: BelleExpr) extends BelleExpr
-case class USubstPatternTactic(v: Formula, options: Seq[(Formula, BelleExpr)]) extends BelleExpr
+case class USubstPatternTactic(options: Seq[(BelleType, BelleExpr)]) extends BelleExpr
 case class ParametricTactic(t: BelleTypeVariable, child: BelleExpr) extends BelleExpr
 case class ParaAppTactic(fn : ParametricTactic, arg: BelleType) extends BelleExpr
-case class ProductCase(product: BelleValue, left: BelleExpr, right: BelleExpr) extends BelleExpr
+case class ProductProjection(left: BelleExpr, right: BelleExpr) extends BelleExpr
 
 abstract trait BelleValue
 case class BelleProvable(p : Provable) extends BelleExpr with BelleValue

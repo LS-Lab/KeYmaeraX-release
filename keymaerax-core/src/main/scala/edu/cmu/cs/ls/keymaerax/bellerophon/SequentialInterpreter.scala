@@ -10,19 +10,19 @@ import scala.annotation.tailrec
  * @author Nathan Fulton
  */
 class SequentialInterpreter extends Interpreter {
-  override def apply(expr: BelleExpr, inputValues: Seq[BelleValue]) : Seq[BelleValue] = expr match {
+  override def apply(expr: BelleExpr, vs: Seq[BelleValue]) : Seq[BelleValue] = expr match {
     case SeqTactic(left, right) => {
-      val leftResult  = apply(left, inputValues)
+      val leftResult  = apply(left, vs)
       apply(right, leftResult)
     }
     case EitherTactic(left, right) => {
       try {
-        Seq(LeftResult(apply(left, inputValues)))
+        Seq(LeftResult(apply(left, vs)))
       }
       catch {
         case leftError : BelleError => {
           try {
-            Seq(RightResult(apply(right, inputValues)))
+            Seq(RightResult(apply(right, vs)))
           }
           catch {
             case rightError : BelleError => {
@@ -33,30 +33,48 @@ class SequentialInterpreter extends Interpreter {
       }
     }
     case ParallelTactic(left, right) => {
-      apply(EitherTactic(left, right), inputValues)
+      apply(EitherTactic(left, right), vs)
     }
     case ExactIterTactic(child, count) => {
       if(count < 0) throw new Exception("Expected non-negative count")
-      if(count == 0) inputValues
-      else tailrecNTimes(child, inputValues, count)
+      if(count == 0) vs
+      else tailrecNTimes(child, vs, count)
     }
     case SaturateTactic(child, annotation) =>
-      tailrecSaturate(child, toBelleProvables(inputValues), annotation)
+      tailrecSaturate(child, toBelleProvables(vs), annotation)
     case BranchTactic(children) =>
-      if(inputValues.length == children.length)
-        (children zip inputValues) flatMap (ci => apply(ci._1, Seq(ci._2)))
+      if(vs.length == children.length)
+        (children zip vs) flatMap (ci => apply(ci._1, Seq(ci._2)))
       else
-        throw BelleError(s"Length mismatch on branching tactic: have ${inputValues.length} values but ${children.length} tactics")
+        throw BelleError(s"Length mismatch on branching tactic: have ${vs.length} values but ${children.length} tactics")
     case OptionalTactic(child) => {
       try {
-        apply(child, inputValues)
+        apply(child, vs)
       }
       catch {
-        case e: BelleError => inputValues
+        case e: BelleError => vs
       }
     }
-
+    case USubstPatternTactic(options) => {
+      val firstMatch = options.find(pi => TypeChecker.findSubst(pi._1, toBelleProvables(vs).map(_.p)).isDefined)
+      firstMatch match {
+        case Some(pair) => apply(pair._2, vs)
+        case None => throw BelleError("USubst case distinction failed.")
+      }
+    }
+    case ParametricTactic(options) =>
+      throw BelleError("Tried to apply a type-abstracted expression to a value.")
+    case ParaAppTactic(fn, arg) =>
+      ???
+    case ProductProjection(le, re) => uniquev(vs) match {
+      case LeftResult(l)  => apply(le, l)
+      case RightResult(r) => apply(re, r)
+    }
   }
+
+  private def uniquev(values : Seq[BelleValue]) =
+    if(values.length != 1) throw BelleError(s"Expected 1 (one) value but found ${values.length}")
+    else values.head
 
   private def toBelleProvables(values : Seq[BelleValue]) = values.map(_ match {
     case x : BelleProvable => x
