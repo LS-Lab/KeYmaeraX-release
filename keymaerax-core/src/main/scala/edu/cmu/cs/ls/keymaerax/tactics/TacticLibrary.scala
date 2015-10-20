@@ -749,19 +749,23 @@ object TacticLibrary {
           val cutted = Box(a, cutf)
           val cutical = AntePosition(node.sequent.ante.length + 1)
           Some(cutR(conditioned)(p) & onBranch(
-            (BranchLabels.cutShowLbl, label("") & implyR(p) & cutR(cutted)(p) & onBranch(
-              (BranchLabels.cutUseLbl/*cutShowLbl?*/, label("") & /*implyR(p) &*/ debugT("showing post cut") &
+            (BranchLabels.cutShowLbl, label("") & assertT(Imply(conditioned,Box(a,post)),"original implication")(p) &
+              implyR(p) & assertT(Box(a,post), "original postcondition expected")(p) & assertT(conditioned, "[a](cut->post)")(conditional)
+              & cutR(cutted)(p) & onBranch(
+              (BranchLabels.cutUseLbl/*cutShowLbl?*/, label("") & assertT(cutted,"show [a]cut")(p) & /*implyR(p) &*/ debugT("showing post cut") &
                 hide(conditioned)(conditional) & label(BranchLabels.cutShowLbl)),
-              (BranchLabels.cutShowLbl/*cutUseLbl?*/, label("") &
+              (BranchLabels.cutShowLbl/*cutUseLbl?*/, (label("") & assertT(Imply(cutted,Box(a,post)),"[a]cut->[a]post")(p) &
                 //debug("inversing implies") & PropositionalTacticsImpl.InverseImplyRightT(cutical, p)
                 //useAt("K modal modus ponens", PosInExpr(1::Nil))(p) &
-                debug("K away") &
-                useAt("K modal modus ponens", PosInExpr(0::Nil))(conditional) &
-                debug("closing by K") &
-                closeId // close(conditional, p.asInstanceOf[SuccPosition])
+                debug("K reduction") &
+                useAt("K modal modus ponens", PosInExpr(1::Nil))(p) &
+                assertT(Box(a, Imply(cutf,post)), "[a](cut->post)")(p) &
+                debug("closing by K assumption") &
+                closeId  //(conditional, p.asInstanceOf[SuccPosition])
+                ) ~ errorT("should close")
                 )
             )),
-            (BranchLabels.cutUseLbl, label(BranchLabels.cutUseLbl))
+            (BranchLabels.cutUseLbl, assertT(conditioned, "[a](cut->post)")(p) & label(BranchLabels.cutUseLbl))
           ))
         case _ => None
       }
