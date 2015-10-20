@@ -59,7 +59,7 @@ object TactixLibrary extends UnifyUSCalculus {
     * @see [[UnifyUSCalculus]]
     *******************************************************************/
 
-  /** US: uniform substitution
+  /** US: uniform substitution ([[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule USubst]])
     * @see [[UnifyUSCalculus]]
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]]
     * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
@@ -125,44 +125,44 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val hide               : PositionTactic = TacticLibrary.hideT
   /** Hide/weaken given formula at given position */
   def hide(fml: Formula)      : PositionTactic = assertT(fml, "hiding expects given formula") ~ TacticLibrary.hideT
-  /** Hide/weaken left: weaken a formula to drop it from the antecedent @see [[edu.cmu.cs.ls.keymaerax.core.HideLeft]] */
+  /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
   lazy val hideL              : PositionTactic = TacticLibrary.hideT
-  /** Hide/weaken right: weaken a formula to drop it from the succcedent @see [[edu.cmu.cs.ls.keymaerax.core.HideRight]] */
+  /** Hide/weaken right: weaken a formula to drop it from the succcedent ([[edu.cmu.cs.ls.keymaerax.core.HideRight HideRight]]) */
   lazy val hideR              : PositionTactic = TacticLibrary.hideT
-  /** CoHide/coweaken whether left or right: drop all other formulas from the sequent @see [[edu.cmu.cs.ls.keymaerax.core.CoHideLeft]] */
+  /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
   lazy val cohide             : PositionTactic = PropositionalTacticsImpl.cohideT
-  /** !L Not left: move an negation in the antecedent to the succedent @see [[edu.cmu.cs.ls.keymaerax.core.NotLeft]] */
+  /** !L Not left: move an negation in the antecedent to the succedent ([[edu.cmu.cs.ls.keymaerax.core.NotLeft NotLeft]]) */
   lazy val notL               : PositionTactic = TacticLibrary.NotLeftT
-  /** !R Not right: move an negation in the succedent to the antecedent @see [[edu.cmu.cs.ls.keymaerax.core.NotRight]] */
+  /** !R Not right: move an negation in the succedent to the antecedent ([[edu.cmu.cs.ls.keymaerax.core.NotRight NotRight]]) */
   lazy val notR               : PositionTactic = TacticLibrary.NotRightT
-  /** &L And left: split a conjunction in the antecedent into separate assumptions @see [[edu.cmu.cs.ls.keymaerax.core.AndLeft]] */
+  /** &L And left: split a conjunction in the antecedent into separate assumptions ([[edu.cmu.cs.ls.keymaerax.core.AndLeft AndLeft]]) */
   lazy val andL               : PositionTactic = TacticLibrary.AndLeftT
-  /** &R And right: prove a conjunction in the succedent on two separate branches @see [[edu.cmu.cs.ls.keymaerax.core.AndRight]] */
+  /** &R And right: prove a conjunction in the succedent on two separate branches ([[edu.cmu.cs.ls.keymaerax.core.AndRight AndRight]]) */
   lazy val andR               : PositionTactic = TacticLibrary.AndRightT
-  /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches @see [[edu.cmu.cs.ls.keymaerax.core.OrLeft]] */
+  /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches ([[edu.cmu.cs.ls.keymaerax.core.OrLeft OrLeft]]) */
   lazy val orL                : PositionTactic = TacticLibrary.OrLeftT
-  /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively @see [[edu.cmu.cs.ls.keymaerax.core.OrRight]] */
+  /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively ([[edu.cmu.cs.ls.keymaerax.core.OrRight OrRight]]) */
   lazy val orR                : PositionTactic = TacticLibrary.OrRightT
-  /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch @see [[edu.cmu.cs.ls.keymaerax.core.ImplyLeft]] */
+  /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch ([[edu.cmu.cs.ls.keymaerax.core.ImplyLeft ImplyLeft]]) */
   lazy val implyL             : PositionTactic = TacticLibrary.ImplyLeftT
-  /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side @see [[edu.cmu.cs.ls.keymaerax.core.ImplyRight]] */
+  /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side ([[edu.cmu.cs.ls.keymaerax.core.ImplyRight ImplyRight]]) */
   lazy val implyR             : PositionTactic = TacticLibrary.ImplyRightT
-  /** <->L Equiv left: use an equivalence by considering both true or both false cases @see [[edu.cmu.cs.ls.keymaerax.core.EquivLeft]] */
+  /** <->L Equiv left: use an equivalence by considering both true or both false cases ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]]) */
   lazy val equivL             : PositionTactic = TacticLibrary.EquivLeftT
-  /** <->R Equiv right: prove an equivalence by proving both implications @see [[edu.cmu.cs.ls.keymaerax.core.EquivRight]] */
+  /** <->R Equiv right: prove an equivalence by proving both implications ([[edu.cmu.cs.ls.keymaerax.core.EquivRight EquivRight]]) */
   lazy val equivR             : PositionTactic = TacticLibrary.EquivRightT
 
-  /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds @see [[edu.cmu.cs.ls.keymaerax.core.Cut]] */
+  /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds ([[edu.cmu.cs.ls.keymaerax.core.Cut Cut]]) */
   def cut(cut : Formula)      : Tactic         = TacticLibrary.cutT(Some(cut))
-  /** cut a formula in in place of pos on the right to prove it on one branch and then assume it on the other. @see [[edu.cmu.cs.ls.keymaerax.core.CutRight]] */
+  /** cut a formula in in place of pos on the right to prove it on one branch and then assume it on the other. ([[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]) */
   def cutR(cut : Formula)     : PositionTactic  = PropositionalTacticsImpl.cutRightT(cut)
-  /** cut a formula in in place of pos on the left to prove it on one branch and then assume it on the other. @see [[edu.cmu.cs.ls.keymaerax.core.CutLeft]] */
+  /** cut a formula in in place of pos on the left to prove it on one branch and then assume it on the other. ([[edu.cmu.cs.ls.keymaerax.core.CutLeft CutLeft]]) */
   def cutL(cut : Formula)     : PositionTactic  = PropositionalTacticsImpl.cutLeftT(cut)
-  /** cut a formula in in place of pos to prove it on one branch and then assume it on the other (whether pos is left or right). @see [[edu.cmu.cs.ls.keymaerax.core.CutLeft]] @see [[edu.cmu.cs.ls.keymaerax.core.CutRight]] */
+  /** cut a formula in in place of pos to prove it on one branch and then assume it on the other (whether pos is left or right). ([[edu.cmu.cs.ls.keymaerax.core.CutLeft CutLeft]] or [[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]) */
   def cutLR(cut : Formula)    : PositionTactic  = PropositionalTacticsImpl.cutLeftRight(cut)
 
   // quantifiers
-  /** all right: Skolemize a universal quantifier in the succedent @see [[edu.cmu.cs.ls.keymaerax.core.Skolemize]] */
+  /** all right: Skolemize a universal quantifier in the succedent ([[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemize]]) */
   lazy val allR               : PositionTactic = TacticLibrary.skolemizeT
   /** all left: instantiate a universal quantifier in the antecedent by a concrete instance */
   def allL(x: Variable, inst: Term) : PositionTactic = TacticLibrary.instantiateQuanT(x, inst)
@@ -238,11 +238,11 @@ object TactixLibrary extends UnifyUSCalculus {
 
   // axiomatic rules
 
-  /** G: Goedel rule proves the postcondition of a box in isolation (hybrid systems)
+  /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
     * @see [[Monb]] with p(x)=True
     */
   lazy val G                  : Tactic         = AxiomaticRuleTactics.goedelT
-  /** allG: all generalization rule proves the formula after a universal quantifier in isolation */
+  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
   lazy val allG               : Tactic         = AxiomaticRuleTactics.forallGeneralizationT
   /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality to an equality */
   def CT(inEqPos: PosInExpr)  : Tactic         = ???
@@ -250,9 +250,9 @@ object TactixLibrary extends UnifyUSCalculus {
   //def CQ(inEqPos: PosInExpr)  : Tactic
   /** CE: Congruence: Contextual Equivalence at the indicated position to reduce an equivalence to an equivalence */
   //def CE(inEqPos: PosInExpr)  : Tactic
-  /** Monb: Monotone for [a;]p(x) |- [a;]q(x) reduces to proving p(x) |- q(x) */
+  /** Monb: Monotone for `[a;]p(x) |- [a;]q(x)` reduces to proving `p(x) |- q(x)` */
   lazy val Monb               : Tactic         = AxiomaticRuleTactics.boxMonotoneT
-  /** Mond: Monotone for <a;>p(x) |- <a;>q(x) reduces to proving p(x) |- q(x) */
+  /** Mond: Monotone for `<a;>p(x) |- <a;>q(x)` reduces to proving `p(x) |- q(x)` */
   lazy val Mond               : Tactic         = AxiomaticRuleTactics.diamondMonotoneT
 
   // more
@@ -272,14 +272,14 @@ object TactixLibrary extends UnifyUSCalculus {
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : Tactic         = TacticLibrary.closeT
-  /** close: closes the branch when the same formula is in the antecedent and succedent */
+  /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   def close(a: AntePosition, s: SuccPosition) : Tactic = PropositionalTacticsImpl.CloseId(a,s)
   def close(a: Int, s: Int)  : Tactic = close(new AntePosition(SeqPos(a).asInstanceOf[AntePos].getIndex), new SuccPosition(SeqPos(s).asInstanceOf[SuccPos].getIndex))
-  /** closeId: closes the branch when the same formula is in the antecedent and succedent */
+  /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   lazy val closeId           : Tactic         = TacticLibrary.AxiomCloseT
-  /** closeT: closes the branch when true is in the succedent */
+  /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
   lazy val closeT            : PositionTactic = TacticLibrary.CloseTrueT
-  /** closeF: closes the branch when false is in the antecedent */
+  /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
   lazy val closeF            : PositionTactic = TacticLibrary.CloseFalseT
 
   // counter example
@@ -289,10 +289,11 @@ object TactixLibrary extends UnifyUSCalculus {
 
   // derived
 
-  /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. */
+  /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. ([[edu.cmu.cs.ls.keymaerax.core.EquivifyRight EquivifyRight]]) */
   lazy val equivifyR          : PositionTactic = PropositionalTacticsImpl.equivifyRightT
-  /** Commute an equivalence on the right. */
+  /** Commute an equivalence on the right. ([[edu.cmu.cs.ls.keymaerax.core.CommuteEquivRight CommuteEquivRight]]) */
   lazy val commuteEquivR      : PositionTactic = PropositionalTacticsImpl.commuteEquivRightT
+  //@todo commuteEquivLeft
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
@@ -365,9 +366,15 @@ object TactixLibrary extends UnifyUSCalculus {
 
 
   // Global Utility Functions
+
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable
    * @see [[TactixLibrary.by(Provable)]]
+   * @see [[proveBy()]]
+   * @example {{{
+   *   import StringConverter._
+   *   val proof = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula)), prop)
+   * }}}
    */
   def proveBy(goal: Sequent, tactic: Tactic): Provable = {
     val rootNode = new RootNode(goal)
@@ -381,6 +388,10 @@ object TactixLibrary extends UnifyUSCalculus {
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable
    * @see [[TactixLibrary.by(Provable)]]
+   * @example {{{
+   *   import StringConverter._
+   *   val proof = TactixLibrary.proveBy("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula, prop)
+   * }}}
    */
   def proveBy(goal: Formula, tactic: Tactic): Provable = proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(goal)), tactic)
 

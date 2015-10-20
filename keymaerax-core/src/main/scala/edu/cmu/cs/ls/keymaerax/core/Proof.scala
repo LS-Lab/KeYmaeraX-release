@@ -953,8 +953,10 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  * }}}
  * @param subst the uniform substitution to be applied to origin.
  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
+ *               In the above rule, this would be `G |- D`.
  * @note In sequent calculus, this Hilbert-calculus rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
  * @author Andre Platzer
+ * @see [[USubst]]
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  */
