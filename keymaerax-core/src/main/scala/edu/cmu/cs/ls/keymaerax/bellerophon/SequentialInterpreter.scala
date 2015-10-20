@@ -63,10 +63,10 @@ class SequentialInterpreter extends Interpreter {
         case None => throw BelleError("USubst case distinction failed.")
       }
     }
-    case ParametricTactic(options) =>
+    case ParametricTactic(t, body) =>
       throw BelleError("Tried to apply a type-abstracted expression to a value.")
-    case ParaAppTactic(fn, arg) =>
-      ???
+    case ParaAppTactic(fn, arg) => ???
+
     case ProductProjection(le, re) => uniquev(vs) match {
       case LeftResult(l)  => apply(le, l)
       case RightResult(r) => apply(re, r)
