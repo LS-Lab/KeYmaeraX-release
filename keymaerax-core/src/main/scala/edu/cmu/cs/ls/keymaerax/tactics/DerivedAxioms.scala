@@ -709,6 +709,7 @@ object DerivedAxioms {
       useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::1::Nil))) &
       useAt("!| deMorgan")(SuccPosition(0, PosInExpr(0::0::1::Nil))) &
       useAt("[] split")(SuccPosition(0, PosInExpr(0::0::Nil))) &
+      useAt("!& deMorgan")(SuccPosition(0, PosInExpr(0::Nil))) &
       byUS("<-> reflexive")
   )
   lazy val diamondSplitT = derivedAxiomT(diamondSplit)
