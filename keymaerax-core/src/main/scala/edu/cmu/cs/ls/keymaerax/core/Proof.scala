@@ -205,10 +205,10 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
     ante.map(_.prettyString).mkString(", ") + (if (ante.isEmpty) "  ==>  " else "\n  ==>  ") + succ.map(_.prettyString).mkString(", ")}
 
   /** Pretty-print sequent */
-  def prettyString: String =
-    (1 to ante.length).map(i => -i + ":  " + ante(i-1).prettyString + "\t" + ante(i-1).getClass.getSimpleName).mkString("\n") +
-      (if (ante.isEmpty) if (succ.length<=1) "  ==>  " else "  ==>  \n" else "\n  ==>  \n") +
-    (1 to succ.length).map(i => +i + ":  " + succ(i-1).prettyString + "\t" + succ(i-1).getClass.getSimpleName).mkString("\n")
+  def prettyString: String = (if (ante.isEmpty) "" else "   ") +
+    (1 to ante.length).map(i => -i + ":  " + ante(i-1).prettyString + "\t" + ante(i-1).getClass.getSimpleName).mkString("\n   ") +
+      (if (ante.isEmpty) "" else "\n") + "==> " +
+    (1 to succ.length).map(i => +i + ":  " + succ(i-1).prettyString + "\t" + succ(i-1).getClass.getSimpleName).mkString("\n    ")
 
 }
 

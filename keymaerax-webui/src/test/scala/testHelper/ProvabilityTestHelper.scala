@@ -200,7 +200,7 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
 //    logger("Ending wait sequence for " + tactic.name)
     logger("Proof is closed: " + rootNode.isClosed())
     if(!rootNode.isClosed()) {
-      rootNode.openGoals().map(x => logger("Open Goal: " + x.sequent.toString()))
+      rootNode.openGoals().map(x => logger("Open Goal: " + x.tacticInfo.infos.getOrElse("subLabel", "") + "/" + x.tacticInfo.infos.getOrElse("branchLabel", "<unknown>") + ":\n" + x.sequent.prettyString))
     }
 
     if (superScrutiny && rootNode.isClosed()) {
