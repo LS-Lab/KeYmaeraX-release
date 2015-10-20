@@ -14,9 +14,8 @@ object TypeChecker {
 
 
   /**
-   * Attemts to find a uniform substitution s.t. usubst(on) = matching
-   * @param on
-   * @param matching
+   * Attempts to find a uniform substitution s.t. usubst(on) = matching
+   * @note This method is used by both the TypeChecker and the Interpreter.
    * @return
    */
   def findSubst(on: BelleType, matching: Seq[Provable]): Option[USubst] = ???
