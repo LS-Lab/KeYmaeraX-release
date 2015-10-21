@@ -194,7 +194,8 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val composeb           : PositionTactic = TacticLibrary.boxSeqT
   /** iterateb: [*] prove a property of a loop `[{a}*]p(x)` by unrolling it once `p(x) & [a][{a}*]p(x)` */
   lazy val iterateb           : PositionTactic = HilbertCalculus.iterateb
-  /** splitb: splits [a](p&q) into [a]p & [a]q */
+
+  /** splitb: splits `[a](p&q)` into `[a]p & [a]q` */
   lazy val splitb             : PositionTactic = HybridProgramTacticsImpl.boxSplitConjunctionT
 
   /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
