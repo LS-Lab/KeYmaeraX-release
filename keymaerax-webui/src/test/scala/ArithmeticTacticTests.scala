@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
-import edu.cmu.cs.ls.keymaerax.core.SuccPos
+import edu.cmu.cs.ls.keymaerax.core.{Sequent, SuccPos}
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl._
 
 import scala.collection.immutable
 import scala.collection.immutable.Map
+import scala.collection.immutable._
 
 /**
  * Created by smitsch on 2/14/15.
@@ -683,4 +684,29 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     result.openGoals() should have size 0
   }
 
+  import TactixLibrary._
+
+  "function arithmetic" should "prove f(1)=5 |- f(1)=5" in {
+    proveBy("f(1)=5 -> f(1)=5".asFormula, implyR(1) & QE) shouldBe 'closed
+  }
+
+  it should "prove w=1, f(w)>=5 |- f(1)>=5" in {
+    proveBy("w=1 & f(w)>=5 -> f(1)>=5".asFormula, implyR(1) & andL(-1) & QE) shouldBe 'closed
+  }
+
+  it should "not choke on f(w)=5 |- f(1)=5" in {
+    proveBy("f(w)=5 -> f(1)=5".asFormula, implyR(1) & QE).subgoals should contain only Sequent(Nil, IndexedSeq("p(w)".asFormula), IndexedSeq("p(1)".asFormula))
+  }
+
+  "predicate arithmetic" should "prove p(1) |- p(1)" in {
+    proveBy("p(1) -> p(1)".asFormula, implyR(1) & QE) shouldBe 'closed
+  }
+
+  it should "prove w=1, p(w) |- p(1)" in {
+    proveBy("w=1 & p(w) -> p(1)".asFormula, implyR(1) & andL(-1) & QE) shouldBe 'closed
+  }
+
+  it should "not choke on p(w) |- p(1)" in {
+    proveBy("p(w) -> p(1)".asFormula, implyR(1) & QE).subgoals should contain only Sequent(Nil, IndexedSeq("p(w)".asFormula), IndexedSeq("p(1)".asFormula))
+  }
 }
