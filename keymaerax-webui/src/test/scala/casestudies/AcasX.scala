@@ -484,7 +484,23 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     & debug("gathered")
                     & sublabel("postCut A()&W(w0)") & debug("postCut A()&W(w0")
                     & postCut(And(a,w0))(1) & onBranch(
-                    (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)") & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & chase(1) & label("gen") & closeId),
+                    (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)") & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & chase(1)
+                      & allR(1) // equivalent:  HilbertCalculus.vacuousAll(1)
+                      & label("gen by arith") & debug("gen by arith")
+                      & andR(1) & (
+                      andR(1) & (
+                        closeId
+                        ,
+                        close // QE
+                        )
+                        ,
+                      andR(1) & (
+                        closeId
+                        ,
+                        close //QE
+                        )
+                      )
+                      ),
                     (BranchLabels.cutUseLbl, (sublabel("generalized A()&W(w0)->post")
                       & HilbertCalculus.testb(1, 1::1::Nil)
                       & debug("do use dist equiv impl")
