@@ -486,7 +486,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     & sublabel("postCut A()&W(w0)") & debug("postCut A()&W(w0")
                     & postCut(And(a,w0))(1) & onBranch(
                     (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)") & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & chase(1) & label("gen") & closeId),
-                    (BranchLabels.cutUseLbl, sublabel("generalized A()&W(w0)->post")
+                    (BranchLabels.cutUseLbl, (sublabel("generalized A()&W(w0)->post")
                       & HilbertCalculus.testb(1, 1::1::Nil)
                       & debug("do use dist equiv impl")
                       & useAt(distEquivImpl.conclusion.succ.head, PosInExpr(0::Nil))(1, 1::Nil)
@@ -498,7 +498,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                       & debug("do [] post weaken")
                       & useAt("[] post weaken")(1, /*Nil*/1::1::1::Nil)
                       & close(-3, 1)
-                      )
+                      ) ~ errorT("should close"))
                   )
                   )
                   ),
