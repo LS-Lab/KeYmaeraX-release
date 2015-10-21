@@ -208,20 +208,28 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val V                  : PositionTactic = HybridProgramTacticsImpl.boxVacuousT
 
   // differential equations
-  /** DW: Differential Weakening to use evolution domain constraint (equivalence form) */
+  /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
   lazy val DW                 : PositionTactic = TacticLibrary.diffWeakenT
-  /** DC: Differential Cut a new invariant for a differential equation */
+  /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : PositionTactic = TacticLibrary.diffCutT(invariant)
-  /** DE: Differential Effect exposes the effect of a differential equation on its differential symbols */
+  /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols as `[x'=f(x)][x':=f(x)]p(x,x')` */
   lazy val DE                 : PositionTactic = ODETactics.diffEffectT
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
   lazy val DI                 : PositionTactic = TacticLibrary.diffInvariant
-  /** DG: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b */
+  /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
+    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)'`.
+    */
   def DG(y:Variable, a:Term, b:Term) : PositionTactic = ODETactics.diffAuxiliaryT(y,a,b)
-  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
+  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
+    * {{{
+    * G |- p(x), D   |- p(x) <-> \exists y. r(x,y)    |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
+    * ------------------------------------------------------------------------------------------- DA
+    * G |- [x'=f(x)&q(x)]p(x), D
+    * }}}
+    */
   def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
   /** DS: Differential Solution solves a differential equation */
-  def DS                      : PositionTactic = ???
+  //def DS                      : PositionTactic = ???
 
   /** Dassignb: Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
   lazy val Dassignb           : PositionTactic = HybridProgramTacticsImpl.boxDerivativeAssignT

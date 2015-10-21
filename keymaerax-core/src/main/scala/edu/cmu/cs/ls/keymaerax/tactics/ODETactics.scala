@@ -1553,10 +1553,11 @@ object ODETactics {
 
   /**
    * Tactic to derive the differential auxiliaries proof rule from DG and monotonicity.
+   * {{{
    * p(x) <-> \exists y. r(x,y)       r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
-   * -------------------------------------------------------------------------
+   * ------------------------------------------------------------------------- DA
    * p(x) -> [x'=f(x)&q(x)]p(x)
-   *
+   * }}}
    * Tactic input: [x'=f(x)&q(x)]p(x)
    * Tactic output: ... -> p(x)
    *                p(x) <-> \exists y. r(x,y)
@@ -1571,6 +1572,8 @@ object ODETactics {
    * @param gc Constant portion of g: g(x,y) = gl*y+gc
    * @param r The replacement for p(x).
    * @return The tactic instance.
+   * @todo check compatibility with TactixLibrary.DA
+   * @todo Get rid of "\exists y. r(x,y) -> p(x)" by using EquivifyRight and CommuteEquivRight
    */
   def diffAuxiliariesRule(y: Variable, gl: Term, gc: Term, r: Formula): PositionTactic = new PositionTactic("DA") {
     override def applies(s: Sequent, pos: Position): Boolean = getFormula(s, pos) match {

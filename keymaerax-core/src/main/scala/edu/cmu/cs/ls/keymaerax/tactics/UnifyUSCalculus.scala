@@ -323,6 +323,9 @@ trait UnifyUSCalculus {
 
   }
 
+  //////////////
+  // Congruence Reasoning
+
   /**
    * CQ(pos) at the indicated position within an equivalence reduces contextual equivalence `p(left)<->p(right)` to argument equality `left=right`.
    * This tactic will use [[CE()]] under the hood as needed.
@@ -457,6 +460,19 @@ trait UnifyUSCalculus {
   /** CE(fact) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
     * reasoning at the indicated position to replace `right` by `left` at indicated position (literally, no substitution).
     * Efficient unification-free version of [[UnifyUSCalculus#useAt(Provable, PosInExpr):PositionTactic]]
+    * {{{
+    *                          fact
+    *   G |- C{q(x)}, D    p(x) <-> q(x)
+    *   -------------------------------- CE(fact)
+    *   G |- C{p(x)}, D
+    * }}}
+    * Similarly for antecedents or equality facts or implication facts, e.g.:
+    * {{{
+    *                          fact
+    *   C{q(x)}, G |- D    p(x) <-> q(x)
+    *   -------------------------------- CE(fact)
+    *   C{p(x)}, G |- D
+    * }}}
     * @see [[UnifyUSCalculus.CE(Provable,Context)]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
@@ -548,12 +564,12 @@ trait UnifyUSCalculus {
   /** cutAt(repl) cuts left/right to replace the expression at the indicated position in its context C{.} by `repl`.
     * {{{
     *   G |- C{repl}, D   G |- C{repl}->C{c}, D
-    *   ---------------------------------------
+    *   --------------------------------------- cutAt(repl)
     *   G |- C{c}, D
     * }}}
     * {{{
     *   C{repl}, G |- D   G |- D, C{c}->C{repl}
-    *   ---------------------------------------
+    *   --------------------------------------- cutAt(repl)
     *   C{c}, G |- D
     * }}}
     * @see [[UnifyUSCalculus.CE(Provable)]]
@@ -610,6 +626,16 @@ trait UnifyUSCalculus {
 
   /** CE(C) will wrap any equivalence left<->right or equality left=right fact it gets within context C.
     * Uses CE or CQ as needed.
+    * {{{
+    *       p(x) <-> q(x)
+    *   --------------------- CE
+    *    C{p(x)} <-> C{q(x)}
+    * }}}
+    * {{{
+    *       f(x) = g(x)
+    *   --------------------- CQ+CE
+    *    c(f(x)) <-> c(g(x))
+    * }}}
     * @see [[CE(PosInExpr]]
     * @see [[CE(Provable)]]
     * @see [[CMon(Context)]]

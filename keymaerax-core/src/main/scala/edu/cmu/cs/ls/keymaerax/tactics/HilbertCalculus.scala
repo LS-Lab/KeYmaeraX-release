@@ -18,6 +18,7 @@ import edu.cmu.cs.ls.keymaerax.tools.Tool
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @see [[HilbertCalculus.derive()]]
+ * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
 object HilbertCalculus extends UnifyUSCalculus {
   import TactixLibrary.QE
@@ -72,7 +73,7 @@ object HilbertCalculus extends UnifyUSCalculus {
 //  // differential equations
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
   lazy val DW                 : PositionTactic = useAt("DW differential weakening")
-  /** DC: Differential Cut a new invariant for a differential equation */
+  /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : PositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
   )
@@ -82,7 +83,9 @@ object HilbertCalculus extends UnifyUSCalculus {
       (useAt("DE differential effect (system)") * getODEDim),
       useAt("DE differential effect"))
   else ODETactics.diffEffectT
-  /** DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation @see [[diffInd()]] */
+  /** DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation.
+    * `[x'=f(x)&q(x)]p(x)` reduces to `q(x) -> p(x) & [x'=f(x)]p(x)'`.
+    * @see [[diffInd()]] */
   lazy val DI                 : PositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
   /** diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE) */
   lazy val diffInd            : PositionTactic = new PositionTactic("diffInd") {
@@ -123,7 +126,9 @@ object HilbertCalculus extends UnifyUSCalculus {
       }
     }
 
-  /** DG: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b */
+  /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
+    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)'`.
+    */
   def DG(y:Variable, a:Term, b:Term) : PositionTactic = useAt("DG differential ghost", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq(
       (Variable("y",None,Real), y),
@@ -133,7 +138,8 @@ object HilbertCalculus extends UnifyUSCalculus {
 
   //  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
 //  def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
-  /** DS: Differential Solution solves a differential equation */
+  /** DS: Differential Solution solves a simple differential equation `[x'=c&q(x)]p(x)` by reduction to
+    * `\forall t>=0 ((\forall 0<=s<=t  q(x+c()*s) -> [x:=x+c()*t;]p(x))` */
   lazy val DS                 : PositionTactic = useAt("DS& differential equation solution")
   
   /** Dassignb: Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
@@ -199,6 +205,8 @@ object HilbertCalculus extends UnifyUSCalculus {
   lazy val vacuousAll          : PositionTactic = useAt("vacuous all quantifier")
   /** vacuousExists: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
   lazy val vacuousExists       : PositionTactic = useAt("vacuous exists quantifier")
+
+  //@todo make the other quantifier axioms accessible by useAt too
 
   /*******************************************************************
     * Stepping auto-tactic
