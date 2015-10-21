@@ -419,7 +419,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
               //@note could have handled 2*composeb(1) at once
               //@note useing W(w_0) instead of W(w) or use post-postcondition
               composeb(1) & generalize(w0)(1) & onBranch(
-              (BranchLabels.genShow, (debugT("W gen V 1") & V(1) & implyR(1) & closeId) ~ errorT("closed by V")),
+              (BranchLabels.genShow, (debugT("W gen V 1") & V(1) & closeId) ~ errorT("closed by V")),
               (BranchLabels.genUse, composeb(1) & useAt("V[:*] vacuous assign nondet")(SuccPosition(0, 1::Nil)) &
                 choiceb(1) & andR(1) & (
                 (sublabel("& left") & testb(1) & implyR(1) & closeId) ~ errorT("left choices closes")
