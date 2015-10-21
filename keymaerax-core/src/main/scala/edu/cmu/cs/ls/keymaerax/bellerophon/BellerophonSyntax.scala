@@ -31,7 +31,7 @@ case class OptionalTactic(child: BelleExpr) extends BelleExpr
 case class USubstPatternTactic(options: Seq[(BelleType, BelleExpr)]) extends BelleExpr
 case class ParametricTactic(t: BelleTypeVariable, body: BelleExpr) extends BelleExpr
 case class ParaAppTactic(fn : ParametricTactic, arg: BelleType) extends BelleExpr
-case class SumtProjection(left: BelleExpr, right: BelleExpr) extends BelleExpr
+case class SumProjection(left: BelleExpr, right: BelleExpr) extends BelleExpr
 /** @todo eisegesis */
 case class Map(e: BelleExpr) extends BelleExpr
 
