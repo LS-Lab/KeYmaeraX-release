@@ -246,10 +246,24 @@ object TactixLibrary extends UnifyUSCalculus {
 
   // more
 
-  /* Generalize postcondition to C and, separately, prove that C implies postcondition */
+  /* Generalize postcondition to C and, separately, prove that C implies postcondition
+   * {{{
+   *   genUseLbl:        genShowLbl:
+   *   G |- [a]C, D      C |- B
+   *   ------------------------
+   *          G |- [a]B, D
+   * }}}
+   */
   def generalize(C: Formula)  : PositionTactic = TacticLibrary.generalize(C)
 
-  /** Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post */
+  /** Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post
+    * {{{
+    *   cutUseLbl:           cutShowLbl:
+    *   G |- [a](C->B), D    G |- [a]C, D
+    *   ---------------------------------
+    *          G |- [a]B, D
+    * }}}
+    */
   def postCut(cut: Formula)   : PositionTactic = TacticLibrary.postCut(cut)
 
 
