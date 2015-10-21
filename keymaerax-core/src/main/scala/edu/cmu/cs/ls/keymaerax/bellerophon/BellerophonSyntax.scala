@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.{Provable, Formula}
+import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable, Formula}
 import edu.cmu.cs.ls.keymaerax.pt.ProofTerm
 
 /**
@@ -11,6 +11,8 @@ import edu.cmu.cs.ls.keymaerax.pt.ProofTerm
 abstract class BelleExpr
 abstract case class BuiltInTactic() extends BelleExpr {
   def apply(provable : Provable) : Seq[Provable]
+
+  val typeOf : BelleType
 
   /**
    * Constructs a proof term for the provable.
@@ -29,7 +31,9 @@ case class OptionalTactic(child: BelleExpr) extends BelleExpr
 case class USubstPatternTactic(options: Seq[(BelleType, BelleExpr)]) extends BelleExpr
 case class ParametricTactic(t: BelleTypeVariable, body: BelleExpr) extends BelleExpr
 case class ParaAppTactic(fn : ParametricTactic, arg: BelleType) extends BelleExpr
-case class ProductProjection(left: BelleExpr, right: BelleExpr) extends BelleExpr
+case class SumtProjection(left: BelleExpr, right: BelleExpr) extends BelleExpr
+/** @todo eisegesis */
+case class Map(e: BelleExpr) extends BelleExpr
 
 abstract trait BelleValue
 case class BelleProvable(p : Provable) extends BelleExpr with BelleValue
@@ -41,8 +45,11 @@ case class RightResult(vs: Seq[BelleValue]) extends BelleExpr  with BelleValue
  * @todo incomplete.
  */
 abstract class BelleType
-case class BelleTypeVariable(name: String) extends BelleType
-
+case class BelleTypeVariable(name: String)              extends BelleType
+case class BelleSequentTy(sequent: Sequent)             extends BelleType
+case class BelleSequentsTy(sequents: Seq[Sequent])      extends BelleType
+case class BelleMapType(dom: BelleType, cod: BelleType) extends BelleType
+case class BelleClosedProofType()                       extends BelleType
 
 case class BelleError(message: String)
   extends Exception(s"[Bellerophon Runtime] $message")
