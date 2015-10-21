@@ -87,6 +87,11 @@ private[core] object AxiomBase {
        * Premise f_(??) = g_(??)
        * Conclusion ctxP_(f_(??)) <-> ctxP_(g_(??))
        * End.
+       * {{{
+       *      f(x)   =  g(x)
+       *   --------------------- CQ
+       *    c(f(x)) <-> c(g(x))
+       * }}}
        */
       ("CQ equation congruence",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany))),
@@ -96,12 +101,17 @@ private[core] object AxiomBase {
        * Premise p_(??) <-> q_(??)
        * Conclusion ctxF_(p_(??)) <-> ctxF_(q_(??))
        * End.
+       * {{{
+       *       p(x) <-> q(x)
+       *   --------------------- CE
+       *    C{p(x)} <-> C{q(x)}
+       * }}}
        */
       ("CE congruence",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
       /**
-       * Rule "CE congruence".
+       * Rule "C0 one-sided congruence".
        * Premise p_(??) <-> q_(??)
        * Conclusion ctxF_(p_(??)) |- ctxF_(q_(??))
        * End.

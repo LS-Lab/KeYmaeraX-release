@@ -326,6 +326,11 @@ trait UnifyUSCalculus {
   /**
    * CQ(pos) at the indicated position within an equivalence reduces contextual equivalence `p(left)<->p(right)` to argument equality `left=right`.
    * This tactic will use [[CE()]] under the hood as needed.
+   * {{{
+   *        f(x) = g(x)
+   *   --------------------- CQ
+   *    c(f(x)) <-> c(g(x))
+   * }}}
    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotTerm happens.
    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
@@ -372,6 +377,11 @@ trait UnifyUSCalculus {
 
   /**
    * CE(pos) at the indicated position within an equivalence reduces contextual equivalence `C{left}<->C{right}`to argument equivalence `left<->right`.
+   * {{{
+   *       p(x) <-> q(x)
+   *   --------------------- CE
+   *    C{p(x)} <-> C{q(x)}
+   * }}}
    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
    * @see [[UnifyUSCalculus.CE(Context)]]
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]

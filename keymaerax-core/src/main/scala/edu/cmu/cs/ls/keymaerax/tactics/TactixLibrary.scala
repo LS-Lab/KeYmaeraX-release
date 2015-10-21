@@ -282,7 +282,7 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val closeId           : Tactic         = TacticLibrary.AxiomCloseT
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
   lazy val closeT            : PositionTactic = TacticLibrary.CloseTrueT
-  /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
+  /** closeF: closes the branch when false is in the antecedeunnt ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
   lazy val closeF            : PositionTactic = TacticLibrary.CloseFalseT
 
   // counter example
