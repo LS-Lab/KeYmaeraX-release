@@ -217,7 +217,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
   lazy val DI                 : PositionTactic = TacticLibrary.diffInvariant
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
-    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)'`.
+    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */
   def DG(y:Variable, a:Term, b:Term) : PositionTactic = ODETactics.diffAuxiliaryT(y,a,b)
   /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.

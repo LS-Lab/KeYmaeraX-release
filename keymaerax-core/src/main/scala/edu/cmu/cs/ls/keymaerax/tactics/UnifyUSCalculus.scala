@@ -32,6 +32,11 @@ trait UnifyUSCalculus {
     *******************************************************************/
 
   /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
+    * {{{
+    *       p(??)
+    *   ----------- G
+    *    [a;]p(??)
+    * }}}
     * @see [[Monb]] with p(x)=True
     */
   lazy val G                  : Tactic         = AxiomaticRuleTactics.goedelT
@@ -479,7 +484,7 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
-    * @example CE(fact) == CE(fact, Context("⎵".asFormula))
+    * @example CE(fact) is equivalent to CE(fact, Context("⎵".asFormula))
     */
   def CE(fact: Provable): PositionTactic = new PositionTactic("CE(Provable)") {
     import Augmentors._
@@ -524,6 +529,9 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
+    * @example CE(fact, Context("⎵".asFormula)) is equivalent to CE(fact)
+    * @example CE(fact, Context("x>0&⎵".asFormula))(p) is equivalent to CE(fact)(p+1)
+    *          except that the former only accepts x>0&⎵ as the shape of the context at position p.
     */
   def CE(fact: Provable, C: Context[Formula]): PositionTactic = new PositionTactic("CE(Provable,Context)") {
     import Augmentors._
@@ -624,7 +632,7 @@ trait UnifyUSCalculus {
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key, inst)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
-  /** CE(C) will wrap any equivalence left<->right or equality left=right fact it gets within context C.
+  /** CE(C) will wrap any equivalence `left<->right` or equality `left=right` fact it gets within context C.
     * Uses CE or CQ as needed.
     * {{{
     *       p(x) <-> q(x)
@@ -668,7 +676,7 @@ trait UnifyUSCalculus {
     }
   }
 
-  /** CMon(C) will wrap any implication left->right fact it gets within a positive context C by monotonicity.
+  /** CMon(C) will wrap any implication `left->right` fact it gets within a (positive or negative) context C by monotonicity.
     * {{{
     *      k |- o
     *   ------------ CMon if C{⎵} of positive polarity
