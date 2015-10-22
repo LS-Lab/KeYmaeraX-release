@@ -510,7 +510,9 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                       & debug("do use dist equiv impl")
                       & useAt(distEquivImpl.conclusion.succ.head, PosInExpr(0::Nil))(1, 1::Nil)
                       & debug("used dist equiv impl")
+                      // repacking
                       & useAt("[?] test", PosInExpr(1::Nil))(1, 1::1::Nil)
+                      & debug("repacked test")
                       // drop a&w implication from postcondition again
                       //& useAt("K modal modus ponens", PosInExpr(0::Nil))(1) & implyR(1) & hide(-4)
                       & sublabel("[] post weaken")
@@ -518,6 +520,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                       & useAt("[] post weaken", PosInExpr(1::Nil))(1) //& useAt("[] post weaken")(1, /*Nil*/1::1::1::Nil)
                       & debug("did [] post weaken")
                       & close(-3, 1)
+                      // successfully closes
                       )
                   )
                   )
