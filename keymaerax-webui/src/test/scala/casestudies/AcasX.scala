@@ -484,19 +484,19 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     & useAt("[;] compose", PosInExpr(1::Nil))(1)
                     & useAt("[;] compose", PosInExpr(1::Nil))(-3)
                     & debug("gathered")
-                    & sublabel("postCut A()&W(w0)") & debug("postCut A()&W(w0")
+                    & sublabel("postCut A()&W(w0)") & debug("postCut A()&W(w0)")
                     & postCut(And(a,w0))(1) & onBranch(
                     (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)")
-                      & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & chase(1)
+                      & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & sublabel("chasing") & chase(1)
                       & allR(1) // equivalent:  HilbertCalculus.vacuousAll(1)
-                      & label("gen by arith") & debug("gen by arith")
+                      & sublabel("gen by arith") & debug("gen by arith")
                       & andR(1) & (
                       andR(1) & (
                         closeId
                         ,
                         close // QE
                         )
-                        ,
+                      ,
                       andR(1) & (
                         closeId
                         ,
@@ -515,12 +515,14 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                       //& useAt("K modal modus ponens", PosInExpr(0::Nil))(1) & implyR(1) & hide(-4)
                       & sublabel("[] post weaken")
                       & debug("do [] post weaken")
-                      & useAt("[] post weaken")(1, /*Nil*/1::1::1::Nil)
+                      & useAt("[] post weaken", PosInExpr(1::Nil))(1) //& useAt("[] post weaken")(1, /*Nil*/1::1::1::Nil)
+                      & debug("did [] post weaken")
                       & close(-3, 1)
                       )
                   )
                   )
                   ),
+
                 (BranchLabels.cutUseLbl, sublabel("use patch") & debug("use patch")
                   // repacking
                   & useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) & useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil))
