@@ -222,12 +222,25 @@ object TactixLibrary extends UnifyUSCalculus {
   def DG(y:Variable, a:Term, b:Term) : PositionTactic = ODETactics.diffAuxiliaryT(y,a,b)
   /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
     * {{{
-    * G |- p(x), D   |- p(x) <-> \exists y. r(x,y)    |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
-    * ------------------------------------------------------------------------------------------- DA
+    * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
+    * ----------------------------------------------------------- DA
     * G |- [x'=f(x)&q(x)]p(x), D
     * }}}
+    * @see[[DA(Variable, Term, Term, Provable)]]
+    * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
+    * @note G |- p(x) will be proved already from G if p(x) in G (verbatim)
     */
   def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
+  /**
+   * DA: Differential Ghost expert mode. Use if QE cannot prove p(x) <-> \exists y. r(x,y).
+   * To obtain a Provable with conclusion p(x) <-> \exists y. r(x,y), use TactixLibrary.by, for example:
+   * @example{{{
+   *   val provable = by("x>0 <-> \exists y (y>0&x*y>0)".asFormula, QE)
+   * }}}
+   * @see[[DA(Variable, Term, Term, Formula)]]
+   * @see[[by]]
+   **/
+  def DA(y:Variable, a:Term, b:Term, r:Provable) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
   /** DS: Differential Solution solves a differential equation */
   //def DS                      : PositionTactic = ???
 
