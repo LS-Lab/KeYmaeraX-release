@@ -481,8 +481,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     */
                     // gather outer boxes to [;]
                     & sublabel("gathering") & debug("gathering")
-                    & (((useAt("[;] compose", PosInExpr(1::Nil))(1) & debug("gathered 1")) ~ errorT("should [;] 1"))
-                     & debug("mid gather") & (useAt("[;] compose", PosInExpr(1::Nil))(-3) ~ errorT("should [;] -3")))
+                    & useAt("[;] compose", PosInExpr(1::Nil))(1) & debug("gathered 1")
+                    & debug("mid gather") & useAt("[;] compose", PosInExpr(1::Nil))(-3)
                     & debug("gathered")
                     & sublabel("postCut A()&W(w0)") & debug("postCut A()&W(w0")
                     & postCut(And(a,w0))(1) & onBranch(
