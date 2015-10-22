@@ -291,6 +291,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     distEquivalence.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
   }
 
+
   it should "derive sequent version of conditional equivalence" in {
     val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-equivalence.key")).mkString)
     val Imply(And(a,w), Equiv(e,i)) = equivalence
@@ -469,7 +470,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     & debug("-> weakened")
                     & label("CMon") & debug("CMon")
                     & sublabel("-> weakened")
-                    // like CMon(PosInExpr(1::1::1::0::0::Nil)) except with context
+                    // the following is like CMon(PosInExpr(1::1::1::0::0::Nil)) except with context kept around
                     & implyR(1)
                     & debug("->R ed")
                     /*
@@ -478,9 +479,10 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     & (useAt("[:=] assign")(1, 1::1::Nil) & useAt("[:=] assign")(-3, 1::1::Nil))
                     & (randomb(1) & randomb(-3))
                     */
-                    // gather
+                    // gather outer boxes to [;]
                     & sublabel("gathering") & debug("gathering")
-                    & (useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0)) & useAt("[;] compose", PosInExpr(1::Nil))(AntePosition(2)))
+                    & (((useAt("[;] compose", PosInExpr(1::Nil))(1) & debug("gathered 1")) ~ errorT("should [;] 1"))
+                     & debug("mid gather") & (useAt("[;] compose", PosInExpr(1::Nil))(-3) ~ errorT("should [;] -3")))
                     & debug("gathered")
                     & sublabel("postCut A()&W(w0)") & debug("postCut A()&W(w0")
                     & postCut(And(a,w0))(1) & onBranch(
