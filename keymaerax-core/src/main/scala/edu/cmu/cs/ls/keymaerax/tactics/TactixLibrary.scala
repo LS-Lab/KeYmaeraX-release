@@ -290,7 +290,7 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val closeId           : Tactic         = TacticLibrary.AxiomCloseT
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
   lazy val closeT            : PositionTactic = TacticLibrary.CloseTrueT
-  /** closeF: closes the branch when false is in the antecedeunnt ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
+  /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
   lazy val closeF            : PositionTactic = TacticLibrary.CloseFalseT
 
   // counter example
@@ -387,6 +387,7 @@ object TactixLibrary extends UnifyUSCalculus {
    * @see [[proveBy()]]
    * @example {{{
    *   import StringConverter._
+   *   import TactixLibrary._
    *   val proof = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula)), prop)
    * }}}
    */
@@ -404,6 +405,7 @@ object TactixLibrary extends UnifyUSCalculus {
    * @see [[TactixLibrary.by(Provable)]]
    * @example {{{
    *   import StringConverter._
+   *   import TactixLibrary._
    *   val proof = TactixLibrary.proveBy("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula, prop)
    * }}}
    */
