@@ -48,7 +48,7 @@ abstract class BelleExpr {
       case (leftType: MappingType, rightType: MappingType, _, _) =>
         throw BelleError("Cannot synthesize a type for e ~> e' | d ~> d' when the e and d mappings are of differing syntactic categories.")
       case _ =>
-        throw BelleError("Unkown error when trying the synthesize a type for e | d")
+        throw BelleError("Unknown error when trying the synthesize a type for e | d")
     }
   }
 }
