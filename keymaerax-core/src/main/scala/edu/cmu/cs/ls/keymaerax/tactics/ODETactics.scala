@@ -6,24 +6,25 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{boxMonotoneT, goedelT}
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.boxMonotoneT
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverAxiomT,uncoverConditionalAxiomT,axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
-import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.{cutInContext, peelT}
+import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
+import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.skolemizeT
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.boxAssignT
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.boxDerivativeAssignT
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT, CloseId, EquivRightT, ImplyRightT, cutT,
-  EquivLeftT, ImplyLeftT, uniformSubstT, NotLeftT, AndLeftT, cohideT, cohide2T, PropositionalRightT}
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT, CloseId, commuteEquivRightT, equivifyRightT,
+  EquivRightT, ImplyRightT, InverseImplyRightT, cutT, EquivLeftT, ImplyLeftT, uniformSubstT, NotLeftT, AndLeftT,
+  cohideT, cohide2T, PropositionalRightT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{onBranch, lastAnte, lastSucc}
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
-import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext.ApplicableAtTerm
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol, findFormulaByStructure}
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol}
 import AlphaConversionHelper._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, Tool}
 
@@ -1554,67 +1555,89 @@ object ODETactics {
   /**
    * Tactic to derive the differential auxiliaries proof rule from DG and monotonicity.
    * {{{
-   * p(x) <-> \exists y. r(x,y)       r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
-   * ------------------------------------------------------------------------- DA
-   * p(x) -> [x'=f(x)&q(x)]p(x)
+   * G |- p(x)     G |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y), D
+   * ---------------------------------------------------------------- DA(by(p(x) <-> \exists y. r(x,y), QE))
+   * G |- p(x) -> [x'=f(x)&q(x)]p(x), D
    * }}}
-   * Tactic input: [x'=f(x)&q(x)]p(x)
-   * Tactic output: ... -> p(x)
-   *                p(x) <-> \exists y. r(x,y)
-   *                \exists y. r(x,y) -> p(x)
-   *                r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
-   *
-   * Note, that one side of the equivalence shows up a second time as an implication, and we cut in p(x) just in
-   * case p(x) does not literally occur (tactic inefficiency).
+   * Tactic input: [x'=f(x)&q(x)]p(x), Provable that p(x) <-> \exists y r(x,y)
+   * Tactic output: G |- p(x) (if p(x) not in G), G |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y), D
    *
    * @param y The new diff. auxiliary.
    * @param gl Linear portion of g: g(x,y) = gl*y+gc
    * @param gc Constant portion of g: g(x,y) = gl*y+gc
-   * @param r The replacement for p(x).
+   * @param auxEquiv Provable that shows p(x) <-> \exists y r(x,y).
    * @return The tactic instance.
-   * @todo check compatibility with TactixLibrary.DA
-   * @todo Get rid of "\exists y. r(x,y) -> p(x)" by using EquivifyRight and CommuteEquivRight
    */
-  def diffAuxiliariesRule(y: Variable, gl: Term, gc: Term, r: Formula): PositionTactic = new PositionTactic("DA") {
-    override def applies(s: Sequent, pos: Position): Boolean = getFormula(s, pos) match {
-      case Box(ode@ODESystem(c, h), p) if !StaticSemantics(ode).bv.contains(y) &&
+  def diffAuxiliariesRule(y: Variable, gl: Term, gc: Term, auxEquiv: Provable): PositionTactic = new PositionTactic("DA") {
+    require(auxEquiv.isProved && auxEquiv.conclusion.ante.isEmpty && auxEquiv.conclusion.succ.size == 1 &&
+      (auxEquiv.conclusion.succ.head match {
+        case Equiv(_, Exists(_, _)) => true
+        case _ => false
+      }), "Expected a proven Provable with conclusion |- p(x) <-> \\exists y. r(x,y), but got " + auxEquiv)
+    override def applies(s: Sequent, pos: Position): Boolean = s(pos).sub(pos.inExpr) match {
+      case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(gc).contains(y) && !StaticSemantics.symbols(gl).contains(y) => true
       case _ => false
     }
 
     override def apply(pos: Position): Tactic = new ConstructionTactic("DA") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
-        case Box(ode@ODESystem(c, h), p) if !StaticSemantics(ode).bv.contains(y) &&
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos).sub(pos.inExpr) match {
+        case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
           !StaticSemantics.symbols(gc).contains(y) && !StaticSemantics.symbols(gl).contains(y) =>
+
+          val Equiv(_, Exists(_, r)) = auxEquiv.conclusion.succ.head
           val desiredBox = Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(gl, y), gc))), h), r)
 
-          //@todo tactic inefficiency: cutting in p would not be necessary if p is already in antecedent
-          Some(cutT(Some(p)) & onBranch(
-            (cutShowLbl, hideT(pos) &
-              /* remains as proof obligation 0 */ LabelBranch("Diff. Aux. P Initially Valid")),
-            (cutUseLbl, cutT(Some(Equiv(p, Exists(y::Nil, r)))) & onBranch(
-              (cutShowLbl, lastSucc(cohideT) &
-                /* remains as proof obligation 1 */ LabelBranch("Diff. Aux. Show Equivalence (1)")),
-              (cutUseLbl,
-                equivRewriting(AntePosition(node.sequent.ante.length+1), AntePosition(node.sequent.ante.length)) &
-                  lastAnte(skolemizeT) &
-                  diffAuxiliaryT(y, gl, gc)(pos) &
-                  instantiateT(pos) &
-                  cutT(Some(desiredBox)) &
-                  onBranch(
-                    (cutShowLbl, hideT(pos) & (SearchTacticsImpl.locateAnte(hideT, _ == p)*) &
-                      /* remains as proof obligation 2 */ LabelBranch("Diff. Aux. Result")),
-                    (cutUseLbl, cohide2T(AntePosition(node.sequent.ante.length+1), pos) &
-                      boxMonotoneT & lastAnte(existentialGenT(y, y)) &
-                      /* remains, but see proof obligation 1 */ LabelBranch("Diff. Aux. Show Equivalence (2)"))
-                  ))
+          val pIdx = node.sequent.ante.indexOf(p)
+          val pPos = if (pIdx >= 0) AntePosition(pIdx) else AntePosition(node.sequent.ante.length)
+          val equivPos = if (pIdx >= 0) AntePosition(node.sequent.ante.length+1) else AntePosition(node.sequent.ante.length+2)
+
+          val diffAuxEquiv = cutT(Some(Exists(y::Nil, r))) & onBranch(
+            (cutShowLbl, cohide2T(pPos, SuccPos(node.sequent.succ.length)) & InverseImplyRightT() & equivifyRightT(1) &
+              TactixLibrary.by(auxEquiv)),
+            (cutUseLbl, lastAnte(skolemizeT) & diffAuxiliaryT(y, gl, gc)(pos) & instantiateT(pos) &
+              cutT(Some(desiredBox)) & onBranch(
+                (cutShowLbl, hideT(pos) & (SearchTacticsImpl.locateAnte(hideT, _ == p)*) &
+                  /* remains as proof obligation 2 */ LabelBranch("Diff. Aux. Result")),
+                (cutUseLbl, debugT("Bar") & cohide2T(equivPos, pos) & boxMonotoneT & existentialGenT(y, y)(-1) &
+                  InverseImplyRightT() & equivifyRightT(1) & commuteEquivRightT(1) & TactixLibrary.by(auxEquiv))
             ))
-          ))
+          )
+
+          Some(ifElseT(_.sequent.ante.contains(p),
+            /* if */   diffAuxEquiv,
+            /* else */ cutT(Some(p)) & onBranch(
+              (cutShowLbl, hideT(pos) &
+                /* remains as proof obligation 0 */ LabelBranch("Diff. Aux. P Initially Valid")),
+              (cutUseLbl, diffAuxEquiv)
+            )))
         case _ => ???
       }
     }
   }
+
+  /** Convenience DA that uses QE to obtain a Provable for p(x) <-> \exists y r(x,y) */
+  def diffAuxiliariesRule(y: Variable, gl: Term, gc: Term, r: Formula): PositionTactic = new PositionTactic("DA") {
+    override def applies(s: Sequent, pos: Position): Boolean = s(pos).sub(pos.inExpr) match {
+      case Some(Box(ode@ODESystem(_, _), p)) if !StaticSemantics(ode).bv.contains(y) &&
+        !StaticSemantics.symbols(gc).contains(y) && !StaticSemantics.symbols(gl).contains(y) => true
+      case _ => false
+    }
+
+    override def apply(pos: Position): Tactic = new ConstructionTactic("DA") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos).sub(pos.inExpr) match {
+        case Some(Box(ode@ODESystem(_, _), p)) if !StaticSemantics(ode).bv.contains(y) &&
+          !StaticSemantics.symbols(gc).contains(y) && !StaticSemantics.symbols(gl).contains(y) =>
+
+          val auxEquiv = TactixLibrary.proveBy(Equiv(p, Exists(y :: Nil, r)), TactixLibrary.QE)
+          Some(diffAuxiliariesRule(y, gl, gc, auxEquiv)(pos))
+      }
+    }
+  }
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // DI for Systems of Differential Equations

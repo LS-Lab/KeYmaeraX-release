@@ -82,8 +82,6 @@ class Quadcopter extends FlatSpec with Matchers with BeforeAndAfterEach {
             //@todo need constify(variable) tactic
             DA(Variable("z"), "kd()".asTerm, "0".asTerm, And(cut1, "z>0".asFormula))(odePos) & onBranch(
             ("Diff. Aux. P Initially Valid", debug("Initially valid") & QE),
-            ("Diff. Aux. Show Equivalence (1)", debug("Auxiliary equivalent (1)") & QE),
-            ("Diff. Aux. Show Equivalence (2)", debug("Auxiliary equivalent (2)") & QE),
             ("Diff. Aux. Result", debug("DA result") &
               debug("Introducing ghost z0") &
               HybridProgramTacticsImpl.discreteGhostT(Some(Variable("z0")), Variable("z"))(odePos) &
@@ -101,9 +99,6 @@ class Quadcopter extends FlatSpec with Matchers with BeforeAndAfterEach {
                         la(hide, "(h^2*kp^2-2*h*href*kp^2+href^2*kp^2+h*kd()*kp*v-href*kd()*kp*v+kp*v^2)*(h0_1()^2*kp^2-2*h0_1()*href*kp^2+href^2*kp^2+h0_1()*kd()*kp*v0_1()-href*kd()*kp*v0_1()+kp*v0_1()^2)>0") &
                         debug("Introducing diff. auxiliary u'=u*-1/2*kd()") &
                         DA(Variable("u"), "-1/2*kd()".asTerm, "0".asTerm, "z>0 & z*u^2=1".asFormula)(odePos) & onBranch(
-                        ("Diff. Aux. P Initially Valid", debug("Initially valid") & closeId),
-                        ("Diff. Aux. Show Equivalence (1)", debug("Auxiliary equivalent (1)") & QE),
-                        ("Diff. Aux. Show Equivalence (2)", debug("Auxiliary equivalent (2)") & QE),
                         ("Diff. Aux. Result", debug("DA result") &
                           debug("Diff. cut (3)") &
                           DC("z*u^2=1".asFormula)(odePos) & onBranch(

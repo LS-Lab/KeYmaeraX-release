@@ -217,17 +217,30 @@ object TactixLibrary extends UnifyUSCalculus {
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
   lazy val DI                 : PositionTactic = TacticLibrary.diffInvariant
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
-    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)'`.
+    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */
   def DG(y:Variable, a:Term, b:Term) : PositionTactic = ODETactics.diffAuxiliaryT(y,a,b)
   /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
     * {{{
-    * G |- p(x), D   |- p(x) <-> \exists y. r(x,y)    |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
-    * ------------------------------------------------------------------------------------------- DA
+    * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
+    * ----------------------------------------------------------- DA
     * G |- [x'=f(x)&q(x)]p(x), D
     * }}}
+    * @see[[DA(Variable, Term, Term, Provable)]]
+    * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
+    * @note G |- p(x) will be proved already from G if p(x) in G (verbatim)
     */
   def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
+  /**
+   * DA: Differential Ghost expert mode. Use if QE cannot prove p(x) <-> \exists y. r(x,y).
+   * To obtain a Provable with conclusion p(x) <-> \exists y. r(x,y), use TactixLibrary.by, for example:
+   * @example{{{
+   *   val provable = by("x>0 <-> \exists y (y>0&x*y>0)".asFormula, QE)
+   * }}}
+   * @see[[DA(Variable, Term, Term, Formula)]]
+   * @see[[by]]
+   **/
+  def DA(y:Variable, a:Term, b:Term, r:Provable) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
   /** DS: Differential Solution solves a differential equation */
   //def DS                      : PositionTactic = ???
 
@@ -336,9 +349,16 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Assert that the given condition holds for the sequent at the position where the tactic is applied */
   def assertT(cond : (Sequent,Position)=>Boolean, msg:String): PositionTactic = Tactics.assertPT(cond, msg)
   /** Assert that the given expression is present at the position in the sequent where this tactic is applied to. */
-  def assertT(expected: Expression, msg:String): PositionTactic = expected match {
+  def assertT(expected: Expression, msg:String): PositionTactic = {
+    import Augmentors.SequentAugmentor
+    //assertPT((s, pos) => pos.isIndexDefined(s) && s.sub(pos) == Some(expected), msg + "\nExpected: " + expected.prettyString)
+    expected match {
+      //@todo could simplify all to be the same as the Program case
     case t: Term => Tactics.assertPT(t, msg)
     case f: Formula => Tactics.assertPT(f, msg)
+    case p: Program =>
+      assertPT((s, pos) => pos.isIndexDefined(s) && s.sub(pos) == Some(expected), msg + "\nExpected: " + expected.prettyString)
+    }
   }
 
   /** errorT raises an error upon executing this tactic, stopping processing */
@@ -395,7 +415,7 @@ object TactixLibrary extends UnifyUSCalculus {
     val rootNode = new RootNode(goal)
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
-    if (!rootNode.isClosed() || Tactic.DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n\n" + rootNode.openGoals().map(x => "Open: " + x.tacticInfo.infos.getOrElse("subLabel", "") + "/" + x.tacticInfo.infos.getOrElse("branchLabel", "<unknown>") + ":\n" + x.sequent.prettyString).mkString(("\n"))) + "\n")
+    if (!rootNode.isClosed() || Tactic.DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open " + rootNode.openGoals().size + "\n\n" + rootNode.openGoals().map(x => "Open: " + x.tacticInfo.infos.getOrElse("subLabel", "") + "/" + x.tacticInfo.infos.getOrElse("branchLabel", "<unknown>") + ":\n" + x.sequent.prettyString).mkString(("\n"))) + "\n")
     val proof = rootNode.provableWitness
     if (Tactic.DEBUG) println("proveBy " + proof + "\n")
     proof

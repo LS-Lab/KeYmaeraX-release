@@ -97,6 +97,7 @@ object HereP extends PosInExpr
     /** The top-level part of this position */
     def top: SeqPos
 
+    /** Returns a position that has i appended to this position */
     def +(i: Int): Position
 
     def first: Position

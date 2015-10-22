@@ -156,6 +156,11 @@ private[core] object AxiomBase {
        * Premise p(??)
        * Conclusion [a;]p(??)
        * End.
+       * {{{
+       *       p(??)
+       *   ----------- G
+       *    [a;]p(??)
+       * }}}
        * @NOTE Unsound for hybrid games
        * @TODO Add [a;]true -> to conclusion to make it sound for hybrid games (and then equivalent to [] monotone)
        */

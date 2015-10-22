@@ -77,7 +77,7 @@ object HilbertCalculus extends UnifyUSCalculus {
   def DC(invariant: Formula)  : PositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
   )
-  /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols as `[x'=f(x)][x':=f(x)]p(x,x')` */
+  /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols as `[x'=f(x)][x':=f(x)]p(x,x')` with its differential assignment `x':=f(x)`. */
   lazy val DE                 : PositionTactic = if (INTERNAL)
     ifElseT(isODESystem,
       (useAt("DE differential effect (system)") * getODEDim),
@@ -127,7 +127,7 @@ object HilbertCalculus extends UnifyUSCalculus {
     }
 
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
-    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)'`.
+    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */
   def DG(y:Variable, a:Term, b:Term) : PositionTactic = useAt("DG differential ghost", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq(
@@ -142,7 +142,7 @@ object HilbertCalculus extends UnifyUSCalculus {
     * `\forall t>=0 ((\forall 0<=s<=t  q(x+c()*s) -> [x:=x+c()*t;]p(x))` */
   lazy val DS                 : PositionTactic = useAt("DS& differential equation solution")
   
-  /** Dassignb: Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
+  /** Dassignb: [:='] Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
   lazy val Dassignb           : PositionTactic = useAt("[':=] differential assign")
   /** Dplus: +' derives a sum `(f(x)+g(x))' = (f(x))' + (g(x))'` */
   lazy val Dplus              : PositionTactic = useAt("+' derive sum")
