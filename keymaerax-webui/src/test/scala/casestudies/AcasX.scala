@@ -405,7 +405,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     TactixLibrary.proveBy(acasxexplicit,
       implyR(1) & andL(-1) &
         postCut(a)(1) & onBranch(
-        (BranchLabels.cutShowLbl, (sublabel("A() vacuous") & debug("vacuous global assumptions") & V(1) & close(-1, 1)) ~ errorT("A induction closes")),
+        (BranchLabels.cutShowLbl, sublabel("A() vacuous") & debug("vacuous global assumptions") & V(1) & close(-1, 1)),
 
         (BranchLabels.cutUseLbl, label("") & debug("true induction need") &
 
@@ -420,16 +420,16 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
               //@note could have handled 2*composeb(1) at once
               //@note useing W(w_0) instead of W(w) or use post-postcondition
               composeb(1) & generalize(w0)(1) & onBranch(
-              (BranchLabels.genShow, (debugT("W gen V 1") & V(1) & closeId) ~ errorT("closed by V")),
+              (BranchLabels.genShow, debugT("W gen V 1") & V(1) & closeId),
               (BranchLabels.genUse, composeb(1) & useAt("V[:*] vacuous assign nondet")(SuccPosition(0, 1::Nil)) &
                 choiceb(1) & andR(1) & (
-                (sublabel("& left") & testb(1) & implyR(1) & closeId) ~ errorT("left choices closes")
+                sublabel("& left") & testb(1) & implyR(1) & closeId
                 ,
                 sublabel("& right") &
                   composeb(1) & composeb(SuccPosition(0, 1::Nil)) & generalize(w0)(1) & onBranch(
-                  (BranchLabels.genUse, (useAt("V[:*] vacuous assign nondet")(1) & closeId) ~ errorT("vacuous closes")),
+                  (BranchLabels.genUse, useAt("V[:*] vacuous assign nondet")(1) & closeId),
                   (BranchLabels.genShow, generalize(w0)(1) & onBranch(
-                    (BranchLabels.genShow, (debugT("W gen V 2") & V(1) & closeId) ~ errorT("vacuously closed")),
+                    (BranchLabels.genShow, debugT("W gen V 2") & V(1) & closeId),
                     (BranchLabels.genUse, master)
                   ))
                 )
@@ -481,12 +481,13 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     */
                     // gather outer boxes to [;]
                     & sublabel("gathering") & debug("gathering")
-                    & useAt("[;] compose", PosInExpr(1::Nil))(1) & debug("gathered 1")
-                    & debug("mid gather") & useAt("[;] compose", PosInExpr(1::Nil))(-3)
+                    & useAt("[;] compose", PosInExpr(1::Nil))(1)
+                    & useAt("[;] compose", PosInExpr(1::Nil))(-3)
                     & debug("gathered")
                     & sublabel("postCut A()&W(w0)") & debug("postCut A()&W(w0")
                     & postCut(And(a,w0))(1) & onBranch(
-                    (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)") & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & chase(1)
+                    (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)")
+                      & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & chase(1)
                       & allR(1) // equivalent:  HilbertCalculus.vacuousAll(1)
                       & label("gen by arith") & debug("gen by arith")
                       & andR(1) & (
@@ -503,7 +504,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                         )
                       )
                       ),
-                    (BranchLabels.cutUseLbl, (sublabel("generalized A()&W(w0)->post")
+
+                    (BranchLabels.cutUseLbl, sublabel("generalized A()&W(w0)->post")
                       & HilbertCalculus.testb(1, 1::1::Nil)
                       & debug("do use dist equiv impl")
                       & useAt(distEquivImpl.conclusion.succ.head, PosInExpr(0::Nil))(1, 1::Nil)
@@ -515,7 +517,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                       & debug("do [] post weaken")
                       & useAt("[] post weaken")(1, /*Nil*/1::1::1::Nil)
                       & close(-3, 1)
-                      ) ~ errorT("should close"))
+                      )
                   )
                   )
                   ),
