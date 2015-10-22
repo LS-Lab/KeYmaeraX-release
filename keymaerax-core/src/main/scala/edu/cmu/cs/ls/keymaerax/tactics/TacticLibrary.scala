@@ -760,7 +760,7 @@ object TacticLibrary {
               & cutR(cutted)(p) & onBranch(
               (BranchLabels.cutUseLbl/*cutShowLbl?*/, label("") & assertT(cutted,"show [a]cut")(p) & /*implyR(p) &*/ debugT("showing post cut") &
                 hide(conditioned)(conditional) & label(BranchLabels.cutShowLbl)),
-              (BranchLabels.cutShowLbl/*cutUseLbl?*/, (label("") & assertT(Imply(cutted,Box(a,post)),"[a]cut->[a]post")(p) &
+              (BranchLabels.cutShowLbl/*cutUseLbl?*/, label("") & assertT(Imply(cutted,Box(a,post)),"[a]cut->[a]post")(p) &
                 //debug("inversing implies") & PropositionalTacticsImpl.InverseImplyRightT(cutical, p)
                 //useAt("K modal modus ponens", PosInExpr(1::Nil))(p) &
                 debug("K reduction") &
@@ -768,7 +768,6 @@ object TacticLibrary {
                 assertT(Box(a, Imply(C,post)), "[a](cut->post)")(p) &
                 debug("closing by K assumption") &
                 closeId  //(conditional, p.asInstanceOf[SuccPosition])
-                ) ~ errorT("should close")
                 )
             )),
             (BranchLabels.cutUseLbl, assertT(conditioned, "[a](cut->post)")(p) & label(BranchLabels.cutUseLbl))
