@@ -28,6 +28,34 @@ trait UnifyUSCalculus {
   type Subst = UnificationMatch.Subst
 
   /*******************************************************************
+    * Axiomatic Rules
+    *******************************************************************/
+
+  /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
+    * {{{
+    *       p(??)
+    *   ----------- G
+    *    [a;]p(??)
+    * }}}
+    * @see [[Monb]] with p(x)=True
+    */
+  lazy val G                  : Tactic         = AxiomaticRuleTactics.goedelT
+  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
+  lazy val allG               : Tactic         = AxiomaticRuleTactics.forallGeneralizationT
+  /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality `c(f(x))=c(g(x))` to an equality `f(x)=g(x)` */
+  //def CT(inEqPos: PosInExpr)  : Tactic         = ???
+  /** CQ: Equation Congruence: Contextual Equivalence of terms at the indicated position to reduce an equivalence to an equation */
+  //def CQ(inEqPos: PosInExpr)  : Tactic
+  /** CE: Congruence: Contextual Equivalence at the indicated position to reduce an equivalence to an equivalence */
+  //def CE(inEqPos: PosInExpr)  : Tactic
+  /** Monb: Monotone `[a;]p(x) |- [a;]q(x)` reduces to proving `p(x) |- q(x)` */
+  lazy val Monb               : Tactic         = AxiomaticRuleTactics.boxMonotoneT
+  /** Mond: Monotone `<a;>p(x) |- <a;>q(x)` reduces to proving `p(x) |- q(x)` */
+  lazy val Mond               : Tactic         = AxiomaticRuleTactics.diamondMonotoneT
+
+
+
+  /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)
     *******************************************************************/
 
@@ -300,9 +328,17 @@ trait UnifyUSCalculus {
 
   }
 
+  //////////////
+  // Congruence Reasoning
+
   /**
    * CQ(pos) at the indicated position within an equivalence reduces contextual equivalence `p(left)<->p(right)` to argument equality `left=right`.
    * This tactic will use [[CE()]] under the hood as needed.
+   * {{{
+   *        f(x) = g(x)
+   *   --------------------- CQ
+   *    c(f(x)) <-> c(g(x))
+   * }}}
    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotTerm happens.
    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
@@ -349,6 +385,11 @@ trait UnifyUSCalculus {
 
   /**
    * CE(pos) at the indicated position within an equivalence reduces contextual equivalence `C{left}<->C{right}`to argument equivalence `left<->right`.
+   * {{{
+   *       p(x) <-> q(x)
+   *   --------------------- CE
+   *    C{p(x)} <-> C{q(x)}
+   * }}}
    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
    * @see [[UnifyUSCalculus.CE(Context)]]
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
@@ -424,13 +465,26 @@ trait UnifyUSCalculus {
   /** CE(fact) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
     * reasoning at the indicated position to replace `right` by `left` at indicated position (literally, no substitution).
     * Efficient unification-free version of [[UnifyUSCalculus#useAt(Provable, PosInExpr):PositionTactic]]
+    * {{{
+    *                          fact
+    *   G |- C{q(x)}, D    p(x) <-> q(x)
+    *   -------------------------------- CE(fact)
+    *   G |- C{p(x)}, D
+    * }}}
+    * Similarly for antecedents or equality facts or implication facts, e.g.:
+    * {{{
+    *                          fact
+    *   C{q(x)}, G |- D    p(x) <-> q(x)
+    *   -------------------------------- CE(fact)
+    *   C{p(x)}, G |- D
+    * }}}
     * @see [[UnifyUSCalculus.CE(Provable,Context)]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
-    * @example CE(fact) == CE(fact, Context("⎵".asFormula))
+    * @example CE(fact) is equivalent to CE(fact, Context("⎵".asFormula))
     */
   def CE(fact: Provable): PositionTactic = new PositionTactic("CE(Provable)") {
     import Augmentors._
@@ -475,6 +529,9 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
+    * @example CE(fact, Context("⎵".asFormula)) is equivalent to CE(fact)
+    * @example CE(fact, Context("x>0&⎵".asFormula))(p) is equivalent to CE(fact)(p+1)
+    *          except that the former only accepts x>0&⎵ as the shape of the context at position p.
     */
   def CE(fact: Provable, C: Context[Formula]): PositionTactic = new PositionTactic("CE(Provable,Context)") {
     import Augmentors._
@@ -515,12 +572,12 @@ trait UnifyUSCalculus {
   /** cutAt(repl) cuts left/right to replace the expression at the indicated position in its context C{.} by `repl`.
     * {{{
     *   G |- C{repl}, D   G |- C{repl}->C{c}, D
-    *   ---------------------------------------
+    *   --------------------------------------- cutAt(repl)
     *   G |- C{c}, D
     * }}}
     * {{{
     *   C{repl}, G |- D   G |- D, C{c}->C{repl}
-    *   ---------------------------------------
+    *   --------------------------------------- cutAt(repl)
     *   C{c}, G |- D
     * }}}
     * @see [[UnifyUSCalculus.CE(Provable)]]
@@ -575,8 +632,18 @@ trait UnifyUSCalculus {
     else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key, inst)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
-  /** CE(C) will wrap any equivalence left<->right or equality left=right fact it gets within context C.
+  /** CE(C) will wrap any equivalence `left<->right` or equality `left=right` fact it gets within context C.
     * Uses CE or CQ as needed.
+    * {{{
+    *       p(x) <-> q(x)
+    *   --------------------- CE
+    *    C{p(x)} <-> C{q(x)}
+    * }}}
+    * {{{
+    *       f(x) = g(x)
+    *   --------------------- CQ+CE
+    *    c(f(x)) <-> c(g(x))
+    * }}}
     * @see [[CE(PosInExpr]]
     * @see [[CE(Provable)]]
     * @see [[CMon(Context)]]
@@ -609,7 +676,7 @@ trait UnifyUSCalculus {
     }
   }
 
-  /** CMon(C) will wrap any implication left->right fact it gets within a positive context C by monotonicity.
+  /** CMon(C) will wrap any implication `left->right` fact it gets within a (positive or negative) context C by monotonicity.
     * {{{
     *      k |- o
     *   ------------ CMon if C{⎵} of positive polarity

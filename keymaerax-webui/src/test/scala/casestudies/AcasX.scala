@@ -291,6 +291,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     distEquivalence.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
   }
 
+
   it should "derive sequent version of conditional equivalence" in {
     val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-equivalence.key")).mkString)
     val Imply(And(a,w), Equiv(e,i)) = equivalence
@@ -382,7 +383,6 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val shuffle2 = TactixLibrary.proveBy("(A()&W()->(Ce()<->Ci())) -> ((A()&W() -> Ce() -> q()) <-> (A()&W() -> Ci() -> q()))".asFormula, prop)
     shuffle2 shouldBe 'proved
     // (A()&W(w_0) -> Ce(w_0,dhf_0) -> q())  <->  (A()&W(w_0) -> Ci(w_0,dhf_0) -> q())
-    //@todo turn into a lemma:
     val distEquivImpl = (TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w0), Imply(e0, "q()".asFormula)), Imply(And(a,w0),Imply(i0,"q()".asFormula))))),
       // //useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
       useAt(shuffle2, PosInExpr(1::Nil))(1)
@@ -405,7 +405,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     TactixLibrary.proveBy(acasxexplicit,
       implyR(1) & andL(-1) &
         postCut(a)(1) & onBranch(
-        (BranchLabels.cutShowLbl, label("") & sublabel("A() vacuous") & debug("vacuous global assumptions") & V(1) & close(-1, 1)),
+        (BranchLabels.cutShowLbl, sublabel("A() vacuous") & debug("vacuous global assumptions") & V(1) & close(-1, 1)),
 
         (BranchLabels.cutUseLbl, label("") & debug("true induction need") &
 
@@ -418,9 +418,9 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
               // could also just always generalize(w0)
               // this is a more efficient version
               //@note could have handled 2*composeb(1) at once
-              //@todo use W(w_0) instead of W(w) or use post-postcondition
+              //@note useing W(w_0) instead of W(w) or use post-postcondition
               composeb(1) & generalize(w0)(1) & onBranch(
-              (BranchLabels.genShow, V(1) & implyR(1) & closeId),
+              (BranchLabels.genShow, debugT("W gen V 1") & V(1) & closeId),
               (BranchLabels.genUse, composeb(1) & useAt("V[:*] vacuous assign nondet")(SuccPosition(0, 1::Nil)) &
                 choiceb(1) & andR(1) & (
                 sublabel("& left") & testb(1) & implyR(1) & closeId
@@ -429,7 +429,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                   composeb(1) & composeb(SuccPosition(0, 1::Nil)) & generalize(w0)(1) & onBranch(
                   (BranchLabels.genUse, useAt("V[:*] vacuous assign nondet")(1) & closeId),
                   (BranchLabels.genShow, generalize(w0)(1) & onBranch(
-                    (BranchLabels.genShow, V(1) & closeId),
+                    (BranchLabels.genShow, debugT("W gen V 2") & V(1) & closeId),
                     (BranchLabels.genUse, master)
                   ))
                 )
@@ -470,7 +470,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     & debug("-> weakened")
                     & label("CMon") & debug("CMon")
                     & sublabel("-> weakened")
-                    // like CMon(PosInExpr(1::1::1::0::0::Nil)) except with context
+                    // the following is like CMon(PosInExpr(1::1::1::0::0::Nil)) except with context kept around
                     & implyR(1)
                     & debug("->R ed")
                     /*
@@ -479,29 +479,55 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     & (useAt("[:=] assign")(1, 1::1::Nil) & useAt("[:=] assign")(-3, 1::1::Nil))
                     & (randomb(1) & randomb(-3))
                     */
-                    // gather
+                    // gather outer boxes to [;]
                     & sublabel("gathering") & debug("gathering")
-                    & (useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0)) & useAt("[;] compose", PosInExpr(1::Nil))(AntePosition(2)))
+                    & useAt("[;] compose", PosInExpr(1::Nil))(1)
+                    & useAt("[;] compose", PosInExpr(1::Nil))(-3)
                     & debug("gathered")
-                    & sublabel("postCut A()&W(w0)") & debug("postCut A()&W(w0")
+                    & sublabel("postCut A()&W(w0)") & debug("postCut A()&W(w0)")
                     & postCut(And(a,w0))(1) & onBranch(
-                    (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)") & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & chase(1) & label("gen") & closeId),
+                    (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)")
+                      & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & sublabel("chasing") & chase(1)
+                      & allR(1) // equivalent:  HilbertCalculus.vacuousAll(1)
+                      & sublabel("gen by arith") & debug("gen by arith")
+                      & andR(1) & (
+                      andR(1) & (
+                        closeId
+                        ,
+                        close // QE
+                        )
+                      ,
+                      andR(1) & (
+                        closeId
+                        ,
+                        close //QE
+                        )
+                      )
+                      ),
+
                     (BranchLabels.cutUseLbl, sublabel("generalized A()&W(w0)->post")
                       & HilbertCalculus.testb(1, 1::1::Nil)
                       & debug("do use dist equiv impl")
                       & useAt(distEquivImpl.conclusion.succ.head, PosInExpr(0::Nil))(1, 1::Nil)
                       & debug("used dist equiv impl")
+                      // repacking
                       & useAt("[?] test", PosInExpr(1::Nil))(1, 1::1::Nil)
+                      & debug("repacked test")
                       // drop a&w implication from postcondition again
                       //& useAt("K modal modus ponens", PosInExpr(0::Nil))(1) & implyR(1) & hide(-4)
                       & sublabel("[] post weaken")
                       & debug("do [] post weaken")
-                      & useAt("[] post weaken")(1, /*Nil*/1::1::1::Nil)
+                      // & assertT(And(a,w0), "post weaken form")(1, 1::0::Nil)
+                      & assertT(Test(i0), "post weaken form")(1, 1::1::0::Nil)
+                      & useAt("[] post weaken", PosInExpr(1::Nil))(1) //& useAt("[] post weaken")(1, /*Nil*/1::1::1::Nil)
+                      & debug("did [] post weaken")
                       & close(-3, 1)
+                      // successfully closes
                       )
                   )
                   )
                   ),
+
                 (BranchLabels.cutUseLbl, sublabel("use patch") & debug("use patch")
                   // repacking
                   & useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) & useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil))

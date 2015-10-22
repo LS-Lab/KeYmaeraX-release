@@ -692,9 +692,12 @@ object TacticLibrary {
   /**
    * Generalize postcondition to C and, separately, prove that C implies postcondition .
    * The operational effect of {a;b;}@generalize(f1) is generalize(f1)
-   * Applied to [a]B leaves behind branches
-   * genUseLbl:  with ... |- [a]C ...
-   * genShowLbl: with C |- B
+   * {{{
+   *   genUseLbl:        genShowLbl:
+   *   G |- [a]C, D      C |- B
+   *   ------------------------
+   *          G |- [a]B, D
+   * }}}
    * @author Andre Platzer
    * @todo same for diamonds by the dual of K
    */
@@ -723,13 +726,16 @@ object TacticLibrary {
   /**
    * Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post.
    * The operational effect of {a;}*@invariant(f1,f2,f3) is postCut(f1) & postcut(f2) & postCut(f3).
-   * Leaves behind branches
-   * cutUseLbl: with ... |- [a](cut->post)
-   * cutShowbranch: with ... |- [a]cut
+   * {{{
+   *   cutUseLbl:           cutShowLbl:
+   *   G |- [a](C->B), D    G |- [a]C, D
+   *   ---------------------------------
+   *          G |- [a]B, D
+   * }}}
    * @author Andre Platzer
    * @todo same for diamonds by the dual of K
    */
-  def postCut(cutf: Formula): PositionTactic = new PositionTactic("postCut") {
+  def postCut(C: Formula): PositionTactic = new PositionTactic("postCut") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
       case Box(_, _) => true
       case Diamond(_, _) => println("postCut not yet implemented for diamonds"); true
@@ -743,10 +749,10 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case Box(a, post) =>
           // [a](cut->post) and its position in assumptions
-          val conditioned = Box(a, Imply(cutf, post))
+          val conditioned = Box(a, Imply(C, post))
           val conditional = AntePosition(node.sequent.ante.length)
           // [a]cut and its position in assumptions
-          val cutted = Box(a, cutf)
+          val cutted = Box(a, C)
           val cutical = AntePosition(node.sequent.ante.length + 1)
           Some(cutR(conditioned)(p) & onBranch(
             (BranchLabels.cutShowLbl, label("") & assertT(Imply(conditioned,Box(a,post)),"original implication")(p) &
@@ -754,15 +760,14 @@ object TacticLibrary {
               & cutR(cutted)(p) & onBranch(
               (BranchLabels.cutUseLbl/*cutShowLbl?*/, label("") & assertT(cutted,"show [a]cut")(p) & /*implyR(p) &*/ debugT("showing post cut") &
                 hide(conditioned)(conditional) & label(BranchLabels.cutShowLbl)),
-              (BranchLabels.cutShowLbl/*cutUseLbl?*/, (label("") & assertT(Imply(cutted,Box(a,post)),"[a]cut->[a]post")(p) &
+              (BranchLabels.cutShowLbl/*cutUseLbl?*/, label("") & assertT(Imply(cutted,Box(a,post)),"[a]cut->[a]post")(p) &
                 //debug("inversing implies") & PropositionalTacticsImpl.InverseImplyRightT(cutical, p)
                 //useAt("K modal modus ponens", PosInExpr(1::Nil))(p) &
                 debug("K reduction") &
                 useAt("K modal modus ponens", PosInExpr(1::Nil))(p) &
-                assertT(Box(a, Imply(cutf,post)), "[a](cut->post)")(p) &
+                assertT(Box(a, Imply(C,post)), "[a](cut->post)")(p) &
                 debug("closing by K assumption") &
                 closeId  //(conditional, p.asInstanceOf[SuccPosition])
-                ) ~ errorT("should close")
                 )
             )),
             (BranchLabels.cutUseLbl, assertT(conditioned, "[a](cut->post)")(p) & label(BranchLabels.cutUseLbl))
