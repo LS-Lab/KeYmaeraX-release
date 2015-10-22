@@ -517,6 +517,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                       //& useAt("K modal modus ponens", PosInExpr(0::Nil))(1) & implyR(1) & hide(-4)
                       & sublabel("[] post weaken")
                       & debug("do [] post weaken")
+                      // & assertT(And(a,w0), "post weaken form")(1, 1::0::Nil)
+                      & assertT(Test(i0), "post weaken form")(1, 1::1::0::Nil)
                       & useAt("[] post weaken", PosInExpr(1::Nil))(1) //& useAt("[] post weaken")(1, /*Nil*/1::1::1::Nil)
                       & debug("did [] post weaken")
                       & close(-3, 1)

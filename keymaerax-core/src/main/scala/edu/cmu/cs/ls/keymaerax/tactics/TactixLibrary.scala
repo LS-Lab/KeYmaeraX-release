@@ -336,9 +336,16 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Assert that the given condition holds for the sequent at the position where the tactic is applied */
   def assertT(cond : (Sequent,Position)=>Boolean, msg:String): PositionTactic = Tactics.assertPT(cond, msg)
   /** Assert that the given expression is present at the position in the sequent where this tactic is applied to. */
-  def assertT(expected: Expression, msg:String): PositionTactic = expected match {
+  def assertT(expected: Expression, msg:String): PositionTactic = {
+    import Augmentors.SequentAugmentor
+    //assertPT((s, pos) => pos.isIndexDefined(s) && s.sub(pos) == Some(expected), msg + "\nExpected: " + expected.prettyString)
+    expected match {
+      //@todo could simplify all to be the same as the Program case
     case t: Term => Tactics.assertPT(t, msg)
     case f: Formula => Tactics.assertPT(f, msg)
+    case p: Program =>
+      assertPT((s, pos) => pos.isIndexDefined(s) && s.sub(pos) == Some(expected), msg + "\nExpected: " + expected.prettyString)
+    }
   }
 
   /** errorT raises an error upon executing this tactic, stopping processing */
