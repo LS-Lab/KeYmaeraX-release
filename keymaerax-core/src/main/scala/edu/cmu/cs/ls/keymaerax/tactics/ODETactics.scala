@@ -6,11 +6,12 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{boxMonotoneT, goedelT}
+import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.boxMonotoneT
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverAxiomT,uncoverConditionalAxiomT,axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
-import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.{cutInContext, peelT}
+import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
+import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.skolemizeT
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
@@ -20,10 +21,9 @@ import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT, Clos
   EquivLeftT, ImplyLeftT, uniformSubstT, NotLeftT, AndLeftT, cohideT, cohide2T, PropositionalRightT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{onBranch, lastAnte, lastSucc}
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
-import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext.ApplicableAtTerm
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol, findFormulaByStructure}
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol}
 import AlphaConversionHelper._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, Tool}
 
@@ -1576,41 +1576,48 @@ object ODETactics {
    * @todo Get rid of "\exists y. r(x,y) -> p(x)" by using EquivifyRight and CommuteEquivRight
    */
   def diffAuxiliariesRule(y: Variable, gl: Term, gc: Term, r: Formula): PositionTactic = new PositionTactic("DA") {
-    override def applies(s: Sequent, pos: Position): Boolean = getFormula(s, pos) match {
-      case Box(ode@ODESystem(c, h), p) if !StaticSemantics(ode).bv.contains(y) &&
+    override def applies(s: Sequent, pos: Position): Boolean = s(pos).sub(pos.inExpr) match {
+      case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(gc).contains(y) && !StaticSemantics.symbols(gl).contains(y) => true
       case _ => false
     }
 
     override def apply(pos: Position): Tactic = new ConstructionTactic("DA") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
-        case Box(ode@ODESystem(c, h), p) if !StaticSemantics(ode).bv.contains(y) &&
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos).sub(pos.inExpr) match {
+        case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
           !StaticSemantics.symbols(gc).contains(y) && !StaticSemantics.symbols(gl).contains(y) =>
           val desiredBox = Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(gl, y), gc))), h), r)
 
-          //@todo tactic inefficiency: cutting in p would not be necessary if p is already in antecedent
-          Some(cutT(Some(p)) & onBranch(
-            (cutShowLbl, hideT(pos) &
-              /* remains as proof obligation 0 */ LabelBranch("Diff. Aux. P Initially Valid")),
-            (cutUseLbl, cutT(Some(Equiv(p, Exists(y::Nil, r)))) & onBranch(
-              (cutShowLbl, lastSucc(cohideT) &
-                /* remains as proof obligation 1 */ LabelBranch("Diff. Aux. Show Equivalence (1)")),
-              (cutUseLbl,
-                equivRewriting(AntePosition(node.sequent.ante.length+1), AntePosition(node.sequent.ante.length)) &
-                  lastAnte(skolemizeT) &
-                  diffAuxiliaryT(y, gl, gc)(pos) &
-                  instantiateT(pos) &
-                  cutT(Some(desiredBox)) &
-                  onBranch(
-                    (cutShowLbl, hideT(pos) & (SearchTacticsImpl.locateAnte(hideT, _ == p)*) &
-                      /* remains as proof obligation 2 */ LabelBranch("Diff. Aux. Result")),
-                    (cutUseLbl, cohide2T(AntePosition(node.sequent.ante.length+1), pos) &
-                      boxMonotoneT & lastAnte(existentialGenT(y, y)) &
-                      /* remains, but see proof obligation 1 */ LabelBranch("Diff. Aux. Show Equivalence (2)"))
-                  ))
-            ))
-          ))
+          val pIdx = node.sequent.ante.indexOf(p)
+          val pPos = if (pIdx >= 0) AntePosition(pIdx) else AntePosition(node.sequent.ante.length)
+          val equivPos = if (pIdx >= 0) AntePosition(node.sequent.ante.length) else AntePosition(node.sequent.ante.length+1)
+
+          val diffAuxEquiv = cutT(Some(Equiv(p, Exists(y::Nil, r)))) & onBranch(
+            (cutShowLbl, lastSucc(cohideT) &
+              /* remains as proof obligation 1 */ LabelBranch("Diff. Aux. Show Equivalence (1)")),
+            (cutUseLbl,
+              equivRewriting(equivPos, pPos) &
+                lastAnte(skolemizeT) &
+                diffAuxiliaryT(y, gl, gc)(pos) &
+                instantiateT(pos) &
+                cutT(Some(desiredBox)) &
+                onBranch(
+                  (cutShowLbl, hideT(pos) & (SearchTacticsImpl.locateAnte(hideT, _ == p)*) &
+                    /* remains as proof obligation 2 */ LabelBranch("Diff. Aux. Result")),
+                  (cutUseLbl, cohide2T(equivPos, pos) &
+                    boxMonotoneT & lastAnte(existentialGenT(y, y)) &
+                    /* remains, but see proof obligation 1 */ LabelBranch("Diff. Aux. Show Equivalence (2)"))
+                ))
+          )
+
+          Some(ifElseT(_.sequent.ante.contains(p),
+            /* if */   diffAuxEquiv,
+            /* else */ cutT(Some(p)) & onBranch(
+              (cutShowLbl, hideT(pos) &
+                /* remains as proof obligation 0 */ LabelBranch("Diff. Aux. P Initially Valid")),
+              (cutUseLbl, diffAuxEquiv)
+            )))
         case _ => ???
       }
     }
