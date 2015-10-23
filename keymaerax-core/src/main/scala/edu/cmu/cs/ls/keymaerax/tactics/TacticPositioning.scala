@@ -106,7 +106,8 @@ object HereP extends PosInExpr
 
     protected def clone(i: Int, e: PosInExpr = HereP): Position
 
-    override def toString: String = (if (isAnte) "Ante" else "Succ") + "(" + getIndex + ", " + inExpr.pos.mkString(".") + ")"
+    override def toString: String = prettyString
+    def canonicalString: String = (if (isAnte) "Ante" else "Succ") + "(" + getIndex + ", " + inExpr.pos.mkString(".") + ")"
     def prettyString: String = top.getPos + "." + inExpr.pos.mkString(".")
   }
 

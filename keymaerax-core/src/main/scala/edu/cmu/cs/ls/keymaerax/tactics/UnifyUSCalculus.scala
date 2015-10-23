@@ -194,7 +194,7 @@ trait UnifyUSCalculus {
       UnificationMatch(keyPart,sub.get)
       true
     } catch {case e: ProverException =>
-      if (DEBUG || true) println("INFO: " + e.inContext("useAt(" + fact + ")(" + p + ")\n(" + s + ")" + "\nat " + s.sub(p)))
+      if (DEBUG || true) println("INFO: " + e.inContext("useAt(" + fact + ") (" + p + ")\n(" + s + ")" + "\nat " + s.sub(p)))
       false
     }
 
