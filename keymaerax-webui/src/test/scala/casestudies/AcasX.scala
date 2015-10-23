@@ -520,13 +520,13 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                       & debug("used dist equiv impl")
                       & assertE(And(a,w0), "used dist equiv form")(1, 1::0::Nil)
                       & assertE(i0, "used dist equiv form")(1, 1::1::0::Nil)
-                      & (if (distEquivImpl.isProved) {
-                      assertE("dhf_0:=*;{w_0:=-1;++w_0:=1;}".asProgram, "used dist equiv form")(1, 0 :: Nil) &
-                        assertE ("ao:=*;".asProgram, "used dist equiv form")(1, 1::1::1::0::Nil)
-                    } else {
-                    //  println("WARN: unproved distEquivImpl, so proof goals will remain around");
-                      skip
-                    })
+//                      & (if (distEquivImpl.isProved) {
+//                      assertE("dhf_0:=*;{w_0:=-1;++w_0:=1;}".asProgram, "used dist equiv form")(1, 0 :: Nil) &
+//                        assertE ("ao:=*;".asProgram, "used dist equiv form")(1, 1::1::1::0::Nil)
+//                    } else {
+//                    //  println("WARN: unproved distEquivImpl, so proof goals will remain around");
+//                      skip
+//                    })
                       // repacking
                       & useAt("[?] test", PosInExpr(1::Nil))(1, 1::1::Nil)
                       & debug("repacked test")
