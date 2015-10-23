@@ -338,7 +338,14 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val Imply(And(a,w), Equiv(e,i)) = equivalence
     val acasximplicit = shape(i)
     val acasxexplicit = shape(e)
-    acasXcongruence(implicitExplicit, Provable.startProof(acasximplicit), acasxexplicit) shouldBe 'closed
+    acasXcongruence(implicitExplicit, Provable.startProof(acasximplicit), acasxexplicit).subgoals should have length 2
+  }
+
+  it should "prove explicit region safety from implicit region safety and conditional equivalence" in {
+    val acasximplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay_max.key")).mkString)
+    val acasxexplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-explicit.key")).mkString)
+    val implicitExplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay_equivalence.key")).mkString)
+    acasXcongruence(Provable.startProof(implicitExplicit), Provable.startProof(acasximplicit), acasxexplicit) shouldBe 'closed
   }
 
   private def acasXcongruence(implicitExplicit: Provable, acasximplicitP: Provable, acasxexplicit: Formula): Provable = {
@@ -459,7 +466,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                   (BranchLabels.genUse, useAt("V[:*] vacuous assign nondet")(1) & closeId),
                   (BranchLabels.genShow, generalize(w0)(1) & onBranch(
                     (BranchLabels.genShow, debugT("W gen V 2") & V(1) & closeId),
-                    (BranchLabels.genUse, master)
+                    (BranchLabels.genUse, sublabel("arith") & chase(1) & allR(1) & allR(1) & implyR(1) & cohide(1) & master)
                   ))
                 )
                 )
@@ -634,45 +641,6 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
       proof
   }
-
-
-  it should "prove explicit region safety from implicit region safety and conditional equivalence" in {
-    val acasximplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay_max.key")).mkString)
-    val acasxexplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-explicit.key")).mkString)
-    val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-equivalence.key")).mkString)
-    val Imply(And(a,w), Equiv(e,i)) = equivalence
-    //@note same proof of seqEquivalence as in "derive sequent version of conditional equivalence"
-    val seqEquivalence = (Provable.startProof(Sequent(Nil, IndexedSeq(a, w), IndexedSeq(Equiv(e,i)))))
-
-    val distEquivalence = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w), e), Imply(And(a,w),i)))),
-      useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
-    distEquivalence.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
-
-
-    acasxexplicit match {
-      case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == e && c2 == e =>
-      case _ => throw new IllegalArgumentException("Unexpected input shape of explicit file")
-    }
-    acasximplicit match {
-      case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == i && c2 == i =>
-      case _ => throw new IllegalArgumentException("Unexpected input shape of implicit file")
-    }
-
-    import TactixLibrary._
-    TactixLibrary.proveBy(acasxexplicit,
-      implyR(1) & andL(-1) &
-        postCut(a)(1) & onBranch(
-        (BranchLabels.cutShowLbl, V(1) & close(-1, 1)),
-        (BranchLabels.cutUseLbl, skip)
-      )
-    ).
-      subgoals should contain only (
-      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(acasximplicit)),
-      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(equivalence))
-      )
-
-  }
-
 
     /*  "abs_test0" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/acasx/abs_test0.key"))
