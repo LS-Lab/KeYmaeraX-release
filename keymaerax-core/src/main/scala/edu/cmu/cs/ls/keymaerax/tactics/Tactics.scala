@@ -458,7 +458,7 @@ object Tactics {
   /**
    * Assertion PositionTactic, which has no effect except to sanity-check the given condition like an assert would.
    */
-  def assertPT(cond : (Sequent,Position)=>Boolean, msg:String = ""): PositionTactic = new PositionTactic("Assert") {
+  def assertPT(cond : (Sequent,Position)=>Boolean, msg: => String = ""): PositionTactic = new PositionTactic("Assert") {
     def applies(s: Sequent, p: Position) = true
 
     def apply(pos: Position): Tactic = ifT(node => !cond(node.sequent, pos), errorT("Tactic Assertion failed: " + msg + "\nat " + pos))

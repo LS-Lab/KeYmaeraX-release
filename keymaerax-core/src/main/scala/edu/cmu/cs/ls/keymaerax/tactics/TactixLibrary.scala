@@ -352,6 +352,7 @@ object TactixLibrary extends UnifyUSCalculus {
   def assertT(expected: Expression, msg:String): PositionTactic = {
     import Augmentors.SequentAugmentor
     //assertPT((s, pos) => pos.isIndexDefined(s) && s.sub(pos) == Some(expected), msg + "\nExpected: " + expected.prettyString)
+    //@todo the following code seems incorrect compared to assertE
     expected match {
       //@todo could simplify all to be the same as the Program case
     case t: Term => Tactics.assertPT(t, msg)
@@ -359,6 +360,11 @@ object TactixLibrary extends UnifyUSCalculus {
     case p: Program =>
       assertPT((s, pos) => pos.isIndexDefined(s) && s.sub(pos) == Some(expected), msg + "\nExpected: " + expected.prettyString)
     }
+  }
+
+  def assertE(expected: Expression, msg:String): PositionTactic = {
+    import Augmentors.SequentAugmentor
+    assertPT((s, pos) => s.sub(pos) == Some(expected), msg + "\nExpected: " + expected.prettyString /*+ "\nFound:   " + s.sub(pos)*/)
   }
 
   /** errorT raises an error upon executing this tactic, stopping processing */
