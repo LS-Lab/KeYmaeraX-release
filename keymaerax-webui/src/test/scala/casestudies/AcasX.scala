@@ -313,6 +313,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     seqEquivalence.subgoals should contain only Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence))
   }
 
+
+
   it should "prove stylized generic region Ce safety from region Ci safety and conditional equivalence" in {
     val shape = Context(
       """  (A()) &
@@ -383,7 +385,9 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val shuffle2 = TactixLibrary.proveBy("(A()&W()->(Ce()<->Ci())) -> ((A()&W() -> Ce() -> q()) <-> (A()&W() -> Ci() -> q()))".asFormula, prop)
     shuffle2 shouldBe 'proved
     // (A()&W(w_0) -> Ce(w_0,dhf_0) -> q())  <->  (A()&W(w_0) -> Ci(w_0,dhf_0) -> q())
-    val distEquivImpl = (TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w0), Imply(e0, "q()".asFormula)), Imply(And(a,w0),Imply(i0,"q()".asFormula))))),
+    val distEquivImpl = (TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(
+      Imply(And(a,w0), Imply(e0, "q()".asFormula)),
+      Imply(And(a,w0), Imply(i0, "q()".asFormula))))),
       // //useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
       useAt(shuffle2, PosInExpr(1::Nil))(1)
         & byUS(equivalenceP)))
@@ -508,8 +512,13 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                     (BranchLabels.cutUseLbl, sublabel("generalized A()&W(w0)->post")
                       & HilbertCalculus.testb(1, 1::1::Nil)
                       & debug("do use dist equiv impl")
+                      & assertE(And(a,w0), "do use dist equiv form")(1, 1::0::Nil)
+                      & assertE(e0, "do use dist equiv form")(1, 1::1::0::Nil)
+                      //@todo does this keep around too much?
                       & useAt(distEquivImpl.conclusion.succ.head, PosInExpr(0::Nil))(1, 1::Nil)
                       & debug("used dist equiv impl")
+                      & assertE(And(a,w0), "used dist equiv form")(1, 1::0::Nil)
+                      & assertE(i0, "used dist equiv form")(1, 1::1::0::Nil)
                       // repacking
                       & useAt("[?] test", PosInExpr(1::Nil))(1, 1::1::Nil)
                       & debug("repacked test")
@@ -517,8 +526,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                       //& useAt("K modal modus ponens", PosInExpr(0::Nil))(1) & implyR(1) & hide(-4)
                       & sublabel("[] post weaken")
                       & debug("do [] post weaken")
-                      // & assertT(And(a,w0), "post weaken form")(1, 1::0::Nil)
-                      & assertT(Test(i0), "post weaken form")(1, 1::1::0::Nil)
+                      & assertE(And(a,w0), "post weaken form")(1, 1::0::Nil)
+                      & assertE(Test(i0), "post weaken form")(1, 1::1::0::Nil)
                       & useAt("[] post weaken", PosInExpr(1::Nil))(1) //& useAt("[] post weaken")(1, /*Nil*/1::1::1::Nil)
                       & debug("did [] post weaken")
                       & close(-3, 1)
