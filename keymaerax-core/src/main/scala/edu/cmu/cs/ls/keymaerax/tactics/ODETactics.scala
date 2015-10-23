@@ -1587,7 +1587,9 @@ object ODETactics {
           !StaticSemantics.symbols(gc).contains(y) && !StaticSemantics.symbols(gl).contains(y) =>
 
           val Equiv(_, Exists(_, r)) = auxEquiv.conclusion.succ.head
-          val desiredBox = Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(gl, y), gc))), h), r)
+
+          val ctx = Context.at(node.sequent(pos.topLevel), pos.inExpr)
+          val desiredResult = ctx._1(Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(gl, y), gc))), h), r))
 
           val pIdx = node.sequent.ante.indexOf(p)
           val pPos = if (pIdx >= 0) AntePosition(pIdx) else AntePosition(node.sequent.ante.length)
@@ -1597,10 +1599,13 @@ object ODETactics {
             (cutShowLbl, cohide2T(pPos, SuccPos(node.sequent.succ.length)) & InverseImplyRightT() & equivifyRightT(1) &
               TactixLibrary.by(auxEquiv)),
             (cutUseLbl, lastAnte(skolemizeT) & diffAuxiliaryT(y, gl, gc)(pos) & instantiateT(pos) &
-              cutT(Some(desiredBox)) & onBranch(
-                (cutShowLbl, hideT(pos) & (SearchTacticsImpl.locateAnte(hideT, _ == p)*) &
+              cutT(Some(desiredResult)) & onBranch(
+                (cutShowLbl, hideT(pos.topLevel) & (SearchTacticsImpl.locateAnte(hideT, _ == p)*) &
                   /* remains as proof obligation 2 */ LabelBranch("Diff. Aux. Result")),
-                (cutUseLbl, debugT("Bar") & cohide2T(equivPos, pos) & boxMonotoneT & existentialGenT(y, y)(-1) &
+                (cutUseLbl, cohide2T(equivPos, pos.topLevel) & InverseImplyRightT() &
+                  // pos.inExpr points to [a]q in ctx([a]q), we want to CMon to q in ctx([a]q)
+                  TactixLibrary.CMon(pos.inExpr.second) &
+                  TactixLibrary.implyR(1) & existentialGenT(y, y)(-1) &
                   InverseImplyRightT() & equivifyRightT(1) & commuteEquivRightT(1) & TactixLibrary.by(auxEquiv))
             ))
           )

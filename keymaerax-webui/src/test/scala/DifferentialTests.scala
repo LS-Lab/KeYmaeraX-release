@@ -510,6 +510,40 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     result.openGoals().head.sequent.succ should contain only "[{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
   }
 
+  it should "work in a simple context" in {
+    import ODETactics.diffAuxiliariesRule
+    val s = Sequent(Nil, immutable.IndexedSeq("x>0".asFormula), immutable.IndexedSeq("a=2 -> [{x'=2}]x>0".asFormula))
+    val tactic = diffAuxiliariesRule(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1, 1::Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "y>0 & x*y>0".asFormula
+    result.openGoals().head.sequent.succ should contain only "a=2 -> [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+  }
+
+  it should "work in a complicated context" in {
+    import ODETactics.diffAuxiliariesRule
+    val s = Sequent(Nil, immutable.IndexedSeq("x>0".asFormula), immutable.IndexedSeq("a=2 -> [b:=3;]<?c=5;{c'=2}>[{x'=2}]x>0".asFormula))
+    val tactic = diffAuxiliariesRule(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1, 1::1::1::Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "y>0 & x*y>0".asFormula
+    result.openGoals().head.sequent.succ should contain only "a=2 -> [b:=3;]<?c=5;{c'=2}>[{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+  }
+
+  it should "not mess up when the context binds the differential auxiliary" in {
+    //@todo should we disallow applicability? result doesn't make much sense anyway...
+    import ODETactics.diffAuxiliariesRule
+    val s = Sequent(Nil, immutable.IndexedSeq("x>0".asFormula), immutable.IndexedSeq("[y:=2;][{x'=2}]x>0".asFormula))
+    val tactic = diffAuxiliariesRule(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1, 1::Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "y_0>0 & x*y_0>0".asFormula
+    result.openGoals().head.sequent.succ should contain only "[y:=2;][{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+  }
+
   "Differential introduce constants" should "replace a with a() in v'=a" in {
     val s = sucSequent("[{v'=a}]v=v0()+a*t()".asFormula)
     val result = helper.runTactic(locateSucc(ODETactics.diffIntroduceConstantT), new RootNode(s))
