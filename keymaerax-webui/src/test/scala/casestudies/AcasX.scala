@@ -466,7 +466,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                   (BranchLabels.genUse, useAt("V[:*] vacuous assign nondet")(1) & closeId),
                   (BranchLabels.genShow, generalize(w0)(1) & onBranch(
                     (BranchLabels.genShow, debugT("W gen V 2") & V(1) & closeId),
-                    (BranchLabels.genUse, sublabel("W arith") & debug("W arith") & choiceb(1) & useAt("[:=] assign")(1, 0::Nil) & useAt("[:=] assign")(1, 1::Nil))
+                    (BranchLabels.genUse, sublabel("W arith") & debug("W arith") & cohide(1) & choiceb(1) & useAt("[:=] assign")(1, 0::Nil) & useAt("[:=] assign")(1, 1::Nil) & QE)
                   ))
                 )
                 )
