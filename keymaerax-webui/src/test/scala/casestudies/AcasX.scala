@@ -319,17 +319,13 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val shape = Context(
       """  (A()) &
   ( (W(w)) &
-      (
         ⎵
-      ) /* C(w,dhf) */
   )
   -> [
   {   {
       { ?true; ++
         {dhf :=*; {w:=-1; ++ w:=1;}
-         ?(
-            ⎵
-          ); /* C(w,dhf) */
+         ?⎵;
         }}
         ao :=*;
       }
