@@ -314,8 +314,34 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
 
-
   it should "prove stylized generic region Ce safety from region Ci safety and conditional equivalence" in {
+    val implicitExplicit = Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("A()&W(w) -> (Ce(w,dhf/*r,dhd,h,dhf,w,ao*/)<->Ci(w,dhf/*r,dhd,h,dhf,w,ao*/))".asFormula)))
+    val shape = Context(
+      """  (A()) &
+  ( (W(w)) &
+        ⎵
+  )
+  -> [
+  {   {
+      { ?true; ++
+        {dhf :=*; {w:=-1; ++ w:=1;}
+         ?⎵;
+        }}
+        ao :=*;
+      }
+      {r' = -rv, dhd' = ao, h' = -dhd & (w * dhd >= w * dhf | w * ao >= a)}
+   }*
+  ] ((h < -hp | h > hp | r < -rp | r> rp) & ⎵)
+      """.asFormula)
+
+    val equivalence = implicitExplicit.conclusion.succ.head
+    val Imply(And(a,w), Equiv(e,i)) = equivalence
+    val acasximplicit = shape(i)
+    val acasxexplicit = shape(e)
+    acasXcongruence(implicitExplicit, Provable.startProof(acasximplicit), acasxexplicit) shouldBe 'closed
+  }
+
+  private def acasXcongruence(implicitExplicit: Provable, acasximplicitP: Provable, acasxexplicit: Formula): Provable = {
     val shape = Context(
       """  (A()) &
   ( (W(w)) &
@@ -334,8 +360,10 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
   ] ((h < -hp | h > hp | r < -rp | r> rp) & ⎵)
       """.asFormula)
     val u = "(h < -hp | h > hp | r < -rp | r> rp)".asFormula
-    val equivalence = "A()&W(w) -> (Ce(w,dhf/*r,dhd,h,dhf,w,ao*/)<->Ci(w,dhf/*r,dhd,h,dhf,w,ao*/))".asFormula
-    val equivalenceP = Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(equivalence)))
+
+    implicitExplicit.conclusion.ante shouldBe 'empty
+    implicitExplicit.conclusion.succ.length shouldBe 1
+    val equivalence = implicitExplicit.conclusion.succ.head
     val Imply(And(a,w), Equiv(e,i)) = equivalence
     // read off more lemmas from equivalence
 
@@ -355,7 +383,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     // second-left branch a,w |- e<->i, a
     (Close(AntePos(0), SuccPos(1)), 0)
     )
-    seqEquivalence.subgoals shouldBe equivalenceP.subgoals
+    seqEquivalence.subgoals shouldBe implicitExplicit.subgoals
     val shuffle = TactixLibrary.proveBy("(A()&W()->(Ce()<->Ci())) -> ((W()->A()->u()&Ci()) <-> (W()->A()->u()&Ce()))".asFormula, prop)
     shuffle shouldBe 'proved
     // (W(w)->A->u&Ci(w,dhf)) <-> (W(w)->A->u&Ce(w,dhf))
@@ -364,9 +392,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
             Imply(w,Imply(a, And(u, e))))
       , useAt(shuffle, PosInExpr(1::Nil))(1)
         & by(seqEquivalence))
-    postEquivalence.subgoals shouldBe equivalenceP.subgoals
-    val acasximplicit = shape(i)
-    val acasxexplicit = shape(e)
+    postEquivalence.subgoals shouldBe implicitExplicit.subgoals
 
     //@note _0 variations in induction :-/
     val w0 = "W(w_0)".asFormula
@@ -377,7 +403,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     // (A()&W(w) -> Ce(w,dhf))  <->  (A()&W(w) -> Ci(w,dhf))
     val distEquivalence = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w), e), Imply(And(a,w),i)))),
       useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
-    distEquivalence.subgoals shouldBe equivalenceP.subgoals
+    distEquivalence.subgoals shouldBe implicitExplicit.subgoals
     val shuffle2 = TactixLibrary.proveBy("(A()&W()->(Ce()<->Ci())) -> ((A()&W() -> Ce() -> q()) <-> (A()&W() -> Ci() -> q()))".asFormula, prop)
     shuffle2 shouldBe 'proved
     // (A()&W(w_0) -> Ce(w_0,dhf_0) -> q())  <->  (A()&W(w_0) -> Ci(w_0,dhf_0) -> q())
@@ -386,8 +412,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       Imply(And(a,w0), Imply(i0, "q()".asFormula))))),
       // //useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
       useAt(shuffle2, PosInExpr(1::Nil))(1)
-        & byUS(equivalenceP)))
-    distEquivImpl.subgoals shouldBe equivalenceP.subgoals
+        & byUS(implicitExplicit)))
+    distEquivImpl.subgoals shouldBe implicitExplicit.subgoals
     println("distEquivImpl " + distEquivImpl)
 
     // begin actual proof
@@ -396,13 +422,16 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == e && c2 == e =>
       case _ => throw new IllegalArgumentException("Unexpected input shape of explicit file")
     }
+    acasximplicitP.conclusion.ante shouldBe 'empty
+    acasximplicitP.conclusion.succ.length shouldBe 1
+    val acasximplicit = acasximplicitP.conclusion.succ.head
     acasximplicit match {
       case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == i && c2 == i =>
       case _ => throw new IllegalArgumentException("Unexpected input shape of implicit file")
     }
 
     import TactixLibrary._
-    TactixLibrary.proveBy(acasxexplicit,
+    val proof = TactixLibrary.proveBy(acasxexplicit,
       implyR(1) & andL(-1) &
         postCut(a)(1) & onBranch(
         (BranchLabels.cutShowLbl, sublabel("A() vacuous") & debug("vacuous global assumptions") & V(1) & close(-1, 1)),
@@ -596,12 +625,14 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
         )
           )
       )
-    ).
-      subgoals should contain only (
-      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(acasximplicit)),
-      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(equivalence))
-      )
+    )
 
+      proof.subgoals should contain only (
+        new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(acasximplicit)),
+        new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(equivalence))
+        )
+
+      proof
   }
 
 
