@@ -18,26 +18,36 @@ abstract class BelleExpr {
   final val belleType : BelleType = this match {
     case builtIn: BuiltInTactic => builtIn.belleTypeAnnotation
     case builtIn: BuiltInPosTactic => builtIn.belleTypeAnnotation
-    case SeqTactic(l,r)  => (l, l.belleType, r, r.belleType) match {
-      case (TAbs(lv2, lBody), ForAllType(lv, leftType), TAbs(rv2, rBody), ForAllType(rv, rightType)) if(lv == lv2 && rv == rv2) =>
-        ForAllType(lv, (lBody & rBody).belleType)
-      case (left, leftType: ProvableMapping, right, rightType: ProvableMapping) =>
-        ProvableMapping(leftType.dom, rightType.cod)
-      case (left, leftType : SequentMapping, right, rightType : SequentMapping) =>
-        SequentMapping(leftType.dom, rightType.cod)
-      case _ => throw BelleError(s"Cannot synthesize a sequential type for ${l.belleType} and ${r.belleType}")
+    case TAbs(t, body) => ForAllType(t, body.belleType)
+    case SeqTactic(l,r)  => {
+      val lBelleType = l.belleType
+      val rBelleType = r.belleType
+      (l, lBelleType, r, rBelleType) match {
+        case (TAbs(lv2, lBody), ForAllType(lv, leftType), TAbs(rv2, rBody), ForAllType(rv, rightType)) if(lv == lv2 && rv == rv2) =>
+          ForAllType(lv, (lBody & rBody).belleType)
+        case (left, leftType: ProvableMapping, right, rightType: ProvableMapping) if(leftType.cod == rightType.dom) =>
+          ProvableMapping(leftType.dom, rightType.cod)
+        case (left, leftType : SequentMapping, right, rightType : SequentMapping) if(leftType.cod == rightType.dom) =>
+          SequentMapping(leftType.dom, rightType.cod)
+        case (left, leftType : SequentMapping, right, rightType : SequentMapping) if(leftType.cod != rightType.dom) =>
+          throw BelleError(s"Cannot synthesize a sequential type because left's codomain is not equal to right's domain.")
+        case _ => throw BelleError(s"Cannot synthesize a sequential type for $l : $lBelleType and $r : $rBelleType")
+      }
     }
+    case EitherTactic(l, r)     => EitherType(l.belleType, r.belleType)
+    case ExactIterTactic(child, n) => ???
+    case x : SaturateTactic     => x.annotation
   }
 }
 
 abstract case class BuiltInTactic(name: String) extends BelleExpr {
   def apply(provable : Provable) : Provable
-  val belleTypeAnnotation : BelleType
+  def belleTypeAnnotation : BelleType
 }
 
 abstract case class BuiltInPosTactic(name: String) extends BelleExpr {
   def apply(provable: Provable, pos: SeqPos) : Provable
-  val belleTypeAnnotation : BelleType
+  def belleTypeAnnotation : BelleType
 }
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
@@ -74,10 +84,10 @@ case class FormulaType(f: Formula) extends BelleType
 //case class Formula(dom: FormulaType, cod: FormulaType) extends BelleType with MappingType
 
 case class SequentType(ante: Seq[BelleType], succ: Seq[BelleType]) extends BelleType
-case class SequentMapping(val dom: SequentType, val cod: BelleType) extends BelleType
+case class SequentMapping(dom: SequentType, cod: BelleType) extends BelleType
 
 case class ProvableType(sequents: Seq[SequentType]) extends BelleType
-case class ProvableMapping(val dom: ProvableType, val cod: BelleType) extends BelleType
+case class ProvableMapping(dom: ProvableType, cod: BelleType) extends BelleType
 
 case class BelleClosedProofType() extends BelleType
 
