@@ -104,7 +104,7 @@ trait UnifyUSCalculus {
   def by(provable: Provable)  : Tactic = new ByProvable(provable)
   /** by(lemma) is a pseudo-tactic that uses the given Lemma to continue or close the proof (if it fits to what has been proved) */
   def by(lemma: Lemma)        : Tactic = by(lemma.fact)
-  /** byUS(provable) proves by a uniform substitution instance of provable */
+  /** byUS(provable) proves by a uniform substitution instance of provable, obtained by unification */
   def byUS(provable: Provable): Tactic = US(provable.conclusion) & by(provable)
   /** byUS(lemma) proves by a uniform substitution instance of lemma */
   def byUS(lemma: Lemma)      : Tactic  = byUS(lemma.fact)
@@ -119,8 +119,14 @@ trait UnifyUSCalculus {
     *******************************************************************/
 
   /**
-   * US(form) uses a suitable uniform substitution to reduce the proof to instead proving form.
-   * Unifies the sequent with form and uses that as a uniform substitution.
+   * US(form) uses a suitable uniform substitution to reduce the proof to instead proving `form`.
+   * Unifies the current sequent with `form` and uses that unifier as a uniform substitution.
+   * {{{
+   *      form:
+   *     g |- d
+   *   --------- US where G=s(g) and D=s(d) where s=unify(form, G|-d)
+   *     G |- D
+   * }}}
    *
    * @author Andre Platzer
    * @param form the sequent to reduce this proof node to by a Uniform Substitution
@@ -147,13 +153,21 @@ trait UnifyUSCalculus {
    * useAt(fact)(pos) uses the given fact at the given position in the sequent.
    * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
    * instance to make progress by reducing to the other side.
+   * {{{
+   *     G |- C{s(r)}, D
+   *   ------------------ useAt(__l__<->r) if s=unify(c,l)
+   *     G |- C{c}, D
+   * }}}
+   * and accordingly for facts that are `__l__->r` facts or conditional `c->(__l__<->r)` or `c->(__l__->r)` facts and so on,
+   * where `__l__` indicates the key part of the fact.
+   * useAt automatically tries proving the required assumptions/conditions of the fact it is using.
    *
    * Backward Tableaux-style proof analogue of [[useFor()]].
 
    * Tactic specification:
    * {{{
-   * useAt(fact)(p)(F) = let (C,f)=F(p) in
-   *   case f of {
+   * useAt(fact)(p)(F) = let (C,c)=F(p) in
+   *   case c of {
    *     s=unify(fact.left,_) => CutRight(C(s(fact.right))(p) & <(
    *       "use cut": skip
    *       "show cut": EquivifyRight(p.top) & CoHide(p.top) & CE(C(_)) & factTactic
@@ -174,6 +188,7 @@ trait UnifyUSCalculus {
    * turns it into
    * [x:=1;][{x'=22}] ([x:=2*x;]x>=0 & [x:=0;]x>=0)
    * @see [[useFor()]]
+   * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
    * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
    */
   def useAt(fact: Formula, key: PosInExpr, factTactic: Tactic, inst: Subst=>Subst = (us=>us)): PositionTactic = new PositionTactic("useAt") {
@@ -880,6 +895,14 @@ trait UnifyUSCalculus {
 
   /** useFor(fact,key,inst) use the key part of the given fact forward for the selected position in the given Provable to conclude a new Provable
     * Forward Hilbert-style proof analogue of [[useAt()]].
+    * {{{
+    *     G |- C{c}, D
+    *   ------------------ useFor(__l__<->r) if s=unify(c,l)
+    *     G |- C{s(r)}, D
+    * }}}
+    * and accordingly for facts that are `__l__->r` facts or conditional `c->(__l__<->r)` or `c->(__l__->r)` facts and so on,
+    * where `__l__` indicates the key part of the fact.
+    * useAt automatically tries proving the required assumptions/conditions of the fact it is using.
     * @author Andre Platzer
     * @param fact the Provable whose conclusion  to use to simplify at the indicated position of the sequent
     * @param key the part of the fact's conclusion to unify the indicated position of the sequent with
@@ -892,6 +915,7 @@ trait UnifyUSCalculus {
     * turns it into
     * [x:=1;][{x'=22}] ([x:=2*x;]x>=0 & [x:=0;]x>=0)
     * @see [[useAt()]]
+    * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
     */
   def useFor(fact: Provable, key: PosInExpr, inst: Subst=>Subst = (us => us)): ForwardPositionTactic = {
     import Augmentors._
