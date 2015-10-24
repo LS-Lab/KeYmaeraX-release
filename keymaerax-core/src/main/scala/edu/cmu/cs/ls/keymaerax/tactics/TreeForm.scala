@@ -11,7 +11,7 @@ import scala.collection.mutable
  * Created by bbohrer on 10/23/15.
  */
 object TreeForm {
-  sealed case class TermSymbol () {}
+  sealed trait TermSymbol {}
   final case class Var(name: String) extends TermSymbol
   final case class DiffVar(name: String) extends TermSymbol
   final case class Func(name:String) extends TermSymbol
@@ -29,19 +29,21 @@ object TreeForm {
         case Neg (t1) => Tree(Operator("-", Some(2)), List(Tree(Constant(Number(0)), List()), binaryTree(t1)))
         case Differential(t1) => Tree(Operator("'", Some(1)), List(binaryTree(t1)))
         case Variable (name, _, _) => Tree(Var(name), List())
-        case DifferentialSymbol (v, _) => Tree(DiffVar(v.name), List())
-        case FuncOf(Function(f, _, _), x) => Tree(Func(f), List(binaryTree(x)))
+        case DifferentialSymbol (v) => Tree(DiffVar(v.name), List())
+        case FuncOf(Function(f, _, _,_), x) => Tree(Func(f), List(binaryTree(x)))
       }
     }
   }
 
   final case class Tree (sym: TermSymbol, args: List[Tree]) {
-    def this (t: Term) { this (Tree.binaryTree(t).simplify)}
+    def this (t: Tree) = { this (t.sym, t.args) }
+
+    def this (t: Term) = { this(Tree.binaryTree(t).simplify)}
 
     def size: Int = args.foldLeft(1){case (acc, t) => acc + t.size}
 
     private def expand(name:String, l:List[Tree]): List[Tree] =
-      l.flatMap({case Tree(Operator(name2), lst) => if (name.equals(name2)) lst else Nil})
+      l.flatMap({case Tree(Operator(name2, _), lst) => if (name.equals(name2)) lst else Nil})
 
     private def fixedPoint(l:List[Tree], f:List[Tree] => List[Tree]): List[Tree] = {
       val l2 = f(l)
@@ -91,13 +93,25 @@ object TreeForm {
   def iterDepth(f: (Int, Tree) => Unit): Unit = iterDepth(0, f)
   }
 
-  case class Stat (count: Int, depthWeighted: Int, sizeWeighted: Int) {
-    def this (l : List[Tree], depth: Int) = this (1, depth, l.foldLeft(1)({case (acc, t) => acc + t.size}))
-    def add (l: List[Tree], depth: Int): Stat =
-      Stat(1 + count, depth + depthWeighted, l.foldLeft(sizeWeighted)({case (acc, t) => acc + t.size}))
+  object Stat {
+    object countOrdering extends Ordering[Stat] {
+      def compare(x: Stat, y: Stat): Int = x.count.compare(y.count)
+    }
+    object depthOrdering extends Ordering[Stat] {
+      def compare(x: Stat, y: Stat): Int = x.depthWeighted.compare(y.depthWeighted)
+    }
+    object sizeOrdering extends Ordering[Stat] {
+      def compare(x: Stat, y: Stat): Int = x.sizeWeighted.compare(y.sizeWeighted)
+    }
   }
 
-  case class Stats (t : Term) {
+  case class Stat (count: Int, depthWeighted: Int, sizeWeighted: Int) {
+    def this (l : List[Tree], depth: Int, size: Int) = this (1, depth, size)
+    def add (l: List[Tree], depth: Int, size: Int): Stat =
+      Stat(1 + count, depth + depthWeighted, size + sizeWeighted)
+  }
+
+  case class Stats (t : Term, depthFactor: Int => Int = {case i => 1}, sizeFactor: Int => Int = {case i => 1}) {
     val asTree = new Tree(t)
     // Operators can appear with multiple arities. As a result, we may want to query both the stats for a particular
     // arity and the aggregate stats for an operator across all arities.
@@ -105,14 +119,14 @@ object TreeForm {
     val counts = new mutable.HashMap[TermSymbol, Stat] {}
     asTree.iterDepth({case (depth, Tree(sym, l)) =>
       counts.find({case (sym2, _) => sym.equals(sym2)}) match {
-        case None => counts.+((sym, new Stat(l, depth)))
-        case Some((_, stat)) => counts.+((sym, stat.add(l, depth)))
+        case None => counts.+((sym, new Stat(l, depthFactor(depth), sizeFactor(Tree(sym,l).size))))
+        case Some((_, stat)) => counts.+((sym, stat.add(l, depthFactor(depth), sizeFactor(Tree(sym,l).size))))
       }
       sym match {
         case Operator(name, _) =>
           operatorTotals.find({case (name2, _) => name == name2}) match {
-            case Some((_, stat)) => operatorTotals.+((name, stat.add(l, depth)))
-            case None => operatorTotals.+((name, new Stat (l, depth)))
+            case Some((_, stat)) => operatorTotals.+((name, stat.add(l, depthFactor(depth), sizeFactor(Tree(sym,l).size))))
+            case None => operatorTotals.+((name, new Stat (l, depthFactor(depth), sizeFactor(Tree(sym,l).size))))
           }
         case _ => ()
       }
@@ -127,13 +141,41 @@ object TreeForm {
     new StatOrdering(new Ordering[Stats] {def compare (x: Stats, y: Stats) = f(x).compare(f(y))})
   }
 
+  private def id (i: Int): Int = i
+
   /** Knuth-Bendix orderings assign a constant weight to each symbol and then
-    * weigh the terms based on the sum of all the symbols within.
+    * weigh the terms based on the sum of all the symbols within and compare by the weight.
     * Weights for operators without an arity specified apply to all arities for that operator.
     * @see Knuth, D. E., Bendix, P. B.Simple word problems in universal algebras. */
   class KnuthBendixOrdering (weighting: List[(TermSymbol, Int)]) extends Ordering[Term]{
+    def compare (x: Term, y:Term): Int = {
+      new GenericKBOrdering(weighting, id, id, Stat.countOrdering).compare(x, y)
+    }
+  }
+
+  /** Variant of Knuth-Bendix ordering where the weight of every occurrence of a symbol is multiplied by its depth in the
+    * formula, which has the affect of penalizing values at the leaves of a term. */
+  class DepthKBOrdering (weighting: List[(TermSymbol, Int)]) extends Ordering[Term] {
     def compare (x: Term, y: Term): Int = {
-      val (xStats, yStats) = (Stats(x), Stats(y))
+      new GenericKBOrdering(weighting, id, id, Stat.depthOrdering).compare(x, y)
+    }
+  }
+
+  /** Variant of Knuth-Bendix ordering where the weight of every occurrence of a symbol is multiplied by the size
+    * of the subterm starting at that symbol. This has the effect of penalizing large terms over small terms with
+    * the same root symbol. */
+  class SizeKBOrdering (weighting: List[(TermSymbol, Int)]) extends Ordering[Term] {
+    def compare (x: Term, y: Term): Int = {
+      new GenericKBOrdering(weighting, id, id, Stat.sizeOrdering).compare(x, y)
+    }
+  }
+
+  /** Generalization of Knuth-Bendix ordering that allows arbitrary comparisons on the Stat's computed for the terms
+    * and tweaking the depth/size stats by replacing each depth with depthFactor(depth) and each size with sizeFactor(size) */
+  class GenericKBOrdering (weighting: List[(TermSymbol, Int)], depthFactor: Int => Int, sizeFactor: Int => Int, cmpStat: Ordering[Stat])
+    extends Ordering[Term]{
+    def compare (x: Term, y: Term): Int = {
+      val (xStats, yStats) = (new Stats(x, depthFactor, sizeFactor), new Stats(y, depthFactor, sizeFactor))
       weighting.foldLeft(0)({ case (cmp, (sym, weight)) =>
         if (cmp != 0) cmp
         else {
@@ -142,7 +184,7 @@ object TreeForm {
               case (None, None) => 0
               case (Some(_), None) => 1
               case (None, Some(_)) => -1
-              case (Some(Stat(count1, _, _)), Some(Stat(count2, _, _))) => count1.compare(count2)
+              case (Some(stat1), Some(stat2)) => cmpStat.compare(stat1, stat2)
             }
           sym match {
             // Get aggregate stats for this operator across all arities
@@ -153,10 +195,5 @@ object TreeForm {
         }
       })
     }
-  }
-
-  /** @todo implement: variation on Knuth-Bendix ordering where weights depend on the depth of a constructor within a term*/
-  class DepthKBOrdering (weighting: List[(String, Int)], depthFactor: Int => Int) {
-
   }
 }
