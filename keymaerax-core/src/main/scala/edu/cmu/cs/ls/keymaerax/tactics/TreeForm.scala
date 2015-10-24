@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 
+import scala.collection.immutable.SortedSet
 import scala.collection.mutable
 
 /**
@@ -195,5 +196,34 @@ object TreeForm {
         }
       })
     }
+  }
+
+  /** Recursive path orderings are one general way to extend orderings on logical symbols to orderings on terms.
+    * They obey some of the intuition one might want from a term ordering. For example, if the most complex symbol in
+    * t1 is more complex than the most complex symbol of t2, then t1 > t2.
+   * @see Nachum Dershowitz. Orderings for Term-Rewriting Systems. Theoretical Computer Science, 1982.*/
+  class RecursivePathOrdering (ord: Ordering[TermSymbol]) extends Ordering[Term] {
+    def greater (x:Tree, y: Tree): Boolean = {
+      (x, y) match {
+        case (Tree(sym1, l1), Tree(sym2, l2)) =>
+          val cmp = ord.compare(sym1, sym2)
+          if (cmp > 0) {
+            l2.forall({ case t => greater(x, t)})
+          } else if (cmp < 0) {
+            l1.exists({ case t => t.equals(y) || greater(t, y) })
+          } else {
+            // @note This agrees with Dershowitz's definition of RPO iff the RPO is a total ordering
+            // (which gives us meaningful max elements of l1 and l2). If the RPO is not a total ordering,
+            // this is merely a heuristic (that is much faster to compute)
+            val (s1, s2) = (l1.toSet, l2.toSet)
+            val (m, n) = (s1 -- s2, s2 -- s1)
+            val treeOrd = this.asInstanceOf[Ordering[Tree]]
+            greater(m.max[Tree](treeOrd), n.max[Tree](treeOrd))
+          }
+        }
+      }
+
+    def compare (x:Tree, y: Tree): Int =  if (greater(x,y)) 1 else -1
+    def compare (x:Term, y: Term): Int = compare(new Tree(x), new Tree(y))
   }
 }
