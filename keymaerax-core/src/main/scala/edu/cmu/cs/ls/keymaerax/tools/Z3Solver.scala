@@ -139,12 +139,16 @@ class Z3Solver extends SMTSolver {
     val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
     val z3Output = cmd.!!
     if (DEBUG) println("[Z3 simplify result] \n" + z3Output + "\n")
-    try {
-      KeYmaeraXParser.termParser(z3Output)
-    } catch {
-      case e: ParseException =>
-        if (DEBUG) println("[Info] Cannot parse Z3 simplified result: " + z3Output)
-        t
+    if(z3Output.contains("!"))
+      t
+    else {
+      try {
+        KeYmaeraXParser.termParser(z3Output)
+      } catch {
+        case e: ParseException =>
+          if (DEBUG) println("[Info] Cannot parse Z3 simplified result: " + z3Output)
+          t
+      }
     }
   }
 }
