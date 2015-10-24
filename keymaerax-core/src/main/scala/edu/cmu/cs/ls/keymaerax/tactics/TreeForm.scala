@@ -198,6 +198,30 @@ object TreeForm {
     }
   }
 
+  // @todo This would probably be faster with a map instead of a set
+  type Multiset[A] = Set[(A, Int)]
+
+  def multiset[A](l : List[A]): Multiset[A] = {
+    l.foldLeft(Set.empty[(A, Int)])({case (ms, t) =>
+      ms.find({case (t2, n) => t2.equals(t)}) match {
+        case None => ms.+((t, 1))
+        case Some(old@(t2, n)) => ms.-(old).+((t2, n+1))
+      }})
+  }
+
+  def subtract[A](x: Multiset[A], y: Multiset[A]): Multiset[A] = {
+    x.flatMap[(A, Int), Multiset[A]]({case (t1, n1) =>
+      y.find({case (t2, n2) => t1.equals(t2)}) match {
+        case None => Set.empty
+        case Some((t2, n2)) =>
+          if (n1 > n2) Set.empty.+((t1, n1-n2))
+          else Set.empty
+      }
+    })
+  }
+
+  def toSet[A](x: Multiset[A]): Set[A] = { x.map({case (t, n) => t}) }
+
   /** Recursive path orderings are one general way to extend orderings on logical symbols to orderings on terms.
     * They obey some of the intuition one might want from a term ordering. For example, if the most complex symbol in
     * t1 is more complex than the most complex symbol of t2, then t1 > t2.
@@ -215,8 +239,8 @@ object TreeForm {
             // @note This agrees with Dershowitz's definition of RPO iff the RPO is a total ordering
             // (which gives us meaningful max elements of l1 and l2). If the RPO is not a total ordering,
             // this is merely a heuristic (that is much faster to compute)
-            val (s1, s2) = (l1.toSet, l2.toSet)
-            val (m, n) = (s1 -- s2, s2 -- s1)
+            val (s1, s2) = (multiset(l1), multiset(l2))
+            val (m, n) = (toSet(subtract(s1, s2)), toSet(subtract(s2, s1)))
             val treeOrd = this.asInstanceOf[Ordering[Tree]]
             greater(m.max[Tree](treeOrd), n.max[Tree](treeOrd))
           }
