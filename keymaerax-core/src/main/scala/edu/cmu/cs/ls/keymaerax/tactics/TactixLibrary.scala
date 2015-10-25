@@ -91,12 +91,12 @@ object TactixLibrary extends UnifyUSCalculus {
 
   /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
   def llu(tactic: PositionTactic, shape: Formula): Tactic =
-    SearchTacticsImpl.locateAnte(tactic, f => UnificationMatch.unifiable(f, shape)!=None)
+    SearchTacticsImpl.locateAnte(tactic, f => UnificationMatch.unifiable(shape, f)!=None)
   /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
   def llu(tactic: PositionTactic, shape: String): Tactic = llu(tactic, parser.formulaParser(shape))
   /** Locate applicable position in succedent on the right in which something matching the given shape occurs */
   def lru(tactic: PositionTactic, shape: Formula): Tactic =
-    SearchTacticsImpl.locateSucc(tactic, f => UnificationMatch.unifiable(f, shape)!=None)
+    SearchTacticsImpl.locateSucc(tactic, f => UnificationMatch.unifiable(shape, f)!=None)
   /** Locate applicable position in succedent on the right in which something matching the given shape occurs */
   def lru(tactic: PositionTactic, shape: String): Tactic = lru(tactic, parser.formulaParser(shape))
 
