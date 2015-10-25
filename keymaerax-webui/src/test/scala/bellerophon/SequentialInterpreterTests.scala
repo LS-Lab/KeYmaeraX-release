@@ -72,7 +72,13 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     shouldClose(expr, f)
   }
 
-  //@todo add * tests
+  "* combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
+    val f = "(1=1->1=1) & (2=2->2=2)".asFormula
+    val expr = (
+      DoAll(AndR(SuccPos(0))) |
+      DoAll(ImplyR(SuccPos(0)) & TrivialCloser)
+    ) * (TheType())
+  }
 
   "Branch Combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val tactic = AndR(SuccPos(0)) < (
