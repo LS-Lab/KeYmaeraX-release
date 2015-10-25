@@ -29,4 +29,16 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     result.isInstanceOf[BelleProvable] shouldBe true
     result.asInstanceOf[BelleProvable].p.subgoals shouldBe expectedResult
   }
+
+  "Sequential Combinator" should "prove |- 1=2 -> 1=2" in {
+    val tactic = ImplyR(SuccPos(0)) & TrvialCloser
+    val v = {
+      val f = "1=2 -> 1=2".asFormula
+      BelleProvable(Provable.startProof(f))
+    }
+    val result = theInterpreter.apply(tactic, v)
+
+    result.isInstanceOf[BelleProvable] shouldBe true
+    result.asInstanceOf[BelleProvable].p.isProved shouldBe true
+  }
 }

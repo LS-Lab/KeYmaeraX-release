@@ -11,6 +11,9 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
  * @author Nathan Fulton
  */
 object PropositionalTactics {
+  /**
+   * Throw exception if there is more than one open subgoal on the provable.
+   */
   private def checkProvableShape(provable: Provable) =
     if(provable.subgoals.length != 1) throw BelleError("Expected exactly one sequent in Provable")
 
@@ -53,6 +56,18 @@ object PropositionalTactics {
     override def applyAt(provable : Provable, pos: AntePos) = {
       checkProvableShape(provable)
       provable(core.ImplyLeft(pos), 0)
+    }
+  }
+
+  /**
+   * Closes a goal with exactly the form \phi |- \phi; i.e., no surrounding context.
+   */
+  def TrvialCloser = new BuiltInTactic("CloseTrivialForm") {
+    override def apply(provable: Provable) = {
+      checkProvableShape(provable)
+      if(provable.subgoals.head.ante.length != 1 || provable.subgoals.head.succ.length != 1)
+        throw BelleError(s"${this.name} should only be applied to formulas of the form \\phi |- \\phi")
+      provable(core.Close(AntePos(0), SuccPos(0)), 0)
     }
   }
 
