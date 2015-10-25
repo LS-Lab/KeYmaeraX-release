@@ -76,6 +76,12 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     shouldClose(expr, f)
   }
 
+  it should "move inside Eithers correctly" in {
+    val f = "(1=1->1=1) & (2=2->2=2)".asFormula
+    val expr = AndR(SuccPos(0)) & DoAll (AndR(SuccPos(0)) | (ImplyR(SuccPos(0)) & TrivialCloser))
+    shouldClose(expr, f)
+  }
+
   "* combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = (
@@ -170,9 +176,6 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     ))
     a[BelleUserGeneratedError] shouldBe thrownBy (shouldClose(e, "1=1->1=1".asFormula))
   }
-
-
-
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Helper methods
