@@ -59,9 +59,7 @@ object PropositionalTactics {
     }
   }
 
-  /**
-   * Closes a goal with exactly the form \phi |- \phi; i.e., no surrounding context.
-   */
+  /** Closes a goal with exactly the form \phi |- \phi; i.e., no surrounding context. */
   def TrivialCloser = new BuiltInTactic("CloseTrivialForm") {
     override def result(provable: Provable) = {
       checkProvableShape(provable)

@@ -4,6 +4,15 @@ import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
 
 import scala.annotation.tailrec
 
+/**
+ * Sequential interpreter for
+ * @param listeners todo -- this is intended as an extension point for things like :
+ *                  * the forward/backward debugger
+ *                  * GUI view updates
+ *                  * History recording
+ *                  but I'm not sure how these are going to work yet.
+ * @author Nathan Fulton
+ */
 case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)] = Seq()) extends Interpreter {
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     listeners.foreach(f => f(expr, v))

@@ -65,4 +65,8 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     result.isInstanceOf[BelleProvable] shouldBe true
     result.asInstanceOf[BelleProvable].p.isProved shouldBe true
   }
+
+  //@todo test * combinator.
+
+  //@todo test < combinator
 }
