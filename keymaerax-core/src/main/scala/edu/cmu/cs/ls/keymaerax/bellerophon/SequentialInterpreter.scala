@@ -64,6 +64,13 @@ case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)]
         }
         case _ => throw BelleError("Cannot perform branching on a non-provable goal.")
       }
+      case DoAll(e) => {
+        val provable = v match {
+          case BelleProvable(p) => p
+          case _ => throw BelleError("Cannot attempt DoAll with a non-Provable value.")
+        }
+        apply(BranchTactic(Seq.tabulate(provable.subgoals.length)(_ => e)), v)
+      }
       case USubstPatternTactic(children) => {
         val provable = v match {
           case BelleProvable(p) => p

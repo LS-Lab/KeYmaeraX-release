@@ -18,8 +18,8 @@ abstract class BelleExpr {
 
   /**
    * Executes this tactic with the default interpreter.
-    * @note DO NOT call .execute from a built-in tactic -- doing so breaks interpreter listeners/hooks.
-    */
+   * @note DO NOT call .execute from a built-in tactic -- doing so breaks interpreter listeners/hooks.
+   */
   def execute(provable: Provable) = SequentialInterpreter()(this, BelleProvable(provable))
 }
 
@@ -59,8 +59,10 @@ case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr
 //case class OptionalTactic(child: BelleExpr) extends BelleExpr
 case class USubstPatternTactic(options: Seq[(BelleType, BelleExpr)]) extends BelleExpr
 
-/** @todo eisegesis */
-case class Map(e: BelleExpr) extends BelleExpr
+/** @todo eisegesis
+  * DoAll(e)(BelleProvable(p)) == < (e, ..., e) where e occurs p.subgoals.length times.
+  */
+case class DoAll(e: BelleExpr) extends BelleExpr
 
 /**
  * Bellerophon expressions that are values.

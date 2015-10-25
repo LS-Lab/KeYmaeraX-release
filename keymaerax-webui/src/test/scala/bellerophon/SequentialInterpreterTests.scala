@@ -1,6 +1,6 @@
 package bellerophon
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, SuccPos, Provable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -66,7 +66,13 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     result.asInstanceOf[BelleProvable].p.isProved shouldBe true
   }
 
-  //@todo test * combinator.
+  "DoAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
+    val f = "(1=1->1=1) & (2=2->2=2)".asFormula
+    val expr = AndR(SuccPos(0)) & DoAll (ImplyR(SuccPos(0)) & TrivialCloser)
+    shouldClose(expr, f)
+  }
+
+  //@todo add * tests
 
   "Branch Combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val tactic = AndR(SuccPos(0)) < (
@@ -95,6 +101,24 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
       Seq(toSequent("2=2"), toSequent("3=3"))
     )
   }
+
+  it should "handle cases were subgoals are added -- switch order" in {
+    val tactic = AndR(SuccPos(0)) < (
+      ImplyR(SuccPos(0)) & TrivialCloser,
+      AndR(SuccPos(0))
+      )
+    val f = "(1=1->1=1) & (2=2 & 3=3)".asFormula
+    shouldResultIn(
+      tactic,
+      f,
+      Seq(toSequent("2=2"), toSequent("3=3"))
+    )
+  }
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // Helper methods
+  //////////////////////////////////////////////////////////////////////////////////////////////////
 
   private def toSequent(s : String) = new Sequent(Nil, IndexedSeq(), IndexedSeq(s.asFormula))
 
