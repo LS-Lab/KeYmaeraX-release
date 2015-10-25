@@ -1,6 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
+import edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch
+import edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch.Subst
 
 import scala.annotation.tailrec
 
@@ -76,8 +78,28 @@ case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)]
           case BelleProvable(p) => p
           case _ => throw BelleError("Cannot attempt US unification with a non-Provable value.")
         }
-        //Attempt to unify child with the input value.
-        ???
+
+        if(provable.subgoals.length != 1)
+          throw BelleError("Unification of multi-sequent patterns is not currently supported.")
+
+        //Attempt to find a child that unifies with the input.
+        val unifyingExpression : BelleExpr = children
+          .map(pair => {
+            val ty = pair._1
+            val expr = pair._2
+            ty match {
+              case SequentType(s) => UnificationMatch.unifiable(s, provable.subgoals.head) match {
+                case Some(subst) => Some((subst, expr))
+                case None => None
+              }
+              case _ => throw BelleError("Cannot unify non-sequent types.")
+            }
+            })
+          .filter(_.isDefined).map(_.get)
+          .headOption.getOrElse(throw BelleError("USubst Pattern Incomplete -- could not find a unifier for any option"))
+          ._2
+
+        apply(unifyingExpression, v)
       }
     }
   }

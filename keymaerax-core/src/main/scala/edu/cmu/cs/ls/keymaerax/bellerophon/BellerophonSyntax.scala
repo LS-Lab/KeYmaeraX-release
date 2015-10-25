@@ -77,6 +77,8 @@ case class BelleProvable(p : Provable) extends BelleExpr with BelleValue
 /** @todo eisegesis -- simple types */
 abstract trait BelleType
 case class TheType() extends BelleType
+/** @todo Added because SequentTypes are needed for unification tactics. */
+case class SequentType(s : Sequent) extends BelleType
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Errors
