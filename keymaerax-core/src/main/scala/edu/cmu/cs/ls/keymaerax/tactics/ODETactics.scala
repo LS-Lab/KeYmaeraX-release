@@ -1582,7 +1582,7 @@ object ODETactics {
 
     override def apply(pos: Position): Tactic = new ConstructionTactic("DA") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos).sub(pos.inExpr) match {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos.topLevel).sub(pos.inExpr) match {
         case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
           !StaticSemantics.symbols(gc).contains(y) && !StaticSemantics.symbols(gl).contains(y) =>
 
@@ -1613,7 +1613,7 @@ object ODETactics {
           Some(ifElseT(_.sequent.ante.contains(p),
             /* if */   diffAuxEquiv,
             /* else */ cutT(Some(p)) & onBranch(
-              (cutShowLbl, hideT(pos) &
+              (cutShowLbl, hideT(pos.topLevel) &
                 /* remains as proof obligation 0 */ LabelBranch("Diff. Aux. P Initially Valid")),
               (cutUseLbl, diffAuxEquiv)
             )))
