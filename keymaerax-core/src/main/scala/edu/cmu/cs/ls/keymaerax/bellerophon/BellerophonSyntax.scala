@@ -15,7 +15,10 @@ abstract class BelleExpr {
   def |(other: BelleExpr)      = EitherTactic(this, other)
   def *(annotation: BelleType) = SaturateTactic(this, annotation)
 
-  /** Executes this tactic with the default interpreter. */
+  /**
+   * Executes this tactic with the default interpreter.
+    * @note DO NOT call .execute from a built-in tactic -- doing so breaks interpreter listeners/hooks.
+    */
   def execute(provable: Provable) = SequentialInterpreter()(this, BelleProvable(provable))
 }
 
