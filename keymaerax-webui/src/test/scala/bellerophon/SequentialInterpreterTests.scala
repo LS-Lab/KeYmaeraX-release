@@ -31,7 +31,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   "Sequential Combinator" should "prove |- 1=2 -> 1=2" in {
-    val tactic = ImplyR(SuccPos(0)) & TrvialCloser
+    val tactic = ImplyR(SuccPos(0)) & TrivialCloser
     val v = {
       val f = "1=2 -> 1=2".asFormula
       BelleProvable(Provable.startProof(f))
@@ -43,7 +43,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   "Either combinator" should "prove |- 1=2 -> 1=2 by AndR | (ImplyR & Close)" in {
-    val tactic = AndR(SuccPos(0)) | (ImplyR(SuccPos(0)) & TrvialCloser)
+    val tactic = AndR(SuccPos(0)) | (ImplyR(SuccPos(0)) & TrivialCloser)
     val v = {
       val f = "1=2 -> 1=2".asFormula
       BelleProvable(Provable.startProof(f))
@@ -55,7 +55,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "prove |- 1=2 -> 1=2 by (ImplyR & Close) | AndR" in {
-    val tactic = (ImplyR(SuccPos(0)) & TrvialCloser) | AndR(SuccPos(0))
+    val tactic = (ImplyR(SuccPos(0)) & TrivialCloser) | AndR(SuccPos(0))
     val v = {
       val f = "1=2 -> 1=2".asFormula
       BelleProvable(Provable.startProof(f))
