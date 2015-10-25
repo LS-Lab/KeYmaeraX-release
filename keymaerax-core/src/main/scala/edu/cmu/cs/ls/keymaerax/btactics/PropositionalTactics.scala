@@ -15,42 +15,42 @@ object PropositionalTactics {
     if(provable.subgoals.length != 1) throw BelleError("Expected exactly one sequent in Provable")
 
   def AndR = new BuiltInRightTactic("AndR") {
-    override def apply(provable: Provable, pos : SuccPos) = {
+    override def applyAt(provable: Provable, pos : SuccPos) = {
       checkProvableShape(provable)
       provable(core.AndRight(pos), 0)
     }
   }
 
   def AndL = new BuiltInLeftTactic("AndL") {
-    override def apply(provable: Provable, pos: AntePos) = {
+    override def applyAt(provable: Provable, pos: AntePos) = {
       checkProvableShape(provable)
       provable(core.AndLeft(pos), 0)
     }
   }
 
   def OrR = new BuiltInRightTactic("OrR") {
-    override def apply(provable: Provable, pos : SuccPos) = {
+    override def applyAt(provable: Provable, pos : SuccPos) = {
       checkProvableShape(provable)
       provable(core.OrRight(pos), 0)
     }
   }
 
   def OrL = new BuiltInLeftTactic("OrL") {
-    override def apply(provable: Provable, pos: AntePos) = {
+    override def applyAt(provable: Provable, pos: AntePos) = {
       checkProvableShape(provable)
       provable(core.OrLeft(pos), 0)
     }
   }
 
   def ImplyR = new BuiltInRightTactic("ImplyR") {
-    override def apply(provable : Provable, pos : SuccPos) = {
+    override def applyAt(provable : Provable, pos : SuccPos) = {
       checkProvableShape(provable)
       provable(core.ImplyRight(pos), 0)
     }
   }
 
   def ImplyL = new BuiltInLeftTactic("ImplyL") {
-    override def apply(provable : Provable, pos: AntePos) = {
+    override def applyAt(provable : Provable, pos: AntePos) = {
       checkProvableShape(provable)
       provable(core.ImplyLeft(pos), 0)
     }
