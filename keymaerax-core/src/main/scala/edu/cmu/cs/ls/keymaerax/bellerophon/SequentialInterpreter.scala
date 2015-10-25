@@ -54,7 +54,8 @@ case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)]
             })
 
           // Compute a single provable that contains the combined effect of all the piecewise computations.
-          // The Int is threaded through to keep track of indexes changing.
+          // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
+          // is replaced with 0 or 2+ new subgoals.
           val combinedEffect =
             results.foldLeft((p, 0))((op : (Provable, Int), subderivation : Provable) => {
               replaceConclusion(op._1, op._2, subderivation)
@@ -62,6 +63,14 @@ case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)]
           BelleProvable(combinedEffect._1)
         }
         case _ => throw BelleError("Cannot perform branching on a non-provable goal.")
+      }
+      case USubstPatternTactic(children) => {
+        val provable = v match {
+          case BelleProvable(p) => p
+          case _ => throw BelleError("Cannot attempt US unification with a non-Provable value.")
+        }
+        //Attempt to unify child with the input value.
+        ???
       }
     }
   }
@@ -87,7 +96,8 @@ case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)]
    */
   private def replaceConclusion(original: Provable, n: Int, subderivation: Provable): (Provable, Int) = {
     assert(original.subgoals.length > n, s"${n} is a bad index for ${original}")
-    assert(original.subgoals(n) == subderivation.conclusion, s"The nth subgoal of ${original} should be equal to the conclusion of ${subderivation}")
+    if(original.subgoals(n) != subderivation.conclusion)
+      throw BelleError(s"Subgoal #${n} of the original provable (${original.subgoals(n)}}) should be equal to the conclusion of the subderivation (${subderivation.conclusion}})")
     val newProvable = original(subderivation, n)
     (newProvable, n + subderivation.subgoals.length)
   }
