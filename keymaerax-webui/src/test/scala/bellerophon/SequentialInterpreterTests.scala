@@ -124,6 +124,12 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     )
   }
 
+  "Unification" should "work on 1=1->1=1" in {
+    val pattern = SequentType(toSequent("p() -> p()"))
+    val e = USubstPatternTactic(Seq((pattern, ImplyR(SuccPos(0)) & TrivialCloser)))
+    shouldClose(e, "1=1->1=1".asFormula)
+  }
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Helper methods
