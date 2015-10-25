@@ -227,27 +227,26 @@ object TreeForm {
     * t1 is more complex than the most complex symbol of t2, then t1 > t2.
    * @see Nachum Dershowitz. Orderings for Term-Rewriting Systems. Theoretical Computer Science, 1982.*/
   class RecursivePathOrdering (ord: Ordering[TermSymbol]) extends Ordering[Term] {
-    def greater (x:Tree, y: Tree): Boolean = {
-      (x, y) match {
-        case (Tree(sym1, l1), Tree(sym2, l2)) =>
-          val cmp = ord.compare(sym1, sym2)
-          if (cmp > 0) {
-            l2.forall({ case t => greater(x, t)})
-          } else if (cmp < 0) {
-            l1.exists({ case t => t.equals(y) || greater(t, y) })
-          } else {
-            // @note This agrees with Dershowitz's definition of RPO iff the RPO is a total ordering
-            // (which gives us meaningful max elements of l1 and l2). If the RPO is not a total ordering,
-            // this is merely a heuristic (that is much faster to compute)
-            val (s1, s2) = (multiset(l1), multiset(l2))
-            val (m, n) = (toSet(subtract(s1, s2)), toSet(subtract(s2, s1)))
-            val treeOrd = this.asInstanceOf[Ordering[Tree]]
-            greater(m.max[Tree](treeOrd), n.max[Tree](treeOrd))
-          }
+    object TreeOrdering extends Ordering[Tree] {
+      def compare (x:Tree, y: Tree): Int =
+        (x, y) match {
+          case (Tree(f, s), Tree(g, t)) =>
+            val cmp = ord.compare(f, g)
+            if (cmp == 0) {
+              // @note This relies on the fact that the Ordering type represents total orderings, and that an RPO is
+              // a total ordering when ord is a total Ordering. This definition only agrees with Dershowitz's definition
+              // if the RPO is a total ordering (we use this definition instead of his because it is faster to compute).
+              val (s1, s2) = (multiset(s), multiset(t))
+              val (m, n) = (toSet(subtract(s1, s2)), toSet(subtract(s2, s1)))
+              compare(m.max(TreeOrdering), n.max(TreeOrdering))
+            } else if (cmp > 0) {
+              if (t.forall({case ti => compare (x, ti) > 0})) 1 else -1
+            } else {
+              if (s.forall({case si => compare(y, si) > 0})) -1 else 1
+            }
         }
-      }
+    }
 
-    def compare (x:Tree, y: Tree): Int =  if (greater(x,y)) 1 else -1
-    def compare (x:Term, y: Term): Int = compare(new Tree(x), new Tree(y))
+    def compare (x:Term, y: Term): Int = TreeOrdering.compare(new Tree(x), new Tree(y))
   }
 }
