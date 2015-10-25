@@ -71,6 +71,14 @@ object PropositionalTactics {
     }
   }
 
-
-  
+  /** Closes the goal using specified positions. */
+  def Close = new BuiltInTwoPositionTactic("Close") {
+    override def applyAt(provable: Provable, posOne: SeqPos, posTwo: SeqPos): Provable = {
+      checkProvableShape(provable)
+      (posOne, posTwo) match {
+        case (antePos : AntePos, succPos : SuccPos) => provable(core.Close(antePos, succPos), 0)
+        case _ => throw BelleError("Close should receive a single antecedent position and a single succedent position.")
+      }
+    }
+  }
 }
