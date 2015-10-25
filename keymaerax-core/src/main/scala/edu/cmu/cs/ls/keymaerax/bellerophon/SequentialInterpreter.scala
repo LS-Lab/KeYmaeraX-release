@@ -55,7 +55,7 @@ case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)]
 
           // Compute a single provable that contains the combined effect of all the piecewise computations.
           // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
-          // is replaced with 0 or 2+ new subgoals.
+          // is replaced with 0 new subgoals.
           val combinedEffect =
             results.foldLeft((p, 0))((op : (Provable, Int), subderivation : Provable) => {
               replaceConclusion(op._1, op._2, subderivation)
@@ -95,10 +95,11 @@ case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)]
    *         * The new index of the (n+1)th goal.
    */
   private def replaceConclusion(original: Provable, n: Int, subderivation: Provable): (Provable, Int) = {
-    assert(original.subgoals.length > n, s"${n} is a bad index for ${original}")
+    assert(original.subgoals.length > n, s"${n} is a bad index for Provable with ${original.subgoals.length} subgoals: ${original}")
     if(original.subgoals(n) != subderivation.conclusion)
       throw BelleError(s"Subgoal #${n} of the original provable (${original.subgoals(n)}}) should be equal to the conclusion of the subderivation (${subderivation.conclusion}})")
     val newProvable = original(subderivation, n)
-    (newProvable, n + subderivation.subgoals.length)
+    val nextIdx = if(subderivation.isProved) n else n + 1
+    (newProvable, nextIdx)
   }
 }
