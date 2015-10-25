@@ -23,6 +23,10 @@ case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)]
         case BelleProvable(provable) => BelleProvable(builtIn.result(provable))
         case _ => throw BelleError(s"Attempted to apply a built-in tactic to a non-Provable value: ${v.getClass.getName}")
       }
+      case d : DependentTactic => {
+        val valueDependentTactic = d.computeExpr(v)
+        apply(valueDependentTactic, v)
+      }
       case BuiltInPositionTactic(_) | BuiltInLeftTactic(_) | BuiltInRightTactic(_) | BuiltInTwoPositionTactic(_) =>
         throw BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.")
       case SeqTactic(left, right) => {

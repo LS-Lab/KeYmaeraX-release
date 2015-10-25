@@ -1,6 +1,7 @@
 package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, SuccPos, Provable}
@@ -175,6 +176,13 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
       (pattern1, ImplyR(SuccPos(0)) & TrivialCloser)
     ))
     a[BelleUserGeneratedError] shouldBe thrownBy (shouldClose(e, "1=1->1=1".asFormula))
+  }
+
+  "AtSubgoal" should "work" in {
+    val t = AndR(SuccPos(0)) &
+      Idioms.AtSubgoal(0, ImplyR(SuccPos(0)) & TrivialCloser) &
+      Idioms.AtSubgoal(0, ImplyR(SuccPos(0)) & TrivialCloser)
+    shouldClose(t, "(1=1->1=1) & (2=2->2=2)".asFormula)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
