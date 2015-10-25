@@ -8,6 +8,9 @@ import scala.collection.immutable.IndexedSeq
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
+ * Very fine-grained tests of the sequential interpreter.
+ * These tests are all I/O tests, so it should be possible to switch out
+ * theInterpreter when other interpreters are implemented.
  * @author Nathan Fulton
  */
 class SequentialInterpreterTests extends FlatSpec with Matchers {
@@ -77,7 +80,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val expr = (
       DoAll(AndR(SuccPos(0))) |
       DoAll(ImplyR(SuccPos(0)) & TrivialCloser)
-    ) * (TheType())
+    )*@(TheType())
   }
 
   "Branch Combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
@@ -127,7 +130,6 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   //////////////////////////////////////////////////////////////////////////////////////////////////
 
   private def toSequent(s : String) = new Sequent(Nil, IndexedSeq(), IndexedSeq(s.asFormula))
-
 
   private def shouldClose(expr: BelleExpr, f: Formula) = {
     val v = BelleProvable(Provable.startProof(f))
