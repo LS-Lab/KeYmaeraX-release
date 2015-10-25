@@ -14,6 +14,7 @@ abstract class BelleExpr {
   def &(other: BelleExpr)      = SeqTactic(this, other)
   def |(other: BelleExpr)      = EitherTactic(this, other)
   def *(annotation: BelleType) = SaturateTactic(this, annotation)
+  def <(children: BelleExpr*)  = SeqTactic(this, BranchTactic(children))
 
   /**
    * Executes this tactic with the default interpreter.
