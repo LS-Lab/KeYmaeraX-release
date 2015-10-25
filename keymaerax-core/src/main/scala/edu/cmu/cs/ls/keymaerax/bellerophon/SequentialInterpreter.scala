@@ -7,18 +7,15 @@ import edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch.Subst
 import scala.annotation.tailrec
 
 /**
- * Sequential interpreter for
- * @param listeners todo -- this is intended as an extension point for things like :
- *                  * the forward/backward debugger
- *                  * GUI view updates
- *                  * History recording
- *                  but I'm not sure how these are going to work yet.
+ * Sequential interpreter for BelleExprs
+ * @param listeners Pre- and pos-processing hooks for step-wise tactic execution.
  * @author Nathan Fulton
  */
-case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)] = Seq()) extends Interpreter {
+case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends Interpreter {
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
-    listeners.foreach(f => f(expr, v))
-    expr match {
+    listeners.map(_.begin(v, expr))
+
+    val result = expr match {
       case builtIn : BuiltInTactic => v match {
         case BelleProvable(provable) => BelleProvable(builtIn.result(provable))
         case _ => throw BelleError(s"Attempted to apply a built-in tactic to a non-Provable value: ${v.getClass.getName}")
@@ -38,7 +35,6 @@ case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)]
           apply(left, v)
         }
         catch {
-          case e : BelleError => apply(right, v)
           case _ => apply(right, v)
         }
       }
@@ -107,6 +103,8 @@ case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)]
         apply(unifyingExpression, v)
       }
     }
+    listeners.foreach(l => l.end(v, expr, result))
+    result
   }
 
   @tailrec

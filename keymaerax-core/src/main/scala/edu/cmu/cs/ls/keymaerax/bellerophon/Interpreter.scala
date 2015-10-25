@@ -9,3 +9,8 @@ import edu.cmu.cs.ls.keymaerax.pt.ProofTerm
 trait Interpreter {
   def apply(expr: BelleExpr, v : BelleValue) : BelleValue
 }
+
+trait IOListener {
+  private[bellerophon] def begin(input: BelleValue, expr: BelleExpr) : Unit
+  private[bellerophon] def end(input: BelleValue, expr: BelleExpr, output: BelleValue): Unit
+}
