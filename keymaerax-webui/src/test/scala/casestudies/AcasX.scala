@@ -362,29 +362,12 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     // extract subformulas A()&W(w) -> (Ce(...)<->Ci(...))
     val Imply(And(a,w), Equiv(e,i)) = equivalence
 
-    acasxexplicit match {
-      case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == e && c2 == e =>
-      case _ => throw new IllegalArgumentException("Unexpected input shape of explicit file\nFound:    " + acasxexplicit
-        + "\nExpected: " + Imply(And(a, And(w, e)), Context(Box(
-        """
-          |{   {
-          |      { ?true; ++
-          |        {dhf :=*; {w:=-1; ++ w:=1;}
-          |         ?⎵;
-          |        }}
-          |        ao :=*;
-          |      }
-          |      {r' = -rv, dhd' = ao, h' = -dhd & (w * dhd >= w * dhf | w * ao >= a)}
-          |   }*
-        """.stripMargin.asProgram, And("h < -hp | h > hp | r < -rp | r> rp".asFormula, e))) (e))
-        )
-    }
     acasximplicitP.conclusion.ante shouldBe 'empty
     acasximplicitP.conclusion.succ.length shouldBe 1
     val acasximplicit = acasximplicitP.conclusion.succ.head
     acasximplicit match {
       case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == i && c2 == i =>
-      case _ => throw new IllegalArgumentException("Unexpected input shape of implicit file\n" + acasximplicit
+      case _ => throw new IllegalArgumentException("Unexpected input shape of implicit file\nFound:    " + acasximplicit
         + "\nExpected: " + Imply(And(a, And(w, i)), Context(Box(
         """
           |{   {
@@ -400,6 +383,24 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     }
     val Imply(And(_, And(_, _)), Box(Loop(_), And(u, _))) = acasximplicit
+
+    acasxexplicit match {
+      case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == e && c2 == e =>
+      case _ => throw new IllegalArgumentException("Unexpected input shape of explicit file\nFound:    " + acasxexplicit
+        + "\nExpected: " + Imply(And(a, And(w, e)), Context(Box(
+        """
+          |{   {
+          |      { ?true; ++
+          |        {dhf :=*; {w:=-1; ++ w:=1;}
+          |         ?⎵;
+          |        }}
+          |        ao :=*;
+          |      }
+          |      {r' = -rv, dhd' = ao, h' = -dhd & (w * dhd >= w * dhf | w * ao >= a)}
+          |   }*
+        """.stripMargin.asProgram, And("h < -hp | h > hp | r < -rp | r> rp".asFormula, e))) (e))
+      )
+    }
 
     // read off more lemmas from equivalence
 
@@ -427,7 +428,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       Equiv(Imply(w,Imply(a, And(u, i))),
             Imply(w,Imply(a, And(u, e))))
       , useAt(shuffle, PosInExpr(1::Nil))(1)
-        & by(seqEquivalence))
+        & by(implicitExplicit))
     postEquivalence.subgoals shouldBe implicitExplicit.subgoals
 
     //@note _0 variations in induction :-/
