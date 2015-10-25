@@ -52,7 +52,7 @@ abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
-case class ExactIterTactic(child: BelleExpr, count: Int) extends BelleExpr
+//case class ExactIterTactic(child: BelleExpr, count: Int) extends BelleExpr
 case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends BelleExpr
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr
 //case class OptionalTactic(child: BelleExpr) extends BelleExpr
