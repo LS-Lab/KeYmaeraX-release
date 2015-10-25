@@ -133,6 +133,8 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val hideR              : PositionTactic = TacticLibrary.hideT
   /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
   lazy val cohide             : PositionTactic = PropositionalTacticsImpl.cohideT
+  /** CoHide2/coweaken2 both left and right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHide2 CoHide2]]) */
+  def cohide2(p1: Position, p2: Position): Tactic = PropositionalTacticsImpl.cohide2T(p1, p2)
   /** !L Not left: move an negation in the antecedent to the succedent ([[edu.cmu.cs.ls.keymaerax.core.NotLeft NotLeft]]) */
   lazy val notL               : PositionTactic = TacticLibrary.NotLeftT
   /** !R Not right: move an negation in the succedent to the antecedent ([[edu.cmu.cs.ls.keymaerax.core.NotRight NotRight]]) */
