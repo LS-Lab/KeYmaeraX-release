@@ -71,5 +71,6 @@ object PropositionalTactics {
     }
   }
 
+
   
 }

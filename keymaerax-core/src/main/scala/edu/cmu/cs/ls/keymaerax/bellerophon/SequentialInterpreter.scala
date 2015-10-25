@@ -20,6 +20,7 @@ case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)]
         }
         catch {
           case e : BelleError => apply(right, v)
+          case _ => apply(right, v) //@todo Decide if we really want to swallow up all errors.
         }
       }
     }
