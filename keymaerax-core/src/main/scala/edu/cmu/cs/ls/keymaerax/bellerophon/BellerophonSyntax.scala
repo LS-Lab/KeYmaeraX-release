@@ -1,8 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.pt.ProofTerm
-import edu.cmu.cs.ls.keymaerax.tactics.SuccPosition
 
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron expressions.
@@ -15,7 +13,7 @@ abstract class BelleExpr {
   def |(other: BelleExpr)             = EitherTactic(this, other)
   def *@(annotation: BelleType)       = SaturateTactic(this, annotation)
   def <(children: BelleExpr*)         = SeqTactic(this, BranchTactic(children))
-  def U(p: (SequentType, BelleExpr)*) = USubstPatternTactic(p)
+  def U(p: (SequentType, BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
 
   /**
    * Executes this tactic with the default interpreter.
