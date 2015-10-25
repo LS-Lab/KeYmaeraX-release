@@ -2,6 +2,7 @@ package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, SuccPos, Provable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import scala.collection.immutable.IndexedSeq
@@ -129,6 +130,48 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val e = USubstPatternTactic(Seq((pattern, ImplyR(SuccPos(0)) & TrivialCloser)))
     shouldClose(e, "1=1->1=1".asFormula)
   }
+
+  it should "work when there are non-working patterns" in {
+    val pattern1 = SequentType(toSequent("p() -> p()"))
+    val pattern2 = SequentType(toSequent("p() & q()"))
+    val e = USubstPatternTactic(Seq(
+      (pattern2, ErrorT("Should never get here.")),
+      (pattern1, ImplyR(SuccPos(0)) & TrivialCloser)
+    ))
+    shouldClose(e, "1=1->1=1".asFormula)
+  }
+
+  it should "work when there are non-working patterns -- flipped order." in {
+    val pattern1 = SequentType(toSequent("p() -> p()"))
+    val pattern2 = SequentType(toSequent("p() & q()"))
+    val e = USubstPatternTactic(Seq(
+      (pattern1, ImplyR(SuccPos(0)) & TrivialCloser),
+      (pattern2, ErrorT("Should never get here."))
+    ))
+    shouldClose(e, "1=1->1=1".asFormula)
+  }
+
+  it should "choose the first applicable unification when there are many options" in {
+    val pattern1 = SequentType(toSequent("p() -> p()"))
+    val pattern2 = SequentType(toSequent("p() -> q()"))
+    val e = USubstPatternTactic(Seq(
+      (pattern1, ImplyR(SuccPos(0)) & TrivialCloser),
+      (pattern2, ErrorT("Should never get here."))
+    ))
+    shouldClose(e, "1=1->1=1".asFormula)
+  }
+
+  it should "choose the first applicable unification when there are many options -- flipped order" in {
+    val pattern1 = SequentType(toSequent("p() -> p()"))
+    val pattern2 = SequentType(toSequent("p() -> q()"))
+    val e = USubstPatternTactic(Seq(
+      (pattern2, ErrorT("Should never get here.")),
+      (pattern1, ImplyR(SuccPos(0)) & TrivialCloser)
+    ))
+    a[BelleUserGeneratedError] shouldBe thrownBy (shouldClose(e, "1=1->1=1".asFormula))
+  }
+
+
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////

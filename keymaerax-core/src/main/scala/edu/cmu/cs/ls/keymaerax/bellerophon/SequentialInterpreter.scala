@@ -83,6 +83,7 @@ case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)]
           throw BelleError("Unification of multi-sequent patterns is not currently supported.")
 
         //Attempt to find a child that unifies with the input.
+        //@todo Suppress "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
         val unifyingExpression : BelleExpr = children
           .map(pair => {
             val ty = pair._1

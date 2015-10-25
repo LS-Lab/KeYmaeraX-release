@@ -88,5 +88,8 @@ case class SequentType(s : Sequent) extends BelleType
 case class BelleError(message: String)
   extends Exception(s"[Bellerophon Runtime] $message")
 
+case class BelleUserGeneratedError(message: String)
+  extends Exception(s"[Bellerophon User-Generated Message] $message")
+
 class CompoundException(left: BelleError, right: BelleError)
   extends BelleError(s"Left Message: ${left.getMessage}\nRight Message: ${right.getMessage})")
