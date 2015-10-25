@@ -84,9 +84,9 @@ trait UnifyUSCalculus {
           (BranchLabels.cutShowLbl,
             // G |- (J(x)->[a*]J(x)) -> [a*]p(x), D
             implyR(p.top) & implyL(AntePosition(node.sequent.ante.length)) & (
-              label(BranchLabels.indInitLbl)
+              hide(p.top) & label(BranchLabels.indInitLbl)
               ,
-              cohide2(AntePosition(node.sequent.ante.length), p.top) & label(BranchLabels.indUseCaseLbl)
+              cohide2(AntePosition(node.sequent.ante.length), p.top) & Monb & label(BranchLabels.indUseCaseLbl)
               )
             )
         )
