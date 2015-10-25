@@ -5,7 +5,7 @@ case class SequentialInterpreter(listeners : Seq[((BelleExpr, BelleValue) => _)]
     listeners.foreach(f => f(expr, v))
     expr match {
       case builtIn : BuiltInTactic => v match {
-        case BelleProvable(provable) => BelleProvable(builtIn(provable))
+        case BelleProvable(provable) => BelleProvable(builtIn.result(provable))
         case _ => throw BelleError(s"Attempted to apply a built-in tactic to a non-Provable value: ${v.getClass.getName}")
       }
       case BuiltInPositionTactic(_) | BuiltInLeftTactic(_) | BuiltInRightTactic(_) | BuiltInTwoPositionTactic(_) =>

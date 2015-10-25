@@ -14,30 +14,33 @@ abstract class BelleExpr {
   def &(other: BelleExpr)      = SeqTactic(this, other)
   def |(other: BelleExpr)      = EitherTactic(this, other)
   def *(annotation: BelleType) = SaturateTactic(this, annotation)
+
+  /** Executes this tactic with the default interpreter. */
+  def execute(provable: Provable) = SequentialInterpreter()(this, BelleProvable(provable))
 }
 
 abstract case class BuiltInTactic(name: String) extends BelleExpr {
-  def apply(provable : Provable) : Provable
+  def result(provable : Provable) : Provable
 }
 abstract case class BuiltInPositionTactic(name: String) extends BelleExpr {
   def applyAt(provable: Provable, pos: SeqPos) : Provable
 
   def apply(pos: SeqPos) = new BuiltInTactic(s"$name@$pos") {
-    override def apply(provable: Provable) = applyAt(provable, pos)
+    override def result(provable: Provable) = applyAt(provable, pos)
   }
 }
 abstract case class BuiltInLeftTactic(name: String) extends BelleExpr {
   def applyAt(provable: Provable, pos: AntePos) : Provable
 
   def apply(pos: AntePos) = new BuiltInTactic(s"$name@$pos") {
-    override def apply(provable: Provable) = applyAt(provable, pos)
+    override def result(provable: Provable) = applyAt(provable, pos)
   }
 }
 abstract case class BuiltInRightTactic(name: String) extends BelleExpr {
   def applyAt(provable: Provable, pos: SuccPos) : Provable
 
   def apply(pos: SuccPos) = new BuiltInTactic(s"$name@$pos") {
-    override def apply(provable: Provable) = applyAt(provable, pos)
+    override def result(provable: Provable) = applyAt(provable, pos)
   }
 }
 abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
