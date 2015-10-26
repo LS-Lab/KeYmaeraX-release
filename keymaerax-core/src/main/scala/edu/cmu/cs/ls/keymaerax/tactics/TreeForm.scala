@@ -112,11 +112,13 @@ object TreeForm {
       Stat(1 + count, depth + depthWeighted, size + sizeWeighted)
   }
 
+  /** A Stats accumulates data about a term that can be used to implement a variety of useful orderings. */
   case class Stats (t : Term, depthFactor: Int => Int = {case i => 1}, sizeFactor: Int => Int = {case i => 1}) {
     val asTree = new Tree(t)
     // Operators can appear with multiple arities. As a result, we may want to query both the stats for a particular
-    // arity and the aggregate stats for an operator across all arities.
-    val operatorTotals = new mutable.HashMap[String, Stat] {}
+    // arity and the aggregate stats for an operator across all arities. We provide this ability by storing the aggregate
+    // stats for an operator "op" under Operator("op", None) and the individual stats for each arity i under
+    // Operator("op", Some(i))
     val counts = new mutable.HashMap[TermSymbol, Stat] {}
     asTree.iterDepth({case (depth, Tree(sym, l)) =>
       counts.find({case (sym2, _) => sym.equals(sym2)}) match {
@@ -124,10 +126,10 @@ object TreeForm {
         case Some((_, stat)) => counts.+((sym, stat.add(l, depthFactor(depth), sizeFactor(Tree(sym,l).size))))
       }
       sym match {
-        case Operator(name, _) =>
-          operatorTotals.find({case (name2, _) => name == name2}) match {
-            case Some((_, stat)) => operatorTotals.+((name, stat.add(l, depthFactor(depth), sizeFactor(Tree(sym,l).size))))
-            case None => operatorTotals.+((name, new Stat (l, depthFactor(depth), sizeFactor(Tree(sym,l).size))))
+        case Operator(name, Some(_)) =>
+          counts.find({case (Operator(name2, None), _) => name == name2}) match {
+            case Some((_, stat)) => counts.+((Operator(name, None), stat.add(l, depthFactor(depth), sizeFactor(Tree(sym,l).size))))
+            case None => counts.+((Operator(name, None), new Stat (l, depthFactor(depth), sizeFactor(Tree(sym,l).size))))
           }
         case _ => ()
       }
@@ -187,12 +189,7 @@ object TreeForm {
               case (None, Some(_)) => -1
               case (Some(stat1), Some(stat2)) => cmpStat.compare(stat1, stat2)
             }
-          sym match {
-            // Get aggregate stats for this operator across all arities
-            case Operator(name, None) =>
-              compareOpt(xStats.operatorTotals.get(name), yStats.operatorTotals.get(name))
-            case _ => compareOpt(xStats.counts.get(sym), yStats.counts.get(sym))
-          }
+          compareOpt(xStats.counts.get(sym), yStats.counts.get(sym))
         }
       })
     }
@@ -248,5 +245,38 @@ object TreeForm {
     }
 
     def compare (x:Term, y: Term): Int = TreeOrdering.compare(new Tree(x), new Tree(y))
+  }
+
+  /** Given a list of symbols, and two terms x and y, a LexicographicSymbolOrdering
+    * counts the number of occurrences of each symbol in x and y, and considers
+    * x > y if x has more occurrences of the first symbol for which they differ. */
+  class LexicographicSymbolOrdering (ord: List[TermSymbol]) extends Ordering[Term] {
+    object Ordering extends Ordering[Stats] {
+      def getCount (stat: Stats, sym: TermSymbol): Int = {
+        stat.counts.get(sym) match {
+          case None => 0
+          case Some(Stat(n, _, _)) => n
+        }
+      }
+
+      def compare (x: Stats, y: Stats): Int = {
+        ord.foldLeft(0){case (cmp, sym) =>
+          if (cmp != 0) cmp
+          else getCount(x, sym).compare(getCount(y, sym))
+        }
+      }
+    }
+
+    def compare (x: Term, y: Term): Int = new StatOrdering(Ordering).compare(x, y)
+  }
+
+  /** General lexicographic ordering: given a list of orderings, tries each ordering
+    * in turn until some ordering declares the terms to be unequal. For performance
+    * reasons, it may be preferable to reimplement this logic for each lexicographic
+    * ordering of interest, but this class is useful for quickly writing experiments. */
+  class LexicographicOrdering (ord: List[Ordering[Term]]) extends Ordering[Term] {
+    def compare (x: Term, y: Term): Int = {
+      ord.foldLeft(0)({case (acc, cmp) => if (acc != 0) acc else cmp.compare(x,y)})
+    }
   }
 }
