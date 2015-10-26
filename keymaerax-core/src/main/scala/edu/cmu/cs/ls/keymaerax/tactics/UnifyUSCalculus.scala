@@ -324,15 +324,17 @@ trait UnifyUSCalculus {
               ))
 
           case Equiv(DotFormula, other) =>
-            equivStep(other, commuteEquivR(SuccPosition(0)) & factTactic)
+            equivStep(other, (if (p.isSucc) commuteEquivR(SuccPosition(0)) else nil) & factTactic)
 
           case Equiv(other, DotFormula) =>
-            equivStep(other, factTactic)
+            equivStep(other, (if (p.isAnte) commuteEquivR(SuccPosition(0)) else nil) & factTactic)
 
           case Equal(DotTerm, other) =>
+            //@todo analogous swap of directions for p.isSucc/isAnte as above
             equivStep(other, ArithmeticTacticsImpl.commuteEqualsT(SuccPosition(0)) & factTactic)
 
           case Equal(other, DotTerm) =>
+            //@todo analogous swap of directions for p.isSucc/isAnte as above
             equivStep(other, factTactic)
 
           //@todo not sure if the following two cases really work as intended, but they seem to
