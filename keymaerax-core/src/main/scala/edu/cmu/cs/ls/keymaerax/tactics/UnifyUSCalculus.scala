@@ -289,22 +289,27 @@ trait UnifyUSCalculus {
 
         /** Equivalence rewriting step */
         def equivStep(other: Expression, factTactic: Tactic): Tactic = {
-          val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
+          val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length)}
+          lazy val expect = if (p.isSucc) Imply(C(subst(other)), C(subst(keyPart))) else Imply(C(subst(keyPart)), C(subst(other)))
+          lazy val expectEquiv = if (p.isSucc) Equiv(C(subst(other)), C(subst(keyPart))) else Equiv(C(subst(keyPart)), C(subst(other)))
           //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
         //@todo simplify substantially if subst=id
-          debug("start useAt") & cutLR(C(subst(other)))(p.top) & debugC("  cutted right") & onBranch(
+          debug("start useAt " + p) & cutLR(C(subst(other)))(p.top) & debugC("  cutted right") & onBranch(
             //(BranchLabels.cutUseLbl, debugT("  useAt result")),
             //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
             //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-            (BranchLabels.cutShowLbl, debugC("    show use") & cohide(cutPos) & assertT(0,1) & debugC("    cohidden") &
+            (BranchLabels.cutShowLbl, debugC("    show use") & cohide(expect)(cutPos) & assertT(0,1) & debugC("    cohidden") &
+              //@todo SuccPosition(0) should be SuccPosition(previous length) if cutting left?
+              assertE(expect, "useAt show implication")(SuccPosition(0)) &
               equivifyR(SuccPosition(0)) & debugC("    equivified") &
+              //assertE(Equiv(C(subst(other)), C(subst(keyPart))), "useAt show equivalence")(SuccPosition(0)) &
               debugC("    CE coming up") & (
               if (other.kind==FormulaKind) CE(p.inExpr)
               else if (other.kind==TermKind) CQ(p.inExpr)
               else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
               debugC("    using fact tactic") & factTactic & debugC("  done fact tactic"))
             //@todo error if factTactic is not applicable (factTactic | errorT)
-          ) & debug("end   useAt")
+          ) & debug("end   useAt " + p)
         }
 
         K.ctx match {
@@ -319,7 +324,7 @@ trait UnifyUSCalculus {
               ))
 
           case Equiv(DotFormula, other) =>
-            equivStep(other, PropositionalTacticsImpl.commuteEquivRightT(SuccPosition(0)) & factTactic)
+            equivStep(other, commuteEquivR(SuccPosition(0)) & factTactic)
 
           case Equiv(other, DotFormula) =>
             equivStep(other, factTactic)
