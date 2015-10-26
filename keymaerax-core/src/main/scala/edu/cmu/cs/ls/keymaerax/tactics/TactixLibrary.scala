@@ -367,8 +367,9 @@ object TactixLibrary extends UnifyUSCalculus {
     }
   }
 
-  def assertE(expected: Expression, msg:String): PositionTactic = {
+  def assertE(expected: => Expression, msg:String): PositionTactic = {
     import Augmentors.SequentAugmentor
+    //@todo could do if (DEBUG) to save cycles
     assertPT((s, pos) => s.sub(pos) == Some(expected), msg + "\nExpected: " + expected.prettyString /*+ "\nFound:   " + s.sub(pos)*/)
   }
 

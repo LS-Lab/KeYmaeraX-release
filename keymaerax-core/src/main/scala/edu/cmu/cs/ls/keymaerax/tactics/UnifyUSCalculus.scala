@@ -298,11 +298,11 @@ trait UnifyUSCalculus {
             //(BranchLabels.cutUseLbl, debugT("  useAt result")),
             //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
             //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-            (BranchLabels.cutShowLbl, debugC("    show use") & cohide(expect)(cutPos) & assertT(0,1) & debugC("    cohidden") &
+            (BranchLabels.cutShowLbl, sublabel("  show useAt " + fact) & debugC("    show use") & cohide(expect)(cutPos) & assertT(0,1) & debugC("    cohidden") &
               //@todo SuccPosition(0) should be SuccPosition(previous length) if cutting left?
               assertE(expect, "useAt show implication")(SuccPosition(0)) &
               equivifyR(SuccPosition(0)) & debugC("    equivified") &
-              //assertE(Equiv(C(subst(other)), C(subst(keyPart))), "useAt show equivalence")(SuccPosition(0)) &
+              assertE(expectEquiv, "useAt show equivalence")(SuccPosition(0)) &
               debugC("    CE coming up") & (
               if (other.kind==FormulaKind) CE(p.inExpr)
               else if (other.kind==TermKind) CQ(p.inExpr)
