@@ -143,6 +143,7 @@ trait UnifyUSCalculus {
   def useAt(axiom: String): PositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1)
 
   /** by(provable) is a pseudo-tactic that uses the given Provable to continue or close the proof (if it fits to what has been proved) */
+  //@todo auto-weaken as needed (maybe even exchangeleft)
   def by(provable: Provable)  : Tactic = new ByProvable(provable)
   /** by(lemma) is a pseudo-tactic that uses the given Lemma to continue or close the proof (if it fits to what has been proved) */
   def by(lemma: Lemma)        : Tactic = by(lemma.fact)
@@ -557,7 +558,7 @@ trait UnifyUSCalculus {
 
     override def applies(s: Sequent, p: Position): Boolean =
       if (s.sub(p) == Some(key)) true
-      else {if (DEBUG) println("In-applicable CE(" + fact + ") at " + p + " which is " + s.sub(p) + " at " + s); false}
+      else {if (true || DEBUG) println("INFO: In-applicable CE(" + fact + ")\nat " + p + "\nwhich is " + s.sub(p) + "\nat " + s); false}
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
