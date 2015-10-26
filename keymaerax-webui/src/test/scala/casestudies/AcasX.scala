@@ -589,9 +589,11 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                         */
                         // gather outer [dhf:=*;][w:=-1;++w:=1;] boxes to single [;]
                         & sublabel("gathering") & debug("gathering")
+                        // A(), W(w)&u&Ci((w,dhf)), [dhf:=*;][w:=-1;++w:=1;][?Ci((w,dhf));][ao:=*;][{r'=-rv,dhd'=ao,h'=-dhd&w*dhd>=w*dhf|w*ao>=a}](u&Ci((w,dhf)))  ==>  [dhf:=*;][w:=-1;++w:=1;][?Ce((w,dhf));][ao:=*;][{r'=-rv,dhd'=ao,h'=-dhd&w*dhd>=w*dhf|w*ao>=a}](u&Ci((w,dhf)))
                         & useAt("[;] compose", PosInExpr(1::Nil))(1)
                         & useAt("[;] compose", PosInExpr(1::Nil))(-3)
                         & debug("gathered")
+                        // A(), W(w)&u&Ci((w,dhf)), [dhf:=*;{w:=-1;++w:=1;}][?Ci((w,dhf));][ao:=*;][{r'=-rv,dhd'=ao,h'=-dhd&w*dhd>=w*dhf|w*ao>=a}](u&Ci((w,dhf)))  ==>  [dhf:=*;{w:=-1;++w:=1;}][?Ce((w,dhf));][ao:=*;][{r'=-rv,dhd'=ao,h'=-dhd&w*dhd>=w*dhf|w*ao>=a}](u&Ci((w,dhf)))
                         & sublabel("postCut A()&W(w0)") & debug("postCut A()&W(w0)")
                         & postCut(And(a,w0))(1) & onBranch(
                         (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)")
