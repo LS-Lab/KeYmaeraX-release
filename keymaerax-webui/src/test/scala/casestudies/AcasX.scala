@@ -623,7 +623,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                           // [dhf:=*;{w:=-1;++w:=1;}]__(A()&W(w)->Ce(w,dhf) -> [ao:=*;][{r'=-rv,dhd'=ao,h'=-dhd&w*dhd>=w*dhf|w*ao>=a}](u&Ci))__
                           //@todo why will this guy keep around an extra premise??
                           // __(A()&W(w_0) -> Ce(w_0,dhf_0) -> q())__  <->  (A()&W(w_0) -> Ci(w_0,dhf_0) -> q())
-                          & useAt(distEquivImpl/*.conclusion.succ.head*/, PosInExpr(0::Nil))(1, 1::Nil)
+                          & (if(distEquivImpl.isProved) useAt(distEquivImpl, PosInExpr(0::Nil))(1, 1::Nil)
+                          else useAt(distEquivImpl.conclusion.succ.head, PosInExpr(0::Nil))(1, 1::Nil))
                           & sublabel("dist equiv impl")
                           & debug("used dist equiv impl")
                           & assertE(And(a,w0), "used dist equiv form")(1, 1::0::Nil)
