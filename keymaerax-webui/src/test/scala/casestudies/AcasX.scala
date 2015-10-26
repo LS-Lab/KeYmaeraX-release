@@ -350,12 +350,15 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val lem = true
     val lemmaDB = LemmaDBFactory.lemmaDB
     val acasximplicitP = if (lem && lemmaDB.contains("nodelay_max")) LookupLemma(lemmaDB, "nodelay_max").lemma.fact else Provable.startProof(acasximplicit)
-    val implicitExplicitP = if (lem && lemmaDB.contains("nodelay_equivalence")) LookupLemma(lemmaDB, "nodelay_equivalence").lemma.fact else Provable.startProof(implicitExplicit)
+    val implicitExplicitP = if (lem && lemmaDB.contains("nodelay_equivalence")) LookupLemma(lemmaDB, "nodelay_equivalence").lemma.fact
+    else if (lem && lemmaDB.contains("magic-nodelay_equivalence")) LookupLemma(lemmaDB, "magic-nodelay_equivalence").lemma.fact
+    else Provable.startProof(implicitExplicit)
     acasXcongruence(implicitExplicitP, acasximplicitP, acasxexplicit) shouldBe 'closed
   }
 
 
   private def acasXcongruence(implicitExplicit: Provable, acasximplicitP: Provable, acasxexplicit: Formula): Provable = {
+    println("implicit-explicit lemma subgoals: " + implicitExplicit.subgoals)
     implicitExplicit.conclusion.ante shouldBe 'empty
     implicitExplicit.conclusion.succ.length shouldBe 1
     val equivalence = implicitExplicit.conclusion.succ.head
@@ -419,7 +422,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     (Close(AntePos(1), SuccPos(1)), 2)
     // second-left branch a,w |- e<->i, a
     (Close(AntePos(0), SuccPos(1)), 0)
-    )
+    // drag&drop proof
+    (implicitExplicit, 0) )
     seqEquivalence.subgoals shouldBe implicitExplicit.subgoals
     val shuffle = TactixLibrary.proveBy("(A()&W()->(Ce()<->Ci())) -> ((W()->A()->u()&Ci()) <-> (W()->A()->u()&Ce()))".asFormula, prop)
     shuffle shouldBe 'proved
@@ -439,7 +443,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     // (A()&W(w) -> Ce(w,dhf))  <->  (A()&W(w) -> Ci(w,dhf))
     val distEquivalence = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w), e), Imply(And(a,w),i)))),
-      useAt("-> distributes over <->", PosInExpr(1::Nil))(1))
+      useAt("-> distributes over <->", PosInExpr(1::Nil))(1)
+      & by(implicitExplicit))
     distEquivalence.subgoals shouldBe implicitExplicit.subgoals
     val shuffle2 = TactixLibrary.proveBy("(A()&W()->(Ce()<->Ci())) -> ((A()&W() -> Ce() -> q()) <-> (A()&W() -> Ci() -> q()))".asFormula, prop)
     shuffle2 shouldBe 'proved
@@ -480,10 +485,10 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       )
 
     // W is invariant proof for both implicit and explicit models. Same tactic above.
-    val invariantWi = TactixLibrary.proveBy(
-      Sequent(Nil, IndexedSeq(w), IndexedSeq(Box(body, w)))
-      ,
-      invariantWT)
+//    val invariantWi = TactixLibrary.proveBy(
+//      Sequent(Nil, IndexedSeq(w), IndexedSeq(Box(body, w)))
+//      ,
+//      invariantWT)
     val invariantWe = TactixLibrary.proveBy(
       Sequent(Nil, IndexedSeq(w), IndexedSeq(Box(
         acasxexplicit match {case Imply(And(_, And(_, _)), Box(Loop(body), And(_, _))) => body}, w)))
@@ -517,7 +522,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
             cutL(i)(-3) & onBranch(
             (BranchLabels.cutShowLbl, hide(1) & label("by seq-equiv") & equivifyR(1) & by(seqEquivalence)),
 
-            (BranchLabels.cutUseLbl, sublabel("Ce~>Ci reduction") &
+            (BranchLabels.cutUseLbl, sublabel("Ce~>Ci reduction") & label("Ce~>Ci reduction") &
               CE(postEquivalence)(SuccPosition(0, 1::Nil))
               & debug("unpack and repack to replace test") &
               debug("loop") &
@@ -571,7 +576,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                         & (useAt("[:=] assign")(1, 1::1::Nil) & useAt("[:=] assign")(-3, 1::1::Nil))
                         & (randomb(1) & randomb(-3))
                         */
-                        // gather outer boxes to [;]
+                        // gather outer [dhf:=*;][w:=-1;++w:=1;] boxes to single [;]
                         & sublabel("gathering") & debug("gathering")
                         & useAt("[;] compose", PosInExpr(1::Nil))(1)
                         & useAt("[;] compose", PosInExpr(1::Nil))(-3)
