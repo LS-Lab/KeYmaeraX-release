@@ -337,6 +337,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       """.asFormula)
 
     val equivalence = implicitExplicit.conclusion.succ.head
+
     val Imply(And(a,w), Equiv(e,i)) = equivalence
     val acasximplicit = shape(i)
     val acasxexplicit = shape(e)
@@ -351,12 +352,22 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val lemmaDB = LemmaDBFactory.lemmaDB
     val acasximplicitP = if (lem && lemmaDB.contains("nodelay_max")) LookupLemma(lemmaDB, "nodelay_max").lemma.fact else Provable.startProof(acasximplicit)
     val implicitExplicitP = if (lem && lemmaDB.contains("nodelay_equivalence")) LookupLemma(lemmaDB, "nodelay_equivalence").lemma.fact
-    else if (lem && lemmaDB.contains("magic-nodelay_equivalence")) LookupLemma(lemmaDB, "magic-nodelay_equivalence").lemma.fact
+    else if (false && lem && lemmaDB.contains("magic-nodelay_equivalence")) LookupLemma(lemmaDB, "magic-nodelay_equivalence").lemma.fact
     else Provable.startProof(implicitExplicit)
     acasXcongruence(implicitExplicitP, acasximplicitP, acasxexplicit, QE) shouldBe 'closed
   }
 
 
+  /**
+   * ACAS X proof embedding conditional equivalence of implicit and explicit into safety proof of implicit regions
+   * to form a safety proof of explicit regions.
+   * @param implicitExplicit
+   * @param acasximplicitP
+   * @param acasxexplicit
+   * @param done
+   * @return
+   * @author Andre Platzer
+   */
   private def acasXcongruence(implicitExplicit: Provable, acasximplicitP: Provable, acasxexplicit: Formula, done: Tactic = close): Provable = {
     println("implicit-explicit lemma subgoals: " + implicitExplicit.subgoals)
     implicitExplicit.conclusion.ante shouldBe 'empty
@@ -609,8 +620,10 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                           & assertE(e0, "do use dist equiv form")(1, 1::1::0::Nil)
                           & assertE("dhf:=*;{w:=-1;++w:=1;}".asProgram, "do use dist equiv form")(1, 0::Nil)
                           & assertE("ao:=*;".asProgram, "do use dist equiv form")(1, 1::1::1::0::Nil)
-                          //@todo this guy keeps around an extra premise??
-                          & useAt(distEquivImpl.conclusion.succ.head, PosInExpr(0::Nil))(1, 1::Nil)
+                          // [dhf:=*;{w:=-1;++w:=1;}]__(A()&W(w)->Ce(w,dhf) -> [ao:=*;][{r'=-rv,dhd'=ao,h'=-dhd&w*dhd>=w*dhf|w*ao>=a}](u&Ci))__
+                          //@todo why will this guy keep around an extra premise??
+                          // __(A()&W(w_0) -> Ce(w_0,dhf_0) -> q())__  <->  (A()&W(w_0) -> Ci(w_0,dhf_0) -> q())
+                          & useAt(distEquivImpl/*.conclusion.succ.head*/, PosInExpr(0::Nil))(1, 1::Nil)
                           & sublabel("dist equiv impl")
                           & debug("used dist equiv impl")
                           & assertE(And(a,w0), "used dist equiv form")(1, 1::0::Nil)
