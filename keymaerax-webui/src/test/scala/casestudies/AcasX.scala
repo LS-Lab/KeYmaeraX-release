@@ -316,7 +316,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
 
-  it should "prove stylized generic region Ce safety from region Ci safety and conditional equivalence" in {
+  it should "nearly prove stylized generic region Ce safety from region Ci safety and conditional equivalence" in {
     val implicitExplicit = Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("A()&W(w) -> (Ce(w,dhf/*r,dhd,h,dhf,w,ao*/)<->Ci(w,dhf/*r,dhd,h,dhf,w,ao*/))".asFormula)))
     val shape = Context(
       """  (A()) &
@@ -353,11 +353,11 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val implicitExplicitP = if (lem && lemmaDB.contains("nodelay_equivalence")) LookupLemma(lemmaDB, "nodelay_equivalence").lemma.fact
     else if (lem && lemmaDB.contains("magic-nodelay_equivalence")) LookupLemma(lemmaDB, "magic-nodelay_equivalence").lemma.fact
     else Provable.startProof(implicitExplicit)
-    acasXcongruence(implicitExplicitP, acasximplicitP, acasxexplicit) shouldBe 'closed
+    acasXcongruence(implicitExplicitP, acasximplicitP, acasxexplicit, QE) shouldBe 'closed
   }
 
 
-  private def acasXcongruence(implicitExplicit: Provable, acasximplicitP: Provable, acasxexplicit: Formula): Provable = {
+  private def acasXcongruence(implicitExplicit: Provable, acasximplicitP: Provable, acasxexplicit: Formula, done: Tactic = close): Provable = {
     println("implicit-explicit lemma subgoals: " + implicitExplicit.subgoals)
     implicitExplicit.conclusion.ante shouldBe 'empty
     implicitExplicit.conclusion.succ.length shouldBe 1
@@ -522,15 +522,15 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
             cutL(i)(-3) & onBranch(
             (BranchLabels.cutShowLbl, hide(1) & label("by seq-equiv") & equivifyR(1) & by(seqEquivalence)),
 
-            (BranchLabels.cutUseLbl, sublabel("Ce~>Ci reduction") & label("Ce~>Ci reduction") &
-              CE(postEquivalence)(SuccPosition(0, 1::Nil))
+            (BranchLabels.cutUseLbl, sublabel("Ce~>Ci reduction") & label("Ce~>Ci reduction") & debug("Ce~>Ci reduction") &
+              CE(postEquivalence)(1, 1::Nil)
+              & debug("Ce~>Ci reduced in postcondition")
               & debug("unpack and repack to replace test") &
-              debug("loop") &
               /*loop(And(w,And(u, i)))(1)*/
               ind(And(a,And(w,And(u, i))))(1)
-              & debug("loop induction")
+              & sublabel("loop induction")
               & onBranch(
-              (BranchLabels.indInitLbl, sublabel("W&u*Ci init") & andR(1) & (closeId , andR(1) & (close(-2,1) , andR(1) & (label("arith") , close(-3,1))))),
+              (BranchLabels.indInitLbl, sublabel("W&u&Ci init") & debug("W&u&Ci init") & andR(1) & (closeId , andR(1) & (close(-2,1) , andR(1) & (label("arith") /*& done*/, close(-3,1))))),
 
               (BranchLabels.indStepLbl, sublabel("W&u&Ci step") & // hide(And(w,And(u,i)))(-4) & hide(i)(-3) & hide(w)(-2) &
                 andL(-1) & assertE(a, "A()")(-1) &
@@ -591,13 +591,13 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                           andR(1) & (
                             closeId
                             ,
-                            close // QE
+                            done // QE
                             )
                           ,
                           andR(1) & (
                             closeId
                             ,
-                            close //QE
+                            done //QE
                             )
                           )
                           ), // generalize post A()&W(w0)
