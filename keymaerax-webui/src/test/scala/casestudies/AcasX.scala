@@ -382,7 +382,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
         """.stripMargin.asProgram, And("h < -hp | h > hp | r < -rp | r> rp".asFormula, i))) (i)))
 
     }
-    val Imply(And(_, And(_, _)), Box(Loop(_), And(u, _))) = acasximplicit
+    val Imply(And(_, And(_, _)), Box(Loop(body), And(u, _))) = acasximplicit
 
     acasxexplicit match {
       case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == e && c2 == e =>
@@ -432,10 +432,10 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     postEquivalence.subgoals shouldBe implicitExplicit.subgoals
 
     //@note _0 variations in induction :-/
-    val w0 = "W(w_0)".asFormula
-    val i0 = "Ci(w_0,dhf_0)".asFormula
-    val e0 = "Ce(w_0,dhf_0)".asFormula
-    val u0 = "(h_0 < -hp | h_0 > hp | r_0 < -rp | r_0> rp)".asFormula
+    val w0 = w // "W(w_0)".asFormula
+    val i0 = i // "Ci(w_0,dhf_0)".asFormula
+    val e0 = e // "Ce(w_0,dhf_0)".asFormula
+    val u0 = u // "(h_0 < -hp | h_0 > hp | r_0 < -rp | r_0> rp)".asFormula
 
     // (A()&W(w) -> Ce(w,dhf))  <->  (A()&W(w) -> Ci(w,dhf))
     val distEquivalence = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w), e), Imply(And(a,w),i)))),
@@ -455,7 +455,41 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     // begin actual proof
 
-    import TactixLibrary._
+
+    val invariantWT =
+      // could also just always generalize(w0)
+      // this is a more efficient version
+      //@note could have handled 2*composeb(1) at once
+      //@note useing W(w_0) instead of W(w) or use post-postcondition
+      composeb(1) & generalize(w0)(1) & onBranch(
+        (BranchLabels.genShow, debugT("W gen V 1") & V(1) & closeId),
+        (BranchLabels.genUse, composeb(1) & useAt("V[:*] vacuous assign nondet")(SuccPosition(0, 1::Nil)) &
+          choiceb(1) & andR(1) & (
+          sublabel("& left") & testb(1) & implyR(1) & closeId
+          ,
+          sublabel("& right") &
+            composeb(1) & composeb(SuccPosition(0, 1::Nil)) & generalize(w0)(1) & onBranch(
+            (BranchLabels.genUse, useAt("V[:*] vacuous assign nondet")(1) & closeId),
+            (BranchLabels.genShow, generalize(w0)(1) & onBranch(
+              (BranchLabels.genShow, debugT("W gen V 2") & V(1) & closeId),
+              (BranchLabels.genUse, sublabel("W arith") & debug("W arith") & cohide(1) & choiceb(1) & useAt("[:=] assign")(1, 0::Nil) & useAt("[:=] assign")(1, 1::Nil) & QE)
+            ))
+          )
+          )
+          )
+      )
+
+    // W is invariant proof for both implicit and explicit models. Same tactic above.
+    val invariantWi = TactixLibrary.proveBy(
+      Sequent(Nil, IndexedSeq(w), IndexedSeq(Box(body, w)))
+      ,
+      invariantWT)
+    val invariantWe = TactixLibrary.proveBy(
+      Sequent(Nil, IndexedSeq(w), IndexedSeq(Box(
+        acasxexplicit match {case Imply(And(_, And(_, _)), Box(Loop(body), And(_, _))) => body}, w)))
+      ,
+      invariantWT)
+
     val proof = TactixLibrary.proveBy(acasxexplicit,
       implyR(1) & andL(-1) &
         postCut(a)(1) & onBranch(
@@ -465,199 +499,213 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
           postCut(w)(1) & onBranch(
           (BranchLabels.cutShowLbl, label("") & debug("w=-1 | w=1") & assertT(And(w,e), "W&Ce")(-2) & andL(-2) &
-            loop(w)(1) & onBranch(
+            //loop(w)(1)
+            ind(w)(1) & onBranch(
             (BranchLabels.indInitLbl, sublabel("W(w) init") & closeId),
 
-            (BranchLabels.indStepLbl, sublabel("W(w) step") & hide(w)(-4) & hide(w)(-2) & implyR(1) & debug("step w=-1 | w=1") &
-              // could also just always generalize(w0)
-              // this is a more efficient version
-              //@note could have handled 2*composeb(1) at once
-              //@note useing W(w_0) instead of W(w) or use post-postcondition
-              composeb(1) & generalize(w0)(1) & onBranch(
-              (BranchLabels.genShow, debugT("W gen V 1") & V(1) & closeId),
-              (BranchLabels.genUse, composeb(1) & useAt("V[:*] vacuous assign nondet")(SuccPosition(0, 1::Nil)) &
-                choiceb(1) & andR(1) & (
-                sublabel("& left") & testb(1) & implyR(1) & closeId
-                ,
-                sublabel("& right") &
-                  composeb(1) & composeb(SuccPosition(0, 1::Nil)) & generalize(w0)(1) & onBranch(
-                  (BranchLabels.genUse, useAt("V[:*] vacuous assign nondet")(1) & closeId),
-                  (BranchLabels.genShow, generalize(w0)(1) & onBranch(
-                    (BranchLabels.genShow, debugT("W gen V 2") & V(1) & closeId),
-                    (BranchLabels.genUse, sublabel("W arith") & debug("W arith") & cohide(1) & choiceb(1) & useAt("[:=] assign")(1, 0::Nil) & useAt("[:=] assign")(1, 1::Nil) & QE)
-                  ))
-                )
-                )
-                )
-            )
+            (BranchLabels.indStepLbl, sublabel("W(w) step") & //hide(w)(-4) & hide(w)(-2) &
+              /*implyR(1) &*/ debug("step w=-1 | w=1") &
+              by(invariantWe)
               ),
-            (BranchLabels.indUseCaseLbl, sublabel("W(w) loop use") & implyR(1) & closeId)
+
+            (BranchLabels.indUseCaseLbl, sublabel("W(w) loop use") & /*implyR(1) &*/ closeId)
           )
+            // end postCut(w)
             ),
 
           (BranchLabels.cutUseLbl, sublabel("A()&W(w) augmented") & assertT(And(w,e), "W&Ce")(-2) & andL(-2) & debug("inductive use of A&W") &
             cutL(i)(-3) & onBranch(
             (BranchLabels.cutShowLbl, hide(1) & label("by seq-equiv") & equivifyR(1) & by(seqEquivalence)),
+
             (BranchLabels.cutUseLbl, sublabel("Ce~>Ci reduction") &
               CE(postEquivalence)(SuccPosition(0, 1::Nil))
               & debug("unpack and repack to replace test") &
-              loop(And(w,And(u, i)))(1) & onBranch(
-              (BranchLabels.indInitLbl, sublabel("W&u*Ci init") & andR(1) & (close(-2,1) , andR(1) & (label("arith") , close(-3,1)))),
-              (BranchLabels.indStepLbl, sublabel("W&u&Ci step") & hide(And(w,And(u,i)))(-4) & hide(i)(-3) & hide(w)(-2) & implyR(1) &
-                composeb(1) & composeb(1) & choiceb(1)  // unpack
-                //& useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil))  // gather
-                & composeb(SuccPosition(0, 1::Nil)) & composeb(SuccPosition(0, 1::1::Nil))
-                & debug("cutting explicit dynamics away")
-                & cutAt(i0)(SuccPosition(0, 1::1::1::0::0::Nil)) & debug("cuttedAt") & onBranch(
-                (BranchLabels.cutShowLbl, sublabel("show patch") & debug("showing patch")
-                  & useAt("-> distributes over &", PosInExpr(0::Nil))(1)
-                  & andR(1) & (
-                  // left branch is unchanged
-                  sublabel("cutAt no change on left") & implyR(1) & andL(-3) & closeId
+              debug("loop") &
+              /*loop(And(w,And(u, i)))(1)*/
+              ind(And(a,And(w,And(u, i))))(1)
+              & debug("loop induction")
+              & onBranch(
+              (BranchLabels.indInitLbl, sublabel("W&u*Ci init") & andR(1) & (closeId , andR(1) & (close(-2,1) , andR(1) & (label("arith") , close(-3,1))))),
+
+              (BranchLabels.indStepLbl, sublabel("W&u&Ci step") & // hide(And(w,And(u,i)))(-4) & hide(i)(-3) & hide(w)(-2) &
+                andL(-1) & assertE(a, "A()")(-1) &
+                splitb(1) & andR(1) & (
+                // A() invariant
+                V(1) & closeId
+                ,
+                // implyR(1) &
+                splitb(1) & andR(1) & (
+                  // W(w) invariant
+                  debug("W invariant again") &
+                  andL(-2) & andL(-3)
+                    & hide(i)(-4) & hide(u)(-3) & hide(a)(-1) &
+                  by(invariantWe)
                   ,
-                  // right branch replaced implicit with explicit conditionally
-                  sublabel("CMon++")
-                    & debug("CMon++")
-                    & useAt("& commute")(SuccPosition(0, 0::Nil))
-                    & debug("& commuted")
-                    & useAt("-> weaken", PosInExpr(1::Nil))(1)
-                    & debug("-> weakened")
-                    & label("CMon") & debug("CMon")
-                    & sublabel("-> weakened")
-                    // the following is like CMon(PosInExpr(1::1::1::0::0::Nil)) except with context kept around
-                    & implyR(1)
-                    & debug("->R ed")
-                    /*
-                    & (choiceb(1, 1::Nil) & choiceb(-3, 1::Nil))
-                    & (useAt("[:=] assign")(1, 1::0::Nil) & useAt("[:=] assign")(-3, 1::0::Nil))
-                    & (useAt("[:=] assign")(1, 1::1::Nil) & useAt("[:=] assign")(-3, 1::1::Nil))
-                    & (randomb(1) & randomb(-3))
-                    */
-                    // gather outer boxes to [;]
-                    & sublabel("gathering") & debug("gathering")
-                    & useAt("[;] compose", PosInExpr(1::Nil))(1)
-                    & useAt("[;] compose", PosInExpr(1::Nil))(-3)
-                    & debug("gathered")
-                    & sublabel("postCut A()&W(w0)") & debug("postCut A()&W(w0)")
-                    & postCut(And(a,w0))(1) & onBranch(
-                    (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)")
-                      & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & sublabel("chasing") & chase(1)
-                      & allR(1) // equivalent:  HilbertCalculus.vacuousAll(1)
-                      & sublabel("gen by arith") & debug("gen by arith")
+                  // u&Ce invariant
+                  composeb(1) & composeb(1) & choiceb(1)  // unpack
+                    //& useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil))  // gather
+                    & composeb(SuccPosition(0, 1::Nil)) & composeb(SuccPosition(0, 1::1::Nil))
+                    & debug("cutting explicit dynamics away")
+                    & cutAt(i0)(SuccPosition(0, 1::1::1::0::0::Nil)) & debug("cuttedAt") & onBranch(
+                    (BranchLabels.cutShowLbl, sublabel("show patch") & debug("showing patch")
+                      & useAt("-> distributes over &", PosInExpr(0::Nil))(1)
                       & andR(1) & (
-                      andR(1) & (
-                        closeId
-                        ,
-                        close // QE
-                        )
+                      // left branch is unchanged
+                      sublabel("cutAt no change on left") & implyR(1) & andL(-3) & closeId
                       ,
-                      andR(1) & (
-                        closeId
-                        ,
-                        close //QE
-                        )
-                      )
-                      ),
-
-                    (BranchLabels.cutUseLbl, sublabel("generalized A()&W(w0)->post")
-                      & HilbertCalculus.testb(1, 1::1::Nil)
-                      & debug("do use dist equiv impl")
-                      & assertE(And(a,w0), "do use dist equiv form")(1, 1::0::Nil)
-                      & assertE(e0, "do use dist equiv form")(1, 1::1::0::Nil)
-                      //@todo for unproved distEquivImpl, this guy keeps around an extra premise
-                      & useAt(distEquivImpl.conclusion.succ.head, PosInExpr(0::Nil))(1, 1::Nil)
-                      & sublabel("dist equiv impl")
-                      & debug("used dist equiv impl")
-                      & assertE(And(a,w0), "used dist equiv form")(1, 1::0::Nil)
-                      & assertE(i0, "used dist equiv form")(1, 1::1::0::Nil)
-//                      & (if (distEquivImpl.isProved) {
-//                      assertE("dhf_0:=*;{w_0:=-1;++w_0:=1;}".asProgram, "used dist equiv form")(1, 0 :: Nil) &
-//                        assertE ("ao:=*;".asProgram, "used dist equiv form")(1, 1::1::1::0::Nil)
-//                    } else {
-//                    //  println("WARN: unproved distEquivImpl, so proof goals will remain around");
-//                      skip
-//                    })
-                      // repacking
-                      & useAt("[?] test", PosInExpr(1::Nil))(1, 1::1::Nil)
-                      & debug("repacked test")
-                      // drop a&w implication from postcondition again
-                      //& useAt("K modal modus ponens", PosInExpr(0::Nil))(1) & implyR(1) & hide(-4)
-                      & sublabel("[] post weaken")
-                      & debug("do [] post weaken")
-                      & assertE(And(a,w0), "post weaken form")(1, 1::0::Nil)
-                      & assertE(Test(i0), "post weaken form")(1, 1::1::0::Nil)
-                      & useAt("[] post weaken", PosInExpr(1::Nil))(1) //& useAt("[] post weaken")(1, /*Nil*/1::1::1::Nil)
-                      & debug("did [] post weaken")
-                      & close(-3, 1)
-                      // successfully closes
-                      )
-                  )
-                  )
-                  ),
-
-                (BranchLabels.cutUseLbl, sublabel("use patch") & debug("use patch")
-                  // repacking
-                  & useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) & useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil))
-                  //& useAt("[;] compose", PosInExpr(0::Nil))(SuccPosition(0, 1::Nil))// ungather
-                  // repack
-                  & useAt("[++] choice", PosInExpr(1::Nil))(1) & useAt("[;] compose", PosInExpr(1::Nil))(1) & useAt("[;] compose", PosInExpr(1::Nil))(1)
-                  & label("use patch") & debug("used patch")
-                  //@todo by unrolling implicit once
-                  //@todo rename acasximplicit to w_0 names ....
-                  & cut(acasximplicit.asInstanceOf[Imply].right) & onBranch(
-                  (BranchLabels.cutShowLbl,
-                    sublabel("show implicit applicable") &
-                      hide(1) &
-                      cut(acasximplicit) & onBranch(
-                      (BranchLabels.cutShowLbl, cohide(2) & sublabel("lookup lemma")),
-                      (BranchLabels.cutUseLbl,
-                        debug("show implicit applicable") &
-                          implyL(-3) & (
-                          hide(1) &
-                            // prove A()&(W(w)&Ci(w,dhf))
-                            andR(1) & (
-                            label("A id") & close(-1,1)
+                      // right branch replaced implicit with explicit conditionally
+                      sublabel("CMon++")
+                        & debug("CMon++")
+                        & useAt("& commute")(SuccPosition(0, 0::Nil))
+                        & debug("& commuted")
+                        & useAt("-> weaken", PosInExpr(1::Nil))(1)
+                        & debug("-> weakened")
+                        & label("CMon") & debug("CMon")
+                        & sublabel("-> weakened")
+                        // the following is like CMon(PosInExpr(1::1::1::0::0::Nil)) except with context kept around
+                        & implyR(1)
+                        & debug("->R ed")
+                        /*
+                        & (choiceb(1, 1::Nil) & choiceb(-3, 1::Nil))
+                        & (useAt("[:=] assign")(1, 1::0::Nil) & useAt("[:=] assign")(-3, 1::0::Nil))
+                        & (useAt("[:=] assign")(1, 1::1::Nil) & useAt("[:=] assign")(-3, 1::1::Nil))
+                        & (randomb(1) & randomb(-3))
+                        */
+                        // gather outer boxes to [;]
+                        & sublabel("gathering") & debug("gathering")
+                        & useAt("[;] compose", PosInExpr(1::Nil))(1)
+                        & useAt("[;] compose", PosInExpr(1::Nil))(-3)
+                        & debug("gathered")
+                        & sublabel("postCut A()&W(w0)") & debug("postCut A()&W(w0)")
+                        & postCut(And(a,w0))(1) & onBranch(
+                        (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)")
+                          & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & sublabel("chasing") & chase(1)
+                          & allR(1) // equivalent:  HilbertCalculus.vacuousAll(1)
+                          & sublabel("gen by arith") & debug("gen by arith")
+                          & andR(1) & (
+                          andR(1) & (
+                            closeId
                             ,
-                            // split W(w)&u&Ci finally
-                            andL(-2) & andL(-3) &
-                              andR(1) & (
-                              label("W(w) id") & close(-2,1)
-                              ,
-                              andR(1) & (
-                                label("arithmetic")
-                                ,
-                                label("Ci id") & close(-4,1)
-                                )
-                              )
+                            close // QE
                             )
                           ,
-                          closeId)
+                          andR(1) & (
+                            closeId
+                            ,
+                            close //QE
+                            )
+                          )
+                          ), // generalize post A()&W(w0)
+
+                        (BranchLabels.cutUseLbl, sublabel("generalized A()&W(w0)->post")
+                          & HilbertCalculus.testb(1, 1::1::Nil)
+                          & debug("do use dist equiv impl")
+                          & assertE(And(a,w0), "do use dist equiv form")(1, 1::0::Nil)
+                          & assertE(e0, "do use dist equiv form")(1, 1::1::0::Nil)
+                          //@todo for unproved distEquivImpl, this guy keeps around an extra premise
+                          & useAt(distEquivImpl.conclusion.succ.head, PosInExpr(0::Nil))(1, 1::Nil)
+                          & sublabel("dist equiv impl")
+                          & debug("used dist equiv impl")
+                          & assertE(And(a,w0), "used dist equiv form")(1, 1::0::Nil)
+                          & assertE(i0, "used dist equiv form")(1, 1::1::0::Nil)
+                          //                      & (if (distEquivImpl.isProved) {
+                          //                      assertE("dhf_0:=*;{w_0:=-1;++w_0:=1;}".asProgram, "used dist equiv form")(1, 0 :: Nil) &
+                          //                        assertE ("ao:=*;".asProgram, "used dist equiv form")(1, 1::1::1::0::Nil)
+                          //                    } else {
+                          //                    //  println("WARN: unproved distEquivImpl, so proof goals will remain around");
+                          //                      skip
+                          //                    })
+                          // repacking
+                          & useAt("[?] test", PosInExpr(1::Nil))(1, 1::1::Nil)
+                          & debug("repacked test")
+                          // drop a&w implication from postcondition again
+                          //& useAt("K modal modus ponens", PosInExpr(0::Nil))(1) & implyR(1) & hide(-4)
+                          & sublabel("[] post weaken")
+                          & debug("do [] post weaken")
+                          & assertE(And(a,w0), "post weaken form")(1, 1::0::Nil)
+                          & assertE(Test(i0), "post weaken form")(1, 1::1::0::Nil)
+                          & useAt("[] post weaken", PosInExpr(1::Nil))(1) //& useAt("[] post weaken")(1, /*Nil*/1::1::1::Nil)
+                          & debug("did [] post weaken")
+                          & close(-3, 1)
+                          // successfully closes
+                          ) // generalized A()&W(w0)->post
+                      )  // postCut(And(a,w0))
+                      )  // andR within show patch
+                      )  // show patch
+                    ,
+
+                    (BranchLabels.cutUseLbl, sublabel("use patch") & debug("use patch")
+                      // repacking
+                      & useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) & useAt("[;] compose", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil))
+                      //& useAt("[;] compose", PosInExpr(0::Nil))(SuccPosition(0, 1::Nil))// ungather
+                      // repack
+                      & useAt("[++] choice", PosInExpr(1::Nil))(1) & useAt("[;] compose", PosInExpr(1::Nil))(1) & useAt("[;] compose", PosInExpr(1::Nil))(1)
+                      & label("use patch") & debug("used patch")
+                      // by unrolling implicit once
+                      //@todo rename acasximplicit to w_0 names or vice versa ....
+                      & cut(acasximplicit.asInstanceOf[Imply].right) & onBranch(
+                      (BranchLabels.cutShowLbl,
+                        sublabel("show implicit applicable") &
+                          hide(1) &
+                          cut(acasximplicit) & onBranch(
+                          (BranchLabels.cutShowLbl, cohide(2) & sublabel("lookup lemma") & label("") & by(acasximplicitP)),
+                          (BranchLabels.cutUseLbl,
+                            sublabel("show lemma assumptions") & label("") & debug("show lemma assumptions") &
+                              implyL(-3) & (
+                              hide(1) &
+                                label("step 1") &
+                                // prove A()&(W(w)&Ci(w,dhf))
+                                andR(1) & (
+                                label("A id") & close(-1,1)
+                                ,
+                                // split W(w)&u&Ci finally
+                                label("step W(w)&Ci") & debug("step W(w)&Ci") &
+                                  andL(-2) & andL(-3) &
+                                  andR(1) & (
+                                  label("W(w) id") & closeId // (-2,1)
+                                  ,
+                                  label("Ci id") & closeId //(-4,1)
+                                  /*andR(1) & (
+                                    label("arithmetic")
+                                    ,
+                                    label("Ci id") & closeId //(-4,1)
+                                    )
+                                    */
+                                  )
+                                )
+                              ,
+                              label("looked up") & closeId)
+                            )
                         )
+                        ),  // show implicit applicable
+
+                      (BranchLabels.cutUseLbl, sublabel("by implicit") & useAt("[*] approx")(-3) & close(-3,1))
                     )
-                    ),
-                  (BranchLabels.cutUseLbl, sublabel("by implicit") & useAt("[*] approx")(-3) & close(-3,1))
+                      )  // use patch
+                  )  // cutAt(i0)
+                  )  // u&Ce invariant
                 )
-                  )
-              )
-                ),
-              (BranchLabels.indUseCaseLbl, sublabel("final use") & implyR(1)
-                & implyR(1) & implyR(1) & andL(-3)
+                ),  // W(w)&Ci step
+
+              (BranchLabels.indUseCaseLbl, sublabel("final use") & debug("final use") & andL(-1) & andL(-2) & andL(-3)
+                & implyR(1) & implyR(1)
+                & andR(1)
                 & closeId)
-            )
+            ) // ind(And(a,And(w,And(u, i))))
               )
-          )
+          ) // cutL(i)(-3)
             )
         )
           )
-      )
+      ) // postCut(a)
     )
 
-      proof.subgoals should contain only (
-        new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(acasximplicit)),
-        new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(equivalence))
-        )
+    proof.subgoals should contain only (
+      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(acasximplicit)),
+      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(equivalence))
+      )
 
-      proof
+    proof
   }
 
     /*  "abs_test0" should "be provable" in {
