@@ -53,6 +53,48 @@ trait UnifyUSCalculus {
   /** Mond: Monotone `<a;>p(x) |- <a;>q(x)` reduces to proving `p(x) |- q(x)` */
   lazy val Mond               : Tactic         = AxiomaticRuleTactics.diamondMonotoneT
 
+  /**
+   * Loop invariant (global rule).
+   * {{{
+   *   G |- J(x), D    J(x) |- [a]J(x)   J(x) |- p(x)
+   *   ----------------------------------------------- ind
+   *        G |- [{a}*]p(x), D
+   * }}}
+   */
+  def ind(invariant: Formula): PositionTactic = new PositionTactic("ind") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP &&
+      (s(p) match {case Box(Loop(_), _) => true case _ => false})
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) { outer =>
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+      case Box(Loop(a), f) =>
+        val aX = ProgramConst("a_")
+        val pX = Function("p_", None, Real, Bool)
+        val s = USubst(SubstitutionPair(aX, a) ::
+          SubstitutionPair(PredOf(pX, Anything), invariant) :: Nil)
+        Some(cutR(Imply(invariant, Box(Loop(a), invariant)))(p.top) & onBranch(
+          (BranchLabels.cutUseLbl,
+            // G |- J(x)->[a*]J(x), D by ind induction
+            cohide(p.top) & implyR(1) & new ApplyRule(AxiomaticRule("ind induction", s)) {
+            override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+          } & label(BranchLabels.indStepLbl)),
+
+          (BranchLabels.cutShowLbl,
+            // G |- (J(x)->[a*]J(x)) -> [a*]p(x), D
+            implyR(p.top) & implyL(AntePosition(node.sequent.ante.length)) & (
+              hide(p.top) & label(BranchLabels.indInitLbl)
+              ,
+              cohide2(AntePosition(node.sequent.ante.length), p.top) & Monb & label(BranchLabels.indUseCaseLbl)
+              )
+            )
+        )
+        )
+    }
+    }
+  }
+
 
 
   /*******************************************************************

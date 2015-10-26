@@ -942,7 +942,7 @@ object Tactics {
 
     def applicable(node : ProofNode): Boolean =
       if (node.sequent==provable.conclusion) true else
-      {println("by(provable) inapplicable " + provable + " to " + node.sequent + "\nin " + "by(" + provable + ")\n(" + node.sequent + ")"); false}
+      {println("by(provable) inapplicable " + provable + "\nto   " + node.sequent + "\nin " + "by(" + provable + ")\n(" + node.sequent + ")"); false}
 
     def apply(tool : Tool, node : ProofNode) {
       if (applicable(node)) {

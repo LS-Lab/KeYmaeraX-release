@@ -6,6 +6,8 @@ package casestudies
 
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+
 import scala.collection.immutable
 import scala.collection.immutable._
 
@@ -283,7 +285,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "derive distributive version of conditional equivalence" in {
-    val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-equivalence.key")).mkString)
+    val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay_equivalence.key")).mkString)
     val Imply(And(a, w), Equiv(e, i)) = equivalence
     import TactixLibrary._
     val distEquivalence = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(Imply(And(a,w), e), Imply(And(a,w),i)))),
@@ -293,7 +295,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
 
   it should "derive sequent version of conditional equivalence" in {
-    val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-equivalence.key")).mkString)
+    val equivalence = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay_equivalence.key")).mkString)
     val Imply(And(a,w), Equiv(e,i)) = equivalence
     val seqEquivalence = (Provable.startProof(Sequent(Nil, IndexedSeq(a, w), IndexedSeq(Equiv(e,i))))
     (Cut(equivalence), 0)
@@ -345,33 +347,61 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val acasximplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay_max.key")).mkString)
     val acasxexplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay-explicit.key")).mkString)
     val implicitExplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay_equivalence.key")).mkString)
-    acasXcongruence(Provable.startProof(implicitExplicit), Provable.startProof(acasximplicit), acasxexplicit) shouldBe 'closed
+    val lem = true
+    val lemmaDB = LemmaDBFactory.lemmaDB
+    val acasximplicitP = if (lem && lemmaDB.contains("nodelay_max")) LookupLemma(lemmaDB, "nodelay_max").lemma.fact else Provable.startProof(acasximplicit)
+    val implicitExplicitP = if (lem && lemmaDB.contains("nodelay_equivalence")) LookupLemma(lemmaDB, "nodelay_equivalence").lemma.fact else Provable.startProof(implicitExplicit)
+    acasXcongruence(implicitExplicitP, acasximplicitP, acasxexplicit) shouldBe 'closed
   }
 
-  private def acasXcongruence(implicitExplicit: Provable, acasximplicitP: Provable, acasxexplicit: Formula): Provable = {
-    val shape = Context(
-      """  (A()) &
-  ( (W(w)) &
-        ⎵
-  )
-  -> [
-  {   {
-      { ?true; ++
-        {dhf :=*; {w:=-1; ++ w:=1;}
-         ?⎵;
-        }}
-        ao :=*;
-      }
-      {r' = -rv, dhd' = ao, h' = -dhd & (w * dhd >= w * dhf | w * ao >= a)}
-   }*
-  ] ((h < -hp | h > hp | r < -rp | r> rp) & ⎵)
-      """.asFormula)
-    val u = "(h < -hp | h > hp | r < -rp | r> rp)".asFormula
 
+  private def acasXcongruence(implicitExplicit: Provable, acasximplicitP: Provable, acasxexplicit: Formula): Provable = {
     implicitExplicit.conclusion.ante shouldBe 'empty
     implicitExplicit.conclusion.succ.length shouldBe 1
     val equivalence = implicitExplicit.conclusion.succ.head
+    // extract subformulas A()&W(w) -> (Ce(...)<->Ci(...))
     val Imply(And(a,w), Equiv(e,i)) = equivalence
+
+    acasximplicitP.conclusion.ante shouldBe 'empty
+    acasximplicitP.conclusion.succ.length shouldBe 1
+    val acasximplicit = acasximplicitP.conclusion.succ.head
+    acasximplicit match {
+      case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == i && c2 == i =>
+      case _ => throw new IllegalArgumentException("Unexpected input shape of implicit file\nFound:    " + acasximplicit
+        + "\nExpected: " + Imply(And(a, And(w, i)), Context(Box(
+        """
+          |{   {
+          |      { ?true; ++
+          |        {dhf :=*; {w:=-1; ++ w:=1;}
+          |         ?⎵;
+          |        }}
+          |        ao :=*;
+          |      }
+          |      {r' = -rv, dhd' = ao, h' = -dhd & (w * dhd >= w * dhf | w * ao >= a)}
+          |   }*
+        """.stripMargin.asProgram, And("h < -hp | h > hp | r < -rp | r> rp".asFormula, i))) (i)))
+
+    }
+    val Imply(And(_, And(_, _)), Box(Loop(_), And(u, _))) = acasximplicit
+
+    acasxexplicit match {
+      case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == e && c2 == e =>
+      case _ => throw new IllegalArgumentException("Unexpected input shape of explicit file\nFound:    " + acasxexplicit
+        + "\nExpected: " + Imply(And(a, And(w, e)), Context(Box(
+        """
+          |{   {
+          |      { ?true; ++
+          |        {dhf :=*; {w:=-1; ++ w:=1;}
+          |         ?⎵;
+          |        }}
+          |        ao :=*;
+          |      }
+          |      {r' = -rv, dhd' = ao, h' = -dhd & (w * dhd >= w * dhf | w * ao >= a)}
+          |   }*
+        """.stripMargin.asProgram, And("h < -hp | h > hp | r < -rp | r> rp".asFormula, e))) (e))
+      )
+    }
+
     // read off more lemmas from equivalence
 
     //@note same proof of seqEquivalence as in "derive sequent version of conditional equivalence"
@@ -398,7 +428,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       Equiv(Imply(w,Imply(a, And(u, i))),
             Imply(w,Imply(a, And(u, e))))
       , useAt(shuffle, PosInExpr(1::Nil))(1)
-        & by(seqEquivalence))
+        & by(implicitExplicit))
     postEquivalence.subgoals shouldBe implicitExplicit.subgoals
 
     //@note _0 variations in induction :-/
@@ -424,18 +454,6 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     println("distEquivImpl " + distEquivImpl)
 
     // begin actual proof
-
-    acasxexplicit match {
-      case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == e && c2 == e =>
-      case _ => throw new IllegalArgumentException("Unexpected input shape of explicit file")
-    }
-    acasximplicitP.conclusion.ante shouldBe 'empty
-    acasximplicitP.conclusion.succ.length shouldBe 1
-    val acasximplicit = acasximplicitP.conclusion.succ.head
-    acasximplicit match {
-      case Imply(And(aa, And(ww, c)), Box(Loop(_), And(_, c2))) if aa == a && ww == w && c == i && c2 == i =>
-      case _ => throw new IllegalArgumentException("Unexpected input shape of implicit file")
-    }
 
     import TactixLibrary._
     val proof = TactixLibrary.proveBy(acasxexplicit,

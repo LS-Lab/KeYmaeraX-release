@@ -145,6 +145,11 @@ private[core] object AxiomBase {
        * Rule "ind induction".
        * Premise p(??) ==> [a;]p(??)
        * Conclusion p(??) ==> [a*]p(??)
+       * {{{
+       *     p(x) |- [a]p(x)
+       *   --------------------- ind
+       *     p(x) |- [{a}*]p(x)
+       * }}}
        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
       ("ind induction",
