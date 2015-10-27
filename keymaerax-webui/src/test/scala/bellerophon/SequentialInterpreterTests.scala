@@ -1,7 +1,7 @@
 package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms
+import edu.cmu.cs.ls.keymaerax.btactics.{HilbertTactics, Idioms}
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, SuccPos, Provable}
@@ -183,6 +183,12 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
       Idioms.AtSubgoal(0, ImplyR(SuccPos(0)) & TrivialCloser) &
       Idioms.AtSubgoal(0, ImplyR(SuccPos(0)) & TrivialCloser)
     shouldClose(t, "(1=1->1=1) & (2=2->2=2)".asFormula)
+  }
+
+  "Hilbert calulus" should "support most trivial case" in {
+    val t = ImplyR(SuccPos(0)) & HilbertTactics.BoxAssign & TrivialCloser
+      "[v:=t();]p(v) <-> p(t())"
+    shouldClose(t, "x()=1 -> [y:=1]y=1".asFormula)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
