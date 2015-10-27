@@ -10,8 +10,8 @@ KeYmaera X is built up from a small trusted core. The core contains a finite lis
 Branches
 ========
 
-- release is the stable branch for KeYmaera X releases
-- master is the branch for active ongoing developments of KeYmaera X.
+- `release` is the stable branch for KeYmaera X releases
+- `master is the branch for active ongoing developments of KeYmaera X.
 
 Dependencies
 ============
@@ -27,13 +27,13 @@ Dependencies
 Installation
 ============
 
-The easiest way to run KeYmaera X is to download the keymaerax.jar binary file from
+The easiest way to run KeYmaera X is to download the `keymaerax.jar` binary file from
 
   http://keymaeraX.org/
 
 and run it via
 
-    java -Xss20M -jar keymaerax.jaract
+    java -Xss20M -jar keymaerax.jar
 
 If this results in the error `Invalid or corrupt jarfile` then update to Java 1.8 or run it via
 
