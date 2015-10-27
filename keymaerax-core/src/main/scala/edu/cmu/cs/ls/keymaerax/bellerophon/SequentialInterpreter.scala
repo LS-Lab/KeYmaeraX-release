@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
-import edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch
+import edu.cmu.cs.ls.keymaerax.tactics.{UnificationException, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch.Subst
 
 import scala.annotation.tailrec
@@ -35,6 +35,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           apply(left, v)
         }
         catch {
+          //@todo catch a little less. Just catching proper tactic exceptions, maybe some ProverExceptions et al., not swallow everything
           case _ => apply(right, v)
         }
       }
@@ -42,7 +43,8 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       case BranchTactic(children) => v match {
         case BelleProvable(p) => {
           if(children.length != p.subgoals.length)
-            throw BelleError("<(e)(v) is only defined when len(e) = len(v).")
+            throw BelleError("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length)
+          //@todo .inContext(e)
 
           //Compute the results of piecewise applications of children to provable subgoals.
           val results : Seq[Provable] =
@@ -83,15 +85,16 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           throw BelleError("Unification of multi-sequent patterns is not currently supported.")
 
         //Attempt to find a child that unifies with the input.
-        //@todo Suppress "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
         val unifyingExpression : BelleExpr = children
           .map(pair => {
             val ty = pair._1
             val expr = pair._2
             ty match {
-              case SequentType(s) => UnificationMatch.unifiable(s, provable.subgoals.head) match {
-                case Some(subst) => Some((subst, expr))
-                case None => None
+              case SequentType(s) => try {
+                Some((UnificationMatch(s, provable.subgoals.head), expr))
+              } catch {
+                // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
+                case e: UnificationException => None
               }
               case _ => throw BelleError("Cannot unify non-sequent types.")
             }
@@ -124,7 +127,8 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
    * @param subderivation
    * @return A pair of:
    *         * A new provable that is identical to original, except that the nth subgoal is replaced with the remaining subgoals of result; and
-   *         * The new index of the (n+1)th goal.
+   *         * The new index of the (n+1)th goal. //@todo clarify
+   * @todo result is undefined. Subderivation rather
    */
   private def replaceConclusion(original: Provable, n: Int, subderivation: Provable): (Provable, Int) = {
     assert(original.subgoals.length > n, s"${n} is a bad index for Provable with ${original.subgoals.length} subgoals: ${original}")

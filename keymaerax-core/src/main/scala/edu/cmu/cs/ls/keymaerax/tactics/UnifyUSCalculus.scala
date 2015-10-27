@@ -309,7 +309,7 @@ trait UnifyUSCalculus {
               if (other.kind==FormulaKind) CE(p.inExpr)
               else if (other.kind==TermKind) CQ(p.inExpr)
               else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-              debugC("    using fact tactic") & factTactic & debugC("  done fact tactic"))
+              debugC("    using fact tactic") & (factTactic ~ TactixLibrary.errorT("fact should close")) & debugC("  done fact tactic"))
             //@todo error if factTactic is not applicable (factTactic | errorT)
           ) & debug("end   useAt " + p)
         }

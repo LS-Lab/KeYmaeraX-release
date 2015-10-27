@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax
 
 /**
- * The Bellerophon package contains an implementation of the Bellerophon language, including:
+ * Implements the Bellerophon tactics language. This package includes
  *    - a sequential tactic interpreter
  *    - a parallel tactic interpreter
  *    - a type system based on mappings between uniform substitutions
@@ -12,6 +12,4 @@ package edu.cmu.cs.ls.keymaerax
  *    Nathan Fulton and Andre Platzer
  * @author Nathan Fulton
  */
-package object bellerophon {
-
-}
+package object bellerophon {}

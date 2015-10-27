@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  */
 abstract class BelleExpr {
   // Syntactic sugar for combinators.
+  //@todo copy documentation
   def &(other: BelleExpr)             = SeqTactic(this, other)
   def |(other: BelleExpr)             = EitherTactic(this, other)
   def *@(annotation: BelleType)       = SaturateTactic(this, annotation)
@@ -18,6 +19,7 @@ abstract class BelleExpr {
   /**
    * Executes this tactic with the default interpreter.
    * @note DO NOT call .execute from a built-in tactic -- doing so breaks interpreter listeners/hooks.
+   * @todo why is this not apply(Provable) which isn't used otherwise either? Also SequentialInterpreter can come from private object doesn't have to be new since stateless.
    */
   def execute(provable: Provable) = SequentialInterpreter()(this, BelleProvable(provable))
 }
@@ -50,6 +52,7 @@ abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
   def applyAt(provable : Provable, posOne: SeqPos, posTwo: SeqPos) : Provable
 }
 
+//@todo unclear
 abstract case class DependentTactic(name: String) extends BelleExpr {
   def computeExpr(v : BelleValue): BelleExpr
 }
@@ -87,6 +90,7 @@ case class SequentType(s : Sequent) extends BelleType
 // Errors
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+//@todo extend some ProverException and use the inherited inContext functionality throughout the interpreter.
 case class BelleError(message: String)
   extends Exception(s"[Bellerophon Runtime] $message")
 
