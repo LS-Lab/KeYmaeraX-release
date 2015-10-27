@@ -354,7 +354,13 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val implicitExplicitP = if (lem && lemmaDB.contains("nodelay_equivalence")) LookupLemma(lemmaDB, "nodelay_equivalence").lemma.fact
     else if (false && lem && lemmaDB.contains("magic-nodelay_equivalence")) LookupLemma(lemmaDB, "magic-nodelay_equivalence").lemma.fact
     else Provable.startProof(implicitExplicit)
-    acasXcongruence(implicitExplicitP, acasximplicitP, acasxexplicit, QE) shouldBe 'closed
+    val proof = acasXcongruence(implicitExplicitP, acasximplicitP, acasxexplicit, QE)
+    /*proof.subgoals should contain only (
+      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(acasximplicitP.subgoals)),
+      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(implicitExplicitP.subgoals))
+      )*/
+    proof shouldBe 'proved
+    proof.proved shouldBe acasxexplicit
   }
 
 
@@ -469,6 +475,17 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     distEquivImpl.subgoals shouldBe implicitExplicit.subgoals
     println("distEquivImpl " + distEquivImpl)
 
+    val lemmaDB = LemmaDBFactory.lemmaDB
+    val ucLoFact = if (lemmaDB.contains("nodelay_ucLoLemma")) LookupLemma(lemmaDB, "nodelay_ucLoLemma").lemma.fact
+    else Provable.startProof(Imply(And(w,And(i,a)), u))
+    val ucLoLemma = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(a, w, i), IndexedSeq(u)),
+      cut(ucLoFact.conclusion.succ.head) & onBranch(
+        (BranchLabels.cutShowLbl, cohide(2) & by(ucLoFact)),
+        (BranchLabels.cutUseLbl, implyL(-4) & (andR(2) & (andR(2) & (closeId , closeId), closeId), closeId) )
+      )
+    )
+    ucLoLemma.subgoals shouldBe ucLoFact.subgoals
+
     // begin actual proof
 
 
@@ -541,7 +558,11 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
               ind(And(a,And(w,And(u, i))))(1)
               & sublabel("loop induction")
               & onBranch(
-              (BranchLabels.indInitLbl, sublabel("W&u&Ci init") & debug("W&u&Ci init") & andR(1) & (closeId , andR(1) & (close(-2,1) , andR(1) & (label("arith") /*& done*/, close(-3,1))))),
+              (BranchLabels.indInitLbl, sublabel("W&u&Ci init") & debug("W&u&Ci init") & andR(1) & (closeId , andR(1) & (close(-2,1) , andR(1) & (
+                label("arith") /*& done*/
+                & debug("A&W(w)&Ci->u")
+                & by(ucLoLemma)
+                , close(-3,1))))),
 
               (BranchLabels.indStepLbl, sublabel("W&u&Ci step") & // hide(And(w,And(u,i)))(-4) & hide(i)(-3) & hide(w)(-2) &
                 andL(-1) & assertE(a, "A()")(-1) &
@@ -724,11 +745,6 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           )
       ) // postCut(a)
     )
-
-    proof.subgoals should contain only (
-      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(acasximplicit)),
-      new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(equivalence))
-      )
 
     proof
   }
