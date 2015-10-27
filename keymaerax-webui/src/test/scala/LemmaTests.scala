@@ -129,4 +129,42 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       ), new RootNode(t))
     r2 shouldBe 'closed
   }
+
+  "Lemma name" should "be allowed file content is exact same lemma" in {
+    val lemma = createLemma1
+    // add lemma into DB
+    val lemmaDB = LemmaDBFactory.lemmaDB
+    lemmaDB.add(lemma) shouldBe "Lemma 1"
+    // now add the same lemma again, should be allowed
+    lemmaDB.add(lemma) shouldBe "Lemma 1"
+  }
+
+  it should "be disallowed if file content and lemma do not match" in {
+    val lemma = createLemma1
+    val lemmaDB = LemmaDBFactory.lemmaDB
+    lemmaDB.add(lemma) shouldBe "Lemma 1"
+
+    // now try adding a different lemma under the name Lemma 1
+    val g = "[y:=3;]y=3".asFormula
+    val t = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(g))
+    val r2 = helper.runTactic(ls(assignb) & closeId, new RootNode(t))
+    r2 shouldBe 'closed
+    val lemma2 = Lemma(
+      r2.provableWitness,
+      new ToolEvidence(immutable.Map("input" -> g.prettyString, "output" -> "true")) :: Nil,
+      Some("Lemma 1"))
+
+    an [IllegalArgumentException] should be thrownBy lemmaDB.add(lemma2)
+  }
+
+  private def createLemma1: Lemma = {
+    val f = "[x:=2;]x=2".asFormula
+    val s = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(f))
+    val r1 = helper.runTactic(ls(assignb) & closeId, new RootNode(s))
+    r1 shouldBe 'closed
+    Lemma(
+      r1.provableWitness,
+      new ToolEvidence(immutable.Map("input" -> f.prettyString, "output" -> "true")) :: Nil,
+      Some("Lemma 1"))
+  }
 }

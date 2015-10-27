@@ -280,7 +280,48 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
 
+  it should "reduce x>5 |- [x:=x+1;x:=2*x;]x>1 to x>5 |- [x:=x+1;][x:=2*x;]x>1 by useAt" in {
+    proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula)),
+      useAt("[;] compose")(1)).subgoals should contain only Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula))
+  }
 
+  it should "reduce x>5 |- [x:=x+1;][x:=2*x;]x>1 to x>5 |- [x:=x+1;x:=2*x;]x>1 by useAt backwards" in {
+    proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula)),
+      useAt("[;] compose", PosInExpr(1::Nil))(1)).subgoals should contain only Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))
+  }
+
+  it should "reduce [x:=x+1;x:=2*x;]x>1 |- x>5 to [x:=x+1;][x:=2*x;]x>1 |- x>5 by useAt" in {
+    proveBy(Sequent(Nil, IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
+      useAt("[;] compose")(-1)).subgoals should contain only Sequent(Nil, IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula))
+  }
+
+  it should "reduce [x:=x+1;][x:=2*x;]x>1 |- x>5 to [x:=x+1;x:=2*x;]x>1 |- x>5 by useAt backwards" in {
+    proveBy(Sequent(Nil, IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
+    useAt("[;] compose", PosInExpr(1::Nil))(-1)).subgoals should contain only Sequent(Nil, IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula), IndexedSeq("x>5".asFormula))
+  }
+
+
+  it should "reduce x>5 |- [c;d;]x>1 to x>5 |- [c;][d;]x>1 by useAt" in {
+    proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[c;d;]x>1".asFormula)),
+      useAt("[;] compose")(1)).subgoals should contain only Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[c;][d;]x>1".asFormula))
+  }
+
+  it should "reduce x>5 |- [c;][d;]x>1 to x>5 |- [c;d;]x>1 by useAt backwards" in {
+    proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[c;][d;]x>1".asFormula)),
+      useAt("[;] compose", PosInExpr(1::Nil))(1)).subgoals should contain only Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[c;d;]x>1".asFormula))
+  }
+
+  it should "reduce [c;d;]x>1 |- x>5 to [c;][d;]x>1 |- x>5 by useAt" in {
+    proveBy(Sequent(Nil, IndexedSeq("[c;d;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
+      useAt("[;] compose")(-1)).subgoals should contain only Sequent(Nil, IndexedSeq("[c;][d;]x>1".asFormula), IndexedSeq("x>5".asFormula))
+  }
+
+  it should "reduce [c;][d;]x>1 |- x>5 to [c;d;]x>1 |- x>5 by useAt backwards" in {
+    proveBy(Sequent(Nil, IndexedSeq("[c;][d;]x>1".asFormula), IndexedSeq("x>5".asFormula)),
+      useAt("[;] compose", PosInExpr(1::Nil))(-1)).subgoals should contain only Sequent(Nil, IndexedSeq("[c;d;]x>1".asFormula), IndexedSeq("x>5".asFormula))
+  }
+
+  
   "Chase" should "prove [?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0 by chase" in {
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[?x>0;x:=x+1; ++ ?x=0;x:=1;]x>0".asFormula)),
       chase(1,Nil) & QE
