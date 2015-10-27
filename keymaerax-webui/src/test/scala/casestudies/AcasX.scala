@@ -27,7 +27,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{Propositional,N
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
-import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
@@ -359,7 +359,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(implicitExplicitP.subgoals))
       )*/
     proof shouldBe 'proved
-    proof.proved shouldBe acasxexplicit
+    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq(acasxexplicit))
+    lemmaDB.add(Lemma(proof, ToolEvidence(immutable.Map("input" -> acasxexplicit.toString, "output" -> "true")) :: Nil, Some("nodelay-explicit")))
   }
 
 
