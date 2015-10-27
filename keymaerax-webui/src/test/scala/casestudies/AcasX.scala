@@ -351,9 +351,8 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     val lem = true
     val lemmaDB = LemmaDBFactory.lemmaDB
     val acasximplicitP = if (lem && lemmaDB.contains("nodelay_max")) LookupLemma(lemmaDB, "nodelay_max").lemma.fact else Provable.startProof(acasximplicit)
-    val implicitExplicitP = if (lem && lemmaDB.contains("nodelay_equivalence")) LookupLemma(lemmaDB, "nodelay_equivalence").lemma.fact
-    else if (false && lem && lemmaDB.contains("magic-nodelay_equivalence")) LookupLemma(lemmaDB, "magic-nodelay_equivalence").lemma.fact
-    else Provable.startProof(implicitExplicit)
+    val implicitExplicitP = if (lem && lemmaDB.contains("nodelay_equivalence")) LookupLemma(lemmaDB, "nodelay_equivalence").lemma.fact else Provable.startProof(implicitExplicit)
+    if (!acasximplicitP.isProved || !implicitExplicitP.isProved) println("Proof will be partial. Prove other lemmas first")
     val proof = acasXcongruence(implicitExplicitP, acasximplicitP, acasxexplicit, QE)
     /*proof.subgoals should contain only (
       new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(acasximplicitP.subgoals)),
@@ -367,11 +366,11 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
   /**
    * ACAS X proof embedding conditional equivalence of implicit and explicit into safety proof of implicit regions
    * to form a safety proof of explicit regions.
-   * @param implicitExplicit
-   * @param acasximplicitP
-   * @param acasxexplicit
-   * @param done
-   * @return
+   * @param implicitExplicit conditional equivalence result for implicit, explicit regions
+   * @param acasximplicitP safe hybrid systems model with implicit regions
+   * @param acasxexplicit conjectured hybrid systems model with explicit regions
+   * @param done what to call at arithmetic leaves
+   * @return a proof of acasxexplicit as constructed out of the other ingredients.
    * @author Andre Platzer
    */
   private def acasXcongruence(implicitExplicit: Provable, acasximplicitP: Provable, acasxexplicit: Formula, done: Tactic = close): Provable = {
@@ -485,6 +484,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       )
     )
     ucLoLemma.subgoals shouldBe ucLoFact.subgoals
+    if (!ucLoLemma.isProved) println("Proof will be partial. Prove other lemmas first")
 
     // begin actual proof
 
