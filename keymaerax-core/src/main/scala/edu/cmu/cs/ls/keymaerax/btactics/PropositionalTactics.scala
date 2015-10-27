@@ -17,6 +17,12 @@ object PropositionalTactics {
   private def checkProvableShape(provable: Provable) =
     if(provable.subgoals.length != 1) throw BelleError("Expected exactly one sequent in Provable")
 
+  def Cut(input: Formula) = new BuiltInTactic(s"Cut(${input.prettyString})") {
+    override def result(provable: Provable): Provable = {
+      provable(core.Cut(input), 0)
+    }
+  }
+
   def AndR = new BuiltInRightTactic("AndR") {
     override def applyAt(provable: Provable, pos : SuccPos) = {
       checkProvableShape(provable)
