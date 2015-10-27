@@ -7,12 +7,22 @@ KeYmaera X is built up from a small trusted core. The core contains a finite lis
 
   http://keymaeraX.org/
 
+Branches
+========
+
+- release is the stable branch for KeYmaera X releases
+- master is the branch for active ongoing developments of KeYmaera X.
+
 Dependencies
 ============
-- Wolfram Mathematica (version 9.0 or greater recommended. Other versions may work. The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.)
-- Java Development Kit JDK (Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0 is also compatible with Java 1.8)
-- sbt (Version 0.13 or greater recommended. Other versions may work). If you are using IntelliJ, this comes with the Scala plugin.
-- Scala 2.11.7 (sbt will download this automatically)
+- [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
+  (version 9.0 or greater recommended. Other versions may work. The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.)
+- [Java Development Kit JDK](https://java.com/download)
+  (Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0 is also compatible with Java 1.8)
+- [Scala Build Tool sbt](http://www.scala-sbt.org)
+  (Version 0.13 or greater recommended. Other versions may work). If you are using IntelliJ, this comes with the Scala plugin.
+- [Scala 2.11.7](http://www.scala-lang.org)
+  (sbt will download scala this automatically)
 
 Installation
 ============
@@ -23,9 +33,9 @@ The easiest way to run KeYmaera X is to download the keymaerax.jar binary file f
 
 and run it via
 
-    java -Xss20M -jar keymaerax.jar
+    java -Xss20M -jar keymaerax.jaract
 
-If this results in the error `Invalid or corrupt jarfile` then update to Java 1.8 or run via
+If this results in the error `Invalid or corrupt jarfile` then update to Java 1.8 or run it via
 
     java -Xss20M -cp keymaerax.jar KeYmaeraX
 
@@ -83,10 +93,14 @@ If KeYmaera X acts weird after an update, you should clean your local cache of l
 You could also try removing or renaming keymaerax.sqlite (if this file has become corrupt, it may prevent KeYmaera from working).
 
 
-Generating Scaladoc Documentation
-=================================
+Generating API Documentation
+============================
 
-To generate Scaladoc documentation files, run:
+KeYmaera X API Documentation is generated via Scaladoc.
+  
+   http://www.keymaerax.org/scaladoc
+
+To generate KeYmaera X API documentation files locally, run:
 
     sbt doc
 
@@ -110,10 +124,10 @@ Main documentation to read for KeYmaera X API:
     edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary - Main tactic library for most common cases
     edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX - command-line launcher for KeYmaera X
 
-IntelliJ IDEA
-=============
+IntelliJ IDEA Development Environment
+=====================================
 
-If you want to use the IntelliJ IDEA development environment, install it:
+If you choose to use the IntelliJ IDEA development environment, install it:
 - Install IntelliJ IDEA
 - Install the Scala plugin for IntelliJ (the IntelliJ installer will ask you if you want to do this)
 
@@ -249,17 +263,6 @@ https://github.com/LS-Lab/KeYmaera4/wiki/How-to-Add-Tests
 http://www.scalatest.org/user_guide
 
 
-Optional Database Alternative: MongoDB
-======================================
-
-If you prefer to work with a MongoDB than with SQL you need to activate that in the source after installing
-
-    * Install MongoDB. Be sure that that your machine is behind a firewall and/or edit the MongoDB configuration file so that the server binds to the loopback address.
-
-Make sure to run the following before starting KeYmaera X:
-
-    mongod --config /usr/local/etc/mongod.conf
-
 Specification
 =============
 
@@ -319,9 +322,10 @@ arXiv:1205.4788
 Copyright and Licenses
 ======================
 
-Copyright (c) 2014-2015 Carnegie Mellon University. See COPYRIGHT.txt for details.
+Copyright (C) 2014-2015 Carnegie Mellon University. See COPYRIGHT.txt for details.
+Developed by Andre Platzer, Nathan Fulton, Ran Ji, Stefan Mitsch, Jan-David Quesel, Marcus Voelp
 
-See LICENSE.txt for the conditions of this license.
+See LICENSE.txt for the conditions of using this software.
 
 The KeYmaera X distribution contains external tools. A list of tools and their licenses can be found in
 
