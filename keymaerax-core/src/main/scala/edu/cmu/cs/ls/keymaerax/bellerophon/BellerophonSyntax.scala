@@ -52,7 +52,14 @@ abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
   def applyAt(provable : Provable, posOne: SeqPos, posTwo: SeqPos) : Provable
 }
 
-//@todo unclear
+/**
+ * Dependent tactics compute a tactic to apply based on their input.
+ * These tactics are probably not necessary very often, but are useful for idiomatic shortcuts.
+ * See e.g., AtSubgoal.
+ * @note similar to the ConstructionTactics in the old framework, except they should not be necessary
+ *       nearly as often because BuiltIns have direct access to a Provable.
+ * @param name The name of the tactic.
+ */
 abstract case class DependentTactic(name: String) extends BelleExpr {
   def computeExpr(v : BelleValue): BelleExpr
 }
