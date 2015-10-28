@@ -333,7 +333,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       }
       {r' = -rv, dhd' = ao, h' = -dhd & (w * dhd >= w * dhf | w * ao >= a)}
    }*
-  ] ((h < -hp | h > hp | r < -rp | r> rp) & ⎵)
+  ] ((abs(r)>rp|abs(h)>hp) & ⎵)
       """.asFormula)
 
     val equivalence = implicitExplicit.conclusion.succ.head
@@ -399,7 +399,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           |      }
           |      {r' = -rv, dhd' = ao, h' = -dhd & (w * dhd >= w * dhf | w * ao >= a)}
           |   }*
-        """.stripMargin.asProgram, And("h < -hp | h > hp | r < -rp | r> rp".asFormula, i))) (i)))
+        """.stripMargin.asProgram, And("abs(r)>rp|abs(h)>hp".asFormula, i))) (i)))
 
     }
     val Imply(And(_, And(_, _)), Box(Loop(body), And(u, _))) = acasximplicit
@@ -418,7 +418,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           |      }
           |      {r' = -rv, dhd' = ao, h' = -dhd & (w * dhd >= w * dhf | w * ao >= a)}
           |   }*
-        """.stripMargin.asProgram, And("h < -hp | h > hp | r < -rp | r> rp".asFormula, e))) (e))
+        """.stripMargin.asProgram, And("abs(r)>rp|abs(h)>hp".asFormula, e))) (e))
       )
     }
 
