@@ -37,6 +37,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         catch {
           //@todo catch a little less. Just catching proper tactic exceptions, maybe some ProverExceptions et al., not swallow everything
           case _ => apply(right, v)
+            //@todo throw compound exception if neither worked
         }
       }
       case x: SaturateTactic => tailrecSaturate(x, v)

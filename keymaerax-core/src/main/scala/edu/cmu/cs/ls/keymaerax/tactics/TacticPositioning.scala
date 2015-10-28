@@ -15,6 +15,9 @@ import scala.language.implicitConversions
 case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
 
+  /** Position of given child (append child)*/
+  def +(child: Int) = new PosInExpr(pos :+ child)
+
   /** Head: The top-most position */
   def head: Int = {require(pos!=Nil); pos.head}
   /** The child that this position refers to */
