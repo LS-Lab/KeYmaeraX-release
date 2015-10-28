@@ -8,30 +8,55 @@ import edu.cmu.cs.ls.keymaerax.core.{SeqPos, SuccPos, AntePos, Sequent}
 import scala.language.implicitConversions
 
 /**
- * Position within an expression as a list of subexpressions.
- * 0 is first child, 1 is second child, 2 is third child.
+ * Positions identify subexpressions of an expression.
+ * A position is a finite sequence of binary numbers where
+ * 0 identifies the left or only subexpression of an expression and
+ * 1 identifies the right subexpression of an expression.
+ * @example
+ * {{{
+ *   import StringConverter._
+ *   val fml = "(x>2 & x+1<9) -> [x:=2*x+1; y:=0;] x^2>=2".asFormula
+ *   print(FormulaAugmentor(fml).sub(PosInExpr(0::0::Nil)))        // x>2
+ *   print(FormulaAugmentor(fml).sub(PosInExpr(0::1::Nil)))        // x+1<9
+ *   print(FormulaAugmentor(fml).sub(PosInExpr(0::1::0::Nil)))     // x+1
+ *   print(FormulaAugmentor(fml).sub(PosInExpr(0::1::0::0::Nil)))  // x
+ *   print(FormulaAugmentor(fml).sub(PosInExpr(0::1::0::1::Nil)))  // 1
+ *   print(FormulaAugmentor(fml).sub(PosInExpr(0::1::1::Nil)))     // 9
+ *   print(FormulaAugmentor(fml).sub(PosInExpr(1::1::Nil)))        // x^2>=2
+ *   print(FormulaAugmentor(fml).sub(PosInExpr(1::0::Nil)))        // x:=2*x+1; y:=0;
+ *   print(FormulaAugmentor(fml).sub(PosInExpr(1::0::0::Nil)))     // x:=2*x+1;
+ *   print(FormulaAugmentor(fml).sub(PosInExpr(1::0::1::Nil)))     // y:=0;
+ *   print(FormulaAugmentor(fml).sub(PosInExpr(1::0::0::1::Nil)))  // 2*x+1
+ *
+ *   // implicitly use FormulaAugmentor functions on formulas
+ *   import FormulaAugmentor._
+ *   print(fml.sub(PosInExpr(1::0::1::Nil)))  // y:=0;
+ * }}}
  * @see [[Context.at()]]
  */
 case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
 
-  /** Position of given child (append child)*/
+  /** Position of given subexpression (append child)*/
   def +(child: Int) = new PosInExpr(pos :+ child)
 
-  /** Head: The top-most position */
+  /** Head: The top-most position of this position */
   def head: Int = {require(pos!=Nil); pos.head}
-  /** The child that this position refers to */
+  /** The child that this position refers to, i.e., one level down */
   def child: PosInExpr = PosInExpr(pos.tail)
   /** The parent of this position, i.e., one level up */
   def parent: PosInExpr = PosInExpr(pos.dropRight(1))
-  /** The sibling of this position */
+  /** The sibling of this position (flip left to right and right to left) */
   def sibling: PosInExpr = PosInExpr(pos.dropRight(1) :+ (1-pos.last))
 
   /** first child 0 */
+  @deprecated("Use this+0 instead")
   def first:  PosInExpr = new PosInExpr(pos :+ 0)
   /** second child 1 */
+  @deprecated("Use this+1 instead")
   def second: PosInExpr = new PosInExpr(pos :+ 1)
   /** third child 2 */
+  @deprecated("Use this+2 instead")
   def third:  PosInExpr = new PosInExpr(pos :+ 2)
 
   /** Concatenate this with p2: Append p2 to this position */
