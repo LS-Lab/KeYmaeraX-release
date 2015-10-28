@@ -2,7 +2,7 @@ package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{Legacy, Idioms}
-import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
+import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, SuccPos, Provable}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
