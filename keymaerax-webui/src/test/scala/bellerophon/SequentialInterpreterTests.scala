@@ -1,11 +1,15 @@
 package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms
+import edu.cmu.cs.ls.keymaerax.btactics.{Legacy, Idioms}
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, SuccPos, Provable}
+import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tactics
+import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera, Z3}
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.{Matchers, FlatSpec}
 
@@ -183,6 +187,28 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
       Idioms.AtSubgoal(0, ImplyR(SuccPos(0)) & TrivialCloser) &
       Idioms.AtSubgoal(0, ImplyR(SuccPos(0)) & TrivialCloser)
     shouldClose(t, "(1=1->1=1) & (2=2->2=2)".asFormula)
+  }
+
+  "Scheduled tactics" should "work" in {
+    val legacyTactic = tactics.TacticLibrary.arithmeticT
+    val t = Legacy.InitializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic)
+    shouldClose(t, "1=1".asFormula)
+  }
+
+  it should "work again" in {
+    val legacyTactic = tactics.TacticLibrary.arithmeticT
+    val t = Legacy.InitializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic)
+    shouldClose(t, "x = 0 -> x^2 = 0".asFormula)
+  }
+
+
+  it should "work for non-arith things" in {
+    val legacyTactic = tactics.PropositionalTacticsImpl.AndRightT(SuccPos(0))
+    val t = Legacy.InitializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic) < (
+      (ImplyR(SuccPos(0)) & TrivialCloser),
+      (ImplyR(SuccPos(0)) & TrivialCloser)
+      )
+    shouldClose(t, "(1=1->1=1) & (1=2->1=2)".asFormula)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
