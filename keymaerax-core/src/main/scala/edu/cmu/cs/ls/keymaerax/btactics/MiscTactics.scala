@@ -57,6 +57,9 @@ object DebuggingTactics {
   }
 }
 
+/**
+ * @author Nathan Fulton
+ */
 object Idioms {
   def NilT() = new BuiltInTactic("NilT") {
     override def result(provable: Provable): Provable = provable
@@ -71,8 +74,15 @@ object Idioms {
       case _ => throw BelleError("Cannot perform AtSubgoal on a non-Provable value.")
     }
   }
+
+  def NamedTactic(name: String, tactic: BelleExpr) = new DependentTactic(name) {
+    override def computeExpr(v: BelleValue): BelleExpr = tactic
+  }
 }
 
+/**
+ * @author Nathan Fulton
+ */
 object Legacy {
   def defaultInitialization(mathematicaConfig:  Map[String,String]) = {
     Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
