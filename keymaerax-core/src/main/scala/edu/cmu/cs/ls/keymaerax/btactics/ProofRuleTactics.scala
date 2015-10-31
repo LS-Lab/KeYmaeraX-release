@@ -31,6 +31,22 @@ object ProofRuleTactics {
     }
   }
 
+  def CutR(f: Formula) = new BuiltInRightTactic("CutR") {
+    override def applyAt(provable: Provable, pos: SuccPos): Provable = {
+      requireOneSubgoal(provable)
+      provable(core.CutRight(f, pos), 0)
+    }
+  }
+
+  def CutLR(f: Formula) = new BuiltInPositionTactic("CutR") {
+    override def applyAt(provable: Provable, pos: SeqPos): Provable = {
+      requireOneSubgoal(provable)
+      if (pos.isAnte) provable(core.CutLeft(f, pos.asInstanceOf[AntePos]), 0)
+      else provable(core.CutRight(f, pos.asInstanceOf[SuccPos]), 0)
+
+    }
+  }
+
   def NotL = new BuiltInLeftTactic("NotL") {
     override def applyAt(provable: Provable, pos: AntePos): Provable = {
       requireOneSubgoal(provable)
