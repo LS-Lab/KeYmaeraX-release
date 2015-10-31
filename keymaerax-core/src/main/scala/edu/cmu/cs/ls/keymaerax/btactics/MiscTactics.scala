@@ -2,14 +2,18 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.core.Provable
-import edu.cmu.cs.ls.keymaerax.tactics.{TacticWrapper, Interpreter, Tactics, ProofNode}
+import edu.cmu.cs.ls.keymaerax.core.{SeqPos, Formula, Provable}
+import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.tactics.{TacticWrapper, Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 
 /**
  * @author Nathan Fulton
  */
 object DebuggingTactics {
+  //@todo import a debug flag as in Tactics.DEBUG
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+
   def ErrorT(e : Throwable) = new BuiltInTactic("Error") {
     override def result(provable: Provable): Provable = throw e
   }
@@ -17,6 +21,38 @@ object DebuggingTactics {
   def ErrorT(s : String) = new BuiltInTactic("Error") {
     override def result(provable: Provable): Provable = {
       throw BelleUserGeneratedError(s)
+    }
+  }
+
+  /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
+  def debug(message: => String): BuiltInTactic = new BuiltInTactic("debug") {
+    override def result(provable: Provable): Provable = {
+      if (DEBUG) println("===== " + message + " ==== " + provable + " =====")
+      provable
+    }
+  }
+
+  /** assert is a no-op tactic that raises an error if the provable is not of the expected size. */
+  def assert(anteSize: Int, succSize: Int): BuiltInTactic = new BuiltInTactic("assert") {
+    override def result(provable: Provable): Provable = {
+      if (provable.subgoals.size != 1 || provable.subgoals.head.ante.size != anteSize ||
+        provable.subgoals.head.succ.size != succSize) {
+        throw new BelleUserGeneratedError("Expected 1 subgoal with: " + anteSize + " antecedent and " + succSize + " succedent formulas,\n\t but got " +
+          provable.subgoals.size + " subgoals (head subgoal with: " + provable.subgoals.head.ante.size + "antecedent and " +
+          provable.subgoals.head.succ.size + " succedent formulas)")
+      }
+      provable
+    }
+  }
+
+  /** assert is a no-op tactic that raises an error if the provable has not the expected formula at the specified position. */
+  def assert(fml: Formula, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") {
+    override def applyAt(provable: Provable, pos: SeqPos): Provable = {
+      if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos) != fml) {
+        throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal with " + fml + " at position " + pos + ",\n\t but got " +
+          provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.at(pos) + " at position " + pos + ")")
+      }
+      provable
     }
   }
 }
