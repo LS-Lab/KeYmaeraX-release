@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
+import edu.cmu.cs.ls.keymaerax.core.{QETool, Sequent, Provable}
 import edu.cmu.cs.ls.keymaerax.tactics.{UnificationException, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch.Subst
 

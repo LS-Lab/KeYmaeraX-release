@@ -266,6 +266,4 @@ object ProofRuleTactics {
       provable(core.CloseFalse(pos), 0)
     }
   }
-
-
 }

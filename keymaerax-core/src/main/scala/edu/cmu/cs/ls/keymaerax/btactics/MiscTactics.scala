@@ -75,8 +75,17 @@ object Idioms {
     }
   }
 
+  /** Gives a name to a tactic to a definable tactic. */
   def NamedTactic(name: String, tactic: BelleExpr) = new DependentTactic(name) {
     override def computeExpr(v: BelleValue): BelleExpr = tactic
+  }
+
+  /** Establishes the fact by appealing to an existing tactic. */
+  def by(fact: Provable) = new BuiltInTactic("Established by existing provable") {
+    override def result(provable: Provable): Provable = {
+      assert(provable.subgoals.length == 1, "Expected one subgoal but found " + provable.subgoals.length)
+      provable(fact, 0)
+    }
   }
 }
 
