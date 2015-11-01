@@ -93,6 +93,9 @@ object Idioms {
  * @author Nathan Fulton
  */
 object Legacy {
+  /** The default mechanism for initializing KeYmaeraScheduler, Mathematica, and Z3 that are used in the legacy tactics.
+    * @note This may interfere in unexpected ways with sequential tactics.
+    */
   def defaultInitialization(mathematicaConfig:  Map[String,String]) = {
     Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
     Tactics.MathematicaScheduler = new Interpreter(new Mathematica)

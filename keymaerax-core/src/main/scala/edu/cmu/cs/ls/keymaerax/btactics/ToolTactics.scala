@@ -62,7 +62,7 @@ object ToolTactics {
 
       ProofRuleTactics.Cut(qeEquivalence) < (
         Idioms.by(qeFact),
-        ??? //@todo this needs CQ or CE, depending on the shape of the qeEquivalence. But these are axioms?
+        ??? //@todo this needs CQ or CE, depending on the shape of the qeEquivalence. But these aren't currently implemented.
       )
     }
   }
