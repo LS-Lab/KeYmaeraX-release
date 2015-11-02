@@ -16,21 +16,23 @@ import scala.language.implicitConversions
  * {{{
  *   import StringConverter._
  *   val fml = "(x>2 & x+1<9) -> [x:=2*x+1; y:=0;] x^2>=2".asFormula
+ *   // explicitly use FormulaAugmentor
  *   print(FormulaAugmentor(fml).sub(PosInExpr(0::0::Nil)))        // x>2
- *   print(FormulaAugmentor(fml).sub(PosInExpr(0::1::Nil)))        // x+1<9
- *   print(FormulaAugmentor(fml).sub(PosInExpr(0::1::0::Nil)))     // x+1
- *   print(FormulaAugmentor(fml).sub(PosInExpr(0::1::0::0::Nil)))  // x
- *   print(FormulaAugmentor(fml).sub(PosInExpr(0::1::0::1::Nil)))  // 1
- *   print(FormulaAugmentor(fml).sub(PosInExpr(0::1::1::Nil)))     // 9
- *   print(FormulaAugmentor(fml).sub(PosInExpr(1::1::Nil)))        // x^2>=2
- *   print(FormulaAugmentor(fml).sub(PosInExpr(1::0::Nil)))        // x:=2*x+1; y:=0;
- *   print(FormulaAugmentor(fml).sub(PosInExpr(1::0::0::Nil)))     // x:=2*x+1;
- *   print(FormulaAugmentor(fml).sub(PosInExpr(1::0::1::Nil)))     // y:=0;
- *   print(FormulaAugmentor(fml).sub(PosInExpr(1::0::0::1::Nil)))  // 2*x+1
- *
+
  *   // implicitly use FormulaAugmentor functions on formulas
  *   import FormulaAugmentor._
- *   print(fml.sub(PosInExpr(1::0::1::Nil)))  // y:=0;
+ *   print(fml.sub(PosInExpr(0::0::Nil)))        // x>2;
+
+ *   print(fml.sub(PosInExpr(0::1::Nil)))        // x+1<9
+ *   print(fml.sub(PosInExpr(0::1::0::Nil)))     // x+1
+ *   print(fml.sub(PosInExpr(0::1::0::0::Nil)))  // x
+ *   print(fml.sub(PosInExpr(0::1::0::1::Nil)))  // 1
+ *   print(fml.sub(PosInExpr(0::1::1::Nil)))     // 9
+ *   print(fml.sub(PosInExpr(1::1::Nil)))        // x^2>=2
+ *   print(fml.sub(PosInExpr(1::0::Nil)))        // x:=2*x+1; y:=0;
+ *   print(fml.sub(PosInExpr(1::0::0::Nil)))     // x:=2*x+1;
+ *   print(fml.sub(PosInExpr(1::0::1::Nil)))     // y:=0;
+ *   print(fml.sub(PosInExpr(1::0::0::1::Nil)))  // 2*x+1
  * }}}
  * @see [[Context.at()]]
  */
