@@ -344,8 +344,8 @@ object KeYmaeraXParser extends Parser {
 
 
       // special case for negative numbers to turn lexer's MINUS, NUMBER("5") again into NUMBER("-5")
-      case r :+ Token(MINUS,loc1) :+ Token(NUMBER(n),loc) if !n.startsWith("-") && !isNotPrefix(st) &&
-        OpSpec.negativeNumber && loc1.adjacentTo(loc) =>
+      case r :+ Token(MINUS,loc1) :+ Token(NUMBER(n),loc) if OpSpec.negativeNumber && !n.startsWith("-") && !isNotPrefix(st) &&
+        loc1.adjacentTo(loc) =>
         assert(r.isEmpty || !r.top.isInstanceOf[Expr], "Can no longer have an expression on the stack, which would cause a binary operator")
         reduce(st, 2, Number(BigDecimal("-" + n)), r)
 
