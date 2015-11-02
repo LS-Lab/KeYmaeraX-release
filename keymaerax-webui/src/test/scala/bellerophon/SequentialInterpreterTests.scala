@@ -75,6 +75,26 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     result.asInstanceOf[BelleProvable].p.isProved shouldBe true
   }
 
+  it should "failover to right whever a non-closing and non-partial tactic is provided on the left" in {
+    val tactic = (ImplyR(SuccPos(0))) | Idioms.IdentT partial
+
+    shouldResultIn(
+      tactic,
+      "1=2 -> 1=2".asFormula,
+      Seq(Sequent(Nil, IndexedSeq(), IndexedSeq("1=2 -> 1=2".asFormula)))
+    )
+  }
+
+  it should "fail when neither tactic manages to close the goal and also neither is partial" in {
+    val tactic = (ImplyR(SuccPos(0))) | Idioms.IdentT
+
+    shouldResultIn(
+      tactic,
+      "1=2 -> 1=2".asFormula,
+      Seq(Sequent(Nil, IndexedSeq(), IndexedSeq("1=2 -> 1=2".asFormula)))
+    )
+  }
+
   "DoAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = AndR(SuccPos(0)) & DoAll (ImplyR(SuccPos(0)) & TrivialCloser)
@@ -112,7 +132,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   it should "handle cases were subgoals are added." in {
     val tactic = AndR(SuccPos(0)) < (
-      AndR(SuccPos(0)),
+      AndR(SuccPos(0)) partial,
       ImplyR(SuccPos(0)) & TrivialCloser
     )
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
@@ -123,10 +143,21 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     )
   }
 
+  it should "fail whenever there's a non-partial tactic that doesn't close its goal." in {
+    val tactic = AndR(SuccPos(0)) < (
+      AndR(SuccPos(0)),
+      ImplyR(SuccPos(0)) & TrivialCloser
+      )
+    val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
+    a[BelleError] shouldBe thrownBy(
+      theInterpreter.apply(tactic, BelleProvable(Provable.startProof(f)))
+    )
+  }
+
   it should "handle cases were subgoals are added -- switch order" in {
     val tactic = AndR(SuccPos(0)) < (
       ImplyR(SuccPos(0)) & TrivialCloser,
-      AndR(SuccPos(0))
+      AndR(SuccPos(0)) partial
       )
     val f = "(1=1->1=1) & (2=2 & 3=3)".asFormula
     shouldResultIn(
