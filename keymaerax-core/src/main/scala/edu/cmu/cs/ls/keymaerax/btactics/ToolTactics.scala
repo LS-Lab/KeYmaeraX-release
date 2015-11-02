@@ -13,7 +13,7 @@ object ToolTactics {
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(implicit qeTool: QETool) = Idioms.NamedTactic(
     qeTool.getClass.getSimpleName + " QE",
-    toSingleFormula & qeSuccedentHd & ProofRuleTactics.CloseTrue
+    toSingleFormula & qeSuccedentHd & ProofRuleTactics.closeTrue
   )
 
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
@@ -21,7 +21,7 @@ object ToolTactics {
     */
   def partialQE(implicit qeTool: QETool) = Idioms.NamedTactic(
     qeTool.getClass.getSimpleName + " QE",
-    toSingleFormula & qeSuccedentHd & (ProofRuleTactics.CloseTrue | Idioms.IdentT)
+    toSingleFormula & qeSuccedentHd & (ProofRuleTactics.closeTrue | Idioms.ident)
   )
 
   /**
@@ -60,7 +60,7 @@ object ToolTactics {
       val qeEquivalence : core.Equiv =
         qeFact.conclusion.succ(0).asInstanceOf[core.Equiv]
 
-      ProofRuleTactics.Cut(qeEquivalence) < (
+      ProofRuleTactics.cut(qeEquivalence) < (
         Idioms.by(qeFact),
         ??? //@todo this needs CQ or CE, depending on the shape of the qeEquivalence. But these aren't currently implemented.
       )
