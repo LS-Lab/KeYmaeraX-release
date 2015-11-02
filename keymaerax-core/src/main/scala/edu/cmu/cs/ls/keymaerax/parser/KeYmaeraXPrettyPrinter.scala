@@ -110,6 +110,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
    */
   protected def skipParensRight(t: BinaryComposite): Boolean = false
 
+  private[parser] val negativeBrackets = false && OpSpec.negativeNumber
 
   /**@NOTE The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ... */
   private val LEXSPACE: String = " "
@@ -121,13 +122,15 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case DifferentialSymbol(x)  => pp(q+0, x) + op(term).opcode
     case Differential(t)        => "(" + pp(q+0, t) + ")" + op(term).opcode
       // special case forcing parentheses around numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x. Alternatively could add space after unary Neg.
-    case Number(n)              => if (OpSpec.negativeNumber) "(" + n.toString() + ")"
-      else assert(n>=0 || OpSpec.negativeNumber); n.toString()
+    case Number(n)              => if (negativeBrackets) {if (OpSpec.negativeNumber) "(" + n.toString() + ")"
+      else assert(n>=0 || OpSpec.negativeNumber); n.toString()} else n.toString()
     case FuncOf(f, c)           => f.asString + "(" + pp(q+0, c) + ")"
     // special notation
     case Pair(l, r)             => "(" + pp(q+0, l) + op(term).opcode + pp(q+1, r) + ")"
     // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5). OpSpec.negativeNumber
     case t@Neg(Number(n))       => op(t).opcode + "(" + pp(q+0, Number(n)) + ")"
+    // special case forcing space between unary negation and numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x.
+    case t: Neg if !negativeBrackets => val c = pp(q+0, t.child); op(t).opcode + (if (c.charAt(0).isDigit) " " else "") + (if (skipParens(t)) c else "(" + c + ")")
     case t: UnaryCompositeTerm  => op(t).opcode + (if (skipParens(t)) pp(q+0, t.child) else "(" + pp(q+0, t.child) + ")")
     case t: BinaryCompositeTerm =>
       (if (skipParensLeft(t)) pp(q+0, t.left) else "(" + pp(q+0, t.left) + ")") +
