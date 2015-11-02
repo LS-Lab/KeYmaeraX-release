@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.Position
 
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron expressions.
@@ -23,9 +24,9 @@ abstract case class BuiltInTactic(name: String) extends BelleExpr {
   def result(provable : Provable) : Provable
 }
 abstract case class BuiltInPositionTactic(name: String) extends BelleExpr {
-  def applyAt(provable: Provable, pos: SeqPos) : Provable
+  def applyAt(provable: Provable, pos: Position) : Provable
 
-  def apply(pos: SeqPos) = new BuiltInTactic(s"$name@$pos") {
+  def apply(pos: Position) = new BuiltInTactic(s"$name@$pos") {
     override def result(provable: Provable) = applyAt(provable, pos)
   }
 }
@@ -44,7 +45,7 @@ abstract case class BuiltInRightTactic(name: String) extends BelleExpr {
   }
 }
 abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
-  def applyAt(provable : Provable, posOne: SeqPos, posTwo: SeqPos) : Provable
+  def applyAt(provable : Provable, posOne: Position, posTwo: Position) : Provable
 }
 /**
  * Dependent tactics compute a tactic to apply based on their input.

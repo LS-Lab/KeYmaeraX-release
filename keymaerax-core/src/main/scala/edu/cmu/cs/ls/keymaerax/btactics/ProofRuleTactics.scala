@@ -3,8 +3,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.pt.ProofTerm
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tactics.Position
+
 
 /**
  * [[ProofRuleTactics]] contains tactical implementations of the propositional sequent calculus
@@ -45,11 +45,11 @@ object ProofRuleTactics {
   }
 
   def CutLR(f: Formula) = new InputTactic[Formula](f) {
-    override def computeExpr() = new BuiltInPositionTactic("CutR") {
-      override def applyAt(provable: Provable, pos: SeqPos): Provable = {
+    override def computeExpr() = new BuiltInPositionTactic("CutLR") {
+      override def applyAt(provable: Provable, pos: Position): Provable = {
         requireOneSubgoal(provable)
-        if (pos.isAnte) provable(core.CutLeft(f, pos.asInstanceOf[AntePos]), 0)
-        else provable(core.CutRight(f, pos.asInstanceOf[SuccPos]), 0)
+        if (pos.isAnte) provable(core.CutLeft(f, pos), 0)
+        else provable(core.CutRight(f, pos), 0)
       }
     }
   }
@@ -174,26 +174,26 @@ object ProofRuleTactics {
   }
 
   def CoHide2 = new BuiltInTwoPositionTactic("CoHide2") {
-    override def applyAt(provable: Provable, posOne: SeqPos, posTwo: SeqPos): Provable = {
+    override def applyAt(provable: Provable, posOne: Position, posTwo: Position): Provable = {
       requireOneSubgoal(provable)
-      require(posOne.isInstanceOf[AntePos] && posTwo.isInstanceOf[SuccPos], "Should take an antecedent and a succedent position.")
-      provable(core.CoHide2(posOne.asInstanceOf[AntePos], posTwo.asInstanceOf[SuccPos]), 0)
+      require(posOne.isAnte && posTwo.isSucc, "Should take an antecedent and a succedent position.")
+      provable(core.CoHide2(posOne, posTwo), 0)
     }
   }
 
   def ExchangeL = new BuiltInTwoPositionTactic("ExchangeL") {
-    override def applyAt(provable: Provable, posOne: SeqPos, posTwo: SeqPos): Provable = {
+    override def applyAt(provable: Provable, posOne: Position, posTwo: Position): Provable = {
       requireOneSubgoal(provable)
       require(posOne.isAnte && posTwo.isAnte, "Both positions should be in the Antecedent.")
-      provable(core.ExchangeLeftRule(posOne.asInstanceOf[AntePos], posTwo.asInstanceOf[AntePos]), 0)
+      provable(core.ExchangeLeftRule(posOne, posTwo), 0)
     }
   }
 
   def ExchangeR = new BuiltInTwoPositionTactic("ExchangeR") {
-    override def applyAt(provable: Provable, posOne: SeqPos, posTwo: SeqPos): Provable = {
+    override def applyAt(provable: Provable, posOne: Position, posTwo: Position): Provable = {
       requireOneSubgoal(provable)
       require(posOne.isSucc && posTwo.isSucc, "Both positions should be in the Succedent.")
-      provable(core.ExchangeRightRule(posOne.asInstanceOf[SuccPos], posTwo.asInstanceOf[SuccPos]), 0)
+      provable(core.ExchangeRightRule(posOne, posTwo), 0)
     }
   }
 
@@ -204,7 +204,7 @@ object ProofRuleTactics {
     }
   }
 
-  def Axiomatic(axiomName: String, subst: USubst) = new BuiltInTactic(s"US of Axiom ${axiomName}") {
+  def Axiomatic(axiomName: String, subst: USubst) = new BuiltInTactic(s"US of Axiom $axiomName") {
     override def result(provable: Provable): Provable = {
       requireOneSubgoal(provable)
       provable(core.AxiomaticRule(axiomName, subst), 0)
@@ -226,7 +226,7 @@ object ProofRuleTactics {
   }
 
   def Skolemize = new BuiltInPositionTactic("Skolemize") {
-    override def applyAt(provable: Provable, pos: SeqPos): Provable = {
+    override def applyAt(provable: Provable, pos: Position): Provable = {
       requireOneSubgoal(provable)
       provable(core.Skolemize(pos), 0)
     }
@@ -251,12 +251,10 @@ object ProofRuleTactics {
 
   /** Closes the goal using specified positions. */
   def Close = new BuiltInTwoPositionTactic("Close") {
-    override def applyAt(provable: Provable, posOne: SeqPos, posTwo: SeqPos): Provable = {
+    override def applyAt(provable: Provable, posOne: Position, posTwo: Position): Provable = {
       requireOneSubgoal(provable)
-      (posOne, posTwo) match {
-        case (antePos : AntePos, succPos : SuccPos) => provable(core.Close(antePos, succPos), 0)
-        case _ => throw BelleError("Close should receive a single antecedent position and a single succedent position.")
-      }
+      require(posOne.isAnte && posTwo.isSucc, "Position one should be in the Antecedent, position two in the Succedent.")
+      provable(core.Close(posOne, posTwo), 0)
     }
   }
 
