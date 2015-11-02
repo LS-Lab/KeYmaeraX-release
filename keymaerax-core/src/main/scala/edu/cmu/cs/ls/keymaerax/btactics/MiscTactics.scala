@@ -61,9 +61,9 @@ object DebuggingTactics {
  * @author Nathan Fulton
  */
 object Idioms {
-  def NilT() = new BuiltInTactic("NilT") {
+  def NilT() = PartialTactic(new BuiltInTactic("NilT") {
     override def result(provable: Provable): Provable = provable
-  }
+  })
   def IdentT = NilT
 
   def AtSubgoal(subgoalIdx: Int, t: BelleExpr) = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {

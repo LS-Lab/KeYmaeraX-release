@@ -33,6 +33,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       case e : InputTactic[_] => {
         apply(e.computeExpr(), v)
       }
+      case PartialTactic(child) => apply(child, v)
       case EitherTactic(left, right) => {
         try {
           val leftResult = apply(left, v)
