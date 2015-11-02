@@ -129,7 +129,10 @@ object BinaryOpSpec {
  */
 object OpSpec {
   /** Whether to terminate atomic statements with a semicolon instead of separating sequential compositions by a semicolon. */
-  /*private[parser]*/ val statementSemicolon = true
+  private[parser] val statementSemicolon = true
+
+  /** Whether to accept negative numbers as negative numbers as opposed to unary negation applied to a number. */
+  private[parser] val negativeNumber = true
 
   /** no notation */
   private val none = PSEUDO
