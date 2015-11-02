@@ -85,7 +85,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
 
   /** Pretty-print term to a string without contract checking. */
   private[parser] def stringify(expr: Expression) = expr match {
-    case t: Term => pp(HereP, t)
+    case t: Term    => pp(HereP, t)
     case f: Formula => pp(HereP, f)
     case p: Program => pp(HereP, p)
     case f: Function => f.asString
@@ -120,11 +120,13 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case x: Variable            => x.asString
     case DifferentialSymbol(x)  => pp(q+0, x) + op(term).opcode
     case Differential(t)        => "(" + pp(q+0, t) + ")" + op(term).opcode
-    case Number(n)              => n.toString()
+      // special case forcing parentheses around numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x. Alternatively could add space after unary Neg.
+    case Number(n)              => if (OpSpec.negativeNumber) "(" + n.toString() + ")"
+      else assert(n>=0 || OpSpec.negativeNumber); n.toString()
     case FuncOf(f, c)           => f.asString + "(" + pp(q+0, c) + ")"
     // special notation
     case Pair(l, r)             => "(" + pp(q+0, l) + op(term).opcode + pp(q+1, r) + ")"
-    // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5).
+    // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5). OpSpec.negativeNumber
     case t@Neg(Number(n))       => op(t).opcode + "(" + pp(q+0, Number(n)) + ")"
     case t: UnaryCompositeTerm  => op(t).opcode + (if (skipParens(t)) pp(q+0, t.child) else "(" + pp(q+0, t.child) + ")")
     case t: BinaryCompositeTerm =>
