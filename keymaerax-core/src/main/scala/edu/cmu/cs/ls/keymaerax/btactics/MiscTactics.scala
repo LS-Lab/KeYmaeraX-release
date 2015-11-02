@@ -2,9 +2,9 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.core.{SeqPos, Formula, Provable}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.{TacticWrapper, Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaerax.tactics.{Position, TacticWrapper, Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 
 /**
@@ -47,7 +47,7 @@ object DebuggingTactics {
 
   /** assert is a no-op tactic that raises an error if the provable has not the expected formula at the specified position. */
   def assert(fml: Formula, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") {
-    override def applyAt(provable: Provable, pos: SeqPos): Provable = {
+    override def applyAt(provable: Provable, pos: Position): Provable = {
       if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos) != fml) {
         throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal with " + fml + " at position " + pos + ",\n\t but got " +
           provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.at(pos) + " at position " + pos + ")")
@@ -61,16 +61,15 @@ object DebuggingTactics {
  * @author Nathan Fulton
  */
 object Idioms {
-  def nil() = PartialTactic(new BuiltInTactic("NilT") {
+  def nil = PartialTactic(new BuiltInTactic("NilT") {
     override def result(provable: Provable): Provable = provable
   })
   def ident = nil
 
   def atSubgoal(subgoalIdx: Int, t: BelleExpr) = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) => {
+      case BelleProvable(provable) =>
         BranchTactic(Seq.tabulate(provable.subgoals.length)(i => if(i == subgoalIdx) t else ident))
-      }
       case _ => throw BelleError("Cannot perform AtSubgoal on a non-Provable value.")
     }
   }
@@ -85,6 +84,26 @@ object Idioms {
     override def result(provable: Provable): Provable = {
       assert(provable.subgoals.length == 1, "Expected one subgoal but found " + provable.subgoals.length)
       provable(fact, 0)
+    }
+  }
+
+  /** Apply the tactic t at the last position in the antecedent */
+  def lastL(t: BuiltInLeftTactic) = new DependentTactic("lastL") {
+    override def computeExpr(v: BelleValue): BelleExpr = v match {
+      case BelleProvable(provable) =>
+        require(provable.subgoals.size == 1 && provable.subgoals.head.ante.nonEmpty,
+          "Provable must have exactly 1 subgoal with non-empty antecedent")
+        t(AntePos(provable.subgoals.head.ante.size - 1))
+    }
+  }
+
+  /** Apply the tactic t at the last position in the antecedent */
+  def lastR(t: BuiltInRightTactic) = new DependentTactic("lastL") {
+    override def computeExpr(v: BelleValue): BelleExpr = v match {
+      case BelleProvable(provable) =>
+        require(provable.subgoals.size == 1 && provable.subgoals.head.ante.nonEmpty,
+          "Provable must have exactly 1 subgoal with non-empty succedent")
+        t(SuccPos(provable.subgoals.head.succ.size - 1))
     }
   }
 }

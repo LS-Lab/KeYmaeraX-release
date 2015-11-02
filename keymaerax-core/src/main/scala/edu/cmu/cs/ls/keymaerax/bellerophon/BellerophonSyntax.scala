@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.Position
 
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron expressions.
@@ -13,6 +14,7 @@ abstract class BelleExpr {
   def &(other: BelleExpr)             = SeqTactic(this, other)
   def |(other: BelleExpr)             = EitherTactic(this, other)
   def *@(annotation: BelleType)       = SaturateTactic(this, annotation)
+  def *(times: Int/*, annotation: BelleType*/) = RepeatTactic(this, times, null)
   def <(children: BelleExpr*)         = SeqTactic(this, BranchTactic(children))
   def U(p: (SequentType, BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
   def partial                         = PartialTactic(this)
@@ -22,9 +24,9 @@ abstract case class BuiltInTactic(name: String) extends BelleExpr {
   def result(provable : Provable) : Provable
 }
 abstract case class BuiltInPositionTactic(name: String) extends BelleExpr {
-  def applyAt(provable: Provable, pos: SeqPos) : Provable
+  def applyAt(provable: Provable, pos: Position) : Provable
 
-  def apply(pos: SeqPos) = new BuiltInTactic(s"$name@$pos") {
+  def apply(pos: Position) = new BuiltInTactic(s"$name@$pos") {
     override def result(provable: Provable) = applyAt(provable, pos)
   }
 }
@@ -43,7 +45,7 @@ abstract case class BuiltInRightTactic(name: String) extends BelleExpr {
   }
 }
 abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
-  def applyAt(provable : Provable, posOne: SeqPos, posTwo: SeqPos) : Provable
+  def applyAt(provable : Provable, posOne: Position, posTwo: Position) : Provable
 }
 /**
  * Dependent tactics compute a tactic to apply based on their input.
@@ -66,6 +68,7 @@ case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
 //case class ExactIterTactic(child: BelleExpr, count: Int) extends BelleExpr
 case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends BelleExpr
+case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType) extends BelleExpr
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr
 //case class OptionalTactic(child: BelleExpr) extends BelleExpr
 case class USubstPatternTactic(options: Seq[(BelleType, BelleExpr)]) extends BelleExpr
