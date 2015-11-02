@@ -15,6 +15,7 @@ abstract class BelleExpr {
   def *@(annotation: BelleType)       = SaturateTactic(this, annotation)
   def <(children: BelleExpr*)         = SeqTactic(this, BranchTactic(children))
   def U(p: (SequentType, BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
+  def partial                         = PartialTactic(this)
 
   /**
    * Executes this tactic with the default interpreter.
@@ -51,7 +52,6 @@ abstract case class BuiltInRightTactic(name: String) extends BelleExpr {
 abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
   def applyAt(provable : Provable, posOne: SeqPos, posTwo: SeqPos) : Provable
 }
-
 /**
  * Dependent tactics compute a tactic to apply based on their input.
  * These tactics are probably not necessary very often, but are useful for idiomatic shortcuts.
@@ -66,6 +66,8 @@ abstract case class DependentTactic(name: String) extends BelleExpr {
 abstract case class InputTactic[T](input: T) extends BelleExpr {
   def computeExpr(): BelleExpr
 }
+
+case class PartialTactic(child: BelleExpr) extends BelleExpr
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
