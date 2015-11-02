@@ -16,13 +16,6 @@ abstract class BelleExpr {
   def <(children: BelleExpr*)         = SeqTactic(this, BranchTactic(children))
   def U(p: (SequentType, BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
   def partial                         = PartialTactic(this)
-
-  /**
-   * Executes this tactic with the default interpreter.
-   * @note DO NOT call .execute from a built-in tactic -- doing so breaks interpreter listeners/hooks.
-   * @todo why is this not apply(Provable) which isn't used otherwise either? Also SequentialInterpreter can come from private object doesn't have to be new since stateless.
-   */
-  def execute(provable: Provable) = SequentialInterpreter()(this, BelleProvable(provable))
 }
 
 abstract case class BuiltInTactic(name: String) extends BelleExpr {
