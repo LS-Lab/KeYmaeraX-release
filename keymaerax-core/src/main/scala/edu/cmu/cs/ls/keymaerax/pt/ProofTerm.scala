@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.pt
 
-import edu.cmu.cs.ls.keymaerax.core.{Equiv, Equal, NamedSymbol, USubst, Formula}
+import edu.cmu.cs.ls.keymaerax.core._
 
 /**
  * A Proof Term is a syntactic internalization of a proof of a differential dynamic logic theorem.
@@ -19,4 +19,5 @@ case class CTTerm(child: ProofTerm, premise: Equal, substitution: USubst) extend
 case class CQTerm(child: ProofTerm, premise: Equal, substitution: USubst) extends ProofTerm
 case class CETerm(child: ProofTerm, premise: Equiv, substitution: USubst) extends ProofTerm
 case class UsubstTerm(child: ProofTerm, premise: Formula, substitution: USubst) extends ProofTerm
-case class BoundRenamingTerm(child: ProofTerm, premise: Formula, renaming: List[(NamedSymbol, NamedSymbol)]) extends ProofTerm
+//@todo eisegesis theory alllows a set of renamings. Also, make sure UniformRenamings are sufficient for all proofs.
+case class RenamingTerm(child: ProofTerm, premise: Formula, what: Variable, repl: Variable) extends ProofTerm
