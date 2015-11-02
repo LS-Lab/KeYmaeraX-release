@@ -76,7 +76,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "failover to right whever a non-closing and non-partial tactic is provided on the left" in {
-    val tactic = (ImplyR(SuccPos(0))) | Idioms.IdentT partial
+    val tactic = (ImplyR(SuccPos(0))) | Idioms.IdentT
 
     shouldResultIn(
       tactic,
@@ -86,12 +86,10 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "fail when neither tactic manages to close the goal and also neither is partial" in {
-    val tactic = (ImplyR(SuccPos(0))) | Idioms.IdentT
-
-    shouldResultIn(
-      tactic,
-      "1=2 -> 1=2".asFormula,
-      Seq(Sequent(Nil, IndexedSeq(), IndexedSeq("1=2 -> 1=2".asFormula)))
+    val tactic = (ImplyR(SuccPos(0))) | (Idioms.IdentT & Idioms.IdentT)
+    val f = "1=2 -> 1=2".asFormula
+    a[BelleError] should be thrownBy(
+      theInterpreter(tactic, BelleProvable(Provable.startProof(f)))
     )
   }
 
