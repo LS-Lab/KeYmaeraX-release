@@ -30,7 +30,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         val valueDependentTactic = d.computeExpr(v)
         apply(valueDependentTactic, v)
       }
-      case e : InputTactic => {
+      case e : InputTactic[_] => {
         apply(e.computeExpr(), v)
       }
       case EitherTactic(left, right) => {
