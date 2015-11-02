@@ -23,7 +23,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   val theInterpreter = SequentialInterpreter()
 
   "AndR" should "prove |- 1=1 ^ 2=2" in {
-    val tactic = AndR(SuccPos(0))
+    val tactic = andR(SuccPos(0))
     val v = {
       val f = "1=1 & 2=2".asFormula
       BelleProvable(Provable.startProof(f))
@@ -40,7 +40,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   "Sequential Combinator" should "prove |- 1=2 -> 1=2" in {
-    val tactic = ImplyR(SuccPos(0)) & TrivialCloser
+    val tactic = implyR(SuccPos(0)) & trivialCloser
     val v = {
       val f = "1=2 -> 1=2".asFormula
       BelleProvable(Provable.startProof(f))
@@ -52,7 +52,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   "Either combinator" should "prove |- 1=2 -> 1=2 by AndR | (ImplyR & Close)" in {
-    val tactic = AndR(SuccPos(0)) | (ImplyR(SuccPos(0)) & TrivialCloser)
+    val tactic = andR(SuccPos(0)) | (implyR(SuccPos(0)) & trivialCloser)
     val v = {
       val f = "1=2 -> 1=2".asFormula
       BelleProvable(Provable.startProof(f))
@@ -64,7 +64,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "prove |- 1=2 -> 1=2 by (ImplyR & Close) | AndR" in {
-    val tactic = (ImplyR(SuccPos(0)) & TrivialCloser) | AndR(SuccPos(0))
+    val tactic = (implyR(SuccPos(0)) & trivialCloser) | andR(SuccPos(0))
     val v = {
       val f = "1=2 -> 1=2".asFormula
       BelleProvable(Provable.startProof(f))
@@ -76,7 +76,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "failover to right whever a non-closing and non-partial tactic is provided on the left" in {
-    val tactic = (ImplyR(SuccPos(0))) | Idioms.IdentT
+    val tactic = (implyR(SuccPos(0))) | Idioms.ident
 
     shouldResultIn(
       tactic,
@@ -86,7 +86,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "fail when neither tactic manages to close the goal and also neither is partial" in {
-    val tactic = (ImplyR(SuccPos(0))) | (Idioms.IdentT & Idioms.IdentT)
+    val tactic = (implyR(SuccPos(0))) | (Idioms.ident & Idioms.ident)
     val f = "1=2 -> 1=2".asFormula
     a[BelleError] should be thrownBy(
       theInterpreter(tactic, BelleProvable(Provable.startProof(f)))
@@ -95,28 +95,28 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   "DoAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
-    val expr = AndR(SuccPos(0)) & DoAll (ImplyR(SuccPos(0)) & TrivialCloser)
+    val expr = andR(SuccPos(0)) & DoAll (implyR(SuccPos(0)) & trivialCloser)
     shouldClose(expr, f)
   }
 
   it should "move inside Eithers correctly" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
-    val expr = AndR(SuccPos(0)) & DoAll (AndR(SuccPos(0)) | (ImplyR(SuccPos(0)) & TrivialCloser))
+    val expr = andR(SuccPos(0)) & DoAll (andR(SuccPos(0)) | (implyR(SuccPos(0)) & trivialCloser))
     shouldClose(expr, f)
   }
 
   "* combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = (
-      DoAll(AndR(SuccPos(0))) |
-      DoAll(ImplyR(SuccPos(0)) & TrivialCloser)
+      DoAll(andR(SuccPos(0))) |
+      DoAll(implyR(SuccPos(0)) & trivialCloser)
     )*@(TheType())
   }
 
   "Branch Combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
-    val tactic = AndR(SuccPos(0)) < (
-      ImplyR(SuccPos(0)) & TrivialCloser,
-      ImplyR(SuccPos(0)) & TrivialCloser
+    val tactic = andR(SuccPos(0)) < (
+      implyR(SuccPos(0)) & trivialCloser,
+      implyR(SuccPos(0)) & trivialCloser
     )
     val v = {
       val f = "(1=1->1=1) & (2=2->2=2)".asFormula
@@ -129,9 +129,9 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "handle cases were subgoals are added." in {
-    val tactic = AndR(SuccPos(0)) < (
-      AndR(SuccPos(0)) partial,
-      ImplyR(SuccPos(0)) & TrivialCloser
+    val tactic = andR(SuccPos(0)) < (
+      andR(SuccPos(0)) partial,
+      implyR(SuccPos(0)) & trivialCloser
     )
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
     shouldResultIn(
@@ -142,9 +142,9 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "fail whenever there's a non-partial tactic that doesn't close its goal." in {
-    val tactic = AndR(SuccPos(0)) < (
-      AndR(SuccPos(0)),
-      ImplyR(SuccPos(0)) & TrivialCloser
+    val tactic = andR(SuccPos(0)) < (
+      andR(SuccPos(0)),
+      implyR(SuccPos(0)) & trivialCloser
       )
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
     a[BelleError] shouldBe thrownBy(
@@ -153,9 +153,9 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "handle cases were subgoals are added -- switch order" in {
-    val tactic = AndR(SuccPos(0)) < (
-      ImplyR(SuccPos(0)) & TrivialCloser,
-      AndR(SuccPos(0)) partial
+    val tactic = andR(SuccPos(0)) < (
+      implyR(SuccPos(0)) & trivialCloser,
+      andR(SuccPos(0)) partial
       )
     val f = "(1=1->1=1) & (2=2 & 3=3)".asFormula
     shouldResultIn(
@@ -167,7 +167,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   "Unification" should "work on 1=1->1=1" in {
     val pattern = SequentType(toSequent("p() -> p()"))
-    val e = USubstPatternTactic(Seq((pattern, ImplyR(SuccPos(0)) & TrivialCloser)))
+    val e = USubstPatternTactic(Seq((pattern, implyR(SuccPos(0)) & trivialCloser)))
     shouldClose(e, "1=1->1=1".asFormula)
   }
 
@@ -175,8 +175,8 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val pattern1 = SequentType(toSequent("p() -> p()"))
     val pattern2 = SequentType(toSequent("p() & q()"))
     val e = USubstPatternTactic(Seq(
-      (pattern2, ErrorT("Should never get here.")),
-      (pattern1, ImplyR(SuccPos(0)) & TrivialCloser)
+      (pattern2, error("Should never get here.")),
+      (pattern1, implyR(SuccPos(0)) & trivialCloser)
     ))
     shouldClose(e, "1=1->1=1".asFormula)
   }
@@ -185,8 +185,8 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val pattern1 = SequentType(toSequent("p() -> p()"))
     val pattern2 = SequentType(toSequent("p() & q()"))
     val e = USubstPatternTactic(Seq(
-      (pattern1, ImplyR(SuccPos(0)) & TrivialCloser),
-      (pattern2, ErrorT("Should never get here."))
+      (pattern1, implyR(SuccPos(0)) & trivialCloser),
+      (pattern2, error("Should never get here."))
     ))
     shouldClose(e, "1=1->1=1".asFormula)
   }
@@ -195,8 +195,8 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val pattern1 = SequentType(toSequent("p() -> p()"))
     val pattern2 = SequentType(toSequent("p() -> q()"))
     val e = USubstPatternTactic(Seq(
-      (pattern1, ImplyR(SuccPos(0)) & TrivialCloser),
-      (pattern2, ErrorT("Should never get here."))
+      (pattern1, implyR(SuccPos(0)) & trivialCloser),
+      (pattern2, error("Should never get here."))
     ))
     shouldClose(e, "1=1->1=1".asFormula)
   }
@@ -205,37 +205,37 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val pattern1 = SequentType(toSequent("p() -> p()"))
     val pattern2 = SequentType(toSequent("p() -> q()"))
     val e = USubstPatternTactic(Seq(
-      (pattern2, ErrorT("Should never get here.")),
-      (pattern1, ImplyR(SuccPos(0)) & TrivialCloser)
+      (pattern2, error("Should never get here.")),
+      (pattern1, implyR(SuccPos(0)) & trivialCloser)
     ))
     a[BelleUserGeneratedError] shouldBe thrownBy (shouldClose(e, "1=1->1=1".asFormula))
   }
 
   "AtSubgoal" should "work" in {
-    val t = AndR(SuccPos(0)) &
-      Idioms.AtSubgoal(0, ImplyR(SuccPos(0)) & TrivialCloser) &
-      Idioms.AtSubgoal(0, ImplyR(SuccPos(0)) & TrivialCloser)
+    val t = andR(SuccPos(0)) &
+      Idioms.atSubgoal(0, implyR(SuccPos(0)) & trivialCloser) &
+      Idioms.atSubgoal(0, implyR(SuccPos(0)) & trivialCloser)
     shouldClose(t, "(1=1->1=1) & (2=2->2=2)".asFormula)
   }
 
   "Scheduled tactics" should "work" in {
     val legacyTactic = tactics.TacticLibrary.arithmeticT
-    val t = Legacy.InitializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic)
+    val t = Legacy.initializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic)
     shouldClose(t, "1=1".asFormula)
   }
 
   it should "work again" in {
     val legacyTactic = tactics.TacticLibrary.arithmeticT
-    val t = Legacy.InitializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic)
+    val t = Legacy.initializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic)
     shouldClose(t, "x = 0 -> x^2 = 0".asFormula)
   }
 
 
   it should "work for non-arith things" in {
     val legacyTactic = tactics.PropositionalTacticsImpl.AndRightT(SuccPos(0))
-    val t = Legacy.InitializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic) < (
-      (ImplyR(SuccPos(0)) & TrivialCloser),
-      (ImplyR(SuccPos(0)) & TrivialCloser)
+    val t = Legacy.initializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic) < (
+      (implyR(SuccPos(0)) & trivialCloser),
+      (implyR(SuccPos(0)) & trivialCloser)
       )
     shouldClose(t, "(1=1->1=1) & (1=2->1=2)".asFormula)
   }

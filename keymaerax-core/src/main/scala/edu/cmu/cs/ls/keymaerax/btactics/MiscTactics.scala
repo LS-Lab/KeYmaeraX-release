@@ -14,11 +14,11 @@ object DebuggingTactics {
   //@todo import a debug flag as in Tactics.DEBUG
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
-  def ErrorT(e : Throwable) = new BuiltInTactic("Error") {
+  def error(e : Throwable) = new BuiltInTactic("Error") {
     override def result(provable: Provable): Provable = throw e
   }
 
-  def ErrorT(s : String) = new BuiltInTactic("Error") {
+  def error(s : String) = new BuiltInTactic("Error") {
     override def result(provable: Provable): Provable = {
       throw BelleUserGeneratedError(s)
     }
@@ -61,15 +61,15 @@ object DebuggingTactics {
  * @author Nathan Fulton
  */
 object Idioms {
-  def NilT() = PartialTactic(new BuiltInTactic("NilT") {
+  def nil = PartialTactic(new BuiltInTactic("NilT") {
     override def result(provable: Provable): Provable = provable
   })
-  def IdentT = NilT
+  def ident = nil
 
-  def AtSubgoal(subgoalIdx: Int, t: BelleExpr) = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
+  def atSubgoal(subgoalIdx: Int, t: BelleExpr) = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable) =>
-        BranchTactic(Seq.tabulate(provable.subgoals.length)(i => if(i == subgoalIdx) t else IdentT))
+        BranchTactic(Seq.tabulate(provable.subgoals.length)(i => if(i == subgoalIdx) t else ident))
       case _ => throw BelleError("Cannot perform AtSubgoal on a non-Provable value.")
     }
   }
@@ -138,12 +138,12 @@ object Legacy {
 //    }
 //  }
 
-  def InitializedScheduledTactic(mathematicaConfig : Map[String,String], tactic: keymaerax.tactics.Tactics.Tactic) = {
+  def initializedScheduledTactic(mathematicaConfig : Map[String,String], tactic: keymaerax.tactics.Tactics.Tactic) = {
     defaultInitialization(mathematicaConfig)
-    ScheduledTactic(tactic)
+    scheduledTactic(tactic)
   }
 
-  def ScheduledTactic(tactic : keymaerax.tactics.Tactics.Tactic) = new BuiltInTactic(s"Scheduled(${tactic.name})") {
+  def scheduledTactic(tactic : keymaerax.tactics.Tactics.Tactic) = new BuiltInTactic(s"Scheduled(${tactic.name})") {
     //@see [[Legacy.defaultInitialization]]
     if(!Tactics.KeYmaeraScheduler.isInitialized)
       throw BelleError("Need to initialize KeYmaera scheduler and possibly also the Mathematica scheduler before running a Legacy.ScheduledTactic.")
