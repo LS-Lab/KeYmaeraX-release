@@ -63,6 +63,9 @@ abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
 abstract case class DependentTactic(name: String) extends BelleExpr {
   def computeExpr(v : BelleValue): BelleExpr
 }
+abstract case class InputTactic[T](input: T) extends BelleExpr {
+  def computeExpr(): BelleExpr
+}
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
