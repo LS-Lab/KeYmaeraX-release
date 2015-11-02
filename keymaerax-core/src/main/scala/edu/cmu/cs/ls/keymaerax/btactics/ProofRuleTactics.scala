@@ -18,32 +18,39 @@ object ProofRuleTactics {
   private def requireOneSubgoal(provable: Provable) =
     if(provable.subgoals.length != 1) throw BelleError("Expected exactly one sequent in Provable")
 
-  def Cut(input: Formula) = new BuiltInTactic(s"Cut(${input.prettyString})") {
-    override def result(provable: Provable): Provable = {
-      provable(core.Cut(input), 0)
+  def Cut(f: Formula) = new InputTactic[Formula](f) {
+    override def computeExpr() = new BuiltInTactic(s"Cut(${input.prettyString})") {
+      override def result(provable: Provable): Provable = {
+        provable(core.Cut(input), 0)
+      }
     }
   }
 
-  def CutL(f: Formula) = new BuiltInLeftTactic("CutL") {
-    override def applyAt(provable: Provable, pos: AntePos): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.CutLeft(f, pos), 0)
+  def CutL(f: Formula) = new InputTactic[Formula](f) {
+    override def computeExpr() = new BuiltInLeftTactic("CutL") {
+      override def applyAt(provable: Provable, pos: AntePos): Provable = {
+        requireOneSubgoal(provable)
+        provable(core.CutLeft(f, pos), 0)
+      }
     }
   }
 
-  def CutR(f: Formula) = new BuiltInRightTactic("CutR") {
-    override def applyAt(provable: Provable, pos: SuccPos): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.CutRight(f, pos), 0)
+  def CutR(f: Formula) = new InputTactic[Formula](f) {
+    override def computeExpr() = new BuiltInRightTactic("CutR") {
+      override def applyAt(provable: Provable, pos: SuccPos): Provable = {
+        requireOneSubgoal(provable)
+        provable(core.CutRight(f, pos), 0)
+      }
     }
   }
 
-  def CutLR(f: Formula) = new BuiltInPositionTactic("CutR") {
-    override def applyAt(provable: Provable, pos: SeqPos): Provable = {
-      requireOneSubgoal(provable)
-      if (pos.isAnte) provable(core.CutLeft(f, pos.asInstanceOf[AntePos]), 0)
-      else provable(core.CutRight(f, pos.asInstanceOf[SuccPos]), 0)
-
+  def CutLR(f: Formula) = new InputTactic[Formula](f) {
+    override def computeExpr() = new BuiltInPositionTactic("CutR") {
+      override def applyAt(provable: Provable, pos: SeqPos): Provable = {
+        requireOneSubgoal(provable)
+        if (pos.isAnte) provable(core.CutLeft(f, pos.asInstanceOf[AntePos]), 0)
+        else provable(core.CutRight(f, pos.asInstanceOf[SuccPos]), 0)
+      }
     }
   }
 
@@ -266,6 +273,4 @@ object ProofRuleTactics {
       provable(core.CloseFalse(pos), 0)
     }
   }
-
-
 }

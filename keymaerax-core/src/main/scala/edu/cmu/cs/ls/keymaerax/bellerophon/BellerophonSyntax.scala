@@ -16,13 +16,7 @@ abstract class BelleExpr {
   def *(times: Int/*, annotation: BelleType*/) = RepeatTactic(this, times, null)
   def <(children: BelleExpr*)         = SeqTactic(this, BranchTactic(children))
   def U(p: (SequentType, BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
-
-  /**
-   * Executes this tactic with the default interpreter.
-   * @note DO NOT call .execute from a built-in tactic -- doing so breaks interpreter listeners/hooks.
-   * @todo why is this not apply(Provable) which isn't used otherwise either? Also SequentialInterpreter can come from private object doesn't have to be new since stateless.
-   */
-  def execute(provable: Provable) = SequentialInterpreter()(this, BelleProvable(provable))
+  def partial                         = PartialTactic(this)
 }
 
 abstract case class BuiltInTactic(name: String) extends BelleExpr {
@@ -52,7 +46,6 @@ abstract case class BuiltInRightTactic(name: String) extends BelleExpr {
 abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
   def applyAt(provable : Provable, posOne: SeqPos, posTwo: SeqPos) : Provable
 }
-
 /**
  * Dependent tactics compute a tactic to apply based on their input.
  * These tactics are probably not necessary very often, but are useful for idiomatic shortcuts.
@@ -64,6 +57,11 @@ abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
 abstract case class DependentTactic(name: String) extends BelleExpr {
   def computeExpr(v : BelleValue): BelleExpr
 }
+abstract case class InputTactic[T](input: T) extends BelleExpr {
+  def computeExpr(): BelleExpr
+}
+
+case class PartialTactic(child: BelleExpr) extends BelleExpr
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
@@ -73,6 +71,9 @@ case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType) ext
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr
 //case class OptionalTactic(child: BelleExpr) extends BelleExpr
 case class USubstPatternTactic(options: Seq[(BelleType, BelleExpr)]) extends BelleExpr
+
+/** @todo eisegesis */
+case class Postpone(expr: BelleExpr) extends BelleExpr
 
 /** @todo eisegesis
   * DoAll(e)(BelleProvable(p)) == < (e, ..., e) where e occurs p.subgoals.length times.

@@ -57,10 +57,13 @@ object DebuggingTactics {
   }
 }
 
+/**
+ * @author Nathan Fulton
+ */
 object Idioms {
-  def NilT() = new BuiltInTactic("NilT") {
+  def NilT() = PartialTactic(new BuiltInTactic("NilT") {
     override def result(provable: Provable): Provable = provable
-  }
+  })
   def IdentT = NilT
 
   def AtSubgoal(subgoalIdx: Int, t: BelleExpr) = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
@@ -71,9 +74,28 @@ object Idioms {
       case _ => throw BelleError("Cannot perform AtSubgoal on a non-Provable value.")
     }
   }
+
+  /** Gives a name to a tactic to a definable tactic. */
+  def NamedTactic(name: String, tactic: BelleExpr) = new DependentTactic(name) {
+    override def computeExpr(v: BelleValue): BelleExpr = tactic
+  }
+
+  /** Establishes the fact by appealing to an existing tactic. */
+  def by(fact: Provable) = new BuiltInTactic("Established by existing provable") {
+    override def result(provable: Provable): Provable = {
+      assert(provable.subgoals.length == 1, "Expected one subgoal but found " + provable.subgoals.length)
+      provable(fact, 0)
+    }
+  }
 }
 
+/**
+ * @author Nathan Fulton
+ */
 object Legacy {
+  /** The default mechanism for initializing KeYmaeraScheduler, Mathematica, and Z3 that are used in the legacy tactics.
+    * @note This may interfere in unexpected ways with sequential tactics.
+    */
   def defaultInitialization(mathematicaConfig:  Map[String,String]) = {
     Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
     Tactics.MathematicaScheduler = new Interpreter(new Mathematica)

@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
+import edu.cmu.cs.ls.keymaerax.core.{QETool, Sequent, Provable}
 import edu.cmu.cs.ls.keymaerax.tactics.{UnificationException, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch.Subst
 
@@ -20,24 +20,40 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         case BelleProvable(provable) => BelleProvable(builtIn.result(provable))
         case _ => throw BelleError(s"Attempted to apply a built-in tactic to a non-Provable value: ${v.getClass.getName}")
       }
-      case d : DependentTactic => {
-        val valueDependentTactic = d.computeExpr(v)
-        apply(valueDependentTactic, v)
-      }
       case BuiltInPositionTactic(_) | BuiltInLeftTactic(_) | BuiltInRightTactic(_) | BuiltInTwoPositionTactic(_) =>
         throw BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.")
       case SeqTactic(left, right) => {
         val leftResult = apply(left, v)
         apply(right, leftResult)
       }
+      case d : DependentTactic => {
+        val valueDependentTactic = d.computeExpr(v)
+        apply(valueDependentTactic, v)
+      }
+      case e : InputTactic[_] => {
+        apply(e.computeExpr(), v)
+      }
+      case PartialTactic(child) => apply(child, v)
       case EitherTactic(left, right) => {
         try {
-          apply(left, v)
+          val leftResult = apply(left, v)
+          (leftResult, left) match {
+            case (_, x:PartialTactic) => leftResult
+            case (BelleProvable(p), _) if(p.isProved) => leftResult
+            case _ => throw BelleError("Non-partials must close proof.")
+          }
         }
         catch {
           //@todo catch a little less. Just catching proper tactic exceptions, maybe some ProverExceptions et al., not swallow everything
-          case _ => apply(right, v)
+          case _ => {
+            val rightResult = apply(right, v)
+            (rightResult, right) match {
+              case (_, x:PartialTactic) => rightResult
+              case (BelleProvable(p), _) if(p.isProved) => rightResult
+              case _ => throw BelleError("Non-partials must close proof.")
+            }
             //@todo throw compound exception if neither worked
+          }
         }
       }
       case x: SaturateTactic => tailrecSaturate(x, v)
@@ -52,8 +68,11 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             (children zip p.subgoals) map (pair => {
               val e_i = pair._1
               val s_i = pair._2
-              apply(e_i, bval(s_i)) match {
-                case BelleProvable(resultingProvable) => resultingProvable
+              val ithResult =  apply(e_i, bval(s_i))
+              ithResult match {
+                case BelleProvable(resultingProvable) =>
+                  if(resultingProvable.isProved || e_i.isInstanceOf[PartialTactic]) resultingProvable
+                  else throw BelleError("Every branching tactic must close its associated goal or else be annotated as a PartialTactic")
                 case _ => throw BelleError("Each piecewise application in a Branching tactic should result in a provable.")
               }
             })
