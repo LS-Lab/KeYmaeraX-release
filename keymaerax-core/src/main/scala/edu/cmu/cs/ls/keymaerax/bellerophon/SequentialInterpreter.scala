@@ -27,7 +27,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       }
       case SeqTactic(left, right) => {
         val leftResult = try { apply(left, v) } catch {case e: BelleError => throw e.inContext("left of " + expr)}
-        try { apply(right, leftResult) } catch {case e: BelleError => throw e.inContext("right of " + expr)}
+        try { apply(right, leftResult) } catch {case e: BelleError => throw e.inContext("right of " + expr, leftResult.toString)}
       }
       case d : DependentTactic => {
         val valueDependentTactic = d.computeExpr(v)
@@ -133,7 +133,8 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
 
   @tailrec
   private def tailrecSaturate(e : SaturateTactic, v: BelleValue): BelleValue = {
-    val step = apply(e.child, v) //@todo effect on listeners etc.
+    //@todo effect on listeners etc.
+    val step = try { apply(e.child, v) } catch {case e: BelleError => throw e.inContext("body of " + e, v.toString)}
     if(step == v) v
     else tailrecSaturate(e, step)
   }

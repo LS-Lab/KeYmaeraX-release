@@ -120,7 +120,9 @@ case class DoAll(e: BelleExpr) extends BelleExpr
  * Bellerophon expressions that are values.
  */
 abstract trait BelleValue
-case class BelleProvable(p : Provable) extends BelleExpr with BelleValue
+case class BelleProvable(p : Provable) extends BelleExpr with BelleValue {
+  override def toString: String = p.prettyString
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Bellerophon Types
@@ -140,7 +142,7 @@ case class SequentType(s : Sequent) extends BelleType
 case class BelleError(message: String)
   extends ProverException(s"[Bellerophon Runtime] $message")
 
-class BelleUserGeneratedError(message: String)
+case class BelleUserGeneratedError(message: String)
   extends Exception(s"[Bellerophon User-Generated Message] $message")
 
 class CompoundException(left: BelleError, right: BelleError)
