@@ -102,12 +102,12 @@ abstract case class InputTactic[T](input: T) extends BelleExpr {
 
 case class PartialTactic(child: BelleExpr) extends BelleExpr
 
-case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
-case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
+case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def toString = "(" + left + "&" + right + ")" }
+case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def toString = "(" + left + "|" + right + ")" }
 //case class ExactIterTactic(child: BelleExpr, count: Int) extends BelleExpr
-case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends BelleExpr
-case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType) extends BelleExpr
-case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr
+case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends BelleExpr { override def toString = "(" + child + ")*" }
+case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType) extends BelleExpr { override def toString = "(" + child + ")*" + times }
+case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def toString = "<(" + children.mkString(",") + ")" }
 //case class OptionalTactic(child: BelleExpr) extends BelleExpr
 case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr
 
