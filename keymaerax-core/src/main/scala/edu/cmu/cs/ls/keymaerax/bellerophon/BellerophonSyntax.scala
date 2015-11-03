@@ -26,11 +26,13 @@ abstract case class BuiltInTactic(name: String) extends BelleExpr {
   override def toString = name
 }
 
+/** ⎵: Placeholder for tactics. Reserved tactic expression */
 object BelleDot extends BelleExpr { override def toString = ">>_<<" }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Positional tactics
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /** Generalizes the built in position tactics (normal, left, right) */
 trait PositionalTactic extends BelleExpr {
   /** @note this should be called from within interpreters, but not by end-users */
@@ -103,6 +105,7 @@ abstract case class InputTactic[T](input: T) extends BelleExpr {
   def computeExpr(): BelleExpr
 }
 
+/** A partial tactic is allowed to leave its subgoals around as unproved */
 case class PartialTactic(child: BelleExpr) extends BelleExpr { override def toString = "partial(" + child + ")" }
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def toString = "(" + left + "&" + right + ")" }
@@ -118,6 +121,9 @@ case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]
   * DoAll(e)(BelleProvable(p)) == < (e, ..., e) where e occurs p.subgoals.length times.
   */
 case class DoAll(e: BelleExpr) extends BelleExpr
+
+
+
 
 /**
  * Bellerophon expressions that are values.

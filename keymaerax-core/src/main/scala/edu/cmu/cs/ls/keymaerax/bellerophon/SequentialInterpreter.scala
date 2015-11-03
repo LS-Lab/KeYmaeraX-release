@@ -36,14 +36,14 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       case e : InputTactic[_] => {
         apply(e.computeExpr(), v)
       }
-      case PartialTactic(child) => apply(child, v)
+      case PartialTactic(child) => try { apply(child, v) } catch {case e: BelleError => throw e.inContext(PartialTactic(e.context)) }
       case EitherTactic(left, right) => {
         try {
           val leftResult = apply(left, v)
           (leftResult, left) match {
             case (_, x:PartialTactic) => leftResult
             case (BelleProvable(p), _) if(p.isProved) => leftResult
-            case _ => throw BelleError("Non-partials must close proof.")
+            case _ => throw BelleError("Non-partials must close proof.").inContext(BelleDot | right)
           }
         }
         catch {
@@ -53,7 +53,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             (rightResult, right) match {
               case (_, x:PartialTactic) => rightResult
               case (BelleProvable(p), _) if(p.isProved) => rightResult
-              case _ => throw BelleError("Non-partials must close proof.")
+              case _ => throw BelleError("Non-partials must close proof.").inContext(left | BelleDot)
             }
             //@todo throw compound exception if neither worked
           }
@@ -71,6 +71,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             (children zip p.subgoals) map (pair => {
               val e_i = pair._1
               val s_i = pair._2
+              //@todo try catch and build up the remaining branching context where the problem wasn't
               val ithResult =  apply(e_i, bval(s_i))
               ithResult match {
                 case BelleProvable(resultingProvable) =>
@@ -89,14 +90,15 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             })
           BelleProvable(combinedEffect._1)
         }
-        case _ => throw BelleError("Cannot perform branching on a non-provable goal.")
+        case _ => throw BelleError("Cannot perform branching on a goal that is not a BelleValue of type Provable.")
       }
       case DoAll(e) => {
         val provable = v match {
           case BelleProvable(p) => p
           case _ => throw BelleError("Cannot attempt DoAll with a non-Provable value.")
         }
-        apply(BranchTactic(Seq.tabulate(provable.subgoals.length)(_ => e)), v)
+        //@todo actually it would be nice to throw without wrapping inside an extra BranchTactic context
+        try { apply(BranchTactic(Seq.tabulate(provable.subgoals.length)(_ => e)), v) } catch {case e: BelleError => throw e.inContext(DoAll(e.context)) }
       }
       case USubstPatternTactic(children) => {
         val provable = v match {
