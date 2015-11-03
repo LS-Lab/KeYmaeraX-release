@@ -1,7 +1,7 @@
 package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.{Legacy, Idioms}
+import edu.cmu.cs.ls.keymaerax.btactics.{RenUSubst, Legacy, Idioms}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, SuccPos, Provable}
@@ -167,7 +167,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   "Unification" should "work on 1=1->1=1" in {
     val pattern = SequentType(toSequent("p() -> p()"))
-    val e = USubstPatternTactic(Seq((pattern, implyR(SuccPos(0)) & trivialCloser)))
+    val e = USubstPatternTactic(Seq((pattern, (x:RenUSubst) => implyR(SuccPos(0)) & trivialCloser)))
     shouldClose(e, "1=1->1=1".asFormula)
   }
 
@@ -175,8 +175,8 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val pattern1 = SequentType(toSequent("p() -> p()"))
     val pattern2 = SequentType(toSequent("p() & q()"))
     val e = USubstPatternTactic(Seq(
-      (pattern2, error("Should never get here.")),
-      (pattern1, implyR(SuccPos(0)) & trivialCloser)
+      (pattern2, (x:RenUSubst) => error("Should never get here.")),
+      (pattern1, (x:RenUSubst) => implyR(SuccPos(0)) & trivialCloser)
     ))
     shouldClose(e, "1=1->1=1".asFormula)
   }
@@ -185,8 +185,8 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val pattern1 = SequentType(toSequent("p() -> p()"))
     val pattern2 = SequentType(toSequent("p() & q()"))
     val e = USubstPatternTactic(Seq(
-      (pattern1, implyR(SuccPos(0)) & trivialCloser),
-      (pattern2, error("Should never get here."))
+      (pattern1, (x:RenUSubst) => implyR(SuccPos(0)) & trivialCloser),
+      (pattern2, (x:RenUSubst) => error("Should never get here."))
     ))
     shouldClose(e, "1=1->1=1".asFormula)
   }
@@ -195,8 +195,8 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val pattern1 = SequentType(toSequent("p() -> p()"))
     val pattern2 = SequentType(toSequent("p() -> q()"))
     val e = USubstPatternTactic(Seq(
-      (pattern1, implyR(SuccPos(0)) & trivialCloser),
-      (pattern2, error("Should never get here."))
+      (pattern1, (x:RenUSubst) => implyR(SuccPos(0)) & trivialCloser),
+      (pattern2, (x:RenUSubst) => error("Should never get here."))
     ))
     shouldClose(e, "1=1->1=1".asFormula)
   }
@@ -205,8 +205,8 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val pattern1 = SequentType(toSequent("p() -> p()"))
     val pattern2 = SequentType(toSequent("p() -> q()"))
     val e = USubstPatternTactic(Seq(
-      (pattern2, error("Should never get here.")),
-      (pattern1, implyR(SuccPos(0)) & trivialCloser)
+      (pattern2, (x:RenUSubst) => error("Should never get here.")),
+      (pattern1, (x:RenUSubst) => implyR(SuccPos(0)) & trivialCloser)
     ))
     a[BelleUserGeneratedError] shouldBe thrownBy (shouldClose(e, "1=1->1=1".asFormula))
   }

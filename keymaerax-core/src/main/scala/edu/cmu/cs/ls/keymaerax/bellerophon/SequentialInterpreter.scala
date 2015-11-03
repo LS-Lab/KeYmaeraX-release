@@ -1,8 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.{QETool, Sequent, Provable}
-import edu.cmu.cs.ls.keymaerax.tactics.{UnificationException, UnificationMatch}
-import edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch.Subst
+import edu.cmu.cs.ls.keymaerax.btactics.RenUSubst
+import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
+import edu.cmu.cs.ls.keymaerax.btactics.{UnificationException, UnificationMatch}
 
 import scala.annotation.tailrec
 
@@ -105,25 +105,23 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           throw BelleError("Unification of multi-sequent patterns is not currently supported.")
 
         //Attempt to find a child that unifies with the input.
-        val unifyingExpression : BelleExpr = children
-          .map(pair => {
-            val ty = pair._1
-            val expr = pair._2
-            ty match {
-              case SequentType(s) => try {
-                Some((UnificationMatch(s, provable.subgoals.head), expr))
-              } catch {
-                // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
-                case e: UnificationException => None
-              }
-              case _ => throw BelleError("Cannot unify non-sequent types.")
+        val unification : (UnificationMatch.Subst, RenUSubst => BelleExpr) = children.map(pair => {
+          val ty = pair._1
+          val expr = pair._2
+          ty match {
+            case SequentType(s) => try {
+              Some((UnificationMatch(s, provable.subgoals.head), expr))
+            } catch {
+              // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
+              case e: UnificationException => None
             }
-            })
+            case _ => throw BelleError("Cannot unify non-sequent types.")
+          }
+          })
           .filter(_.isDefined).map(_.get)
           .headOption.getOrElse(throw BelleError("USubst Pattern Incomplete -- could not find a unifier for any option"))
-          ._2
 
-        apply(unifyingExpression, v)
+        apply(unification._2(unification._1.asInstanceOf[RenUSubst]), v)
       }
     }
     listeners.foreach(l => l.end(v, expr, result))

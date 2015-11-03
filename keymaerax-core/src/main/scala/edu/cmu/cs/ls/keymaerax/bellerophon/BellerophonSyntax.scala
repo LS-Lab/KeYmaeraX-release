@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.btactics.RenUSubst
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Position
 
@@ -16,7 +17,7 @@ abstract class BelleExpr {
   def *@(annotation: BelleType)       = SaturateTactic(this, annotation)
   def *(times: Int/*, annotation: BelleType*/) = RepeatTactic(this, times, null)
   def <(children: BelleExpr*)         = SeqTactic(this, BranchTactic(children))
-  def U(p: (SequentType, BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
+  def U(p: (SequentType, RenUSubst => BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
   def partial                         = PartialTactic(this)
 }
 
@@ -74,7 +75,7 @@ case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends Belle
 case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType) extends BelleExpr
 case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr
 //case class OptionalTactic(child: BelleExpr) extends BelleExpr
-case class USubstPatternTactic(options: Seq[(BelleType, BelleExpr)]) extends BelleExpr
+case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr
 
 /** @todo eisegesis
   * DoAll(e)(BelleProvable(p)) == < (e, ..., e) where e occurs p.subgoals.length times.
