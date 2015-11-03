@@ -49,7 +49,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         catch {
           //@todo catch a little less. Just catching proper tactic exceptions, maybe some ProverExceptions et al., not swallow everything
           case eleft: BelleError => {
-            val rightResult = try { apply(right, v) } catch {case e: BelleError => throw new CompoundException(eleft, e).inContext(expr.toString)}
+            val rightResult = try { apply(right, v) } catch {case e: BelleError => throw new CompoundException(eleft, e).inContext(left & e.context)}
             (rightResult, right) match {
               case (_, x:PartialTactic) => rightResult
               case (BelleProvable(p), _) if(p.isProved) => rightResult
@@ -59,7 +59,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           }
         }
       }
-      case x: SaturateTactic => tailrecSaturate(x, v)
+      case x: SaturateTactic => try { tailrecSaturate(x, v) } catch {case e: BelleError => throw e.inContext(SaturateTactic(e.context, x.annotation))}
       case BranchTactic(children) => v match {
         case BelleProvable(p) => {
           if(children.length != p.subgoals.length)
@@ -134,7 +134,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
   @tailrec
   private def tailrecSaturate(e : SaturateTactic, v: BelleValue): BelleValue = {
     //@todo effect on listeners etc.
-    val step = try { apply(e.child, v) } catch {case e: BelleError => throw e.inContext("body of " + e, v.toString)}
+    val step = apply(e.child, v)
     if(step == v) v
     else tailrecSaturate(e, step)
   }
