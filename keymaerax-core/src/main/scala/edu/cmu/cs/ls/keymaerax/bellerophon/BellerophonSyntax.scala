@@ -142,8 +142,20 @@ case class SequentType(s : Sequent) extends BelleType
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //@todo extend some ProverException and use the inherited inContext functionality throughout the interpreter.
-case class BelleError(message: String)
-  extends ProverException(s"[Bellerophon Runtime] $message")
+class BelleError(message: String)
+  extends ProverException(s"[Bellerophon Runtime] $message") {
+  /* @note mutable state for gathering the logical context that led to this exception */
+  private var tacticContext: BelleExpr = BelleDot  //@todo BelleUnknown?
+  def context: BelleExpr = tacticContext
+  def inContext(context: BelleExpr): BelleError = {
+    this.tacticContext = context
+    this
+  }
+  override def toString: String = super.toString + "\nin " + tacticContext
+}
+object BelleError {
+  def apply(message: String) = new BelleError(message)
+}
 
 case class BelleUserGeneratedError(message: String)
   extends Exception(s"[Bellerophon User-Generated Message] $message")
