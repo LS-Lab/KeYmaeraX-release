@@ -11,7 +11,7 @@ Branches
 ========
 
 - `release` is the stable branch for KeYmaera X releases
-- `master is the branch for active ongoing developments of KeYmaera X.
+- `master` is the branch for active ongoing developments of KeYmaera X.
 
 Dependencies
 ============
