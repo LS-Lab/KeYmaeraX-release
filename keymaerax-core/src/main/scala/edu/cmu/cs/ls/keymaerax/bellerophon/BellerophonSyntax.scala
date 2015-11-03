@@ -138,9 +138,9 @@ case class SequentType(s : Sequent) extends BelleType
 
 //@todo extend some ProverException and use the inherited inContext functionality throughout the interpreter.
 case class BelleError(message: String)
-  extends Exception(s"[Bellerophon Runtime] $message")
+  extends ProverException(s"[Bellerophon Runtime] $message")
 
-case class BelleUserGeneratedError(message: String)
+class BelleUserGeneratedError(message: String)
   extends Exception(s"[Bellerophon User-Generated Message] $message")
 
 class CompoundException(left: BelleError, right: BelleError)

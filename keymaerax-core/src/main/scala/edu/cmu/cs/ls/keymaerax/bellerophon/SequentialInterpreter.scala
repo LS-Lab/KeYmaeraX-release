@@ -26,8 +26,8 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         case BelleProvable(p) => BelleProvable(positionTactic.computeResult(p, pos))
       }
       case SeqTactic(left, right) => {
-        val leftResult = apply(left, v)
-        apply(right, leftResult)
+        val leftResult = try { apply(left, v) } catch {case e: BelleError => throw e.inContext("left of " + expr)}
+        try { apply(right, leftResult) } catch {case e: BelleError => throw e.inContext("right of " + expr)}
       }
       case d : DependentTactic => {
         val valueDependentTactic = d.computeExpr(v)
@@ -48,8 +48,8 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         }
         catch {
           //@todo catch a little less. Just catching proper tactic exceptions, maybe some ProverExceptions et al., not swallow everything
-          case _ => {
-            val rightResult = apply(right, v)
+          case eleft: BelleError => {
+            val rightResult = try { apply(right, v) } catch {case e: BelleError => throw new CompoundException(eleft, e).inContext(expr.toString)}
             (rightResult, right) match {
               case (_, x:PartialTactic) => rightResult
               case (BelleProvable(p), _) if(p.isProved) => rightResult
