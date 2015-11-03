@@ -47,7 +47,7 @@ object DebuggingTactics {
 
   /** assert is a no-op tactic that raises an error if the provable has not the expected formula at the specified position. */
   def assert(fml: Formula, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") {
-    override def applyAt(provable: Provable, pos: Position): Provable = {
+    override def computeResult(provable: Provable, pos: Position): Provable = {
       if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos) != fml) {
         throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal with " + fml + " at position " + pos + ",\n\t but got " +
           provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.at(pos) + " at position " + pos + ")")

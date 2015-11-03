@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.Position
+import edu.cmu.cs.ls.keymaerax.tactics.{SuccPosition, AntePosition, Position}
 
 
 /**
@@ -28,7 +28,7 @@ object ProofRuleTactics {
 
   def cutL(f: Formula) = new InputTactic[Formula](f) {
     override def computeExpr() = new BuiltInLeftTactic("CutL") {
-      override def applyAt(provable: Provable, pos: AntePos): Provable = {
+      override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
         requireOneSubgoal(provable)
         provable(core.CutLeft(f, pos), 0)
       }
@@ -37,7 +37,7 @@ object ProofRuleTactics {
 
   def cutR(f: Formula) = new InputTactic[Formula](f) {
     override def computeExpr() = new BuiltInRightTactic("CutR") {
-      override def applyAt(provable: Provable, pos: SuccPos): Provable = {
+      override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
         requireOneSubgoal(provable)
         provable(core.CutRight(f, pos), 0)
       }
@@ -46,7 +46,7 @@ object ProofRuleTactics {
 
   def cutLR(f: Formula) = new InputTactic[Formula](f) {
     override def computeExpr() = new BuiltInPositionTactic("CutLR") {
-      override def applyAt(provable: Provable, pos: Position): Provable = {
+      override def computeResult(provable: Provable, pos: Position): Provable = {
         requireOneSubgoal(provable)
         if (pos.isAnte) provable(core.CutLeft(f, pos), 0)
         else provable(core.CutRight(f, pos), 0)
@@ -55,126 +55,126 @@ object ProofRuleTactics {
   }
 
   def notL = new BuiltInLeftTactic("NotL") {
-    override def applyAt(provable: Provable, pos: AntePos): Provable = {
+    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.NotLeft(pos), 0)
     }
   }
 
   def notR = new BuiltInRightTactic("NotR") {
-    override def applyAt(provable: Provable, pos: SuccPos): Provable = {
+    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.NotRight(pos), 0)
     }
   }
 
   def andR = new BuiltInRightTactic("AndR") {
-    override def applyAt(provable: Provable, pos : SuccPos) = {
+    override def computeSuccResult(provable: Provable, pos : SuccPosition) = {
       requireOneSubgoal(provable)
       provable(core.AndRight(pos), 0)
     }
   }
 
   def andL = new BuiltInLeftTactic("AndL") {
-    override def applyAt(provable: Provable, pos: AntePos) = {
+    override def computeAnteResult(provable: Provable, pos: AntePosition) = {
       requireOneSubgoal(provable)
       provable(core.AndLeft(pos), 0)
     }
   }
 
   def orR = new BuiltInRightTactic("OrR") {
-    override def applyAt(provable: Provable, pos : SuccPos) = {
+    override def computeSuccResult(provable: Provable, pos : SuccPosition) = {
       requireOneSubgoal(provable)
       provable(core.OrRight(pos), 0)
     }
   }
 
   def orL = new BuiltInLeftTactic("OrL") {
-    override def applyAt(provable: Provable, pos: AntePos) = {
+    override def computeAnteResult(provable: Provable, pos: AntePosition) = {
       requireOneSubgoal(provable)
       provable(core.OrLeft(pos), 0)
     }
   }
 
   def implyR = new BuiltInRightTactic("ImplyR") {
-    override def applyAt(provable : Provable, pos : SuccPos) = {
+    override def computeSuccResult(provable : Provable, pos : SuccPosition) = {
       requireOneSubgoal(provable)
       provable(core.ImplyRight(pos), 0)
     }
   }
 
   def implyL = new BuiltInLeftTactic("ImplyL") {
-    override def applyAt(provable : Provable, pos: AntePos) = {
+    override def computeAnteResult(provable : Provable, pos: AntePosition) = {
       requireOneSubgoal(provable)
       provable(core.ImplyLeft(pos), 0)
     }
   }
 
   def equivR = new BuiltInRightTactic("EquivR") {
-    override def applyAt(provable: Provable, pos: SuccPos): Provable = {
+    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.EquivRight(pos), 0)
     }
   }
 
   def equivL = new BuiltInLeftTactic("EquivL") {
-    override def applyAt(provable: Provable, pos: AntePos): Provable = {
+    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.EquivLeft(pos), 0)
     }
   }
 
   def commuteEquivL = new BuiltInLeftTactic("CommuteEquivL") {
-    override def applyAt(provable: Provable, pos: AntePos): Provable = {
+    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.CommuteEquivLeft(pos), 0)
     }
   }
 
   def commuteEquivR = new BuiltInRightTactic("CommuteEquivR") {
-    override def applyAt(provable: Provable, pos: SuccPos): Provable = {
+    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.CommuteEquivRight(pos), 0)
     }
   }
 
   def equivifyR = new BuiltInRightTactic("EquivifyR") {
-    override def applyAt(provable: Provable, pos: SuccPos): Provable = {
+    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.EquivifyRight(pos), 0)
     }
   }
 
   def hideL = new BuiltInLeftTactic("HideL") {
-    override def applyAt(provable: Provable, pos: AntePos): Provable = {
+    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.HideLeft(pos), 0)
     }
   }
 
   def hideR = new BuiltInRightTactic("HideR") {
-    override def applyAt(provable: Provable, pos: SuccPos): Provable = {
+    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.HideRight(pos), 0)
     }
   }
 
   def coHideL = new BuiltInLeftTactic("CoHideL") {
-    override def applyAt(provable: Provable, pos: AntePos): Provable = {
+    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.CoHideLeft(pos), 0)
     }
   }
 
   def coHideR = new BuiltInRightTactic("CoHideR") {
-    override def applyAt(provable: Provable, pos: SuccPos): Provable = {
+    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.CoHideRight(pos), 0)
     }
   }
 
   def coHide2 = new BuiltInTwoPositionTactic("CoHide2") {
-    override def applyAt(provable: Provable, posOne: Position, posTwo: Position): Provable = {
+    override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
       requireOneSubgoal(provable)
       require(posOne.isAnte && posTwo.isSucc, "Should take an antecedent and a succedent position.")
       provable(core.CoHide2(posOne, posTwo), 0)
@@ -182,7 +182,7 @@ object ProofRuleTactics {
   }
 
   def exchangeL = new BuiltInTwoPositionTactic("ExchangeL") {
-    override def applyAt(provable: Provable, posOne: Position, posTwo: Position): Provable = {
+    override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
       requireOneSubgoal(provable)
       require(posOne.isAnte && posTwo.isAnte, "Both positions should be in the Antecedent.")
       provable(core.ExchangeLeftRule(posOne, posTwo), 0)
@@ -190,7 +190,7 @@ object ProofRuleTactics {
   }
 
   def exchangeR = new BuiltInTwoPositionTactic("ExchangeR") {
-    override def applyAt(provable: Provable, posOne: Position, posTwo: Position): Provable = {
+    override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
       requireOneSubgoal(provable)
       require(posOne.isSucc && posTwo.isSucc, "Both positions should be in the Succedent.")
       provable(core.ExchangeRightRule(posOne, posTwo), 0)
@@ -226,14 +226,14 @@ object ProofRuleTactics {
   }
 
   def skolemize = new BuiltInPositionTactic("Skolemize") {
-    override def applyAt(provable: Provable, pos: Position): Provable = {
+    override def computeResult(provable: Provable, pos: Position): Provable = {
       requireOneSubgoal(provable)
       provable(core.Skolemize(pos), 0)
     }
   }
 
   def dualFree = new BuiltInRightTactic("DualFree") {
-    override def applyAt(provable: Provable, pos: SuccPos): Provable = {
+    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.DualFree(pos), 0)
     }
@@ -251,7 +251,7 @@ object ProofRuleTactics {
 
   /** Closes the goal using specified positions. */
   def close = new BuiltInTwoPositionTactic("Close") {
-    override def applyAt(provable: Provable, posOne: Position, posTwo: Position): Provable = {
+    override def computeResult(provable: Provable, posOne: Position, posTwo: Position): Provable = {
       requireOneSubgoal(provable)
       require(posOne.isAnte && posTwo.isSucc, "Position one should be in the Antecedent, position two in the Succedent.")
       provable(core.Close(posOne, posTwo), 0)
@@ -259,14 +259,14 @@ object ProofRuleTactics {
   }
 
   def closeTrue = new BuiltInRightTactic("CloseTrue") {
-    override def applyAt(provable: Provable, pos: SuccPos): Provable = {
+    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.CloseTrue(pos), 0)
     }
   }
 
   def closeFalse = new BuiltInLeftTactic("CloseFalse") {
-    override def applyAt(provable: Provable, pos: AntePos): Provable = {
+    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.CloseFalse(pos), 0)
     }

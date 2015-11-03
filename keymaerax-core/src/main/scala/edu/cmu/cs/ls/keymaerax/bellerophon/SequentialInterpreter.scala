@@ -22,6 +22,9 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       }
       case BuiltInPositionTactic(_) | BuiltInLeftTactic(_) | BuiltInRightTactic(_) | BuiltInTwoPositionTactic(_) | DependentPositionTactic(_) =>
         throw BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.")
+      case AppliedPositionTactic(positionTactic, pos) => v match {
+        case BelleProvable(p) => BelleProvable(positionTactic.computeResult(p, pos))
+      }
       case SeqTactic(left, right) => {
         val leftResult = apply(left, v)
         apply(right, leftResult)

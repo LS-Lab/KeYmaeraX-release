@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.RenUSubst
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.Position
+import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position}
 
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron expressions.
@@ -22,28 +22,64 @@ abstract class BelleExpr {
 }
 
 abstract case class BuiltInTactic(name: String) extends BelleExpr {
-  def result(provable : Provable) : Provable
+  private[bellerophon] def result(provable : Provable) : Provable
 }
-abstract case class BuiltInPositionTactic(name: String) extends BelleExpr {
-  def applyAt(provable: Provable, pos: Position) : Provable
 
-  def apply(pos: Position) = new BuiltInTactic(s"$name@$pos") {
-    override def result(provable: Provable) = applyAt(provable, pos)
-  }
-}
-abstract case class BuiltInLeftTactic(name: String) extends BelleExpr {
-  def applyAt(provable: Provable, pos: AntePos) : Provable
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Positional tactics
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Generalizes the built in position tactics (normal, left, right) */
+trait PositionalTactic extends BelleExpr {
+  /** @note this should be called from within interpreters, but not by end-users */
+  def computeResult(provable: Provable, position: Position) : Provable
 
-  def apply(pos: AntePos) = new BuiltInTactic(s"$name@$pos") {
-    override def result(provable: Provable) = applyAt(provable, pos)
-  }
+  /**
+    * Applies a positional tactic to a position.
+    * @param position The position at which this tactic should be executed.
+    * @return An [[AppliedPositionTactic]] that records the tactic and where it was applied --
+    *         enough information to reconstruct the effect of the tactic using computeResult,
+    *         but also an internal representation of the application.
+    */
+  def apply(position: Position) = AppliedPositionTactic(this, position)
 }
-abstract case class BuiltInRightTactic(name: String)(pos: SuccPos) extends BelleExpr {
-  def applyAt(provable: Provable, pos: SuccPos) : Provable
-  def generatedPositions : Seq[Position]
+
+abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic
+
+abstract case class BuiltInLeftTactic(name: String) extends BelleExpr with PositionalTactic {
+  override def computeResult(provable: Provable, position:Position) =
+    if(position.isInstanceOf[AntePosition]) computeAnteResult(provable, position.asInstanceOf[AntePosition])
+    else throw BelleError("LeftTactics can only be applied at a AntePos")
+
+  def computeAnteResult(provable: Provable, pos: AntePosition): Provable
 }
+
+abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
+  override def computeResult(provable: Provable, position:Position) =
+    if(position.isInstanceOf[SuccPosition]) computeSuccResult(provable, position.asInstanceOf[SuccPosition])
+    else throw BelleError("RightTactics can only be applied at a SuccPos")
+
+  def computeSuccResult(provable: Provable, pos: SuccPosition) : Provable
+}
+
+/**
+  * Stores the position tactics and position at which the tactic was applied.
+  * Useful for storing execution traces.
+  */
+case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic, pos: Position) extends BelleExpr {
+  def computeResult(provable: Provable) : Provable = positionTactic.computeResult(provable, pos)
+}
+
 abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
-  def applyAt(provable : Provable, posOne: Position, posTwo: Position) : Provable
+  /** @note this should be called from within interpreters, but not by end users. */
+  def computeResult(provable : Provable, posOne: Position, posTwo: Position) : Provable
+
+  /** Returns an explicit representation of the application of this tactic to the provided positions. */
+  def apply(posOne: Position, posTwo: Position) = AppliedTwoPositionTactic(this, posOne, posTwo)
+}
+
+/** Motivation is similar to [[AppliedPositionTactic]], but for [[BuiltInTwoPositionTactic]] */
+case class AppliedTwoPositionTactic(positionTactic: BuiltInTwoPositionTactic, posOne: Position, posTwo: Position) extends BelleExpr {
+  def computeResult(provable: Provable) : Provable = positionTactic.computeResult(provable, posOne, posTwo)
 }
 
 /**
