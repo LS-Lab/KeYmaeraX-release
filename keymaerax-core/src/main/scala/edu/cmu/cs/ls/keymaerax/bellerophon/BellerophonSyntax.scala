@@ -23,7 +23,10 @@ abstract class BelleExpr {
 
 abstract case class BuiltInTactic(name: String) extends BelleExpr {
   private[bellerophon] def result(provable : Provable) : Provable
+  override def toString = name
 }
+
+object BelleDot extends BelleExpr { override def toString = ">>_<<" }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Positional tactics
@@ -100,7 +103,7 @@ abstract case class InputTactic[T](input: T) extends BelleExpr {
   def computeExpr(): BelleExpr
 }
 
-case class PartialTactic(child: BelleExpr) extends BelleExpr
+case class PartialTactic(child: BelleExpr) extends BelleExpr { override def toString = "partial(" + child + ")" }
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def toString = "(" + left + "&" + right + ")" }
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def toString = "(" + left + "|" + right + ")" }
