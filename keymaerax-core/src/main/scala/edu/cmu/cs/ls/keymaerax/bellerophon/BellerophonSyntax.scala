@@ -119,7 +119,7 @@ case class DoAll(e: BelleExpr) extends BelleExpr
 /**
  * Bellerophon expressions that are values.
  */
-trait BelleValue extends BelleExpr
+abstract trait BelleValue
 case class BelleProvable(p : Provable) extends BelleExpr with BelleValue
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
