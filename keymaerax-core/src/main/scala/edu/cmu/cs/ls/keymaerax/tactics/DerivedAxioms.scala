@@ -1824,7 +1824,7 @@ object DerivedAxioms {
    * @todo derive more efficiently via flip
    */
   lazy val notLessEqualF = "(!(f() <= g())) <-> (f() > g())".asFormula
-  lazy val notLessEqual = derivedAxiom("! <",
+  lazy val notLessEqual = derivedAxiom("! <=",
     Sequent(Nil, IndexedSeq(), IndexedSeq(notLessEqualF)),
     QE
   )
