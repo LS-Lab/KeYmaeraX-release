@@ -29,14 +29,14 @@ class PairParserTests extends FlatSpec with Matchers {
       println("Reparsing" +
         "\nInput:      " + input +
         "\nParsed:     " + parse + " @ " + parse.getClass.getSimpleName +
-        "\nExpression: " + KeYmaeraXPrettyPrinter.fullPrinter(parse))
+        "\nExpression: " + pp.fullPrinter(parse))
       parse shouldBe expr
     }
   }
 
   "The parser" should "parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
     for ((s1, s2) <- expectedParse) {
-      println("input 1: " + s1 + "\ninput 2: " + s2)
+      println("\ninput : " + s1 + "\nversus: " + s2)
       if (s2 == unparseable) {
         // ParseExceptions and CoreExceptions and AssertionErrors are simply all allowed.
         a[Throwable] should be thrownBy println("Parsed:  " + pp(parser(s1)))
@@ -44,6 +44,7 @@ class PairParserTests extends FlatSpec with Matchers {
         val p1 = parser(s1)
         val p2 = parser(s2)
         p1 shouldBe p2
+        parser(pp(p1)) shouldBe parser(pp(p2))
         pp(p1) shouldBe pp(p2)
       }
     }
@@ -487,11 +488,22 @@ class PairParserTests extends FlatSpec with Matchers {
     //("x() -> [x:=x(x);]x()>x(x,x())", unparseable) //@todo if !LAX
 
     ("-x*y", "-(x*y)"),
-    ("-3*y", "-(3*y)"),
-    ("-5*(y-z)", "-(5*(y-z))"),
-    ("-2-3", "(-(2))-(3)"),
-    ("-2*-3", "-(2*(-(3)))"),
-    ("-8", "-(8)"),
+    ("-3*y", "(-3)*y"), //@note subtle "-(3*y)"),
+    ("-5*(y-z)", "(-5)*(y-z)"), // subtle "-(5*(y-z))"),
+    ("-2-3", "(-2)-(3)"),  // subtle "(-(2))-(3)"),
+    ("-2*-3", "(-2)*(-3)"),  // subtle "-(2*(-(3)))"),
+    ("-8", "(-8)"),
+    ("-2*a", "(-2)*a"),  // subtle -(2*a)"),
+    ("-0*a", "(-0)*a"),  // subtle "-(0*a)"),
+    ("a-3*b", "a-(3*b)"),
+    ("-2-3*b", "(-2)-(3*b)"),
+    ("-2+-3*b", "(-2)+((-3)*b)"),
+    ("-(5*x)", "-(5*x)"),
+    ("-(5+x)", "-(5+x)"),
+    ("-(5-x)", "-(5-x)"),
+    ("-(5*x)<=0", "-(5*x)<=0"),
+    ("-0*min_0/a<=0*(tl-to)", "(((-0)*(min_0))/(a))<=0*(tl-to)"), // subtle "-(((0)*(min_0))/(a))<=0*(tl-to)"),
+    ("-(0*min_0/a)<=0*(tl-to)", "-((0*(min_0))/(a))<=0*(tl-to)"),
 
     //@note hybrid games
 //    ("<{x:=x+1;{x'=1}^@ ++ x:=x-1;}*>(0<=x&x<1)", "<{x:=x+1;{x'=1}^@ ++ x:=x-1;}*> (0<=x&x<1)"),

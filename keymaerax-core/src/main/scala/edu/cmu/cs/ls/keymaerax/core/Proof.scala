@@ -87,12 +87,23 @@ object SeqPos {
 }
 
 /**
- * Sequent ante |- succ with antecedent ante and succedent succ.
+ * Sequent `ante |- succ` with antecedent ante and succedent succ.
  * {{{
  *   ante(0),ante(1),...,ante(n) |- succ(0),succ(1),...,succ(m)
  * }}}
- * The semantics of sequent ante |- succ is the conjunction of the formulas in ante implying
- * the disjunction of the formulas in succ.
+ * This sequent is often pretty-printed with signed line numbers:
+ * {{{
+ *     -1: ante(0)
+ *     -2: ante(1)
+ *         ...
+ * -(n+1): ante(n)
+ *  ==> 1: succ(0)
+ *      2: succ(1)
+ *         ...
+ *  (m+1): succ(m)
+ * }}}
+ * The semantics of sequent `ante |- succ` is the conjunction of the formulas in `ante` implying
+ * the disjunction of the formulas in `succ`.
  * @author Andre Platzer
  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
  */

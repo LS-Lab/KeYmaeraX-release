@@ -1,82 +1,98 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.core
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.pt.ProofTerm
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{assert, debug}
+import edu.cmu.cs.ls.keymaerax.btactics.DLTactics._
+import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
+
+import edu.cmu.cs.ls.keymaerax.core.{AntePos, Exists, Forall, Imply, SeqPos, SuccPos}
+import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 
 /**
- * [[PropositionalTactics]] contains tactical implementations of the propositional sequent calculus.
- * @author Nathan Fulton
+ * [[PropositionalTactics]] provides tactics for propositional reasoning.
  */
 object PropositionalTactics {
   /**
-   * Throw exception if there is more than one open subgoal on the provable.
+   * Inverse of [[ProofRuleTactics.implyR]].
+   * {{{
+   *   G, G' |- D, D', a -> b
+   * -------------------------
+   *   G, a, G' |- D, b, D'
+   * }}}
+   * @author Nathan Fulton
+   * @author Stefan Mitsch
+   * @see [[ProofRuleTactics.implyR]]
+   * @todo should generalize to work in gamma delta context when specifying TwoPositionRule type positions.
    */
-  private def checkProvableShape(provable: Provable) =
-    if(provable.subgoals.length != 1) throw BelleError("Expected exactly one sequent in Provable")
-
-  def AndR = new BuiltInRightTactic("AndR") {
-    override def applyAt(provable: Provable, pos : SuccPos) = {
-      checkProvableShape(provable)
-      provable(core.AndRight(pos), 0)
+  def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = new DependentTactic("inverse imply right") {
+    override def computeExpr(v: BelleValue): BelleExpr = v match {
+      case BelleProvable(provable) =>
+        require(provable.subgoals.size == 1, "Provable must have only 1 subgoal, but has " + provable.subgoals.size)
+        val sequent = provable.subgoals.head
+        require(sequent.ante.length > antePos.getIndex && sequent.succ.length > succPos.getIndex,
+          "Ante position " + antePos + " or succ position " + succPos + " is out of bounds; provable has ante size " +
+            sequent.ante.length + " and succ size " + sequent.succ.length)
+        val left = sequent.ante(antePos.getIndex)
+        val right = sequent.succ(succPos.getIndex)
+        val cutUsePos = AntePos(sequent.ante.length)
+        cut(Imply(left, right)) <(
+          /* use */ implyL(cutUsePos) & DoAll(close),
+          /* show */ assert(right, "")(succPos) & hideR(succPos) & assert(left, "")(antePos) & hideL(antePos) /* This is the result. */)
     }
   }
 
-  def AndL = new BuiltInLeftTactic("AndL") {
-    override def applyAt(provable: Provable, pos: AntePos) = {
-      checkProvableShape(provable)
-      provable(core.AndLeft(pos), 0)
-    }
-  }
-
-  def OrR = new BuiltInRightTactic("OrR") {
-    override def applyAt(provable: Provable, pos : SuccPos) = {
-      checkProvableShape(provable)
-      provable(core.OrRight(pos), 0)
-    }
-  }
-
-  def OrL = new BuiltInLeftTactic("OrL") {
-    override def applyAt(provable: Provable, pos: AntePos) = {
-      checkProvableShape(provable)
-      provable(core.OrLeft(pos), 0)
-    }
-  }
-
-  def ImplyR = new BuiltInRightTactic("ImplyR") {
-    override def applyAt(provable : Provable, pos : SuccPos) = {
-      checkProvableShape(provable)
-      provable(core.ImplyRight(pos), 0)
-    }
-  }
-
-  def ImplyL = new BuiltInLeftTactic("ImplyL") {
-    override def applyAt(provable : Provable, pos: AntePos) = {
-      checkProvableShape(provable)
-      provable(core.ImplyLeft(pos), 0)
-    }
-  }
-
-  /** Closes a goal with exactly the form \phi |- \phi; i.e., no surrounding context. */
-  def TrivialCloser = new BuiltInTactic("CloseTrivialForm") {
-    override def result(provable: Provable) = {
-      checkProvableShape(provable)
-      if(provable.subgoals.head.ante.length != 1 || provable.subgoals.head.succ.length != 1)
-        throw BelleError(s"${this.name} should only be applied to formulas of the form \\phi |- \\phi")
-      provable(core.Close(AntePos(0), SuccPos(0)), 0)
-    }
-  }
-
-  /** Closes the goal using specified positions. */
-  def Close = new BuiltInTwoPositionTactic("Close") {
-    override def applyAt(provable: Provable, posOne: SeqPos, posTwo: SeqPos): Provable = {
-      checkProvableShape(provable)
-      (posOne, posTwo) match {
-        case (antePos : AntePos, succPos : SuccPos) => provable(core.Close(antePos, succPos), 0)
-        case _ => throw BelleError("Close should receive a single antecedent position and a single succedent position.")
+  /**
+   * Returns a tactic for propositional CE with purely propositional unpeeling. Useful when unpeeled fact is not
+   * an equivalence, as needed by CE. May perform better than CE for small contexts.
+   * @see [[UnifyUSCalculus.CMon(Context)]]
+   * @see [[UnifyUSCalculus.CE(Context)]]
+   * @example{{{
+   *                  z=1 |- z>0
+   *         --------------------------propCE(PosInExpr(1::Nil))
+   *           x>0 -> z=1 |- x>0 -> z>0
+   * }}}
+   * @param at Points to the position to unpeel.
+   * @return The tactic.
+   */
+  def propCMon(at: PosInExpr): DependentTactic = new DependentTactic("Prop. CMon") {
+    //@todo would want to use result symbol of skolemizeT, for now we have to guess it
+    def instWithGuessedSkolem(pos: SeqPos) = new DependentTactic("Instantiate with guessed skolem") {
+      override def computeExpr(bv: BelleValue): BelleExpr = bv match {
+        case BelleProvable(provable) =>
+          require(provable.subgoals.size == 1)
+          val s = provable.subgoals.head
+          require(s(pos) match {
+            case Forall(_ :: Nil, _) =>  pos.isAnte
+            case Exists(_ :: Nil, _) => !pos.isAnte
+            case _ => false
+          })
+          s(pos) match {
+            case Forall(v :: Nil, _) if  pos.isAnte => ??? //@todo instantiateT(v, Variable(v.name, v.index match { case None => Some(0) case Some(i) => Some(i + 1) }, v.sort))(pos)
+            case Exists(v :: Nil, _) if !pos.isAnte => ??? //@todo instantiateT(v, Variable(v.name, v.index match { case None => Some(0) case Some(i) => Some(i + 1) }, v.sort))(pos)
+          }
       }
+    }
+
+    override def computeExpr(v: BelleValue): BelleExpr = v match {
+      case BelleProvable(provable) =>
+        require(provable.subgoals.size == 1, "Expected single sub goal, but got " + provable.subgoals.size)
+        val sequent = provable.subgoals.head
+        require(sequent.ante.length == 1 && sequent.succ.length == 1 &&
+          sequent.ante.head.at(at)._1 == sequent.succ.head.at(at)._1, "")
+
+        // we know that we have the same operator in antecedent and succedent with the same lhs -> we know that one
+        // will branch and one of these branches will close by identity. on the other branch, we have to hide
+        debug(s"Start unpeeling towards $at") &
+        // list all cases explicitly, hide appropriate formulas in order to not blow up branching
+        (((notL(AntePos(0)) & notR(SuccPos(0)) & assert(1, 1)) |
+          (andL(AntePos(0)) & andR(SuccPos(0)) <(close | hideL(AntePos(1)), close | hideL(AntePos(0))) & assert(1, 1)) |
+          (orR(SuccPos(0)) & orL(AntePos(0)) <(close | hideR(SuccPos(1)), close | hideR(SuccPos(0))) & assert(1, 1)) |
+          (implyR(SuccPos(0)) & implyL(AntePos(0)) <(close | hideR(SuccPos(0)), close | hideL(AntePos(0))) & assert(1, 1)) |
+          monb | mond |
+          (skolemize(SuccPos(0)) & instWithGuessedSkolem(AntePos(0))) |
+          (skolemize(AntePos(0)) & instWithGuessedSkolem(SuccPos(0)))
+          ) & debug("Unpeeled one layer"))*at.pos.length & debug("Unpeeling finished")
     }
   }
 }

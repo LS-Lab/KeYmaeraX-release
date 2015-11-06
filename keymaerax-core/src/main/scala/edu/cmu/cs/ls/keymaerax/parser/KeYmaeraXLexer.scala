@@ -244,6 +244,12 @@ sealed abstract class Location extends Serializable {
   /** The range from this region to the other region, inclusive. Starting here and ending at other. */
   //@todo review choices
   def --(other: Location): Location
+  /** whether other location is adjacent to this location with no whitespace in between */
+  def adjacentTo(other: Location): Boolean = end match {
+    case Region(_,_,l,c) => other.begin match {
+      case Region(ol,oc,_,_) => l==ol&&c+1==oc
+    }
+  }
 }
 object UnknownLocation extends Location {
   override def toString = "<somewhere>"
