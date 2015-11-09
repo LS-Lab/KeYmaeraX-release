@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.equivalenceCongruenceT
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{axiomLookupBaseT, uncoverAxiomT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
@@ -793,73 +794,26 @@ object ArithmeticTacticsImpl {
   }
 
   def MinMaxT: PositionTactic = new PositionTactic("MinMax") {
-    override def applies(s: Sequent, pos: Position): Boolean = getTerm(s, pos) match {
-      case FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(f, g)) => true
-      case FuncOf(Function("max", None, Tuple(Real, Real), Real), Pair(f, g)) => true
+    override def applies(s: Sequent, pos: Position): Boolean = s(pos.topLevel).sub(pos.inExpr) match {
+      case Some(FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(f, g))) => true
+      case Some(FuncOf(Function("max", None, Tuple(Real, Real), Real), Pair(f, g))) => true
       case _ => false
     }
 
     override def apply(pos: Position): Tactic = new ConstructionTactic("MinMax") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTerm(node.sequent, pos) match {
-        case minmax@FuncOf(Function(name, None, Tuple(Real, Real), Real), Pair(f, g)) if name == "min" || name == "max" =>
-          val freshMinMaxIdx = TacticLibrary.TacticHelper.freshIndexInSequent(name, node.sequent)
-          val minmaxVar = Variable(name, freshMinMaxIdx)
-          Some(cutT(Some(Exists(minmaxVar :: Nil, Equal(minmax, minmaxVar)))) & onBranch(
-            (cutShowLbl, lastSucc(cohideT) & MinMaxAxiomT(SuccPosition(0).first) & TacticLibrary.arithmeticT),
-            (cutUseLbl, lastAnte(FOQuantifierTacticsImpl.skolemizeT) &
-              lastAnte(EqualityRewritingImpl.eqLeft(exhaustive=true)) &
-              //@todo may find wrong equality, if min(x) = ... is already present in antecedent
-              locateAnte(MinMaxAxiomT, { case Equal(a, _) if a == minmax => true case _ => false }))
-          ))
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos.topLevel).sub(pos.inExpr) match {
+        case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real), Pair(f, g))) if fn == "min" || fn == "max" =>
+          val freshMinMaxIdx = TacticLibrary.TacticHelper.freshIndexInSequent(fn, node.sequent)
+          val minmaxVar = Variable(fn, freshMinMaxIdx)
+
+          Some(EqualityRewritingImpl.abbrv(minmax, Some(minmaxVar))
+            & locateAnte(TactixLibrary.useAt("= commute"), _ == Equal(minmaxVar, minmax))
+            & locateAnte(TactixLibrary.useAt(fn), _ == Equal(minmax, minmaxVar))
+          )
         case _ => throw new IllegalStateException("Impossible by applies")
       }
     }
-  }
-
-  /**
-   * Expands minimum/maximum value function as a disjunction.
-   * Axiom min: (min(f(), g()) = h()) <-> ((f()<=g() & h()=f()) | (f()>=g() & h()=g()))
-   * Axiom max: (max(f(), g()) = h()) <-> ((f()>=g() & h()=f()) | (f()<=g() & h()=g()))
-   * @return The tactic to replace lhs of axiom min/max with rhs.
-   */
-  def MinMaxAxiomT: PositionTactic = new PositionTactic("MinMaxAxiom") {
-    override def applies(s: Sequent, pos: Position): Boolean = getFormula(s, pos) match {
-      case Equal(FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(f, g)), h) => true
-      case Equal(FuncOf(Function("max", None, Tuple(Real, Real), Real), Pair(f, g)), h) => true
-      case _ => false
-    }
-
-    override def apply(pos: Position): Tactic = new ConstructionTactic("MinMaxAxiom") {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
-        case Equal(FuncOf(Function("min", _, _, _), _), _) => Some(uncoverAxiomT("min", axiomInstance, _ => MinMaxAxiomBaseT("min"))(pos))
-        case Equal(FuncOf(Function("max", _, _, _), _), _) => Some(uncoverAxiomT("max", axiomInstance, _ => MinMaxAxiomBaseT("max"))(pos))
-        case _ => throw new IllegalStateException("Impossible by applies")
-      }
-    }
-
-    private def axiomInstance(fml: Formula): Formula = fml match {
-      case Equal(FuncOf(Function("min", None, Tuple(Real, Real), Real), Pair(f, g)), h) =>
-        Equiv(fml, Or(And(LessEqual(f, g), Equal(h, f)), And(Greater(f, g), Equal(h, g))))
-      case Equal(FuncOf(Function("max", None, Tuple(Real, Real), Real), Pair(f, g)), h) =>
-        Equiv(fml, Or(And(GreaterEqual(f, g), Equal(h, f)), And(Less(f, g), Equal(h, g))))
-      case _ => False
-    }
-
-  }
-  /** Base tactic for min/max */
-  private def MinMaxAxiomBaseT(name: String): PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Equal(FuncOf(Function(n, _, _, _), Pair(f, g)), h), _) if n == name =>
-        val aF = FuncOf(Function("f", None, Unit, Real), Nothing)
-        val aG = FuncOf(Function("g", None, Unit, Real), Nothing)
-        val aH = FuncOf(Function("h", None, Unit, Real), Nothing)
-        SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: SubstitutionPair(aH, h) :: Nil
-      case _ => throw new IllegalStateException("Impossible by axiomInstance of MinMaxAxiomT")
-    }
-    axiomLookupBaseT(name, subst, _ => NilPT, (f, ax) => ax)
   }
 }
