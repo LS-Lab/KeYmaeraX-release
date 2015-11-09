@@ -320,78 +320,63 @@ object ArithmeticTacticsImpl {
    * Creates a new axiom tactic for commuting over equality: f()=g()) <-> (g()=f()
    * @return The axiom tactic.
    */
-  def commuteEqualsT : PositionTactic = {
-    def axiomInstance(fml : Formula) = fml match {
-      case Equal(f, g) => Equiv(fml, Equal(g,f))
+  @deprecated("Use TactixLibrary.useAt(\"= commute\") instead")
+  def commuteEqualsT : PositionTactic = new PositionTactic("= commute") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p.topLevel).sub(p.inExpr) match {
+      case Some(Equal(_, _)) => true
+      case _ => false
     }
-    uncoverAxiomT("= commute", axiomInstance, _ => CommuteEqualsBaseT)
-  }
-  /** Base tactic for commute equals */
-  private def CommuteEqualsBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = {
-      val (sort, f, g) = fml match {
-        case Equiv(Equal(ff, gg), _) => (ff.sort, ff, gg)
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p.topLevel).sub(p.inExpr) match {
+        case Some(Equal(_, _)) => Some(TactixLibrary.useAt("= commute")(p))
       }
-      val aF = FuncOf(Function("f", None, Unit, sort), Nothing)
-      val aG = FuncOf(Function("g", None, Unit, sort), Nothing)
-      SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
-    axiomLookupBaseT("= commute", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
    * Creates a new axiom tactic for negating equality: s=t <-> !(s!=t)
    * @return The axiom tactic.
    */
-  def NegateEqualsT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      // construct axiom instance: s=t <-> !(s!=t)
-      case Equal(f, g) => Equiv(Not(NotEqual(f, g)), fml)
-      case Not(NotEqual(f, g)) => Equiv(fml, Equal(f, g))
-      case _ => False
+  @deprecated("Use TactixLibrary.useAt(\"= negate\") instead")
+  def NegateEqualsT: PositionTactic = new PositionTactic("= negate") {
+    /** Checks whether this position tactic will be applicable at the indicated position of the given sequent */
+    override def applies(s: Sequent, p: Position): Boolean = s(p.topLevel).sub(p.inExpr) match {
+      case Some(Equal(_, _)) => true
+      case Some(Not(NotEqual(_, _))) => true
+      case _ => false
     }
-    uncoverAxiomT("= negate", axiomInstance, _ => NegateEqualsBaseT)
-  }
-  /** Base tactic for negate equals */
-  private def NegateEqualsBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = {
-      val (sort, f, g) = fml match {
-        case Equiv(_, Equal(ff, gg)) => (ff.sort, ff, gg)
-        case Not(NotEqual(ff, gg)) => (ff.sort, ff, gg)
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p.topLevel).sub(p.inExpr) match {
+        case Some(Equal(_, _)) => Some(TactixLibrary.useAt("= negate", PosInExpr(1::Nil))(p))
+        case Some(Not(NotEqual(_, _))) => Some(TactixLibrary.useAt("= negate")(p))
       }
-      // TODO check that axiom is of the expected form s=t <-> !(s != t)
-      val aF = FuncOf(Function("f", None, Unit, sort), Nothing)
-      val aG = FuncOf(Function("g", None, Unit, sort), Nothing)
-      SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
-    axiomLookupBaseT("= negate", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
    * Creates a new axiom tactic for negating equality: s=t <-> !(s!=t)
    * @return The axiom tactic.
    */
-  def NegateLessThanT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      // construct axiom instance: s<t <-> !(s>=t)
-      case Less(f, g) => Equiv(Not(GreaterEqual(f, g)), fml)
-      case Not(GreaterEqual(f, g)) => Equiv(fml, Less(f, g))
-      case _ => False
+  @deprecated("Use TactixLibrary.useAt(\"< negate\") instead")
+  def NegateLessThanT: PositionTactic = new PositionTactic("< negate") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p.topLevel).sub(p.inExpr) match {
+      case Some(Less(_, _)) => true
+      case Some(Not(GreaterEqual(_, _))) => true
+      case _ => false
     }
-    uncoverAxiomT("< negate", axiomInstance, _ => NegateLessThanBaseT)
-  }
-  /** Base tactic for negate less than */
-  def NegateLessThanBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = {
-      val (sort, f, g) = fml match {
-        case Equiv(_, Less(ff, gg)) => (ff.sort, ff, gg)
-        case Equiv(Not(GreaterEqual(ff, gg)), _) => (ff.sort, ff, gg)
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p.topLevel).sub(p.inExpr) match {
+        case Some(Less(_, _)) => Some(TactixLibrary.useAt("< negate", PosInExpr(1::Nil))(p))
+        case Some(Not(GreaterEqual(_, _))) => Some(TactixLibrary.useAt("< negate")(p))
+
       }
-      val aF = FuncOf(Function("f", None, Unit, sort), Nothing)
-      val aG = FuncOf(Function("g", None, Unit, sort), Nothing)
-      SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
-    axiomLookupBaseT("< negate", subst, _ => NilPT, (f, ax) => ax)
   }
 
   @deprecated("Use TactixLibrary.useAt(\"! <=\") instead")
@@ -488,21 +473,18 @@ object ArithmeticTacticsImpl {
    * }}}
    * @return The axiom tactic.
    */
+  @deprecated("Use TactixLibrary.byUS(\"= reflexive\") instead")
   def EqualReflexiveT: PositionTactic = new PositionTactic("= reflexive") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
       case Equal(s1, s2) if s1 == s2 => true
       case _ => false
     })
 
-    override def apply(p: Position): Tactic = new ConstructionTactic("= reflexive") {
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case Equal(s1, s2) if s1 == s2 =>
-          val aS = FuncOf(Function("s", None, Unit, Real), Nothing)
-          val subst = SubstitutionPair(aS, s1) :: Nil
-          Some(uniformSubstT(subst, Map(node.sequent(p) -> Equal(aS, aS))) & cohideT(p) & AxiomTactic.axiomT("= reflexive"))
-        case _ => throw new IllegalStateException("Impossible by EqualReflexiveT.applies")
+        case Equal(s1, s2) if s1 == s2 => Some(cohideT(p) & TactixLibrary.byUS("= reflexive"))
       }
     }
   }
