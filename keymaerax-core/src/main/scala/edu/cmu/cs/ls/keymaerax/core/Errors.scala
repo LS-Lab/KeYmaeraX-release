@@ -12,7 +12,7 @@ package edu.cmu.cs.ls.keymaerax.core
 /**
  * KeYmaera X Prover Exceptions.
  */
-class ProverException(msg: String) extends RuntimeException(msg) {
+class ProverException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause) {
 
   /* @note mutable state for gathering the logical context that led to this exception */
   private var logicalContext: String = ""
