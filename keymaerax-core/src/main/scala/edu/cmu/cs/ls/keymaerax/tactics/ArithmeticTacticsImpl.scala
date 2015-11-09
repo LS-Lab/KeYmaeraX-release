@@ -472,41 +472,39 @@ object ArithmeticTacticsImpl {
     axiomLookupBaseT("> flip", subst, _ => NilPT, (f, ax) => ax)
   }
 
+  @deprecated("Use TactixLibrary.useAt(\"! <=\") instead")
   def NegateGreaterThanT: PositionTactic = new PositionTactic("> negate") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Greater(_, _) => true
-      case Not(LessEqual(_, _)) => true
+    override def applies(s: Sequent, p: Position): Boolean = s(p.topLevel).sub(p.inExpr) match {
+      case Some(Greater(_, _)) => true
+      case Some(Not(LessEqual(_, _))) => true
       case _ => false
     }
 
     override def apply(p: Position) = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
-      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case Greater(s, t) =>
-          Some(GreaterThanFlipT(p) & NegateLessThanT(p) & GreaterEqualFlipT(p.first))
-        case Not(LessEqual(s, t)) =>
-          Some(GreaterEqualFlipT(p.first) & NegateLessThanT(p) & GreaterThanFlipT(p))
+      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p.topLevel).sub(p.inExpr) match {
+        case Some(Greater(s, t)) => Some(TactixLibrary.useAt("! <=", PosInExpr(1::Nil))(p))
+        case Some(Not(LessEqual(s, t))) => Some(TactixLibrary.useAt("! <=")(p))
         case _ => None
       }
     }
   }
 
+  @deprecated("Use TactixLibrary.useAt(\"! >\") instead")
   def NegateLessEqualsT: PositionTactic = new PositionTactic("<= negate") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case LessEqual(_, _) => true
-      case Not(Greater(_, _)) => true
+    override def applies(s: Sequent, p: Position): Boolean = s(p.topLevel).sub(p.inExpr) match {
+      case Some(LessEqual(_, _)) => true
+      case Some(Not(Greater(_, _))) => true
       case _ => false
     }
 
     override def apply(p: Position) = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
-      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case LessEqual(s, t) =>
-          Some(GreaterEqualFlipT(p) & NegateGreaterEqualsT(p) & GreaterThanFlipT(p.first))
-        case Not(Greater(s, t)) =>
-          Some(GreaterThanFlipT(p.first) & NegateGreaterEqualsT(p) & GreaterEqualFlipT(p))
+      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p.topLevel).sub(p.inExpr) match {
+        case Some(LessEqual(s, t)) => Some(TactixLibrary.useAt("! >", PosInExpr(1::Nil))(p))
+        case Some(Not(Greater(s, t))) => Some(TactixLibrary.useAt("! >")(p))
         case _ => None
       }
     }
