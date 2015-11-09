@@ -477,7 +477,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
   "Abs axiom tactic" should "expand abs(x) = y in succedent" in {
     val s = sucSequent("abs(x) = y".asFormula)
-    val tactic = ArithmeticTacticsImpl.AbsAxiomT(SuccPosition(0))
+    val tactic = TactixLibrary.useAt("abs")(1)
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
@@ -487,7 +487,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
   it should "expand abs(x) = y in antecedent" in {
     val s = sequent(Nil, immutable.IndexedSeq("abs(x) = y".asFormula), immutable.IndexedSeq())
-    val tactic = ArithmeticTacticsImpl.AbsAxiomT(AntePosition(0))
+    val tactic = TactixLibrary.useAt("abs")(-1)
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
@@ -566,7 +566,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
   "Min axiom tactic" should "expand min(x,y) = z in succedent" in {
     val s = sucSequent("min(x,y) = z".asFormula)
-    val tactic = ArithmeticTacticsImpl.MinMaxAxiomT(SuccPosition(0))
+    val tactic = TactixLibrary.useAt("min")(1)
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
@@ -596,7 +596,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
   "Max axiom tactic" should "expand max(x,y) = z in succedent" in {
     val s = sucSequent("max(x,y) = z".asFormula)
-    val tactic = ArithmeticTacticsImpl.MinMaxAxiomT(SuccPosition(0))
+    val tactic = TactixLibrary.useAt("max")(1)
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
