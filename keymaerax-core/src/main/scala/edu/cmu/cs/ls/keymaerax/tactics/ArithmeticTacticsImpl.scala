@@ -616,98 +616,20 @@ object ArithmeticTacticsImpl {
    * Creates a new tactic for negating >=: s < t <-> !(s>=t)
    * @return The tactic.
    */
+  @deprecated("Use TactixLibrary.useAt(\"! <\") instead")
   def NegateGreaterEqualsT = new PositionTactic(">= negate") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case GreaterEqual(_, _) => true
-      case Not(Less(_, _)) => true
+    override def applies(s: Sequent, p: Position): Boolean = s(p.topLevel).sub(p.inExpr) match {
+      case Some(GreaterEqual(_, _)) => true
+      case Some(Not(Less(_, _))) => true
       case _ => false
     }
 
     override def apply(p: Position) = new ConstructionTactic(name) {
       override def applicable(node: ProofNode) = applies(node.sequent, p)
 
-      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        def prepareKMP = new ConstructionTactic("Prepare KMP") {
-          override def applicable(node : ProofNode): Boolean = {
-            val antePrgs = node.sequent.ante.filter({ case Box(_, _) => true case _ => false }).
-              map({ case Box(prg, _) => prg })
-            val succPrgs = node.sequent.succ.filter({ case Box(_, _) => true case _ => false }).
-              map({ case Box(prg, _) => prg })
-            antePrgs.intersect(succPrgs).nonEmpty
-          }
-
-          def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-            val (f, fPrg) = node.sequent.ante.filter({ case Box(_, _) => true case _ => false }).
-              map({ case b@Box(prg, _) => (b, prg) }).last
-            val g = node.sequent.succ.filter({ case Box(prg, _) => prg == fPrg case _ => false }).
-              map({ case b@Box(_, _) => b }).last
-
-            val pa = AntePosition(node.sequent.ante.length)
-            val ps = SuccPosition(node.sequent.succ.length)
-            Some(
-              cutT(Some(Imply(f, g))) & onBranch (
-                (cutUseLbl, ImplyT(pa) & (CloseId | debugT("Should not happen") & stopT)),
-                (cutShowLbl, cohideT(ps))
-              )
-            )
-          }
-        }
-
-        def cutShowTactic = {
-          val ps = SuccPosition(node.sequent.succ.length)
-          val ps0 = SuccPosition(0)
-
-          cohideT(ps) & assertT(0, 1) & TacticLibrary.propositional & (
-            ((prepareKMP & kModalModusPonensT(ps0) & goedelT & TacticLibrary.propositional)*)
-              | TacticLibrary.propositional) & locate(NegateLessThanT) & locate(NotT) & (CloseId | debugT("BAD 1") & stopT)
-        }
-
-        val pa = AntePosition(node.sequent.ante.length)
-        getFormula(node.sequent, p) match {
-          case GreaterEqual(s, t) =>
-            val replFormula = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
-              override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
-                Right(Not(Less(s, t)))
-              }
-            }), node.sequent(p)) match {
-              case Some(f) => f
-              case None => throw new IllegalArgumentException("Checked by applies to never occur")
-            }
-
-            if (p.isAnte) {
-              Some(
-                cutT(Some(Imply(node.sequent(p), replFormula))) & onBranch(
-                  (cutShowLbl, cutShowTactic),
-                  (cutUseLbl, ImplyT(pa) && (CloseId | debugT("BAD 2") & stopT, hideT(p.topLevel))))
-              )
-            } else {
-              Some(
-                cutT(Some(Imply(replFormula, node.sequent(p)))) & onBranch(
-                  (cutShowLbl, cutShowTactic),
-                  (cutUseLbl, ImplyT(pa) && (hideT(p.topLevel), CloseId | debugT("BAD 3") & stopT)))
-              )
-            }
-          case Not(Less(s, t)) =>
-            val replFormula = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
-              override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
-                Right(GreaterEqual(s, t))
-              }
-            }), node.sequent(p)) match {
-              case Some(f) => f
-              case None => throw new IllegalArgumentException("Checked by applies to never occur")
-            }
-
-            if (p.isAnte) Some(
-              cutT(Some(Imply(node.sequent(p), replFormula))) & onBranch(
-                (cutShowLbl, cutShowTactic),
-                (cutUseLbl, ImplyT(pa) && (CloseId | debugT("BAD 4") & stopT, hideT(p.topLevel))))
-            )
-            else Some(
-              cutT(Some(Imply(replFormula, node.sequent(p)))) & onBranch(
-                (cutShowLbl, cutShowTactic),
-                (cutUseLbl, ImplyT(pa) && (hideT(p.topLevel), CloseId | debugT("BAD 5") & stopT)))
-            )
-        }
+      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p.topLevel).sub(p.inExpr) match {
+        case Some(GreaterEqual(_, _)) => Some(TactixLibrary.useAt("! <", PosInExpr(1::Nil))(p))
+        case Some(Not(Less(_, _))) => Some(TactixLibrary.useAt("! <")(p))
       }
     }
   }
