@@ -17,25 +17,25 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
 
     val result = expr match {
       case builtIn : BuiltInTactic => v match {
-        case BelleProvable(provable) => BelleProvable(builtIn.result(provable))
+        case BelleProvable(pr) => try { BelleProvable(builtIn.result(pr)) } catch { case e: BelleError => throw e.inContext(builtIn.name, pr.prettyString) }
         case _ => throw BelleError(s"Attempted to apply a built-in tactic to a non-Provable value: ${v.getClass.getName}")
       }
       case BuiltInPositionTactic(_) | BuiltInLeftTactic(_) | BuiltInRightTactic(_) | BuiltInTwoPositionTactic(_) | DependentPositionTactic(_) =>
         throw BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.")
       case AppliedPositionTactic(positionTactic, pos) => v match {
-        case BelleProvable(p) => BelleProvable(positionTactic.computeResult(p, pos))
+        case BelleProvable(pr) => try { BelleProvable(positionTactic.computeResult(pr, pos)) } catch { case e: BelleError => throw e.inContext(positionTactic + " at " + pos, pr.prettyString) }
       }
       case SeqTactic(left, right) => {
         val leftResult = try { apply(left, v) } catch {case e: BelleError => throw e.inContext(e.context & right)}
         try { apply(right, leftResult) } catch {case e: BelleError => throw e.inContext(left & e.context)}
       }
-      case d : DependentTactic => {
+      case d : DependentTactic => try {
         val valueDependentTactic = d.computeExpr(v)
         apply(valueDependentTactic, v)
-      }
-      case e : InputTactic[_] => {
+      } catch { case e: BelleError => throw e.inContext(d.toString, v.prettyString) }
+      case e : InputTactic[_] => try {
         apply(e.computeExpr(), v)
-      }
+      } catch { case e: BelleError => throw e.inContext(e.toString, v.prettyString) }
       case PartialTactic(child) => try { apply(child, v) } catch {case e: BelleError => throw e.inContext(PartialTactic(e.context)) }
       case EitherTactic(left, right) => {
         try {
@@ -129,6 +129,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         apply(unification._2(unification._1.asInstanceOf[RenUSubst]), v)
       }
     }
+
     listeners.foreach(l => l.end(v, expr, result))
     result
   }

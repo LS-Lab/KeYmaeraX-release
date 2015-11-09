@@ -4,20 +4,20 @@
 Grammar of Concrete Syntax
 --------------------------
 
-The grammar for the concrete syntax of differential dynamic logic is given below in order of ascending precedence, i.e. operators towards the beginning of the grammar bind stronger than later operators. Unary operators bind stronger than binary operators, which is why unary operators come later. Also ; binds stronger than ++ and & stronger than | stronger than both -> and <->. That is precedence is the following order with stronger precedence listed first and equal precedence delimited by `,`
+The grammar for the concrete syntax of differential dynamic logic is given below in order of ascending precedence, i.e. operators towards the beginning of the grammar bind stronger than later operators. Unary operators bind stronger than binary operators, which is why unary operators come later. Except that unary - binds like binary -.  Also ; binds stronger than ++ and & stronger than | stronger than both -> and <->. That is precedence is the following order with stronger precedence listed first and equal precedence delimited by `,`
 
-    '   -   ^   *,/   +,-
+    '   ^   *,/   -   +,-
     '  =,!=,>,>=,<,<=
     ' \forall,\exists,[],<>
         !   &    |   ->,<-   <->
         *   ;    ++
     ,
-All arithmetic operators except ^ are left-associative.
-All logical and program operators except <- and <-> are right-associative.
+All arithmetic operators except `^` are left-associative.
+All logical and program operators except `<-` and `<->` are right-associative.
 
 ==Terms==
 
-    T ::= x | x' | num | ∙ | f(T) | f() | -T | T^T | T*T | T/T | T+T | T-T | (T)' | (T) 
+    T ::= x | x' | num | ∙ | f(T) | f() | T^T | T*T | T/T | -T | T+T | T-T | (T)' | (T) 
 
 Operators are left-associative, i.e. x-y-z is (x-y)-z.
 Except that `T^T` is right-associative, i.e. x^4^2 is x^(4^2)

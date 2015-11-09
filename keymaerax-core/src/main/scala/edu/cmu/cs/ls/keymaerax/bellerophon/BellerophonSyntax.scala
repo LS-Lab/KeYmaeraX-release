@@ -128,7 +128,9 @@ case class DoAll(e: BelleExpr) extends BelleExpr
 /**
  * Bellerophon expressions that are values.
  */
-abstract trait BelleValue
+abstract trait BelleValue {
+  def prettyString: String = toString
+}
 case class BelleProvable(p : Provable) extends BelleExpr with BelleValue {
   override def toString: String = p.prettyString
 }

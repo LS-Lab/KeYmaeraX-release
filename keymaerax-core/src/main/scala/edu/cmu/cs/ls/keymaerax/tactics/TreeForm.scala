@@ -32,6 +32,7 @@ object TreeForm {
         case Variable (name, _, _) => Tree(Var(name), List())
         case DifferentialSymbol (v) => Tree(DiffVar(v.name), List())
         case FuncOf(Function(f, _, _,_), x) => Tree(Func(f), List(binaryTree(x)))
+        case n@Number(_) => Tree(Constant(n), List())
       }
     }
   }
@@ -44,7 +45,8 @@ object TreeForm {
     def size: Int = args.foldLeft(1){case (acc, t) => acc + t.size}
 
     private def expand(name:String, l:List[Tree]): List[Tree] =
-      l.flatMap({case Tree(Operator(name2, _), lst) => if (name.equals(name2)) lst else Nil})
+      l.flatMap({case Tree(Operator(name2, _), lst) => if (name.equals(name2)) lst else Nil
+                 case x => List(x)})
 
     private def fixedPoint(l:List[Tree], f:List[Tree] => List[Tree]): List[Tree] = {
       val l2 = f(l)
@@ -67,9 +69,12 @@ object TreeForm {
         case Tree(Operator("-", Some(n1)), (Tree(Operator("-",Some(n2)), l1))::l2) =>
           Tree(Operator("-", Some(n1+n2-1)), l1 ++ l2).simplify
         case Tree(Operator("-", Some(n)), hd::tl) =>
-          val positive = hd::tl.flatMap({case Tree(Operator("-", _), hd1::_) => List(hd1) case _ => Nil})
-          val negative = tl.flatMap({case Tree(Operator("-", _), _::tl1) => tl1 case _ => Nil})
-          Tree(Operator("-", Some(n)), Tree(Operator("+", Some(positive.length)), positive)::negative).simplify
+          val positives = tl.flatMap({case Tree(Operator("-", _), hd1::_) => List(hd1) case _ => Nil})
+          val allNegative = tl.flatMap({case Tree(Operator("-", _), _::tl1) => tl1 case _ => Nil})
+          val simplePositives = positives.map({case x => x.simplify})
+          val allPositives = Tree(Operator("+", Some(1+positives.length)), hd::simplePositives)
+          val negative = allNegative.map({case x => x.simplify})
+          Tree(Operator("-", Some(n)), allPositives::negative)
         case Tree(Operator("/", Some(n1)), (Tree(Operator("/",Some(n2)), l1))::l2) =>
           Tree(Operator("/", Some(n1+n2-1)), l1 ++ l2).simplify
         case Tree(Operator("/", Some(n)), hd::tl) =>
@@ -87,7 +92,7 @@ object TreeForm {
   def iterDepth(depth: Int, f: (Int, Tree) => Unit): Unit = {
     f(depth, this)
     this match {
-      case Tree(_, l) => l.foldLeft(())({case ((), t) => iterDepth(depth + 1, f)})
+      case Tree(_, l) => l.foldLeft(())({case ((), t) => t.iterDepth(depth + 1, f)})
     }
   }
 
@@ -108,6 +113,7 @@ object TreeForm {
 
   case class Stat (count: Int, depthWeighted: Int, sizeWeighted: Int) {
     def this (l : List[Tree], depth: Int, size: Int) = this (1, depth, size)
+    def add (other: Stat) = Stat(count+other.count, depthWeighted+other.depthWeighted, sizeWeighted+other.sizeWeighted)
     def add (l: List[Tree], depth: Int, size: Int): Stat =
       Stat(1 + count, depth + depthWeighted, size + sizeWeighted)
   }
@@ -122,18 +128,21 @@ object TreeForm {
     val counts = new mutable.HashMap[TermSymbol, Stat] {}
     asTree.iterDepth({case (depth, Tree(sym, l)) =>
       counts.find({case (sym2, _) => sym.equals(sym2)}) match {
-        case None => counts.+((sym, new Stat(l, depthFactor(depth), sizeFactor(Tree(sym,l).size))))
-        case Some((_, stat)) => counts.+((sym, stat.add(l, depthFactor(depth), sizeFactor(Tree(sym,l).size))))
+        case None => counts.put(sym, new Stat(l, depthFactor(depth), sizeFactor(Tree(sym,l).size)))
+        case Some((_, stat)) => counts.put(sym, stat.add(l, depthFactor(depth), sizeFactor(Tree(sym,l).size)))
       }
       sym match {
         case Operator(name, Some(_)) =>
-          counts.find({case (Operator(name2, None), _) => name == name2}) match {
-            case Some((_, stat)) => counts.+((Operator(name, None), stat.add(l, depthFactor(depth), sizeFactor(Tree(sym,l).size))))
-            case None => counts.+((Operator(name, None), new Stat (l, depthFactor(depth), sizeFactor(Tree(sym,l).size))))
+          counts.find({case (Operator(name2, None), _) => name == name2 case _ => false}) match {
+            case Some((_, stat)) => counts.put(Operator(name, None), stat.add(l, depthFactor(depth), sizeFactor(Tree(sym,l).size)))
+            case None => counts.put(Operator(name, None), new Stat (l, depthFactor(depth), sizeFactor(Tree(sym,l).size)))
           }
         case _ => ()
       }
     })
+
+    def combine: Stat =
+      counts.foldLeft(Stat(0, 0, 0))({case (acc, (_key, stat)) => acc.add(stat)})
   }
 
   class StatOrdering (ord: Ordering[Stats]) extends Ordering[Term]{
@@ -174,24 +183,12 @@ object TreeForm {
   }
 
   /** Generalization of Knuth-Bendix ordering that allows arbitrary comparisons on the Stat's computed for the terms
-    * and tweaking the depth/size stats by replacing each depth with depthFactor(depth) and each size with sizeFactor(size) */
+    * and tweaking the depth/size  by replacing each depth with depthFactor(depth) and each size with sizeFactor(size) */
   class GenericKBOrdering (weighting: List[(TermSymbol, Int)], depthFactor: Int => Int, sizeFactor: Int => Int, cmpStat: Ordering[Stat])
     extends Ordering[Term]{
     def compare (x: Term, y: Term): Int = {
       val (xStats, yStats) = (new Stats(x, depthFactor, sizeFactor), new Stats(y, depthFactor, sizeFactor))
-      weighting.foldLeft(0)({ case (cmp, (sym, weight)) =>
-        if (cmp != 0) cmp
-        else {
-          def compareOpt(x: Option[Stat], y: Option[Stat]): Int =
-            (x, y) match {
-              case (None, None) => 0
-              case (Some(_), None) => 1
-              case (None, Some(_)) => -1
-              case (Some(stat1), Some(stat2)) => cmpStat.compare(stat1, stat2)
-            }
-          compareOpt(xStats.counts.get(sym), yStats.counts.get(sym))
-        }
-      })
+      cmpStat.compare(xStats.combine, yStats.combine)
     }
   }
 
