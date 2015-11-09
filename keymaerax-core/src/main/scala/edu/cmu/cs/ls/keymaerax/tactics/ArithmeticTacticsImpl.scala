@@ -744,53 +744,26 @@ object ArithmeticTacticsImpl {
   }
 
   def AbsT: PositionTactic = new PositionTactic("Abs") {
-    override def applies(s: Sequent, pos: Position): Boolean = getTerm(s, pos) match {
-      case FuncOf(Function("abs", None, Real, Real), f) => true
+    override def applies(s: Sequent, pos: Position): Boolean = s(pos.topLevel).sub(pos.inExpr) match {
+      case Some(FuncOf(Function("abs", None, Real, Real), _)) => true
       case _ => false
     }
 
     override def apply(pos: Position): Tactic = new ConstructionTactic("Abs") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTerm(node.sequent, pos) match {
-        case abs@FuncOf(Function("abs", None, Real, Real), f) =>
-          val freshAbsIdx = TacticLibrary.TacticHelper.freshIndexInSequent("abs", node.sequent)
-          val absVar = Variable("abs", freshAbsIdx)
-          Some(cutT(Some(Exists(absVar :: Nil, Equal(abs, absVar)))) & onBranch(
-            (cutShowLbl, lastSucc(cohideT) & AbsAxiomT(SuccPosition(0).first) & TacticLibrary.arithmeticT),
-            (cutUseLbl, lastAnte(FOQuantifierTacticsImpl.skolemizeT) &
-              lastAnte(EqualityRewritingImpl.eqLeft(exhaustive=true)) &
-              //@todo may find wrong equality, if abs(x) = ... is already present in antecedent
-              locateAnte(AbsAxiomT, { case Equal(a, _) if a == abs => true case _ => false }))
-          ))
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos.topLevel).sub(pos.inExpr) match {
+        case Some(abs@FuncOf(Function(fn, None, Real, Real), _)) if fn == "abs" =>
+          val freshAbsIdx = TacticLibrary.TacticHelper.freshIndexInSequent(fn, node.sequent)
+          val absVar = Variable(fn, freshAbsIdx)
+
+          Some(EqualityRewritingImpl.abbrv(abs, Some(absVar))
+            & locateAnte(TactixLibrary.useAt("= commute"), _ == Equal(absVar, abs))
+            & locateAnte(TactixLibrary.useAt(fn), _ == Equal(abs, absVar))
+          )
         case _ => throw new IllegalStateException("Impossible by applies")
       }
     }
-  }
-
-  /**
-   * Expands absolute value function as a disjunction.
-   * Axiom abs: (abs(f()) = g())  <->  ((f()>=0 & g()=f()) | (f()<=0 & g()=-f()))
-   * @return The tactic to replace lhs of axiom abs with rhs.
-   */
-  def AbsAxiomT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      case Equal(FuncOf(Function("abs", None, Real, Real), f), g) =>
-        Equiv(fml, Or(And(GreaterEqual(f, Number(0)), Equal(g, f)), And(Less(f, Number(0)), Equal(g, Neg(f)))))
-      case _ => False
-    }
-    uncoverAxiomT("abs", axiomInstance, _ => AbsAxiomBaseT)
-  }
-  /** Base tactic for abs */
-  private def AbsAxiomBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Equal(FuncOf(Function("abs", _, _, _), f), g), _) =>
-        val aS = FuncOf(Function("s", None, Unit, Real), Nothing)
-        val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
-        SubstitutionPair(aS, f) :: SubstitutionPair(aT, g) :: Nil
-      case _ => throw new IllegalStateException("Impossible by axiomInstance of AbsT")
-    }
-    axiomLookupBaseT("abs", subst, _ => NilPT, (f, ax) => ax)
   }
 
   def MinMaxT: PositionTactic = new PositionTactic("MinMax") {
