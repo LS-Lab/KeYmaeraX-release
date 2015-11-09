@@ -209,6 +209,7 @@ object DerivedAxioms {
     case "= commute" => Some(equalCommuteF, equalCommuteT)
     case "<=" => Some(lessEqualF, lessEqualT)
     case "= negate" => Some(notNotEqualF, notNotEqualT)
+    case "!= negate" => Some(notEqualF, notEqualT)
     case "! !=" => derivedAxiomInfo("= negate")
     case "! =" => Some(notEqualF, notEqualT)
     case "! <" => Some(notLessF, notLessT)
@@ -314,6 +315,7 @@ object DerivedAxioms {
       , "= commute" -> Some(equalCommuteF, equalCommuteT)
       , "<=" -> Some(lessEqualF, lessEqualT)
       , "= negate" -> Some(notNotEqualF, notNotEqualT)
+      , "!= negate" -> Some(notEqualF, notEqualT)
 //      , "! !=" -> derivedAxiomInfo("= negate")
 //      , "! =" -> Some(notEqualF, notEqualT)
       , "! <" -> Some(notLessF, notLessT)
@@ -1790,7 +1792,7 @@ object DerivedAxioms {
    * }}}
    */
   lazy val notEqualF = "(!(f() = g())) <-> (f() != g())".asFormula
-  lazy val notEqual = derivedAxiom("= negate",
+  lazy val notEqual = derivedAxiom("!= negate",
     Sequent(Nil, IndexedSeq(), IndexedSeq(notEqualF)),
     QE
   )
