@@ -23,11 +23,16 @@ abstract class BelleExpr {
 
 abstract case class BuiltInTactic(name: String) extends BelleExpr {
   private[bellerophon] def result(provable : Provable) : Provable
+  override def toString = name
 }
+
+/** ⎵: Placeholder for tactics. Reserved tactic expression */
+object BelleDot extends BelleExpr { override def toString = ">>_<<" }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Positional tactics
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /** Generalizes the built in position tactics (normal, left, right) */
 trait PositionalTactic extends BelleExpr {
   /** @note this should be called from within interpreters, but not by end-users */
@@ -100,14 +105,15 @@ abstract case class InputTactic[T](input: T) extends BelleExpr {
   def computeExpr(): BelleExpr
 }
 
-case class PartialTactic(child: BelleExpr) extends BelleExpr
+/** A partial tactic is allowed to leave its subgoals around as unproved */
+case class PartialTactic(child: BelleExpr) extends BelleExpr { override def toString = "partial(" + child + ")" }
 
-case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
-case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr
+case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def toString = "(" + left + "&" + right + ")" }
+case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def toString = "(" + left + "|" + right + ")" }
 //case class ExactIterTactic(child: BelleExpr, count: Int) extends BelleExpr
-case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends BelleExpr
-case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType) extends BelleExpr
-case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr
+case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends BelleExpr { override def toString = "(" + child + ")*" }
+case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType) extends BelleExpr { override def toString = "(" + child + ")*" + times }
+case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def toString = "<(" + children.mkString(",") + ")" }
 //case class OptionalTactic(child: BelleExpr) extends BelleExpr
 case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr
 
@@ -116,11 +122,18 @@ case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]
   */
 case class DoAll(e: BelleExpr) extends BelleExpr
 
+
+
+
 /**
  * Bellerophon expressions that are values.
  */
-abstract trait BelleValue
-case class BelleProvable(p : Provable) extends BelleExpr with BelleValue
+abstract trait BelleValue {
+  def prettyString: String = toString
+}
+case class BelleProvable(p : Provable) extends BelleExpr with BelleValue {
+  override def toString: String = p.prettyString
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Bellerophon Types
@@ -137,8 +150,20 @@ case class SequentType(s : Sequent) extends BelleType
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //@todo extend some ProverException and use the inherited inContext functionality throughout the interpreter.
-case class BelleError(message: String)
-  extends Exception(s"[Bellerophon Runtime] $message")
+class BelleError(message: String)
+  extends ProverException(s"[Bellerophon Runtime] $message") {
+  /* @note mutable state for gathering the logical context that led to this exception */
+  private var tacticContext: BelleExpr = BelleDot  //@todo BelleUnknown?
+  def context: BelleExpr = tacticContext
+  def inContext(context: BelleExpr): BelleError = {
+    this.tacticContext = context
+    this
+  }
+  override def toString: String = super.toString + "\nin " + tacticContext
+}
+object BelleError {
+  def apply(message: String) = new BelleError(message)
+}
 
 case class BelleUserGeneratedError(message: String)
   extends Exception(s"[Bellerophon User-Generated Message] $message")

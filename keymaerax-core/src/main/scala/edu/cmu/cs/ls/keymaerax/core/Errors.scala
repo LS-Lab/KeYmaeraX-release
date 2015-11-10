@@ -12,19 +12,21 @@ package edu.cmu.cs.ls.keymaerax.core
 /**
  * KeYmaera X Prover Exceptions.
  */
-class ProverException(msg: String) extends RuntimeException(msg) {
+class ProverException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause) {
 
   /* @note mutable state for gathering the logical context that led to this exception */
   private var logicalContext: String = ""
 
   /**
-   * The logical context, i.e. stack of proof rules or nested logical context information
+   * Returns the logical context, i.e. stack of proof rules or nested logical context information
    * describing in which context this exception occurred.
    */
   def getContext = logicalContext
 
   /**
    * Add the context information to this exception, returning the resulting exception to be thrown.
+   * @param context textual description of the context within which this prover exception occurred.
+   * @param additionalMessage optional additional information about the situation in which this prover exception occurred, e.g., the state of affairs.
    */
   def inContext(context: String, additionalMessage : String = ""): ProverException = {
     this.logicalContext  = this.logicalContext + "\nin " + context
