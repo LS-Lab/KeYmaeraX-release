@@ -90,7 +90,7 @@ trait UnifyUSCalculus {
   def by(fact: Provable)  : BuiltInTactic = new BuiltInTactic("by") {
     override def result(provable: Provable): Provable = {
       require(provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion, "Conclusion of fact " + fact + " must match sole open goal in " + provable)
-      if (provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion) fact
+      if (provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion) provable.apply(fact, 0)
       else throw new BelleError("Conclusion of fact " + fact + " does not match sole open goal of " + provable)
     }
   }//new ByProvable(provable)
@@ -218,12 +218,12 @@ trait UnifyUSCalculus {
         lazy val expectEquiv = if (p.isSucc) Equiv(C(subst(other)), C(subst(keyPart))) else Equiv(C(subst(keyPart)), C(subst(other)))
         //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
         //@todo simplify substantially if subst=id
-        debug("start useAt " + p) & ProofRuleTactics.cut(C(subst(other))) & debug("  cutted right") <(
-          //(BranchLabels.cutUseLbl, debugT("  useAt result")),
+        debug("start useAt " + p) & cutLR(C(subst(other)))(p.top) <(
           //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
           //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
+          /* use cut */ debug("    use cut") & ident partial,
           /* show cut */
-            debug("    show use") &
+            debug("    show cut") &
             coHideR/*(expect)*/(cutPos) & assert(0, 1) & debug("    cohidden") &
             //@todo SuccPosition(0) should be SuccPosition(previous length) if cutting left?
             assert(expect, "useAt show implication")(SuccPos(0)) &
@@ -233,8 +233,8 @@ trait UnifyUSCalculus {
             if (other.kind==FormulaKind) CE(p.inExpr)
             else if (other.kind==TermKind) CQ(p.inExpr)
             else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-            debug("    using fact tactic") & factTactic & debug("  done fact tactic"),
-          /* use cut */ ident
+            debug("    using fact tactic") & factTactic & debug("  done fact tactic")
+
         ) & debug("end   useAt " + p)
       }
 
@@ -265,21 +265,21 @@ trait UnifyUSCalculus {
 
         //@todo not sure if the following two cases really work as intended, but they seem to
         case Imply(other, DotFormula) if p.isSucc && p.isTopLevel =>
-          cutR(subst(other)) <(
-            /* use */ ident,
+          cutR(subst(other))(p) <(
+            /* use */ partial,
             /* show */ coHideR(p) & factTactic
           )
 
         case Imply(DotFormula, other) if p.isAnte && p.isTopLevel =>
-          cutL(subst(other)) <(
-            /* use */ ident,
+          cutL(subst(other))(p) <(
+            /* use */ partial,
             /* show */ lastR(coHideR) & factTactic
           )
 
         case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel) =>
           val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
-          cutLR(C(subst(other))) <(
-            /* use */ ident,
+          cutLR(C(subst(other)))(p.top) <(
+            /* use */ partial,
             /* show */ coHideR(cutPos) & implyR(SuccPos(0)) &
               propCMon(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
               // gather back to a single implication for axiom-based factTactic to succeed
@@ -291,8 +291,8 @@ trait UnifyUSCalculus {
           println("Check this useAt case")
           // same as "case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel)"
           val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
-          cutLR(C(subst(other))) <(
-            /* use */ ident,
+          cutLR(C(subst(other)))(p.top) <(
+            /* use */ partial,
             /* show */ coHideR(cutPos) & implyR(SuccPos(0)) &
               propCMon(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
               // gather back to a single implication for axiom-based factTactic to succeed
@@ -305,7 +305,7 @@ trait UnifyUSCalculus {
           //@todo could do: if prereq provable by master then use remainder directly. Otherwise use CMon to show C{prereq} implies ....
           //@todo only prove remainder absolutely by proving prereq if that proof works out. Otherwise preserve context to prove prereq by master.
           //@todo check positioning etc.
-          useAt(subst, new Context(remainder), k, p, C, c, cutR(subst(prereq)) <(
+          useAt(subst, new Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(0)) <(
             //@note the roles of cutUseLbl and cutShowLbl are really swapped here, since the implication on cutShowLbl will be handled by factTactic
             //@todo don't work on prereq? Or make it customizable?
             /* use */ /* prove prereq: */ /*@todo: TactixLibrary.master*/ ???,
@@ -484,12 +484,9 @@ trait UnifyUSCalculus {
           require(sequent.sub(pos).contains(key), "In-applicable CE(" + fact + ")\nat " + pos + "\nwhich is " + sequent.sub(pos) + "\nat " + sequent)
           val (ctx, _) = sequent.at(pos)
           val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
-          cutLR(ctx(other)) <(
+          cutLR(ctx(other))(pos.top) <(
             /* use */ ident,
-            /* show */ coHideR(cutPos) &
-            equivify & /*commuteEquivR(SuccPosition(0)) &*/
-            tactic(pos.inExpr) &
-            by(fact)
+            /* show */ debug("Foo") & coHideR(cutPos) & debug("Bar") & equivify & debug("Zee") & tactic(pos.inExpr) & debug("WTF?") & by(fact) & debug("Done")
             )
       }
     }
@@ -528,8 +525,8 @@ trait UnifyUSCalculus {
           val (posctx,c) = sequent.at(pos)
           val ctx = posctx(C)
           val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
-          cutLR(ctx(other)) <(
-            /* use */ ident,
+          cutLR(ctx(other))(pos.top) <(
+            /* use */ ident partial,
             /* show */ coHideR(cutPos) & //assertT(0,1) &
             equivify & /*commuteEquivR(SuccPosition(0)) &*/
             by(tactic(C)(fact))
@@ -560,7 +557,7 @@ trait UnifyUSCalculus {
           val sequent = provable.subgoals.head
           require(sequent.sub(pos).isDefined, "Position " + pos + " not defined in sequent " + sequent)
           val (ctx, _) = sequent.at(pos)
-          cutLR(ctx(repl))
+          cutLR(ctx(repl))(pos.top)
       }
     }
   }
