@@ -26,27 +26,27 @@ object ProofRuleTactics {
     }
   }
 
-  def cutL(f: Formula) = new InputTactic[Formula](f) {
-    override def computeExpr() = new BuiltInLeftTactic("CutL") {
-      override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
+  def cutL(f: Formula)(pos: AntePos) = new InputTactic[Formula](f) {
+    override def computeExpr() = new BuiltInTactic("CutL") {
+      override def result(provable: Provable): Provable = {
         requireOneSubgoal(provable)
         provable(core.CutLeft(f, pos), 0)
       }
     }
   }
 
-  def cutR(f: Formula) = new InputTactic[Formula](f) {
-    override def computeExpr() = new BuiltInRightTactic("CutR") {
-      override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
+  def cutR(f: Formula)(pos: SuccPos) = new InputTactic[Formula](f) {
+    override def computeExpr() = new BuiltInTactic("CutR") {
+      override def result(provable: Provable): Provable = {
         requireOneSubgoal(provable)
         provable(core.CutRight(f, pos), 0)
       }
     }
   }
 
-  def cutLR(f: Formula) = new InputTactic[Formula](f) {
-    override def computeExpr() = new BuiltInPositionTactic("CutLR") {
-      override def computeResult(provable: Provable, pos: Position): Provable = {
+  def cutLR(f: Formula)(pos: Position) = new InputTactic[Formula](f) {
+    override def computeExpr() = new BuiltInTactic("CutLR") {
+      override def result(provable: Provable): Provable = {
         requireOneSubgoal(provable)
         if (pos.isAnte) provable(core.CutLeft(f, pos), 0)
         else provable(core.CutRight(f, pos), 0)
