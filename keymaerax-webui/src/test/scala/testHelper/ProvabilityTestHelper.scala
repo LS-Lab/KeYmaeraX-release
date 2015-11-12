@@ -27,6 +27,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * @author Andre Platzer
  * @author Ran Ji
  */
+object ProvabilityTestHelper {
+  var config = DefaultConfiguration.defaultMathematicaConfig
+}
 class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
 
   val superScrutiny = false
@@ -264,12 +267,12 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
     }
   }
 
+  def mathematicaConfig(cfg: Map[String, String]) = { ProvabilityTestHelper.config = cfg }
   def mathematicaConfig: Map[String, String] = {
-    val defaultCfg = DefaultConfiguration.defaultMathematicaConfig
-    if (defaultCfg.contains("linkName") && defaultCfg.contains("libDir")) defaultCfg
-    else throw new Exception("Mathematica not installed at one of the default locations")
+    val cfg = ProvabilityTestHelper.config
+    if (cfg.contains("linkName") && cfg.contains("libDir")) cfg
+    else throw new Exception("Mathematica not installed at one the configured location")
   }
-
 
   /**
    *
