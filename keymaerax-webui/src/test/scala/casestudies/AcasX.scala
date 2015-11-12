@@ -20,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT,sko
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT, arithmeticT, ImplyRightT, AndLeftT, hideT, AndRightT,
   ImplyLeftT, AxiomCloseT, OrRightT, OrLeftT, cutT, locate, NotRightT, NotLeftT}
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.{AbsAxiomT,AbsT,MinMaxAxiomT,MinMaxT,EqualReflexiveT}
+import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl.{AbsT,MinMaxT,EqualReflexiveT}
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.{abbrv,eqLeft}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ApplyRule, Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{Propositional,NonBranchingPropositionalT,cohideT}
@@ -2092,6 +2092,412 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val safeTheorem = helper.runTactic(safeTac, new RootNode(safeSeq))
     safeTheorem shouldBe 'closed
+  }
+
+  "ACAS X safe implicit-explicit equivalence" should "be provable" in {
+    //val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay_equivalence.key"))
+    val s = new Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(
+      KeYmaeraXProblemParser(io.Source.fromInputStream(
+        getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay_equivalence.key")).mkString)))
+
+    def dT(s : String) = debugT(s)
+
+    val crushw = la(orL, "w=-1|w=1") && (QE, QE)
+    // Q: Stefan, why did you change this from w() ?
+
+    val crushor = (la(orL)*) & QE
+
+    val absmax = abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxA"))) &
+      la(MinMaxT, "", Some("max(0,w*(dhf-dhd))".asTerm)) &
+      ls(AbsT, "", Some("abs(r)".asTerm)) &
+      ls(AbsT, "", Some("abs(h)".asTerm)) &
+      la(AbsT, "", Some("abs(r-0)".asTerm))
+
+    val absmax2 = ls(AbsT, "", Some("abs(r_3-ro_0)".asTerm)) &
+      abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) &
+      la(MinMaxT, "", Some("max((0,w*(dhf-dhd)))".asTerm)) &
+      abbrv("max((0,w*(dhf-dhd_3)))".asTerm, Some(Variable("maxF"))) &
+      la(MinMaxT, "", Some("max((0,w*(dhf-dhd_3)))".asTerm))
+
+    def cutEZ(c:Formula, t:Tactic) = cut(c) & onBranch(
+      (cutShowLbl, t | dT("Cut didn't close") & Tactics.stopT)
+    )
+
+    val crushabsmax = absmax & crushor
+
+    val tactic = ls(implyR) & ls(equivR) & onBranch(
+      (equivLeftLbl, dT("->") &
+        cut("w*dhf>=0 | w*dhf<0".asFormula) &
+        onBranch(
+          (cutShowLbl, ls(cohide,"w*dhf>=0 | w*dhf<0") & QE),
+          (cutUseLbl, la(orL, "w*dhf>=0 | w*dhf<0") &&
+            ( dT("w*dhf>=0") &
+              la(andL, "(w*dhf>=0->(-rp<=r&r < -rp-rv*min((0,w*dhd))/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp-rv*min((0,w*dhd))/a<=r&r<=rp-rv*min((0,w*dhd))/a->w*h < (-min((0,w*dhd))^2)/(2*a)-hp)&(rp-rv*min((0,w*dhd))/a < r&r<=rp+rv*max((0,w*(dhf-dhd)))/a->w*rv^2*h < a/2*(r-rp)^2+w*rv*dhd*(r-rp)-rv^2*hp)&(rp+rv*max((0,w*(dhf-dhd)))/a < r->rv=0|w*rv*h < w*dhf*(r-rp)-rv*max((0,w*(dhf-dhd)))^2/(2*a)-rv*hp))&(w*dhf < 0->(-rp<=r&r < -rp+rv*max((0,w*(dhf-dhd)))/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp+rv*max((0,w*(dhf-dhd)))/a<=r->rv=0&r>rp|w*rv*h < w*dhf*(r+rp)-rv*max((0,w*(dhf-dhd)))^2/(2*a)-rv*hp))") &
+              la(hide, "w*dhf < 0->(-rp<=r&r < -rp+rv*max((0,w*(dhf-dhd)))/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp+rv*max((0,w*(dhf-dhd)))/a<=r->rv=0&r>rp|w*rv*h < w*dhf*(r+rp)-rv*max((0,w*(dhf-dhd)))^2/(2*a)-rv*hp)") &
+              la(implyL, "w*dhf>=0->(-rp<=r&r < -rp-rv*min((0,w*dhd))/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp-rv*min((0,w*dhd))/a<=r&r<=rp-rv*min((0,w*dhd))/a->w*h < (-min((0,w*dhd))^2)/(2*a)-hp)&(rp-rv*min((0,w*dhd))/a < r&r<=rp+rv*max((0,w*(dhf-dhd)))/a->w*rv^2*h < a/2*(r-rp)^2+w*rv*dhd*(r-rp)-rv^2*hp)&(rp+rv*max((0,w*(dhf-dhd)))/a < r->rv=0|w*rv*h < w*dhf*(r-rp)-rv*max((0,w*(dhf-dhd)))^2/(2*a)-rv*hp)") &&
+              (
+                ls(hide,"\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp)") & closeId,
+                (ls(skolemizeT)*) &
+                  cut("((r< -rp) | (-rp<=r & r < -rp-rv*min((0,w*dhd))/a) | (-rp-rv*min((0,w*dhd))/a<=r & r<=rp-rv*min((0,w*dhd))/a) | (rp-rv*min((0,w*dhd))/a < r & r<=rp+rv*max((0,w*(dhf-dhd)))/a) | (rp+rv*max((0,w*(dhf-dhd)))/a < r))".asFormula)
+                  & onBranch(
+                  (cutShowLbl, /*ls(cohide,"((r< -rp) | (-rp<=r & r < -rp-rv*min((0,w*dhd))/a) | (-rp-rv*min((0,w*dhd))/a<=r & r<=rp-rv*min((0,w*dhd))/a) | (rp-rv*min((0,w*dhd))/a < r & r<=rp+rv*max((0,w*(dhf-dhd)))/a) | (rp+rv*max((0,w*(dhf-dhd)))/a < r))") &*/ QE),
+                  (cutUseLbl,
+                    abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxA"))) &
+                      abbrv("min((0,w*dhd))".asTerm, Some(Variable("minA"))) &
+                      la(MinMaxT, "", Some("max(0,w*(dhf-dhd))".asTerm)) &
+                      la(MinMaxT, "", Some("min(0,w*dhd)".asTerm)) &
+                      ls(AbsT, "", Some("abs(r-ro)".asTerm)) &
+                      la(orL, "r < -rp|-rp<=r&r < -rp-rv*minA/a|-rp-rv*minA/a<=r&r<=rp-rv*minA/a|rp-rv*minA/a < r&r<=rp+rv*maxA/a|rp+rv*maxA/a < r") &&
+                      (dT("r<-rp") & la(hide,"((-rp<=r&r < -rp-rv*minA/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp-rv*minA/a<=r&r<=rp-rv*minA/a->w*h < (-minA^2)/(2*a)-hp)&(rp-rv*minA/a < r&r<=rp+rv*maxA/a->w*rv^2*h < a/2*(r-rp)^2+w*rv*dhd*(r-rp)-rv^2*hp)&(rp+rv*maxA/a < r->rv=0|w*rv*h < w*dhf*(r-rp)-rv*maxA^2/(2*a)-rv*hp))") & QE,
+                        la(andL, "(-rp<=r&r < -rp-rv*minA/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp-rv*minA/a<=r&r<=rp-rv*minA/a->w*h < (-minA^2)/(2*a)-hp)&(rp-rv*minA/a < r&r<=rp+rv*maxA/a->w*rv^2*h < a/2*(r-rp)^2+w*rv*dhd*(r-rp)-rv^2*hp)&(rp+rv*maxA/a < r->rv=0|w*rv*h < w*dhf*(r-rp)-rv*maxA^2/(2*a)-rv*hp)") &
+                          la(orL, "-rp<=r&r < -rp-rv*minA/a|-rp-rv*minA/a<=r&r<=rp-rv*minA/a|rp-rv*minA/a < r&r<=rp+rv*maxA/a|rp+rv*maxA/a < r") &&
+                          (dT("-> 1:(-rp<=r & r < -rp-rv*minA/a)") &
+                            la(hide, "(-rp-rv*minA/a<=r&r<=rp-rv*minA/a->w*h < (-minA^2)/(2*a)-hp)&(rp-rv*minA/a < r&r<=rp+rv*maxA/a->w*rv^2*h < a/2*(r-rp)^2+w*rv*dhd*(r-rp)-rv^2*hp)&(rp+rv*maxA/a < r->rv=0|w*rv*h < w*dhf*(r-rp)-rv*maxA^2/(2*a)-rv*hp)") &
+                            //**
+                            la(implyL, "-rp<=r&r < -rp-rv*minA/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp") &&
+                            (
+                              ls(hide,"0<=t&t < maxA/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxA/a&ro=rv*t&ho=dhf*t-w*maxA^2/(2*a)->abs_0>rp|w*h < w*ho-hp") & closeId
+                              ,
+                              ls(implyR) & ls(orR) &
+                                cut("t<= (r+rp)/rv | t > (r+rp)/rv".asFormula) & onBranch(
+                                (cutShowLbl, /*ls(cohide, "t<=(r+rp)/rv|t>(r+rp)/rv") &*/ QE),
+                                (cutUseLbl, la(orL, "t<=(r+rp)/rv|t>(r+rp)/rv") &&
+                                  (//dT("t<= (r+rp)/rv") &
+                                    ls(hide, "abs_0>rp") &
+                                      la(orL, "0<=t&t < maxA/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxA/a&ro=rv*t&ho=dhf*t-w*maxA^2/(2*a)") &
+                                      (la(andL)*) & QE
+                                    ,
+                                    //dT("t > (r+rp)/rv") &
+                                    ls(hide, "w*h < w*ho-hp")  & la(orL, "0<=t&t < maxA/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxA/a&ro=rv*t&ho=dhf*t-w*maxA^2/(2*a)") &
+                                      (la(andL)*) & QE
+                                    )
+                                  ))
+                              )
+                            ,
+                            la(hide, "(-rp<=r&r < -rp-rv*minA/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)") &
+                              la(andL, "(-rp-rv*minA/a<=r&r<=rp-rv*minA/a->w*h < (-minA^2)/(2*a)-hp)&(rp-rv*minA/a < r&r<=rp+rv*maxA/a->w*rv^2*h < a/2*(r-rp)^2+w*rv*dhd*(r-rp)-rv^2*hp)&(rp+rv*maxA/a < r->rv=0|w*rv*h < w*dhf*(r-rp)-rv*maxA^2/(2*a)-rv*hp)") &
+                              la(orL, "-rp-rv*minA/a<=r&r<=rp-rv*minA/a|rp-rv*minA/a < r&r<=rp+rv*maxA/a|rp+rv*maxA/a < r") &&
+                              (dT("-> 2: -rp-rv*minA/a<=r&r<=rp-rv*minA/a") &
+                                la(hide, "(rp-rv*minA/a < r&r<=rp+rv*maxA/a->w*rv^2*h < a/2*(r-rp)^2+w*rv*dhd*(r-rp)-rv^2*hp)&(rp+rv*maxA/a < r->rv=0|w*rv*h < w*dhf*(r-rp)-rv*maxA^2/(2*a)-rv*hp)") &
+                                la(implyL, "(-rp-rv*minA/a<=r&r<=rp-rv*minA/a->w*h < (-minA^2)/(2*a)-hp)") &&
+                                (
+                                  ls(hide,"0<=t&t < maxA/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxA/a&ro=rv*t&ho=dhf*t-w*maxA^2/(2*a)->abs_0>rp|w*h < w*ho-hp") & closeId
+                                  ,
+                                  ls(implyR) & ls(orR) & ls(hide, "abs_0>rp") & QE
+                                  )
+                                ,
+                                la(hide, "-rp-rv*minA/a<=r&r<=rp-rv*minA/a->w*h < (-minA^2)/(2*a)-hp") &
+                                  la(andL, "(rp-rv*minA/a < r&r<=rp+rv*maxA/a->w*rv^2*h < a/2*(r-rp)^2+w*rv*dhd*(r-rp)-rv^2*hp)&(rp+rv*maxA/a < r->rv=0|w*rv*h < w*dhf*(r-rp)-rv*maxA^2/(2*a)-rv*hp)") &
+                                  la(orL, "rp-rv*minA/a < r&r<=rp+rv*maxA/a|rp+rv*maxA/a < r") &&
+                                  (dT("-> 3: rv*minA/a<=r&r<=rp-rv*minA/") &
+                                    la(hide, "rp+rv*maxA/a < r->rv=0|w*rv*h < w*dhf*(r-rp)-rv*maxA^2/(2*a)-rv*hp") &
+                                    la(implyL, "rp-rv*minA/a < r&r<=rp+rv*maxA/a->w*rv^2*h < a/2*(r-rp)^2+w*rv*dhd*(r-rp)-rv^2*hp") &&
+                                    (closeId,
+                                      ls(implyR) & cut("t<= (r-rp)/rv | t > (r-rp)/rv".asFormula) & onBranch(
+                                        (cutShowLbl, /*ls(cohide, "t<=(r-rp)/rv|t>(r-rp)/rv") &*/ QE),
+                                        (cutUseLbl, la(orL, "t<=(r-rp)/rv|t>(r-rp)/rv") &&
+                                          (//dT("t<=(r-rp)/rv") &
+                                            //ls(orR) & ls(hide, "w*h < w*ho-hp") &
+                                            la(orL, "0<=t&t < maxA/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxA/a&ro=rv*t&ho=dhf*t-w*maxA^2/(2*a)") &&
+                                              (QE, QE)
+                                            ,
+                                            //dT("t>(r-rp)/rv") &
+                                            //ls(orR) & ls(hide, "abs_0>rp") &
+                                            la(orL, "0<=t&t < maxA/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxA/a&ro=rv*t&ho=dhf*t-w*maxA^2/(2*a)") &&
+                                              (QE, QE)
+                                            ))))
+                                    ,
+                                    dT("-> 4") &
+                                      la(implyL, "rp+rv*maxA/a < r->rv=0|w*rv*h < w*dhf*(r-rp)-rv*maxA^2/(2*a)-rv*hp") &&
+                                      (closeId,
+                                        ls(implyR) & cut("t<= (r-rp)/rv | t > (r-rp)/rv".asFormula) & onBranch(
+                                          (cutShowLbl, /*ls(cohide, "t<=(r-rp)/rv|t>(r-rp)/rv") &*/ QE),
+                                          (cutUseLbl, la(orL, "t<=(r-rp)/rv|t>(r-rp)/rv") &&
+                                            (// dT("t<=(r-rp)/rv") &
+                                              //    ls(orR) & ls(hide, "w*h < w*ho-hp") & // clean up
+                                              la(orL, "0<=t&t < maxA/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxA/a&ro=rv*t&ho=dhf*t-w*maxA^2/(2*a)") &&
+                                                (QE, QE),
+                                              // dT("t>(r-rp)/rv") &
+                                              //    ls(orR) & ls(hide, "abs_0>rp") & // clean up
+                                              la(orL, "0<=t&t < maxA/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxA/a&ro=rv*t&ho=dhf*t-w*maxA^2/(2*a)") &&
+                                                (QE, QE))))
+                                        )
+                                    )
+                                )
+                            ))
+                    )))
+              ,
+              dT("w*dhf<0") &
+                (la(andL)*) & dT("2nd mark") &
+                //	 (ls(allR)*) &
+                (ls(skolemizeT)*) &
+                //         dT("skolemized..") &
+                la(hide, "w*dhf>=0->(-rp<=r&r < -rp-rv*min((0,w*dhd))/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp-rv*min((0,w*dhd))/a<=r&r<=rp-rv*min((0,w*dhd))/a->w*h < (-min((0,w*dhd))^2)/(2*a)-hp)&(rp-rv*min((0,w*dhd))/a < r&r<=rp+rv*max((0,w*(dhf-dhd)))/a->w*rv^2*h < a/2*(r-rp)^2+w*rv*dhd*(r-rp)-rv^2*hp)&(rp+rv*max((0,w*(dhf-dhd)))/a < r->rv=0|w*rv*h < w*dhf*(r-rp)-rv*max((0,w*(dhf-dhd)))^2/(2*a)-rv*hp)") &
+                //	 dT("3rd mark") &
+                la(implyL, "w*dhf < 0->(-rp<=r&r < -rp+rv*max((0,w*(dhf-dhd)))/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp+rv*max((0,w*(dhf-dhd)))/a<=r->rv=0&r>rp|w*rv*h < w*dhf*(r+rp)-rv*max((0,w*(dhf-dhd)))^2/(2*a)-rv*hp)") &&
+                (closeId
+                  ,
+                  cut("(-rp>r)|(-rp<=r&r < -rp+rv*max((0,w*(dhf-dhd)))/a)|(-rp+rv*max((0,w*(dhf-dhd)))/a<=r)".asFormula) &
+                    onBranch(
+                      (cutShowLbl, QE)
+                      ,
+                      (cutUseLbl, la(orL, "(-rp>r)|(-rp<=r&r < -rp+rv*max((0,w*(dhf-dhd)))/a)|(-rp+rv*max((0,w*(dhf-dhd)))/a<=r)") &&
+                        (
+                          la(hide,"(-rp<=r&r < -rp+rv*max((0,w*(dhf-dhd)))/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp+rv*max((0,w*(dhf-dhd)))/a<=r->rv=0&r>rp|w*rv*h < w*dhf*(r+rp)-rv*max((0,w*(dhf-dhd)))^2/(2*a)-rv*hp)") & QE
+                          ,
+                          ls(implyR)  &
+                            abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxA"))) &
+                            la(MinMaxT, "", Some("max(0,w*(dhf-dhd))".asTerm)) &
+                            ls(AbsT, "", Some("abs(r-ro)".asTerm)) &
+                            la(andL, "(-rp<=r&r < -rp+rv*maxA/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)&(-rp+rv*maxA/a<=r->rv=0&r>rp|w*rv*h < w*dhf*(r+rp)-rv*maxA^2/(2*a)-rv*hp)") &
+                            la(orL, "-rp<=r&r < -rp+rv*maxA/a|-rp+rv*maxA/a<=r") &&
+                            (
+                              dT("-> 5") &
+                                la(implyL,"(-rp<=r&r < -rp+rv*maxA/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp)") &&
+                                (
+                                  closeId
+                                  ,
+                                  la(hide, "-rp+rv*maxA/a<=r->rv=0&r>rp|w*rv*h < w*dhf*(r+rp)-rv*maxA^2/(2*a)-rv*hp") &
+                                    ls(orR) &
+                                    la(orL, "0<=t&t < maxA/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxA/a&ro=rv*t&ho=dhf*t-w*maxA^2/(2*a)") &&
+                                    (QE, QE)
+                                  )
+                              ,
+                              dT("-> 6") &
+                                la(hide, "-rp<=r&r < -rp+rv*maxA/a->w*rv^2*h < a/2*(r+rp)^2+w*rv*dhd*(r+rp)-rv^2*hp") &
+                                la(implyL, "-rp+rv*maxA/a<=r->rv=0&r>rp|w*rv*h < w*dhf*(r+rp)-rv*maxA^2/(2*a)-rv*hp") &&
+                                (
+                                  closeId
+                                  ,
+                                  la(orL, "rv=0&r>rp|w*rv*h < w*dhf*(r+rp)-rv*maxA^2/(2*a)-rv*hp") &&(
+                                    dT("zerocase") &
+                                      la(orL, "0<=t&t < maxA/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxA/a&ro=rv*t&ho=dhf*t-w*maxA^2/(2*a)") & QE
+                                    ,
+                                    ls(orR) & cut("t<= (r+rp)/rv | t > (r+rp)/rv".asFormula) & onBranch(
+                                      (cutShowLbl, /*ls(cohide, "t<=(r+rp)/rv|t>(r+rp)/rv") &*/ QE),
+                                      (cutUseLbl, la(orL, "t<=(r+rp)/rv|t>(r+rp)/rv") &&
+                                        (
+                                          dT("t<= (r+rp)/rv") & ls(hide, "abs_0>rp") &
+                                            la(orL, "0<=t&t < maxA/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxA/a&ro=rv*t&ho=dhf*t-w*maxA^2/(2*a)") &
+                                            (la(andL)*) & QE
+                                          ,
+                                          dT("t > (r+rp)/rv") & ls(hide, "w*h < w*ho-hp")  &
+                                            la(orL, "0<=t&t < maxA/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxA/a&ro=rv*t&ho=dhf*t-w*maxA^2/(2*a)") &
+                                            (la(andL)*) & QE
+                                          ))))
+                                  )
+
+                              )
+                          )
+
+                        ))
+                  )
+              ))
+        ))
+      ,
+      (equivRightLbl, dT("<-") &
+        abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxA"))) &
+        la(MinMaxT, "", Some("max(0,w*(dhf-dhd))".asTerm)) &
+        ls(andR) &&
+        (
+          ls(implyR) & ls(andR) &&
+            (
+              dT("<- 1") & ls(MinMaxT, "", Some("min(0,w*dhd)".asTerm)) & ls(implyR) & (la(andL)*) &
+                cut("rv=0|rv>0".asFormula) & onBranch(
+                (cutShowLbl, QE),
+                (cutUseLbl,
+                  la(orL, "rv=0|rv>0") && (
+                    dT("<- 1:rv=0") &
+                      la(instantiateT(Variable("t"), "0".asTerm)) &
+                      la(instantiateT(Variable("ro"), "rv*0".asTerm)) &
+                      la(instantiateT(Variable("ho"), "w*a/2*0^2+dhd*0".asTerm)) &
+                      la(implyL, "0<=0&0 < maxA/a&rv*0=rv*0&w*a/2*0^2+dhd*0=w*a/2*0^2+dhd*0|0>=maxA/a&rv*0=rv*0&w*a/2*0^2+dhd*0=dhf*0-w*maxA^2/(2*a)->abs(r-rv*0)>rp|w*h < w*(w*a/2*0^2+dhd*0)-hp") &&
+                      (
+                        QE
+                        ,
+                        la(AbsT, "", Some("abs(r-rv*0)".asTerm)) & QE
+                        )
+                    ,
+                    dT("<- 1:rv>0") &
+                      la(instantiateT(Variable("t"), "(r+rp)/rv".asTerm)) &
+                      la(instantiateT(Variable("ro"), "rv*((r+rp)/rv)".asTerm)) &
+                      la(instantiateT(Variable("ho"), "w*a/2*((r+rp)/rv)^2+dhd*((r+rp)/rv)".asTerm)) &
+                      la(implyL, "0<=(r+rp)/rv&(r+rp)/rv < maxA/a&rv*((r+rp)/rv)=rv*((r+rp)/rv)&w*a/2*((r+rp)/rv)^2+dhd*((r+rp)/rv)=w*a/2*((r+rp)/rv)^2+dhd*((r+rp)/rv)|(r+rp)/rv>=maxA/a&rv*((r+rp)/rv)=rv*((r+rp)/rv)&w*a/2*((r+rp)/rv)^2+dhd*((r+rp)/rv)=dhf*((r+rp)/rv)-w*maxA^2/(2*a)->abs(r-rv*((r+rp)/rv))>rp|w*h < w*(w*a/2*((r+rp)/rv)^2+dhd*((r+rp)/rv))-hp") &&
+                      (
+                        QE
+                        ,
+                        la(AbsT, "", Some("abs(r-rv*((r+rp)/rv))".asTerm)) & QE
+                        ))))
+              ,
+              ls(andR) &&
+                (
+                  dT("<- 2") &
+                    abbrv("min((0,w*dhd))".asTerm, Some(Variable("minA"))) &
+                    la(MinMaxT, "", Some("min((0,w*dhd))".asTerm)) &
+                    ls(implyR) & (la(andL)*) &
+                    cut("rv=0|rv>0".asFormula) & onBranch(
+                    (cutShowLbl, QE),
+                    (cutUseLbl,
+                      la(orL, "rv=0|rv>0") && (
+                        dT("<- 2:rv=0") &
+                          la(instantiateT(Variable("t"), "-minA/a".asTerm)) &
+                          la(instantiateT(Variable("ro"), "rv*(-minA/a)".asTerm)) &
+                          la(instantiateT(Variable("ho"), "w*a/2*(-minA/a)^2+dhd*(-minA/a)".asTerm)) &
+                          la(implyL, "0<=-minA/a&-minA/a < maxA/a&rv*(-minA/a)=rv*(-minA/a)&w*a/2*(-minA/a)^2+dhd*(-minA/a)=w*a/2*(-minA/a)^2+dhd*(-minA/a)|-minA/a>=maxA/a&rv*(-minA/a)=rv*(-minA/a)&w*a/2*(-minA/a)^2+dhd*(-minA/a)=dhf*(-minA/a)-w*maxA^2/(2*a)->abs(r-rv*(-minA/a))>rp|w*h < w*(w*a/2*(-minA/a)^2+dhd*(-minA/a))-hp") &&
+                          (
+                            QE
+                            ,
+                            abbrv("r-rv*(-minA/a)".asTerm, Some(Variable("absA"))) &
+                              la(AbsT, "", Some("abs(absA)".asTerm)) & QE
+                            )
+                        ,
+                        dT("<- 2:rv>0") &
+                          la(instantiateT(Variable("t"), "-minA/a".asTerm)) &
+                          la(instantiateT(Variable("ro"), "rv*(-minA/a)".asTerm)) &
+                          la(instantiateT(Variable("ho"), "w*a/2*(-minA/a)^2+dhd*(-minA/a)".asTerm)) &
+                          la(implyL, "0<=-minA/a&-minA/a < maxA/a&rv*(-minA/a)=rv*(-minA/a)&w*a/2*(-minA/a)^2+dhd*(-minA/a)=w*a/2*(-minA/a)^2+dhd*(-minA/a)|-minA/a>=maxA/a&rv*(-minA/a)=rv*(-minA/a)&w*a/2*(-minA/a)^2+dhd*(-minA/a)=dhf*(-minA/a)-w*maxA^2/(2*a)->abs(r-rv*(-minA/a))>rp|w*h < w*(w*a/2*(-minA/a)^2+dhd*(-minA/a))-hp") &&
+                          (
+                            QE
+                            ,
+                            abbrv("r-rv*(-minA/a)".asTerm, Some(Variable("absA"))) &
+                              la(AbsT, "", Some("abs(absA)".asTerm)) & QE
+                            )
+                        )))
+                  ,
+                  ls(andR) &&
+                    (
+                      dT("<- 3") & ls(MinMaxT, "", Some("min(0,w*dhd)".asTerm)) & ls(implyR)  & (la(andL)*) &
+                        cut("rv=0|rv>0".asFormula) & onBranch(
+                        (cutShowLbl, QE),
+                        (cutUseLbl,
+                          la(orL, "rv=0|rv>0") && (
+                            dT("<- 3:rv=0") &
+                              la(instantiateT(Variable("t"), "0".asTerm)) &
+                              la(instantiateT(Variable("ro"), "rv*0".asTerm)) &
+                              la(instantiateT(Variable("ho"), "w*a/2*0^2+dhd*0".asTerm)) &
+                              la(implyL, "0<=0&0 < maxA/a&rv*0=rv*0&w*a/2*0^2+dhd*0=w*a/2*0^2+dhd*0|0>=maxA/a&rv*0=rv*0&w*a/2*0^2+dhd*0=dhf*0-w*maxA^2/(2*a)->abs(r-rv*0)>rp|w*h < w*(w*a/2*0^2+dhd*0)-hp") &&
+                              (
+                                QE
+                                ,
+                                la(AbsT, "", Some("abs(r-rv*0)".asTerm)) & QE
+                                )
+                            ,
+                            dT("<- 3:rv>0") &
+                              la(instantiateT(Variable("t"), "(r-rp)/rv".asTerm)) &
+                              la(instantiateT(Variable("ro"), "rv*((r-rp)/rv)".asTerm)) &
+                              la(instantiateT(Variable("ho"), "w*a/2*((r-rp)/rv)^2+dhd*((r-rp)/rv)".asTerm)) &
+                              la(implyL, "0<=(r-rp)/rv&(r-rp)/rv < maxA/a&rv*((r-rp)/rv)=rv*((r-rp)/rv)&w*a/2*((r-rp)/rv)^2+dhd*((r-rp)/rv)=w*a/2*((r-rp)/rv)^2+dhd*((r-rp)/rv)|(r-rp)/rv>=maxA/a&rv*((r-rp)/rv)=rv*((r-rp)/rv)&w*a/2*((r-rp)/rv)^2+dhd*((r-rp)/rv)=dhf*((r-rp)/rv)-w*maxA^2/(2*a)->abs(r-rv*((r-rp)/rv))>rp|w*h < w*(w*a/2*((r-rp)/rv)^2+dhd*((r-rp)/rv))-hp") &&
+                              (
+                                QE
+                                ,
+                                la(AbsT, "", Some("abs(r-rv*((r-rp)/rv))".asTerm)) & QE
+                                ))))
+                      ,
+                      dT("<- 4") & (la(andL)*) & ls(implyR)  &
+                        cut("rv=0|rv>0".asFormula) & onBranch(
+                        (cutShowLbl, QE),
+                        (cutUseLbl,
+                          la(orL, "rv=0|rv>0") && (
+                            dT("<- 4:rv=0") &
+                              ls(orR) & ls(hide, "w*rv*h < w*dhf*(r-rp)-rv*maxA^2/(2*a)-rv*hp") & QE
+                            ,
+                            dT("<- 4:rv>0") &
+                              ls(orR) & ls(hide, "rv=0") &
+                              la(instantiateT(Variable("t"), "(r-rp)/rv".asTerm)) &
+                              la(instantiateT(Variable("ro"), "rv*((r-rp)/rv)".asTerm)) &
+                              la(instantiateT(Variable("ho"), "dhf*((r-rp)/rv)-w*maxA^2/(2*a)".asTerm)) &
+                              la(implyL, "0<=(r-rp)/rv&(r-rp)/rv < maxA/a&rv*((r-rp)/rv)=rv*((r-rp)/rv)&dhf*((r-rp)/rv)-w*maxA^2/(2*a)=w*a/2*((r-rp)/rv)^2+dhd*((r-rp)/rv)|(r-rp)/rv>=maxA/a&rv*((r-rp)/rv)=rv*((r-rp)/rv)&dhf*((r-rp)/rv)-w*maxA^2/(2*a)=dhf*((r-rp)/rv)-w*maxA^2/(2*a)->abs(r-rv*((r-rp)/rv))>rp|w*h < w*(dhf*((r-rp)/rv)-w*maxA^2/(2*a))-hp") &&
+                              (
+                                ls(hide, "w*rv*h < w*dhf*(r-rp)-rv*maxA^2/(2*a)-rv*hp") & ls(orR) &
+                                  ls(hide, "0<=(r-rp)/rv&(r-rp)/rv < maxA/a&rv*((r-rp)/rv)=rv*((r-rp)/rv)&dhf*((r-rp)/rv)-w*maxA^2/(2*a)=w*a/2*((r-rp)/rv)^2+dhd*((r-rp)/rv)") & QE
+                                ,
+                                la(AbsT, "", Some("abs(r-rv*((r-rp)/rv))".asTerm)) & QE
+                                )
+                            )))
+                      )
+                  )
+              )
+          ,
+          ls(implyR) & ls(andR) && (
+            dT("<- 5")  & (la(andL)*) &
+              cut("rv=0|rv>0".asFormula) & onBranch(
+              (cutShowLbl, QE),
+              (cutUseLbl,
+                la(orL, "rv=0|rv>0") && (
+                  dT("<- 5:rv=0") &
+                    la(instantiateT(Variable("t"), "0".asTerm)) &
+                    la(instantiateT(Variable("ro"), "rv*0".asTerm)) &
+                    la(instantiateT(Variable("ho"), "w*a/2*0^2+dhd*0".asTerm)) &
+                    la(implyL, "0<=0&0 < maxA/a&rv*0=rv*0&w*a/2*0^2+dhd*0=w*a/2*0^2+dhd*0|0>=maxA/a&rv*0=rv*0&w*a/2*0^2+dhd*0=dhf*0-w*maxA^2/(2*a)->abs(r-rv*0)>rp|w*h < w*(w*a/2*0^2+dhd*0)-hp") &&
+                    (
+                      QE
+                      ,
+                      la(AbsT, "", Some("abs(r-rv*0)".asTerm)) & QE
+                      )
+                  ,
+                  dT("<- 5:rv>0") &
+                    la(instantiateT(Variable("t"), "(r+rp)/rv".asTerm)) &
+                    la(instantiateT(Variable("ro"), "rv*((r+rp)/rv)".asTerm)) &
+                    la(instantiateT(Variable("ho"), "w*a/2*((r+rp)/rv)^2+dhd*((r+rp)/rv)".asTerm)) &
+                    la(implyL, "0<=(r+rp)/rv&(r+rp)/rv < maxA/a&rv*((r+rp)/rv)=rv*((r+rp)/rv)&w*a/2*((r+rp)/rv)^2+dhd*((r+rp)/rv)=w*a/2*((r+rp)/rv)^2+dhd*((r+rp)/rv)|(r+rp)/rv>=maxA/a&rv*((r+rp)/rv)=rv*((r+rp)/rv)&w*a/2*((r+rp)/rv)^2+dhd*((r+rp)/rv)=dhf*((r+rp)/rv)-w*maxA^2/(2*a)->abs(r-rv*((r+rp)/rv))>rp|w*h < w*(w*a/2*((r+rp)/rv)^2+dhd*((r+rp)/rv))-hp") &&
+                    (
+                      QE
+                      ,
+                      la(AbsT, "", Some("abs(r-rv*((r+rp)/rv))".asTerm)) & QE
+                      ))))
+            ,
+            dT("<- 6") & (la(andL)*) & ls(implyR) &
+              cut("rv=0|rv>0".asFormula) & onBranch(
+              (cutShowLbl, QE),
+              (cutUseLbl,
+                la(orL, "rv=0|rv>0") && (
+                  dT("<- 6:rv=0") & ls(orR)  &
+                    cut("r>rp|r<=rp".asFormula) & onBranch(
+                    (cutShowLbl, ls(cohide, "r>rp|r<=rp") & QE),
+                    (cutUseLbl, la(orL, "r>rp|r<=rp") &&
+                      (
+                        ls(hide, "w*rv*h < w*dhf*(r+rp)-rv*maxA^2/(2*a)-rv*hp") & QE
+                        ,
+                        ls(hide, "rv=0&r>rp") &
+                          cut("(h+w*maxA^2/(2*a))/dhf>=maxA/a|(h+w*maxA^2/(2*a))/dhf<maxA/a".asFormula) & onBranch(
+                          (cutShowLbl,ls(hide,"w*rv*h < w*dhf*(r+rp)-rv*maxA^2/(2*a)-rv*hp") & QE),
+                          (cutUseLbl, la(orL, "(h+w*maxA^2/(2*a))/dhf>=maxA/a|(h+w*maxA^2/(2*a))/dhf<maxA/a") &&
+                            (
+                              la(instantiateT(Variable("t"), "(h+w*maxA^2/(2*a))/dhf".asTerm)) &
+                                la(instantiateT(Variable("ro"), "0".asTerm)) &
+                                la(instantiateT(Variable("ho"), "h".asTerm)) &
+                                la(implyL) &&
+                                (ls(hide,"w*rv*h < w*dhf*(r+rp)-rv*maxA^2/(2*a)-rv*hp") & dT("foo1") & QE, QE)
+                              ,
+                              la(instantiateT(Variable("t"), "maxA/a".asTerm)) &
+                                la(instantiateT(Variable("ro"), "0".asTerm)) &
+                                la(instantiateT(Variable("ho"), "dhf*maxA/a-w*maxA^2/(2*a)".asTerm)) &
+                                la(implyL) &&
+                                (ls(hide,"w*rv*h < w*dhf*(r+rp)-rv*maxA^2/(2*a)-rv*hp") & QE, QE)
+                              ))))))
+                  ,
+                  dT("<- 6:rv>0") & ls(orR) & ls(hide, "rv=0&r>rp") &
+                    la(instantiateT(Variable("t"), "(r+rp)/rv".asTerm)) &
+                    la(instantiateT(Variable("ro"), "rv*((r+rp)/rv)".asTerm)) &
+                    la(instantiateT(Variable("ho"), "dhf*((r+rp)/rv)-w*maxA^2/(2*a)".asTerm)) &
+                    la(implyL, "0<=(r+rp)/rv&(r+rp)/rv < maxA/a&rv*((r+rp)/rv)=rv*((r+rp)/rv)&dhf*((r+rp)/rv)-w*maxA^2/(2*a)=w*a/2*((r+rp)/rv)^2+dhd*((r+rp)/rv)|(r+rp)/rv>=maxA/a&rv*((r+rp)/rv)=rv*((r+rp)/rv)&dhf*((r+rp)/rv)-w*maxA^2/(2*a)=dhf*((r+rp)/rv)-w*maxA^2/(2*a)->abs(r-rv*((r+rp)/rv))>rp|w*h < w*(dhf*((r+rp)/rv)-w*maxA^2/(2*a))-hp") &&
+                    (QE, la(AbsT, "", Some("abs(r-rv*((r+rp)/rv))".asTerm)) & QE)
+                  )))
+            )
+          )
+
+        )
+    )
+
+    val equivalence = helper.runTactic(tactic, new RootNode(s))
+    equivalence shouldBe 'closed
+
+    //    val lemmaDB = LemmaDBFactory.lemmaDB
+    // create evidence (traces input into tool and output from tool)
+    //    val equivalenceEvidence = new ToolEvidence(immutable.Map("input" -> s.toString, "output" -> "true")) :: Nil
+    // add lemma into DB, which creates an ID for it. use the ID to apply the lemma
+    //    val equivalenceLemmaID = lemmaDB.add(Lemma(equivalence.provableWitness, equivalenceEvidence, Some("nodelay_equivalence")))
+    //    print("nodelay_equivalence.key equivalence lemma proof saved as lemma " + equivalenceLemmaID)
   }
 
 
