@@ -478,7 +478,17 @@ keymaeraProofControllers.controller('DashboardCtrl',
     $http.get("/keymaeraXVersion")
         .success(function(data) {
             if(data.errorThrown) showCaughtErrorMessage($modal, data, "Could not get the server's KeYmaera X version")
-            else  $scope.keymaeraXVersion = data.keymaeraXVersion
+            else  {
+                $scope.keymaeraXVersion = data.keymaeraXVersion
+                if(data.upToDate != null) {
+                    $scope.versionInfoAvailable = true
+                    $scope.upToDate = data.upToDate
+                    $scope.latestVersion = data.latestVersion
+                }
+                else {
+                    $scope.versionInfoAvailable = false
+                }
+            }
         })
         .error(function() {
             var message = "Unhandled error when attempting to get KeYmaera X version."
