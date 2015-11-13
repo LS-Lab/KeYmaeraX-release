@@ -15,6 +15,6 @@ import java.io.File
         ".keymaerax" + File.separator + "keymaerax.sqlite"
       def main(args : Array[String]) : Unit =
         scala.slick.codegen.SourceCodeGenerator.main(
-          Array("scala.slick.driver.SQLiteDriver", "org.sqlite.JDBC", "jdbc:sqlite:" + loc, "src/main/scala/edu/cmu/cs/ls/keymaerax/hydra", "")
+          Array("scala.slick.driver.SQLiteDriver", "org.sqlite.JDBC", "jdbc:sqlite:" + loc, "kemyaerax-webui/src/main/scala/edu/cmu/cs/ls/keymaerax/hydra", "")
         )
     }
