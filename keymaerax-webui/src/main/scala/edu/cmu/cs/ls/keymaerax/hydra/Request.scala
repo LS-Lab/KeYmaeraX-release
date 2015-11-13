@@ -140,7 +140,11 @@ class KyxConfigRequest(db: DBAbstraction) extends Request {
 class KeymaeraXVersionRequest() extends Request {
   override def getResultingResponses() : List[Response] = {
     val keymaeraXVersion = VERSION
-    new KeymaeraXVersionResponse(keymaeraXVersion) :: Nil
+    val (upToDate, latestVersion) = UpdateChecker() match {
+      case Some((upToDate, latestVersion)) => (Some(upToDate), Some(latestVersion))
+      case _ => (None, None)
+    }
+    new KeymaeraXVersionResponse(keymaeraXVersion, upToDate, latestVersion) :: Nil
   }
 }
 
