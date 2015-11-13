@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{SequentType, USubstPatternTactic}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, NamedTactic, SequentType, USubstPatternTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
 import edu.cmu.cs.ls.keymaerax.core.{USubst, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -20,10 +20,11 @@ object DLBySubst {
     *   [a]p |- [a]q
     * }}}
     */
-  def monb = {
+  val monb = new NamedTactic("monb", {
     val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]p_(??)".asFormula), IndexedSeq("[a_;]q_(??)".asFormula)))
     USubstPatternTactic(Seq(
       (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("[] monotone", ru.substitution.usubst)) //@todo not sure about how to handle the renaming portion?
     ))
-  }
+  })
+
 }

@@ -26,7 +26,7 @@ object ProofRuleTactics {
     }
   }
 
-  def cutL(f: Formula)(pos: AntePos) = new InputTactic[Formula](f) {
+  def cutL(f: Formula)(pos: AntePos) = new InputPositionTactic[Formula](f, pos) {
     override def computeExpr() = new BuiltInTactic("CutL") {
       override def result(provable: Provable): Provable = {
         requireOneSubgoal(provable)
@@ -35,7 +35,7 @@ object ProofRuleTactics {
     }
   }
 
-  def cutR(f: Formula)(pos: SuccPos) = new InputTactic[Formula](f) {
+  def cutR(f: Formula)(pos: SuccPos) = new InputPositionTactic[Formula](f, pos) {
     override def computeExpr() = new BuiltInTactic("CutR") {
       override def result(provable: Provable): Provable = {
         requireOneSubgoal(provable)
@@ -44,7 +44,7 @@ object ProofRuleTactics {
     }
   }
 
-  def cutLR(f: Formula)(pos: Position) = new InputTactic[Formula](f) {
+  def cutLR(f: Formula)(pos: Position) = new InputPositionTactic[Formula](f, pos) {
     override def computeExpr() = new BuiltInTactic("CutLR") {
       override def result(provable: Provable): Provable = {
         requireOneSubgoal(provable)

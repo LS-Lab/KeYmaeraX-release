@@ -16,6 +16,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
     listeners.map(_.begin(v, expr))
 
     val result = expr match {
+      case named: NamedTactic => apply(named.tactic, v)
       case builtIn : BuiltInTactic => v match {
         case BelleProvable(pr) => try { BelleProvable(builtIn.result(pr)) } catch { case e: BelleError => throw e.inContext(builtIn.name, pr.prettyString) }
         case _ => throw BelleError(s"Attempted to apply a built-in tactic to a non-Provable value: ${v.getClass.getName}")
