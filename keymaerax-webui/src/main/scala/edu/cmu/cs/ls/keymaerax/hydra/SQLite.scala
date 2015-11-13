@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.sql.SQLException
 
-import Tables.TacticonproofRow
+//import Tables.TacticonproofRow
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 
 import scala.slick.driver.SQLiteDriver.simple._
@@ -81,77 +81,77 @@ object SQLite extends DBAbstraction {
       }
     })
 
-  override def getTactic(id: String): Option[TacticPOJO] =
-    sqldb.withSession(implicit session => {
-      val matches =
-        Tactics.filter(_.tacticid === id)
-               .list
-               .map(t => new TacticPOJO(t.tacticid.get, t.name.get, t.clazz.get, TacticKind.withName(blankOk(t.kind))))
+  override def getTactic(id: String): Option[TacticPOJO] = ???
+//    sqldb.withSession(implicit session => {
+//      val matches =
+//        Tactics.filter(_.tacticid === id)
+//               .list
+//               .map(t => new TacticPOJO(t.tacticid.get, t.name.get, t.clazz.get, TacticKind.withName(blankOk(t.kind))))
+//
+//      if(matches.length > 1) throw new Exception()
+//      else if(matches.length == 1) Some(matches.head)
+//      else None
+//    })
 
-      if(matches.length > 1) throw new Exception()
-      else if(matches.length == 1) Some(matches.head)
-      else None
-    })
 
+  override def createDispatchedCLTerm(taskId: String, nodeId: Option[String], clTerm: String): String = ???
+//    sqldb.withSession(implicit session => {
+//      val cltermId = idgen()
+//      Clterms.map(t => (t.termid.get, t.proofid.get, t.nodeid, t.clterm.get))
+//             .insert(cltermId, taskId, nodeId, clTerm);
+//      cltermId
+//    })
 
-  override def createDispatchedCLTerm(taskId: String, nodeId: Option[String], clTerm: String): String =
-    sqldb.withSession(implicit session => {
-      val cltermId = idgen()
-      Clterms.map(t => (t.termid.get, t.proofid.get, t.nodeid, t.clterm.get))
-             .insert(cltermId, taskId, nodeId, clTerm);
-      cltermId
-    })
+  override def updateProofOnTacticCompletion(proofId: String, tId: String): Unit = ???
+//    sqldb.withSession(implicit session => {
+//      val openGoals = KeYmaeraInterface.getOpenGoalCount(proofId)
+//
+//      val newIdx : Int =
+//        if (Completedtasks.filter(_.proofid === proofId).filter(_.termid === tId).list.nonEmpty)
+//          Completedtasks.filter(_.proofid === proofId).filter(_.termid === tId).list.map(_.idx).max + 1
+//        else 0
+//
+//      val dispatchedTactic = getDispatchedTermOrTactic(tId)
+//
+//      dispatchedTactic match {
+//          //Update the running and completed task lists.
+//        case Some(x: DispatchedTacticPOJO) => {
+//          Completedtasks.map(t => (t.stepid, t.proofid.get, t.idx, t.termid, t.prooftacticid.get))
+//                        .insert(tId, proofId, newIdx, None, tId)
+//          val q = for{l <- Tacticonproof if(l.prooftacticid === tId)} yield l.status
+//          q.update(Some(DispatchedTacticStatus.Finished.toString))
+//        }
+//        case Some(x : DispatchedCLTermPOJO) => {
+//
+//          Completedtasks.map(t => (t.stepid, t.proofid.get, t.idx, t.termid.get, t.prooftacticid))
+//            .insert(tId, proofId, newIdx, tId, None)
+//          val q = for{l <- Clterms if(l.termid === tId)} yield l.status
+//          q.update(Some(DispatchedTacticStatus.Finished.toString))
+//        }
+//        case Some(x : AbstractDispatchedPOJO) => throw new Exception("Expected only dispatched built-in tactic or dispatched term, but found a different abstract dispatched pojo.")
+//        case None => throw new Exception("Found a None.")
+//      }
+//
+//      //Update the proof status the proof is complete.
+//      if(openGoals == 0) {
+//        val q = for{l <- Proofs if(l.proofid === proofId)} yield l.closed
+//        q.update(Some(1))
+//      }
+//    })
 
-  override def updateProofOnTacticCompletion(proofId: String, tId: String): Unit =
-    sqldb.withSession(implicit session => {
-      val openGoals = KeYmaeraInterface.getOpenGoalCount(proofId)
+  override def updateDispatchedTactics(tactic: DispatchedTacticPOJO): Unit = ???
+//    sqldb.withSession(implicit session => {
+//      //Create a new row.
+//      val newRow : TacticonproofRow = TacticonproofRow(Some(tactic.id), Some(tactic.proofId), Some(tactic.tacticsId), tactic.nodeId, tactic.formulaId, optToString(tactic.auto), Some(tactic.status.toString))
+//      //Commit the new row.
+//      Tacticonproof.filter(_.prooftacticid === tactic.id).update(newRow)
+//    })
 
-      val newIdx : Int =
-        if (Completedtasks.filter(_.proofid === proofId).filter(_.termid === tId).list.nonEmpty)
-          Completedtasks.filter(_.proofid === proofId).filter(_.termid === tId).list.map(_.idx).max + 1
-        else 0
-
-      val dispatchedTactic = getDispatchedTermOrTactic(tId)
-
-      dispatchedTactic match {
-          //Update the running and completed task lists.
-        case Some(x: DispatchedTacticPOJO) => {
-          Completedtasks.map(t => (t.stepid, t.proofid.get, t.idx, t.termid, t.prooftacticid.get))
-                        .insert(tId, proofId, newIdx, None, tId)
-          val q = for{l <- Tacticonproof if(l.prooftacticid === tId)} yield l.status
-          q.update(Some(DispatchedTacticStatus.Finished.toString))
-        }
-        case Some(x : DispatchedCLTermPOJO) => {
-
-          Completedtasks.map(t => (t.stepid, t.proofid.get, t.idx, t.termid.get, t.prooftacticid))
-            .insert(tId, proofId, newIdx, tId, None)
-          val q = for{l <- Clterms if(l.termid === tId)} yield l.status
-          q.update(Some(DispatchedTacticStatus.Finished.toString))
-        }
-        case Some(x : AbstractDispatchedPOJO) => throw new Exception("Expected only dispatched built-in tactic or dispatched term, but found a different abstract dispatched pojo.")
-        case None => throw new Exception("Found a None.")
-      }
-
-      //Update the proof status the proof is complete.
-      if(openGoals == 0) {
-        val q = for{l <- Proofs if(l.proofid === proofId)} yield l.closed
-        q.update(Some(1))
-      }
-    })
-
-  override def updateDispatchedTactics(tactic: DispatchedTacticPOJO): Unit =
-    sqldb.withSession(implicit session => {
-      //Create a new row.
-      val newRow : TacticonproofRow = TacticonproofRow(Some(tactic.id), Some(tactic.proofId), Some(tactic.tacticsId), tactic.nodeId, tactic.formulaId, optToString(tactic.auto), Some(tactic.status.toString))
-      //Commit the new row.
-      Tacticonproof.filter(_.prooftacticid === tactic.id).update(newRow)
-    })
-
-  override def updateDispatchedTacticStatus(tacticId: String, status: DispatchedTacticStatus.Value) =
-  sqldb.withSession(implicit session => {
-    println(s"[HyDRA] Updating tactic status of tactic ${tacticId} to ${status.toString}")
-    Tacticonproof.filter(_.prooftacticid === tacticId).map(_.status.get).update(status.toString)
-  })
+  override def updateDispatchedTacticStatus(tacticId: String, status: DispatchedTacticStatus.Value) = ???
+//  sqldb.withSession(implicit session => {
+//    println(s"[HyDRA] Updating tactic status of tactic ${tacticId} to ${status.toString}")
+//    Tacticonproof.filter(_.prooftacticid === tacticId).map(_.status.get).update(status.toString)
+//  })
 
   override def createUser(username: String, password: String): Unit =
     sqldb.withSession(implicit session => {
@@ -163,39 +163,39 @@ object SQLite extends DBAbstraction {
   private def idgen() : String = java.util.UUID.randomUUID().toString()
 
 
-  override def updateDispatchedCLTerm(termToUpdate: DispatchedCLTermPOJO): Unit =
-    sqldb.withSession(implicit session => {
-      Clterms.filter(_.termid === termToUpdate.id).update(termPojoToRow(termToUpdate))
-    })
+  override def updateDispatchedCLTerm(termToUpdate: DispatchedCLTermPOJO): Unit = ???
+//    sqldb.withSession(implicit session => {
+//      Clterms.filter(_.termid === termToUpdate.id).update(termPojoToRow(termToUpdate))
+//    })
 
-  override def updateDispatchedCLTermStatus(termId: String, status: DispatchedTacticStatus.Value) =
-    sqldb.withSession(implicit session => {
-      Clterms.filter(_.termid === termId).map(_.status.get).update(status.toString)
-    })
+  override def updateDispatchedCLTermStatus(termId: String, status: DispatchedTacticStatus.Value) = ???
+//    sqldb.withSession(implicit session => {
+//      Clterms.filter(_.termid === termId).map(_.status.get).update(status.toString)
+//    })
 
-  private def termPojoToRow(t : DispatchedCLTermPOJO) : CltermsRow =
-    new CltermsRow(Some(t.id), Some(t.clTerm), Some(t.proofId), t.nodeId, optToString(t.status))
+//  private def termPojoToRow(t : DispatchedCLTermPOJO) : CltermsRow =
+//    new CltermsRow(Some(t.id), Some(t.clTerm), Some(t.proofId), t.nodeId, optToString(t.status))
 
   // Tactics
-  override def createTactic(name: String, clazz: String, kind: TacticKind.Value): String =
-    sqldb.withSession(implicit session => {
-      val id = idgen()
-      Tactics.map(t => (t.tacticid.get, t.name.get, t.clazz.get, t.kind.get))
-             .insert(id, name, clazz, kind.toString());
-      id
-    })
+  override def createTactic(name: String, clazz: String, kind: TacticKind.Value): String = ???
+//    sqldb.withSession(implicit session => {
+//      val id = idgen()
+//      Tactics.map(t => (t.tacticid.get, t.name.get, t.clazz.get, t.kind.get))
+//             .insert(id, name, clazz, kind.toString());
+//      id
+//    })
 
 
   override def updateProofOnCLTermCompletion(proofId: String, termId: String): Unit =
     updateProofOnTacticCompletion(proofId, termId) //@TODO check this.
 
-  override def getTacticByName(name: String): Option[TacticPOJO] =
-    sqldb.withSession(implicit session => {
-      Tactics.filter(_.name === name).firstOption match {
-        case Some(x) => getTactic(x.tacticid.get)
-        case None => None
-      }
-    })
+  override def getTacticByName(name: String): Option[TacticPOJO] = ???
+//    sqldb.withSession(implicit session => {
+//      Tactics.filter(_.name === name).firstOption match {
+//        case Some(x) => getTactic(x.tacticid.get)
+//        case None => None
+//      }
+//    })
 
 
   /**
@@ -239,10 +239,10 @@ object SQLite extends DBAbstraction {
    * @param proofId
    * @return A list of completedTask IDs.
    */
-  override def getProofSteps(proofId: String): List[String] =
-    sqldb.withSession(implicit session => {
-      Completedtasks.filter(_.proofid === proofId).sortBy(_.idx).list.map(_.stepid)
-    })
+  override def getProofSteps(proofId: String): List[String] = ???
+//    sqldb.withSession(implicit session => {
+//      Completedtasks.filter(_.proofid === proofId).sortBy(_.idx).list.map(_.stepid)
+//    })
 
   // Users
   override def userExists(username: String): Boolean =
@@ -320,20 +320,20 @@ object SQLite extends DBAbstraction {
     })
 
 
-  override def getDispatchedCLTerm(id: String): Option[DispatchedCLTermPOJO] =
-    sqldb.withSession(implicit session => {
-      val list = Clterms.filter(_.termid === id)
-             .list
-             .map(t => new DispatchedCLTermPOJO(t.termid.get, t.proofid.get, t.nodeid, t.clterm.get,
-                t.status match {
-                  case Some(x) => Some(DispatchedTacticStatus.withName(x))
-                  case None => None
-                }))
-
-      if(list.length == 0) None
-      else if(list.length != 1) throw new Exception()
-      else Some(list.head)
-    })
+  override def getDispatchedCLTerm(id: String): Option[DispatchedCLTermPOJO] = ???
+//    sqldb.withSession(implicit session => {
+//      val list = Clterms.filter(_.termid === id)
+//             .list
+//             .map(t => new DispatchedCLTermPOJO(t.termid.get, t.proofid.get, t.nodeid, t.clterm.get,
+//                t.status match {
+//                  case Some(x) => Some(DispatchedTacticStatus.withName(x))
+//                  case None => None
+//                }))
+//
+//      if(list.length == 0) None
+//      else if(list.length != 1) throw new Exception()
+//      else Some(list.head)
+//    })
 
   override def createProofForModel(modelId: String, name: String, description: String, date: String): String =
     sqldb.withSession(implicit session => {
@@ -343,10 +343,10 @@ object SQLite extends DBAbstraction {
       proofId
     })
 
-  override def tacticExists(id: String): Boolean =
-    sqldb.withSession(implicit session => {
-      Tactics.filter(_.tacticid === id).list.length != 0
-    })
+  override def tacticExists(id: String): Boolean = ???
+//    sqldb.withSession(implicit session => {
+//      Tactics.filter(_.tacticid === id).list.length != 0
+//    })
 
   override def getModel(modelId: String): ModelPOJO =
     sqldb.withSession(implicit session => {
@@ -362,12 +362,12 @@ object SQLite extends DBAbstraction {
       else throw new Exception("Primary keys aren't unique in models table.")
     })
 
-  override def getTactics: List[TacticPOJO] =
-    sqldb.withSession(implicit session => {
-      Tactics.list.map(t => new TacticPOJO(
-        t.tacticid.get, blankOk(t.name), t.clazz.get, TacticKind.withName(t.kind.getOrElse(""))
-      ))
-    })
+  override def getTactics: List[TacticPOJO] = ???
+//    sqldb.withSession(implicit session => {
+//      Tactics.list.map(t => new TacticPOJO(
+//        t.tacticid.get, blankOk(t.name), t.clazz.get, TacticKind.withName(t.kind.getOrElse(""))
+//      ))
+//    })
 
   override def getUsername(uid: String): String =
     uid
@@ -379,47 +379,47 @@ object SQLite extends DBAbstraction {
 
   override def createDispatchedTactics(taskId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String,
                               input:Map[Int, String], auto: Option[PositionTacticAutomation.PositionTacticAutomation],
-                              status:DispatchedTacticStatus.Value) : String =
-    sqldb.withSession(implicit session => {
-      val id = idgen()
+                              status:DispatchedTacticStatus.Value) : String = ???
+//    sqldb.withSession(implicit session => {
+//      val id = idgen()
+//
+//      //First create the dispatched tactic
+//      Tacticonproof.map(tp => (tp.prooftacticid.get, tp.proofid.get, tp.nodeid, tp.formulaid, tp.tacticsid.get, tp.auto, tp.status.get))
+//        .insert((id, taskId, nodeId, formulaId, tacticsId, optToString(auto), status.toString()))
+//
+//      input.toList.map(element => {
+//        Prooftacticinput.map(i => (i.prooftacticid.get, i.inputorder.get, i.input.get))
+//        .insert((id, element._1, element._2))
+//      })
+//
+//      id
+//    })
 
-      //First create the dispatched tactic
-      Tacticonproof.map(tp => (tp.prooftacticid.get, tp.proofid.get, tp.nodeid, tp.formulaid, tp.tacticsid.get, tp.auto, tp.status.get))
-        .insert((id, taskId, nodeId, formulaId, tacticsId, optToString(auto), status.toString()))
-
-      input.toList.map(element => {
-        Prooftacticinput.map(i => (i.prooftacticid.get, i.inputorder.get, i.input.get))
-        .insert((id, element._1, element._2))
-      })
-
-      id
-    })
-
-  override def getDispatchedTactics(tId: String): Option[DispatchedTacticPOJO] =
-    sqldb.withSession(implicit session => {
-      val result = Tacticonproof.filter(_.prooftacticid === tId)
-        .list
-        .map(element => {
-          //get Inputs.
-          val inputs : Map[Int, String] = Prooftacticinput
-            .filter(input => input.prooftacticid === element.prooftacticid)
-            .list
-            .map(element => (element.inputorder.get, blankOk(element.input))).toMap
-
-          val auto = element.auto match {
-            case Some(a) => Some(PositionTacticAutomation.withName(a))
-            case None => None
-          }
-
-          DispatchedTacticPOJO(element.prooftacticid.get, element.proofid.get, element.nodeid, element.formulaid,
-            element.tacticsid.get, inputs, auto,
-            DispatchedTacticStatus.fromString(element.status.get))
-        })
-
-      if(result.length < 1) None
-      else if(result.length == 1) Some(result.head)
-      else throw new Exception("Expected primary keys to be unique.")
-    })
+  override def getDispatchedTactics(tId: String): Option[DispatchedTacticPOJO] = ???
+//    sqldb.withSession(implicit session => {
+//      val result = Tacticonproof.filter(_.prooftacticid === tId)
+//        .list
+//        .map(element => {
+//          //get Inputs.
+//          val inputs : Map[Int, String] = Prooftacticinput
+//            .filter(input => input.prooftacticid === element.prooftacticid)
+//            .list
+//            .map(element => (element.inputorder.get, blankOk(element.input))).toMap
+//
+//          val auto = element.auto match {
+//            case Some(a) => Some(PositionTacticAutomation.withName(a))
+//            case None => None
+//          }
+//
+//          DispatchedTacticPOJO(element.prooftacticid.get, element.proofid.get, element.nodeid, element.formulaid,
+//            element.tacticsid.get, inputs, auto,
+//            DispatchedTacticStatus.fromString(element.status.get))
+//        })
+//
+//      if(result.length < 1) None
+//      else if(result.length == 1) Some(result.head)
+//      else throw new Exception("Expected primary keys to be unique.")
+//    })
 
 
   override def getConfiguration(configName: String): ConfigurationPOJO =

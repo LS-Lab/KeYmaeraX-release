@@ -1,7 +1,3 @@
-/**
-* Copyright (c) Carnegie Mellon University.
-* See LICENSE.txt for the conditions of this license.
-*/
 package 
 // AUTO-GENERATED Slick data model
 /** Stand-alone Slick data model for immediate use */
@@ -18,79 +14,7 @@ trait Tables {
   import scala.slick.jdbc.{GetResult => GR}
   
   /** DDL for all tables. Call .create to execute. */
-  lazy val ddl = Clterms.ddl ++ Completedtasks.ddl ++ Config.ddl ++ Models.ddl ++ Proofs.ddl ++ Prooftacticinput.ddl ++ Tacticonproof.ddl ++ Tactics.ddl ++ Users.ddl
-  
-  /** Entity class storing rows of table Clterms
-   *  @param termid Database column termId DBType(TEXT), PrimaryKey
-   *  @param clterm Database column clTerm DBType(TEXT)
-   *  @param proofid Database column proofId DBType(TEXT)
-   *  @param nodeid Database column nodeId DBType(TEXT)
-   *  @param status Database column status DBType(TEXT) */
-  case class CltermsRow(termid: Option[String], clterm: Option[String], proofid: Option[String], nodeid: Option[String], status: Option[String])
-  /** GetResult implicit for fetching CltermsRow objects using plain SQL queries */
-  implicit def GetResultCltermsRow(implicit e0: GR[Option[String]]): GR[CltermsRow] = GR{
-    prs => import prs._
-    CltermsRow.tupled((<<?[String], <<?[String], <<?[String], <<?[String], <<?[String]))
-  }
-  /** Table description of table CLTerms. Objects of this class serve as prototypes for rows in queries. */
-  class Clterms(_tableTag: Tag) extends Table[CltermsRow](_tableTag, "CLTerms") {
-    def * = (termid, clterm, proofid, nodeid, status) <> (CltermsRow.tupled, CltermsRow.unapply)
-    
-    /** Database column termId DBType(TEXT), PrimaryKey */
-    val termid: Column[Option[String]] = column[Option[String]]("termId", O.PrimaryKey)
-    /** Database column clTerm DBType(TEXT) */
-    val clterm: Column[Option[String]] = column[Option[String]]("clTerm")
-    /** Database column proofId DBType(TEXT) */
-    val proofid: Column[Option[String]] = column[Option[String]]("proofId")
-    /** Database column nodeId DBType(TEXT) */
-    val nodeid: Column[Option[String]] = column[Option[String]]("nodeId")
-    /** Database column status DBType(TEXT) */
-    val status: Column[Option[String]] = column[Option[String]]("status")
-    
-    /** Foreign key referencing Proofs (database name proofs_FK_1) */
-    lazy val proofsFk = foreignKey("proofs_FK_1", proofid, Proofs)(r => r.proofid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
-  }
-  /** Collection-like TableQuery object for table Clterms */
-  lazy val Clterms = new TableQuery(tag => new Clterms(tag))
-  
-  /** Entity class storing rows of table Completedtasks
-   *  @param stepid Database column stepId DBType(TEXT), PrimaryKey
-   *  @param proofid Database column proofId DBType(TEXT)
-   *  @param idx Database column idx DBType(INTEGER)
-   *  @param termid Database column termId DBType(TEXT)
-   *  @param prooftacticid Database column proofTacticId DBType(TEXT) */
-  case class CompletedtasksRow(stepid: String, proofid: Option[String], idx: Int, termid: Option[String], prooftacticid: Option[String])
-  /** GetResult implicit for fetching CompletedtasksRow objects using plain SQL queries */
-  implicit def GetResultCompletedtasksRow(implicit e0: GR[String], e1: GR[Option[String]], e2: GR[Int]): GR[CompletedtasksRow] = GR{
-    prs => import prs._
-    CompletedtasksRow.tupled((<<[String], <<?[String], <<[Int], <<?[String], <<?[String]))
-  }
-  /** Table description of table completedTasks. Objects of this class serve as prototypes for rows in queries. */
-  class Completedtasks(_tableTag: Tag) extends Table[CompletedtasksRow](_tableTag, "completedTasks") {
-    def * = (stepid, proofid, idx, termid, prooftacticid) <> (CompletedtasksRow.tupled, CompletedtasksRow.unapply)
-    /** Maps whole row to an option. Useful for outer joins. */
-    def ? = (stepid.?, proofid, idx.?, termid, prooftacticid).shaped.<>({r=>import r._; _1.map(_=> CompletedtasksRow.tupled((_1.get, _2, _3.get, _4, _5)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
-    
-    /** Database column stepId DBType(TEXT), PrimaryKey */
-    val stepid: Column[String] = column[String]("stepId", O.PrimaryKey)
-    /** Database column proofId DBType(TEXT) */
-    val proofid: Column[Option[String]] = column[Option[String]]("proofId")
-    /** Database column idx DBType(INTEGER) */
-    val idx: Column[Int] = column[Int]("idx")
-    /** Database column termId DBType(TEXT) */
-    val termid: Column[Option[String]] = column[Option[String]]("termId")
-    /** Database column proofTacticId DBType(TEXT) */
-    val prooftacticid: Column[Option[String]] = column[Option[String]]("proofTacticId")
-    
-    /** Foreign key referencing Clterms (database name CLTerms_FK_1) */
-    lazy val cltermsFk = foreignKey("CLTerms_FK_1", termid, Clterms)(r => r.termid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
-    /** Foreign key referencing Proofs (database name proofs_FK_2) */
-    lazy val proofsFk = foreignKey("proofs_FK_2", proofid, Proofs)(r => r.proofid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
-    /** Foreign key referencing Tacticonproof (database name tacticOnProof_FK_3) */
-    lazy val tacticonproofFk = foreignKey("tacticOnProof_FK_3", prooftacticid, Tacticonproof)(r => r.prooftacticid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
-  }
-  /** Collection-like TableQuery object for table Completedtasks */
-  lazy val Completedtasks = new TableQuery(tag => new Completedtasks(tag))
+  lazy val ddl = Config.ddl ++ Executableparameter.ddl ++ Executables.ddl ++ Executionsteps.ddl ++ Models.ddl ++ Patterns.ddl ++ Proofs.ddl ++ Provables.ddl ++ Scalatactics.ddl ++ Sequentformulas.ddl ++ Tacticexecutions.ddl ++ Users.ddl ++ Valuetypes.ddl
   
   /** Entity class storing rows of table Config
    *  @param configid Database column configId DBType(TEXT), PrimaryKey
@@ -118,6 +42,123 @@ trait Tables {
   }
   /** Collection-like TableQuery object for table Config */
   lazy val Config = new TableQuery(tag => new Config(tag))
+  
+  /** Entity class storing rows of table Executableparameter
+   *  @param parameterid Database column parameterId DBType(TEXT), PrimaryKey
+   *  @param executableid Database column executableId DBType(TEXT)
+   *  @param idx Database column idx DBType(INT)
+   *  @param valuetypeid Database column valueTypeId DBType(TEXT)
+   *  @param value Database column value DBType(TEXT) */
+  case class ExecutableparameterRow(parameterid: Option[String], executableid: Option[String], idx: Option[Int], valuetypeid: Option[String], value: Option[String])
+  /** GetResult implicit for fetching ExecutableparameterRow objects using plain SQL queries */
+  implicit def GetResultExecutableparameterRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[ExecutableparameterRow] = GR{
+    prs => import prs._
+    ExecutableparameterRow.tupled((<<?[String], <<?[String], <<?[Int], <<?[String], <<?[String]))
+  }
+  /** Table description of table executableParameter. Objects of this class serve as prototypes for rows in queries. */
+  class Executableparameter(_tableTag: Tag) extends Table[ExecutableparameterRow](_tableTag, "executableParameter") {
+    def * = (parameterid, executableid, idx, valuetypeid, value) <> (ExecutableparameterRow.tupled, ExecutableparameterRow.unapply)
+    
+    /** Database column parameterId DBType(TEXT), PrimaryKey */
+    val parameterid: Column[Option[String]] = column[Option[String]]("parameterId", O.PrimaryKey)
+    /** Database column executableId DBType(TEXT) */
+    val executableid: Column[Option[String]] = column[Option[String]]("executableId")
+    /** Database column idx DBType(INT) */
+    val idx: Column[Option[Int]] = column[Option[Int]]("idx")
+    /** Database column valueTypeId DBType(TEXT) */
+    val valuetypeid: Column[Option[String]] = column[Option[String]]("valueTypeId")
+    /** Database column value DBType(TEXT) */
+    val value: Column[Option[String]] = column[Option[String]]("value")
+    
+    /** Foreign key referencing Executables (database name executables_FK_1) */
+    lazy val executablesFk = foreignKey("executables_FK_1", executableid, Executables)(r => r.executableid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+  }
+  /** Collection-like TableQuery object for table Executableparameter */
+  lazy val Executableparameter = new TableQuery(tag => new Executableparameter(tag))
+  
+  /** Entity class storing rows of table Executables
+   *  @param executableid Database column executableId DBType(TEXT), PrimaryKey
+   *  @param scalatacticid Database column scalaTacticId DBType(TEXT)
+   *  @param belleexpr Database column belleExpr DBType(TEXT) */
+  case class ExecutablesRow(executableid: Option[String], scalatacticid: Option[String], belleexpr: Option[String])
+  /** GetResult implicit for fetching ExecutablesRow objects using plain SQL queries */
+  implicit def GetResultExecutablesRow(implicit e0: GR[Option[String]]): GR[ExecutablesRow] = GR{
+    prs => import prs._
+    ExecutablesRow.tupled((<<?[String], <<?[String], <<?[String]))
+  }
+  /** Table description of table executables. Objects of this class serve as prototypes for rows in queries. */
+  class Executables(_tableTag: Tag) extends Table[ExecutablesRow](_tableTag, "executables") {
+    def * = (executableid, scalatacticid, belleexpr) <> (ExecutablesRow.tupled, ExecutablesRow.unapply)
+    
+    /** Database column executableId DBType(TEXT), PrimaryKey */
+    val executableid: Column[Option[String]] = column[Option[String]]("executableId", O.PrimaryKey)
+    /** Database column scalaTacticId DBType(TEXT) */
+    val scalatacticid: Column[Option[String]] = column[Option[String]]("scalaTacticId")
+    /** Database column belleExpr DBType(TEXT) */
+    val belleexpr: Column[Option[String]] = column[Option[String]]("belleExpr")
+  }
+  /** Collection-like TableQuery object for table Executables */
+  lazy val Executables = new TableQuery(tag => new Executables(tag))
+  
+  /** Entity class storing rows of table Executionsteps
+   *  @param stepid Database column stepId DBType(TEXT), PrimaryKey
+   *  @param exeuctionid Database column exeuctionId DBType(TEXT)
+   *  @param previousstep Database column previousStep DBType(TEXT)
+   *  @param parentstep Database column parentStep DBType(TEXT)
+   *  @param branchorder Database column branchOrder DBType(TEXT)
+   *  @param branchlabel Database column branchLabel DBType(INT)
+   *  @param alternativeorder Database column alternativeOrder DBType(INT)
+   *  @param isinterrupt Database column isInterrupt DBType(BOOLEAN)
+   *  @param executableid Database column executableId DBType(TEXT)
+   *  @param inputprovableid Database column inputProvableId DBType(TEXT)
+   *  @param resultprovableid Database column resultProvableId DBType(TEXT)
+   *  @param userexecuted Database column userExecuted DBType(BOOLEAN) */
+  case class ExecutionstepsRow(stepid: Option[String], exeuctionid: Option[String], previousstep: Option[String], parentstep: Option[String], branchorder: Option[String], branchlabel: Option[Int], alternativeorder: Option[Int], isinterrupt: Option[String], executableid: Option[String], inputprovableid: Option[String], resultprovableid: Option[String], userexecuted: Option[String])
+  /** GetResult implicit for fetching ExecutionstepsRow objects using plain SQL queries */
+  implicit def GetResultExecutionstepsRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[ExecutionstepsRow] = GR{
+    prs => import prs._
+    ExecutionstepsRow.tupled((<<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String]))
+  }
+  /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
+  class Executionsteps(_tableTag: Tag) extends Table[ExecutionstepsRow](_tableTag, "executionSteps") {
+    def * = (stepid, exeuctionid, previousstep, parentstep, branchorder, branchlabel, alternativeorder, isinterrupt, executableid, inputprovableid, resultprovableid, userexecuted) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
+    
+    /** Database column stepId DBType(TEXT), PrimaryKey */
+    val stepid: Column[Option[String]] = column[Option[String]]("stepId", O.PrimaryKey)
+    /** Database column exeuctionId DBType(TEXT) */
+    val exeuctionid: Column[Option[String]] = column[Option[String]]("exeuctionId")
+    /** Database column previousStep DBType(TEXT) */
+    val previousstep: Column[Option[String]] = column[Option[String]]("previousStep")
+    /** Database column parentStep DBType(TEXT) */
+    val parentstep: Column[Option[String]] = column[Option[String]]("parentStep")
+    /** Database column branchOrder DBType(TEXT) */
+    val branchorder: Column[Option[String]] = column[Option[String]]("branchOrder")
+    /** Database column branchLabel DBType(INT) */
+    val branchlabel: Column[Option[Int]] = column[Option[Int]]("branchLabel")
+    /** Database column alternativeOrder DBType(INT) */
+    val alternativeorder: Column[Option[Int]] = column[Option[Int]]("alternativeOrder")
+    /** Database column isInterrupt DBType(BOOLEAN) */
+    val isinterrupt: Column[Option[String]] = column[Option[String]]("isInterrupt")
+    /** Database column executableId DBType(TEXT) */
+    val executableid: Column[Option[String]] = column[Option[String]]("executableId")
+    /** Database column inputProvableId DBType(TEXT) */
+    val inputprovableid: Column[Option[String]] = column[Option[String]]("inputProvableId")
+    /** Database column resultProvableId DBType(TEXT) */
+    val resultprovableid: Column[Option[String]] = column[Option[String]]("resultProvableId")
+    /** Database column userExecuted DBType(BOOLEAN) */
+    val userexecuted: Column[Option[String]] = column[Option[String]]("userExecuted")
+    
+    /** Foreign key referencing Executables (database name executables_FK_1) */
+    lazy val executablesFk = foreignKey("executables_FK_1", executableid, Executables)(r => r.executableid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+    /** Foreign key referencing Executionsteps (database name executionSteps_FK_2) */
+    lazy val executionstepsFk = foreignKey("executionSteps_FK_2", (parentstep, previousstep), Executionsteps)(r => (r.stepid, r.stepid), onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+    /** Foreign key referencing Provables (database name provables_FK_3) */
+    lazy val provablesFk = foreignKey("provables_FK_3", (resultprovableid, inputprovableid), Provables)(r => (r.provableid, r.provableid), onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+    /** Foreign key referencing Tacticexecutions (database name tacticExecutions_FK_4) */
+    lazy val tacticexecutionsFk = foreignKey("tacticExecutions_FK_4", exeuctionid, Tacticexecutions)(r => r.executionid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+  }
+  /** Collection-like TableQuery object for table Executionsteps */
+  lazy val Executionsteps = new TableQuery(tag => new Executionsteps(tag))
   
   /** Entity class storing rows of table Models
    *  @param modelid Database column modelId DBType(TEXT), PrimaryKey
@@ -164,6 +205,39 @@ trait Tables {
   /** Collection-like TableQuery object for table Models */
   lazy val Models = new TableQuery(tag => new Models(tag))
   
+  /** Entity class storing rows of table Patterns
+   *  @param patternid Database column patternId DBType(TEXT), PrimaryKey
+   *  @param executableid Database column executableId DBType(TEXT)
+   *  @param idx Database column idx DBType(INT)
+   *  @param patternformula Database column patternFormula DBType(TEXT)
+   *  @param resultingexecutable Database column resultingExecutable DBType(TEXT) */
+  case class PatternsRow(patternid: Option[String], executableid: Option[String], idx: Option[Int], patternformula: Option[String], resultingexecutable: Option[String])
+  /** GetResult implicit for fetching PatternsRow objects using plain SQL queries */
+  implicit def GetResultPatternsRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[PatternsRow] = GR{
+    prs => import prs._
+    PatternsRow.tupled((<<?[String], <<?[String], <<?[Int], <<?[String], <<?[String]))
+  }
+  /** Table description of table patterns. Objects of this class serve as prototypes for rows in queries. */
+  class Patterns(_tableTag: Tag) extends Table[PatternsRow](_tableTag, "patterns") {
+    def * = (patternid, executableid, idx, patternformula, resultingexecutable) <> (PatternsRow.tupled, PatternsRow.unapply)
+    
+    /** Database column patternId DBType(TEXT), PrimaryKey */
+    val patternid: Column[Option[String]] = column[Option[String]]("patternId", O.PrimaryKey)
+    /** Database column executableId DBType(TEXT) */
+    val executableid: Column[Option[String]] = column[Option[String]]("executableId")
+    /** Database column idx DBType(INT) */
+    val idx: Column[Option[Int]] = column[Option[Int]]("idx")
+    /** Database column patternFormula DBType(TEXT) */
+    val patternformula: Column[Option[String]] = column[Option[String]]("patternFormula")
+    /** Database column resultingExecutable DBType(TEXT) */
+    val resultingexecutable: Column[Option[String]] = column[Option[String]]("resultingExecutable")
+    
+    /** Foreign key referencing Executables (database name executables_FK_1) */
+    lazy val executablesFk = foreignKey("executables_FK_1", (resultingexecutable, executableid), Executables)(r => (r.executableid, r.executableid), onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+  }
+  /** Collection-like TableQuery object for table Patterns */
+  lazy val Patterns = new TableQuery(tag => new Patterns(tag))
+  
   /** Entity class storing rows of table Proofs
    *  @param proofid Database column proofId DBType(TEXT), PrimaryKey
    *  @param modelid Database column modelId DBType(TEXT)
@@ -200,97 +274,101 @@ trait Tables {
   /** Collection-like TableQuery object for table Proofs */
   lazy val Proofs = new TableQuery(tag => new Proofs(tag))
   
-  /** Entity class storing rows of table Prooftacticinput
-   *  @param prooftacticid Database column proofTacticId DBType(TEXT), PrimaryKey
-   *  @param inputorder Database column inputOrder DBType(INTEGER)
-   *  @param input Database column input DBType(TEXT) */
-  case class ProoftacticinputRow(prooftacticid: Option[String], inputorder: Option[Int], input: Option[String])
-  /** GetResult implicit for fetching ProoftacticinputRow objects using plain SQL queries */
-  implicit def GetResultProoftacticinputRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[ProoftacticinputRow] = GR{
+  /** Entity class storing rows of table Provables
+   *  @param provableid Database column provableId DBType(TEXT), PrimaryKey */
+  case class ProvablesRow(provableid: Option[String])
+  /** GetResult implicit for fetching ProvablesRow objects using plain SQL queries */
+  implicit def GetResultProvablesRow(implicit e0: GR[Option[String]]): GR[ProvablesRow] = GR{
     prs => import prs._
-    ProoftacticinputRow.tupled((<<?[String], <<?[Int], <<?[String]))
+    ProvablesRow(<<?[String])
   }
-  /** Table description of table proofTacticInput. Objects of this class serve as prototypes for rows in queries. */
-  class Prooftacticinput(_tableTag: Tag) extends Table[ProoftacticinputRow](_tableTag, "proofTacticInput") {
-    def * = (prooftacticid, inputorder, input) <> (ProoftacticinputRow.tupled, ProoftacticinputRow.unapply)
+  /** Table description of table provables. Objects of this class serve as prototypes for rows in queries. */
+  class Provables(_tableTag: Tag) extends Table[ProvablesRow](_tableTag, "provables") {
+    def * = provableid <> (ProvablesRow, ProvablesRow.unapply)
     
-    /** Database column proofTacticId DBType(TEXT), PrimaryKey */
-    val prooftacticid: Column[Option[String]] = column[Option[String]]("proofTacticId", O.PrimaryKey)
-    /** Database column inputOrder DBType(INTEGER) */
-    val inputorder: Column[Option[Int]] = column[Option[Int]]("inputOrder")
-    /** Database column input DBType(TEXT) */
-    val input: Column[Option[String]] = column[Option[String]]("input")
+    /** Database column provableId DBType(TEXT), PrimaryKey */
+    val provableid: Column[Option[String]] = column[Option[String]]("provableId", O.PrimaryKey)
   }
-  /** Collection-like TableQuery object for table Prooftacticinput */
-  lazy val Prooftacticinput = new TableQuery(tag => new Prooftacticinput(tag))
+  /** Collection-like TableQuery object for table Provables */
+  lazy val Provables = new TableQuery(tag => new Provables(tag))
   
-  /** Entity class storing rows of table Tacticonproof
-   *  @param prooftacticid Database column proofTacticId DBType(TEXT), PrimaryKey
-   *  @param proofid Database column proofId DBType(TEXT)
-   *  @param tacticsid Database column tacticsId DBType(TEXT)
-   *  @param nodeid Database column nodeId DBType(TEXT)
-   *  @param formulaid Database column formulaId DBType(TEXT)
-   *  @param auto Database column auto DBType(TEXT)
-   *  @param status Database column status DBType(TEXT) */
-  case class TacticonproofRow(prooftacticid: Option[String], proofid: Option[String], tacticsid: Option[String], nodeid: Option[String], formulaid: Option[String], auto: Option[String], status: Option[String])
-  /** GetResult implicit for fetching TacticonproofRow objects using plain SQL queries */
-  implicit def GetResultTacticonproofRow(implicit e0: GR[Option[String]]): GR[TacticonproofRow] = GR{
+  /** Entity class storing rows of table Scalatactics
+   *  @param scalatacticid Database column scalaTacticId DBType(TEXT), PrimaryKey
+   *  @param location Database column location DBType(TEXT) */
+  case class ScalatacticsRow(scalatacticid: Option[String], location: Option[String])
+  /** GetResult implicit for fetching ScalatacticsRow objects using plain SQL queries */
+  implicit def GetResultScalatacticsRow(implicit e0: GR[Option[String]]): GR[ScalatacticsRow] = GR{
     prs => import prs._
-    TacticonproofRow.tupled((<<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String]))
+    ScalatacticsRow.tupled((<<?[String], <<?[String]))
   }
-  /** Table description of table tacticOnProof. Objects of this class serve as prototypes for rows in queries. */
-  class Tacticonproof(_tableTag: Tag) extends Table[TacticonproofRow](_tableTag, "tacticOnProof") {
-    def * = (prooftacticid, proofid, tacticsid, nodeid, formulaid, auto, status) <> (TacticonproofRow.tupled, TacticonproofRow.unapply)
+  /** Table description of table scalaTactics. Objects of this class serve as prototypes for rows in queries. */
+  class Scalatactics(_tableTag: Tag) extends Table[ScalatacticsRow](_tableTag, "scalaTactics") {
+    def * = (scalatacticid, location) <> (ScalatacticsRow.tupled, ScalatacticsRow.unapply)
     
-    /** Database column proofTacticId DBType(TEXT), PrimaryKey */
-    val prooftacticid: Column[Option[String]] = column[Option[String]]("proofTacticId", O.PrimaryKey)
+    /** Database column scalaTacticId DBType(TEXT), PrimaryKey */
+    val scalatacticid: Column[Option[String]] = column[Option[String]]("scalaTacticId", O.PrimaryKey)
+    /** Database column location DBType(TEXT) */
+    val location: Column[Option[String]] = column[Option[String]]("location")
+  }
+  /** Collection-like TableQuery object for table Scalatactics */
+  lazy val Scalatactics = new TableQuery(tag => new Scalatactics(tag))
+  
+  /** Entity class storing rows of table Sequentformulas
+   *  @param sequentformulaid Database column sequentFormulaId DBType(TEXT), PrimaryKey
+   *  @param provableid Database column provableId DBType(TEXT)
+   *  @param isante Database column isAnte DBType(BOOLEAN)
+   *  @param idx Database column idx DBType(INTEGER)
+   *  @param formula Database column formula DBType(TEXT) */
+  case class SequentformulasRow(sequentformulaid: Option[String], provableid: Option[String], isante: Option[String], idx: Option[Int], formula: Option[String])
+  /** GetResult implicit for fetching SequentformulasRow objects using plain SQL queries */
+  implicit def GetResultSequentformulasRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[SequentformulasRow] = GR{
+    prs => import prs._
+    SequentformulasRow.tupled((<<?[String], <<?[String], <<?[String], <<?[Int], <<?[String]))
+  }
+  /** Table description of table sequentFormulas. Objects of this class serve as prototypes for rows in queries. */
+  class Sequentformulas(_tableTag: Tag) extends Table[SequentformulasRow](_tableTag, "sequentFormulas") {
+    def * = (sequentformulaid, provableid, isante, idx, formula) <> (SequentformulasRow.tupled, SequentformulasRow.unapply)
+    
+    /** Database column sequentFormulaId DBType(TEXT), PrimaryKey */
+    val sequentformulaid: Column[Option[String]] = column[Option[String]]("sequentFormulaId", O.PrimaryKey)
+    /** Database column provableId DBType(TEXT) */
+    val provableid: Column[Option[String]] = column[Option[String]]("provableId")
+    /** Database column isAnte DBType(BOOLEAN) */
+    val isante: Column[Option[String]] = column[Option[String]]("isAnte")
+    /** Database column idx DBType(INTEGER) */
+    val idx: Column[Option[Int]] = column[Option[Int]]("idx")
+    /** Database column formula DBType(TEXT) */
+    val formula: Column[Option[String]] = column[Option[String]]("formula")
+    
+    /** Foreign key referencing Provables (database name provables_FK_1) */
+    lazy val provablesFk = foreignKey("provables_FK_1", provableid, Provables)(r => r.provableid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+  }
+  /** Collection-like TableQuery object for table Sequentformulas */
+  lazy val Sequentformulas = new TableQuery(tag => new Sequentformulas(tag))
+  
+  /** Entity class storing rows of table Tacticexecutions
+   *  @param executionid Database column executionId DBType(TEXT), PrimaryKey
+   *  @param proofid Database column proofId DBType(TEXT) */
+  case class TacticexecutionsRow(executionid: Option[String], proofid: Option[String])
+  /** GetResult implicit for fetching TacticexecutionsRow objects using plain SQL queries */
+  implicit def GetResultTacticexecutionsRow(implicit e0: GR[Option[String]]): GR[TacticexecutionsRow] = GR{
+    prs => import prs._
+    TacticexecutionsRow.tupled((<<?[String], <<?[String]))
+  }
+  /** Table description of table tacticExecutions. Objects of this class serve as prototypes for rows in queries. */
+  class Tacticexecutions(_tableTag: Tag) extends Table[TacticexecutionsRow](_tableTag, "tacticExecutions") {
+    def * = (executionid, proofid) <> (TacticexecutionsRow.tupled, TacticexecutionsRow.unapply)
+    
+    /** Database column executionId DBType(TEXT), PrimaryKey */
+    val executionid: Column[Option[String]] = column[Option[String]]("executionId", O.PrimaryKey)
     /** Database column proofId DBType(TEXT) */
     val proofid: Column[Option[String]] = column[Option[String]]("proofId")
-    /** Database column tacticsId DBType(TEXT) */
-    val tacticsid: Column[Option[String]] = column[Option[String]]("tacticsId")
-    /** Database column nodeId DBType(TEXT) */
-    val nodeid: Column[Option[String]] = column[Option[String]]("nodeId")
-    /** Database column formulaId DBType(TEXT) */
-    val formulaid: Column[Option[String]] = column[Option[String]]("formulaId")
-    /** Database column auto DBType(TEXT) */
-    val auto: Column[Option[String]] = column[Option[String]]("auto")
-    /** Database column status DBType(TEXT) */
-    val status: Column[Option[String]] = column[Option[String]]("status")
     
     /** Foreign key referencing Proofs (database name proofs_FK_1) */
     lazy val proofsFk = foreignKey("proofs_FK_1", proofid, Proofs)(r => r.proofid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
-    /** Foreign key referencing Tactics (database name tactics_FK_2) */
-    lazy val tacticsFk = foreignKey("tactics_FK_2", tacticsid, Tactics)(r => r.tacticid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
   }
-  /** Collection-like TableQuery object for table Tacticonproof */
-  lazy val Tacticonproof = new TableQuery(tag => new Tacticonproof(tag))
-  
-  /** Entity class storing rows of table Tactics
-   *  @param tacticid Database column tacticId DBType(TEXT), PrimaryKey
-   *  @param name Database column name DBType(TEXT)
-   *  @param clazz Database column clazz DBType(TEXT)
-   *  @param kind Database column kind DBType(TEXT) */
-  case class TacticsRow(tacticid: Option[String], name: Option[String], clazz: Option[String], kind: Option[String])
-  /** GetResult implicit for fetching TacticsRow objects using plain SQL queries */
-  implicit def GetResultTacticsRow(implicit e0: GR[Option[String]]): GR[TacticsRow] = GR{
-    prs => import prs._
-    TacticsRow.tupled((<<?[String], <<?[String], <<?[String], <<?[String]))
-  }
-  /** Table description of table tactics. Objects of this class serve as prototypes for rows in queries. */
-  class Tactics(_tableTag: Tag) extends Table[TacticsRow](_tableTag, "tactics") {
-    def * = (tacticid, name, clazz, kind) <> (TacticsRow.tupled, TacticsRow.unapply)
-    
-    /** Database column tacticId DBType(TEXT), PrimaryKey */
-    val tacticid: Column[Option[String]] = column[Option[String]]("tacticId", O.PrimaryKey)
-    /** Database column name DBType(TEXT) */
-    val name: Column[Option[String]] = column[Option[String]]("name")
-    /** Database column clazz DBType(TEXT) */
-    val clazz: Column[Option[String]] = column[Option[String]]("clazz")
-    /** Database column kind DBType(TEXT) */
-    val kind: Column[Option[String]] = column[Option[String]]("kind")
-  }
-  /** Collection-like TableQuery object for table Tactics */
-  lazy val Tactics = new TableQuery(tag => new Tactics(tag))
+  /** Collection-like TableQuery object for table Tacticexecutions */
+  lazy val Tacticexecutions = new TableQuery(tag => new Tacticexecutions(tag))
   
   /** Entity class storing rows of table Users
    *  @param email Database column email DBType(TEXT), PrimaryKey
@@ -312,4 +390,27 @@ trait Tables {
   }
   /** Collection-like TableQuery object for table Users */
   lazy val Users = new TableQuery(tag => new Users(tag))
+  
+  /** Entity class storing rows of table Valuetypes
+   *  @param valuetypeid Database column valueTypeId DBType(TEXT), PrimaryKey
+   *  @param `type` Database column type DBType(TEXT) */
+  case class ValuetypesRow(valuetypeid: Option[String], `type`: Option[String])
+  /** GetResult implicit for fetching ValuetypesRow objects using plain SQL queries */
+  implicit def GetResultValuetypesRow(implicit e0: GR[Option[String]]): GR[ValuetypesRow] = GR{
+    prs => import prs._
+    ValuetypesRow.tupled((<<?[String], <<?[String]))
+  }
+  /** Table description of table valueTypes. Objects of this class serve as prototypes for rows in queries.
+   *  NOTE: The following names collided with Scala keywords and were escaped: type */
+  class Valuetypes(_tableTag: Tag) extends Table[ValuetypesRow](_tableTag, "valueTypes") {
+    def * = (valuetypeid, `type`) <> (ValuetypesRow.tupled, ValuetypesRow.unapply)
+    
+    /** Database column valueTypeId DBType(TEXT), PrimaryKey */
+    val valuetypeid: Column[Option[String]] = column[Option[String]]("valueTypeId", O.PrimaryKey)
+    /** Database column type DBType(TEXT)
+     *  NOTE: The name was escaped because it collided with a Scala keyword. */
+    val `type`: Column[Option[String]] = column[Option[String]]("type")
+  }
+  /** Collection-like TableQuery object for table Valuetypes */
+  lazy val Valuetypes = new TableQuery(tag => new Valuetypes(tag))
 }
