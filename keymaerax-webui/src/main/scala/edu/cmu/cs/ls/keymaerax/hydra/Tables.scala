@@ -14,7 +14,7 @@ trait Tables {
   import scala.slick.jdbc.{GetResult => GR}
   
   /** DDL for all tables. Call .create to execute. */
-  lazy val ddl = Config.ddl ++ Executableparameter.ddl ++ Executables.ddl ++ Executionsteps.ddl ++ Models.ddl ++ Patterns.ddl ++ Proofs.ddl ++ Provables.ddl ++ Scalatactics.ddl ++ Sequentformulas.ddl ++ Sequents.ddl ++ Tacticexecutions.ddl ++ Users.ddl ++ Valuetypes.ddl
+  lazy val ddl = Config.ddl ++ Executableparameter.ddl ++ Executables.ddl ++ Executionsteps.ddl ++ Models.ddl ++ Patterns.ddl ++ Proofs.ddl ++ Provables.ddl ++ Scalatactics.ddl ++ Sequentformulas.ddl ++ Sequents.ddl ++ Tacticexecutions.ddl ++ Users.ddl
   
   /** Entity class storing rows of table Config
    *  @param configid Database column configId DBType(TEXT), PrimaryKey
@@ -47,9 +47,9 @@ trait Tables {
    *  @param parameterid Database column parameterId DBType(TEXT), PrimaryKey
    *  @param executableid Database column executableId DBType(TEXT)
    *  @param idx Database column idx DBType(INT)
-   *  @param valuetypeid Database column valueTypeId DBType(TEXT)
+   *  @param valuetype Database column valueType DBType(TEXT)
    *  @param value Database column value DBType(TEXT) */
-  case class ExecutableparameterRow(parameterid: Option[String], executableid: Option[String], idx: Option[Int], valuetypeid: Option[String], value: Option[String])
+  case class ExecutableparameterRow(parameterid: Option[String], executableid: Option[String], idx: Option[Int], valuetype: Option[String], value: Option[String])
   /** GetResult implicit for fetching ExecutableparameterRow objects using plain SQL queries */
   implicit def GetResultExecutableparameterRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[ExecutableparameterRow] = GR{
     prs => import prs._
@@ -57,7 +57,7 @@ trait Tables {
   }
   /** Table description of table executableParameter. Objects of this class serve as prototypes for rows in queries. */
   class Executableparameter(_tableTag: Tag) extends Table[ExecutableparameterRow](_tableTag, "executableParameter") {
-    def * = (parameterid, executableid, idx, valuetypeid, value) <> (ExecutableparameterRow.tupled, ExecutableparameterRow.unapply)
+    def * = (parameterid, executableid, idx, valuetype, value) <> (ExecutableparameterRow.tupled, ExecutableparameterRow.unapply)
     
     /** Database column parameterId DBType(TEXT), PrimaryKey */
     val parameterid: Column[Option[String]] = column[Option[String]]("parameterId", O.PrimaryKey)
@@ -65,8 +65,8 @@ trait Tables {
     val executableid: Column[Option[String]] = column[Option[String]]("executableId")
     /** Database column idx DBType(INT) */
     val idx: Column[Option[Int]] = column[Option[Int]]("idx")
-    /** Database column valueTypeId DBType(TEXT) */
-    val valuetypeid: Column[Option[String]] = column[Option[String]]("valueTypeId")
+    /** Database column valueType DBType(TEXT) */
+    val valuetype: Column[Option[String]] = column[Option[String]]("valueType")
     /** Database column value DBType(TEXT) */
     val value: Column[Option[String]] = column[Option[String]]("value")
     
@@ -420,27 +420,4 @@ trait Tables {
   }
   /** Collection-like TableQuery object for table Users */
   lazy val Users = new TableQuery(tag => new Users(tag))
-  
-  /** Entity class storing rows of table Valuetypes
-   *  @param valuetypeid Database column valueTypeId DBType(TEXT), PrimaryKey
-   *  @param `type` Database column type DBType(TEXT) */
-  case class ValuetypesRow(valuetypeid: Option[String], `type`: Option[String])
-  /** GetResult implicit for fetching ValuetypesRow objects using plain SQL queries */
-  implicit def GetResultValuetypesRow(implicit e0: GR[Option[String]]): GR[ValuetypesRow] = GR{
-    prs => import prs._
-    ValuetypesRow.tupled((<<?[String], <<?[String]))
-  }
-  /** Table description of table valueTypes. Objects of this class serve as prototypes for rows in queries.
-   *  NOTE: The following names collided with Scala keywords and were escaped: type */
-  class Valuetypes(_tableTag: Tag) extends Table[ValuetypesRow](_tableTag, "valueTypes") {
-    def * = (valuetypeid, `type`) <> (ValuetypesRow.tupled, ValuetypesRow.unapply)
-    
-    /** Database column valueTypeId DBType(TEXT), PrimaryKey */
-    val valuetypeid: Column[Option[String]] = column[Option[String]]("valueTypeId", O.PrimaryKey)
-    /** Database column type DBType(TEXT)
-     *  NOTE: The name was escaped because it collided with a Scala keyword. */
-    val `type`: Column[Option[String]] = column[Option[String]]("type")
-  }
-  /** Collection-like TableQuery object for table Valuetypes */
-  lazy val Valuetypes = new TableQuery(tag => new Valuetypes(tag))
 }
