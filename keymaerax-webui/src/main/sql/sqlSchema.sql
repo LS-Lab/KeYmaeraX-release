@@ -77,8 +77,7 @@ CREATE TABLE IF NOT EXISTS `executionSteps` (
 
   -- Rows that identify whether this is a tactic execution, or some other form of user interaction (e.g., interruption)
   `status`           TEXT,
-  `executableId`     TEXT REFERENCES `executables` (`executableId`)
-    CHECK (`isInterrupt` ISNULL OR `executableId` ISNULL),
+  `executableId`     TEXT REFERENCES `executables` (`executableId`),
 
   -- Rows that identify input and output of the tactic
   `inputProvableId`  TEXT REFERENCES `provables` (`provableId`),
