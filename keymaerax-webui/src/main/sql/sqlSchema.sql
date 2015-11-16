@@ -35,12 +35,18 @@ CREATE TABLE IF NOT EXISTS `proofs` (
 -- Serialization of Provables
 ----------------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `provables` (
-  `provableId` TEXT PRIMARY KEY ON CONFLICT FAIL
+  `provableId` TEXT PRIMARY KEY ON CONFLICT FAIL,
+  `conclusionId` TEXT REFERENCES `sequents`
+);
+
+CREATE TABLE IF NOT EXISTS `sequents` (
+  `sequentId` TEXT,
+  `provableId` TEXT REFERENCES `provables` (`provableId`)
 );
 
 CREATE TABLE IF NOT EXISTS `sequentFormulas` (
   `sequentFormulaId` TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `provableId` TEXT REFERENCES `provables` (`provableId`),
+  `sequentId` TEXT REFERENCES `sequents` (`sequentId`),
   `isAnte` BOOLEAN,
   `idx` INTEGER,
   `formula` TEXT
@@ -70,7 +76,7 @@ CREATE TABLE IF NOT EXISTS `executionSteps` (
   `alternativeOrder` INT,
 
   -- Rows that identify whether this is a tactic execution, or some other form of user interaction (e.g., interruption)
-  `isInterrupt`       BOOLEAN,
+  `status`           TEXT,
   `executableId`     TEXT REFERENCES `executables` (`executableId`)
     CHECK (`isInterrupt` ISNULL OR `executableId` ISNULL),
 
