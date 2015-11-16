@@ -11,6 +11,11 @@ import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.PositionTacticAutomation
 import java.io.File
 import java.io.FileOutputStream
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
+import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
+import edu.cmu.cs.ls.keymaerax.hydra.ParameterValueType.ParameterValueType
+
 import scala.io.Source
 import spray.json.DefaultJsonProtocol._
 
@@ -66,7 +71,7 @@ case class SequentFormulaPOJO(sequentFormulaId: String, sequentId: String, isAnt
 
 object ExecutionStepStatus extends Enumeration {
   type ExecutionStepStatus = Value
-  val Prepared, Running, Finished, Aborted, Error = Value
+  val Prepared, Running, Finished, Aborted, Error, DependsOnChildren = Value
 
   def fromString(s : String) = s match {
     case "Prepared" => Prepared
@@ -74,6 +79,7 @@ object ExecutionStepStatus extends Enumeration {
     case "Finished" => Finished
     case "Aborted" => Aborted
     case "Error" => Error
+    case "DependsOnChildren" => DependsOnChildren
     case _ => throw new Exception("Status " + s + " not in enum.")
   }
 }
@@ -94,7 +100,7 @@ case class ExecutionStepPOJO(stepId: String, executionId: String,
   require(branchOrder.isEmpty != branchLabel.isEmpty) //also schema constraint
 }
 
-case class ExecutablesPOJO(executableId: String, scalaTacticId: Option[String], belleExpr: Option[String]) {
+case class ExecutablePOJO(executableId: String, scalaTacticId: Option[String], belleExpr: Option[String]) {
   require(scalaTacticId.isEmpty != belleExpr.isEmpty)
 }
 
@@ -106,17 +112,8 @@ CREATE TABLE IF NOT EXISTS `scalaTactics` (
 */
 case class ScalaTacticPOJO(scalaTacticId: String, location: String)
 
-/*
 
-CREATE TABLE `executableParameter` (
-  `parameterId`  TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `executableId` TEXT REFERENCES `executables` (`executableId`),
-  `idx`          INT,
-  `valueTypeId`  TEXT REFERENCES `argumentTypes` (`typeId`),
-  `value`        TEXT
-);
-*/
-case class ParameterPOJO(parameterId: String, executableID: String, idx: Int, valueTypeId: String, value: String)
+case class ParameterPOJO(parameterId: String, executableID: String, idx: Int, valueType: ParameterValueType, value: String)
 
 
 object ParameterValueType extends Enumeration {
@@ -175,35 +172,50 @@ trait DBAbstraction {
   def getProofSteps(proofId : String) : List[String]
 
   // Tactics
-  def createTactic(name : String, clazz : String, kind : TacticKind.Value) : String
-  def tacticExists(id: String) : Boolean
-  def getTactic(id: String) : Option[TacticPOJO]
-  def getTacticByName(name: String) : Option[TacticPOJO]
-  def getTactics : List[TacticPOJO]
-  def createDispatchedTactics(taskId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String,
-                              input:Map[Int, String], auto: Option[PositionTacticAutomation.PositionTacticAutomation],
-                              status:DispatchedTacticStatus.Value) : String
-  def updateDispatchedTactics(tactic:DispatchedTacticPOJO)
-  def updateDispatchedTacticStatus(tacticId:String, message: DispatchedTacticStatus.Value)
-  def getDispatchedTactics(tId : String) : Option[DispatchedTacticPOJO]
-  def getDispatchedTermOrTactic(tId : String) : Option[AbstractDispatchedPOJO]
-  def updateProofOnTacticCompletion(proofId: String, tId: String)
+  /** Stores a Provable in the database and returns its ID */
+  def serializeProvable(p : Provable): String
 
-  def createDispatchedCLTerm(taskId : String, nodeId : Option[String], clTerm : String) : String
-  def getDispatchedCLTerm(id : String) : Option[DispatchedCLTermPOJO]
-  def updateDispatchedCLTerm(termToUpdate : DispatchedCLTermPOJO)
-  def updateDispatchedCLTermStatus(termId: String, status: DispatchedTacticStatus.Value)
-  def updateProofOnCLTermCompletion(proofId : String, termId : String)
+  /** Gets the conclusion of a provable */
+  def getConclusion(provableId: String): Sequent
 
+  /** Use escape hatch in prover core to create a new Provable */
+  def loadProvable(provableId: String): Sequent
 
-  def initializeForDemo() : Unit = {
-    val dbFile = this.getClass.getResourceAsStream("/keymaerax.sqlite")
-    val target = new java.io.File(DBAbstractionObj.dblocation)
-    val targetStream = new FileOutputStream(target)
-    targetStream.getChannel.transferFrom(Channels.newChannel(dbFile), 0, Long.MaxValue)
-    targetStream.close()
-    dbFile.close()
-  }
+  /** Deletes a provable and all associated sequents / formulas */
+  def deleteProvable(provableId: String): Unit
+
+  /////////////////////
+
+  /** Creates a new execution and returns the new ID in tacticExecutions */
+  def createExecution(proofId: String): String
+
+  /** Deletes an execution from the database */
+  def deleteExecution(executionId: String): Unit
+
+  /**
+    * Adds an execution step to an existing execution
+    * @note Implementations should enforce additional invarants -- never insert when branches or alt orderings overlap.
+    */
+  def addExecutionStep(step: ExecutionStepPOJO): String
+
+  def getExecutionSteps(executionID: String) : List[ExecutionStepPOJO]
+
+  /** Updates an executable step's status. @note should not be transitive */
+  def updateExeuctionStatus(executionStepId: String, status: ExecutionStepStatus): Unit
+
+  /////////////////////
+
+  /** Adds a new scala tactic and returns the resulting id */
+  def addScalaTactic(scalaTactic: ScalaTacticPOJO): String
+
+  /** Adds a bellerophon expression as an executable and returns the new executableId */
+  def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): String
+
+  /** Adds a built-in tactic application using a set of parameters */
+  def addAppliedScalaTactic(scalaTacticId: String, params: List[ParameterPOJO]): String
+
+  /** Returns the executable with ID executableId */
+  def getExecutable(executableId: String): ExecutablePOJO
 
   import spray.json._ //allows for .parseJoson on strings.
   def initializeForDemo2() : Unit = {
