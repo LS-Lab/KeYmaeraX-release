@@ -22,7 +22,7 @@ object DBAbstractionObj {
       System.getProperty("user.home") + File.separator +
         ".keymaerax"
     ).mkdirs()
-    
+
     val file = new File(System.getProperty("user.home") + File.separator +
       ".keymaerax" + File.separator + "keymaerax.sqlite")
     file.getCanonicalPath
@@ -30,25 +30,7 @@ object DBAbstractionObj {
   println(dblocation)
 }
 
-// POJOs, short for Plain Old Java Objects, are for us just tagged products.
-object TacticKind extends Enumeration {
-  type TacticKind = Value
-  val Tactic, PositionTactic, InputTactic, InputPositionTactic, UserTactic = Value
-}
-
-object DispatchedTacticStatus extends Enumeration {
-  type DispatchedTacticStatus = Value
-  val Prepared, Running, Finished, Aborted, Error = Value
-
-  def fromString(s : String) = s match {
-    case "Prepared" => Prepared
-    case "Running" => Running
-    case "Finished" => Finished
-    case "Aborted" => Aborted
-    case "Error" => Error
-    case _ => throw new Exception("Status " + s + " not in enum.")
-  }
-}
+class ConfigurationPOJO(val name: String, val config: Map[String,String])
 
 /**
  * Data object for models.
@@ -76,38 +58,82 @@ class ModelPOJO(val modelId:String, val userId:String, val name:String, val date
 class ProofPOJO(val proofId:String, val modelId:String, val name:String, val description:String,
                 val date:String, val stepCount : Integer, val closed : Boolean)
 
-/**
- * Data object for tactics.
- * @param tacticId Identifies the tactic.
- * @param name The name of the tactic.
- * @param clazz The tactic implementation.
- * @param kind The kind of tactic.
- */
-class TacticPOJO(val tacticId:String, val name:String, val clazz:String, val kind : TacticKind.Value)
+case class ProvablePOJO(provableId: String, conclusionId: String)
+
+case class SequentPOJO(sequentId: String, provableId: String)
+
+case class SequentFormulaPOJO(sequentFormulaId: String, sequentId: String, isAnte: Boolean, index: Int, formulaStr: String)
+
+object ExecutionStepStatus extends Enumeration {
+  type ExecutionStepStatus = Value
+  val Prepared, Running, Finished, Aborted, Error = Value
+
+  def fromString(s : String) = s match {
+    case "Prepared" => Prepared
+    case "Running" => Running
+    case "Finished" => Finished
+    case "Aborted" => Aborted
+    case "Error" => Error
+    case _ => throw new Exception("Status " + s + " not in enum.")
+  }
+}
+
+case class TacticExecutionPOJO(executionId: String, proofId: String)
+
+case class ExecutionStepPOJO(stepId: String, executionId: String,
+                             previousStep: String, parentStep: String,
+                             branchOrder: Option[String],
+                             branchLabel: Option[Int],
+                             alternativeOrder: Int,
+                             status: ExecutionStepStatus,
+                             executaleId: String,
+                             inputProvableId: String,
+                             resultProvableId: String,
+                             userExecuted: Boolean)
+{
+  require(branchOrder.isEmpty != branchLabel.isEmpty) //also schema constraint
+}
+
+case class ExecutablesPOJO(executableId: String, scalaTacticId: Option[String], belleExpr: Option[String]) {
+  require(scalaTacticId.isEmpty != belleExpr.isEmpty)
+}
+
+/*
+CREATE TABLE IF NOT EXISTS `scalaTactics` (
+  `scalaTacticId` TEXT PRIMARY KEY ON CONFLICT FAIL,
+  `location`      TEXT
+);
+*/
+case class ScalaTacticPOJO(scalaTacticId: String, location: String)
+
+/*
+
+CREATE TABLE `executableParameter` (
+  `parameterId`  TEXT PRIMARY KEY ON CONFLICT FAIL,
+  `executableId` TEXT REFERENCES `executables` (`executableId`),
+  `idx`          INT,
+  `valueTypeId`  TEXT REFERENCES `argumentTypes` (`typeId`),
+  `value`        TEXT
+);
+*/
+case class ParameterPOJO(parameterId: String, executableID: String, idx: Int, valueTypeId: String, value: String)
 
 
-abstract class AbstractDispatchedPOJO
+object ParameterValueType extends Enumeration {
+  type ParameterValueType = Value
+  val String, Position, Formula, Provable = Value
 
-/**
- * Data object for a tactic instance running on the specified formula of a particular proof (node).
- * @param id Identifies the tactic instance.
- * @param proofId Identifies the proof.
- * @param nodeId Identifies the node. If None, it identifies the "root" node of task nodes.
- * @param formulaId Identifies the formula.
- * @param tacticsId Identifies the tactic that is being run.
- */
-case class DispatchedTacticPOJO(val id:String, val proofId:String, val nodeId:Option[String], val formulaId:Option[String],
-                           val tacticsId:String, val input:Map[Int,String],
-                           val auto:Option[PositionTacticAutomation.Value], val status:DispatchedTacticStatus.Value) extends AbstractDispatchedPOJO
+  def fromString(s : String) = s match {
+    case "0" => String
+    case "1" => Position
+    case "2" => Formula
+    case "3" => Provable
+    case _ => throw new Exception("ParameterValueType " + s + " not in enum.")
+  }
+}
 
-case class DispatchedCLTermPOJO(val id : String, val proofId : String, val nodeId : Option[String], val clTerm : String, val status:Option[DispatchedTacticStatus.Value]) extends AbstractDispatchedPOJO
-
-class ConfigurationPOJO(val name: String, val config: Map[String,String])
-
-//tasks : _id, model
-//tactics: _id, name, class
-//dispatched_tactics: _id, tactic_id, task_id, node_id, count
-
+case class USubstPatternParameterPOJO(patternId: String, executableId: String,
+                                  index: Int, patternFormulaStr: String, resultingExecutableId: String)
 
 /**
  * Proof database
