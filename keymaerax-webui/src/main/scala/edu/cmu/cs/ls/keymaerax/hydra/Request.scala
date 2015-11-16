@@ -359,89 +359,91 @@ class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request
 }
 
 class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wait : Boolean = false) extends Request {
-  def getResultingResponses() = {
-    val proof = db.getProofInfo(proofId)
-
-    TaskManagement.startLoadingTask(proof.proofId)
-
-    val t = new Thread(new Runnable() {
-      override def run(): Unit = {
-        if (!KeYmaeraInterface.containsTask(proof.proofId)) {
-          val model = db.getModel(proof.modelId)
-          KeYmaeraInterface.addTask(proof.proofId, model.keyFile)
-
-          val steps: List[AbstractDispatchedPOJO] = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTermOrTactic(step).getOrElse(throw new Exception("Expected to find tactic inst or term with id " + step)))
-          if (steps.nonEmpty) {
-            steps.head match {
-              case firstStep: DispatchedTacticPOJO => {
-                //@todo thead the actual exception to the UI through the database via an additional "errorThrown" column on proof.
-                val exnHandler = new TacticExceptionListener {
-                  override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = {
-                    //@todo not sure if this is the correct step ID.
-                    db.updateDispatchedTacticStatus(firstStep.id, DispatchedTacticStatus.Error) //@todo not sure if this is the correct step ID.
-                  }
-                }
-                KeYmaeraInterface.runTactic(proof.proofId, firstStep.nodeId, firstStep.tacticsId, firstStep.formulaId,
-                  firstStep.id, Some(tacticCompleted(steps.toArray, 1)), exnHandler, firstStep.input, firstStep.auto)
-              }
-              case firstStep: DispatchedCLTermPOJO => {
-                //@todo thead the actual exception to the UI through the database via an additional "errorThrown" column on proof.
-                val exnHandler = new TacticExceptionListener {
-                  override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = {
-                    //@todo not sure if this is the correct step ID.
-                    db.updateDispatchedTacticStatus(firstStep.id, DispatchedTacticStatus.Error)
-                  }
-                }
-                KeYmaeraInterface.runTerm(firstStep.clTerm, firstStep.proofId, firstStep.nodeId, firstStep.clTerm, Some(tacticCompleted(steps.toArray, 1)), exnHandler)
-              }
-            }
-          } else {
-            TaskManagement.finishedLoadingTask(proofId)
-          }
-        } else {
-          TaskManagement.finishedLoadingTask(proofId)
-        }
-      }
-    })
-
-    if(!wait) t.start()
-    else t.run()
-
-    val status = KeYmaeraInterface.getTaskLoadStatus(proofId)
-    new OpenProofResponse(proof, status.toString.toLowerCase) :: Nil
-  }
+  def getResultingResponses() = ???
+//  {
+//    val proof = db.getProofInfo(proofId)
+//
+//    TaskManagement.startLoadingTask(proof.proofId)
+//
+//    val t = new Thread(new Runnable() {
+//      override def run(): Unit = {
+//        if (!KeYmaeraInterface.containsTask(proof.proofId)) {
+//          val model = db.getModel(proof.modelId)
+//          KeYmaeraInterface.addTask(proof.proofId, model.keyFile)
+//
+//          val steps: List[AbstractDispatchedPOJO] = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTermOrTactic(step).getOrElse(throw new Exception("Expected to find tactic inst or term with id " + step)))
+//          if (steps.nonEmpty) {
+//            steps.head match {
+//              case firstStep: DispatchedTacticPOJO => {
+//                //@todo thead the actual exception to the UI through the database via an additional "errorThrown" column on proof.
+//                val exnHandler = new TacticExceptionListener {
+//                  override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = {
+//                    //@todo not sure if this is the correct step ID.
+//                    db.updateDispatchedTacticStatus(firstStep.id, DispatchedTacticStatus.Error) //@todo not sure if this is the correct step ID.
+//                  }
+//                }
+//                KeYmaeraInterface.runTactic(proof.proofId, firstStep.nodeId, firstStep.tacticsId, firstStep.formulaId,
+//                  firstStep.id, Some(tacticCompleted(steps.toArray, 1)), exnHandler, firstStep.input, firstStep.auto)
+//              }
+//              case firstStep: DispatchedCLTermPOJO => {
+//                //@todo thead the actual exception to the UI through the database via an additional "errorThrown" column on proof.
+//                val exnHandler = new TacticExceptionListener {
+//                  override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = {
+//                    //@todo not sure if this is the correct step ID.
+//                    db.updateDispatchedTacticStatus(firstStep.id, DispatchedTacticStatus.Error)
+//                  }
+//                }
+//                KeYmaeraInterface.runTerm(firstStep.clTerm, firstStep.proofId, firstStep.nodeId, firstStep.clTerm, Some(tacticCompleted(steps.toArray, 1)), exnHandler)
+//              }
+//            }
+//          } else {
+//            TaskManagement.finishedLoadingTask(proofId)
+//          }
+//        } else {
+//          TaskManagement.finishedLoadingTask(proofId)
+//        }
+//      }
+//    })
+//
+//    if(!wait) t.start()
+//    else t.run()
+//
+//    val status = KeYmaeraInterface.getTaskLoadStatus(proofId)
+//    new OpenProofResponse(proof, status.toString.toLowerCase) :: Nil
+//  }
 
   //@todo To improve readability, move the once-unwinding above and this implementation into a single function.
-  private def tacticCompleted(steps : Array[AbstractDispatchedPOJO], next : Int)(tId: String)(proofId: String, nId: Option[String],
-                                                                               tacticId: String) {
-    if (next < steps.length) {
-
-      steps(next) match {
-        case nextStep : DispatchedTacticPOJO => {
-          //@todo thead the actual exception to the UI through the database via an additional "errorThrown" column on proof.
-          val exnHandler = new TacticExceptionListener {
-            override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = {
-              db.updateDispatchedTacticStatus(tId, DispatchedTacticStatus.Error) //@todo not sure if this should be proofId, tId, or tacticId?
-            }
-          }
-          KeYmaeraInterface.runTactic(proofId, nextStep.nodeId, nextStep.tacticsId, nextStep.formulaId, nextStep.id,
-            Some(tacticCompleted(steps, next + 1)), exnHandler, nextStep.input, nextStep.auto)
-        }
-        case nextStep : DispatchedCLTermPOJO => {
-          //@todo thead the actual exception to the UI through the database via an additional "errorThrown" column on proof.
-          val exnHandler = new TacticExceptionListener {
-            override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = {
-              db.updateDispatchedCLTermStatus(tId, DispatchedTacticStatus.Error) //@todo not sure if this should be proofId, tId, or tacticId?
-            }
-          }
-          KeYmaeraInterface.runTerm(nextStep.id, nextStep.proofId, nextStep.nodeId, nextStep.clTerm, Some(tacticCompleted(steps, next + 1)), exnHandler)
-        }
-      }
-    } else {
-      println("*******************\nFinished loading proof " + proofId + "\n*******************")
-      TaskManagement.finishedLoadingTask(proofId)
-    }
-  }
+//  private def tacticCompleted(steps : Array[AbstractDispatchedPOJO], next : Int)(tId: String)(proofId: String, nId: Option[String],
+//                                                                               tacticId: String) = ???
+//  {
+//    if (next < steps.length) {
+//
+//      steps(next) match {
+//        case nextStep : DispatchedTacticPOJO => {
+//          //@todo thead the actual exception to the UI through the database via an additional "errorThrown" column on proof.
+//          val exnHandler = new TacticExceptionListener {
+//            override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = {
+//              db.updateDispatchedTacticStatus(tId, DispatchedTacticStatus.Error) //@todo not sure if this should be proofId, tId, or tacticId?
+//            }
+//          }
+//          KeYmaeraInterface.runTactic(proofId, nextStep.nodeId, nextStep.tacticsId, nextStep.formulaId, nextStep.id,
+//            Some(tacticCompleted(steps, next + 1)), exnHandler, nextStep.input, nextStep.auto)
+//        }
+//        case nextStep : DispatchedCLTermPOJO => {
+//          //@todo thead the actual exception to the UI through the database via an additional "errorThrown" column on proof.
+//          val exnHandler = new TacticExceptionListener {
+//            override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = {
+//              db.updateDispatchedCLTermStatus(tId, DispatchedTacticStatus.Error) //@todo not sure if this should be proofId, tId, or tacticId?
+//            }
+//          }
+//          KeYmaeraInterface.runTerm(nextStep.id, nextStep.proofId, nextStep.nodeId, nextStep.clTerm, Some(tacticCompleted(steps, next + 1)), exnHandler)
+//        }
+//      }
+//    } else {
+//      println("*******************\nFinished loading proof " + proofId + "\n*******************")
+//      TaskManagement.finishedLoadingTask(proofId)
+//    }
+//  }
 }
 
 /**
@@ -490,14 +492,15 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
  * @param formulaId Identifies the formula in the sequent on which to apply the tactic.
  */
 class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], formulaId : Option[String]) extends Request {
-  def getResultingResponses() = {
-    val applicableTactics = KeYmaeraInterface.getApplicableTactics(proofId, nodeId, formulaId)
-      .map(tId => db.getTactic(tId) match {
-        case Some(t) => t
-        case None => throw new IllegalStateException("Tactic " + tId + " not in database")
-    }).toList
-    new ApplicableTacticsResponse(applicableTactics) :: Nil
-  }
+  def getResultingResponses() = ???
+//  {
+//    val applicableTactics = KeYmaeraInterface.getApplicableTactics(proofId, nodeId, formulaId)
+//      .map(tId => db.getTactic(tId) match {
+//        case Some(t) => t
+//        case None => throw new IllegalStateException("Tactic " + tId + " not in database")
+//    }).toList
+//    new ApplicableTacticsResponse(applicableTactics) :: Nil
+//  }
 }
 
 /**
@@ -515,13 +518,14 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
 class RunTacticByNameRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String],
                              formulaId : Option[String], tacticName : String, input : Map[Int,String],
                              auto: Option[String] = None) extends Request {
-  def getResultingResponses() = {
-    val tacticId = db.getTacticByName(tacticName) match {
-      case Some(t) => t.tacticId
-      case None => throw new IllegalArgumentException("Tactic name " + tacticName + " unknown")
-    }
-    new RunTacticRequest(db, userId, proofId, nodeId, formulaId, tacticId, input, auto).getResultingResponses()
-  }
+  def getResultingResponses() = ???
+//  {
+//    val tacticId = db.getTacticByName(tacticName) match {
+//      case Some(t) => t.tacticId
+//      case None => throw new IllegalArgumentException("Tactic name " + tacticName + " unknown")
+//    }
+//    new RunTacticRequest(db, userId, proofId, nodeId, formulaId, tacticId, input, auto).getResultingResponses()
+//  }
 }
 
 /**
@@ -540,121 +544,126 @@ class RunTacticByNameRequest(db : DBAbstraction, userId : String, proofId : Stri
 class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String],
                        formulaId : Option[String], tacticId : String, input : Map[Int,String],
                        auto: Option[String] = None) extends Request {
-  def getResultingResponses() = {
-    val automation = auto match {
-      case Some(s) => Some(KeYmaeraInterface.PositionTacticAutomation.withName(s.toLowerCase))
-      case _ => None
-    }
-    val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, input, automation, DispatchedTacticStatus.Prepared)
-    db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input, automation,
-      DispatchedTacticStatus.Running))
-
-    new Thread(new Runnable() {
-      override def run(): Unit = {
-        val exnHandler = new TacticExceptionListener {
-          override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = {
-            db.synchronized({
-              db.updateDispatchedTacticStatus(tId, DispatchedTacticStatus.Error)
-            })
-            println("[HyDRA] Caught exception in Request.scala after running a tactic: " + tactic.name + " with tactic ID: " + tId)
-          }
-        }
-
-        try {
-          KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
-            Some(tacticCompleted(db)), exnHandler, input, automation)
-        }
-        catch {
-          case e : Exception => db.synchronized({
-            db.updateDispatchedTacticStatus(tId, DispatchedTacticStatus.Error)
-            throw e
-          })
-        }
-      }
-    }).start()
-
-    new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input, automation,
-      DispatchedTacticStatus.Running)) :: Nil
-  }
-
-  private def tacticCompleted(db : DBAbstraction)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
-    db.synchronized {
-      // Do not change the status to finished unless the current status is different from Error.
-      // This won't prevent re-running a tactic that failed incidentally because when the tactic is
-      // re-run its current status will change to Running.
-      if(!db.getDispatchedTactics(tId).get.status.equals(DispatchedTacticStatus.Error))
-        db.updateProofOnTacticCompletion(proofId, tId)
-    }
-  }
+  def getResultingResponses() = ???
+//  {
+//    val automation = auto match {
+//      case Some(s) => Some(KeYmaeraInterface.PositionTacticAutomation.withName(s.toLowerCase))
+//      case _ => None
+//    }
+//    val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, input, automation, DispatchedTacticStatus.Prepared)
+//    db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input, automation,
+//      DispatchedTacticStatus.Running))
+//
+//    new Thread(new Runnable() {
+//      override def run(): Unit = {
+//        val exnHandler = new TacticExceptionListener {
+//          override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = {
+//            db.synchronized({
+//              db.updateDispatchedTacticStatus(tId, DispatchedTacticStatus.Error)
+//            })
+//            println("[HyDRA] Caught exception in Request.scala after running a tactic: " + tactic.name + " with tactic ID: " + tId)
+//          }
+//        }
+//
+//        try {
+//          KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
+//            Some(tacticCompleted(db)), exnHandler, input, automation)
+//        }
+//        catch {
+//          case e : Exception => db.synchronized({
+//            db.updateDispatchedTacticStatus(tId, DispatchedTacticStatus.Error)
+//            throw e
+//          })
+//        }
+//      }
+//    }).start()
+//
+//    new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input, automation,
+//      DispatchedTacticStatus.Running)) :: Nil
+//  }
+//
+//  private def tacticCompleted(db : DBAbstraction)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
+//    db.synchronized {
+//      // Do not change the status to finished unless the current status is different from Error.
+//      // This won't prevent re-running a tactic that failed incidentally because when the tactic is
+//      // re-run its current status will change to Running.
+//      if(!db.getDispatchedTactics(tId).get.status.equals(DispatchedTacticStatus.Error))
+//        db.updateProofOnTacticCompletion(proofId, tId)
+//    }
+//  }
 }
 
 class RunCLTermRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], clTerm : String) extends Request {
-  def getResultingResponses() = {
-    try {
-      //Make sure that the tactic is going to construct and parse before updating the database.
-      CLInterpreter.construct(CLParser(clTerm).getOrElse(throw new Exception("Failed to parse CL term: " + clTerm)))
+  def getResultingResponses() = ???
+//  {
+//    try {
+//      //Make sure that the tactic is going to construct and parse before updating the database.
+//      CLInterpreter.construct(CLParser(clTerm).getOrElse(throw new Exception("Failed to parse CL term: " + clTerm)))
+//
+//      val termId = db.createDispatchedCLTerm(proofId, nodeId, clTerm)
+//      //Update status to running.
+//      val dispatchedTerm = new DispatchedCLTermPOJO(termId, proofId, nodeId, clTerm, Some(DispatchedTacticStatus.Running))
+//      db.updateDispatchedCLTerm(dispatchedTerm)
+//      //Run the tactic.
+//      new Thread(new Runnable() {
+//        val exnHandler = new TacticExceptionListener {
+//          override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = db.updateDispatchedCLTermStatus(termId, DispatchedTacticStatus.Error)
+//        }
+//
+//        override def run(): Unit = try {
+//          KeYmaeraInterface.runTerm(termId, proofId, nodeId, clTerm, Some(completionContinuation(db)), exnHandler)
+//        } catch {
+//          case e : Exception => {
+//            //@todo update the database when an error for the running cl term. This is how it's done but for built-in tactics (I think): db.updateDispatchedTacticStatus(termId, "error")
+//            throw e
+//          }
+//        }
+//      }).start()
+//
+//      //Construct the response to this request.
+//      new DispatchedCLTermResponse(dispatchedTerm):: Nil
+//    }
+//    catch {
+//      case e:Exception => { e.printStackTrace(); new ErrorResponse(e) :: Nil }
+//    }
+//  }
 
-      val termId = db.createDispatchedCLTerm(proofId, nodeId, clTerm)
-      //Update status to running.
-      val dispatchedTerm = new DispatchedCLTermPOJO(termId, proofId, nodeId, clTerm, Some(DispatchedTacticStatus.Running))
-      db.updateDispatchedCLTerm(dispatchedTerm)
-      //Run the tactic.
-      new Thread(new Runnable() {
-        val exnHandler = new TacticExceptionListener {
-          override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = db.updateDispatchedCLTermStatus(termId, DispatchedTacticStatus.Error)
-        }
-
-        override def run(): Unit = try {
-          KeYmaeraInterface.runTerm(termId, proofId, nodeId, clTerm, Some(completionContinuation(db)), exnHandler)
-        } catch {
-          case e : Exception => {
-            //@todo update the database when an error for the running cl term. This is how it's done but for built-in tactics (I think): db.updateDispatchedTacticStatus(termId, "error")
-            throw e
-          }
-        }
-      }).start()
-
-      //Construct the response to this request.
-      new DispatchedCLTermResponse(dispatchedTerm):: Nil
-    }
-    catch {
-      case e:Exception => { e.printStackTrace(); new ErrorResponse(e) :: Nil }
-    }
-  }
-
-  private def completionContinuation(db : DBAbstraction)(termId : String)(proodId : String, nodeId : Option[String], clTerm : String): Unit = {
-    db.synchronized {
-      db.updateProofOnCLTermCompletion(proofId, termId)
-    }
-  }
+  private def completionContinuation(db : DBAbstraction)(termId : String)(proodId : String, nodeId : Option[String], clTerm : String): Unit = ???
+//  {
+//    db.synchronized {
+//      db.updateProofOnCLTermCompletion(proofId, termId)
+//    }
+//  }
 }
 
 class GetDispatchedTacticRequest(db : DBAbstraction, userId : String, proofId : String, tId : String) extends Request {
-  def getResultingResponses() = {
-    try {
-      db.getDispatchedTactics(tId) match {
-        case Some(d) => new DispatchedTacticResponse(d) :: Nil
-        case _ => new ErrorResponse(new IllegalArgumentException("Cannot find dispatched tactic with ID: " + tId)) :: Nil
-      }
-    }
-    catch {
-      case e:Exception => new ErrorResponse(e) :: Nil //@todo indicate tactic is running?
-    }
-  }
+  def getResultingResponses() = ???
+//  {
+//    try {
+//      db.getDispatchedTactics(tId) match {
+//        case Some(d) => new DispatchedTacticResponse(d) :: Nil
+//        case _ => new ErrorResponse(new IllegalArgumentException("Cannot find dispatched tactic with ID: " + tId)) :: Nil
+//      }
+//    }
+//    catch {
+//      case e:Exception => new ErrorResponse(e) :: Nil //@todo indicate tactic is running?
+//    }
+//  }
 }
 
 class GetDispatchedTermRequest(db : DBAbstraction, userId : String, proofId : String, termId : String) extends Request {
-  def getResultingResponses() = {
-    try {
-      db.getDispatchedCLTerm(termId) match {
-        case Some(d) => new DispatchedCLTermResponse(d) :: Nil
-        case _ => new ErrorResponse(new IllegalArgumentException("Cannot find dispatched term with ID: " + termId)) :: Nil
-      }
-    }
-    catch {
-      case e:Exception => new ErrorResponse(e) :: Nil //@todo indicate term is running?
-    }
-  }
+  def getResultingResponses() = ???
+//  {
+//    try {
+//      db.getDispatchedCLTerm(termId) match {
+//        case Some(d) => new DispatchedCLTermResponse(d) :: Nil
+//        case _ => new ErrorResponse(new IllegalArgumentException("Cannot find dispatched term with ID: " + termId)) :: Nil
+//      }
+//    }
+//    catch {
+//      case e:Exception => new ErrorResponse(e) :: Nil //@todo indicate term is running?
+//    }
+//  }
 }
 
 
@@ -677,16 +686,17 @@ class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String,
 }
 
 class GetProofHistoryRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
-  override def getResultingResponses(): List[Response] = {
-    if(db.getProofInfo(proofId).stepCount!=0) {
-      val steps = db.getProofSteps(proofId).map(step => db.getDispatchedTactics(step)).filter(_.isDefined).map(_.get).
-        map(step => step -> db.getTactic(step.tacticsId).getOrElse(
-        throw new IllegalStateException(s"Proof refers to unknown tactic ${step.tacticsId}")))
-      if (steps.nonEmpty) {
-        new ProofHistoryResponse(steps) :: Nil
-      } else new ErrorResponse(new Exception("Could not find a proof history associated with these ids.")) :: Nil
-    } else Nil
-  }
+  override def getResultingResponses(): List[Response] = ???
+//  {
+//    if(db.getProofInfo(proofId).stepCount!=0) {
+//      val steps = db.getProofSteps(proofId).map(step => db.getDispatchedTactics(step)).filter(_.isDefined).map(_.get).
+//        map(step => step -> db.getTactic(step.tacticsId).getOrElse(
+//        throw new IllegalStateException(s"Proof refers to unknown tactic ${step.tacticsId}")))
+//      if (steps.nonEmpty) {
+//        new ProofHistoryResponse(steps) :: Nil
+//      } else new ErrorResponse(new Exception("Could not find a proof history associated with these ids.")) :: Nil
+//    } else Nil
+//  }
 }
 
 class GetProofNodeInfoRequest(db : DBAbstraction, userId : String, proofId : String, nodeId: Option[String]) extends Request {
@@ -817,55 +827,56 @@ class RunModelInitializationTacticRequest(db : DBAbstraction, userId : String, m
   * @todo This proofs will not reload -- this is for one-off proving only!
   */
 class RunScalaFileRequest(db: DBAbstraction, proofId: String, proof: File) extends Request {
-  override def getResultingResponses(): List[Response] = {
-    val tacticSource = scala.io.Source.fromFile(proof).mkString
-
-    val cm = universe.runtimeMirror(getClass.getClassLoader)
-    val tb = cm.mkToolBox()
-    val tactic = tb.eval(tb.parse(tacticSource)).asInstanceOf[Tactic]
-
-    //@todo provide a bunch of junk for all of these values, because we won't ever try to re-run this tactic.
-    val nodeID = ""
-    val tacticId = ""
-    val formulaId = Some("")
-    val input = Map[Int,String]()
-    val nodeId = Some("")
-    val automation = None
-    val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, input, automation, DispatchedTacticStatus.Prepared)
-
-    val exnHandler = new TacticExceptionListener {
-      override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = {
-        db.synchronized({
-          db.updateDispatchedTacticStatus(tId, DispatchedTacticStatus.Error)
-        })
-        println("[HyDRA] Caught exception in Request.scala after running a tactic: " + tactic.name + " with tactic ID: " + tId)
-      }
-    }
-    def tacticCompleted(db : DBAbstraction)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
-      db.synchronized {
-        // Do not change the status to finished unless the current status is different from Error.
-        // This won't prevent re-running a tactic that failed incidentally because when the tactic is
-        // re-run its current status will change to Running.
-        if (!db.getDispatchedTactics(tId).get.status.equals(DispatchedTacticStatus.Error))
-          db.updateProofOnTacticCompletion(proofId, tId)
-      }
-    }
-
-    //Run the tactic.
-    try {
-      println("About to run a Scala file with tId" + tId)
-      KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
-        Some(tacticCompleted(db)), exnHandler, input, automation);
-
-      new ErrorResponse(new Exception("Tactic DID complete successfully, but this response should never make it to the UI.")) :: Nil
-    }
-    catch {
-      case e: Exception => db.synchronized({
-        db.updateDispatchedTacticStatus(tId, DispatchedTacticStatus.Error)
-        new ErrorResponse(e) :: Nil
-      })
-    };
-  }
+  override def getResultingResponses(): List[Response] = ???
+//  {
+//    val tacticSource = scala.io.Source.fromFile(proof).mkString
+//
+//    val cm = universe.runtimeMirror(getClass.getClassLoader)
+//    val tb = cm.mkToolBox()
+//    val tactic = tb.eval(tb.parse(tacticSource)).asInstanceOf[Tactic]
+//
+//    //@todo provide a bunch of junk for all of these values, because we won't ever try to re-run this tactic.
+//    val nodeID = ""
+//    val tacticId = ""
+//    val formulaId = Some("")
+//    val input = Map[Int,String]()
+//    val nodeId = Some("")
+//    val automation = None
+//    val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, input, automation, DispatchedTacticStatus.Prepared)
+//
+//    val exnHandler = new TacticExceptionListener {
+//      override def acceptTacticException(tactic: Tactic, exn: Exception): Unit = {
+//        db.synchronized({
+//          db.updateDispatchedTacticStatus(tId, DispatchedTacticStatus.Error)
+//        })
+//        println("[HyDRA] Caught exception in Request.scala after running a tactic: " + tactic.name + " with tactic ID: " + tId)
+//      }
+//    }
+//    def tacticCompleted(db : DBAbstraction)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
+//      db.synchronized {
+//        // Do not change the status to finished unless the current status is different from Error.
+//        // This won't prevent re-running a tactic that failed incidentally because when the tactic is
+//        // re-run its current status will change to Running.
+//        if (!db.getDispatchedTactics(tId).get.status.equals(DispatchedTacticStatus.Error))
+//          db.updateProofOnTacticCompletion(proofId, tId)
+//      }
+//    }
+//
+//    //Run the tactic.
+//    try {
+//      println("About to run a Scala file with tId" + tId)
+//      KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
+//        Some(tacticCompleted(db)), exnHandler, input, automation);
+//
+//      new ErrorResponse(new Exception("Tactic DID complete successfully, but this response should never make it to the UI.")) :: Nil
+//    }
+//    catch {
+//      case e: Exception => db.synchronized({
+//        db.updateDispatchedTacticStatus(tId, DispatchedTacticStatus.Error)
+//        new ErrorResponse(e) :: Nil
+//      })
+//    };
+//  }
 }
 
 /////
