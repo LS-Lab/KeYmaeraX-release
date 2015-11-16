@@ -14,7 +14,7 @@ trait Tables {
   import scala.slick.jdbc.{GetResult => GR}
   
   /** DDL for all tables. Call .create to execute. */
-  lazy val ddl = Config.ddl ++ Executableparameter.ddl ++ Executables.ddl ++ Executionsteps.ddl ++ Models.ddl ++ Patterns.ddl ++ Proofs.ddl ++ Provables.ddl ++ Scalatactics.ddl ++ Sequentformulas.ddl ++ Tacticexecutions.ddl ++ Users.ddl ++ Valuetypes.ddl
+  lazy val ddl = Config.ddl ++ Executableparameter.ddl ++ Executables.ddl ++ Executionsteps.ddl ++ Models.ddl ++ Patterns.ddl ++ Proofs.ddl ++ Provables.ddl ++ Scalatactics.ddl ++ Sequentformulas.ddl ++ Sequents.ddl ++ Tacticexecutions.ddl ++ Users.ddl ++ Valuetypes.ddl
   
   /** Entity class storing rows of table Config
    *  @param configid Database column configId DBType(TEXT), PrimaryKey
@@ -108,12 +108,12 @@ trait Tables {
    *  @param branchorder Database column branchOrder DBType(TEXT)
    *  @param branchlabel Database column branchLabel DBType(INT)
    *  @param alternativeorder Database column alternativeOrder DBType(INT)
-   *  @param isinterrupt Database column isInterrupt DBType(BOOLEAN)
+   *  @param status Database column status DBType(TEXT)
    *  @param executableid Database column executableId DBType(TEXT)
    *  @param inputprovableid Database column inputProvableId DBType(TEXT)
    *  @param resultprovableid Database column resultProvableId DBType(TEXT)
    *  @param userexecuted Database column userExecuted DBType(BOOLEAN) */
-  case class ExecutionstepsRow(stepid: Option[String], exeuctionid: Option[String], previousstep: Option[String], parentstep: Option[String], branchorder: Option[String], branchlabel: Option[Int], alternativeorder: Option[Int], isinterrupt: Option[String], executableid: Option[String], inputprovableid: Option[String], resultprovableid: Option[String], userexecuted: Option[String])
+  case class ExecutionstepsRow(stepid: Option[String], exeuctionid: Option[String], previousstep: Option[String], parentstep: Option[String], branchorder: Option[String], branchlabel: Option[Int], alternativeorder: Option[Int], status: Option[String], executableid: Option[String], inputprovableid: Option[String], resultprovableid: Option[String], userexecuted: Option[String])
   /** GetResult implicit for fetching ExecutionstepsRow objects using plain SQL queries */
   implicit def GetResultExecutionstepsRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[ExecutionstepsRow] = GR{
     prs => import prs._
@@ -121,7 +121,7 @@ trait Tables {
   }
   /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
   class Executionsteps(_tableTag: Tag) extends Table[ExecutionstepsRow](_tableTag, "executionSteps") {
-    def * = (stepid, exeuctionid, previousstep, parentstep, branchorder, branchlabel, alternativeorder, isinterrupt, executableid, inputprovableid, resultprovableid, userexecuted) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
+    def * = (stepid, exeuctionid, previousstep, parentstep, branchorder, branchlabel, alternativeorder, status, executableid, inputprovableid, resultprovableid, userexecuted) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
     
     /** Database column stepId DBType(TEXT), PrimaryKey */
     val stepid: Column[Option[String]] = column[Option[String]]("stepId", O.PrimaryKey)
@@ -137,8 +137,8 @@ trait Tables {
     val branchlabel: Column[Option[Int]] = column[Option[Int]]("branchLabel")
     /** Database column alternativeOrder DBType(INT) */
     val alternativeorder: Column[Option[Int]] = column[Option[Int]]("alternativeOrder")
-    /** Database column isInterrupt DBType(BOOLEAN) */
-    val isinterrupt: Column[Option[String]] = column[Option[String]]("isInterrupt")
+    /** Database column status DBType(TEXT) */
+    val status: Column[Option[String]] = column[Option[String]]("status")
     /** Database column executableId DBType(TEXT) */
     val executableid: Column[Option[String]] = column[Option[String]]("executableId")
     /** Database column inputProvableId DBType(TEXT) */
@@ -275,19 +275,25 @@ trait Tables {
   lazy val Proofs = new TableQuery(tag => new Proofs(tag))
   
   /** Entity class storing rows of table Provables
-   *  @param provableid Database column provableId DBType(TEXT), PrimaryKey */
-  case class ProvablesRow(provableid: Option[String])
+   *  @param provableid Database column provableId DBType(TEXT), PrimaryKey
+   *  @param conclusionid Database column conclusionId DBType(TEXT) */
+  case class ProvablesRow(provableid: Option[String], conclusionid: Option[String])
   /** GetResult implicit for fetching ProvablesRow objects using plain SQL queries */
   implicit def GetResultProvablesRow(implicit e0: GR[Option[String]]): GR[ProvablesRow] = GR{
     prs => import prs._
-    ProvablesRow(<<?[String])
+    ProvablesRow.tupled((<<?[String], <<?[String]))
   }
   /** Table description of table provables. Objects of this class serve as prototypes for rows in queries. */
   class Provables(_tableTag: Tag) extends Table[ProvablesRow](_tableTag, "provables") {
-    def * = provableid <> (ProvablesRow, ProvablesRow.unapply)
+    def * = (provableid, conclusionid) <> (ProvablesRow.tupled, ProvablesRow.unapply)
     
     /** Database column provableId DBType(TEXT), PrimaryKey */
     val provableid: Column[Option[String]] = column[Option[String]]("provableId", O.PrimaryKey)
+    /** Database column conclusionId DBType(TEXT) */
+    val conclusionid: Column[Option[String]] = column[Option[String]]("conclusionId")
+    
+    /** Foreign key referencing Sequents (database name sequents_FK_1) */
+    lazy val sequentsFk = foreignKey("sequents_FK_1", conclusionid, Sequents)(r => r.sequentid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
   }
   /** Collection-like TableQuery object for table Provables */
   lazy val Provables = new TableQuery(tag => new Provables(tag))
@@ -315,11 +321,11 @@ trait Tables {
   
   /** Entity class storing rows of table Sequentformulas
    *  @param sequentformulaid Database column sequentFormulaId DBType(TEXT), PrimaryKey
-   *  @param provableid Database column provableId DBType(TEXT)
+   *  @param sequentid Database column sequentId DBType(TEXT)
    *  @param isante Database column isAnte DBType(BOOLEAN)
    *  @param idx Database column idx DBType(INTEGER)
    *  @param formula Database column formula DBType(TEXT) */
-  case class SequentformulasRow(sequentformulaid: Option[String], provableid: Option[String], isante: Option[String], idx: Option[Int], formula: Option[String])
+  case class SequentformulasRow(sequentformulaid: Option[String], sequentid: Option[String], isante: Option[String], idx: Option[Int], formula: Option[String])
   /** GetResult implicit for fetching SequentformulasRow objects using plain SQL queries */
   implicit def GetResultSequentformulasRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[SequentformulasRow] = GR{
     prs => import prs._
@@ -327,12 +333,12 @@ trait Tables {
   }
   /** Table description of table sequentFormulas. Objects of this class serve as prototypes for rows in queries. */
   class Sequentformulas(_tableTag: Tag) extends Table[SequentformulasRow](_tableTag, "sequentFormulas") {
-    def * = (sequentformulaid, provableid, isante, idx, formula) <> (SequentformulasRow.tupled, SequentformulasRow.unapply)
+    def * = (sequentformulaid, sequentid, isante, idx, formula) <> (SequentformulasRow.tupled, SequentformulasRow.unapply)
     
     /** Database column sequentFormulaId DBType(TEXT), PrimaryKey */
     val sequentformulaid: Column[Option[String]] = column[Option[String]]("sequentFormulaId", O.PrimaryKey)
-    /** Database column provableId DBType(TEXT) */
-    val provableid: Column[Option[String]] = column[Option[String]]("provableId")
+    /** Database column sequentId DBType(TEXT) */
+    val sequentid: Column[Option[String]] = column[Option[String]]("sequentId")
     /** Database column isAnte DBType(BOOLEAN) */
     val isante: Column[Option[String]] = column[Option[String]]("isAnte")
     /** Database column idx DBType(INTEGER) */
@@ -340,11 +346,35 @@ trait Tables {
     /** Database column formula DBType(TEXT) */
     val formula: Column[Option[String]] = column[Option[String]]("formula")
     
-    /** Foreign key referencing Provables (database name provables_FK_1) */
-    lazy val provablesFk = foreignKey("provables_FK_1", provableid, Provables)(r => r.provableid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+    /** Foreign key referencing Sequents (database name sequents_FK_1) */
+    lazy val sequentsFk = foreignKey("sequents_FK_1", sequentid, Sequents)(r => r.sequentid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
   }
   /** Collection-like TableQuery object for table Sequentformulas */
   lazy val Sequentformulas = new TableQuery(tag => new Sequentformulas(tag))
+  
+  /** Entity class storing rows of table Sequents
+   *  @param sequentid Database column sequentId DBType(TEXT)
+   *  @param provableid Database column provableId DBType(TEXT) */
+  case class SequentsRow(sequentid: Option[String], provableid: Option[String])
+  /** GetResult implicit for fetching SequentsRow objects using plain SQL queries */
+  implicit def GetResultSequentsRow(implicit e0: GR[Option[String]]): GR[SequentsRow] = GR{
+    prs => import prs._
+    SequentsRow.tupled((<<?[String], <<?[String]))
+  }
+  /** Table description of table sequents. Objects of this class serve as prototypes for rows in queries. */
+  class Sequents(_tableTag: Tag) extends Table[SequentsRow](_tableTag, "sequents") {
+    def * = (sequentid, provableid) <> (SequentsRow.tupled, SequentsRow.unapply)
+    
+    /** Database column sequentId DBType(TEXT) */
+    val sequentid: Column[Option[String]] = column[Option[String]]("sequentId")
+    /** Database column provableId DBType(TEXT) */
+    val provableid: Column[Option[String]] = column[Option[String]]("provableId")
+    
+    /** Foreign key referencing Provables (database name provables_FK_1) */
+    lazy val provablesFk = foreignKey("provables_FK_1", provableid, Provables)(r => r.provableid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+  }
+  /** Collection-like TableQuery object for table Sequents */
+  lazy val Sequents = new TableQuery(tag => new Sequents(tag))
   
   /** Entity class storing rows of table Tacticexecutions
    *  @param executionid Database column executionId DBType(TEXT), PrimaryKey
