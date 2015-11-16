@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS `proofs` (
 ----------------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `provables` (
   `provableId` TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `conclusionId` TEXT REFERENCES `sequents`
+  `conclusionId` TEXT REFERENCES `sequents` (`sequentId`)
 );
 
 CREATE TABLE IF NOT EXISTS `sequents` (
