@@ -321,8 +321,13 @@ class KyxConfigResponse(kyxConfig: String) extends Response {
   )
 }
 
-class KeymaeraXVersionResponse(keymaeraXVersion: String) extends Response {
-  val json = JsObject("keymaeraXVersion" -> JsString(keymaeraXVersion))
+class KeymaeraXVersionResponse(installedVersion: String, upToDate: Option[Boolean], latestVersion: Option[String]) extends Response {
+  assert(upToDate.isDefined == latestVersion.isDefined, "upToDate and latestVersion should both be defined, or both be undefined.")
+  val json = upToDate match {
+    case Some(b) if b == true => JsObject("keymaeraXVersion" -> JsString(installedVersion), "upToDate" -> JsTrue)
+    case Some(b) if b == false => JsObject("keymaeraXVersion" -> JsString(installedVersion), "upToDate" -> JsFalse, "latestVersion" -> JsString(latestVersion.get))
+    case None => JsObject("keymaeraXVersion" -> JsString(installedVersion))
+  }
 }
 
 class ConfigureMathematicaResponse(linkNamePrefix : String, jlinkLibDirPrefix : String, success : Boolean) extends Response {
