@@ -222,36 +222,36 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
   )
 }
 
-class DispatchedTacticResponse(t : DispatchedTacticPOJO) extends Response {
-  val nid = t.nodeId match {
-    case Some(nodeId) => nodeId
-    case None => t.proofId
-  }
+//class DispatchedTacticResponse(t : DispatchedTacticPOJO) extends Response {
+//  val nid = t.nodeId match {
+//    case Some(nodeId) => nodeId
+//    case None => t.proofId
+//  }
+//
+//  val json = JsObject(
+//    "proofId" -> JsString(t.proofId),
+//    "nodeId" -> JsString(nid),
+//    "tacticId" -> JsString(t.tacticsId),
+//    "tacticInstId" -> JsString(t.id),
+//    "tacticInstStatus" -> JsString(t.status.toString)
+//  )
+//}
 
-  val json = JsObject(
-    "proofId" -> JsString(t.proofId),
-    "nodeId" -> JsString(nid),
-    "tacticId" -> JsString(t.tacticsId),
-    "tacticInstId" -> JsString(t.id),
-    "tacticInstStatus" -> JsString(t.status.toString)
-  )
-}
-
-class DispatchedCLTermResponse(t : DispatchedCLTermPOJO) extends Response {
-  val nid = t.nodeId match {
-    case Some(nodeId) => nodeId
-    case None => t.proofId
-  }
-
-  val json = JsObject(
-    "id" -> JsString(t.id),
-    "proofId" -> JsString(t.proofId),
-    "nodeId" -> JsString(nid),
-    "termId" -> JsString(t.id),
-    "term" -> JsString(t.clTerm),
-    "status" -> JsString(t.status.get.toString)
-  )
-}
+//class DispatchedCLTermResponse(t : DispatchedCLTermPOJO) extends Response {
+//  val nid = t.nodeId match {
+//    case Some(nodeId) => nodeId
+//    case None => t.proofId
+//  }
+//
+//  val json = JsObject(
+//    "id" -> JsString(t.id),
+//    "proofId" -> JsString(t.proofId),
+//    "nodeId" -> JsString(nid),
+//    "termId" -> JsString(t.id),
+//    "term" -> JsString(t.clTerm),
+//    "status" -> JsString(t.status.get.toString)
+//  )
+//}
 
 class UpdateResponse(update: String) extends Response {
   val json = JsObject(
@@ -300,14 +300,14 @@ class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: S
   )
 }
 
-class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
-  val objects = tactics.map(tactic => JsObject(
-    "id" -> JsString(tactic.tacticId),
-    "name" -> JsString(tactic.name)
-  ))
-
-  val json = JsArray(objects)
-}
+//class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
+//  val objects = tactics.map(tactic => JsObject(
+//    "id" -> JsString(tactic.tacticId),
+//    "name" -> JsString(tactic.name)
+//  ))
+//
+//  val json = JsArray(objects)
+//}
 
 class CounterExampleResponse(cntEx: String) extends Response {
   val json = JsObject(
@@ -419,25 +419,25 @@ class AngularTreeViewResponse(tree : String) extends Response {
   }
 }
 
-class ProofHistoryResponse(history : List[(DispatchedTacticPOJO, TacticPOJO)]) extends Response {
-  val json = JsArray(history.map { case (dispatched, tactic) => convert(dispatched, tactic)})
-
-  private def convert(dispatched: DispatchedTacticPOJO, tactic: TacticPOJO): JsValue = JsObject(
-    "dispatched" -> JsObject(
-      "id" -> JsString(dispatched.id),
-      "proofId" -> JsString(dispatched.proofId),
-      "nodeId" -> JsString(dispatched.nodeId match { case Some(nId) => nId case _ => "" }),
-      "status" -> JsString(dispatched.status.toString),
-      "input" -> convertInput(dispatched.input)
-    ),
-    "tactic" -> JsObject(
-      "id" -> JsString(tactic.tacticId),
-      "name" -> JsString(tactic.name)
-    )
-  )
-
-  private def convertInput(input: Map[Int, String]) = JsArray(/* TODO */)
-}
+//class ProofHistoryResponse(history : List[(DispatchedTacticPOJO, TacticPOJO)]) extends Response {
+//  val json = JsArray(history.map { case (dispatched, tactic) => convert(dispatched, tactic)})
+//
+//  private def convert(dispatched: DispatchedTacticPOJO, tactic: TacticPOJO): JsValue = JsObject(
+//    "dispatched" -> JsObject(
+//      "id" -> JsString(dispatched.id),
+//      "proofId" -> JsString(dispatched.proofId),
+//      "nodeId" -> JsString(dispatched.nodeId match { case Some(nId) => nId case _ => "" }),
+//      "status" -> JsString(dispatched.status.toString),
+//      "input" -> convertInput(dispatched.input)
+//    ),
+//    "tactic" -> JsObject(
+//      "id" -> JsString(tactic.tacticId),
+//      "name" -> JsString(tactic.name)
+//    )
+//  )
+//
+//  private def convertInput(input: Map[Int, String]) = JsArray(/* TODO */)
+//}
 
 class DashInfoResponse(openProofs:Int, allModels: Int, provedModels: Int) extends Response {
   override val schema = Some("DashInfoResponse.js")
