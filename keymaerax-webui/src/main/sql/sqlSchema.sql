@@ -109,18 +109,9 @@ CREATE TABLE `executableParameter` (
   `parameterId`  TEXT PRIMARY KEY ON CONFLICT FAIL,
   `executableId` TEXT REFERENCES `executables` (`executableId`),
   `idx`          INT,
-  `valueTypeId`  TEXT REFERENCES `argumentTypes` (`typeId`),
+  `valueType`  TEXT,
   `value`        TEXT
 );
-
-CREATE TABLE `valueTypes` (
-  `valueTypeId` TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `type` TEXT
-);
-INSERT INTO valueTypes VALUES('0', 'String');
-INSERT INTO valueTypes VALUES('1', 'Position');
-INSERT INTO valueTypes VALUES('2', 'Formula');
-INSERT INTO valueTypes VALUES('3', 'Provable'); -- If `executableParameter`.`valueTypeId` = 3, then `executableParameter`.`value` is an FK to provables.
 
 -- Specific table for serializing USubstPatternTactics.
 CREATE TABLE `patterns` (
