@@ -51,17 +51,19 @@ trait PositionalTactic extends BelleExpr {
 abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic
 
 abstract case class BuiltInLeftTactic(name: String) extends BelleExpr with PositionalTactic {
-  override def computeResult(provable: Provable, position:Position) =
-    if(position.isInstanceOf[AntePosition]) computeAnteResult(provable, position.asInstanceOf[AntePosition])
-    else throw BelleError("LeftTactics can only be applied at a AntePos")
+  override def computeResult(provable: Provable, position:Position) = position match {
+    case p: AntePosition => computeAnteResult(provable, p)
+    case _ => throw BelleError("LeftTactics can only be applied at a AntePos")
+  }
 
   def computeAnteResult(provable: Provable, pos: AntePosition): Provable
 }
 
 abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
-  override def computeResult(provable: Provable, position:Position) =
-    if(position.isInstanceOf[SuccPosition]) computeSuccResult(provable, position.asInstanceOf[SuccPosition])
-    else throw BelleError("RightTactics can only be applied at a SuccPos")
+  override def computeResult(provable: Provable, position:Position) = position match {
+    case p: SuccPosition => computeSuccResult(provable, p)
+    case _ => throw BelleError("RightTactics can only be applied at a SuccPos")
+  }
 
   def computeSuccResult(provable: Provable, pos: SuccPosition) : Provable
 }
@@ -128,7 +130,7 @@ case class DoAll(e: BelleExpr) extends BelleExpr
 /**
  * Bellerophon expressions that are values.
  */
-abstract trait BelleValue {
+trait BelleValue {
   def prettyString: String = toString
 }
 case class BelleProvable(p : Provable) extends BelleExpr with BelleValue {
@@ -140,7 +142,7 @@ case class BelleProvable(p : Provable) extends BelleExpr with BelleValue {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** @todo eisegesis -- simple types */
-abstract trait BelleType
+trait BelleType
 case class TheType() extends BelleType
 /** @todo Added because SequentTypes are needed for unification tactics. */
 case class SequentType(s : Sequent) extends BelleType
