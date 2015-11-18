@@ -7,9 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
-import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Generator, NoneGenerate, Position, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 
 import scala.collection.immutable._
 
@@ -69,18 +67,18 @@ object TactixLibrary extends UnifyUSCalculus {
    * @see [[edu.cmu.cs.ls.keymaerax.tactics.BranchLabels]]
    * @see [[label()]]
    */
-  def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): BuiltInTactic = ??? //SearchTacticsImpl.onBranch(s1, spec:_*)
+  def onBranch(s1: (String, BelleExpr), spec: (String, BelleExpr)*): BelleExpr = ??? //SearchTacticsImpl.onBranch(s1, spec:_*)
 
   /** Call/label the current proof branch s
     * @see [[onBranch()]]
     * @see [sublabel()]]
     */
-  def label(s: String): Tactic = new LabelBranch(s)
+  def label(s: String): BelleExpr = ??? //new LabelBranch(s)
 
   /** Mark the current proof branch and all subbranches s
     * @see [[label()]]
     */
-  def sublabel(s: String): Tactic = new SubLabelBranch(s)
+  def sublabel(s: String): BelleExpr = ??? //new SubLabelBranch(s)
 
   // Locating applicable positions for PositionTactics
 
@@ -294,7 +292,8 @@ object TactixLibrary extends UnifyUSCalculus {
   // closing
 
   /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
-  lazy val QE                : BelleExpr         = ToolTactics.fullQE(/*@todo seriously?*/MathematicaScheduler.tool.asInstanceOf[QETool])
+  lazy val QE                : BelleExpr         = ToolTactics.fullQE(
+    /*@todo seriously?*/ edu.cmu.cs.ls.keymaerax.tactics.Tactics.MathematicaScheduler.tool.asInstanceOf[QETool])
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : BuiltInTwoPositionTactic         = ProofRuleTactics.close
@@ -316,7 +315,7 @@ object TactixLibrary extends UnifyUSCalculus {
   // derived propositional
 
   /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. ([[edu.cmu.cs.ls.keymaerax.core.EquivifyRight EquivifyRight]]) */
-  lazy val equivifyR          : PositionTactic = ???
+  lazy val equivifyR          : BelleExpr = ???
   /** Modus Ponens: p&(p->q) -> q */
   def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = PropositionalTactics.modusPonens(assumption, implication)
   /** Commute equivalence on the left [[edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.commuteEquivL]] */
