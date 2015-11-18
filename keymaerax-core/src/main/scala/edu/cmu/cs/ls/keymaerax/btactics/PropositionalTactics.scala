@@ -5,9 +5,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{assert, debug}
 import edu.cmu.cs.ls.keymaerax.btactics.DLTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
 
-import edu.cmu.cs.ls.keymaerax.core.{AntePos, Exists, Forall, Imply, SeqPos, SuccPos}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
+
+import scala.language.postfixOps
 
 /**
  * [[PropositionalTactics]] provides tactics for propositional reasoning.
@@ -93,6 +95,29 @@ object PropositionalTactics {
           (skolemize(SuccPos(0)) & instWithGuessedSkolem(AntePos(0))) |
           (skolemize(AntePos(0)) & instWithGuessedSkolem(SuccPos(0)))
           ) & debug("Unpeeled one layer"))*at.pos.length & debug("Unpeeling finished")
+    }
+  }
+
+  /**
+   * Modus ponens.
+   * @example{{{
+   *      p, q |-
+   *   ------------ modusPonens
+   *   p, p->q |-
+   * }}}
+   * @param assumption Position pointing to p
+   * @param implication Position pointing to p->q
+   * @return The tactic.
+   */
+  def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = new DependentTactic("Modus Ponens") {
+    override def computeExpr(v: BelleValue): BelleExpr = v match {
+      case BelleProvable(provable) =>
+        require(provable.subgoals.size == 1, "Exactly one subgoal expected")
+        val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
+        implyL(implication) <(
+          coHide2(p, SuccPos(provable.subgoals.head.seq.succ.length)) & trivialCloser,
+          /*hideL(p)*/Idioms.ident partial
+          )
     }
   }
 }
