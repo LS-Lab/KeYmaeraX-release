@@ -224,7 +224,7 @@ class Scheduler(tools : Seq[Tool]) extends ExecutionEngine {
  * Sequential interpretation of tactics.
  * @param tool The tool to execute tactics.
  */
-class Interpreter(tool : Tool) extends ExecutionEngine {
+class Interpreter(val tool : Tool) extends ExecutionEngine {
   private var initialized = false
   override def init(config: Map[String,String]) = {
     tool.init(config)
