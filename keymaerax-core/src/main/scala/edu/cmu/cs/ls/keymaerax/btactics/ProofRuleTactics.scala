@@ -18,6 +18,13 @@ object ProofRuleTactics {
   private def requireOneSubgoal(provable: Provable) =
     if(provable.subgoals.length != 1) throw BelleError("Expected exactly one sequent in Provable")
 
+  def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
+    override def result(provable: Provable): Provable = {
+      requireOneSubgoal(provable)
+      provable(rule, 0)
+    }
+  }
+
   def cut(f: Formula) = new InputTactic[Formula](f) {
     override def computeExpr() = new BuiltInTactic(s"Cut(${input.prettyString})") {
       override def result(provable: Provable): Provable = {
@@ -145,6 +152,17 @@ object ProofRuleTactics {
     }
   }
 
+  def hide = new DependentPositionTactic("Hide") {
+    override def apply(pos: Position): DependentTactic = pos match {
+      case p: AntePosition => new DependentTactic(name) {
+        override def computeExpr(v: BelleValue): BelleExpr = hideL(p)
+      }
+      case p: SuccPosition => new DependentTactic(name) {
+        override def computeExpr(v: BelleValue): BelleExpr = hideR(p)
+      }
+    }
+  }
+
   def hideL = new BuiltInLeftTactic("HideL") {
     override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable)
@@ -156,6 +174,17 @@ object ProofRuleTactics {
     override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.HideRight(pos), 0)
+    }
+  }
+
+  def coHide = new DependentPositionTactic("CoHide") {
+    override def apply(pos: Position): DependentTactic = pos match {
+      case p: AntePosition => new DependentTactic(name) {
+        override def computeExpr(v: BelleValue): BelleExpr = coHideL(p)
+      }
+      case p: SuccPosition => new DependentTactic(name) {
+        override def computeExpr(v: BelleValue): BelleExpr = coHideR(p)
+      }
     }
   }
 
@@ -227,6 +256,20 @@ object ProofRuleTactics {
 
   def skolemize = new BuiltInPositionTactic("Skolemize") {
     override def computeResult(provable: Provable, pos: Position): Provable = {
+      requireOneSubgoal(provable)
+      provable(core.Skolemize(pos), 0)
+    }
+  }
+
+  def skolemizeR = new BuiltInRightTactic("Skolemize") {
+    override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
+      requireOneSubgoal(provable)
+      provable(core.Skolemize(pos), 0)
+    }
+  }
+
+  def skolemizeL = new BuiltInLeftTactic("Skolemize") {
+    override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.Skolemize(pos), 0)
     }
