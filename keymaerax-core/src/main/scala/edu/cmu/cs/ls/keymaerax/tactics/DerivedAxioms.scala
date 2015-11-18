@@ -749,17 +749,12 @@ object DerivedAxioms {
       (cutShowLbl, cut(/*(8)*/"([a;]p(??) -> [a;](q(??) -> p(??)&q(??)))  ->  (([a;](q(??)->p(??)&q(??)) -> ([a;]q(??) -> [a;](p(??)&q(??))))  ->  (([a;]p(??) & [a;]q(??)) -> [a;](p(??)&q(??))))".asFormula) & onBranch(
         (cutShowLbl, cohide(3) & prop),
         (cutUseLbl, cut(/*(5)*/"[a;]p(??) -> [a;](q(??) -> p(??)&q(??))".asFormula) & onBranch(
-          (cutShowLbl, cohide(3) & kModalModusPonensT(1) & useAt("-> tautology")(SuccPosition(0, PosInExpr(1::Nil))) & V(1) & close),
+          (cutShowLbl, cohide(3) & useAt("K modal modus ponens", PosInExpr(1::Nil))(1) & useAt("-> tautology")(SuccPosition(0, PosInExpr(1::Nil))) & V(1) & close),
           (cutUseLbl, modusPonensT(AntePosition(1), AntePosition(0)) & close)
         ))
       )),
       (cutUseLbl, cut(/*(6)*/"[a;](q(??) -> (p(??)&q(??)))  ->  ([a;]q(??) -> [a;](p(??)&q(??)))".asFormula) & onBranch(
-        (cutShowLbl, cohide(2) &
-          uniformSubstT(
-            SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "q(??)".asFormula) ::
-            SubstitutionPair(PredOf(Function("q", None, Real, Bool), Anything), "p(??)&q(??)".asFormula) :: Nil,
-            Map(/*(6)*/"[a;](q(??) -> (p(??)&q(??)))  ->  ([a;]q(??) -> [a;](p(??)&q(??)))".asFormula -> /*K*/"[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula)) &
-          AxiomTactic.axiomT("K modal modus ponens")),
+        (cutShowLbl, cohide(2) & byUS("K modal modus ponens")),
         (cutUseLbl, modusPonensT(AntePosition(1), AntePosition(0)) & close)
       ))
     )
@@ -798,12 +793,7 @@ object DerivedAxioms {
     cut(/*(2)*/"[a;](p(??)&q(??) -> p(??))".asFormula) & onBranch(
       (cutShowLbl, cohide(2) & useAt("PC1")(1, 1::0::Nil) & useAt("-> self")(1, 1::Nil) & V(1) & close),
       (cutUseLbl, cut(/*(4)*/"[a;](p(??)&q(??)->p(??)) -> ([a;](p(??)&q(??)) -> [a;]p(??))".asFormula) & onBranch(
-        (cutShowLbl, cohide(2) &
-          uniformSubstT(
-            SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "p(??)&q(??)".asFormula) ::
-            SubstitutionPair(PredOf(Function("q", None, Real, Bool), Anything), "p(??)".asFormula) :: Nil,
-            Map(/*(4)*/"[a;](p(??)&q(??)->p(??)) -> ([a;](p(??)&q(??)) -> [a;]p(??))".asFormula -> /*K*/"[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula)
-          ) & AxiomTactic.axiomT("K modal modus ponens")),
+        (cutShowLbl, cohide(2) & byUS("K modal modus ponens")),
         (cutUseLbl, modusPonensT(AntePosition(0), AntePosition(1)) & close)
       ))
     )
@@ -858,11 +848,7 @@ object DerivedAxioms {
     cut(/*7*/"[a;](p(??)&q(??) -> q(??))".asFormula) & onBranch(
       (cutShowLbl, cohide(2) & useAt("PC2")(1, 1::0::Nil) & useAt("-> self")(1, 1::Nil) & V(1) & close),
       (cutUseLbl, cut(/*(8)*/"[a;](p(??)&q(??)->q(??)) -> ([a;](p(??)&q(??)) -> [a;]q(??))".asFormula) & onBranch(
-        (cutShowLbl, cohide(2) &
-          uniformSubstT(
-            SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "p(??)&q(??)".asFormula) :: Nil,
-            Map(/*(8)*/"[a;](p(??)&q(??)->q(??)) -> ([a;](p(??)&q(??)) -> [a;]q(??))".asFormula -> /*K*/"[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula)
-          ) & AxiomTactic.axiomT("K modal modus ponens")),
+        (cutShowLbl, cohide(2) & byUS("K modal modus ponens")),
         (cutUseLbl, modusPonensT(AntePosition(0), AntePosition(1)) & close)
       ))
     )
