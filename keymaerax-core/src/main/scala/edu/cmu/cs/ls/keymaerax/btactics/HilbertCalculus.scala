@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 //import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BuiltInPositionTactic, BelleExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Position}
@@ -223,104 +223,89 @@ object HilbertCalculus extends UnifyUSCalculus {
    * @author Andre Platzer
    * @note Efficient source-level indexing implementation.
    */
-  lazy val stepAt: BuiltInPositionTactic = ???
-//  new PositionTactic("stepAt") {
-//    //import TactixLibrary._
-//    override def applies(s: Sequent, p: Position): Boolean = getTactic(s, p).isDefined
-//
-//    def getTactic(s: Sequent, p: Position): Option[PositionTactic] = {
-//      val sub = s.sub(p)
-//      if (!sub.isDefined) {println("ill-positioned " + p + " in " + s + "\nin " + "stepAt(" + p + ")\n(" + s + ")"); return None}
-//
-//      //@todo simplify most cases substantially by useAt(AxiomIndex.axiomFor(sub))(p)
-//      sub.get match {
-//        case Box(a, _) => a match {
-//          case _: Assign    => Some(assignb)
-//          case _: AssignAny => Some(randomb)
-//          case _: Test      => Some(testb)
-//          case ode:ODESystem if ODETactics.isDiffSolvable(sub.asInstanceOf[Formula])=> Some(diffSolve)
-//          case _: Compose   => Some(composeb)
-//          case _: Choice    => Some(choiceb)
-//          case _: Dual      => Some(dualb)
-//          case _ => None
-//        }
-//        case Diamond(a, _) => a match {
-//          case _: Assign    => Some(assignd)
-//          case _: AssignAny => Some(randomd)
-//          case _: Test      => Some(testd)
-//          case ode:ODESystem if ODETactics.isDiffSolvable(sub.asInstanceOf[Formula])=> ???
-//          case _: Compose   => Some(composed)
-//          case _: Choice    => Some(choiced)
-//          case _: Dual      => Some(duald)
-//          case _ => None
-//        }
-//        case DifferentialFormula(f) => f match {
-//          case _: Equal     => Some(Dequal)
-//          case _: NotEqual  => Some(Dnotequal)
-//          case _: Greater   => Some(Dgreater)
-//          case _: GreaterEqual => Some(Dgreaterequal)
-//          case _: Less      => Some(Dless)
-//          case _: LessEqual => Some(Dlessequal)
-//          case _: And       => Some(Dand)
-//          case _: Or        => Some(Dor)
-//          case _: Imply     => Some(Dimply)
-//          case _: Forall    => Some(Dforall)
-//          case _: Exists    => Some(Dexists)
-//        }
-//        case Differential(t) => t match {
-//          case _: Variable  => Some(Dvariable)
-//          case _: Plus      => Some(Dplus)
-//          case _: Neg       => Some(Dneg)
-//          case _: Minus     => Some(Dminus)
-//          case _: Times     => Some(Dtimes)
-//          case _: Divide    => Some(Dquotient)
-//          case _: Power     => Some(Dpower)
-//          case _: Number    => Some(Dconst)
-//          case FuncOf(_,Nothing) => Some(Dconst)
-//        }
-//        case Not(f)         => f match {
-//          case Box(_,Not(_))=> Some(useAt("<> dual"))
-//          case _: Box       => Some(useAt("![]"))
-//          case Diamond(_,Not(_))=> Some(useAt("[] dual"))
-//          case _: Diamond   => Some(useAt("!<>"))
-//          case _: Forall    => Some(useAt("!all"))
-//          case _: Exists    => Some(useAt("!exists"))
-//          case _: Equal     => Some(useAt("! ="))
-//          case _: NotEqual  => Some(useAt("! !="))
-//          case _: Less      => Some(useAt("! <"))
-//          case _: LessEqual => Some(useAt("! <="))
-//          case _: Greater   => Some(useAt("! >"))
-//          case _: GreaterEqual => Some(useAt("! >="))
-//          //@note for conceptual simplicity, use propositional and Skolem sequent rules, too
-//          case _ if p.isTopLevel => if(p.isAnte) Some(TactixLibrary.notL) else Some(TactixLibrary.notR)
-//          case _: Not       => Some(useAt(DerivedAxioms.doubleNegationAxiom))
-//          case _: And       => Some(useAt(DerivedAxioms.notAnd))
-//          case _: Or        => Some(useAt(DerivedAxioms.notOr))
-//          case _: Imply     => Some(useAt(DerivedAxioms.notImply))
-//          case _: Equiv     => Some(useAt(DerivedAxioms.notEquiv))
-//        }
-//        //@note for conceptual simplicity, use propositional and Skolem sequent rules, too
-//        case _: Not   if p.isTopLevel => assert(false, "already above"); if(p.isAnte) Some(TactixLibrary.notL)   else Some(TactixLibrary.notR)
-//        case _: And   if p.isTopLevel => if(p.isAnte) Some(TactixLibrary.andL)   else Some(TactixLibrary.andR)
-//        case _: Or    if p.isTopLevel => if(p.isAnte) Some(TactixLibrary.orL)    else Some(TactixLibrary.orR)
-//        case _: Imply if p.isTopLevel => if(p.isAnte) Some(TactixLibrary.implyL) else Some(TactixLibrary.implyR)
-//        case _: Equiv if p.isTopLevel => if(p.isAnte) Some(TactixLibrary.equivL) else Some(TactixLibrary.equivR)
-//        case _: Forall if p.isTopLevel && !p.isAnte => Some(TactixLibrary.allR)
-//        case _: Exists if p.isTopLevel &&  p.isAnte => Some(TactixLibrary.existsL)
-//        case _ => None
-//      }
-//    }
-//
-//    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-//      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-//
-//      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-//        getTactic(node.sequent, p) match {
-//          case None => None
-//          case Some(postac) => Some(postac(p))
-//        }
-//    }
-//  }
+  lazy val stepAt: DependentPositionTactic = new DependentPositionTactic("stepAt") {
+    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
+      override def computeExpr(v: BelleValue): BelleExpr = v match {
+        case BelleProvable(provable) =>
+          require(provable.subgoals.size == 1, "Exactly one subgoal expected")
+          val sub = provable.subgoals.head.sub(pos)
+          if (sub.isEmpty) throw new BelleUserGeneratedError("ill-positioned " + pos + " in " + provable.subgoals.head + "\nin " + "stepAt(" + pos + ")\n(" + provable.subgoals.head + ")")
+          sub.get match {
+            case Box(a, _) => a match {
+              case _: Assign    => assignb
+              case _: AssignAny => randomb
+              case _: Test      => testb
+//              case ode: ODESystem if ODETactics.isDiffSolvable(sub.asInstanceOf[Formula])=> Some(diffSolve)
+              case _: Compose   => composeb
+              case _: Choice    => choiceb
+              case _: Dual      => dualb
+            }
+            case Diamond(a, _) => a match {
+              case _: Assign    => assignd
+              case _: AssignAny => randomd
+              case _: Test      => testd
+//              case ode:ODESystem if ODETactics.isDiffSolvable(sub.asInstanceOf[Formula])=> ???
+              case _: Compose   => composed
+              case _: Choice    => choiced
+              case _: Dual      => duald
+            }
+            case DifferentialFormula(f) => f match {
+              case _: Equal     => Dequal
+              case _: NotEqual  => Dnotequal
+              case _: Greater   => Dgreater
+              case _: GreaterEqual => Dgreaterequal
+              case _: Less      => Dless
+              case _: LessEqual => Dlessequal
+              case _: And       => Dand
+              case _: Or        => Dor
+              case _: Imply     => Dimply
+              case _: Forall    => Dforall
+              case _: Exists    => Dexists
+            }
+            case Differential(t) => t match {
+              case _: Variable  => Dvariable
+              case _: Plus      => Dplus
+              case _: Neg       => Dneg
+              case _: Minus     => Dminus
+              case _: Times     => Dtimes
+              case _: Divide    => Dquotient
+              case _: Power     => Dpower
+              case _: Number    => Dconst
+              case FuncOf(_,Nothing) => Dconst
+            }
+            case Not(f)         => f match {
+              case Box(_,Not(_))=> useAt("<> dual")
+              case _: Box       => useAt("![]")
+              case Diamond(_,Not(_))=> useAt("[] dual")
+              case _: Diamond   => useAt("!<>")
+              case _: Forall    => useAt("!all")
+              case _: Exists    => useAt("!exists")
+              case _: Equal     => useAt("! =")
+              case _: NotEqual  => useAt("! !=")
+              case _: Less      => useAt("! <")
+              case _: LessEqual => useAt("! <=")
+              case _: Greater   => useAt("! >")
+              case _: GreaterEqual => useAt("! >=")
+              //@note for conceptual simplicity, use propositional and Skolem sequent rules, too
+              case _ if pos.isTopLevel => if (pos.isAnte) ProofRuleTactics.notL else ProofRuleTactics.notR
+              case _: Not       => useAt(DerivedAxioms.doubleNegationAxiom)
+              case _: And       => useAt(DerivedAxioms.notAnd)
+              case _: Or        => useAt(DerivedAxioms.notOr)
+              case _: Imply     => useAt(DerivedAxioms.notImply)
+              case _: Equiv     => useAt(DerivedAxioms.notEquiv)
+            }
+            //@note for conceptual simplicity, use propositional and Skolem sequent rules, too
+            case _: Not   if pos.isTopLevel => assert(assertion=false, "already above"); if(pos.isAnte) ProofRuleTactics.notL else ProofRuleTactics.notR
+            case _: And   if pos.isTopLevel => if (pos.isAnte) ProofRuleTactics.andL   else ProofRuleTactics.andR
+            case _: Or    if pos.isTopLevel => if (pos.isAnte) ProofRuleTactics.orL    else ProofRuleTactics.orR
+            case _: Imply if pos.isTopLevel => if (pos.isAnte) ProofRuleTactics.implyL else ProofRuleTactics.implyR
+            case _: Equiv if pos.isTopLevel => if (pos.isAnte) ProofRuleTactics.equivL else ProofRuleTactics.equivR
+            case _: Forall if pos.isTopLevel && !pos.isAnte => TactixLibrary.allR
+            case _: Exists if pos.isTopLevel &&  pos.isAnte => TactixLibrary.existsL
+          }
+      }
+    }
+  }
 
   /*******************************************************************
     * Derive by proof
