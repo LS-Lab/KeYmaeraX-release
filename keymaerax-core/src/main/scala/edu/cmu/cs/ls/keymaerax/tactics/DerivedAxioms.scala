@@ -45,15 +45,17 @@ object DerivedAxioms {
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
     // create evidence (traces input into tool and output from tool)
     val evidence = new ToolEvidence(immutable.Map("input" -> fact.toString, "output" -> "true")) :: Nil
-    val lemma = Lemma(fact, evidence, Some(name))
+    val lemmaName = axiom2lemmaName(name)
+    val lemma = Lemma(fact, evidence, Some(lemmaName))
     if (!AUTO_INSERT) {
       lemma
     } else {
       // first check whether the lemma DB already contains identical lemma name
-      val lemmaID = if (derivedAxiomDB.contains(name)) {
+      val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
         // identical lemma contents with identical name, so reuse ID
-        if (derivedAxiomDB.get(name) == Some(lemma)) lemma.name.get
-        else throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(name))
+        if (derivedAxiomDB.get(lemmaName).contains(lemma)) lemma.name.get
+        else throw new IllegalStateException("Prover already has a different lemma filed under the same name " +
+          derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ")")
       } else {
         derivedAxiomDB.add(lemma)
       }
@@ -63,25 +65,28 @@ object DerivedAxioms {
 
   /** Derive an axiom for the given derivedAxiom with the given tactic, package it up as a Lemma and make it available */
   private[tactics] def derivedAxiom(name: String, derived: Sequent, tactic: Tactic): Lemma =
-    derivedAxiomDB.get(name) match {
+    derivedAxiomDB.get(axiom2lemmaName(name)) match {
       case Some(lemma) => lemma
-      case None => {
+      case None =>
         val witness = TactixLibrary.proveBy(derived, tactic)
         assert(witness.isProved, "tactics proving derived axioms should produce proved Provables: " + name + " got\n" + witness)
         derivedAxiom(name, witness)
-      }
     }
 
   /** Package a Lemma for a derived axiom up as a rule */
-  private[tactics] def derivedAxiomR(lemma: String): LookupLemma = {
-    require(derivedAxiomDB.contains(lemma), "Lemma has already been added")
-    LookupLemma(derivedAxiomDB, lemma)
+  private[tactics] def derivedAxiomR(name: String): LookupLemma = {
+    val lemmaName = axiom2lemmaName(name)
+    require(derivedAxiomDB.contains(lemmaName), s"Lemma '$lemmaName' not found; lemma must be present in lemma DB for lookup")
+    LookupLemma(derivedAxiomDB, lemmaName)
   }
 
   /** Package a Lemma for a derived axiom up as a tactic */
   private[tactics] def derivedAxiomT(lemma: Lemma): ApplyRule[LookupLemma] = {
     require(derivedAxiomDB.contains(lemma.name.get), "Lemma has already been added")
-    new ApplyRule(derivedAxiomR(lemma.name.get)) {
+    val lemma2axiomName = axiom2lemmaName.map(_.swap)
+    require(lemma2axiomName.contains(lemma.name.get), s"Lemma with name ${lemma.name.get} must prove an axiom")
+    val axiomName = lemma2axiomName.get(lemma.name.get).get
+    new ApplyRule(derivedAxiomR(axiomName)) {
       override def applicable(node: ProofNode): Boolean = node.sequent.sameSequentAs(lemma.fact.conclusion)
     }
   }
@@ -96,6 +101,111 @@ object DerivedAxioms {
   private val ctxt = Function("ctx_", None, Real, Real) // function symbol
   private val ctxf = Function("ctx_", None, Real, Bool) // predicate symbol
   private val context = Function("ctx_", None, Bool, Bool) // predicational symbol
+
+  //@note enables consistent axiom names as well as valid file names on all platforms
+  private val axiom2lemmaName: Map[String, String] = Map(
+    "<-> reflexive" -> "equiv reflexive",
+    "-> distributes over &" -> "imply distributes over and",
+    "-> distributes over <->" -> "imply distributes over equiv",
+    "-> weaken" -> "imply weaken",
+    "!! double negation" -> "double negation",
+    "exists dual" -> "exists dual",
+    "!exists" -> "exists negate",
+    "!all" -> "all negate",
+    "![]" -> "box negate",
+    "!<>" -> "diamond negate",
+    "[] dual" -> "box dual",
+    "K1" -> "K1",
+    "K2" -> "K2",
+    "[] split" -> "box split",
+    "[] split left" -> "box split left",
+    "[] split right" -> "box split right",
+    "<> split" -> "diamond split",
+    "<> split left" -> "diamond split left",
+    "<:=> assign" -> "diamond assign",
+    ":= assign dual" -> "assign dial",
+    "[:=] assign equational" -> "box assign equational",
+    "[:=] assign update" -> "box assign update",
+    "[:=] vacuous assign" -> "box vacuous assign",
+    "<:=> assign equational" -> "diamond assign equational",
+    "<:=> assign update" -> "diamond assign update",
+    "<:=> vacuous assign" -> "diamond vacuous assign",
+    "<':=> differential assign" -> "diamond differential assign",
+    "<:*> assign nondet" -> "diamond assign nondet",
+    "<?> test" -> "diamond test",
+    "<++> choice" -> "diamond choice",
+    "<;> compose" -> "diamond compose",
+    "<*> iterate" -> "diamond iterate",
+    "<*> approx" -> "diamond approx",
+    "[*] approx" -> "diamond approx",
+    "exists generalize" -> "exists generalize",
+    "all substitute" -> "all substitute",
+    "vacuous exists quantifier" -> "vacuous exists quantifier",
+    "V[:*] vacuous assign nondet" -> "V box vacuous assign nondet",
+    "V<:*> vacuous assign nondet" -> "V diamond vacuous assign nondet",
+    "DX diamond differential skip" -> "DX diamond differential skip",
+    "DW differential weakening" -> "DW differential weakening",
+    "DS differential equation solution" -> "DS differential equation solution",
+    "Dsol& differential equation solution" -> "Dsol domain differential equation solution",
+    "Dsol differential equation solution" -> "Dsol differential equation solution",
+    "Domain Constraint Conjunction Reordering" -> "Domain Constraint Conjunction Reordering",
+    "[] post weaken" -> "box post weaken",
+    "& commute" -> "and commute",
+    "& associative" -> "and associative",
+    "& reflexive" -> "and reflexive",
+    "!& deMorgan" -> "not and deMorgan",
+    "!| deMorgan" -> "not or deMorgan",
+    "!-> deMorgan" -> "not imply deMorgan",
+    "!<-> deMorgan" -> "not equiv deMorgan",
+    "-> expand" -> "imply expand",
+    "-> self" -> "imply self",
+    "PC1" -> "PC1",
+    "PC2" -> "PC2",
+    "PC3" -> "PC3",
+    "PC9" -> "PC9",
+    "PC10" -> "PC10",
+    "-> tautology" -> "imply tautology",
+    "->' derive imply" -> "derive imply",
+    "\\forall->\\exists" -> "forall imply exists",
+    "->true" -> "imply true",
+    "true->" -> "true imply",
+    "&true" -> "and true",
+    "true&" -> "true and",
+    "0*" -> "zero times",
+    "0+" -> "zero plus",
+    "x' derive variable" -> "derive variable",
+    "' linear" -> "prime linear",
+    "' linear right" -> "prime linear right",
+    "DG differential pre-ghost" -> "DG differential pre-ghost",
+    "= reflexive" -> "equal reflexive",
+    "* commute" -> "times commute",
+    "= commute" -> "equal commute",
+    "<=" -> "lessEqual expand",
+    "= negate" -> "equal negate",
+    "!= negate" -> "notEqual negate",
+    "! <" -> "less negate",
+    "! <=" -> "lessEqual negate",
+    "! >" -> "greater negate",
+    ">= flip" -> "greaterEqual flip",
+    "> flip" -> "greater flip",
+    "<" -> "less normalize",
+    ">" -> "greater flip",
+    "abs" -> "abs",
+    "min" -> "min",
+    "max" -> "max",
+    "<*> stuck" -> "diamond loop stuck",
+    "<'> stuck" -> "diamond prime stuck",
+    "+<= up" -> "interval plus up",
+    "-<= up" -> "interval minus up",
+    "*<= up" -> "interval times up",
+    "1Div<= up" -> "interval 1divide up",
+    "Div<= up" -> "interval divide up",
+    "<=+ down" -> "interval plus down",
+    "<=- down" -> "interval minus down",
+    "<=* down" -> "interval times down",
+    "<=1Div down" -> "interval 1divide down",
+    "<=Div down" -> "interval divide down"
+  )
 
   /**
    * Looks up a tactic by name to derive an axiom.
@@ -237,7 +347,7 @@ object DerivedAxioms {
     case "<=1Div down" => Some(intervalDown1DivideF, intervalDown1DivideT)
     case "<=Div down" => Some(intervalDownDivideF, intervalDownDivideT)
     case _ => None
-  } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == name, s"Lookup of DerivedAxiom should find the correct lemma (name: ${name})")
+  } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == axiom2lemmaName(name), s"Lookup of DerivedAxiom should find the correct lemma (name: $name)")
 
   /** populates the derived lemma database with all of the lemmas in the case statement above.*/
   def prepopulateDerivedLemmaDatabase() = {
