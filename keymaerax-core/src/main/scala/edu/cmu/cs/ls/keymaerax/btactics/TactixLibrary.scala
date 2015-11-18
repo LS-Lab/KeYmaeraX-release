@@ -196,7 +196,7 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val iterateb           : BelleExpr = HilbertCalculus.iterateb
 
   /** splitb: splits `[a](p&q)` into `[a]p & [a]q` */
-  lazy val splitb             : BuiltInPositionTactic = ??? //HybridProgramTacticsImpl.boxSplitConjunctionT
+  lazy val splitb             : DependentPositionTactic = useAt("[] split")
 
   /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def I(invariant : Formula)  : BuiltInPositionTactic = ??? //TacticLibrary.inductionT(Some(invariant))
