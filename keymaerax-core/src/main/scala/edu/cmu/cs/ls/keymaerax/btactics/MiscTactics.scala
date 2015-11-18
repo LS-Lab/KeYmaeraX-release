@@ -18,7 +18,7 @@ object DebuggingTactics {
     override def result(provable: Provable): Provable = throw e
   }
 
-  def error(s : String) = new BuiltInTactic("Error") {
+  def error(s: => String) = new BuiltInTactic("Error") {
     override def result(provable: Provable): Provable = {
       throw new BelleUserGeneratedError(s)
     }
@@ -33,11 +33,11 @@ object DebuggingTactics {
   }
 
   /** assert is a no-op tactic that raises an error if the provable is not of the expected size. */
-  def assert(anteSize: Int, succSize: Int): BuiltInTactic = new BuiltInTactic("assert") {
+  def assert(anteSize: Int, succSize: Int, msg: => String = ""): BuiltInTactic = new BuiltInTactic("assert") {
     override def result(provable: Provable): Provable = {
       if (provable.subgoals.size != 1 || provable.subgoals.head.ante.size != anteSize ||
         provable.subgoals.head.succ.size != succSize) {
-        throw new BelleUserGeneratedError("Expected 1 subgoal with: " + anteSize + " antecedent and " + succSize + " succedent formulas,\n\t but got " +
+        throw new BelleUserGeneratedError(msg + "\nExpected 1 subgoal with: " + anteSize + " antecedent and " + succSize + " succedent formulas,\n\t but got " +
           provable.subgoals.size + " subgoals (head subgoal with: " + provable.subgoals.head.ante.size + "antecedent and " +
           provable.subgoals.head.succ.size + " succedent formulas)")
       }
