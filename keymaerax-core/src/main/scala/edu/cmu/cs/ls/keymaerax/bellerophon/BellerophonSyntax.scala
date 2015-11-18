@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.RenUSubst
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position}
+import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
 
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron expressions.
@@ -45,7 +45,8 @@ trait PositionalTactic extends BelleExpr {
     *         enough information to reconstruct the effect of the tactic using computeResult,
     *         but also an internal representation of the application.
     */
-  def apply(position: Position) = AppliedPositionTactic(this, position)
+  def apply(position: Position): AppliedPositionTactic = AppliedPositionTactic(this, position)
+  def apply(seqIdx: Int, inExpr: List[Int] = Nil): AppliedPositionTactic = apply(PositionConverter.convertPos(seqIdx, inExpr))
 }
 
 abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic
@@ -102,6 +103,7 @@ abstract case class DependentTactic(name: String) extends BelleExpr {
 }
 abstract case class DependentPositionTactic(name: String) extends BelleExpr {
   def apply(pos: Position) : DependentTactic
+  def apply(seqIdx: Int, inExpr: List[Int] = Nil): DependentTactic = apply(PositionConverter.convertPos(seqIdx, inExpr))
 }
 abstract case class InputTactic[T](input: T) extends BelleExpr {
   def computeExpr(): BelleExpr
@@ -172,6 +174,14 @@ case class BelleUserGeneratedError(message: String)
 
 class CompoundException(left: BelleError, right: BelleError)
   extends BelleError(s"Left Message: ${left.getMessage}\nRight Message: ${right.getMessage})")
+
+object PositionConverter {
+  def convertPos(seqIdx: Int, inExpr: List[Int] = Nil): Position = {
+    require(seqIdx != 0, "Sequent index must be strictly negative (antecedent) or strictly positive (succedent)")
+    if (seqIdx < 0) new AntePosition(-seqIdx - 1, PosInExpr(inExpr))
+    else new SuccPosition(seqIdx - 1, PosInExpr(inExpr))
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Errors
