@@ -1204,7 +1204,7 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
     // all free symbols anywhere else in the sequent, i.e. except at the quantifier position
     // note: this skolemization will be by identity, not to a new name, so no clashes can be caused from s(pos)
     //@note Taboos are the free symbols in the remaining sequent, i.e. after replacing pos with innocent True
-    val taboos = StaticSemantics.freeVars(s.updated(pos, True)).toSymbolSet
+    val taboos = StaticSemantics.freeVars(s).toSymbolSet ensuring (r => StaticSemantics.freeVars(s.updated(pos, True)).toSymbolSet.subsetOf(r))
     val (v,phi) = s(pos) match {
       case Forall(qv, qphi) if pos.isSucc => (qv, qphi)
       case Exists(qv, qphi) if pos.isAnte => (qv, qphi)
