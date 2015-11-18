@@ -205,7 +205,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** K: modal modus ponens (hybrid systems) */
   lazy val K                  : DependentPositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
   /** V: vacuous box [a]p() will be discarded and replaced by p() provided a does not changes values of postcondition p */
-  lazy val V                  : BuiltInPositionTactic = ??? //HybridProgramTacticsImpl.boxVacuousT
+  lazy val V                  : DependentPositionTactic = useAt("V vacuous", PosInExpr(1::Nil))
 
   // differential equations
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
