@@ -35,11 +35,8 @@ import scala.collection.immutable._
 object TactixLibrary extends UnifyUSCalculus {
   private val parser = KeYmaeraXParser
 
-  /** step: makes one sequent proof step to simplify the formula at the indicated position (unless @invariant needed) */
-  val step                    : BuiltInPositionTactic = ??? //TacticLibrary.step
-
-  /** stepAt: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  lazy val stepAt             : BuiltInPositionTactic = ??? //HilbertCalculus.stepAt
+  /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
+  lazy val step               : DependentPositionTactic = HilbertCalculus.stepAt
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
   def normalize               : BelleExpr = (alphaRule | closeId | ls(allR) | la(existsL)
@@ -47,7 +44,7 @@ object TactixLibrary extends UnifyUSCalculus {
     | betaRule
     | l(step))*@TheType()
   /** exhaust propositional logic */
-  def prop                    : BuiltInTactic = ??? //TacticLibrary.propositional
+  def prop                    : BelleExpr = (closeId | close | alphaRule | betaRule)*@TheType()
   /** master: master tactic that tries hard to prove whatever it could */
   def master                  : BuiltInTactic = ??? //master(new NoneGenerate(), "Mathematica")
   def master(qeTool: String)  : BuiltInTactic = ??? //master(new NoneGenerate(), qeTool)
@@ -113,8 +110,10 @@ object TactixLibrary extends UnifyUSCalculus {
 //      if (key.isDefined) Some(_ == key.get) else None)
   /** Locate applicable position in antecedent on the left */
   def lL(tactic: BuiltInLeftTactic): BuiltInTactic = la(tactic)
-  /** Locate applicable position in left or right in antecedent or succedent */
+  /** Locate applicable top-level position in left or right in antecedent or succedent */
   def l(tactic: PositionalTactic): BuiltInTactic  = ??? //TacticLibrary.locateAnteSucc(tactic)
+  /** Locate applicable top-level position in left or right in antecedent or succedent */
+  def l(tactic: DependentPositionTactic): DependentTactic = ???
   /** Locate applicable position within a given position */
   def lin(tactic: PositionalTactic): PositionalTactic = ???
 
