@@ -25,6 +25,9 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       case AppliedPositionTactic(positionTactic, pos) => v match {
         case BelleProvable(pr) => try { BelleProvable(positionTactic.computeResult(pr, pos)) } catch { case e: BelleError => throw e.inContext(positionTactic + " at " + pos, pr.prettyString) }
       }
+      case AppliedTwoPositionTactic(positionTactic, posOne, posTwo) => v match {
+        case BelleProvable(pr) => try { BelleProvable(positionTactic.computeResult(pr, posOne, posTwo)) } catch { case e: BelleError => throw e.inContext(positionTactic + " at (" + posOne + ", " + posTwo + ")", pr.prettyString) }
+      }
       case SeqTactic(left, right) => {
         val leftResult = try { apply(left, v) } catch {case e: BelleError => throw e.inContext(e.context & right)}
         try { apply(right, leftResult) } catch {case e: BelleError => throw e.inContext(left & e.context)}
