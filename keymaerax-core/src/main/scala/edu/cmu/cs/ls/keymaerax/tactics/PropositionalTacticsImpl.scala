@@ -355,24 +355,8 @@ object PropositionalTacticsImpl {
       })
   }
 
-  def kModalModusPonensT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      case Imply(Box(a, p), Box(b, q)) if a == b => Imply(Box(a, Imply(p, q)), fml)
-      case _ => False
-    }
-    uncoverAxiomT("K modal modus ponens", axiomInstance, _ => kModalModusPonensBaseT)
-  }
-  /** Base tactic for k modal modus ponens */
-  private def kModalModusPonensBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(_, Imply(Box(a, p), Box(b, q))) if a == b =>
-        val aA = ProgramConst("a")
-        val aP = PredOf(Function("p", None, Real, Bool), Anything)
-        val aQ = PredOf(Function("q", None, Real, Bool), Anything)
-        SubstitutionPair(aA, a) :: SubstitutionPair(aP, p) :: SubstitutionPair(aQ, q) :: Nil
-    }
-    axiomLookupBaseT("K modal modus ponens", subst, _ => NilPT, (f, ax) => ax)
-  }
+  @deprecated("Use TactixLibrary.useAt(\"K modal modus ponens\", PosInExpr(1::Nil)) instead")
+  def kModalModusPonensT: PositionTactic = TactixLibrary.useAt("K modal modus ponens", PosInExpr(1::Nil))
 
   /**
    * Tactic to perform uniform substitution. In most cases this is called on a sequent that only contains a single

@@ -207,7 +207,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def loop(invariant: Formula) = I(invariant)
   /** K: modal modus ponens (hybrid systems) */
-  lazy val K                  : PositionTactic = PropositionalTacticsImpl.kModalModusPonensT
+  lazy val K                  : PositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
   /** V: vacuous box [a]p() will be discarded and replaced by p() provided a does not changes values of postcondition p */
   lazy val V                  : PositionTactic = HybridProgramTacticsImpl.boxVacuousT
 

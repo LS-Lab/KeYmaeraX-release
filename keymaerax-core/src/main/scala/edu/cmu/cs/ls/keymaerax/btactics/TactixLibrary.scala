@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Generator, NoneGenerate, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Generator, NoneGenerate, Position, PosInExpr, SuccPosition}
 
 import scala.collection.immutable._
 
@@ -193,7 +193,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** composeb: [;] handle both parts of a sequential composition `[a;b]p(x)` one at a time `[a][b]p(x)` */
   lazy val composeb           : DependentPositionTactic = useAt("[;] compose")
   /** iterateb: [*] prove a property of a loop `[{a}*]p(x)` by unrolling it once `p(x) & [a][{a}*]p(x)` */
-  lazy val iterateb           : BuiltInPositionTactic = ??? //HilbertCalculus.iterateb
+  lazy val iterateb           : BelleExpr = HilbertCalculus.iterateb
 
   /** splitb: splits `[a](p&q)` into `[a]p & [a]q` */
   lazy val splitb             : BuiltInPositionTactic = ??? //HybridProgramTacticsImpl.boxSplitConjunctionT
@@ -203,7 +203,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def loop(invariant: Formula) = I(invariant)
   /** K: modal modus ponens (hybrid systems) */
-  lazy val K                  : BuiltInPositionTactic = ??? //PropositionalTacticsImpl.kModalModusPonensT
+  lazy val K                  : DependentPositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
   /** V: vacuous box [a]p() will be discarded and replaced by p() provided a does not changes values of postcondition p */
   lazy val V                  : BuiltInPositionTactic = ??? //HybridProgramTacticsImpl.boxVacuousT
 
