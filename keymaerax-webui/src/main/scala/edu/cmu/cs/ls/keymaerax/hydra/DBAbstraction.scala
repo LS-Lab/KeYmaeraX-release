@@ -73,7 +73,7 @@ object ExecutionStepStatus extends Enumeration {
   type ExecutionStepStatus = Value
   val Prepared, Running, Finished, Aborted, Error, DependsOnChildren = Value
 
-  def fromString(s : String) = s match {
+  def fromString(s : String): ExecutionStepStatus = s match {
     case "Prepared" => Prepared
     case "Running" => Running
     case "Finished" => Finished

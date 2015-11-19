@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.sql.SQLException
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.core.{Provable, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 
 //import Tables.TacticonproofRow
@@ -309,12 +309,31 @@ object SQLite extends DBAbstraction {
     })}
 
   /** Returns the executable with ID executableId */
-  override def getExecutable(executableId: String): ExecutablePOJO = ???
+  override def getExecutable(executableId: String): ExecutablePOJO =
+    sqldb.withSession(implicit session => {
+      val executables =
+        Executables.filter(_.executableid === executableId)
+          .list
+          .map(exe => new ExecutablePOJO(exe.executableid.get, exe.scalatacticid, exe.belleexpr))
+      if(executables.length < 1) throw new Exception("getExecutable type should be an Option")
+      else if(executables.length == 1) executables.head
+      else throw new Exception("Primary keys aren't unique in executables table.")
+    })
 
   /** Use escape hatch in prover core to create a new Provable */
   override def loadProvable(provableId: String): Sequent = ???
 
-  override def getExecutionSteps(executionID: String): List[ExecutionStepPOJO] = ???
+  override def getExecutionSteps(executionID: String): List[ExecutionStepPOJO] = {
+    sqldb.withSession(implicit session => {
+      val steps =
+      Executionsteps.filter(_.executionid === executionID)
+      .list
+      .map(step => new ExecutionStepPOJO(step.stepid.get, step.executionid.get, step.previousstep.get, step.parentstep.get,
+        step.branchorder, step.branchlabel, step.alternativeorder.get, ExecutionStepStatus.fromString(step.status.get),
+        step.executableid.get, step.inputprovableid.get, step.resultprovableid.get, step.userexecuted.get.toBoolean))
+    if(steps.length < 1) throw new Exception("No steps found for execution " + executionID)
+    else steps
+  })}
 
   /** Adds a new scala tactic and returns the resulting id */
   /*@TODO Understand whether to use the ID passed in or generate our own*/
@@ -327,6 +346,12 @@ object SQLite extends DBAbstraction {
     })
   }
 
+  /** @TODO Clarify spec for this function. Questions:
+    * Top-level rules only?
+    * Branches?
+    * Alternatives?
+    * Does order matter?
+    * What's in each string? */
   override def getProofSteps(proofId: String): List[String] = ???
 
   /** Adds a built-in tactic application using a set of parameters */
@@ -345,8 +370,38 @@ object SQLite extends DBAbstraction {
   }
 
   /** Updates an executable step's status. @note should not be transitive */
-  override def updateExecutionStatus(executionStepId: String, status: ExecutionStepStatus): Unit = ???
+  override def updateExecutionStatus(executionStepId: String, status: ExecutionStepStatus): Unit = {
+    val newStatus = ExecutionStepStatus.toString(status)
+    sqldb.withSession(implicit session => {
+      Executionsteps.filter(_.stepid === executionStepId).map(_.status).update(Some(newStatus))
+    })
+  }
+
+  private def sortFormulas(fromAnte: Boolean, formulas: List[SequentFormulaPOJO]): List[Formula] = {
+    import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+    val relevant = formulas.filter({case formula => fromAnte == formula.isAnte})
+    val sorted = relevant.sortWith({case (f1, f2) => f1.index > f2.index})
+    sorted.map({case formula => formula.formulaStr.asFormula})
+  }
 
   /** Gets the conclusion of a provable */
-  override def getConclusion(provableId: String): Sequent = ???
+  override def getConclusion(provableId: String): Sequent = {
+    sqldb.withSession(implicit session => {
+      val sequents =
+        Sequents.filter(_.provableid == provableId)
+        .list
+        .map({case sequent => sequent.sequentid.get})
+      if (sequents.length != 1)
+        throw new Exception ("provable should have exactly 1 sequent in getConclusion, has " + sequents.length)
+      val sequent = sequents.head
+      val formulas =
+        Sequentformulas.filter(_.sequentid === sequent)
+          .list
+          .map(formula => new SequentFormulaPOJO(formula.sequentformulaid.get, formula.sequentid.get,
+            formula.isante.get.toBoolean, formula.idx.get, formula.formula.get))
+      val ante = sortFormulas(fromAnte=true, formulas).toIndexedSeq
+      val succ = sortFormulas(fromAnte=false, formulas).toIndexedSeq
+      Sequent(null, ante, succ)
+    })
+  }
 }
