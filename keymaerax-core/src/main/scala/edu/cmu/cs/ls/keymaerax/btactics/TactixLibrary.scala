@@ -296,16 +296,41 @@ object TactixLibrary extends UnifyUSCalculus {
     /*@todo seriously?*/ edu.cmu.cs.ls.keymaerax.tactics.Tactics.MathematicaScheduler.tool.asInstanceOf[QETool])
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
-  lazy val close             : BuiltInTwoPositionTactic         = ProofRuleTactics.close
+  lazy val close             : BelleExpr         = closeId | closeT | closeF
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   def close(a: AntePosition, s: SuccPosition) : BelleExpr = cohide2(a, s) & ProofRuleTactics.trivialCloser
   def close(a: Int, s: Int)  : BelleExpr = close(new AntePosition(SeqPos(a).asInstanceOf[AntePos].getIndex), new SuccPosition(SeqPos(s).asInstanceOf[SuccPos].getIndex))
   /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
-  lazy val closeId           : BuiltInTactic         = ???
+  lazy val closeId           : DependentTactic = new DependentTactic("close id") {
+    override def computeExpr(v : BelleValue): BelleExpr = v match {
+      case BelleProvable(provable) =>
+        require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
+        val s = provable.subgoals.head
+        require(s.ante.intersect(s.succ).nonEmpty, "Expects same formula in antecedent and succedent,\n\t but antecedent " + s.ante + "\n\t does not overlap with succedent " + s.succ)
+        val fml = s.ante.intersect(s.succ).head
+        close(AntePosition(s.ante.indexOf(fml)), SuccPosition(s.succ.indexOf(fml)))
+    }
+  }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
-  lazy val closeT            : BuiltInRightTactic = ProofRuleTactics.closeTrue
+  lazy val closeT            : DependentTactic = new DependentTactic("close true") {
+    override def computeExpr(v: BelleValue): BelleExpr = v match {
+      case BelleProvable(provable) =>
+        require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
+        val s = provable.subgoals.head
+        require(s.succ.contains(True), "Expects true in succedent,\n\t but succedent " + s.succ + " does not contain true")
+        ProofRuleTactics.closeTrue(SuccPosition(s.succ.indexOf(True)))
+    }
+  }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
-  lazy val closeF            : BuiltInLeftTactic = ProofRuleTactics.closeFalse
+  lazy val closeF            : DependentTactic = new DependentTactic("close false") {
+    override def computeExpr(v: BelleValue): BelleExpr = v match {
+      case BelleProvable(provable) =>
+        require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
+        val s = provable.subgoals.head
+        require(s.ante.contains(False), "Expects false in antecedent,\n\t but antecedent " + s.ante + " does not contain false")
+        ProofRuleTactics.closeFalse(AntePosition(s.ante.indexOf(False)))
+    }
+  }
 
   // counter example
 
