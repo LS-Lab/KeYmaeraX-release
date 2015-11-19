@@ -315,7 +315,7 @@ object TactixLibrary extends UnifyUSCalculus {
   // derived propositional
 
   /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. ([[edu.cmu.cs.ls.keymaerax.core.EquivifyRight EquivifyRight]]) */
-  lazy val equivifyR          : BelleExpr = ???
+  lazy val equivifyR          : BuiltInRightTactic = ProofRuleTactics.equivifyR
   /** Modus Ponens: p&(p->q) -> q */
   def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = PropositionalTactics.modusPonens(assumption, implication)
   /** Commute equivalence on the left [[edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.commuteEquivL]] */
@@ -344,19 +344,15 @@ object TactixLibrary extends UnifyUSCalculus {
 
   // Tactic contracts
   /** Assert that the given condition holds for the goal's sequent. */
-  def assertT(cond : Sequent=>Boolean, msg: => String): BelleExpr = ??? //DebuggingTactics.assert(cond, msg)
-  /** Assertion that the sequent has the specified number of antecedent and succedent formulas, respectively. */
+  def assertT(cond : Sequent=>Boolean, msg: => String): BelleExpr = DebuggingTactics.assert(cond, msg)
+  /** Assert that the sequent has the specified number of antecedent and succedent formulas, respectively. */
   def assertT(antecedents: Int, succedents: Int, msg: => String = ""): BelleExpr = DebuggingTactics.assert(antecedents, succedents, msg)
-  /** Assert that the given formula is present at the given position in the sequent that this tactic is applied to. */
-  def assertT(expected: Formula, pos: Position, msg: => String): BelleExpr = DebuggingTactics.assert(expected, msg)(pos)
 
   // PositionTactic contracts
   /** Assert that the given condition holds for the sequent at the position where the tactic is applied */
-  def assertT(cond : (Sequent,Position)=>Boolean, msg: => String): BelleExpr = ??? //DebuggingTactics.assertPT(cond, msg)
+  def assertT(cond : (Sequent,Position)=>Boolean, msg: => String): BuiltInPositionTactic = DebuggingTactics.assert(cond, msg)
   /** Assert that the given expression is present at the position in the sequent where this tactic is applied to. */
-  def assertE(expected: => Expression, msg: => String): BuiltInPositionTactic = ???
-//    //@todo could do if (DEBUG) to save cycles
-//    assertPT((s, pos) => s.sub(pos) == Some(expected), msg + "\nExpected: " + expected.prettyString /*+ "\nFound:   " + s.sub(pos)*/)
+  def assertE(expected: => Expression, msg: => String): BuiltInPositionTactic = DebuggingTactics.assertE(expected, msg)
 
   /** errorT raises an error upon executing this tactic, stopping processing */
   def errorT(msg: => String): BuiltInTactic = DebuggingTactics.error(msg)
@@ -364,7 +360,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** debug(s) sprinkles debug message s into the output and the ProofNode information */
   def debug(s: => Any): BuiltInTactic = DebuggingTactics.debug(s.toString)
   /** debugAt(s) sprinkles debug message s into the output and the ProofNode information */
-  def debugAt(s: => Any): BuiltInPositionTactic = ??? //TacticLibrary.debugAtT(s)
+  def debugAt(s: => Any): BuiltInPositionTactic = DebuggingTactics.debugAt(s.toString)
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Special functions
