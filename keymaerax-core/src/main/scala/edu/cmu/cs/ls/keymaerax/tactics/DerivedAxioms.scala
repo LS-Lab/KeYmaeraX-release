@@ -1656,7 +1656,7 @@ object DerivedAxioms {
     useAt("!! double negation", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::Nil))) &
     useAt("!& deMorgan")(SuccPosition(0, PosInExpr(0::0::Nil))) &
     useAt("-> expand", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::0::Nil))) &
-    ODETactics.diffSkipT(DifferentialProgramConst("c"))(SuccPosition(0, PosInExpr(0::0::Nil))) &
+    useAt("DX differential skip")(SuccPosition(0, PosInExpr(0::0::Nil))) &
     useAt("<> dual")(SuccPosition(0, PosInExpr(0::Nil))) & implyR(SuccPosition(0)) & close
   )
   lazy val DskipdT = derivedAxiomT(Dskipd)
