@@ -860,74 +860,14 @@ object HybridProgramTacticsImpl {
     axiomLookupBaseT(name, subst, alpha, axiomInstance)
   }
 
-  /**
-   * Creates a new axiom tactic for V vacuous.
-   * @return The new tactic.
-   */
-  def boxVacuousT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      case Box(prg, phi) => Imply(phi, fml)
-      case _ => False
-    }
-    uncoverAxiomT("V vacuous", axiomInstance, _ => boxVacuousBaseT)
-  }
-  /** Base tactic for box vacuous */
-  private def boxVacuousBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(_, Box(prg, phi)) =>
-        val aA = ProgramConst("a")
-        val aP = PredOf(Function("p", None, Unit, Bool), Nothing)
-        SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
-    }
-    axiomLookupBaseT("V vacuous", subst, _ => NilPT, (f, ax) => ax)
-  }
+  @deprecated("Use TactixLibrary.useAt(\"V vacuous\") instead")
+  def boxVacuousT: PositionTactic = TactixLibrary.useAt("V vacuous", PosInExpr(1::Nil))
 
-  /**
-   * Creates a new axiom tactic for test [?H].
-   * @return The new tactic.
-   */
-  def boxTestT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      case Box(Test(h), p) => Equiv(fml, Imply(h, p))
-      case _ => False
-    }
-    uncoverAxiomT("[?] test", axiomInstance, _ => boxTestBaseT)
-  }
-  /** Base tactic for boxTestT */
-  private def boxTestBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Box(Test(h), p), _) =>
-        // construct substitution
-        val aH = PredOf(Function("H", None, Unit, Bool), Nothing)
-        val aP = PredOf(Function("p", None, Unit, Bool), Nothing)
-        SubstitutionPair(aH, h) :: SubstitutionPair(aP, p) :: Nil
-    }
-    axiomLookupBaseT("[?] test", subst, _ => NilPT, (f, ax) => ax)
-  }
+  @deprecated("Use TactixLibrary.useAt(\"[?] test\") instead")
+  def boxTestT: PositionTactic = TactixLibrary.useAt("[?] test")
 
-  /**
-   * Creates a new axiom tactic for diamond test.
-   * @return The new tactic.
-   * @author Stefan Mitsch
-   */
-  def diamondTestT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      case Diamond(Test(h), p) => Equiv(fml, And(h, p))
-      case _ => False
-    }
-    uncoverAxiomT("<?> test", axiomInstance, _ => diamondTestBaseT)
-  }
-  /** Base tactic for diamondTestT */
-  private def diamondTestBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Diamond(Test(h), p), _) =>
-        // construct substitution
-        val aH = PredOf(Function("H", None, Unit, Bool), Nothing)
-        val aP = PredOf(Function("p", None, Unit, Bool), Nothing)
-        SubstitutionPair(aH, h) :: SubstitutionPair(aP, p) :: Nil
-    }
-    axiomLookupBaseT("<?> test", subst, _ => NilPT, (f, ax) => ax)
-  }
+  @deprecated("Use TactixLibrary.useAt(\"<?> test\") instead")
+  def diamondTestT: PositionTactic = TactixLibrary.useAt("<?> test")
 
   /**
    * Creates a new axiom tactic for non-deterministic assignment [x := *].
@@ -1096,125 +1036,20 @@ object HybridProgramTacticsImpl {
     axiomLookupBaseT("<:*> assign nondet", subst, alpha, axiomInstance)
   }
 
-  /**
-   * Creates a new axiom tactic for sequential composition [;]
-   * @return The new tactic.
-   * @author Stefan Mitsch
-   */
-  def boxSeqT = seqT("[;] compose", Box.unapply, Box.apply)
+  @deprecated("Use TactixLibrary.useAt(\"[;] compose\") instead")
+  def boxSeqT = TactixLibrary.useAt("[;] compose")
 
-  /**
-   * Creates a new axiom tactic for diamond sequential composition <;>
-   * @return The new tactic.
-   * @author Stefan Mitsch
-   */
-  def diamondSeqT = seqT("<;> compose", Diamond.unapply, Diamond.apply)
+  @deprecated("Use TactixLibrary.useAt(\"<;> compose\") instead")
+  def diamondSeqT = TactixLibrary.useAt("<;> compose")
 
-  /**
-   * Creates a new axiom tactic for box/diamond sequential composition
-   * @param name The name of the axiom.
-   * @param mod The unapply method of the concrete modality.
-   * @param factory The apply method of the concrete modality.
-   * @return The new tactic.
-   * @author Stefan Mitsch
-   */
-  private def seqT[T: Manifest](name: String, mod: T => Option[(Program, Formula)],
-                                factory: (Program, Formula) => Formula): PositionTactic = {
-    val BDModality = new ModalityUnapplyer(mod)
+  @deprecated("Use TactixLibrary.useAt(\"I induction\") instead")
+  def boxInductionT: PositionTactic = TactixLibrary.useAt("I induction", PosInExpr(1::Nil))
 
-    def axiomInstance(fml: Formula): Formula = fml match {
-      case BDModality(Compose(a, b), p) => Equiv(fml, factory(a, factory(b, p)))
-      case _ => False
-    }
-    uncoverAxiomT(name, axiomInstance, _ => seqBaseT(name, mod))
-  }
-  /** Base tactic for seqT */
-  private def seqBaseT[T: Manifest](name: String, mod: T => Option[(Program, Formula)]): PositionTactic = {
-    val BDModality = new ModalityUnapplyer(mod)
+  @deprecated("Use TactixLibrary.useAt(\"[++] choice\") instead")
+  def boxChoiceT: PositionTactic = TactixLibrary.useAt("[++] choice")
 
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(BDModality(Compose(a, b), p), _) =>
-        val aA = ProgramConst("a")
-        val aB = ProgramConst("b")
-        val aP = PredOf(Function("p", None, Real, Bool), Anything)
-        SubstitutionPair(aA, a) :: SubstitutionPair(aB, b) :: SubstitutionPair(aP, p) :: Nil
-    }
-    axiomLookupBaseT(name, subst, _ => NilPT, (f, ax) => ax)
-  }
-
-  /**
-   * Creates a new axiom tactic for box induction [*] I induction
-   * @return The new tactic.
-   */
-  def boxInductionT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      // construct axiom instance: (p & [a*](p -> [a] p)) -> [a*]p
-      case Box(Loop(a), p) => Imply(And(p, Box(Loop(a), Imply(p, Box(a, p)))), fml)
-      case _ => False
-    }
-    //@todo Unsound for hybrid games, use ind induction rule instead but augment fml with trivial constant expressions then*/
-    uncoverAxiomT("I induction", axiomInstance, _ => boxInductionBaseT)
-  }
-  /** Base tactic for box induction */
-  private def boxInductionBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(And(p, Box(Loop(a), Imply(_, Box(_, _)))), _) =>
-        val aA = ProgramConst("a")
-        val aP = PredOf(Function("p", None, Real, Bool), Anything)
-        SubstitutionPair(aA, a) :: SubstitutionPair(aP, p) :: Nil
-    }
-
-    axiomLookupBaseT("I induction", subst, _ => NilPT, (f, ax) => ax)
-  }
-
-  /**
-   * Creates a new axiom tactic for box choice [++].
-   * @return The new tactic.
-   */
-  def boxChoiceT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      // construct axiom instance: [ a ++ b ]p <-> [a]p & [b]p.
-      case Box(Choice(a, b), p) => Equiv(fml, And(Box(a, p), Box(b, p)))
-      case _ => False
-    }
-    uncoverAxiomT("[++] choice", axiomInstance, _ => boxChoiceBaseT)
-  }
-  /** Base tactic for box choice */
-  private def boxChoiceBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Box(Choice(a, b), p), _) =>
-        val aA = ProgramConst("a")
-        val aB = ProgramConst("b")
-        val aP = PredOf(Function("p", None, Real, Bool), Anything)
-        SubstitutionPair(aA, a) :: SubstitutionPair(aB, b) :: SubstitutionPair(aP, p) :: Nil
-    }
-    axiomLookupBaseT("[++] choice", subst, _ => NilPT, (f, ax) => ax)
-  }
-
-  /**
-   * Creates a new axiom tactic for diamond choice <++>.
-   * @return The new tactic.
-   * @author Stefan Mitsch
-   */
-  def diamondChoiceT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      // construct axiom instance: < a ++ b >p <-> <a>p | <b>p.
-      case Diamond(Choice(a, b), p) => Equiv(fml, Or(Diamond(a, p), Diamond(b, p)))
-      case _ => False
-    }
-    uncoverAxiomT("<++> choice", axiomInstance, _ => diamondChoiceBaseT)
-  }
-  /** Base tactic for diamond choice */
-  private def diamondChoiceBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Diamond(Choice(a, b), p), _) =>
-        val aA = ProgramConst("a")
-        val aB = ProgramConst("b")
-        val aP = PredOf(Function("p", None, Real, Bool), Anything)
-        SubstitutionPair(aA, a) :: SubstitutionPair(aB, b) :: SubstitutionPair(aP, p) :: Nil
-    }
-    axiomLookupBaseT("<++> choice", subst, _ => NilPT, (f, ax) => ax)
-  }
+  @deprecated("Use TactixLibrary.useAt(\"<++> choice\") instead")
+  def diamondChoiceT: PositionTactic = TactixLibrary.useAt("<++> choice")
 
   /**
    * Creates a new position tactic to apply the induction rule.
