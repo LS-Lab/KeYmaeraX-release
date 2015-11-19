@@ -210,7 +210,7 @@ trait DBAbstraction {
   def getExecutionSteps(executionID: String) : List[ExecutionStepPOJO]
 
   /** Updates an executable step's status. @note should not be transitive */
-  def updateExeuctionStatus(executionStepId: String, status: ExecutionStepStatus): Unit
+  def updateExecutionStatus(executionStepId: String, status: ExecutionStepStatus): Unit
 
   /////////////////////
 

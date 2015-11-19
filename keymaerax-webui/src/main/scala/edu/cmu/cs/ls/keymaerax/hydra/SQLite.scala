@@ -273,8 +273,8 @@ object SQLite extends DBAbstraction {
     sqldb.withSession(implicit session => {
       // @TODO Figure out whether to generate ID's here or pass them in through the params
       val executableId = idgen()
-      Executables.map({case exe => (exe.executableid.get, exe.scalatacticid, exe.belleexpr.get)})
-      .insert((executableId, None, expr.toString))
+      Executables.map({case exe => (exe.executableid.get, exe.scalatacticid, exe.belleexpr)})
+      .insert((executableId, None, Some(expr.toString)))
       val paramTable = Executableparameter.map({case param => (param.parameterid.get, param.executableid.get, param.idx.get,
         param.valuetype.get, param.value.get)})
       for (i <- params.indices) {
@@ -317,15 +317,35 @@ object SQLite extends DBAbstraction {
   override def getExecutionSteps(executionID: String): List[ExecutionStepPOJO] = ???
 
   /** Adds a new scala tactic and returns the resulting id */
-  override def addScalaTactic(scalaTactic: ScalaTacticPOJO): String = ???
+  /*@TODO Understand whether to use the ID passed in or generate our own*/
+  override def addScalaTactic(scalaTactic: ScalaTacticPOJO): String = {
+    val scalaTacticId = idgen()
+    sqldb.withSession(implicit session => {
+      Scalatactics.map({case tactic => (tactic.scalatacticid.get, tactic.location.get)})
+      .insert((scalaTacticId, scalaTactic.location))
+      scalaTacticId
+    })
+  }
 
   override def getProofSteps(proofId: String): List[String] = ???
 
   /** Adds a built-in tactic application using a set of parameters */
-  override def addAppliedScalaTactic(scalaTacticId: String, params: List[ParameterPOJO]): String = ???
+  override def addAppliedScalaTactic(scalaTacticId: String, params: List[ParameterPOJO]): String = {
+    val executableId = idgen()
+    sqldb.withSession(implicit session => {
+      Executables.map({case exe => (exe.executableid.get, exe.scalatacticid, exe.belleexpr)})
+        .insert((executableId, Some(scalaTacticId), None))
+      val paramTable = Executableparameter.map({case param => (param.parameterid.get, param.executableid.get, param.idx.get,
+        param.valuetype.get, param.value.get)})
+      for (i <- params.indices) {
+        val paramId = idgen()
+        paramTable.insert((paramId, executableId, i, params(i).valueType.toString, params(i).value))
+      }
+      executableId})
+  }
 
   /** Updates an executable step's status. @note should not be transitive */
-  override def updateExeuctionStatus(executionStepId: String, status: ExecutionStepStatus): Unit = ???
+  override def updateExecutionStatus(executionStepId: String, status: ExecutionStepStatus): Unit = ???
 
   /** Gets the conclusion of a provable */
   override def getConclusion(provableId: String): Sequent = ???
