@@ -102,7 +102,7 @@ trait Tables {
   
   /** Entity class storing rows of table Executionsteps
    *  @param stepid Database column stepId DBType(TEXT), PrimaryKey
-   *  @param exeuctionid Database column exeuctionId DBType(TEXT)
+   *  @param executionid Database column executionId DBType(TEXT)
    *  @param previousstep Database column previousStep DBType(TEXT)
    *  @param parentstep Database column parentStep DBType(TEXT)
    *  @param branchorder Database column branchOrder DBType(TEXT)
@@ -113,7 +113,7 @@ trait Tables {
    *  @param inputprovableid Database column inputProvableId DBType(TEXT)
    *  @param resultprovableid Database column resultProvableId DBType(TEXT)
    *  @param userexecuted Database column userExecuted DBType(BOOLEAN) */
-  case class ExecutionstepsRow(stepid: Option[String], exeuctionid: Option[String], previousstep: Option[String], parentstep: Option[String], branchorder: Option[String], branchlabel: Option[Int], alternativeorder: Option[Int], status: Option[String], executableid: Option[String], inputprovableid: Option[String], resultprovableid: Option[String], userexecuted: Option[String])
+  case class ExecutionstepsRow(stepid: Option[String], executionid: Option[String], previousstep: Option[String], parentstep: Option[String], branchorder: Option[String], branchlabel: Option[Int], alternativeorder: Option[Int], status: Option[String], executableid: Option[String], inputprovableid: Option[String], resultprovableid: Option[String], userexecuted: Option[String])
   /** GetResult implicit for fetching ExecutionstepsRow objects using plain SQL queries */
   implicit def GetResultExecutionstepsRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[ExecutionstepsRow] = GR{
     prs => import prs._
@@ -121,12 +121,12 @@ trait Tables {
   }
   /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
   class Executionsteps(_tableTag: Tag) extends Table[ExecutionstepsRow](_tableTag, "executionSteps") {
-    def * = (stepid, exeuctionid, previousstep, parentstep, branchorder, branchlabel, alternativeorder, status, executableid, inputprovableid, resultprovableid, userexecuted) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
+    def * = (stepid, executionid, previousstep, parentstep, branchorder, branchlabel, alternativeorder, status, executableid, inputprovableid, resultprovableid, userexecuted) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
     
     /** Database column stepId DBType(TEXT), PrimaryKey */
     val stepid: Column[Option[String]] = column[Option[String]]("stepId", O.PrimaryKey)
-    /** Database column exeuctionId DBType(TEXT) */
-    val exeuctionid: Column[Option[String]] = column[Option[String]]("exeuctionId")
+    /** Database column executionId DBType(TEXT) */
+    val executionid: Column[Option[String]] = column[Option[String]]("executionId")
     /** Database column previousStep DBType(TEXT) */
     val previousstep: Column[Option[String]] = column[Option[String]]("previousStep")
     /** Database column parentStep DBType(TEXT) */
@@ -155,7 +155,7 @@ trait Tables {
     /** Foreign key referencing Provables (database name provables_FK_3) */
     lazy val provablesFk = foreignKey("provables_FK_3", (resultprovableid, inputprovableid), Provables)(r => (r.provableid, r.provableid), onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
     /** Foreign key referencing Tacticexecutions (database name tacticExecutions_FK_4) */
-    lazy val tacticexecutionsFk = foreignKey("tacticExecutions_FK_4", exeuctionid, Tacticexecutions)(r => r.executionid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+    lazy val tacticexecutionsFk = foreignKey("tacticExecutions_FK_4", executionid, Tacticexecutions)(r => r.executionid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
   }
   /** Collection-like TableQuery object for table Executionsteps */
   lazy val Executionsteps = new TableQuery(tag => new Executionsteps(tag))
