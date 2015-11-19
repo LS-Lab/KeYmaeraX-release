@@ -230,22 +230,83 @@ object SQLite extends DBAbstraction {
   override def deleteExecution(executionId: String): Unit = ???
 
   /** Creates a new execution and returns the new ID in tacticExecutions */
-  override def createExecution(proofId: String): String = ???
+  override def createExecution(proofId: String): String =
+    sqldb.withSession(implicit session => {
+      val executionId = idgen()
+      Tacticexecutions.map(te => (te.executionid.get, te.proofid.get))
+        .insert(executionId, proofId)
+      executionId
+    })
 
   /** Deletes a provable and all associated sequents / formulas */
-  override def deleteProvable(provableId: String): Unit = ???
+  override def deleteProvable(provableId: String): Unit =  ???
 
   /**
     * Adds an execution step to an existing execution
     * @note Implementations should enforce additional invarants -- never insert when branches or alt orderings overlap.
     */
-  override def addExecutionStep(step: ExecutionStepPOJO): String = ???
+  override def addExecutionStep(step: ExecutionStepPOJO): String = {
+    val (branchOrder, branchLabel: String) = (step.branchOrder, step.branchLabel) match {
+      case (None, None) => (null, null)
+      case (Some(order), None) => (order, null)
+      case (None, Some(label)) => (null, label)
+      case (Some(order), Some(label)) =>
+        throw new Exception("execution steps cannot have both a branchOrder and a branchLabel")
+    }
+    sqldb.withSession(implicit session => {
+      val executionStepId = idgen()
+      val status = ExecutionStepStatus.toString(step.status)
+      // @TODO See if Nathan confirms that the db schema has the wrong type
+      val hack = 0
+      Executionsteps.map({case step => (step.stepid.get, step.executionid.get, step.previousstep.get, step.parentstep.get,
+        step.branchorder.get, step.branchlabel.get, step.alternativeorder.get, step.status.get, step.executableid.get,
+        step.inputprovableid.get, step.resultprovableid.get, step.userexecuted.get)})
+      .insert((executionStepId, step.executionId, step.previousStep, step.parentStep, branchOrder, hack,
+        step.alternativeOrder, status, step.executableId, step.inputProvableId, step.resultProvableId,
+        step.userExecuted.toString))
+      executionStepId
+    })
+  }
 
-  /** Adds a bellerophon expression as an executable and returns the new executableId */
-  override def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): String = ???
+  /** Adds a Bellerophon expression as an executable and returns the new executableId */
+  override def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): String =
+    sqldb.withSession(implicit session => {
+      // @TODO Figure out whether to generate ID's here or pass them in through the params
+      val executableId = idgen()
+      Executables.map({case exe => (exe.executableid.get, exe.scalatacticid, exe.belleexpr.get)})
+      .insert((executableId, None, expr.toString))
+      val paramTable = Executableparameter.map({case param => (param.parameterid.get, param.executableid.get, param.idx.get,
+        param.valuetype.get, param.value.get)})
+      for (i <- params.indices) {
+        val paramId = idgen()
+        paramTable.insert((paramId, executableId, i, params(i).valueType.toString, params(i).value))
+      }
+      executableId
+    })
 
+  /** @TODO what if we want to extract a proof witness from a deserialized provable? Doesn't this put the
+    * DB into the prover core in a way?*/
   /** Stores a Provable in the database and returns its ID */
-  override def serializeProvable(p: Provable): String = ???
+  override def serializeProvable(p: Provable): String = {
+    val provableId = idgen()
+    val sequentId = idgen()
+    val ante = p.conclusion.ante
+    val succ = p.conclusion.succ
+    sqldb.withSession(implicit session => {
+      Provables.map({case provable => (provable.provableid.get, provable.conclusionid.get)})
+      .insert((provableId, sequentId))
+      Sequents.map({case sequent => (sequent.sequentid.get, sequent.provableid.get)})
+      .insert((sequentId, provableId))
+      val formulas = Sequentformulas.map({case fml => (fml.sequentformulaid.get, fml.sequentid.get,
+        fml.isante.get, fml.idx.get, fml.formula.get)})
+      for(i <- ante.indices) {
+        formulas.insert((idgen(), sequentId, true.toString, i, ante(i).toString))
+      }
+      for(i <- succ.indices) {
+        formulas.insert((idgen(), sequentId, false.toString, i, succ(i).toString))
+      }
+      provableId
+    })}
 
   /** Returns the executable with ID executableId */
   override def getExecutable(executableId: String): ExecutablePOJO = ???

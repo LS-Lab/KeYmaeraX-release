@@ -164,4 +164,14 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
     val nextIdx = if(subderivation.isProved) n else n + 1
     (newProvable, nextIdx)
   }
+
+  class DebuggerListener extends IOListener {
+    def begin(v: BelleValue, expr: BelleExpr) = {
+      ()
+    }
+
+    def end(v: BelleValue, expr: BelleExpr, result: BelleValue): Unit = {
+      ()
+    }
+  }
 }

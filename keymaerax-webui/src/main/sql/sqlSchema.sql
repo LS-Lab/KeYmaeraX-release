@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS `sequentFormulas` (
 );
 
 ----------------------------------------------------------------------------------------------------
--- Record of tactic exeuction
+-- Record of tactic execution
 -- These tables record only the *structure* of a tactic execution.
 -- The actual contents of each step of the execution are stored in the tables in the next section.
 ----------------------------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS `tacticExecutions` (
 
 CREATE TABLE IF NOT EXISTS `executionSteps` (
   `stepId`           TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `exeuctionId`      TEXT REFERENCES `tacticExecutions` (`executionId`),
+  `executionId`      TEXT REFERENCES `tacticExecutions` (`executionId`),
 
   -- Rows that identify where in the proof this execution step occurs.
   `previousStep`     TEXT REFERENCES `executionSteps` (`stepId`),

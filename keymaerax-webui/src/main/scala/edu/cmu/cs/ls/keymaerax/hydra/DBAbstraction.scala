@@ -82,6 +82,15 @@ object ExecutionStepStatus extends Enumeration {
     case "DependsOnChildren" => DependsOnChildren
     case _ => throw new Exception("Status " + s + " not in enum.")
   }
+
+  def toString(status: ExecutionStepStatus): String = status match {
+    case Prepared => "Prepared"
+    case Running => "Running"
+    case Finished => "Finished"
+    case Aborted => "Aborted"
+    case Error => "Error"
+    case DependsOnChildren => "DependsOnChilden"
+  }
 }
 
 case class TacticExecutionPOJO(executionId: String, proofId: String)
@@ -92,7 +101,7 @@ case class ExecutionStepPOJO(stepId: String, executionId: String,
                              branchLabel: Option[Int],
                              alternativeOrder: Int,
                              status: ExecutionStepStatus,
-                             executaleId: String,
+                             executableId: String,
                              inputProvableId: String,
                              resultProvableId: String,
                              userExecuted: Boolean)
