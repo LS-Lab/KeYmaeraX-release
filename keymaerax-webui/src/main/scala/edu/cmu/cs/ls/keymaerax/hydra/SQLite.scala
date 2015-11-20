@@ -256,8 +256,6 @@ object SQLite extends DBAbstraction {
     sqldb.withSession(implicit session => {
       val executionStepId = idgen()
       val status = ExecutionStepStatus.toString(step.status)
-      // @TODO See if Nathan confirms that the db schema has the wrong type
-      val hack = 0
       Executionsteps.map({case step => (step.stepid.get, step.executionid.get, step.previousstep.get, step.parentstep.get,
         step.branchorder.get, step.branchlabel.get, step.alternativeorder.get, step.status.get, step.executableid.get,
         step.inputprovableid.get, step.resultprovableid.get, step.userexecuted.get)})
