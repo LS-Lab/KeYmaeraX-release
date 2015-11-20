@@ -246,7 +246,7 @@ object SQLite extends DBAbstraction {
     * @note Implementations should enforce additional invarants -- never insert when branches or alt orderings overlap.
     */
   override def addExecutionStep(step: ExecutionStepPOJO): String = {
-    val (branchOrder, branchLabel: String) = (step.branchOrder, step.branchLabel) match {
+    val (branchOrder: Int, branchLabel) = (step.branchOrder, step.branchLabel) match {
       case (None, None) => (null, null)
       case (Some(order), None) => (order, null)
       case (None, Some(label)) => (null, label)
@@ -261,7 +261,7 @@ object SQLite extends DBAbstraction {
       Executionsteps.map({case step => (step.stepid.get, step.executionid.get, step.previousstep.get, step.parentstep.get,
         step.branchorder.get, step.branchlabel.get, step.alternativeorder.get, step.status.get, step.executableid.get,
         step.inputprovableid.get, step.resultprovableid.get, step.userexecuted.get)})
-      .insert((executionStepId, step.executionId, step.previousStep, step.parentStep, branchOrder, hack,
+      .insert((executionStepId, step.executionId, step.previousStep, step.parentStep, branchOrder, branchLabel,
         step.alternativeOrder, status, step.executableId, step.inputProvableId, step.resultProvableId,
         step.userExecuted.toString))
       executionStepId
@@ -388,7 +388,7 @@ object SQLite extends DBAbstraction {
   override def getConclusion(provableId: String): Sequent = {
     sqldb.withSession(implicit session => {
       val sequents =
-        Sequents.filter(_.provableid == provableId)
+        Sequents.filter(_.provableid === provableId)
         .list
         .map({case sequent => sequent.sequentid.get})
       if (sequents.length != 1)

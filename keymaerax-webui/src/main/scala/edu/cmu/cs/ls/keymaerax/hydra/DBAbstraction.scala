@@ -97,8 +97,8 @@ case class TacticExecutionPOJO(executionId: String, proofId: String)
 
 case class ExecutionStepPOJO(stepId: String, executionId: String,
                              previousStep: String, parentStep: String,
-                             branchOrder: Option[String],
-                             branchLabel: Option[Int],
+                             branchOrder: Option[Int],
+                             branchLabel: Option[String],
                              alternativeOrder: Int,
                              status: ExecutionStepStatus,
                              executableId: String,
