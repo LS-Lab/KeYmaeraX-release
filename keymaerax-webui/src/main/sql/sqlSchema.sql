@@ -70,8 +70,8 @@ CREATE TABLE IF NOT EXISTS `executionSteps` (
   -- Rows that identify where in the proof this execution step occurs.
   `previousStep`     TEXT REFERENCES `executionSteps` (`stepId`),
   `parentStep`       TEXT REFERENCES `executionSteps` (`stepId`),
-  `branchOrder`      TEXT,
-  `branchLabel`      INT
+  `branchOrder`      INT,
+  `branchLabel`      TEXT
     CHECK (`branchOrder` ISNULL OR `branchLabel` ISNULL), -- mixing branching styles is a bad idea.
   `alternativeOrder` INT,
 

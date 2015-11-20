@@ -105,19 +105,19 @@ trait Tables {
    *  @param executionid Database column executionId DBType(TEXT)
    *  @param previousstep Database column previousStep DBType(TEXT)
    *  @param parentstep Database column parentStep DBType(TEXT)
-   *  @param branchorder Database column branchOrder DBType(TEXT)
-   *  @param branchlabel Database column branchLabel DBType(INT)
+   *  @param branchorder Database column branchOrder DBType(INT)
+   *  @param branchlabel Database column branchLabel DBType(TEXT)
    *  @param alternativeorder Database column alternativeOrder DBType(INT)
    *  @param status Database column status DBType(TEXT)
    *  @param executableid Database column executableId DBType(TEXT)
    *  @param inputprovableid Database column inputProvableId DBType(TEXT)
    *  @param resultprovableid Database column resultProvableId DBType(TEXT)
    *  @param userexecuted Database column userExecuted DBType(BOOLEAN) */
-  case class ExecutionstepsRow(stepid: Option[String], executionid: Option[String], previousstep: Option[String], parentstep: Option[String], branchorder: Option[String], branchlabel: Option[Int], alternativeorder: Option[Int], status: Option[String], executableid: Option[String], inputprovableid: Option[String], resultprovableid: Option[String], userexecuted: Option[String])
+  case class ExecutionstepsRow(stepid: Option[String], executionid: Option[String], previousstep: Option[String], parentstep: Option[String], branchorder: Option[Int], branchlabel: Option[String], alternativeorder: Option[Int], status: Option[String], executableid: Option[String], inputprovableid: Option[String], resultprovableid: Option[String], userexecuted: Option[String])
   /** GetResult implicit for fetching ExecutionstepsRow objects using plain SQL queries */
   implicit def GetResultExecutionstepsRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[ExecutionstepsRow] = GR{
     prs => import prs._
-    ExecutionstepsRow.tupled((<<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String]))
+    ExecutionstepsRow.tupled((<<?[String], <<?[String], <<?[String], <<?[String], <<?[Int], <<?[String], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String]))
   }
   /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
   class Executionsteps(_tableTag: Tag) extends Table[ExecutionstepsRow](_tableTag, "executionSteps") {
@@ -131,10 +131,10 @@ trait Tables {
     val previousstep: Column[Option[String]] = column[Option[String]]("previousStep")
     /** Database column parentStep DBType(TEXT) */
     val parentstep: Column[Option[String]] = column[Option[String]]("parentStep")
-    /** Database column branchOrder DBType(TEXT) */
-    val branchorder: Column[Option[String]] = column[Option[String]]("branchOrder")
-    /** Database column branchLabel DBType(INT) */
-    val branchlabel: Column[Option[Int]] = column[Option[Int]]("branchLabel")
+    /** Database column branchOrder DBType(INT) */
+    val branchorder: Column[Option[Int]] = column[Option[Int]]("branchOrder")
+    /** Database column branchLabel DBType(TEXT) */
+    val branchlabel: Column[Option[String]] = column[Option[String]]("branchLabel")
     /** Database column alternativeOrder DBType(INT) */
     val alternativeorder: Column[Option[Int]] = column[Option[Int]]("alternativeOrder")
     /** Database column status DBType(TEXT) */
