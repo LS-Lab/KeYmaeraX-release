@@ -10,8 +10,9 @@ import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
   */
 object TacticDebugger {
 
-  class DebuggerListener (db: DBAbstraction, executionId: String, executableId: String) extends IOListener {
-    class TraceNode {
+  class DebuggerListener (db: DBAbstraction, executionId: String, executableId: String, userExecuted: Boolean,
+                          alternativeOrder: Int, branch:Either[Int, String]) extends IOListener {
+    class TraceNode (isFirstNode: Boolean){
       var id: Option[String] = None
       var parent: TraceNode = null
       var sibling: TraceNode = null
@@ -21,10 +22,10 @@ object TacticDebugger {
       var reverseChildren: List[TraceNode] = Nil
       def children = reverseChildren.reverse
       var stepId: String = null
-      val alternativeOrder = ???
-      val branchLabel = ???
-      val branchOrder = ???
-      val userExecuted = ???
+      val altOrder = if (isFirstNode) alternativeOrder else 0
+      val branchLabel: String = branch match {case Right(label) => label case _ => null}
+      val branchOrder: Int = branch match {case Left(order) => order case _ => -1}
+      val userExe = if(userExecuted) isFirstNode else false
 
       var inputProvableId: String = null
       var outputProvableId: String = null
@@ -42,8 +43,9 @@ object TacticDebugger {
       }
 
       def asPOJO: ExecutionStepPOJO = {
-        new ExecutionStepPOJO (stepId, executionId, sibling.stepId, parent.stepId, alternativeOrder, branchOrder,
-          branchLabel, status, executableId, getInputProvableId, getOutputProvableId, userExecuted)
+        new ExecutionStepPOJO (stepId, executionId, sibling.stepId, parent.stepId, Option(branchOrder),
+          Option(branchLabel), alternativeOrder,status, executableId, getInputProvableId, getOutputProvableId,
+          userExecuted)
       }
     }
 
@@ -52,7 +54,7 @@ object TacticDebugger {
 
     def begin(v: BelleValue, expr: BelleExpr) = {
       val parent = node
-      node = new TraceNode()
+      node = new TraceNode(isFirstNode = parent == null)
       node.parent = parent
       node.sibling = youngestSibling
       node.input = v match {case BelleProvable(p) => p}
