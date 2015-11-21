@@ -112,6 +112,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         if(provable.subgoals.length != 1)
           throw BelleError("Unification of multi-sequent patterns is not currently supported.")
 
+        //@todo loop through all using the first one whose unificatoin and tactic application ends up being successful as opposed to committing to first unifiable case.
         //Attempt to find a child that unifies with the input.
         val unification : (UnificationMatch.Subst, RenUSubst => BelleExpr) = children.map(pair => {
           val ty = pair._1
