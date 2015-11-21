@@ -116,10 +116,11 @@ case class ExecutablePOJO(executableId: String, scalaTacticId: Option[String], b
 /*
 CREATE TABLE IF NOT EXISTS `scalaTactics` (
   `scalaTacticId` TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `location`      TEXT
+  `location`      TEXT,
+  `name`          TEXT
 );
 */
-case class ScalaTacticPOJO(scalaTacticId: String, location: String)
+case class ScalaTacticPOJO(scalaTacticId: String, location: String, name: String)
 
 
 case class ParameterPOJO(parameterId: String, executableID: String, idx: Int, valueType: ParameterValueType, value: String)
