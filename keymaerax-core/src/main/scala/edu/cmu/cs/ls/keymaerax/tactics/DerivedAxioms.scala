@@ -117,13 +117,14 @@ object DerivedAxioms {
     "[] dual" -> "box dual",
     "K1" -> "K1",
     "K2" -> "K2",
+    "[]~><> propagation" -> "box diamond propagation",
     "[] split" -> "box split",
     "[] split left" -> "box split left",
     "[] split right" -> "box split right",
     "<> split" -> "diamond split",
     "<> split left" -> "diamond split left",
     "<:=> assign" -> "diamond assign",
-    ":= assign dual" -> "assign dial",
+    ":= assign dual" -> "assign dual",
     "[:=] assign equational" -> "box assign equational",
     "[:=] assign update" -> "box assign update",
     "[:=] vacuous assign" -> "box vacuous assign",
@@ -137,8 +138,9 @@ object DerivedAxioms {
     "<;> compose" -> "diamond compose",
     "<*> iterate" -> "diamond iterate",
     "<*> approx" -> "diamond approx",
-    "[*] approx" -> "diamond approx",
+    "[*] approx" -> "box approx",
     "exists generalize" -> "exists generalize",
+    "all distribute" -> "all distribute",
     "all substitute" -> "all substitute",
     "vacuous exists quantifier" -> "vacuous exists quantifier",
     "V[:*] vacuous assign nondet" -> "V box vacuous assign nondet",
@@ -177,19 +179,31 @@ object DerivedAxioms {
     "' linear" -> "prime linear",
     "' linear right" -> "prime linear right",
     "DG differential pre-ghost" -> "DG differential pre-ghost",
+    "distributive" -> "distributive",
     "= reflexive" -> "equal reflexive",
     "* commute" -> "times commute",
+    "* associative" -> "times associative",
+    "* commutative" -> "times commutative",
+    "* inverse" -> "times inverse",
+    "* closed" -> "times closed",
+    "* identity" -> "times identity",
+    "+ associative" -> "plus associative",
+    "+ commutative" -> "plus commutative",
+    "+ inverse" -> "plus inverse",
+    "+ closed" -> "plus closed",
+    "positivity" -> "positivity",
     "= commute" -> "equal commute",
     "<=" -> "lessEqual expand",
+    "< negate" -> "less negate",
     "= negate" -> "equal negate",
     "!= negate" -> "notEqual negate",
-    "! <" -> "less negate",
-    "! <=" -> "lessEqual negate",
-    "! >" -> "greater negate",
+    "! <" -> "not less",
+    "! <=" -> "not lessEqual",
+    "! >" -> "not greater",
     ">= flip" -> "greaterEqual flip",
     "> flip" -> "greater flip",
     "<" -> "less normalize",
-    ">" -> "greater flip",
+    ">" -> "greater normalize",
     "abs" -> "abs",
     "min" -> "min",
     "max" -> "max",
@@ -204,8 +218,16 @@ object DerivedAxioms {
     "<=- down" -> "interval minus down",
     "<=* down" -> "interval times down",
     "<=1Div down" -> "interval 1divide down",
-    "<=Div down" -> "interval divide down"
-  )
+    "<=Div down" -> "interval divide down",
+    // these are here for unit tests only; but if we implement with renaming scheme, we loose the ability to check for duplicate file names
+    "exists dual dummy" -> "exists dual dummy",
+    "all dual dummy" -> "all dual dummy",
+    "all dual dummy 2" -> "all dual dummy 2",
+    "+id' dummy" -> "plus id prime dummy",
+    "+*' reduce dummy" -> "plus times prime reduce dummy",
+    "+*' expand dummy" -> "plus times prime expand dummy",
+    "^' dummy" -> "power prime dummy"
+  ) ensuring(r => r.values.size == r.values.toSet.size, "No duplicate file names allowed")
 
   /**
    * Looks up a tactic by name to derive an axiom.
@@ -1656,7 +1678,8 @@ object DerivedAxioms {
     useAt("!! double negation", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::Nil))) &
     useAt("!& deMorgan")(SuccPosition(0, PosInExpr(0::0::Nil))) &
     useAt("-> expand", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::0::Nil))) &
-    useAt("DX differential skip")(SuccPosition(0, PosInExpr(0::0::Nil))) &
+    // assumes same differential program constant name "c" in DX diamond differential skip and DX differential skip
+    useAt("DX differential skip", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::0::Nil))) &
     useAt("<> dual")(SuccPosition(0, PosInExpr(0::Nil))) & implyR(SuccPosition(0)) & close
   )
   lazy val DskipdT = derivedAxiomT(Dskipd)
