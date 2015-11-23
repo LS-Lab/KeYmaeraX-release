@@ -51,30 +51,54 @@ object TacticDebugger {
 
     var youngestSibling: TraceNode = null
     var node: TraceNode = null
+    var isDead: Boolean = false
 
-    def begin(v: BelleValue, expr: BelleExpr) = {
-      val parent = node
-      node = new TraceNode(isFirstNode = parent == null)
-      node.parent = parent
-      node.sibling = youngestSibling
-      node.input = v match {case BelleProvable(p) => p}
-      node.status = ExecutionStepStatus.Running
+    def begin(v: BelleValue, expr: BelleExpr): Unit = {
+      synchronized {
+        if(isDead) return
+        val parent = node
+        node = new TraceNode(isFirstNode = parent == null)
+        node.parent = parent
+        node.sibling = youngestSibling
+        node.input = v match {
+          case BelleProvable(p) => p
+        }
+        node.status = ExecutionStepStatus.Running
 
-      if(parent != null) {
-        parent.status = ExecutionStepStatus.DependsOnChildren
-        parent.reverseChildren = node :: parent.reverseChildren
-        db.updateExecutionStatus(parent.stepId, parent.status)
+        if (parent != null) {
+          parent.status = ExecutionStepStatus.DependsOnChildren
+          parent.reverseChildren = node :: parent.reverseChildren
+          db.updateExecutionStatus(parent.stepId, parent.status)
+        }
+        node.stepId = db.addExecutionStep(node.asPOJO)
       }
-      node.stepId = db.addExecutionStep(node.asPOJO)
     }
 
     def end(v: BelleValue, expr: BelleExpr, result: BelleValue): Unit = {
-      val current = node
-      node = node.parent
-      youngestSibling = current
-      current.output = result match {case BelleProvable(p) => p}
-      current.status = ExecutionStepStatus.Finished
-      db.updateExecutionStatus(current.stepId, current.status)
+      synchronized {
+        if(isDead) return
+        val current = node
+        node = node.parent
+        youngestSibling = current
+        current.output = result match {
+          case BelleProvable(p) => p
+        }
+        current.status = ExecutionStepStatus.Finished
+        db.updateExecutionStatus(current.stepId, current.status)
+      }
+    }
+
+    /** Called by HyDRA before killing the interpreter's thread. Updates the database to reflect that the computation
+      * was interrupted. There are two race conditions to worry about here:
+      * (1) kill() can race with a call to begin/end that was in progress when kill() started. This is resolved with
+      * a mutex (synchronized{} blocks)
+      * (2) An in-progress computation can race with a kill signal (sent externally after kill() is called). This is
+      * resolved by setting a flag during kill() which turns future operations into a no-op. */
+    def kill(): Unit = {
+      synchronized {
+        isDead = true
+        db.updateExecutionStatus(node.stepId, ExecutionStepStatus.Aborted)
+      }
     }
   }
 }

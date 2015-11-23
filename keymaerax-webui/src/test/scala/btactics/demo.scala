@@ -17,8 +17,9 @@ class demo extends FlatSpec with Matchers {
       println(expr.getClass)
     }
     override def end(input: BelleValue, expr: BelleExpr, output: BelleValue): Unit= {
-
     }
+    override def kill():Unit = ()
+
   }
 
   val interp = SequentialInterpreter(Seq(listener))

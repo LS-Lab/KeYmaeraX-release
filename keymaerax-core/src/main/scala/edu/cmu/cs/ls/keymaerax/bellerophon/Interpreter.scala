@@ -11,6 +11,7 @@ trait Interpreter {
 }
 
 trait IOListener {
-  private[bellerophon] def begin(input: BelleValue, expr: BelleExpr) : Unit
+  private[bellerophon] def begin(input: BelleValue, expr: BelleExpr): Unit
   private[bellerophon] def end(input: BelleValue, expr: BelleExpr, output: BelleValue): Unit
+  private[bellerophon] def kill(): Unit
 }
