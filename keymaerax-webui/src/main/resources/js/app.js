@@ -15,6 +15,7 @@
   'mathjaxformula',
   'mathjaxbind',
   'sequent',
+  'sequentproof',
   'xeditable'
 ], function($rootScopeProvider) {
   $rootScopeProvider.digestTtl(1000);
@@ -63,7 +64,7 @@ keymaeraProofApp.config(['$routeProvider',
       }).
       when('/proofs/:proofId', {
         //templateUrl: 'partials/proof-detail.html',
-        templateUrl: 'partials/proof.html',
+        templateUrl: 'partials/proofawesome.html',
         controller: 'ProofCtrl'
       }).
       when('/prooftree/:proofId', {

@@ -6,7 +6,8 @@ angular.module('sequent', ['ngSanitize','formula'])
             proofId: '=',
             nodeId: '=',
             sequent: '=',
-            readOnly: '=?'
+            readOnly: '=?',
+            collapsed: '=?'
         },
         controller: function($scope, $sce, $modal, $http, $cookies, Agenda, Tactics) {
             // TODO should issue events other controllers can subscribe to
@@ -68,6 +69,6 @@ angular.module('sequent', ['ngSanitize','formula'])
                 function () { return Agenda.getSelectedTask(); }
             );
         },
-        templateUrl: 'partials/sequent.html'
+        templateUrl: 'partials/collapsiblesequent.html'
     };
   });

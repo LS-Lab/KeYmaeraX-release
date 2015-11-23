@@ -203,7 +203,9 @@ keymaeraProofControllers.factory('Agenda', function () {
             return selectedTask;
         },
         setSelectedTask: function(t) {
+            selectedTask.selected = false;
             selectedTask = t;
+            t.selected = true;
         }
     };
 });
