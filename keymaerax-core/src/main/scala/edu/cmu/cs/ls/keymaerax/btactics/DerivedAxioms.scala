@@ -1590,7 +1590,6 @@ object DerivedAxioms {
       useAt("!& deMorgan")(1, 0::0::Nil) &
       useAt("-> expand", PosInExpr(1::Nil))(1, 0::0::Nil) &
       useAt("DX differential skip")(1, 0::0::Nil) &
-//      ODETactics.diffSkipT(DifferentialProgramConst("c"))(1, 0::0::Nil) &
       useAt("<> dual")(1, 0::Nil) & implyR(1) & close
   )
   lazy val DskipdT = derivedAxiomT(Dskipd)
