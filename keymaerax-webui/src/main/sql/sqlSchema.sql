@@ -102,7 +102,8 @@ CREATE TABLE IF NOT EXISTS `executables` (
 
 CREATE TABLE IF NOT EXISTS `scalaTactics` (
   `scalaTacticId` TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `location`      TEXT
+  `location`      TEXT,
+  `name`          TEXT
 );
 
 CREATE TABLE `executableParameter` (

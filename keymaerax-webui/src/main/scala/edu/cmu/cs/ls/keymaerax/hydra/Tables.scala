@@ -300,21 +300,24 @@ trait Tables {
   
   /** Entity class storing rows of table Scalatactics
    *  @param scalatacticid Database column scalaTacticId DBType(TEXT), PrimaryKey
-   *  @param location Database column location DBType(TEXT) */
-  case class ScalatacticsRow(scalatacticid: Option[String], location: Option[String])
+   *  @param location Database column location DBType(TEXT)
+   *  @param name Database column name DBType(TEXT) */
+  case class ScalatacticsRow(scalatacticid: Option[String], location: Option[String], name: Option[String])
   /** GetResult implicit for fetching ScalatacticsRow objects using plain SQL queries */
   implicit def GetResultScalatacticsRow(implicit e0: GR[Option[String]]): GR[ScalatacticsRow] = GR{
     prs => import prs._
-    ScalatacticsRow.tupled((<<?[String], <<?[String]))
+    ScalatacticsRow.tupled((<<?[String], <<?[String], <<?[String]))
   }
   /** Table description of table scalaTactics. Objects of this class serve as prototypes for rows in queries. */
   class Scalatactics(_tableTag: Tag) extends Table[ScalatacticsRow](_tableTag, "scalaTactics") {
-    def * = (scalatacticid, location) <> (ScalatacticsRow.tupled, ScalatacticsRow.unapply)
+    def * = (scalatacticid, location, name) <> (ScalatacticsRow.tupled, ScalatacticsRow.unapply)
     
     /** Database column scalaTacticId DBType(TEXT), PrimaryKey */
     val scalatacticid: Column[Option[String]] = column[Option[String]]("scalaTacticId", O.PrimaryKey)
     /** Database column location DBType(TEXT) */
     val location: Column[Option[String]] = column[Option[String]]("location")
+    /** Database column name DBType(TEXT) */
+    val name: Column[Option[String]] = column[Option[String]]("name")
   }
   /** Collection-like TableQuery object for table Scalatactics */
   lazy val Scalatactics = new TableQuery(tag => new Scalatactics(tag))
