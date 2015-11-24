@@ -8,7 +8,7 @@
   'cgBusy',
   'ui.bootstrap',
   'ui.bootstrap.tabs',
-  'keymaeraProofControllers',
+  'keymaerax.controllers',
   'progressMeter',
   'proofProgressChart',
   'formula',
