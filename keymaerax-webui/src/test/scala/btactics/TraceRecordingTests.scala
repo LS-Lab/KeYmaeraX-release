@@ -1,0 +1,41 @@
+package btactics
+
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, IOListener, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus
+import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Provable, Sequent, PrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstractionObj, SQLite}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger
+import edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
+import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+
+import scala.collection.immutable._
+
+/** Tests whether execution traces are recorded in the DB in the format expected and with sufficient detail to support
+  * the desired operations.
+  * Created by bbohrer on 11/23/15.
+  */
+class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach  {
+  val listener = new DebuggerListener(db, "foo", "bar", true, 0, Left(1))
+  val db = DBAbstractionObj.testDatabase
+  val theInterpreter = new SequentialInterpreter(Seq(listener))
+  object TestLib extends UnifyUSCalculus
+
+  override def beforeEach() = {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+  }
+
+  private def proveBy(s: Sequent, tactic: BelleExpr): Provable = {
+    val v = BelleProvable(Provable.startProof(s))
+    theInterpreter(tactic, v) match {
+      case BelleProvable(provable) => provable
+      case r => fail("Unexpected tactic result " + r)
+    }
+  }
+  "IOListener" should "Not Crash" in {
+    proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula)),
+      TestLib.useAt("[;] compose", PosInExpr(1::Nil))(SuccPos(0))).subgoals should contain only Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))
+  }
+}

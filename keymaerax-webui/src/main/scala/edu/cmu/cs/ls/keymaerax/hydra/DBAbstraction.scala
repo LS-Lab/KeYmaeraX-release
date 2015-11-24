@@ -21,18 +21,22 @@ import spray.json.DefaultJsonProtocol._
 
 //Global setting:
 object DBAbstractionObj {
-  def defaultDatabase = SQLite //this needs to be a def and not a val because DBAbstractionObj is initialized in SQLite.
-  val dblocation: String = {
+  def defaultDatabase = SQLite.ProdDB //this needs to be a def and not a val because DBAbstractionObj is initialized in SQLite.
+  def testDatabase = SQLite.TestDB
+  private def getLocation(isTest: Boolean): String = {
+    val dirname = if (isTest) ".keymaeraxTest" else ".keymaerax"
     new File(
-      System.getProperty("user.home") + File.separator +
-        ".keymaerax"
+      System.getProperty("user.home") + File.separator + dirname
     ).mkdirs()
 
     val file = new File(System.getProperty("user.home") + File.separator +
-      ".keymaerax" + File.separator + "keymaerax.sqlite")
+      dirname + File.separator + "keymaerax.sqlite")
     file.getCanonicalPath
   }
+
+  val dblocation: String = getLocation(isTest=false)
   println(dblocation)
+  val testLocation = getLocation(isTest=true)
 }
 
 class ConfigurationPOJO(val name: String, val config: Map[String,String])
@@ -250,8 +254,8 @@ trait DBAbstraction {
     val kvps = element.asJsObject.fields.map(kvp =>
       (kvp._1, kvp._2.convertTo[String])
     )
-    val name = kvps.getOrElse("name", throw new Exception("Expcted a name but found none."))
-    val file = kvps.getOrElse("file", throw new Exception("Expcted a file but found none."))
+    val name = kvps.getOrElse("name", throw new Exception("Expected a name but found none."))
+    val file = kvps.getOrElse("file", throw new Exception("Expected a file but found none."))
     val fileContents = getFileContents("/" + file)
     val description = kvps.get("description")
     val publink = kvps.get("pubLink")
