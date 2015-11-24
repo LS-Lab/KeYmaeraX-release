@@ -31,19 +31,21 @@ object TacticDebugger {
       var outputProvableId: String = null
 
       def getInputProvableId:String = {
-        if (inputProvableId == null)
+        if (input != null && inputProvableId == null)
           inputProvableId = db.serializeProvable(input)
         inputProvableId
       }
 
       def getOutputProvableId:String = {
-        if (outputProvableId == null)
+        if (output != null && outputProvableId == null)
           outputProvableId = db.serializeProvable(output)
         outputProvableId
       }
 
       def asPOJO: ExecutionStepPOJO = {
-        new ExecutionStepPOJO (stepId, executionId, sibling.stepId, parent.stepId, Option(branchOrder),
+        val siblingStep = if (sibling == null) null else sibling.stepId
+        val parentStep = if (parent == null) null else parent.stepId
+        new ExecutionStepPOJO (stepId, executionId, siblingStep, parentStep, Option(branchOrder),
           Option(branchLabel), alternativeOrder,status, executableId, getInputProvableId, getOutputProvableId,
           userExecuted)
       }

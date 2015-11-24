@@ -18,8 +18,8 @@ import scala.collection.immutable._
   * Created by bbohrer on 11/23/15.
   */
 class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach  {
-  val listener = new DebuggerListener(db, "foo", "bar", true, 0, Left(1))
   val db = DBAbstractionObj.testDatabase
+  val listener = new DebuggerListener(db, "foo", "bar", true, 0, Left(1))
   val theInterpreter = new SequentialInterpreter(Seq(listener))
   object TestLib extends UnifyUSCalculus
 
