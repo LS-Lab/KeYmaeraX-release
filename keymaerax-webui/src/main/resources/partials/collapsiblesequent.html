@@ -7,27 +7,34 @@
 
     <!-- Collapsed antecedent, also readonly -->
     <div class="col-md-5">
-        <div class="pull-right">
-            <!--<div class="k4-abbreviate" ng-repeat="f in sequent.ante" id="{{f.id}}">-->
-                <!--<k4-formula formula="f.formula" highlight="false"></k4-formula>{{$last ? '' : ', '}}-->
-            <!--</div>-->
-            <div class="k4-abbreviate">
-                <k4-formula formula="sequent.ante[0].formula" highlight="false" collapsed="true"></k4-formula>
+        <div class="pull-right" ng-if="sequent.ante.length > 0">
+        <div class="row k4-flexrow">
+            <div class="col-md-12 k4-formula k4-flexcell">
+                <div class="k4-formula-content k4-abbreviate">
+                    <k4-formula formula="sequent.ante[0].formula" highlight="false" collapsed="true"></k4-formula>
+                </div>
             </div>
+        </div>
         </div>
     </div>
 
     <!-- Turnstile -->
     <div class="col-md-1">
         <div class="row k4-flexrow">
-            <div class="k4-formula k4-flexcell">&#8866;</div>
+            <div class="col-md-12 k4-formula k4-flexcell">
+                <div class="k4-formula-content">&#8866;</div>
+            </div>
         </div>
     </div>
 
     <!-- Collapsed succedent -->
-    <div class="col-md-4">
-        <div class="k4-abbreviate">
-            <k4-formula formula="sequent.succ[0].formula" highlight="false" collapsed="true"></k4-formula>
+    <div class="col-md-5">
+        <div class="row k4-flexrow" ng-if="sequent.succ.length > 0">
+            <div class="col-md-12 k4-formula k4-flexcell">
+                <div class="k4-formula-content k4-abbreviate">
+                    <k4-formula formula="sequent.succ[0].formula" highlight="false" collapsed="true"></k4-formula>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -54,7 +61,9 @@
                 </div>
             </div>
             <div class="col-md-12 k4-formula k4-flexcell" ng-if="readOnly">
-                <k4-formula formula="f.formula" highlight="false" collapsed="false"></k4-formula>
+                <div class="k4-formula-content">
+                    <k4-formula formula="f.formula" highlight="false" collapsed="false"></k4-formula>
+                </div>
             </div>
         </div>
         </div>
@@ -63,25 +72,25 @@
     <!-- Turnstile -->
     <div class="col-md-1">
         <div class="row k4-flexrow">
-            <div class="k4-formula k4-flexcell" ng-if="!readOnly">
+            <div class="col-md-12 k4-formula k4-flexcell" ng-click="handleTurnstileClick()" ng-if="!readOnly">
                 <ul>
                     <li><a href="" ng-click="applyTacticsByName('keymaerax.default')"><span class="fa fa-magic"></span></a></li>
                     <li><a href="" ng-click="applyTacticsByName('keymaerax.propositional')"><span class="fa fa-forward"></span></a></li>
                     <li><a href="" ng-click="applyTacticsByName('keymaerax.arithmetic')"><span class="fa fa-calculator"></span></a></li>
-                    <li><a href="" ng-click="applyTacticsByName('keymaerax.defaultNoArith')"><span class="fa fa-ban"></span></a>
+                    <li><a href="" ng-click="applyTacticsByName('keymaerax.defaultNoArith')"><span class="fa fa-ban"></span></a></li>
                     <li><a href="" ng-click="getCounterExample()"><span class="fa fa-search"></span></a></li>
-                    </li>
                     <!--<li><a href="" ng-click="applyTacticsByName(f,'keymaerax.cut')"><span class="fa fa-pencil"></span> Cut</a></li>-->
                 </ul>
-                <div class="k4-formula-content" ng-click="handleTurnstileClick()">&#8866;</div>
+                <div class="k4-formula-content">&#8866;</div>
             </div>
-            <div class="k4-formula k4-flexcell" ng-if="readOnly">&#8866;</div>
+            <div class="col-md-12 k4-formula k4-flexcell" ng-if="readOnly">
+                <div class="k4-formula-content"><ul></ul>&#8866;</div>
+            </div>
         </div>
     </div>
 
     <!-- Succedent -->
     <div class="col-md-5">
-        <!--<div class="pull-left">-->
         <div class="row k4-flexrow" ng-repeat="f in sequent.succ" id="{{f.id}}">
             <div class="col-md-12 k4-formula k4-flexcell" ng-if="!readOnly">
                 <ul>
@@ -93,10 +102,11 @@
                 </div>
             </div>
             <div class="col-md-12 k4-formula k4-flexcell" ng-if="readOnly">
-                <k4-formula formula="f.formula" highlight="false" collapsed="false"></k4-formula>
+                <div class="k4-formula-content">
+                    <k4-formula pId="proofId", nId="nodeId" formula="f.formula" highlight="false" collapsed="false"></k4-formula>
+                </div>
             </div>
         </div>
-        <!--</div>-->
     </div>
 
 </div>
