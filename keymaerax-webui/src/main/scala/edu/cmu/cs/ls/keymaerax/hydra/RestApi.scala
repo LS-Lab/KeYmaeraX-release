@@ -191,6 +191,24 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val proofTasksNew = path("proofs" / "user" / Segment / Segment / "agendaawesome") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new MockRequest("/mockdata/proof1opentasksreply.json")
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val proofTasksParent = path("proofs" / "user" / Segment / Segment / Segment / Segment / "parent") { (userId, proofId, nodeId, goalId) => { pathEnd {
+    get {
+      val request = goalId match {
+        case "S3" => new MockRequest("/mockdata/s23parentreply.json")
+        case "S2" => new MockRequest("/mockdata/s23parentreply.json")
+        case "S1" => new MockRequest("/mockdata/s1parentreply.json")
+      }
+      complete(standardCompletion(request))
+    }
+  }}}
+
   val proofTask = path("proofs" / "user" / Segment / Segment / "agendaDetails" / Segment.?) { (userId, proofId, nodeId) => { pathEnd {
     get {
       val request = new GetProofNodeInfoRequest(database, userId, proofId, nodeId)
@@ -464,10 +482,11 @@ trait RestApi extends HttpService {
     proofList             ::
     openProof             ::
     proofLoadStatus       ::
-    changeProofName        ::
+    changeProofName       ::
     proofProgressStatus   ::
     proofCheckIsProved    ::
-    proofTasks            ::
+    proofTasksNew         ::
+    proofTasksParent      ::
     proofTask             ::
     nodeFormulaTactics    ::
     nodeRunTactics        ::

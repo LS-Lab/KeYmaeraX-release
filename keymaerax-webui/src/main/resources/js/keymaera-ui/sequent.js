@@ -9,7 +9,7 @@ angular.module('sequent', ['ngSanitize','formula'])
             readOnly: '=?',
             collapsed: '=?'
         },
-        controller: function($scope, $sce, $modal, $http, $cookies, Agenda, Tactics) {
+        controller: function($scope, $sce, $modal, $http, $cookies, Tactics) {
             // TODO should issue events other controllers can subscribe to
             $scope.handleFormulaClick = function(f,isAnte) {
                 var modalInstance = $modal.open({
@@ -64,10 +64,6 @@ angular.module('sequent', ['ngSanitize','formula'])
                   }
                 });
             }
-
-            $scope.$watch('selectedTask',
-                function () { return Agenda.getSelectedTask(); }
-            );
         },
         templateUrl: 'partials/collapsiblesequent.html'
     };
