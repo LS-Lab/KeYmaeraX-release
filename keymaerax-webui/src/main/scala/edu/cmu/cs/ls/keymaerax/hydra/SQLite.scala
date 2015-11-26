@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 
 //import Tables.TacticonproofRow
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
-
+import scala.slick.jdbc.StaticQuery.interpolation
 import scala.slick.driver.SQLiteDriver.simple._
 import scala.slick.lifted.{ProvenShape, ForeignKeyQuery}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.PositionTacticAutomation
@@ -307,7 +307,9 @@ object SQLite {
       val sequentId = idgen()
       val ante = p.conclusion.ante
       val succ = p.conclusion.succ
-      sqldb.withTransaction(implicit session => {
+      sqldb.withSession(implicit session => {
+        sqlu"PRAGMA journal_mode = WAL".execute
+        session.withTransaction({
         Provables.map({ case provable => (provable.provableid.get, provable.conclusionid.get) })
           .insert((provableId, sequentId))
         Sequents.map({ case sequent => (sequent.sequentid.get, sequent.provableid.get) })
@@ -322,7 +324,7 @@ object SQLite {
           formulas.insert((idgen(), sequentId, false.toString, i, succ(i).toString))
         }
         provableId
-      })
+      })})
     }
 
     /** Returns the executable with ID executableId */
