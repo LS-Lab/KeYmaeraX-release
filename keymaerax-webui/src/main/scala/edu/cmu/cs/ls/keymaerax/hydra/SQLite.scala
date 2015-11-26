@@ -337,8 +337,46 @@ object SQLite {
         executableId
       })
 
+    /* I originally suspected that the writes alone were slowing us down, but if you enable deduplicateSequents you
+     * will see this is not the case. This flag enables a query before every provable creation that checks whether the
+     * sequent is already present. This significantly reduces writes to the sequent table, but the select queries end
+     * up taking the same length of time and the "is this sequent present" computation takes much much longer
+     * than all the queries using the naive algorithm below.
+     * Due to the slowness I'm leaving the flag disabled, but leaving the code around since it may be of interest while
+     * doing optimizations. */
+    private val deduplicateSequents = false
+    private var searchTime: Long = 0
+    private var processTime: Long = 0
     private def findSequentId(s: Sequent): Option[String] = {
-      None
+      if (deduplicateSequents) {
+        nSelects = nSelects + 1
+        val t1 = System.nanoTime()
+        val lst = Sequentformulas.list
+        val t2 = System.nanoTime()
+        searchTime = searchTime + t2 - t1
+        val fmls = lst.filter(row =>
+          (row.isante.get.toBoolean && s.ante.exists(p => row.formula.get == p.toString))
+         || (!row.isante.get.toBoolean && s.succ.exists(p => row.formula.get == p.toString)))
+        val fmlss = fmls.sortWith((row1, row2) => row1.sequentid.get.compare(row2.sequentid.get) > 0).groupBy(row => row.sequentid)
+        val ante = s.ante.zipWithIndex
+        val succ = s.succ.zipWithIndex
+        val which = fmlss.find({case ((_: Option[String], rows)) =>
+          val anteFound =
+            ante.forall({case (fml:Formula, int:Int) => rows.exists(row =>
+              row.idx.get == int && row.isante.get.toBoolean && row.formula.get == fml.toString)})
+          val succFound =
+            succ.forall({case (fml:Formula, int:Int) => rows.exists(row =>
+              row.idx.get == int && !row.isante.get.toBoolean && row.formula.get == fml.toString)})
+          anteFound && succFound})
+        val t3 = System.nanoTime()
+        processTime = processTime + t3 - t2
+        which match {
+          case None => None
+          case Some((_, Nil)) => None
+          case Some((_, (x :: _))) => Some(x.sequentid.get)
+        }
+      }
+      else None
     }
 
     /** @TODO what if we want to extract a proof witness from a deserialized provable? Doesn't this put the
@@ -346,27 +384,35 @@ object SQLite {
     /** Stores a Provable in the database and returns its ID */
     override def serializeProvable(p: Provable): String = {
       val provableId = idgen()
-      val sequentId = idgen()
       val ante = p.conclusion.ante
       val succ = p.conclusion.succ
       session.withTransaction({
-        Provables.map({ case provable => (provable.provableid.get, provable.conclusionid.get) })
-          .insert((provableId, sequentId))
-        Sequents.map({ case sequent => (sequent.sequentid.get, sequent.provableid.get) })
-          .insert((sequentId, provableId))
-        nInserts = nInserts + 2
-        val formulas = Sequentformulas.map({ case fml => (fml.sequentformulaid.get, fml.sequentid.get,
-          fml.isante.get, fml.idx.get, fml.formula.get)
-        })
-        for (i <- ante.indices) {
-          nInserts = nInserts + 1
-          formulas.insert((idgen(), sequentId, true.toString, i, ante(i).toString))
+        findSequentId(p.conclusion) match {
+          case None =>
+            val sequentId = idgen()
+            Provables.map({ case provable => (provable.provableid.get, provable.conclusionid.get) })
+              .insert((provableId, sequentId))
+            Sequents.map({ case sequent => (sequent.sequentid.get, sequent.provableid.get) })
+              .insert((sequentId, provableId))
+            nInserts = nInserts + 2
+            val formulas = Sequentformulas.map({ case fml => (fml.sequentformulaid.get, fml.sequentid.get,
+              fml.isante.get, fml.idx.get, fml.formula.get)
+            })
+            for (i <- ante.indices) {
+              nInserts = nInserts + 1
+              formulas.insert((idgen(), sequentId, true.toString, i, ante(i).toString))
+            }
+            for (i <- succ.indices) {
+              nInserts = nInserts + 1
+              formulas.insert((idgen(), sequentId, false.toString, i, succ(i).toString))
+            }
+            provableId
+          case Some(sequentId) =>
+            Provables.map({ case provable => (provable.provableid.get, provable.conclusionid.get) })
+              .insert((provableId, sequentId))
+            nInserts = nInserts + 1
+            provableId
         }
-        for (i <- succ.indices) {
-          nInserts = nInserts + 1
-          formulas.insert((idgen(), sequentId, false.toString, i, succ(i).toString))
-        }
-        provableId
       })
     }
 
@@ -475,6 +521,9 @@ object SQLite {
       })
     }
 
-    def printStats = println("Updates: " + nUpdates + " Inserts: " + nInserts + " Selects: " + nSelects)
+    def printStats = {
+      println("Updates: " + nUpdates + " Inserts: " + nInserts + " Selects: " + nSelects)
+      println("Searching time: " + (searchTime / 1000000000.0) + " Processing Time: " + (processTime / 1000000000.0))
+    }
   }
 }
