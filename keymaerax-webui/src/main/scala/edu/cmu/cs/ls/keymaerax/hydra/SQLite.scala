@@ -9,8 +9,11 @@ import java.nio.channels.Channels
 import java.sql.SQLException
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Provable, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
+import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
+
+import scala.collection.immutable.Nil
 
 //import Tables.TacticonproofRow
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
@@ -33,11 +36,16 @@ object SQLite {
 
     val sqldb = Database.forURL("jdbc:sqlite:" + dblocation, driver = "org.sqlite.JDBC")
     private var currentSession:Session = null
+    private var nUpdates = 0
+    private var nInserts = 0
+    private var nSelects = 0
 
     implicit def session:Session = {
       if (currentSession == null || currentSession.conn.isClosed) {
         currentSession = sqldb.createSession()
+        /* Enable write-ahead logging for SQLite - significantly improves write performance */
         sqlu"PRAGMA journal_mode = WAL".execute(currentSession)
+        sqlu"VACUUM".execute(currentSession)
       }
       currentSession
     }
@@ -54,6 +62,7 @@ object SQLite {
     // Configuration
     override def getAllConfigurations: Set[ConfigurationPOJO] =
       session.withTransaction({
+        nSelects = nSelects + 1
         Config.list.filter(_.configname.isDefined).map(_.configname.get).map(getConfiguration(_)).toSet
       })
 
@@ -70,6 +79,7 @@ object SQLite {
 
     override def getModelList(userId: String): List[ModelPOJO] = {
       session.withTransaction({
+        nSelects = nSelects + 1
         Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element.modelid.get, element.userid.get, element.name.get,
           blankOk(element.date), blankOk(element.filecontents),
           blankOk(element.description), blankOk(element.publink), blankOk(element.title), element.tactic))
@@ -80,11 +90,10 @@ object SQLite {
       session.withTransaction({
         Users.map(u => (u.email.get, u.password.get))
           .insert((username, password))
+        nInserts = nInserts + 1
       })}
 
-
     private def idgen(): String = java.util.UUID.randomUUID().toString()
-
 
     /**
       * Poorly names -- either update the config, or else insert an existing key.
@@ -96,15 +105,18 @@ object SQLite {
         config.config.map(kvp => {
           val key = kvp._1
           val value = kvp._2
+          nSelects = nSelects + 1
           val configExists = Config.filter(c => c.configname === config.name && c.key === key).list.length != 0
 
           if (configExists) {
             val q = for {l <- Config if (l.configname === config.name && l.key === key)} yield l.value
             q.update(Some(value))
+            nUpdates = nUpdates + 1
           }
           else {
             Config.map(c => (c.configid.get, c.configname.get, c.key.get, c.value.get))
               .insert((idgen, config.name, key, value))
+            nInserts = nInserts + 1
           }
         })
       })
@@ -113,6 +125,7 @@ object SQLite {
     override def getProofInfo(proofId: String): ProofPOJO =
       session.withTransaction({
         val stepCount = getProofSteps(proofId).size
+        nSelects = nSelects + 1
         val list = Proofs.filter(_.proofid === proofId)
           .list
           .map(p => new ProofPOJO(p.proofid.get, p.modelid.get, blankOk(p.name), blankOk(p.description),
@@ -125,6 +138,7 @@ object SQLite {
     // Users
     override def userExists(username: String): Boolean =
       session.withTransaction({
+        nSelects = nSelects + 1
         Users.filter(_.email === username).list.length != 0
       })
 
@@ -142,17 +156,22 @@ object SQLite {
 
     override def checkPassword(username: String, password: String): Boolean =
       session.withTransaction({
+        nSelects = nSelects + 1
         Users.filter(_.email === username).filter(_.password === password).list.length != 0
       })
 
     override def updateProofInfo(proof: ProofPOJO): Unit =
       session.withTransaction({
+        nSelects = nSelects + 1
         Proofs.filter(_.proofid === proof.proofId).update(proofPojoToRow(proof))
+        nUpdates = nUpdates + 1
       })
 
     override def updateProofName(proofId: String, newName: String): Unit = {
       session.withTransaction({
+        nSelects = nSelects + 1
         Proofs.filter(_.proofid === proofId).map(_.name).update(Some(newName))
+        nUpdates = nUpdates + 1
       })
     }
 
@@ -163,6 +182,7 @@ object SQLite {
     //the string is a model name.
     override def openProofs(userId: String): List[ProofPOJO] =
       session.withTransaction({
+        nSelects = nSelects + 1
         getProofsForUser(userId).map(_._1).filter(!_.closed)
       })
 
@@ -171,6 +191,7 @@ object SQLite {
     //returns id of create object
     override def getProofsForModel(modelId: String): List[ProofPOJO] =
       session.withTransaction({
+        nSelects = nSelects + 1
         Proofs.filter(_.modelid === modelId).list.map(p => {
           //        val stepCount : Int = Tacticonproof.filter(_.proofid === p.proofid.get).list.count
           val stepCount = 0 //@todo after everything else is done implement this.
@@ -185,12 +206,13 @@ object SQLite {
                              description: Option[String] = None, publink: Option[String] = None,
                              title: Option[String] = None, tactic: Option[String] = None): Option[String] =
       session.withTransaction({
+        nSelects = nSelects + 1
         if (Models.filter(_.userid === userId).filter(_.name === name).list.length == 0) {
           val modelId = idgen()
 
           Models.map(m => (m.modelid.get, m.userid.get, m.name.get, m.filecontents.get, m.date.get, m.description, m.publink, m.title, m.tactic))
             .insert(modelId, userId, name, fileContents, date, description, publink, title, tactic)
-
+          nInserts = nInserts + 1
           Some(modelId)
         }
         else None
@@ -201,11 +223,13 @@ object SQLite {
         val proofId = idgen()
         Proofs.map(p => (p.proofid.get, p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get))
           .insert(proofId, modelId, name, description, date, 0)
+        nInserts = nInserts + 1
         proofId
       })
 
     override def getModel(modelId: String): ModelPOJO =
       session.withTransaction({
+        nSelects = nSelects + 1
         val models =
           Models.filter(_.modelid === modelId)
             .list
@@ -228,6 +252,7 @@ object SQLite {
 
     override def getConfiguration(configName: String): ConfigurationPOJO =
       session.withTransaction({
+        nSelects = nSelects + 1
         val kvp = Config.filter(_.configname === configName)
           .filter(_.key.isDefined)
           .list
@@ -259,6 +284,7 @@ object SQLite {
         val executionId = idgen()
         Tacticexecutions.map(te => (te.executionid.get, te.proofid.get))
           .insert(executionId, proofId)
+        nInserts = nInserts + 1
         executionId
       })
 
@@ -287,6 +313,7 @@ object SQLite {
           .insert((executionStepId, step.executionId, step.previousStep, step.parentStep, branchOrder, branchLabel,
             step.alternativeOrder, status, step.executableId, step.inputProvableId, step.resultProvableId,
             step.userExecuted.toString))
+        nInserts = nInserts + 1
         executionStepId
       })
     }
@@ -298,15 +325,21 @@ object SQLite {
         val executableId = idgen()
         Executables.map({ case exe => (exe.executableid.get, exe.scalatacticid, exe.belleexpr) })
           .insert((executableId, None, Some(expr.toString)))
+        nInserts = nInserts + 1
         val paramTable = Executableparameter.map({ case param => (param.parameterid.get, param.executableid.get, param.idx.get,
           param.valuetype.get, param.value.get)
         })
         for (i <- params.indices) {
           val paramId = idgen()
+          nInserts = nInserts + 1
           paramTable.insert((paramId, executableId, i, params(i).valueType.toString, params(i).value))
         }
         executableId
       })
+
+    private def findSequentId(s: Sequent): Option[String] = {
+      None
+    }
 
     /** @TODO what if we want to extract a proof witness from a deserialized provable? Doesn't this put the
       *       DB into the prover core in a way? */
@@ -321,13 +354,16 @@ object SQLite {
           .insert((provableId, sequentId))
         Sequents.map({ case sequent => (sequent.sequentid.get, sequent.provableid.get) })
           .insert((sequentId, provableId))
+        nInserts = nInserts + 2
         val formulas = Sequentformulas.map({ case fml => (fml.sequentformulaid.get, fml.sequentid.get,
           fml.isante.get, fml.idx.get, fml.formula.get)
         })
         for (i <- ante.indices) {
+          nInserts = nInserts + 1
           formulas.insert((idgen(), sequentId, true.toString, i, ante(i).toString))
         }
         for (i <- succ.indices) {
+          nInserts = nInserts + 1
           formulas.insert((idgen(), sequentId, false.toString, i, succ(i).toString))
         }
         provableId
@@ -337,6 +373,7 @@ object SQLite {
     /** Returns the executable with ID executableId */
     override def getExecutable(executableId: String): ExecutablePOJO =
       session.withTransaction({
+        nSelects = nSelects + 1
         val executables =
           Executables.filter(_.executableid === executableId)
             .list
@@ -351,6 +388,7 @@ object SQLite {
 
     override def getExecutionSteps(executionID: String): List[ExecutionStepPOJO] = {
       session.withTransaction({
+        nSelects = nSelects + 1
         val steps =
           Executionsteps.filter(_.executionid === executionID)
             .list
@@ -402,6 +440,8 @@ object SQLite {
     override def updateExecutionStatus(executionStepId: String, status: ExecutionStepStatus): Unit = {
       val newStatus = ExecutionStepStatus.toString(status)
       session.withTransaction({
+        nSelects = nSelects + 1
+        nUpdates = nUpdates + 1
         Executionsteps.filter(_.stepid === executionStepId).map(_.status).update(Some(newStatus))
       })
     }
@@ -416,6 +456,7 @@ object SQLite {
     /** Gets the conclusion of a provable */
     override def getConclusion(provableId: String): Sequent = {
       session.withTransaction({
+        nSelects = nSelects + 1
         val sequents =
           Sequents.filter(_.provableid === provableId)
             .list
@@ -433,5 +474,7 @@ object SQLite {
         Sequent(null, ante, succ)
       })
     }
+
+    def printStats = println("Updates: " + nUpdates + " Inserts: " + nInserts + " Selects: " + nSelects)
   }
 }
