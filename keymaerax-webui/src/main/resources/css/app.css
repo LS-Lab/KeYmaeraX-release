@@ -309,7 +309,7 @@ table .btn{
     padding: 0;
     margin: 0 0 0 -4px; /* margin: 0 8px 0 -4px */
     text-align: left;
-    width: 100px;
+    width: 20px; /* 100 px with text */
     opacity: 0;
     display: block;
     position: absolute;
