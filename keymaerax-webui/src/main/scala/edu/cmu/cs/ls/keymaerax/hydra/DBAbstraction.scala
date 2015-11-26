@@ -24,13 +24,13 @@ object DBAbstractionObj {
   def defaultDatabase = SQLite.ProdDB //this needs to be a def and not a val because DBAbstractionObj is initialized in SQLite.
   def testDatabase = SQLite.TestDB
   private def getLocation(isTest: Boolean): String = {
-    val dirname = if (isTest) ".keymaeraxTest" else ".keymaerax"
+    val dirname = ".keymaerax"
+    val filename = if (isTest) "testDB.sqlite" else "keymaerax.sqlite"
     new File(
       System.getProperty("user.home") + File.separator + dirname
     ).mkdirs()
-
     val file = new File(System.getProperty("user.home") + File.separator +
-      dirname + File.separator + "keymaerax.sqlite")
+      dirname + File.separator + filename)
     file.getCanonicalPath
   }
 

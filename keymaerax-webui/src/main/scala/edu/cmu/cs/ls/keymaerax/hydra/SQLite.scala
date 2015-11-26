@@ -4,6 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
+import java.io.FileOutputStream
+import java.nio.channels.Channels
 import java.sql.SQLException
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
@@ -31,10 +33,13 @@ object SQLite {
 
     val sqldb = Database.forURL("jdbc:sqlite:" + dblocation, driver = "org.sqlite.JDBC")
 
-
-    if (!new java.io.File(dblocation).exists()) {
-      this.cleanup()
+    private def ensureExists(location: String): Unit = {
+      if (!new java.io.File(location).exists()) {
+        cleanup(location)
+      }
     }
+    ensureExists(DBAbstractionObj.dblocation)
+    ensureExists(DBAbstractionObj.testLocation)
 
     //@TODO
     // Configuration
@@ -226,7 +231,15 @@ object SQLite {
     /**
       * Initializes a new database.
       */
-    override def cleanup(): Unit = () /** ???*/
+    override def cleanup (): Unit = { cleanup(DBAbstractionObj.dblocation)}
+    def cleanup(which: String): Unit = {
+      val dbFile = this.getClass.getResourceAsStream("/keymaerax.sqlite")
+      val target = new java.io.File(which)
+      val targetStream = new FileOutputStream(target)
+      targetStream.getChannel.transferFrom(Channels.newChannel(dbFile), 0, Long.MaxValue)
+      targetStream.close()
+      dbFile.close()
+    }
 
     /** Deletes an execution from the database */
     override def deleteExecution(executionId: String): Unit = ???
