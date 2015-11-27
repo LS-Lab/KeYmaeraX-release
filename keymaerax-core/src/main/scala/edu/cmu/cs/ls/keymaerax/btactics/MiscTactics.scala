@@ -113,7 +113,7 @@ object Idioms {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable) =>
         BranchTactic(Seq.tabulate(provable.subgoals.length)(i => if(i == subgoalIdx) t else ident))
-      case _ => throw BelleError("Cannot perform AtSubgoal on a non-Provable value.")
+      case _ => throw new BelleError("Cannot perform AtSubgoal on a non-Provable value.")
     }
   }
 
@@ -189,7 +189,7 @@ object Legacy {
   def scheduledTactic(tactic : keymaerax.tactics.Tactics.Tactic) = new BuiltInTactic(s"Scheduled(${tactic.name})") {
     //@see [[Legacy.defaultInitialization]]
     if(!Tactics.KeYmaeraScheduler.isInitialized)
-      throw BelleError("Need to initialize KeYmaera scheduler and possibly also the Mathematica scheduler before running a Legacy.ScheduledTactic.")
+      throw new BelleError("Need to initialize KeYmaera scheduler and possibly also the Mathematica scheduler before running a Legacy.ScheduledTactic.")
 
     override def result(provable: Provable): Provable = {
       //@todo don't know if we can create a proof node from a provable.

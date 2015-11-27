@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, Po
  * See Table 1 of "Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus"
  * @author Nathan Fulton
  */
-abstract class BelleExpr {
+abstract class BelleExpr(val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) {
   // Syntactic sugar for combinators.
   //@todo copy documentation
   def &(other: BelleExpr)             = SeqTactic(this, other)
@@ -22,7 +22,13 @@ abstract class BelleExpr {
 }
 
 abstract case class BuiltInTactic(name: String) extends BelleExpr {
-  private[bellerophon] def result(provable : Provable) : Provable
+  private[bellerophon] final def execute(provable: Provable): Provable = try {
+    result(provable)
+  } catch {
+    case be: BelleError => throw be
+    case t: Throwable => throw new BelleError(t.getMessage, t)
+  }
+  private[bellerophon] def result(provable : Provable): Provable
   override def toString = name
 }
 
@@ -54,7 +60,7 @@ abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic
 abstract case class BuiltInLeftTactic(name: String) extends BelleExpr with PositionalTactic {
   override def computeResult(provable: Provable, position:Position) = position match {
     case p: AntePosition => computeAnteResult(provable, p)
-    case _ => throw BelleError("LeftTactics can only be applied at a AntePos")
+    case _ => throw new BelleError("LeftTactics can only be applied at a AntePos")
   }
 
   def computeAnteResult(provable: Provable, pos: AntePosition): Provable
@@ -63,7 +69,7 @@ abstract case class BuiltInLeftTactic(name: String) extends BelleExpr with Posit
 abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
   override def computeResult(provable: Provable, position:Position) = position match {
     case p: SuccPosition => computeSuccResult(provable, p)
-    case _ => throw BelleError("RightTactics can only be applied at a SuccPos")
+    case _ => throw new BelleError("RightTactics can only be applied at a SuccPos")
   }
 
   def computeSuccResult(provable: Provable, pos: SuccPosition) : Provable
@@ -112,19 +118,19 @@ abstract case class InputTactic[T](input: T) extends BelleExpr {
 /** A partial tactic is allowed to leave its subgoals around as unproved */
 case class PartialTactic(child: BelleExpr) extends BelleExpr { override def toString = "partial(" + child + ")" }
 
-case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def toString = "(" + left + "&" + right + ")" }
-case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def toString = "(" + left + "|" + right + ")" }
+case class SeqTactic(left: BelleExpr, right: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def toString = "(" + left + "&" + right + ")" }
+case class EitherTactic(left: BelleExpr, right: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def toString = "(" + left + "|" + right + ")" }
 //case class ExactIterTactic(child: BelleExpr, count: Int) extends BelleExpr
-case class SaturateTactic(child: BelleExpr, annotation: BelleType) extends BelleExpr { override def toString = "(" + child + ")*" }
-case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType) extends BelleExpr { override def toString = "(" + child + ")*" + times }
-case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def toString = "<(" + children.mkString(",") + ")" }
+case class SaturateTactic(child: BelleExpr, annotation: BelleType, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def toString = "(" + child + ")*" }
+case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def toString = "(" + child + ")*" + times }
+case class BranchTactic(children: Seq[BelleExpr], override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def toString = "<(" + children.mkString(",") + ")" }
 //case class OptionalTactic(child: BelleExpr) extends BelleExpr
-case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr
+case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)], override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr
 
 /** @todo eisegesis
   * DoAll(e)(BelleProvable(p)) == < (e, ..., e) where e occurs p.subgoals.length times.
   */
-case class DoAll(e: BelleExpr) extends BelleExpr
+case class DoAll(e: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr
 
 
 
@@ -154,19 +160,21 @@ case class SequentType(s : Sequent) extends BelleType
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //@todo extend some ProverException and use the inherited inContext functionality throughout the interpreter.
-class BelleError(message: String)
-  extends ProverException(s"[Bellerophon Runtime] $message") {
+class BelleError(message: String, cause: Throwable = null)
+    extends ProverException(s"[Bellerophon Runtime] $message", if (cause != null) cause else new Throwable(message)) {
   /* @note mutable state for gathering the logical context that led to this exception */
   private var tacticContext: BelleExpr = BelleDot  //@todo BelleUnknown?
   def context: BelleExpr = tacticContext
-  def inContext(context: BelleExpr): BelleError = {
+  def inContext(context: BelleExpr, additionalMessage: String): BelleError = {
     this.tacticContext = context
+    context.location.find(e => !("Thread.java"::"BellerophonSyntax.scala"::"SequentialInterpreter.scala"::Nil).contains(e.getFileName)) match {
+      case Some(location) => getCause.setStackTrace(getCause.getStackTrace :+ location)
+      case None => // no specific stack trace element outside the tactic framework found -> nothing to do
+    }
+    super.inContext(context.toString, additionalMessage)
     this
   }
   override def toString: String = super.toString + "\nin " + tacticContext
-}
-object BelleError {
-  def apply(message: String) = new BelleError(message)
 }
 
 case class BelleUserGeneratedError(message: String)

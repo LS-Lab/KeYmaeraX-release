@@ -40,16 +40,6 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   }
 
-  "A failing tactic" should "print nice errors" in {
-    val itFails = new BuiltInTactic("fails") {
-      override def result(provable: Provable) = throw new ProverException("I don't want to compute today...")
-    }
-
-    theInterpreter.apply(Idioms.nil
-      & itFails
-      & Idioms.nil, BelleProvable(Provable.startProof("1=1".asFormula)))
-  }
-
   private def proveBy(fml: Formula, tactic: BelleExpr): Provable = {
     val v = BelleProvable(Provable.startProof(fml))
     theInterpreter(tactic, v) match {

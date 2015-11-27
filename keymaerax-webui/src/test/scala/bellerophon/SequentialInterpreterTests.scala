@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{RenUSubst, Legacy, Idioms}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, SuccPos, Provable}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics
@@ -12,6 +12,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera, Z3}
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.{Matchers, FlatSpec}
+
+import scala.language.postfixOps
 
 /**
  * Very fine-grained tests of the sequential interpreter.
@@ -234,10 +236,38 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   it should "work for non-arith things" in {
     val legacyTactic = tactics.PropositionalTacticsImpl.AndRightT(SuccPos(0))
     val t = Legacy.initializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic) < (
-      (implyR(SuccPos(0)) & trivialCloser),
-      (implyR(SuccPos(0)) & trivialCloser)
+      implyR(SuccPos(0)) & trivialCloser,
+      implyR(SuccPos(0)) & trivialCloser
       )
     shouldClose(t, "(1=1->1=1) & (1=2->1=2)".asFormula)
+  }
+
+  "A failing tactic" should "print nice errors and provide a stack trace" in {
+    val itFails = new BuiltInTactic("fails") {
+      override def result(provable: Provable) = throw new ProverException("Fails...")
+    }
+
+    val conj = Idioms.nil & (itFails | itFails)
+
+    // now try with defs
+    def repTwo = conj*2
+
+    def split = (andR(1) <(
+        repTwo,
+        Idioms.ident partial)
+      )*@TheType()
+
+    val thrown = intercept[Throwable] {
+      theInterpreter.apply(Idioms.nil
+        & Idioms.nil
+        & split
+        & Idioms.nil
+        & Idioms.nil, BelleProvable(Provable.startProof("1=1 & 2=2".asFormula)))
+    }
+    thrown.printStackTrace()
+    thrown.getMessage should include ("Fails...")
+    val s = thrown.getCause.getStackTrace
+    s.slice(s.length-9, s.length).map(_.getLineNumber) shouldBe Array(250, 250, 253, 255, 255, 258, 263, 264, 265)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
