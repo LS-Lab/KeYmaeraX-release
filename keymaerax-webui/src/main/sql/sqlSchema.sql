@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS `config`  (
-  `configId` TEXT PRIMARY KEY ON CONFLICT FAIL,
+  `configId` INTEGER PRIMARY KEY ON CONFLICT FAIL,
   `configName` TEXT,
   `key` TEXT,
   `value` TEXT
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 );
 
 CREATE TABLE IF NOT EXISTS `models` (
-  `modelId` TEXT PRIMARY KEY ON CONFLICT FAIL,
+  `modelId` INTEGER PRIMARY KEY ON CONFLICT FAIL,
   `userId` TEXT REFERENCES `users` (`email`),
   `name` TEXT,
   `date` TEXT,
@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS `models` (
 );
 
 CREATE TABLE IF NOT EXISTS `proofs` (
-  `proofId` TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `modelId` TEXT REFERENCES `models` (`modelId`),
+  `proofId` INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  `modelId` INTEGER REFERENCES `models` (`modelId`),
   `name` TEXT,
   `description` TEXT,
   `date` TEXT,
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS `sequentFormulas` (
 
 CREATE TABLE IF NOT EXISTS `tacticExecutions` (
   `executionId` INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  `proofId` TEXT REFERENCES `proofs` (`proofId`)
+  `proofId` INTEGER REFERENCES `proofs` (`proofId`)
 );
 
 CREATE TABLE IF NOT EXISTS `executionSteps` (

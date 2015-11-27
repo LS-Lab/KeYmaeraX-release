@@ -117,15 +117,15 @@ object SQLite {
             nUpdates = nUpdates + 1
           }
           else {
-            Config.map(c => (c.configid.get, c.configname.get, c.key.get, c.value.get))
-              .insert((idgen, config.name, key, value))
+            Config.map(c => (c.configname.get, c.key.get, c.value.get))
+              .insert((config.name, key, value))
             nInserts = nInserts + 1
           }
         })
       })
 
     //Proofs and Proof Nodes
-    override def getProofInfo(proofId: String): ProofPOJO =
+    override def getProofInfo(proofId: Int): ProofPOJO =
       session.withTransaction({
         val stepCount = getProofSteps(proofId).size
         nSelects = nSelects + 1
@@ -170,7 +170,7 @@ object SQLite {
         nUpdates = nUpdates + 1
       })
 
-    override def updateProofName(proofId: String, newName: String): Unit = {
+    override def updateProofName(proofId: Int, newName: String): Unit = {
       session.withTransaction({
         nSelects = nSelects + 1
         Proofs.filter(_.proofid === proofId).map(_.name).update(Some(newName))
@@ -192,7 +192,7 @@ object SQLite {
     private def sqliteBoolToBoolean(x: Int) = if (x == 0) false else if (x == 1) true else throw new Exception()
 
     //returns id of create object
-    override def getProofsForModel(modelId: String): List[ProofPOJO] =
+    override def getProofsForModel(modelId: Int): List[ProofPOJO] =
       session.withTransaction({
         nSelects = nSelects + 1
         Proofs.filter(_.modelid === modelId).list.map(p => {
@@ -207,30 +207,25 @@ object SQLite {
     //Models
     override def createModel(userId: String, name: String, fileContents: String, date: String,
                              description: Option[String] = None, publink: Option[String] = None,
-                             title: Option[String] = None, tactic: Option[String] = None): Option[String] =
+                             title: Option[String] = None, tactic: Option[String] = None): Option[Int] =
       session.withTransaction({
         nSelects = nSelects + 1
         if (Models.filter(_.userid === userId).filter(_.name === name).list.length == 0) {
-          val modelId = idgen()
-
-          Models.map(m => (m.modelid.get, m.userid.get, m.name.get, m.filecontents.get, m.date.get, m.description, m.publink, m.title, m.tactic))
-            .insert(modelId, userId, name, fileContents, date, description, publink, title, tactic)
           nInserts = nInserts + 1
-          Some(modelId)
+          Some(Models.map(m => (m.userid.get, m.name.get, m.filecontents.get, m.date.get, m.description, m.publink, m.title, m.tactic))
+            .insert(userId, name, fileContents, date, description, publink, title, tactic))
         }
         else None
       })
 
-    override def createProofForModel(modelId: String, name: String, description: String, date: String): String =
+    override def createProofForModel(modelId: Int, name: String, description: String, date: String): Int =
       session.withTransaction({
-        val proofId = idgen()
-        Proofs.map(p => (p.proofid.get, p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get))
-          .insert(proofId, modelId, name, description, date, 0)
         nInserts = nInserts + 1
-        proofId
+        Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get))
+          .insert(modelId, name, description, date, 0)
       })
 
-    override def getModel(modelId: String): ModelPOJO =
+    override def getModel(modelId: Int): ModelPOJO =
       session.withTransaction({
         nSelects = nSelects + 1
         val models =
@@ -279,10 +274,10 @@ object SQLite {
     }
 
     /** Deletes an execution from the database */
-    override def deleteExecution(executionId: String): Unit = ???
+    override def deleteExecution(executionId: Int): Unit = ???
 
     /** Creates a new execution and returns the new ID in tacticExecutions */
-    override def createExecution(proofId: String): Int =
+    override def createExecution(proofId: Int): Int =
       session.withTransaction({
         val executionId =
           Tacticexecutions.map(te => te.proofid.get)
@@ -292,7 +287,7 @@ object SQLite {
       })
 
     /** Deletes a provable and all associated sequents / formulas */
-    override def deleteProvable(provableId: String): Unit = ???
+    override def deleteProvable(provableId: Int): Unit = ???
 
     /**
       * Adds an execution step to an existing execution
@@ -436,7 +431,7 @@ object SQLite {
       })
 
     /** Use escape hatch in prover core to create a new Provable */
-    override def loadProvable(provableId: String): Sequent = ???
+    override def loadProvable(provableId: Int): Sequent = ???
 
     override def getExecutionSteps(executionID: Int): List[ExecutionStepPOJO] = {
       session.withTransaction({
@@ -454,12 +449,10 @@ object SQLite {
 
     /** Adds a new scala tactic and returns the resulting id */
     /*@TODO Understand whether to use the ID passed in or generate our own*/
-    override def addScalaTactic(scalaTactic: ScalaTacticPOJO): String = {
-      val scalaTacticId = idgen()
+    override def addScalaTactic(scalaTactic: ScalaTacticPOJO): Int = {
       session.withTransaction({
         Scalatactics.map({ case tactic => tactic.location.get })
           .insert(scalaTactic.location)
-        scalaTacticId
       })
     }
 
@@ -469,7 +462,7 @@ object SQLite {
       *       Alternatives?
       *       Does order matter?
       *       What's in each string? */
-    override def getProofSteps(proofId: String): List[String] = ???
+    override def getProofSteps(proofId: Int): List[String] = ???
 
     /** Adds a built-in tactic application using a set of parameters */
     override def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int = {
