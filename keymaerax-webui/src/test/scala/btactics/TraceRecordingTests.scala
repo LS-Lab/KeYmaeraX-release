@@ -19,7 +19,7 @@ import scala.collection.immutable._
   */
 class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach  {
   val db = DBAbstractionObj.testDatabase
-  val listener = new DebuggerListener(db, "foo", "bar", true, 0, Left(1))
+  val listener = new DebuggerListener(db, 1337, 7331, true, 0, Left(1))
   val theInterpreter = new SequentialInterpreter(Seq(listener))
   object TestLib extends UnifyUSCalculus
 
@@ -36,7 +36,7 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
   }
   "IOListener" should "Not Crash" in {
     val t1 = System.nanoTime()
-    for(i <- 1 to 10)
+    for(i <- 1 to 100)
     {
       proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula)),
         TestLib.useAt("[;] compose", PosInExpr(1 :: Nil))(SuccPos(0))).subgoals should contain only Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))

@@ -10,10 +10,10 @@ import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
   */
 object TacticDebugger {
 
-  class DebuggerListener (db: DBAbstraction, executionId: String, executableId: String, userExecuted: Boolean,
+  class DebuggerListener (db: DBAbstraction, executionId: Int, executableId: Int, userExecuted: Boolean,
                           alternativeOrder: Int, branch:Either[Int, String]) extends IOListener {
     class TraceNode (isFirstNode: Boolean){
-      var id: Option[String] = None
+      var id: Option[Int] = None
       var parent: TraceNode = null
       var sibling: TraceNode = null
       var input: Provable = null
@@ -21,30 +21,30 @@ object TacticDebugger {
       var status: ExecutionStepStatus = null
       var reverseChildren: List[TraceNode] = Nil
       def children = reverseChildren.reverse
-      var stepId: String = null
+      var stepId: Int = -1
       val altOrder = if (isFirstNode) alternativeOrder else 0
       val branchLabel: String = branch match {case Right(label) => label case _ => null}
       val branchOrder: Int = branch match {case Left(order) => order case _ => -1}
       val userExe = if(userExecuted) isFirstNode else false
 
-      var inputProvableId: String = null
-      var outputProvableId: String = null
+      var inputProvableId: Int = -1
+      var outputProvableId: Int = -1
 
-      def getInputProvableId:String = {
+      def getInputProvableId:Int = {
         if (input != null && inputProvableId == null)
           inputProvableId = db.serializeProvable(input)
         inputProvableId
       }
 
-      def getOutputProvableId:String = {
+      def getOutputProvableId:Int = {
         if (output != null && outputProvableId == null)
           outputProvableId = db.serializeProvable(output)
         outputProvableId
       }
 
       def asPOJO: ExecutionStepPOJO = {
-        val siblingStep = if (sibling == null) null else sibling.stepId
-        val parentStep = if (parent == null) null else parent.stepId
+        val siblingStep = if (sibling == null) -1 else sibling.stepId
+        val parentStep = if (parent == null) -1 else parent.stepId
         new ExecutionStepPOJO (stepId, executionId, siblingStep, parentStep, Option(branchOrder),
           Option(branchLabel), alternativeOrder,status, executableId, getInputProvableId, getOutputProvableId,
           userExecuted)

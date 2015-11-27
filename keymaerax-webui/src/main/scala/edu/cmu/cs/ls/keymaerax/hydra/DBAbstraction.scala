@@ -65,13 +65,13 @@ class ModelPOJO(val modelId:String, val userId:String, val name:String, val date
  * @param closed Indicates whether the proof is closed (finished proof) or not (partial proof).
  */
 class ProofPOJO(val proofId:String, val modelId:String, val name:String, val description:String,
-                val date:String, val stepCount : Integer, val closed : Boolean)
+                val date:String, val stepCount : Int, val closed : Boolean)
 
 case class ProvablePOJO(provableId: String, conclusionId: String)
 
 case class SequentPOJO(sequentId: String, provableId: String)
 
-case class SequentFormulaPOJO(sequentFormulaId: String, sequentId: String, isAnte: Boolean, index: Int, formulaStr: String)
+case class SequentFormulaPOJO(sequentFormulaId: Int, sequentId: Int, isAnte: Boolean, index: Int, formulaStr: String)
 
 object ExecutionStepStatus extends Enumeration {
   type ExecutionStepStatus = Value
@@ -97,23 +97,23 @@ object ExecutionStepStatus extends Enumeration {
   }
 }
 
-case class TacticExecutionPOJO(executionId: String, proofId: String)
+case class TacticExecutionPOJO(executionId: Int, proofId: Int)
 
-case class ExecutionStepPOJO(stepId: String, executionId: String,
-                             previousStep: String, parentStep: String,
+case class ExecutionStepPOJO(stepId: Int, executionId: Int,
+                             previousStep: Int, parentStep: Int,
                              branchOrder: Option[Int],
                              branchLabel: Option[String],
                              alternativeOrder: Int,
                              status: ExecutionStepStatus,
-                             executableId: String,
-                             inputProvableId: String,
-                             resultProvableId: String,
+                             executableId: Int,
+                             inputProvableId: Int,
+                             resultProvableId: Int,
                              userExecuted: Boolean)
 {
   require(branchOrder.isEmpty != branchLabel.isEmpty) //also schema constraint
 }
 
-case class ExecutablePOJO(executableId: String, scalaTacticId: Option[String], belleExpr: Option[String]) {
+case class ExecutablePOJO(executableId: Int, scalaTacticId: Option[Int], belleExpr: Option[String]) {
   require(scalaTacticId.isEmpty != belleExpr.isEmpty)
 }
 
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS `scalaTactics` (
   `name`          TEXT
 );
 */
-case class ScalaTacticPOJO(scalaTacticId: String, location: String, name: String)
+case class ScalaTacticPOJO(scalaTacticId: Int, location: String, name: String)
 
 
 case class ParameterPOJO(parameterId: String, executableID: String, idx: Int, valueType: ParameterValueType, value: String)
@@ -187,10 +187,10 @@ trait DBAbstraction {
 
   // Tactics
   /** Stores a Provable in the database and returns its ID */
-  def serializeProvable(p : Provable): String
+  def serializeProvable(p : Provable): Int
 
   /** Gets the conclusion of a provable */
-  def getConclusion(provableId: String): Sequent
+  def getConclusion(provableId: Int): Sequent
 
   /** Use escape hatch in prover core to create a new Provable */
   def loadProvable(provableId: String): Sequent
@@ -201,7 +201,7 @@ trait DBAbstraction {
   /////////////////////
 
   /** Creates a new execution and returns the new ID in tacticExecutions */
-  def createExecution(proofId: String): String
+  def createExecution(proofId: String): Int
 
   /** Deletes an execution from the database */
   def deleteExecution(executionId: String): Unit
@@ -210,12 +210,12 @@ trait DBAbstraction {
     * Adds an execution step to an existing execution
     * @note Implementations should enforce additional invarants -- never insert when branches or alt orderings overlap.
     */
-  def addExecutionStep(step: ExecutionStepPOJO): String
+  def addExecutionStep(step: ExecutionStepPOJO): Int
 
-  def getExecutionSteps(executionID: String) : List[ExecutionStepPOJO]
+  def getExecutionSteps(executionID: Int) : List[ExecutionStepPOJO]
 
   /** Updates an executable step's status. @note should not be transitive */
-  def updateExecutionStatus(executionStepId: String, status: ExecutionStepStatus): Unit
+  def updateExecutionStatus(executionStepId: Int, status: ExecutionStepStatus): Unit
 
   /////////////////////
 
@@ -223,13 +223,13 @@ trait DBAbstraction {
   def addScalaTactic(scalaTactic: ScalaTacticPOJO): String
 
   /** Adds a bellerophon expression as an executable and returns the new executableId */
-  def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): String
+  def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): Int
 
   /** Adds a built-in tactic application using a set of parameters */
-  def addAppliedScalaTactic(scalaTacticId: String, params: List[ParameterPOJO]): String
+  def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int
 
   /** Returns the executable with ID executableId */
-  def getExecutable(executableId: String): ExecutablePOJO
+  def getExecutable(executableId: Int): ExecutablePOJO
 
   import spray.json._ //allows for .parseJoson on strings.
   def initializeForDemo2() : Unit = {

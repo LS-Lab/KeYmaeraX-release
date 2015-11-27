@@ -282,11 +282,11 @@ object SQLite {
     override def deleteExecution(executionId: String): Unit = ???
 
     /** Creates a new execution and returns the new ID in tacticExecutions */
-    override def createExecution(proofId: String): String =
+    override def createExecution(proofId: String): Int =
       session.withTransaction({
-        val executionId = idgen()
-        Tacticexecutions.map(te => (te.executionid.get, te.proofid.get))
-          .insert(executionId, proofId)
+        val executionId =
+          Tacticexecutions.map(te => te.proofid.get)
+            .insert(proofId)
         nInserts = nInserts + 1
         executionId
       })
@@ -298,7 +298,7 @@ object SQLite {
       * Adds an execution step to an existing execution
       * @note Implementations should enforce additional invarants -- never insert when branches or alt orderings overlap.
       */
-    override def addExecutionStep(step: ExecutionStepPOJO): String = {
+    override def addExecutionStep(step: ExecutionStepPOJO): Int = {
       val (branchOrder: Int, branchLabel) = (step.branchOrder, step.branchLabel) match {
         case (None, None) => (null, null)
         case (Some(order), None) => (order, null)
@@ -307,35 +307,35 @@ object SQLite {
           throw new Exception("execution steps cannot have both a branchOrder and a branchLabel")
       }
       session.withTransaction({
-        val executionStepId = idgen()
         val status = ExecutionStepStatus.toString(step.status)
-        Executionsteps.map({ case step => (step.stepid.get, step.executionid.get, step.previousstep.get, step.parentstep.get,
-          step.branchorder.get, step.branchlabel.get, step.alternativeorder.get, step.status.get, step.executableid.get,
-          step.inputprovableid.get, step.resultprovableid.get, step.userexecuted.get)
-        })
-          .insert((executionStepId, step.executionId, step.previousStep, step.parentStep, branchOrder, branchLabel,
-            step.alternativeOrder, status, step.executableId, step.inputProvableId, step.resultProvableId,
-            step.userExecuted.toString))
+        val steps =
+          Executionsteps.map({case step => (step.executionid.get, step.previousstep.get, step.parentstep.get,
+            step.branchorder.get, step.branchlabel.get, step.alternativeorder.get, step.status.get, step.executableid.get,
+            step.inputprovableid.get, step.resultprovableid.get, step.userexecuted.get)
+          })
+        val stepId = steps
+            .insert((step.executionId, step.previousStep, step.parentStep, branchOrder, branchLabel,
+              step.alternativeOrder, status, step.executableId, step.inputProvableId, step.resultProvableId,
+              step.userExecuted.toString))
         nInserts = nInserts + 1
-        executionStepId
+        stepId
       })
     }
 
     /** Adds a Bellerophon expression as an executable and returns the new executableId */
-    override def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): String =
+    override def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): Int =
       session.withTransaction({
         // @TODO Figure out whether to generate ID's here or pass them in through the params
-        val executableId = idgen()
-        Executables.map({ case exe => (exe.executableid.get, exe.scalatacticid, exe.belleexpr) })
-          .insert((executableId, None, Some(expr.toString)))
+        val executableId =
+        Executables.map({ case exe => (exe.scalatacticid, exe.belleexpr) })
+          .insert((None, Some(expr.toString)))
         nInserts = nInserts + 1
-        val paramTable = Executableparameter.map({ case param => (param.parameterid.get, param.executableid.get, param.idx.get,
+        val paramTable = Executableparameter.map({ case param => (param.executableid.get, param.idx.get,
           param.valuetype.get, param.value.get)
         })
         for (i <- params.indices) {
-          val paramId = idgen()
           nInserts = nInserts + 1
-          paramTable.insert((paramId, executableId, i, params(i).valueType.toString, params(i).value))
+          paramTable.insert((executableId, i, params(i).valueType.toString, params(i).value))
         }
         executableId
       })
@@ -350,7 +350,7 @@ object SQLite {
     private val deduplicateSequents = false
     private var searchTime: Long = 0
     private var processTime: Long = 0
-    private def findSequentId(s: Sequent): Option[String] = {
+    private def findSequentId(s: Sequent): Option[Int] = {
       if (deduplicateSequents) {
         nSelects = nSelects + 1
         val t1 = System.nanoTime()
@@ -363,7 +363,7 @@ object SQLite {
         val fmlss = fmls.sortWith((row1, row2) => row1.sequentid.get.compare(row2.sequentid.get) > 0).groupBy(row => row.sequentid)
         val ante = s.ante.zipWithIndex
         val succ = s.succ.zipWithIndex
-        val which = fmlss.find({case ((_: Option[String], rows)) =>
+        val which = fmlss.find({case ((_: Option[Int], rows)) =>
           val anteFound =
             ante.forall({case (fml:Formula, int:Int) => rows.exists(row =>
               row.idx.get == int && row.isante.get.toBoolean && row.formula.get == fml.toString)})
@@ -385,42 +385,45 @@ object SQLite {
     /** @TODO what if we want to extract a proof witness from a deserialized provable? Doesn't this put the
       *       DB into the prover core in a way? */
     /** Stores a Provable in the database and returns its ID */
-    override def serializeProvable(p: Provable): String = {
+    override def serializeProvable(p: Provable): Int = {
       val provableId = idgen()
       val ante = p.conclusion.ante
       val succ = p.conclusion.succ
       session.withTransaction({
         findSequentId(p.conclusion) match {
           case None =>
-            val sequentId = idgen()
-            Provables.map({ case provable => (provable.provableid.get, provable.conclusionid.get) })
-              .insert((provableId, sequentId))
-            Sequents.map({ case sequent => (sequent.sequentid.get, sequent.provableid.get) })
-              .insert((sequentId, provableId))
+            val provableId =
+              Provables.map({ case provable => () })
+                .insert()
+            val sequentId =
+              Sequents.map({ case sequent => (sequent.provableid.get) })
+                .insert(provableId)
+            Provables.filter(_.provableid === provableId).map(provable => (provable.conclusionid.get))
+            .update(sequentId)
             nInserts = nInserts + 2
-            val formulas = Sequentformulas.map({ case fml => (fml.sequentformulaid.get, fml.sequentid.get,
+            nUpdates = nUpdates + 1
+            val formulas = Sequentformulas.map({ case fml => (fml.sequentid.get,
               fml.isante.get, fml.idx.get, fml.formula.get)
             })
             for (i <- ante.indices) {
               nInserts = nInserts + 1
-              formulas.insert((idgen(), sequentId, true.toString, i, ante(i).toString))
+              formulas.insert((sequentId, true.toString, i, ante(i).toString))
             }
             for (i <- succ.indices) {
               nInserts = nInserts + 1
-              formulas.insert((idgen(), sequentId, false.toString, i, succ(i).toString))
+              formulas.insert((sequentId, false.toString, i, succ(i).toString))
             }
             provableId
           case Some(sequentId) =>
-            Provables.map({ case provable => (provable.provableid.get, provable.conclusionid.get) })
-              .insert((provableId, sequentId))
             nInserts = nInserts + 1
-            provableId
+            Provables.map({ case provable => provable.conclusionid.get })
+              .insert(sequentId)
         }
       })
     }
 
     /** Returns the executable with ID executableId */
-    override def getExecutable(executableId: String): ExecutablePOJO =
+    override def getExecutable(executableId: Int): ExecutablePOJO =
       session.withTransaction({
         nSelects = nSelects + 1
         val executables =
@@ -435,7 +438,7 @@ object SQLite {
     /** Use escape hatch in prover core to create a new Provable */
     override def loadProvable(provableId: String): Sequent = ???
 
-    override def getExecutionSteps(executionID: String): List[ExecutionStepPOJO] = {
+    override def getExecutionSteps(executionID: Int): List[ExecutionStepPOJO] = {
       session.withTransaction({
         nSelects = nSelects + 1
         val steps =
@@ -454,8 +457,8 @@ object SQLite {
     override def addScalaTactic(scalaTactic: ScalaTacticPOJO): String = {
       val scalaTacticId = idgen()
       session.withTransaction({
-        Scalatactics.map({ case tactic => (tactic.scalatacticid.get, tactic.location.get) })
-          .insert((scalaTacticId, scalaTactic.location))
+        Scalatactics.map({ case tactic => tactic.location.get })
+          .insert(scalaTactic.location)
         scalaTacticId
       })
     }
@@ -469,24 +472,23 @@ object SQLite {
     override def getProofSteps(proofId: String): List[String] = ???
 
     /** Adds a built-in tactic application using a set of parameters */
-    override def addAppliedScalaTactic(scalaTacticId: String, params: List[ParameterPOJO]): String = {
-      val executableId = idgen()
+    override def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int = {
       session.withTransaction({
-        Executables.map({ case exe => (exe.executableid.get, exe.scalatacticid, exe.belleexpr) })
-          .insert((executableId, Some(scalaTacticId), None))
-        val paramTable = Executableparameter.map({ case param => (param.parameterid.get, param.executableid.get, param.idx.get,
+        val executableId =
+          Executables.map({ case exe => ( exe.scalatacticid, exe.belleexpr) })
+            .insert(Some(scalaTacticId), None)
+        val paramTable = Executableparameter.map({ case param => (param.executableid.get, param.idx.get,
           param.valuetype.get, param.value.get)
         })
         for (i <- params.indices) {
-          val paramId = idgen()
-          paramTable.insert((paramId, executableId, i, params(i).valueType.toString, params(i).value))
+          paramTable.insert((executableId, i, params(i).valueType.toString, params(i).value))
         }
         executableId
       })
     }
 
     /** Updates an executable step's status. @note should not be transitive */
-    override def updateExecutionStatus(executionStepId: String, status: ExecutionStepStatus): Unit = {
+    override def updateExecutionStatus(executionStepId: Int, status: ExecutionStepStatus): Unit = {
       val newStatus = ExecutionStepStatus.toString(status)
       session.withTransaction({
         nSelects = nSelects + 1
@@ -503,7 +505,7 @@ object SQLite {
     }
 
     /** Gets the conclusion of a provable */
-    override def getConclusion(provableId: String): Sequent = {
+    override def getConclusion(provableId: Int): Sequent = {
       session.withTransaction({
         nSelects = nSelects + 1
         val sequents =
