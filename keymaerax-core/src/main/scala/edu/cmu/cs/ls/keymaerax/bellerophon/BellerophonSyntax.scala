@@ -168,7 +168,7 @@ class BelleError(message: String, cause: Throwable = null)
   def inContext(context: BelleExpr, additionalMessage: String): BelleError = {
     this.tacticContext = context
     context.location.find(e => !("Thread.java"::"BellerophonSyntax.scala"::"SequentialInterpreter.scala"::Nil).contains(e.getFileName)) match {
-      case Some(location) => getCause.setStackTrace(getCause.getStackTrace :+ location)
+      case Some(location) => getCause.setStackTrace(location +: getCause.getStackTrace)
       case None => // no specific stack trace element outside the tactic framework found -> nothing to do
     }
     super.inContext(context.toString, additionalMessage)

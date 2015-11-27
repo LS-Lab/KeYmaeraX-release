@@ -47,7 +47,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         } catch {
           //@todo catch a little less. Just catching proper tactic exceptions, maybe some ProverExceptions et al., not swallow everything
           case eleft: BelleError =>
-            val rightResult = try { apply(right, v) } catch {case e: BelleError => throw new CompoundException(eleft, e).inContext(EitherTactic(eleft.context, e.context, location), "Failed: both left-hand side and right-hand side " + expr)}
+            val rightResult = try { apply(right, v) } catch {case e: BelleError => throw e.inContext(EitherTactic(eleft.context, e.context, location), "Failed: both left-hand side and right-hand side " + expr)}
             (rightResult, right) match {
               case (_, x:PartialTactic) => rightResult
               case (BelleProvable(p), _) if p.isProved => rightResult

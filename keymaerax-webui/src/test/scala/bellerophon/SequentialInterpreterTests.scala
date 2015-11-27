@@ -267,7 +267,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     thrown.printStackTrace()
     thrown.getMessage should include ("Fails...")
     val s = thrown.getCause.getStackTrace
-    s.slice(s.length-9, s.length).map(_.getLineNumber) shouldBe Array(250, 250, 253, 255, 255, 258, 263, 264, 265)
+    s.filter(_.getFileName == "SequentialInterpreterTests.scala").slice(0, 11).map(_.getLineNumber) shouldBe Array(265, 264, 263, 258, 255, 255, 253, 250, 250, 247, 246)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
