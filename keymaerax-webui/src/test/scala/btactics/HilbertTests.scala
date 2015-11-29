@@ -40,16 +40,6 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   }
 
-  "A failing tactic" should "print nice errors" in {
-    val itFails = new BuiltInTactic("fails") {
-      override def result(provable: Provable) = throw new ProverException("I don't want to compute today...")
-    }
-
-    theInterpreter.apply(Idioms.nil
-      & itFails
-      & Idioms.nil, BelleProvable(Provable.startProof("1=1".asFormula)))
-  }
-
   private def proveBy(fml: Formula, tactic: BelleExpr): Provable = {
     val v = BelleProvable(Provable.startProof(fml))
     theInterpreter(tactic, v) match {
@@ -143,19 +133,22 @@ class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "prove in monotone context (x<99 | _) & y<2" in {shouldCMon(Context("(x<99 | ⎵) & y<2".asFormula))}
   it should "prove in monotone context x<7 -> (x<99 | _) & y<2" in {shouldCMon(Context("x<7 -> (x<99 | ⎵) & y<2".asFormula))}
   it should "prove in monotone context x<y -> x<7 -> (x<99 | x<10 -> (_ & z=2 | x=5 & y=3)) & y<2" in {shouldCMon(Context("x<y -> x<7 -> (x<99 | x<10 -> (⎵ & z=2 | x=5 & y=3)) & y<2".asFormula))}
-  ignore should "prove in monotone context \\forall y _" in {shouldCMon(Context("\\forall y ⎵".asFormula))}
-  ignore should "prove in monotone context \\forall x _" in {shouldCMon(Context("\\forall x ⎵".asFormula))}
-  ignore should "prove in monotone context \\exists y _" in {shouldCMon(Context("\\exists y ⎵".asFormula))}
-  ignore should "prove in monotone context \\exists x _" in {shouldCMon(Context("\\exists x ⎵".asFormula))}
-  ignore should "prove in monotone context \\forall y (_ | x<y)" in {shouldCMon(Context("\\forall y (⎵ | x<y)".asFormula))}
-  ignore should "prove in monotone context \\forall x (_ | x<y)" in {shouldCMon(Context("\\forall x (⎵ | x<y)".asFormula))}
-  ignore should "prove in monotone context \\exists y (_ | x<y)" in {shouldCMon(Context("\\exists y (⎵ | x<y)".asFormula))}
-  ignore should "prove in monotone context \\exists x (_ | x<y)" in {shouldCMon(Context("\\exists x (⎵ | x<y)".asFormula))}
+  it should "prove in monotone context \\forall y _" in {shouldCMon(Context("\\forall y ⎵".asFormula))}
+  it should "prove in monotone context \\forall x _" in {shouldCMon(Context("\\forall x ⎵".asFormula))}
+  it should "prove in monotone context \\exists y _" in {shouldCMon(Context("\\exists y ⎵".asFormula))}
+  it should "prove in monotone context \\exists x _" in {shouldCMon(Context("\\exists x ⎵".asFormula))}
+  it should "prove in monotone context \\forall y (_ | x<y)" in {shouldCMon(Context("\\forall y (⎵ | x<y)".asFormula))}
+  it should "prove in monotone context \\forall x (_ | x<y)" in {shouldCMon(Context("\\forall x (⎵ | x<y)".asFormula))}
+  it should "prove in monotone context \\exists y (_ | x<y)" in {shouldCMon(Context("\\exists y (⎵ | x<y)".asFormula))}
+  it should "prove in monotone context \\exists x (_ | x<y)" in {shouldCMon(Context("\\exists x (⎵ | x<y)".asFormula))}
   it should "prove in antimonotone context _ -> y<2" in {shouldCMonA(Context("⎵ -> y<2".asFormula))}
   it should "prove in antimonotone context _ -> y<2 & x<10" in {shouldCMonA(Context("⎵ -> y<2 & x<10".asFormula))}
   it should "prove in antimonotone context (_ -> y<2) & x<10" in {shouldCMonA(Context("(⎵ -> y<2) & x<10".asFormula))}
   it should "prove in antimonotone context (_ -> y<2) & x<10 | x=7" in {shouldCMonA(Context("(⎵ -> y<2) & x<10 | x=7".asFormula))}
-  it should "prove in antiantimonotone context ((_ -> y<2) -> z=0) & x<10 | x=7 " in {shouldCMonA(Context("((⎵ -> y<2) -> z=0) & x<10 | x=7".asFormula))}
+  it should "prove in antimonotone context (<x:=5;>_ -> y<2) & x<10 | x=7" in {shouldCMonA(Context("(<x:=5;>⎵ -> y<2) & x<10 | x=7".asFormula))}
+  it should "prove in antimonotone context (a=3|<x:=5;>_ -> y<2) & x<10 | x=7" in {shouldCMonA(Context("(a=3|<x:=5;>⎵ -> y<2) & x<10 | x=7".asFormula))}
+  it should "prove in antimonotone context (<x:=5;>_&a=3 -> y<2) & x<10 | x=7" in {shouldCMonA(Context("(<x:=5;>⎵&a=3 -> y<2) & x<10 | x=7".asFormula))}
+  it should "prove in antiantimonotone context ((_ -> y<2) -> z=0) & x<10 | x=7" in {shouldCMon(Context("((⎵ -> y<2) -> z=0) & x<10 | x=7".asFormula))}
 
   lazy val basicImpl = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)),
     TactixLibrary.QE)

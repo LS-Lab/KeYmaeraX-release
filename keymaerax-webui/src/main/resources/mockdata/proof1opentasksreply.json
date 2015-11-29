@@ -1,0 +1,85 @@
+{
+  "proofTree": {
+    "id": "P1",
+    "nodes": {
+      "S0": {
+        "id": "S0",
+        "sequent": {
+          "ante": [],
+          "succ": [
+            {
+              "id": "F0s",
+              "formula": {
+                "name": "imply",
+                "children": [
+                  { "name": "lt", "children": [ {"name": "z"}, {"name": "1"} ] },
+                  {
+                    "name": "and",
+                    "children": [
+                      {
+                        "name": "and",
+                        "children": [
+                          { "name": "lt", "children": [ {"name": "x"}, {"name": "5"} ] },
+                          { "name": "true" }
+                        ]
+                      },
+                      { "name": "gt", "children": [ {"name": "2"}, {"name": "y"} ] }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "children": null,
+        "parent": "S0"
+      },
+      "S2": {
+        "id": "S2",
+        "sequent": {
+          "ante": [ {"id": "F2a", "formula": { "name": "lt", "children": [ {"name": "z"}, {"name": "1"} ] }} ],
+          "succ": [
+            {
+              "id": "F2s",
+              "formula": {
+                "name": "and",
+                "children": [
+                  { "name": "lt", "children": [ {"name": "x"}, {"name": "5"} ] },
+                  { "name": "true" }
+                ]
+              }
+            }
+          ]
+        },
+        "children": [],
+        "parent": null
+      },
+      "S3": {
+        "id": "S3",
+        "sequent": {
+          "ante": [ {"id": "F3a", "formula": { "name": "lt", "children": [ {"name": "z"}, {"name": "1"} ] }} ],
+          "succ": [ { "id": "F3", "formula": { "name": "gt", "children": [ {"name": "2"}, {"name": "y"} ] } } ]
+        },
+        "children": [],
+        "parent": null
+      }
+    },
+    "root": "S0"
+  },
+  "agendaItems": {
+    "N1": {
+      "id": "N1",
+      "name": "base case",
+      "proofId": "P1",
+      "goal": "S2",
+      "path": []
+    },
+    "N2": {
+      "id": "N2",
+      "name": "whatever",
+      "proofId": "P1",
+      "goal": "S3",
+      "path": []
+    }
+  }
+}

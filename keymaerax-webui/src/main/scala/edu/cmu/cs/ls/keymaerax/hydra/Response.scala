@@ -454,3 +454,8 @@ class NodeResponse(tree : String) extends Response {
   val node = JsonParser(tree).asJsObject
   val json = node
 }
+
+class MockResponse(resourceName: String) extends Response {
+  //@todo add schema
+  val json = scala.io.Source.fromInputStream(getClass.getResourceAsStream(resourceName)).mkString.parseJson
+}

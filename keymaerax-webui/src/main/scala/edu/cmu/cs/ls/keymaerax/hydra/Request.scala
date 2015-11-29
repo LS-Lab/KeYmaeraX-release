@@ -920,3 +920,7 @@ class ShutdownReqeuest() extends Request {
     new BooleanResponse(true) :: Nil
   }
 }
+
+class MockRequest(resourceName: String) extends Request {
+  override def getResultingResponses(): List[Response] = new MockResponse(resourceName) :: Nil
+}

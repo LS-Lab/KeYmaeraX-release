@@ -260,7 +260,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
     result shouldBe 'closed
   }
 
-  it should "be provable with KeYmaeraX command line interface" in {
+  ignore should "be provable with KeYmaeraX command line interface" in {
     // command line main has to initialize the prover itself, so dispose all test setup first
     afterEach()
 

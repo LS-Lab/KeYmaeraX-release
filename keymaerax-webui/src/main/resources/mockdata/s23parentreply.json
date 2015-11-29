@@ -1,0 +1,27 @@
+{
+  "id": "S1",
+  "sequent": {
+    "ante": [ {"id": "F1a", "formula": { "name": "lt", "children": [ {"name": "z"}, {"name": "1"} ] }} ],
+    "succ": [
+      {
+        "id": "F1s",
+        "formula": {
+          "name": "and",
+          "children": [
+            {
+              "name": "and",
+              "children": [
+                { "name": "lt", "children": [ {"name": "x"}, {"name": "5"} ] },
+                { "name": "true" }
+              ]
+            },
+            { "name": "gt", "children": [ {"name": "2"}, {"name": "y"} ] }
+          ]
+        }
+      }
+    ]
+  },
+  "children": [ "S2", "S3" ],
+  "rule": { "id": "R1", "name": "andR" },
+  "parent": null
+}

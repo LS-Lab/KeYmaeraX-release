@@ -32,11 +32,31 @@ trait UnifyUSCalculus {
    * Throw exception if there is more than one open subgoal on the provable.
    */
   private def requireOneSubgoal(provable: Provable) =
-    if(provable.subgoals.length != 1) throw BelleError("Expected exactly one sequent in Provable")
+    if(provable.subgoals.length != 1) throw new BelleError("Expected exactly one sequent in Provable")
 
   type Subst = UnificationMatch.Subst
 
-  //@todo port Goedel etc.
+  /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
+    * {{{
+    *       p(??)
+    *   ----------- G
+    *    [a;]p(??)
+    * }}}
+    * @see [[monb]] with p(x)=True
+    */
+  lazy val G                  : BelleExpr         = ??? //AxiomaticRuleTactics.goedelT
+  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
+  lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
+  /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality `c(f(x))=c(g(x))` to an equality `f(x)=g(x)` */
+  //def CT(inEqPos: PosInExpr)  : Tactic         = ???
+  /** CQ: Equation Congruence: Contextual Equivalence of terms at the indicated position to reduce an equivalence to an equation */
+  //def CQ(inEqPos: PosInExpr)  : Tactic
+  /** CE: Congruence: Contextual Equivalence at the indicated position to reduce an equivalence to an equivalence */
+  //def CE(inEqPos: PosInExpr)  : Tactic
+  /** monb: Monotone `[a;]p(x) |- [a;]q(x)` reduces to proving `p(x) |- q(x)` */
+  lazy val monb               : BelleExpr         = DLBySubst.monb
+  /** mond: Monotone `<a;>p(x) |- <a;>q(x)` reduces to proving `p(x) |- q(x)` */
+  lazy val mond               : BelleExpr         = DLBySubst.mond
 
 
 
@@ -652,23 +672,33 @@ trait UnifyUSCalculus {
   def CMon(C: Context[Formula]): ForwardTactic = impl => {
     import StaticSemantics.symbols
     require(impl.conclusion.ante.length == 1 && impl.conclusion.succ.length == 1, "expected equivalence shape without antecedent and exactly one succedent " + impl)
-    //@todo require(DotFormula only occurs with positive polarity in C)
-    val left = impl.conclusion.ante.head
-    val right = impl.conclusion.succ.head
+
+    // global polarity switch for all cases, except Modal and Equiv, which modify this switch if necessary
+    val polarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(
+      throw new IllegalArgumentException(s"Context should contain DotFormula, but is ${C.ctx}")))
+    val (left, right) =
+      if (polarity < 0) (impl.conclusion.succ.head, impl.conclusion.ante.head)
+      else (impl.conclusion.ante.head, impl.conclusion.succ.head)
+
     require(C.isFormulaContext, "Formula context expected to make use of equivalences with CE " + C)
     if (DEBUG) println("CMon(" + C + ")" + "(" + impl + ")")
     /** Monotonicity rewriting step to replace occurrence of instance of k by instance of o in context */
     def monStep(C: Context[Formula], mon: Provable): Provable = {
       if (DEBUG) println("in monStep(" + C + ", " + mon + ")") //\nin CMon(" + C + ")" + "(" + impl + ")")
-      var polarity = 1 // default is positive polarity
-      var weakened = false  //@todo this is a hack that doesn't even quite work.
+
+      val localPolarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(
+        throw new IllegalArgumentException("Context should contain DotFormula")))
+      val (ante, succ) =
+        if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (IndexedSeq(C(right)), IndexedSeq(C(left)))
+        else (IndexedSeq(C(left)), IndexedSeq(C(right)))
+
       (
         // which context to use it in
-      C.ctx match {
-        case DotFormula => mon
+        C.ctx match {
+          case DotFormula => mon
 
-        case And(e, c) if !symbols(e).contains(DotFormula) =>
-          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+          case And(e, c) if !symbols(e).contains(DotFormula) =>
+            (Provable.startProof(Sequent(Nil, ante, succ))
             (AndLeft(AntePos(0)), 0)
             (AndRight(SuccPos(0)), 0)
             (Close(AntePos(0), SuccPos(0)), 0)
@@ -676,8 +706,8 @@ trait UnifyUSCalculus {
             (CoHide2(AntePos(1), SuccPos(0)), 0)
             ) (monStep(Context(c), mon), 0)
 
-        case And(c, e) if !symbols(e).contains(DotFormula) =>
-          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+          case And(c, e) if !symbols(e).contains(DotFormula) =>
+            (Provable.startProof(Sequent(Nil, ante, succ))
             (AndLeft(AntePos(0)), 0)
             (AndRight(SuccPos(0)), 0)
             (Close(AntePos(1), SuccPos(0)), 1)
@@ -685,8 +715,8 @@ trait UnifyUSCalculus {
             (CoHide2(AntePos(0), SuccPos(0)), 0)
             ) (monStep(Context(c), mon), 0)
 
-        case Or(e, c) if !symbols(e).contains(DotFormula) =>
-          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+          case Or(e, c) if !symbols(e).contains(DotFormula) =>
+            (Provable.startProof(Sequent(Nil, ante, succ))
             (OrRight(SuccPos(0)), 0)
             (OrLeft(AntePos(0)), 0)
             (Close(AntePos(0), SuccPos(0)), 0)
@@ -694,8 +724,8 @@ trait UnifyUSCalculus {
             (CoHide2(AntePos(0), SuccPos(1)), 0)
             ) (monStep(Context(c), mon), 0)
 
-        case Or(c, e) if !symbols(e).contains(DotFormula) =>
-          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+          case Or(c, e) if !symbols(e).contains(DotFormula) =>
+            (Provable.startProof(Sequent(Nil, ante, succ))
             (OrRight(SuccPos(0)), 0)
             (OrLeft(AntePos(0)), 0)
             (Close(AntePos(0), SuccPos(1)), 1)
@@ -703,13 +733,10 @@ trait UnifyUSCalculus {
             (CoHide2(AntePos(0), SuccPos(0)), 0)
             ) (monStep(Context(c), mon), 0)
 
-        case Imply(e, c) if !symbols(e).contains(DotFormula) =>
-          polarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(
-            throw new IllegalArgumentException("Context should contain DotFormula")))
-          val (ante, succ) =
-            if (polarity < 0) (IndexedSeq(C(right)), IndexedSeq(C(left))) // polarity switch so switch left/right sides
-            else (IndexedSeq(C(left)), IndexedSeq(C(right)))
-          (Provable.startProof(Sequent(Nil, ante, succ))
+          case Imply(e, c) if !symbols(e).contains(DotFormula) =>
+            if (DEBUG) println("CMon check case: " + C + " to prove " + Sequent(Nil, ante, succ) + "\nfrom " + mon +
+              "\nnext step in context " + Context(c) + "\n having current polarity " + polarity + " and new polarity " + localPolarity)
+            (Provable.startProof(Sequent(Nil, ante, succ))
             (ImplyRight(SuccPos(0)), 0)
             (ImplyLeft(AntePos(0)), 0)
             (Close(AntePos(0), SuccPos(1)), 0)
@@ -717,14 +744,10 @@ trait UnifyUSCalculus {
             (CoHide2(AntePos(1), SuccPos(0)), 0)
             ) (monStep(Context(c), mon), 0)
 
-        case Imply(c, e) if !symbols(e).contains(DotFormula) =>
-          polarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(
-            throw new IllegalArgumentException("Context should contain DotFormula")))
-          val (ante, succ) =
-            if (polarity < 0) (IndexedSeq(C(right)), IndexedSeq(C(left))) // polarity switch so switch left/right sides
-            else (IndexedSeq(C(left)), IndexedSeq(C(right)))
-          println("CMon check case: " + C + " to prove " + Sequent(Nil, ante, succ) + "\nfrom " + mon)
-          (Provable.startProof(Sequent(Nil, ante, succ))
+          case Imply(c, e) if !symbols(e).contains(DotFormula) =>
+            if (DEBUG) println("CMon check case: " + C + " to prove " + Sequent(Nil, ante, succ) + "\nfrom " + mon +
+              "\nnext step in context " + Context(c) + "\n having current polarity " + polarity + " and new polarity " + localPolarity)
+            (Provable.startProof(Sequent(Nil, ante, succ))
             (ImplyRight(SuccPos(0)), 0)
             (ImplyLeft(AntePos(0)), 0)
             // right branch
@@ -733,108 +756,125 @@ trait UnifyUSCalculus {
             (CoHide2(AntePos(0), SuccPos(1)), 0)
             ) (monStep(Context(c), mon), 0)
 
-        case Equiv(e, c) if !symbols(e).contains(DotFormula) =>
-          //@note fallback to implication
-          // polarity(k)=-1, polarity(o)=+1
-          weakened = true
-          // orient equivalence Equiv(c,e) such that polarity of k in that will be +1
-          // and polarity of o in that will be -1
-          val newPol = FormulaTools.polarityAt(Imply(c,e), FormulaTools.posOf(Imply(c,e), DotFormula).getOrElse(
-            throw new IllegalArgumentException("Context should contain DotFormula")))
-          if (newPol<0) {
-            // polarity of k in (Context(Imply(c,e))(k) will be +1
-            // polarity of o in (Context(Imply(c,e))(o) will be -1
-            monStep(Context(Imply(c, e)), mon)
-          } else if (newPol>0) {
-            Predef.assert(FormulaTools.polarityAt(Imply(e,c), FormulaTools.posOf(Imply(e,c), DotFormula).getOrElse(
-              throw new IllegalArgumentException("Context should contain DotFormula")))>0)
-            // polarity of k in (Context(Imply(e,c))(k) will be +1
-            // polarity of o in (Context(Imply(e,c))(o) will be -1
-            monStep(Context(Imply(e, c)), mon)
-          } else {
-            Predef.assert(false, "polarity rotations should ultimately be nonzero except with too many nested equivalences " + C); ???
-          }
+          case Equiv(e, c) if !symbols(e).contains(DotFormula) =>
+            //@note fallback to implication
+            // polarity(k)=-1, polarity(o)=+1
+            // orient equivalence Equiv(c,e) such that polarity of k in that will be +1
+            // and polarity of o in that will be -1
+            val newPol = FormulaTools.polarityAt(Imply(c,e), FormulaTools.posOf(Imply(c,e), DotFormula).getOrElse(
+              throw new IllegalArgumentException("Context should contain DotFormula")))
+            if (newPol<0) {
+              // polarity of k in (Context(Imply(c,e))(k) will be +1
+              // polarity of o in (Context(Imply(c,e))(o) will be -1
+              monStep(Context(Imply(c, e)), mon)
+            } else if (newPol>0) {
+              Predef.assert(FormulaTools.polarityAt(Imply(e,c), FormulaTools.posOf(Imply(e,c), DotFormula).getOrElse(
+                throw new IllegalArgumentException("Context should contain DotFormula")))<0)
+              // polarity of k in (Context(Imply(e,c))(k) will be +1
+              // polarity of o in (Context(Imply(e,c))(o) will be -1
+              monStep(Context(Imply(e, c)), mon)
+            } else {
+              Predef.assert(false, "polarity rotations should ultimately be nonzero except with too many nested equivalences " + C); ???
+            }
 
-        case Equiv(c, e) if !symbols(e).contains(DotFormula) =>
-          //@note fallback to implication
-          // polarity(k)=-1, polarity(o)=+1
-          weakened = true
-          // orient equivalence Equiv(c,e) such that polarity of k in that will be +1
-          // and polarity of o in that will be -1
-          val newPol = FormulaTools.polarityAt(Imply(c,e), FormulaTools.posOf(Imply(c,e), DotFormula).getOrElse(
-            throw new IllegalArgumentException("Context should contain DotFormula")))
-          if (newPol<0) {
-            // polarity of k in (Context(Imply(c,e))(k) will be +1
-            // polarity of o in (Context(Imply(c,e))(o) will be -1
-            monStep(Context(Imply(c, e)), mon)
-          } else if (newPol>0) {
-            Predef.assert(FormulaTools.polarityAt(Imply(e,c), FormulaTools.posOf(Imply(e,c), DotFormula).getOrElse(
-              throw new IllegalArgumentException("Context should contain DotFormula")))>0)
-            // polarity of k in (Context(Imply(e,c))(k) will be +1
-            // polarity of o in (Context(Imply(e,c))(o) will be -1
-            monStep(Context(Imply(e, c)), mon)
-          } else {
-            Predef.assert(false, "polarity rotations should ultimately be nonzero except with too many nested equivalences " + C); ???
-          }
+          case Equiv(c, e) if !symbols(e).contains(DotFormula) =>
+            //@note fallback to implication
+            // polarity(k)=-1, polarity(o)=+1
+            // orient equivalence Equiv(c,e) such that polarity of k in that will be +1
+            // and polarity of o in that will be -1
+            val newPol = FormulaTools.polarityAt(Imply(c,e), FormulaTools.posOf(Imply(c,e), DotFormula).getOrElse(
+              throw new IllegalArgumentException("Context should contain DotFormula")))
+            if (newPol>0) {
+              // polarity of k in (Context(Imply(c,e))(k) will be +1
+              // polarity of o in (Context(Imply(c,e))(o) will be -1
+              monStep(Context(Imply(c, e)), mon)
+            } else if (newPol<0) {
+              Predef.assert(FormulaTools.polarityAt(Imply(e,c), FormulaTools.posOf(Imply(e,c), DotFormula).getOrElse(
+                throw new IllegalArgumentException("Context should contain DotFormula")))>0)
+              // polarity of k in (Context(Imply(e,c))(k) will be +1
+              // polarity of o in (Context(Imply(e,c))(o) will be -1
+              monStep(Context(Imply(e, c)), mon)
+            } else {
+              Predef.assert(false, "polarity rotations should ultimately be nonzero except with too many nested equivalences " + C); ???
+            }
 
-        case Equiv(e, c) => Predef.assert(symbols(e).contains(DotFormula) || symbols(c).contains(DotFormula), "proper contexts have dots somewhere " + C)
-          throw new ProverException("No monotone context for equivalences " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
+          case Equiv(e, c) => Predef.assert(symbols(e).contains(DotFormula) || symbols(c).contains(DotFormula), "proper contexts have dots somewhere " + C)
+            throw new ProverException("No monotone context for equivalences " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
 
-        case Box(a, c) if !symbols(a).contains(DotFormula) =>
-          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+          case Box(a, c) if !symbols(a).contains(DotFormula) =>
+            //@note undo polarity switch from beginning of CMon, need to nibble off modality first
+            val (ante, succ) =
+              if (polarity < 0) (right, left)
+              else (left, right)
+            (Provable.startProof(Sequent(Nil, IndexedSeq(C(ante)), IndexedSeq(C(succ))))
             (AxiomaticRule("[] monotone", USubst(
               SubstitutionPair(ProgramConst("a_"), a)
-                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(left))
-                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(right))
+                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(ante))
+                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(succ))
                 :: Nil
             )
             ), 0)
             ) (monStep(Context(c), mon), 0)
 
-        case Diamond(a, c) if !symbols(a).contains(DotFormula) =>
-          (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+          case Diamond(a, c) if !symbols(a).contains(DotFormula) =>
+            //@note undo polarity switch from beginning of CMon, need to nibble off modality first
+            val (ante, succ) =
+              if (polarity < 0) (right, left)
+              else (left, right)
+            (Provable.startProof(Sequent(Nil, IndexedSeq(C(ante)), IndexedSeq(C(succ))))
             (AxiomaticRule("<> monotone", USubst(
               SubstitutionPair(ProgramConst("a_"), a)
-                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(left))
-                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(right))
+                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(ante))
+                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(succ))
                 :: Nil
             )
             ), 0)
             ) (monStep(Context(c), mon), 0)
 
-        case m:Modal if symbols(m.program).contains(DotFormula) =>
-          //@todo implement good cases. For example nibble of assign on both sides. Or random. Or ....
-          throw new ProverException("No monotone context within programs " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
+          case m:Modal if symbols(m.program).contains(DotFormula) =>
+            //@todo implement good cases. For example nibble of assign on both sides. Or random. Or ....
+            throw new ProverException("No monotone context within programs " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
 
-        case Forall(vars, c) => //if !StaticSemantics.freeVars(subst(c)).toSymbolSet.intersect(vars.toSet).isEmpty =>
-          //@note would also work with all distribute and all generalization instead
-          //@note would also work with Skolemize and all instantiate but disjointness is more painful
-          useFor("all eliminate", PosInExpr(1::Nil))(AntePosition(0))(monStep(Context(c), mon)) (
-            Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))),
-            Skolemize(SuccPos(0))
-          )
+          case Forall(vars, c) => //if !StaticSemantics.freeVars(subst(c)).toSymbolSet.intersect(vars.toSet).isEmpty =>
+            require(vars.size == 1, "Universal quantifier must not be block quantifier")
+            //@note would also work with all distribute and all generalization instead
+            //@note would also work with Skolemize and all instantiate but disjointness is more painful
+            val rename = (us: RenUSubst) => us ++ RenUSubst(Seq((Variable("x"), vars.head)))
+            useFor("all eliminate", PosInExpr(1::Nil), rename)(AntePosition(0))(monStep(Context(c), mon)) (
+              Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))),
+              Skolemize(SuccPos(0))
+            )
 
-        /*case Forall(vars, c) if StaticSemantics.freeVars(subst(c)).toSymbolSet.intersect(vars.toSet).isEmpty =>
-          useFor("vacuous all quantifier")(SuccPosition(0))(
-            useFor("vacuous all quantifier")(AntePosition(0))(monStep(Context(c), mon))
-          )*/
+          /*case Forall(vars, c) if StaticSemantics.freeVars(subst(c)).toSymbolSet.intersect(vars.toSet).isEmpty =>
+            useFor("vacuous all quantifier")(SuccPosition(0))(
+              useFor("vacuous all quantifier")(AntePosition(0))(monStep(Context(c), mon))
+            )*/
 
-        case Exists(vars, c) =>
-          //@note would also work with exists distribute and exists generalization instead
-          //@note would also work with Skolemize and all instantiate but disjointness is more painful
-          useFor("exists eliminate", PosInExpr(0::Nil))(SuccPosition(0))(monStep(Context(c), mon)) (
-            Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))),
-            Skolemize(AntePos(0))
-          )
+          case Exists(vars, c) =>
+            require(vars.size == 1, "Existential quantifier must not be block quantifier")
+            //@note would also work with exists distribute and exists generalization instead
+            //@note would also work with Skolemize and all instantiate but disjointness is more painful
+            val rename = (us: RenUSubst) => us ++ RenUSubst(Seq((Variable("x"), vars.head)))
+            useFor("exists eliminate", PosInExpr(0::Nil), rename)(SuccPosition(0))(monStep(Context(c), mon)) (
+              Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))),
+              Skolemize(AntePos(0))
+            )
 
-        //@todo flip polarity
-        case Not(_) => throw new ProverException("No monotone context without polarity flipping for not\nin CMon.monStep(" + C + ",\non " + mon + ")")
+          case Not(c) =>
+            //@note no polarity switch necessary here, since global polarity switch at beginning of CMon
+            (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+            (NotLeft(AntePos(0)), 0)
+            (NotRight(SuccPos(0)), 0)
+            ) (monStep(Context(c), mon), 0)
 
-        case _ => throw new ProverException("Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
-      }
-        ) ensuring(r => weakened || r.conclusion == (if (polarity < 0)
-        Sequent(Nil, IndexedSeq(C(right)), IndexedSeq(C(left)))
-      else Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right)))), "Expected conclusion " + "\nin CMon.monStep(" + C + ",\non " + mon + ")"
+          case _ => throw new ProverException("Not implemented for other cases yet " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
+        }
+        ) ensuring(r => {true || r.conclusion ==
+        //@todo ensuring is not correct yet (needs to keep track of when to switch polarity)
+        (if (C.ctx == DotFormula && polarity < 0) Sequent(Nil, IndexedSeq(right), IndexedSeq(left))
+        else if (C.ctx == DotFormula && polarity >= 0) Sequent(Nil, IndexedSeq(left), IndexedSeq(right))
+        else if (polarity >= 0) Sequent(Nil, IndexedSeq(C(right)), IndexedSeq(C(left)))
+        else Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))}, "Expected conclusion " + "\nin CMon.monStep(" + C + ",\nwhich is " + (if (polarity < 0) C(right) + "/" + C(left) else C(left) + "/" + C(right)) + ",\non " + mon + ")"
         ) ensuring(r => !impl.isProved || r.isProved, "Proved if input fact proved" + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
     }
     monStep(C, impl)
@@ -942,19 +982,25 @@ trait UnifyUSCalculus {
           case Equiv(o, DotFormula) =>
             equivStep(o, commuteEquivR(SuccPos(0)) & byUS(fact))
 
-          //@todo implies cases
           case Imply(o, DotFormula) =>
             // |- o->k
             val deduct = inverseImplyR(fact)
             // o |- k
             val sideUS: Provable = subst.toForward(deduct)
             // subst(o) |- subst(k) by US
-            val Cmon = CMon(C)(sideUS)
+
+            //@note align context with implication o -> _ to get correct case (_ -> o or o -> _ depending on polarity)
+            val Cmon = C.ctx match {
+              case Equiv(ctxL, ctxR) if symbols(ctxL).contains(DotFormula) => CMon(Context(Equiv(ctxR, ctxL)))(sideUS)
+              case _ => CMon(C)(sideUS)
+            }
 
             // C{subst(k)} |- C{subst(o)} for polarity < 0
             // C{subst(o)} |- C{subst(k)} for polarity > 0
-            // C{subst(k)} |- Ci{subst(o)} for polarity = 0, where <-> in C are turned into -> in Ci
-            val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)  //@todo * (if (pos.isAnte) -1 else 1)
+            // Ci{subst(k)} |- Ci{subst(o)} for polarity = 0, where <-> in C are turned into -> in Ci
+            //@note do not need to inverse polarity if pos.isAnte, because sideImply implicitly inverses polarity for
+            // ante by using Imply(kk, oo) in succ
+            val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)
             val (kk, oo) =
               if (polarity < 0) (C(subst(k)), C(subst(o)))
               else if (polarity > 0) (C(subst(o)), C(subst(k)))
@@ -978,22 +1024,19 @@ trait UnifyUSCalculus {
             // G |- C{subst(o)}  -> C{subst(k)}, D by CoHideRight
             val proved = {
               if (pos.isSucc)
+              // G |- C{subst(o)}, D by CutRight with coside
                 Provable.startProof(proof.conclusion.updated(pos.top, oo))(
-                  CutRight(kk, pos.top.asInstanceOf[SuccPos]), 0
-                ) (coside, 1)
-                // G |- C{subst(o)}, D by CutRight with coside
+                  CutRight(kk, pos.top.asInstanceOf[SuccPos]), 0) (coside, 1)
               else
-                //@todo flip o,k sides?
-                Provable.startProof(proof.conclusion.updated(pos.top, oo))(
-                  CutLeft(kk, pos.top.asInstanceOf[AntePos]), 0
-                ) (coside, 1)
-                // C{subst(o)}, G |- D by CutLeft with coside
-              } /*ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
+              // C{subst(o)}, G |- D by CutLeft with coside
+                Provable.startProof(proof.conclusion.updated(pos.top, kk))(
+                  CutLeft(oo, pos.top.asInstanceOf[AntePos]), 0) (coside, 1)
+            } /*ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
                 ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
 
             if (polarity == 0 && pos.isSucc) {
               val equivified = proved(Provable.startProof(proved.subgoals.head)(EquivifyRight(pos.top.asInstanceOf[SuccPos]), 0), 0)
-              //@todo is equiv always top-level, so looking at inExpr.head determines direction?
+              //@note equiv assumed to always be top-level, so looking at inExpr.head determines direction
               val commuted =
                 if (pos.inExpr.head == 1) equivified(CommuteEquivRight(pos.top.asInstanceOf[SuccPos]), 0)
                 else equivified
@@ -1002,25 +1045,37 @@ trait UnifyUSCalculus {
               ???
             } else proved(proof, 0)
 
-          //@todo check this case!
           case Imply(DotFormula, o) =>
             // |- k->o
             val deduct = inverseImplyR(fact)
             // k |- o
             val sideUS: Provable = subst.toForward(deduct)
             // subst(k) |- subst(o) by US
-            val Cmon = CMon(C)(sideUS)
 
-            // C{subst(o)} |- C{subst(k)} for polarity > 0
-            // C{subst(k)} |- C{subst(o)} for polarity < 0
+            //@note align context with implication _ -> o to get correct case (_ -> o or o -> _ depending on polarity)
+            val Cmon = C.ctx match {
+              case Equiv(ctxL, ctxR) if symbols(ctxR).contains(DotFormula)  => CMon(Context(Equiv(ctxR, ctxL)))(sideUS)
+              case _ => CMon(C)(sideUS)
+            }
+
+            // C{subst(o)} |- C{subst(k)} for polarity < 0
+            // C{subst(k)} |- C{subst(o)} for polarity > 0
+            // Ci{subst(o)} |- Ci{subst(k)} for polarity = 0, where <-> in C are turned into -> in Ci
+            //@note do not need to inverse polarity if pos.isAnte, because sideImply implicitly inverses polarity for
+            // ante by using Imply(kk, oo) in succ
             val polarity = FormulaTools.polarityAt(C.ctx, pos.inExpr)
-            //@todo relax the context C if CMon met an equivalence here, see case above.
-            Predef.assert(polarity != 0, "Polarity should be either positive or negative. Polarity 0 of equivalences not supported: " + C) // polarity 0: met an <->
-            val impl = if (polarity < 0) Imply(C(subst(o)), C(subst(k))) else Imply(C(subst(k)), C(subst(o)))
+            val (kk, oo) =
+              if (polarity < 0) (C(subst(o)), C(subst(k)))
+              else if (polarity > 0) (C(subst(k)), C(subst(o)))
+              else {
+                Predef.assert(polarity == 0)
+                val Ci = Context(FormulaTools.makePolarityAt(C.ctx, pos.inExpr, 1))
+                (Ci(subst(k)), Ci(subst(o)))
+              }
 
-            val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(impl)),
-              ImplyRight(SuccPos(0))
-            )
+            val impl = Imply(kk, oo)
+            val sideImply = Cmon(Sequent(Nil, IndexedSeq(), IndexedSeq(impl)), ImplyRight(SuccPos(0)))
+
             // |- C{subst(k)} -> C{subst(o)}
             val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(proof.conclusion.succ.length)}
             val coside: Provable = sideImply(
@@ -1030,15 +1085,30 @@ trait UnifyUSCalculus {
                 glue(Sequent(Nil, IndexedSeq(), IndexedSeq(impl))),
               CoHideRight(cutPos)
             )
-            // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
-            val proved = {Provable.startProof(proof.conclusion.updated(pos.top, C(subst(o))))(
-              //@todo CutLeft if pos is AntePos
-              CutRight(C(subst(k)), pos.top.asInstanceOf[SuccPos]), 0
-            ) (coside, 1)
+
+            val proved = {
               // G |- C{subst(k)}  -> C{subst(o)}, D by CoHideRight
+              if (pos.isSucc)
+              // C{subst(k)}, G |- D by CutLeft with coside
+                Provable.startProof(proof.conclusion.updated(pos.top, oo))(
+                  CutRight(kk, pos.top.asInstanceOf[SuccPos]), 0) (coside, 1)
+              else
+              // G |- C{subst(o)}, D by CutRight with coside
+                Provable.startProof(proof.conclusion.updated(pos.top, kk))(
+                  CutLeft(oo, pos.top.asInstanceOf[AntePos]), 0) (coside, 1)
             } /*ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
               ) ensuring(r=>r.subgoals==List(proof.conclusion.updated(p.top, C(subst(k)))), "expected premise if fact.isProved")*/
-            proved(proof, 0)
+
+            if (polarity == 0 && pos.isSucc) {
+              val equivified = proved(Provable.startProof(proved.subgoals.head)(EquivifyRight(pos.top.asInstanceOf[SuccPos]), 0), 0)
+              //@note equiv assumed to always be top-level, so looking at inExpr.head determines direction
+              val commuted =
+                if (pos.inExpr.head == 0) equivified(CommuteEquivRight(pos.top.asInstanceOf[SuccPos]), 0)
+                else equivified
+              commuted(proof, 0)
+            } else if (polarity == 0 && pos.isAnte) {
+              ???
+            } else proved(proof, 0)
 
           case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
             throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
