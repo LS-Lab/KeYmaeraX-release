@@ -25,7 +25,7 @@ object DLBySubst {
     USubstPatternTactic(
       (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("[] monotone", ru.substitution.usubst))::Nil //@todo not sure about how to handle the renaming portion?
     )
-  }
+  })
 
   /**
    * Diamond monotonicity.
@@ -35,15 +35,10 @@ object DLBySubst {
    *   <a>p |- <a>q
    * }}}
    */
-  def mond = {
+  def mond = new NamedTactic("mond", {
     val pattern = SequentType(Sequent(Nil, IndexedSeq("<a_;>p_(??)".asFormula), IndexedSeq("<a_;>q_(??)".asFormula)))
     USubstPatternTactic(
-      (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("<> monotone", ru.substitution.usubst))::Nil //@todo not sure about how to handle the renaming portion?
+      (pattern, (ru: RenUSubst) => ru.getRenamingTactic & axiomatic("<> monotone", ru.substitution.usubst)) :: Nil //@todo not sure about how to handle the renaming portion?
     )
-  }
-    USubstPatternTactic(Seq(
-      (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("[] monotone", ru.substitution.usubst)) //@todo not sure about how to handle the renaming portion?
-    ))
   })
-
 }
