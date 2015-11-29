@@ -306,15 +306,16 @@ object SQLite {
       session.withTransaction({
         val status = ExecutionStepStatus.toString(step.status)
         val steps =
-          Executionsteps.map({case step => (step.executionid.get, step.previousstep.get, step.parentstep.get,
+          Executionsteps.map({case step => (step.executionid.get, step.previousstep, step.parentstep,
             step.branchorder.get, step.branchlabel.get, step.alternativeorder.get, step.status.get, step.executableid.get,
-            step.inputprovableid.get, step.resultprovableid.get, step.userexecuted.get)
-          })
+            step.inputprovableid.get, step.resultprovableid, step.userexecuted.get)
+          }) returning Executionsteps.map(_.stepid.get)
         val stepId = steps
             .insert((step.executionId, step.previousStep, step.parentStep, branchOrder, branchLabel,
               step.alternativeOrder, status, step.executableId, step.inputProvableId, step.resultProvableId,
               step.userExecuted.toString))
         nInserts = nInserts + 1
+        println("I believe I just generated a step with ID " + stepId)
         stepId
       })
     }
@@ -389,9 +390,12 @@ object SQLite {
       session.withTransaction({
         findSequentId(p.conclusion) match {
           case None =>
+            /* Working around bug in slick: The natural thing to write would be insert() without any arguments, but
+            * that generates an ill-formed SQL statement, so let's explicitly insert a row with a null conclusion - it
+            * does the same thing but generates SQL that parses.*/
             val provableId =
-              Provables.map({ case provable => () })
-                .insert()
+              Provables.map({ case provable => provable.conclusionid})
+                .insert(None)
             val sequentId =
               Sequents.map({ case sequent => (sequent.provableid.get) })
                 .insert(provableId)
@@ -441,9 +445,9 @@ object SQLite {
         val steps =
           Executionsteps.filter(_.executionid === executionID)
             .list
-            .map(step => new ExecutionStepPOJO(step.stepid.get, step.executionid.get, step.previousstep.get, step.parentstep.get,
+            .map(step => new ExecutionStepPOJO(step.stepid, step.executionid.get, step.previousstep, step.parentstep,
               step.branchorder, step.branchlabel, step.alternativeorder.get, ExecutionStepStatus.fromString(step.status.get),
-              step.executableid.get, step.inputprovableid.get, step.resultprovableid.get, step.userexecuted.get.toBoolean))
+              step.executableid.get, step.inputprovableid.get, step.resultprovableid, step.userexecuted.get.toBoolean))
         if (steps.length < 1) throw new Exception("No steps found for execution " + executionID)
         else steps
       })

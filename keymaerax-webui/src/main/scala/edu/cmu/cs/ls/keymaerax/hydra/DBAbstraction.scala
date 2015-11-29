@@ -99,15 +99,15 @@ object ExecutionStepStatus extends Enumeration {
 
 case class TacticExecutionPOJO(executionId: Int, proofId: Int)
 
-case class ExecutionStepPOJO(stepId: Int, executionId: Int,
-                             previousStep: Int, parentStep: Int,
+case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
+                             previousStep: Option[Int], parentStep: Option[Int],
                              branchOrder: Option[Int],
                              branchLabel: Option[String],
                              alternativeOrder: Int,
                              status: ExecutionStepStatus,
                              executableId: Int,
                              inputProvableId: Int,
-                             resultProvableId: Int,
+                             resultProvableId: Option[Int],
                              userExecuted: Boolean)
 {
   require(branchOrder.isEmpty != branchLabel.isEmpty) //also schema constraint
