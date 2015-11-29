@@ -45,9 +45,11 @@ object SQLite {
         currentSession = sqldb.createSession()
         /* Enable write-ahead logging for SQLite - significantly improves write performance */
         sqlu"PRAGMA journal_mode = WAL".execute(currentSession)
-        /* @TODO Setting synchronous = OFF ruins fault-tolerance, but right now I'm not sure how else to get the
-        * throughput we need. Look for a better way. */
-        sqlu"PRAGMA synchronous = OFF".execute(currentSession)
+        /* Note: Setting synchronous = NORMAL introduces some risk of database corruption during power loss. According
+         * to official documentation, that risk is less than the risk of the hard drive failing completely, but we
+         * should at least be aware that the risk exists. Initial testing showed this to be about 8 times faster, so
+         * it seems worth the risk. */
+        sqlu"PRAGMA synchronous = NORMAL".execute(currentSession)
         sqlu"VACUUM".execute(currentSession)
       }
       currentSession
