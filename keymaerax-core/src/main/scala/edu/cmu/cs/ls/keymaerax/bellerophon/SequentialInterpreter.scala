@@ -20,20 +20,19 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         case _ => throw new BelleError(s"Attempted to apply a built-in tactic to a non-Provable value: ${v.getClass.getName}").inContext(BelleDot, "")
       }
       case BuiltInPositionTactic(_) | BuiltInLeftTactic(_) | BuiltInRightTactic(_) | BuiltInTwoPositionTactic(_) | DependentPositionTactic(_) =>
-        throw BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.")
+        throw new BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.").inContext(expr, "")
       case AppliedPositionTactic(positionTactic, pos) => v match {
         case BelleProvable(pr) => try {
           BelleProvable(positionTactic.computeResult(pr, pos))
         } catch {
           case e: BelleError => throw e.inContext(positionTactic + " at " + pos, pr.prettyString)
-        }
-        throw new BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.").inContext(expr, "")
-      case positionTactic@AppliedPositionTactic(_, pos) => v match {
-        case BelleProvable(pr) => try { BelleProvable(positionTactic.computeResult(pr)) } catch { case e: BelleError => throw e.inContext(positionTactic, pr.prettyString) }
-      }
+        }}
       case positionTactic@AppliedTwoPositionTactic(_, posOne, posTwo) => v match {
-        case BelleProvable(pr) => try { BelleProvable(positionTactic.computeResult(pr)) } catch { case e: BelleError => throw e.inContext(positionTactic, pr.prettyString) }
-      }
+        case BelleProvable(pr) => try {
+          BelleProvable(positionTactic.computeResult(pr))
+        } catch {
+          case e: BelleError => throw e.inContext(positionTactic + " at " + posOne + ", " + posTwo, pr.prettyString)
+        }}
       case SeqTactic(left, right, location) =>
         val leftResult = try { apply(left, v) } catch {case e: BelleError => throw e.inContext(SeqTactic(e.context, right, location), "Failed left-hand side of &: " + left)}
         try { apply(right, leftResult) } catch {case e: BelleError => throw e.inContext(SeqTactic(left, e.context, location), "Failed right-hand side of &: " + right)}
