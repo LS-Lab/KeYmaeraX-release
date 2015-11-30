@@ -8,6 +8,7 @@ import java.io.FileOutputStream
 import java.nio.channels.Channels
 import java.sql.SQLException
 
+import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
@@ -85,7 +86,7 @@ object SQLite {
     override def getModelList(userId: String): List[ModelPOJO] = {
       session.withTransaction({
         nSelects = nSelects + 1
-        Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element.modelid.get, element.userid.get, element.name.get,
+        Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element._Id.get, element.userid.get, element.name.get,
           blankOk(element.date), blankOk(element.filecontents),
           blankOk(element.description), blankOk(element.publink), blankOk(element.title), element.tactic))
       })
@@ -131,9 +132,9 @@ object SQLite {
       session.withTransaction({
         val stepCount = getProofSteps(proofId).size
         nSelects = nSelects + 1
-        val list = Proofs.filter(_.proofid === proofId)
+        val list = Proofs.filter(_._Id.get === proofId)
           .list
-          .map(p => new ProofPOJO(p.proofid.get, p.modelid.get, blankOk(p.name), blankOk(p.description),
+          .map(p => new ProofPOJO(p._Id.get, p.modelid.get, blankOk(p.name), blankOk(p.description),
             blankOk(p.date), stepCount, p.closed.getOrElse(0) == 1))
         if (list.length > 1) throw new Exception()
         else if (list.length == 0) throw new Exception()
@@ -168,14 +169,14 @@ object SQLite {
     override def updateProofInfo(proof: ProofPOJO): Unit =
       session.withTransaction({
         nSelects = nSelects + 1
-        Proofs.filter(_.proofid === proof.proofId).update(proofPojoToRow(proof))
+        Proofs.filter(_._Id.get === proof.proofId).update(proofPojoToRow(proof))
         nUpdates = nUpdates + 1
       })
 
     override def updateProofName(proofId: Int, newName: String): Unit = {
       session.withTransaction({
         nSelects = nSelects + 1
-        Proofs.filter(_.proofid === proofId).map(_.name).update(Some(newName))
+        Proofs.filter(_._Id.get === proofId).map(_.name).update(Some(newName))
         nUpdates = nUpdates + 1
       })
     }
@@ -201,7 +202,7 @@ object SQLite {
           //        val stepCount : Int = Tacticonproof.filter(_.proofid === p.proofid.get).list.count
           val stepCount = 0 //@todo after everything else is done implement this.
           val closed: Boolean = sqliteBoolToBoolean(p.closed.getOrElse(0))
-          new ProofPOJO(p.proofid.get, p.modelid.get, blankOk(p.name), blankOk(p.description), blankOk(p.date), stepCount, closed)
+          new ProofPOJO(p._Id.get, p.modelid.get, blankOk(p.name), blankOk(p.description), blankOk(p.date), stepCount, closed)
         })
       })
 
@@ -214,7 +215,8 @@ object SQLite {
         nSelects = nSelects + 1
         if (Models.filter(_.userid === userId).filter(_.name === name).list.length == 0) {
           nInserts = nInserts + 1
-          Some(Models.map(m => (m.userid.get, m.name.get, m.filecontents.get, m.date.get, m.description, m.publink, m.title, m.tactic))
+          Some((Models.map(m => (m.userid.get, m.name.get, m.filecontents.get, m.date.get, m.description, m.publink, m.title, m.tactic))
+            returning Models.map(_._Id.get))
             .insert(userId, name, fileContents, date, description, publink, title, tactic))
         }
         else None
@@ -223,7 +225,8 @@ object SQLite {
     override def createProofForModel(modelId: Int, name: String, description: String, date: String): Int =
       session.withTransaction({
         nInserts = nInserts + 1
-        Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get))
+        (Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get))
+          returning Proofs.map(_._Id.get))
           .insert(modelId, name, description, date, 0)
       })
 
@@ -231,10 +234,10 @@ object SQLite {
       session.withTransaction({
         nSelects = nSelects + 1
         val models =
-          Models.filter(_.modelid === modelId)
+          Models.filter(_._Id.get === modelId)
             .list
             .map(m => new ModelPOJO(
-              m.modelid.get, m.userid.get, blankOk(m.name), blankOk(m.date), m.filecontents.get, blankOk(m.description), blankOk(m.publink), blankOk(m.title), m.tactic
+              m._Id.get, m.userid.get, blankOk(m.name), blankOk(m.date), m.filecontents.get, blankOk(m.description), blankOk(m.publink), blankOk(m.title), m.tactic
             ))
 
         if (models.length < 1) throw new Exception("getModel type should be an Option")
@@ -282,7 +285,8 @@ object SQLite {
     override def createExecution(proofId: Int): Int =
       session.withTransaction({
         val executionId =
-          Tacticexecutions.map(te => te.proofid.get)
+          (Tacticexecutions.map(te => te.proofid.get)
+            returning Tacticexecutions.map(_._Id.get))
             .insert(proofId)
         nInserts = nInserts + 1
         executionId
@@ -315,7 +319,6 @@ object SQLite {
               step.alternativeOrder, status, step.executableId, step.inputProvableId, step.resultProvableId,
               step.userExecuted.toString))
         nInserts = nInserts + 1
-        println("I believe I just generated a step with ID " + stepId)
         stepId
       })
     }
@@ -325,7 +328,8 @@ object SQLite {
       session.withTransaction({
         // @TODO Figure out whether to generate ID's here or pass them in through the params
         val executableId =
-        Executables.map({ case exe => (exe.scalatacticid, exe.belleexpr) })
+          (Executables.map({ case exe => (exe.scalatacticid, exe.belleexpr) })
+            returning Executables.map(_._Id.get))
           .insert((None, Some(expr.toString)))
         nInserts = nInserts + 1
         val paramTable = Executableparameter.map({ case param => (param.executableid.get, param.idx.get,
@@ -384,7 +388,6 @@ object SQLite {
       *       DB into the prover core in a way? */
     /** Stores a Provable in the database and returns its ID */
     override def serializeProvable(p: Provable): Int = {
-      val provableId = idgen()
       val ante = p.conclusion.ante
       val succ = p.conclusion.succ
       session.withTransaction({
@@ -394,12 +397,12 @@ object SQLite {
             * that generates an ill-formed SQL statement, so let's explicitly insert a row with a null conclusion - it
             * does the same thing but generates SQL that parses.*/
             val provableId =
-              Provables.map({ case provable => provable.conclusionid})
+              (Provables.map({ case provable => provable.conclusionid}) returning Provables.map(_._Id.get))
                 .insert(None)
             val sequentId =
-              Sequents.map({ case sequent => (sequent.provableid.get) })
+              (Sequents.map({ case sequent => sequent.provableid.get }) returning Sequents.map(_._Id.get))
                 .insert(provableId)
-            Provables.filter(_.provableid === provableId).map(provable => (provable.conclusionid.get))
+            Provables.filter(_._Id === provableId).map(provable => provable.conclusionid.get)
             .update(sequentId)
             nInserts = nInserts + 2
             nUpdates = nUpdates + 1
@@ -417,7 +420,7 @@ object SQLite {
             provableId
           case Some(sequentId) =>
             nInserts = nInserts + 1
-            Provables.map({ case provable => provable.conclusionid.get })
+            (Provables.map({ case provable => provable.conclusionid.get }) returning Provables.map(_._Id.get))
               .insert(sequentId)
         }
       })
@@ -428,9 +431,9 @@ object SQLite {
       session.withTransaction({
         nSelects = nSelects + 1
         val executables =
-          Executables.filter(_.executableid === executableId)
+          Executables.filter(_._Id === executableId)
             .list
-            .map(exe => new ExecutablePOJO(exe.executableid.get, exe.scalatacticid, exe.belleexpr))
+            .map(exe => new ExecutablePOJO(exe._Id.get, exe.scalatacticid, exe.belleexpr))
         if (executables.length < 1) throw new Exception("getExecutable type should be an Option")
         else if (executables.length == 1) executables.head
         else throw new Exception("Primary keys aren't unique in executables table.")
@@ -457,7 +460,8 @@ object SQLite {
     /*@TODO Understand whether to use the ID passed in or generate our own*/
     override def addScalaTactic(scalaTactic: ScalaTacticPOJO): Int = {
       session.withTransaction({
-        Scalatactics.map({ case tactic => tactic.location.get })
+        (Scalatactics.map({ case tactic => tactic.location.get })
+          returning Scalatactics.map(_._Id.get))
           .insert(scalaTactic.location)
       })
     }
@@ -474,7 +478,8 @@ object SQLite {
     override def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int = {
       session.withTransaction({
         val executableId =
-          Executables.map({ case exe => ( exe.scalatacticid, exe.belleexpr) })
+          (Executables.map({ case exe => ( exe.scalatacticid, exe.belleexpr)})
+            returning Executables.map(_._Id.get))
             .insert(Some(scalaTacticId), None)
         val paramTable = Executableparameter.map({ case param => (param.executableid.get, param.idx.get,
           param.valuetype.get, param.value.get)
@@ -510,14 +515,14 @@ object SQLite {
         val sequents =
           Sequents.filter(_.provableid === provableId)
             .list
-            .map({ case sequent => sequent.sequentid.get })
+            .map({ case sequent => sequent._Id.get })
         if (sequents.length != 1)
           throw new Exception("provable should have exactly 1 sequent in getConclusion, has " + sequents.length)
         val sequent = sequents.head
         val formulas =
           Sequentformulas.filter(_.sequentid === sequent)
             .list
-            .map(formula => new SequentFormulaPOJO(formula.sequentformulaid.get, formula.sequentid.get,
+            .map(formula => new SequentFormulaPOJO(formula._Id.get, formula.sequentid.get,
               formula.isante.get.toBoolean, formula.idx.get, formula.formula.get))
         val ante = sortFormulas(fromAnte = true, formulas).toIndexedSeq
         val succ = sortFormulas(fromAnte = false, formulas).toIndexedSeq
