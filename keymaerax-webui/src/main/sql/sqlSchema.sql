@@ -64,12 +64,13 @@ CREATE TABLE IF NOT EXISTS `tacticExecutions` (
 );
 
 CREATE TABLE IF NOT EXISTS `executionSteps` (
-  `stepId`           INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  -- _id has special meaning in SQLite - this is the unique row ID, which is present for all tables
+  `_id`              INTEGER PRIMARY KEY ON CONFLICT FAIL,
   `executionId`      INTEGER REFERENCES `tacticExecutions` (`executionId`),
 
   -- Rows that identify where in the proof this execution step occurs.
-  `previousStep`     INTEGER REFERENCES `executionSteps` (`stepId`),
-  `parentStep`       INTEGER REFERENCES `executionSteps` (`stepId`),
+  `previousStep`     INTEGER REFERENCES `executionSteps` (`_id`),
+  `parentStep`       INTEGER REFERENCES `executionSteps` (`_id`),
   `branchOrder`      INT,
   `branchLabel`      TEXT
     CHECK (`branchOrder` ISNULL OR `branchLabel` ISNULL), -- mixing branching styles is a bad idea.

@@ -104,7 +104,7 @@ trait Tables {
   lazy val Executables = new TableQuery(tag => new Executables(tag))
   
   /** Entity class storing rows of table Executionsteps
-   *  @param stepid Database column stepId DBType(INTEGER), PrimaryKey
+   *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
    *  @param executionid Database column executionId DBType(INTEGER)
    *  @param previousstep Database column previousStep DBType(INTEGER)
    *  @param parentstep Database column parentStep DBType(INTEGER)
@@ -116,7 +116,7 @@ trait Tables {
    *  @param inputprovableid Database column inputProvableId DBType(INTEGER)
    *  @param resultprovableid Database column resultProvableId DBType(INTEGER)
    *  @param userexecuted Database column userExecuted DBType(BOOLEAN) */
-  case class ExecutionstepsRow(stepid: Option[Int], executionid: Option[Int], previousstep: Option[Int], parentstep: Option[Int], branchorder: Option[Int], branchlabel: Option[String], alternativeorder: Option[Int], status: Option[String], executableid: Option[Int], inputprovableid: Option[Int], resultprovableid: Option[Int], userexecuted: Option[String])
+  case class ExecutionstepsRow(_Id: Option[Int], executionid: Option[Int], previousstep: Option[Int], parentstep: Option[Int], branchorder: Option[Int], branchlabel: Option[String], alternativeorder: Option[Int], status: Option[String], executableid: Option[Int], inputprovableid: Option[Int], resultprovableid: Option[Int], userexecuted: Option[String])
   /** GetResult implicit for fetching ExecutionstepsRow objects using plain SQL queries */
   implicit def GetResultExecutionstepsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ExecutionstepsRow] = GR{
     prs => import prs._
@@ -124,10 +124,10 @@ trait Tables {
   }
   /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
   class Executionsteps(_tableTag: Tag) extends Table[ExecutionstepsRow](_tableTag, "executionSteps") {
-    def * = (stepid, executionid, previousstep, parentstep, branchorder, branchlabel, alternativeorder, status, executableid, inputprovableid, resultprovableid, userexecuted) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
+    def * = (_Id, executionid, previousstep, parentstep, branchorder, branchlabel, alternativeorder, status, executableid, inputprovableid, resultprovableid, userexecuted) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
     
-    /** Database column stepId DBType(INTEGER), PrimaryKey */
-    val stepid: Column[Option[Int]] = column[Option[Int]]("stepId", O.PrimaryKey)
+    /** Database column _id DBType(INTEGER), PrimaryKey */
+    val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
     /** Database column executionId DBType(INTEGER) */
     val executionid: Column[Option[Int]] = column[Option[Int]]("executionId")
     /** Database column previousStep DBType(INTEGER) */
@@ -154,7 +154,7 @@ trait Tables {
     /** Foreign key referencing Executables (database name executables_FK_1) */
     lazy val executablesFk = foreignKey("executables_FK_1", executableid, Executables)(r => r.executableid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
     /** Foreign key referencing Executionsteps (database name executionSteps_FK_2) */
-    lazy val executionstepsFk = foreignKey("executionSteps_FK_2", (parentstep, previousstep), Executionsteps)(r => (r.stepid, r.stepid), onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+    lazy val executionstepsFk = foreignKey("executionSteps_FK_2", (parentstep, previousstep), Executionsteps)(r => (r._Id, r._Id), onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
     /** Foreign key referencing Provables (database name provables_FK_3) */
     lazy val provablesFk = foreignKey("provables_FK_3", (resultprovableid, inputprovableid), Provables)(r => (r.provableid, r.provableid), onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
     /** Foreign key referencing Tacticexecutions (database name tacticExecutions_FK_4) */

@@ -309,7 +309,7 @@ object SQLite {
           Executionsteps.map({case step => (step.executionid.get, step.previousstep, step.parentstep,
             step.branchorder.get, step.branchlabel.get, step.alternativeorder.get, step.status.get, step.executableid.get,
             step.inputprovableid.get, step.resultprovableid, step.userexecuted.get)
-          }) returning Executionsteps.map(_.stepid.get)
+          }) returning Executionsteps.map(es => es._Id.get)
         val stepId = steps
             .insert((step.executionId, step.previousStep, step.parentStep, branchOrder, branchLabel,
               step.alternativeOrder, status, step.executableId, step.inputProvableId, step.resultProvableId,
@@ -445,7 +445,7 @@ object SQLite {
         val steps =
           Executionsteps.filter(_.executionid === executionID)
             .list
-            .map(step => new ExecutionStepPOJO(step.stepid, step.executionid.get, step.previousstep, step.parentstep,
+            .map(step => new ExecutionStepPOJO(step._Id, step.executionid.get, step.previousstep, step.parentstep,
               step.branchorder, step.branchlabel, step.alternativeorder.get, ExecutionStepStatus.fromString(step.status.get),
               step.executableid.get, step.inputprovableid.get, step.resultprovableid, step.userexecuted.get.toBoolean))
         if (steps.length < 1) throw new Exception("No steps found for execution " + executionID)
@@ -492,7 +492,7 @@ object SQLite {
       session.withTransaction({
         nSelects = nSelects + 1
         nUpdates = nUpdates + 1
-        Executionsteps.filter(_.stepid === executionStepId).map(_.status).update(Some(newStatus))
+        Executionsteps.filter(_._Id === executionStepId).map(_.status).update(Some(newStatus))
       })
     }
 
