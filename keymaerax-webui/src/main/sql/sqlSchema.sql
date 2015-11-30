@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS `tacticExecutions` (
 );
 
 CREATE TABLE IF NOT EXISTS `executionSteps` (
-  -- _id has special meaning in SQLite - this is the unique row ID, which is present for all tables
+  -- _id is the SQLite keyword for the auto-generated unique row ID
   `_id`              INTEGER PRIMARY KEY ON CONFLICT FAIL,
   `executionId`      INTEGER REFERENCES `tacticExecutions` (`executionId`),
 
