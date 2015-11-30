@@ -1,21 +1,21 @@
 {
   "id": "S1",
   "sequent": {
-    "ante": [ {"id": "F1a", "formula": { "name": "lt", "children": [ {"name": "z"}, {"name": "1"} ] }} ],
+    "ante": [ {"id": "F1a", "formula": { "name": "lt", "id": "F1a0", "children": [ {"name": "z", "id": "F1a1"}, {"name": "1", "id": "F1a2"} ] }} ],
     "succ": [
       {
         "id": "F1s",
         "formula": {
-          "name": "and",
+          "name": "and", "id": "F1s0",
           "children": [
             {
-              "name": "and",
+              "name": "and", "id": "F1s1",
               "children": [
-                { "name": "lt", "children": [ {"name": "x"}, {"name": "5"} ] },
-                { "name": "true" }
+                { "name": "lt", "id": "F1s2", "children": [ {"name": "x", "id": "F1s3"}, {"name": "5", "id": "F1s4"} ] },
+                { "name": "true", "id": "F1s5" }
               ]
             },
-            { "name": "gt", "children": [ {"name": "2"}, {"name": "y"} ] }
+            { "name": "gt", "id": "F1s6", "children": [ {"name": "2", "id": "F1s7"}, {"name": "y", "id": "F1s8"} ] }
           ]
         }
       }
