@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
   */
 object TacticDebugger {
 
-  class DebuggerListener (db: DBAbstraction, executionId: Int, executableId: Int, userExecuted: Boolean,
+  class DebuggerListener (db: DBAbstraction, executionId: Int, executableId: Int,
                           alternativeOrder: Int, branch:Either[Int, String]) extends IOListener {
     class TraceNode (isFirstNode: Boolean){
       var id: Option[Int] = None
@@ -28,7 +28,7 @@ object TacticDebugger {
       val altOrder = if (isFirstNode) alternativeOrder else 0
       val branchLabel: String = branch match {case Right(label) => label case _ => null}
       val branchOrder: Option[Int] = branch match {case Left(order) => Some(order) case _ => None}
-      val userExe = if(userExecuted) isFirstNode else false
+      val userExe = isFirstNode
 
       var inputProvableId: Option[Int] = None
       var outputProvableId: Option[Int] = None
@@ -50,7 +50,7 @@ object TacticDebugger {
         val parentStep = if (parent == null) None else parent.stepId
         new ExecutionStepPOJO (stepId, executionId, siblingStep, parentStep, branchOrder,
           Option(branchLabel), alternativeOrder,status, executableId, getInputProvableId, getOutputProvableId,
-          userExecuted)
+          userExe)
       }
     }
 
