@@ -248,6 +248,7 @@ table .btn{
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
     width: 20px; /* 100px with text */
+    text-align: center;
   }
   .k4-formula > ul:first-child li.show {
     display: none;
@@ -326,6 +327,7 @@ table .btn{
     border-top-left-radius: 3px;
     border-bottom-left-radius: 3px;
     width: 20px; /* 100px with text */
+    text-align: center;
   }
   .k4-formula > ul:first-child li.show {
     display: none;
