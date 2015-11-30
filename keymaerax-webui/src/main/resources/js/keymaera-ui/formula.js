@@ -356,8 +356,8 @@ angular.module('formula')
             // TODO: Popover menu
 
             var template =
-              '<span ng-if="highlight">' + parseFormulaHelper($scope.formula, 0, false); + '</span>' +
-              '<span ng-if="!highlight" class="k4-abbreviate">' + parseFormulaHelper($scope.formula, 0, $scope.collapsed); + '</span>';
+              '<span ng-if="highlight">' + parseFormulaHelper($scope.formula, 0, false) + '</span>' +
+              '<span ng-if="!highlight" class="k4-abbreviate">' + parseFormulaHelper($scope.formula, 0, $scope.collapsed) + '</span>';
             // compile template, bind to scope, and add into DOM
             $sce.append($compile(template)($scope));
         }
