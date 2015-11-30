@@ -31,11 +31,11 @@
     <div class="col-md-12 text-center">
         <small>
             <a ng-click="fetchParent(deductionPath[deductionPath.length-1])"
-               ng-if="deductionPath.length > 0"><span class="fa fa-angle-down"></span></a>
+               ng-if="deductionPath.length > 0"><span class="fa fa-angle-down"> Parent</span></a>
             <a ng-click="fetchParent(goalId)"
-               ng-if="deductionPath.length <= 0"><span class="fa fa-angle-down"></span></a>
-            <a><span class="fa fa-code-fork"></span></a>
-            <a><span class="fa fa-angle-double-down"></span></a>
+               ng-if="deductionPath.length <= 0"><span class="fa fa-angle-down"> Parent</span></a>
+            <a><span class="fa fa-code-fork"> Branching point</span></a>
+            <a><span class="fa fa-angle-double-down"> Expand all</span></a>
         </small>
     </div>
 </div>
