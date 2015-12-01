@@ -11,7 +11,9 @@
         <div class="row k4-flexrow">
             <div class="col-md-12 k4-formula k4-flexcell">
                 <div class="k4-formula-content k4-abbreviate">
-                    <k4-formula formula="sequent.ante[0].formula" highlight="false" collapsed="true"></k4-formula>
+                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
+                                formula="sequent.ante[0].formula" highlight="false" collapsed="true"
+                                on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
                 </div>
             </div>
         </div>
@@ -32,7 +34,9 @@
         <div class="row k4-flexrow" ng-if="sequent.succ.length > 0">
             <div class="col-md-12 k4-formula k4-flexcell">
                 <div class="k4-formula-content k4-abbreviate">
-                    <k4-formula formula="sequent.succ[0].formula" highlight="false" collapsed="true"></k4-formula>
+                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
+                                formula="sequent.succ[0].formula" highlight="false" collapsed="true"
+                                on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
                 </div>
             </div>
         </div>
@@ -57,12 +61,16 @@
                 </ul>
                 <div class="k4-formula-content" ng-click="handleFormulaClick(f,true)">
                     <small>-{{$index+1}}: </small>
-                    <k4-formula formula="f.formula" highlight="true" collapsed="false"></k4-formula>
+                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
+                                formula="f.formula" highlight="true" collapsed="false"
+                                on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
                 </div>
             </div>
             <div class="col-md-12 k4-formula k4-flexcell" ng-if="readOnly">
                 <div class="k4-formula-content">
-                    <k4-formula formula="f.formula" highlight="false" collapsed="false"></k4-formula>
+                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
+                                formula="f.formula" highlight="false" collapsed="false"
+                                on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
                 </div>
             </div>
         </div>
@@ -97,13 +105,19 @@
                     <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaerax.step')"><span class="fa fa-step-forward"></span></a></li>
                     <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="fa fa-eye-slash"></span></a></li>
                 </ul>
-                <div class="k4-formula-content" ng-click="handleFormulaClick(f,false)">
-                    <small>{{$index + 1}}: </small><k4-formula pId="proofId" nId="nodeId" formula="f.formula" highlight="true" collapsed="false"></k4-formula>
+                <div class="k4-formula-content">
+                <!--<div class="k4-formula-content" ng-click="handleFormulaClick(f,false)">-->
+                    <small>{{$index + 1}}: </small>
+                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
+                                formula="f.formula" highlight="true" collapsed="false"
+                                on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
                 </div>
             </div>
             <div class="col-md-12 k4-formula k4-flexcell" ng-if="readOnly">
                 <div class="k4-formula-content">
-                    <k4-formula pId="proofId", nId="nodeId" formula="f.formula" highlight="false" collapsed="false"></k4-formula>
+                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
+                                formula="f.formula" highlight="false" collapsed="false"
+                                on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
                 </div>
             </div>
         </div>

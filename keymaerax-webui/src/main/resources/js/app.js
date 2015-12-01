@@ -93,6 +93,6 @@ keymaeraProofApp.config(['$routeProvider',
 // triggers for tooltip and popover
 keymaeraProofApp.config(['$tooltipProvider', function($tooltipProvider) {
   $tooltipProvider.setTriggers({
-    'contextmenu': 'click'
+    'contextmenu': 'blur'
   });
 }]);

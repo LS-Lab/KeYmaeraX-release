@@ -48,6 +48,12 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         var item = scope.agenda.itemsMap[scope.nodeId];
         return candidates.filter(function(e) { return e !== item.goal && item.path.indexOf(e) < 0; });
       }
+
+      scope.onUseAt = function(formulaId, axiomId) {
+        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/' + formulaId + '/use/' + axiomId).success(function(data) {
+          console.log("used axiom, got new node for proof tree " + data);
+        }
+      }
     }
 
     return {

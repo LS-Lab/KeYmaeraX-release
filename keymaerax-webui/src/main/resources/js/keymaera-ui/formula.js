@@ -1,14 +1,33 @@
 angular.module('formula', ['ngSanitize']);
 
+/** Right-click directive (TODO move someplace shared with other directives) */
+angular.module('formula')
+  .directive('ngRightClick', function($parse) {
+    return function(scope, element, attrs) {
+        var fn = $parse(attrs.ngRightClick);
+        element.bind('contextmenu', function(event) {
+            scope.$apply(function() {
+                event.preventDefault();
+                fn(scope, {$event:event});
+            });
+        });
+    };
+  });
+
 /** Renders a formula into hierarchically structured spans */
 angular.module('formula')
-  .directive('k4Formula', ["$compile", function($compile) {
+  .directive('k4Formula', ['$compile', '$http', function($compile, $http) {
     return {
         restrict: 'AE',
         scope: {
+            userId: '=',
+            proofId: '=',
+            nodeId: '=',
+            goalId: '=',
             formula: '=',
             highlight: '=',
-            collapsed: '=?'
+            collapsed: '=?',
+            onAxiom: '&'     // onAxiom(formulaId, axiomId)
         },
         link: function($scope, $sce) {
             var span = function(id, content, depth) {
@@ -16,7 +35,13 @@ angular.module('formula')
                     return '<span class="hl" id="' + id + '"' +
                              'onmouseover="$(event.target).addClass(\'hlhover\');"' +
                              'onmouseout="$(event.target).removeClass(\'hlhover\');"' +
-                             'ng-click="formulaClick(\'' + id + '\', $event)">' + content + '</span>';
+                             'ng-click="formulaClick(\'' + id + '\', $event)"' +
+                             'ng-right-click="formulaRightClick(\'' + id + '\', $event)"' +
+                             // initialize formulaId for popover template, use ng-repeat for scoping
+                             'ng-repeat="formulaId in [\'' + id + '\']"' +
+                             'uib-popover-template="\'js/keymaera-ui/axiomPopoverTemplate.html\'"' +
+                             'popover-title="Apply axiom"' +
+                             'popover-trigger="contextmenu" popover-placement="bottom" tabindex="-1">' + content + '</span>';
                 } else {
                     return content;
                 }
@@ -347,13 +372,35 @@ angular.module('formula')
                 return items.join("");
             }
 
+            $scope.formulaAxiomsMap = {};
+
             $scope.formulaClick = function(formulaId, event) {
               // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
               event.stopPropagation();
-              console.log("Formula click " + formulaId)
+              console.log('Formula click ' + formulaId);
+              $scope.onAxiom({formulaId: formulaId, axiomId: "step"});
             }
 
-            // TODO: Popover menu
+            $scope.formulaRightClick = function(formulaId, event) {
+              event.stopPropagation();
+              // emulate hoverable popover (to come in later ui-bootstrap version) with hide on blur (need to focus for blur)
+              event.target.focus();
+              if ($scope.formulaAxiomsMap[formulaId] === undefined) {
+                // axioms not fetched yet
+                $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.nodeId + '/' + $scope.goalId + '/' + formulaId + '/list')
+                  .success(function(data) {
+                    console.log("Axioms for " + formulaId + ": " + data.length)
+                    $scope.formulaAxiomsMap[formulaId] = data;
+                });
+              } else {
+                console.log("Supplying axioms for " + formulaId + " from local cache: " + $scope.formulaAxiomsMap[formulaId].length)
+              }
+            }
+
+            $scope.applyAxiom = function(formulaId, axiomId) {
+              console.log("Applying axiom " + axiomId + " on formula " + formulaId);
+              $scope.onAxiom({formulaId: formulaId, axiomId: axiomId});
+            }
 
             var template =
               '<span ng-if="highlight">' + parseFormulaHelper($scope.formula, 0, false) + '</span>' +
