@@ -73,9 +73,9 @@
 <div class="row" ng-controller="TaskCtrl">
     <div class="col-md-12">
         <!-- TODO restrict to < 10 tasks as tabs, then complement the rest with dropdown -->
-        <tabset justified="true">
-            <tab active="task.isSelected" ng-repeat="task in agenda.items()" select="agenda.select(task)">
-                <tab-heading>
+        <uib-tabset justified="true">
+            <uib-tab active="task.isSelected" ng-repeat="task in agenda.items()" select="agenda.select(task)">
+                <uib-tab-heading>
                     <!-- ng-class={'fa fa-tasks':openGoal, 'fa fa-check-square-o':closedGoal} -->
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
                     <div class="row">
@@ -97,7 +97,7 @@
                         <!--</div>-->
                         <div class="col-md-1" cg-busy="defer" ng-if="defer"></div>
                     </div>
-                </tab-heading>
+                </uib-tab-heading>
                 <k4-sequentproof user-id="userId"
                                  proof-id="proofId"
                                  node-id="task.id"
@@ -106,7 +106,7 @@
                                  proof-tree="prooftree"
                                  agenda="agenda"
                                  read-only="false"></k4-sequentproof>
-            </tab>
-        </tabset>
+            </uib-tab>
+        </uib-tabset>
     </div>
 </div>

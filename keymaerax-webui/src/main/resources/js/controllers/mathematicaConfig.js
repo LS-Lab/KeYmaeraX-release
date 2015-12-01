@@ -1,17 +1,17 @@
 angular.module('keymaerax.controllers').controller('MathematicaConfig',
-  function($scope, $rootScope, $http, $cookies, $modal, $routeParams) {
+  function($scope, $rootScope, $http, $cookies, $uibModal, $routeParams) {
     $http.get("/config/mathematica/suggest")
       .success(function(data) {
-          if(data.errorThrown) showCaughtErrorMessage($modal, data, "Encountered an error when attempting to get a suggested Mathematica configuration.")
+          if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Encountered an error when attempting to get a suggested Mathematica configuration.")
           else $scope.mathematicaConfigSuggestion = data
       })
       .error(function() {
-          showErrorMessage($modal, "Encountered an error when attempting to get a suggested Mathematica configuration.")
+          showErrorMessage($uibModal, "Encountered an error when attempting to get a suggested Mathematica configuration.")
       });
 
     $http.get("/config/mathematica")
       .success(function(data) {
-          if(data.errorThrown) showCaughtErrorMessage($modal, data, "Failed to retrieve the server's current Mathematica configuration")
+          if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Failed to retrieve the server's current Mathematica configuration")
           else {
               if (data.linkName !== "" && data.jlinkLibPath !== "") {
                   $scope.linkName = data.linkName;
@@ -27,7 +27,7 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
           }
       })
       .error(function() {
-          showErrorMessage($modal, "Failed to retrieve the server's current Mathematica configuration.")
+          showErrorMessage($uibModal, "Failed to retrieve the server's current Mathematica configuration.")
       });
 
     $scope.configureMathematica = function() {
@@ -42,7 +42,7 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
                     $scope.MathematicaForm.linkName.$setValidity("FileExists", true);
                     $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", true);
 
-                    $modal.open({
+                    $uibModal.open({
                         templateUrl: 'partials/mathematicaconfig_update.html',
                         controller: 'MathematicaConfig.UpdateDialog',
                         size: 'md'
@@ -52,7 +52,7 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
                     $rootScope.mathematicaIsConfigured = data.configured;
                 }
                 else if(data.errorThrown) {
-                    showCaughtErrorMessage($modal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration")
+                    showCaughtErrorMessage($uibModal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration")
                 }
                 else {
                     var kernelNameExists = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.kernelName) > -1 &&
@@ -77,7 +77,7 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
                 }
             })
             .error(function(data) {
-                showCaughtErrorMessage($modal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration.")
+                showCaughtErrorMessage($uibModal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration.")
             })
     }
 
