@@ -50,9 +50,16 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       }
 
       scope.onUseAt = function(formulaId, axiomId) {
-        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/' + formulaId + '/use/' + axiomId).success(function(data) {
-          console.log("used axiom, got new node for proof tree " + data);
-        }
+        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + scope.goalId + '/' + formulaId + '/use/' + axiomId).success(function(data) {
+          scope.proofTree.nodesMap[data.id] = data;
+          scope.proofTree.nodesMap[data.parent].children = [data.id];
+          scope.proofTree.nodesMap[data.parent].rule = data.byRule;
+          // got new open goal, prepend previous open goal to deduction path
+          var item = scope.agenda.itemsMap[scope.nodeId];
+          item.path.unshift(item.goal);
+          item.goal = data.id;
+          scope.goalId = data.id;
+        });
       }
     }
 

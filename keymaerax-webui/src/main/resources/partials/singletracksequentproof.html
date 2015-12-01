@@ -1,28 +1,28 @@
 <!-- Open Goal -->
 <div class="row">
-    <div class="col-md-12" ng-init="goal=proofTree.nodesMap[goalId]">
+    <div class="col-md-12">
         <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
-        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId" sequent="goal.sequent"
+        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId" sequent="proofTree.nodesMap[goalId].sequent"
                     read-only="readOnly" collapsed="false" on-use-at="onUseAt(formulaId, axiomId)"></k4-sequent>
     </div>
 </div>
 <!-- Conclusion -->
 <div class="row k4-proofrow" ng-repeat="stepId in deductionPath">
-    <div class="col-md-12 k4-goalwithsiblings" ng-init="step=proofTree.nodesMap[stepId]">
-        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId" sequent="step.sequent"
+    <div class="col-md-12 k4-goalwithsiblings">
+        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId" sequent="proofTree.nodesMap[stepId].sequent"
                     read-only="true" collapsed="true" on-use-at="onUseAt(formulaId, axiomId)"></k4-sequent>
         <ul>
-            <li ng-repeat="sibling in siblingCandidates(step.children)">
+            <li ng-repeat="sibling in siblingCandidates(proofTree.nodesMap[stepId].children)">
                 <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
                 <!-- todo HTML tooltip would be nice, but couldn't get to work so far -->
-                <a ng-init="item=agenda.itemsByProofStep(sibling)[0]" ng-click="agenda.select(item)"
+                <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
                    uib-tooltip="{{tooltip(proofTree.nodesMap[sibling].sequent)}}" tooltip-trigger
-                   tooltip-placement="top">{{item.id}}</a>
+                   tooltip-placement="top">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
             </li>
         </ul>
     </div>
     <ul>
-        <li>{{step.rule.name}}</li>
+        <li>{{proofTree.nodesMap[stepId].rule.name}}</li>
     </ul>
     <!-- add buttons: rewind to here, start alternative proof attempt etc. -->
 </div>

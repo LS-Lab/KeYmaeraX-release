@@ -377,7 +377,6 @@ angular.module('formula')
             $scope.formulaClick = function(formulaId, event) {
               // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
               event.stopPropagation();
-              console.log('Formula click ' + formulaId);
               $scope.onAxiom({formulaId: formulaId, axiomId: "step"});
             }
 
@@ -389,7 +388,6 @@ angular.module('formula')
                 // axioms not fetched yet
                 $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.nodeId + '/' + $scope.goalId + '/' + formulaId + '/list')
                   .success(function(data) {
-                    console.log("Axioms for " + formulaId + ": " + data.length)
                     $scope.formulaAxiomsMap[formulaId] = data;
                 });
               } else {
