@@ -1131,6 +1131,7 @@ trait UnifyUSCalculus {
    * ----------------
    *   G, a |- b, D
    * }}}
+    * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008. Lemma 7"
    */
   private def inverseImplyR: ForwardTactic = pr => {
     val pos = SuccPos(0)
