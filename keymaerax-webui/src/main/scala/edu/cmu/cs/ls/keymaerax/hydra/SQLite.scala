@@ -9,7 +9,7 @@ import java.nio.channels.Channels
 import java.sql.SQLException
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import _root_.edu.cmu.cs.ls.keymaerax.core.Sequent
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
@@ -343,10 +343,28 @@ object SQLite {
         executableId
       })
 
+    def serializeSequent(sequent: Sequent, provableId: Int, subgoal: Option[Int]): Unit = {
+      val ante = sequent.ante
+      val succ = sequent.succ
+      val sequentId =
+        (Sequents.map({ case sequent => (sequent.provableid.get, sequent.idx) }) returning Sequents.map(_._Id.get))
+          .insert(provableId, subgoal)
+      nInserts = nInserts + 1
+      val formulas = Sequentformulas.map({ case fml => (fml.sequentid.get,
+        fml.isante.get, fml.idx.get, fml.formula.get)
+      })
+      for (i <- ante.indices) {
+        nInserts = nInserts + 1
+        formulas.insert((sequentId, true.toString, i, ante(i).toString))
+      }
+      for (i <- succ.indices) {
+        nInserts = nInserts + 1
+        formulas.insert((sequentId, false.toString, i, succ(i).toString))
+      }
+    }
+
     /** Stores a Provable in the database and returns its ID */
     override def serializeProvable(p: Provable): Int = {
-      val ante = p.conclusion.ante
-      val succ = p.conclusion.succ
       session.withTransaction({
         /* Working around bug in slick: The natural thing to write would be insert() without any arguments, but
         * that generates an ill-formed SQL statement, so let's explicitly insert a row with a null conclusion - it
@@ -354,21 +372,9 @@ object SQLite {
         val provableId =
           (Provables.map({ case provable => provable._Id}) returning Provables.map(_._Id.get))
             .insert(None)
-        /* Insert conclusion */
-        val sequentId =
-          (Sequents.map({ case sequent => sequent.provableid.get }) returning Sequents.map(_._Id.get))
-            .insert(provableId)
-        nInserts = nInserts + 2
-        val formulas = Sequentformulas.map({ case fml => (fml.sequentid.get,
-          fml.isante.get, fml.idx.get, fml.formula.get)
-        })
-        for (i <- ante.indices) {
-          nInserts = nInserts + 1
-          formulas.insert((sequentId, true.toString, i, ante(i).toString))
-        }
-        for (i <- succ.indices) {
-          nInserts = nInserts + 1
-          formulas.insert((sequentId, false.toString, i, succ(i).toString))
+        serializeSequent(p.conclusion, provableId, None)
+        for(i <- p.subgoals.indices) {
+          serializeSequent(p.subgoals(i), provableId, Some(i))
         }
         provableId
       })
@@ -456,24 +462,36 @@ object SQLite {
       sorted.map({ case formula => formula.formulaStr.asFormula })
     }
 
+    def getSequent(sequentId: Int)(implicit session: Session): Sequent = {
+      val formulas =
+        Sequentformulas.filter(_.sequentid === sequentId)
+          .list
+          .map(formula => new SequentFormulaPOJO(formula._Id.get, formula.sequentid.get,
+            formula.isante.get.toBoolean, formula.idx.get, formula.formula.get))
+      val ante = sortFormulas(fromAnte = true, formulas).toIndexedSeq
+      val succ = sortFormulas(fromAnte = false, formulas).toIndexedSeq
+      Sequent(null, ante, succ)
+    }
+
     def getSequents(provableId: Int): (List[Sequent], Sequent) = {
       session.withTransaction({
         nSelects = nSelects + 1
         val sequents =
           Sequents.filter(_.provableid === provableId)
             .list
-            .map({ case sequent => sequent._Id.get })
-        if (sequents.length != 1)
-          throw new Exception("provable should have exactly 1 sequent in getConclusion, has " + sequents.length)
-        val sequent = sequents.head
-        val formulas =
-          Sequentformulas.filter(_.sequentid === sequent)
-            .list
-            .map(formula => new SequentFormulaPOJO(formula._Id.get, formula.sequentid.get,
-              formula.isante.get.toBoolean, formula.idx.get, formula.formula.get))
-        val ante = sortFormulas(fromAnte = true, formulas).toIndexedSeq
-        val succ = sortFormulas(fromAnte = false, formulas).toIndexedSeq
-        (Nil, Sequent(null, ante, succ))
+            .map({ case sequent => (sequent._Id.get, sequent.idx) })
+        val (conclusions, subgoals) =
+          sequents.partition({case (id, idx) => idx.isEmpty})
+        if(conclusions.length != 1)
+          throw new Exception("Provable should have exactly one conclusion in getSequents")
+        val conclusion = conclusions.head
+        val conclusionSequent = getSequent(conclusion._1)
+        val sortedSubgoals = subgoals.sortWith({case (x, y) => x._2.get < y._2.get}).map({case (x, _) => x})
+        var revSequents: List[Sequent] = Nil
+        for (i <- sortedSubgoals.indices) {
+          revSequents = getSequent(sortedSubgoals(i)) :: revSequents
+        }
+        (revSequents.reverse, conclusionSequent)
       })
     }
 
