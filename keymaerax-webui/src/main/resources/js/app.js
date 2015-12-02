@@ -10,6 +10,7 @@
   'ui.bootstrap.tabs',
   'ui.bootstrap.tooltip',
   'ui.bootstrap.popover',
+  'ui.bootstrap.collapse',
   'keymaerax.controllers',
   'progressMeter',
   'proofProgressChart',

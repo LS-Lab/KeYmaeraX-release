@@ -51,7 +51,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         $scope.agenda.select($scope.agenda.itemsMap[itemId]);
       },
       itemsByProofStep: function(ptNodeId) {
-        return $.grep($scope.agenda.items(), function(e) { return e.path.indexOf(ptNodeId) >= 0; });
+        return $.grep($scope.agenda.items(), function(e) {
+          return $.grep(e.path, function(v, i) { return v.id == ptNodeId; }).length > 0; });
       }
     }
     $scope.prooftree = {

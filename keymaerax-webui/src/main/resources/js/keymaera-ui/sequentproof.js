@@ -35,10 +35,10 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
           // append parent at the end of the deduction path of all relevant agenda items
           var items = $.map(data.children, function(e) { return scope.agenda.itemsByProofStep(e); }); // JQuery flat map
           $.each(items, function(i, v) {
-            if (data.children.indexOf(v.path[v.path.length - 1]) < 0) {
+            if (data.children.indexOf(v.path[v.path.length - 1].id) < 0) {
               console.error('Expected last path element to be a child of ' + data.id + ', but agenda item ' + v.id +
-                ' has ' + v.path[v.path.length - 1] + ' as last path element');
-            } else v.path.push(data.id); });
+                ' has ' + v.path[v.path.length - 1].id + ' as last path element');
+            } else v.path.push({id: data.id, isCollapsed: false}); });
         });
       }
 
@@ -51,18 +51,41 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       /** Filters sibling candidates: removes this item's goal and path */
       scope.siblingCandidates = function(candidates) {
         var item = scope.agenda.itemsMap[scope.nodeId];
-        return candidates.filter(function(e) { return item.path.indexOf(e) < 0; });
+        return candidates.filter(function(e) {
+          return $.grep(item.path, function(pe, i) { return pe.id === e; }).length <= 0;
+        });
       }
 
       scope.onUseAt = function(formulaId, axiomId) {
-        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + scope.deductionPath[0] + '/' + formulaId + '/use/' + axiomId).success(function(data) {
+        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + scope.deductionPath[0].id + '/' + formulaId + '/use/' + axiomId).success(function(data) {
           scope.proofTree.nodesMap[data.id] = data;
           scope.proofTree.nodesMap[data.parent].children = [data.id];
           scope.proofTree.nodesMap[data.parent].rule = data.byRule;
           // prepend new open goal to deduction path
-          scope.agenda.itemsMap[scope.nodeId].path.unshift(data.id);
+          scope.agenda.itemsMap[scope.nodeId].path.unshift({id: data.id, isCollapsed: false});
         });
       }
+
+      scope.isConclusionCollapsed = function(conclusionIdx) {
+        // a conclusion is collapsed, if it is itself collapsed or if any of its children is collapsed
+        // first element in deduction path is goal
+        for (var i = 1; i < conclusionIdx+2; i++) {
+          if (scope.deductionPath[i].isCollapsed) return true;
+        }
+        return false;
+      }
+      scope.setConclusionCollapsed = function(conclusionIdx, collapsed) {
+        scope.deductionPath[conclusionIdx+1].isCollapsed = collapsed;
+      }
+      scope.minCollapsedIndex = function() {
+        // there is no fast JQuery implementation for this
+        for (var i = 1; i < scope.deductionPath.length; i++) {
+          if (scope.deductionPath[i].isCollapsed) return i-1;
+        }
+        return scope.deductionPath.length-1;
+      }
+
+      scope.deductionPath = $.map(scope.deductionPath, function(v, i) { return {id: v, isCollapsed: false}; });
     }
 
     return {
