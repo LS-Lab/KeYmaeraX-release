@@ -73,15 +73,13 @@
       "id": "N1",
       "name": "base case",
       "proofId": "P1",
-      "goal": "S2",
-      "path": []
+      "path": ["S2"]
     },
     "N2": {
       "id": "N2",
       "name": "whatever",
       "proofId": "P1",
-      "goal": "S3",
-      "path": []
+      "path": ["S3"]
     }
   }
 }

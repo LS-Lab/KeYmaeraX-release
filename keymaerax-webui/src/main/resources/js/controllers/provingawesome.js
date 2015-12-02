@@ -38,7 +38,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.userId = $cookies.get('userId');
     // TODO convert agenda and proof tree into a service?
     $scope.agenda = {
-      itemsMap: {},           // { id: { id: String, name: String, isSelected: Bool, goal: ref PTNode, path: [ref PTNode] } }, ... }
+      itemsMap: {},           // { id: { id: String, name: String, isSelected: Bool, path: [ref PTNode] } }, ... }
       selectedId: undefined,  // ref Item
       itemIds: function() { return Object.keys(itemsMap); },
       items: function() { return $.map($scope.agenda.itemsMap, function(v) {return v;}); },
@@ -51,7 +51,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         $scope.agenda.select($scope.agenda.itemsMap[itemId]);
       },
       itemsByProofStep: function(ptNodeId) {
-        return $.grep($scope.agenda.items(), function(e) { return e.goal === ptNodeId || $.inArray(ptNodeId, e.path) > -1; });
+        return $.grep($scope.agenda.items(), function(e) { return e.path.indexOf(ptNodeId) >= 0; });
       }
     }
     $scope.prooftree = {

@@ -2,14 +2,16 @@
 <div class="row">
     <div class="col-md-12">
         <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
-        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId" sequent="proofTree.nodesMap[goalId].sequent"
+        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath[0]"
+                    sequent="proofTree.nodesMap[deductionPath[0]].sequent"
                     read-only="readOnly" collapsed="false" on-use-at="onUseAt(formulaId, axiomId)"></k4-sequent>
     </div>
 </div>
 <!-- Conclusion -->
-<div class="row k4-proofrow" ng-repeat="stepId in deductionPath">
+<div class="row k4-proofrow" ng-repeat="stepId in deductionPath.slice(1)">
     <div class="col-md-12 k4-goalwithsiblings">
-        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId" sequent="proofTree.nodesMap[stepId].sequent"
+        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath[0]"
+                    sequent="proofTree.nodesMap[stepId].sequent"
                     read-only="true" collapsed="true" on-use-at="onUseAt(formulaId, axiomId)"></k4-sequent>
         <ul>
             <li ng-repeat="sibling in siblingCandidates(proofTree.nodesMap[stepId].children)">
@@ -27,7 +29,7 @@
     <!-- add buttons: rewind to here, start alternative proof attempt etc. -->
 </div>
 <!-- navigation buttons below bottom-most proof row -->
-<div class="row" ng-if="(deductionPath.length === 0 && goalId !== proofTree.root) || (deductionPath.length > 0 && deductionPath[deductionPath.length-1] !== proofTree.root)">
+<div class="row" ng-if="deductionPath[deductionPath.length-1] !== proofTree.root">
     <div class="col-md-12 text-center">
         <small>
             <a ng-click="fetchParent(deductionPath[deductionPath.length-1])"
