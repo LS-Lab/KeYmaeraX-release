@@ -343,87 +343,34 @@ object SQLite {
         executableId
       })
 
-    /* I originally suspected that the writes alone were slowing us down, but if you enable deduplicateSequents you
-     * will see this is not the case. This flag enables a query before every provable creation that checks whether the
-     * sequent is already present. This significantly reduces writes to the sequent table, but the select queries end
-     * up taking the same length of time and the "is this sequent present" computation takes much much longer
-     * than all the queries using the naive algorithm below.
-     * Due to the slowness I'm leaving the flag disabled, but leaving the code around since it may be of interest while
-     * doing optimizations. */
-    private val deduplicateSequents = false
-    private var searchTime: Long = 0
-    private var processTime: Long = 0
-    private def findSequentId(s: Sequent): Option[Int] = {
-      if (deduplicateSequents) {
-        nSelects = nSelects + 1
-        val t1 = System.nanoTime()
-        val lst = Sequentformulas.list
-        val t2 = System.nanoTime()
-        searchTime = searchTime + t2 - t1
-        val fmls = lst.filter(row =>
-          (row.isante.get.toBoolean && s.ante.exists(p => row.formula.get == p.toString))
-         || (!row.isante.get.toBoolean && s.succ.exists(p => row.formula.get == p.toString)))
-        val fmlss = fmls.sortWith((row1, row2) => row1.sequentid.get.compare(row2.sequentid.get) > 0).groupBy(row => row.sequentid)
-        val ante = s.ante.zipWithIndex
-        val succ = s.succ.zipWithIndex
-        val which = fmlss.find({case ((_: Option[Int], rows)) =>
-          val anteFound =
-            ante.forall({case (fml:Formula, int:Int) => rows.exists(row =>
-              row.idx.get == int && row.isante.get.toBoolean && row.formula.get == fml.toString)})
-          val succFound =
-            succ.forall({case (fml:Formula, int:Int) => rows.exists(row =>
-              row.idx.get == int && !row.isante.get.toBoolean && row.formula.get == fml.toString)})
-          anteFound && succFound})
-        val t3 = System.nanoTime()
-        processTime = processTime + t3 - t2
-        which match {
-          case None => None
-          case Some((_, Nil)) => None
-          case Some((_, (x :: _))) => Some(x.sequentid.get)
-        }
-      }
-      else None
-    }
-
-    /** @TODO what if we want to extract a proof witness from a deserialized provable? Doesn't this put the
-      *       DB into the prover core in a way? */
     /** Stores a Provable in the database and returns its ID */
     override def serializeProvable(p: Provable): Int = {
       val ante = p.conclusion.ante
       val succ = p.conclusion.succ
       session.withTransaction({
-        findSequentId(p.conclusion) match {
-          case None =>
-            /* Working around bug in slick: The natural thing to write would be insert() without any arguments, but
-            * that generates an ill-formed SQL statement, so let's explicitly insert a row with a null conclusion - it
-            * does the same thing but generates SQL that parses.*/
-            val provableId =
-              (Provables.map({ case provable => provable.conclusionid}) returning Provables.map(_._Id.get))
-                .insert(None)
-            val sequentId =
-              (Sequents.map({ case sequent => sequent.provableid.get }) returning Sequents.map(_._Id.get))
-                .insert(provableId)
-            Provables.filter(_._Id === provableId).map(provable => provable.conclusionid.get)
-            .update(sequentId)
-            nInserts = nInserts + 2
-            nUpdates = nUpdates + 1
-            val formulas = Sequentformulas.map({ case fml => (fml.sequentid.get,
-              fml.isante.get, fml.idx.get, fml.formula.get)
-            })
-            for (i <- ante.indices) {
-              nInserts = nInserts + 1
-              formulas.insert((sequentId, true.toString, i, ante(i).toString))
-            }
-            for (i <- succ.indices) {
-              nInserts = nInserts + 1
-              formulas.insert((sequentId, false.toString, i, succ(i).toString))
-            }
-            provableId
-          case Some(sequentId) =>
-            nInserts = nInserts + 1
-            (Provables.map({ case provable => provable.conclusionid.get }) returning Provables.map(_._Id.get))
-              .insert(sequentId)
+        /* Working around bug in slick: The natural thing to write would be insert() without any arguments, but
+        * that generates an ill-formed SQL statement, so let's explicitly insert a row with a null conclusion - it
+        * does the same thing but generates SQL that parses.*/
+        val provableId =
+          (Provables.map({ case provable => provable._Id}) returning Provables.map(_._Id.get))
+            .insert(None)
+        /* Insert conclusion */
+        val sequentId =
+          (Sequents.map({ case sequent => sequent.provableid.get }) returning Sequents.map(_._Id.get))
+            .insert(provableId)
+        nInserts = nInserts + 2
+        val formulas = Sequentformulas.map({ case fml => (fml.sequentid.get,
+          fml.isante.get, fml.idx.get, fml.formula.get)
+        })
+        for (i <- ante.indices) {
+          nInserts = nInserts + 1
+          formulas.insert((sequentId, true.toString, i, ante(i).toString))
         }
+        for (i <- succ.indices) {
+          nInserts = nInserts + 1
+          formulas.insert((sequentId, false.toString, i, succ(i).toString))
+        }
+        provableId
       })
     }
 
@@ -526,7 +473,7 @@ object SQLite {
               formula.isante.get.toBoolean, formula.idx.get, formula.formula.get))
         val ante = sortFormulas(fromAnte = true, formulas).toIndexedSeq
         val succ = sortFormulas(fromAnte = false, formulas).toIndexedSeq
-        Sequent(null, ante, succ)
+        (Nil, Sequent(null, ante, succ))
       })
     }
 
@@ -537,7 +484,6 @@ object SQLite {
 
     def printStats = {
       println("Updates: " + nUpdates + " Inserts: " + nInserts + " Selects: " + nSelects)
-      println("Searching time: " + (searchTime / 1000000000.0) + " Processing Time: " + (processTime / 1000000000.0))
     }
 
     def proofSteps(executionId: Int): List[ExecutionStepPOJO] = {
@@ -580,7 +526,8 @@ object SQLite {
         throw new Exception("Tried to get proof tree for empty execution with ID " + executionId)
       }
       val initialProvable = steps.head.inputProvableId
-      var openGoals : List[TreeNode] =
+      var openGoals : List[TreeNode] = ???
+      ???
       /*
       * {proofTree:
       *  {id: proofId
