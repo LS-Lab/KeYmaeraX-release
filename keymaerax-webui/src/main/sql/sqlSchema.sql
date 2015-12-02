@@ -42,8 +42,7 @@ CREATE TABLE IF NOT EXISTS `provables` (
 CREATE TABLE IF NOT EXISTS `sequents` (
   `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
   `provableId` INTEGER REFERENCES `provables` (`_id`),
-  `idx` INTEGER, -- index of the sequent within the provable. If null then this is the conclusion of the provable.
-  `conclusionId` INTEGER REFERENCES `sequents` (`_id`)
+  `idx` INTEGER -- index of the sequent within the provable. If null then this is the conclusion of the provable.
 );
 
 CREATE TABLE IF NOT EXISTS `sequentFormulas` (
