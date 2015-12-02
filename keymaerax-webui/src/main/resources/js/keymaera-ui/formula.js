@@ -400,9 +400,10 @@ angular.module('formula')
               $scope.onAxiom({formulaId: formulaId, axiomId: axiomId});
             }
 
+            var fmlMarkup = parseFormulaHelper($scope.formula, 0, $scope.collapsed);
             var template =
-              '<span ng-if="highlight">' + parseFormulaHelper($scope.formula, 0, false) + '</span>' +
-              '<span ng-if="!highlight" class="k4-abbreviate">' + parseFormulaHelper($scope.formula, 0, $scope.collapsed) + '</span>';
+              '<span ng-if="!collapsed">' + fmlMarkup + '</span>' +
+              '<span ng-if="collapsed" class="k4-abbreviate">' + fmlMarkup + '</span>';
             // compile template, bind to scope, and add into DOM
             $sce.append($compile(template)($scope));
         }

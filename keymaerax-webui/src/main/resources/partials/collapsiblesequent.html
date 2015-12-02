@@ -7,12 +7,12 @@
 
     <!-- Collapsed antecedent, also readonly -->
     <div class="col-md-5">
-        <div class="pull-right" ng-if="sequent.ante.length > 0">
-        <div class="row k4-flexrow">
-            <div class="col-md-12 k4-formula k4-flexcell">
+        <div class="pull-right">
+        <div class="row k4-flexrow" ng-repeat="f in sequent.ante | limitTo:1" id="{{f.id}}">
+            <div class="col-md-12 k4-formula">
                 <div class="k4-formula-content k4-abbreviate">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
-                                formula="sequent.ante[0].formula" highlight="false" collapsed="true"
+                                formula="f.formula" highlight="false" collapsed="true"
                                 on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
                 </div>
             </div>
@@ -31,11 +31,11 @@
 
     <!-- Collapsed succedent -->
     <div class="col-md-5">
-        <div class="row k4-flexrow" ng-if="sequent.succ.length > 0">
-            <div class="col-md-12 k4-formula k4-flexcell">
+        <div class="row k4-flexrow" ng-repeat="f in sequent.succ | limitTo:1" id="{{f.id}}">
+            <div class="col-md-12 k4-formula">
                 <div class="k4-formula-content k4-abbreviate">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
-                                formula="sequent.succ[0].formula" highlight="false" collapsed="true"
+                                formula="f.formula" highlight="false" collapsed="true"
                                 on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
                 </div>
             </div>
@@ -54,19 +54,19 @@
     <div class="col-md-5">
         <div class="pull-right">
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante" id="{{f.id}}">
-            <div class="col-md-12 k4-formula k4-flexcell" ng-if="!readOnly">
+            <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
                     <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaerax.step')"><span class="fa fa-step-forward"></span></a></li>
                     <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="fa fa-eye-slash"></span></a></li>
                 </ul>
-                <div class="k4-formula-content" ng-click="handleFormulaClick(f,true)">
-                    <small>-{{$index+1}}: </small>
+                <div class="k4-formula-content">
+                    <ul><li>-{{$index + 1}}:</li></ul>
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="true" collapsed="false"
                                 on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
                 </div>
             </div>
-            <div class="col-md-12 k4-formula k4-flexcell" ng-if="readOnly">
+            <div class="col-md-12 k4-formula" ng-if="readOnly">
                 <div class="k4-formula-content">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="false" collapsed="false"
@@ -100,25 +100,25 @@
     <!-- Succedent -->
     <div class="col-md-5">
         <div class="row k4-flexrow" ng-repeat="f in sequent.succ" id="{{f.id}}">
-            <div class="col-md-12 k4-formula k4-flexcell" ng-if="!readOnly">
+            <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
                     <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaerax.step')"><span class="fa fa-step-forward"></span></a></li>
                     <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="fa fa-eye-slash"></span></a></li>
                 </ul>
                 <div class="k4-formula-content">
-                <!--<div class="k4-formula-content" ng-click="handleFormulaClick(f,false)">-->
-                    <small>{{$index + 1}}: </small>
+                    <ul><li>{{$index + 1}}:</li></ul>
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="true" collapsed="false"
                                 on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
                 </div>
             </div>
-            <div class="col-md-12 k4-formula k4-flexcell" ng-if="readOnly">
-                <div class="k4-formula-content">
+            <div class="col-md-12 k4-formula" ng-if="readOnly">
+                <div class="row k4-formula-content">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
-                                formula="f.formula" highlight="false" collapsed="false"
-                                on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
+                            formula="f.formula" highlight="false" collapsed="false"
+                            on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
                 </div>
+
             </div>
         </div>
     </div>
