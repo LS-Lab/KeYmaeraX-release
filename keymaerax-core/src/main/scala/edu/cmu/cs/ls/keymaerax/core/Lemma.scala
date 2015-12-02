@@ -50,8 +50,9 @@ object Lemma {
  * }}}
  * @author Stefan Mitsch
  * @see [[LookupLemma]]
- * @see RCF.proveArithmetic
+ * @see [[RCF.proveArithmetic]]
  * @see [[LemmaDB]]
+ * @see [[Lemma.fromString]]
  * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
  */
 final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[String] = None) {

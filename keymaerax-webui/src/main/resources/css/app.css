@@ -72,8 +72,64 @@ table .btn{
     white-space: nowrap;
 }
 
+.k4-goalwithsiblings {
+  border-style: none;
+  /*border-left: none;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;*/
+}
+
+.k4-goalwithsiblings > ul:last-child {
+  list-style-type: none;
+  padding: 0px 0px 0px 0px;
+  margin: -20px 0px 0px 0px;
+  text-align: right;
+  width: 200px;
+  display: block;
+  position: absolute;
+  top: 0px;
+  right: 0px;
+}
+.k4-goalwithsiblings > ul:last-child li {
+  height: 15px;
+  font-size: x-small;
+  border: none;
+  color: black;
+  display: list-item;
+  width: 200px;
+}
+
+
+.k4-proofrow {
+  border-style: solid;
+  border-left: none;
+  border-top: thin solid black;
+  border-right: none;
+  border-bottom: none;
+}
+
+.k4-proofrow > ul:last-child {
+  list-style-type: none;
+  padding: 0px 0px 0px 0px;
+  margin: -10px 0px 0px -35px;
+  text-align: right;
+  width: 30px;
+  display: block;
+  position: absolute;
+  left: 0px;
+}
+.k4-proofrow > ul:last-child li {
+  height: 15px;
+  font-size: x-small;
+  border: none;
+  color: black;
+  display: list-item;
+  width: 30px;
+}
+
 .k4-flexrow {
-    display: flex;
+  display: flex;
 }
 .k4-flexcell {
     align-items: stretch;
@@ -138,6 +194,12 @@ table .btn{
     overflow: auto;
 }
 
+.k4-abbreviate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (min-width: 0px) {
   .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
     opacity: 1;
@@ -167,9 +229,9 @@ table .btn{
   .k4-formula > ul:first-child {
     list-style-type: none;
     padding: 0;
-    margin: 0 8px 0 -4px;
+    margin: 0 0px 0 -4px; /* margin: 0 8px 0 -4px; */
     text-align: left;
-    width: 100px;
+    width: 20px; /* 100px with text */
     opacity: 0;
     display: block;
     /*position: absolute;
@@ -185,7 +247,7 @@ table .btn{
     background: #BACBD9;
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
-    width: 100px;
+    width: 20px; /* 100px with text */
   }
   .k4-formula > ul:first-child li.show {
     display: none;
@@ -197,7 +259,7 @@ table .btn{
   }
   .k4-formula > ul:first-child li a {
     color: #4D6473;
-    padding: 0 5px 0 10px;
+    padding: 0 0 0 0; /* padding: 0 5px 0 10px; */
     display: block;
     line-height: 13px;
     font-size: 10px;
@@ -220,7 +282,7 @@ table .btn{
   .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
     opacity: 1;
     position: absolute;
-    left: -79px;
+    left: 0px; /* -79px with text */
     top: 0px;
     z-index: 100;
   }
@@ -245,13 +307,13 @@ table .btn{
   .k4-formula > ul:first-child {
     list-style-type: none;
     padding: 0;
-    margin: 0 8px 0 -4px;
+    margin: 0 0 0 -4px; /* margin: 0 8px 0 -4px */
     text-align: left;
-    width: 100px;
+    width: 20px; /* 100 px with text */
     opacity: 0;
     display: block;
     position: absolute;
-    left: -79px;
+    left: 0px; /* -79px with text */
     top: 0px;
     z-index: 1;
   }
@@ -263,7 +325,7 @@ table .btn{
     background: #BACBD9;
     border-top-left-radius: 3px;
     border-bottom-left-radius: 3px;
-    width: 100px;
+    width: 20px; /* 100px with text */
   }
   .k4-formula > ul:first-child li.show {
     display: none;
@@ -275,7 +337,7 @@ table .btn{
   }
   .k4-formula > ul:first-child li a {
     color: #4D6473;
-    padding: 0 5px 0 10px;
+    padding: 0 0 0 0px; /* padding: 0 5px 0 10px; */
     display: block;
     line-height: 13px;
     font-size: 10px;

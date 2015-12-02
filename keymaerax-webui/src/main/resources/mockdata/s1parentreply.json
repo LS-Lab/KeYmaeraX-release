@@ -1,0 +1,33 @@
+{
+  "id": "S0",
+  "sequent": {
+    "ante": [],
+    "succ": [
+      {
+        "id": "F0s",
+        "formula": {
+          "name": "imply",
+          "children": [
+            { "name": "lt", "children": [ {"name": "z"}, {"name": "1"} ] },
+            {
+              "name": "and",
+              "children": [
+                {
+                  "name": "and",
+                  "children": [
+                    { "name": "lt", "children": [ {"name": "x"}, {"name": "5"} ] },
+                    { "name": "true" }
+                  ]
+                },
+                { "name": "gt", "children": [ {"name": "2"}, {"name": "y"} ] }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "children": [ "S1" ],
+  "rule": { "id": "R2", "name": "implyR" },
+  "parent": "S0"
+}

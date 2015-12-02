@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS `config`  (
-  `configId` TEXT PRIMARY KEY ON CONFLICT FAIL,
+  `configId` INTEGER PRIMARY KEY ON CONFLICT FAIL,
   `configName` TEXT,
   `key` TEXT,
   `value` TEXT
@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS `users` (
 );
 
 CREATE TABLE IF NOT EXISTS `models` (
-  `modelId` TEXT PRIMARY KEY ON CONFLICT FAIL,
+  -- _id is the SQLite keyword for the auto-generated unique row ID
+  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
   `userId` TEXT REFERENCES `users` (`email`),
   `name` TEXT,
   `date` TEXT,
@@ -23,8 +24,8 @@ CREATE TABLE IF NOT EXISTS `models` (
 );
 
 CREATE TABLE IF NOT EXISTS `proofs` (
-  `proofId` TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `modelId` TEXT REFERENCES `models` (`modelId`),
+  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  `modelId` INTEGER REFERENCES `models` (`_id`),
   `name` TEXT,
   `description` TEXT,
   `date` TEXT,
@@ -35,18 +36,24 @@ CREATE TABLE IF NOT EXISTS `proofs` (
 -- Serialization of Provables
 ----------------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `provables` (
-  `provableId` TEXT PRIMARY KEY ON CONFLICT FAIL,
+  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
 );
 
 CREATE TABLE IF NOT EXISTS `sequents` (
-  `sequentId` TEXT PRIMARY KEY ON CONFLICT FAIL,
+  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
   `provableId` TEXT REFERENCES `provables` (`provableId`),
   `idx` INTEGER -- index of the sequent within the provable. If 0, then this is the conclusion of the provable. 
+  `conclusionId` INTEGER REFERENCES `sequents` (`_id`)
+);
+
+CREATE TABLE IF NOT EXISTS `sequents` (
+  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  `provableId` INTEGER REFERENCES `provables` (`_id`)
 );
 
 CREATE TABLE IF NOT EXISTS `sequentFormulas` (
-  `sequentFormulaId` TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `sequentId` TEXT REFERENCES `sequents` (`sequentId`),
+  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  `sequentId` INTEGER REFERENCES `sequents` (`_id`),
   `isAnte` BOOLEAN,
   `idx` INTEGER,
   `formula` TEXT
@@ -64,17 +71,17 @@ CREATE TABLE IF NOT EXISTS `sequentFormulas` (
 ----------------------------------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS `tacticExecutions` (
-  `executionId` TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `proofId` TEXT REFERENCES `proofs` (`proofId`)
+  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  `proofId` INTEGER REFERENCES `proofs` (`_id`)
 );
 
 CREATE TABLE IF NOT EXISTS `executionSteps` (
-  `stepId`           TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `executionId`      TEXT REFERENCES `tacticExecutions` (`executionId`),
+  `_id`              INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  `executionId`      INTEGER REFERENCES `tacticExecutions` (`_id`),
 
   -- Rows that identify where in the proof this execution step occurs.
-  `previousStep`     TEXT REFERENCES `executionSteps` (`stepId`),
-  `parentStep`       TEXT REFERENCES `executionSteps` (`stepId`),
+  `previousStep`     INTEGER REFERENCES `executionSteps` (`_id`),
+  `parentStep`       INTEGER REFERENCES `executionSteps` (`_id`),
   `branchOrder`      INT,
   `branchLabel`      TEXT
     CHECK (`branchOrder` ISNULL OR `branchLabel` ISNULL), -- mixing branching styles is a bad idea.
@@ -82,11 +89,11 @@ CREATE TABLE IF NOT EXISTS `executionSteps` (
 
   -- Rows that identify whether this is a tactic execution, or some other form of user interaction (e.g., interruption)
   `status`           TEXT,
-  `executableId`     TEXT REFERENCES `executables` (`executableId`),
+  `executableId`     INTEGER REFERENCES `executables` (`_id`),
 
   -- Rows that identify input and output of the tactic
-  `inputProvableId`  TEXT REFERENCES `provables` (`provableId`),
-  `resultProvableId` TEXT REFERENCES `provables` (`provableId`),
+  `inputProvableId`  INTEGER REFERENCES `provables` (`_id`),
+  `resultProvableId` INTEGER REFERENCES `provables` (`_id`),
 
   -- Indicates whether this tactic was *directly* executed by the user.
   `userExecuted`     BOOLEAN
@@ -98,22 +105,22 @@ CREATE TABLE IF NOT EXISTS `executionSteps` (
 ----------------------------------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS `executables` (
-  `executableId`  TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `scalaTacticId` TEXT,
+  `_id`  INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  `scalaTacticId` INTEGER REFERENCES `scalaTactics` (`_id`),
   `belleExpr`     TEXT
     CHECK (`scalaTacticId` ISNULL OR
            `belleExpr` ISNULL) -- each executable is either a bellerophon expression (a.k.a. custom tactic) or a built-in scala tactic.
 );
 
 CREATE TABLE IF NOT EXISTS `scalaTactics` (
-  `scalaTacticId` TEXT PRIMARY KEY ON CONFLICT FAIL,
+  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
   `location`      TEXT,
   `name`          TEXT
 );
 
 CREATE TABLE `executableParameter` (
-  `parameterId`  TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `executableId` TEXT REFERENCES `executables` (`executableId`),
+  `_id`  INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  `executableId` INTEGER REFERENCES `executables` (`_id`),
   `idx`          INT,
   `valueType`  TEXT,
   `value`        TEXT
@@ -121,9 +128,9 @@ CREATE TABLE `executableParameter` (
 
 -- Specific table for serializing USubstPatternTactics.
 CREATE TABLE `patterns` (
-  `patternId`           TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `executableId`        TEXT REFERENCES `executables` (`executableId`),
+  `_id`           INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  `executableId`        INTEGER REFERENCES `executables` (`_id`),
   `idx`                 INT,
   `patternFormula`      TEXT,
-  `resultingExecutable` TEXT REFERENCES `executables` (`executableId`)
+  `resultingExecutable` INTEGER REFERENCES `executables` (`_id`)
 );

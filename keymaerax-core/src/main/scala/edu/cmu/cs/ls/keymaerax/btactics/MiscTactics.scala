@@ -18,7 +18,7 @@ object DebuggingTactics {
     override def result(provable: Provable): Provable = throw e
   }
 
-  def error(s : String) = new BuiltInTactic("Error") {
+  def error(s: => String) = new BuiltInTactic("Error") {
     override def result(provable: Provable): Provable = {
       throw new BelleUserGeneratedError(s)
     }
@@ -32,12 +32,22 @@ object DebuggingTactics {
     }
   }
 
+  /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
+  def debugAt(message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("debug") {
+    override def computeResult(provable: Provable, pos: Position): Provable = {
+      if (DEBUG) println("===== " + message + " ==== " + "\n\t with formula: " + provable.subgoals.head.at(pos)
+        + " at position " + pos + " of first subgoal,"
+        + "\n\t entire provable: " + provable + " =====")
+      provable
+    }
+  }
+
   /** assert is a no-op tactic that raises an error if the provable is not of the expected size. */
-  def assert(anteSize: Int, succSize: Int): BuiltInTactic = new BuiltInTactic("assert") {
+  def assert(anteSize: Int, succSize: Int, msg: => String = ""): BuiltInTactic = new BuiltInTactic("assert") {
     override def result(provable: Provable): Provable = {
       if (provable.subgoals.size != 1 || provable.subgoals.head.ante.size != anteSize ||
         provable.subgoals.head.succ.size != succSize) {
-        throw new BelleUserGeneratedError("Expected 1 subgoal with: " + anteSize + " antecedent and " + succSize + " succedent formulas,\n\t but got " +
+        throw new BelleUserGeneratedError(msg + "\nExpected 1 subgoal with: " + anteSize + " antecedent and " + succSize + " succedent formulas,\n\t but got " +
           provable.subgoals.size + " subgoals (head subgoal with: " + provable.subgoals.head.ante.size + "antecedent and " +
           provable.subgoals.head.succ.size + " succedent formulas)")
       }
@@ -50,6 +60,39 @@ object DebuggingTactics {
     override def computeResult(provable: Provable, pos: Position): Provable = {
       if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != fml) {
         throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal with " + fml + " at position " + pos + ",\n\t but got " +
+          provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.at(pos) + " at position " + pos + ")")
+      }
+      provable
+    }
+  }
+
+  /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition. */
+  def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") {
+    override def result(provable: Provable): Provable = {
+      if (provable.subgoals.size != 1 || !cond(provable.subgoals.head)) {
+        throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal whose sequent matches condition " + cond + ",\n\t but got " +
+          provable.subgoals.size + " subgoals, or sole subgoal does not match")
+      }
+      provable
+    }
+  }
+
+  /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition at position pos. */
+  def assert(cond: (Sequent,Position)=>Boolean, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") {
+    override def computeResult(provable: Provable, pos: Position): Provable = {
+      if (provable.subgoals.size != 1 || !cond(provable.subgoals.head, pos)) {
+        throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal whose sequent matches condition " + cond + " at position " + pos + ",\n\t but got " +
+          provable.subgoals.size + " subgoals, or sole subgoal formula " + provable.subgoals.head.at(pos) + " does not match")
+      }
+      provable
+    }
+  }
+
+  /** assertE is a no-op tactic that raises an error if the provable has not the expected expression at the specified position. */
+  def assertE(expected: => Expression, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") {
+    override def computeResult(provable: Provable, pos: Position): Provable = {
+      if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != expected) {
+        throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal with " + expected + " at position " + pos + ",\n\t but got " +
           provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.at(pos) + " at position " + pos + ")")
       }
       provable
@@ -70,7 +113,7 @@ object Idioms {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable) =>
         BranchTactic(Seq.tabulate(provable.subgoals.length)(i => if(i == subgoalIdx) t else ident))
-      case _ => throw BelleError("Cannot perform AtSubgoal on a non-Provable value.")
+      case _ => throw new BelleError("Cannot perform AtSubgoal on a non-Provable value.")
     }
   }
 
@@ -146,7 +189,7 @@ object Legacy {
   def scheduledTactic(tactic : keymaerax.tactics.Tactics.Tactic) = new BuiltInTactic(s"Scheduled(${tactic.name})") {
     //@see [[Legacy.defaultInitialization]]
     if(!Tactics.KeYmaeraScheduler.isInitialized)
-      throw BelleError("Need to initialize KeYmaera scheduler and possibly also the Mathematica scheduler before running a Legacy.ScheduledTactic.")
+      throw new BelleError("Need to initialize KeYmaera scheduler and possibly also the Mathematica scheduler before running a Legacy.ScheduledTactic.")
 
     override def result(provable: Provable): Provable = {
       //@todo don't know if we can create a proof node from a provable.

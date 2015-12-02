@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
+import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext.ApplicableAtFormula
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
@@ -73,13 +73,13 @@ object SearchTacticsImpl {
       val traversal = new ExpressionTraversalFunction {
         override def preF(p : PosInExpr, f : Formula) = {
           if(pred(f)) {
-            pos = Some(p);
+            pos = Some(p)
             Left(Some(ExpressionTraversal.stop))
           }
           else Left(None)
         }
       }
-      ExpressionTraversal.traverse(traversal, formula);
+      ExpressionTraversal.traverse(traversal, formula)
       pos
     }
   }
@@ -101,13 +101,12 @@ object SearchTacticsImpl {
     override def apply(p: Position): Tactic = new ConstructionTactic("Construct " + name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case Equiv(fa, fb) => findPosInExpr(fa, fb) match {
-          case Some(posInExpr) => {
+          case Some(posInExpr) =>
             // posInExpr is the position of a in fa, so to get the position of a in fa <-> fb we have to prepend a 0.
             val position =
               if(p.isAnte) AntePosition(p.index, PosInExpr(0 +: posInExpr.pos))
               else SuccPosition(p.index, PosInExpr(0 +: posInExpr.pos))
             Some(congT(position))
-          }
           case None => None
         }
         case _ => None
@@ -130,8 +129,8 @@ object SearchTacticsImpl {
         def preExpression(p : PosInExpr, e : Expression) = {
           if (e == a) {
             TacticHelper.getTerm(fb, p) match {
-              case Some(bCandidate) => {
-                if(bCandidate == b) {
+              case Some(bCandidate) =>
+                if (bCandidate == b) {
                   retVal = Some(p)
                   Left(Some(ExpressionTraversal.stop))
                 }
@@ -139,7 +138,6 @@ object SearchTacticsImpl {
 //                  println("Skipping this candidate because b != " + TacticHelper.getTerm(fb, p))
                   Left(None)
                 }
-              }
               case None => Left(None)
             }
           }
@@ -201,19 +199,18 @@ object SearchTacticsImpl {
           })
             .filter(_._2.isDefined)
             .lastOption match {
-            case Some(idxAndPosAndExpr) => {
+            case Some(idxAndPosAndExpr) =>
               val idx : Int = idxAndPosAndExpr._1
               val posAndExpr : Option[(PosInExpr, Expression)] = idxAndPosAndExpr._2
               if(isAnte) Some(AntePosition(idx, posAndExpr.get._1)) //The .get is justified by the filter.
               else       Some(SuccPosition(idx, posAndExpr.get._1))
-            }
             case None => None
           }
         }
 
 
-        if(inAnte) firstApplicablePosition(s.ante, true)
-        else       firstApplicablePosition(s.succ, false)
+        if(inAnte) firstApplicablePosition(s.ante, isAnte=true)
+        else       firstApplicablePosition(s.succ, isAnte=false)
       }
 
       override def applicable(node: ProofNode): Boolean =
@@ -277,8 +274,10 @@ object SearchTacticsImpl {
     override def applicable(p: ProofNode): Boolean = {
       val pos = findPosition(p.sequent)
       pos.isDefined && cond(p.sequent(pos.get)) && (key match {
-        case Some(keyCond) if p.sequent(pos.get).isFormulaAt(pos.get.inExpr) => keyCond(p.sequent(pos.get).subFormulaAt(pos.get.inExpr).get)
-        case Some(keyCond) if p.sequent(pos.get).isTermAt(pos.get.inExpr) => keyCond(p.sequent(pos.get).termAt(pos.get.inExpr))
+        case Some(keyCond) => p.sequent(pos.get.topLevel).sub(pos.get.inExpr) match {
+            case Some(x) => keyCond(x)
+            case None => false
+          }
         case None => true
       })
     }
@@ -306,14 +305,15 @@ object SearchTacticsImpl {
    * @param key The key, default is None (meaning look for top-level formula).
    * @return A new tactic that applies said tactic at the specified position.
    */
-  def locateSucc(posT: PositionTactic, cond: Formula => Boolean = (_ => true), key: Option[Expression => Boolean] = None): Tactic =
+  def locateSucc(posT: PositionTactic, cond: Formula => Boolean = _ => true, key: Option[Expression => Boolean] = None): Tactic =
       new ApplyPositionTactic("locateSucc (" + posT.name + ")", posT) {
     override def applicable(p: ProofNode): Boolean = {
       val pos = findPosition(p.sequent)
-      pos.isDefined && cond(p.sequent(pos.get)) && (key match {
-        //@todo the following two cases can be merged by using  p.sequent(pos.get.top).at(pos.get.inExpr), which in turn should be part of a SequentConverter(pos.get) implicit def
-        case Some(keyCond) if p.sequent(pos.get).isFormulaAt(pos.get.inExpr) => keyCond(p.sequent(pos.get).subFormulaAt(pos.get.inExpr).get)
-        case Some(keyCond) if p.sequent(pos.get).isTermAt(pos.get.inExpr) => keyCond(p.sequent(pos.get).termAt(pos.get.inExpr))
+      pos.isDefined && cond(p.sequent(pos.get.topLevel)) && (key match {
+        case Some(keyCond) => p.sequent(pos.get.topLevel).sub(pos.get.inExpr) match {
+          case Some(x) => keyCond(x)
+          case None => false
+        }
         case None => true
       })
     }

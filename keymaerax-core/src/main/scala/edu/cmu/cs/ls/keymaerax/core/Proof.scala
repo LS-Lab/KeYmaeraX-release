@@ -1201,10 +1201,10 @@ final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
 case class Skolemize(pos: SeqPos) extends PositionRule {
   val name: String = "Skolemize"
   override def apply(s: Sequent): immutable.List[Sequent] = {
-    // all symbols anywhere else in the sequent, i.e. except at the quantifier position
+    // all free symbols anywhere else in the sequent, i.e. except at the quantifier position
     // note: this skolemization will be by identity, not to a new name, so no clashes can be caused from s(pos)
-    //@note Taboos are the symbols in the remaining sequent, i.e. after replacing pos with innocent True
-    val taboos = StaticSemantics.symbols(s.updated(pos, True))  //@todo StaticSemantics.freeVars(s.updated(pos, True)).toSymbolSet
+    //@note Taboos are the free symbols in the remaining sequent, i.e. after replacing pos with innocent True
+    val taboos = StaticSemantics.freeVars(s).toSymbolSet ensuring (r => StaticSemantics.freeVars(s.updated(pos, True)).toSymbolSet.subsetOf(r))
     val (v,phi) = s(pos) match {
       case Forall(qv, qphi) if pos.isSucc => (qv, qphi)
       case Exists(qv, qphi) if pos.isAnte => (qv, qphi)

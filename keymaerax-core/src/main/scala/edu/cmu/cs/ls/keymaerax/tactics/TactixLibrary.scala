@@ -200,16 +200,16 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val iterateb           : PositionTactic = HilbertCalculus.iterateb
 
   /** splitb: splits `[a](p&q)` into `[a]p & [a]q` */
-  lazy val splitb             : PositionTactic = HybridProgramTacticsImpl.boxSplitConjunctionT
+  lazy val splitb             : PositionTactic = useAt("[] split")
 
   /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
   /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def loop(invariant: Formula) = I(invariant)
   /** K: modal modus ponens (hybrid systems) */
-  lazy val K                  : PositionTactic = PropositionalTacticsImpl.kModalModusPonensT
+  lazy val K                  : PositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
   /** V: vacuous box [a]p() will be discarded and replaced by p() provided a does not changes values of postcondition p */
-  lazy val V                  : PositionTactic = HybridProgramTacticsImpl.boxVacuousT
+  lazy val V                  : PositionTactic = useAt("V vacuous", PosInExpr(1::Nil))
 
   // differential equations
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */

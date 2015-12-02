@@ -189,7 +189,7 @@ object Context {
     // homomorphic cases
     case f:UnaryCompositeFormula  if pos.head==0 => f.reapply(replaceAt(f.child, pos.child, repl))
     case f:BinaryCompositeFormula if pos.head==0 => f.reapply(replaceAt(f.left, pos.child, repl), f.right)
-    case f:BinaryCompositeFormula if pos.head==1 => f.reapply(f.left, replaceAt(f.left, pos.child, repl))
+    case f:BinaryCompositeFormula if pos.head==1 => f.reapply(f.left, replaceAt(f.right, pos.child, repl))
     case f:Quantified             if pos.head==0 => f.reapply(f.vars, replaceAt(f.child, pos.child, repl))
     case f:Modal                  if pos.head==0 => f.reapply(replaceAt(f.program, pos.child, repl), f.child)
     case f:Modal                  if pos.head==1 => f.reapply(f.program, replaceAt(f.child, pos.child, repl))

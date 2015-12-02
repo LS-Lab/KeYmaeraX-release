@@ -1,8 +1,9 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, IOListener, SequentialInterpreter}
-import edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus
-import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Provable, Sequent, PrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
+import edu.cmu.cs.ls.keymaerax.btactics.{ProofRuleTactics, UnifyUSCalculus}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstractionObj, SQLite}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
@@ -19,7 +20,7 @@ import scala.collection.immutable._
   */
 class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach  {
   val db = DBAbstractionObj.testDatabase
-  val listener = new DebuggerListener(db, "foo", "bar", true, 0, Left(1))
+  val listener = new DebuggerListener(db, 1337, 7331, 0, Left(1))
   val theInterpreter = new SequentialInterpreter(Seq(listener))
   object TestLib extends UnifyUSCalculus
 
@@ -35,7 +36,22 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
     }
   }
   "IOListener" should "Not Crash" in {
-    proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula)),
-      TestLib.useAt("[;] compose", PosInExpr(1::Nil))(SuccPos(0))).subgoals should contain only Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))
+    val t1 = System.nanoTime()
+    for(i <- 1 to 100)
+    {
+      proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;][x:=2*x;]x>1".asFormula)),
+        TestLib.useAt("[;] compose", PosInExpr(1 :: Nil))(SuccPos(0))).subgoals should contain only Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("[x:=x+1;x:=2*x;]x>1".asFormula))
+    }
+    val t2 = System.nanoTime()
+    println("My time: " + (t2-t1)/1000000000.0)
+    db.printStats
+  }
+
+  /* Same sequent and proof as the mockup for the new proof tree UI. Should give us a good sense of whether this code
+  * can support the new UI or not. */
+  it should "handle branching proofs" in {
+  proveBy(Sequent(Nil,IndexedSeq(), IndexedSeq("(z>5) -> ((x < 5) & true) & (2 > y)".asFormula)),
+    implyR(SuccPos(0)) & andR(SuccPos(0)))
+    db.printStats
   }
 }

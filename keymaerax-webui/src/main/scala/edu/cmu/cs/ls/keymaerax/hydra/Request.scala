@@ -76,7 +76,7 @@ class LoginRequest(db : DBAbstraction, username : String, password : String) ext
 class ProofsForUserRequest(db : DBAbstraction, userId: String) extends Request {
   def getResultingResponses() = {
     val proofs = db.getProofsForUser(userId).map(proof =>
-      (proof._1, KeYmaeraInterface.getTaskLoadStatus(proof._1.proofId).toString.toLowerCase))
+      (proof._1, KeYmaeraInterface.getTaskLoadStatus(proof._1.proofId.toString).toString.toLowerCase))
     new ProofListResponse(proofs) :: Nil
   }
 }
@@ -293,7 +293,7 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
       //Return the resulting response.
       KeYmaeraXProblemParser(keyFileContents) match {
         case f : Formula => {
-          createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate())
+          createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate()).map(x => x.toString)
           new BooleanResponse(createdId.isDefined) :: Nil
         }
         case a => new ErrorResponse(new Exception("TODO pass back the parse error.")) :: Nil //TODO-nrf pass back useful parser error messages.
@@ -353,7 +353,7 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
 class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request {
   def getResultingResponses() = {
     val proofs = db.getProofsForModel(modelId).map(proof =>
-      (proof, KeYmaeraInterface.getTaskLoadStatus(proof.proofId).toString.toLowerCase))
+      (proof, KeYmaeraInterface.getTaskLoadStatus(proof.proofId.toString).toString.toLowerCase))
     new ProofListResponse(proofs) :: Nil
   }
 }
@@ -467,7 +467,7 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
 
         val openGoalIds = KeYmaeraInterface.getOpenGoals(proofId)
 
-        val result = openGoalIds.map(g => KeYmaeraInterface.getSubtree(proof.proofId, Some(g), 0, true) match {
+        val result = openGoalIds.map(g => KeYmaeraInterface.getSubtree(proof.proofId.toString, Some(g), 0, true) match {
           case Some(proofNode) => (proof, g, proofNode)
           case None => throw new IllegalStateException("No subtree for goal " + g + " in proof " + proof.proofId)
         })
@@ -919,4 +919,8 @@ class ShutdownReqeuest() extends Request {
 
     new BooleanResponse(true) :: Nil
   }
+}
+
+class MockRequest(resourceName: String) extends Request {
+  override def getResultingResponses(): List[Response] = new MockResponse(resourceName) :: Nil
 }

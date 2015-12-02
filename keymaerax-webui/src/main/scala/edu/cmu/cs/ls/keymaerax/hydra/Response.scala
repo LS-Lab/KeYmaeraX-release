@@ -82,7 +82,7 @@ class BooleanResponse(flag : Boolean) extends Response {
 
 class ModelListResponse(models : List[ModelPOJO]) extends Response {
   val objects = models.map(modelpojo => JsObject(
-    "id" -> JsString(modelpojo.modelId),
+    "id" -> JsString(modelpojo.modelId.toString),
     "name" -> JsString(modelpojo.name),
     "date" -> JsString(modelpojo.date),
     "description" -> JsString(modelpojo.description),
@@ -109,11 +109,11 @@ class ProofListResponse(proofs : List[(ProofPOJO, String)], models : Option[List
 
   val objects : List[JsObject] = models match {
     case None => proofs.map({case (proof, loadStatus) => JsObject(
-      "id" -> JsString(proof.proofId),
+      "id" -> JsString(proof.proofId.toString),
       "name" -> JsString(proof.name),
       "description" -> JsString(proof.description),
       "date" -> JsString(proof.date),
-      "modelId" -> JsString(proof.modelId),
+      "modelId" -> JsString(proof.modelId.toString),
       "stepCount" -> JsNumber(proof.stepCount),
       "status" -> JsBoolean(proof.closed),
       "loadStatus" -> JsString(loadStatus)
@@ -124,11 +124,11 @@ class ProofListResponse(proofs : List[(ProofPOJO, String)], models : Option[List
         val modelName = p._2
 
         JsObject(
-          "id" -> JsString(proof.proofId),
+          "id" -> JsString(proof.proofId.toString),
           "name" -> JsString(proof.name),
           "description" -> JsString(proof.description),
           "date" -> JsString(proof.date),
-          "modelId" -> JsString(proof.modelId),
+          "modelId" -> JsString(proof.modelId.toString),
           "stepCount" -> JsNumber(proof.stepCount),
           "status" -> JsBoolean(proof.closed),
           "loadStatus" -> JsString(loadStatus),
@@ -142,7 +142,7 @@ class ProofListResponse(proofs : List[(ProofPOJO, String)], models : Option[List
 
 class GetModelResponse(model : ModelPOJO) extends Response {
   val json = JsObject(
-    "id" -> JsString(model.modelId),
+    "id" -> JsString(model.modelId.toString),
     "name" -> JsString(model.name),
     "date" -> JsString(model.date),
     "description" -> JsString(model.description),
@@ -155,7 +155,7 @@ class GetModelResponse(model : ModelPOJO) extends Response {
 
 class GetModelTacticResponse(model : ModelPOJO) extends Response {
   val json = JsObject(
-    "modelId" -> JsString(model.modelId),
+    "modelId" -> JsString(model.modelId.toString),
     "modelName" -> JsString(model.name),
     "tacticBody" -> JsString(model.tactic.getOrElse(""))
   )
@@ -270,11 +270,11 @@ class ProofTreeResponse(tree: String) extends Response {
 class OpenProofResponse(proof : ProofPOJO, loadStatus : String) extends Response {
   override val schema = Some("proof.js")
   val json = JsObject(
-    "id" -> JsString(proof.proofId),
+    "id" -> JsString(proof.proofId.toString),
     "name" -> JsString(proof.name),
     "description" -> JsString(proof.description),
     "date" -> JsString(proof.date),
-    "modelId" -> JsString(proof.modelId),
+    "modelId" -> JsString(proof.modelId.toString),
     "stepCount" -> JsNumber(proof.stepCount),
     "status" -> JsBoolean(proof.closed),
     "loadStatus" -> JsString(loadStatus)
@@ -284,7 +284,7 @@ class OpenProofResponse(proof : ProofPOJO, loadStatus : String) extends Response
 class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Response {
   override val schema = Some("proofagenda.js")
   val objects = tasks.map({ case (proofPojo, nodeId, nodeJson) => JsObject(
-    "proofId" -> JsString(proofPojo.proofId),
+    "proofId" -> JsString(proofPojo.proofId.toString),
     "nodeId" -> JsString(nodeId),
     "proofNode" -> JsonParser(nodeJson)
   )})
@@ -453,4 +453,9 @@ class NodeResponse(tree : String) extends Response {
   //todo add schema.
   val node = JsonParser(tree).asJsObject
   val json = node
+}
+
+class MockResponse(resourceName: String) extends Response {
+  //@todo add schema
+  val json = scala.io.Source.fromInputStream(getClass.getResourceAsStream(resourceName)).mkString.parseJson
 }

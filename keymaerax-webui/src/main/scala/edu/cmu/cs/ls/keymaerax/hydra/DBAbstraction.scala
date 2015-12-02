@@ -24,13 +24,13 @@ object DBAbstractionObj {
   def defaultDatabase = SQLite.ProdDB //this needs to be a def and not a val because DBAbstractionObj is initialized in SQLite.
   def testDatabase = SQLite.TestDB
   private def getLocation(isTest: Boolean): String = {
-    val dirname = if (isTest) ".keymaeraxTest" else ".keymaerax"
+    val dirname = ".keymaerax"
+    val filename = if (isTest) "testDB.sqlite" else "keymaerax.sqlite"
     new File(
       System.getProperty("user.home") + File.separator + dirname
     ).mkdirs()
-
     val file = new File(System.getProperty("user.home") + File.separator +
-      dirname + File.separator + "keymaerax.sqlite")
+      dirname + File.separator + filename)
     file.getCanonicalPath
   }
 
@@ -51,7 +51,7 @@ class ConfigurationPOJO(val name: String, val config: Map[String,String])
  * @param description The description of the model.
  * @param pubLink Link to additional information (paper) on the model.
  */
-class ModelPOJO(val modelId:String, val userId:String, val name:String, val date:String, val keyFile:String,
+class ModelPOJO(val modelId:Int, val userId:String, val name:String, val date:String, val keyFile:String,
                 val description:String, val pubLink:String, val title:String, val tactic : Option[String]) //the other guys on this linke should also be optional.
 
 /**
@@ -64,14 +64,14 @@ class ModelPOJO(val modelId:String, val userId:String, val name:String, val date
  * @param stepCount The number of proof steps in the proof.
  * @param closed Indicates whether the proof is closed (finished proof) or not (partial proof).
  */
-class ProofPOJO(val proofId:String, val modelId:String, val name:String, val description:String,
-                val date:String, val stepCount : Integer, val closed : Boolean)
+class ProofPOJO(val proofId:Int, val modelId:Int, val name:String, val description:String,
+                val date:String, val stepCount : Int, val closed : Boolean)
 
-case class ProvablePOJO(provableId: String, conclusionId: String)
+case class ProvablePOJO(provableId: Int, conclusionId: Int)
 
-case class SequentPOJO(sequentId: String, provableId: String)
+case class SequentPOJO(sequentId: Int, provableId: Int)
 
-case class SequentFormulaPOJO(sequentFormulaId: String, sequentId: String, isAnte: Boolean, index: Int, formulaStr: String)
+case class SequentFormulaPOJO(sequentFormulaId: Int, sequentId: Int, isAnte: Boolean, index: Int, formulaStr: String)
 
 object ExecutionStepStatus extends Enumeration {
   type ExecutionStepStatus = Value
@@ -97,23 +97,23 @@ object ExecutionStepStatus extends Enumeration {
   }
 }
 
-case class TacticExecutionPOJO(executionId: String, proofId: String)
+case class TacticExecutionPOJO(executionId: Int, proofId: Int)
 
-case class ExecutionStepPOJO(stepId: String, executionId: String,
-                             previousStep: String, parentStep: String,
+case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
+                             previousStep: Option[Int], parentStep: Option[Int],
                              branchOrder: Option[Int],
                              branchLabel: Option[String],
                              alternativeOrder: Int,
                              status: ExecutionStepStatus,
-                             executableId: String,
-                             inputProvableId: String,
-                             resultProvableId: String,
+                             executableId: Int,
+                             inputProvableId: Int,
+                             resultProvableId: Option[Int],
                              userExecuted: Boolean)
 {
   require(branchOrder.isEmpty != branchLabel.isEmpty) //also schema constraint
 }
 
-case class ExecutablePOJO(executableId: String, scalaTacticId: Option[String], belleExpr: Option[String]) {
+case class ExecutablePOJO(executableId: Int, scalaTacticId: Option[Int], belleExpr: Option[String]) {
   require(scalaTacticId.isEmpty != belleExpr.isEmpty)
 }
 
@@ -124,10 +124,10 @@ CREATE TABLE IF NOT EXISTS `scalaTactics` (
   `name`          TEXT
 );
 */
-case class ScalaTacticPOJO(scalaTacticId: String, location: String, name: String)
+case class ScalaTacticPOJO(scalaTacticId: Int, location: String, name: String)
 
 
-case class ParameterPOJO(parameterId: String, executableID: String, idx: Int, valueType: ParameterValueType, value: String)
+case class ParameterPOJO(parameterId: Int, executableID: Int, idx: Int, valueType: ParameterValueType, value: String)
 
 
 object ParameterValueType extends Enumeration {
@@ -143,8 +143,8 @@ object ParameterValueType extends Enumeration {
   }
 }
 
-case class USubstPatternParameterPOJO(patternId: String, executableId: String,
-                                  index: Int, patternFormulaStr: String, resultingExecutableId: String)
+case class USubstPatternParameterPOJO(patternId: Int, executableId: Int,
+                                  index: Int, patternFormulaStr: String, resultingExecutableId: Int)
 
 /**
  * Proof database
@@ -172,64 +172,70 @@ trait DBAbstraction {
   //Models
   def createModel(userId: String, name : String, fileContents : String, date:String,
                   description : Option[String]=None, publink:Option[String]=None,
-                  title:Option[String]=None, tactic:Option[String]=None) : Option[String]
-  def getModel(modelId : String) : ModelPOJO
+                  title:Option[String]=None, tactic:Option[String]=None) : Option[Int]
+  def getModel(modelId : Int) : ModelPOJO
+  def getModel(modelId : String) : ModelPOJO = getModel(modelId.toInt)
   def getModelList(userId : String) : List[ModelPOJO] // name, date, fileContents
   //Proofs of models
-  def createProofForModel(modelId : String, name : String, description : String, date : String) : String //returns id of create object
-  def getProofsForModel(modelId : String) : List[ProofPOJO]
+  def createProofForModel(modelId : Int, name : String, description : String, date : String) : Int //returns id of create object
+  def createProofForModel(modelId : String, name : String, description : String, date : String) : String =
+    createProofForModel(modelId.toInt, name, description, date).toString
+  def getProofsForModel(modelId : Int) : List[ProofPOJO]
+  def getProofsForModel(modelId : String) : List[ProofPOJO] = getProofsForModel(modelId.toInt)
 
   //Proofs and Proof Nodes
-  def getProofInfo(proofId : String) : ProofPOJO
+  def getProofInfo(proofId : Int) : ProofPOJO
+  def getProofInfo(proofId : String) : ProofPOJO = getProofInfo(proofId.toInt)
   def updateProofInfo(proof: ProofPOJO)
-  def updateProofName(proofId : String, name : String)
-  def getProofSteps(proofId : String) : List[String]
+  def updateProofName(proofId : Int, name : String):Unit
+  def updateProofName(proofId : String, name : String):Unit = updateProofName(proofId.toInt, name)
+  def getProofSteps(proofId : Int) : List[String]
 
   // Tactics
   /** Stores a Provable in the database and returns its ID */
-  def serializeProvable(p : Provable): String
+  def serializeProvable(p : Provable): Int
 
   /** Gets the conclusion of a provable */
-  def getConclusion(provableId: String): Sequent
+  def getConclusion(provableId: Int): Sequent
 
   /** Use escape hatch in prover core to create a new Provable */
-  def loadProvable(provableId: String): Sequent
+  def loadProvable(provableId: Int): Sequent
 
   /** Deletes a provable and all associated sequents / formulas */
-  def deleteProvable(provableId: String): Unit
+  def deleteProvable(provableId: Int): Unit
 
   /////////////////////
 
   /** Creates a new execution and returns the new ID in tacticExecutions */
-  def createExecution(proofId: String): String
+  def createExecution(proofId: Int): Int
 
   /** Deletes an execution from the database */
-  def deleteExecution(executionId: String): Unit
+  def deleteExecution(executionId: Int): Unit
 
   /**
     * Adds an execution step to an existing execution
     * @note Implementations should enforce additional invarants -- never insert when branches or alt orderings overlap.
     */
-  def addExecutionStep(step: ExecutionStepPOJO): String
+  def addExecutionStep(step: ExecutionStepPOJO): Int
 
-  def getExecutionSteps(executionID: String) : List[ExecutionStepPOJO]
+  def getExecutionSteps(executionID: Int) : List[ExecutionStepPOJO]
 
   /** Updates an executable step's status. @note should not be transitive */
-  def updateExecutionStatus(executionStepId: String, status: ExecutionStepStatus): Unit
+  def updateExecutionStatus(executionStepId: Int, status: ExecutionStepStatus): Unit
 
   /////////////////////
 
   /** Adds a new scala tactic and returns the resulting id */
-  def addScalaTactic(scalaTactic: ScalaTacticPOJO): String
+  def addScalaTactic(scalaTactic: ScalaTacticPOJO): Int
 
   /** Adds a bellerophon expression as an executable and returns the new executableId */
-  def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): String
+  def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): Int
 
   /** Adds a built-in tactic application using a set of parameters */
-  def addAppliedScalaTactic(scalaTacticId: String, params: List[ParameterPOJO]): String
+  def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int
 
   /** Returns the executable with ID executableId */
-  def getExecutable(executableId: String): ExecutablePOJO
+  def getExecutable(executableId: Int): ExecutablePOJO
 
   import spray.json._ //allows for .parseJoson on strings.
   def initializeForDemo2() : Unit = {
