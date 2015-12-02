@@ -32,8 +32,14 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
             scope.proofTree.nodesMap[data.id].rule = data.rule;
           }
 
-          // append parent at the end of the deduction path of this agenda item TODO add to all subgoals (append or at the appropriate position?)
-          scope.agenda.itemsMap[scope.nodeId].path.push(data.id)
+          // append parent at the end of the deduction path of all relevant agenda items
+          var items = $.map(data.children, function(e) { return scope.agenda.itemsByProofStep(e); }); // JQuery flat map
+          $.each(items, function(i, v) {
+            var lastPathElem = (v.path.length === 0 ? v.goal : v.path[v.path.length - 1]);
+            if ($.inArray(lastPathElem, data.children) < 0) {
+              console.error('Expected last path element to be a child of ' + data.id + ', but agenda item ' + v.id +
+                ' has ' + lastPathElem.id + ' as last path element');
+            } else v.path.push(data.id); });
         });
       }
 
