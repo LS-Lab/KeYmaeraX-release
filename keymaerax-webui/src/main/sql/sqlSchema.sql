@@ -36,19 +36,14 @@ CREATE TABLE IF NOT EXISTS `proofs` (
 -- Serialization of Provables
 ----------------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `provables` (
-  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL
 );
 
 CREATE TABLE IF NOT EXISTS `sequents` (
   `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  `provableId` TEXT REFERENCES `provables` (`provableId`),
-  `idx` INTEGER -- index of the sequent within the provable. If 0, then this is the conclusion of the provable. 
+  `provableId` INTEGER REFERENCES `provables` (`_id`),
+  `idx` INTEGER, -- index of the sequent within the provable. If null then this is the conclusion of the provable.
   `conclusionId` INTEGER REFERENCES `sequents` (`_id`)
-);
-
-CREATE TABLE IF NOT EXISTS `sequents` (
-  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  `provableId` INTEGER REFERENCES `provables` (`_id`)
 );
 
 CREATE TABLE IF NOT EXISTS `sequentFormulas` (
@@ -58,11 +53,6 @@ CREATE TABLE IF NOT EXISTS `sequentFormulas` (
   `idx` INTEGER,
   `formula` TEXT
 );
-
---CREATE TABLE IF NOT EXISTS `provables` (
---  `provableId` TEXT PRIMARY KEY ON CONFLICT FAIL,
---  `lemma` TEXT -- a serialized lemma a la lemma db.
---);
 
 ----------------------------------------------------------------------------------------------------
 -- Record of tactic execution
