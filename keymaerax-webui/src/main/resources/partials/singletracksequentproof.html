@@ -18,27 +18,27 @@
                 <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
                 <!-- todo HTML tooltip would be nice, but couldn't get to work so far -->
                 <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
-                   uib-tooltip="{{tooltip(proofTree.nodesMap[sibling].sequent)}}" tooltip-trigger
+                   uib-tooltip="{{tooltip(proofTree.nodesMap[sibling].sequent)}}"
                    tooltip-placement="top">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
             </li>
         </ul>
     </div>
     <ul>
-        <li>{{proofTree.nodesMap[stepId].rule.name}}</li>
+        <li uib-tooltip="{{proofTree.nodesMap[stepId].rule.name}}" tooltip-placement="right">
+            {{proofTree.nodesMap[stepId].rule.name}}
+        </li>
     </ul>
     <!-- add buttons: rewind to here, start alternative proof attempt etc. -->
 </div>
 <!-- navigation buttons below bottom-most proof row -->
 <div class="row" ng-if="deductionPath[deductionPath.length-1] !== proofTree.root">
     <div class="col-md-12 text-center">
-        <small>
-            <a ng-click="fetchParent(deductionPath[deductionPath.length-1])"
-               ng-if="deductionPath.length > 0"><span class="fa fa-angle-down"> Parent</span></a>
-            <a ng-click="fetchParent(goalId)"
-               ng-if="deductionPath.length <= 0"><span class="fa fa-angle-down"> Parent</span></a>
-            <a><span class="fa fa-code-fork"> Branching point</span></a>
-            <a><span class="fa fa-angle-double-down"> Expand all</span></a>
-        </small>
+        <a ng-click="fetchParent(deductionPath[deductionPath.length-1])"
+           ng-if="deductionPath.length > 0"><span class="fa fa-angle-down"> Parent</span></a>
+        <a ng-click="fetchParent(goalId)"
+           ng-if="deductionPath.length <= 0"><span class="fa fa-angle-down"> Parent</span></a>
+        <a><span class="fa fa-code-fork"> Branching point</span></a>
+        <a><span class="fa fa-angle-double-down"> Expand all</span></a>
     </div>
 </div>
 <!-- failed attempt on HTML tooltip -->
