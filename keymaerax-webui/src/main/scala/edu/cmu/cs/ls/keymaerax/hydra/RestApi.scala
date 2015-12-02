@@ -223,6 +223,7 @@ trait RestApi extends HttpService {
     get {
       val request = (formulaId, axiomId) match {
         case ("F2s0", "and true") => new MockRequest("/mockdata/andtrueresult.json")
+        case ("F2s0", "step") => new MockRequest("/mockdata/andtrueresult.json")
       }
       complete(standardCompletion(request))
     }
