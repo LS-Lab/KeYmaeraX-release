@@ -237,6 +237,8 @@ trait DBAbstraction {
   /** Returns the executable with ID executableId */
   def getExecutable(executableId: Int): ExecutablePOJO
 
+  def proofSteps(executionId: Int): List[ExecutionStepPOJO]
+
   import spray.json._ //allows for .parseJoson on strings.
   def initializeForDemo2() : Unit = {
     println("Initializing a demo database")

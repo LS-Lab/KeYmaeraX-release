@@ -9,6 +9,7 @@ import java.nio.channels.Channels
 import java.sql.SQLException
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import _root_.edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
@@ -508,8 +509,7 @@ object SQLite {
       sorted.map({ case formula => formula.formulaStr.asFormula })
     }
 
-    /** Gets the conclusion of a provable */
-    override def getConclusion(provableId: Int): Sequent = {
+    def getSequents(provableId: Int): (List[Sequent], Sequent) = {
       session.withTransaction({
         nSelects = nSelects + 1
         val sequents =
@@ -530,9 +530,76 @@ object SQLite {
       })
     }
 
+    /** Gets the conclusion of a provable */
+    override def getConclusion(provableId: Int): Sequent = {
+      getSequents(provableId)._2
+    }
+
     def printStats = {
       println("Updates: " + nUpdates + " Inserts: " + nInserts + " Selects: " + nSelects)
       println("Searching time: " + (searchTime / 1000000000.0) + " Processing Time: " + (processTime / 1000000000.0))
+    }
+
+    def proofSteps(executionId: Int): List[ExecutionStepPOJO] = {
+      session.withTransaction({
+        var steps = Executionsteps.filter(_.executionid === executionId).list
+        var prevId: Option[Int] = None
+        var revResult: List[ExecutionStepPOJO] = Nil
+        while(steps != Nil) {
+          val (headSteps, tailSteps) = steps.partition({step => step.previousstep == prevId})
+          if (headSteps == Nil)
+            return revResult.reverse
+          val headsByAlternative =
+            headSteps.sortWith({case (x, y) => y.alternativeorder.get < x.alternativeorder.get})
+          val head = headsByAlternative.head
+          revResult =
+            new ExecutionStepPOJO(head._Id, head.executionid.get, head.previousstep, head.parentstep,
+              head.branchorder, head.branchlabel, head.alternativeorder.get, ExecutionStepStatus.fromString(head.status.get),
+              head.executableid.get, head.inputprovableid.get, head.resultprovableid, head.userexecuted.get.toBoolean)::revResult
+          prevId = head._Id
+          steps = tailSteps
+        }
+        revResult.reverse
+      })
+    }
+
+    var nodeId = 0
+
+    case class TreeNode(sequent: Sequent, parent: Option[TreeNode])  {
+      val id = nodeId
+      nodeId = nodeId + 1
+      var children: List[TreeNode] = Nil
+    }
+
+    case class Tree (id: String, nodes: List[TreeNode], root: TreeNode)
+    case class AgendaItem (id: String, name: String, proofId: String, goal: TreeNode, path: List[String])
+
+    def proofTree(executionId: Int) = {
+      val steps = proofSteps(executionId)
+      if (steps.isEmpty) {
+        throw new Exception("Tried to get proof tree for empty execution with ID " + executionId)
+      }
+      val initialProvable = steps.head.inputProvableId
+      var openGoals : List[TreeNode] =
+      /*
+      * {proofTree:
+      *  {id: proofId
+      *   nodes: List[
+      *     {id: nodeId
+      *      sequent:
+      *        {ante: List[{id: formulaId formula: rec t. {name: string, children: Option[List[t]]}}]
+      *         succ: <same>}
+      *      children: List[nodeId]
+      *      parent: Option[nodeId]}
+      *   root: nodeId}
+      *  agendaItems:
+      *  {<the nodeId>:
+      *    {id: itemId
+      *     name: String
+      *     proofId: proofId
+      *     goal: nodeId
+      *     path: List[Something??]
+      *  */
     }
   }
 }

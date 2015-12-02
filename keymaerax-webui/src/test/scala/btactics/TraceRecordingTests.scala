@@ -54,4 +54,8 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
     implyR(SuccPos(0)) & andR(SuccPos(0)))
     db.printStats
   }
+
+  it should "print out some steps for me to check by hand" in {
+    println(db.proofSteps(1337))
+  }
 }
