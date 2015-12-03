@@ -85,11 +85,12 @@ object TacticDebugger {
         val current = node
         node = node.parent
         youngestSibling = current
-        current.output = result match {
-          case BelleProvable(p) => p
+        result match {
+          case BelleProvable(p) => current.output = p
         }
         current.status = ExecutionStepStatus.Finished
         db.updateExecutionStatus(current.stepId.get, current.status)
+        db.updateResultProvable(current.stepId.get, current.getOutputProvableId)
       }
     }
 
