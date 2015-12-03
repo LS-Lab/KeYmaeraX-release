@@ -9,7 +9,8 @@ import java.nio.channels.Channels
 import java.sql.SQLException
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import _root_.edu.cmu.cs.ls.keymaerax.core.{Provable, Sequent}
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Provable, Sequent}
+import _root_.edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
@@ -214,6 +215,7 @@ object SQLite {
                              title: Option[String] = None, tactic: Option[String] = None): Option[Int] =
       session.withTransaction({
         nSelects = nSelects + 1
+        /* @todo create execution here */
         if (Models.filter(_.userid === userId).filter(_.name === name).list.length == 0) {
           nInserts = nInserts + 1
           Some((Models.map(m => (m.userid.get, m.name.get, m.filecontents.get, m.date.get, m.description, m.publink, m.title, m.tactic))
@@ -235,12 +237,11 @@ object SQLite {
       session.withTransaction({
         nSelects = nSelects + 1
         val models =
-          Models.filter(_._Id.get === modelId)
+          Models.filter(_._Id === modelId)
             .list
             .map(m => new ModelPOJO(
               m._Id.get, m.userid.get, blankOk(m.name), blankOk(m.date), m.filecontents.get, blankOk(m.description), blankOk(m.publink), blankOk(m.title), m.tactic
             ))
-
         if (models.length < 1) throw new Exception("getModel type should be an Option")
         else if (models.length == 1) models.head
         else throw new Exception("Primary keys aren't unique in models table.")
@@ -542,10 +543,35 @@ object SQLite {
       TreeNode(maxNode, subgoal, parent)
     }
 
-    override def proofTree(executionId: Int): Tree = {
+    private def getProofConclusion(proofId: Int): Sequent = {
+      val modelId = getProofInfo(proofId).modelId
+      val model = getModel(modelId)
+      KeYmaeraXProblemParser(model.keyFile) match {
+        case fml:Formula => Sequent(Nil, collection.immutable.IndexedSeq(), collection.immutable.IndexedSeq(fml))
+        case _ => throw new Exception("Failed to parse model for proof " + proofId + " model " + modelId)
+      }
+    }
+
+    private def getTacticExecution(proofId: Int): Int =
+      session.withTransaction({
+        val executionIds =
+          Tacticexecutions.filter(_.proofid === proofId)
+            .list
+            .map({case row => row._Id.get})
+        if (executionIds.length < 1) throw new Exception("getTacticExecution type should be an Option")
+        else if (executionIds.length == 1) executionIds.head
+        else throw new Exception("Primary keys aren't unique in executions table.")})
+
+    override def proofTree(proofId: Int): Tree = {
+      val executionId = getTacticExecution(proofId)
       var steps = proofSteps(executionId)
+      /* This happens if we ask for a proof tree before we've done any actual proving, e.g. if we just created a new
+      * proof. In this case the right thing to do is display one node with the sequent we're trying to prove, which we
+      * can find by asking the proof. */
       if (steps.isEmpty) {
-        throw new Exception("Tried to get proof tree for empty execution with ID " + executionId)
+        val sequent = getProofConclusion(proofId)
+        val node = treeNode(sequent, None)
+        Tree("ProofId", List(node), node, List(AgendaItem("itemId", "name", "proofId", node, Nil)))
       }
       val (rootSubgoals, conclusion) = getSequents(steps.head.inputProvableId)
       var openGoals : List[TreeNode] = rootSubgoals.map({case subgoal => treeNode(subgoal, None)})
@@ -568,25 +594,6 @@ object SQLite {
         steps = steps.tail
       }
       Tree("ProofId", allNodes, allNodes.head, openGoals.map({case sg => AgendaItem("itemId", "name", "proofId", sg, Nil)}))
-      /*
-      * {proofTree:
-      *  {id: proofId
-      *   nodes: List[
-      *     {id: nodeId
-      *      sequent:
-      *        {ante: List[{id: formulaId formula: rec t. {name: string, children: Option[List[t]]}}]
-      *         succ: <same>}
-      *      children: List[nodeId]
-      *      parent: Option[nodeId]}
-      *   root: nodeId}
-      *  agendaItems:
-      *  {<the nodeId>:
-      *    {id: itemId
-      *     name: String
-      *     proofId: proofId
-      *     goal: nodeId
-      *     path: List[Something??]
-      *  */
     }
   }
 }
