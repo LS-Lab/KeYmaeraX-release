@@ -10,12 +10,12 @@
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import com.github.fge.jackson.JsonLoader
-import com.github.fge.jsonschema.main.JsonSchemaFactory
+import _root_.edu.cmu.cs.ls.keymaerax.api.JSONConverter
+import _root_.edu.cmu.cs.ls.keymaerax.core.Sequent
+import com.fasterxml.jackson.annotation.JsonValue
 import spray.json._
 import java.io.{PrintWriter, StringWriter, File}
 
-import scala.collection.mutable.ListBuffer
 
 /**
  * Responses are like views -- they shouldn't do anything except produce appropriately
@@ -290,6 +290,57 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
   )})
 
   val json = JsArray(objects)
+}
+
+class AgendaAwesomeResponse(tree: Tree, agenda: List[AgendaItem]) extends Response {
+  override val schema = Some("agendaawesome.js")
+
+  def childrenJson(children: List[TreeNode]):JsValue = {
+   JsArray(children.map({case node => nodeIdJson(node.id)}))
+  }
+
+  def sequentJson(sequent: Sequent): JsValue = {
+    JsObject (
+      "ante" -> JsArray(sequent.ante.map{case fml => JSONConverter.convertFormula(fml, null, null)}.toVector),
+      "succ" -> JsArray(sequent.succ.map{case fml => JSONConverter.convertFormula(fml, null, null)}.toVector)
+    )
+  }
+
+  def nodeJson(node: TreeNode): JsValue = {
+    JsObject (
+      "id" -> nodeIdJson(node.id),
+      "sequent" -> sequentJson(node.sequent),
+      "children" -> childrenJson(node.children),
+      "parent" -> node.parent.map({case n => nodeIdJson(n.id)}).getOrElse(JsNull))
+  }
+
+  def pathJson(path: List[String]):JsValue = JsArray()
+
+  def itemJson(item: AgendaItem): (String, JsValue) = {
+    val value = JsObject (
+      "id" -> JsString(item.id),
+      "name" -> JsString(item.name),
+      "proofId" -> JsString(item.proofId),
+      "goal" -> JsString(item.id),
+      "path" -> pathJson(item.path))
+    (item.id, value)
+  }
+
+  def nodeIdJson(n: Int):JsValue = JsString("Node" + n)
+  def proofIdJson(n: String):JsValue = JsString("Proof" + n)
+
+  val proofTree = JsObject (
+    "id" -> proofIdJson(tree.id),
+    "nodes" -> new JsArray(tree.nodes.map({case node => nodeJson(node)})),
+    "root" -> nodeIdJson(tree.root.id))
+
+  val agendaItems = JsObject(agenda.map({case item => itemJson(item)}))
+
+  val json =
+    JsObject (
+      "proofTree" -> proofTree,
+      "agendaItems" -> agendaItems
+    )
 }
 
 class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: String) extends Response {

@@ -13,6 +13,7 @@ import java.io.{File, FileNotFoundException, FileReader}
 import java.text.SimpleDateFormat
 import java.util.{Locale, Calendar}
 
+import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
@@ -479,6 +480,19 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
         }
       }
     }
+  }
+}
+
+/**
+  * Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task!
+  * @param db Access to the database.
+  * @param userId Identifies the user.
+  * @param proofId Identifies the proof.
+  */
+class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+  def getResultingResponses() = {
+    val (tree, agenda) = db.proofTree(proofId.toInt)
+    new AgendaAwesomeResponse(tree, agenda) :: Nil
   }
 }
 

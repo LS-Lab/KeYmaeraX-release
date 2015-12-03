@@ -536,16 +536,19 @@ object SQLite {
       })
     }
 
-    case class Tree (id: String, nodes: List[TreeNode], root: TreeNode)
-    case class AgendaItem (id: String, name: String, proofId: String, goal: TreeNode, path: List[String])
+    private var maxNode = 0
+    private def treeNode(subgoal: Sequent, parent: Option[TreeNode]) = {
+      maxNode = maxNode + 1
+      TreeNode(maxNode, subgoal, parent)
+    }
 
-    def proofTree(executionId: Int): (Tree, List[AgendaItem]) = {
+    override def proofTree(executionId: Int): (Tree, List[AgendaItem]) = {
       var steps = proofSteps(executionId)
       if (steps.isEmpty) {
         throw new Exception("Tried to get proof tree for empty execution with ID " + executionId)
       }
       val (rootSubgoals, conclusion) = getSequents(steps.head.inputProvableId)
-      var openGoals : List[TreeNode] = rootSubgoals.map({case subgoal => TreeNode(subgoal, None)})
+      var openGoals : List[TreeNode] = rootSubgoals.map({case subgoal => treeNode(subgoal, None)})
       var allNodes = openGoals
       while (steps.nonEmpty && steps.head.resultProvableId.nonEmpty) {
         val step = steps.head
@@ -557,8 +560,8 @@ object SQLite {
         } else {
           val (updated :: added) =
             endSubgoals.filter({case sg => !openGoals.exists({case node => node.sequent == sg})})
-          val updatedNode = TreeNode(updated, Some(openGoals(branch)))
-          val addedNodes = added.map({case sg => TreeNode(sg, Some(openGoals(branch)))})
+          val updatedNode = treeNode(updated, Some(openGoals(branch)))
+          val addedNodes = added.map({case sg => treeNode(sg, Some(openGoals(branch)))})
           openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
           allNodes = allNodes ++ (updatedNode :: addedNodes)
         }
