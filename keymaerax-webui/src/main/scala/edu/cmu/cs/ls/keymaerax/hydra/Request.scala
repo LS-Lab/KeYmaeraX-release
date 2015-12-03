@@ -491,8 +491,7 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
   */
 class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
-    val (tree, agenda) = db.proofTree(proofId.toInt)
-    new AgendaAwesomeResponse(tree, agenda) :: Nil
+    new AgendaAwesomeResponse(db.proofTree(proofId.toInt)) :: Nil
   }
 }
 

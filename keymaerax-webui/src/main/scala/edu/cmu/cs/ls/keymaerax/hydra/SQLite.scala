@@ -542,7 +542,7 @@ object SQLite {
       TreeNode(maxNode, subgoal, parent)
     }
 
-    override def proofTree(executionId: Int): (Tree, List[AgendaItem]) = {
+    override def proofTree(executionId: Int): Tree = {
       var steps = proofSteps(executionId)
       if (steps.isEmpty) {
         throw new Exception("Tried to get proof tree for empty execution with ID " + executionId)
@@ -567,7 +567,7 @@ object SQLite {
         }
         steps = steps.tail
       }
-      (Tree("ProofId", allNodes, allNodes.head), openGoals.map({case sg => AgendaItem("itemId", "name", "proofId", sg, Nil)}))
+      Tree("ProofId", allNodes, allNodes.head, openGoals.map({case sg => AgendaItem("itemId", "name", "proofId", sg, Nil)}))
       /*
       * {proofTree:
       *  {id: proofId

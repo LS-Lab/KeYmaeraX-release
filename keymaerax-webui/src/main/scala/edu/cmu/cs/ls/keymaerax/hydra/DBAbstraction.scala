@@ -141,7 +141,10 @@ case class TreeNode (id: Int, sequent: Sequent, parent: Option[TreeNode]) {
     parent.get.children = this :: parent.get.children
 }
 
-case class Tree(id: String, nodes: List[TreeNode], root: TreeNode)
+case class Tree(id: String, nodes: List[TreeNode], root: TreeNode, leaves: List[AgendaItem]) {
+  def leavesAndRoot = root :: leaves.map({case item => item.goal})
+}
+
 case class AgendaItem(id: String, name: String, proofId: String, goal: TreeNode, path: List[String])
 
 object ParameterValueType extends Enumeration {
@@ -225,7 +228,7 @@ trait DBAbstraction {
 
   def getProofSteps(proofId: Int): List[String]
 
-  def proofTree(executionId: Int): (Tree, List[AgendaItem])
+  def proofTree(executionId: Int): Tree
 
   // Tactics
   /** Stores a Provable in the database and returns its ID */

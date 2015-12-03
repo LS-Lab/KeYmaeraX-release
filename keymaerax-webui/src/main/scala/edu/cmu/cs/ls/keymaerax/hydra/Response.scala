@@ -292,7 +292,7 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
   val json = JsArray(objects)
 }
 
-class AgendaAwesomeResponse(tree: Tree, agenda: List[AgendaItem]) extends Response {
+class AgendaAwesomeResponse(tree: Tree) extends Response {
   override val schema = Some("agendaawesome.js")
 
   def childrenJson(children: List[TreeNode]):JsValue = {
@@ -331,10 +331,10 @@ class AgendaAwesomeResponse(tree: Tree, agenda: List[AgendaItem]) extends Respon
 
   val proofTree = JsObject (
     "id" -> proofIdJson(tree.id),
-    "nodes" -> new JsArray(tree.nodes.map({case node => nodeJson(node)})),
+    "nodes" -> new JsArray(tree.leavesAndRoot.map({case node => nodeJson(node)})),
     "root" -> nodeIdJson(tree.root.id))
 
-  val agendaItems = JsObject(agenda.map({case item => itemJson(item)}))
+  val agendaItems = JsObject(tree.leaves.map({case item => itemJson(item)}))
 
   val json =
     JsObject (
