@@ -27,26 +27,18 @@
         <li >
             <span>
                 <!-- Show collapse button on first element -->
-                <a ng-if="!conclusionIsCollapsed($index)" ng-click="setConclusionCollapsed($index, true)"><span class="fa fa-minus-square-o"></span></a>
                 <span uib-tooltip="{{proofTree.nodesMap[step.id].rule.name}}" tooltip-placement="right">{{proofTree.nodesMap[step.id].rule.name}}</span>
+                <a ng-if="!conclusionIsCollapsed($index)" ng-click="setConclusionCollapsed($index, true)"><span class="fa fa-minus-square-o"></span></a>
             </span>
         </li>
     </ul>
     <!-- add buttons: rewind to here, start alternative proof attempt etc. -->
 </div>
-<!-- button to uncollapse collapsed conclusions -->
-<div class="row k4-proofrow" ng-if="minCollapsedIndex() < deductionPath.length-1">
+<!-- button to collapse/uncollapse (fetch data, if necessary) -->
+<div class="row k4-proofrow" ng-if="minCollapsedIndex() < deductionPath.length-1 || deductionPath[deductionPath.length-1].id !== proofTree.root">
     <ul>
         <li>
-            <a ng-click="setConclusionCollapsed(minCollapsedIndex(), false)"><span class="fa fa-plus-square-o"></span></a>
-        </li>
-    </ul>
-</div>
-<!-- navigation buttons to fetch parents -->
-<div class="row k4-proofrow" ng-if="deductionPath[deductionPath.length-1].id !== proofTree.root">
-    <ul>
-        <li>
-            <a ng-click="fetchParent(deductionPath[deductionPath.length-1].id)"
+            <a ng-click="fetchParent(deductionPath[Math.min(deductionPath.length-1, minCollapsedIndex())].id)"
                ng-right-click="fetchParentRightClick($event)"
                uib-popover-template="'navigateTowardsRootPopoverHtml'" popover-title="Proof history"
                popover-placement="bottom" popover-trigger="contextmenu" tabindex="-1">

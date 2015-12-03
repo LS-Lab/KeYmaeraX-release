@@ -15,7 +15,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
    * @param agenda          The agenda, see provingawesome.js for schema.
    * @param readOnly        Indicates whether or not the proof steps should allow interaction (optional).
    */
-  .directive('k4Sequentproof', ['$http', function($http) {
+  .directive('k4Sequentproof', ['$http', '$window', function($http, $window) {
     /* The directive's internal control. */
     function link(scope, element, attrs) {
       /**
@@ -23,9 +23,22 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
        * (parent appended as previous proof step below deduction view).
        */
       scope.fetchParent = function(goalId) {
-        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/parent').success(function(data) {
-          addProofTreeNode(data);
-        });
+        var item = scope.agenda.itemsMap[scope.nodeId];
+        if (item.path[item.path.length-1].id === goalId) {
+          // sanity check: parent pointer should be null
+          if (scope.proofTree.nodesMap[goalId].parent !== null) {
+            console.error('Inconsistent path and tree parent for node ' + goalId + ': parent ' +
+              scope.proofTree.nodesMap[goalId].parent + ' is not last element in path ' + item.path);
+          }
+          $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/parent').success(function(data) {
+            addProofTreeNode(data);
+          });
+        } else {
+          var parentId = scope.proofTree.nodesMap[goalId].parent;
+          var parents = $.grep(item.path, function(v, i) { return v.id === parentId; });
+          if (parents.length != 1) { console.error('Node ' + goalId + ': expected unique parent, but got ' + parents); }
+          parents[0].isCollapsed = false;
+        }
       }
 
       scope.fetchBranchRoot = function(goalId) {
@@ -36,10 +49,16 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       }
 
       scope.fetchPathAll = function(goalId) {
-        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/pathall').success(function(data) {
-          // TODO use numParentsUntilComplete to display some information
-          $.each(data.path, function(i, ptnode) { addProofTreeNode(ptnode); });
-        });
+        var item = scope.agenda.itemsMap[scope.nodeId];
+        if (item.path[item.path.length-1].id !== scope.proofTree.root) {
+          $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/pathall').success(function(data) {
+            // TODO use numParentsUntilComplete to display some information
+            $.each(data.path, function(i, ptnode) { ptnode.isCollapsed = false; });
+            $.each(data.path, function(i, ptnode) { addProofTreeNode(ptnode); });
+          });
+        } else {
+          $.each(item.path, function(i, v) { v.isCollapsed = false; });
+        }
       }
 
       addProofTreeNode = function(proofTreeNode) {
@@ -50,6 +69,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
           scope.proofTree.nodesMap[proofTreeNode.id].children = proofTreeNode.children;
           scope.proofTree.nodesMap[proofTreeNode.id].rule = proofTreeNode.rule;
         }
+        // update parent pointer of children
+        $.each(proofTreeNode.children, function(i, v) { scope.proofTree.nodesMap[v].parent = proofTreeNode.id; });
 
         // append parent at the end of the deduction path of all relevant agenda items
         var items = $.map(proofTreeNode.children, function(e) { return scope.agenda.itemsByProofStep(e); }); // JQuery flat map
@@ -108,6 +129,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         // emulate hoverable popover (to come in later ui-bootstrap version) with hide on blur (need to focus for blur)
         event.target.focus();
       }
+
+      scope.Math = $window.Math;
 
       scope.deductionPath = $.map(scope.deductionPath, function(v, i) { return {id: v, isCollapsed: false}; });
     }
