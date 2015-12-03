@@ -209,6 +209,16 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val proofTasksPathAll = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pathall") { (userId, proofId, nodeId, goalId) => { pathEnd {
+    get {
+      val request = goalId match {
+        case "S3" => new MockRequest("/mockdata/s23pathallreply.json")
+        case "S2" => new MockRequest("/mockdata/s23pathallreply.json")
+      }
+      complete(standardCompletion(request))
+    }
+  }}}
+
   val axiomList = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, goalId, formulaId) => { pathEnd {
     get {
       val request = formulaId match {
@@ -507,6 +517,7 @@ trait RestApi extends HttpService {
     proofCheckIsProved    ::
     proofTasksNew         ::
     proofTasksParent      ::
+    proofTasksPathAll     ::
     axiomList             ::
     useAt                 ::
     proofTask             ::

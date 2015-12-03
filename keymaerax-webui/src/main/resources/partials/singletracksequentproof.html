@@ -42,19 +42,25 @@
         </li>
     </ul>
 </div>
-<!-- navigation buttons below bottom-most conclusion TODO depending on collapse/uncollapse-->
-<div class="row" ng-if="deductionPath[deductionPath.length-1].id !== proofTree.root">
-    <div class="col-md-12 text-center">
-        <a ng-click="fetchParent(deductionPath[deductionPath.length-1].id)"
-           ng-if="deductionPath.length > 0"><span class="fa fa-angle-down"> Parent</span></a>
-        <a ng-click="fetchParent(goalId)"
-           ng-if="deductionPath.length <= 0"><span class="fa fa-angle-down"> Parent</span></a>
-        <a><span class="fa fa-code-fork"> Branching point</span></a>
-        <a><span class="fa fa-angle-double-down"> Expand all</span></a>
-    </div>
+<!-- navigation buttons to fetch parents -->
+<div class="row k4-proofrow" ng-if="deductionPath[deductionPath.length-1].id !== proofTree.root">
+    <ul>
+        <li>
+            <a ng-click="fetchParent(deductionPath[deductionPath.length-1].id)"
+               ng-right-click="fetchParentRightClick($event)"
+               uib-popover-template="'navigateTowardsRootPopoverHtml'" popover-title="Proof history"
+               popover-placement="bottom" popover-trigger="contextmenu" tabindex="-1">
+                <span class="fa fa-plus-square-o"></span>
+            </a>
+        </li>
+    </ul>
 </div>
-
-<!-- failed attempt on HTML tooltip -->
-<!--<script type="text/ng-template" id="sequentTooltipHtml">-->
-    <!--<span><small>{{tooltip(proofTree.nodesMap[sibling].sequent)}}</small></span>-->
-<!--</script>-->
+<script type="text/ng-template" id="navigateTowardsRootPopoverHtml">
+    <div>
+        <a ng-click="fetchBranchRoot"><span class="fa fa-code-fork"> Show branch root</span></a>
+        <a ng-click="fetchTreeRoot"><span class="fa fa-angle-down"> Show tree root</span></a>
+        <a ng-click="fetchPathAll(deductionPath[deductionPath.length-1].id)">
+            <span class="fa fa-angle-double-down"> Expand all</span>
+        </a>
+    </div>
+</script>

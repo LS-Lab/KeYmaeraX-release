@@ -24,22 +24,40 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
        */
       scope.fetchParent = function(goalId) {
         $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/parent').success(function(data) {
-          // add node to proof tree if not already present; otherwise, update node with fetched rule and children
-          if (scope.proofTree.nodesMap[data.id] === undefined) {
-            scope.proofTree.nodesMap[data.id] = data;
-          } else {
-            scope.proofTree.nodesMap[data.id].children = data.children;
-            scope.proofTree.nodesMap[data.id].rule = data.rule;
-          }
-
-          // append parent at the end of the deduction path of all relevant agenda items
-          var items = $.map(data.children, function(e) { return scope.agenda.itemsByProofStep(e); }); // JQuery flat map
-          $.each(items, function(i, v) {
-            if (data.children.indexOf(v.path[v.path.length - 1].id) < 0) {
-              console.error('Expected last path element to be a child of ' + data.id + ', but agenda item ' + v.id +
-                ' has ' + v.path[v.path.length - 1].id + ' as last path element');
-            } else v.path.push({id: data.id, isCollapsed: false}); });
+          addProofTreeNode(data);
         });
+      }
+
+      scope.fetchBranchRoot = function(goalId) {
+      }
+
+      scope.fetchTreeRoot = function(goalId) {
+        // nothing to do here, already have tree root
+      }
+
+      scope.fetchPathAll = function(goalId) {
+        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/pathall').success(function(data) {
+          // TODO use numParentsUntilComplete to display some information
+          $.each(data.path, function(i, ptnode) { addProofTreeNode(ptnode); });
+        });
+      }
+
+      addProofTreeNode = function(proofTreeNode) {
+        // add node to proof tree if not already present; otherwise, update node with fetched rule and children
+        if (scope.proofTree.nodesMap[proofTreeNode.id] === undefined) {
+          scope.proofTree.nodesMap[proofTreeNode.id] = proofTreeNode;
+        } else {
+          scope.proofTree.nodesMap[proofTreeNode.id].children = proofTreeNode.children;
+          scope.proofTree.nodesMap[proofTreeNode.id].rule = proofTreeNode.rule;
+        }
+
+        // append parent at the end of the deduction path of all relevant agenda items
+        var items = $.map(proofTreeNode.children, function(e) { return scope.agenda.itemsByProofStep(e); }); // JQuery flat map
+        $.each(items, function(i, v) {
+          if (proofTreeNode.children.indexOf(v.path[v.path.length - 1].id) < 0) {
+            console.error('Expected last path element to be a child of ' + proofTreeNode.id + ', but agenda item ' + v.id +
+              ' has ' + v.path[v.path.length - 1].id + ' as last path element');
+          } else v.path.push({id: proofTreeNode.id, isCollapsed: false}); });
       }
 
       /** Pretty prints sequent JSON into HTML */
@@ -83,6 +101,12 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
           if (scope.deductionPath[i].isCollapsed) return i-1;
         }
         return scope.deductionPath.length-1;
+      }
+
+      scope.fetchParentRightClick = function(event) {
+        event.stopPropagation();
+        // emulate hoverable popover (to come in later ui-bootstrap version) with hide on blur (need to focus for blur)
+        event.target.focus();
       }
 
       scope.deductionPath = $.map(scope.deductionPath, function(v, i) { return {id: v, isCollapsed: false}; });
