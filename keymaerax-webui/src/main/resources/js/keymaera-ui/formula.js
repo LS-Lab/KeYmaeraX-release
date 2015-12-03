@@ -1,19 +1,5 @@
 angular.module('formula', ['ngSanitize']);
 
-/** Right-click directive (TODO move someplace shared with other directives) */
-angular.module('formula')
-  .directive('ngRightClick', function($parse) {
-    return function(scope, element, attrs) {
-        var fn = $parse(attrs.ngRightClick);
-        element.bind('contextmenu', function(event) {
-            scope.$apply(function() {
-                event.preventDefault();
-                fn(scope, {$event:event});
-            });
-        });
-    };
-  });
-
 /** Renders a formula into hierarchically structured spans */
 angular.module('formula')
   .directive('k4Formula', ['$compile', '$http', function($compile, $http) {

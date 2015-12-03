@@ -12,6 +12,7 @@
   'ui.bootstrap.popover',
   'ui.bootstrap.collapse',
   'keymaerax.controllers',
+  'keymaerax.ui.mouseevents',
   'progressMeter',
   'proofProgressChart',
   'formula',
