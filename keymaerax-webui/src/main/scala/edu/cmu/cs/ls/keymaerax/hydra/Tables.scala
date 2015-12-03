@@ -278,19 +278,22 @@ trait Tables {
   lazy val Proofs = new TableQuery(tag => new Proofs(tag))
   
   /** Entity class storing rows of table Provables
-   *  @param _Id Database column _id DBType(INTEGER), PrimaryKey */
-  case class ProvablesRow(_Id: Option[Int])
+   *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
+   *  @param insertstatementwassyntacticallyvalid Database column insertStatementWasSyntacticallyValid DBType(INTEGER) */
+  case class ProvablesRow(_Id: Option[Int], insertstatementwassyntacticallyvalid: Option[Int])
   /** GetResult implicit for fetching ProvablesRow objects using plain SQL queries */
   implicit def GetResultProvablesRow(implicit e0: GR[Option[Int]]): GR[ProvablesRow] = GR{
     prs => import prs._
-    ProvablesRow(<<?[Int])
+    ProvablesRow.tupled((<<?[Int], <<?[Int]))
   }
   /** Table description of table provables. Objects of this class serve as prototypes for rows in queries. */
   class Provables(_tableTag: Tag) extends Table[ProvablesRow](_tableTag, "provables") {
-    def * = _Id <> (ProvablesRow, ProvablesRow.unapply)
+    def * = (_Id, insertstatementwassyntacticallyvalid) <> (ProvablesRow.tupled, ProvablesRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
     val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
+    /** Database column insertStatementWasSyntacticallyValid DBType(INTEGER) */
+    val insertstatementwassyntacticallyvalid: Column[Option[Int]] = column[Option[Int]]("insertStatementWasSyntacticallyValid")
   }
   /** Collection-like TableQuery object for table Provables */
   lazy val Provables = new TableQuery(tag => new Provables(tag))
@@ -355,17 +358,16 @@ trait Tables {
   /** Entity class storing rows of table Sequents
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
    *  @param provableid Database column provableId DBType(INTEGER)
-   *  @param idx Database column idx DBType(INTEGER)
-   *  @param conclusionid Database column conclusionId DBType(INTEGER) */
-  case class SequentsRow(_Id: Option[Int], provableid: Option[Int], idx: Option[Int], conclusionid: Option[Int])
+   *  @param idx Database column idx DBType(INTEGER) */
+  case class SequentsRow(_Id: Option[Int], provableid: Option[Int], idx: Option[Int])
   /** GetResult implicit for fetching SequentsRow objects using plain SQL queries */
   implicit def GetResultSequentsRow(implicit e0: GR[Option[Int]]): GR[SequentsRow] = GR{
     prs => import prs._
-    SequentsRow.tupled((<<?[Int], <<?[Int], <<?[Int], <<?[Int]))
+    SequentsRow.tupled((<<?[Int], <<?[Int], <<?[Int]))
   }
   /** Table description of table sequents. Objects of this class serve as prototypes for rows in queries. */
   class Sequents(_tableTag: Tag) extends Table[SequentsRow](_tableTag, "sequents") {
-    def * = (_Id, provableid, idx, conclusionid) <> (SequentsRow.tupled, SequentsRow.unapply)
+    def * = (_Id, provableid, idx) <> (SequentsRow.tupled, SequentsRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
     val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -373,13 +375,9 @@ trait Tables {
     val provableid: Column[Option[Int]] = column[Option[Int]]("provableId")
     /** Database column idx DBType(INTEGER) */
     val idx: Column[Option[Int]] = column[Option[Int]]("idx")
-    /** Database column conclusionId DBType(INTEGER) */
-    val conclusionid: Column[Option[Int]] = column[Option[Int]]("conclusionId")
     
     /** Foreign key referencing Provables (database name provables_FK_1) */
     lazy val provablesFk = foreignKey("provables_FK_1", provableid, Provables)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
-    /** Foreign key referencing Sequents (database name sequents_FK_2) */
-    lazy val sequentsFk = foreignKey("sequents_FK_2", conclusionid, Sequents)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
   }
   /** Collection-like TableQuery object for table Sequents */
   lazy val Sequents = new TableQuery(tag => new Sequents(tag))

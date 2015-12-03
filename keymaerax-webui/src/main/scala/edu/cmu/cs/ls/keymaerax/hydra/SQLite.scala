@@ -355,11 +355,11 @@ object SQLite {
       })
       for (i <- ante.indices) {
         nInserts = nInserts + 1
-        formulas.insert((sequentId, true.toString, i, ante(i).toString))
+        formulas.insert((sequentId, true.toString, i, ante(i).prettyString))
       }
       for (i <- succ.indices) {
         nInserts = nInserts + 1
-        formulas.insert((sequentId, false.toString, i, succ(i).toString))
+        formulas.insert((sequentId, false.toString, i, succ(i).prettyString))
       }
     }
 
@@ -370,8 +370,8 @@ object SQLite {
         * that generates an ill-formed SQL statement, so let's explicitly insert a row with a null conclusion - it
         * does the same thing but generates SQL that parses.*/
         val provableId =
-          (Provables.map({ case provable => provable._Id}) returning Provables.map(_._Id.get))
-            .insert(None)
+          (Provables.map({ case provable => provable.insertstatementwassyntacticallyvalid.get}) returning Provables.map(_._Id.get))
+            .insert(1)
         serializeSequent(p.conclusion, provableId, None)
         for(i <- p.subgoals.indices) {
           serializeSequent(p.subgoals(i), provableId, Some(i))
@@ -455,6 +455,15 @@ object SQLite {
       })
     }
 
+
+    def updateResultProvable(executionStepId: Int, provableId: Option[Int]): Unit = {
+      session.withTransaction({
+        nSelects = nSelects + 1
+        nUpdates = nUpdates + 1
+        Executionsteps.filter(_._Id === executionStepId).map(_.resultprovableid).update(provableId)
+      })
+    }
+
     private def sortFormulas(fromAnte: Boolean, formulas: List[SequentFormulaPOJO]): List[Formula] = {
       import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
       val relevant = formulas.filter({ case formula => fromAnte == formula.isAnte })
@@ -470,7 +479,7 @@ object SQLite {
             formula.isante.get.toBoolean, formula.idx.get, formula.formula.get))
       val ante = sortFormulas(fromAnte = true, formulas).toIndexedSeq
       val succ = sortFormulas(fromAnte = false, formulas).toIndexedSeq
-      Sequent(null, ante, succ)
+      Sequent(Nil, ante, succ)
     }
 
     def getSequents(provableId: Int): (List[Sequent], Sequent) = {
@@ -527,25 +536,35 @@ object SQLite {
       })
     }
 
-    var nodeId = 0
-
-    case class TreeNode(sequent: Sequent, parent: Option[TreeNode])  {
-      val id = nodeId
-      nodeId = nodeId + 1
-      var children: List[TreeNode] = Nil
-    }
-
     case class Tree (id: String, nodes: List[TreeNode], root: TreeNode)
     case class AgendaItem (id: String, name: String, proofId: String, goal: TreeNode, path: List[String])
 
-    def proofTree(executionId: Int) = {
-      val steps = proofSteps(executionId)
+    def proofTree(executionId: Int): (Tree, List[AgendaItem]) = {
+      var steps = proofSteps(executionId)
       if (steps.isEmpty) {
         throw new Exception("Tried to get proof tree for empty execution with ID " + executionId)
       }
-      val initialProvable = steps.head.inputProvableId
-      var openGoals : List[TreeNode] = ???
-      ???
+      val (rootSubgoals, conclusion) = getSequents(steps.head.inputProvableId)
+      var openGoals : List[TreeNode] = rootSubgoals.map({case subgoal => TreeNode(subgoal, None)})
+      var allNodes = openGoals
+      while (steps.nonEmpty && steps.head.resultProvableId.nonEmpty) {
+        val step = steps.head
+        val branch = step.branchOrder.get
+        val (endSubgoals, _) = getSequents(step.resultProvableId.get)
+        /* This step closed a branch*/
+        if(endSubgoals.length == openGoals.length - 1) {
+          openGoals = openGoals.slice(0, branch) ++ openGoals.slice(branch + 1, openGoals.length)
+        } else {
+          val (updated :: added) =
+            endSubgoals.filter({case sg => !openGoals.exists({case node => node.sequent == sg})})
+          val updatedNode = TreeNode(updated, Some(openGoals(branch)))
+          val addedNodes = added.map({case sg => TreeNode(sg, Some(openGoals(branch)))})
+          openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
+          allNodes = allNodes ++ (updatedNode :: addedNodes)
+        }
+        steps = steps.tail
+      }
+      (Tree("ProofId", allNodes, allNodes.head), openGoals.map({case sg => AgendaItem("itemId", "name", "proofId", sg, Nil)}))
       /*
       * {proofTree:
       *  {id: proofId

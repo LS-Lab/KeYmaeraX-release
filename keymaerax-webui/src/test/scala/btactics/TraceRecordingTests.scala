@@ -56,6 +56,6 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
   }
 
   it should "print out some steps for me to check by hand" in {
-    println(db.proofSteps(1337))
+    println(db.proofTree(1337))
   }
 }
