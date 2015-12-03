@@ -36,7 +36,10 @@ CREATE TABLE IF NOT EXISTS `proofs` (
 -- Serialization of Provables
 ----------------------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `provables` (
-  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL
+  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  -- Work around Slick bug where it's impossible to insert without specifying at least one of the columns. This is
+  -- never actually used for anything.
+  `insertStatementWasSyntacticallyValid` INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS `sequents` (
