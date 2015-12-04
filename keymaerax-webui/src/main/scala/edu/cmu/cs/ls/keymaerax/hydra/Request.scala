@@ -14,6 +14,7 @@ import java.text.SimpleDateFormat
 import java.util.{Locale, Calendar}
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
+import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
@@ -491,7 +492,8 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
   */
 class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
-    new AgendaAwesomeResponse(db.proofTree(proofId.toInt)) :: Nil
+    val response = new AgendaAwesomeResponse(db.proofTree(proofId.toInt))
+    response :: Nil
   }
 }
 

@@ -134,7 +134,7 @@ object SQLite {
       session.withTransaction({
         val stepCount = getProofSteps(proofId).size
         nSelects = nSelects + 1
-        val list = Proofs.filter(_._Id.get === proofId)
+        val list = Proofs.filter(_._Id === proofId)
           .list
           .map(p => new ProofPOJO(p._Id.get, p.modelid.get, blankOk(p.name), blankOk(p.description),
             blankOk(p.date), stepCount, p.closed.getOrElse(0) == 1))
@@ -171,14 +171,14 @@ object SQLite {
     override def updateProofInfo(proof: ProofPOJO): Unit =
       session.withTransaction({
         nSelects = nSelects + 1
-        Proofs.filter(_._Id.get === proof.proofId).update(proofPojoToRow(proof))
+        Proofs.filter(_._Id === proof.proofId).update(proofPojoToRow(proof))
         nUpdates = nUpdates + 1
       })
 
     override def updateProofName(proofId: Int, newName: String): Unit = {
       session.withTransaction({
         nSelects = nSelects + 1
-        Proofs.filter(_._Id.get === proofId).map(_.name).update(Some(newName))
+        Proofs.filter(_._Id === proofId).map(_.name).update(Some(newName))
         nUpdates = nUpdates + 1
       })
     }
@@ -201,8 +201,7 @@ object SQLite {
       session.withTransaction({
         nSelects = nSelects + 1
         Proofs.filter(_.modelid === modelId).list.map(p => {
-          //        val stepCount : Int = Tacticonproof.filter(_.proofid === p.proofid.get).list.count
-          val stepCount = 0 //@todo after everything else is done implement this.
+          val stepCount = getProofSteps(p._Id.get).size
           val closed: Boolean = sqliteBoolToBoolean(p.closed.getOrElse(0))
           new ProofPOJO(p._Id.get, p.modelid.get, blankOk(p.name), blankOk(p.description), blankOk(p.date), stepCount, closed)
         })
@@ -215,7 +214,6 @@ object SQLite {
                              title: Option[String] = None, tactic: Option[String] = None): Option[Int] =
       session.withTransaction({
         nSelects = nSelects + 1
-        /* @todo create execution here */
         if (Models.filter(_.userid === userId).filter(_.name === name).list.length == 0) {
           nInserts = nInserts + 1
           Some((Models.map(m => (m.userid.get, m.name.get, m.filecontents.get, m.date.get, m.description, m.publink, m.title, m.tactic))
@@ -227,10 +225,13 @@ object SQLite {
 
     override def createProofForModel(modelId: Int, name: String, description: String, date: String): Int =
       session.withTransaction({
-        nInserts = nInserts + 1
-        (Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get))
-          returning Proofs.map(_._Id.get))
-          .insert(modelId, name, description, date, 0)
+        nInserts = nInserts + 2
+        val proofId =
+          (Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get))
+            returning Proofs.map(_._Id.get))
+            .insert(modelId, name, description, date, 0)
+        Tacticexecutions.map(te => te.proofid.get).insert(proofId)
+        proofId
       })
 
     override def getModel(modelId: Int): ModelPOJO =
@@ -427,7 +428,11 @@ object SQLite {
       *       Alternatives?
       *       Does order matter?
       *       What's in each string? */
-    override def getProofSteps(proofId: Int): List[String] = ???
+    override def getProofSteps(proofId: Int): List[String] = {
+      val execution = getTacticExecution(proofId)
+      val stepPOJOs = proofSteps(execution)
+      stepPOJOs.map({case step => step.toString})
+    }
 
     /** Adds a built-in tactic application using a set of parameters */
     override def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int = {
@@ -571,7 +576,7 @@ object SQLite {
       if (steps.isEmpty) {
         val sequent = getProofConclusion(proofId)
         val node = treeNode(sequent, None)
-        Tree("ProofId", List(node), node, List(AgendaItem("itemId", "name", "proofId", node, Nil)))
+        return Tree("ProofId", List(node), node, List(AgendaItem("itemId", "name", "proofId", node, Nil)))
       }
       val (rootSubgoals, conclusion) = getSequents(steps.head.inputProvableId)
       var openGoals : List[TreeNode] = rootSubgoals.map({case subgoal => treeNode(subgoal, None)})

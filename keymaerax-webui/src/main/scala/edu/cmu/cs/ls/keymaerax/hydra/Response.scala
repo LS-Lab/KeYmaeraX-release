@@ -301,17 +301,22 @@ class AgendaAwesomeResponse(tree: Tree) extends Response {
 
   def sequentJson(sequent: Sequent): JsValue = {
     JsObject (
-      "ante" -> JsArray(sequent.ante.map{case fml => JSONConverter.convertFormula(fml, null, null)}.toVector),
-      "succ" -> JsArray(sequent.succ.map{case fml => JSONConverter.convertFormula(fml, null, null)}.toVector)
+      "ante" -> JsArray(sequent.ante.map{case fml => JSONConverter.convertFormula(fml, "", "")}.toVector),
+      "succ" -> JsArray(sequent.succ.map{case fml => JSONConverter.convertFormula(fml, "", "")}.toVector)
     )
   }
 
   def nodeJson(node: TreeNode): JsValue = {
+    val id = nodeIdJson(node.id)
+    val sequent = sequentJson(node.sequent)
+    val children = childrenJson(node.children)
+    val parentOpt = node.parent.map({case n => nodeIdJson(n.id)})
+    val parent = parentOpt.getOrElse(JsNull)
     JsObject (
-      "id" -> nodeIdJson(node.id),
-      "sequent" -> sequentJson(node.sequent),
-      "children" -> childrenJson(node.children),
-      "parent" -> node.parent.map({case n => nodeIdJson(n.id)}).getOrElse(JsNull))
+      "id" -> id,
+      "sequent" -> sequent,
+      "children" -> children,
+      "parent" -> parent)
   }
 
   def pathJson(path: List[String]):JsValue = JsArray()
@@ -329,10 +334,17 @@ class AgendaAwesomeResponse(tree: Tree) extends Response {
   def nodeIdJson(n: Int):JsValue = JsString("Node" + n)
   def proofIdJson(n: String):JsValue = JsString("Proof" + n)
 
-  val proofTree = JsObject (
-    "id" -> proofIdJson(tree.id),
-    "nodes" -> new JsArray(tree.leavesAndRoot.map({case node => nodeJson(node)})),
-    "root" -> nodeIdJson(tree.root.id))
+  val proofTree = {
+    val id = proofIdJson(tree.id)
+    val nodez = tree.leavesAndRoot
+    val nodezz = nodez.map({case node => nodeJson(node)})
+    val nodes = new JsArray(nodezz)
+    val root = nodeIdJson(tree.root.id)
+    JsObject(
+      "id" -> id,
+      "nodes" -> nodes,
+      "root" -> root)
+  }
 
   val agendaItems = JsObject(tree.leaves.map({case item => itemJson(item)}))
 
