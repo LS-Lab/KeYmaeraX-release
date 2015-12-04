@@ -497,6 +497,15 @@ class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : Str
   }
 }
 
+class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
+  def getResultingResponses() = {
+    val tree = db.proofTree(proofId toInt)
+    val parent = tree.parent(nodeId)
+    val response = new ProofTaskParentResponse(parent)
+    response :: Nil
+  }
+}
+
 /**
  * Searches for tactics that are applicable to the specified formula. The sequent, which contains this formula, is
  * identified by the proof ID and the node ID.

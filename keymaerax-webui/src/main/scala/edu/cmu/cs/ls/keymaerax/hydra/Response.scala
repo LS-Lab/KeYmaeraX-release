@@ -292,47 +292,58 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
   val json = JsArray(objects)
 }
 
+  object Helpers {
+    def childrenJson(children: List[TreeNode]): JsValue = {
+      JsArray(children.map({ case node => nodeIdJson(node.id) }))
+    }
+
+    def sequentJson(sequent: Sequent): JsValue = {
+      JsObject(
+        "ante" -> JsArray(sequent.ante.map { case fml => JSONConverter.convertFormula(fml, "", "") }.toVector),
+        "succ" -> JsArray(sequent.succ.map { case fml => JSONConverter.convertFormula(fml, "", "") }.toVector)
+      )
+    }
+
+    def nodeJson(node: TreeNode): JsValue = {
+      val id = nodeIdJson(node.id)
+      val sequent = sequentJson(node.sequent)
+      val children = childrenJson(node.children)
+      val parentOpt = node.parent.map({ case n => nodeIdJson(n.id) })
+      val parent = parentOpt.getOrElse(JsNull)
+      JsObject(
+        "id" -> id,
+        "sequent" -> sequent,
+        "children" -> children,
+        "parent" -> parent)
+    }
+
+    def pathJson(path: List[String]): JsValue = JsArray()
+
+    def itemJson(item: AgendaItem): (String, JsValue) = {
+      val value = JsObject(
+        "id" -> JsString(item.id),
+        "name" -> JsString(item.name),
+        "proofId" -> JsString(item.proofId),
+        "goal" -> JsString(item.id),
+        "path" -> pathJson(item.path))
+      (item.id, value)
+    }
+
+    def nodeIdJson(n: Int):JsValue = JsString("Node" + n)
+    def proofIdJson(n: String):JsValue = JsString("Proof" + n)
+
+    /** @TODO Actually say what the rules are */
+    def ruleJson(rule: String):JsValue = {
+      JsObject(
+        "id" -> JsString("RulesUnimplemented"),
+        "name" -> JsString("RulesUnimplemented")
+      )
+    }
+  }
+
 class AgendaAwesomeResponse(tree: Tree) extends Response {
+  import Helpers._
   override val schema = Some("agendaawesome.js")
-
-  def childrenJson(children: List[TreeNode]):JsValue = {
-   JsArray(children.map({case node => nodeIdJson(node.id)}))
-  }
-
-  def sequentJson(sequent: Sequent): JsValue = {
-    JsObject (
-      "ante" -> JsArray(sequent.ante.map{case fml => JSONConverter.convertFormula(fml, "", "")}.toVector),
-      "succ" -> JsArray(sequent.succ.map{case fml => JSONConverter.convertFormula(fml, "", "")}.toVector)
-    )
-  }
-
-  def nodeJson(node: TreeNode): JsValue = {
-    val id = nodeIdJson(node.id)
-    val sequent = sequentJson(node.sequent)
-    val children = childrenJson(node.children)
-    val parentOpt = node.parent.map({case n => nodeIdJson(n.id)})
-    val parent = parentOpt.getOrElse(JsNull)
-    JsObject (
-      "id" -> id,
-      "sequent" -> sequent,
-      "children" -> children,
-      "parent" -> parent)
-  }
-
-  def pathJson(path: List[String]):JsValue = JsArray()
-
-  def itemJson(item: AgendaItem): (String, JsValue) = {
-    val value = JsObject (
-      "id" -> JsString(item.id),
-      "name" -> JsString(item.name),
-      "proofId" -> JsString(item.proofId),
-      "goal" -> JsString(item.id),
-      "path" -> pathJson(item.path))
-    (item.id, value)
-  }
-
-  def nodeIdJson(n: Int):JsValue = JsString("Node" + n)
-  def proofIdJson(n: String):JsValue = JsString("Proof" + n)
 
   val proofTree = {
     val id = proofIdJson(tree.id)
@@ -361,6 +372,35 @@ class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: S
     "nodeId" -> JsString(nodeId match { case Some(nId) => nId case None => "" }),
     "proofNode" -> JsonParser(nodeJson)
   )
+}
+
+class ProofTaskParentResponse (parent: Option[TreeNode]) extends Response {
+  import Helpers._
+  val json =
+    parent match {
+      case None => JsObject()
+      case Some(node) =>
+        JsObject (
+          "id" -> nodeIdJson(node.id),
+          "sequent" -> sequentJson(node.sequent),
+          "children" -> childrenJson(node.children),
+          "rule" -> ruleJson(node.rule),
+          "parent" -> node.parent.map({case parent => nodeIdJson(parent.id)}).getOrElse(JsNull)
+        )
+    }
+  /*
+{
+  "id": "S0",
+  "sequent": {
+    "ante": [],
+    "succ": [{
+      "id": "F0s",
+      "formula": {"name": "imply", "children": []}
+     },
+  "children": [ "S1" ],
+  "rule": { "id": "R2", "name": "implyR" },
+  "parent": "S0"
+}*/
 }
 
 //class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {

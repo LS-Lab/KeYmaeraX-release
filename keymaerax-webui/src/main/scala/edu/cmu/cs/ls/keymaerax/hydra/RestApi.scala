@@ -200,11 +200,7 @@ trait RestApi extends HttpService {
 
   val proofTasksParent = path("proofs" / "user" / Segment / Segment / Segment / Segment / "parent") { (userId, proofId, nodeId, goalId) => { pathEnd {
     get {
-      val request = goalId match {
-        case "S3" => new MockRequest("/mockdata/s23parentreply.json")
-        case "S2" => new MockRequest("/mockdata/s23parentreply.json")
-        case "S1" => new MockRequest("/mockdata/s1parentreply.json")
-      }
+      val request = new ProofTaskParentRequest(database, userId, proofId, nodeId, goalId)
       complete(standardCompletion(request))
     }
   }}}
