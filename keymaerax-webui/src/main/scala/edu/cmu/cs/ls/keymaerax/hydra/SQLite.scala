@@ -581,7 +581,7 @@ object SQLite {
         return Tree("ProofId", List(node), node, List(AgendaItem("itemId", "name", "proofId", node, Nil)))
       }
       val (rootSubgoals, conclusion) = getSequents(steps.head.inputProvableId)
-      var openGoals : List[TreeNode] = rootSubgoals.map({case subgoal => treeNode(subgoal, None)})
+      var openGoals = rootSubgoals.map({case subgoal => treeNode(subgoal, None)})
       var allNodes = openGoals
       while (steps.nonEmpty && steps.head.resultProvableId.nonEmpty) {
         val step = steps.head

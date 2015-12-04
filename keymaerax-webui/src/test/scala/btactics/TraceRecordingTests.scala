@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, IOListener
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.{ProofRuleTactics, UnifyUSCalculus}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstractionObj, SQLite}
+import edu.cmu.cs.ls.keymaerax.hydra.{ProofTaskParentRequest, DBAbstractionObj, SQLite}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, SuccPosition}
@@ -50,12 +50,24 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
   /* Same sequent and proof as the mockup for the new proof tree UI. Should give us a good sense of whether this code
   * can support the new UI or not. */
   it should "handle branching proofs" in {
-  proveBy(Sequent(Nil,IndexedSeq(), IndexedSeq("(z>5) -> ((x < 5) & true) & (2 > y)".asFormula)),
-    implyR(SuccPos(0)) & andR(SuccPos(0)))
+    proveBy(Sequent(Nil,IndexedSeq(), IndexedSeq("(z>5) -> ((x < 5) & true) & (2 > y)".asFormula)),
+      implyR(SuccPos(0)) & andR(SuccPos(0)))
+      db.printStats
+  }
+
+  it should "support multiple proof steps" in {
+    val provable =
+      proveBy(Sequent(Nil,IndexedSeq(), IndexedSeq("(z>5) -> ((x < 5) & true) & (2 > y)".asFormula)),
+        implyR(SuccPos(0)))
+    proveBy(provable.subgoals.head, andR(SuccPos(0)))
     db.printStats
   }
 
+  it should "support parents" in {
+    println(new ProofTaskParentRequest(db, "guest","10", "4", "goal").getResultingResponses().head.json)
+  }
+
   it should "print out some steps for me to check by hand" in {
-    println(db.proofTree(1337))
+    println(db.proofTree(10))
   }
 }
