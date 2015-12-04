@@ -542,12 +542,6 @@ object SQLite {
       })
     }
 
-    private var maxNode = 0
-    private def treeNode(subgoal: Sequent, parent: Option[TreeNode]) = {
-      maxNode = maxNode + 1
-      TreeNode(maxNode, subgoal, parent)
-    }
-
     private def getProofConclusion(proofId: Int): Sequent = {
       val modelId = getProofInfo(proofId).modelId
       val model = getModel(modelId)
@@ -570,6 +564,14 @@ object SQLite {
     override def proofTree(proofId: Int): Tree = {
       val executionId = getTacticExecution(proofId)
       var steps = proofSteps(executionId)
+      var currentNodeId = 1
+
+      def treeNode(subgoal: Sequent, parent: Option[TreeNode]): TreeNode = {
+        val nodeId = currentNodeId
+        currentNodeId = currentNodeId + 1
+        TreeNode(nodeId, subgoal, parent)
+      }
+
       /* This happens if we ask for a proof tree before we've done any actual proving, e.g. if we just created a new
       * proof. In this case the right thing to do is display one node with the sequent we're trying to prove, which we
       * can find by asking the proof. */
