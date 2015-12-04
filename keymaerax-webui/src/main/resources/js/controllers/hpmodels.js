@@ -1,17 +1,17 @@
 angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
-  function ($scope, $http, $cookies, $cookieStore, $route, $modal, Models) {
+  function ($scope, $http, $cookies, $cookieStore, $route, $uibModal, Models) {
 
      $scope.runPreloadedProof = function(model) {
         $http.post("/models/users/" + $scope.userId + "/model/" + model.id + "/initialize")
             .success(function(data) {
                 if(data.errorThrown) {
-                    showCaughtErrorMessage($modal, data, "Proof Preloader")
+                    showCaughtErrorMessage($uibModal, data, "Proof Preloader")
                 } else {
                     console.log("yay! Take the user to the proof load page?")
                 }
             })
             .error(function() {
-                showErrorMessage($modal, "Proof failed to load.");
+                showErrorMessage($uibModal, "Proof failed to load.");
             })
      };
 
@@ -22,7 +22,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
           fr.onerror = function(e) { alert("Could not even open your file: " + e.getMessage()); };
           fr.onload = function(e) {
                $.ajax({
-                     url: "user/" + $cookies.userId + "/modeltextupload/" + $scope.modelName,
+                     url: "user/" + $cookies.get('userId') + "/modeltextupload/" + $scope.modelName,
                      type: "POST",
                      data: e.target.result,
                      async: true,
@@ -30,7 +30,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
                      contentType: 'application/json',
                      success: function(data) {
                          if(data.errorThrown) {
-                            $modal.open({
+                            $uibModal.open({
                                templateUrl: 'partials/error_alert.html',
                                controller: 'ErrorAlertCtrl',
                                size: 'md',
@@ -44,13 +44,13 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
                             while (Models.getModels().length != 0) {
                                Models.getModels().shift()
                             }
-                            $http.get("models/users/" + $cookies.userId).success(function(data) {
-                                if(data.errorThrown) showErrorMessage($modal, data, "Could not get models for user " + $cookies.userId)
+                            $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
+                                if(data.errorThrown) showErrorMessage($uibModal, data, "Could not get models for user " + $cookies.get('userId'))
                                 Models.addModels(data);
                                 $route.reload();
                             })
                             .error(function() {
-                                showErrorMessage($modal, "Could not retrieve model list.")
+                                showErrorMessage($uibModal, "Could not retrieve model list.")
                             })
                          }
                      },
@@ -68,18 +68,18 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      $scope.$emit('routeLoaded', {theview: 'models'});
 });
 
-angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $modal, $location, Models) {
+angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $uibModal, $location, Models) {
   $scope.models = [];
-  $http.get("models/users/" + $cookies.userId).success(function(data) {
-      if(data.errorThrown) showErrorMessage($modal, data, "Could not get models for user " + $cookies.userId)
+  $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
+      if(data.errorThrown) showErrorMessage($uibModal, data, "Could not get models for user " + $cookies.get('userId'))
       $scope.models = data
   })
   .error(function() {
-      showErrorMessage($modal, "Could not retrieve model list")
+      showErrorMessage($uibModal, "Could not retrieve model list")
   })
 
   $scope.open = function (modelid) {
-      var modalInstance = $modal.open({
+      var modalInstance = $uibModal.open({
         templateUrl: 'partials/modeldialog.html',
         controller: 'ModelDialogCtrl',
         size: 'lg',
@@ -90,7 +90,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   };
 
   $scope.openTactic = function (modelid) {
-      var modalInstance = $modal.open({
+      var modalInstance = $uibModal.open({
         templateUrl: 'partials/modeltacticdialog.html',
         controller: 'ModelTacticDialogCtrl',
         size: 'lg',
@@ -101,13 +101,13 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   };
 
   $scope.runTactic = function (modelid) {
-    $http.post("user/" + $cookies.userId + "/model/" + modelid + "/tactic/run")
+    $http.post("user/" + $cookies.get('userId') + "/model/" + modelid + "/tactic/run")
     .success(function(data) {
-        if(data.errorThrown) showCaughtErrorMessage($modal, data, "Error While Running Tactic")
+        if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Error While Running Tactic")
         else console.log("Done running tactic")
     })
     .error(function() {
-      showErrorMessage($modal, "Error While Running Tactic")
+      showErrorMessage($uibModal, "Error While Running Tactic")
     });
   }
 
@@ -118,7 +118,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
 })
 
 angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function ($scope, $http, $cookies, $modalInstance, modelid) {
-  $http.get("user/" + $cookies.userId + "/model/" + modelid).success(function(data) {
+  $http.get("user/" + $cookies.get('userId') + "/model/" + modelid).success(function(data) {
       $scope.model = data
   });
 
@@ -126,7 +126,7 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function (
 });
 
 angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', function ($scope, $http, $cookies, $modalInstance, modelid) {
-  $http.get("user/" + $cookies.userId + "/model/" + modelid + "/tactic").success(function(data) {
+  $http.get("user/" + $cookies.get('userId') + "/model/" + modelid + "/tactic").success(function(data) {
       $scope.tactic = data
   });
 

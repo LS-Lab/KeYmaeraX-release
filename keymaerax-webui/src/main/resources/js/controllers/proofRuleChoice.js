@@ -12,7 +12,7 @@ angular.module('keymaerax.controllers').controller('ProofRuleDialogCtrl',
   $scope.userTactics = [];
 
   var fId = ((formula !== undefined) ? formula.id : "sequent")
-  var uri = 'proofs/user/' + $cookies.userId + '/' + proofId + '/nodes/' + nodeId + '/formulas/' + fId + '/tactics'
+  var uri = 'proofs/user/' + $cookies.get('userId') + '/' + proofId + '/nodes/' + nodeId + '/formulas/' + fId + '/tactics'
 
   $http.get(uri).success(function(data) {
       $scope.ruleTactics = [];

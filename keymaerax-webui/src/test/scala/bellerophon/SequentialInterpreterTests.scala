@@ -22,6 +22,7 @@ import scala.language.postfixOps
  * @author Nathan Fulton
  */
 class SequentialInterpreterTests extends FlatSpec with Matchers {
+  val initializingK = KeYmaera.init(Map.empty)
   val theInterpreter = SequentialInterpreter()
 
   "AndR" should "prove |- 1=1 ^ 2=2" in {

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "and commute",
+    "name": "& commute",
+    "axiom": "(p() & q()) <-> (q() & p())"
+  },
+  {
+    "id": "and true",
+    "name": "& true",
+    "axiom": "(p()&true) <-> p()"
+  }
+]

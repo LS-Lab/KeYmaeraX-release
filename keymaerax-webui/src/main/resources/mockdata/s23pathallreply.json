@@ -1,0 +1,66 @@
+{
+  "numParentsUntilComplete": 0,
+  "path": [
+    {
+      "id": "S1",
+      "sequent": {
+        "ante": [ {"id": "F1a", "formula": { "name": "lt", "id": "F1a0", "children": [ {"name": "z", "id": "F1a1"}, {"name": "1", "id": "F1a2"} ] }} ],
+        "succ": [
+          {
+            "id": "F1s",
+            "formula": {
+              "name": "and", "id": "F1s0",
+              "children": [
+                {
+                  "name": "and", "id": "F1s1",
+                  "children": [
+                    { "name": "lt", "id": "F1s2", "children": [ {"name": "x", "id": "F1s3"}, {"name": "5", "id": "F1s4"} ] },
+                    { "name": "true", "id": "F1s5" }
+                  ]
+                },
+                { "name": "gt", "id": "F1s6", "children": [ {"name": "2", "id": "F1s7"}, {"name": "y", "id": "F1s8"} ] }
+              ]
+            }
+          }
+        ]
+      },
+      "children": [ "S2", "S3" ],
+      "rule": { "id": "R1", "name": "andR" },
+      "parent": "S1"
+    },
+    {
+      "id": "S0",
+      "sequent": {
+        "ante": [],
+        "succ": [
+          {
+            "id": "F0s",
+            "formula": {
+              "name": "imply",
+              "id": "F0s0",
+              "children": [
+                { "name": "lt", "id": "F0s1", "children": [ {"name": "z", "id": "F0s2"}, {"name": "1", "id": "F0s3"} ] },
+                {
+                  "name": "and", "id": "F0s4",
+                  "children": [
+                    {
+                      "name": "and", "id": "F0s5",
+                      "children": [
+                        { "name": "lt", "id": "F0s6", "children": [ {"name": "x", "id": "F0s7"}, {"name": "5", "id": "F0s8"} ] },
+                        { "name": "true", "id": "F0s9" }
+                      ]
+                    },
+                    { "name": "gt", "id": "F0s10", "children": [ {"name": "2", "id": "F0s11"}, {"name": "y", "id": "F0s12"} ] }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "children": [ "S1" ],
+      "rule": { "id": "R2", "name": "implyR" },
+      "parent": "S0"
+    }
+  ]
+}

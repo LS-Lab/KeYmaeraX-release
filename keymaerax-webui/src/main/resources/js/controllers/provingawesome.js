@@ -9,7 +9,7 @@ angular.module('keymaerax.controllers').value('cgBusyDefaults',{
 });
 
 angular.module('keymaerax.controllers').controller('ProofCtrl', function($scope, $http, $cookies, $routeParams) {
-  $http.get('proofs/user/' + $cookies.userId + "/" + $routeParams.proofId).success(function(data) {
+  $http.get('proofs/user/' + $cookies.get('userId') + "/" + $routeParams.proofId).success(function(data) {
       $scope.proofId = data.id;
       $scope.proofName = data.name;
       $scope.modelId = data.model;
@@ -21,7 +21,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl', function($scope,
 
   //Save a name edited using the inline editor.
   $scope.saveProofName = function(newName) {
-    $http.post("proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/name/" + newName, {})
+    $http.post("proofs/user/" + $cookies.get('userId') + "/" + $routeParams.proofId + "/name/" + newName, {})
   };
 });
 
@@ -33,12 +33,12 @@ angular.module('keymaerax.controllers').controller('RunningTacticsCtrl',
 });
 
 angular.module('keymaerax.controllers').controller('TaskCtrl',
-  function($rootScope, $scope, $http, $cookies, $routeParams, $q, $modal, $sce, Tactics) {
+  function($rootScope, $scope, $http, $cookies, $routeParams, $q, $uibModal, $sce, Tactics) {
     $scope.proofId = $routeParams.proofId;
-    $scope.userId = $cookies.userId;
+    $scope.userId = $cookies.get('userId');
     // TODO convert agenda and proof tree into a service?
     $scope.agenda = {
-      itemsMap: {},           // { id: { id: String, name: String, isSelected: Bool, goal: ref PTNode, path: [ref PTNode] } }, ... }
+      itemsMap: {},           // { id: { id: String, name: String, isSelected: Bool, path: [ref PTNode] } }, ... }
       selectedId: undefined,  // ref Item
       itemIds: function() { return Object.keys(itemsMap); },
       items: function() { return $.map($scope.agenda.itemsMap, function(v) {return v;}); },
@@ -51,7 +51,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         $scope.agenda.select($scope.agenda.itemsMap[itemId]);
       },
       itemsByProofStep: function(ptNodeId) {
-        return $.grep($scope.agenda.items(), function(e) { return e.goal === ptNodeId || $.inArray(ptNodeId, e.path) > -1; });
+        return $.grep($scope.agenda.items(), function(e) {
+          return $.grep(e.path, function(v, i) { return v.id == ptNodeId; }).length > 0; });
       }
     }
     $scope.prooftree = {
@@ -73,7 +74,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
                 // proof might be finished
                 $http.get('proofs/user/' + userId + "/" + proofId + '/progress').success(function(data) {
                   if (data.status == 'closed') {
-                    var modalInstance = $modal.open({
+                    var modalInstance = $uibModal.open({
                       templateUrl: 'partials/prooffinisheddialog.html',
                       controller: 'ProofFinishedDialogCtrl',
                       size: 'md',
@@ -84,11 +85,11 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
                     });
                   } else {
                     // should never happen
-                    showErrorMessage($modal, 'empty agenda even though proof is not closed (' + data.status + ')')
+                    showErrorMessage($uibModal, 'empty agenda even though proof is not closed (' + data.status + ')')
                   }
                 })
                 .error(function() {
-                  showErrorMessage($modal, "error retrieving proof progress")
+                  showErrorMessage($uibModal, "error retrieving proof progress")
                 })
             }
         }).error(function(data) {
@@ -103,7 +104,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         });
     }
 
-    $scope.fetchAgenda($cookies.userId, $scope.proofId)
+    $scope.fetchAgenda($cookies.get('userId'), $scope.proofId)
 
     // Watch running tactics
     $scope.$on('handleDispatchedTactics', function(event, tId) {
@@ -111,7 +112,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         $scope.defer = $q.defer();
         $scope.defer.promise.then(function (tacticResult) {
             if (tacticResult == 'Finished') {
-                $scope.fetchAgenda($cookies.userId, $scope.proofId)
+                $scope.fetchAgenda($cookies.get('userId'), $scope.proofId)
             } else {
                 // TODO not yet used, but could be used to report an error in running the tactic
             }
@@ -123,10 +124,10 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
             $scope.watchedTactics[tId] = true;
             (function poll(){
                setTimeout(function() {
-                    $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTactics/' + tId)
+                    $http.get('proofs/user/' + $cookies.get('userId') + '/' + $scope.proofId + '/dispatchedTactics/' + tId)
                             .success(function(data) {
                             if(data.errorThrown || data.tacticInstStatus == 'Error') {
-                              $modal.open({
+                              $uibModal.open({
                                 templateUrl: 'partials/error_alert.html',
                                 controller: 'ErrorAlertCtrl',
                                 size: 'md',
@@ -184,13 +185,13 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     //Executes a combinator language term.
     $scope.execute = function() {
         var nodeId = this.selectedTask.nodeId;
-        var uri = "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/nodes/" + nodeId + "/tactics/runTerm"
+        var uri = "/proofs/user/" + $cookies.get('userId') + "/" + $routeParams.proofId + "/nodes/" + nodeId + "/tactics/runTerm"
         var dataObj = {clTerm: $scope.clTerm};
 
         $http.post(uri, dataObj)
              .success(function(data) {
                 if(data.errorThrown) {
-                   $modal.open({
+                   $uibModal.open({
                       templateUrl: 'partials/error_alert.html',
                       controller: 'ErrorAlertCtrl',
                       size: 'md',
@@ -205,7 +206,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
                 }
              })
              .error(function() {
-                showErrorMessage($modal, "encountered error during post on runTerm.")
+                showErrorMessage($uibModal, "encountered error during post on runTerm.")
              })
     }
     $scope.$on('handleDispatchedTerm', function(event, tId) {
@@ -213,7 +214,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         $scope.defer = $q.defer();
         $scope.defer.promise.then(function (tacticResult) {
             if (tacticResult == 'Finished') {
-                $scope.fetchAgenda($cookies.userId, $scope.proofId)
+                $scope.fetchAgenda($cookies.get('userId'), $scope.proofId)
             } else {
                 // TODO not yet used, but could be used to report an error in running the tactic
             }
@@ -224,11 +225,11 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         if(!$scope.watchedTerms[tId]) {
             (function poll(){
                setTimeout(function() {
-                    $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTerm/' + tId)
+                    $http.get('proofs/user/' + $cookies.get('userId') + '/' + $scope.proofId + '/dispatchedTerm/' + tId)
                          .success(function(data) {
 //                            if (data.status == 'Running' || data.errorThrown) { //Errors might be thrown if the term isn't created yet...
                             if(data.errorThrown) {
-                              $modal.open({
+                              $uibModal.open({
                                 templateUrl: 'partials/error_alert.html',
                                 controller: 'ErrorAlertCtrl',
                                 size: 'md',
@@ -250,14 +251,14 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     });
 
     $scope.fetchNodeInfo = function(dispatched) {
-      var uri = "/proofs/user/" + $cookies.userId + "/" + dispatched.proofId + "/agendaDetails/" + dispatched.nodeId;
+      var uri = "/proofs/user/" + $cookies.get('userId') + "/" + dispatched.proofId + "/agendaDetails/" + dispatched.nodeId;
       $http.get(uri)
         .success(function(data) {
         data.readOnly = true;
         $scope.selectedTask = data;
       })
       .error(function() {
-        showErrorMessage($modal, "error encountered while trying to retrieve the proof history details.")
+        showErrorMessage($uibModal, "error encountered while trying to retrieve the proof history details.")
       })
     }
 
@@ -287,11 +288,11 @@ angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
     };
 
     $scope.validateProof = function() {
-      $http.get("/proofs/user/" + $cookies.userId + "/" + proofId + "/validatedStatus").success(function(data) {
+      $http.get("/proofs/user/" + $cookies.get('userId') + "/" + proofId + "/validatedStatus").success(function(data) {
         $scope.validatedProofStatus = data.status
       })
       .error(function() {
-        showErrorMessage($modal, "error when validating proof")
+        showErrorMessage($uibModal, "error when validating proof")
       })
     }
 });

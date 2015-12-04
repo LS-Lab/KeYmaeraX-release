@@ -1,45 +1,66 @@
 <!-- Open Goal -->
-<div class="row">
-    <div class="col-md-12" ng-init="goal=proofTree.nodesMap[goalId]">
+<div class="row k4-proofrow-first">
+    <div class="col-md-12">
         <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
-        <k4-sequent proof-id="proofId" node-id="nodeId" sequent="goal.sequent"
-                    read-only="readOnly" collapsed="false"></k4-sequent>
+        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath[0].id"
+                    sequent="proofTree.nodesMap[deductionPath[0].id].sequent"
+                    read-only="readOnly" collapsed="false" on-use-at="onUseAt(formulaId, axiomId)"></k4-sequent>
     </div>
 </div>
 <!-- Conclusion -->
-<div class="row k4-proofrow" ng-repeat="stepId in deductionPath">
-    <div class="col-md-12 k4-goalwithsiblings" ng-init="step=proofTree.nodesMap[stepId]">
-        <k4-sequent proof-id="proofId" node-id="nodeId" sequent="step.sequent"
-                    read-only="true" collapsed="true"></k4-sequent>
+<div uib-collapse="isConclusionCollapsed($index)" class="row k4-proofrow" ng-repeat="step in deductionPath.slice(1)">
+    <div class="col-md-12 k4-goalwithsiblings">
+        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath[0].id"
+                    sequent="proofTree.nodesMap[step.id].sequent"
+                    read-only="true" collapsed="true" on-use-at="onUseAt(formulaId, axiomId)"></k4-sequent>
         <ul>
-            <li ng-repeat="sibling in siblingCandidates(step.children)">
+            <li ng-repeat="sibling in siblingCandidates(proofTree.nodesMap[step.id].children)">
                 <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
                 <!-- todo HTML tooltip would be nice, but couldn't get to work so far -->
-                <a ng-init="item=agenda.itemsByProofStep(sibling)[0]" ng-click="agenda.select(item)"
-                   tooltip="{{tooltip(proofTree.nodesMap[sibling].sequent)}}" tooltip-trigger
-                   tooltip-placement="top">{{item.id}}</a>
+                <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
+                   uib-tooltip="{{tooltip(proofTree.nodesMap[sibling].sequent)}}"
+                   tooltip-placement="top">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
             </li>
         </ul>
     </div>
     <ul>
-        <li>{{step.rule.name}}</li>
+        <li >
+            <span>
+                <!-- Show collapse button on first element -->
+                <a ng-if="!conclusionIsCollapsed($index)" ng-click="setConclusionCollapsed($index, true)"><span class="fa fa-minus-square-o"></span></a>
+                <span uib-tooltip="{{proofTree.nodesMap[step.id].rule.name}}" tooltip-placement="right">{{proofTree.nodesMap[step.id].rule.name}}</span>
+            </span>
+        </li>
     </ul>
     <!-- add buttons: rewind to here, start alternative proof attempt etc. -->
 </div>
-<!-- navigation buttons below bottom-most proof row -->
-<div class="row" ng-if="(deductionPath.length === 0 && goalId !== proofTree.root) || (deductionPath.length > 0 && deductionPath[deductionPath.length-1] !== proofTree.root)">
-    <div class="col-md-12 text-center">
-        <small>
-            <a ng-click="fetchParent(deductionPath[deductionPath.length-1])"
-               ng-if="deductionPath.length > 0"><span class="fa fa-angle-down"></span></a>
-            <a ng-click="fetchParent(goalId)"
-               ng-if="deductionPath.length <= 0"><span class="fa fa-angle-down"></span></a>
-            <a><span class="fa fa-code-fork"></span></a>
-            <a><span class="fa fa-angle-double-down"></span></a>
-        </small>
-    </div>
+<!-- button to uncollapse collapsed conclusions -->
+<div class="row k4-proofrow" ng-if="minCollapsedIndex() < deductionPath.length-1">
+    <ul>
+        <li>
+            <a ng-click="setConclusionCollapsed(minCollapsedIndex(), false)"><span class="fa fa-plus-square-o"></span></a>
+        </li>
+    </ul>
 </div>
-<!-- failed attempt on HTML tooltip -->
-<!--<script type="text/ng-template" id="sequentTooltipHtml">-->
-    <!--<span><small>{{tooltip(proofTree.nodesMap[sibling].sequent)}}</small></span>-->
-<!--</script>-->
+<!-- navigation buttons to fetch parents -->
+<div class="row k4-proofrow" ng-if="deductionPath[deductionPath.length-1].id !== proofTree.root">
+    <ul>
+        <li>
+            <a ng-click="fetchParent(deductionPath[deductionPath.length-1].id)"
+               ng-right-click="fetchParentRightClick($event)"
+               uib-popover-template="'navigateTowardsRootPopoverHtml'" popover-title="Proof history"
+               popover-placement="bottom" popover-trigger="contextmenu" tabindex="-1">
+                <span class="fa fa-plus-square-o"></span>
+            </a>
+        </li>
+    </ul>
+</div>
+<script type="text/ng-template" id="navigateTowardsRootPopoverHtml">
+    <div>
+        <a ng-click="fetchBranchRoot"><span class="fa fa-code-fork"> Show branch root</span></a>
+        <a ng-click="fetchTreeRoot"><span class="fa fa-angle-down"> Show tree root</span></a>
+        <a ng-click="fetchPathAll(deductionPath[deductionPath.length-1].id)">
+            <span class="fa fa-angle-double-down"> Expand all</span>
+        </a>
+    </div>
+</script>

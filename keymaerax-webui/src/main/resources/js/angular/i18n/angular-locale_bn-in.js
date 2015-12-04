@@ -12,10 +12,19 @@ $provide.value("$locale", {
       "\u09b8\u09cb\u09ae\u09ac\u09be\u09b0",
       "\u09ae\u0999\u09cd\u0997\u09b2\u09ac\u09be\u09b0",
       "\u09ac\u09c1\u09a7\u09ac\u09be\u09b0",
-      "\u09ac\u09c3\u09b9\u09b7\u09cd\u09aa\u09a4\u09bf\u09ac\u09be\u09b0",
+      "\u09ac\u09c3\u09b9\u09b8\u09cd\u09aa\u09a4\u09bf\u09ac\u09be\u09b0",
       "\u09b6\u09c1\u0995\u09cd\u09b0\u09ac\u09be\u09b0",
       "\u09b6\u09a8\u09bf\u09ac\u09be\u09b0"
     ],
+    "ERANAMES": [
+      "\u0996\u09cd\u09b0\u09bf\u09b8\u09cd\u099f\u09aa\u09c2\u09b0\u09cd\u09ac",
+      "\u0996\u09c3\u09b7\u09cd\u099f\u09be\u09ac\u09cd\u09a6"
+    ],
+    "ERAS": [
+      "\u0996\u09cd\u09b0\u09bf\u09b8\u09cd\u099f\u09aa\u09c2\u09b0\u09cd\u09ac",
+      "\u0996\u09c3\u09b7\u09cd\u099f\u09be\u09ac\u09cd\u09a6"
+    ],
+    "FIRSTDAYOFWEEK": 6,
     "MONTH": [
       "\u099c\u09be\u09a8\u09c1\u09af\u09bc\u09be\u09b0\u09c0",
       "\u09ab\u09c7\u09ac\u09cd\u09b0\u09c1\u09af\u09bc\u09be\u09b0\u09c0",
@@ -53,6 +62,10 @@ $provide.value("$locale", {
       "\u09a8\u09ad\u09c7\u09ae\u09cd\u09ac\u09b0",
       "\u09a1\u09bf\u09b8\u09c7\u09ae\u09cd\u09ac\u09b0"
     ],
+    "WEEKENDRANGE": [
+      6,
+      6
+    ],
     "fullDate": "EEEE, d MMMM, y",
     "longDate": "d MMMM, y",
     "medium": "d MMM, y h:mm:ss a",
@@ -63,14 +76,13 @@ $provide.value("$locale", {
     "shortTime": "h:mm a"
   },
   "NUMBER_FORMATS": {
-    "CURRENCY_SYM": "\u09f3",
+    "CURRENCY_SYM": "\u20b9",
     "DECIMAL_SEP": ".",
     "GROUP_SEP": ",",
     "PATTERNS": [
       {
         "gSize": 2,
         "lgSize": 3,
-        "macFrac": 0,
         "maxFrac": 3,
         "minFrac": 0,
         "minInt": 1,
@@ -82,18 +94,17 @@ $provide.value("$locale", {
       {
         "gSize": 2,
         "lgSize": 3,
-        "macFrac": 0,
         "maxFrac": 2,
         "minFrac": 2,
         "minInt": 1,
-        "negPre": "(",
-        "negSuf": "\u00a4)",
+        "negPre": "-",
+        "negSuf": "\u00a4",
         "posPre": "",
         "posSuf": "\u00a4"
       }
     ]
   },
   "id": "bn-in",
-  "pluralCat": function (n) {  if (n == 1) {   return PLURAL_CATEGORY.ONE;  }  return PLURAL_CATEGORY.OTHER;}
+  "pluralCat": function(n, opt_precision) {  var i = n | 0;  if (i == 0 || n == 1) {    return PLURAL_CATEGORY.ONE;  }  return PLURAL_CATEGORY.OTHER;}
 });
 }]);

@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "id": "http://keymaerax.org/schemas/sequent.json",
+  "title": "sequent",
+  "description": "A sequent",
+  "type": "object",
+  "properties": {
+      "id": {
+        "type": "string",
+        "description": "Uniquely identifies this sequent"
+      },
+      "ante": {
+        "type": "array",
+        "description": "The antecedent formulas",
+        "items": {
+          "type": "string"
+        }
+      },
+      "succ": {
+        "type": "array",
+        "description": "The antecedent formulas",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required" : ["id", "ante", "succ"]
+}
