@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 package edu.cmu.cs.ls.keymaerax.tactics
@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT, sk
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cutT, EquivLeftT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{lastSucc,locateAnte}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, PositionTactic, Tactic, NilPT, NilT}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import PropositionalTacticsImpl._
 import BranchLabels._
 import SearchTacticsImpl.{lastAnte,onBranch}
@@ -21,7 +21,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverConditionalAxiomT,unc
 import TacticLibrary.TacticHelper.getTerm
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
-import scala.collection.immutable.Set
+import scala.collection.immutable.{TreeSet, SortedSet, Set}
 
 /**
  * Implementation of equality rewriting.
@@ -45,7 +45,7 @@ object EqualityRewritingImpl {
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(eqPos) match {
       case Equiv(a, b) if a == node.sequent(p) && !p.isAnte =>
         Some(EquivLeftT(eqPos) & onBranch(
-          (equivLeftLbl, AndLeftT(eqPos) & AxiomCloseT),
+          (equivLeftLbl, AndLeftT(eqPos) & CloseId),
           (equivRightLbl, AndLeftT(eqPos) & hideT(p) & NotLeftT(AntePos(node.sequent.ante.length)) & hideT(AntePos(node.sequent.ante.length - 1)))
         ))
       case Equiv(a, b) if a == node.sequent(p) && p.isAnte =>
@@ -53,11 +53,11 @@ object EqualityRewritingImpl {
           (equivLeftLbl, AndLeftT(eqPos) &
             (if (p.index < eqPos.index) hideT(AntePosition(node.sequent.ante.length - 1)) & hideT(p)
              else hideT(AntePosition(node.sequent.ante.length - 1)) & hideT(AntePosition(p.index - 1)))),
-          (equivRightLbl, AndLeftT(eqPos) & lastAnte(NotLeftT) & lastAnte(NotLeftT) & AxiomCloseT)
+          (equivRightLbl, AndLeftT(eqPos) & lastAnte(NotLeftT) & lastAnte(NotLeftT) & CloseId)
         ))
       case Equiv(a, b) if b == node.sequent(p) && !p.isAnte =>
         Some(EquivLeftT(eqPos) & onBranch(
-          (equivLeftLbl, AndLeftT(eqPos) & AxiomCloseT),
+          (equivLeftLbl, AndLeftT(eqPos) & CloseId),
           (equivRightLbl, AndLeftT(eqPos) & hideT(p) & NotLeftT(eqPos) & hideT(eqPos))
         ))
       case Equiv(a, b) if b == node.sequent(p) && p.isAnte =>
@@ -65,7 +65,7 @@ object EqualityRewritingImpl {
           (equivLeftLbl, AndLeftT(eqPos) &
             (if (p.index < eqPos.index) hideT(AntePosition(node.sequent.ante.length)) & hideT(p)
              else hideT(AntePosition(node.sequent.ante.length)) & hideT(AntePosition(p.index - 1)))),
-          (equivRightLbl, AndLeftT(eqPos) & lastAnte(NotLeftT) & lastAnte(NotLeftT) & AxiomCloseT)
+          (equivRightLbl, AndLeftT(eqPos) & lastAnte(NotLeftT) & lastAnte(NotLeftT) & CloseId)
         ))
       case _ => None
     }
@@ -107,7 +107,7 @@ object EqualityRewritingImpl {
   /** Shows condition in const formula congruence */
   private def constFormulaCongruenceCondT: PositionTactic = new PositionTactic("const formula congruence cond") {
     override def applies(s: Sequent, p: Position): Boolean = true
-    override def apply(p: Position): Tactic = AxiomCloseT
+    override def apply(p: Position): Tactic = CloseId
   }
   /** Base tactic for const formula congruence */
   private def constFormulaCongruenceBaseT(isLeft: Boolean, where: PosInExpr, exhaustive: Boolean): PositionTactic = new PositionTactic("const formula congruence base") {
@@ -134,6 +134,95 @@ object EqualityRewritingImpl {
             }
         }
         Some(axiomLookupBaseT("const formula congruence", subst, _ => NilPT, (f, ax) => ax)(p))
+      }
+    }
+  }
+
+  def smartEqualityRewritingT:Tactic = SearchTacticsImpl.locateAnte(smartEqPos("Look for equality in antecedent and apply it"))
+
+  def positionsOf(t: Term, fml: Formula): Set[PosInExpr] = {
+    var positions: Set[PosInExpr] = Set.empty
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+        if (e == t && !positions.exists(_.isPrefixOf(p))) positions += p
+        Left(None)
+      }
+    }, fml)
+    positions
+  }
+
+  def positionsOf(t: Term, s: Sequent): Set[Position] = {
+    val ante = s.ante.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => AntePosition(i, p)) })
+    val succ = s.succ.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => SuccPosition(i, p)) })
+    (ante ++ succ).toSet
+  }
+
+  /**
+   * Applies an equality at a position everywhere in the sequent if it makes the sequent "simpler" for some definition of simpler.
+   * Hides the equality if no possible uses remain.
+   * @example{{{
+   *               |- x < 5
+   *   ----------------------------------
+   *   x = y^2 + 1 |- y^2 + 1 < 5
+   * }}}
+   * @todo Check whether it's safe to apply this tactic in more cases than eqPos due to the complexity checks.
+   */
+  private def smartEqPos(name: String): PositionTactic = new PositionTactic(name) {
+    import scala.language.postfixOps
+    override def applies(s: Sequent, p: Position):Boolean = p.isAnte && (s(p) match {
+      case Equal(lhs,rhs) =>
+        val cmp = PolynomialForm.compareTermComplexity(lhs,rhs)
+        if (cmp == 0) {
+          false
+        } else {
+          val what = if (cmp > 0) lhs else rhs
+          val repl = if (cmp > 0) rhs else lhs
+          // This tactic relies on Mathematica for finding counterexamples
+          val toolIsInitialized = MathematicaScheduler.isInitialized
+          val occurrences : Set[Position] = positionsOf(what, s).filter(pos => pos.isAnte != p.isAnte || pos.index != p.index).
+            filter(pos => StaticSemanticsTools.boundAt(s(pos), pos.inExpr).intersect(StaticSemantics.freeVars(what)).isEmpty)
+          // prevent endless self rewriting (e.g., 0=0) -> compute dependencies first to figure out what to rewrite when
+          !what.isInstanceOf[Number] && what != repl &&
+            positionsOf(what, s).exists(pos => (pos.isAnte != p.isAnte || pos.index != p.index) &&
+              StaticSemanticsTools.boundAt(s(pos), pos.inExpr).intersect(StaticSemantics.freeVars(what)).isEmpty) &&
+            occurrences.size != 0 && toolIsInitialized
+
+          }
+      case _ => false })
+
+    override def apply(p: Position): Tactic = new Tactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def apply(tool: Tool, node: ProofNode) = {
+        val t = new ConstructionTactic("Smart Equality Rewriting") {
+          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+          override def constructTactic(tool: Tool, node: ProofNode) = {
+            node.sequent(p) match {
+              case eq@Equal(lhs, rhs) =>
+                val cmp = PolynomialForm.compareTermComplexity(lhs, rhs)
+                val what = if (cmp > 0) lhs else rhs
+                val repl = if (cmp > 0) rhs else lhs
+                assert(!what.isInstanceOf[Number] && what != repl && cmp != 0)
+                // positions are not stable, so we need to search over and over again (we even need to search eqPos, since it
+                // may shift)
+                val occurrences = positionsOf(what, node.sequent).filter(pos => pos.isAnte != p.isAnte || pos.index != p.index).
+                  filter(pos => StaticSemanticsTools.boundAt(node.sequent(pos), pos.inExpr).intersect(StaticSemantics.freeVars(what)).isEmpty)
+                val tactic = constFormulaCongruenceT(p, left = cmp > 0, exhaustive = false)(occurrences.head) &
+                  (locateAnte(eqPos(name, cmp > 0, true), _ == eq) | NilT)
+                // Hide the equality if we think we won't need it for the rest of the proof. We test for counterexamples first because if
+                // the equality has a counterexample then we can derive false, it which case we definitely don't want to throw it out.
+                if (tool.name != "Mathematica" || ArithmeticTacticsImpl.isContradiction(tool, node, p)) {
+                  Some(tactic)
+                } else {
+                  val hide = SearchTacticsImpl.locateAnte(assertPT(node.sequent(p), "Wrong position when hiding EQ") & hideT, _ == node.sequent(p))
+                  Some(tactic & hide)
+                }
+            }
+          }
+        }
+        t.scheduler = MathematicaScheduler
+        t.continuation = continuation
+        t.dispatch(this, node)
       }
     }
   }
@@ -177,23 +266,6 @@ object EqualityRewritingImpl {
             Some(constFormulaCongruenceT(p, left=left, exhaustive=false)(occurrences.head))
           }
       }
-    }
-
-    def positionsOf(t: Term, fml: Formula): Set[PosInExpr] = {
-      var positions: Set[PosInExpr] = Set.empty
-      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-          if (e == t && !positions.exists(_.isPrefixOf(p))) positions += p
-          Left(None)
-        }
-      }, fml)
-      positions
-    }
-
-    def positionsOf(t: Term, s: Sequent): Set[Position] = {
-      val ante = s.ante.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => AntePosition(i, p)) })
-      val succ = s.succ.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => SuccPosition(i, p)) })
-      (ante ++ succ).toSet
     }
   }
 
@@ -263,8 +335,8 @@ object EqualityRewritingImpl {
           //@note cannot use instantiateT, because during \exists generalize we don't know which part of z=z we should generalize
           cutT(Some(Equiv(Exists(v :: Nil, Equal(v, t)), Equal(t, t)))) & onBranch(
           (cutShowLbl, lastSucc(EquivRightT) & onBranch(
-            (equivLeftLbl, AxiomCloseT),
-            (equivRightLbl, FOQuantifierTacticsImpl.existentialGenPosT(v, HereP.first :: Nil)(AntePosition(0)) & AxiomCloseT)
+            (equivLeftLbl, CloseId),
+            (equivRightLbl, FOQuantifierTacticsImpl.existentialGenPosT(v, HereP.first :: Nil)(AntePosition(0)) & CloseId)
           )),
           (cutUseLbl, equivRewriting(AntePosition(0), SuccPosition(0)) & EqualReflexiveT(SuccPosition(0)))
         )),
@@ -272,5 +344,4 @@ object EqualityRewritingImpl {
       ))
     }
   }
-
 }

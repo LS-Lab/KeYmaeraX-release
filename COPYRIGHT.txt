@@ -1,2 +1,32 @@
-These files are part of the KeYmaera X Prover.
-Copyright (c) Carnegie Mellon University, 2014-2015. Developed by Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp, and Andre Platzer.
+KeYmaera X
+Copyright (C) 2014-2015 Carnegie Mellon University 
+Developed by Andre Platzer, Nathan Fulton, Ran Ji, Stefan Mitsch, Jan-David Quesel, Marcus Voelp
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+Contact Information
+
+Electronic Mail: 
+  keymaerax@keymaerax.org
+
+Paper Mail:
+  Andre Platzer
+  Computer Science Department
+  Carnegie Mellon University
+  5000 Forbes Ave.
+  Pittsburgh, PA 15213
+  USA
+
+

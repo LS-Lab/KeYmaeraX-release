@@ -6,7 +6,8 @@ angular.module('sequent', ['ngSanitize','formula'])
             proofId: '=',
             nodeId: '=',
             sequent: '=',
-            readOnly: '=?'
+            readOnly: '=?',
+            collapsed: '=?'
         },
         controller: function($scope, $sce, $modal, $http, $cookies, Agenda, Tactics) {
             // TODO should issue events other controllers can subscribe to
@@ -38,6 +39,18 @@ angular.module('sequent', ['ngSanitize','formula'])
                 });
             }
 
+            $scope.getCounterExample = function() {
+                $modal.open({
+                    templateUrl: 'partials/counterExample.html',
+                    controller: 'counterExampleCtrl',
+                    size: 'lg',
+                    resolve: {
+                      proofId: function() { return $scope.proofId; },
+                      nodeId: function() { return $scope.nodeId; }
+                    }
+                    });
+            }
+
             $scope.handleTurnstileClick = function() {
                 var modalInstance = $modal.open({
                   templateUrl: 'partials/proofruledialog.html',
@@ -56,6 +69,6 @@ angular.module('sequent', ['ngSanitize','formula'])
                 function () { return Agenda.getSelectedTask(); }
             );
         },
-        templateUrl: 'partials/sequent.html'
+        templateUrl: 'partials/collapsiblesequent.html'
     };
   });

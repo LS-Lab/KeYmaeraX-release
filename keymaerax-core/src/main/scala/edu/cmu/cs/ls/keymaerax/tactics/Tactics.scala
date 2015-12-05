@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 /**
@@ -252,6 +252,7 @@ object Tactics {
   }
   /**
    * A schedulable tactic that can be applied to try to prove a ProofNode.
+   * @see [[ConstructionTactic]]
    */
   abstract class Tactic(val name : String) extends Stats {
 
@@ -435,11 +436,10 @@ object Tactics {
 
   /**
    * Error tactics execution.
-   * @TODO Implement and check.
    */
   def errorT(msg: String) = new Tactic("Error") {
     def applicable(node : ProofNode) = true
-    def apply(tool : Tool, node : ProofNode) = {println(msg + "\nat " + node.sequent); throw new TacticException(msg, node)}
+    def apply(tool : Tool, node : ProofNode) = {println(msg + "\nat " + node.sequent.prettyString); throw new TacticException(msg, node)}
   }
 
   /**
@@ -458,17 +458,17 @@ object Tactics {
   /**
    * Assertion PositionTactic, which has no effect except to sanity-check the given condition like an assert would.
    */
-  def assertPT(cond : (Sequent,Position)=>Boolean, msg:String = ""): PositionTactic = new PositionTactic("Assert") {
+  def assertPT(cond : (Sequent,Position)=>Boolean, msg: => String = ""): PositionTactic = new PositionTactic("Assert") {
     def applies(s: Sequent, p: Position) = true
 
-    def apply(pos: Position): Tactic = ifT(node => !cond(node.sequent, pos), errorT("Tactic Assertion failed: " + msg + " at " + pos))
+    def apply(pos: Position): Tactic = ifT(node => !cond(node.sequent, pos), errorT("Tactic Assertion failed: " + msg + "\nat " + pos))
   }
   
   /**
    * Assertion PositionTactic, which checks that the given formula is present at the position in the sequent where this tactic is applied to.
    */
   def assertPT(formulaExpectedAtPosition: Formula, msg:String): PositionTactic =
-    assertPT((s,pos)=> (if (pos.isAnte) s.ante.size > pos.index else s.succ.size > pos.index ) && s(pos)==formulaExpectedAtPosition, "Expected: " + formulaExpectedAtPosition.prettyString + " " + msg)
+    assertPT((s,pos)=> pos.isIndexDefined(s) && s(pos)==formulaExpectedAtPosition, msg + "\nExpected: " + formulaExpectedAtPosition.prettyString)
 
   def assertPT(formulaExpectedAtPosition: Formula): PositionTactic = assertPT(formulaExpectedAtPosition, "")
 
@@ -942,7 +942,7 @@ object Tactics {
 
     def applicable(node : ProofNode): Boolean =
       if (node.sequent==provable.conclusion) true else
-      {println("by(provable) inapplicable " + provable + " to " + node.sequent + "\nin " + "by(" + provable + ")\n(" + node.sequent + ")"); false}
+      {println("INFO: by(provable) inapplicable " + provable + "\nto   " + node.sequent + "\nin " + "by(" + provable + ")\n(" + node.sequent + ")"); false}
 
     def apply(tool : Tool, node : ProofNode) {
       if (applicable(node)) {
@@ -965,6 +965,7 @@ object Tactics {
 
   }
 
+  /** Pseudo-tactic that has no effect but labelling the proof node with s */
   object LabelBranch {
     def apply(s: String): Tactic = new LabelBranch(s)
   }
@@ -977,6 +978,23 @@ object Tactics {
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
       node.tacticInfo.infos += ("branchLabel" -> s)
+      continuation(this, Success, Seq(node))
+    }
+  }
+
+  /** Pseudo-tactic that has no effect but sub-labelling the proof node with s */
+  object SubLabelBranch {
+    def apply(s: String): Tactic = new SubLabelBranch(s)
+  }
+  /**
+   * Pseudo-tactic that has no effect but sub-labeling the proof node and all its subnodes s
+   * @see LabelBranch
+   */
+  class SubLabelBranch(s: String) extends Tactic("Sublabel " + s) {
+    override def applicable(node: ProofNode): Boolean = true
+
+    override def apply(tool: Tool, node: ProofNode): Unit = {
+      node.tacticInfo.infos += ("subLabel" -> (node.tacticInfo.infos.getOrElse("subLabel", "") + "/" + s))
       continuation(this, Success, Seq(node))
     }
   }

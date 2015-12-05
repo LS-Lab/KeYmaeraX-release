@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 /**
@@ -119,11 +119,20 @@ object BinaryOpSpec {
 
 /**
  * Differential Dynamic Logic's concrete syntax: operator notation specifications.
+ * @note Subtleties:
+ *       sPower right associative to ensure `x^2^3` == `x^(2^3)` instead of `(x^2)^3`.
+ *       sPower < sNeg to ensure `-x^2` == `-(x^2)` instead of `(-x)^2`.
+ *       NUMBER lexer does not contain - sign to enable `x-5` to be parsed. Parser will make up for this, respecting binary versus unary operators.
+ *       sEquiv nonassociative to ensure that `p()<->q()<->r()` does not parse since binding unclear.
+ *       sAnd and sOr are right-associative to simplify stable position ordering during sequent decomposition.
  * @author Andre Platzer
  */
 object OpSpec {
   /** Whether to terminate atomic statements with a semicolon instead of separating sequential compositions by a semicolon. */
-  /*private[parser]*/ val statementSemicolon = true
+  private[parser] val statementSemicolon = true
+
+  /** Whether to accept negative numbers as negative numbers as opposed to unary negation applied to a number. */
+  private[parser] val negativeNumber = true
 
   /** no notation */
   private val none = PSEUDO
@@ -147,7 +156,7 @@ object OpSpec {
   val sDifferentialSymbol = UnaryOpSpec[Term](PRIME, 0, PostfixFormat, unterm, (v:Term) => DifferentialSymbol(v.asInstanceOf[Variable]))
   val sPair         = BinaryOpSpec[Term](COMMA,   888, RightAssociative, binterm, Pair.apply _)
   val sDifferential = UnaryOpSpec[Term] (PRIME,    10, PostfixFormat, unterm, Differential.apply _)
-  val sNeg          = UnaryOpSpec[Term] (MINUS,    11, PrefixFormat, unterm, Neg.apply _)
+  val sNeg          = UnaryOpSpec[Term] (MINUS,    49/*!*/, PrefixFormat, unterm, Neg.apply _)    // -x^2 == -(x^2) != (-x)^2
   val sPower        = BinaryOpSpec[Term](POWER,    20, RightAssociative/*!*/, binterm, Power.apply _)
   val sTimes        = BinaryOpSpec[Term](STAR,     40, LeftAssociative, binterm, Times.apply _)
   val sDivide       = BinaryOpSpec[Term](SLASH,    40, LeftAssociative/*!*/, binterm, Divide.apply _)

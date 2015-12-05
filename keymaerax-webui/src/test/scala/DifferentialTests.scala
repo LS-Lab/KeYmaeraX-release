@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 import edu.cmu.cs.ls.keymaerax.core._
@@ -461,19 +461,115 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   "Differential auxiliaries proof rule" should "add y'=1 to [x'=2]x>0" in {
     import ODETactics.diffAuxiliariesRule
-    val s = Sequent(Nil, immutable.IndexedSeq("x>0".asFormula), immutable.IndexedSeq("[{x'=2}]x>0".asFormula))
-    val tactic = locateSucc(diffAuxiliariesRule(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula))
+    val s = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("[{x'=2}]x>0".asFormula))
+    val tactic = diffAuxiliariesRule(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1)
     val result = helper.runTactic(tactic, new RootNode(s))
 
-    result.openGoals() should have size 4
-    result.openGoals()(0).sequent.ante should contain only "\\exists y (y>0 & x*y>0)".asFormula
-    result.openGoals()(0).sequent.succ should contain only "x>0".asFormula
-    result.openGoals()(1).sequent.ante should contain only "y>0 & x*y>0".asFormula
-    result.openGoals()(1).sequent.succ should contain only "[{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
-    result.openGoals()(2).sequent.ante shouldBe empty
-    result.openGoals()(2).sequent.succ should contain only "x>0 <-> \\exists y (y>0 & x*y>0)".asFormula
-    result.openGoals()(3).sequent.ante should contain only "x>0".asFormula
-    result.openGoals()(3).sequent.succ should contain only "x>0".asFormula
+    result.openGoals() should have size 2
+    result.openGoals()(0).sequent.ante should contain only "y>0 & x*y>0".asFormula
+    result.openGoals()(0).sequent.succ should contain only "[{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+    result.openGoals()(0).tacticInfo.infos should contain ("branchLabel", "Diff. Aux. Result")
+    result.openGoals()(1).sequent.ante shouldBe empty
+    result.openGoals()(1).sequent.succ should contain only "x>0".asFormula
+    result.openGoals()(1).tacticInfo.infos should contain ("branchLabel", "Diff. Aux. P Initially Valid")
+  }
+
+  it should "add y'=1 to [x'=2]x>0 when provided a provable explicitly" in {
+    import ODETactics.diffAuxiliariesRule
+    val s = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("[{x'=2}]x>0".asFormula))
+
+    val auxEquiv = TactixLibrary.proveBy("x>0 <-> \\exists y (y>0 & x*y>0)".asFormula, TactixLibrary.QE)
+
+    val tactic = diffAuxiliariesRule(Variable("y"), "0".asTerm, "1".asTerm, auxEquiv)(1)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 2
+    result.openGoals()(0).sequent.ante should contain only "y>0 & x*y>0".asFormula
+    result.openGoals()(0).sequent.succ should contain only "[{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+    result.openGoals()(1).sequent.ante shouldBe empty
+    result.openGoals()(1).sequent.succ should contain only "x>0".asFormula
+  }
+
+  it should "not cut in x>0 if already present in antecedent when adding y'=1 to [x'=2]x>0" in {
+    import ODETactics.diffAuxiliariesRule
+    val s = Sequent(Nil, immutable.IndexedSeq("x>0".asFormula), immutable.IndexedSeq("[{x'=2}]x>0".asFormula))
+    val tactic = diffAuxiliariesRule(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "y>0 & x*y>0".asFormula
+    result.openGoals().head.sequent.succ should contain only "[{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+  }
+
+  it should "not cut in x>0 if already present among other formulas in antecedent when adding y'=1 to [x'=2]x>0" in {
+    import ODETactics.diffAuxiliariesRule
+    val s = Sequent(Nil, immutable.IndexedSeq("a=2".asFormula, "x>0".asFormula, "b<4".asFormula), immutable.IndexedSeq("[{x'=2}]x>0".asFormula))
+    val tactic = diffAuxiliariesRule(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("a=2".asFormula, "y>0 & x*y>0".asFormula, "b<4".asFormula)
+    result.openGoals().head.sequent.succ should contain only "[{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+  }
+
+  it should "work in a simple context" in {
+    import ODETactics.diffAuxiliariesRule
+    val s = Sequent(Nil, immutable.IndexedSeq("x>0".asFormula), immutable.IndexedSeq("a=2 -> [{x'=2}]x>0".asFormula))
+    val tactic = diffAuxiliariesRule(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1, 1::Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "y>0 & x*y>0".asFormula
+    result.openGoals().head.sequent.succ should contain only "a=2 -> [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+  }
+
+  it should "when used in context, leave two branches open when P is not in antecedent" in {
+    import ODETactics.diffAuxiliariesRule
+    val s = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("a=2 -> [{x'=2}]x>0".asFormula))
+    val tactic = diffAuxiliariesRule(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1, 1::Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 2
+    result.openGoals()(0).sequent.ante should contain only "y>0 & x*y>0".asFormula
+    result.openGoals()(0).sequent.succ should contain only "a=2 -> [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+    result.openGoals()(0).tacticInfo.infos should contain ("branchLabel", "Diff. Aux. Result")
+    result.openGoals()(1).sequent.ante shouldBe empty
+    result.openGoals()(1).sequent.succ should contain only "x>0".asFormula
+    result.openGoals()(1).tacticInfo.infos should contain ("branchLabel", "Diff. Aux. P Initially Valid")
+  }
+
+  it should "work in a complicated context" in {
+    import ODETactics.diffAuxiliariesRule
+    val s = Sequent(Nil, immutable.IndexedSeq("x>0".asFormula), immutable.IndexedSeq("a=2 -> [b:=3;]<?c=5;{c'=2}>[{x'=2}]x>0".asFormula))
+    val tactic = diffAuxiliariesRule(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1, 1::1::1::Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "y>0 & x*y>0".asFormula
+    result.openGoals().head.sequent.succ should contain only "a=2 -> [b:=3;]<?c=5;{c'=2}>[{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+  }
+
+  it should "not mess up when the context binds the differential auxiliary" in {
+    //@todo should we disallow applicability? result doesn't make much sense anyway...
+    import ODETactics.diffAuxiliariesRule
+    val s = Sequent(Nil, immutable.IndexedSeq("x>0".asFormula), immutable.IndexedSeq("[y:=2;][{x'=2}]x>0".asFormula))
+    val tactic = diffAuxiliariesRule(Variable("y"), "0".asTerm, "1".asTerm, "y>0 & x*y>0".asFormula)(1, 1::Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only "y_0>0 & x*y_0>0".asFormula
+    result.openGoals().head.sequent.succ should contain only "[y:=2;][{x'=2,y'=0*y+1}](y>0 & x*y>0)".asFormula
+  }
+
+  it should "add y'=-a() to [x'=2]x>0" in {
+    import ODETactics.diffAuxiliariesRule
+    val s = Sequent(Nil, immutable.IndexedSeq("a()>0".asFormula, "x>0".asFormula), immutable.IndexedSeq("[{x'=2}]x>0".asFormula))
+    val tactic = diffAuxiliariesRule(Variable("y"), "0".asTerm, "-a()".asTerm, "x>0 & y<0".asFormula)(1)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals()(0).sequent.ante should contain only ("a()>0".asFormula, "x>0 & y<0".asFormula)
+    result.openGoals()(0).sequent.succ should contain only "[{x'=2,y'=0*y+-a()}](x>0 & y<0)".asFormula
   }
 
   "Differential introduce constants" should "replace a with a() in v'=a" in {

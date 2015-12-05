@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 package edu.cmu.cs.ls.keymaerax.api
@@ -137,7 +137,7 @@ object JSONConverter {
     "inExpr" -> convertPos(pos.inExpr)
   )
 
-  def convertRule(rule : Rule) = {
+  def convertRule(rule : Rule): JsObject = {
     val cf = ("name" -> JsString(rule.name)) :: Nil
     rule match {
       case r : AssumptionRule => JsObject(("kind" -> JsString("AssumptionRule")) :: ("pos" -> convertPosition(r.pos))
@@ -148,6 +148,10 @@ object JSONConverter {
         :: ("pos1" -> convertPosition(r.pos1)) :: ("pos2" -> convertPosition(r.pos2)) :: Nil ++: cf)
       case _ => JsObject(("kind" -> JsString("UnspecificRule")) +: cf)
     }
+  }
+
+  def convertSubderivation(provable: Provable): JsObject = {
+    JsObject("kind" -> JsString("Subderivation"), "name" -> JsString("unknown"))
   }
 
   def convert(l: Seq[Formula], ante: String, nodeId: String): JsArray =
@@ -193,7 +197,7 @@ object JSONConverter {
 
   def convert(id: String, filter: (ProofStepInfo => Boolean), ps: ProofStep, i: Int, store: (ProofNode, String) => Unit, printSequent: Boolean): JsObject =
     JsObject(
-      "rule"      -> convertRule(ps.rule),
+      "rule"      -> (if (ps.isRule) convertRule(ps.rule) else convertSubderivation(ps.subderivation)),
       "id"        -> JsNumber(i),
       "children"  -> subgoals(id, filter, store, printSequent)(ps)
     )

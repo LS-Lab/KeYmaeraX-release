@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 
@@ -41,8 +41,7 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   "Simplify" should "simplify term" in {
     z3.simplify("1+x-x".asTerm) should be ("1".asTerm)
-    //TODO Polya support
-    //    polya.simplify("1+x-x".asTerm) should be ("1".asTerm)
+    polya.simplify("1+x-x".asTerm) should be ("1".asTerm)
   }
 
   // ---------------------------
@@ -97,7 +96,7 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
   // Complicated
   // ---------------------------
 
-  it should "prove complex qutifiers" in {
+  it should "prove complex quantifiers" in {
     z3.qe("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("false".asFormula)
     polya.qe("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be ("false".asFormula)
   }
@@ -107,7 +106,7 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
     polya.qe("(x+y-z)^3 = 1 -> true".asFormula) should be("true".asFormula)
   }
 
-  it should "prove complex 22" in {
+  it should "prove complex 1" in {
     z3.qe("x > 0 -> !x^2-2*x+1=0".asFormula) should be("false".asFormula)
     // TODO returns false but for the wrong reasons (Polya timeout)
 //    polya.qe("x > 0 -> !x^2-2*x+1=0".asFormula) should be("false".asFormula)

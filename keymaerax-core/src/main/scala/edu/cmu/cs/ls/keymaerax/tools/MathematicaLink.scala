@@ -1,10 +1,13 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 package edu.cmu.cs.ls.keymaerax.tools
 
+import java.util.{GregorianCalendar, Date}
+
 import com.wolfram.jlink._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
@@ -55,6 +58,7 @@ trait MathematicaLink extends QETool with DiffSolutionTool {
  */
 class JLinkMathematicaLink extends MathematicaLink {
   private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private val TIMEOUT = 10
 
   var ml: KernelLink = null
 
@@ -84,8 +88,15 @@ class JLinkMathematicaLink extends MathematicaLink {
         "-linkmode", "launch",
         "-linkname", linkName + " -mathlink"))
       ml.discardAnswer()
-      //@todo 6*9
-      true
+      isActivated match {
+        case Some(true) => isComputing match {
+          case Some(true) => true // everything ok
+          case Some(false) => throw new IllegalStateException("Test computation in Mathematica failed.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
+          case None => if (DEBUG) println("Unable to determine state of Mathematica, Mathematica may not be working.\n Restart KeYmaera X if you experience problems using arithmetic tactics."); true
+        }
+        case Some(false) => throw new IllegalStateException("Mathematica is not activated or Mathematica license is expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please renew your Mathematica license and restart KeYmaera X.")
+        case None => if (DEBUG) println("Mathematica may not be activated or Mathematica license might be expired.\\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\\n Please check your Mathematica license manually."); true
+      }
     } catch {
       case e:MathLinkException => println("Mathematica J/Link errored " + e); throw e
     }
@@ -190,6 +201,22 @@ class JLinkMathematicaLink extends MathematicaLink {
       case f : Formula => (f, new ToolEvidence(immutable.Map("input" -> input.toString, "output" -> output)))
       case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
     }
+  }
+
+  def getCounterExample(f : Formula) : String = {
+    val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
+      Array(toMathematica(Not(f)), new MExpr(listExpr, StaticSemantics.symbols(f).toList.sorted.map(s => toMathematica(s)).toArray), new MExpr(Expr.SYMBOL, "Reals")))
+    val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
+    try {
+      val (output, result) = run(inputWithTO)
+      result match {
+        case ff : Formula => KeYmaeraXPrettyPrinter(ff)
+        case _ => throw new NoCountExException("Mathematica cannot find counter examples for: " + KeYmaeraXPrettyPrinter(f))
+      }
+    } catch {
+      case e: MathematicaComputationAbortedException => throw new NoCountExException("Within " + TIMEOUT + " seconds, Mathematica cannot find counter examples for: " + KeYmaeraXPrettyPrinter(f))
+    }
+
   }
 
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Function]): Option[Formula] =
@@ -301,5 +328,64 @@ class JLinkMathematicaLink extends MathematicaLink {
     }, f) match {
     case Some(resultF) => resultF
     case None => throw new IllegalArgumentException("Unable to defunctionalize " + f)
+  }
+
+  /** Returns the version as (Major, Minor, Release) */
+  private def getVersion: (String, String, String) = {
+    ml.evaluate("$VersionNumber")
+    ml.waitForAnswer()
+    val version = ml.getExpr
+    ml.evaluate("$ReleaseNumber")
+    ml.waitForAnswer()
+    val release = ml.getExpr
+    //@note using strings to be robust in case Wolfram decides to switch from current major:Double/minor:Int
+    val (major, minor) = { val versionParts = version.toString.split("\\."); (versionParts(0), versionParts(1)) }
+    (major, minor, release.toString)
+  }
+
+  /** Checks if Mathematica is activated by querying the license expiration date */
+  private def isActivated: Option[Boolean] = {
+    type MExpr = com.wolfram.jlink.Expr
+    //@todo this is how Mathematica 10 represents infinity, test if 9 is the same
+    val infinity = new MExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
+
+    ml.evaluate("$LicenseExpirationDate")
+    ml.waitForAnswer()
+    val licenseExpirationDate = ml.getExpr
+
+    val date: Array[MExpr] = getVersion match {
+      case ("9", _, _) => licenseExpirationDate.args
+      case ("10", _, _) => licenseExpirationDate.args.head.args
+      case (major, minor, _) => if (DEBUG) println("WARNING: Cannot check license expiration date since unknown Mathematica version " + major + "." + minor + ", only version 9.x and 10.x supported. Mathematica requests may fail if license is expired."); null
+    }
+
+    if (date == null) None
+    else try {
+      if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
+        //@note month in calendar is 0-based, in Mathematica it's 1-based
+        val expiration = new GregorianCalendar(date(0).asInt(), date(1).asInt() - 1, date(2).asInt())
+        val today = new Date()
+        Some(expiration.getTime.after(today))
+      } else if (date.length >= 1 && date(0).equals(infinity)) {
+        Some(true)
+      } else {
+        None
+      }
+    } catch {
+      case e: ExprFormatException => if (DEBUG) println("WARNING: Unable to determine Mathematica expiration date\n cause: " + e); None
+    }
+  }
+
+  /** Sends a simple computation to Mathematica to ensure its actually working */
+  private def isComputing: Option[Boolean] = {
+    try {
+      ml.evaluate("6*9")
+      ml.waitForAnswer()
+      val answer = ml.getExpr
+      Some(answer.integerQ() && answer.asInt() == 54)
+    } catch {
+      //@todo need better error reporting, this way it will never show up on UI
+      case e: Throwable => if (DEBUG) println("WARNING: Mathematica may not be functional \n cause: " + e); None
+    }
   }
 }

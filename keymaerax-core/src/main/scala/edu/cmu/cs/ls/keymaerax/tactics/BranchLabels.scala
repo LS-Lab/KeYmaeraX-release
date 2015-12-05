@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 package edu.cmu.cs.ls.keymaerax.tactics
@@ -7,6 +7,8 @@ package edu.cmu.cs.ls.keymaerax.tactics
 /**
  * List of commonly used names of branch labels.
  * Created by Jan-David Quesel on 5/19/14.
+ * @see [[TactixLibrary.label()]]
+ * @see [[TactixLibrary.onBranch()]]
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.Tactics.LabelBranch]]
  */
 object BranchLabels {
@@ -15,6 +17,9 @@ object BranchLabels {
   val indInitLbl = "base case"  //@todo rename to "base case" for paper consistency. Used to be "Invariant initially valid"
   val indUseCaseLbl = "use case"  //@todo maybe renamed from "Use case" for paper consistency
   val indStepLbl = "induction step"  //@todo maybe renamed from "Induction step" for paper consistency
+
+  val genUse = "Use generalization"
+  val genShow = "Show generalization"
 
   val equivLeftLbl = "Positive equiv case"
   val equivRightLbl = "Negative equiv case"

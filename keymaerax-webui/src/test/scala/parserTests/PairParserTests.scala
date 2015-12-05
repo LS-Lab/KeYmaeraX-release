@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 package parserTests
@@ -7,6 +7,7 @@ package parserTests
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import org.scalatest.{FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags
 
@@ -20,6 +21,7 @@ import scala.collection.immutable._
 class PairParserTests extends FlatSpec with Matchers {
   val pp = KeYmaeraXPrettyPrinter
   val parser = KeYmaeraXParser
+  KeYmaera.init(Map.empty)
 
   def parseShouldBe(input: String, expr: Expression) = {
     val parse = parser(input)
@@ -27,14 +29,14 @@ class PairParserTests extends FlatSpec with Matchers {
       println("Reparsing" +
         "\nInput:      " + input +
         "\nParsed:     " + parse + " @ " + parse.getClass.getSimpleName +
-        "\nExpression: " + KeYmaeraXPrettyPrinter.fullPrinter(parse))
+        "\nExpression: " + pp.fullPrinter(parse))
       parse shouldBe expr
     }
   }
 
   "The parser" should "parse table of string pairs as expected" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
     for ((s1, s2) <- expectedParse) {
-      println("input 1: " + s1 + "\ninput 2: " + s2)
+      println("\ninput : " + s1 + "\nversus: " + s2)
       if (s2 == unparseable) {
         // ParseExceptions and CoreExceptions and AssertionErrors are simply all allowed.
         a[Throwable] should be thrownBy println("Parsed:  " + pp(parser(s1)))
@@ -42,6 +44,7 @@ class PairParserTests extends FlatSpec with Matchers {
         val p1 = parser(s1)
         val p2 = parser(s2)
         p1 shouldBe p2
+        parser(pp(p1)) shouldBe parser(pp(p2))
         pp(p1) shouldBe pp(p2)
       }
     }
@@ -55,6 +58,7 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x-y-z","(x-y)-z"),
     ("x/y/z","(x/y)/z"),
     ("x^2^4", "x^(2^4)"),
+    ("-x^2", "-(x^2)"),
     ("p()->q()->r()", "p()->(q()->r())"),
     ("p()<-q()<-r()", "(p()<-q())<-r()"),
     ("p()<->q()<->r()", unparseable),
@@ -69,6 +73,97 @@ class PairParserTests extends FlatSpec with Matchers {
     ("p()<->q()->r()", "p()<->(q()->r())"),
     ("p()->q()<->r()", "(p()->q())<->r()"),
     ("p()<->q()<-r()", "p()<->(q()<-r())"),
+
+
+    // full table
+    // unary meets unary
+    ("-x'", "-(x')"),
+    ("-(x)'", "-((x)')"),
+    // unary meets binary left
+    ("-x+y", "(-x)+y"),
+    ("-x-y", "(-x)-y"),
+    ("-x*y", "-(x*y)"),
+    ("-x/y", "-(x/y)"),
+    ("-x^y", "-(x^y)"),
+    // unary meets binary right
+    ("x+-y", "x+(-y)"),
+    ("x--y", "x-(-y)"),
+    ("x*-y", "x*(-y)"),
+    ("x/-y", "x/(-y)"),
+    ("x^-y", "x^(-y)"),
+    // unary meets binary left
+    ("x'+y", "(x')+y"),
+    ("x'-y", "(x')-y"),
+    ("x'*y", "(x')*y"),
+    ("x'/y", "(x')/y"),
+    ("x'^y", "(x')^y"),
+    // unary meets binary right
+    ("x+y'", "x+(y')"),
+    ("x-y'", "x-(y')"),
+    ("x*y'", "x*(y')"),
+    ("x/y'", "x/(y')"),
+    ("x^y'", "x^(y')"),
+
+    // binary meets binary from left
+    ("x+y+z", "(x+y)+z"),
+    ("x+y-z", "(x+y)-z"),
+    ("x+y*z", "x+(y*z)"),
+    ("x+y/z", "x+(y/z)"),
+    ("x+y^z", "x+(y^z)"),
+    // binary meets binary from right
+    ("x+y+z", "(x+y)+z"),
+    ("x-y+z", "(x-y)+z"),
+    ("x*y+z", "(x*y)+z"),
+    ("x/y+z", "(x/y)+z"),
+    ("x^y+z", "(x^y)+z"),
+    // binary meets binary from left
+    ("x-y+z", "(x-y)+z"),
+    ("x-y-z", "(x-y)-z"),
+    ("x-y*z", "x-(y*z)"),
+    ("x-y/z", "x-(y/z)"),
+    ("x-y^z", "x-(y^z)"),
+    // binary meets binary from right
+    ("x+y-z", "(x+y)-z"),
+    ("x-y-z", "(x-y)-z"),
+    ("x*y-z", "(x*y)-z"),
+    ("x/y-z", "(x/y)-z"),
+    ("x^y-z", "(x^y)-z"),
+    // binary meets binary from left
+    ("x*y+z", "(x*y)+z"),
+    ("x*y-z", "(x*y)-z"),
+    ("x*y*z", "(x*y)*z"),
+    ("x*y/z", "(x*y)/z"),
+    ("x*y^z", "x*(y^z)"),
+    // binary meets binary from right
+    ("x+y*z", "x+(y*z)"),
+    ("x-y*z", "x-(y*z)"),
+    ("x*y*z", "(x*y)*z"),
+    ("x/y*z", "(x/y)*z"),
+    ("x^y*z", "(x^y)*z"),
+    // binary meets binary from left
+    ("x/y+z", "(x/y)+z"),
+    ("x/y-z", "(x/y)-z"),
+    ("x/y*z", "(x/y)*z"),
+    ("x/y/z", "(x/y)/z"),
+    ("x/y^z", "x/(y^z)"),
+    // binary meets binary from right
+    ("x+y/z", "x+(y/z)"),
+    ("x-y/z", "x-(y/z)"),
+    ("x*y/z", "(x*y)/z"),
+    ("x/y/z", "(x/y)/z"),
+    ("x^y/z", "(x^y)/z"),
+    // binary meets binary from left
+    ("x^y+z", "(x^y)+z"),
+    ("x^y-z", "(x^y)-z"),
+    ("x^y*z", "(x^y)*z"),
+    ("x^y/z", "(x^y)/z"),
+    ("x^y^z", "x^(y^z)"),
+    // binary meets binary from right
+    ("x+y^z", "x+(y^z)"),
+    ("x-y^z", "x-(y^z)"),
+    ("x*y^z", "x*(y^z)"),
+    ("x/y^z", "x/(y^z)"),
+    ("x^y^z", "x^(y^z)"),
 
 
     // reasonably systematic
@@ -115,16 +210,16 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x- -y-z","(x-(-y))-z"),
     ("x+y- -z","(x+y)-(-z)"),
     ("x-y- -z","(x-y)-(-z)"),
-    ("-x*y+z","((-x)*y)+z"),
+    ("-x*y+z","(-(x*y))+z"),
     ("x*-y-z","(x*(-y))-z"),
     ("x+y*-z","x+(y*(-z))"),
     ("x-y*-z","x-(y*(-z))"),
-    ("-x/y+z","((-x)/y)+z"),
+    ("-x/y+z","(-(x/y))+z"),
     ("x/-y-z","(x/(-y))-z"),
     ("-x+y/z","(-x)+(y/z)"),
     ("x-y/-z","x-(y/(-z))"),
-    ("-x*y*z","((-x)*y)*z"),
-    ("x*-y/z","(x*(-y))/z"),
+    ("-x*y*z","-((x*y)*z)"),
+    ("x*-y/z","x*(-(y/z))"),     // subtle  (x*(-y))/z
     ("x/y/-z","(x/y)/(-z)"),
     ("x/y*-z","(x/y)*(-z)"),
     ("x*-/y", unparseable),
@@ -136,11 +231,81 @@ class PairParserTests extends FlatSpec with Matchers {
     ("x^y+-z","(x^y)+(-z)"),
     ("x^y- -z","(x^y)-(-z)"),
 
+    // more unary minus
     ("x+-y+z","(x+(-y))+z"),
     ("x- -y-z","(x-(-y))-z"),
-    ("x*-y*z","(x*(-y))*z"),
-    ("x/-y/z","(x/(-y))/z"),
-    ("x^-y^z","x^((-y)^z)"),
+    ("x-y- -z","(x-y)-(-z)"),
+    ("x- -y- -z","(x-(-y))-(-z)"),
+    ("-x- -y- -z","((-x)-(-y))-(-z)"),
+    ("x*-y*z","x*(-(y*z))"),   // subtle (x*(-y))*z
+    ("-x*y*z","-((x*y)*z)"),        // subtle ((-x)*y)*z
+    ("x*y*-z","(x*y)*(-z)"),
+
+    // primes
+    ("x'+y+z","(x'+y)+z"),
+    ("x+y'+z","(x+(y'))+z"),
+    ("x+y+z'","(x+y)+(z')"),
+    ("x'-y-z","(x'-y)-z"),
+    ("x-y'-z","(x-(y'))-z"),
+    ("x-y-z'","(x-y)-(z')"),
+    ("x'*y*z","(x'*y)*z"),
+    ("x*y'*z","(x*(y'))*z"),
+    ("x*y*z'","(x*y)*(z')"),
+    ("x/-y/z","x/(-(y/z))"),   // subtle "(x/(-y))/z"
+    ("x^-y^z","x^(-(y^z))"),
+
+    ("-x'", "-(x')"),
+    ("x+y'", "x+(y')"),
+    ("x-y'", "x-(y')"),
+    ("x*y'", "x*(y')"),
+    ("x/y'", "x/(y')"),
+    ("x^2'", "x^(2')"),
+    ("x^2^4'", "x^(2^(4'))"),
+
+    // prop meet table
+    ("p()&q()&r()", "p()&(q()&r())"),
+    ("p()&q()|r()", "(p()&q())|r()"),
+    ("p()&q()->r()", "(p()&q())->r()"),
+    ("p()&q()<->r()", "(p()&q())<->r()"),
+    ("!p()&q()", "(!p())&q()"),
+    ("p()&q()&r()", "p()&(q()&r())"),
+    ("p()|q()&r()", "p()|(q()&r())"),
+    ("p()->q()&r()", "p()->(q()&r())"),
+    ("p()<->q()&r()", "p()<->(q()&r())"),
+    ("p()&!q()", "p()&(!q())"),
+
+    ("p()|q()&r()", "p()|(q()&r())"),
+    ("p()|q()|r()", "p()|(q()|r())"),
+    ("p()|q()->r()", "(p()|q())->r()"),
+    ("p()|q()<->r()", "(p()|q())<->r()"),
+    ("!p()|q()", "(!p())|q()"),
+    ("p()&q()|r()", "(p()&q())|r()"),
+    ("p()|q()|r()", "p()|(q()|r())"),
+    ("p()->q()|r()", "p()->(q()|r())"),
+    ("p()<->q()|r()", "p()<->(q()|r())"),
+    ("p()|!q()", "p()|(!q())"),
+
+    ("p()->q()&r()", "p()->(q()&r())"),
+    ("p()->q()|r()", "p()->(q()|r())"),
+    ("p()->q()->r()", "p()->(q()->r())"),
+    ("p()->q()<->r()", "(p()->q())<->r()"),
+    ("!p()->q()", "(!p())->q()"),
+    ("p()&q()->r()", "(p()&q())->r()"),
+    ("p()|q()->r()", "(p()|q())->r()"),
+    ("p()->q()->r()", "p()->(q()->r())"),
+    ("p()<->q()->r()", "p()<->(q()->r())"),
+    ("p()->!q()", "p()->(!q())"),
+
+    ("p()<->q()&r()", "p()<->(q()&r())"),
+    ("p()<->q()|r()", "p()<->(q()|r())"),
+    ("p()<->q()->r()", "p()<->(q()->r())"),
+    ("p()<->q()<->r()", unparseable),
+    ("!p()<->q()", "(!p())<->q()"),
+    ("p()&q()<->r()", "(p()&q())<->r()"),
+    ("p()|q()<->r()", "(p()|q())<->r()"),
+    ("p()<->q()->r()", "p()<->(q()->r())"),
+    ("p()<->q()<->r()", unparseable),
+    ("p()<->!q()", "p()<->(!q())"),
 
     ("\\forall x p(x)&q(x)", "(\\forall x p(x))&q(x)"),
     ("\\forall x p(x)|q(x)", "(\\forall x p(x))|q(x)"),
@@ -303,6 +468,14 @@ class PairParserTests extends FlatSpec with Matchers {
 
   // more tests
 
+    ("-x^2", "-(x^2)"),
+    ("-x^1", "-(x^1)"),
+    ("y+x^2", "y+(x^2)"),
+    ("y-x^2", "y-(x^2)"),
+    ("y*x^2", "y*(x^2)"),
+    ("y/x^2", "y/(x^2)"),
+    ("-x*y", "-(x*y)"),
+
     ("[{x'=1,y'=2,z'=3}]x>0", "[{x'=1,{y'=2,z'=3}}]x>0"),
     ("[{x'=1,y'=2,z'=3&x<5}]x>0", "[{x'=1,{y'=2,z'=3}&x<5}]x>0"),
     ("p(x)>0->[x:=0;{x'=2}x:=x+1;\n{y'=x&\nx<   2}]x<=5", "p(x)>0->[x:=0;{{x'=2}{x:=x+1;{y'=x&(x<2)}}}](x<=5)"),
@@ -314,6 +487,23 @@ class PairParserTests extends FlatSpec with Matchers {
 
     //("x() -> [x:=x(x);]x()>x(x,x())", unparseable) //@todo if !LAX
 
+    ("-x*y", "-(x*y)"),
+    ("-3*y", "(-3)*y"), //@note subtle "-(3*y)"),
+    ("-5*(y-z)", "(-5)*(y-z)"), // subtle "-(5*(y-z))"),
+    ("-2-3", "(-2)-(3)"),  // subtle "(-(2))-(3)"),
+    ("-2*-3", "(-2)*(-3)"),  // subtle "-(2*(-(3)))"),
+    ("-8", "(-8)"),
+    ("-2*a", "(-2)*a"),  // subtle -(2*a)"),
+    ("-0*a", "(-0)*a"),  // subtle "-(0*a)"),
+    ("a-3*b", "a-(3*b)"),
+    ("-2-3*b", "(-2)-(3*b)"),
+    ("-2+-3*b", "(-2)+((-3)*b)"),
+    ("-(5*x)", "-(5*x)"),
+    ("-(5+x)", "-(5+x)"),
+    ("-(5-x)", "-(5-x)"),
+    ("-(5*x)<=0", "-(5*x)<=0"),
+    ("-0*min_0/a<=0*(tl-to)", "(((-0)*(min_0))/(a))<=0*(tl-to)"), // subtle "-(((0)*(min_0))/(a))<=0*(tl-to)"),
+    ("-(0*min_0/a)<=0*(tl-to)", "-((0*(min_0))/(a))<=0*(tl-to)"),
 
     //@note hybrid games
 //    ("<{x:=x+1;{x'=1}^@ ++ x:=x-1;}*>(0<=x&x<1)", "<{x:=x+1;{x'=1}^@ ++ x:=x-1;}*> (0<=x&x<1)"),

@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.skolemizeT
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.{boxAssignT, boxChoiceT, boxNDetAssign, boxSeqT,
 boxTestT, discreteGhostT}
 import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.{diffIntroduceConstantT, diffCutT, diffInvariantT, diffWeakenT}
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndLeftT, AndRightT, AxiomCloseT, ImplyLeftT,
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndLeftT, AndRightT, CloseId, ImplyLeftT,
 ImplyRightT, OrLeftT, OrRightT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT, hideT, inductionT}
@@ -111,7 +111,7 @@ class PassiveSafetyTacticGenerator extends (() => Tactic) {
   )
 
   def hideAndEqT(xo:
-                 Variable, yo: Variable) = ls(AndRightT) && ((ls(AndRightT)*) & (AxiomCloseT | debugT("AxiomClose failed")), debugT("Hide") &
+                 Variable, yo: Variable) = ls(AndRightT) && ((ls(AndRightT)*) & (CloseId | debugT("AxiomClose failed")), debugT("Hide") &
     la(eqLeft
       (exhaustive = true), "v0_1()=v_0", "x0_1()=x_0", "y0_1()=y_0", "xo0_1()=" + xo.prettyString, "yo0_1()=" + yo.prettyString) &
     debugT(
@@ -287,11 +287,11 @@ class PassiveSafetyTacticGenerator extends (() => Tactic) {
   )
 
   ls(ImplyRightT) & (la(AndLeftT)*) & ls(inductionT(Some(invariant))) & onBranch(
-    (indInitLbl, debugT("Base case") & (ls(AndRightT)*) & (ls(OrRightT)*) & la(OrLeftT) & (AxiomCloseT | debugT(
+    (indInitLbl, debugT("Base case") & (ls(AndRightT)*) & (ls(OrRightT)*) & la(OrLeftT) & (CloseId | debugT(
       "Robix axiom close failed unexpectedly") & Tactics.stopT)),
     (indUseCaseLbl, debugT("Use case") & la(hideT,
       "(x-xo>=0->x-xo>v^2/(2*B)+Vo()*(v/B))&(x-xo<=0->xo-x>v^2/(2*B)+Vo()*(v/B))|(y-yo>=0->y-yo>v^2/(2*B)+Vo()*(v/B))&(y-yo<=0->yo-y>v^2/(2*B)+Vo()*(v/B))") & ls(
-      ImplyRightT) & (la(AndLeftT)*) & ls(ImplyRightT) & (AxiomCloseT | QE | debugT("Failed unexpectedly"))),
+      ImplyRightT) & (la(AndLeftT)*) & ls(ImplyRightT) & (CloseId | QE | debugT("Failed unexpectedly"))),
     (indStepLbl, debugT("Induction step") & la(hideT,
       "(x-xo>=0->x-xo>v^2/(2*B)+Vo()*(v/B))&(x-xo<=0->xo-x>v^2/(2*B)+Vo()*(v/B))|(y-yo>=0->y-yo>v^2/(2*B)+Vo()*(v/B))&(y-yo<=0->yo-y>v^2/(2*B)+Vo()*(v/B))")
       & ls(ImplyRightT) & (la(AndLeftT)*) &

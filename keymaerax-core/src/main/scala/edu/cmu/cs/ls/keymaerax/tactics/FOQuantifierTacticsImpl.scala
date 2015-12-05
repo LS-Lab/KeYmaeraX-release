@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 package edu.cmu.cs.ls.keymaerax.tactics
@@ -461,7 +461,7 @@ object FOQuantifierTacticsImpl {
           val desired = createDesired(node.sequent)
           val cutFrm = Imply(desired, node.sequent(p))
           Some(cutT(Some(cutFrm)) & onBranch(
-            (cutUseLbl, lastAnte(assertPT(cutFrm)) & lastAnte(ImplyLeftT) && (hideT(p.topLevel), AxiomCloseT ~ errorT("Failed to close!"))),
+            (cutUseLbl, lastAnte(assertPT(cutFrm)) & lastAnte(ImplyLeftT) && (hideT(p.topLevel), CloseId ~ errorT("Failed to close!"))),
             (cutShowLbl, lastSucc(assertPT(cutFrm)) & lastSucc(cohideT) & assertT(0, 1) & assertPT(cutFrm)(SuccPosition(0)) &
               ImplyRightT(SuccPosition(0)) & assertT(1, 1) &
               generalize(varPos))
@@ -481,13 +481,58 @@ object FOQuantifierTacticsImpl {
 
       private def generalize(where: List[PosInExpr]) = {
         if (p.isTopLevel) {
-          existentialGenPosT(quantified, where)(AntePosition(0)) & AxiomCloseT
+          existentialGenPosT(quantified, where)(AntePosition(0)) & CloseId
         } else {
           AxiomaticRuleTactics.propositionalCongruenceT(p.inExpr) &
             lastAnte(existentialGenPosT(quantified, where)) &
-            (AxiomCloseT | TacticLibrary.debugT("Instantiate existential: axiom close failed"))
+            (CloseId | TacticLibrary.debugT("Instantiate existential: axiom close failed"))
         }
       }
+    }
+  }
+
+  /**
+   * Returns a tactic to instantiate an existential quantifier that is known to have an equal substitute.
+   * @example{{{
+   *           |- z>0 & z=z
+   *         --------------------------existSubstitute(1)
+   *           |- \exists x (x>0 & x=z)
+   * }}}
+   * @return The tactic.
+   */
+  def existSubstitute: PositionTactic = new PositionTactic("Exist Substitute") {
+    /** Checks whether this position tactic will be applicable at the indicated position of the given sequent */
+    override def applies(s: Sequent, p: Position): Boolean = p.isSucc && (s(p).subFormulaAt(p.inExpr) match {
+      case Some(Exists(vars, pred)) => vars.size == 1 && equalTermOf(vars.head, pred).isDefined
+      case _ => false
+    })
+
+    /** Apply this PositionTactic at the indicated Position to obtain a tactic to use at any ProofNode */
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      /** Returns true if this tactics is applicable to the proof node */
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p).subFormulaAt(p.inExpr) match {
+        case Some(Exists(vars, pred)) =>
+          assert(vars.size == 1, s"Only quantifiers with 1 variable supported so far, have $vars")
+          equalTermOf(vars.head, pred) match {
+            case Some(t) => Some(instantiateExistentialQuanT(vars.head, t)(p))
+            case None => throw new IllegalArgumentException(s"Formula $pred must contain an equality mentioning variable ${vars.head}")
+          }
+      }
+    }
+
+    /** Returns the first term in formula fml that is found to be equal to the variable v */
+    private def equalTermOf(v: Variable, fml: Formula): Option[Term] = {
+      var result: Option[Term] = None
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+          case Equal(l, r) if l == v => result = Some(r); Left(Some(ExpressionTraversal.stop))
+          case Equal(l, r) if r == v => result = Some(l); Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, fml)
+      result
     }
   }
 
@@ -531,7 +576,7 @@ object FOQuantifierTacticsImpl {
         val genFml = Forall(Seq(quantified), SubstitutionHelper.replaceFree(node.sequent(p))(t, quantified))
         Some(cutT(Some(genFml)) & onBranch(
           (cutShowLbl, hideT(p)),
-          (cutUseLbl, lastAnte(instantiateT(quantified, t)) & (AxiomCloseT | TacticLibrary.debugT("Universal gen: axiom close failed unexpectedly")))
+          (cutUseLbl, lastAnte(instantiateT(quantified, t)) & (CloseId | TacticLibrary.debugT("Universal gen: axiom close failed unexpectedly")))
         ))
       }
     }

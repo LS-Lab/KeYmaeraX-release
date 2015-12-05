@@ -17,7 +17,11 @@ import scala.collection.immutable._
  *
  * This library features all main tactic elements for most common cases, except sophisticated tactics.
  * Brief documentation for the tactics is provided inline in this interface file.
- * *Following toward the implementation reveals more detailed documentation*.
+ *
+ * *Following tactics forward to their implementation reveals more detailed documentation*.
+ *
+ * For tactics implementing built-in rules such as sequent proof rules,
+ * elaborate documentation is in the [[edu.cmu.cs.ls.keymaerax.core.Rule prover kernel]].
  *
  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
@@ -27,6 +31,7 @@ import scala.collection.immutable._
  * @see [[TacticLibrary]]
  * @see [[DerivedAxioms]]
  * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
+ * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
  */
 object TactixLibrary extends UnifyUSCalculus {
   private val parser = KeYmaeraXParser
@@ -54,8 +59,10 @@ object TactixLibrary extends UnifyUSCalculus {
     * @see [[UnifyUSCalculus]]
     *******************************************************************/
 
-  /** US: uniform substitution
+  /** US: uniform substitution ([[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule USubst]])
     * @see [[UnifyUSCalculus]]
+    * @see [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]]
+    * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
     */
   def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula]) = Map()): Tactic = PropositionalTacticsImpl.uniformSubstT(subst, delta)
 
@@ -68,20 +75,28 @@ object TactixLibrary extends UnifyUSCalculus {
    */
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic = SearchTacticsImpl.onBranch(s1, spec:_*)
 
-  /** Call the current proof branch s */
+  /** Call/label the current proof branch s
+    * @see [[onBranch()]]
+    * @see [sublabel()]]
+    */
   def label(s: String): Tactic = new LabelBranch(s)
+
+  /** Mark the current proof branch and all subbranches s
+    * @see [[label()]]
+    */
+  def sublabel(s: String): Tactic = new SubLabelBranch(s)
 
   // Locating applicable positions for PositionTactics
 
 
   /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
   def llu(tactic: PositionTactic, shape: Formula): Tactic =
-    SearchTacticsImpl.locateAnte(tactic, f => UnificationMatch.unifiable(f, shape)!=None)
+    SearchTacticsImpl.locateAnte(tactic, f => UnificationMatch.unifiable(shape, f)!=None)
   /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
   def llu(tactic: PositionTactic, shape: String): Tactic = llu(tactic, parser.formulaParser(shape))
   /** Locate applicable position in succedent on the right in which something matching the given shape occurs */
   def lru(tactic: PositionTactic, shape: Formula): Tactic =
-    SearchTacticsImpl.locateSucc(tactic, f => UnificationMatch.unifiable(f, shape)!=None)
+    SearchTacticsImpl.locateSucc(tactic, f => UnificationMatch.unifiable(shape, f)!=None)
   /** Locate applicable position in succedent on the right in which something matching the given shape occurs */
   def lru(tactic: PositionTactic, shape: String): Tactic = lru(tactic, parser.formulaParser(shape))
 
@@ -104,48 +119,59 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Locate applicable position within a given position */
   def lin(tactic: PositionTactic): PositionTactic = ???
 
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Propositional tactics
-  /** Hide whether left or right */
+
+  /** Hide/weaken whether left or right */
   lazy val hide               : PositionTactic = TacticLibrary.hideT
-  /** Hide left: weaken a formula to drop it from the antecedent */
+  /** Hide/weaken given formula at given position */
+  def hide(fml: Formula)      : PositionTactic = assertT(fml, "hiding") ~ TacticLibrary.hideT
+  /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
   lazy val hideL              : PositionTactic = TacticLibrary.hideT
-  /** Hide right: weaken a formula to drop it from the succcedent */
+  /** Hide/weaken right: weaken a formula to drop it from the succcedent ([[edu.cmu.cs.ls.keymaerax.core.HideRight HideRight]]) */
   lazy val hideR              : PositionTactic = TacticLibrary.hideT
-  /** CoHide whether left or right: drop all other formulas from the sequent */
+  /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
   lazy val cohide             : PositionTactic = PropositionalTacticsImpl.cohideT
-  /** !L Not left: move an negation in the antecedent to the succedent */
+  /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
+  def cohide(fml: Formula)    : PositionTactic = assertT(fml, "cohiding") ~ cohide
+  /** CoHide2/coweaken2 both left and right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHide2 CoHide2]]) */
+  def cohide2(p1: Position, p2: Position): Tactic = PropositionalTacticsImpl.cohide2T(p1, p2)
+  /** !L Not left: move an negation in the antecedent to the succedent ([[edu.cmu.cs.ls.keymaerax.core.NotLeft NotLeft]]) */
   lazy val notL               : PositionTactic = TacticLibrary.NotLeftT
-  /** !R Not right: move an negation in the succedent to the antecedent */
+  /** !R Not right: move an negation in the succedent to the antecedent ([[edu.cmu.cs.ls.keymaerax.core.NotRight NotRight]]) */
   lazy val notR               : PositionTactic = TacticLibrary.NotRightT
-  /** &L And left: split a conjunction in the antecedent into separate assumptions */
+  /** &L And left: split a conjunction in the antecedent into separate assumptions ([[edu.cmu.cs.ls.keymaerax.core.AndLeft AndLeft]]) */
   lazy val andL               : PositionTactic = TacticLibrary.AndLeftT
-  /** &R And right: prove a conjunction in the succedent on two separate branches */
+  /** &R And right: prove a conjunction in the succedent on two separate branches ([[edu.cmu.cs.ls.keymaerax.core.AndRight AndRight]]) */
   lazy val andR               : PositionTactic = TacticLibrary.AndRightT
-  /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches */
+  /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches ([[edu.cmu.cs.ls.keymaerax.core.OrLeft OrLeft]]) */
   lazy val orL                : PositionTactic = TacticLibrary.OrLeftT
-  /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively */
+  /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively ([[edu.cmu.cs.ls.keymaerax.core.OrRight OrRight]]) */
   lazy val orR                : PositionTactic = TacticLibrary.OrRightT
-  /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch */
+  /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch ([[edu.cmu.cs.ls.keymaerax.core.ImplyLeft ImplyLeft]]) */
   lazy val implyL             : PositionTactic = TacticLibrary.ImplyLeftT
-  /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side */
+  /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side ([[edu.cmu.cs.ls.keymaerax.core.ImplyRight ImplyRight]]) */
   lazy val implyR             : PositionTactic = TacticLibrary.ImplyRightT
-  /** <->L Equiv left: use an equivalence by considering both true or both false cases */
+  /** <->L Equiv left: use an equivalence by considering both true or both false cases ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]]) */
   lazy val equivL             : PositionTactic = TacticLibrary.EquivLeftT
-  /** <->R Equiv right: prove an equivalence by proving both implications */
+  /** <->R Equiv right: prove an equivalence by proving both implications ([[edu.cmu.cs.ls.keymaerax.core.EquivRight EquivRight]]) */
   lazy val equivR             : PositionTactic = TacticLibrary.EquivRightT
 
-  /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds */
+  /** cut a formula in to prove it on one branch and then assume it on the other. Or to perform a case distinction on whether it holds ([[edu.cmu.cs.ls.keymaerax.core.Cut Cut]]) */
   def cut(cut : Formula)      : Tactic         = TacticLibrary.cutT(Some(cut))
-  /** cut a formula in in place of pos on the right to prove it on one branch and then assume it on the other. */
+  /** cut a formula in in place of pos on the right to prove it on one branch and then assume it on the other. ([[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]) */
   def cutR(cut : Formula)     : PositionTactic  = PropositionalTacticsImpl.cutRightT(cut)
-  /** cut a formula in in place of pos on the left to prove it on one branch and then assume it on the other. */
+  /** cut a formula in in place of pos on the left to prove it on one branch and then assume it on the other. ([[edu.cmu.cs.ls.keymaerax.core.CutLeft CutLeft]]) */
   def cutL(cut : Formula)     : PositionTactic  = PropositionalTacticsImpl.cutLeftT(cut)
-  /** cut a formula in in place of pos to prove it on one branch and then assume it on the other (whether pos is left or right). */
+  /** cut a formula in in place of pos to prove it on one branch and then assume it on the other (whether pos is left or right). ([[edu.cmu.cs.ls.keymaerax.core.CutLeft CutLeft]] or [[edu.cmu.cs.ls.keymaerax.core.CutRight CutRight]]) */
   def cutLR(cut : Formula)    : PositionTactic  = PropositionalTacticsImpl.cutLeftRight(cut)
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // First-order tactics
+
   // quantifiers
-  /** all right: Skolemize a universal quantifier in the succedent */
+  /** all right: Skolemize a universal quantifier in the succedent ([[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemize]]) */
   lazy val allR               : PositionTactic = TacticLibrary.skolemizeT
   /** all left: instantiate a universal quantifier in the antecedent by a concrete instance */
   def allL(x: Variable, inst: Term) : PositionTactic = TacticLibrary.instantiateQuanT(x, inst)
@@ -157,57 +183,82 @@ object TactixLibrary extends UnifyUSCalculus {
   def existsR(inst: Term)     : PositionTactic = TacticLibrary.instantiateQuanT(???, inst)
 
   // modalities
-  //  def SpecificMaster(toolId : String) : Tactic = TacticLibrary.master(new NoneGenerate(), true, toolId)
-  /** assignb: [:=] simplify assignment by substitution or equation */
+
+  /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation */
   lazy val assignb            : PositionTactic = TacticLibrary.boxAssignT
-  /** randomb: [:*] simplify nondeterministic assignment to universal quantifier */
+  /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
   lazy val randomb            : PositionTactic = TacticLibrary.boxNDetAssign
-  /** testb: [?] simplifies test to an implication */
+  /** testb: [?] simplifies test `[?q;]p` to an implication `q->p` */
   lazy val testb              : PositionTactic = TacticLibrary.boxTestT
-  /** diffSolve: solve a differential equationb */
+  /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)` */
   lazy val diffSolve          : PositionTactic = TacticLibrary.diffSolutionT
-  /** choiceb: [++] handles both cases of a nondeterministic choice separately */
+  /** choiceb: [++] handles both cases of a nondeterministic choice `[a++b]p(x)` separately `[a]p(x) & [b]p(x)` */
   lazy val choiceb            : PositionTactic = TacticLibrary.boxChoiceT
-  /** composeb: [;] handle both parts of a sequential composition one at a time */
+  /** composeb: [;] handle both parts of a sequential composition `[a;b]p(x)` one at a time `[a][b]p(x)` */
   lazy val composeb           : PositionTactic = TacticLibrary.boxSeqT
-  /** iterateb: [*] prove a property of a loop by unrolling it once */
-  lazy val iterateb           : PositionTactic = ???
-  /** splitb: splits [a](p&q) into [a]p & [a]q */
-  lazy val splitb             : PositionTactic = HybridProgramTacticsImpl.boxSplitConjunctionT
+  /** iterateb: [*] prove a property of a loop `[{a}*]p(x)` by unrolling it once `p(x) & [a][{a}*]p(x)` */
+  lazy val iterateb           : PositionTactic = HilbertCalculus.iterateb
+
+  /** splitb: splits `[a](p&q)` into `[a]p & [a]q` */
+  lazy val splitb             : PositionTactic = useAt("[] split")
+
   /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
+  /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def loop(invariant: Formula) = I(invariant)
   /** K: modal modus ponens (hybrid systems) */
-  lazy val K                  : PositionTactic = PropositionalTacticsImpl.kModalModusPonensT
-  /** V: vacuous box will be discarded (unless it changes values of the postcondition) (hybrid systems) */
-  lazy val V                  : PositionTactic = HybridProgramTacticsImpl.boxVacuousT
+  lazy val K                  : PositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
+  /** V: vacuous box [a]p() will be discarded and replaced by p() provided a does not changes values of postcondition p */
+  lazy val V                  : PositionTactic = useAt("V vacuous", PosInExpr(1::Nil))
 
   // differential equations
-  /** DW: Differential Weakening to use evolution domain constraint (equivalence form) */
+  /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
   lazy val DW                 : PositionTactic = TacticLibrary.diffWeakenT
-  /** DC: Differential Cut a new invariant for a differential equation */
+  /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : PositionTactic = TacticLibrary.diffCutT(invariant)
-  /** DE: Differential Effect exposes the effect of a differential equation on its differential symbols */
+  /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols as `[x'=f(x)][x':=f(x)]p(x,x')` */
   lazy val DE                 : PositionTactic = ODETactics.diffEffectT
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
   lazy val DI                 : PositionTactic = TacticLibrary.diffInvariant
-  /** DG: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b */
+  /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
+    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
+    */
   def DG(y:Variable, a:Term, b:Term) : PositionTactic = ODETactics.diffAuxiliaryT(y,a,b)
-  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
+  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
+    * {{{
+    * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
+    * ----------------------------------------------------------- DA
+    * G |- [x'=f(x)&q(x)]p(x), D
+    * }}}
+    * @see[[DA(Variable, Term, Term, Provable)]]
+    * @note Uses QE to prove p(x) <-> \exists y. r(x,y)
+    * @note G |- p(x) will be proved already from G if p(x) in G (verbatim)
+    */
   def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
+  /**
+   * DA: Differential Ghost expert mode. Use if QE cannot prove p(x) <-> \exists y. r(x,y).
+   * To obtain a Provable with conclusion p(x) <-> \exists y. r(x,y), use TactixLibrary.by, for example:
+   * @example{{{
+   *   val provable = by("x>0 <-> \exists y (y>0&x*y>0)".asFormula, QE)
+   * }}}
+   * @see[[DA(Variable, Term, Term, Formula)]]
+   * @see[[by]]
+   **/
+  def DA(y:Variable, a:Term, b:Term, r:Provable) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
   /** DS: Differential Solution solves a differential equation */
-  def DS                      : PositionTactic = ???
-  /** Dassignb: Substitute a differential assignment */
+  //def DS                      : PositionTactic = ???
+
+  /** Dassignb: Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
   lazy val Dassignb           : PositionTactic = HybridProgramTacticsImpl.boxDerivativeAssignT
-  /** Dplus: +' derives a sum */
+  /** Dplus: +' derives a sum `(f(x)+g(x))' = (f(x))' + (g(x))'` */
   lazy val Dplus              : PositionTactic = SyntacticDerivationInContext.AddDerivativeT
-  /** neg: -' derives neg */
+  /** neg: -' derives unary negation `(-f(x))' = -(f(x)')` */
   lazy val Dneg               : PositionTactic = SyntacticDerivationInContext.NegativeDerivativeT
-  /** Dminus: -' derives a difference */
+  /** Dminus: -' derives a difference `(f(x)-g(x))' = (f(x))' - (g(x))'` */
   lazy val Dminus             : PositionTactic = SyntacticDerivationInContext.SubtractDerivativeT
-  /** Dtimes: *' derives a product */
+  /** Dtimes: *' derives a product `(f(x)*g(x))' = f(x)'*g(x) + f(x)*g(x)'` */
   lazy val Dtimes             : PositionTactic = SyntacticDerivationInContext.MultiplyDerivativeT
-  /** Dquotient: /' derives a quotient */
+  /** Dquotient: /' derives a quotient `(f(x)/g(x))' = (f(x)'*g(x) - f(x)*g(x)') / (g(x)^2)` */
   lazy val Dquotient          : PositionTactic = SyntacticDerivationInContext.DivideDerivativeT
   /** Dcompose: o' derives a function composition by chain rule */
   lazy val Dcompose           : PositionTactic = ???
@@ -218,24 +269,28 @@ object TactixLibrary extends UnifyUSCalculus {
   //@todo could change type to invariants: Formula* if considered more readable
   def diffInvariant(invariants: List[Formula]): PositionTactic = ODETactics.diffInvariant(invariants)
 
-  // axiomatic rules
+  // more
 
-  /** G: Goedel rule proves the postcondition of a box in isolation (hybrid systems)
-    * @see [[Monb]] with p(x)=True
+  /* Generalize postcondition to C and, separately, prove that C implies postcondition
+   * {{{
+   *   genUseLbl:        genShowLbl:
+   *   G |- [a]C, D      C |- B
+   *   ------------------------
+   *          G |- [a]B, D
+   * }}}
+   */
+  def generalize(C: Formula)  : PositionTactic = TacticLibrary.generalize(C)
+
+  /** Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post
+    * {{{
+    *   cutUseLbl:           cutShowLbl:
+    *   G |- [a](C->B), D    G |- [a]C, D
+    *   ---------------------------------
+    *          G |- [a]B, D
+    * }}}
     */
-  lazy val G                  : Tactic         = AxiomaticRuleTactics.goedelT
-  /** allG: all generalization rule proves the formula after a universal quantifier in isolation */
-  lazy val allG               : Tactic         = AxiomaticRuleTactics.forallGeneralizationT
-  /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality to an equality */
-  def CT(inEqPos: PosInExpr)  : Tactic         = ???
-  /** CQ: Equation Congruence: Contextual Equivalence of terms at the indicated position to reduce an equivalence to an equation */
-  //def CQ(inEqPos: PosInExpr)  : Tactic
-  /** CE: Congruence: Contextual Equivalence at the indicated position to reduce an equivalence to an equivalence */
-  //def CE(inEqPos: PosInExpr)  : Tactic
-  /** Monb: Monotone for [a;]p(x) |- [a;]q(x) reduces to proving p(x) |- q(x) */
-  lazy val Monb               : Tactic         = AxiomaticRuleTactics.boxMonotoneT
-  /** Mond: Monotone for <a;>p(x) |- <a;>q(x) reduces to proving p(x) |- q(x) */
-  lazy val Mond               : Tactic         = AxiomaticRuleTactics.diamondMonotoneT
+  def postCut(cut: Formula)   : PositionTactic = TacticLibrary.postCut(cut)
+
 
 
   // closing
@@ -245,19 +300,29 @@ object TactixLibrary extends UnifyUSCalculus {
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : Tactic         = TacticLibrary.closeT
-  /** closeId: closes the branch when the same formula is in the antecedent and succedent */
+  /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
+  def close(a: AntePosition, s: SuccPosition) : Tactic = PropositionalTacticsImpl.CloseId(a,s)
+  def close(a: Int, s: Int)  : Tactic = close(new AntePosition(SeqPos(a).asInstanceOf[AntePos].getIndex), new SuccPosition(SeqPos(s).asInstanceOf[SuccPos].getIndex))
+  /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   lazy val closeId           : Tactic         = TacticLibrary.AxiomCloseT
-  /** closeT: closes the branch when true is in the succedent */
+  /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
   lazy val closeT            : PositionTactic = TacticLibrary.CloseTrueT
-  /** closeF: closes the branch when false is in the antecedent */
+  /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
   lazy val closeF            : PositionTactic = TacticLibrary.CloseFalseT
+
+  // counter example
+
+  /** Generate counter example */
+  lazy val counterEx         : Tactic         = TacticLibrary.counterExampleT
 
   // derived
 
-  /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. */
+  /** Turn implication on the right into an equivalence, which is useful to prove by CE etc. ([[edu.cmu.cs.ls.keymaerax.core.EquivifyRight EquivifyRight]]) */
   lazy val equivifyR          : PositionTactic = PropositionalTacticsImpl.equivifyRightT
-  /** Commute an equivalence on the right. */
+  /** Commute an equivalence on the right. ([[edu.cmu.cs.ls.keymaerax.core.CommuteEquivRight CommuteEquivRight]]) */
   lazy val commuteEquivR      : PositionTactic = PropositionalTacticsImpl.commuteEquivRightT
+  //@todo commuteEquivLeft
+  //@todo commuteEqual
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
@@ -289,10 +354,27 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Assert that the given condition holds for the sequent at the position where the tactic is applied */
   def assertT(cond : (Sequent,Position)=>Boolean, msg:String): PositionTactic = Tactics.assertPT(cond, msg)
   /** Assert that the given expression is present at the position in the sequent where this tactic is applied to. */
-  def assertT(expected: Expression, msg:String): PositionTactic = expected match {
+  def assertT(expected: Expression, msg:String): PositionTactic = {
+    import Augmentors.SequentAugmentor
+    //assertPT((s, pos) => pos.isIndexDefined(s) && s.sub(pos) == Some(expected), msg + "\nExpected: " + expected.prettyString)
+    //@todo the following code seems incorrect compared to assertE
+    expected match {
+      //@todo could simplify all to be the same as the Program case
     case t: Term => Tactics.assertPT(t, msg)
     case f: Formula => Tactics.assertPT(f, msg)
+    case p: Program =>
+      assertPT((s, pos) => pos.isIndexDefined(s) && s.sub(pos) == Some(expected), msg + "\nExpected: " + expected.prettyString)
+    }
   }
+
+  def assertE(expected: => Expression, msg:String): PositionTactic = {
+    import Augmentors.SequentAugmentor
+    //@todo could do if (DEBUG) to save cycles
+    assertPT((s, pos) => s.sub(pos) == Some(expected), msg + "\nExpected: " + expected.prettyString /*+ "\nFound:   " + s.sub(pos)*/)
+  }
+
+  /** errorT raises an error upon executing this tactic, stopping processing */
+  def errorT(msg: String): Tactic = Tactics.errorT(msg)
 
   /** debug(s) sprinkles debug message s into the output and the ProofNode information */
   def debug(s: => Any): Tactic = TacticLibrary.debugT(s)
@@ -330,22 +412,34 @@ object TactixLibrary extends UnifyUSCalculus {
 
 
   // Global Utility Functions
+
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable
    * @see [[TactixLibrary.by(Provable)]]
+   * @see [[proveBy()]]
+   * @example {{{
+   *   import StringConverter._
+   *   import TactixLibrary._
+   *   val proof = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula)), prop)
+   * }}}
    */
   def proveBy(goal: Sequent, tactic: Tactic): Provable = {
     val rootNode = new RootNode(goal)
     //@todo what/howto ensure it's been initialized already
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
-    if (!rootNode.isClosed() || Tactic.DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open\n" + rootNode.openGoals().map(x => "Open Goal: " + x.sequent).mkString(("\n"))))
+    if (!rootNode.isClosed() || Tactic.DEBUG) println("proveBy " + (if (rootNode.isClosed()) "closed" else "open " + rootNode.openGoals().size + "\n\n" + rootNode.openGoals().map(x => "Open: " + x.tacticInfo.infos.getOrElse("subLabel", "") + "/" + x.tacticInfo.infos.getOrElse("branchLabel", "<unknown>") + ":\n" + x.sequent.prettyString).mkString(("\n"))) + "\n")
     val proof = rootNode.provableWitness
-    if (Tactic.DEBUG) println("proveBy " + proof)
+    if (Tactic.DEBUG) println("proveBy " + proof + "\n")
     proof
   }
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable
    * @see [[TactixLibrary.by(Provable)]]
+   * @example {{{
+   *   import StringConverter._
+   *   import TactixLibrary._
+   *   val proof = TactixLibrary.proveBy("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula, prop)
+   * }}}
    */
   def proveBy(goal: Formula, tactic: Tactic): Provable = proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq(goal)), tactic)
 

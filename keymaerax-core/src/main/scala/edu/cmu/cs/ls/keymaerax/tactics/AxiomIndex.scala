@@ -107,16 +107,18 @@ object AxiomIndex {
     case "!all" | "!exists" => (PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(Nil)::Nil)
     case "![]" | "!<>" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
 
-    case "[] split" => binaryDefault
+    case "[] split" | "<> split" => binaryDefault
     case "[] split left" | "[] split right" => directReduction
     case "<*> approx" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
     case "<*> stuck" => (PosInExpr(0::Nil), Nil)
     case "<'> stuck" => (PosInExpr(0::Nil), Nil)
 
+    case "[] post weaken" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
+
     case "+<= up" | "-<= up" | "<=+ down" | "<=- down" => (PosInExpr(1::Nil), PosInExpr(0::0::Nil)::PosInExpr(0::1::Nil)::Nil)
 
     // default position
-    case _ => println("AxiomIndex: defaulted for " + axiom); (PosInExpr(0::Nil), Nil)
+    case _ => (PosInExpr(0::Nil), Nil)
   }
 
 

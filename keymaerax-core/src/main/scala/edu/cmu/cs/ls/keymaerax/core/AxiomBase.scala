@@ -87,6 +87,11 @@ private[core] object AxiomBase {
        * Premise f_(??) = g_(??)
        * Conclusion ctxP_(f_(??)) <-> ctxP_(g_(??))
        * End.
+       * {{{
+       *      f(x)   =  g(x)
+       *   --------------------- CQ
+       *    c(f(x)) <-> c(g(x))
+       * }}}
        */
       ("CQ equation congruence",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany))),
@@ -96,12 +101,17 @@ private[core] object AxiomBase {
        * Premise p_(??) <-> q_(??)
        * Conclusion ctxF_(p_(??)) <-> ctxF_(q_(??))
        * End.
+       * {{{
+       *       p(x) <-> q(x)
+       *   --------------------- CE
+       *    C{p(x)} <-> C{q(x)}
+       * }}}
        */
       ("CE congruence",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
       /**
-       * Rule "CE congruence".
+       * Rule "C0 one-sided congruence".
        * Premise p_(??) <-> q_(??)
        * Conclusion ctxF_(p_(??)) |- ctxF_(q_(??))
        * End.
@@ -135,6 +145,11 @@ private[core] object AxiomBase {
        * Rule "ind induction".
        * Premise p(??) ==> [a;]p(??)
        * Conclusion p(??) ==> [a*]p(??)
+       * {{{
+       *     p(x) |- [a]p(x)
+       *   --------------------- ind
+       *     p(x) |- [{a}*]p(x)
+       * }}}
        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
       ("ind induction",
@@ -146,6 +161,11 @@ private[core] object AxiomBase {
        * Premise p(??)
        * Conclusion [a;]p(??)
        * End.
+       * {{{
+       *       p(??)
+       *   ----------- G
+       *    [a;]p(??)
+       * }}}
        * @NOTE Unsound for hybrid games
        * @TODO Add [a;]true -> to conclusion to make it sound for hybrid games (and then equivalent to [] monotone)
        */

@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 /**
@@ -47,7 +47,8 @@ class FileLemmaDB extends LemmaDB {
       // synchronize to make sure concurrent uses use new file names
       lemma.name match {
         case Some(n) =>
-          require(isUniqueLemmaName(n), "Duplicate lemma name " + n)
+          require(isUniqueLemmaName(n) || lemma == get(n).orNull,
+            "Lemma name '" + n + ".alp' must be unique, or file content must be the lemma: \n" + lemma)
           (n, new File(lemmadbpath, n + ".alp"))
         case None =>
           val (newId, newFile) = getUniqueLemmaFile()

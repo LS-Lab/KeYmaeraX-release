@@ -18,6 +18,7 @@ import edu.cmu.cs.ls.keymaerax.tools.Tool
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @see [[HilbertCalculus.derive()]]
+ * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
 object HilbertCalculus extends UnifyUSCalculus {
   import TactixLibrary.QE
@@ -26,63 +27,65 @@ object HilbertCalculus extends UnifyUSCalculus {
   private val INTERNAL = true
 
   // modalities
-  /** assignb: [:=] simplify assignment by substitution or equation */
+  /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation */
   lazy val assignb            : PositionTactic = if (INTERNAL) useAt("[:=] assign") | useAt("[:=] assign equational") | useAt("[:=] assign update")
   else TacticLibrary.boxAssignT
-  /** randomb: [:*] simplify nondeterministic assignment to universal quantifier */
+  /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
   lazy val randomb            : PositionTactic = useAt("[:*] assign nondet")
-  /** testb: [?] simplifies test to an implication */
+  /** testb: [?] simplifies test `[?q;]p` to an implication `q->p` */
   lazy val testb              : PositionTactic = useAt("[?] test")
-  /** diffSolve: solve a differential equation */
+  /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)` */
   def diffSolve               : PositionTactic = TacticLibrary.diffSolutionT
-  /** choiceb: [++] handles both cases of a nondeterministic choice separately */
+  /** choiceb: [++] handles both cases of a nondeterministic choice `[a++b]p(x)` separately `[a]p(x) & [b]p(x)` */
   lazy val choiceb            : PositionTactic = useAt("[++] choice")
-  /** composeb: [;] handle both parts of a sequential composition one at a time */
+  /** composeb: [;] handle both parts of a sequential composition `[a;b]p(x)` one at a time `[a][b]p(x)` */
   lazy val composeb           : PositionTactic = useAt("[;] compose")
-  /** iterateb: [*] prove a property of a loop by unrolling it once */
+  /** iterateb: [*] prove a property of a loop `[{a}*]p(x)` by unrolling it once `p(x) & [a][{a}*]p(x)` */
   lazy val iterateb           : PositionTactic = useAt("[*] iterate")
-  /** dualb: [^d] handle dual game */
+  /** dualb: [^d] handle dual game `[{a}^d]p(x)` by `![a]!p(x)` */
   lazy val dualb              : PositionTactic = useAt("[d] dual")
 
-  /** assignd: <:=> simplify assignment by substitution or equation */
+  /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */
   lazy val assignd            : PositionTactic = useAt("<:=> assign") | useAt("<:=> assign equational") //@todo or "[:=] assign" if no clash
-  /** randomd: <:*> simplify nondeterministic assignment to existential quantifier */
+  /** randomd: <:*> simplify nondeterministic assignment `<x:=*;>p(x)` to an existential quantifier `\exists x p(x)` */
   lazy val randomd            : PositionTactic = useAt("<:*> assign nondet")
-  /** testd: <?> simplifies test to a conjunction */
+  /** testd: <?> simplifies test `<?q;>p` to a conjunction `q&p` */
   lazy val testd              : PositionTactic = useAt("<?> test")
-  /** diffSolve: solve a differential equation */
+  /** diffSolve: solve a differential equation `<x'=f>p(x)` to `\exists t>=0 <x:=solution(t)>p(x)` */
   def diffSolved              : PositionTactic = ???
-  /** choiced: <++> handles both cases of a nondeterministic choice options separately */
+  /** choiced: <++> handles both cases of a nondeterministic choice `<a++b>p(x)` separately `<a>p(x) | <b>p(x)` */
   lazy val choiced            : PositionTactic = useAt("<++> choice")
-  /** composed: <;> handle both parts of a sequential composition one at a time */
+  /** composed: <;> handle both parts of a sequential composition `<a;b>p(x)` one at a time `<a><b>p(x)` */
   lazy val composed           : PositionTactic = useAt("<;> compose")
-  /** iterated: <*> prove a property of a loop by unrolling it once */
+  /** iterated: <*> prove a property of a loop `<{a}*>p(x)` by unrolling it once `p(x) | <a><{a}*>p(x)` */
   lazy val iterated           : PositionTactic = useAt("<*> iterate")
-  /** duald: `<^d>` handle dual game */
+  /** duald: `<^d>` handle dual game `<{a}^d>p(x)` by `!<a>!p(x)` */
   lazy val duald              : PositionTactic = useAt("<d> dual")
 
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
 //  def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
 //  def loop(invariant: Formula) = I(invariant)
-//  /** K: modal modus ponens (hybrid systems) */
-//  def K                       : PositionTactic = PropositionalTacticsImpl.kModalModusPonensT
-//  /** V: vacuous box will be discarded (unless it changes values of the postcondition) (hybrid systems) */
-//  def V                       : PositionTactic = HybridProgramTacticsImpl.boxVacuousT
+  /** K: modal modus ponens */
+  //def K                       : PositionTactic = PropositionalTacticsImpl.kModalModusPonensT
+  /** V: vacuous box [a]p() will be discarded and replaced by p() provided a does not changes values of postcondition p */
+  lazy val V                  : PositionTactic = useAt("V vacuous")
 //
 //  // differential equations
-  /** DW: Differential Weakening to use evolution domain constraint (equivalence form) */
+  /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
   lazy val DW                 : PositionTactic = useAt("DW differential weakening")
-  /** DC: Differential Cut a new invariant for a differential equation */
+  /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : PositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
   )
-  /** DE: Differential Effect exposes the effect of a differential equation on its differential symbols */
+  /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols as `[x'=f(x)][x':=f(x)]p(x,x')` with its differential assignment `x':=f(x)`. */
   lazy val DE                 : PositionTactic = if (INTERNAL)
     ifElseT(isODESystem,
       (useAt("DE differential effect (system)") * getODEDim),
       useAt("DE differential effect"))
   else ODETactics.diffEffectT
-  /** DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation @see [[diffInd()]] */
+  /** DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation.
+    * `[x'=f(x)&q(x)]p(x)` reduces to `q(x) -> p(x) & [x'=f(x)]p(x)'`.
+    * @see [[diffInd()]] */
   lazy val DI                 : PositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
   /** diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE) */
   lazy val diffInd            : PositionTactic = new PositionTactic("diffInd") {
@@ -123,7 +126,9 @@ object HilbertCalculus extends UnifyUSCalculus {
       }
     }
 
-  /** DG: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b */
+  /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
+    * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
+    */
   def DG(y:Variable, a:Term, b:Term) : PositionTactic = useAt("DG differential ghost", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq(
       (Variable("y",None,Real), y),
@@ -133,54 +138,75 @@ object HilbertCalculus extends UnifyUSCalculus {
 
   //  /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and replacement formula */
 //  def DA(y:Variable, a:Term, b:Term, r:Formula) : PositionTactic = ODETactics.diffAuxiliariesRule(y,a,b,r)
-  /** DS: Differential Solution solves a differential equation */
+  /** DS: Differential Solution solves a simple differential equation `[x'=c&q(x)]p(x)` by reduction to
+    * `\forall t>=0 ((\forall 0<=s<=t  q(x+c()*s) -> [x:=x+c()*t;]p(x))` */
   lazy val DS                 : PositionTactic = useAt("DS& differential equation solution")
-  /** Dassignb: Substitute a differential assignment */
+  
+  /** Dassignb: [:='] Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
   lazy val Dassignb           : PositionTactic = useAt("[':=] differential assign")
-  /** Dplus: +' derives a sum */
+  /** Dplus: +' derives a sum `(f(x)+g(x))' = (f(x))' + (g(x))'` */
   lazy val Dplus              : PositionTactic = useAt("+' derive sum")
-  /** neg: -' derives neg */
+  /** neg: -' derives unary negation `(-f(x))' = -(f(x)')` */
   lazy val Dneg               : PositionTactic = useAt("-' derive neg")
-  /** Dminus: -' derives a difference */
+  /** Dminus: -' derives a difference `(f(x)-g(x))' = (f(x))' - (g(x))'` */
   lazy val Dminus             : PositionTactic = useAt("-' derive minus")
-  /** Dtimes: *' derives a product */
+  /** Dtimes: *' derives a product `(f(x)*g(x))' = f(x)'*g(x) + f(x)*g(x)'` */
   lazy val Dtimes             : PositionTactic = useAt("*' derive product")
-  /** Dquotient: /' derives a quotient */
+  /** Dquotient: /' derives a quotient `(f(x)/g(x))' = (f(x)'*g(x) - f(x)*g(x)') / (g(x)^2)` */
   lazy val Dquotient          : PositionTactic = useAt("/' derive quotient")
   /** Dpower: ^' derives a power */
   lazy val Dpower             : PositionTactic = useAt("^' derive power", PosInExpr(1::0::Nil))
   /** Dcompose: o' derives a function composition by chain rule */
   //lazy val Dcompose           : PositionTactic = ???
-  /** Dconst: c()' derives a constant */
+  /** Dconst: c()' derives a constant `c()' = 0` */
   lazy val Dconst             : PositionTactic = useAt("c()' derive constant fn")
-  /** Dvariable: x' derives a variable */
+  /** Dvariable: x' derives a variable `(x)' = x'` */
   lazy val Dvariable          : PositionTactic = if (false&&INTERNAL) useAt("x' derive var", PosInExpr(0::Nil)) //useAt("x' derive variable", PosInExpr(0::0::Nil))
   else SyntacticDerivationInContext.symbolizeDifferential
 
-  /** Dand: &' derives a conjunction */
+  /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
   lazy val Dand               : PositionTactic = useAt("&' derive and")
-  /** Dor: |' derives a disjunction */
+  /** Dor: |' derives a disjunction `(p(x)|q(x))'` to obtain `p(x)' & q(x)'` */
   lazy val Dor                : PositionTactic = useAt("|' derive or")
-  /** Dimply: ->' derives an implication */
+  /** Dimply: ->' derives an implication `(p(x)->q(x))'` to obtain `(!p(x) | q(x))'` */
   lazy val Dimply             : PositionTactic = useAt("->' derive imply")
-  /** Dequal: =' derives an equation */
+  /** Dequal: =' derives an equation `(f(x)=g(x))'` to obtain `f(x)'=g(x)'` */
   lazy val Dequal             : PositionTactic = useAt("=' derive =")
-  /** Dnotequal: !=' derives a disequation */
+  /** Dnotequal: !=' derives a disequation `(f(x)!=g(x))'` to obtain `f(x)'=g(x)'` */
   lazy val Dnotequal          : PositionTactic = useAt("!=' derive !=")
-  /** Dless: <' derives less-than */
+  /** Dless: <' derives less-than `(f(x)<g(x))'` to obtain `f(x)'<=g(x)'` */
   lazy val Dless              : PositionTactic = useAt("<' derive <")
-  /** Dlessequal: <=' derives a less-or-equal */
+  /** Dlessequal: <=' derives a less-or-equal `(f(x)<=g(x))'` to obtain `f(x)'<=g(x)'` */
   lazy val Dlessequal         : PositionTactic = useAt("<=' derive <=")
-  /** Dgreater: >' derives greater-than */
+  /** Dgreater: >' derives greater-than `(f(x)>g(x))'` to obtain `f(x)'>=g(x)'` */
   lazy val Dgreater           : PositionTactic = useAt(">' derive >")
-  /** Dgreaterequal: >=' derives a greater-or-equal */
+  /** Dgreaterequal: >=' derives a greater-or-equal `(f(x)>=g(x))'` to obtain `f(x)'>=g(x)'` */
   lazy val Dgreaterequal      : PositionTactic = useAt(">=' derive >=")
-  /** Dforall: \forall' derives an all quantifier */
+  /** Dforall: \forall' derives an all quantifier `(\forall x p(x))'` to obtain `\forall x (p(x)')` */
   lazy val Dforall            : PositionTactic = useAt("forall' derive forall")
   /** Dexists: \exists' derives an exists quantifier */
   lazy val Dexists            : PositionTactic = useAt("exists' derive exists")
 
+
+
+  /** splitb: splits `[a](p&q)` into `[a]p & [a]q` */
+  lazy val splitb             : PositionTactic = useAt("[] split")
+  /** splitd: splits `<a>(p|q)` into `<a>p | <a>q` */
+  lazy val splitd             : PositionTactic = useAt("<> split")
+
   // def ind
+
+
+  /*******************************************************************
+    * First-order logic
+    *******************************************************************/
+
+  /** vacuousAll: vacuous `\forall x p()` will be discarded and replaced by p() provided x does not occur in p(). */
+  lazy val vacuousAll          : PositionTactic = useAt("vacuous all quantifier")
+  /** vacuousExists: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
+  lazy val vacuousExists       : PositionTactic = useAt("vacuous exists quantifier")
+
+  //@todo make the other quantifier axioms accessible by useAt too
 
   /*******************************************************************
     * Stepping auto-tactic

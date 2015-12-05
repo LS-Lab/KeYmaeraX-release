@@ -95,7 +95,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
         (debugT("Diff. Inv. result") & ls(diffWeakenT) & ls(ImplyRightT) & (la(AndLeftT)*) & debugT("Plant result"))
     }
 
-    def hideAndEqT(xo: Variable, yo: Variable) = ls(AndRightT) && ((ls(AndRightT)*) & (AxiomCloseT | debugT("AxiomClose failed")), debugT("Hide") &
+    def hideAndEqT(xo: Variable, yo: Variable) = ls(AndRightT) && ((ls(AndRightT)*) & (CloseId | debugT("AxiomClose failed")), debugT("Hide") &
       la(eqLeft(exhaustive = true), "v0_1()=v_0", "x0_1()=x_0", "y0_1()=y_0", "xo0_1()=" + xo.prettyString, "yo0_1()=" + yo.prettyString) &
       debugT("Done equality rewriting") &
       la(hideT, "r!=0", "v>=0", "dx^2+dy^2=1", "dxo^2+dyo^2<=V()^2", "t_2=0", "v0_1()=v_0",
@@ -214,8 +214,8 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
     )
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(inductionT(Some(invariant))) & onBranch(
-      (indInitLbl, debugT("Base case") & (ls(AndRightT)*) & (ls(OrRightT)*) & la(OrLeftT) & (AxiomCloseT | debugT("Robix axiom close failed unexpectedly") & Tactics.stopT)),
-      (indUseCaseLbl, debugT("Use case") & la(hideT, "(x-xo>=0->x-xo>v^2/(2*B)+V()*(v/B))&(x-xo<=0->xo-x>v^2/(2*B)+V()*(v/B))|(y-yo>=0->y-yo>v^2/(2*B)+V()*(v/B))&(y-yo<=0->yo-y>v^2/(2*B)+V()*(v/B))") & ls(ImplyRightT) & (la(AndLeftT)*) & ls(ImplyRightT) & (AxiomCloseT | QE | debugT("Failed unexpectedly"))),
+      (indInitLbl, debugT("Base case") & (ls(AndRightT)*) & (ls(OrRightT)*) & la(OrLeftT) & (CloseId | debugT("Robix axiom close failed unexpectedly") & Tactics.stopT)),
+      (indUseCaseLbl, debugT("Use case") & la(hideT, "(x-xo>=0->x-xo>v^2/(2*B)+V()*(v/B))&(x-xo<=0->xo-x>v^2/(2*B)+V()*(v/B))|(y-yo>=0->y-yo>v^2/(2*B)+V()*(v/B))&(y-yo<=0->yo-y>v^2/(2*B)+V()*(v/B))") & ls(ImplyRightT) & (la(AndLeftT)*) & ls(ImplyRightT) & (CloseId | QE | debugT("Failed unexpectedly"))),
       (indStepLbl, debugT("Induction step") & la(hideT, "(x-xo>=0->x-xo>v^2/(2*B)+V()*(v/B))&(x-xo<=0->xo-x>v^2/(2*B)+V()*(v/B))|(y-yo>=0->y-yo>v^2/(2*B)+V()*(v/B))&(y-yo<=0->yo-y>v^2/(2*B)+V()*(v/B))") & ls(ImplyRightT) & (la(AndLeftT)*) &
         ls(boxSeqT) &
         // obstacle control
@@ -260,7 +260,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
     result shouldBe 'closed
   }
 
-  it should "be provable with KeYmaeraX command line interface" in {
+  ignore should "be provable with KeYmaeraX command line interface" in {
     // command line main has to initialize the prover itself, so dispose all test setup first
     afterEach()
 
@@ -460,7 +460,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
     )
 
     def hideAndEqT(ox: Variable, oy: Variable) = ls(AndRightT) && (
-      (AxiomCloseT | ls(AndRightT))*,
+      (CloseId | ls(AndRightT))*,
       ls(OrRightT) & la(eqLeft(exhaustive=true), "v0_1()=v_0", "x0_1()=x_0", "y0_1()=y_0", s"ox0_1()=${ox.prettyString}", s"oy0_1()=${oy.prettyString}", "talpha0_1()=talpha_0") &
         debugT("Done equality rewriting") & la(hideT, "r_0()!=0", "dx^2+dy^2=1", /*"dx_0^2+dy_0^2=1",*/ "odx()^2+ody()^2<=V()^2", "t_2=0", "v0_1()=v_0", "x0_1()=x_0", "y0_1()=y_0", s"ox0_1()=${ox.prettyString}", s"oy0_1()=${oy.prettyString}", "talpha0_1()=talpha_0") & debugT("Done hiding") & ls(AndRightT) && (
           la(OrLeftT, s"v_0=0|(talpha_0>=0&r_0()>=0->talpha_0+v_0^2/(2*b()*r_0()) < alpha())&(talpha_0>=0&r_0() < 0->talpha_0+v_0^2/(-2*b()*r_0()) < alpha())&(talpha_0 < 0&r_0()>=0->-talpha_0+v_0^2/(2*b()*r_0()) < alpha())&(talpha_0 < 0&r_0() < 0->-talpha_0+v_0^2/(-2*b()*r_0()) < alpha())&(isVisible < 0|((x_0-${ox.prettyString}>=0->x_0-${ox.prettyString}>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-${ox.prettyString}<=0->${ox.prettyString}-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-${oy.prettyString}>=0->y_0-${oy.prettyString}>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-${oy.prettyString}<=0->${oy.prettyString}-y_0>v_0^2/(2*b())+V()*(v_0/b()))))") && (
@@ -481,7 +481,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
       )
 
     def hideAndEqAccelerate1T(ox: Variable, oy: Variable) = ls(AndRightT) && (
-      (AxiomCloseT | ls(AndRightT))*,
+      (CloseId | ls(AndRightT))*,
       ls(OrRightT) & la(eqLeft(exhaustive=true), "v0_1()=v_0", "x0_1()=x_0", "y0_1()=y_0", s"ox0_1()=${ox.prettyString}", s"oy0_1()=${oy.prettyString}", "talpha0_1()=talpha_3") &
         debugT("Done equality rewriting") & la(hideT, "r_0!=0", "dx^2+dy^2=1", "odx()^2+ody()^2<=V()^2", "t_2=0", "v0_1()=v_0", "x0_1()=x_0", "y0_1()=y_0", s"ox0_1()=${ox.prettyString}", s"oy0_1()=${oy.prettyString}", "talpha0_1()=talpha_3") & debugT("Done hiding") & ls(AndRightT) && (
         la(OrLeftT, "v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))") && (
@@ -503,7 +503,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
       )
 
     def hideAndEqAccelerate2T(ox: Variable, oy: Variable) = ls(AndRightT) && (
-      (AxiomCloseT | ls(AndRightT))*,
+      (CloseId | ls(AndRightT))*,
       ls(OrRightT) & la(eqLeft(exhaustive=true), "v0_1()=v_0", "x0_1()=x_0", "y0_1()=y_0", s"ox0_1()=${ox.prettyString}", s"oy0_1()=${oy.prettyString}", "talpha0_1()=talpha_3") &
         debugT("Done equality rewriting") & la(hideT, "r_0!=0", "dx^2+dy^2=1", "odx()^2+ody()^2<=V()^2", "t_2=0", "v0_1()=v_0", "x0_1()=x_0", "y0_1()=y_0", s"ox0_1()=${ox.prettyString}", s"oy0_1()=${oy.prettyString}", "talpha0_1()=talpha_3") & debugT("Done hiding") & ls(AndRightT) && (
         la(OrLeftT, "v_0=0|(talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha())&(talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha())&(isVisible < 0|((x_0-ox_0>=0->x_0-ox_0>v_0^2/(2*b())+V()*(v_0/b()))&(x_0-ox_0<=0->ox_0-x_0>v_0^2/(2*b())+V()*(v_0/b()))|(y_0-oy_0>=0->y_0-oy_0>v_0^2/(2*b())+V()*(v_0/b()))&(y_0-oy_0<=0->oy_0-y_0>v_0^2/(2*b())+V()*(v_0/b()))))") && (
@@ -531,15 +531,15 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
         ls(AndRightT) && (
           ls(AndRightT) && (
             ls(AndRightT) && (
-              debugT("Show talpha >= 0 & r >= 0") & (AxiomCloseT | QE | debugT("QE failed unexpectedly") & Tactics.stopT),
+              debugT("Show talpha >= 0 & r >= 0") & (CloseId | QE | debugT("QE failed unexpectedly") & Tactics.stopT),
               debugT("Show talpha >= 0 & r < 0")) & la(hideT, "talpha_0 < 0&r_0() < 0->-talpha_0+v_0^2/(-2*b()*r_0()) < alpha()", "talpha_0 < 0&r_0()>=0->-talpha_0+v_0^2/(2*b()*r_0()) < alpha()", "talpha_0>=0&r_0()>=0->talpha_0+v_0^2/(2*b()*r_0()) < alpha()") &
-              (ls(ImplyRightT)*) & (la(ImplyLeftT)*) & (AxiomCloseT | QE | debugT("QE failed unexpectedly") & Tactics.stopT),
+              (ls(ImplyRightT)*) & (la(ImplyLeftT)*) & (CloseId | QE | debugT("QE failed unexpectedly") & Tactics.stopT),
             debugT("Show talpha < 0 & r >= 0") & la(hideT, "talpha_0 < 0&r_0() < 0->-talpha_0+v_0^2/(-2*b()*r_0()) < alpha()", "talpha_0>=0&r_0()>=0->talpha_0+v_0^2/(2*b()*r_0()) < alpha()", "talpha_0>=0&r_0() < 0->talpha_0+v_0^2/(-2*b()*r_0()) < alpha()") &
-            (ls(ImplyRightT)*) & (la(ImplyLeftT)*) & (AxiomCloseT | QE | debugT("QE failed unexpectedly") & Tactics.stopT)),
-          debugT("Show talpha < 0 & r < 0") & (AxiomCloseT | QE | debugT("QE failed unexpectedly") & Tactics.stopT)
+            (ls(ImplyRightT)*) & (la(ImplyLeftT)*) & (CloseId | QE | debugT("QE failed unexpectedly") & Tactics.stopT)),
+          debugT("Show talpha < 0 & r < 0") & (CloseId | QE | debugT("QE failed unexpectedly") & Tactics.stopT)
         )),
       ("Show safe dist, know v=0", ls(hideT, "isVisible < 0", "(x_1-ox_1>=0->x_1-ox_1>v_1^2/(2*b())+V()*(v_1/b()))&(x_1-ox_1<=0->ox_1-x_1>v_1^2/(2*b())+V()*(v_1/b()))", "(y_1-oy_1>=0->y_1-oy_1>v_1^2/(2*b())+V()*(v_1/b()))&(y_1-oy_1<=0->oy_1-y_1>v_1^2/(2*b())+V()*(v_1/b()))") & QE),
-      ("Show safe dist, know invisible", AxiomCloseT),
+      ("Show safe dist, know invisible", CloseId),
       ("Show safe dist, know x",
         la(hideT, "-t_3*(v_1-a_1()/2*t_3)<=y_1-y_0", "y_1-y_0<=t_3*(v_1-a_1()/2*t_3)", "-t_3*V()<=oy_1-oy_0", "oy_1-oy_0<=t_3*V()") &
         ls(hideT, "(y_1-oy_1>=0->y_1-oy_1>v_1^2/(2*b())+V()*(v_1/b()))&(y_1-oy_1<=0->oy_1-y_1>v_1^2/(2*b())+V()*(v_1/b()))") &
@@ -561,7 +561,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
           ls(AndRightT) && (
           ls(AndRightT) && (
             ls(AndRightT) && (
-              debugT("Show talpha >= 0 & r >= 0") & (AxiomCloseT | QE | debugT("QE failed unexpectedly") & Tactics.stopT),
+              debugT("Show talpha >= 0 & r >= 0") & (CloseId | QE | debugT("QE failed unexpectedly") & Tactics.stopT),
               debugT("Show talpha >= 0 & r < 0")) & ls(hideT, "v_1=0") & la(hideT, "A>=0", "a()<=A", "V()>=0", "w_0=(a()*t_3+v_0)/r_1()", "w*r_1()=v_0", "talpha_0 < 0&r_0 < 0->-talpha_0+v_0^2/(-2*b()*r_0) < alpha()", "talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha()", "talpha_0>=0&r_0>=0->talpha_0+v_0^2/(2*b()*r_0) < alpha()") &
               (ls(ImplyRightT)*) & la(ImplyLeftT, "r_1()>=0->v_0^2/(-2*a()) < alpha()*r_1()") && (
                 la(ImplyLeftT, "r_1() < 0->v_0^2/(-2*a()) < -alpha()*r_1()") && (
@@ -569,7 +569,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
                   la(hideT, "talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha()") & ls(hideT, "r_1()>=0") & QE
                   ),
                 la(ImplyLeftT, "r_1() < 0->v_0^2/(-2*a()) < -alpha()*r_1()") && (
-                  /* r<0 |- r<0 */ la(AndLeftT, "talpha_4>=0&r_1() < 0") & AxiomCloseT,
+                  /* r<0 |- r<0 */ la(AndLeftT, "talpha_4>=0&r_1() < 0") & CloseId,
                   /* unsat ante x < alpha*r & x < -alpha*r */ la(hideT, "talpha_0>=0&r_0 < 0->talpha_0+v_0^2/(-2*b()*r_0) < alpha()") & QE
                   )
               ),
@@ -577,14 +577,14 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
               (ls(ImplyRightT)*) & debugT("IMPLY LEFT")) & la(ImplyLeftT, "r_1()>=0->v_0^2/(-2*a()) < alpha()*r_1()") && (
             la(ImplyLeftT, "r_1() < 0->v_0^2/(-2*a()) < -alpha()*r_1()") && (
               /* |- r>=0 | r<0 */ QE,
-              /* r>=0 |- r>=0*/ la(AndLeftT, "talpha_4 < 0&r_1()>=0") & AxiomCloseT
+              /* r>=0 |- r>=0*/ la(AndLeftT, "talpha_4 < 0&r_1()>=0") & CloseId
               ),
             la(ImplyLeftT, "r_1() < 0->v_0^2/(-2*a()) < -alpha()*r_1()") && (
               la(hideT, "talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha()") & QE,
               /* unsat ante x < alpha*r & x < -alpha*r */ la(hideT, "talpha_0 < 0&r_0>=0->-talpha_0+v_0^2/(2*b()*r_0) < alpha()") & QE
               )
             ),
-          debugT("Show talpha < 0 & r < 0") & (AxiomCloseT | QE | debugT("QE failed unexpectedly") & Tactics.stopT)
+          debugT("Show talpha < 0 & r < 0") & (CloseId | QE | debugT("QE failed unexpectedly") & Tactics.stopT)
           )
         ),
       ("Show safe dist, know v=0",
@@ -598,7 +598,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
           "isVisible_0 < 0",
           "(x_1-ox_2>=0->x_1-ox_2>v_1^2/(2*b())+V()*(v_1/b()))&(x_1-ox_2<=0->ox_2-x_1>v_1^2/(2*b())+V()*(v_1/b()))",
           "(y_1-oy_2>=0->y_1-oy_2>v_1^2/(2*b())+V()*(v_1/b()))&(y_1-oy_2<=0->oy_2-y_1>v_1^2/(2*b())+V()*(v_1/b()))") & QE),
-      ("Show safe dist, know invisible", AxiomCloseT),
+      ("Show safe dist, know invisible", CloseId),
       ("Show safe dist, know x",
         la(hideT,
           "-t_3*(v_1-a()/2*t_3)<=y_1-y_0", "y_1-y_0<=t_3*(v_1-a()/2*t_3)", "-t_3*V()<=oy_2-oy_1", "oy_2-oy_1<=t_3*V()",
@@ -645,7 +645,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
       ls(AndRightT) && (
       ls(AndRightT) && (
         ls(AndRightT) && (
-          debugT("Show talpha >= 0 & r >= 0") & (AxiomCloseT | QE | debugT("QE failed unexpectedly") & Tactics.stopT),
+          debugT("Show talpha >= 0 & r >= 0") & (CloseId | QE | debugT("QE failed unexpectedly") & Tactics.stopT),
           debugT("Show talpha >= 0 & r < 0") & ls(hideT, "v_1=0") & la(hideT, "A>=0", "a()<=A", "V()>=0", "w_0=(a()*t_3+v_0)/r_1()", "w*r_1()=v_0") &
           (ls(ImplyRightT)*) & la(ImplyLeftT, "r_1()>=0->v_0^2/(2*b())+(a()/b()+1)*(a()/2*ep()^2+ep()*v_0) < alpha()*r_1()") && (
             la(ImplyLeftT, "r_1() < 0->v_0^2/(2*b())+(a()/b()+1)*(a()/2*ep()^2+ep()*v_0) < -alpha()*r_1()") && (
@@ -653,7 +653,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
               ls(hideT, "r_1()>=0") & QE
               ),
             la(ImplyLeftT, "r_1() < 0->v_0^2/(2*b())+(a()/b()+1)*(a()/2*ep()^2+ep()*v_0) < -alpha()*r_1()") && (
-              /* r<0 |- r<0 */ la(AndLeftT, "talpha_4>=0&r_1() < 0") & AxiomCloseT,
+              /* r<0 |- r<0 */ la(AndLeftT, "talpha_4>=0&r_1() < 0") & CloseId,
               /* unsat ante x < alpha*r & x < -alpha*r */ QE
               )
             )
@@ -662,7 +662,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
           (ls(ImplyRightT)*) & la(ImplyLeftT, "r_1()>=0->v_0^2/(2*b())+(a()/b()+1)*(a()/2*ep()^2+ep()*v_0) < alpha()*r_1()") && (
           la(ImplyLeftT, "r_1() < 0->v_0^2/(2*b())+(a()/b()+1)*(a()/2*ep()^2+ep()*v_0) < -alpha()*r_1()") && (
             /* |- r>=0 | r<0 */ QE,
-            /* r>=0 |- r>=0*/ la(AndLeftT, "talpha_4 < 0&r_1()>=0") & AxiomCloseT
+            /* r>=0 |- r>=0*/ la(AndLeftT, "talpha_4 < 0&r_1()>=0") & CloseId
             ),
           la(ImplyLeftT, "r_1() < 0->v_0^2/(2*b())+(a()/b()+1)*(a()/2*ep()^2+ep()*v_0) < -alpha()*r_1()") && (
             QE,
@@ -670,7 +670,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
             )
           )
         ),
-      debugT("Show talpha < 0 & r < 0") & (AxiomCloseT | QE | debugT("QE failed unexpectedly") & Tactics.stopT)
+      debugT("Show talpha < 0 & r < 0") & (CloseId | QE | debugT("QE failed unexpectedly") & Tactics.stopT)
       )
 
     def finishAccelerate2T = onBranch(
@@ -683,7 +683,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
           "dx_0^2+dy_0^2=1", "talpha_4-talpha_3=a()*t_3^2/(2*r_1())+v_0*t_3/r_1()", "w_0=(a()*t_3+v_0)/r_1()", "v_0>=0",
           "r_1()!=0", "alpha()>0", "talpha_3=0", "w*r_1()=v_0") &
         la(OrLeftT, "isVisible_0 < 0|((x_0-ox_1>=0->x_0-ox_1>v_0^2/(2*b())+V()*(v_0/b())+(a()/b()+1)*(a()/2*ep()^2+ep()*(v_0+V())))&(x_0-ox_1<=0->ox_1-x_0>v_0^2/(2*b())+V()*(v_0/b())+(a()/b()+1)*(a()/2*ep()^2+ep()*(v_0+V())))|(y_0-oy_1>=0->y_0-oy_1>v_0^2/(2*b())+V()*(v_0/b())+(a()/b()+1)*(a()/2*ep()^2+ep()*(v_0+V())))&(y_0-oy_1<=0->oy_1-y_0>v_0^2/(2*b())+V()*(v_0/b())+(a()/b()+1)*(a()/2*ep()^2+ep()*(v_0+V()))))") && (
-          /* know invisible */ AxiomCloseT,
+          /* know invisible */ CloseId,
           la(OrLeftT, "(x_0-ox_1>=0->x_0-ox_1>v_0^2/(2*b())+V()*(v_0/b())+(a()/b()+1)*(a()/2*ep()^2+ep()*(v_0+V())))&(x_0-ox_1<=0->ox_1-x_0>v_0^2/(2*b())+V()*(v_0/b())+(a()/b()+1)*(a()/2*ep()^2+ep()*(v_0+V())))|(y_0-oy_1>=0->y_0-oy_1>v_0^2/(2*b())+V()*(v_0/b())+(a()/b()+1)*(a()/2*ep()^2+ep()*(v_0+V())))&(y_0-oy_1<=0->oy_1-y_0>v_0^2/(2*b())+V()*(v_0/b())+(a()/b()+1)*(a()/2*ep()^2+ep()*(v_0+V())))") && (
             /* know x */
             ls(hideT, "v_1=0", "isVisible_0 < 0", "(y_1-oy_2>=0->y_1-oy_2>v_1^2/(2*b())+V()*(v_1/b()))&(y_1-oy_2<=0->oy_2-y_1>v_1^2/(2*b())+V()*(v_1/b()))") &
@@ -727,7 +727,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
               )
             )
         )),
-      ("Show safe dist, know invisible", AxiomCloseT),
+      ("Show safe dist, know invisible", CloseId),
       ("Show safe dist, know x", debugT("Foo 5") &
         la(hideT,
           "y_1-y_0<=t_3*(v_1-a()/2*t_3)", "-t_3*(v_1-a()/2*t_3)<=y_1-y_0",
@@ -839,7 +839,7 @@ class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
     )
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(inductionT(Some(invariant))) & onBranch(
-      (indInitLbl, debugT("Base case") & ((AxiomCloseT | la(Propositional) | ls(Propositional))*) & (AxiomCloseT | QE)),
+      (indInitLbl, debugT("Base case") & ((CloseId | la(Propositional) | ls(Propositional))*) & (CloseId | QE)),
       (indUseCaseLbl, debugT("Use case") & la(hideT, "talpha=0", "r>=0->v^2/(2*b()*r) < alpha()", "r < 0->v^2/(2*b()*-r) < alpha()",
         "(x-ox>=0->x-ox>v^2/(2*b())+V()*(v/b()))&(x-ox<=0->ox-x>v^2/(2*b())+V()*(v/b()))|(y-oy>=0->y-oy>v^2/(2*b())+V()*(v/b()))&(y-oy<=0->oy-y>v^2/(2*b())+V()*(v/b()))",
         "v>=0") & ls(ImplyRightT) & QE),

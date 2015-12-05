@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 
@@ -103,6 +103,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   it should "prove box split" in {check(boxSplit)}
   it should "prove box split left" in {check(boxSplitLeft)}
   it should "prove box split right" in {check(boxSplitRight)}
+  it should "prove <> split" in {check(diamondSplit)}
   it should "prove diamond split left" in {check(diamondSplitLeft)}
   it should "prove []~><> propagation" in {check{boxDiamondPropagation}}
   it should "prove <:=> assign" in {check(assigndAxiom)}

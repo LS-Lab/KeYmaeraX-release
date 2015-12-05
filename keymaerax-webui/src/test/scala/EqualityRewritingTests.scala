@@ -1,18 +1,19 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, PosInExpr, RootNode, SuccPosition, EqualityRewritingImpl,
   Interpreter, Tactics}
-import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.{constFormulaCongruenceT, eqLeft}
+import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl._
+import edu.cmu.cs.ls.keymaerax.tactics.PolynomialForm._
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.SequentFactory._
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{TreeSet, Map}
 
 /**
  * Created by smitsch on 3/16/15.
@@ -285,5 +286,192 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante should contain only ("Term = f()+g()".asFormula, "x>y".asFormula)
     result.openGoals().head.sequent.succ should contain only "a<b".asFormula
+  }
+
+  def v(str:String):Term= Variable(str, None, Real)
+  def v1(str:String):(Term,Int) = (v(str),1)
+  def d(str:String):Term = DifferentialSymbol(Variable(str,None,Real))
+  def d1(str:String):(Term,Int) = (d(str),1)
+  def polysWithin(p1:Polynomial,p2:Polynomial,tolerance:Double):Boolean = {
+    val sorted1 = p1.asSet.foldLeft(TreeSet()(MonomialGrlex)){case(acc,mon) => acc.+(mon)}.toList
+    val sorted2 = p2.asSet.foldLeft(TreeSet()(MonomialGrlex)){case(acc,mon) => acc.+(mon)}.toList
+    if (sorted1.length != sorted2.length) {
+      false
+    } else {
+      sorted1.zip(sorted2).forall({case(p1,p2) =>
+        p1.coeff.value - p2.coeff.value <= tolerance &&
+        p1.coeff.value - p2.coeff.value >= -tolerance &&
+        p1.vars == p2.vars})
+    }
+  }
+
+  def polyClose(p1:Polynomial,p2:Polynomial):Boolean = polysWithin(p1,p2,0.00001)
+  def polyEq(p1:Polynomial, p2:Polynomial):Boolean = polysWithin(p1,p2,0)
+
+  "term normalization" should "handle multiplications" in {
+    val input = "(x + 1)*(y + 2)".asTerm
+    val output =
+      Set (Monomial(Number(1), Set(v1("x"), v1("y"))),
+        Monomial(Number(2), Set(v1("x"))),
+        Monomial(Number(1), Set(v1("y"))),
+        Monomial(Number(2), Set()))
+    new Polynomial(input).mons should be (output)
+  }
+
+  it should "handle constant powers" in {
+    val poly = new Polynomial("(x + 1)^3".asTerm)
+    val output: Polynomial =
+      new Polynomial (Set (Monomial(Number(1), Set((v("x"), 3))),
+          Monomial(Number(3), Set((v("x"),2))),
+          Monomial(Number(3), Set((v("x"),1))),
+          Monomial(Number(1), Set.empty[(Term,Int)])))
+    polyEq(poly, output) should be (true)
+  }
+
+  it should "handle constant division" in {
+    val poly = new Polynomial ("(x + 3)/3".asTerm)
+    val output =
+      new Polynomial(Set(Monomial(Number(1.0/3.0), Set(v1("x"))),
+          Monomial(Number(1), Set.empty[(Term,Int)])))
+    polyClose(poly, output) should be (true)
+  }
+
+  it should "raise on non-constant exponents" in {
+    val input = "3^x".asTerm
+    a [BadPower] should be thrownBy {
+      new Polynomial(input)
+    }
+  }
+
+  it should "raise on non-constant division" in {
+    val input = "x/(3-3)".asTerm
+    a [BadDivision] should be thrownBy {
+      new Polynomial(input)
+    }
+  }
+
+  it should "handle subtraction" in {
+    val input = "(x-(x-2))".asTerm
+    val output = Polynomial(Set(Monomial(Number(2),Set.empty[(Term,Int)])))
+    polyEq(new Polynomial(input),output) should be (true)
+  }
+
+  it should "handle negation" in {
+    val input = "-(x-(x-2))".asTerm
+    var output = Polynomial(Set(Monomial(Number(-2),Set.empty[(Term,Int)])))
+    polyEq(new Polynomial(input),output) should be (true)
+  }
+
+  it should "handle differentiation" in {
+    val input = "(x + y)'".asTerm
+    val output = Polynomial(Set(Monomial(Number(1), Set(d1("x"))),
+      Monomial(Number(1),Set(d1("y")))))
+    polyEq(new Polynomial(input), output) should be (true)
+  }
+
+  "term comparison" should "sort variable names lexicographically" in {
+    compareTermComplexity("x".asTerm,"y".asTerm) should be (-1)
+    compareTermComplexity("xx".asTerm,"xy".asTerm) should be (-1)
+    compareTermComplexity("x".asTerm,"x".asTerm) should be (0)
+    compareTermComplexity("xx".asTerm,"xx".asTerm) should be (0)
+    compareTermComplexity("xy".asTerm,"xx".asTerm) should be (1)
+  }
+
+  it should "sort by total degree first" in {
+    compareTermComplexity("x * y^3".asTerm, "x^2 * y".asTerm) should be (1)
+  }
+
+  it should "find the leading term" in {
+    compareTermComplexity("x + y^3 + z".asTerm, "x^2 + y^2 + z^2".asTerm) should be (1)
+  }
+
+  it should "break ties with coefficients" in {
+     compareTermComplexity("x".asTerm, "2 * x".asTerm) should be (-1)
+  }
+
+  it should "break ties with lex order" in {
+    compareTermComplexity("x*y".asTerm,"x*z".asTerm) should be (-1)
+  }
+
+  it should "consider exponentials to be more complicated than polynomials" in {
+    compareTermComplexity("2^x".asTerm, "x^100".asTerm) should be (1)
+  }
+
+  it should "consider exponentials to be more complicated than quotients" in {
+    compareTermComplexity("2^x".asTerm, "(x + 2)/(x+1)".asTerm) should be (1)
+  }
+
+  it should "consider quotients to be more complicated than polynomials" in {
+    compareTermComplexity("(x+2)/(x+1)".asTerm, "x^5".asTerm) should be (1)
+  }
+
+  "Smart Equality Rewriting" should "rewrite a single formula exhaustively" in {
+    val s = sequent(Nil, "x=0".asFormula::Nil, "x*y=0".asFormula :: "z>2".asFormula :: "z<x+1".asFormula :: Nil)
+    val tactic = smartEqualityRewritingT
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only ("0*y=0".asFormula, "z>2".asFormula, "z<0+1".asFormula)
+  }
+
+  it should "rewrite formulas exhaustively" in {
+    val s = sequent(Nil, "x=0".asFormula :: "z=x".asFormula :: Nil, "x*y=0".asFormula :: "z>2".asFormula :: "z<x+1".asFormula :: Nil)
+    val tactic = smartEqualityRewritingT
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only ("z=0".asFormula)
+    result.openGoals().flatMap(_.sequent.succ) should contain only ("0*y=0".asFormula, "z>2".asFormula, "z<0+1".asFormula)
+  }
+
+  it should "rewrite formulas exhaustively everywhere" in {
+    val s = sequent(Nil, "z=x".asFormula :: "x=0".asFormula :: Nil, "x*y=0".asFormula :: "z>2".asFormula :: "z<x+1".asFormula :: Nil)
+    val tactic = smartEqualityRewritingT
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.succ) should contain only ("x*y=0".asFormula, "x>2".asFormula, "x<x+1".asFormula)
+    result.openGoals().flatMap(_.sequent.ante) should contain only ("x=0".asFormula)
+  }
+
+  it should "work even if there is only one other formula" in {
+    val s = sequent(Nil, "x<5".asFormula :: "x=0".asFormula :: Nil, Nil)
+    val tactic = smartEqualityRewritingT
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only ("0<5".asFormula)
+    result.openGoals().flatMap(_.sequent.succ) shouldBe empty
+  }
+
+  it should "replace compound terms" in {
+    val s = sequent(Nil, "a+b<5".asFormula :: "a+b=c".asFormula :: Nil, Nil)
+    val tactic = smartEqualityRewritingT
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("c<5".asFormula)
+    result.openGoals().head.sequent.succ shouldBe empty
+  }
+
+  // rewriting numbers is disallowed, because otherwise we run into endless rewriting
+  it should "not rewrite numbers" in {
+    val s = sequent(Nil, "0<5".asFormula :: "0=0".asFormula :: Nil, Nil)
+    val tactic = smartEqualityRewritingT
+    tactic.applicable(new RootNode(s)) shouldBe false
+  }
+
+  it should "not try to rewrite bound occurrences" in {
+    //@note would clash anyway, but tactic shouldn't even try
+    val s = sequent(Nil, "a=1".asFormula :: Nil, "[a:=2;]a=1".asFormula :: Nil)
+    val tactic = smartEqualityRewritingT
+    tactic.applicable(new RootNode(s)) shouldBe false
+  }
+
+  it should "not rewrite contradictions" in {
+    val s = sequent(Nil, "x=x+1".asFormula :: Nil, "x+1=0".asFormula :: Nil)
+    var tactic = smartEqualityRewritingT
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante should contain only ("x=x+1".asFormula)
+    result.openGoals().head.sequent.succ should contain only ("x=0".asFormula)
   }
 }

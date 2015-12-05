@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 package edu.cmu.cs.ls.keymaerax.tactics
@@ -74,10 +74,10 @@ object AxiomTactic {
                 assertT(1, 1) & lastAnte(assertPT(f, name + ": unexpected formula in ante")) & lastSucc(assertPT(g, name + ": unexpected formula in succ")) &
                 cutT(Some(inst)) & onBranch(
                 (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getFormula(node.sequent, p)))),
-                (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
+                (cutUseLbl, lastAnte(ImplyLeftT) & CloseId)
               )),
               (cutUseLbl, lastAnte(ImplyLeftT) &&(
-                AxiomCloseT,
+                CloseId,
                 (assertPT(node.sequent(p), name + ": hiding original instance") & hideT)(p.topLevel)))
             ))
           case inst@Imply(f, g) if !p.isAnte =>
@@ -86,11 +86,11 @@ object AxiomTactic {
                 assertT(1, 1) & lastAnte(assertPT(f, name + ": unexpected formula in ante")) & lastSucc(assertPT(g, name + ": unexpected formula in succ")) &
                 cutT(Some(inst)) & onBranch(
                 (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getFormula(node.sequent, p)))),
-                (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
+                (cutUseLbl, lastAnte(ImplyLeftT) & CloseId)
               )),
               (cutUseLbl, lastAnte(ImplyLeftT) &&(
                 (assertPT(node.sequent(p), name + ": hiding original instance") & hideT)(p.topLevel),
-                AxiomCloseT)
+                CloseId)
                 )
             ))
           case Equal(lhs, rhs) => ???
@@ -119,7 +119,7 @@ object AxiomTactic {
                 lastSucc(condT(getFormula(node.sequent, p)))),
               (cutUseLbl, cutT(Some(inst)) & onBranch(
                 (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getFormula(node.sequent, p)))),
-                (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
+                (cutUseLbl, lastAnte(ImplyLeftT) & CloseId)
               ))
               )),
             (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel) & LabelBranch(cutUseLbl))
@@ -152,7 +152,7 @@ object AxiomTactic {
                 lastSucc(condT(getTerm(node.sequent, p)))),
               (cutUseLbl, cutT(Some(inst)) & onBranch(
                 (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getTerm(node.sequent, p)))),
-                (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
+                (cutUseLbl, lastAnte(ImplyLeftT) & CloseId)
               ))
             )),
             (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel) & LabelBranch(cutUseLbl))

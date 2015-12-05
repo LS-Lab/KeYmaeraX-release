@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 package edu.cmu.cs.ls.keymaerax.tools
@@ -31,6 +31,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
 
   override def qe(formula: Formula): Formula = jlink.qe(formula)
   override def qeEvidence(formula: Formula): (Formula, Evidence) = jlink.qeEvidence(formula)
+  def getCounterExample(formula: Formula): String = jlink.getCounterExample(formula)
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,
                        iv: Predef.Map[Variable, Function]): Option[Formula] = jlink.diffSol(diffSys, diffArg, iv)
 

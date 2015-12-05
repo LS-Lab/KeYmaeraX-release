@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 package edu.cmu.cs.ls.keymaerax.parser
@@ -20,12 +20,12 @@ object KeYmaeraXProblemParser {
   def parseProblem(tokens: List[Token]) :  (Map[(String, Option[Int]), (Option[Sort], Sort)], Formula) = {
     val parser = KeYmaeraXParser
     val (decls, remainingTokens) = KeYmaeraXDeclarationsParser(tokens)
-    assert(remainingTokens.nonEmpty)
-    assert(remainingTokens.head.tok.equals(PROBLEM_BLOCK))
+    checkInput(remainingTokens.nonEmpty, "Problem. block expected", UnknownLocation, "kyx problem input problem block")
+    checkInput(remainingTokens.head.tok.equals(PROBLEM_BLOCK), "Problem. block expected", remainingTokens.head.loc, "kyx reading problem block")
 
     val (theProblem, eof) = remainingTokens.span(x => !x.tok.equals(END_BLOCK))
-    assert(eof.length == 2 && eof.head.tok.equals(END_BLOCK) && eof.last.tok.equals(EOF),
-      "Expected .kyx file to end with .<EOF> but found " + eof)
+    checkInput(eof.length == 2 && eof.head.tok.equals(END_BLOCK) && eof.last.tok.equals(EOF),
+      "Expected .kyx file to end with .<EOF> but found " + eof, eof.last.loc, "kyx problem end block parser")
 
     val problem : Formula = parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {
       case f : Formula => f
@@ -172,8 +172,8 @@ object KeYmaeraXDeclarationsParser {
     if(afterName.head.tok.equals(LPAREN)) {
       val (domainSort, remainder) = parseFunctionDomainSort(afterName)
 
-      assert(remainder.last.tok.equals(PERIOD),
-        "Expected declaration to end with . but found " + remainder.last)
+      checkInput(remainder.last.tok.equals(PERIOD),
+        "Expected declaration to end with . but found " + remainder.last, remainder.last.loc, "Reading a declaration")
 
       (( (nameToken.name, nameToken.index), (Some(domainSort), sort)), remainder.tail)
     }
@@ -194,14 +194,14 @@ object KeYmaeraXDeclarationsParser {
    */
   private def parseFunctionDomainSort(tokens : List[Token]) : (Sort, List[Token]) = {
     // Parse the domain sort.
-    assert(tokens.length > 1)
-    assert(tokens.head.tok.equals(LPAREN))
+    checkInput(tokens.length > 1, "domain sort expected in declaration", if (tokens.isEmpty) UnknownLocation else tokens.head.loc, "parsing function domain sort")
+    checkInput(tokens.head.tok.equals(LPAREN), "function argument parentheses expected", tokens.head.loc, "parsing function domain sorts")
 
     val splitAtRparen = tokens.tail.span(x => !x.tok.equals(RPAREN))
     val domainElements = splitAtRparen._1
 
-    assert(splitAtRparen._2.head.tok.equals(RPAREN),
-      "unmatched LPAREN at end of function declaration. Intead, found: " + splitAtRparen._2.head)
+    checkInput(splitAtRparen._2.head.tok.equals(RPAREN),
+      "unmatched LPAREN at end of function declaration. Intead, found: " + splitAtRparen._2.head, splitAtRparen._2.head.loc, "parsing function domain sorts")
     val remainder = splitAtRparen._2.tail
 
     val domain = domainElements.foldLeft(List[Sort]())((list, token) =>

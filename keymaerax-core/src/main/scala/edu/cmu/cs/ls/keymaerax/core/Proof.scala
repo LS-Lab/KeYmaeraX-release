@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 /**
@@ -87,12 +87,23 @@ object SeqPos {
 }
 
 /**
- * Sequent ante |- succ with antecedent ante and succedent succ.
+ * Sequent `ante |- succ` with antecedent ante and succedent succ.
  * {{{
  *   ante(0),ante(1),...,ante(n) |- succ(0),succ(1),...,succ(m)
  * }}}
- * The semantics of sequent ante |- succ is the conjunction of the formulas in ante implying
- * the disjunction of the formulas in succ.
+ * This sequent is often pretty-printed with signed line numbers:
+ * {{{
+ *     -1: ante(0)
+ *     -2: ante(1)
+ *         ...
+ * -(n+1): ante(n)
+ *  ==> 1: succ(0)
+ *      2: succ(1)
+ *         ...
+ *  (m+1): succ(m)
+ * }}}
+ * The semantics of sequent `ante |- succ` is the conjunction of the formulas in `ante` implying
+ * the disjunction of the formulas in `succ`.
  * @author Andre Platzer
  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
  */
@@ -205,10 +216,10 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
     ante.map(_.prettyString).mkString(", ") + (if (ante.isEmpty) "  ==>  " else "\n  ==>  ") + succ.map(_.prettyString).mkString(", ")}
 
   /** Pretty-print sequent */
-  def prettyString: String =
-    (1 to ante.length).map(i => -i + ":  " + ante(i-1).prettyString + "\t" + ante(i-1).getClass.getSimpleName).mkString("\n") +
-      (if (ante.isEmpty) if (succ.length<=1) "  ==>  " else "  ==>  \n" else "\n  ==>  \n") +
-    (1 to succ.length).map(i => +i + ":  " + succ(i-1).prettyString + "\t" + succ(i-1).getClass.getSimpleName).mkString("\n")
+  def prettyString: String = (if (ante.isEmpty) "" else "   ") +
+    (1 to ante.length).map(i => -i + ":  " + ante(i-1).prettyString + "\t" + ante(i-1).getClass.getSimpleName).mkString("\n   ") +
+      (if (ante.isEmpty) "" else "\n") + "==> " +
+    (1 to succ.length).map(i => +i + ":  " + succ(i-1).prettyString + "\t" + succ(i-1).getClass.getSimpleName).mkString("\n    ")
 
 }
 
@@ -232,6 +243,15 @@ object Provable {
     Provable(goal, immutable.IndexedSeq(goal))
   } ensuring(
     r => !r.isProved && r.subgoals == immutable.IndexedSeq(r.conclusion), "correct initial proof start")
+
+  /**
+   * Begin a new proof for the desired conclusion formula from no antecedent.
+   * @param goal the desired conclusion formula for the succedent.
+   * @return a Provable whose subgoals need to be all proved in order to prove goal.
+   * @note Not soundness-critical
+   */
+  def startProof(goal : Formula): Provable =
+    startProof(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(goal)))
 
   /**
    * Create a new provable for facts provided by external tools.
@@ -944,8 +964,10 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  * }}}
  * @param subst the uniform substitution to be applied to origin.
  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
+ *               In the above rule, this would be `G |- D`.
  * @note In sequent calculus, this Hilbert-calculus rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
  * @author Andre Platzer
+ * @see [[USubst]]
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  */
@@ -1179,10 +1201,10 @@ final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
 case class Skolemize(pos: SeqPos) extends PositionRule {
   val name: String = "Skolemize"
   override def apply(s: Sequent): immutable.List[Sequent] = {
-    // all symbols anywhere else in the sequent, i.e. except at the quantifier position
+    // all free symbols anywhere else in the sequent, i.e. except at the quantifier position
     // note: this skolemization will be by identity, not to a new name, so no clashes can be caused from s(pos)
-    //@note Taboos are the symbols in the remaining sequent, i.e. after replacing pos with innocent True
-    val taboos = StaticSemantics.symbols(s.updated(pos, True))  //@todo StaticSemantics.freeVars(s.updated(pos, True)).toSymbolSet
+    //@note Taboos are the free symbols in the remaining sequent, i.e. after replacing pos with innocent True
+    val taboos = StaticSemantics.freeVars(s).toSymbolSet ensuring (r => StaticSemantics.freeVars(s.updated(pos, True)).toSymbolSet.subsetOf(r))
     val (v,phi) = s(pos) match {
       case Forall(qv, qphi) if pos.isSucc => (qv, qphi)
       case Exists(qv, qphi) if pos.isAnte => (qv, qphi)

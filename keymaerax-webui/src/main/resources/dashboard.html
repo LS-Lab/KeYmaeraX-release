@@ -19,7 +19,8 @@
         {tex2jax: {inlineMath: [['\\(','\\)']]}},
         {TeX: { extensions: ["AMSmath.js", "AMSsymbols.js"] }},
         {"HTML-CSS": { linebreaks: { automatic: true } }},
-        {SVG: { linebreaks: { automatic: true } }}
+        {SVG: { linebreaks: { automatic: true } }},
+        {imageFont: null}
       );
     </script>
     <script type="text/javascript"
@@ -38,7 +39,8 @@
     <link href="/css/xeditable.css" rel="stylesheet" type="text/css">
 
     <!-- Custom styles for this template -->
-    <link href="css/app.css" rel="stylesheet" type="text/css">
+    <link href="css/app.css" title="KeYmaera X" rel="stylesheet" type="text/css">
+    <link href="css/presentation.css" title="KeYmaera X Presentation Mode" rel="alternate stylesheet" type="text/css">
     <link href="css/sticky-footer-navbar.css" rel="stylesheet" type="text/css">
 
 
@@ -110,7 +112,11 @@
 
 <div class="footer">
     <div class="container">
-        <p class="text-muted">KeYmaera X version {{keymaeraXVersion}}. &copy; <a href="http://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a>, Carnegie Mellon University 2015</p>
+        <p class="text-muted">KeYmaera X version {{keymaeraXVersion}}
+            <span ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
+            <span ng-if="!versionInfoAvailable">(could not retrieve version information from KeYmaeraX.org).</span>
+            <span ng-if="upToDate && versionInfoAvailable">(latest release).</span>
+            &copy; <a href="http://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a>, Carnegie Mellon University 2015</p>
     </div>
 </div>
 
@@ -119,7 +125,7 @@
 <!-- Placed at the end of the document so the pages load faster -->
 <script src="/js/jquery.min.js"></script>
 <script src="/js/jquery-ui.min.js"></script>
-<script src="/js/bootstrap/bootstrap.js"></script>
+<script src="/js/bootstrap/bootstrap.min.js"></script>
 <script src="/js/jasny-bootstrap.min.js"></script>
 <script src="/js/angular.min.js"></script>
 <script src="/js/angular-sanitize.js"></script>
@@ -142,6 +148,7 @@
 <script src="js/keymaera-ui/mathjaxbind.js"></script>
 <script src="js/keymaera-ui/mathjaxformula.js"></script>
 <script src="js/keymaera-ui/sequent.js"></script>
+<script src="js/keymaera-ui/sequentproof.js"></script>
 
 <!-- KeYmaera API -- this is deprecated.
 ================================================== -->

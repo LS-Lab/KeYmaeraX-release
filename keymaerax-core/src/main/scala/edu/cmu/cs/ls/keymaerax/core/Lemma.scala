@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 /**
@@ -33,10 +33,26 @@ object Lemma {
 /**
  * Lemmas are named Provables, supported by some evidence of how they came about.
  * The soundness-critical part in a lemma is its provable fact, which can only be obtained from the prover core.
+ * @example{{{
+ * // prove a lemma
+ * val proved = TactixLibrary.proveBy(
+ *    Sequent(Nil, IndexedSeq(), IndexedSeq("true | x>5".asFormula)),
+ *    orR(1) & close
+ *  )
+ * // store a lemma
+ * val lemmaDB = LemmaDBFactory.lemmaDB
+ * val evidence = ToolEvidence(immutable.Map("input" -> proved.toString, "output" -> "true")) :: Nil))
+ * val lemmaID = lemmaDB.add(
+ *   Lemma(proved, evidence, Some("Lemma <?> test"))
+ * )
+ * // use a lemma
+ * LookupLemma(lemmaDB, lemmaID)
+ * }}}
  * @author Stefan Mitsch
- * @see LookupLemma
- * @see RCF.proveArithmetic
- * @see LemmaDB
+ * @see [[LookupLemma]]
+ * @see [[RCF.proveArithmetic]]
+ * @see [[LemmaDB]]
+ * @see [[Lemma.fromString]]
  * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
  */
 final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[String] = None) {

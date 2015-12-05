@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 /**
@@ -16,6 +16,7 @@ package edu.cmu.cs.ls.keymaerax.core
  * @see Lemma
  * @example Storing and using a lemma
  * {{{
+ * import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
  * val lemmaDB = LemmaDBFactory.lemmaDB
  * // prove a lemma
  * val proved = TactixLibrary.proveBy(

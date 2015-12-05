@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 package edu.cmu.cs.ls.keymaerax.tactics
@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.existsDualT
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT,AxiomCloseT,ImplyLeftT,ImplyRightT,
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AndRightT,CloseId,ImplyLeftT,ImplyRightT,
   ImplyToAndT, cutT, hideT, cohideT, cohide2T, kModalModusPonensT, modusPonensT, uniformSubstT}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import BindingAssessment.allNames
@@ -644,7 +644,7 @@ object HybridProgramTacticsImpl {
                 // TODO does not work in mixed settings such as <x:=t>[x'=2] and [x:=t]<x'=2>
                 PropositionalTacticsImpl.cohideT(SuccPosition(succLength)) & assertT(0, 1) &
                 alphaRenamingT(t, v)(SuccPosition(0, PosInExpr(1 :: p.inExpr.pos))) &
-                  EquivRightT(SuccPosition(0)) & (AxiomCloseT | debugT("v2vAssign: Axiom close failed unexpectedly") & stopT)),
+                  EquivRightT(SuccPosition(0)) & (CloseId | debugT("v2vAssign: Axiom close failed unexpectedly") & stopT)),
               (cutUseLbl, equivRewriting(AntePosition(anteLength), p.topLevel))
             )
         )
@@ -680,50 +680,140 @@ object HybridProgramTacticsImpl {
   }
 
   /**
-   * Creates a new axiom tactic for box assignment [x := t;]
-   * @return The axiom tactic.
+   * Returns a tactic for box substitution assignment [x := t;]. Substitution assignment can be performed if the
+   * variable assigned to is not bound later in the formula, if it is a stuttering assignment of the form [x:=x;]p,
+   * or if x is must-bound later in the formula, except by an ODE.
+   * @example{{{
+   *           |- 2>0
+   *         ------------substitutionBoxAssignT(1)
+   *           |- [x:=2;]x>0
+   * }}}
+   * Stuttering assignments are always allowed.
+   * @example{{{
+   *           |- [{x'=2} ++ y:=3;]x>0
+   *         --------------------------------substitutionBoxAssignT(1)
+   *           |- [x:=x;][{x'=2} ++ y:=3;]x>0
+   * }}}
+   * When must-bound later in the formula, substitution assignment works, even when choices must-bound.
+   * @example{{{
+   *           |- [x:=*;]x>0
+   *         ----------------------substitutionBoxAssignT(1)
+   *           |- [x:=z;][x:=*;]x>0
+   *
+   *           |- [z:=2; {x:=5; ++ y:=3;x:=2;}]x>0
+   *         ------------------------------------substitutionBoxAssignT(1)
+   *           |- [x:=2;][z:=2; {x:=5; ++ y:=3;x:=2;}]x>0
+   * }}}
+   * @return The tactic.
+   * @see [[substitutionDiamondAssignT]]
    * @author Stefan Mitsch
    */
   def substitutionBoxAssignT = substitutionAssignT("[:=] assign", Box.unapply)
 
   /**
-   * Creates a new axiom tactic for box assignment [x := t;]
-   * @return The axiom tactic.
+   * Returns a tactic for diamond substitution assignment <x := t;>. Substitution assignment can be performed if the
+   * variable assigned to is not bound later in the formula, if it is a stuttering assignment of the form <x:=x;>p,
+   * or if x is must-bound later in the formula, except by an ODE.
+   * @example{{{
+   *           |- 2>0
+   *         ------------substitutionDiamondAssignT(1)
+   *           |- <x:=2;>x>0
+   * }}}
+   * Stuttering assignments are always allowed.
+   * @example{{{
+   *           |- [{x'=2} ++ y:=3;]x>0
+   *         --------------------------------substitutionDiamondAssignT(1)
+   *           |- <x:=x;>[{x'=2} ++ y:=3;]x>0
+   * }}}
+   * When must-bound later in the formula, substitution assignment works, even when choices must-bound.
+   * @example{{{
+   *           |- [x:=*;]x>0
+   *         ----------------------substitutionDiamondAssignT(1)
+   *           |- <x:=z;>[x:=*;]x>0
+   *
+   *           |- [z:=2; {x:=5; ++ y:=3;x:=2;}]x>0
+   *         ------------------------------------substitutionDiamondAssignT(1)
+   *           |- <x:=2;>[z:=2; {x:=5; ++ y:=3;x:=2;}]x>0
+   * }}}
+   * @return The tactic.
+   * @see [[substitutionBoxAssignT]]
    * @author Stefan Mitsch
    */
   def substitutionDiamondAssignT = substitutionAssignT("<:=> assign", Diamond.unapply)
 
   /**
-   * Creates a new axiom tactic for box/diamond assignment [x := t;], < x := t;>.
-   * @return The axiom tactic.
+   * Returns a tactic for box/diamond substitution assignment [x := t;], < x := t;>.
+   * @return The tactic.
+   * @see [[substitutionBoxAssignT]]
+   * @see [[substitutionDiamondAssignT]]
    * @author Stefan Mitsch
    */
   private def substitutionAssignT[T: Manifest](name: String, mod: T => Option[(Program, Formula)]): PositionTactic = {
     val BDModality = new ModalityUnapplyer(mod)
 
-    def axiomInstance(fml: Formula) = fml match {
+    /** Returns onMatch if term is not bound in fml or if term is equal to v, False otherwise */
+    def checkTerm(v: Variable, fml: Formula, t: Term, onMatch: Formula): Formula = {
+      require(fml match {
+        case Box(a, _)     => firstMBVAtomicProgInFml(fml, v).nonEmpty && firstMBVAtomicProgInFml(fml, v).forall({case ODESystem(_, _) => false case _ => true})
+        case Diamond(a, _) => firstMBVAtomicProgInFml(fml, v).nonEmpty && firstMBVAtomicProgInFml(fml, v).forall({case ODESystem(_, _) => false case _ => true})
+        case _ => StaticSemantics(fml).bv.contains(v) && !StaticSemantics(fml).fv.contains(v)
+      }, s"Variable $v must be must-bound in formula $fml, but not inside an ODE")
+      t match {
+        case tv: Variable if v == tv => onMatch // self assignment no-op is ok in any case
+        // next three matches: term is not bound later
+        case tv: Variable if !StaticSemantics(fml).bv.contains(tv) => onMatch
+        case _: FuncOf => onMatch
+        case _: Number => onMatch
+        case _ => False
+      }
+    } ensuring(r => r == onMatch || r == False, s"Either returns False or $onMatch")
+
+    /** Returns the first programs in fml binding v (must-bound), empty list if none. */
+    def firstMBVAtomicProgInFml(fml: Formula, v: Variable): IndexedSeq[Program] = fml match {
+      case Box(a, pred)     if firstMBVAtomicProgOf(a, v).nonEmpty => firstMBVAtomicProgOf(a, v)
+      case Box(a, pred)     if firstMBVAtomicProgOf(a, v).isEmpty  => firstMBVAtomicProgInFml(pred, v)
+      case Diamond(a, pred) if firstMBVAtomicProgOf(a, v).nonEmpty => firstMBVAtomicProgOf(a, v)
+      case Diamond(a, pred) if firstMBVAtomicProgOf(a, v).isEmpty  => firstMBVAtomicProgInFml(pred, v)
+      case _ => IndexedSeq()
+    }
+
+    /** Returns the first programs in program binding v (must-bound), empty list if none. */
+    def firstMBVAtomicProgOf(program: Program, v: Variable): IndexedSeq[Program] = {
+      var firstMBVProg: IndexedSeq[Program] = IndexedSeq()
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+          case prg@Assign(tv, _)  if v == tv => firstMBVProg = firstMBVProg :+ prg; Left(Some(ExpressionTraversal.stop))
+          case prg@AssignAny(tv)  if v == tv => firstMBVProg = firstMBVProg :+ prg; Left(Some(ExpressionTraversal.stop))
+          case prg@ODESystem(ode, _) if StaticSemantics(prg).mbv.contains(v) => firstMBVProg = firstMBVProg :+ prg; Left(Some(ExpressionTraversal.stop))
+          // nothing ever must-bound inside a loop
+          case Loop(_) => Left(Some(ExpressionTraversal.stop))
+          // must-bound only when must-bound on both branches
+          case prg@Choice(l, r) if firstMBVAtomicProgOf(l, v).nonEmpty && firstMBVAtomicProgOf(r, v).nonEmpty => firstMBVProg = firstMBVAtomicProgOf(l, v) ++ firstMBVAtomicProgOf(r, v); Left(Some(ExpressionTraversal.stop))
+          case prg@Choice(l, r) if firstMBVAtomicProgOf(l, v).isEmpty  || firstMBVAtomicProgOf(r, v).isEmpty => Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, program)
+      firstMBVProg
+    }
+
+    def axiomInstance(fml: Formula): Formula = fml match {
       case BDModality(Assign(v: Variable, t: Term), pred) =>
         val g = SubstitutionHelper.replaceFree(pred)(v, t)
         val instance = Equiv(fml, g)
-        pred match {
-          // loop and ODE are probably a little too strict here, but we have v2vBoxAssignT to handle those
-          case Box(_: DifferentialProgram, _) => t match {
-            case tv: Variable if v == tv => instance
+        t match {
+          case tv: Variable if v == tv => instance // self assignment no-op is ok in any case
+          case _ => pred match {
+            // if v is not bound at all, substitution is ok
+            case _ if !StaticSemantics(pred).bv.contains(v) => instance
+            // is v must-bound by something that is not an ODE? if so, check that term is not bound, so substitution ok
+            case Box(a, _)     if firstMBVAtomicProgInFml(pred, v).nonEmpty && firstMBVAtomicProgInFml(pred, v).forall({case ODESystem(_, _) => false case _ => true}) => checkTerm(v, pred, t, instance)
+            case Box(a, _)     /* otherwise */ => False
+            case Diamond(a, _) if firstMBVAtomicProgInFml(pred, v).nonEmpty && firstMBVAtomicProgInFml(pred, v).forall({case ODESystem(_, _) => false case _ => true}) => checkTerm(v, pred, t, instance)
+            case Diamond(a, _) /* otherwise */ => False
+            // must-bound for non-modal formulas, must be after modal cases
+            case _ if  StaticSemantics(pred).bv.contains(v) && !StaticSemantics(pred).fv.contains(v) => checkTerm(v, pred, t, instance)
             case _ => False
           }
-          case Box(_: Loop, _) => t match {
-            case tv: Variable if v == tv => instance
-            case _ => False
-          }
-          case Diamond(_: DifferentialProgram, _) => t match {
-            case tv: Variable if v == tv => instance
-            case _ => False
-          }
-          case Diamond(_: Loop, _) => t match {
-            case tv: Variable if v == tv => instance
-            case _ => False
-          }
-          case _ => instance
         }
       case _ => False
     }
@@ -753,8 +843,7 @@ object HybridProgramTacticsImpl {
 
             override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
               override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-                Some(alphaRenamingT(v.name, v.index, aV.name, aV.index)(p) ~
-                  globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
+                Some(alphaRenamingT(v, aV)(p) ~ globalAlphaRenamingT(v, aV))
 
               override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
             }
@@ -765,80 +854,20 @@ object HybridProgramTacticsImpl {
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
       case Equiv(BDModality(Assign(v: Variable, _: Term), _), _) =>
         val Equiv(lhs, rhs) = axiom
-        Equiv(if (v.name != aV.name || v.index != None) replace(lhs)(aV, v) else lhs, rhs)
+        Equiv(if (v.name != aV.name || v.index.isDefined) replace(lhs)(aV, v) else lhs, rhs)
     }
 
     axiomLookupBaseT(name, subst, alpha, axiomInstance)
   }
 
-  /**
-   * Creates a new axiom tactic for V vacuous.
-   * @return The new tactic.
-   */
-  def boxVacuousT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      case Box(prg, phi) => Imply(phi, fml)
-      case _ => False
-    }
-    uncoverAxiomT("V vacuous", axiomInstance, _ => boxVacuousBaseT)
-  }
-  /** Base tactic for box vacuous */
-  private def boxVacuousBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(_, Box(prg, phi)) =>
-        val aA = ProgramConst("a")
-        val aP = PredOf(Function("p", None, Unit, Bool), Nothing)
-        SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
-    }
-    axiomLookupBaseT("V vacuous", subst, _ => NilPT, (f, ax) => ax)
-  }
+  @deprecated("Use TactixLibrary.useAt(\"V vacuous\") instead")
+  def boxVacuousT: PositionTactic = TactixLibrary.useAt("V vacuous", PosInExpr(1::Nil))
 
-  /**
-   * Creates a new axiom tactic for test [?H].
-   * @return The new tactic.
-   */
-  def boxTestT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      case Box(Test(h), p) => Equiv(fml, Imply(h, p))
-      case _ => False
-    }
-    uncoverAxiomT("[?] test", axiomInstance, _ => boxTestBaseT)
-  }
-  /** Base tactic for boxTestT */
-  private def boxTestBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Box(Test(h), p), _) =>
-        // construct substitution
-        val aH = PredOf(Function("H", None, Unit, Bool), Nothing)
-        val aP = PredOf(Function("p", None, Unit, Bool), Nothing)
-        SubstitutionPair(aH, h) :: SubstitutionPair(aP, p) :: Nil
-    }
-    axiomLookupBaseT("[?] test", subst, _ => NilPT, (f, ax) => ax)
-  }
+  @deprecated("Use TactixLibrary.useAt(\"[?] test\") instead")
+  def boxTestT: PositionTactic = TactixLibrary.useAt("[?] test")
 
-  /**
-   * Creates a new axiom tactic for diamond test.
-   * @return The new tactic.
-   * @author Stefan Mitsch
-   */
-  def diamondTestT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      case Diamond(Test(h), p) => Equiv(fml, And(h, p))
-      case _ => False
-    }
-    uncoverAxiomT("<?> test", axiomInstance, _ => diamondTestBaseT)
-  }
-  /** Base tactic for diamondTestT */
-  private def diamondTestBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Diamond(Test(h), p), _) =>
-        // construct substitution
-        val aH = PredOf(Function("H", None, Unit, Bool), Nothing)
-        val aP = PredOf(Function("p", None, Unit, Bool), Nothing)
-        SubstitutionPair(aH, h) :: SubstitutionPair(aP, p) :: Nil
-    }
-    axiomLookupBaseT("<?> test", subst, _ => NilPT, (f, ax) => ax)
-  }
+  @deprecated("Use TactixLibrary.useAt(\"<?> test\") instead")
+  def diamondTestT: PositionTactic = TactixLibrary.useAt("<?> test")
 
   /**
    * Creates a new axiom tactic for non-deterministic assignment [x := *].
@@ -846,7 +875,7 @@ object HybridProgramTacticsImpl {
    * @author Stefan Mitsch
    */
   def boxNDetAssign: PositionTactic = new PositionTactic("[:=] assign equational") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
+    override def applies(s: Sequent, p: Position): Boolean = /*!p.isAnte &&*/ p.inExpr == HereP && (s(p) match {
       case Box(AssignAny(v: Variable), _) => true
       case _ => false
     })
@@ -1007,125 +1036,20 @@ object HybridProgramTacticsImpl {
     axiomLookupBaseT("<:*> assign nondet", subst, alpha, axiomInstance)
   }
 
-  /**
-   * Creates a new axiom tactic for sequential composition [;]
-   * @return The new tactic.
-   * @author Stefan Mitsch
-   */
-  def boxSeqT = seqT("[;] compose", Box.unapply, Box.apply)
+  @deprecated("Use TactixLibrary.useAt(\"[;] compose\") instead")
+  def boxSeqT = TactixLibrary.useAt("[;] compose")
 
-  /**
-   * Creates a new axiom tactic for diamond sequential composition <;>
-   * @return The new tactic.
-   * @author Stefan Mitsch
-   */
-  def diamondSeqT = seqT("<;> compose", Diamond.unapply, Diamond.apply)
+  @deprecated("Use TactixLibrary.useAt(\"<;> compose\") instead")
+  def diamondSeqT = TactixLibrary.useAt("<;> compose")
 
-  /**
-   * Creates a new axiom tactic for box/diamond sequential composition
-   * @param name The name of the axiom.
-   * @param mod The unapply method of the concrete modality.
-   * @param factory The apply method of the concrete modality.
-   * @return The new tactic.
-   * @author Stefan Mitsch
-   */
-  private def seqT[T: Manifest](name: String, mod: T => Option[(Program, Formula)],
-                                factory: (Program, Formula) => Formula): PositionTactic = {
-    val BDModality = new ModalityUnapplyer(mod)
+  @deprecated("Use TactixLibrary.useAt(\"I induction\") instead")
+  def boxInductionT: PositionTactic = TactixLibrary.useAt("I induction", PosInExpr(1::Nil))
 
-    def axiomInstance(fml: Formula): Formula = fml match {
-      case BDModality(Compose(a, b), p) => Equiv(fml, factory(a, factory(b, p)))
-      case _ => False
-    }
-    uncoverAxiomT(name, axiomInstance, _ => seqBaseT(name, mod))
-  }
-  /** Base tactic for seqT */
-  private def seqBaseT[T: Manifest](name: String, mod: T => Option[(Program, Formula)]): PositionTactic = {
-    val BDModality = new ModalityUnapplyer(mod)
+  @deprecated("Use TactixLibrary.useAt(\"[++] choice\") instead")
+  def boxChoiceT: PositionTactic = TactixLibrary.useAt("[++] choice")
 
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(BDModality(Compose(a, b), p), _) =>
-        val aA = ProgramConst("a")
-        val aB = ProgramConst("b")
-        val aP = PredOf(Function("p", None, Real, Bool), Anything)
-        SubstitutionPair(aA, a) :: SubstitutionPair(aB, b) :: SubstitutionPair(aP, p) :: Nil
-    }
-    axiomLookupBaseT(name, subst, _ => NilPT, (f, ax) => ax)
-  }
-
-  /**
-   * Creates a new axiom tactic for box induction [*] I induction
-   * @return The new tactic.
-   */
-  def boxInductionT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      // construct axiom instance: (p & [a*](p -> [a] p)) -> [a*]p
-      case Box(Loop(a), p) => Imply(And(p, Box(Loop(a), Imply(p, Box(a, p)))), fml)
-      case _ => False
-    }
-    //@todo Unsound for hybrid games, use ind induction rule instead but augment fml with trivial constant expressions then*/
-    uncoverAxiomT("I induction", axiomInstance, _ => boxInductionBaseT)
-  }
-  /** Base tactic for box induction */
-  private def boxInductionBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(And(p, Box(Loop(a), Imply(_, Box(_, _)))), _) =>
-        val aA = ProgramConst("a")
-        val aP = PredOf(Function("p", None, Real, Bool), Anything)
-        SubstitutionPair(aA, a) :: SubstitutionPair(aP, p) :: Nil
-    }
-
-    axiomLookupBaseT("I induction", subst, _ => NilPT, (f, ax) => ax)
-  }
-
-  /**
-   * Creates a new axiom tactic for box choice [++].
-   * @return The new tactic.
-   */
-  def boxChoiceT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      // construct axiom instance: [ a ++ b ]p <-> [a]p & [b]p.
-      case Box(Choice(a, b), p) => Equiv(fml, And(Box(a, p), Box(b, p)))
-      case _ => False
-    }
-    uncoverAxiomT("[++] choice", axiomInstance, _ => boxChoiceBaseT)
-  }
-  /** Base tactic for box choice */
-  private def boxChoiceBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Box(Choice(a, b), p), _) =>
-        val aA = ProgramConst("a")
-        val aB = ProgramConst("b")
-        val aP = PredOf(Function("p", None, Real, Bool), Anything)
-        SubstitutionPair(aA, a) :: SubstitutionPair(aB, b) :: SubstitutionPair(aP, p) :: Nil
-    }
-    axiomLookupBaseT("[++] choice", subst, _ => NilPT, (f, ax) => ax)
-  }
-
-  /**
-   * Creates a new axiom tactic for diamond choice <++>.
-   * @return The new tactic.
-   * @author Stefan Mitsch
-   */
-  def diamondChoiceT: PositionTactic = {
-    def axiomInstance(fml: Formula): Formula = fml match {
-      // construct axiom instance: < a ++ b >p <-> <a>p | <b>p.
-      case Diamond(Choice(a, b), p) => Equiv(fml, Or(Diamond(a, p), Diamond(b, p)))
-      case _ => False
-    }
-    uncoverAxiomT("<++> choice", axiomInstance, _ => diamondChoiceBaseT)
-  }
-  /** Base tactic for diamond choice */
-  private def diamondChoiceBaseT: PositionTactic = {
-    def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Diamond(Choice(a, b), p), _) =>
-        val aA = ProgramConst("a")
-        val aB = ProgramConst("b")
-        val aP = PredOf(Function("p", None, Real, Bool), Anything)
-        SubstitutionPair(aA, a) :: SubstitutionPair(aB, b) :: SubstitutionPair(aP, p) :: Nil
-    }
-    axiomLookupBaseT("<++> choice", subst, _ => NilPT, (f, ax) => ax)
-  }
+  @deprecated("Use TactixLibrary.useAt(\"<++> choice\") instead")
+  def diamondChoiceT: PositionTactic = TactixLibrary.useAt("<++> choice")
 
   /**
    * Creates a new position tactic to apply the induction rule.
@@ -1152,7 +1076,7 @@ object HybridProgramTacticsImpl {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
               case x@Box(a, _) =>
                 val cPos = AntePosition(node.sequent.ante.length)
-                val b1 = ImplyLeftT(cPos) & AxiomCloseT
+                val b1 = ImplyLeftT(cPos) & CloseId
                 val b2 = hideT(p)
                 Some(cutT(Some(Imply(Box(a, f), x))) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
               case _ => None
@@ -1166,7 +1090,7 @@ object HybridProgramTacticsImpl {
           val branch2Tactic = hideT(p) &
             ImplyRightT(cutSPos) &
             ind(cutSPos, hideT(cutAPos) & LabelBranch(indStepLbl)) &
-            onBranch(("Close Next", AxiomCloseT))
+            onBranch(("Close Next", CloseId))
           getBody(node.sequent(p)) match {
             case Some(a) =>
               Some(cutT(Some(Imply(f, Box(Loop(a), f)))) &
@@ -1227,7 +1151,7 @@ object HybridProgramTacticsImpl {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
               case x@Box(a, _) =>
                 val cPos = AntePosition(node.sequent.ante.length)
-                val b1 = ImplyLeftT(cPos) & AxiomCloseT
+                val b1 = ImplyLeftT(cPos) & CloseId
                 val b2 = hideT(p)
                 Some(cutT(Some(Imply(Box(a, f), x))) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
               case _ => None
@@ -1241,7 +1165,7 @@ object HybridProgramTacticsImpl {
           val branch2Tactic = hideT(p) &
             ImplyRightT(cutSPos) &
             ind(cutSPos, LabelBranch(indStepLbl)) &
-            onBranch(("Close Next", AxiomCloseT))
+            onBranch(("Close Next", CloseId))
           getBody(node.sequent(p)) match {
             case Some(a) =>
               Some(cutT(Some(Imply(f, Box(Loop(a), f)))) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
@@ -1252,100 +1176,8 @@ object HybridProgramTacticsImpl {
     }
   }
 
-  def boxSplitConjunctionT: PositionTactic = new PositionTactic("[]split conjunction") {
-    override def applies(s: Sequent, pos: Position): Boolean = getFormula(s, pos) match {
-      case Box(_, And(p, q)) => true
-      case _ => false
-    }
-
-    override def apply(pos: Position): Tactic = new ConstructionTactic("[]split conjunction") {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
-        case b@Box(a, And(p, q)) =>
-          // implements Cresswell, Hughes. A New Introduction to Modal Logic, K2 p. 27
-
-          // (9) ([a](q->p&q) -> ([a]q -> [a](p&q)))  ->  (([a]p & [a]q) -> [a](p&q))
-          val f9 = Imply(Imply(Box(a, Imply(q, And(p, q))), Imply(Box(a, q), Box(a, And(p, q)))), Imply(And(Box(a, p), Box(a, q)), Box(a, And(p, q))))
-
-          // (8) ([a]p -> [a](q -> p&q))  ->  (9)
-          val f8 = Imply(Imply(Box(a, p), Box(a, Imply(q, And(p, q)))), f9)
-
-          // (6) [a](q -> (p&q))  ->  ([a]q -> [a](p&q))
-          val f6 = Imply(Box(a, Imply(q, And(p, q))), Imply(Box(a, q), Box(a, And(p, q))))
-
-          // (5) [a]p -> [a](q -> p&q)
-          val f5 = Imply(Box(a, p), Box(a, Imply(q, And(p, q))))
-
-          // (4) [a](p -> (q -> p&q))  ->  ([a]p -> [a](q -> p&q))
-          val f4 = Imply(Box(a, Imply(p, Imply(q, And(p, q)))), Imply(Box(a, p), Box(a, Imply(q, And(p, q)))))
-
-          // (2) [a](p -> (q -> p&q))
-          val f2 = Box(a, Imply(p, Imply(q, And(p, q))))
-
-          // uniform substitution to get (6) from K
-          val subst =
-            SubstitutionPair(ProgramConst("a"), a) ::
-            SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), q) ::
-            SubstitutionPair(PredOf(Function("q", None, Real, Bool), Anything), And(p, q)) :: Nil
-
-          val k = Axiom.axioms.get("K modal modus ponens").get
-
-          Some(cutT(Some(Equiv(b, And(Box(a, p), Box(a, q))))) & onBranch(
-            (cutShowLbl, lastSucc(EquivRightT) & onBranch(
-              (equivLeftLbl, AxiomCloseT),
-              (equivRightLbl,
-                debugT("Show [a]p & [a]q -> [a](p&q)") &
-                cohide2T(AntePosition(node.sequent.ante.length), SuccPosition(node.sequent.succ.length)) &
-                cutT(Some(f9)) & onBranch(
-                  (cutShowLbl,
-                    debugT("Show f9") &
-                    cutT(Some(f8)) & onBranch(
-                      (cutShowLbl,
-                        debugT("Show f8") &
-                        lastSucc(cohideT) &
-                        /* PC8 (just propositional stuff) */
-                        lastSucc(ImplyRightT)*3 & lastAnte(AndLeftT) &
-                        modusPonensT(AntePosition(2), AntePosition(0)) &
-                        modusPonensT(AntePosition(2), AntePosition(0)) &
-                        modusPonensT(AntePosition(0), AntePosition(1)) & AxiomCloseT),
-                      (cutUseLbl, cutT(Some(f5)) & onBranch(
-                        (cutShowLbl,
-                          debugT("Show f5, get f2 by KMP") &
-                          lastSucc(cohideT) & lastSucc(kModalModusPonensT) &
-                          debugT("Show f2") &
-                            TactixLibrary.useAt("-> tautology")(SuccPosition(0, PosInExpr(1::Nil))) &
-                            TactixLibrary.V(SuccPosition(0)) & TactixLibrary.close
-                          ),
-                        (cutUseLbl,
-                          debugAtT("Use f5, modus ponens with assumption")(AntePosition(2)) &
-                            modusPonensT(AntePosition(2), AntePosition(1)) &
-                            AxiomCloseT)
-                      ))
-                    )),
-                  (cutUseLbl,
-                    debugT("Use f9") &
-                    cutT(Some(f6)) & onBranch(
-                      (cutShowLbl,
-                        debugT("Show f6") &
-                        lastSucc(cohideT) &
-                        // uniform substitution from K
-                        uniformSubstT(subst, Map(f6 -> k)) &
-                        AxiomTactic.axiomT("K modal modus ponens")
-                        ),
-                      (cutUseLbl,
-                        debugAtT("Use f6, modus ponens with assumption")(AntePosition(2)) &
-                        modusPonensT(AntePosition(2), AntePosition(1)) &
-                        lastAnte(ImplyLeftT) & AxiomCloseT)
-                  ))
-                ))
-            )),
-            (cutUseLbl, EqualityRewritingImpl.equivRewriting(AntePosition(node.sequent.ante.length), pos) /* desired result remains open */)
-          ))
-        case _ => throw new IllegalStateException("Checked by applies to never happen")
-      }
-    }
-  }
+  @deprecated("Use TactixLibrary.useAt(\"[] split\") instead")
+  def boxSplitConjunctionT: PositionTactic = TactixLibrary.useAt("[] split")
 
   /**
    * Induction tactic that generates an invariant using the specified generator.

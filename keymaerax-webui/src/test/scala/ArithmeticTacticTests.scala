@@ -1,9 +1,9 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 
-import edu.cmu.cs.ls.keymaerax.core.SuccPos
+import edu.cmu.cs.ls.keymaerax.core.{Sequent, SuccPos}
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl._
 
 import scala.collection.immutable
 import scala.collection.immutable.Map
+import scala.collection.immutable._
 
 /**
  * Created by smitsch on 2/14/15.
@@ -174,50 +175,6 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     ))
   }
 
-  "LessEqualSplitT" should "split <= in succedent" in {
-    val s = sucSequent("x<=0".asFormula)
-    val tactic = locateSucc(LessEqualSplitT)
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("x<0 | x=0".asFormula)
-    ))
-  }
-
-  it should "unite <|= in succedent" in {
-    val s = sucSequent("x<0 | x=0".asFormula)
-    val tactic = locateSucc(LessEqualSplitT)
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("x<=0".asFormula)
-    ))
-  }
-
-  it should "not unite <|= with deviating lhs" in {
-    val s = sucSequent("x<0 | y=0".asFormula)
-    val tactic = locateSucc(LessEqualSplitT)
-    tactic.applicable(new RootNode(s)) shouldBe false
-  }
-
-  it should "not unite <|= with deviating rhs" in {
-    val s = sucSequent("x<0 | x=1".asFormula)
-    val tactic = locateSucc(LessEqualSplitT)
-    tactic.applicable(new RootNode(s)) shouldBe false
-  }
-
-  it should "split <= in antecedent" in {
-    val s = sequent(Nil, "x<=0".asFormula :: Nil, Nil)
-    val tactic = locateAnte(LessEqualSplitT)
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, "x<0 | x=0".asFormula :: Nil, Nil)
-    ))
-  }
-
-  it should "unite <|= in antecedent" in {
-    val s = sequent(Nil, "x<0 | x=0".asFormula :: Nil, Nil)
-    val tactic = locateAnte(LessEqualSplitT)
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, "x<=0".asFormula :: Nil, Nil)
-    ))
-  }
-
   "NegateLessThanT" should "negate < in succedent" in {
     val s = sucSequent("x<0".asFormula)
     val tactic = locateSucc(NegateLessThanT)
@@ -330,70 +287,6 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     node.openGoals().flatMap(_.sequent.succ) shouldBe empty
   }
 
-  "GreaterThanFlipT" should "flip > in succedent" in {
-    val s = sucSequent("x>0".asFormula)
-    val tactic = locateSucc(GreaterThanFlipT)
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("0<x".asFormula)
-    ))
-  }
-
-  it should "flip < in succedent" in {
-    val s = sucSequent("x<0".asFormula)
-    val tactic = locateSucc(GreaterThanFlipT)
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("0>x".asFormula)
-    ))
-  }
-
-  it should "flip > in antecedent" in {
-    val s = sequent(Nil, "x>0".asFormula::Nil, Nil)
-    val tactic = locateAnte(GreaterThanFlipT)
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, "0<x".asFormula::Nil, Nil)
-    ))
-  }
-
-  it should "flip < in antecedent" in {
-    val s = sequent(Nil, "x<0".asFormula::Nil, Nil)
-    val tactic = locateAnte(GreaterThanFlipT)
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, "0>x".asFormula::Nil, Nil)
-    ))
-  }
-
-  "GreaterEqualsFlipT" should "flip >= in succedent" in {
-    val s = sucSequent("x>=0".asFormula)
-    val tactic = locateSucc(GreaterEqualFlipT)
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("0<=x".asFormula)
-    ))
-  }
-
-  it should "flip <= in succedent" in {
-    val s = sucSequent("x<=0".asFormula)
-    val tactic = locateSucc(GreaterEqualFlipT)
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("0>=x".asFormula)
-    ))
-  }
-
-  it should "flip >= in antecedent" in {
-    val s = sequent(Nil, "x>=0".asFormula::Nil, Nil)
-    val tactic = locateAnte(GreaterEqualFlipT)
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, "0<=x".asFormula::Nil, Nil)
-    ))
-  }
-
-  it should "flip <= in antecedent" in {
-    val s = sequent(Nil, "x<=0".asFormula::Nil, Nil)
-    val tactic = locateAnte(GreaterEqualFlipT)
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, "0>=x".asFormula::Nil, Nil)
-    ))
-  }
-
   "NegateGreaterThanT" should "negate > in succedent" in {
     val s = sucSequent("x>0".asFormula)
     val tactic = locateSucc(NegateGreaterThanT)
@@ -476,7 +369,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
   "Abs axiom tactic" should "expand abs(x) = y in succedent" in {
     val s = sucSequent("abs(x) = y".asFormula)
-    val tactic = ArithmeticTacticsImpl.AbsAxiomT(SuccPosition(0))
+    val tactic = TactixLibrary.useAt("abs")(1)
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
@@ -486,7 +379,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
   it should "expand abs(x) = y in antecedent" in {
     val s = sequent(Nil, immutable.IndexedSeq("abs(x) = y".asFormula), immutable.IndexedSeq())
-    val tactic = ArithmeticTacticsImpl.AbsAxiomT(AntePosition(0))
+    val tactic = TactixLibrary.useAt("abs")(-1)
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
@@ -565,7 +458,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
   "Min axiom tactic" should "expand min(x,y) = z in succedent" in {
     val s = sucSequent("min(x,y) = z".asFormula)
-    val tactic = ArithmeticTacticsImpl.MinMaxAxiomT(SuccPosition(0))
+    val tactic = TactixLibrary.useAt("min")(1)
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
@@ -595,7 +488,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
 
   "Max axiom tactic" should "expand max(x,y) = z in succedent" in {
     val s = sucSequent("max(x,y) = z".asFormula)
-    val tactic = ArithmeticTacticsImpl.MinMaxAxiomT(SuccPosition(0))
+    val tactic = TactixLibrary.useAt("max")(1)
     val result = helper.runTactic(tactic, new RootNode(s))
 
     result.openGoals() should have size 1
@@ -683,4 +576,29 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     result.openGoals() should have size 0
   }
 
+  import TactixLibrary._
+
+  "function arithmetic" should "prove f(1)=5 |- f(1)=5" in {
+    proveBy("f(1)=5 -> f(1)=5".asFormula, implyR(1) & QE) shouldBe 'closed
+  }
+
+  it should "prove w=1, f(w)>=5 |- f(1)>=5" in {
+    proveBy("w=1 & f(w)>=5 -> f(1)>=5".asFormula, implyR(1) & andL(-1) & QE) shouldBe 'closed
+  }
+
+  it should "not choke on f(w)=5 |- f(1)=5" in {
+    proveBy("f(w)=5 -> f(1)=5".asFormula, implyR(1) & QE).subgoals should contain only Sequent(Nil, IndexedSeq("p(w)".asFormula), IndexedSeq("p(1)".asFormula))
+  }
+
+  "predicate arithmetic" should "prove p(1) |- p(1)" in {
+    proveBy("p(1) -> p(1)".asFormula, implyR(1) & QE) shouldBe 'closed
+  }
+
+  it should "prove w=1, p(w) |- p(1)" in {
+    proveBy("w=1 & p(w) -> p(1)".asFormula, implyR(1) & andL(-1) & QE) shouldBe 'closed
+  }
+
+  it should "not choke on p(w) |- p(1)" in {
+    proveBy("p(w) -> p(1)".asFormula, implyR(1) & QE).subgoals should contain only Sequent(Nil, IndexedSeq("p(w)".asFormula), IndexedSeq("p(1)".asFormula))
+  }
 }

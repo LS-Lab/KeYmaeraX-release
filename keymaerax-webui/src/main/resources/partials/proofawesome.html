@@ -1,0 +1,108 @@
+<div class="row" ng-controller="ProofInfoCtrl">
+    <div class="col-md-3">
+    <!-- The style forces the _ _ _ underline to only span the length of the text, not the entire paragraph block width. -->
+    <p class="lead" editable-text="proofName" onbeforesave="saveProofName($data)" style="display:inline-block">
+        {{proofName}}
+    </p>
+    </div>
+    <div class="col-md-9">
+        <!-- Tool box -->
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <!-- Brand and toggle get grouped for better mobile display -->
+                <!-- TODO for some reason the navbar is not collapsible -->
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <span class="navbar-brand">Tools</span>
+                </div>
+                <div class="collapse navbar-collapse">
+                    <ul class="nav navbar-nav">
+                        <li><a href="#"><span class="fa fa-play"> Auto</span></a></li>
+                        <li><a href="#"><span class="fa fa-undo"> Undo</span></a></li>
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">and left <code>andL</code></a></li>
+                                <li><a href="#">imply right <code>implyR</code></a></li>
+                                <li><a href="#">or right <code>orR</code></a></li>
+                                <li><a href="#">equiv left <code>equivL</code></a></li>
+                                <li role="separator" class="divider"></li>
+                                <li><a href="#">and right <code>andR</code></a></li>
+                                <li><a href="#">or left <code>orL</code></a></li>
+                                <li><a href="#">imply left <code>implyL</code></a></li>
+                                <li><a href="#">equiv right <code>equivR</code></a></li>
+                            </ul>
+                        </li>
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Hybrid Programs <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">[;] compose <code>composeb</code></a></li>
+                                <li><a href="#">[++] choice <code>choiceb</code></a></li>
+                                <!-- TODO -->
+                                <li role="separator" class="divider"></li>
+                                <li><a href="#">&lt;;&gt; compose <code>composed</code></a></li>
+                                <li><a href="#">&lt;++&gt; compose <code>choiced</code></a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                    <form class="navbar-form navbar-right" role="search">
+                        <div class="form-group">
+                            <input type="text" class="form-control" placeholder="Custom tactic">
+                        </div>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default">Execute</button>
+                            <button type="submit" class="btn btn-default dropdown-toggle" data-toggle="dropdown"
+                                    aria-haspopup="true" aria-expanded="false">
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">Open Tactic Editor</a></li>
+                            </ul>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </nav>
+    </div>
+</div>
+
+<div class="row" ng-controller="TaskListCtrl">
+    <div class="col-md-12">
+        <tabset justified="true">
+            <tab active="task.selected" ng-repeat="task in agenda" select="setSelected(task)">
+                <tab-heading>
+                    <!-- ng-class={'fa fa-tasks':openGoal, 'fa fa-check-square-o':closedGoal} -->
+                    <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
+                    <div class="row">
+                        <div class="col-md-11" ng-if="selectedTask == task"><span class="fa fa-tasks k4-nowrap k4-abbreviate"> {{task.goalLabel}}</span></div>
+                        <div class="col-md-11" ng-if="selectedTask != task"><span class="fa fa-tasks k4-nowrap k4-abbreviate"> {{task.goalLabel}}</span></div>
+                        <!-- TODO failed attempt to provide a preview of the goal -->
+                        <!--<div class="col-md-3"  ng-if="selectedTask != task"><span class="fa fa-tasks k4-nowrap k4-abbreviate"> {{task.goalLabel}}</span></div>-->
+                        <!--<div class="col-md-8" ng-if="selectedTask != task">-->
+                            <!--<span class="k4-tiny k4-abbreviate k4-nowrap">-->
+                                <!--<k4-formula formula="task.proofNode.sequent.ante[0].formula"-->
+                                            <!--highlight="false"-->
+                                            <!--collapsed="true"-->
+                                            <!--ng-if="task.proofNode.sequent.ante.length > 0"></k4-formula>-->
+                                <!--&#8866;-->
+                                <!--<k4-formula formula="task.proofNode.sequent.succ[0].formula"-->
+                                            <!--highlight="false"-->
+                                            <!--collapsed="true"-->
+                                            <!--ng-if="task.proofNode.sequent.succ.length > 0"></k4-formula>-->
+                            <!--</span>-->
+                        <!--</div>-->
+                        <div class="col-md-1" cg-busy="defer" ng-if="defer"></div>
+                    </div>
+                </tab-heading>
+                <k4-sequentproof proof-id="proofId"
+                                 node-id="task.nodeId"
+                                 sequent="task.proofNode.sequent"
+                                 read-only="task.readOnly"></k4-sequentproof>
+            </tab>
+        </tabset>
+    </div>
+</div>

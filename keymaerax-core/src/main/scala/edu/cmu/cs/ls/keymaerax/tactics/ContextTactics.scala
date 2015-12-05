@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 package edu.cmu.cs.ls.keymaerax.tactics
@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.AlphaConversionHelper.replaceBound
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{skolemizeT,instantiateT}
 import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{AxiomCloseT,ImplyRightT,ImplyLeftT,NotRightT,NotLeftT,
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{CloseId,ImplyRightT,ImplyLeftT,NotRightT,NotLeftT,
   AndLeftT,AndRightT}
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{lastSucc,lastAnte}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, ConstructionTactic, Tactic, stopT}
@@ -52,7 +52,7 @@ object ContextTactics {
         //        assert(context.instantiateContext(f) == node.sequent(p), s"Context $context with formula $f, which is\n   ${context.instantiateContext(f)}\n not found at position $p\n   ${node.sequent(p)}")
         //        assert(context.instantiateContext(g) == node.sequent(counterPart), s"Context $context with formula $g, which is\n   ${context.instantiateContext(g)}\n not found at position $counterPart\n   ${node.sequent(counterPart)}")
         if (!signature(context).contains(DotFormula) && !signature(context).contains(DotTerm))
-          Some(AxiomCloseT | debugT(s"Unexpected peeling result: ${node.sequent} did not close by axiom") & stopT)
+          Some(CloseId | debugT(s"Unexpected peeling result: ${node.sequent} did not close by axiom") & stopT)
         else context match {
           case DotFormula => Some(debugT(s"Finished peeling, now calling base tactic ${baseT.name}") & baseT(p))
           case Not(phi) => Some(NotLeftT(counterPart) & NotRightT(p) & lastSucc(peelT(phi, f, g, AntePosition(node.sequent.ante.length - 1), baseT)))

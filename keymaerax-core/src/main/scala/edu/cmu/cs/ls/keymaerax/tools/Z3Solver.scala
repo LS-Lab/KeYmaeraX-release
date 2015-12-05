@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 package edu.cmu.cs.ls.keymaerax.tools
@@ -18,6 +18,7 @@ import scala.sys.process._
  * @author Ran Ji
  */
 class Z3Solver extends SMTSolver {
+  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
 
   /** Get the absolute path to Z3 jar */
   private val pathToZ3 : String = {
@@ -70,8 +71,10 @@ class Z3Solver extends SMTSolver {
       // Copy file to temporary directory
       z3Dest.getChannel.transferFrom(z3Source, 0, Long.MaxValue)
       val z3AbsPath = z3Temp.getAbsolutePath
-      //@todo what's with Windows?
-      Runtime.getRuntime.exec("chmod u+x " + z3AbsPath)
+      val permissionCmd =
+        if(osName.contains("windows")) "icacls " + z3AbsPath + " /e /p Everyone:F"
+        else "chmod u+x " + z3AbsPath
+      Runtime.getRuntime.exec(permissionCmd)
       z3Source.close()
       z3Dest.close()
       assert(new File(z3AbsPath).exists())
@@ -86,7 +89,7 @@ class Z3Solver extends SMTSolver {
    */
   def run(cmd: String) : (String, Formula)= {
     val z3Output = cmd.!!
-    println("[Z3 result] \n" + z3Output + "\n")
+    if (DEBUG) println("[Z3 result] \n" + z3Output + "\n")
     //@todo So far does not handle get-model or unsat-core
     val kResult = {
       //@todo investigate Z3 binding for Scala
@@ -106,7 +109,7 @@ class Z3Solver extends SMTSolver {
   /** Return Z3 QE result and the proof evidence */
   def qeEvidence(f: Formula) : (Formula, Evidence) = {
     val smtCode = SMTConverter(f, "Z3") + "\n(check-sat)\n"
-    println("[Solving with Z3...] \n" + smtCode)
+    if (DEBUG) println("[Solving with Z3...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
@@ -127,7 +130,7 @@ class Z3Solver extends SMTSolver {
    */
   def simplify(t: Term) : Term = {
     val smtCode = SMTConverter.generateSimplify(t, "Z3")
-    println("[Simplifying with Z3 ...] \n" + smtCode)
+    if (DEBUG) println("[Simplifying with Z3 ...] \n" + smtCode)
     val smtFile = getUniqueSmt2File()
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
@@ -135,11 +138,17 @@ class Z3Solver extends SMTSolver {
     writer.close()
     val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
     val z3Output = cmd.!!
-    println("[Z3 simplify result] \n" + z3Output + "\n")
-    try {
-      KeYmaeraXParser.termParser(z3Output)
-    } catch {
-      case e: ParseException => println("[Info] Cannot parse Z3 simplified result: " + z3Output); t
+    if (DEBUG) println("[Z3 simplify result] \n" + z3Output + "\n")
+    if(z3Output.contains("!"))
+      t
+    else {
+      try {
+        KeYmaeraXParser.termParser(z3Output)
+      } catch {
+        case e: ParseException =>
+          if (DEBUG) println("[Info] Cannot parse Z3 simplified result: " + z3Output)
+          t
+      }
     }
   }
 }

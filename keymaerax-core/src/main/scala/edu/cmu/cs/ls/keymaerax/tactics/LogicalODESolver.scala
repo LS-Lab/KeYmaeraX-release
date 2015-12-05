@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 package edu.cmu.cs.ls.keymaerax.tactics
@@ -34,12 +34,13 @@ object LogicalODESolver {
 
     val loggingPrefix = "[LODESolver Top Level] "
 
-    /*
-     * Note:
-     * renameAndDropImpl still produces an open goal that needs to be closed, maybe with monotonicity?
+    /**
+     * Solves a differential equation and returns something like \forall t ...
+     * @todo Introduces a time variable and symbolic = initial conditions for primed variables, if they are not already present.
+     * @note I think this is no longer true: renameAndDropImpl still produces an open goal that needs to be closed, maybe with monotonicity?
      */
     override def apply(p: Position): Tactic =
-      LogicalODESolver.setupTimeVarT(p) ~
+      LogicalODESolver.setupTimeVarT(p) ~ //may fail b/c time might already exist.
       (cutInSolnsT(p) *) &
       verboseDebugT(s"$loggingPrefix Finished Cutting In Solutions") &
       cutTimeLB(p) &
@@ -53,9 +54,13 @@ object LogicalODESolver {
       (successiveInverseDiffGhost(p) *) &
       verboseDebugT(s"$loggingPrefix Finished successive inverse diff ghosts") &
       ODETactics.diffSolveConstraintT(p) &
-      verboseDebugT(s"$loggingPrefix Finished DS& application at t' = 1 (hopefully)") &
-      reduceToArithmetic(p) // separated out for testing purposes
+      verboseDebugT(s"$loggingPrefix Finished DS& application at t' = 1 (hopefully)")
   }
+
+  /**
+   * Reduces the output of solveT to arithmetic and tries to close.
+   */
+  def solveAndProve(p: Position): Tactic = solveT(p) & reduceToArithmetic(p)
 
   /**
    * These final steps of the LogicalODESolver should always just work,
@@ -66,8 +71,7 @@ object LogicalODESolver {
     FOQuantifierTacticsImpl.skolemizeT(p) &
     ImplyRightT(p) & ImplyRightT(p) & debugT("After imply right") &
     HybridProgramTacticsImpl.boxAssignT(p) &
-    arithmeticT ~
-    errorT("Should have closed.")
+    arithmeticT
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // tactics for the advanced solver
@@ -281,7 +285,7 @@ object LogicalODESolver {
                 Tactics.assertT(1,2) &
                   assertT(s => s.succ.head.equals(right)) &
                   hideT(SuccPos(0)) &
-                  InverseImplyRightT ~
+                  InverseImplyRightT() ~
                     debugT("After inverse") ~
                     kModalModusPonensT(SuccPos(0)) ~
                     debugT("After k modal") ~

@@ -1,5 +1,5 @@
 /**
-* Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+* Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
 import edu.cmu.cs.ls.keymaerax.core._
@@ -349,16 +349,24 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "update self assignments" in {
-    val assignT = locateSucc(HybridProgramTacticsImpl.substitutionBoxAssignT)
+    val assignT = substitutionBoxAssignT(1)
     getProofSequent(assignT, new RootNode(sucSequent("[y:=z;][y:=y;]y>0".asFormula))) should be (sucSequent("[y:=z;]y>0".asFormula))
   }
 
-  ignore should "handle self assignments inside formulas" in {
-    val tacticFactory = PrivateMethod[PositionTactic]('v2tBoxAssignT)
-    val assignT = (HybridProgramTacticsImpl invokePrivate tacticFactory())(new SuccPosition(0, new PosInExpr(0 :: Nil)))
-    // equivalence rewriting will not go past bound y in \\forall y
+  it should "handle self assignments inside formulas" in {
+    val assignT = substitutionBoxAssignT(1, 0::Nil)
     getProofSequent(assignT, new RootNode(sucSequent("\\forall y [y:=y;]y>0".asFormula))) should be (
       sucSequent("\\forall y y>0".asFormula))
+  }
+
+  it should "handle assignments in front of non-binding programs" in {
+    val s = Sequent(Nil, immutable.IndexedSeq(),
+      immutable.IndexedSeq("[w:=1;][?w>0;]w>0".asFormula))
+
+    val result = helper.runTactic(substitutionBoxAssignT(1), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "[?1>0;]1>0".asFormula
   }
 
   "Substitution diamond assignment" should "work on self assignment" in {
@@ -375,6 +383,11 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   it should "assign terms in simple predicates" in {
     val assignT = locateSucc(HybridProgramTacticsImpl.substitutionDiamondAssignT)
     getProofSequent(assignT, new RootNode(sucSequent("<y:=z+5*y;>y>0".asFormula))) should be (sucSequent("z+5*y>0".asFormula))
+  }
+
+  it should "not assign when variable is bound afterwards" in {
+    val assignT = locateSucc(HybridProgramTacticsImpl.substitutionDiamondAssignT)
+    assignT.applicable(new RootNode(sucSequent("<y:=z+5*y;><z:=2; {y:=*; ++ x:=3;}>y>0".asFormula))) shouldBe false
   }
 
   "Box test tactic" should "use axiom [?H]p <-> (H->p)" in {
@@ -554,21 +567,52 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Substitution box assignment" should "replace with variables" in {
     val s = sucSequent("[y:=z;]y>0".asFormula)
-    val assignT = locateSucc(HybridProgramTacticsImpl.substitutionBoxAssignT)
-    getProofSequent(assignT, new RootNode(s)) should be (
-      sucSequent("z>0".asFormula))
+    val assignT = substitutionBoxAssignT(1)
+    getProofSequent(assignT, new RootNode(s)) should be (sucSequent("z>0".asFormula))
   }
 
-  it should "work with arbitrary terms" in {
+  it should "work with numbers" in {
     val s = sucSequent("[y:=1;][y:=y;]y>0".asFormula)
-    val assignT = locateSucc(HybridProgramTacticsImpl.substitutionBoxAssignT)
+    val assignT = substitutionBoxAssignT(1)
     getProofSequent(assignT, new RootNode(s)) should be (sucSequent("[y:=1;]y>0".asFormula))
   }
 
-  it should "not apply when immediately followed by an ODE or loop" in {
-    val tactic = locateSucc(HybridProgramTacticsImpl.substitutionBoxAssignT)
+  it should "work with functions" in {
+    val s = sucSequent("[y:=t();][y:=y;]y>0".asFormula)
+    val assignT = substitutionBoxAssignT(1)
+    getProofSequent(assignT, new RootNode(s)) should be (sucSequent("[y:=t();]y>0".asFormula))
+  }
+
+  it should "work when followed by universal quantifier" in {
+    val s = sucSequent("[y:=t();]\\forall y y>0".asFormula)
+    val assignT = substitutionBoxAssignT(1)
+    getProofSequent(assignT, new RootNode(s)) should be (sucSequent("\\forall y y>0".asFormula))
+  }
+
+  it should "work when must-bound somewhen later but not in-between" in {
+    val s = sucSequent("[y:=t();][z:=2;]<?x>5;><y:=x;>\\forall y y>0".asFormula)
+    val assignT = substitutionBoxAssignT(1)
+    getProofSequent(assignT, new RootNode(s)) should be (sucSequent("[z:=2;]<?x>5;><y:=x;>\\forall y y>0".asFormula))
+  }
+
+  it should "work when must-bound on both branches of a choice" in {
+    val s = sucSequent("[y:=t();][z:=2;][y:=2; ++ y:=*;]y>0".asFormula)
+    val assignT = substitutionBoxAssignT(1)
+    getProofSequent(assignT, new RootNode(s)) should be (sucSequent("[z:=2;][y:=2; ++ y:=*;]y>0".asFormula))
+  }
+
+  it should "not apply when 1) not must-bound and 2) not self-assignment" in {
+    val tactic = substitutionBoxAssignT(1)
+    tactic.applicable(new RootNode(sucSequent("[y:=y;][y:=z+1; ++ x:=2;]y>0".asFormula))) shouldBe true
+    tactic.applicable(new RootNode(sucSequent("[y:=y;][{y'=z+1}]y>0".asFormula))) shouldBe true
+    tactic.applicable(new RootNode(sucSequent("[y:=y;][{y:=z+1;}*]y>0".asFormula))) shouldBe true
+    tactic.applicable(new RootNode(sucSequent("[y:=z;][x:=2;][y:=*;]y>0".asFormula))) shouldBe true
+    tactic.applicable(new RootNode(sucSequent("[y:=z;][y:=z+1; ++ x:=2;]y>0".asFormula))) shouldBe false
     tactic.applicable(new RootNode(sucSequent("[y:=z;][{y'=z+1}]y>0".asFormula))) shouldBe false
     tactic.applicable(new RootNode(sucSequent("[y:=z;][{y:=z+1;}*]y>0".asFormula))) shouldBe false
+    tactic.applicable(new RootNode(sucSequent("[y:=z;][y:=z+1; ++ {y'=2}]y>0".asFormula))) shouldBe false
+    tactic.applicable(new RootNode(sucSequent("[y:=z;][x:=2;{x:=3; ++ y:=2;};y:=1;]y>0".asFormula))) shouldBe false
+    tactic.applicable(new RootNode(sucSequent("[y:=z;][x:=2;y:=1;{x:=3; ++ y:=2;};y:=1;]y>0".asFormula))) shouldBe true
   }
 
   "v2vAssignT" should "work on box ODEs" in {
