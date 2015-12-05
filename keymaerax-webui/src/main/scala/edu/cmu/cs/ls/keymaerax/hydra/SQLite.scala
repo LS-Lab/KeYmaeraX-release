@@ -578,7 +578,7 @@ object SQLite {
       if (steps.isEmpty) {
         val sequent = getProofConclusion(proofId)
         val node = treeNode(sequent, None)
-        return Tree("ProofId", List(node), node, List(AgendaItem("itemId", "name", "proofId", node, Nil)))
+        return Tree(proofId.toString, List(node), node, List(AgendaItem("0", "Unnamed Item", proofId.toString, node)))
       }
       val (rootSubgoals, conclusion) = getSequents(steps.head.inputProvableId)
       var openGoals = rootSubgoals.map({case subgoal => treeNode(subgoal, None)})
@@ -600,7 +600,11 @@ object SQLite {
         }
         steps = steps.tail
       }
-      Tree("ProofId", allNodes, allNodes.head, openGoals.map({case sg => AgendaItem("itemId", "name", "proofId", sg, Nil)}))
+      var items:List[AgendaItem] = Nil
+      for (i <- openGoals.indices) {
+        items = AgendaItem(i.toString, "Unnamed Goal", proofId.toString, openGoals(i)) :: items
+      }
+      Tree(proofId.toString, allNodes, allNodes.head, items.reverse)
     }
   }
 }

@@ -149,7 +149,10 @@ case class Tree(id: String, nodes: List[TreeNode], root: TreeNode, leaves: List[
     nodes.find({case node => node.id.toString == id}).flatMap({case node => node.parent})
 }
 
-case class AgendaItem(id: String, name: String, proofId: String, goal: TreeNode, path: List[String])
+case class AgendaItem(id: String, name: String, proofId: String, goal: TreeNode) {
+  // @todo full path
+  def path = List(goal.id.toString)
+}
 
 object ParameterValueType extends Enumeration {
   type ParameterValueType = Value

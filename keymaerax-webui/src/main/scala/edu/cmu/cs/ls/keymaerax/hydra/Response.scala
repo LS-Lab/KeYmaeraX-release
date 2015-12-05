@@ -317,20 +317,20 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
         "parent" -> parent)
     }
 
-    def pathJson(path: List[String]): JsValue = JsArray()
+    def pathJson(path: List[String]): JsValue = JsArray(path.map({case str => JsString(str)}))
 
     def itemJson(item: AgendaItem): (String, JsValue) = {
       val value = JsObject(
         "id" -> JsString(item.id),
         "name" -> JsString(item.name),
         "proofId" -> JsString(item.proofId),
-        "goal" -> JsString(item.id),
+    //    "goal" -> JsString(item.id),
         "path" -> pathJson(item.path))
       (item.id, value)
     }
 
-    def nodeIdJson(n: Int):JsValue = JsString("Node" + n)
-    def proofIdJson(n: String):JsValue = JsString("Proof" + n)
+    def nodeIdJson(n: Int):JsValue = JsString(n.toString)
+    def proofIdJson(n: String):JsValue = JsString(n)
 
     /** @TODO Actually say what the rules are */
     def ruleJson(rule: String):JsValue = {
@@ -364,7 +364,9 @@ class AgendaAwesomeResponse(tree: Tree) extends Response {
       "proofTree" -> proofTree,
       "agendaItems" -> agendaItems
     )
+    println("I made " + json)
 }
+
 
 class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: String) extends Response {
   val json = JsObject(

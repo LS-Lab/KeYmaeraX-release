@@ -14,6 +14,7 @@ import java.text.SimpleDateFormat
 import java.util.{Locale, Calendar}
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
+import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
@@ -361,7 +362,10 @@ class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request
 }
 
 class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wait : Boolean = false) extends Request {
-  def getResultingResponses() = ???
+  def getResultingResponses() = {
+    /* @todo Total cop-out to help the UI run until we write something better */
+    (new OpenProofResponse(db.getProofInfo(proofId), TaskManagement.TaskLoadStatus.Loaded.toString)) :: Nil
+  }
 //  {
 //    val proof = db.getProofInfo(proofId)
 //
