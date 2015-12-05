@@ -1,0 +1,10 @@
+<script type="text/ng-template" id="js/keymaera-ui/axiomPopoverTemplate.html">
+    <table class="table table-hover table-condensed">
+        <tbody>
+            <tr ng-repeat="axiom in formulaAxiomsMap[formulaId]">
+                <td><a ng-click="applyAxiom(formulaId, axiom.id)">{{axiom.name}}</a></td>
+                <td>{{axiom.axiom}}</td>
+            </tr>
+        </tbody>
+    </table>
+</script>

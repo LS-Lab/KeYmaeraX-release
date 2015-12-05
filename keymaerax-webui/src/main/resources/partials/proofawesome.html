@@ -70,16 +70,16 @@
     </div>
 </div>
 
-<div class="row" ng-controller="TaskListCtrl">
+<div class="row" ng-controller="TaskCtrl">
     <div class="col-md-12">
-        <tabset justified="true">
-            <tab active="task.selected" ng-repeat="task in agenda" select="setSelected(task)">
-                <tab-heading>
+        <!-- TODO restrict to < 10 tasks as tabs, then complement the rest with dropdown -->
+        <uib-tabset justified="true">
+            <uib-tab active="task.isSelected" ng-repeat="task in agenda.items()" select="agenda.select(task)">
+                <uib-tab-heading>
                     <!-- ng-class={'fa fa-tasks':openGoal, 'fa fa-check-square-o':closedGoal} -->
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
                     <div class="row">
-                        <div class="col-md-11" ng-if="selectedTask == task"><span class="fa fa-tasks k4-nowrap k4-abbreviate"> {{task.goalLabel}}</span></div>
-                        <div class="col-md-11" ng-if="selectedTask != task"><span class="fa fa-tasks k4-nowrap k4-abbreviate"> {{task.goalLabel}}</span></div>
+                        <div class="col-md-11"><span class="fa fa-tasks k4-nowrap k4-abbreviate"> {{task.name}} ({{task.id}})</span></div>
                         <!-- TODO failed attempt to provide a preview of the goal -->
                         <!--<div class="col-md-3"  ng-if="selectedTask != task"><span class="fa fa-tasks k4-nowrap k4-abbreviate"> {{task.goalLabel}}</span></div>-->
                         <!--<div class="col-md-8" ng-if="selectedTask != task">-->
@@ -97,12 +97,15 @@
                         <!--</div>-->
                         <div class="col-md-1" cg-busy="defer" ng-if="defer"></div>
                     </div>
-                </tab-heading>
-                <k4-sequentproof proof-id="proofId"
-                                 node-id="task.nodeId"
-                                 sequent="task.proofNode.sequent"
-                                 read-only="task.readOnly"></k4-sequentproof>
-            </tab>
-        </tabset>
+                </uib-tab-heading>
+                <k4-sequentproof user-id="userId"
+                                 proof-id="proofId"
+                                 node-id="task.id"
+                                 deduction-path="task.path"
+                                 proof-tree="prooftree"
+                                 agenda="agenda"
+                                 read-only="false"></k4-sequentproof>
+            </uib-tab>
+        </uib-tabset>
     </div>
 </div>

@@ -30,7 +30,7 @@ class ProverException(msg: String, cause: Throwable = null) extends RuntimeExcep
    */
   def inContext(context: String, additionalMessage : String = ""): ProverException = {
     this.logicalContext  = this.logicalContext + "\nin " + context
-    if(!additionalMessage.equals("")) this.logicalContext = this.logicalContext + "\n(" + additionalMessage + ")"
+    if(!additionalMessage.equals("")) this.logicalContext = this.logicalContext + "\n\t(" + additionalMessage + ")"
     this
   }
 

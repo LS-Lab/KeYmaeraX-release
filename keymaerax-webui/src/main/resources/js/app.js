@@ -2,13 +2,17 @@
   'ngRoute',
   'ngCookies',
   'ngSanitize',
-  'ngDragDrop',
+  'ngAnimate',
   'angularTreeview',
   'ui.tree',
   'cgBusy',
   'ui.bootstrap',
   'ui.bootstrap.tabs',
-  'keymaeraProofControllers',
+  'ui.bootstrap.tooltip',
+  'ui.bootstrap.popover',
+  'ui.bootstrap.collapse',
+  'keymaerax.controllers',
+  'keymaerax.ui.mouseevents',
   'progressMeter',
   'proofProgressChart',
   'formula',
@@ -87,3 +91,10 @@ keymaeraProofApp.config(['$routeProvider',
         redirectTo: '/dashboard'
       });
   }]);
+
+// triggers for tooltip and popover
+keymaeraProofApp.config(['$tooltipProvider', function($tooltipProvider) {
+  $tooltipProvider.setTriggers({
+    'contextmenu': 'blur'
+  });
+}]);

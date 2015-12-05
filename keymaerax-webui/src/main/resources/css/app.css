@@ -72,29 +72,72 @@ table .btn{
     white-space: nowrap;
 }
 
-.k4-proofrow {
-  border-style: solid;
-  border-left: none;
+.k4-goalwithsiblings {
+  border-style: none;
+  /*border-left: none;
   border-top: none;
   border-right: none;
-  border-bottom: thin solid black;
+  border-bottom: none;*/
 }
 
-.k4-proofrow > ul:last-child {
+.k4-goalwithsiblings > ul:last-child {
   list-style-type: none;
-  padding: 0;
-  margin: 0px 0px 0px -15px;
-  text-align: left;
-  width: 30px;
+  padding: 0px 0px 0px 0px;
+  margin: -20px 0px 0px 0px;
+  text-align: right;
+  width: 200px;
   display: block;
+  position: absolute;
+  top: 0px;
+  right: 0px;
 }
-.k4-proofrow > ul:last-child li {
+.k4-goalwithsiblings > ul:last-child li {
   height: 15px;
   font-size: x-small;
   border: none;
   color: black;
   display: list-item;
-  width: 30px;
+  width: 200px;
+}
+
+.k4-proofrow-first {
+  border-style: solid;
+  border-left: none;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  margin: 0 0 0 4em;
+}
+
+.k4-proofrow {
+  border-style: solid;
+  border-left: none;
+  border-top: thin solid black;
+  border-right: none;
+  border-bottom: none;
+  margin: 0 0 0 4em;
+}
+
+.k4-proofrow > ul:last-child {
+  list-style-type: none;
+  padding: 0 0 0 0;
+  margin: -1ex 0 0 1em;
+  text-align: right;
+  width: 4em;
+  display: block;
+  position: absolute;
+  left: 0;
+}
+.k4-proofrow > ul:last-child li {
+  height: 3ex;
+  font-size: x-small;
+  border: none;
+  color: black;
+  display: block;
+  white-space: nowrap;
+  overflow-x: hidden;
+  text-overflow: clip;
+  width: 4em;
 }
 
 .k4-flexrow {
@@ -169,160 +212,100 @@ table .btn{
   text-overflow: ellipsis;
 }
 
-@media (min-width: 0px) {
-  .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
-    opacity: 1;
-    /*position: absolute;
-    left: 20px;
-    top: 30px;
-    z-index: 100;*/
-  }
-  .k4-formula.hover .k4-formula-content, .k4-formula:hover .k4-formula-content {
-    background: #BACBD9;
-    border: 1px solid #4D6473;
-    padding: 4px 4px 4px 4px;
-  }
-  .k4-formula.hover .k4-formula-content:before, .k4-formula:hover .k4-formula-content:before {
-      display: none;
-  }
-  /* TODO: does not quite work yet */
-  .k4-formula.hidden .k4-formula-content {
-    opacity: 0.5;
-  }
-  .k4-formula.hidden ul:first-child li.show {
-    display: inline-block;
-  }
-  .k4-formula.hidden ul:first-child li.hide {
-    display: none;
-  }
-  .k4-formula > ul:first-child {
-    list-style-type: none;
-    padding: 0;
-    margin: 0 0px 0 -4px; /* margin: 0 8px 0 -4px; */
-    text-align: left;
-    width: 20px; /* 100px with text */
-    opacity: 0;
-    display: block;
-    /*position: absolute;
-    left: 20px;
-    top: 30px;
-    z-index: 1;*/
-  }
-  .k4-formula > ul:first-child li {
-    height: 15px;
-    border: 1px solid #4D6473;
-    display: list-item;
-    margin: 0 -1px;
-    background: #BACBD9;
-    border-top-left-radius: 3px;
-    border-top-right-radius: 3px;
-    width: 20px; /* 100px with text */
-  }
-  .k4-formula > ul:first-child li.show {
-    display: none;
-    margin-right: 8px;
-  }
-  .k4-formula > ul:first-child li.hide {
-    display: inline-block;
-    margin-right: 8px;
-  }
-  .k4-formula > ul:first-child li a {
-    color: #4D6473;
-    padding: 0 0 0 0; /* padding: 0 5px 0 10px; */
-    display: block;
-    line-height: 13px;
-    font-size: 10px;
-  }
-  .k4-formula > ul:first-child li:hover {
-    background: #7297A6;
-  }
-  .k4-formula > ul:first-child li:hover a {
-    color: #4D6473;
-  }
-  .k4-formula .k4-formula-content {
-    padding: 4px 4px 4px 4px;
-    border-top-left-radius: 3px;
-    border-top-right-radius: 3px;
-    display: table-cell;
-  }
+.k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
+  opacity: 1;
+  position: absolute;
+  left: 0px; /* -79px with text */
+  top: 0px;
+  z-index: 100;
 }
-
-@media (min-width: 992px) {
-  .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
-    opacity: 1;
-    position: absolute;
-    left: 0px; /* -79px with text */
-    top: 0px;
-    z-index: 100;
-  }
-  .k4-formula.hover .k4-formula-content, .k4-formula:hover .k4-formula-content {
-    background: #BACBD9;
-    border: 1px solid #4D6473;
-    padding: 4px 4px 4px 4px;
-  }
-  .k4-formula.hover .k4-formula-content:before, .k4-formula:hover .k4-formula-content:before {
-      display: none;
-  }
-  /* TODO: does not quite work yet */
-  .k4-formula.hidden .k4-formula-content {
-    opacity: 0.5;
-  }
-  .k4-formula.hidden ul:first-child li.show {
-    display: inline-block;
-  }
-  .k4-formula.hidden ul:first-child li.hide {
+.k4-formula.hover .k4-formula-content, .k4-formula:hover .k4-formula-content {
+  background: #BACBD9;
+  border: 1px solid #4D6473;
+  padding: 4px 4px 4px 4px;
+}
+.k4-formula.hover .k4-formula-content:before, .k4-formula:hover .k4-formula-content:before {
     display: none;
-  }
-  .k4-formula > ul:first-child {
-    list-style-type: none;
-    padding: 0;
-    margin: 0 0 0 -4px; /* margin: 0 8px 0 -4px */
-    text-align: left;
-    width: 100px;
-    opacity: 0;
-    display: block;
-    position: absolute;
-    left: 0px; /* -79px with text */
-    top: 0px;
-    z-index: 1;
-  }
-  .k4-formula > ul:first-child li {
-    height: 15px;
-    border: 1px solid #4D6473;
-    display: list-item;
-    margin: 0 -1px;
-    background: #BACBD9;
-    border-top-left-radius: 3px;
-    border-bottom-left-radius: 3px;
-    width: 20px; /* 100px with text */
-  }
-  .k4-formula > ul:first-child li.show {
-    display: none;
-    margin-right: 8px;
-  }
-  .k4-formula > ul:first-child li.hide {
-    display: inline-block;
-    margin-right: 8px;
-  }
-  .k4-formula > ul:first-child li a {
-    color: #4D6473;
-    padding: 0 0 0 0px; /* padding: 0 5px 0 10px; */
-    display: block;
-    line-height: 13px;
-    font-size: 10px;
-  }
-  .k4-formula > ul:first-child li:hover {
-    background: #7297A6;
-  }
-  .k4-formula > ul:first-child li:hover a {
-    color: #4D6473;
-  }
-  .k4-formula .k4-formula-content {
-    padding: 4px 4px 4px 4px;
-    border-top-right-radius: 3px;
-    border-bottom-right-radius: 3px;
-    display: table-cell;
-  }
+}
+.k4-formula-content > ul:first-child {
+  list-style-type: none;
+  padding: 0px 0px 0px 0px;
+  margin-top: -1ex;
+  text-align: center;
+  width: 10px;
+  display: block;
+  position: absolute;
+  left: 0px;
+  top: 50%;
+}
+.k4-formula-content > ul:first-child li {
+  height: 15px;
+  font-size: x-small;
+  border: none;
+  color: black;
+  display: list-item;
+  width: 10px;
+}
+/* TODO: does not quite work yet */
+.k4-formula.hidden .k4-formula-content {
+  opacity: 0.5;
+}
+.k4-formula.hidden ul:first-child li.show {
+  display: inline-block;
+}
+.k4-formula.hidden ul:first-child li.hide {
+  display: none;
+}
+.k4-formula > ul:first-child {
+  list-style-type: none;
+  padding: 0;
+  margin: 0 0 0 -4px; /* margin: 0 8px 0 -4px */
+  text-align: left;
+  width: 20px; /* 100 px with text */
+  opacity: 0;
+  display: block;
+  position: absolute;
+  left: 0px; /* -79px with text */
+  top: 0px;
+  z-index: 1;
+}
+.k4-formula > ul:first-child li {
+  height: 15px;
+  border: 1px solid #4D6473;
+  display: list-item;
+  margin: 0 -1px;
+  background: #BACBD9;
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+  width: 20px; /* 100px with text */
+  text-align: center;
+}
+.k4-formula > ul:first-child li.show {
+  display: none;
+  margin-right: 8px;
+}
+.k4-formula > ul:first-child li.hide {
+  display: inline-block;
+  margin-right: 8px;
+}
+.k4-formula > ul:first-child li a {
+  color: #4D6473;
+  padding: 0 0 0 0px; /* padding: 0 5px 0 10px; */
+  display: block;
+  line-height: 13px;
+  font-size: 10px;
+}
+.k4-formula > ul:first-child li:hover {
+  background: #7297A6;
+}
+.k4-formula > ul:first-child li:hover a {
+  color: #4D6473;
+}
+.k4-formula .k4-formula-content {
+  padding: 4px 4px 4px 4px;
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+  display: table-cell;
 }
 
 /*

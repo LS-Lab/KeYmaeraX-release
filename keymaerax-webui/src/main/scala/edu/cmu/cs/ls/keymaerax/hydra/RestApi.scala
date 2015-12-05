@@ -191,6 +191,54 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val proofTasksNew = path("proofs" / "user" / Segment / Segment / "agendaawesome") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new MockRequest("/mockdata/proof1opentasksreply.json")
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val proofTasksParent = path("proofs" / "user" / Segment / Segment / Segment / Segment / "parent") { (userId, proofId, nodeId, goalId) => { pathEnd {
+    get {
+      val request = goalId match {
+        case "S3" => new MockRequest("/mockdata/s23parentreply.json")
+        case "S2" => new MockRequest("/mockdata/s23parentreply.json")
+        case "S1" => new MockRequest("/mockdata/s1parentreply.json")
+      }
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val proofTasksPathAll = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pathall") { (userId, proofId, nodeId, goalId) => { pathEnd {
+    get {
+      val request = goalId match {
+        case "S3" => new MockRequest("/mockdata/s23pathallreply.json")
+        case "S2" => new MockRequest("/mockdata/s23pathallreply.json")
+      }
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val axiomList = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, goalId, formulaId) => { pathEnd {
+    get {
+      val request = formulaId match {
+        case "F2s0" => new MockRequest("/mockdata/andaxiomlist.json")
+        case "F2s1" => new MockRequest("/mockdata/ltaxiomlist.json")
+      }
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val useAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "use" / Segment) { (userId, proofId, nodeId, goalId, formulaId, axiomId) => { pathEnd {
+    get {
+      val request = (formulaId, axiomId) match {
+        case ("F2s0", "and true") => new MockRequest("/mockdata/andtrueresult.json")
+        case ("F2s0", "step") => new MockRequest("/mockdata/andtrueresult.json")
+      }
+      complete(standardCompletion(request))
+    }
+  }}}
+
   val proofTask = path("proofs" / "user" / Segment / Segment / "agendaDetails" / Segment.?) { (userId, proofId, nodeId) => { pathEnd {
     get {
       val request = new GetProofNodeInfoRequest(database, userId, proofId, nodeId)
@@ -464,10 +512,14 @@ trait RestApi extends HttpService {
     proofList             ::
     openProof             ::
     proofLoadStatus       ::
-    changeProofName        ::
+    changeProofName       ::
     proofProgressStatus   ::
     proofCheckIsProved    ::
-    proofTasks            ::
+    proofTasksNew         ::
+    proofTasksParent      ::
+    proofTasksPathAll     ::
+    axiomList             ::
+    useAt                 ::
     proofTask             ::
     nodeFormulaTactics    ::
     nodeRunTactics        ::

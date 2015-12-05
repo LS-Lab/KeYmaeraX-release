@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "id": "http://keymaerax.org/schemas/opentasksreply.json",
+  "title": "openTasks",
+  "description": "Open tasks of a proof",
+  "definitions": {
+    "agendaItem": {
+      "id": "http://keymaerax.org/schemas/opentasksreply.json#agendaItem",
+      "description": "An item in the agenda list",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identifies the agenda item"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name of the agenda item"
+        },
+        "proofId": {
+          "type": "string",
+          "description": "Refers to the proof"
+        },
+        "path": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "description": "References a node in the proof tree"
+          }
+        }
+      },
+      "required": ["id", "name", "proofId", "path"]
+    }
+  },
+  "type": "object",
+  "properties": {
+      "id": {
+        "type": "string",
+        "description": "Uniquely identifies the proof"
+      },
+      "proofTree": {
+        "type": "object",
+        "description": "The proof tree template (only leaves and root)",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identifies the proof"
+          },
+          "nodes": {
+            "type": "object",
+            "description": "A map of proof tree node IDs to proof tree nodes, i.e., Map[string, prooftreenode], see prooftreenode=parentreply.json"
+          },
+          "root": {
+            "type": "string",
+            "description": "References the root node of the tree (ID)"
+          }
+        },
+        "required": ["id", "nodes", "root"]
+      },
+      "agendaItems": {
+        "type": "object",
+        "description": "A map of agenda item IDs to agenda items, i.e., Map[string, agendaItem], see definition agendaItem above"
+      }
+    },
+    "required" : ["id", "proofTree", "agendaItems"]
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "id": "http://keymaerax.org/schemas/pathallreply.json",
+  "title": "pathallreply",
+  "description": "The proof steps on the path of a goal to the proof tree root",
+  "type": "object",
+  "properties": {
+    "numParentsUntilComplete": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "How many more parents to fetch until the path is complete; 0 means that this document transmits the entire path."
+    },
+    "path": {
+      "type": "array",
+      "description": "The path of parents towards the root (first element = direct parent, last element = root)"
+      "items": {
+        "type": "object",
+        "description": "See parentreply.json (TODO: cross-reference schema)"
+      }
+    }
+  },
+  "required": ["numParentsUntilComplete", "path"]
+}

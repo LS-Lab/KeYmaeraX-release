@@ -3,16 +3,19 @@ angular.module('sequent', ['ngSanitize','formula'])
     return {
         restrict: 'AE',
         scope: {
+            userId: '=',
             proofId: '=',
             nodeId: '=',
+            goalId: '=',
             sequent: '=',
             readOnly: '=?',
-            collapsed: '=?'
+            collapsed: '=?',
+            onUseAt: '&'
         },
-        controller: function($scope, $sce, $modal, $http, $cookies, Agenda, Tactics) {
+        link: function($scope, $sce, $uibModal, $http, $cookies, Tactics) {
             // TODO should issue events other controllers can subscribe to
             $scope.handleFormulaClick = function(f,isAnte) {
-                var modalInstance = $modal.open({
+                var modalInstance = $uibModal.open({
                   templateUrl: 'partials/proofruledialog.html',
                   controller: 'ProofRuleDialogCtrl',
                   size: 'lg',
@@ -29,7 +32,7 @@ angular.module('sequent', ['ngSanitize','formula'])
                 $scope.applyTacticsOnFormulaByName('sequent', tName)
             }
             $scope.applyTacticsOnFormulaByName = function(formula, tName) {
-                var uri = 'proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/nodes/' + $scope.nodeId
+                var uri = 'proofs/user/' + $cookies.get('userId') + '/' + $scope.proofId + '/nodes/' + $scope.nodeId
                         + '/formulas/' + formula + '/tactics'
                 $http.post(uri + "/runByName/" + tName)
                         .success(function(data) {
@@ -40,7 +43,7 @@ angular.module('sequent', ['ngSanitize','formula'])
             }
 
             $scope.getCounterExample = function() {
-                $modal.open({
+                $uibModal.open({
                     templateUrl: 'partials/counterExample.html',
                     controller: 'counterExampleCtrl',
                     size: 'lg',
@@ -52,7 +55,7 @@ angular.module('sequent', ['ngSanitize','formula'])
             }
 
             $scope.handleTurnstileClick = function() {
-                var modalInstance = $modal.open({
+                var modalInstance = $uibModal.open({
                   templateUrl: 'partials/proofruledialog.html',
                   controller: 'ProofRuleDialogCtrl',
                   size: 'lg',
@@ -65,9 +68,7 @@ angular.module('sequent', ['ngSanitize','formula'])
                 });
             }
 
-            $scope.$watch('selectedTask',
-                function () { return Agenda.getSelectedTask(); }
-            );
+            $scope.onAxiom = function(formulaId, axiomId) { $scope.onUseAt({formulaId: formulaId, axiomId: axiomId}); }
         },
         templateUrl: 'partials/collapsiblesequent.html'
     };

@@ -306,7 +306,7 @@ A secondary goal of KeYmaera X is to also make it possible to implement extensio
 
 8. André Platzer. 
 [Differential game logic](http://arxiv.org/abs/1408.1980). 
-ACM Trans. Comput. Log.
+ACM Trans. Comput. Log., 17(1), 2015.
 [arXiv:1408.1980](http://arxiv.org/abs/1408.1980)
 
 9. André Platzer.

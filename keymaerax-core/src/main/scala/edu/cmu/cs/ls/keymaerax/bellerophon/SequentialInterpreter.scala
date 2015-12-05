@@ -4,8 +4,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.RenUSubst
 import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
 import edu.cmu.cs.ls.keymaerax.btactics.{UnificationException, UnificationMatch}
 
-import scala.annotation.tailrec
-
 /**
  * Sequential interpreter for BelleExprs
  * @param listeners Pre- and pos-processing hooks for step-wise tactic execution.
@@ -13,25 +11,24 @@ import scala.annotation.tailrec
  */
 case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends Interpreter {
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
-    listeners.map(_.begin(v, expr))
+    listeners.foreach(_.begin(v, expr))
 
     val result = expr match {
       case builtIn : BuiltInTactic => v match {
-        case BelleProvable(pr) => try { BelleProvable(builtIn.result(pr)) } catch { case e: BelleError => throw e.inContext(builtIn.name, pr.prettyString) }
-        case _ => throw BelleError(s"Attempted to apply a built-in tactic to a non-Provable value: ${v.getClass.getName}")
+        case BelleProvable(pr) => try { BelleProvable(builtIn.execute(pr)) } catch { case e: BelleError => throw e.inContext(BelleDot, pr.prettyString) }
+        case _ => throw new BelleError(s"Attempted to apply a built-in tactic to a non-Provable value: ${v.getClass.getName}").inContext(BelleDot, "")
       }
       case BuiltInPositionTactic(_) | BuiltInLeftTactic(_) | BuiltInRightTactic(_) | BuiltInTwoPositionTactic(_) | DependentPositionTactic(_) =>
-        throw BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.")
-      case AppliedPositionTactic(positionTactic, pos) => v match {
-        case BelleProvable(pr) => try { BelleProvable(positionTactic.computeResult(pr, pos)) } catch { case e: BelleError => throw e.inContext(positionTactic + " at " + pos, pr.prettyString) }
+        throw new BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.").inContext(expr, "")
+      case positionTactic@AppliedPositionTactic(_, pos) => v match {
+        case BelleProvable(pr) => try { BelleProvable(positionTactic.computeResult(pr)) } catch { case e: BelleError => throw e.inContext(positionTactic, pr.prettyString) }
       }
-      case AppliedTwoPositionTactic(positionTactic, posOne, posTwo) => v match {
-        case BelleProvable(pr) => try { BelleProvable(positionTactic.computeResult(pr, posOne, posTwo)) } catch { case e: BelleError => throw e.inContext(positionTactic + " at (" + posOne + ", " + posTwo + ")", pr.prettyString) }
+      case positionTactic@AppliedTwoPositionTactic(_, posOne, posTwo) => v match {
+        case BelleProvable(pr) => try { BelleProvable(positionTactic.computeResult(pr)) } catch { case e: BelleError => throw e.inContext(positionTactic, pr.prettyString) }
       }
-      case SeqTactic(left, right) => {
-        val leftResult = try { apply(left, v) } catch {case e: BelleError => throw e.inContext(e.context & right)}
-        try { apply(right, leftResult) } catch {case e: BelleError => throw e.inContext(left & e.context)}
-      }
+      case SeqTactic(left, right, location) =>
+        val leftResult = try { apply(left, v) } catch {case e: BelleError => throw e.inContext(SeqTactic(e.context, right, location), "Failed left-hand side of &: " + left)}
+        try { apply(right, leftResult) } catch {case e: BelleError => throw e.inContext(SeqTactic(left, e.context, location), "Failed right-hand side of &: " + right)}
       case d : DependentTactic => try {
         val valueDependentTactic = d.computeExpr(v)
         apply(valueDependentTactic, v)
@@ -39,48 +36,55 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       case e : InputTactic[_] => try {
         apply(e.computeExpr(), v)
       } catch { case e: BelleError => throw e.inContext(e.toString, v.prettyString) }
-      case PartialTactic(child) => try { apply(child, v) } catch {case e: BelleError => throw e.inContext(PartialTactic(e.context)) }
-      case EitherTactic(left, right) => {
-        try {
+      case PartialTactic(child) => try { apply(child, v) } catch {case e: BelleError => throw e.inContext(PartialTactic(e.context), "Failed partial child: " + child) }
+      case EitherTactic(left, right, location) => try {
           val leftResult = apply(left, v)
           (leftResult, left) match {
-            case (_, x:PartialTactic) => leftResult
-            case (BelleProvable(p), _) if(p.isProved) => leftResult
-            case _ => throw BelleError("Non-partials must close proof.").inContext(BelleDot | right)
+            case (BelleProvable(p), _) if p.isProved => leftResult
+            case (_, x: PartialTactic) => leftResult
+            case _ => throw new BelleError("Non-partials must close proof.").inContext(EitherTactic(BelleDot, right, location), "Failed left-hand side of |:" + left)
           }
-        }
-        catch {
+        } catch {
           //@todo catch a little less. Just catching proper tactic exceptions, maybe some ProverExceptions et al., not swallow everything
-          case eleft: BelleError => {
-            val rightResult = try { apply(right, v) } catch {case e: BelleError => throw new CompoundException(eleft, e).inContext(left & e.context)}
+          case eleft: BelleError =>
+            val rightResult = try { apply(right, v) } catch {case e: BelleError => throw e.inContext(EitherTactic(eleft.context, e.context, location), "Failed: both left-hand side and right-hand side " + expr)}
             (rightResult, right) match {
               case (_, x:PartialTactic) => rightResult
-              case (BelleProvable(p), _) if(p.isProved) => rightResult
-              case _ => throw BelleError("Non-partials must close proof.").inContext(left | BelleDot)
+              case (BelleProvable(p), _) if p.isProved => rightResult
+              case _ => throw new BelleError("Non-partials must close proof.").inContext(EitherTactic(left, BelleDot, location), "Failed right-hand side of |: " + right)
             }
-            //@todo throw compound exception if neither worked
-          }
         }
+      case SaturateTactic(child, annotation, location) =>
+        var prev: BelleValue = null
+        var result: BelleValue = v
+        var rep = 1
+        do {
+          prev = result
+          //@todo effect on listeners etc.
+          try { result = apply(child, result) } catch {case e: BelleError => throw e.inContext(SaturateTactic(e.context, annotation, location), "Failed * saturation on repetition " + rep + ": " + child)}
+          rep += 1
+        } while (result != prev)
+        result
+      case RepeatTactic(child, times, annotation, location) => try {
+        var result = v
+        for (i <- 1 to times) try { result = apply(child, result) } catch {case e: BelleError => throw e.inContext(RepeatTactic(e.context, times, annotation, location), "Failed on repetition " + i + " of " + times + ": " + child)}
+        result
       }
-      case x: SaturateTactic => try { tailrecSaturate(x, v) } catch {case e: BelleError => throw e.inContext(SaturateTactic(e.context, x.annotation))}
-      case BranchTactic(children) => v match {
-        case BelleProvable(p) => {
+      case BranchTactic(children, location) => v match {
+        case BelleProvable(p) =>
           if(children.length != p.subgoals.length)
-            throw BelleError("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length)
-          //@todo .inContext(e)
-
+            throw new BelleError("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(expr, "")
           //Compute the results of piecewise applications of children to provable subgoals.
           val results : Seq[Provable] =
             (children zip p.subgoals) map (pair => {
               val e_i = pair._1
               val s_i = pair._2
-              //@todo try catch and build up the remaining branching context where the problem wasn't
-              val ithResult =  apply(e_i, bval(s_i))
+              val ithResult =  try { apply(e_i, bval(s_i)) } catch {case e: BelleError => throw e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context), location), "Failed on branch " + e_i)}
               ithResult match {
                 case BelleProvable(resultingProvable) =>
                   if(resultingProvable.isProved || e_i.isInstanceOf[PartialTactic]) resultingProvable
-                  else throw BelleError("Every branching tactic must close its associated goal or else be annotated as a PartialTactic")
-                case _ => throw BelleError("Each piecewise application in a Branching tactic should result in a provable.")
+                  else throw new BelleError("Every branching tactic must close its associated goal or else be annotated as a PartialTactic").inContext(expr, "")
+                case _ => throw new BelleError("Each piecewise application in a Branching tactic should result in a provable.").inContext(expr, "")
               }
             })
 
@@ -92,25 +96,23 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
               replaceConclusion(op._1, op._2, subderivation)
             })
           BelleProvable(combinedEffect._1)
+        case _ => throw new BelleError("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(expr, "")
         }
-        case _ => throw BelleError("Cannot perform branching on a goal that is not a BelleValue of type Provable.")
-      }
-      case DoAll(e) => {
+      case DoAll(e, location) =>
         val provable = v match {
           case BelleProvable(p) => p
-          case _ => throw BelleError("Cannot attempt DoAll with a non-Provable value.")
+          case _ => throw new BelleError("Cannot attempt DoAll with a non-Provable value.").inContext(expr, "")
         }
         //@todo actually it would be nice to throw without wrapping inside an extra BranchTactic context
-        try { apply(BranchTactic(Seq.tabulate(provable.subgoals.length)(_ => e)), v) } catch {case e: BelleError => throw e.inContext(DoAll(e.context)) }
-      }
-      case USubstPatternTactic(children) => {
+        try { apply(BranchTactic(Seq.tabulate(provable.subgoals.length)(_ => e), location), v) } catch {case e: BelleError => throw e.inContext(DoAll(e.context, location), "") }
+      case t@USubstPatternTactic(children, location) => {
         val provable = v match {
           case BelleProvable(p) => p
-          case _ => throw BelleError("Cannot attempt US unification with a non-Provable value.")
+          case _ => throw new BelleError("Cannot attempt US unification with a non-Provable value.").inContext(expr, "")
         }
 
         if(provable.subgoals.length != 1)
-          throw BelleError("Unification of multi-sequent patterns is not currently supported.")
+          throw new BelleError("Unification of multi-sequent patterns is not currently supported.").inContext(expr, "")
 
         //@todo loop through all using the first one whose unificatoin and tactic application ends up being successful as opposed to committing to first unifiable case.
         //Attempt to find a child that unifies with the input.
@@ -124,11 +126,11 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
               // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
               case e: UnificationException => None
             }
-            case _ => throw BelleError("Cannot unify non-sequent types.")
+            case _ => throw new BelleError("Cannot unify non-sequent types.").inContext(t, "")
           }
           })
           .filter(_.isDefined).map(_.get)
-          .headOption.getOrElse(throw BelleError("USubst Pattern Incomplete -- could not find a unifier for any option"))
+          .headOption.getOrElse(throw new BelleError("USubst Pattern Incomplete -- could not find a unifier for any option").inContext(t, ""))
 
         apply(unification._2(unification._1.asInstanceOf[RenUSubst]), v)
       }
@@ -136,14 +138,6 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
 
     listeners.foreach(l => l.end(v, expr, result))
     result
-  }
-
-  @tailrec
-  private def tailrecSaturate(e : SaturateTactic, v: BelleValue): BelleValue = {
-    //@todo effect on listeners etc.
-    val step = apply(e.child, v)
-    if(step == v) v
-    else tailrecSaturate(e, step)
   }
 
   /** Maps sequents to BelleProvables. */
@@ -160,9 +154,9 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
    * @todo result is undefined. Subderivation rather
    */
   private def replaceConclusion(original: Provable, n: Int, subderivation: Provable): (Provable, Int) = {
-    assert(original.subgoals.length > n, s"${n} is a bad index for Provable with ${original.subgoals.length} subgoals: ${original}")
+    assert(original.subgoals.length > n, s"$n is a bad index for Provable with ${original.subgoals.length} subgoals: $original")
     if(original.subgoals(n) != subderivation.conclusion)
-      throw BelleError(s"Subgoal #${n} of the original provable (${original.subgoals(n)}}) should be equal to the conclusion of the subderivation (${subderivation.conclusion}})")
+      throw new BelleError(s"Subgoal #$n of the original provable (${original.subgoals(n)}}) should be equal to the conclusion of the subderivation (${subderivation.conclusion}})")
     val newProvable = original(subderivation, n)
     val nextIdx = if(subderivation.isProved) n else n + 1
     (newProvable, nextIdx)

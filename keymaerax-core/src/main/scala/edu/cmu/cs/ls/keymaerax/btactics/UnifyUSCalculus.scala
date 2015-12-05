@@ -32,7 +32,7 @@ trait UnifyUSCalculus {
    * Throw exception if there is more than one open subgoal on the provable.
    */
   private def requireOneSubgoal(provable: Provable) =
-    if(provable.subgoals.length != 1) throw BelleError("Expected exactly one sequent in Provable")
+    if(provable.subgoals.length != 1) throw new BelleError("Expected exactly one sequent in Provable")
 
   type Subst = UnificationMatch.Subst
 
@@ -1131,6 +1131,7 @@ trait UnifyUSCalculus {
    * ----------------
    *   G, a |- b, D
    * }}}
+    * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008. Lemma 7"
    */
   private def inverseImplyR: ForwardTactic = pr => {
     val pos = SuccPos(0)

@@ -1,0 +1,13 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Development Tools -- these can be removed before release.
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+angular.module('keymaerax.controllers').controller('DevCtrl',
+  function ($scope, $http, $cookies, $routeParams) {
+    $scope.deletedb = function() {
+        $http.get("/dev/deletedb")
+            .success(function(data) {
+                alert("Database cleared.")
+            })
+    }
+});

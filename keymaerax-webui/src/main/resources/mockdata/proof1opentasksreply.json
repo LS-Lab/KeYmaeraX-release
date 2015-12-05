@@ -1,0 +1,85 @@
+{
+  "proofTree": {
+    "id": "P1",
+    "nodes": {
+      "S0": {
+        "id": "S0",
+        "sequent": {
+          "ante": [],
+          "succ": [
+            {
+              "id": "F0s",
+              "formula": {
+                "name": "imply",
+                "id": "F0s0",
+                "children": [
+                  { "name": "lt", "id": "F0s1", "children": [ {"name": "z", "id": "F0s2"}, {"name": "1", "id": "F0s3"} ] },
+                  {
+                    "name": "and", "id": "F0s4",
+                    "children": [
+                      {
+                        "name": "and", "id": "F0s5",
+                        "children": [
+                          { "name": "lt", "id": "F0s6", "children": [ {"name": "x", "id": "F0s7"}, {"name": "5", "id": "F0s8"} ] },
+                          { "name": "true", "id": "F0s9" }
+                        ]
+                      },
+                      { "name": "gt", "id": "F0s10", "children": [ {"name": "2", "id": "F0s11"}, {"name": "y", "id": "F0s12"} ] }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "children": null,
+        "parent": "S0"
+      },
+      "S2": {
+        "id": "S2",
+        "sequent": {
+          "ante": [ {"id": "F2a", "formula": { "name": "lt", "id": "F2a0", "children": [ {"name": "z", "id": "F2a1"}, {"name": "1", "id": "F2a2"} ] }} ],
+          "succ": [
+            {
+              "id": "F2s",
+              "formula": {
+                "name": "and",
+                "id": "F2s0",
+                "children": [
+                  { "name": "lt", "id": "F2s1", "children": [ {"name": "x", "id": "F2s2"}, {"name": "5", "id": "F2s3"} ] },
+                  { "name": "true", "id": "F2s4" }
+                ]
+              }
+            }
+          ]
+        },
+        "children": [],
+        "parent": null
+      },
+      "S3": {
+        "id": "S3",
+        "sequent": {
+          "ante": [ {"id": "F3a", "formula": { "name": "lt", "id": "F3a0", "children": [ {"name": "z", "id": "F3a1"}, {"name": "1", "id": "F3a2"} ] }} ],
+          "succ": [ { "id": "F3", "formula": { "name": "gt", "id": "F3s0", "children": [ {"name": "2", "id": "F3s1"}, {"name": "y", "id": "F3s2"} ] } } ]
+        },
+        "children": [],
+        "parent": null
+      }
+    },
+    "root": "S0"
+  },
+  "agendaItems": {
+    "N1": {
+      "id": "N1",
+      "name": "base case",
+      "proofId": "P1",
+      "path": ["S2"]
+    },
+    "N2": {
+      "id": "N2",
+      "name": "whatever",
+      "proofId": "P1",
+      "path": ["S3"]
+    }
+  }
+}

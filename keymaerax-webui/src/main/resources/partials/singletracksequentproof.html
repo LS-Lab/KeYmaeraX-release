@@ -1,58 +1,66 @@
-<!-- TODO: directive to generate all that -->
-<!--<div class="row k4-proofrow">-->
-    <!--<div class="col-md-1 text-center">-->
-        <!--<a><small class="k4-nowrap">Goal 2</small></a>-->
-    <!--</div>-->
-    <!--<div class="col-md-10">-->
-        <!--<div class="row k4-proofrow">-->
-            <!--&lt;!&ndash; nodeId, sequent, readOnly, collapsed must come from proofrow &ndash;&gt;-->
-            <!--<div class="col-md-12">-->
-                <!--<k4-sequent proof-id="proofId" node-id="nodeId" sequent="sequent"-->
-                            <!--read-only="readOnly" collapsed="false"></k4-sequent>-->
-            <!--</div>-->
-            <!--<ul>-->
-                <!--<li>andL&lt;!&ndash; {{proofrow.tactic}} &ndash;&gt;</li>-->
-            <!--</ul>-->
-        <!--</div>-->
-        <!--&lt;!&ndash; final row above outer row &ndash;&gt;-->
-        <!--<div class="row">-->
-            <!--<div class="col-md-12 k4-nowrap">-->
-                <!--<k4-sequent proof-id="proofId" node-id="nodeId" sequent="sequent"-->
-                            <!--read-only="readOnly" collapsed="true"></k4-sequent>-->
-            <!--</div>-->
-        <!--</div>-->
-    <!--</div>-->
-    <!--<div class="col-md-1 text-center">-->
-            <!--<a><small class="k4-nowrap">Goal 3</small></a>-->
-    <!--</div>-->
-    <!--<ul>-->
-        <!--<li>I</li>-->
-    <!--</ul>-->
-<!--</div>-->
-<!--<div class="row k4-proofrow">-->
-    <!--&lt;!&ndash; nodeId, sequent, readOnly, collapsed must come from proofrow &ndash;&gt;-->
-    <!--<div class="col-md-12 k4-nowrap">-->
-        <!--<k4-sequent proof-id="proofId" node-id="nodeId" sequent="sequent"-->
-                    <!--read-only="readOnly" collapsed="true"></k4-sequent>-->
-    <!--</div>-->
-    <!--<ul>-->
-        <!--<li>implyR</li>-->
-    <!--</ul>-->
-<!--</div>-->
-<!-- bottom-most proof row is not derived from anything -->
-<div class="row">
-    <!-- nodeId, sequent, readOnly, collapsed must come from proofrow -->
-    <div class="col-md-12 k4-nowrap">
-        <k4-sequent proof-id="proofId" node-id="nodeId" sequent="sequent"
-                    read-only="readOnly" collapsed="false"></k4-sequent>
+<!-- Open Goal -->
+<div class="row k4-proofrow-first">
+    <div class="col-md-12">
+        <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
+        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath[0].id"
+                    sequent="proofTree.nodesMap[deductionPath[0].id].sequent"
+                    read-only="readOnly" collapsed="false" on-use-at="onUseAt(formulaId, axiomId)"></k4-sequent>
     </div>
 </div>
-<div class="row">
-    <div class="col-md-12 text-center">
-        <small>
-        <a><span class="fa fa-angle-down"></span></a>
-        <a><span class="fa fa-code-fork"></span></a>
-        <a><span class="fa fa-angle-double-down"></span></a>
-        </small>
+<!-- Conclusion -->
+<div uib-collapse="isConclusionCollapsed($index)" class="row k4-proofrow" ng-repeat="step in deductionPath.slice(1)">
+    <div class="col-md-12 k4-goalwithsiblings">
+        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath[0].id"
+                    sequent="proofTree.nodesMap[step.id].sequent"
+                    read-only="true" collapsed="true" on-use-at="onUseAt(formulaId, axiomId)"></k4-sequent>
+        <ul>
+            <li ng-repeat="sibling in siblingCandidates(proofTree.nodesMap[step.id].children)">
+                <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
+                <!-- todo HTML tooltip would be nice, but couldn't get to work so far -->
+                <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
+                   uib-tooltip="{{tooltip(proofTree.nodesMap[sibling].sequent)}}"
+                   tooltip-placement="top">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
+            </li>
+        </ul>
     </div>
+    <ul>
+        <li >
+            <span>
+                <!-- Show collapse button on first element -->
+                <a ng-if="!conclusionIsCollapsed($index)" ng-click="setConclusionCollapsed($index, true)"><span class="fa fa-minus-square-o"></span></a>
+                <span uib-tooltip="{{proofTree.nodesMap[step.id].rule.name}}" tooltip-placement="right">{{proofTree.nodesMap[step.id].rule.name}}</span>
+            </span>
+        </li>
+    </ul>
+    <!-- add buttons: rewind to here, start alternative proof attempt etc. -->
 </div>
+<!-- button to uncollapse collapsed conclusions -->
+<div class="row k4-proofrow" ng-if="minCollapsedIndex() < deductionPath.length-1">
+    <ul>
+        <li>
+            <a ng-click="setConclusionCollapsed(minCollapsedIndex(), false)"><span class="fa fa-plus-square-o"></span></a>
+        </li>
+    </ul>
+</div>
+<!-- navigation buttons to fetch parents -->
+<div class="row k4-proofrow" ng-if="deductionPath[deductionPath.length-1].id !== proofTree.root">
+    <ul>
+        <li>
+            <a ng-click="fetchParent(deductionPath[deductionPath.length-1].id)"
+               ng-right-click="fetchParentRightClick($event)"
+               uib-popover-template="'navigateTowardsRootPopoverHtml'" popover-title="Proof history"
+               popover-placement="bottom" popover-trigger="contextmenu" tabindex="-1">
+                <span class="fa fa-plus-square-o"></span>
+            </a>
+        </li>
+    </ul>
+</div>
+<script type="text/ng-template" id="navigateTowardsRootPopoverHtml">
+    <div>
+        <a ng-click="fetchBranchRoot"><span class="fa fa-code-fork"> Show branch root</span></a>
+        <a ng-click="fetchTreeRoot"><span class="fa fa-angle-down"> Show tree root</span></a>
+        <a ng-click="fetchPathAll(deductionPath[deductionPath.length-1].id)">
+            <span class="fa fa-angle-double-down"> Expand all</span>
+        </a>
+    </div>
+</script>

@@ -1,26 +1,39 @@
-angular.module('formula', ['ngSanitize'])
-  .directive('k4Formula', function() {
+angular.module('formula', ['ngSanitize']);
+
+/** Renders a formula into hierarchically structured spans */
+angular.module('formula')
+  .directive('k4Formula', ['$compile', '$http', function($compile, $http) {
     return {
         restrict: 'AE',
         scope: {
+            userId: '=',
+            proofId: '=',
+            nodeId: '=',
+            goalId: '=',
             formula: '=',
             highlight: '=',
-            collapsed: '=?'
+            collapsed: '=?',
+            onAxiom: '&'     // onAxiom(formulaId, axiomId)
         },
-        controller: function($scope, $sce) {
-            function span(id, content) {
+        link: function($scope, $sce) {
+            var span = function(id, content, depth) {
                 if ($scope.highlight) {
-                    return '<span xmlns="http://www.w3.org/1999/xhtml"' +
+                    return '<span class="hl" id="' + id + '"' +
                              'onmouseover="$(event.target).addClass(\'hlhover\');"' +
                              'onmouseout="$(event.target).removeClass(\'hlhover\');"' +
-                             'class="hl" id="' + id + '">' + content + '</span>';
+                             'ng-click="formulaClick(\'' + id + '\', $event)"' +
+                             'ng-right-click="formulaRightClick(\'' + id + '\', $event)"' +
+                             // initialize formulaId for popover template, use ng-repeat for scoping
+                             'ng-repeat="formulaId in [\'' + id + '\']"' +
+                             'uib-popover-template="\'js/keymaera-ui/axiomPopoverTemplate.html\'"' +
+                             'popover-title="Apply axiom"' +
+                             'popover-trigger="contextmenu" popover-placement="bottom" tabindex="-1">' + content + '</span>';
                 } else {
                     return content;
                 }
             }
 
-
-            function needsParens(parent, child) {
+            var needsParens = function(parent, child) {
                 var precedence =
                   [
                   //Terms.
@@ -79,7 +92,7 @@ angular.module('formula', ['ngSanitize'])
                 return childPrecedence > parentPrecedence;
             }
 
-            function parensIfNeeded(parent, child, depth, collapsed) {
+            var parensIfNeeded = function(parent, child, depth, collapsed) {
                 var parens = [ "(", ")" ]
 //                  if(child.isInstanceOf[Program]) ["{","}"]
 //                  else ["(",")"]
@@ -92,7 +105,7 @@ angular.module('formula', ['ngSanitize'])
               }
 
             // Recursively generate sequent HTML
-            function parseFormulaHelper(json, depth, collapsed) {
+            var parseFormulaHelper = function(json, depth, collapsed) {
                 var items = [];
                 if (json.hasOwnProperty("children") && $.isArray(json.children)) {
                     var c = json.children;
@@ -338,18 +351,47 @@ angular.module('formula', ['ngSanitize'])
                             content = json.name + "(" + seqs.join(", ") + ")";
                             break;
                     }
-                    items.push(span(json.id, content));
+                    items.push(span(json.id, content, depth));
                 } else {
-                    items.push(json.name);
+                    items.push(span(json.id, json.name, depth));
                 }
                 return items.join("");
             }
 
-            $scope.parseFormula = function(json, collapsed) {
-                return $sce.trustAsHtml(parseFormulaHelper(json, 0, collapsed));
-            };
-        },
-        template: '<span ng-if="highlight" ng-bind-html="parseFormula(formula)"></span>' +
-                  '<div ng-if="!highlight" class="k4-abbreviate" ng-bind-html="parseFormula(formula, collapsed)"></div>'
+            $scope.formulaAxiomsMap = {};
+
+            $scope.formulaClick = function(formulaId, event) {
+              // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
+              event.stopPropagation();
+              $scope.onAxiom({formulaId: formulaId, axiomId: "step"});
+            }
+
+            $scope.formulaRightClick = function(formulaId, event) {
+              event.stopPropagation();
+              // emulate hoverable popover (to come in later ui-bootstrap version) with hide on blur (need to focus for blur)
+              event.target.focus();
+              if ($scope.formulaAxiomsMap[formulaId] === undefined) {
+                // axioms not fetched yet
+                $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.nodeId + '/' + $scope.goalId + '/' + formulaId + '/list')
+                  .success(function(data) {
+                    $scope.formulaAxiomsMap[formulaId] = data;
+                });
+              } else {
+                console.log("Supplying axioms for " + formulaId + " from local cache: " + $scope.formulaAxiomsMap[formulaId].length)
+              }
+            }
+
+            $scope.applyAxiom = function(formulaId, axiomId) {
+              console.log("Applying axiom " + axiomId + " on formula " + formulaId);
+              $scope.onAxiom({formulaId: formulaId, axiomId: axiomId});
+            }
+
+            var fmlMarkup = parseFormulaHelper($scope.formula, 0, $scope.collapsed);
+            var template =
+              '<span ng-if="!collapsed">' + fmlMarkup + '</span>' +
+              '<span ng-if="collapsed" class="k4-abbreviate">' + fmlMarkup + '</span>';
+            // compile template, bind to scope, and add into DOM
+            $sce.append($compile(template)($scope));
+        }
     };
-  });
+  }]);
