@@ -35,7 +35,7 @@ abstract case class BuiltInTactic(name: String) extends BelleExpr {
   private[bellerophon] def result(provable : Provable): Provable
   override def prettyString = name
 }
-case class NamedTactic(name: String, tactic: BelleExpr) extends BelleExpr
+case class NamedTactic(name: String, tactic: BelleExpr) extends BelleExpr { override def prettyString = name }
 
 /** ⎵: Placeholder for tactics. Reserved tactic expression */
 object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
