@@ -54,6 +54,11 @@ table .btn{
   color: #e1edf7;
 }
 
+/* do not change appearance when focused for the sake of a context menu */
+.k4-withcontextmenu:focus {
+  outline: none;
+}
+
 .k4-carousel-caption {
   position: absolute;
   right: 0%;

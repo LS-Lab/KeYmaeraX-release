@@ -26,17 +26,13 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         // nothing to do here, already have tree root
       }
 
-      scope.fetchPathAll = function(goalId) {
-        // TODO adapt to sections
-        var item = scope.agenda.itemsMap[scope.nodeId];
-        if (item.path[item.path.length-1].id !== scope.proofTree.root) {
-          $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/pathall').success(function(data) {
+      scope.fetchPathAll = function(section) {
+        var sectionEnd = section.path[section.path.length-1]
+        if (sectionEnd !== scope.proofTree.root) {
+          $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + sectionEnd + '/pathall').success(function(data) {
             // TODO use numParentsUntilComplete to display some information
-            $.each(data.path, function(i, ptnode) { ptnode.isCollapsed = false; });
             $.each(data.path, function(i, ptnode) { addProofTreeNode(ptnode); });
           });
-        } else {
-          $.each(item.path, function(i, v) { v.isCollapsed = false; });
         }
       }
 

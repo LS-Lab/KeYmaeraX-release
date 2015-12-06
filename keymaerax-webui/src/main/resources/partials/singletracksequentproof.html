@@ -108,9 +108,13 @@
         <ul>
             <li>
                 <span>
-                <a ng-click="fetchSectionParent(deductionPath.sections[outerIdx])"
+                <a class="k4-withcontextmenu"
+                   ng-click="fetchSectionParent(deductionPath.sections[outerIdx])"
                    uib-tooltip="Fetch parent step"
                    tooltip-popup-delay="1000"
+                   ng-right-click="fetchParentRightClick($event)" tabindex="-1"
+                   uib-popover-template="'navigateTowardsRootPopover.html'"
+                   popover-title="Proof history" popover-placement="bottom" popover-trigger="contextmenu"
                    ng-if="!section.isComplete && !section.isCollapsed"><span class="fa fa-plus-square-o"></span></a>
                 <!-- Full collapse if the first section is collapsed -->
                 <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
@@ -153,7 +157,7 @@
     <div class="k4-nobreak">
         <a ng-click="fetchBranchRoot"><span class="fa fa-code-fork"> Show branch root</span></a><br/>
         <a ng-click="fetchTreeRoot"><span class="fa fa-angle-down"> Show tree root</span></a><br/>
-        <a ng-click="fetchPathAll(deductionPath[deductionPath.length-1].id)">
+        <a ng-click="fetchPathAll(deductionPath.sections[outerIdx])">
             <span class="fa fa-angle-double-down"> Expand all</span>
         </a>
     </div>

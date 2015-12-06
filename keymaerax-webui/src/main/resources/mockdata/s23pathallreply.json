@@ -26,7 +26,7 @@
       },
       "children": [ "S2", "S3" ],
       "rule": { "id": "R1", "name": "andR" },
-      "parent": "S1"
+      "parent": "S0"
     },
     {
       "id": "S0",
@@ -60,7 +60,75 @@
       },
       "children": [ "S1" ],
       "rule": { "id": "R2", "name": "implyR" },
-      "parent": "S0"
+      "parent": "S-1"
+    },
+    {
+      "id": "S-1",
+      "sequent": {
+        "ante": [],
+        "succ": [
+          {
+            "id": "F-1s",
+            "formula": {
+              "name": "imply",
+              "id": "F-1s0",
+              "children": [
+                { "name": "lt", "id": "F-1s1", "children": [ {"name": "z", "id": "F-1s2"}, {"name": "1", "id": "F-1s3"} ] },
+                {
+                  "name": "and", "id": "F-1s4",
+                  "children": [
+                    {
+                      "name": "and", "id": "F-1s5",
+                      "children": [
+                        { "name": "lt", "id": "F-1s6", "children": [ {"name": "x", "id": "F-1s7"}, {"name": "5", "id": "F-1s8"} ] },
+                        { "name": "true", "id": "F-1s9" }
+                      ]
+                    },
+                    { "name": "gt", "id": "F-1s10", "children": [ {"name": "2", "id": "F-1s11"}, {"name": "y", "id": "F-1s12"} ] }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "children": [ "S0" ],
+      "rule": { "id": "R0", "name": "skip" },
+      "parent": "S-2"
+    },
+    {
+      "id": "S-2",
+      "sequent": {
+        "ante": [],
+        "succ": [
+          {
+            "id": "F-2s",
+            "formula": {
+              "name": "imply",
+              "id": "F-2s0",
+              "children": [
+                { "name": "lt", "id": "F-2s1", "children": [ {"name": "z", "id": "F-2s2"}, {"name": "1", "id": "F-2s3"} ] },
+                {
+                  "name": "and", "id": "F-2s4",
+                  "children": [
+                    {
+                      "name": "and", "id": "F-2s5",
+                      "children": [
+                        { "name": "lt", "id": "F-2s6", "children": [ {"name": "x", "id": "F-2s7"}, {"name": "5", "id": "F-2s8"} ] },
+                        { "name": "true", "id": "F-2s9" }
+                      ]
+                    },
+                    { "name": "gt", "id": "F-2s10", "children": [ {"name": "2", "id": "F-2s11"}, {"name": "y", "id": "F-2s12"} ] }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "children": [ "S-1" ],
+      "rule": { "id": "R0", "name": "skip" },
+      "parent": "S-2"
     }
   ]
 }
