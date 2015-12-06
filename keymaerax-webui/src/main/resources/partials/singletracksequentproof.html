@@ -152,9 +152,9 @@
                 <a ng-click="section.isCollapsed = !section.isCollapsed"
                    ng-mouseover="section.isHighlighted=true"
                    ng-mouseout="section.isHighlighted=false"
-                   ng-if="section.isCollapsed && section.path.length > 2">
+                   ng-if="section.isCollapsed && section.path.length > 1">
                     <span ng-class="section.isHighlighted ? 'fa fa-chevron-circle-right' : 'fa fa-angle-right'"></span></a>
-                <span ng-if="section.path.length <= 2">&nbsp;</span>
+                <span ng-if="section.path.length <= 1">&nbsp;</span>
                 </span>
                 <span class="k4-proofrule">&nbsp;</span>
             </li>
