@@ -38,6 +38,8 @@
                       tooltip-placement="right">{{proofTree.nodesMap[deductionPath.sections[outerIdx].path[0]].rule.name}}</span>
                 <!-- Full collapse if the first section contains only one element (and is not collapsed) -->
                 <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
+                   uib-tooltip="Collapse/uncollapse everything"
+                   tooltip-popup-delay="1000"
                    ng-if="outerIdx === 1 && !deductionPath.sections[0].isCollapsed && deductionPath.sections[0].path.length === 1">
                     <span ng-class="deductionPath.isCollapsed ? 'fa fa-plus-square-o': 'fa fa-minus-square-o'"></span></a>
 
@@ -81,6 +83,8 @@
                       tooltip-placement="right">{{proofTree.nodesMap[step].rule.name}}</span>
                 <!-- first element full collapse on second element in first section -->
                 <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
+                   uib-tooltip="Collapse/expand all"
+                   tooltip-popup-delay="1000"
                    ng-if="outerIdx === 0 && $first">
                     <span ng-class="deductionPath.isCollapsed ? 'fa fa-plus-square-o': 'fa fa-minus-square-o'"></span></a>
 
@@ -105,9 +109,13 @@
             <li>
                 <span>
                 <a ng-click="fetchSectionParent(deductionPath.sections[outerIdx])"
+                   uib-tooltip="Fetch parent step"
+                   tooltip-popup-delay="1000"
                    ng-if="!section.isComplete && !section.isCollapsed"><span class="fa fa-plus-square-o"></span></a>
                 <!-- Full collapse if the first section is collapsed -->
                 <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
+                   uib-tooltip="Collapse/expand all"
+                   tooltip-popup-delay="1000"
                    ng-if="outerIdx === 0 && section.isCollapsed">
                     <span ng-class="deductionPath.isCollapsed ? 'fa fa-plus-square-o': 'fa fa-minus-square-o'"></span></a>
                 <!-- Collapse upwards -->
@@ -136,7 +144,8 @@
     </div>
     <ul>
         <li>
-            <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"><span class="fa fa-plus-square-o"></span></a>
+            <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
+               uib-tooltip="Expand all" tooltip-popup-delay="1000"><span class="fa fa-plus-square-o"></span></a>
         </li>
     </ul>
 </div>
