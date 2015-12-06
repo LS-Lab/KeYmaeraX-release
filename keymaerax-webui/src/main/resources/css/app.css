@@ -100,22 +100,22 @@ table .btn{
   width: 200px;
 }
 
-.k4-proofrow-first {
+.k4-proofrow {
+  border-style: solid;
+  border-left: none;
+  border-top: none;
+  border-right: none;
+  border-bottom: thin solid black;
+  margin: 0 0 0 4em;
+}
+
+/* must be after k4-proofrow: overrides border styling */
+.k4-proofrow-last {
   border-style: solid;
   border-left: none;
   border-top: none;
   border-right: none;
   border-bottom: none;
-  margin: 0 0 0 4em;
-}
-
-.k4-proofrow {
-  border-style: solid;
-  border-left: none;
-  border-top: thin solid black;
-  border-right: none;
-  border-bottom: none;
-  margin: 0 0 0 4em;
 }
 
 .k4-proofrow > ul:last-child {

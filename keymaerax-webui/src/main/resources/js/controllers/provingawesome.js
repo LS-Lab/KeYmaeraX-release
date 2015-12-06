@@ -52,7 +52,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       },
       itemsByProofStep: function(ptNodeId) {
         return $.grep($scope.agenda.items(), function(e) {
-          return $.grep(e.path, function(v, i) { return v.id == ptNodeId; }).length > 0; });
+          return $.grep(e.deduction.sections, function(v, i) { return v.path.indexOf(ptNodeId) >= 0; }).length > 0; });
       }
     }
     $scope.prooftree = {

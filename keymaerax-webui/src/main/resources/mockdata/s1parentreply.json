@@ -30,5 +30,5 @@
   },
   "children": [ "S1" ],
   "rule": { "id": "R2", "name": "implyR" },
-  "parent": "S0"
+  "parent": null
 }
