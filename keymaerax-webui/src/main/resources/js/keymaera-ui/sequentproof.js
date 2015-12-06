@@ -27,6 +27,11 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         });
       }
 
+      scope.showProofRoot = function() {
+        var root = scope.proofTree.nodesMap[scope.proofTree.root];
+        addBranchRoot(root, scope.agenda.itemsMap[scope.nodeId], scope.deductionPath.sections.length-1);
+      }
+
       scope.fetchPathAll = function(sectionIdx) {
         var section = scope.deductionPath.sections[sectionIdx];
         var sectionEnd = section.path[section.path.length-1];
@@ -50,10 +55,19 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
           scope.proofTree.nodesMap[proofTreeNode.id].rule = proofTreeNode.rule;
         }
         // update parent pointer of children, if loaded
-        $.each(proofTreeNode.children, function(i, v) {
-          var child = scope.proofTree.nodesMap[v];
-          if (child !== undefined) scope.proofTree.nodesMap[v].parent = proofTreeNode.id;
-        });
+        if (proofTreeNode.children != null) {
+          $.each(proofTreeNode.children, function(i, v) {
+            var child = scope.proofTree.nodesMap[v];
+            if (child !== undefined) scope.proofTree.nodesMap[v].parent = proofTreeNode.id;
+          });
+        }
+        // update children of parent (tree and branch root may have been loaded without children)
+        if (proofTreeNode.parent != null && proofTreeNode.parent != proofTreeNode.id) {
+          var parent = scope.proofTree.nodesMap[proofTreeNode.parent];
+          if (parent !== undefined && parent.children.indexOf(proofTreeNode.id) < 0) {
+            parent.children.push(proofTreeNode.id);
+          }
+        }
       }
 
       /**
@@ -65,7 +79,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       updateSection = function(proofTreeNode, agendaItem, sectionIdx) {
         var section = agendaItem.deduction.sections[sectionIdx];
         var sectionEnd = section.path[section.path.length-1];
-        if (proofTreeNode.children.length > 1) {
+        if (proofTreeNode.children != null && proofTreeNode.children.length > 1) {
           if (sectionIdx+1 >= agendaItem.deduction.sections.length || agendaItem.deduction.sections[sectionIdx+1].path[0] !== proofTreeNode.id) {
             // start new section with parent, parent section is complete if parent is root
             agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: proofTreeNode.parent === proofTreeNode.id});
@@ -84,14 +98,14 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
               ? scope.proofTree.nodesMap[agendaItem.deduction.sections[sectionIdx+1].path[0]]
               : undefined);
             section.isComplete =
-              parentCandidate !== undefined && parentCandidate.children.indexOf(proofTreeNode.id) >= 0;
+              parentCandidate !== undefined && parentCandidate.children != null && parentCandidate.children.indexOf(proofTreeNode.id) >= 0;
           } else {
             if (sectionIdx+1 < agendaItem.deduction.sections.length) {
               console.error('Received proof tree root, which can only be added to last section, but ' + sectionIdx +
                 ' is not last section in ' + agendaItem.deduction.sections);
             } else {
               agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: true});
-              section.isComplete = proofTreeNode.children.indexOf(sectionEnd) >= 0;
+              section.isComplete = proofTreeNode.children != null && proofTreeNode.children.indexOf(sectionEnd) >= 0;
             }
           }
         }
@@ -119,11 +133,13 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         updateSection(proofTreeNode, agendaItem, sectionIdx);
 
         // append parent to the appropriate section in all relevant agenda items
-        var items = $.map(proofTreeNode.children, function(e) { return scope.agenda.itemsByProofStep(e); });
-        $.each(items, function(i, v) {
-          var childSectionIdx = childSectionIndex(v, proofTreeNode);
-          updateSection(proofTreeNode, v, childSectionIdx);
-        });
+        if (proofTreeNode.children != null) {
+          var items = $.map(proofTreeNode.children, function(e) { return scope.agenda.itemsByProofStep(e); });
+          $.each(items, function(i, v) {
+            var childSectionIdx = childSectionIndex(v, proofTreeNode);
+            updateSection(proofTreeNode, v, childSectionIdx);
+          });
+        }
       }
 
       /**
@@ -148,7 +164,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       scope.siblingCandidates = function(candidates) {
         var item = scope.agenda.itemsMap[scope.nodeId];
         var fp = flatPath(item);
-        return candidates.filter(function(e) { return fp.indexOf(e) === -1; });
+        return candidates != null ? candidates.filter(function(e) { return fp.indexOf(e) === -1; }) : [];
       }
 
       scope.onUseAt = function(formulaId, axiomId) {
