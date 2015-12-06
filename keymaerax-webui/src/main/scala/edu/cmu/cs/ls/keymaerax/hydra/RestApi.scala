@@ -216,8 +216,24 @@ trait RestApi extends HttpService {
   val proofTasksPathAll = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pathall") { (userId, proofId, nodeId, goalId) => { pathEnd {
     get {
       val request = goalId match {
+        case "S5" => new MockRequest("/mockdata/s5pathallreply.json")
         case "S3" => new MockRequest("/mockdata/s23pathallreply.json")
         case "S2" => new MockRequest("/mockdata/s23pathallreply.json")
+      }
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val proofTasksBranchRoot = path("proofs" / "user" / Segment / Segment / Segment / Segment / "branchroot") { (userId, proofId, nodeId, goalId) => { pathEnd {
+    get {
+      val request = goalId match {
+        case "S5" => new MockRequest("/mockdata/s23parentreply.json")
+        case "S4" => new MockRequest("/mockdata/s23parentreply.json")
+        case "S3" => new MockRequest("/mockdata/s23parentreply.json")
+        case "S2" => new MockRequest("/mockdata/s23parentreply.json")
+        case "S1" => new MockRequest("/mockdata/s-1parentreply.json")
+        case "S0" => new MockRequest("/mockdata/s-1parentreply.json")
+        case "S-1" => new MockRequest("/mockdata/s-1parentreply.json")
       }
       complete(standardCompletion(request))
     }
@@ -522,6 +538,7 @@ trait RestApi extends HttpService {
     proofTasksNew         ::
     proofTasksParent      ::
     proofTasksPathAll     ::
+    proofTasksBranchRoot  ::
     axiomList             ::
     useAt                 ::
     proofTask             ::

@@ -19,58 +19,110 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
     /* The directive's internal control. */
     function link(scope, element, attrs) {
 
-      scope.fetchBranchRoot = function(goalId) {
+      scope.fetchBranchRoot = function(sectionIdx) {
+        var section = scope.deductionPath.sections[sectionIdx];
+        var sectionEnd = section.path[section.path.length-1];
+        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + sectionEnd + '/branchroot').success(function(data) {
+          addBranchRoot(data, scope.agenda.itemsMap[scope.nodeId], sectionIdx);
+        });
       }
 
-      scope.fetchTreeRoot = function(goalId) {
-        // nothing to do here, already have tree root
-      }
-
-      scope.fetchPathAll = function(section) {
-        var sectionEnd = section.path[section.path.length-1]
+      scope.fetchPathAll = function(sectionIdx) {
+        var section = scope.deductionPath.sections[sectionIdx];
+        var sectionEnd = section.path[section.path.length-1];
         if (sectionEnd !== scope.proofTree.root) {
           $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + sectionEnd + '/pathall').success(function(data) {
             // TODO use numParentsUntilComplete to display some information
-            $.each(data.path, function(i, ptnode) { addProofTreeNode(ptnode); });
+            $.each(data.path, function(i, ptnode) { updateProof(ptnode); });
           });
         }
       }
 
       /**
-       * Adds a proof tree node and updates the agenda sections.
+       * Adds a node to proof tree if not already present; otherwise, updates the node with fetched rule and children
+       * @param proofTreeNode The node to add.
        */
       addProofTreeNode = function(proofTreeNode) {
-        // add node to proof tree if not already present; otherwise, update node with fetched rule and children
         if (scope.proofTree.nodesMap[proofTreeNode.id] === undefined) {
           scope.proofTree.nodesMap[proofTreeNode.id] = proofTreeNode;
         } else {
           scope.proofTree.nodesMap[proofTreeNode.id].children = proofTreeNode.children;
           scope.proofTree.nodesMap[proofTreeNode.id].rule = proofTreeNode.rule;
         }
-        // update parent pointer of children
-        $.each(proofTreeNode.children, function(i, v) { scope.proofTree.nodesMap[v].parent = proofTreeNode.id; });
+        // update parent pointer of children, if loaded
+        $.each(proofTreeNode.children, function(i, v) {
+          var child = scope.proofTree.nodesMap[v];
+          if (child !== undefined) scope.proofTree.nodesMap[v].parent = proofTreeNode.id;
+        });
+      }
 
-        // append parent at the end of the deduction path of all relevant agenda items
+      /**
+       * Updates the specified section by adding the proof tree node. If the node has more than 1 child, a new section
+       * after the specified section is started.
+       * @param proofTreeNode The node to add.
+       * @param sectionIdx The section where to add the proof node.
+       */
+      updateSection = function(proofTreeNode, agendaItem, sectionIdx) {
+        var section = agendaItem.deduction.sections[sectionIdx];
+        var sectionEnd = section.path[section.path.length-1];
+        if (proofTreeNode.children.length > 1) {
+          if (sectionIdx+1 >= agendaItem.deduction.sections.length || agendaItem.deduction.sections[sectionIdx+1].path[0] !== proofTreeNode.id) {
+            // start new section with parent, parent section is complete if parent is root
+            agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: proofTreeNode.parent === proofTreeNode.id});
+          } // else: parent already has its own section, see fetchBranchRoot
+          // in any case: child's section is loaded completely if its ending in one of the children of the proof tree node
+          section.isComplete = proofTreeNode.children.indexOf(sectionEnd) >= 0;
+        } else {
+          // parent has exactly 1 child, append parent to child's section
+          if (sectionIdx === -1) {
+            console.error('Expected a unique path section ending in a child of ' + proofTreeNode.id + ', but agenda item ' + agendaItem.id +
+              ' has ' + agendaItem.sections + ' as path sections');
+          } else if (proofTreeNode.parent !== proofTreeNode.id) {
+            section.path.push(proofTreeNode.id);
+            var parentCandidate =
+              (sectionIdx+1 < agendaItem.deduction.sections.length
+              ? scope.proofTree.nodesMap[agendaItem.deduction.sections[sectionIdx+1].path[0]]
+              : undefined);
+            section.isComplete =
+              parentCandidate !== undefined && parentCandidate.children.indexOf(proofTreeNode.id) >= 0;
+          } else {
+            if (sectionIdx+1 < agendaItem.deduction.sections.length) {
+              console.error('Received proof tree root, which can only be added to last section, but ' + sectionIdx +
+                ' is not last section in ' + agendaItem.deduction.sections);
+            } else {
+              agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: true});
+              section.isComplete = proofTreeNode.children.indexOf(sectionEnd) >= 0;
+            }
+          }
+        }
+      }
+
+      /**
+       * Adds a proof tree node and updates the agenda sections.
+       */
+      updateProof = function(proofTreeNode) {
+        addProofTreeNode(proofTreeNode);
+
+        // append parent to the appropriate section in all relevant agenda items
         var items = $.map(proofTreeNode.children, function(e) { return scope.agenda.itemsByProofStep(e); }); // JQuery flat map
         $.each(items, function(i, v) {
           var childSectionIdx = childSectionIndex(v, proofTreeNode);
-          if (proofTreeNode.children.length > 1) {
-            if (childSectionIdx+1 >= v.deduction.sections.length || v.deduction.sections[childSectionIdx+1].path[0] !== proofTreeNode.id) {
-              // start new section with parent, parent section is complete if parent is root
-              v.deduction.sections.splice(childSectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: proofTreeNode.parent === proofTreeNode.id});
-            } // else: parent already has its own section, see fetchBranchRoot
-            // in any case: child's section is now loaded completely
-            v.deduction.sections[childSectionIdx].isComplete = true;
-          } else {
-            // parent has exactly 1 child, append parent to child's section
-            if (childSectionIdx === -1) {
-              console.error('Expected a unique path section ending in a child of ' + proofTreeNode.id + ', but agenda item ' + v.id +
-                ' has ' + v.path + ' as path sections');
-            } else {
-              v.deduction.sections[childSectionIdx].path.push(proofTreeNode.id);
-              v.deduction.sections[childSectionIdx].isComplete = proofTreeNode.parent === proofTreeNode.id;
-            }
-          }
+          updateSection(proofTreeNode, v, childSectionIdx);
+        });
+      }
+
+      /**
+       * Adds the specified proof tree node as branch root to the specified section.
+       */
+      addBranchRoot = function(proofTreeNode, agendaItem, sectionIdx) {
+        addProofTreeNode(proofTreeNode);
+        updateSection(proofTreeNode, agendaItem, sectionIdx);
+
+        // append parent to the appropriate section in all relevant agenda items
+        var items = $.map(proofTreeNode.children, function(e) { return scope.agenda.itemsByProofStep(e); });
+        $.each(items, function(i, v) {
+          var childSectionIdx = childSectionIndex(v, proofTreeNode);
+          updateSection(proofTreeNode, v, childSectionIdx);
         });
       }
 
@@ -128,7 +180,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       scope.fetchSectionParent = function(section) {
         var goalId = section.path[section.path.length - 1];
         $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/parent').success(function(data) {
-          addProofTreeNode(data);
+          updateProof(data);
         });
       }
 

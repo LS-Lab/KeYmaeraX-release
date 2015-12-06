@@ -40,7 +40,7 @@
                 <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
                    uib-tooltip="Collapse/uncollapse everything"
                    tooltip-popup-delay="1000"
-                   ng-if="outerIdx === 1 && !deductionPath.sections[0].isCollapsed && deductionPath.sections[0].path.length === 1">
+                   ng-if="outerIdx === 1 && deductionPath.sections[0].isComplete && !deductionPath.sections[0].isCollapsed && deductionPath.sections[0].path.length === 1">
                     <span ng-class="deductionPath.isCollapsed ? 'fa fa-plus-square-o': 'fa fa-minus-square-o'"></span></a>
 
                 <!-- Collapse upwards: on first element of next section, but only if previous section actually is large enough to collapse -->
@@ -100,27 +100,32 @@
         </ul>
         <!-- add buttons: rewind to here, start alternative proof attempt etc. -->
     </div>
-    <!-- fetch parent, collapse/uncollapse for unfinished sections/last section-->
-    <div ng-class="(outerIdx === deductionPath.sections.length-1 || !section.isCollapsed) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'">
-        <div class="col-md-12" ng-if="!section.isComplete || section.isCollapsed">
+    <!-- fetch parent of incomplete section, collapse/uncollapse for unfinished sections/last section-->
+    <div ng-class="(outerIdx === deductionPath.sections.length-1 || (section.isComplete && !section.isCollapsed)) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'">
+        <div class="col-md-12 k4-proofrow-annotation" ng-if="!section.isComplete || section.isCollapsed">
             ...
+            <ul>
+                <li>
+                    <!-- load parent -->
+                    <a class="k4-withcontextmenu"
+                       ng-click="fetchSectionParent(deductionPath.sections[outerIdx])"
+                       uib-tooltip="Fetch parent step"
+                       tooltip-popup-delay="1000"
+                       ng-right-click="fetchParentRightClick($event)" tabindex="-1"
+                       uib-popover-template="'navigateTowardsRootPopover.html'"
+                       popover-title="Proof history" popover-placement="bottom" popover-trigger="contextmenu"
+                       ng-if="!section.isComplete && !section.isCollapsed"><span class="fa fa-plus-square-o"></span></a>
+                </li>
+            </ul>
         </div>
         <ul>
             <li>
                 <span>
-                <a class="k4-withcontextmenu"
-                   ng-click="fetchSectionParent(deductionPath.sections[outerIdx])"
-                   uib-tooltip="Fetch parent step"
-                   tooltip-popup-delay="1000"
-                   ng-right-click="fetchParentRightClick($event)" tabindex="-1"
-                   uib-popover-template="'navigateTowardsRootPopover.html'"
-                   popover-title="Proof history" popover-placement="bottom" popover-trigger="contextmenu"
-                   ng-if="!section.isComplete && !section.isCollapsed"><span class="fa fa-plus-square-o"></span></a>
-                <!-- Full collapse if the first section is collapsed -->
+                <!-- Full collapse if the first section is collapsed or is incomplete with only 1 element -->
                 <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
                    uib-tooltip="Collapse/expand all"
                    tooltip-popup-delay="1000"
-                   ng-if="outerIdx === 0 && section.isCollapsed">
+                   ng-if="outerIdx === 0 && (section.isCollapsed || (!section.isComplete && section.path.length === 1))">
                     <span ng-class="deductionPath.isCollapsed ? 'fa fa-plus-square-o': 'fa fa-minus-square-o'"></span></a>
                 <!-- Collapse upwards -->
                 <a ng-click="section.isCollapsed = !section.isCollapsed"
@@ -155,9 +160,9 @@
 </div>
 <script type="text/ng-template" id="navigateTowardsRootPopover.html">
     <div class="k4-nobreak">
-        <a ng-click="fetchBranchRoot"><span class="fa fa-code-fork"> Show branch root</span></a><br/>
+        <a ng-click="fetchBranchRoot(outerIdx)"><span class="fa fa-code-fork"> Show branch root</span></a><br/>
         <a ng-click="fetchTreeRoot"><span class="fa fa-angle-down"> Show tree root</span></a><br/>
-        <a ng-click="fetchPathAll(deductionPath.sections[outerIdx])">
+        <a ng-click="fetchPathAll(outerIdx)">
             <span class="fa fa-angle-double-down"> Expand all</span>
         </a>
     </div>
