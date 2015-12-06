@@ -74,7 +74,8 @@ table .btn{
 }
 
 .k4-nobreak {
-    white-space: nowrap;
+  white-space: nowrap;
+  display: inline-block;
 }
 
 .k4-goalwithsiblings {
@@ -138,7 +139,7 @@ table .btn{
   border-top: none;
   border-right: none;
   border-bottom: thin solid black;
-  margin: 0 0 0 4em;
+  margin: 0 0 0 6em;
 }
 
 /* must be after k4-proofrow: overrides border styling */
@@ -153,9 +154,9 @@ table .btn{
 .k4-proofrow > ul:last-child {
   list-style-type: none;
   padding: 0 0 0 0;
-  margin: -1ex 0 0 1em;
+  margin: -1.4ex 0 0 0.5em;
   text-align: right;
-  width: 4em;
+  width: 6em;
   display: block;
   position: absolute;
   left: 0;
@@ -165,11 +166,24 @@ table .btn{
   font-size: x-small;
   border: none;
   color: black;
-  display: block;
+  display: inline-block;
+  white-space: nowrap;
+  width: 6.5em;
+}
+
+.k4-proofrow .k4-proofrule {
+  width: 3em;
+  display: inline-block;
   white-space: nowrap;
   overflow-x: hidden;
   text-overflow: clip;
-  width: 4em;
+  text-align: right;
+}
+
+.k4-proofrow .k4-prooficon {
+  display: inline-block;
+  text-align: center;
+  width: 1.5em;
 }
 
 .k4-flexrow {
