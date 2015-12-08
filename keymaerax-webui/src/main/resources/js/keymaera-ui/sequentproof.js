@@ -161,10 +161,10 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       }
 
       /** Filters sibling candidates: removes this item's goal and path */
-      scope.siblingCandidates = function(candidates) {
+      scope.siblingsWithAgendaItem = function(candidates) {
         var item = scope.agenda.itemsMap[scope.nodeId];
         var fp = flatPath(item);
-        return candidates != null ? candidates.filter(function(e) { return fp.indexOf(e) === -1; }) : [];
+        return (candidates != null ? candidates.filter(function(e) { return fp.indexOf(e) < 0 && scope.agenda.itemsByProofStep(e).length > 0; }) : []);
       }
 
       scope.onUseAt = function(formulaId, axiomId) {

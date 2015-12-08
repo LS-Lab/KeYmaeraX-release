@@ -21,10 +21,12 @@
                         read-only="true" collapsed="true"
                         on-use-at="onUseAt(formulaId, axiomId)"></k4-sequent>
             <ul>
-                <li ng-repeat="sibling in siblingCandidates(proofTree.nodesMap[deductionPath.sections[$index].path[0]].children)">
+                <!-- display siblings at fork -->
+                <li ng-repeat="sibling in siblingsWithAgendaItem(proofTree.nodesMap[deductionPath.sections[$index].path[0]].children)">
                     <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
                     <!-- todo HTML tooltip -->
                     <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
+                       class="badge"
                        uib-tooltip="{{tooltip(proofTree.nodesMap[sibling].sequent)}}"
                        tooltip-placement="top">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
                 </li>
@@ -66,20 +68,11 @@
     <div ng-class="(outerIdx === deductionPath.sections.length-1 && $last && section.isComplete) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'"
          ng-repeat="step in section.path.slice(1)"
          uib-collapse="section.isCollapsed">
-        <div class="col-md-12 k4-goalwithsiblings">
+        <div class="col-md-12">
             <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath.sections[0][0]"
                         sequent="proofTree.nodesMap[step].sequent"
                         read-only="true" collapsed="true"
                         on-use-at="onUseAt(formulaId, axiomId)"></k4-sequent>
-            <ul>
-                <li ng-repeat="sibling in siblingCandidates(proofTree.nodesMap[step].children)">
-                    <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
-                    <!-- todo HTML tooltip -->
-                    <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
-                       uib-tooltip="{{tooltip(proofTree.nodesMap[sibling].sequent)}}"
-                       tooltip-placement="top">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
-                </li>
-            </ul>
         </div>
         <ul>
             <li>
@@ -180,10 +173,8 @@
 </div>
 <script type="text/ng-template" id="navigateTowardsRootPopover.html">
     <div class="k4-nobreak">
-        <a ng-click="fetchBranchRoot(outerIdx)"><span class="fa fa-code-fork"> Show branch root</span></a><br/>
-        <a ng-click="showProofRoot()"><span class="fa fa-angle-down"> Show tree root</span></a><br/>
-        <a ng-click="fetchPathAll(outerIdx)">
-            <span class="fa fa-angle-double-down"> Expand all</span>
-        </a>
+        <a ng-click="fetchBranchRoot(outerIdx)"><span class="fa fa-code-fork"> Show fork</span></a><br/>
+        <a ng-click="showProofRoot()"><span class="fa fa-angle-down"> Show original conjecture</span></a><br/>
+        <a ng-click="fetchPathAll(outerIdx)"><span class="fa fa-angle-double-down"> Expand all</span></a>
     </div>
 </script>
