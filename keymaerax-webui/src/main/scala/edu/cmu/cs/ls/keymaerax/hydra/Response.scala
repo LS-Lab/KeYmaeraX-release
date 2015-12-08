@@ -335,14 +335,15 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
         "parent" -> parent)
     }
 
-    def pathJson(path: List[String]): JsValue = JsArray(path.map({case str => JsString(str)}))
+    def deductionJson(deduction: List[String]): JsValue =
+      JsObject("sections" -> new JsArray(List(new JsArray(deduction.map{case str => new JsString(str)}))))
 
     def itemJson(item: AgendaItem): (String, JsValue) = {
       val value = JsObject(
         "id" -> JsString(item.id),
         "name" -> JsString(item.name),
         "proofId" -> JsString(item.proofId),
-        "path" -> pathJson(item.path))
+        "deduction" -> deductionJson(item.path))
       (item.id, value)
     }
 
