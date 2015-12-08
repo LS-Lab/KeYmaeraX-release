@@ -11,7 +11,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.JSONConverter
-import _root_.edu.cmu.cs.ls.keymaerax.core.Sequent
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import com.fasterxml.jackson.annotation.JsonValue
 import spray.json._
 import java.io.{PrintWriter, StringWriter, File}
@@ -298,9 +298,22 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
     }
 
     def sequentJson(sequent: Sequent): JsValue = {
+      var num: Int = 0
+      def fmlId: String = {
+        num = num + 1
+        num.toString
+      }
+      def fmlsJson (fmls: IndexedSeq[Formula]): JsValue = {
+        JsArray(fmls.map { case fml =>
+          val fmlJson = JSONConverter.convertFormula(fml, "", "")
+          JsObject(
+            "id" -> JsString(fmlId),
+            "formula" -> fmlJson
+          )}.toVector)
+      }
       JsObject(
-        "ante" -> JsArray(sequent.ante.map { case fml => JSONConverter.convertFormula(fml, "", "") }.toVector),
-        "succ" -> JsArray(sequent.succ.map { case fml => JSONConverter.convertFormula(fml, "", "") }.toVector)
+        "ante" -> fmlsJson(sequent.ante),
+        "succ" -> fmlsJson(sequent.succ)
       )
     }
 
@@ -324,7 +337,6 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
         "id" -> JsString(item.id),
         "name" -> JsString(item.name),
         "proofId" -> JsString(item.proofId),
-    //    "goal" -> JsString(item.id),
         "path" -> pathJson(item.path))
       (item.id, value)
     }
@@ -347,9 +359,10 @@ class AgendaAwesomeResponse(tree: Tree) extends Response {
 
   val proofTree = {
     val id = proofIdJson(tree.id)
+    /* @TODO make this less silly once debugged */
     val nodez = tree.leavesAndRoot
-    val nodezz = nodez.map({case node => nodeJson(node)})
-    val nodes = new JsArray(nodezz)
+    val nodezz = nodez.map({case node => (node.id.toString, nodeJson(node))})
+    val nodes = new JsObject(nodezz.toMap)
     val root = nodeIdJson(tree.root.id)
     JsObject(
       "id" -> id,
