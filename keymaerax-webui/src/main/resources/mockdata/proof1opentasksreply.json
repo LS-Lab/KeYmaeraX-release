@@ -33,7 +33,7 @@
           ]
         },
         "children": [ "S-1" ],
-        "parent": "S-2"
+        "parent": null
       },
       "S5": {
         "id": "S5",
@@ -54,7 +54,7 @@
           ]
         },
         "children": [],
-        "parent": null
+        "parent": "S4"
       },
       "S3": {
         "id": "S3",
@@ -63,7 +63,7 @@
           "succ": [ { "id": "F3", "formula": { "name": "gt", "id": "F3s0", "children": [ {"name": "2", "id": "F3s1"}, {"name": "y", "id": "F3s2"} ] } } ]
         },
         "children": [],
-        "parent": null
+        "parent": "S1"
       }
     },
     "root": "S-2"

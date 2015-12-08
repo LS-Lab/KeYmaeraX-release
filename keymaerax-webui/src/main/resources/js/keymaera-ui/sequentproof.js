@@ -55,19 +55,19 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
           scope.proofTree.nodesMap[proofTreeNode.id].rule = proofTreeNode.rule;
         }
         // update parent pointer of children, if loaded
-        if (proofTreeNode.children != null) {
-          $.each(proofTreeNode.children, function(i, v) {
-            var child = scope.proofTree.nodesMap[v];
-            if (child !== undefined) scope.proofTree.nodesMap[v].parent = proofTreeNode.id;
-          });
-        }
+//        if (proofTreeNode.children != null) {
+//          $.each(proofTreeNode.children, function(i, v) {
+//            var child = scope.proofTree.nodesMap[v];
+//            if (child !== undefined) scope.proofTree.nodesMap[v].parent = proofTreeNode.id;
+//          });
+//        }
         // update children of parent (tree and branch root may have been loaded without children)
-        if (proofTreeNode.parent != null && proofTreeNode.parent != proofTreeNode.id) {
-          var parent = scope.proofTree.nodesMap[proofTreeNode.parent];
-          if (parent !== undefined && parent.children.indexOf(proofTreeNode.id) < 0) {
-            parent.children.push(proofTreeNode.id);
-          }
-        }
+//        if (proofTreeNode.parent != null && proofTreeNode.parent != proofTreeNode.id) {
+//          var parent = scope.proofTree.nodesMap[proofTreeNode.parent];
+//          if (parent !== undefined && parent.children.indexOf(proofTreeNode.id) < 0) {
+//            parent.children.push(proofTreeNode.id);
+//          }
+//        }
       }
 
       /**
@@ -80,9 +80,9 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         var section = agendaItem.deduction.sections[sectionIdx];
         var sectionEnd = section.path[section.path.length-1];
         if (proofTreeNode.children != null && proofTreeNode.children.length > 1) {
-          if (sectionIdx+1 >= agendaItem.deduction.sections.length || agendaItem.deduction.sections[sectionIdx+1].path[0] !== proofTreeNode.id) {
+          if (sectionIdx+1 >= agendaItem.deduction.sections.length || agendaItem.deduction.sections[sectionIdx+1].path[0] !== null) {
             // start new section with parent, parent section is complete if parent is root
-            agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: proofTreeNode.parent === proofTreeNode.id});
+            agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: proofTreeNode.parent === null});
           } // else: parent already has its own section, see fetchBranchRoot
           // in any case: child's section is loaded completely if its ending in one of the children of the proof tree node
           section.isComplete = proofTreeNode.children.indexOf(sectionEnd) >= 0;
@@ -91,7 +91,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
           if (sectionIdx === -1) {
             console.error('Expected a unique path section ending in a child of ' + proofTreeNode.id + ', but agenda item ' + agendaItem.id +
               ' has ' + agendaItem.sections + ' as path sections');
-          } else if (proofTreeNode.parent !== proofTreeNode.id) {
+          } else if (proofTreeNode.parent !== null) {
             section.path.push(proofTreeNode.id);
             var parentCandidate =
               (sectionIdx+1 < agendaItem.deduction.sections.length

@@ -23,5 +23,5 @@
   },
   "children": [ "S2", "S3" ],
   "rule": { "id": "R1", "name": "andR" },
-  "parent": null
+  "parent": "S0"
 }
