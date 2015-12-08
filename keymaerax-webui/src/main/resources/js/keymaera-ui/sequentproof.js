@@ -154,12 +154,6 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         return -1;
       }
 
-      /** Pretty prints sequent JSON into HTML */
-      scope.tooltip = function(sequent) {
-        // TODO call the pretty printer
-        return sequent;
-      }
-
       /** Filters sibling candidates: removes this item's goal and path */
       scope.siblingsWithAgendaItem = function(candidates) {
         var item = scope.agenda.itemsMap[scope.nodeId];

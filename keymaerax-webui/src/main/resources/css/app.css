@@ -91,7 +91,6 @@ table .btn{
   padding: 0 0 0 0;
   margin: -1ex 0 0 0;
   text-align: right;
-  width: 200px;
   display: block;
   position: absolute;
   top: -50%;
@@ -103,7 +102,6 @@ table .btn{
   border: none;
   color: black;
   display: list-item;
-  width: 200px;
 }
 
 .k4-proofrow-annotation {
