@@ -242,8 +242,8 @@ trait RestApi extends HttpService {
   val axiomList = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, goalId, formulaId) => { pathEnd {
     get {
       val request = formulaId match {
-        case "F2s0" => new MockRequest("/mockdata/andaxiomlist.json")
-        case "F2s1" => new MockRequest("/mockdata/ltaxiomlist.json")
+        case "F5s0" => new MockRequest("/mockdata/andaxiomlist.json")
+        case "F5s1" => new MockRequest("/mockdata/ltaxiomlist.json")
       }
       complete(standardCompletion(request))
     }
@@ -252,8 +252,8 @@ trait RestApi extends HttpService {
   val useAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "use" / Segment) { (userId, proofId, nodeId, goalId, formulaId, axiomId) => { pathEnd {
     get {
       val request = (formulaId, axiomId) match {
-        case ("F2s0", "and true") => new MockRequest("/mockdata/andtrueresult.json")
-        case ("F2s0", "step") => new MockRequest("/mockdata/andtrueresult.json")
+        case ("F5s0", "and true") => new MockRequest("/mockdata/andtrueresult.json")
+        case ("F5s0", "step") => new MockRequest("/mockdata/andtrueresult.json")
       }
       complete(standardCompletion(request))
     }
