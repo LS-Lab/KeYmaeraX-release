@@ -54,20 +54,6 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
           scope.proofTree.nodesMap[proofTreeNode.id].children = proofTreeNode.children;
           scope.proofTree.nodesMap[proofTreeNode.id].rule = proofTreeNode.rule;
         }
-        // update parent pointer of children, if loaded
-//        if (proofTreeNode.children != null) {
-//          $.each(proofTreeNode.children, function(i, v) {
-//            var child = scope.proofTree.nodesMap[v];
-//            if (child !== undefined) scope.proofTree.nodesMap[v].parent = proofTreeNode.id;
-//          });
-//        }
-        // update children of parent (tree and branch root may have been loaded without children)
-//        if (proofTreeNode.parent != null && proofTreeNode.parent != proofTreeNode.id) {
-//          var parent = scope.proofTree.nodesMap[proofTreeNode.parent];
-//          if (parent !== undefined && parent.children.indexOf(proofTreeNode.id) < 0) {
-//            parent.children.push(proofTreeNode.id);
-//          }
-//        }
       }
 
       /**
