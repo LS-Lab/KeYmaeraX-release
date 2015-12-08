@@ -80,7 +80,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     //println("Unifying " + e1 + " and " + e2 + "\nwith renaming " + ren + " gives " + ren(e1) + " led to\n" + unify(ren(e1),e2) + " and ")
     Subst(reunify(unify(ren(e1),e2) ++ ren.subsDefsInput))
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.toString     + "\n   with  " + e2.toString)}
-  } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal")
+  } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal" + "\n" + Subst(reunify(unify(RenUSubst.renamingPart(unify(e1,e2))(e1),e2) ++ RenUSubst.renamingPart(unify(e1,e2)).subsDefsInput)) + "\ngives " + Subst(reunify(unify(RenUSubst.renamingPart(unify(e1,e2))(e1),e2) ++ RenUSubst.renamingPart(unify(e1,e2)).subsDefsInput))(e1) + "\nand   " + Subst(reunify(unify(RenUSubst.renamingPart(unify(e1,e2))(e1),e2) ++ RenUSubst.renamingPart(unify(e1,e2)).subsDefsInput))(e2))
 
   /** Re-unify multiple replacements for the same what */
   private def reunify(subst: List[SubstRepl]): List[SubstRepl] = {

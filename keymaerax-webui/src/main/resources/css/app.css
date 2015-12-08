@@ -54,6 +54,11 @@ table .btn{
   color: #e1edf7;
 }
 
+/* do not change appearance when focused for the sake of a context menu */
+.k4-withcontextmenu:focus {
+  outline: none;
+}
+
 .k4-carousel-caption {
   position: absolute;
   right: 0%;
@@ -69,7 +74,8 @@ table .btn{
 }
 
 .k4-nobreak {
-    white-space: nowrap;
+  white-space: nowrap;
+  display: inline-block;
 }
 
 .k4-goalwithsiblings {
@@ -100,30 +106,57 @@ table .btn{
   width: 200px;
 }
 
-.k4-proofrow-first {
-  border-style: solid;
-  border-left: none;
-  border-top: none;
-  border-right: none;
-  border-bottom: none;
-  margin: 0 0 0 4em;
+.k4-proofrow-annotation {
+  border-style: none;
+}
+
+.k4-proofrow-annotation > ul:last-child {
+  list-style-type: none;
+  padding: 0 0 0 0;
+  margin: -0.5ex 0 0 0;
+  text-align: left;
+  width: 1em;
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 50%;
+}
+.k4-proofrow-annotation > ul:last-child li {
+  height: 3ex;
+  font-size: x-small;
+  border: none;
+  color: black;
+  display: block;
+  white-space: nowrap;
+  overflow-x: hidden;
+  text-overflow: clip;
+  width: 1em;
 }
 
 .k4-proofrow {
   border-style: solid;
   border-left: none;
-  border-top: thin solid black;
+  border-top: none;
+  border-right: none;
+  border-bottom: thin solid black;
+  margin: 0 0 0 6em;
+}
+
+/* must be after k4-proofrow: overrides border styling */
+.k4-proofrow-last {
+  border-style: solid;
+  border-left: none;
+  border-top: none;
   border-right: none;
   border-bottom: none;
-  margin: 0 0 0 4em;
 }
 
 .k4-proofrow > ul:last-child {
   list-style-type: none;
   padding: 0 0 0 0;
-  margin: -1ex 0 0 1em;
+  margin: -1.4ex 0 0 0.5em;
   text-align: right;
-  width: 4em;
+  width: 6em;
   display: block;
   position: absolute;
   left: 0;
@@ -133,11 +166,24 @@ table .btn{
   font-size: x-small;
   border: none;
   color: black;
-  display: block;
+  display: inline-block;
+  white-space: nowrap;
+  width: 6.5em;
+}
+
+.k4-proofrow .k4-proofrule {
+  width: 3em;
+  display: inline-block;
   white-space: nowrap;
   overflow-x: hidden;
   text-overflow: clip;
-  width: 4em;
+  text-align: right;
+}
+
+.k4-proofrow .k4-prooficon {
+  display: inline-block;
+  text-align: center;
+  width: 1.5em;
 }
 
 .k4-flexrow {

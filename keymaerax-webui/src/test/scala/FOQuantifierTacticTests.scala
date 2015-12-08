@@ -598,7 +598,7 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   "Universal closure" should "work for simple formula" in {
-    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT)
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT())
     val s = sucSequent("x>5".asFormula)
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -607,7 +607,7 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   it should "work when indexed names are already there" in {
-    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT)
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT())
     val s = sucSequent("x_0>0 & x_1>1 & x_2>2".asFormula)
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -616,7 +616,7 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   it should "compute closure for formulas with variables and parameterless function symbols" in {
-    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT)
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT())
     val s = sucSequent("x>5 & f()<2 & y+3>z".asFormula)
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -625,7 +625,7 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   it should "ignore bound variables in closure" in {
-    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT)
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT())
     val s = sucSequent("\\forall x \\forall y (x>5 & f()<2 & y+3>z)".asFormula)
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -634,7 +634,7 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   it should "not ignore variables that are not bound everywhere" in {
-    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT)
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT())
     val s = sucSequent("(\\forall x x>5) & x<2".asFormula)
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -643,12 +643,36 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   it should "not do anything if all variables are bound" in {
-    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT)
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT())
     val s = sucSequent("\\forall x x>5".asFormula)
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().head.sequent.ante shouldBe empty
     result.openGoals().head.sequent.succ should contain only "\\forall x x>5".asFormula
+  }
+
+  it should "use the provided order of symbols" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT(Variable("x")::Variable("a")::Variable("y")::Nil))
+    val s = sucSequent("a>0 & x>5 & y<2".asFormula)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\forall x_0 \\forall a_0 \\forall y_0 (a_0>0 & x_0>5 & y_0<2)".asFormula
+  }
+
+  it should "append non-mentioned symbols in reverse alphabetical order" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT(Variable("x")::Nil))
+    val s = sucSequent("a>0 & x>5 & y<2".asFormula)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().head.sequent.ante shouldBe empty
+    result.openGoals().head.sequent.succ should contain only "\\forall x_0 \\forall y_0 \\forall a_0 (a_0>0 & x_0>5 & y_0<2)".asFormula
+  }
+
+  it should "not be applicable when the order is not a subset of the free variables plus signature" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.universalClosureT(Variable("b")::Nil))
+    val s = sucSequent("a>0 & x>5 & y<2".asFormula)
+    tactic.applicable(new RootNode(s)) shouldBe false
   }
 
   "Exists instantiate" should "close exists max0 max(0, w*(dhf-dhd)) = max0 by reflexivity" in {

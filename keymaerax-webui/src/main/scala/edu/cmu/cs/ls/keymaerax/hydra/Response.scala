@@ -384,7 +384,6 @@ class AgendaAwesomeResponse(tree: Tree) extends Response {
     )
 }
 
-
 class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: String) extends Response {
   val json = JsObject(
     "proofId" -> JsString(proofId),

@@ -91,7 +91,7 @@ object BuiltinHigherTactics {
       | locateSucc(diffInvariantSystemT)
       | locateAnte(eqLeft(exhaustive = false))
       | locateSuccAnte(stepAt(beta = true, simplifyProg = true, quantifiers = true, equiv = true))
-    ) ~ arithmeticT(toolId)
+    ) ~ arithmeticT(toolId, Nil)
   }
 
   /**
