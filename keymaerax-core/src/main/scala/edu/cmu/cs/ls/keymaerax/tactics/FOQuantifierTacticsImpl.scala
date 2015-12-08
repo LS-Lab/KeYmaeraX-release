@@ -41,22 +41,29 @@ object FOQuantifierTacticsImpl {
     }
   }
 
-  def universalClosureT: PositionTactic = new PositionTactic("Universal closure") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel
+  def universalClosureT(order: List[NamedSymbol] = Nil): PositionTactic = new PositionTactic("Universal closure") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel &&
+      order.toSet.subsetOf(StaticSemantics.freeVars(s(p)).toSet ++ StaticSemantics.signature(s(p)))
 
     override def apply(p: Position): Tactic = new ConstructionTactic("Universal Closure") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         // fetch non-bound variables and parameterless function symbols
-        val varsFns = (StaticSemantics.freeVars(node.sequent(p)).toSet ++ StaticSemantics.signature(node.sequent(p))).
+        val varsFns: Set[NamedSymbol] = StaticSemantics.freeVars(node.sequent(p)).toSet ++ StaticSemantics.signature(node.sequent(p))
+        require(order.toSet.subsetOf(varsFns), "Order of variables must be a subset of the free symbols+signature, but "
+          + (order.toSet -- varsFns) + " is not in the subset")
+        // use specified order in reverse, prepend the rest alphabetically
+        // @note get both: specified order and compatibility with previous sorting, which resulted in
+        //       reverse-alphabetical ordering of quantifiers
+        val sorted: List[Term] = ((varsFns -- order).
           filter({ case Variable(_, _, _) => true case Function(_, _, Unit, _) => true case _ => false }).
           // guarantee stable sorting of quantifiers so that Mathematica behavior is predictable - for now: alphabetically
-          toList.sortBy(_.name).
+          toList.sortBy(_.name) ++ order.reverse).
           map({ case v@Variable(_, _, _) => v case fn@Function(_, _, Unit, _) => FuncOf(fn, Nothing) case _ => throw new IllegalArgumentException("Should have been filtered") })
 
-        if (varsFns.isEmpty) Some(NilT)
-        else Some(varsFns.map(t => universalGenT(None, t)(p)).reduce(_ & _))
+        if (sorted.isEmpty) Some(NilT)
+        else Some(sorted.map(t => universalGenT(None, t)(p)).reduce(_ & _))
       }
     }
   }

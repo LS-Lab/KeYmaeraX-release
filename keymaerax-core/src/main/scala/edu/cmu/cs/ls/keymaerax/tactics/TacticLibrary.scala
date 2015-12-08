@@ -304,25 +304,26 @@ object TacticLibrary {
    * Tactic for arithmetic.
    * @return The tactic.
    */
+  lazy val arithmeticT: Tactic = arithmeticT()
 
   /**
    * Default arithmeticT
    * Use Mathematica
    * @todo allow allRight and existsLeft rules as well.
    */
-  def arithmeticT =
+  def arithmeticT(order: List[NamedSymbol] = Nil) =
     debugT("Apply non-branching propositional") & repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) &
     debugT("Search and apply equalities") & repeatT(locateAnte(eqThenHideIfChanged)) &
     debugT("Consolidate sequent") & PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) &
-    debugT("Compute universal closure") & lastSucc(FOQuantifierTacticsImpl.universalClosureT) &
+    debugT("Compute universal closure") & lastSucc(FOQuantifierTacticsImpl.universalClosureT()) &
     debugT("Handing to Mathematica/Z3") & (ArithmeticTacticsImpl.quantifierEliminationT("Mathematica") | ArithmeticTacticsImpl.quantifierEliminationT("Z3"))
 
   /**
    * Alternative arithmeticT
    * @param toolId quantifier elimination tool, could be: Mathematica, Z3, ...
    */
-  def arithmeticT(toolId : String) = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
-    PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & lastSucc(FOQuantifierTacticsImpl.universalClosureT) & debugT("Handing to " + toolId) &
+  def arithmeticT(toolId : String, order: List[NamedSymbol]) = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
+    PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & lastSucc(FOQuantifierTacticsImpl.universalClosureT(order)) & debugT("Handing to " + toolId) &
     ArithmeticTacticsImpl.quantifierEliminationT(toolId)
 
   /*private*/ def eqThenHideIfChanged: PositionTactic = new PositionTactic("Eq and Hide if Changed") {
@@ -359,7 +360,7 @@ object TacticLibrary {
    * Quantifier elimination.
    */
   def quantifierEliminationT(toolId: String) = PropositionalTacticsImpl.ConsolidateSequentT &
-    FOQuantifierTacticsImpl.universalClosureT(SuccPosition(0)) & ArithmeticTacticsImpl.quantifierEliminationT(toolId)
+    FOQuantifierTacticsImpl.universalClosureT()(SuccPosition(0)) & ArithmeticTacticsImpl.quantifierEliminationT(toolId)
 
   /*******************************************************************
    * Elementary tactics
