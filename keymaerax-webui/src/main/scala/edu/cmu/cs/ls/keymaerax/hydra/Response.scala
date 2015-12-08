@@ -294,7 +294,12 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
 
   object Helpers {
     def childrenJson(children: List[TreeNode]): JsValue = {
-      JsArray(children.map({ case node => nodeIdJson(node.id) }))
+      /* It would probably not be a huge deal to return [] instead of null in the empty case, but this is what the
+      * JSON mockups did, so let's be consistent just in case.*/
+      children.map({ case node => nodeIdJson(node.id) }) match {
+        case Nil => JsNull
+        case lst => JsArray(lst)
+      }
     }
 
     def sequentJson(sequent: Sequent): JsValue = {
@@ -377,7 +382,6 @@ class AgendaAwesomeResponse(tree: Tree) extends Response {
       "proofTree" -> proofTree,
       "agendaItems" -> agendaItems
     )
-    println("I made " + json)
 }
 
 
