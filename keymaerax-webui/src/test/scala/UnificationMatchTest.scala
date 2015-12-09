@@ -97,14 +97,29 @@ class UnificationMatchTest extends FlatSpec with Matchers {
         SubstitutionPair("t()".asTerm, Variable("z")) :: Nil))
   }
 
-  "New unification match" should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0" in {
+  "New unification match" should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0 (failed setup)" in {
     val s1 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
     val s2 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
     import edu.cmu.cs.ls.keymaerax.btactics._
     //@todo not sure about the expected result
+    a[CoreException] shouldBe thrownBy(
     UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
       SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm)) ::
         SubstitutionPair(Variable("x"), Variable("y")) ::
         SubstitutionPair("t()".asTerm, Variable("z")) :: Nil))
+    )
+  }
+
+  it should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0" in {
+    val s1 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
+    val s2 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
+    import edu.cmu.cs.ls.keymaerax.btactics.UnificationMatch
+    import edu.cmu.cs.ls.keymaerax.btactics.RenUSubst
+    println("Unify " + s1 + "\nwith  " + s2 + "\nyields " + UnificationMatch(s1, s2))
+    //@todo not sure about the expected result
+    UnificationMatch(s1, s2) shouldBe RenUSubst(
+      (PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm)) ::
+        (Variable("x"), Variable("y")) ::
+        ("t()".asTerm, Variable("z")) :: Nil)
   }
 }
