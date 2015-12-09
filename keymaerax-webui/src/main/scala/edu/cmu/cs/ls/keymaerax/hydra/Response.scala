@@ -407,19 +407,15 @@ class ProofTaskParentResponse (parent: Option[TreeNode]) extends Response {
           "parent" -> node.parent.map({case parent => nodeIdJson(parent.id)}).getOrElse(JsNull)
         )
     }
-  /*
-{
-  "id": "S0",
-  "sequent": {
-    "ante": [],
-    "succ": [{
-      "id": "F0s",
-      "formula": {"name": "imply", "children": []}
-     },
-  "children": [ "S1" ],
-  "rule": { "id": "R2", "name": "implyR" },
-  "parent": "S0"
-}*/
+}
+
+class GetPathAllResponse(path: List[TreeNode], parentsRemaining: Int) extends Response {
+  import Helpers._
+  val json =
+    JsObject (
+      "numParentsUntilComplete" -> JsNumber(parentsRemaining),
+      "path" -> new JsArray(path.map({case node => nodeJson(node)}))
+    )
 }
 
 //class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {

@@ -16,6 +16,7 @@ import java.util.{Locale, Calendar}
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
+import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
@@ -503,9 +504,24 @@ class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : Str
 
 class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
   def getResultingResponses() = {
-    val tree = db.proofTree(proofId toInt)
+    val tree = db.proofTree(proofId.toInt)
     val parent = tree.parent(nodeId)
     val response = new ProofTaskParentResponse(parent)
+    response :: Nil
+  }
+}
+
+case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
+  def getResultingResponses() = {
+    var tree: Option[TreeNode] = Some(db.proofTree(proofId.toInt).root)
+    var path: List[TreeNode] = Nil
+    while (tree.nonEmpty) {
+      path = tree.get :: path
+      tree = tree.get.parent
+    }
+    /* To start with, always send the whole path. */
+    val parentsRemaining = 0
+    val response = new GetPathAllResponse(path.reverse, parentsRemaining)
     response :: Nil
   }
 }

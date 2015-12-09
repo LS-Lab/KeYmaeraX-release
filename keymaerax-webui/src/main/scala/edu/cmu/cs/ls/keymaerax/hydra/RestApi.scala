@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
+import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import akka.actor.Actor
 import spray.routing._
 import spray.http._
@@ -207,11 +208,7 @@ trait RestApi extends HttpService {
 
   val proofTasksPathAll = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pathall") { (userId, proofId, nodeId, goalId) => { pathEnd {
     get {
-      val request = goalId match {
-        case "S5" => new MockRequest("/mockdata/s5pathallreply.json")
-        case "S3" => new MockRequest("/mockdata/s23pathallreply.json")
-        case "S2" => new MockRequest("/mockdata/s23pathallreply.json")
-      }
+      val request = new GetPathAllRequest(database, userId, proofId, nodeId, goalId)
       complete(standardCompletion(request))
     }
   }}}
@@ -557,6 +554,7 @@ trait RestApi extends HttpService {
       initializeModel :: isLocal :: shutdown ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
+
 }
 //
 //
