@@ -89,6 +89,18 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   "Unification match" should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0" in {
     val s1 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
     val s2 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
+    import edu.cmu.cs.ls.keymaerax.tactics._
+    //@todo not sure about the expected result
+    UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm)) ::
+        SubstitutionPair(Variable("x"), Variable("y")) ::
+        SubstitutionPair("t()".asTerm, Variable("z")) :: Nil))
+  }
+
+  "New unification match" should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0" in {
+    val s1 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
+    val s2 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
+    import edu.cmu.cs.ls.keymaerax.btactics._
     //@todo not sure about the expected result
     UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
       SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm)) ::
