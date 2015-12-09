@@ -63,10 +63,6 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
     db.printStats
   }
 
-  it should "support parents" in {
-    println(new ProofTaskParentRequest(db, "guest","10", "4", "goal").getResultingResponses().head.json)
-  }
-
   it should "print out some steps for me to check by hand" in {
     println(db.proofTree(10))
   }
