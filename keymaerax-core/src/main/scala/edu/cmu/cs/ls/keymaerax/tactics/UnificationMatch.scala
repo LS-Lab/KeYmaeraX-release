@@ -13,10 +13,11 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 
 /**
- * Unification/matching algorithm for tactics.
- * Matches second argument against the pattern of the first argument but not vice versa.
- * @author Andre Platzer
- */
+  * Unification/matching algorithm for tactics.
+  * Unify(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
+  * Matcher leaves input alone and only substitutes into shape.
+  * @author Andre Platzer
+  */
 object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
 //  type Subst = USubst
 //  private def Subst(subs: List[SubstRepl]): Subst = USubst(subs)
