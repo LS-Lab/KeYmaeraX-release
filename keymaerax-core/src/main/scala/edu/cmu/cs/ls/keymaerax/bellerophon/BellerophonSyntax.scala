@@ -4,8 +4,6 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
 
-import scala.collection.immutable
-
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron expressions.
  * See Table 1 of "Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus"
@@ -60,8 +58,13 @@ trait PositionalTactic extends BelleExpr {
   def apply(position: Position): AppliedPositionTactic = apply(Fixed(position))
   def apply(seqIdx: Int, inExpr: List[Int] = Nil): AppliedPositionTactic = apply(PositionConverter.convertPos(seqIdx, inExpr))
   def apply(locator: Symbol): AppliedPositionTactic = locator match {
-    case 'L => apply(FindAnte())
-    case 'R => apply(FindSucc())
+    case 'L => apply(Find(0, None, AntePosition(0)))
+    case 'R => apply(Find(0, None, SuccPosition(0)))
+    case '_ => this match {
+      case _: BuiltInLeftTactic => apply(Find(0, None, AntePosition(0)))
+      case _: BuiltInRightTactic => apply(Find(0, None, SuccPosition(0)))
+      case _ => throw new BelleError(s"Cannot determine whether tactic $prettyString is left/right. Please use 'L or 'R as appropriate.")
+    }
   }
   def apply(locator: PositionLocator): AppliedPositionTactic = AppliedPositionTactic(this, locator)
 }
@@ -98,12 +101,10 @@ abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
 case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic, locator: PositionLocator) extends BelleExpr {
   def computeResult(provable: Provable) : Provable = locator match {
     case Fixed(pos) => positionTactic.computeResult(provable, pos)
-    case FindAnte(goal, shape, start) =>
-      require(provable.subgoals(goal).ante.nonEmpty, "Antecedent must be non-empty")
+    case Find(goal, shape, start) =>
+      require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
       tryAllAfter(provable, goal, shape, start, null)
-    case FindSucc(goal, shape, start) =>
-      require(provable.subgoals(goal).succ.nonEmpty, "Succedent must be non-empty")
-      tryAllAfter(provable, goal, shape, start, null)
+
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
@@ -161,13 +162,53 @@ abstract case class DependentTactic(name: String) extends BelleExpr {
   override def prettyString: String = "DependentTactic(" + name + ")"
 }
 abstract case class DependentPositionTactic(name: String) extends BelleExpr {
-  def apply(pos: Position) : DependentTactic
-  def apply(seqIdx: Int, inExpr: List[Int] = Nil): DependentTactic = apply(PositionConverter.convertPos(seqIdx, inExpr))
+  def apply(pos: Position): DependentTactic
+  def apply(seqIdx: Int, inExpr: List[Int] = Nil): DependentTactic = apply(Fixed(PositionConverter.convertPos(seqIdx, inExpr)))
+  def apply(locator: Symbol): AppliedDependentPositionTactic = locator match {
+    case 'L => apply(Find(0, None, AntePosition(0)))
+    case 'R => apply(Find(0, None, SuccPosition(0)))
+  }
+  def apply(locator: PositionLocator): AppliedDependentPositionTactic = new AppliedDependentPositionTactic(this, locator)
   override def prettyString: String = "DependentPositionTactic(" + name + ")"
 }
 abstract case class InputTactic[T](input: T) extends BelleExpr {
   def computeExpr(): BelleExpr
   override def prettyString: String = "input(" + input + ")"
+}
+
+class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: PositionLocator) extends DependentTactic(pt.name) {
+  override def computeExpr(v: BelleValue): BelleExpr = locator match {
+    case Fixed(pos) => pt.apply(pos).computeExpr(v)
+    case Find(goal, shape, start) =>
+      tryAllAfter(goal, shape, start, null)
+  }
+
+  /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
+  private def tryAllAfter(goal: Int, shape: Option[Formula], pos: Position, cause: BelleError): DependentTactic = new DependentTactic(name) {
+    override def computeExpr(v: BelleValue): BelleExpr = v match {
+      case BelleProvable(provable) =>
+        if (pos.isIndexDefined(provable.subgoals(goal))) {
+          try {
+            shape match {
+              case Some(f) if UnificationMatch.unifiable(f, provable.subgoals(goal)(pos)).isDefined =>
+                pt.apply(pos).computeExpr(v)
+              case Some(f) if UnificationMatch.unifiable(f, provable.subgoals(goal)(pos)).isEmpty =>
+                tryAllAfter(goal, shape, pos+1, new BelleError(s"Formula is not of expected shape", cause))
+              case None => pt.apply(pos).computeExpr(v)
+            }
+          } catch {
+            case e: Throwable =>
+              val newCause = if (cause == null) new BelleError(s"Dependent position tactic ${pt.prettyString} is not " +
+                s"applicable at ${pos.prettyString}", e)
+              else new CompoundException(
+                new BelleError(s"Dependent position tactic ${pt.prettyString} is not applicable at ${pos.prettyString}", e),
+                cause)
+              tryAllAfter(goal, shape, pos+1, newCause)
+          }
+        } else throw cause
+      case _ => pt.apply(pos).computeExpr(v) // cannot search recursively, because don't know when to abort
+    }
+  }
 }
 
 /** A partial tactic is allowed to leave its subgoals around as unproved */

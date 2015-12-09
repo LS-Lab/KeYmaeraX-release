@@ -1110,7 +1110,7 @@ object DerivedAxioms {
     useAt("<*> iterate")(1, 1::Nil) &
       useAt("<*> iterate")(1, 1::1::1::Nil) &
       cut("<a;>p(??) -> <a;>(p(??) | <a;><{a;}*>p(??))".asFormula) <(
-      /* show */ hideR(1) & ls(implyR) & mond & prop,
+      /* show */ hideR(1) & implyR('_) & mond & prop,
       /* use */ prop
     )
   )
@@ -1131,7 +1131,7 @@ object DerivedAxioms {
     useAt("[*] iterate")(1, 0::Nil) &
       useAt("[*] iterate")(1, 0::1::1::Nil) &
       cut("[a;](p(??) & [a;][{a;}*]p(??)) -> [a;]p(??)".asFormula) <(
-      /* show */ hideR(1) & ls(implyR) & monb & prop,
+      /* show */ hideR(1) & implyR('_) & monb & prop,
       /* use */ prop
     )
   )

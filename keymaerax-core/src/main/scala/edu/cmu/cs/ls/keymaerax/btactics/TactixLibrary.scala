@@ -37,10 +37,11 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val step               : DependentPositionTactic = HilbertCalculus.stepAt
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
-  def normalize               : BelleExpr = (alphaRule | closeId | ls(allR) | la(existsL)
+  def normalize               : BelleExpr = (alphaRule | closeId | allR('_) | existsL('_)
     | close
     | betaRule
-    | l(step))*@TheType()
+    | step('L)
+    | step('R))*@TheType()
   /** exhaust propositional logic */
   def prop                    : BelleExpr = (closeId | close | alphaRule | betaRule)*@TheType()
   /** master: master tactic that tries hard to prove whatever it could */
@@ -79,42 +80,6 @@ object TactixLibrary extends UnifyUSCalculus {
     * @see [[label()]]
     */
   def sublabel(s: String): BelleExpr = ??? //new SubLabelBranch(s)
-
-  // Locating applicable positions for PositionTactics
-
-
-  /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
-  def llu(tactic: PositionalTactic, shape: Formula): BuiltInTactic = ???
-//    SearchTacticsImpl.locateAnte(tactic, f => UnificationMatch.unifiable(shape, f)!=None)
-  /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
-  def llu(tactic: PositionalTactic, shape: String): BuiltInTactic = llu(tactic, parser.formulaParser(shape))
-  /** Locate applicable position in succedent on the right in which something matching the given shape occurs */
-  def lru(tactic: PositionalTactic, shape: Formula): BuiltInTactic = ???
-//    SearchTacticsImpl.locateSucc(tactic, f => UnificationMatch.unifiable(shape, f)!=None)
-  /** Locate applicable position in succedent on the right in which something matching the given shape occurs */
-  def lru(tactic: PositionalTactic, shape: String): BuiltInTactic = lru(tactic, parser.formulaParser(shape))
-
-  /** Locate applicable position in succedent on the right in which fml occurs verbatim */
-  def ls(tactic: BuiltInRightTactic, fml: String = "", key: Option[Expression] = None): BuiltInTactic = ???
-//    SearchTacticsImpl.locateSucc(tactic,
-//      if (fml == "") (_ => true) else _ == fml.asFormula,
-//      if (key.isDefined) Some(_ == key.get) else None)
-  /** Locate applicable position in succedent on the right */
-  def lR(tactic: BuiltInRightTactic): BuiltInTactic = ls(tactic)
-  /** Locate applicable position in antecedent on the left in which fml occurs verbatim  */
-  def la(tactic: BuiltInLeftTactic, fml: String = "", key: Option[Expression] = None): BuiltInTactic = ???
-//    SearchTacticsImpl.locateAnte(tactic,
-//      if (fml == "") _ => true else _ == fml.asFormula,
-//      if (key.isDefined) Some(_ == key.get) else None)
-  /** Locate applicable position in antecedent on the left */
-  def lL(tactic: BuiltInLeftTactic): BuiltInTactic = la(tactic)
-  /** Locate applicable top-level position in left or right in antecedent or succedent */
-  def l(tactic: PositionalTactic): BuiltInTactic  = ??? //TacticLibrary.locateAnteSucc(tactic)
-  /** Locate applicable top-level position in left or right in antecedent or succedent */
-  def l(tactic: DependentPositionTactic): DependentTactic = ???
-  /** Locate applicable position within a given position */
-  def lin(tactic: PositionalTactic): PositionalTactic = ???
-
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Propositional tactics
@@ -183,7 +148,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation */
   lazy val assignb            : BuiltInPositionTactic = ??? //TacticLibrary.boxAssignT
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
-  lazy val randomb            : BuiltInPositionTactic = ??? //TacticLibrary.boxNDetAssign
+  lazy val randomb            : DependentPositionTactic = useAt("[:*] assign nondet")
   /** testb: [?] simplifies test `[?q;]p` to an implication `q->p` */
   lazy val testb              : DependentPositionTactic = useAt("[?] test")
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)` */
@@ -209,13 +174,15 @@ object TactixLibrary extends UnifyUSCalculus {
 
   // differential equations
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
-  lazy val DW                 : BuiltInPositionTactic = ??? //TacticLibrary.diffWeakenT
+  lazy val DW                 : DependentPositionTactic = useAt("DW differential weakening") //@todo more powerful tactic that removes [{x'}], see ODETactics.diffWeakenT
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
-  def DC(invariant: Formula)  : BuiltInPositionTactic = ??? //TacticLibrary.diffCutT(invariant)
+  def DC(invariant: Formula)  : DependentPositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
+    (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
+  )
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols as `[x'=f(x)][x':=f(x)]p(x,x')` */
-  lazy val DE                 : BuiltInPositionTactic = ??? //ODETactics.diffEffectT
+  lazy val DE                 : DependentPositionTactic = DifferentialTactics.DE
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
-  lazy val DI                 : BuiltInPositionTactic = ??? //TacticLibrary.diffInvariant
+  lazy val DI                 : DependentPositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */
@@ -244,22 +211,49 @@ object TactixLibrary extends UnifyUSCalculus {
   /** DS: Differential Solution solves a differential equation */
   def DS                      : BuiltInPositionTactic = ???
 
-  /** Dassignb: Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
-  lazy val Dassignb           : BuiltInPositionTactic = ??? //HybridProgramTacticsImpl.boxDerivativeAssignT
+  /** Dassignb: [:='] Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
+  lazy val Dassignb           : DependentPositionTactic = useAt("[':=] differential assign")
   /** Dplus: +' derives a sum `(f(x)+g(x))' = (f(x))' + (g(x))'` */
-  lazy val Dplus              : BuiltInPositionTactic = ??? //SyntacticDerivationInContext.AddDerivativeT
+  lazy val Dplus              : DependentPositionTactic = useAt("+' derive sum")
   /** neg: -' derives unary negation `(-f(x))' = -(f(x)')` */
-  lazy val Dneg               : BuiltInPositionTactic = ??? //SyntacticDerivationInContext.NegativeDerivativeT
+  lazy val Dneg               : DependentPositionTactic = useAt("-' derive neg")
   /** Dminus: -' derives a difference `(f(x)-g(x))' = (f(x))' - (g(x))'` */
-  lazy val Dminus             : BuiltInPositionTactic = ??? //SyntacticDerivationInContext.SubtractDerivativeT
+  lazy val Dminus             : DependentPositionTactic = useAt("-' derive minus")
   /** Dtimes: *' derives a product `(f(x)*g(x))' = f(x)'*g(x) + f(x)*g(x)'` */
-  lazy val Dtimes             : BuiltInPositionTactic = ??? //SyntacticDerivationInContext.MultiplyDerivativeT
+  lazy val Dtimes             : DependentPositionTactic = useAt("*' derive product")
   /** Dquotient: /' derives a quotient `(f(x)/g(x))' = (f(x)'*g(x) - f(x)*g(x)') / (g(x)^2)` */
-  lazy val Dquotient          : BuiltInPositionTactic = ??? //SyntacticDerivationInContext.DivideDerivativeT
+  lazy val Dquotient          : DependentPositionTactic = useAt("/' derive quotient")
+  /** Dpower: ^' derives a power */
+  lazy val Dpower             : DependentPositionTactic = useAt("^' derive power", PosInExpr(1::0::Nil))
+  /** Dconst: c()' derives a constant `c()' = 0` */
+  lazy val Dconst             : DependentPositionTactic = useAt("c()' derive constant fn")
   /** Dcompose: o' derives a function composition by chain rule */
   lazy val Dcompose           : BuiltInPositionTactic = ???
   /** Dconstify: substitute non-bound occurences of x with x() */
   lazy val Dconstify          : BuiltInPositionTactic = ???
+
+  /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
+  lazy val Dand               : DependentPositionTactic = useAt("&' derive and")
+  /** Dor: |' derives a disjunction `(p(x)|q(x))'` to obtain `p(x)' & q(x)'` */
+  lazy val Dor                : DependentPositionTactic = useAt("|' derive or")
+  /** Dimply: ->' derives an implication `(p(x)->q(x))'` to obtain `(!p(x) | q(x))'` */
+  lazy val Dimply             : DependentPositionTactic = useAt("->' derive imply")
+  /** Dequal: =' derives an equation `(f(x)=g(x))'` to obtain `f(x)'=g(x)'` */
+  lazy val Dequal             : DependentPositionTactic = useAt("=' derive =")
+  /** Dnotequal: !=' derives a disequation `(f(x)!=g(x))'` to obtain `f(x)'=g(x)'` */
+  lazy val Dnotequal          : DependentPositionTactic = useAt("!=' derive !=")
+  /** Dless: <' derives less-than `(f(x)<g(x))'` to obtain `f(x)'<=g(x)'` */
+  lazy val Dless              : DependentPositionTactic = useAt("<' derive <")
+  /** Dlessequal: <=' derives a less-or-equal `(f(x)<=g(x))'` to obtain `f(x)'<=g(x)'` */
+  lazy val Dlessequal         : DependentPositionTactic = useAt("<=' derive <=")
+  /** Dgreater: >' derives greater-than `(f(x)>g(x))'` to obtain `f(x)'>=g(x)'` */
+  lazy val Dgreater           : DependentPositionTactic = useAt(">' derive >")
+  /** Dgreaterequal: >=' derives a greater-or-equal `(f(x)>=g(x))'` to obtain `f(x)'>=g(x)'` */
+  lazy val Dgreaterequal      : DependentPositionTactic = useAt(">=' derive >=")
+  /** Dforall: \forall' derives an all quantifier `(\forall x p(x))'` to obtain `\forall x (p(x)')` */
+  lazy val Dforall            : DependentPositionTactic = useAt("forall' derive forall")
+  /** Dexists: \exists' derives an exists quantifier */
+  lazy val Dexists            : DependentPositionTactic = useAt("exists' derive exists")
 
   /** Prove the given list of differential invariants in that order by DC+DI */
   //@todo could change type to invariants: Formula* if considered more readable
@@ -399,9 +393,9 @@ object TactixLibrary extends UnifyUSCalculus {
 
 
   /** Alpha rules are propositional rules that do not split */
-  def alphaRule: BelleExpr = lL(andL) | lR(orR) | lR(implyR) | lL(notL) | lR(notR)
+  def alphaRule: BelleExpr = andL('_) | orR('_) | implyR('_) | notL('_) | notR('_)
   /** Beta rules are propositional rules that split */
-  def betaRule: BelleExpr = lR(andR) | lL(orL) | lL(implyL) | lL(equivL) | lR(equivR)
+  def betaRule: BelleExpr = andR('_) | orL('_) | implyL('_) | equivL('_) | equivR('_)
   /** Real-closed field arithmetic after consolidating sequent into a single universally-quantified formula */
   def RCF: BelleExpr = ??? //PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & FOQuantifierTacticsImpl.universalClosureT(1) & debug("Handing to Mathematica") &
     //ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
@@ -409,7 +403,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
   //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
   def lazyQE = (
-    ((alphaRule | ls(allR) | la(existsL)
+    ((alphaRule | allR('_) | existsL('_)
       | close
       //@todo eqLeft|eqRight for equality rewriting directionally toward easy
       //| (la(TacticLibrary.eqThenHideIfChanged)*)
