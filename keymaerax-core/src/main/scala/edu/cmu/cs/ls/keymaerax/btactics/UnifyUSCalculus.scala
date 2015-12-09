@@ -45,7 +45,7 @@ trait UnifyUSCalculus {
     * }}}
     * @see [[monb]] with p(x)=True
     */
-  lazy val G                  : BelleExpr         = ??? //AxiomaticRuleTactics.goedelT
+  lazy val G                  : BelleExpr         = DLBySubst.G
   /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
   lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
   /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality `c(f(x))=c(g(x))` to an equality `f(x)=g(x)` */
