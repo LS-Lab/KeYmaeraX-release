@@ -60,8 +60,8 @@ trait PositionalTactic extends BelleExpr {
   def apply(position: Position): AppliedPositionTactic = apply(Fixed(position))
   def apply(seqIdx: Int, inExpr: List[Int] = Nil): AppliedPositionTactic = apply(PositionConverter.convertPos(seqIdx, inExpr))
   def apply(locator: Symbol): AppliedPositionTactic = locator match {
-    case 'la => apply(FindAnte())
-    case 'ls => apply(FindSucc())
+    case 'L => apply(FindAnte())
+    case 'R => apply(FindSucc())
   }
   def apply(locator: PositionLocator): AppliedPositionTactic = AppliedPositionTactic(this, locator)
 }
@@ -98,19 +98,25 @@ abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
 case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic, locator: PositionLocator) extends BelleExpr {
   def computeResult(provable: Provable) : Provable = locator match {
     case Fixed(pos) => positionTactic.computeResult(provable, pos)
-    case FindAnte(goal, start) =>
+    case FindAnte(goal, shape, start) =>
       require(provable.subgoals(goal).ante.nonEmpty, "Antecedent must be non-empty")
-      tryAllAfter(provable, goal, start, null)
-    case FindSucc(goal, start) =>
+      tryAllAfter(provable, goal, shape, start, null)
+    case FindSucc(goal, shape, start) =>
       require(provable.subgoals(goal).succ.nonEmpty, "Succedent must be non-empty")
-      tryAllAfter(provable, goal, start, null)
+      tryAllAfter(provable, goal, shape, start, null)
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
-  private def tryAllAfter(provable: Provable, goal: Int, pos: Position, cause: BelleError): Provable =
+  private def tryAllAfter(provable: Provable, goal: Int, shape: Option[Formula], pos: Position, cause: BelleError): Provable =
     if (pos.isIndexDefined(provable.subgoals(goal))) {
       try {
-        positionTactic.computeResult(provable, pos)
+        shape match {
+          case Some(f) if UnificationMatch.unifiable(f, provable.subgoals(goal)(pos)).isDefined =>
+            positionTactic.computeResult(provable, pos)
+          case Some(f) if UnificationMatch.unifiable(f, provable.subgoals(goal)(pos)).isEmpty =>
+            tryAllAfter(provable, goal, shape, pos+1, new BelleError(s"Formula is not of expected shape", cause))
+          case None => positionTactic.computeResult(provable, pos)
+        }
       } catch {
         case e: Throwable =>
           val newCause = if (cause == null) new BelleError(s"Position tactic ${positionTactic.prettyString} is not " +
@@ -118,7 +124,7 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
           else new CompoundException(
             new BelleError(s"Position tactic ${positionTactic.prettyString} is not applicable at ${pos.prettyString}", e),
             cause)
-          tryAllAfter(provable, goal, pos+1, newCause)
+          tryAllAfter(provable, goal, shape, pos+1, newCause)
       }
     } else throw cause
 

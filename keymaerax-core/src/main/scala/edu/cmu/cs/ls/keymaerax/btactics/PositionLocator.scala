@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Position, SuccPosition}
 
 /** Locates positions */
@@ -13,11 +14,11 @@ case class Fixed(pos: Position) extends PositionLocator {
 }
 
 /** Locates the first applicable position at or after start in the antecedent of goal. */
-case class FindAnte(goal: Int = 0, start: AntePosition = new AntePosition(0)) extends PositionLocator {
+case class FindAnte(goal: Int = 0, shape: Option[Formula] = None, start: AntePosition = new AntePosition(0)) extends PositionLocator {
   override def prettyString: String = "?a"
 }
 
 /** Locates the first applicable position at or after start in the succedent of goal. */
-case class FindSucc(goal: Int = 0, start: SuccPosition = new SuccPosition(0)) extends PositionLocator {
+case class FindSucc(goal: Int = 0, shape: Option[Formula] = None, start: SuccPosition = new SuccPosition(0)) extends PositionLocator {
   override def prettyString: String = "?s"
 }
