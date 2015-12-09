@@ -94,11 +94,7 @@ object HilbertCalculus extends UnifyUSCalculus {
     (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
   )
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols as `[x'=f(x)][x':=f(x)]p(x,x')` with its differential assignment `x':=f(x)`. */
-  lazy val DE                 : DependentPositionTactic = ???
-//    if (INTERNAL) ifElseT(isODESystem,
-//      (useAt("DE differential effect (system)") * getODEDim),
-//      useAt("DE differential effect"))
-//    else ODETactics.diffEffectT
+  lazy val DE                 : DependentPositionTactic = DifferentialTactics.DE
   /** DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation.
     * `[x'=f(x)&q(x)]p(x)` reduces to `q(x) -> p(x) & [x'=f(x)]p(x)'`.
     * @see [[diffInd()]] */
