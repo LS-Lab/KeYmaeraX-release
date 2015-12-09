@@ -4,8 +4,6 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
 
-import scala.collection.immutable
-
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron expressions.
  * See Table 1 of "Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus"
@@ -60,8 +58,13 @@ trait PositionalTactic extends BelleExpr {
   def apply(position: Position): AppliedPositionTactic = apply(Fixed(position))
   def apply(seqIdx: Int, inExpr: List[Int] = Nil): AppliedPositionTactic = apply(PositionConverter.convertPos(seqIdx, inExpr))
   def apply(locator: Symbol): AppliedPositionTactic = locator match {
-    case 'L => apply(FindAnte())
-    case 'R => apply(FindSucc())
+    case 'L => apply(Find(0, None, AntePosition(0)))
+    case 'R => apply(Find(0, None, SuccPosition(0)))
+    case '_ => this match {
+      case _: BuiltInLeftTactic => apply(Find(0, None, AntePosition(0)))
+      case _: BuiltInRightTactic => apply(Find(0, None, SuccPosition(0)))
+      case _ => throw new BelleError(s"Cannot determine whether tactic $prettyString is left/right. Please use 'L or 'R as appropriate.")
+    }
   }
   def apply(locator: PositionLocator): AppliedPositionTactic = AppliedPositionTactic(this, locator)
 }
@@ -98,12 +101,10 @@ abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
 case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic, locator: PositionLocator) extends BelleExpr {
   def computeResult(provable: Provable) : Provable = locator match {
     case Fixed(pos) => positionTactic.computeResult(provable, pos)
-    case FindAnte(goal, shape, start) =>
-      require(provable.subgoals(goal).ante.nonEmpty, "Antecedent must be non-empty")
+    case Find(goal, shape, start) =>
+      require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
       tryAllAfter(provable, goal, shape, start, null)
-    case FindSucc(goal, shape, start) =>
-      require(provable.subgoals(goal).succ.nonEmpty, "Succedent must be non-empty")
-      tryAllAfter(provable, goal, shape, start, null)
+
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */

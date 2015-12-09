@@ -13,12 +13,7 @@ case class Fixed(pos: Position) extends PositionLocator {
   override def prettyString: String = pos.prettyString
 }
 
-/** Locates the first applicable position at or after start in the antecedent of goal. */
-case class FindAnte(goal: Int = 0, shape: Option[Formula] = None, start: AntePosition = new AntePosition(0)) extends PositionLocator {
-  override def prettyString: String = "?a"
-}
-
-/** Locates the first applicable position at or after start in the succedent of goal. */
-case class FindSucc(goal: Int = 0, shape: Option[Formula] = None, start: SuccPosition = new SuccPosition(0)) extends PositionLocator {
-  override def prettyString: String = "?s"
+/** Locates the first applicable position at or after start of goal. */
+case class Find(goal: Int, shape: Option[Formula], start: Position) extends PositionLocator {
+  override def prettyString: String = "'_"
 }
