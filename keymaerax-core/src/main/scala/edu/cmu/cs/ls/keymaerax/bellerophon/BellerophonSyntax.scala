@@ -1,8 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.RenUSubst
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
+
+import scala.collection.immutable
 
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron expressions.
@@ -55,8 +57,13 @@ trait PositionalTactic extends BelleExpr {
     *         enough information to reconstruct the effect of the tactic using computeResult,
     *         but also an internal representation of the application.
     */
-  def apply(position: Position): AppliedPositionTactic = AppliedPositionTactic(this, position)
+  def apply(position: Position): AppliedPositionTactic = apply(Fixed(position))
   def apply(seqIdx: Int, inExpr: List[Int] = Nil): AppliedPositionTactic = apply(PositionConverter.convertPos(seqIdx, inExpr))
+  def apply(locator: Symbol): AppliedPositionTactic = locator match {
+    case 'la => apply(FindAnte())
+    case 'ls => apply(FindSucc())
+  }
+  def apply(locator: PositionLocator): AppliedPositionTactic = AppliedPositionTactic(this, locator)
 }
 
 abstract case class BuiltInPositionTactic(name: String) extends PositionalTactic {override def prettyString = name}
@@ -88,9 +95,34 @@ abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
   * Stores the position tactic and position at which the tactic was applied.
   * Useful for storing execution traces.
   */
-case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic, pos: Position) extends BelleExpr {
-  def computeResult(provable: Provable) : Provable = positionTactic.computeResult(provable, pos)
-  override def prettyString = positionTactic.prettyString + "(" + pos.prettyString + ")"
+case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic, locator: PositionLocator) extends BelleExpr {
+  def computeResult(provable: Provable) : Provable = locator match {
+    case Fixed(pos) => positionTactic.computeResult(provable, pos)
+    case FindAnte(goal, start) =>
+      require(provable.subgoals(goal).ante.nonEmpty, "Antecedent must be non-empty")
+      tryAllAfter(provable, start, null)
+    case FindSucc(goal, start) =>
+      require(provable.subgoals(goal).succ.nonEmpty, "Succedent must be non-empty")
+      tryAllAfter(provable, start, null)
+  }
+
+  /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
+  private def tryAllAfter(provable: Provable, pos: Position, cause: BelleError): Provable =
+    if (pos.isIndexDefined(provable.subgoals.head)) {
+      try {
+        positionTactic.computeResult(provable, pos)
+      } catch {
+        case e: Throwable =>
+          val newCause = if (cause == null) new BelleError(s"Position tactic ${positionTactic.prettyString} is not " +
+            s"applicable at ${pos.prettyString}", e)
+          else new CompoundException(
+            new BelleError(s"Position tactic ${positionTactic.prettyString} is not applicable at ${pos.prettyString}", e),
+            cause)
+          tryAllAfter(provable, pos+1, newCause)
+      }
+    } else throw cause
+
+  override def prettyString = positionTactic.prettyString + "(" + locator.prettyString + ")"
 }
 
 abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
