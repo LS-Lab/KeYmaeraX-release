@@ -526,6 +526,27 @@ case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String,
   }
 }
 
+case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
+  def getResultingResponses() = {
+    val node = db.proofTree(proofId.toInt).nodes.find({case node => node.id.toString == nodeId})
+    node match {
+      case None => throw new Exception("Node not found")
+      case Some(node) =>
+        var currNode = node
+        var done = false
+        while (currNode.parent.nonEmpty && !done) {
+          currNode = currNode.parent.get
+          /* Don't stop at the first node just because it branches (it may be the end of one branch and the start of the
+          * next), but if we see branching anywhere else we've found the end of our branch. */
+          if (currNode.children.size > 1) {
+            done = true
+          }
+        }
+          new GetBranchRootResponse(currNode) :: Nil
+    }
+  }
+}
+
 /**
  * Searches for tactics that are applicable to the specified formula. The sequent, which contains this formula, is
  * identified by the proof ID and the node ID.

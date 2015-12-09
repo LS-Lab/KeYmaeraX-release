@@ -357,6 +357,16 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
         "name" -> JsString("RulesUnimplemented")
       )
     }
+
+    def singleNodeJson(node: TreeNode): JsValue = {
+      JsObject (
+        "id" -> nodeIdJson(node.id),
+        "sequent" -> sequentJson(node.sequent),
+        "children" -> childrenJson(node.children),
+        "rule" -> ruleJson(node.rule),
+        "parent" -> node.parent.map({case parent => nodeIdJson(parent.id)}).getOrElse(JsNull)
+      )
+    }
   }
 
 class AgendaAwesomeResponse(tree: Tree) extends Response {
@@ -398,14 +408,7 @@ class ProofTaskParentResponse (parent: Option[TreeNode]) extends Response {
   val json =
     parent match {
       case None => JsObject()
-      case Some(node) =>
-        JsObject (
-          "id" -> nodeIdJson(node.id),
-          "sequent" -> sequentJson(node.sequent),
-          "children" -> childrenJson(node.children),
-          "rule" -> ruleJson(node.rule),
-          "parent" -> node.parent.map({case parent => nodeIdJson(parent.id)}).getOrElse(JsNull)
-        )
+      case Some(node) => singleNodeJson(node)
     }
 }
 
@@ -416,6 +419,10 @@ class GetPathAllResponse(path: List[TreeNode], parentsRemaining: Int) extends Re
       "numParentsUntilComplete" -> JsNumber(parentsRemaining),
       "path" -> new JsArray(path.map({case node => nodeJson(node)}))
     )
+}
+
+class GetBranchRootResponse(node: TreeNode) extends Response {
+  val json = Helpers.singleNodeJson(node)
 }
 
 //class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
