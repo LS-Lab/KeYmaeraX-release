@@ -100,15 +100,15 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
     case Fixed(pos) => positionTactic.computeResult(provable, pos)
     case FindAnte(goal, start) =>
       require(provable.subgoals(goal).ante.nonEmpty, "Antecedent must be non-empty")
-      tryAllAfter(provable, start, null)
+      tryAllAfter(provable, goal, start, null)
     case FindSucc(goal, start) =>
       require(provable.subgoals(goal).succ.nonEmpty, "Succedent must be non-empty")
-      tryAllAfter(provable, start, null)
+      tryAllAfter(provable, goal, start, null)
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
-  private def tryAllAfter(provable: Provable, pos: Position, cause: BelleError): Provable =
-    if (pos.isIndexDefined(provable.subgoals.head)) {
+  private def tryAllAfter(provable: Provable, goal: Int, pos: Position, cause: BelleError): Provable =
+    if (pos.isIndexDefined(provable.subgoals(goal))) {
       try {
         positionTactic.computeResult(provable, pos)
       } catch {
@@ -118,7 +118,7 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
           else new CompoundException(
             new BelleError(s"Position tactic ${positionTactic.prettyString} is not applicable at ${pos.prettyString}", e),
             cause)
-          tryAllAfter(provable, pos+1, newCause)
+          tryAllAfter(provable, goal, pos+1, newCause)
       }
     } else throw cause
 
