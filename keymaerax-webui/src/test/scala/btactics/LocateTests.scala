@@ -102,6 +102,16 @@ class LocateTests extends TacticTestBase {
     e.getMessage should include ("Position tactic OrR is not applicable at 2")
   }
 
+  it should "work with dependent position tactics" in {
+    val result = proveBy(
+      Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("[?x>0;]x>0".asFormula)),
+      TactixLibrary.step('R)
+    )
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x>0 -> x>0".asFormula
+  }
+
   "'_" should "locate the sole applicable formula in sequent" in {
     val result = proveBy(
       Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("x>0 | y>0".asFormula)),
