@@ -403,13 +403,9 @@ class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: S
   )
 }
 
-class ProofTaskParentResponse (parent: Option[TreeNode]) extends Response {
+class ProofTaskParentResponse (parent: TreeNode) extends Response {
   import Helpers._
-  val json =
-    parent match {
-      case None => JsObject()
-      case Some(node) => singleNodeJson(node)
-    }
+  val json = singleNodeJson(parent)
 }
 
 class GetPathAllResponse(path: List[TreeNode], parentsRemaining: Int) extends Response {

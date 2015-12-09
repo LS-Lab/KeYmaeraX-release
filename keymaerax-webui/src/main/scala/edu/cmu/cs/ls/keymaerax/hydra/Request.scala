@@ -505,9 +505,12 @@ class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : Str
 class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
   def getResultingResponses() = {
     val tree = db.proofTree(proofId.toInt)
-    val parent = tree.parent(nodeId)
-    val response = new ProofTaskParentResponse(parent)
-    response :: Nil
+    tree.parent(nodeId) match {
+      case None => throw new Exception("Tried to get parent of node " + nodeId + " which has no parent")
+      case Some(parent) =>
+        val response = new ProofTaskParentResponse(parent)
+        response :: Nil
+    }
   }
 }
 
