@@ -6,15 +6,11 @@ package btactics
 */
 
 
-import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.tactics.{Context, PosInExpr, Position, SuccPosition, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import test.RandomFormula
 import testHelper.KeYmaeraXTestTags
 
@@ -26,35 +22,13 @@ import scala.collection.immutable._
  */
 @SummaryTest
 @UsualTest
-class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+class HilbertTests extends TacticTestBase {
 
   object TestLib extends UnifyUSCalculus
 
   val randomTrials = 10
   val randomComplexity = 3
   val rand = new RandomFormula() //(-4317240407825764493L)
-
-  val theInterpreter = SequentialInterpreter()
-
-  override def beforeEach() = {
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-  }
-
-  private def proveBy(fml: Formula, tactic: BelleExpr): Provable = {
-    val v = BelleProvable(Provable.startProof(fml))
-    theInterpreter(tactic, v) match {
-      case BelleProvable(provable) => provable
-      case r => fail("Unexpected tactic result " + r)
-    }
-  }
-
-  private def proveBy(s: Sequent, tactic: BelleExpr): Provable = {
-    val v = BelleProvable(Provable.startProof(s))
-    theInterpreter(tactic, v) match {
-      case BelleProvable(provable) => provable
-      case r => fail("Unexpected tactic result " + r)
-    }
-  }
 
   "UseAt" should "reduce x>5 |- [x:=x+1;x:=2*x;]x>1 to x>5 |- [x:=x+1;][x:=2*x;]x>1 by useAt" in {
     proveBy("[x:=x+1;x:=2*x;]x>1".asFormula, TestLib.useAt("[;] compose")(SuccPosition(0))).subgoals should contain only

@@ -19,38 +19,12 @@ import testHelper.KeYmaeraXTestTags
 import scala.collection.immutable._
 
 /**
- * Tests Hilbert Calculus.
- * @author Andre Platzer
+ * Tests Propositional Calculus.
+ * @see [[edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics]]
  */
 @SummaryTest
 @UsualTest
-class PropositionalTests extends FlatSpec with Matchers with BeforeAndAfterEach {
-
-  val randomTrials = 10
-  val randomComplexity = 3
-  val rand = new RandomFormula() //(-4317240407825764493L)
-
-  val theInterpreter = SequentialInterpreter()
-
-  override def beforeEach() = {
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-  }
-
-  private def proveBy(fml: Formula, tactic: BelleExpr): Provable = {
-    val v = BelleProvable(Provable.startProof(fml))
-    theInterpreter(tactic, v) match {
-      case BelleProvable(provable) => provable
-      case r => fail("Unexpected tactic result " + r)
-    }
-  }
-
-  private def proveBy(s: Sequent, tactic: BelleExpr): Provable = {
-    val v = BelleProvable(Provable.startProof(s))
-    theInterpreter(tactic, v) match {
-      case BelleProvable(provable) => provable
-      case r => fail("Unexpected tactic result " + r)
-    }
-  }
+class PropositionalTests extends TacticTestBase {
 
   "Modus ponens" should "should work in a simple example" in {
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula, "x>0 -> y>0".asFormula), IndexedSeq()),
