@@ -37,10 +37,11 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val step               : DependentPositionTactic = HilbertCalculus.stepAt
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
-  def normalize               : BelleExpr = (alphaRule | closeId | ls(allR) | la(existsL)
+  def normalize               : BelleExpr = (alphaRule | closeId | allR('_) | existsL('_)
     | close
     | betaRule
-    | l(step))*@TheType()
+    | step('L)
+    | step('R))*@TheType()
   /** exhaust propositional logic */
   def prop                    : BelleExpr = (closeId | close | alphaRule | betaRule)*@TheType()
   /** master: master tactic that tries hard to prove whatever it could */
@@ -79,42 +80,6 @@ object TactixLibrary extends UnifyUSCalculus {
     * @see [[label()]]
     */
   def sublabel(s: String): BelleExpr = ??? //new SubLabelBranch(s)
-
-  // Locating applicable positions for PositionTactics
-
-
-  /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
-  def llu(tactic: PositionalTactic, shape: Formula): BuiltInTactic = ???
-//    SearchTacticsImpl.locateAnte(tactic, f => UnificationMatch.unifiable(shape, f)!=None)
-  /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
-  def llu(tactic: PositionalTactic, shape: String): BuiltInTactic = llu(tactic, parser.formulaParser(shape))
-  /** Locate applicable position in succedent on the right in which something matching the given shape occurs */
-  def lru(tactic: PositionalTactic, shape: Formula): BuiltInTactic = ???
-//    SearchTacticsImpl.locateSucc(tactic, f => UnificationMatch.unifiable(shape, f)!=None)
-  /** Locate applicable position in succedent on the right in which something matching the given shape occurs */
-  def lru(tactic: PositionalTactic, shape: String): BuiltInTactic = lru(tactic, parser.formulaParser(shape))
-
-  /** Locate applicable position in succedent on the right in which fml occurs verbatim */
-  def ls(tactic: BuiltInRightTactic, fml: String = "", key: Option[Expression] = None): BuiltInTactic = ???
-//    SearchTacticsImpl.locateSucc(tactic,
-//      if (fml == "") (_ => true) else _ == fml.asFormula,
-//      if (key.isDefined) Some(_ == key.get) else None)
-  /** Locate applicable position in succedent on the right */
-  def lR(tactic: BuiltInRightTactic): BuiltInTactic = ls(tactic)
-  /** Locate applicable position in antecedent on the left in which fml occurs verbatim  */
-  def la(tactic: BuiltInLeftTactic, fml: String = "", key: Option[Expression] = None): BuiltInTactic = ???
-//    SearchTacticsImpl.locateAnte(tactic,
-//      if (fml == "") _ => true else _ == fml.asFormula,
-//      if (key.isDefined) Some(_ == key.get) else None)
-  /** Locate applicable position in antecedent on the left */
-  def lL(tactic: BuiltInLeftTactic): BuiltInTactic = la(tactic)
-  /** Locate applicable top-level position in left or right in antecedent or succedent */
-  def l(tactic: PositionalTactic): BuiltInTactic  = ??? //TacticLibrary.locateAnteSucc(tactic)
-  /** Locate applicable top-level position in left or right in antecedent or succedent */
-  def l(tactic: DependentPositionTactic): DependentTactic = ???
-  /** Locate applicable position within a given position */
-  def lin(tactic: PositionalTactic): PositionalTactic = ???
-
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Propositional tactics
@@ -399,9 +364,9 @@ object TactixLibrary extends UnifyUSCalculus {
 
 
   /** Alpha rules are propositional rules that do not split */
-  def alphaRule: BelleExpr = lL(andL) | lR(orR) | lR(implyR) | lL(notL) | lR(notR)
+  def alphaRule: BelleExpr = andL('_) | orR('_) | implyR('_) | notL('_) | notR('_)
   /** Beta rules are propositional rules that split */
-  def betaRule: BelleExpr = lR(andR) | lL(orL) | lL(implyL) | lL(equivL) | lR(equivR)
+  def betaRule: BelleExpr = andR('_) | orL('_) | implyL('_) | equivL('_) | equivR('_)
   /** Real-closed field arithmetic after consolidating sequent into a single universally-quantified formula */
   def RCF: BelleExpr = ??? //PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & FOQuantifierTacticsImpl.universalClosureT(1) & debug("Handing to Mathematica") &
     //ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
@@ -409,7 +374,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
   //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
   def lazyQE = (
-    ((alphaRule | ls(allR) | la(existsL)
+    ((alphaRule | allR('_) | existsL('_)
       | close
       //@todo eqLeft|eqRight for equality rewriting directionally toward easy
       //| (la(TacticLibrary.eqThenHideIfChanged)*)
