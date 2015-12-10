@@ -139,9 +139,9 @@ object TactixLibrary extends UnifyUSCalculus {
   def allL(inst: Term)              : DependentPositionTactic = FOQuantifierTactics.allL(None, inst)
   /** exists left: Skolemize an existential quantifier in the antecedent */
   lazy val existsL            : BuiltInLeftTactic = ProofRuleTactics.skolemizeL
-  /** exists right: instantiate an existential quantifier in the succedwent by a concrete instance as a witness */
-  def existsR(x: Variable, inst: Term) : BuiltInRightTactic = ??? //TacticLibrary.instantiateQuanT(x, inst)
-  def existsR(inst: Term)     : BuiltInRightTactic = ??? //TacticLibrary.instantiateQuanT(???, inst)
+  /** exists right: instantiate an existential quantifier in the succedent by a concrete instance as a witness */
+  def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsR(Some(x), inst)
+  def existsR(inst: Term)             : DependentPositionTactic = FOQuantifierTactics.existsR(None, inst)
 
   // modalities
 

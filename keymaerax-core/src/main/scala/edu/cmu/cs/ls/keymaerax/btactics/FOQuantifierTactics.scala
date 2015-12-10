@@ -4,9 +4,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.SubstitutionHelper
 
 import scala.collection.immutable
 import scala.language.postfixOps
@@ -17,7 +16,7 @@ import scala.language.postfixOps
  */
 object FOQuantifierTactics {
   def allL(quantified: Option[Variable], instance: Term): DependentPositionTactic =
-    new DependentPositionTactic("Universal Quantifier Instantiation") {
+    new DependentPositionTactic("allL") {
       override def apply(pos: Position): DependentTactic = pos match {
         case ante: AntePosition => new DependentTactic(name) {
           override def computeExpr(v : BelleValue): BelleExpr = v match {
@@ -59,4 +58,16 @@ object FOQuantifierTactics {
         }
       }
   }
+
+  def existsR(quantified: Option[Variable], instance: Term): DependentPositionTactic =
+    new DependentPositionTactic("existsR") {
+      override def apply(pos: Position): DependentTactic = pos match {
+        case succ: SuccPosition => new DependentTactic(name) {
+          override def computeExpr(v : BelleValue): BelleExpr =
+            useAt("exists dual", PosInExpr(1::Nil))(succ) &
+            notR(succ) & allL(quantified, instance)('Llast) & notL('Llast)
+        }
+        case _ => throw new BelleUserGeneratedError("Exists instantiate is only applicable in succedent, but got " + pos)
+      }
+    }
 }

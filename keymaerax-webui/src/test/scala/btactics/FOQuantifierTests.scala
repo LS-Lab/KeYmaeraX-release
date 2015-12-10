@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 
-import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allL
+import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.{allL, existsR}
 
 import scala.collection.immutable
 
@@ -14,7 +14,7 @@ import scala.collection.immutable
 @SummaryTest
 @UsualTest
 class FOQuantifierTests extends TacticTestBase {
-  "Quantifier instantiation of universal quantifier" should "instantiate simple predicate" in {
+  "allL" should "instantiate simple predicate" in {
     val tactic = allL(Some("x".asVariable), "z".asTerm)(-1)
     val result = proveBy(Sequent(Nil, immutable.IndexedSeq("\\forall x x>0".asFormula), immutable.IndexedSeq()), tactic)
     result.subgoals should have size 1
@@ -95,5 +95,14 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "[y:=z;][{y'=1}]y>0".asFormula
     result.subgoals.head.succ shouldBe empty
+  }
+
+  "existsR" should "instantiate simple formula" in {
+    val result = proveBy(
+      Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("\\exists x x>0".asFormula)),
+      existsR(Some("x".asVariable), "z".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "z>0".asFormula
   }
 }
