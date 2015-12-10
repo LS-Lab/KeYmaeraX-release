@@ -302,7 +302,7 @@ object TactixLibrary extends UnifyUSCalculus {
         val s = provable.subgoals.head
         require(s.ante.intersect(s.succ).nonEmpty, "Expects same formula in antecedent and succedent,\n\t but antecedent " + s.ante + "\n\t does not overlap with succedent " + s.succ)
         val fml = s.ante.intersect(s.succ).head
-        close(AntePosition(s.ante.indexOf(fml)), SuccPosition(s.succ.indexOf(fml)))
+        close(new AntePosition(s.ante.indexOf(fml)), new SuccPosition(s.succ.indexOf(fml)))
     }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
@@ -312,7 +312,7 @@ object TactixLibrary extends UnifyUSCalculus {
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
         val s = provable.subgoals.head
         require(s.succ.contains(True), "Expects true in succedent,\n\t but succedent " + s.succ + " does not contain true")
-        ProofRuleTactics.closeTrue(SuccPosition(s.succ.indexOf(True)))
+        ProofRuleTactics.closeTrue(new SuccPosition(s.succ.indexOf(True)))
     }
   }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
@@ -322,7 +322,7 @@ object TactixLibrary extends UnifyUSCalculus {
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
         val s = provable.subgoals.head
         require(s.ante.contains(False), "Expects false in antecedent,\n\t but antecedent " + s.ante + " does not contain false")
-        ProofRuleTactics.closeFalse(AntePosition(s.ante.indexOf(False)))
+        ProofRuleTactics.closeFalse(new AntePosition(s.ante.indexOf(False)))
     }
   }
 
