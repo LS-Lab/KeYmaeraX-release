@@ -41,7 +41,7 @@ object FOQuantifierTactics {
             val pattern = SequentType(Sequent(
               Nil,
               immutable.IndexedSeq(),
-              immutable.IndexedSeq("(\\forall x_ p_(x_)) -> p_(t_())".asFormula)))
+              immutable.IndexedSeq("(\\forall x p(x)) -> p(t())".asFormula)))
             val allInstantiateAxiom = USubstPatternTactic((pattern, (ru:RenUSubst) =>
               ru.getRenamingTactic & ProofRuleTactics.axiomatic("all instantiate", ru.substitution.usubst))::Nil
             )
