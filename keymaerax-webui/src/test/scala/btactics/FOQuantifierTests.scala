@@ -97,6 +97,15 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ shouldBe empty
   }
 
+  it should "instantiate in context" in {
+    val result = proveBy(
+      Sequent(Nil, immutable.IndexedSeq("[a:=2;]\\forall x [y:=x;][{y'=1}]y>0".asFormula), immutable.IndexedSeq()),
+      allL(Some("x".asVariable), "z".asTerm)(-1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "[a:=2;][y:=z;][{y'=1}]y>0".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
   "existsR" should "instantiate simple formula" in {
     val result = proveBy(
       Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("\\exists x x>0".asFormula)),
