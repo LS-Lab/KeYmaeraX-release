@@ -7,6 +7,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.{Position, TacticWrapper, Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 
+import scala.language.postfixOps
+
 /**
  * @author Nathan Fulton
  */
@@ -108,6 +110,9 @@ object Idioms {
     override def result(provable: Provable): Provable = provable
   })
   def ident = nil
+
+  /** Optional tactic */
+  def ?(t: BelleExpr): BelleExpr = (t partial) | nil
 
   def atSubgoal(subgoalIdx: Int, t: BelleExpr) = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
