@@ -17,3 +17,13 @@ case class Fixed(pos: Position) extends PositionLocator {
 case class Find(goal: Int, shape: Option[Formula], start: Position) extends PositionLocator {
   override def prettyString: String = "'_"
 }
+
+/** Locates the last position in the antecedent. */
+case class LastAnte(goal: Int) extends PositionLocator {
+  override def prettyString: String ="'Llast"
+}
+
+/** Locates the last position in the succedent. */
+case class LastSucc(goal: Int) extends PositionLocator {
+  override def prettyString: String ="'Rlast"
+}
