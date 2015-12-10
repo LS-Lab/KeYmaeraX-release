@@ -114,6 +114,9 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val implyL             : BuiltInLeftTactic = ProofRuleTactics.implyL
   /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side ([[edu.cmu.cs.ls.keymaerax.core.ImplyRight ImplyRight]]) */
   lazy val implyR             : BuiltInRightTactic = ProofRuleTactics.implyR
+  /** Inverse of implyR */
+  def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = PropositionalTactics.implyRi(antePos, succPos)
+  lazy val implyRi: DependentTactic = implyRi()
   /** <->L Equiv left: use an equivalence by considering both true or both false cases ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]]) */
   lazy val equivL             : BuiltInLeftTactic = ProofRuleTactics.equivL
   /** <->R Equiv right: prove an equivalence by proving both implications ([[edu.cmu.cs.ls.keymaerax.core.EquivRight EquivRight]]) */
