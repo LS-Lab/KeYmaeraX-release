@@ -125,7 +125,7 @@ final case class RenUSubst(subsDefsInput: immutable.Seq[(Expression,Expression)]
     override def applicable(node: ProofNode): Boolean = true
   }
 
-  override def toString: String = "RenUSubst{" + rens.map(sp=>sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(", ") + " ; " + subsDefs.mkString(", ") + "}"
+  override def toString: String = "t.RenUSubst{" + rens.map(sp=>sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(", ") + " ; " + subsDefs.mkString(", ") + "}"
 
   def apply(e: Expression): Expression = e match {
     case t: Term => apply(t)
