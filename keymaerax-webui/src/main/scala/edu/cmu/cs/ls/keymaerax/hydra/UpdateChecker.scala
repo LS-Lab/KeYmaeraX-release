@@ -3,6 +3,24 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import spray.json._
 
 /**
+  * The JSON should be a http://keymaerax.org/version.json and should look like:
+  * {{{
+  *   {
+  *     "version": "A_VERSION_STRING",
+  *     "oldestAcceptableDB": "A_VERSION_STRING"
+  *   }
+  * }}}
+
+  * where the value of {{{"version"}}} is the latest stable release
+  * and the value of {{{"oldestAcceptableDB"}}} is the last version number where the DB schema changed.
+  *
+  * A_VERSION_STRING should have one of the formats following:
+  * {{{
+  *   X.X
+  *   X.XbX
+*   }}}
+  * where X is a natural number.
+  *
   * @author Nathan Fulton
   */
 object UpdateChecker {
