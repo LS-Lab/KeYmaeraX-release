@@ -294,7 +294,7 @@ trait UnifyUSCalculus {
         case Imply(DotFormula, other) if p.isAnte && p.isTopLevel =>
           cutL(subst(other))(p) <(
             /* use */ ident partial,
-            /* show */ lastR(coHideR) & factTactic
+            /* show */ coHideR('Rlast) & factTactic
           )
 
         case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel) =>

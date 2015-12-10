@@ -134,26 +134,6 @@ object Idioms {
       provable(fact, 0)
     }
   }
-
-  /** Apply the tactic t at the last position in the antecedent */
-  def lastL(t: BuiltInLeftTactic) = new DependentTactic("lastL") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        require(provable.subgoals.size == 1 && provable.subgoals.head.ante.nonEmpty,
-          "Provable must have exactly 1 subgoal with non-empty antecedent")
-        t(AntePos(provable.subgoals.head.ante.size - 1))
-    }
-  }
-
-  /** Apply the tactic t at the last position in the antecedent */
-  def lastR(t: BuiltInRightTactic) = new DependentTactic("lastL") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        require(provable.subgoals.size == 1 && provable.subgoals.head.ante.nonEmpty,
-          "Provable must have exactly 1 subgoal with non-empty succedent")
-        t(SuccPos(provable.subgoals.head.succ.size - 1))
-    }
-  }
 }
 
 /**
