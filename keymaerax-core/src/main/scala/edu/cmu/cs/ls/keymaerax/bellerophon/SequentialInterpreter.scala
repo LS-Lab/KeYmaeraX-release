@@ -29,13 +29,19 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       case SeqTactic(left, right, location) =>
         val leftResult = try { apply(left, v) } catch {case e: BelleError => throw e.inContext(SeqTactic(e.context, right, location), "Failed left-hand side of &: " + left)}
         try { apply(right, leftResult) } catch {case e: BelleError => throw e.inContext(SeqTactic(left, e.context, location), "Failed right-hand side of &: " + right)}
-      case d : DependentTactic => try {
+      case d: DependentTactic => try {
         val valueDependentTactic = d.computeExpr(v)
         apply(valueDependentTactic, v)
-      } catch { case e: BelleError => throw e.inContext(d.toString, v.prettyString) }
-      case e : InputTactic[_] => try {
-        apply(e.computeExpr(), v)
-      } catch { case e: BelleError => throw e.inContext(e.toString, v.prettyString) }
+      } catch {
+        case e: BelleError => throw e.inContext(d, v.prettyString)
+        case e: Throwable => throw new BelleError("Unable to create dependent tactic", e).inContext(d, "")
+      }
+      case it: InputTactic[_] => try {
+        apply(it.computeExpr(), v)
+      } catch {
+        case e: BelleError => throw e.inContext(it, v.prettyString)
+        case e: Throwable => throw new BelleError("Unable to create inpyt tactic", e).inContext(it, "")
+      }
       case PartialTactic(child) => try { apply(child, v) } catch {case e: BelleError => throw e.inContext(PartialTactic(e.context), "Failed partial child: " + child) }
       case EitherTactic(left, right, location) => try {
           val leftResult = apply(left, v)
