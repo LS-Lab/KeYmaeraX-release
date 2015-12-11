@@ -239,6 +239,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
         //@todo stutter  if not free
       case _ => if (DEBUG) println("unify " + e1 + "\nwith  " + e2 + "\ngives " + SubstRepl(PredOf(f,DotTerm), replaceFree(e2)(t,DotTerm)))
         List(SubstRepl(PredOf(f,DotTerm), replaceFree(e2)(t,DotTerm)))
+        //@todo heuristic: for p(f()) simply pass since f() must occur somewhere else in isolation to match on it. In general may have to remember p(subst(f())) = e2 constraint regardless and post-unify.
     }
     case PredicationalOf(f:Function, DotFormula) => if (e1==e2) id else List(SubstRepl(e1, e2))
     case PredicationalOf(c, fml) => e2 match {
@@ -268,6 +269,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     case DifferentialFormula(g) => e2 match {case DifferentialFormula(g2) => unify(g,g2) case _ => ununifiable(e1,e2)}
 
     // pseudo-homomorphic cases
+      //@todo join should be enough for the two unifiers in this case after they have been applied to the other side
     case Forall(vars, g) if vars.length==1 => e2 match {case Forall(v2,g2) if v2.length==1 => unify(vars.head,g, v2.head,g2) case _ => ununifiable(e1,e2)}
     case Exists(vars, g) if vars.length==1 => e2 match {case Exists(v2,g2) if v2.length==1 => unify(vars.head,g, v2.head,g2) case _ => ununifiable(e1,e2)}
 
