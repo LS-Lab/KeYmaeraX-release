@@ -271,6 +271,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   //@note could define a direct composition implementation for fast compositions of USubst, but not used.
 
   /** apply this uniform substitution everywhere in a term */
+  //@todo could optimize empty subsDefs to be identity right away if that happens often (unlikely)
   def apply(t: Term): Term = {try usubst(t) catch {case ex: ProverException => throw ex.inContext(t.prettyString)}
   } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + t + "\ngave " + usubst(t))
