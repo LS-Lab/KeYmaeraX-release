@@ -208,6 +208,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     //@note case o1:BinaryCompositeTerm => e2 match {case o2:BinaryCompositeTerm if o1.reapply==o2.reapply => unify(o1.left,o2.left) ++ unify(o1.right,o2.right) case _ => ununifiable(e1,e2)}
     // homomorphic cases
     case Neg(t)       => e2 match {case Neg(t2) => unify(t,t2) case _ => ununifiable(e1,e2)}
+      // case o: BinaryCompositeTerm => e2 match {case o2: BinaryCompositeTerm if o2.reapply==o.reapply => unify(o.left,o.right, o2.left,o2.right) case _ => ununifiable(e1,e2)}
     case Plus(l, r)   => e2 match {case Plus  (l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
     case Minus(l, r)  => e2 match {case Minus (l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
     case Times(l, r)  => e2 match {case Times (l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
