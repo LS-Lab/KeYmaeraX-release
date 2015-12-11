@@ -15,7 +15,7 @@ import scala.language.postfixOps
  * [[FOQuantifierTactics]] provides tactics for instantiating quantifiers.
  */
 object FOQuantifierTactics {
-  def allInstantiate(quantified: Option[Variable], instance: Term): DependentPositionTactic =
+  def allInstantiate(quantified: Option[Variable], instance: Option[Term]): DependentPositionTactic =
     new DependentPositionTactic("all instantiate") {
       override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
         override def computeExpr(v : BelleValue): BelleExpr = v match {
@@ -27,6 +27,7 @@ object FOQuantifierTactics {
         require(provable.subgoals.size == 1, "Provable must have exactly 1 subgoal, but got " + provable.subgoals.size)
         val sequent = provable.subgoals.head
         def vToInst(vars: Seq[Variable]) = if (quantified.isEmpty) vars.head else quantified.get
+        def inst(vars: Seq[Variable]) = if (instance.isEmpty) vToInst(vars) else instance.get
         sequent.at(pos) match {
           case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
             require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity")
@@ -40,7 +41,7 @@ object FOQuantifierTactics {
 
             def forall(h: Formula) = if (vars.length > 1) Forall(vars.filter(_ != vToInst(vars)), h) else h
             // cut in p(t) from axiom: \forall x. p(x) -> p(t)
-            val p = forall(SubstitutionHelper.replaceFree(qf)(vToInst(vars), instance))
+            val p = forall(SubstitutionHelper.replaceFree(qf)(vToInst(vars), inst(vars)))
             val axiomInstance = if (pos.isAnte) Imply(ctx(f), ctx(p)) else ctx(p)
             if (pos.isAnte) {
               ProofRuleTactics.cut(axiomInstance) <(
@@ -65,7 +66,7 @@ object FOQuantifierTactics {
       }
   }
 
-  def existsInstantiate(quantified: Option[Variable], instance: Term): DependentPositionTactic =
+  def existsInstantiate(quantified: Option[Variable], instance: Option[Term]): DependentPositionTactic =
     new DependentPositionTactic("exists instantiate") {
       override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
         override def computeExpr(v : BelleValue): BelleExpr =
