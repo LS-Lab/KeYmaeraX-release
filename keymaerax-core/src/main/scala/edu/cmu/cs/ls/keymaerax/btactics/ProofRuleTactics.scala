@@ -233,11 +233,19 @@ object ProofRuleTactics {
     }
   }
 
-  def axiomatic(axiomName: String, subst: USubst) = new BuiltInTactic(s"US of Axiom $axiomName") {
-    override def result(provable: Provable): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.AxiomaticRule(axiomName, subst), 0)
-    }
+  def axiomatic(axiomName: String, subst: USubst): DependentTactic = new DependentTactic(s"US of axiom/rule $axiomName") {
+    override def computeExpr(v: BelleValue): BelleExpr =
+      if (AxiomaticRule.rules.contains(axiomName)) new BuiltInTactic(s"US of axiomatic rule $axiomName") {
+        override def result(provable: Provable): Provable = provable(core.AxiomaticRule(axiomName, subst), 0)
+      } else if (Axiom.axioms.contains(axiomName)) {
+        US(subst, Axiom.axiom(axiomName).conclusion) & new BuiltInTactic(s"Close by axiom $axiomName") {
+          override def result(provable: Provable): Provable = provable(core.Axiom(axiomName), 0)
+        }
+      } else if (DerivedAxioms.derivedAxiomFormula(axiomName).isDefined) {
+        US(subst, DerivedAxioms.derivedAxiom(axiomName).conclusion) & new BuiltInTactic(s"Close by derived axiom $axiomName") {
+          override def result(provable: Provable): Provable = provable(DerivedAxioms.derivedAxiomR(axiomName), 0)
+        }
+      } else throw new BelleError(s"Unknown axiom/rule $axiomName")
   }
 
   def uniformRenaming(what: Variable, repl: Variable) = new BuiltInTactic("UniformRenaming") {

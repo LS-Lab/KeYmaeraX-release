@@ -44,7 +44,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case _: Formula => repl.isInstanceOf[Formula]
     case _: Program => repl.isInstanceOf[Program]
   }, "(redundant test) substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + what.kind + " ~> " + repl.kind)
-  matchKey // matchKey will throw exception if requirement("Substitutable expression required, found " + what + " in " + this) failed
+  insist(noException(matchKey), "substitutable expression expected " + this) // matchKey will throw exception if requirement("Substitutable expression required, found " + what + " in " + this) failed
 
   /**
    * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).
@@ -215,7 +215,8 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   /** automatically filter out identity substitution no-ops */
   private val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
-  applicable()
+  insist(noException(applicable()), "unique left-hand sides in substitutees " + this)
+
   /** unique left hand sides in subsDefs */
   private def applicable(): Unit = {
     // check that we never replace n by something and then again replacing the same n by something
