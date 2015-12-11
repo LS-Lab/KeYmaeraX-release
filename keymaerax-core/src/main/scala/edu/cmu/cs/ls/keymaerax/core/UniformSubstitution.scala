@@ -460,6 +460,11 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         case Loop(a)           => requireAdmissible(StaticSemantics(usubst(a)).bv, a, program)
           Loop(usubst(a))
         case Dual(a)           => Dual(usubst(a))
+        //@note This case happens for standalone uniform substitutions on differential programs such as x'=f() or c as they come up in unification for example.
+        case ode: DifferentialProgram =>
+          //@note This case is in analogy to ODESystem
+          requireAdmissible(StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv, ode, program)
+          usubstODE(ode, StaticSemantics(ode).bv)
       }
     /*} catch {
       case ex: IllegalArgumentException => //@todo does this still happen?
@@ -472,7 +477,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
 
   /**
    * uniform substitutions on differential programs
-   * @param odeBV the bound variables of the whole ODESystem, which are thus all taboo during the substitution.
+   * @param odeBV the bound variables of the whole ODESystem within which ode occurs, so all odeBV are taboo during the substitution.
    */
   private def usubstODE(ode: DifferentialProgram, odeBV: SetLattice[NamedSymbol]): DifferentialProgram = {
     ode match {
