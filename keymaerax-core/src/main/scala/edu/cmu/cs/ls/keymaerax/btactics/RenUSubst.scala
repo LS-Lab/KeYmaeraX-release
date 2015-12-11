@@ -134,6 +134,7 @@ final class RenUSubst(private[btactics] val subsDefsInput: immutable.Seq[(Expres
     case p: Program => apply(p)
   }
 
+  //@todo could optimize empty usubst or empty rens to be just identity application right away
   def apply(t: Term): Term = try {usubst(rens.foldLeft(t)((e,sp)=>URename(sp._1,sp._2)(e)))} catch {case ex: ProverException => throw ex.inContext(t.prettyString)}
 
   def apply(f: Formula): Formula = try {usubst(rens.foldLeft(f)((e,sp)=>URename(sp._1,sp._2)(e)))} catch {case ex: ProverException => throw ex.inContext(f.prettyString)}
