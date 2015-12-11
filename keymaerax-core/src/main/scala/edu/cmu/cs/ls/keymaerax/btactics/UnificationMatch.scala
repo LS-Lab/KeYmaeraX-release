@@ -169,12 +169,23 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     before.map(sp => (sp._1, us(sp._2))) ++ after.filter(sp => !before.exists(op=>op._1==sp._1))
   }
 
-  //@todo optimize: this may be slower than static type inference. So could add special cases unify(Term,Term,Term,Term) unify(Formula,Formula,Formula,Formula) Program ....
+  // unify(s1, t1) ++ unify(s2, t2)  // flat approximation without cross-cut
+  //@note optimized: repeated implementation per type to enable the static type inference that Scala generics won't give.
   private def unify(s1:Expression,s2:Expression, t1:Expression,t2:Expression): List[SubstRepl] = {
-    // unify(s1, t1) ++ unify(s2, t2)  // flat approximation without cross-cut
     val u1 = unify(s1, t1)
-    val us1 = Subst(u1)
-    compose(unify(us1(s2), t2), u1)
+    compose(unify(Subst(u1)(s2), t2), u1)
+  }
+  private def unify(s1:Term,s2:Term, t1:Term,t2:Term): List[SubstRepl] = {
+    val u1 = unify(s1, t1)
+    compose(unify(Subst(u1)(s2), t2), u1)
+  }
+  private def unify(s1:Formula,s2:Formula, t1:Formula,t2:Formula): List[SubstRepl] = {
+    val u1 = unify(s1, t1)
+    compose(unify(Subst(u1)(s2), t2), u1)
+  }
+  private def unify(s1:Program,s2:Program, t1:Program,t2:Program): List[SubstRepl] = {
+    val u1 = unify(s1, t1)
+    compose(unify(Subst(u1)(s2), t2), u1)
   }
 
 
