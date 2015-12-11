@@ -7,6 +7,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.{Position, TacticWrapper, Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 
+import scala.language.postfixOps
+
 /**
  * @author Nathan Fulton
  */
@@ -109,6 +111,9 @@ object Idioms {
   })
   def ident = nil
 
+  /** Optional tactic */
+  def ?(t: BelleExpr): BelleExpr = (t partial) | nil
+
   def atSubgoal(subgoalIdx: Int, t: BelleExpr) = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable) =>
@@ -127,26 +132,6 @@ object Idioms {
     override def result(provable: Provable): Provable = {
       assert(provable.subgoals.length == 1, "Expected one subgoal but found " + provable.subgoals.length)
       provable(fact, 0)
-    }
-  }
-
-  /** Apply the tactic t at the last position in the antecedent */
-  def lastL(t: BuiltInLeftTactic) = new DependentTactic("lastL") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        require(provable.subgoals.size == 1 && provable.subgoals.head.ante.nonEmpty,
-          "Provable must have exactly 1 subgoal with non-empty antecedent")
-        t(AntePos(provable.subgoals.head.ante.size - 1))
-    }
-  }
-
-  /** Apply the tactic t at the last position in the antecedent */
-  def lastR(t: BuiltInRightTactic) = new DependentTactic("lastL") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        require(provable.subgoals.size == 1 && provable.subgoals.head.ante.nonEmpty,
-          "Provable must have exactly 1 subgoal with non-empty succedent")
-        t(SuccPos(provable.subgoals.head.succ.size - 1))
     }
   }
 }

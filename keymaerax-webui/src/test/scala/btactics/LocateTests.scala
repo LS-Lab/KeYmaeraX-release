@@ -9,8 +9,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.AntePosition
 import scala.collection.immutable
 
 /**
- * Tests
- * [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.la]]
+ * Tests [[edu.cmu.cs.ls.keymaerax.btactics.PositionLocator]]
  */
 class LocateTests extends TacticTestBase {
 
@@ -139,6 +138,16 @@ class LocateTests extends TacticTestBase {
     )}
     e.getMessage should include ("Position tactic OrR is not applicable at 1")
     e.getMessage should include ("Position tactic OrR is not applicable at 2")
+  }
+
+  "'Llast" should "apply on last formula in antecedent" in {
+    val result = proveBy(
+      Sequent(Nil, immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula, "b=3 & c=4".asFormula), immutable.IndexedSeq()),
+      TactixLibrary.andL('Llast)
+    )
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("a=2".asFormula, "x>0 & y>0".asFormula, "b=3".asFormula, "c=4".asFormula)
+    result.subgoals.head.succ shouldBe empty
   }
 
 }

@@ -65,6 +65,8 @@ trait PositionalTactic extends BelleExpr {
       case _: BuiltInRightTactic => apply(Find(0, None, SuccPosition(0)))
       case _ => throw new BelleError(s"Cannot determine whether tactic $prettyString is left/right. Please use 'L or 'R as appropriate.")
     }
+    case 'Llast => apply(LastAnte(0))
+    case 'Rlast => apply(LastSucc(0))
   }
   def apply(locator: PositionLocator): AppliedPositionTactic = AppliedPositionTactic(this, locator)
 }
@@ -104,7 +106,8 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
     case Find(goal, shape, start) =>
       require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
       tryAllAfter(provable, goal, shape, start, null)
-
+    case LastAnte(goal) => positionTactic.computeResult(provable, new AntePosition(provable.subgoals(goal).ante.size-1))
+    case LastSucc(goal) => positionTactic.computeResult(provable, new SuccPosition(provable.subgoals(goal).succ.size-1))
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
@@ -167,6 +170,8 @@ abstract case class DependentPositionTactic(name: String) extends BelleExpr {
   def apply(locator: Symbol): AppliedDependentPositionTactic = locator match {
     case 'L => apply(Find(0, None, AntePosition(0)))
     case 'R => apply(Find(0, None, SuccPosition(0)))
+    case 'Llast => apply(LastAnte(0))
+    case 'Rlast => apply(LastSucc(0))
   }
   def apply(locator: PositionLocator): AppliedDependentPositionTactic = new AppliedDependentPositionTactic(this, locator)
   override def prettyString: String = "DependentPositionTactic(" + name + ")"
@@ -181,6 +186,8 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: P
     case Fixed(pos) => pt.apply(pos).computeExpr(v)
     case Find(goal, shape, start) =>
       tryAllAfter(goal, shape, start, null)
+    case LastAnte(goal) => pt.apply(v match { case BelleProvable(provable) => new AntePosition(provable.subgoals(goal).ante.size-1) })
+    case LastSucc(goal) => pt.apply(v match { case BelleProvable(provable) => new SuccPosition(provable.subgoals(goal).succ.size-1) })
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */

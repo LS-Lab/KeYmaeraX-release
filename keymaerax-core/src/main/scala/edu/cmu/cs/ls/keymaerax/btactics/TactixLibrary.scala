@@ -87,7 +87,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Hide/weaken whether left or right */
   lazy val hide               : BelleExpr = ProofRuleTactics.hide
   /** Hide/weaken given formula at given position */
-  def hide(fml: Formula)      : BelleExpr = DebuggingTactics.assert(fml, "hiding") & ProofRuleTactics.hide
+  def hide(fml: Formula)(pos: Position) : BelleExpr = DebuggingTactics.assert(fml, "hiding")(pos) & ProofRuleTactics.hide(pos)
   /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
   lazy val hideL              : BuiltInLeftTactic = ProofRuleTactics.hideL
   /** Hide/weaken right: weaken a formula to drop it from the succcedent ([[edu.cmu.cs.ls.keymaerax.core.HideRight HideRight]]) */
@@ -114,6 +114,9 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val implyL             : BuiltInLeftTactic = ProofRuleTactics.implyL
   /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side ([[edu.cmu.cs.ls.keymaerax.core.ImplyRight ImplyRight]]) */
   lazy val implyR             : BuiltInRightTactic = ProofRuleTactics.implyR
+  /** Inverse of implyR */
+  def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = PropositionalTactics.implyRi(antePos, succPos)
+  lazy val implyRi: DependentTactic = implyRi()
   /** <->L Equiv left: use an equivalence by considering both true or both false cases ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]]) */
   lazy val equivL             : BuiltInLeftTactic = ProofRuleTactics.equivL
   /** <->R Equiv right: prove an equivalence by proving both implications ([[edu.cmu.cs.ls.keymaerax.core.EquivRight EquivRight]]) */
@@ -135,13 +138,15 @@ object TactixLibrary extends UnifyUSCalculus {
   /** all right: Skolemize a universal quantifier in the succedent ([[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemize]]) */
   lazy val allR               : BuiltInRightTactic = ProofRuleTactics.skolemizeR
   /** all left: instantiate a universal quantifier in the antecedent by a concrete instance */
-  def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allL(Some(x), inst)
-  def allL(inst: Term)              : DependentPositionTactic = FOQuantifierTactics.allL(None, inst)
+  def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
+  def allL(inst: Term)              : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, Some(inst))
+  lazy val allL                     : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, None)
   /** exists left: Skolemize an existential quantifier in the antecedent */
   lazy val existsL            : BuiltInLeftTactic = ProofRuleTactics.skolemizeL
-  /** exists right: instantiate an existential quantifier in the succedwent by a concrete instance as a witness */
-  def existsR(x: Variable, inst: Term) : BuiltInRightTactic = ??? //TacticLibrary.instantiateQuanT(x, inst)
-  def existsR(inst: Term)     : BuiltInRightTactic = ??? //TacticLibrary.instantiateQuanT(???, inst)
+  /** exists right: instantiate an existential quantifier in the succedent by a concrete instance as a witness */
+  def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
+  def existsR(inst: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(inst))
+  lazy val existsR                    : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, None)
 
   // modalities
 
@@ -163,6 +168,9 @@ object TactixLibrary extends UnifyUSCalculus {
   /** splitb: splits `[a](p&q)` into `[a]p & [a]q` */
   lazy val splitb             : DependentPositionTactic = useAt("[] split")
 
+  /** abstraction: turns '[a]p' into \\forall BV(a) p */
+  lazy val abstractionb       : DependentPositionTactic = DLBySubst.abstractionb
+
   /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def I(invariant : Formula)  : BuiltInPositionTactic = ??? //TacticLibrary.inductionT(Some(invariant))
   /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
@@ -183,6 +191,7 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val DE                 : DependentPositionTactic = DifferentialTactics.DE
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
   lazy val DI                 : DependentPositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))
+  lazy val diffInd            : DependentPositionTactic = HilbertCalculus.diffInd
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */
@@ -211,6 +220,8 @@ object TactixLibrary extends UnifyUSCalculus {
   /** DS: Differential Solution solves a differential equation */
   def DS                      : BuiltInPositionTactic = ???
 
+  lazy val derive: DependentPositionTactic = HilbertCalculus.derive
+
   /** Dassignb: [:='] Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
   lazy val Dassignb           : DependentPositionTactic = useAt("[':=] differential assign")
   /** Dplus: +' derives a sum `(f(x)+g(x))' = (f(x))' + (g(x))'` */
@@ -231,6 +242,8 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val Dcompose           : BuiltInPositionTactic = ???
   /** Dconstify: substitute non-bound occurences of x with x() */
   lazy val Dconstify          : BuiltInPositionTactic = ???
+  /** Dvariable: v' derives a variable */
+  lazy val Dvariable          : DependentPositionTactic = ???
 
   /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
   lazy val Dand               : DependentPositionTactic = useAt("&' derive and")

@@ -294,7 +294,7 @@ trait UnifyUSCalculus {
         case Imply(DotFormula, other) if p.isAnte && p.isTopLevel =>
           cutL(subst(other))(p) <(
             /* use */ ident partial,
-            /* show */ lastR(coHideR) & factTactic
+            /* show */ coHideR('Rlast) & factTactic
           )
 
         case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel) =>
@@ -803,30 +803,30 @@ trait UnifyUSCalculus {
             throw new ProverException("No monotone context for equivalences " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
 
           case Box(a, c) if !symbols(a).contains(DotFormula) =>
-            //@note undo polarity switch from beginning of CMon, need to nibble off modality first
-            val (ante, succ) =
-              if (polarity < 0) (right, left)
+            //@note rotate substitution into same order as current ante/succ
+            val (bleft, bright) =
+              if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
-            (Provable.startProof(Sequent(Nil, IndexedSeq(C(ante)), IndexedSeq(C(succ))))
+            (Provable.startProof(Sequent(Nil, ante, succ))
             (AxiomaticRule("[] monotone", USubst(
               SubstitutionPair(ProgramConst("a_"), a)
-                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(ante))
-                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(succ))
+                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(bleft))
+                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(bright))
                 :: Nil
             )
             ), 0)
             ) (monStep(Context(c), mon), 0)
 
           case Diamond(a, c) if !symbols(a).contains(DotFormula) =>
-            //@note undo polarity switch from beginning of CMon, need to nibble off modality first
-            val (ante, succ) =
-              if (polarity < 0) (right, left)
+            //@note rotate substitution into same order as current ante/succ
+            val (dleft, dright) =
+              if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
-            (Provable.startProof(Sequent(Nil, IndexedSeq(C(ante)), IndexedSeq(C(succ))))
+            (Provable.startProof(Sequent(Nil, ante, succ))
             (AxiomaticRule("<> monotone", USubst(
               SubstitutionPair(ProgramConst("a_"), a)
-                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(ante))
-                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(succ))
+                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(dleft))
+                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(dright))
                 :: Nil
             )
             ), 0)
@@ -842,7 +842,7 @@ trait UnifyUSCalculus {
             //@note would also work with Skolemize and all instantiate but disjointness is more painful
             val rename = (us: RenUSubst) => us ++ RenUSubst(Seq((Variable("x"), vars.head)))
             useFor("all eliminate", PosInExpr(1::Nil), rename)(AntePosition(0))(monStep(Context(c), mon)) (
-              Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))),
+              Sequent(Nil, ante, succ),
               Skolemize(SuccPos(0))
             )
 
@@ -857,13 +857,13 @@ trait UnifyUSCalculus {
             //@note would also work with Skolemize and all instantiate but disjointness is more painful
             val rename = (us: RenUSubst) => us ++ RenUSubst(Seq((Variable("x"), vars.head)))
             useFor("exists eliminate", PosInExpr(0::Nil), rename)(SuccPosition(0))(monStep(Context(c), mon)) (
-              Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))),
+              Sequent(Nil, ante, succ),
               Skolemize(AntePos(0))
             )
 
           case Not(c) =>
             //@note no polarity switch necessary here, since global polarity switch at beginning of CMon
-            (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+            (Provable.startProof(Sequent(Nil, ante, succ))
             (NotLeft(AntePos(0)), 0)
             (NotRight(SuccPos(0)), 0)
             ) (monStep(Context(c), mon), 0)

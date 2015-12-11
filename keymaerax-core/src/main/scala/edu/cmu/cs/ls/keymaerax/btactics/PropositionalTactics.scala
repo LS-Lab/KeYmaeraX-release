@@ -25,7 +25,6 @@ object PropositionalTactics {
    * @author Nathan Fulton
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.implyR]]
-   * @todo should generalize to work in gamma delta context when specifying TwoPositionRule type positions.
    */
   def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = new DependentTactic("inverse imply right") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
@@ -39,8 +38,8 @@ object PropositionalTactics {
         val right = sequent.succ(succPos.getIndex)
         val cutUsePos = AntePos(sequent.ante.length)
         cut(Imply(left, right)) <(
-          /* use */ implyL(cutUsePos) & DoAll(close),
-          /* show */ assert(right, "")(succPos) & hideR(succPos) & assert(left, "")(antePos) & hideL(antePos) /* This is the result. */)
+          /* use */ implyL(cutUsePos) & DoAll(TactixLibrary.close),
+          /* show */ (assert(right, "")(succPos) & hideR(succPos) & assert(left, "")(antePos) & hideL(antePos)) partial /* This is the result. */)
     }
   }
 
