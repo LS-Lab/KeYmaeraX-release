@@ -803,30 +803,30 @@ trait UnifyUSCalculus {
             throw new ProverException("No monotone context for equivalences " + C + "\nin CMon.monStep(" + C + ",\non " + mon + ")")
 
           case Box(a, c) if !symbols(a).contains(DotFormula) =>
-            //@note undo polarity switch from beginning of CMon, need to nibble off modality first
-            val (ante, succ) =
-              if (polarity < 0) (right, left)
+            //@note rotate substitution into same order as current ante/succ
+            val (bleft, bright) =
+              if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
-            (Provable.startProof(Sequent(Nil, IndexedSeq(C(ante)), IndexedSeq(C(succ))))
+            (Provable.startProof(Sequent(Nil, ante, succ))
             (AxiomaticRule("[] monotone", USubst(
               SubstitutionPair(ProgramConst("a_"), a)
-                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(ante))
-                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(succ))
+                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(bleft))
+                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(bright))
                 :: Nil
             )
             ), 0)
             ) (monStep(Context(c), mon), 0)
 
           case Diamond(a, c) if !symbols(a).contains(DotFormula) =>
-            //@note undo polarity switch from beginning of CMon, need to nibble off modality first
-            val (ante, succ) =
-              if (polarity < 0) (right, left)
+            //@note rotate substitution into same order as current ante/succ
+            val (dleft, dright) =
+              if (polarity*localPolarity < 0 || (polarity == 0 && localPolarity < 0)) (right, left)
               else (left, right)
-            (Provable.startProof(Sequent(Nil, IndexedSeq(C(ante)), IndexedSeq(C(succ))))
+            (Provable.startProof(Sequent(Nil, ante, succ))
             (AxiomaticRule("<> monotone", USubst(
               SubstitutionPair(ProgramConst("a_"), a)
-                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(ante))
-                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(succ))
+                :: SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), Context(c)(dleft))
+                :: SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), Context(c)(dright))
                 :: Nil
             )
             ), 0)
