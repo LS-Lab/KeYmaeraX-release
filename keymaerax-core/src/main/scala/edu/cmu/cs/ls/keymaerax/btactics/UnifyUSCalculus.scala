@@ -842,7 +842,7 @@ trait UnifyUSCalculus {
             //@note would also work with Skolemize and all instantiate but disjointness is more painful
             val rename = (us: RenUSubst) => us ++ RenUSubst(Seq((Variable("x"), vars.head)))
             useFor("all eliminate", PosInExpr(1::Nil), rename)(AntePosition(0))(monStep(Context(c), mon)) (
-              Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))),
+              Sequent(Nil, ante, succ),
               Skolemize(SuccPos(0))
             )
 
@@ -857,13 +857,13 @@ trait UnifyUSCalculus {
             //@note would also work with Skolemize and all instantiate but disjointness is more painful
             val rename = (us: RenUSubst) => us ++ RenUSubst(Seq((Variable("x"), vars.head)))
             useFor("exists eliminate", PosInExpr(0::Nil), rename)(SuccPosition(0))(monStep(Context(c), mon)) (
-              Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))),
+              Sequent(Nil, ante, succ),
               Skolemize(AntePos(0))
             )
 
           case Not(c) =>
             //@note no polarity switch necessary here, since global polarity switch at beginning of CMon
-            (Provable.startProof(Sequent(Nil, IndexedSeq(C(left)), IndexedSeq(C(right))))
+            (Provable.startProof(Sequent(Nil, ante, succ))
             (NotLeft(AntePos(0)), 0)
             (NotRight(SuccPos(0)), 0)
             ) (monStep(Context(c), mon), 0)
