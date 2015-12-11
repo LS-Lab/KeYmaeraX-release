@@ -46,7 +46,7 @@ object FOQuantifierTactics {
             if (pos.isAnte) {
               ProofRuleTactics.cut(axiomInstance) <(
                 (modusPonens(pos, new AntePosition(sequent.ante.length)) & hideL(pos.topLevel)) partial,
-                cohide('Rlast) & debug("allLFoo") & CMon(pos.inExpr) & debug("allLBar") & allInstantiateAxiom
+                cohide('Rlast) & CMon(pos.inExpr) & allInstantiateAxiom
                 )
             } else {
               ProofRuleTactics.cut(axiomInstance) <(
