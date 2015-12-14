@@ -15,7 +15,7 @@ import scala.language.postfixOps
  * [[FOQuantifierTactics]] provides tactics for instantiating quantifiers.
  */
 object FOQuantifierTactics {
-  def allInstantiate(quantified: Option[Variable], instance: Option[Term]): DependentPositionTactic =
+  def allInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
     new DependentPositionTactic("all instantiate") {
       override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
         override def computeExpr(v : BelleValue): BelleExpr = v match {
@@ -66,7 +66,7 @@ object FOQuantifierTactics {
       }
   }
 
-  def existsInstantiate(quantified: Option[Variable], instance: Option[Term]): DependentPositionTactic =
+  def existsInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
     new DependentPositionTactic("exists instantiate") {
       override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
         override def computeExpr(v : BelleValue): BelleExpr =
