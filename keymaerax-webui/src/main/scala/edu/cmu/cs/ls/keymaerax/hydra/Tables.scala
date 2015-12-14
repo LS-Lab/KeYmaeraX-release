@@ -14,7 +14,7 @@ trait Tables {
   import scala.slick.jdbc.{GetResult => GR}
   
   /** DDL for all tables. Call .create to execute. */
-  lazy val ddl = Config.ddl ++ Executableparameter.ddl ++ Executables.ddl ++ Executionsteps.ddl ++ Models.ddl ++ Patterns.ddl ++ Proofs.ddl ++ Provables.ddl ++ Scalatactics.ddl ++ Sequentformulas.ddl ++ Sequents.ddl ++ Tacticexecutions.ddl ++ Users.ddl
+  lazy val ddl = Config.ddl ++ Executableparameter.ddl ++ Executables.ddl ++ Executionsteps.ddl ++ Lemma.ddl ++ Models.ddl ++ Patterns.ddl ++ Proofs.ddl ++ Provables.ddl ++ Scalatactics.ddl ++ Sequentformulas.ddl ++ Sequents.ddl ++ Tacticexecutions.ddl ++ Users.ddl
   
   /** Entity class storing rows of table Config
    *  @param configid Database column configId DBType(INTEGER), PrimaryKey
@@ -162,6 +162,27 @@ trait Tables {
   }
   /** Collection-like TableQuery object for table Executionsteps */
   lazy val Executionsteps = new TableQuery(tag => new Executionsteps(tag))
+  
+  /** Entity class storing rows of table Lemma
+   *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
+   *  @param lemma Database column lemma DBType(TEXT) */
+  case class LemmaRow(_Id: Option[Int], lemma: Option[String])
+  /** GetResult implicit for fetching LemmaRow objects using plain SQL queries */
+  implicit def GetResultLemmaRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[LemmaRow] = GR{
+    prs => import prs._
+    LemmaRow.tupled((<<?[Int], <<?[String]))
+  }
+  /** Table description of table lemma. Objects of this class serve as prototypes for rows in queries. */
+  class Lemma(_tableTag: Tag) extends Table[LemmaRow](_tableTag, "lemma") {
+    def * = (_Id, lemma) <> (LemmaRow.tupled, LemmaRow.unapply)
+    
+    /** Database column _id DBType(INTEGER), PrimaryKey */
+    val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
+    /** Database column lemma DBType(TEXT) */
+    val lemma: Column[Option[String]] = column[Option[String]]("lemma")
+  }
+  /** Collection-like TableQuery object for table Lemma */
+  lazy val Lemma = new TableQuery(tag => new Lemma(tag))
   
   /** Entity class storing rows of table Models
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey

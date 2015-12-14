@@ -35,6 +35,12 @@ CREATE TABLE IF NOT EXISTS `proofs` (
 ----------------------------------------------------------------------------------------------------
 -- Serialization of Provables
 ----------------------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `lemmas` (
+  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  `lemma` TEXT -- A string that can be parsed by the Lemma parser
+);
+
+-- TODO eventually remove these tables in favor of lemmas everywhere.
 CREATE TABLE IF NOT EXISTS `provables` (
   `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
 );
