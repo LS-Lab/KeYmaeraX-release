@@ -26,6 +26,7 @@ object PropositionalTactics {
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.implyR]]
    */
+  lazy val implyRi: DependentTactic = implyRi()
   def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = new DependentTactic("inverse imply right") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable) =>
