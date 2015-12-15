@@ -507,7 +507,7 @@ trait UnifyUSCalculus {
           val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
           cutLR(ctx(other))(pos.top) <(
             /* use */ ident,
-            /* show */ debug("Foo") & coHideR(cutPos) & debug("Bar") & equivify & debug("Zee") & tactic(pos.inExpr) & debug("WTF?") & by(fact) & debug("Done")
+            /* show */ coHideR(cutPos) & equivify & tactic(pos.inExpr) & by(fact)
             )
       }
     }
