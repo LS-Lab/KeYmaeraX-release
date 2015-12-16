@@ -276,7 +276,7 @@ object EqualityTactics {
    * @example{{{
    *    x>=0&abs_0=x | x<0&abs_0=-x |- abs_0=5
    *    ---------------------------------------abs(1, 0::Nil)
-   *    |- abs(x)=5
+   *                                |- abs(x)=5
    * }}}
    * @return The tactic.
    */
@@ -297,7 +297,33 @@ object EqualityTactics {
           }
       }
     }
+  }
 
+  /**
+   * Expands min/max function.
+   * @example{{{
+   *    x>=y&max_0=x | x<y&max_0=y  |- max_0=5
+   *    ------------------------------------------max(1, 0::Nil)
+   *                                |- max(x,y)=5
+   * }}}
+   * @return The tactic.
+   */
+  def minmax: DependentPositionTactic = new DependentPositionTactic("min/max") {
+    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
+      override def computeExpr(v: BelleValue): BelleExpr = v match {
+        case BelleProvable(provable) =>
+          require(provable.subgoals.size == 1, "Exactly 1 subgoal expected, but got " + provable.subgoals.size)
+          val sequent = provable.subgoals.head
+          sequent.sub(pos) match {
+            case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real), Pair(f, g))) if fn == "min" || fn == "max" =>
+              val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
+              val minmaxVar = Variable(fn, freshMinMaxIdx)
 
+              abbrv(minmax, Some(minmaxVar)) &
+                useAt("= commute")(Find(0, Some(Equal(minmaxVar, minmax)), new AntePosition(0), exact = true)) &
+                useAt(fn)(Find(0, Some(Equal(minmax, minmaxVar)), new AntePosition(0), exact = true))
+          }
+      }
+    }
   }
 }

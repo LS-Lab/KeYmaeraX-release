@@ -218,4 +218,32 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.ante should contain only ("x>=0&abs_0=x | x<0&abs_0=-x".asFormula, "abs_0>=5".asFormula)
     result.subgoals.head.succ shouldBe empty
   }
+
+  "min" should "expand min(x,y) in succedent" in {
+    val result = proveBy("min(x,y) >= 5".asFormula, minmax(1, 0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x<=y&min_0=x | x>y&min_0=y".asFormula
+    result.subgoals.head.succ should contain only "min_0>=5".asFormula
+  }
+
+  it should "expand min(x,y) in antecedent" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("min(x,y) >= 5".asFormula), IndexedSeq()), minmax(-1, 0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x<=y&min_0=x | x>y&min_0=y".asFormula, "min_0>=5".asFormula)
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  "max" should "expand max(x,y) in succedent" in {
+    val result = proveBy("max(x,y) >= 5".asFormula, minmax(1, 0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>=y&max_0=x | x<y&max_0=y".asFormula
+    result.subgoals.head.succ should contain only "max_0>=5".asFormula
+  }
+
+  it should "expand max(x,y) in antecedent" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("max(x,y) >= 5".asFormula), IndexedSeq()), minmax(-1, 0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x>=y&max_0=x | x<y&max_0=y".asFormula, "max_0>=5".asFormula)
+    result.subgoals.head.succ shouldBe empty
+  }
 }
