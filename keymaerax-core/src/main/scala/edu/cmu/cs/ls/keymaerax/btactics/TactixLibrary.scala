@@ -366,8 +366,18 @@ object TactixLibrary extends UnifyUSCalculus {
   /** nil: skip is a no-op tactic that has no effect */
   lazy val skip : BelleExpr = nil
 
-  /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term. */
-  def abbrv(name: Variable): BuiltInPositionTactic = ??? //EqualityRewritingImpl.abbrv(name)
+  /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term ([[EqualityTactics.abbrv]]) */
+  def abbrv(name: Variable): DependentPositionTactic = EqualityTactics.abbrv(name)
+  /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side at a specific position ([[EqualityTactics.eqL2R]]). */
+  def eqL2R(eqPos: Int): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
+  def eqL2R(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
+  /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side at a specific position ([[EqualityTactics.eqR2L]]). */
+  def eqR2L(eqPos: Int): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
+  def eqR2L(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
+  /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively ([[EqualityTactics.exhaustiveEqL2R]]). */
+  lazy val exhaustiveEqL2R: DependentPositionTactic = EqualityTactics.exhaustiveEqL2R
+  /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
+  lazy val exhaustiveEqR2L: DependentPositionTactic = EqualityTactics.exhaustiveEqR2L
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
