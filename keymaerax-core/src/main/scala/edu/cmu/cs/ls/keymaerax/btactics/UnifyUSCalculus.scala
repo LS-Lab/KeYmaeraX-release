@@ -65,9 +65,6 @@ trait UnifyUSCalculus {
     * unification and matching based auto-tactics (backward tableaux/sequent)
     *******************************************************************/
 
-  /** US(form) reduce the proof to a proof of form by a suitable uniform substitution obtained by unification */
-  //def US(form: Sequent): Tactic = US(form)
-
   /** useAt(fact, tactic)(pos) uses the given fact (that'll be proved by tactic after unification) at the given position in the sequent (by unifying and equivalence rewriting). */
   //def useAt(fact: Formula, key: PosInExpr, tactic: Tactic, inst: Subst=>Subst): PositionTactic = useAt(fact, key, tactic, inst)
   //def useAt(fact: Formula, key: PosInExpr, tactic: Tactic): PositionTactic = useAt(fact, key, tactic)
