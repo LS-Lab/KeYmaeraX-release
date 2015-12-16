@@ -55,11 +55,10 @@ object TactixLibrary extends UnifyUSCalculus {
     *******************************************************************/
 
   /** US: uniform substitution ([[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule USubst]])
-    * @see [[UnifyUSCalculus]]
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]]
     * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
     */
-  def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula]) = Map()): BuiltInTactic = ??? //PropositionalTacticsImpl.uniformSubstT(subst, delta)
+  def US(subst: USubst, origin: Sequent): BuiltInTactic = ProofRuleTactics.US(subst, origin)
 
   // conditional tactics
 
