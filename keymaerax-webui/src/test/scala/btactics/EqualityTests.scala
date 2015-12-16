@@ -197,4 +197,25 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.ante should contain only ("x_0 = c+d".asFormula, "x>y".asFormula)
     result.subgoals.head.succ should contain only "a<b".asFormula
   }
+
+  "abs" should "expand abs(x) in succedent" in {
+    val result = proveBy("abs(x) >= 5".asFormula, abs(1, 0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>=0&abs_0=x | x<0&abs_0=-x".asFormula
+    result.subgoals.head.succ should contain only "abs_0>=5".asFormula
+  }
+
+  it should "expand abs(x) in non-top-level succedent" in {
+    val result = proveBy("y=2 | abs(x) >= 5".asFormula, abs(1, 1::0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>=0&abs_0=x | x<0&abs_0=-x".asFormula
+    result.subgoals.head.succ should contain only "y=2 | abs_0>=5".asFormula
+  }
+
+  it should "expand abs(x) in antecedent" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("abs(x) >= 5".asFormula), IndexedSeq()), abs(-1, 0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x>=0&abs_0=x | x<0&abs_0=-x".asFormula, "abs_0>=5".asFormula)
+    result.subgoals.head.succ shouldBe empty
+  }
 }

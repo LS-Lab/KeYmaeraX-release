@@ -258,8 +258,46 @@ object EqualityTactics {
 
         cut(Exists(v :: Nil, Equal(v, t))) <(
           /* use */ (existsL('Llast) & exhaustiveEqR2L('Llast)) partial,
-          /* show */ cohide('Rlast) & existsR(t)(1) & byUS("= reflexive")
+//          @note cannot use existsR because Unification match doesn't get it right yet
+//          /* show */ cohide('Rlast) & existsR(t)(1) & byUS("= reflexive")
+          /* show */ cohide('Rlast) & cut(Equiv(Exists(v :: Nil, Equal(v, t)), Equal(t, t))) <(
+            /* use */ equivRewriting(-1)(1) & byUS("= reflexive"),
+            /* show */ equivR('Rlast) <(
+              closeId,
+              FOQuantifierTactics.existsGeneralize(v, PosInExpr(0::Nil)::Nil)(-1) & closeId
+            )
           )
+        )
     }
+  }
+
+  /**
+   * Expands an absolute value function.
+   * @example{{{
+   *    x>=0&abs_0=x | x<0&abs_0=-x |- abs_0=5
+   *    ---------------------------------------abs(1, 0::Nil)
+   *    |- abs(x)=5
+   * }}}
+   * @return The tactic.
+   */
+  def abs: DependentPositionTactic = new DependentPositionTactic("abs") {
+    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
+      override def computeExpr(v: BelleValue): BelleExpr = v match {
+        case BelleProvable(provable) =>
+          require(provable.subgoals.size == 1, "Exactly 1 subgoal expected, but got " + provable.subgoals.size)
+          val sequent = provable.subgoals.head
+          sequent.sub(pos) match {
+            case Some(abs@FuncOf(Function(fn, None, Real, Real), _)) if fn == "abs" =>
+              val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
+              val absVar = Variable(fn, freshAbsIdx)
+
+              abbrv(abs, Some(absVar)) &
+                useAt("= commute")(Find(0, Some(Equal(absVar, abs)), new AntePosition(0), exact=true)) &
+                useAt(fn)(Find(0, Some(Equal(abs, absVar)), new AntePosition(0), exact=true))
+          }
+      }
+    }
+
+
   }
 }
