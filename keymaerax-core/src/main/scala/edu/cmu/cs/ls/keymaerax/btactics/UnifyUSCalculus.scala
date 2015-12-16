@@ -141,14 +141,12 @@ trait UnifyUSCalculus {
    * @author Andre Platzer
    * @param form the sequent to reduce this proof node to by a Uniform Substitution
    */
-  def US(form: Sequent): DependentTactic = new DependentTactic("US") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        requireOneSubgoal(provable)
-        val subst = UnificationMatch(form, provable.subgoals.head)
-        if (DEBUG) println("  US(" + form.prettyString + ") unify: " + provable.subgoals.head + " matches against form " + form + " by " + subst)
-        Predef.assert(provable.subgoals.head == subst(form), "unification must match: " + provable.subgoals.head + " is " + subst(form) + " which is " + form + " instantiated by " + subst)
-        subst.toTactic(form)
+  def US(form: Sequent): DependentTactic = new SingleGoalDependentTactic("US") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      val subst = UnificationMatch(form, sequent)
+      if (DEBUG) println("  US(" + form.prettyString + ") unify: " + sequent + " matches against form " + form + " by " + subst)
+      Predef.assert(sequent == subst(form), "unification must match: " + sequent + " is " + subst(form) + " which is " + form + " instantiated by " + subst)
+      subst.toTactic(form)
     }
   }
 
@@ -197,16 +195,14 @@ trait UnifyUSCalculus {
   def useAt(fact: Formula, key: PosInExpr, factTactic: BelleExpr, inst: Subst=>Subst = us=>us): DependentPositionTactic = new DependentPositionTactic("useAt") {
     private val (keyCtx:Context[_],keyPart) = fact.at(key)
 
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
-          requireOneSubgoal(provable)
-          val (ctx,expr) = provable.subgoals.head.at(pos)
-          val subst = inst(UnificationMatch(keyPart, expr))
-          if (DEBUG) println("useAt(" + fact.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
-          Predef.assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
-          //val keyCtxMatched = Context(subst(keyCtx.ctx))
-          useAt(subst, keyCtx, keyPart, pos, ctx, expr, factTactic, provable.subgoals.head)
+    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        val (ctx,expr) = sequent.at(pos)
+        val subst = inst(UnificationMatch(keyPart, expr))
+        if (DEBUG) println("useAt(" + fact.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
+        Predef.assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
+        //val keyCtxMatched = Context(subst(keyCtx.ctx))
+        useAt(subst, keyCtx, keyPart, pos, ctx, expr, factTactic, sequent)
       }
     }
 
@@ -355,37 +351,34 @@ trait UnifyUSCalculus {
    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
    */
-  def CQ(inEqPos: PosInExpr): DependentTactic = new DependentTactic("CQ congruence") {
+  def CQ(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CQ congruence") {
     private val f_ = FuncOf(Function("f_", None, Real, Real), Anything)
     private val g_ = FuncOf(Function("g_", None, Real, Real), Anything)
     private val c_ = PredOf(Function("ctx_", None, Real, Bool), DotTerm)
 
-    override def computeExpr(v: BelleValue): BelleExpr = v match  {
-      case BelleProvable(provable) =>
-        require(provable.subgoals.size == 1, "Expected single subgoal, but got " + provable.subgoals.size)
-        val sequent = provable.subgoals.head
-        require(sequent.ante.isEmpty && sequent.succ.length == 1, "Expected empty antecedent and single succedent, but got " + sequent)
-        sequent.succ.head match {
-          case Equiv(p, q) =>
-            val (ctxF, f) = p.at(inEqPos)
-            val (ctxG, g) = q.at(inEqPos)
-            require(ctxF == ctxG, "Same context expected, but got contexts " + ctxF + " and " + ctxG)
-            require(ctxF.ctx == ctxG.ctx, "Same context formulas expected, but got " + ctxF.ctx + " and " + ctxG.ctx)
-            require(ctxF.isTermContext, "Formula context expected for CQ")
-            if (DEBUG) println("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
-            if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty) {
-              axiomatic("CQ equation congruence", USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil))
-            } else {
-              if (DEBUG) println("CQ: Split " + p + " around " + inEqPos)
-              val (fmlPos,termPos) : (PosInExpr,PosInExpr) = Context.splitPos(p, inEqPos)
-              if (DEBUG) println("CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p.at(fmlPos)._1 + " and " + Context.at(p.at(fmlPos)._2,termPos)._1)
-              if (p.at(fmlPos)._2.isInstanceOf[Modal]) println(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
-              if (fmlPos == HereP) throw new IllegalStateException("CQ split void, would cause infinite loop unless stopped")
-              //@todo could optimize to build directly since ctx already known
-              CE(fmlPos) & CQ(termPos)
-            }
-          case fml => throw new BelleError("Expected equivalence, but got " + fml)
-        }
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      require(sequent.ante.isEmpty && sequent.succ.length == 1, "Expected empty antecedent and single succedent, but got " + sequent)
+      sequent.succ.head match {
+        case Equiv(p, q) =>
+          val (ctxF, f) = p.at(inEqPos)
+          val (ctxG, g) = q.at(inEqPos)
+          require(ctxF == ctxG, "Same context expected, but got contexts " + ctxF + " and " + ctxG)
+          require(ctxF.ctx == ctxG.ctx, "Same context formulas expected, but got " + ctxF.ctx + " and " + ctxG.ctx)
+          require(ctxF.isTermContext, "Formula context expected for CQ")
+          if (DEBUG) println("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
+          if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty) {
+            axiomatic("CQ equation congruence", USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil))
+          } else {
+            if (DEBUG) println("CQ: Split " + p + " around " + inEqPos)
+            val (fmlPos,termPos) : (PosInExpr,PosInExpr) = Context.splitPos(p, inEqPos)
+            if (DEBUG) println("CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p.at(fmlPos)._1 + " and " + Context.at(p.at(fmlPos)._2,termPos)._1)
+            if (p.at(fmlPos)._2.isInstanceOf[Modal]) println(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
+            if (fmlPos == HereP) throw new IllegalStateException("CQ split void, would cause infinite loop unless stopped")
+            //@todo could optimize to build directly since ctx already known
+            CE(fmlPos) & CQ(termPos)
+          }
+        case fml => throw new BelleError("Expected equivalence, but got " + fml)
+      }
     }
   }
 
@@ -402,30 +395,27 @@ trait UnifyUSCalculus {
    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
    * @see [[UnifyUSCalculus.CE(Provable)]]
    */
-  def CE(inEqPos: PosInExpr): DependentTactic = new DependentTactic("CE congruence") {
+  def CE(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CE congruence") {
     private val p_ = PredOf(Function("p_", None, Real, Bool), Anything)
     private val q_ = PredOf(Function("q_", None, Real, Bool), Anything)
     private val c_ = PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula)
 
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        require(provable.subgoals.size == 1, "Expected single open goal, but got " + provable.subgoals.size)
-        val sequent = provable.subgoals.head
-        require(sequent.ante.isEmpty && sequent.succ.length==1, "Expected empty antecedent and single succedent formula, but got " + sequent)
-        sequent.succ.head match {
-          case Equiv(l, r) =>
-            if (inEqPos == HereP) ident
-            else {
-              val (ctxP, p) = l.at(inEqPos)
-              val (ctxQ, q) = r.at(inEqPos)
-              //@note Could skip the construction of ctxQ but it's part of the .at construction anyways.
-              require(ctxP == ctxQ, "Same context expected, but got " + ctxP + " and " + ctxQ)
-              require(ctxP.ctx == ctxQ.ctx, "Same context formula expected, but got " + ctxP.ctx + " and " + ctxQ.ctx)
-              require(ctxP.isFormulaContext, "Formula context expected for CE")
-              axiomatic("CE congruence", USubst(SubstitutionPair(c_, ctxP.ctx) :: SubstitutionPair(p_, p) :: SubstitutionPair(q_, q) :: Nil))
-            }
-          case fml => throw new BelleError("Expected equivalence, but got " + fml)
-        }
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      require(sequent.ante.isEmpty && sequent.succ.length==1, "Expected empty antecedent and single succedent formula, but got " + sequent)
+      sequent.succ.head match {
+        case Equiv(l, r) =>
+          if (inEqPos == HereP) ident
+          else {
+            val (ctxP, p) = l.at(inEqPos)
+            val (ctxQ, q) = r.at(inEqPos)
+            //@note Could skip the construction of ctxQ but it's part of the .at construction anyways.
+            require(ctxP == ctxQ, "Same context expected, but got " + ctxP + " and " + ctxQ)
+            require(ctxP.ctx == ctxQ.ctx, "Same context formula expected, but got " + ctxP.ctx + " and " + ctxQ.ctx)
+            require(ctxP.isFormulaContext, "Formula context expected for CE")
+            axiomatic("CE congruence", USubst(SubstitutionPair(c_, ctxP.ctx) :: SubstitutionPair(p_, p) :: SubstitutionPair(q_, q) :: Nil))
+          }
+        case fml => throw new BelleError("Expected equivalence, but got " + fml)
+      }
     }
   }
 
@@ -441,21 +431,18 @@ trait UnifyUSCalculus {
    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(Context)]]
    */
-  def CMon(inEqPos: PosInExpr): DependentTactic = new DependentTactic("CMon congruence") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        require(provable.subgoals.size == 1, "Expected single open goal, but got " + provable.subgoals.size)
-        val sequent = provable.subgoals.head
-        require(sequent.ante.isEmpty && sequent.succ.length==1, "Expected empty antecedent and single succedent formula, but got " + sequent)
-        sequent.succ.head match {
-          case Imply(l, r) =>
-            val (ctxP, p: Formula) = l.at(inEqPos)
-            val (ctxQ, q: Formula) = r.at(inEqPos)
-            require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
-            implyR(SuccPos(0)) &
-              by(CMon(ctxP)(Provable.startProof(Sequent(Nil, IndexedSeq(p), IndexedSeq(q))))) &
-              by(inverseImplyR(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(p, q))))))
-        }
+  def CMon(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CMon congruence") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      require(sequent.ante.isEmpty && sequent.succ.length==1, "Expected empty antecedent and single succedent formula, but got " + sequent)
+      sequent.succ.head match {
+        case Imply(l, r) =>
+          val (ctxP, p: Formula) = l.at(inEqPos)
+          val (ctxQ, q: Formula) = r.at(inEqPos)
+          require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
+          implyR(SuccPos(0)) &
+            by(CMon(ctxP)(Provable.startProof(Sequent(Nil, IndexedSeq(p), IndexedSeq(q))))) &
+            by(inverseImplyR(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(p, q))))))
+      }
     }
   }
 
@@ -494,18 +481,15 @@ trait UnifyUSCalculus {
     }
     val (other, key, equivify, tactic) = splitFact
 
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
-          require(provable.subgoals.size == 1, "Expected single open goal, but got " + provable.subgoals.size)
-          val sequent = provable.subgoals.head
-          require(sequent.sub(pos).contains(key), "In-applicable CE(" + fact + ")\nat " + pos + "\nwhich is " + sequent.sub(pos) + "\nat " + sequent)
-          val (ctx, _) = sequent.at(pos)
-          val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
-          cutLR(ctx(other))(pos.top) <(
-            /* use */ ident,
-            /* show */ coHideR(cutPos) & equivify & tactic(pos.inExpr) & by(fact)
-            )
+    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(sequent.sub(pos).contains(key), "In-applicable CE(" + fact + ")\nat " + pos + "\nwhich is " + sequent.sub(pos) + "\nat " + sequent)
+        val (ctx, _) = sequent.at(pos)
+        val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
+        cutLR(ctx(other))(pos.top) <(
+          /* use */ ident,
+          /* show */ coHideR(cutPos) & equivify & tactic(pos.inExpr) & by(fact)
+          )
       }
     }
   }
@@ -534,21 +518,18 @@ trait UnifyUSCalculus {
     val (other, key, equivify, tactic) = splitFact
 
 
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
-          require(provable.subgoals.size == 1, "Expected single open goal, but got " + provable.subgoals.size)
-          val sequent = provable.subgoals.head
-          require(sequent.sub(pos).contains(C(key)), "In-applicable CE(" + fact + ",\n" + C + ")\nat " + pos + "\nwhich is " + sequent.sub(pos).getOrElse("none") + "\nat " + sequent)
-          val (posctx,c) = sequent.at(pos)
-          val ctx = posctx(C)
-          val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
-          cutLR(ctx(other))(pos.top) <(
-            /* use */ ident partial,
-            /* show */ coHideR(cutPos) & //assertT(0,1) &
-            equivify & /*commuteEquivR(SuccPosition(0)) &*/
-            by(tactic(C)(fact))
-            )
+    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(sequent.sub(pos).contains(C(key)), "In-applicable CE(" + fact + ",\n" + C + ")\nat " + pos + "\nwhich is " + sequent.sub(pos).getOrElse("none") + "\nat " + sequent)
+        val (posctx,c) = sequent.at(pos)
+        val ctx = posctx(C)
+        val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
+        cutLR(ctx(other))(pos.top) <(
+          /* use */ ident partial,
+          /* show */ coHideR(cutPos) & //assertT(0,1) &
+          equivify & /*commuteEquivR(SuccPosition(0)) &*/
+          by(tactic(C)(fact))
+          )
       }
     }
   }
@@ -568,14 +549,11 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(Provable)]]
     */
   def cutAt(repl: Expression): DependentPositionTactic = new DependentPositionTactic("cutAt") {
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
-          requireOneSubgoal(provable)
-          val sequent = provable.subgoals.head
-          require(sequent.sub(pos).isDefined, "Position " + pos + " not defined in sequent " + sequent)
-          val (ctx, _) = sequent.at(pos)
-          cutLR(ctx(repl))(pos.top)
+    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(sequent.sub(pos).isDefined, "Position " + pos + " not defined in sequent " + sequent)
+        val (ctx, _) = sequent.at(pos)
+        cutLR(ctx(repl))(pos.top)
       }
     }
   }

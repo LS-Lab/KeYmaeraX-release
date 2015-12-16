@@ -165,8 +165,21 @@ case class AppliedTwoPositionTactic(positionTactic: BuiltInTwoPositionTactic, po
  * @param name The name of the tactic.
  */
 abstract case class DependentTactic(name: String) extends BelleExpr {
-  def computeExpr(v : BelleValue): BelleExpr
+  def computeExpr(provable: Provable): BelleExpr = throw new BelleError("Not implemented")
+  def computeExpr(e: BelleValue with BelleError): BelleExpr = throw e
+  /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleError) */
+  def computeExpr(v : BelleValue): BelleExpr = v match {
+    case BelleProvable(provable) => computeExpr(provable)
+    case e: BelleError => computeExpr(e)
+  }
   override def prettyString: String = "DependentTactic(" + name + ")"
+}
+abstract class SingleGoalDependentTactic(override val name: String) extends DependentTactic(name) {
+  def computeExpr(sequent: Sequent): BelleExpr
+  final override def computeExpr(provable: Provable): BelleExpr = {
+    require(provable.subgoals.size == 1, "Exactly 1 subgoal expected, but got " + provable.subgoals.size)
+    computeExpr(provable.subgoals.head)
+  }
 }
 abstract case class DependentPositionTactic(name: String) extends BelleExpr {
   def apply(pos: Position): DependentTactic

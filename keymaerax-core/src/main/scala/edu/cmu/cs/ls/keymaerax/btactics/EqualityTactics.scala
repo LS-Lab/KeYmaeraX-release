@@ -239,10 +239,8 @@ object EqualityTactics {
    * @param abbrvV The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
    * @return The tactic.
    */
-  def abbrv(t: Term, abbrvV: Option[Variable] = None): DependentTactic = new DependentTactic("abbrv") {
-    def computeExpr(v : BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        val sequent = provable.subgoals.head
+  def abbrv(t: Term, abbrvV: Option[Variable] = None): DependentTactic = new SingleGoalDependentTactic("abbrv") {
+    def computeExpr(sequent: Sequent): BelleExpr = {
         require(abbrvV.isEmpty ||
           !(sequent.ante.flatMap(StaticSemantics.signature)
             ++ sequent.succ.flatMap(StaticSemantics.signature)).contains(abbrvV.get),
@@ -281,20 +279,15 @@ object EqualityTactics {
    * @return The tactic.
    */
   def abs: DependentPositionTactic = new DependentPositionTactic("abs") {
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
-          require(provable.subgoals.size == 1, "Exactly 1 subgoal expected, but got " + provable.subgoals.size)
-          val sequent = provable.subgoals.head
-          sequent.sub(pos) match {
-            case Some(abs@FuncOf(Function(fn, None, Real, Real), _)) if fn == "abs" =>
-              val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
-              val absVar = Variable(fn, freshAbsIdx)
+    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
+        case Some(abs@FuncOf(Function(fn, None, Real, Real), _)) if fn == "abs" =>
+          val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
+          val absVar = Variable(fn, freshAbsIdx)
 
-              abbrv(abs, Some(absVar)) &
-                useAt("= commute")(Find(0, Some(Equal(absVar, abs)), new AntePosition(0), exact=true)) &
-                useAt(fn)(Find(0, Some(Equal(abs, absVar)), new AntePosition(0), exact=true))
-          }
+          abbrv(abs, Some(absVar)) &
+            useAt("= commute")(Find(0, Some(Equal(absVar, abs)), new AntePosition(0), exact=true)) &
+            useAt(fn)(Find(0, Some(Equal(abs, absVar)), new AntePosition(0), exact=true))
       }
     }
   }
@@ -309,20 +302,15 @@ object EqualityTactics {
    * @return The tactic.
    */
   def minmax: DependentPositionTactic = new DependentPositionTactic("min/max") {
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
-          require(provable.subgoals.size == 1, "Exactly 1 subgoal expected, but got " + provable.subgoals.size)
-          val sequent = provable.subgoals.head
-          sequent.sub(pos) match {
-            case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real), Pair(f, g))) if fn == "min" || fn == "max" =>
-              val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
-              val minmaxVar = Variable(fn, freshMinMaxIdx)
+    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
+        case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real), Pair(f, g))) if fn == "min" || fn == "max" =>
+          val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
+          val minmaxVar = Variable(fn, freshMinMaxIdx)
 
-              abbrv(minmax, Some(minmaxVar)) &
-                useAt("= commute")(Find(0, Some(Equal(minmaxVar, minmax)), new AntePosition(0), exact = true)) &
-                useAt(fn)(Find(0, Some(Equal(minmax, minmaxVar)), new AntePosition(0), exact = true))
-          }
+          abbrv(minmax, Some(minmaxVar)) &
+            useAt("= commute")(Find(0, Some(Equal(minmaxVar, minmax)), new AntePosition(0), exact = true)) &
+            useAt(fn)(Find(0, Some(Equal(minmax, minmaxVar)), new AntePosition(0), exact = true))
       }
     }
   }
