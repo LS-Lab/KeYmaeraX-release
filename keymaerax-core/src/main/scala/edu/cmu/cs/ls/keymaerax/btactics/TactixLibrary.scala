@@ -406,13 +406,12 @@ object TactixLibrary extends UnifyUSCalculus {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Special functions
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  /** Expands abs using abs(x)=y <-> (x>=0&y=x | x<=0&y=-x) */
-  def abs: BuiltInPositionTactic = ??? //ArithmeticTacticsImpl.AbsT
-  /** Expands min using min(x,y)=z <-> (x<=y&z=x | x>=y&z=y) */
-  def min: BuiltInPositionTactic = ??? //ArithmeticTacticsImpl.MinMaxT
-  /** Expands max using max(x,y)=z <-> (x>=y&z=x | x<=y&z=y) */
-  def max: BuiltInPositionTactic = ??? //ArithmeticTacticsImpl.MinMaxT
-
+  /** Expands abs using abs(x)=y <-> (x>=0&y=x | x<=0&y=-x), see [[EqualityTactics.abs]] */
+  def abs: DependentPositionTactic = EqualityTactics.abs
+  /** Expands min using min(x,y)=z <-> (x<=y&z=x | x>=y&z=y), see [[EqualityTactics.minmax]] */
+  def min: DependentPositionTactic = EqualityTactics.minmax
+  /** Expands max using max(x,y)=z <-> (x>=y&z=x | x<=y&z=y), see [[EqualityTactics.minmax]] */
+  def max: DependentPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
   def alphaRule: BelleExpr = andL('_) | orR('_) | implyR('_) | notL('_) | notR('_)
