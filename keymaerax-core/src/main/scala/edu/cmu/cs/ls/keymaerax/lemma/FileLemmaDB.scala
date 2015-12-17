@@ -73,7 +73,7 @@ class FileLemmaDB extends LemmaDB {
   private def saveProof(file: File, lemma: Lemma, id: String): Unit = {
     //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
     assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "expected lemma form should have no antecedent and exactly one succedent formula " + lemma)
-    assert(KeYmaeraXLemmaParser(lemma.toString) == (lemma.name, lemma.fact.conclusion.succ.head, lemma.evidence.head),
+    assert(KeYmaeraXExtendedLemmaParser(lemma.toString) == (lemma.name, lemma.fact, lemma.evidence.head),
       "reparse of printed lemma should be identical to original lemma " + lemma)
 
     val pw = new PrintWriter(file)
