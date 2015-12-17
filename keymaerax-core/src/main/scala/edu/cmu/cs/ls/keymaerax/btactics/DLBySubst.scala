@@ -219,4 +219,39 @@ object DLBySubst {
       }
     }
   }
+
+  /**
+   * Generalize postcondition to C and, separately, prove that C implies postcondition.
+   * The operational effect of {a;b;}@generalize(f1) is generalize(f1).
+   * {{{
+   *   genUseLbl:        genShowLbl:
+   *   G |- [a]C, D      C |- B
+   *   -------------------------
+   *          G |- [a]B, D
+   * }}}
+   * @example{{{
+   *   genUseLbl:        genShowLbl:
+   *   |- [x:=2;]x>1     x>1 |- [y:=x;]y>1
+   *   ------------------------------------generalize("x>1".asFormula)(1)
+   *   |- [x:=2;][y:=x;]y>1
+   * }}}
+   * @example{{{
+   *   genUseLbl:                      genShowLbl:
+   *   |- a=2 -> [z:=3;][x:=2;]x>1     x>1 |- [y:=x;]y>1
+   *   -------------------------------------------------generalize("x>1".asFormula)(1, 1::1::Nil)
+   *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
+   * }}}
+   * @todo same for diamonds by the dual of K
+   */
+  def generalize(c: Formula): DependentPositionTactic = new DependentPositionTactic("generalize") {
+    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
+        case (ctx, Box(a, _)) =>
+          cutR(ctx(Box(a, c)))(pos) <(
+            /* use */ /*label(BranchLabels.genUse)*/ ident,
+            /* show */(cohide(pos.top) & CMon(pos.inExpr+1) & implyR(pos.top)) partial //& label(BranchLabels.genShow)
+          )
+      }
+    }
+  }
 }
