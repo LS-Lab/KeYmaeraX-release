@@ -29,7 +29,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
 //  private def SubstRepl(what: Expression, repl: Expression): SubstRepl = SubstitutionPair(what,repl)
   type Subst = RenUSubst
   private def Subst(subs: List[SubstRepl]): Subst = if (!REUNIFY) RenUSubst(subs) else RenUSubst(subs.distinct)
-  type SubstRepl = scala.Predef.Pair[Expression,Expression]
+  type SubstRepl = Tuple2[Expression,Expression]
   private def SubstRepl(what: Expression, repl: Expression): SubstRepl = (what,repl)
 
   //
@@ -108,7 +108,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
   /** Re-unify multiple replacements for the same what */
   private def reunify(subst: List[SubstRepl]): List[SubstRepl] = {
     // map matchKey to all substitution pairs in subst that sahre that matchKey
-    var matchKeyMap = new scala.collection.mutable.HashMap[Expression,immutable.List[SubstRepl]]()
+    val matchKeyMap = new scala.collection.mutable.HashMap[Expression,immutable.List[SubstRepl]]()
     for (sp <- subst.distinct) {
       val key = RenUSubst.matchKey(sp)
       matchKeyMap.get(key) match {
@@ -120,7 +120,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
       matchKeyMap.filter(kv => kv._2.size<=1).values.map(list=>{assert(list.length==1); list.head}).toList
     var dups: scala.collection.mutable.HashMap[Expression,immutable.List[SubstRepl]] =
       matchKeyMap.filter(kv => kv._2.size>=2)
-    while (!dups.isEmpty) {
+    while (dups.nonEmpty) {
       val dupkv: (Expression,immutable.List[SubstRepl]) = dups.head
       dups = dups.tail
       if (DEBUG) print("unify duplicate " + dupkv._2.map(sp=>sp._1.prettyString + "~>" + sp._2.prettyString).mkString(", ") + "  ")
@@ -163,8 +163,8 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
 
 //  private def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] = if (x1==e2) id else ununifiable(x1,e2)
 //  private def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = if (xp1==e2) id else ununifiable(xp1,e2)
-  private def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] = if (x1==e2) id else if (e2.isInstanceOf[Variable]) List(SubstRepl(x1,e2.asInstanceOf[Variable])) else ununifiable(x1,e2)
-  private def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = if (xp1==e2) id else if (e2.isInstanceOf[DifferentialSymbol]) List(SubstRepl(xp1.x,e2.asInstanceOf[DifferentialSymbol].x)) else ununifiable(xp1,e2)
+  private def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] = if (x1==e2) id else e2 match { case _: Variable => List(SubstRepl(x1,e2.asInstanceOf[Variable])) case _ => ununifiable(x1,e2)}
+  private def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = if (xp1==e2) id else e2 match { case _: DifferentialSymbol => List(SubstRepl(xp1.x,e2.asInstanceOf[DifferentialSymbol].x)) case _ => ununifiable(xp1,e2)}
 
   //@todo optimize: this may be slower than static type inference
   private def unify(e1: Expression, e2: Expression): List[SubstRepl] = e1 match {
@@ -285,6 +285,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     case AssignAny(x)                => e2 match {case AssignAny(x2)    => unify(x,x2) case _ => ununifiable(e1,e2)}
     case Test(f)                     => e2 match {case Test(f2)         => unify(f,f2) case _ => ununifiable(e1,e2)}
     case ODESystem(a, h)             => e2 match {case ODESystem(a2,h2) => unify(a,h, a2,h2) case _ => ununifiable(e1,e2)}
+    case dp1: DifferentialProgram    => e2 match {case dp2: DifferentialProgram => unifyODE(dp1, dp2) case _ => ununifiable(e1, e2)}
     case Choice(a, b)                => e2 match {case Choice(a2,b2)    => unify(a,b, a2,b2) case _ => ununifiable(e1,e2)}
     case Compose(a, b)               => e2 match {case Compose(a2,b2)   => unify(a,b, a2,b2) case _ => ununifiable(e1,e2)}
     case Loop(a)                     => e2 match {case Loop(a2)         => unify(a,a2) case _ => ununifiable(e1,e2)}
@@ -302,8 +303,8 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     else {
       //@todo this is really a zip fold
       (
-        (0 to s1.ante.length-1).foldLeft(List[SubstRepl]())((subst,i) => subst ++ unify(s1.ante(i), s2.ante(i))) ++
-          (0 to s1.succ.length-1).foldLeft(List[SubstRepl]())((subst,i) => subst ++ unify(s1.succ(i), s2.succ(i)))
+        s1.ante.indices.foldLeft(List[SubstRepl]())((subst,i) => subst ++ unify(s1.ante(i), s2.ante(i))) ++
+          s1.succ.indices.foldLeft(List[SubstRepl]())((subst,i) => subst ++ unify(s1.succ(i), s2.succ(i)))
         ).distinct
     }
 }
