@@ -55,11 +55,10 @@ object TactixLibrary extends UnifyUSCalculus {
     *******************************************************************/
 
   /** US: uniform substitution ([[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule USubst]])
-    * @see [[UnifyUSCalculus]]
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]]
     * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
     */
-  def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula]) = Map()): BuiltInTactic = ??? //PropositionalTacticsImpl.uniformSubstT(subst, delta)
+  def US(subst: USubst, origin: Sequent): BuiltInTactic = ProofRuleTactics.US(subst, origin)
 
   // conditional tactics
 
@@ -85,9 +84,13 @@ object TactixLibrary extends UnifyUSCalculus {
   // Propositional tactics
 
   /** Hide/weaken whether left or right */
-  lazy val hide               : BelleExpr = ProofRuleTactics.hide
+  lazy val hide               : DependentPositionTactic = ProofRuleTactics.hide
   /** Hide/weaken given formula at given position */
-  def hide(fml: Formula)(pos: Position) : BelleExpr = DebuggingTactics.assert(fml, "hiding")(pos) & ProofRuleTactics.hide(pos)
+  def hide(fml: Formula): DependentPositionTactic = new DependentPositionTactic("hide") {
+    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
+      override def computeExpr(v: BelleValue): BelleExpr = assertE(fml, "hiding")(pos) & ProofRuleTactics.hide(pos)
+    }
+  }
   /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
   lazy val hideL              : BuiltInLeftTactic = ProofRuleTactics.hideL
   /** Hide/weaken right: weaken a formula to drop it from the succcedent ([[edu.cmu.cs.ls.keymaerax.core.HideRight HideRight]]) */
@@ -151,7 +154,7 @@ object TactixLibrary extends UnifyUSCalculus {
   // modalities
 
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation */
-  lazy val assignb            : BuiltInPositionTactic = ??? //TacticLibrary.boxAssignT
+  lazy val assignb            : DependentPositionTactic = DLBySubst.assignb
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
   lazy val randomb            : DependentPositionTactic = useAt("[:*] assign nondet")
   /** testb: [?] simplifies test `[?q;]p` to an implication `q->p` */
@@ -171,8 +174,11 @@ object TactixLibrary extends UnifyUSCalculus {
   /** abstraction: turns '[a]p' into \\forall BV(a) p */
   lazy val abstractionb       : DependentPositionTactic = DLBySubst.abstractionb
 
-  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
-  def I(invariant : Formula)  : BuiltInPositionTactic = ??? //TacticLibrary.inductionT(Some(invariant))
+  /**
+   * I: prove a property of a loop by induction with the given loop invariant (hybrid systems)
+   * @see [[DLBySubst.I]]
+   */
+  def I(invariant : Formula)  : DependentPositionTactic = DLBySubst.I(invariant)
   /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def loop(invariant: Formula) = I(invariant)
   /** K: modal modus ponens (hybrid systems) */
@@ -274,15 +280,17 @@ object TactixLibrary extends UnifyUSCalculus {
 
   // more
 
-  /* Generalize postcondition to C and, separately, prove that C implies postcondition
+  /**
+   * Generalize postcondition to C and, separately, prove that C implies postcondition.
    * {{{
    *   genUseLbl:        genShowLbl:
    *   G |- [a]C, D      C |- B
    *   ------------------------
    *          G |- [a]B, D
    * }}}
+   * @see [[DLBySubst.generalize]]
    */
-  def generalize(C: Formula)  : BuiltInPositionTactic = ???
+  def generalize(C: Formula)  : DependentPositionTactic = DLBySubst.generalize(C)
 
   /** Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post
     * {{{
@@ -291,8 +299,9 @@ object TactixLibrary extends UnifyUSCalculus {
     *   ---------------------------------
     *          G |- [a]B, D
     * }}}
+    * @see [[DLBySubst.postCut]]
     */
-  def postCut(cut: Formula)   : BuiltInPositionTactic = ???
+  def postCut(cut: Formula)   : DependentPositionTactic = DLBySubst.postCut(cut)
 
 
 
@@ -366,8 +375,18 @@ object TactixLibrary extends UnifyUSCalculus {
   /** nil: skip is a no-op tactic that has no effect */
   lazy val skip : BelleExpr = nil
 
-  /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term. */
-  def abbrv(name: Variable): BuiltInPositionTactic = ??? //EqualityRewritingImpl.abbrv(name)
+  /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term ([[EqualityTactics.abbrv]]) */
+  def abbrv(name: Variable): DependentPositionTactic = EqualityTactics.abbrv(name)
+  /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side at a specific position ([[EqualityTactics.eqL2R]]). */
+  def eqL2R(eqPos: Int): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
+  def eqL2R(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
+  /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side at a specific position ([[EqualityTactics.eqR2L]]). */
+  def eqR2L(eqPos: Int): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
+  def eqR2L(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
+  /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively ([[EqualityTactics.exhaustiveEqL2R]]). */
+  lazy val exhaustiveEqL2R: DependentPositionTactic = EqualityTactics.exhaustiveEqL2R
+  /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
+  lazy val exhaustiveEqR2L: DependentPositionTactic = EqualityTactics.exhaustiveEqR2L
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -397,13 +416,12 @@ object TactixLibrary extends UnifyUSCalculus {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Special functions
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  /** Expands abs using abs(x)=y <-> (x>=0&y=x | x<=0&y=-x) */
-  def abs: BuiltInPositionTactic = ??? //ArithmeticTacticsImpl.AbsT
-  /** Expands min using min(x,y)=z <-> (x<=y&z=x | x>=y&z=y) */
-  def min: BuiltInPositionTactic = ??? //ArithmeticTacticsImpl.MinMaxT
-  /** Expands max using max(x,y)=z <-> (x>=y&z=x | x<=y&z=y) */
-  def max: BuiltInPositionTactic = ??? //ArithmeticTacticsImpl.MinMaxT
-
+  /** Expands abs using abs(x)=y <-> (x>=0&y=x | x<=0&y=-x), see [[EqualityTactics.abs]] */
+  def abs: DependentPositionTactic = EqualityTactics.abs
+  /** Expands min using min(x,y)=z <-> (x<=y&z=x | x>=y&z=y), see [[EqualityTactics.minmax]] */
+  def min: DependentPositionTactic = EqualityTactics.minmax
+  /** Expands max using max(x,y)=z <-> (x>=y&z=x | x<=y&z=y), see [[EqualityTactics.minmax]] */
+  def max: DependentPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
   def alphaRule: BelleExpr = andL('_) | orR('_) | implyR('_) | notL('_) | notR('_)

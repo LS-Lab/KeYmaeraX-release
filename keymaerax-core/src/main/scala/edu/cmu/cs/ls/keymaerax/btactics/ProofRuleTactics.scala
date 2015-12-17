@@ -265,6 +265,7 @@ object ProofRuleTactics {
   def skolemize = new BuiltInPositionTactic("Skolemize") {
     override def computeResult(provable: Provable, pos: Position): Provable = {
       requireOneSubgoal(provable)
+      require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos), 0)
     }
   }
@@ -272,6 +273,7 @@ object ProofRuleTactics {
   def skolemizeR = new BuiltInRightTactic("Skolemize") {
     override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable)
+      require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos), 0)
     }
   }
@@ -279,6 +281,7 @@ object ProofRuleTactics {
   def skolemizeL = new BuiltInLeftTactic("Skolemize") {
     override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable)
+      require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos), 0)
     }
   }
