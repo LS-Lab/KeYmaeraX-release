@@ -11,7 +11,8 @@ import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 object TacticDebugger {
 
   class DebuggerListener (db: DBAbstraction, executionId: Int, executableId: Int,
-                          alternativeOrder: Int, branch:Either[Int, String]) extends IOListener {
+                          alternativeOrder: Int, branch:Either[Int, String],
+                          recursive: Boolean) extends IOListener {
     class TraceNode (isFirstNode: Boolean){
       var id: Option[Int] = None
       var parent: TraceNode = null
@@ -60,7 +61,7 @@ object TacticDebugger {
 
     def begin(v: BelleValue, expr: BelleExpr): Unit = {
       synchronized {
-        if(isDead) return
+        if(isDead || (node !=  null && !recursive)) return
         val parent = node
         node = new TraceNode(isFirstNode = parent == null)
         node.parent = parent
@@ -81,7 +82,7 @@ object TacticDebugger {
 
     def end(v: BelleValue, expr: BelleExpr, result: BelleValue): Unit = {
       synchronized {
-        if(isDead) return
+        if(isDead || (node.parent !=  null && !recursive)) return
         val current = node
         node = node.parent
         youngestSibling = current
