@@ -315,12 +315,12 @@ object SQLite {
         val steps =
           Executionsteps.map({case step => (step.executionid.get, step.previousstep, step.parentstep,
             step.branchorder.get, step.branchlabel.get, step.alternativeorder.get, step.status.get, step.executableid.get,
-            step.inputprovableid.get, step.resultprovableid, step.userexecuted.get)
+            step.inputprovableid.get, step.resultprovableid, step.userexecuted.get, step.childrenrecorded.get)
           }) returning Executionsteps.map(es => es._Id.get)
         val stepId = steps
             .insert((step.executionId, step.previousStep, step.parentStep, branchOrder, branchLabel,
               step.alternativeOrder, status, step.executableId, step.inputProvableId, step.resultProvableId,
-              step.userExecuted.toString))
+              step.userExecuted.toString, false.toString))
         nInserts = nInserts + 1
         stepId
       })
