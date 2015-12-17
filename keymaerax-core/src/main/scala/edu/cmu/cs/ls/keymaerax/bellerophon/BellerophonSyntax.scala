@@ -152,18 +152,6 @@ case class AppliedTwoPositionTactic(positionTactic: BuiltInTwoPositionTactic, po
   override def prettyString = positionTactic.prettyString + "(" + posOne.prettyString + "," + posTwo.prettyString + ")"
 }
 
-object DependentTacticTable {
-  def isValidIdent(name: String) = {println("COMPAT -- REMOVE THIS SOON!!!!"); true } //@todo call into BellerophonParser to check if name is an ident.
-  case class DependentTacticInitializationError(ident: String) extends Exception(s"``${ident}`` was already registered as a dependent tactic or is not a valid identifier")
-
-  val dependentTactics : scala.collection.mutable.Map[String, DependentTactic] =
-    scala.collection.mutable.Map()
-  val dependentPositionTactics : scala.collection.mutable.Map[String, DependentPositionTactic] =
-    scala.collection.mutable.Map()
-
-  def constructDependentTactic(ident: String) : DependentTactic = ???
-  def constrctDependentPositionTactic(ident: String) : DependentPositionTactic = ???
-}
 /**
  * Dependent tactics compute a tactic to apply based on their input.
  * These tactics are probably not necessary very often, but are useful for idiomatic shortcuts.
@@ -173,21 +161,10 @@ object DependentTacticTable {
  * @param name The name of the tactic.
  */
 abstract case class DependentTactic(name: String) extends BelleExpr {
-  // ASSUMPTION: All dependent tactics should be non-lazy vals defined at the "top leve"; i.e., within global classes that get loaded.
-  //@todo should we enforce that all idents have a unique sort? Answer is no for now.
-  if(DependentTacticTable.dependentTactics.contains(name) || !DependentTacticTable.isValidIdent(name))
-    throw new DependentTacticTable.DependentTacticInitializationError(name)
-  else DependentTacticTable.dependentTactics +=((name, this))
-
   def computeExpr(v : BelleValue): BelleExpr
   override def prettyString: String = "DependentTactic(" + name + ")"
 }
 abstract case class DependentPositionTactic(name: String) extends BelleExpr {
-  //@todo should we enforce that all idents have a unique sort? Answer is no for now.
-  if(DependentTacticTable.dependentPositionTactics.contains(name) || !DependentTacticTable.isValidIdent(name))
-    throw new DependentTacticTable.DependentTacticInitializationError(name)
-  else DependentTacticTable.dependentPositionTactics +=((name, this))
-
   def apply(pos: Position): DependentTactic
   def apply(seqIdx: Int, inExpr: List[Int] = Nil): DependentTactic = apply(Fixed(PositionConverter.convertPos(seqIdx, inExpr)))
   def apply(locator: Symbol): AppliedDependentPositionTactic = locator match {
