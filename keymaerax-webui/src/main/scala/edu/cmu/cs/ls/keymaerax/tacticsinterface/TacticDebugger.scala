@@ -61,7 +61,7 @@ object TacticDebugger {
 
     def begin(v: BelleValue, expr: BelleExpr): Unit = {
       synchronized {
-        if(isDead || (node !=  null && !recursive)) return
+        if(isDead) return
         val parent = node
         node = new TraceNode(isFirstNode = parent == null)
         node.parent = parent
@@ -74,15 +74,18 @@ object TacticDebugger {
         if (parent != null) {
           parent.status = ExecutionStepStatus.DependsOnChildren
           parent.reverseChildren = node :: parent.reverseChildren
-          db.updateExecutionStatus(parent.stepId.get, parent.status)
+          if (recursive) {
+            db.updateExecutionStatus(parent.stepId.get, parent.status)
+          }
         }
-        node.stepId = Some(db.addExecutionStep(node.asPOJO))
+        if (parent == null || recursive)
+          node.stepId = Some(db.addExecutionStep(node.asPOJO))
       }
     }
 
     def end(v: BelleValue, expr: BelleExpr, result: BelleValue): Unit = {
       synchronized {
-        if(isDead || (node.parent !=  null && !recursive)) return
+        if(isDead) return
         val current = node
         node = node.parent
         youngestSibling = current
@@ -90,6 +93,7 @@ object TacticDebugger {
           case BelleProvable(p) => current.output = p
         }
         current.status = ExecutionStepStatus.Finished
+        if (node != null && !recursive) return
         db.updateExecutionStatus(current.stepId.get, current.status)
         db.updateResultProvable(current.stepId.get, current.getOutputProvableId)
       }
