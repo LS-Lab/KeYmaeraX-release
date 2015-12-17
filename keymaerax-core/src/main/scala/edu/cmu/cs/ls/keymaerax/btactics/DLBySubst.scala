@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.axiomatic
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Position}
+import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Position, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 
@@ -250,6 +250,60 @@ object DLBySubst {
           cutR(ctx(Box(a, c)))(pos) <(
             /* use */ /*label(BranchLabels.genUse)*/ ident,
             /* show */(cohide(pos.top) & CMon(pos.inExpr+1) & implyR(pos.top)) partial //& label(BranchLabels.genShow)
+          )
+      }
+    }
+  }
+
+  /**
+   * Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post.
+   * The operational effect of {a;}*@invariant(f1,f2,f3) is postCut(f1) & postcut(f2) & postCut(f3).
+   * {{{
+   *   cutUseLbl:           cutShowLbl:
+   *   G |- [a](C->B), D    G |- [a]C, D
+   *   ---------------------------------
+   *          G |- [a]B, D
+   * }}}
+   * @example{{{
+   *   cutUseLbl:                       cutShowLbl:
+   *   |- [x:=2;](x>1 -> [y:=x;]y>1)    |- [x:=2;]x>1
+   *   -----------------------------------------------postCut("x>1".asFormula)(1)
+   *   |- [x:=2;][y:=x;]y>1
+   * }}}
+   * @example{{{
+   *   cutUseLbl:                                     cutShowLbl:
+   *   |- a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)    |- [x:=2;]x>1
+   *   -------------------------------------------------------------postCut("x>1".asFormula)(1, 1::1::Nil)
+   *   |- a=2 -> [z:=3;][x:=2;][y:=x;]y>1
+   * }}}
+   * @todo same for diamonds by the dual of K
+   */
+  def postCut(C: Formula): DependentPositionTactic = new DependentPositionTactic("postCut") {
+    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      require(pos.isSucc, "postCut only in succedent")
+      override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
+        case (ctx, Box(a, post)) =>
+          // [a](cut->post) and its position in assumptions
+          val conditioned = Box(a, Imply(C, post))
+          val conditional = AntePosition(sequent.ante.length)
+          // [a]cut and its position in assumptions
+          val cutted = Box(a, C)
+          cutR(ctx(conditioned))(pos) <(
+            /* use */ assertE(conditioned, "[a](cut->post)")(pos) partial, //& label(BranchLabels.cutUseLbl)
+            /* show */
+            assertE(Imply(ctx(conditioned),ctx(Box(a,post))),"original implication")(pos.top) & CMon(pos.inExpr) &
+            implyR(pos.top) &
+            assertE(Box(a,post), "original postcondition expected")(pos.top) &
+            assertE(conditioned, "[a](cut->post)")(conditional) &
+            cutR(cutted)(pos.top.asInstanceOf[SuccPos]) <(
+              /* use */ assertE(cutted,"show [a]cut")(pos.top) & debug("showing post cut") &
+              hide(conditioned)(conditional) partial /*& label(BranchLabels.cutShowLbl)*/,
+              /* show */
+              assertE(Imply(cutted,Box(a,post)),"[a]cut->[a]post")(pos.top) &
+              debug("K reduction") & useAt("K modal modus ponens", PosInExpr(1::Nil))(pos.top) &
+              assertE(Box(a, Imply(C,post)), "[a](cut->post)")(pos.top) & debug("closing by K assumption") &
+              closeId
+            ) partial
           )
       }
     }

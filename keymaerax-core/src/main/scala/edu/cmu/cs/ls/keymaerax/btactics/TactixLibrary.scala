@@ -292,8 +292,9 @@ object TactixLibrary extends UnifyUSCalculus {
     *   ---------------------------------
     *          G |- [a]B, D
     * }}}
+    * @see [[DLBySubst.postCut]]
     */
-  def postCut(cut: Formula)   : BuiltInPositionTactic = ???
+  def postCut(cut: Formula)   : DependentPositionTactic = DLBySubst.postCut(cut)
 
 
 
