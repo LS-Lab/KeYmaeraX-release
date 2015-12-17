@@ -174,8 +174,11 @@ object TactixLibrary extends UnifyUSCalculus {
   /** abstraction: turns '[a]p' into \\forall BV(a) p */
   lazy val abstractionb       : DependentPositionTactic = DLBySubst.abstractionb
 
-  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
-  def I(invariant : Formula)  : BuiltInPositionTactic = ??? //TacticLibrary.inductionT(Some(invariant))
+  /**
+   * I: prove a property of a loop by induction with the given loop invariant (hybrid systems)
+   * @see [[DLBySubst.I]]
+   */
+  def I(invariant : Formula)  : DependentPositionTactic = DLBySubst.I(invariant)
   /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def loop(invariant: Formula) = I(invariant)
   /** K: modal modus ponens (hybrid systems) */

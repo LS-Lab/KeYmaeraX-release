@@ -308,4 +308,55 @@ object DLBySubst {
       }
     }
   }
+
+  /**
+   * Loop induction. Wipes conditions that contain bound variables of the loop.
+   * {{{
+   *   use:                        init:        step:
+   *   I, G\BV(a) |- p, D\BV(a)    G |- I, D    I, G\BV(a) |- [a]p, D\BV(a)
+   *   --------------------------------------------------------------------
+   *   G |- [{a}*]p, D
+   * }}}
+   * @example{{{
+   *   use:          init:         step:
+   *   x>1 |- x>0    x>2 |- x>1    x>1 |- [x:=x+1;]x>1
+   *   ------------------------------------------------I("x>1".asFormula)(1)
+   *   x>2 |- [{x:=x+1;}*]x>0
+   * }}}
+   * @example{{{
+   *   use:               init:              step:
+   *   x>1, y>0 |- x>0    x>2, y>0 |- x>1    x>1, y>0 |- [x:=x+y;]x>1
+   *   ---------------------------------------------------------------I("x>1".asFormula)(1)
+   *   x>2, y>0 |- [{x:=x+y;}*]x>0
+   * }}}
+   * @param invariant The invariant.
+   * @return The tactic.
+   */
+  def I(invariant: Formula): DependentPositionTactic = new DependentPositionTactic("I") {
+    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      require(pos.isTopLevel && pos.isSucc, "I only at top-level in succedent, but got " + pos)
+      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
+        case Some(b@Box(Loop(a), p)) =>
+          val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
+          val q =
+            if (consts.size > 1) And(invariant, consts.reduceRight(And))
+            else if (consts.size == 1) And(invariant, consts.head)
+            else And(invariant, True)
+          cut(Box(Loop(a), q)) <(
+            /* use */
+            implyRi(AntePos(sequent.ante.length), pos) & cohide('Rlast) & CMon(pos.inExpr+1) & implyR(1) &
+              (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide(True)('Llast)) partial /* indUse */,
+            /* show */
+            hide(b)(pos) & useAt("I induction")('Rlast) & andR('Rlast) <(
+              andR('Rlast) <(ident /* indInit */, ((andR('Rlast) <(closeId, ident))*(consts.size-1) & closeId) | closeT) partial,
+              cohide('Rlast) & G & implyR(1) & splitb(1) & andR(1) <(
+                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide(True)('Llast)) partial /* indStep */,
+                andL(-1) & hide(invariant)(-1) & V(1) & closeId) partial) partial)
+      }
+
+      private def constAnteConditions(sequent: Sequent, taboo: Set[NamedSymbol]): IndexedSeq[Formula] = {
+        sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
+      }
+    }
+  }
 }

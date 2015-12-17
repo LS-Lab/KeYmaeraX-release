@@ -25,8 +25,14 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "x>0 & z=1 -> [z:=y;]\\forall x x>0".asFormula
   }
 
-  //@todo substitution clash in V
-  ignore should "not introduce a quantifier when the variables are not bound" in {
+  it should "work with loops" in {
+    val result = proveBy("[{x:=2;}*]x>0".asFormula, abstractionb(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "\\forall x x>0".asFormula
+  }
+
+  it should "not introduce a quantifier when the variables are not bound" in {
     val result = proveBy("[x:=2;]y>0".asFormula, abstractionb(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
@@ -193,5 +199,90 @@ class DLTests extends TacticTestBase {
     result.subgoals(0).succ should contain only "a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)".asFormula
     result.subgoals(1).ante shouldBe empty
     result.subgoals(1).succ should contain only "[x:=2;]x>1".asFormula
+  }
+
+  "I" should "work on a simple example" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>2".asFormula), IndexedSeq("[{x:=x+1;}*]x>0".asFormula)),
+      I("x>1".asFormula)(1))
+
+    result.subgoals should have size 3
+    // use case
+    result.subgoals(0).ante should contain only "x>1".asFormula
+    result.subgoals(0).succ should contain only "x>0".asFormula
+    // init
+    result.subgoals(1).ante should contain only "x>2".asFormula
+    result.subgoals(1).succ should contain only "x>1".asFormula
+    // step
+    result.subgoals(2).ante should contain only "x>1".asFormula
+    result.subgoals(2).succ should contain only "[x:=x+1;]x>1".asFormula
+  }
+
+  it should "keep constants around" in {
+    val result = proveBy(Sequent(Nil,
+      IndexedSeq("x>2".asFormula, "y>0".asFormula),
+      IndexedSeq("[{x:=x+y;}*]x>0".asFormula)),
+      I("x>1".asFormula)(1))
+
+    result.subgoals should have size 3
+    // use case
+    result.subgoals(0).ante should contain only ("x>1".asFormula, "y>0".asFormula)
+    result.subgoals(0).succ should contain only "x>0".asFormula
+    // init
+    result.subgoals(1).ante should contain only ("x>2".asFormula, "y>0".asFormula)
+    result.subgoals(1).succ should contain only "x>1".asFormula
+    // step
+    result.subgoals(2).ante should contain only ("x>1".asFormula, "y>0".asFormula)
+    result.subgoals(2).succ should contain only "[x:=x+y;]x>1".asFormula
+  }
+
+  it should "wipe all formulas mentioning bound variables from the context" in {
+    val result = proveBy(Sequent(Nil,
+      IndexedSeq("x>0".asFormula, "y>1".asFormula, "z>7".asFormula),
+      IndexedSeq("[{x:=2;}*]x>2".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
+
+    result.subgoals should have size 3
+    // use case
+    result.subgoals(0).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals(0).succ should contain only "x>2".asFormula
+    // init
+    result.subgoals(1).ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals(1).succ should contain only ("x<3".asFormula, "y<4".asFormula, "x*y>5".asFormula)
+    // step
+    result.subgoals(2).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals(2).succ should contain only "[x:=2;]x*y>5".asFormula
+  }
+
+  it should "do the same with a slightly more complicated formula" in {
+    val result = proveBy(Sequent(Nil,
+        IndexedSeq("x>0".asFormula, "y>1".asFormula, "z>7".asFormula),
+        IndexedSeq("[{x:=2; ++ y:=z;}*]x>2".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
+
+    result.subgoals should have size 3
+    // use case
+    result.subgoals(0).ante should contain only ("x*y>5".asFormula, "z>7".asFormula)
+    result.subgoals(0).succ should contain only "x>2".asFormula
+    // init
+    result.subgoals(1).ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals(1).succ should contain only ("x<3".asFormula, "y<4".asFormula, "x*y>5".asFormula)
+    // step
+    result.subgoals(2).ante should contain only ("x*y>5".asFormula, "z>7".asFormula)
+    result.subgoals(2).succ should contain only "[x:=2; ++ y:=z;]x*y>5".asFormula
+  }
+
+  it should "remove duplicated formulas" in {
+    val result = proveBy(Sequent(Nil,
+        IndexedSeq("x>0".asFormula, "x>0".asFormula, "y>1".asFormula, "z>7".asFormula),
+        IndexedSeq("[{x:=2;}*]x>2".asFormula, "x<3".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
+
+    result.subgoals should have size 3
+    // use case
+    result.subgoals(0).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals(0).succ should contain only "x>2".asFormula
+    // init
+    result.subgoals(1).ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals(1).succ should contain only ("x<3".asFormula, "y<4".asFormula, "x*y>5".asFormula)
+    // step
+    result.subgoals(2).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals(2).succ should contain only "[x:=2;]x*y>5".asFormula
   }
 }
