@@ -13,6 +13,10 @@ import java.io.{File, FileNotFoundException, FileReader}
 import java.text.SimpleDateFormat
 import java.util.{Locale, Calendar}
 
+import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
+import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
+import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
+import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
@@ -359,7 +363,10 @@ class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request
 }
 
 class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wait : Boolean = false) extends Request {
-  def getResultingResponses() = ???
+  def getResultingResponses() = {
+    /* @todo Total cop-out to help the UI run until we write something better */
+    (new OpenProofResponse(db.getProofInfo(proofId), TaskManagement.TaskLoadStatus.Loaded.toString)) :: Nil
+  }
 //  {
 //    val proof = db.getProofInfo(proofId)
 //
@@ -478,6 +485,67 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
           new ProofAgendaResponse(List()) :: Nil
         }
       }
+    }
+  }
+}
+
+/**
+  * Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task!
+  * @param db Access to the database.
+  * @param userId Identifies the user.
+  * @param proofId Identifies the proof.
+  */
+class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+  def getResultingResponses() = {
+    val response = new AgendaAwesomeResponse(db.proofTree(proofId.toInt))
+    response :: Nil
+  }
+}
+
+class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
+  def getResultingResponses() = {
+    val tree = db.proofTree(proofId.toInt)
+    tree.parent(nodeId) match {
+      case None => throw new Exception("Tried to get parent of node " + nodeId + " which has no parent")
+      case Some(parent) =>
+        val response = new ProofTaskParentResponse(parent)
+        response :: Nil
+    }
+  }
+}
+
+case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
+  def getResultingResponses() = {
+    var tree: Option[TreeNode] = Some(db.proofTree(proofId.toInt).root)
+    var path: List[TreeNode] = Nil
+    while (tree.nonEmpty) {
+      path = tree.get :: path
+      tree = tree.get.parent
+    }
+    /* To start with, always send the whole path. */
+    val parentsRemaining = 0
+    val response = new GetPathAllResponse(path.reverse, parentsRemaining)
+    response :: Nil
+  }
+}
+
+case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
+  def getResultingResponses() = {
+    val node = db.proofTree(proofId.toInt).nodes.find({case node => node.id.toString == nodeId})
+    node match {
+      case None => throw new Exception("Node not found")
+      case Some(node) =>
+        var currNode = node
+        var done = false
+        while (currNode.parent.nonEmpty && !done) {
+          currNode = currNode.parent.get
+          /* Don't stop at the first node just because it branches (it may be the end of one branch and the start of the
+          * next), but if we see branching anywhere else we've found the end of our branch. */
+          if (currNode.children.size > 1) {
+            done = true
+          }
+        }
+          new GetBranchRootResponse(currNode) :: Nil
     }
   }
 }

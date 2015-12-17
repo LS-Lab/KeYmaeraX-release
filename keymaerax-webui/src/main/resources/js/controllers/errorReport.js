@@ -17,13 +17,13 @@ function showErrorMessage(modal, message) {
   showCaughtErrorMessage(modal, data, message)
 }
 
-angular.module('keymaerax.controllers').controller('ErrorAlertCtrl', function($scope, $modalInstance, $modal, action, error) {
+angular.module('keymaerax.controllers').controller('ErrorAlertCtrl', function($scope, $modalInstance, $uibModal, action, error) {
   $scope.action = action;
   $scope.errorText = error.textStatus;
   $scope.errorTrace = error.errorThrown;
   $scope.report = function() {
     $modalInstance.dismiss('cancel');
-    var modalInstance = $modal.open({
+    var modalInstance = $uibModal.open({
         templateUrl: 'partials/error_report.html',
         controller: 'ErrorReportCtrl',
         size: 'md',

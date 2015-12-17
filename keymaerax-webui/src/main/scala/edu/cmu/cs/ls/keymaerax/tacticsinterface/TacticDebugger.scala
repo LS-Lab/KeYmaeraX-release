@@ -10,14 +10,16 @@ import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
   */
 object TacticDebugger {
 
-  class DebuggerListener (db: DBAbstraction, executionId: Int, executableId: Int,
-                          alternativeOrder: Int, branch:Either[Int, String]) extends IOListener {
+  class DebuggerListener (db: DBAbstraction, executionId: Int,
+                          alternativeOrder: Int, branch:Either[Int, String],
+                          recursive: Boolean) extends IOListener {
     class TraceNode (isFirstNode: Boolean){
       var id: Option[Int] = None
       var parent: TraceNode = null
       var sibling: TraceNode = null
       var input: Provable = null
       var output: Provable = null
+      var executable: BelleExpr = null
       var status: ExecutionStepStatus = null
       var reverseChildren: List[TraceNode] = Nil
       def children = reverseChildren.reverse
@@ -32,6 +34,7 @@ object TacticDebugger {
 
       var inputProvableId: Option[Int] = None
       var outputProvableId: Option[Int] = None
+      var executableId: Option[Int] = None
 
       def getInputProvableId:Int = {
         if (input != null && inputProvableId.isEmpty)
@@ -45,11 +48,17 @@ object TacticDebugger {
         outputProvableId
       }
 
+      def getExecutableId:Int = {
+        if (executable != null && executableId.isEmpty)
+          executableId = Some(db.addBelleExpr(executable, Nil))
+        executableId.get
+      }
+
       def asPOJO: ExecutionStepPOJO = {
         val siblingStep = if (sibling == null) None else sibling.stepId
         val parentStep = if (parent == null) None else parent.stepId
         new ExecutionStepPOJO (stepId, executionId, siblingStep, parentStep, branchOrder,
-          Option(branchLabel), alternativeOrder,status, executableId, getInputProvableId, getOutputProvableId,
+          Option(branchLabel), alternativeOrder,status, getExecutableId, getInputProvableId, getOutputProvableId,
           userExe)
       }
     }
@@ -65,6 +74,7 @@ object TacticDebugger {
         node = new TraceNode(isFirstNode = parent == null)
         node.parent = parent
         node.sibling = youngestSibling
+        node.executable = expr
         node.input = v match {
           case BelleProvable(p) => p
         }
@@ -73,9 +83,13 @@ object TacticDebugger {
         if (parent != null) {
           parent.status = ExecutionStepStatus.DependsOnChildren
           parent.reverseChildren = node :: parent.reverseChildren
-          db.updateExecutionStatus(parent.stepId.get, parent.status)
+          if (recursive) {
+            db.updateExecutionStatus(parent.stepId.get, parent.status)
+          }
         }
-        node.stepId = Some(db.addExecutionStep(node.asPOJO))
+        if (parent == null || recursive) {
+          node.stepId = Some(db.addExecutionStep(node.asPOJO))
+        }
       }
     }
 
@@ -85,11 +99,13 @@ object TacticDebugger {
         val current = node
         node = node.parent
         youngestSibling = current
-        current.output = result match {
-          case BelleProvable(p) => p
+        result match {
+          case BelleProvable(p) => current.output = p
         }
         current.status = ExecutionStepStatus.Finished
+        if (node != null && !recursive) return
         db.updateExecutionStatus(current.stepId.get, current.status)
+        db.updateResultProvable(current.stepId.get, current.getOutputProvableId)
       }
     }
 

@@ -43,18 +43,15 @@ CREATE TABLE IF NOT EXISTS `lemmas` (
 -- TODO eventually remove these tables in favor of lemmas everywhere.
 CREATE TABLE IF NOT EXISTS `provables` (
   `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  -- Work around Slick bug where it's impossible to insert without specifying at least one of the columns. This is
+  -- never actually used for anything.
+  `insertStatementWasSyntacticallyValid` INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS `sequents` (
   `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  `provableId` TEXT REFERENCES `provables` (`provableId`),
-  `idx` INTEGER -- index of the sequent within the provable. If 0, then this is the conclusion of the provable. 
-  `conclusionId` INTEGER REFERENCES `sequents` (`_id`)
-);
-
-CREATE TABLE IF NOT EXISTS `sequents` (
-  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  `provableId` INTEGER REFERENCES `provables` (`_id`)
+  `provableId` INTEGER REFERENCES `provables` (`_id`),
+  `idx` INTEGER -- index of the sequent within the provable. If null then this is the conclusion of the provable.
 );
 
 CREATE TABLE IF NOT EXISTS `sequentFormulas` (
@@ -64,11 +61,6 @@ CREATE TABLE IF NOT EXISTS `sequentFormulas` (
   `idx` INTEGER,
   `formula` TEXT
 );
-
---CREATE TABLE IF NOT EXISTS `provables` (
---  `provableId` TEXT PRIMARY KEY ON CONFLICT FAIL,
---  `lemma` TEXT -- a serialized lemma a la lemma db.
---);
 
 ----------------------------------------------------------------------------------------------------
 -- Record of tactic execution
@@ -102,7 +94,11 @@ CREATE TABLE IF NOT EXISTS `executionSteps` (
   `resultProvableId` INTEGER REFERENCES `provables` (`_id`),
 
   -- Indicates whether this tactic was *directly* executed by the user.
-  `userExecuted`     BOOLEAN
+  `userExecuted`     BOOLEAN,
+
+  -- Indicates whether all children of this execution step are present in the database yet. By default children are not
+  -- saved in the database because they take a lot of space.
+  `childrenRecorded` BOOLEAN
 );
 
 ----------------------------------------------------------------------------------------------------

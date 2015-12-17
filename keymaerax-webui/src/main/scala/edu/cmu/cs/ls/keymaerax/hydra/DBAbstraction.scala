@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.nio.channels.Channels
 
+import _root_.edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.PositionTacticAutomation
 
 import java.io.File
@@ -16,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 import edu.cmu.cs.ls.keymaerax.hydra.ParameterValueType.ParameterValueType
 
+import scala.collection.immutable.Nil
 import scala.io.Source
 import spray.json.DefaultJsonProtocol._
 
@@ -93,7 +95,7 @@ object ExecutionStepStatus extends Enumeration {
     case Finished => "Finished"
     case Aborted => "Aborted"
     case Error => "Error"
-    case DependsOnChildren => "DependsOnChilden"
+    case DependsOnChildren => "DependsOnChildren"
   }
 }
 
@@ -130,6 +132,28 @@ case class ScalaTacticPOJO(scalaTacticId: Int, location: String, name: String)
 case class ParameterPOJO(parameterId: Int, executableID: Int, idx: Int, valueType: ParameterValueType, value: String)
 
 
+case class USubstPatternParameterPOJO(patternId: Int, executableId: Int,
+                                      index: Int, patternFormulaStr: String, resultingExecutableId: Int)
+
+case class TreeNode (id: Int, sequent: Sequent, parent: Option[TreeNode]) {
+  var children: List[TreeNode] = Nil
+  if (parent.nonEmpty)
+    parent.get.children = this :: parent.get.children
+  def stringId = "Node" + id
+  def rule = "Unimplemented"
+}
+
+case class Tree(id: String, nodes: List[TreeNode], root: TreeNode, leaves: List[AgendaItem]) {
+  def leavesAndRoot = root :: leaves.map({case item => item.goal})
+  def parent(id: String): Option[TreeNode] =
+    nodes.find({case node => node.id.toString == id}).flatMap({case node => node.parent})
+}
+
+case class AgendaItem(id: String, name: String, proofId: String, goal: TreeNode) {
+  // @todo full path
+  def path = List(goal.id.toString)
+}
+
 object ParameterValueType extends Enumeration {
   type ParameterValueType = Value
   val String, Position, Formula, Provable = Value
@@ -143,57 +167,79 @@ object ParameterValueType extends Enumeration {
   }
 }
 
-case class USubstPatternParameterPOJO(patternId: Int, executableId: Int,
-                                  index: Int, patternFormulaStr: String, resultingExecutableId: Int)
-
 /**
  * Proof database
  */
 trait DBAbstraction {
   /**
-   * Initializes a new database.
-   */
-  def cleanup() : Unit
+    * Initializes a new database.
+    */
+  def cleanup(): Unit
 
   // Configuration
   def getAllConfigurations: Set[ConfigurationPOJO]
-  def getConfiguration(configName: String) : ConfigurationPOJO
-  def createConfiguration(configName: String) : Boolean
+
+  def getConfiguration(configName: String): ConfigurationPOJO
+
+  def createConfiguration(configName: String): Boolean
+
   def updateConfiguration(config: ConfigurationPOJO)
 
   // Users
-  def userExists(username : String) : Boolean
-  def createUser(username : String, password : String) : Unit
-  def getUsername(uid : String) : String
-  def checkPassword(username : String, password : String) : Boolean
-  def getProofsForUser(userId : String) : List[(ProofPOJO, String)] //the string is a model name.
-  def openProofs(userId : String) : List[ProofPOJO]
+  def userExists(username: String): Boolean
+
+  def createUser(username: String, password: String): Unit
+
+  def getUsername(uid: String): String
+
+  def checkPassword(username: String, password: String): Boolean
+
+  def getProofsForUser(userId: String): List[(ProofPOJO, String)]
+
+  //the string is a model name.
+  def openProofs(userId: String): List[ProofPOJO]
 
   //Models
-  def createModel(userId: String, name : String, fileContents : String, date:String,
-                  description : Option[String]=None, publink:Option[String]=None,
-                  title:Option[String]=None, tactic:Option[String]=None) : Option[Int]
-  def getModel(modelId : Int) : ModelPOJO
-  def getModel(modelId : String) : ModelPOJO = getModel(modelId.toInt)
-  def getModelList(userId : String) : List[ModelPOJO] // name, date, fileContents
+  def createModel(userId: String, name: String, fileContents: String, date: String,
+                  description: Option[String] = None, publink: Option[String] = None,
+                  title: Option[String] = None, tactic: Option[String] = None): Option[Int]
+
+  def getModel(modelId: Int): ModelPOJO
+
+  def getModel(modelId: String): ModelPOJO = getModel(modelId.toInt)
+
+  def getModelList(userId: String): List[ModelPOJO]
+
+  // name, date, fileContents
   //Proofs of models
-  def createProofForModel(modelId : Int, name : String, description : String, date : String) : Int //returns id of create object
-  def createProofForModel(modelId : String, name : String, description : String, date : String) : String =
+  def createProofForModel(modelId: Int, name: String, description: String, date: String): Int
+
+  //returns id of create object
+  def createProofForModel(modelId: String, name: String, description: String, date: String): String =
     createProofForModel(modelId.toInt, name, description, date).toString
-  def getProofsForModel(modelId : Int) : List[ProofPOJO]
-  def getProofsForModel(modelId : String) : List[ProofPOJO] = getProofsForModel(modelId.toInt)
+
+  def getProofsForModel(modelId: Int): List[ProofPOJO]
+
+  def getProofsForModel(modelId: String): List[ProofPOJO] = getProofsForModel(modelId.toInt)
 
   //Proofs and Proof Nodes
-  def getProofInfo(proofId : Int) : ProofPOJO
-  def getProofInfo(proofId : String) : ProofPOJO = getProofInfo(proofId.toInt)
+  def getProofInfo(proofId: Int): ProofPOJO
+
+  def getProofInfo(proofId: String): ProofPOJO = getProofInfo(proofId.toInt)
+
   def updateProofInfo(proof: ProofPOJO)
-  def updateProofName(proofId : Int, name : String):Unit
-  def updateProofName(proofId : String, name : String):Unit = updateProofName(proofId.toInt, name)
-  def getProofSteps(proofId : Int) : List[String]
+
+  def updateProofName(proofId: Int, name: String): Unit
+
+  def updateProofName(proofId: String, name: String): Unit = updateProofName(proofId.toInt, name)
+
+  def getProofSteps(proofId: Int): List[String]
+
+  def proofTree(executionId: Int): Tree
 
   // Tactics
   /** Stores a Provable in the database and returns its ID */
-  def serializeProvable(p : Provable): Int
+  def serializeProvable(p: Provable): Int
 
   /** Gets the conclusion of a provable */
   def getConclusion(provableId: Int): Sequent
@@ -218,10 +264,13 @@ trait DBAbstraction {
     */
   def addExecutionStep(step: ExecutionStepPOJO): Int
 
-  def getExecutionSteps(executionID: Int) : List[ExecutionStepPOJO]
+  def getExecutionSteps(executionID: Int): List[ExecutionStepPOJO]
 
   /** Updates an executable step's status. @note should not be transitive */
   def updateExecutionStatus(executionStepId: Int, status: ExecutionStepStatus): Unit
+
+  /** Updates an executable step's result provable */
+  def updateResultProvable(executionStepId: Int, provableId: Option[Int]): Unit
 
   /////////////////////
 
@@ -237,8 +286,11 @@ trait DBAbstraction {
   /** Returns the executable with ID executableId */
   def getExecutable(executableId: Int): ExecutablePOJO
 
-  import spray.json._ //allows for .parseJoson on strings.
-  def initializeForDemo2() : Unit = {
+  def proofSteps(executionId: Int): List[ExecutionStepPOJO]
+
+  import spray.json._
+  //allows for .parseJoson on strings.
+  def initializeForDemo2(): Unit = {
     println("Initializing a demo database")
 
     //Add user
@@ -250,13 +302,15 @@ trait DBAbstraction {
     source.elements.map(processJsonForSingleModel(_))
   }
 
-  private def getFileContents(file : String) = {
+  private def getFileContents(file: String) =
+  {
     val reader = this.getClass.getResourceAsStream(file)
-    if(reader == null) throw new Exception(s"Could not find problem file $file.")
+    if (reader == null) throw new Exception(s"Could not find problem file $file.")
     Source.fromInputStream(reader).getLines().foldLeft("")((file, line) => file + "\n" + line)
   }
 
-  private def processJsonForSingleModel(element : JsValue) = {
+  private def processJsonForSingleModel(element: JsValue) =
+  {
     val kvps = element.asJsObject.fields.map(kvp =>
       (kvp._1, kvp._2.convertTo[String])
     )
@@ -272,7 +326,7 @@ trait DBAbstraction {
     }
 
     val id = createModel("guest", name, fileContents, new java.util.Date().toString, description, publink, title,
-                         tacticContent) match {
+      tacticContent) match {
       case Some(x) => x
       case None => throw new Exception("Could not retrieve ID generated by insert.")
     }

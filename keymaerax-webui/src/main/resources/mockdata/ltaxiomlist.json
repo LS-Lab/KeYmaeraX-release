@@ -1,0 +1,7 @@
+[
+  {
+    "id": "lt",
+    "name": "< normalize",
+    "axiom": "f() < g() <-> 0 < g()-f()"
+  }
+]

@@ -2,7 +2,7 @@
  * Controllers for proof lists and proof information pages.
  */
 
-angular.module('keymaerax.controllers').controller('ProofInfoCtrl', function($scope, $rootScope, $http, $cookies, $modal, $routeParams) {
+angular.module('keymaerax.controllers').controller('ProofInfoCtrl', function($scope, $rootScope, $http, $cookies, $uibModal, $routeParams) {
   $scope.proof = {
       proofName: "blah"
   };
@@ -17,7 +17,7 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
   $scope.createDefaultProofForModel = function(modelId) {
       var proofName        = "Untitled Proof"
       var proofDescription = ""
-      var uri              = 'models/users/' + $cookies.userId + '/model/' + modelId + '/createProof'
+      var uri              = 'models/users/' + $cookies.get('userId') + '/model/' + modelId + '/createProof'
       var dataObj          = {proofName : proofName, proofDescription : proofDescription}
 
       $http.post(uri, dataObj).
@@ -37,7 +37,7 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
   $scope.createProof = function() {
       var proofName        = $scope.proofName ? $scope.proofName : ""
       var proofDescription = $scope.proofDescription ? $scope.proofDescription : ""
-      var uri              = 'models/users/' + $cookies.userId + '/model/' + $routeParams.modelId + '/createProof'
+      var uri              = 'models/users/' + $cookies.get('userId') + '/model/' + $routeParams.modelId + '/createProof'
       var dataObj          = {proofName : proofName, proofDescription : proofDescription}
 
       $http.post(uri, dataObj).
@@ -69,15 +69,15 @@ var pollProofStatus = function(proof, userId, http) {
             proof.loadStatus = data.status
           } else if(data.status == 'Error') {
             console.log("Error: " + data.error)
-            showCaughtErrorMessage($modal, data, "Error while polling proof status")
+            showCaughtErrorMessage($uibModal, data, "Error while polling proof status")
           }
           else {
             console.error("Received unknown proof status " + data.status)
-            showErrorMessage($modal, "Received unknown proof status " + data.status)
+            showErrorMessage($uibModal, "Received unknown proof status " + data.status)
           }
       }).
       error(function(data, status, headers, config) {
-            showCaughtErrorMessage($modal, data, "Unable to poll proof status.")
+            showCaughtErrorMessage($uibModal, data, "Unable to poll proof status.")
       });
   }, 1000);
 }
@@ -88,27 +88,27 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function ($s
       $location.path('/proofs/' + proofId)
   }
   //Load the proof list and emit as a view.
-  $http.get('models/users/' + $cookies.userId + "/proofs").success(function(data) {
+  $http.get('models/users/' + $cookies.get('userId') + "/proofs").success(function(data) {
     $scope.allproofs = data;
   });
 
   $scope.loadProof = function(proof) {
       proof.loadStatus = 'loading'
-      $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
+      $http.get('proofs/user/' + $cookies.get('userId') + "/" + proof.id).success(function(data) {
           proof.loadStatus = data.loadStatus
           // when server loads proof itself asynchronously
           if (data.loadStatus == 'loading') {
             console.log("Start polling proof status");
-            pollProofStatus(proof, $cookies.userId, $http);
+            pollProofStatus(proof, $cookies.get('userId'), $http);
           }
           if(data.loadStatus == 'Error') {
-              showCaughtErrorMessage($modal, data, "Error encountered while loading proof.")
+              showCaughtErrorMessage($uibModal, data, "Error encountered while loading proof.")
           }
       }).
       error(function(data, status, headers, config) {
         // TODO check that it is a time out
         console.log("Start polling proof status");
-        pollProofStatus(proof, $cookies.userId, $http);
+        pollProofStatus(proof, $cookies.get('userId'), $http);
       });
   }
 
@@ -125,7 +125,7 @@ angular.module('keymaerax.controllers').controller('ModelProofsCtrl', function (
   $scope.createProof = function() {
       var proofName        = $scope.proofName ? $scope.proofName : ""
       var proofDescription = $scope.proofDescription ? $scope.proofDescription : ""
-      var uri              = 'models/users/' + $cookies.userId + '/model/' + $routeParams.modelId + '/createProof'
+      var uri              = 'models/users/' + $cookies.get('userId') + '/model/' + $routeParams.modelId + '/createProof'
       var dataObj          = {proofName : proofName, proofDescription : proofDescription}
 
       $http.post(uri, dataObj).
@@ -141,27 +141,27 @@ angular.module('keymaerax.controllers').controller('ModelProofsCtrl', function (
 
   $scope.loadProof = function(proof) {
     proof.loadStatus = 'loading'
-    $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
+    $http.get('proofs/user/' + $cookies.get('userId') + "/" + proof.id).success(function(data) {
       proof.loadStatus = data.loadStatus
       // when server loads proof itself asynchronously
       if (data.loadStatus == 'loading') {
         console.log("Start polling proof status");
-        pollProofStatus(proof, $cookies.userId, $http);
+        pollProofStatus(proof, $cookies.get('userId'), $http);
       }
       else if(data.loadStatus == 'Error') {
-          showErrorMessage($modal, "Error encountered while attempting to load proof")
+          showErrorMessage($uibModal, "Error encountered while attempting to load proof")
       }
     }).
     error(function(data, status, headers, config) {
       // TODO check that it is a time out
       console.log("Start polling proof status");
       //@TODO does this mean that there isn't necessarily an error here? Confused.
-//        showErrorMessage($modal, "Encountered error shile trying to poll proof status.")
-      pollProofStatus(proof, $cookies.userId, $http);
+//        showErrorMessage($uibModal, "Encountered error shile trying to poll proof status.")
+      pollProofStatus(proof, $cookies.get('userId'), $http);
     });
   }
   //Load the proof list and emit as a view.
-  $http.get('models/users/' + $cookies.userId + "/model/" + $routeParams.modelId + "/proofs").success(function(data) {
+  $http.get('models/users/' + $cookies.get('userId') + "/model/" + $routeParams.modelId + "/proofs").success(function(data) {
     $scope.proofs = data;
   });
   $scope.$emit('routeLoaded', {theview: 'proofs'});

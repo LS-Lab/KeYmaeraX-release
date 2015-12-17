@@ -296,7 +296,8 @@ object TactixLibrary extends UnifyUSCalculus {
   // closing
 
   /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
-  lazy val QE                : Tactic         = TacticLibrary.arithmeticT
+  lazy val QE                     : Tactic         = TacticLibrary.arithmeticT
+  def QE(order: List[NamedSymbol]): Tactic         = TacticLibrary.arithmeticT(order)
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : Tactic         = TacticLibrary.closeT
@@ -397,7 +398,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Beta rules are propositional rules that split */
   def betaRule: Tactic = lR(andR) | lL(orL) | lL(implyL) | lL(equivL) | lR(equivR)
   /** Real-closed field arithmetic after consolidating sequent into a single universally-quantified formula */
-  def RCF: Tactic = PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & FOQuantifierTacticsImpl.universalClosureT(1) & debug("Handing to Mathematica") &
+  def RCF: Tactic = PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & FOQuantifierTacticsImpl.universalClosureT()(1) & debug("Handing to Mathematica") &
     ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
 
   /** Lazy Quantifier Elimination after decomposing the logic in smart ways */

@@ -8,7 +8,9 @@ import java.io.FileOutputStream
 import java.nio.channels.Channels
 import java.sql.SQLException
 
-import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, BelleExpr}
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Provable, Sequent}
+import _root_.edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
@@ -132,7 +134,7 @@ object SQLite {
       session.withTransaction({
         val stepCount = getProofSteps(proofId).size
         nSelects = nSelects + 1
-        val list = Proofs.filter(_._Id.get === proofId)
+        val list = Proofs.filter(_._Id === proofId)
           .list
           .map(p => new ProofPOJO(p._Id.get, p.modelid.get, blankOk(p.name), blankOk(p.description),
             blankOk(p.date), stepCount, p.closed.getOrElse(0) == 1))
@@ -169,14 +171,14 @@ object SQLite {
     override def updateProofInfo(proof: ProofPOJO): Unit =
       session.withTransaction({
         nSelects = nSelects + 1
-        Proofs.filter(_._Id.get === proof.proofId).update(proofPojoToRow(proof))
+        Proofs.filter(_._Id === proof.proofId).update(proofPojoToRow(proof))
         nUpdates = nUpdates + 1
       })
 
     override def updateProofName(proofId: Int, newName: String): Unit = {
       session.withTransaction({
         nSelects = nSelects + 1
-        Proofs.filter(_._Id.get === proofId).map(_.name).update(Some(newName))
+        Proofs.filter(_._Id === proofId).map(_.name).update(Some(newName))
         nUpdates = nUpdates + 1
       })
     }
@@ -199,8 +201,7 @@ object SQLite {
       session.withTransaction({
         nSelects = nSelects + 1
         Proofs.filter(_.modelid === modelId).list.map(p => {
-          //        val stepCount : Int = Tacticonproof.filter(_.proofid === p.proofid.get).list.count
-          val stepCount = 0 //@todo after everything else is done implement this.
+          val stepCount = getProofSteps(p._Id.get).size
           val closed: Boolean = sqliteBoolToBoolean(p.closed.getOrElse(0))
           new ProofPOJO(p._Id.get, p.modelid.get, blankOk(p.name), blankOk(p.description), blankOk(p.date), stepCount, closed)
         })
@@ -224,22 +225,24 @@ object SQLite {
 
     override def createProofForModel(modelId: Int, name: String, description: String, date: String): Int =
       session.withTransaction({
-        nInserts = nInserts + 1
-        (Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get))
-          returning Proofs.map(_._Id.get))
-          .insert(modelId, name, description, date, 0)
+        nInserts = nInserts + 2
+        val proofId =
+          (Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get))
+            returning Proofs.map(_._Id.get))
+            .insert(modelId, name, description, date, 0)
+        Tacticexecutions.map(te => te.proofid.get).insert(proofId)
+        proofId
       })
 
     override def getModel(modelId: Int): ModelPOJO =
       session.withTransaction({
         nSelects = nSelects + 1
         val models =
-          Models.filter(_._Id.get === modelId)
+          Models.filter(_._Id === modelId)
             .list
             .map(m => new ModelPOJO(
               m._Id.get, m.userid.get, blankOk(m.name), blankOk(m.date), m.filecontents.get, blankOk(m.description), blankOk(m.publink), blankOk(m.title), m.tactic
             ))
-
         if (models.length < 1) throw new Exception("getModel type should be an Option")
         else if (models.length == 1) models.head
         else throw new Exception("Primary keys aren't unique in models table.")
@@ -312,12 +315,12 @@ object SQLite {
         val steps =
           Executionsteps.map({case step => (step.executionid.get, step.previousstep, step.parentstep,
             step.branchorder.get, step.branchlabel.get, step.alternativeorder.get, step.status.get, step.executableid.get,
-            step.inputprovableid.get, step.resultprovableid, step.userexecuted.get)
+            step.inputprovableid.get, step.resultprovableid, step.userexecuted.get, step.childrenrecorded.get)
           }) returning Executionsteps.map(es => es._Id.get)
         val stepId = steps
             .insert((step.executionId, step.previousStep, step.parentStep, branchOrder, branchLabel,
               step.alternativeOrder, status, step.executableId, step.inputProvableId, step.resultProvableId,
-              step.userExecuted.toString))
+              step.userExecuted.toString, false.toString))
         nInserts = nInserts + 1
         stepId
       })
@@ -332,6 +335,7 @@ object SQLite {
             returning Executables.map(_._Id.get))
           .insert((None, Some(expr.toString)))
         nInserts = nInserts + 1
+        // @TODO Why do we even need parameters? These should be part of the BelleExpr
         val paramTable = Executableparameter.map({ case param => (param.executableid.get, param.idx.get,
           param.valuetype.get, param.value.get)
         })
@@ -342,87 +346,40 @@ object SQLite {
         executableId
       })
 
-    /* I originally suspected that the writes alone were slowing us down, but if you enable deduplicateSequents you
-     * will see this is not the case. This flag enables a query before every provable creation that checks whether the
-     * sequent is already present. This significantly reduces writes to the sequent table, but the select queries end
-     * up taking the same length of time and the "is this sequent present" computation takes much much longer
-     * than all the queries using the naive algorithm below.
-     * Due to the slowness I'm leaving the flag disabled, but leaving the code around since it may be of interest while
-     * doing optimizations. */
-    private val deduplicateSequents = false
-    private var searchTime: Long = 0
-    private var processTime: Long = 0
-    private def findSequentId(s: Sequent): Option[Int] = {
-      if (deduplicateSequents) {
-        nSelects = nSelects + 1
-        val t1 = System.nanoTime()
-        val lst = Sequentformulas.list
-        val t2 = System.nanoTime()
-        searchTime = searchTime + t2 - t1
-        val fmls = lst.filter(row =>
-          (row.isante.get.toBoolean && s.ante.exists(p => row.formula.get == p.toString))
-         || (!row.isante.get.toBoolean && s.succ.exists(p => row.formula.get == p.toString)))
-        val fmlss = fmls.sortWith((row1, row2) => row1.sequentid.get.compare(row2.sequentid.get) > 0).groupBy(row => row.sequentid)
-        val ante = s.ante.zipWithIndex
-        val succ = s.succ.zipWithIndex
-        val which = fmlss.find({case ((_: Option[Int], rows)) =>
-          val anteFound =
-            ante.forall({case (fml:Formula, int:Int) => rows.exists(row =>
-              row.idx.get == int && row.isante.get.toBoolean && row.formula.get == fml.toString)})
-          val succFound =
-            succ.forall({case (fml:Formula, int:Int) => rows.exists(row =>
-              row.idx.get == int && !row.isante.get.toBoolean && row.formula.get == fml.toString)})
-          anteFound && succFound})
-        val t3 = System.nanoTime()
-        processTime = processTime + t3 - t2
-        which match {
-          case None => None
-          case Some((_, Nil)) => None
-          case Some((_, (x :: _))) => Some(x.sequentid.get)
-        }
+    def serializeSequent(sequent: Sequent, provableId: Int, subgoal: Option[Int]): Unit = {
+      val ante = sequent.ante
+      val succ = sequent.succ
+      val sequentId =
+        (Sequents.map({ case sequent => (sequent.provableid.get, sequent.idx) }) returning Sequents.map(_._Id.get))
+          .insert(provableId, subgoal)
+      nInserts = nInserts + 1
+      val formulas = Sequentformulas.map({ case fml => (fml.sequentid.get,
+        fml.isante.get, fml.idx.get, fml.formula.get)
+      })
+      for (i <- ante.indices) {
+        nInserts = nInserts + 1
+        formulas.insert((sequentId, true.toString, i, ante(i).prettyString))
       }
-      else None
+      for (i <- succ.indices) {
+        nInserts = nInserts + 1
+        formulas.insert((sequentId, false.toString, i, succ(i).prettyString))
+      }
     }
 
-    /** @TODO what if we want to extract a proof witness from a deserialized provable? Doesn't this put the
-      *       DB into the prover core in a way? */
     /** Stores a Provable in the database and returns its ID */
     override def serializeProvable(p: Provable): Int = {
-      val ante = p.conclusion.ante
-      val succ = p.conclusion.succ
       session.withTransaction({
-        findSequentId(p.conclusion) match {
-          case None =>
-            /* Working around bug in slick: The natural thing to write would be insert() without any arguments, but
-            * that generates an ill-formed SQL statement, so let's explicitly insert a row with a null conclusion - it
-            * does the same thing but generates SQL that parses.*/
-            val provableId =
-              (Provables.map({ case provable => provable.conclusionid}) returning Provables.map(_._Id.get))
-                .insert(None)
-            val sequentId =
-              (Sequents.map({ case sequent => sequent.provableid.get }) returning Sequents.map(_._Id.get))
-                .insert(provableId)
-            Provables.filter(_._Id === provableId).map(provable => provable.conclusionid.get)
-            .update(sequentId)
-            nInserts = nInserts + 2
-            nUpdates = nUpdates + 1
-            val formulas = Sequentformulas.map({ case fml => (fml.sequentid.get,
-              fml.isante.get, fml.idx.get, fml.formula.get)
-            })
-            for (i <- ante.indices) {
-              nInserts = nInserts + 1
-              formulas.insert((sequentId, true.toString, i, ante(i).toString))
-            }
-            for (i <- succ.indices) {
-              nInserts = nInserts + 1
-              formulas.insert((sequentId, false.toString, i, succ(i).toString))
-            }
-            provableId
-          case Some(sequentId) =>
-            nInserts = nInserts + 1
-            (Provables.map({ case provable => provable.conclusionid.get }) returning Provables.map(_._Id.get))
-              .insert(sequentId)
+        /* Working around bug in slick: The natural thing to write would be insert() without any arguments, but
+        * that generates an ill-formed SQL statement, so let's explicitly insert a row with a null conclusion - it
+        * does the same thing but generates SQL that parses.*/
+        val provableId =
+          (Provables.map({ case provable => provable.insertstatementwassyntacticallyvalid.get}) returning Provables.map(_._Id.get))
+            .insert(1)
+        serializeSequent(p.conclusion, provableId, None)
+        for(i <- p.subgoals.indices) {
+          serializeSequent(p.subgoals(i), provableId, Some(i))
         }
+        provableId
       })
     }
 
@@ -441,6 +398,28 @@ object SQLite {
 
     /** Use escape hatch in prover core to create a new Provable */
     override def loadProvable(provableId: Int): Sequent = ???
+
+    /** Rerun all execution steps to generate a provable for the current state of the proof
+      * Assumes the execution starts with a trivial provable (one subgoal, which is the same
+      * as the conclusion) */
+    private def regenerate(executionId: Int): Provable = {
+      getExecutionSteps(executionId) match {
+        case Nil => throw new Exception("Cannot regenerate provable for empty execution")
+        case step::steps =>
+          val (rootSubgoals, conclusion) = getSequents(step.inputProvableId)
+          val initialProvable = Provable.startProof(conclusion)
+          def run(p: Provable, t:BelleExpr): Provable =
+            SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
+              case BelleProvable(p) => p
+            }
+          def loadTactic(id: Int): BelleExpr = ???
+          (step::steps).foldLeft(initialProvable)({case (provable, currStep) =>
+              run(provable, loadTactic(currStep.executableId))
+            })
+          initialProvable
+      }
+
+    }
 
     override def getExecutionSteps(executionID: Int): List[ExecutionStepPOJO] = {
       session.withTransaction({
@@ -472,7 +451,11 @@ object SQLite {
       *       Alternatives?
       *       Does order matter?
       *       What's in each string? */
-    override def getProofSteps(proofId: Int): List[String] = ???
+    override def getProofSteps(proofId: Int): List[String] = {
+      val execution = getTacticExecution(proofId)
+      val stepPOJOs = proofSteps(execution)
+      stepPOJOs.map({case step => step.toString})
+    }
 
     /** Adds a built-in tactic application using a set of parameters */
     override def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int = {
@@ -501,6 +484,15 @@ object SQLite {
       })
     }
 
+
+    def updateResultProvable(executionStepId: Int, provableId: Option[Int]): Unit = {
+      session.withTransaction({
+        nSelects = nSelects + 1
+        nUpdates = nUpdates + 1
+        Executionsteps.filter(_._Id === executionStepId).map(_.resultprovableid).update(provableId)
+      })
+    }
+
     private def sortFormulas(fromAnte: Boolean, formulas: List[SequentFormulaPOJO]): List[Formula] = {
       import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
       val relevant = formulas.filter({ case formula => fromAnte == formula.isAnte })
@@ -508,31 +500,134 @@ object SQLite {
       sorted.map({ case formula => formula.formulaStr.asFormula })
     }
 
-    /** Gets the conclusion of a provable */
-    override def getConclusion(provableId: Int): Sequent = {
+    def getSequent(sequentId: Int)(implicit session: Session): Sequent = {
+      val formulas =
+        Sequentformulas.filter(_.sequentid === sequentId)
+          .list
+          .map(formula => new SequentFormulaPOJO(formula._Id.get, formula.sequentid.get,
+            formula.isante.get.toBoolean, formula.idx.get, formula.formula.get))
+      val ante = sortFormulas(fromAnte = true, formulas).toIndexedSeq
+      val succ = sortFormulas(fromAnte = false, formulas).toIndexedSeq
+      Sequent(Nil, ante, succ)
+    }
+
+    def getSequents(provableId: Int): (List[Sequent], Sequent) = {
       session.withTransaction({
         nSelects = nSelects + 1
         val sequents =
           Sequents.filter(_.provableid === provableId)
             .list
-            .map({ case sequent => sequent._Id.get })
-        if (sequents.length != 1)
-          throw new Exception("provable should have exactly 1 sequent in getConclusion, has " + sequents.length)
-        val sequent = sequents.head
-        val formulas =
-          Sequentformulas.filter(_.sequentid === sequent)
-            .list
-            .map(formula => new SequentFormulaPOJO(formula._Id.get, formula.sequentid.get,
-              formula.isante.get.toBoolean, formula.idx.get, formula.formula.get))
-        val ante = sortFormulas(fromAnte = true, formulas).toIndexedSeq
-        val succ = sortFormulas(fromAnte = false, formulas).toIndexedSeq
-        Sequent(null, ante, succ)
+            .map({ case sequent => (sequent._Id.get, sequent.idx) })
+        val (conclusions, subgoals) =
+          sequents.partition({case (id, idx) => idx.isEmpty})
+        if(conclusions.length != 1)
+          throw new Exception("Provable should have exactly one conclusion in getSequents")
+        val conclusion = conclusions.head
+        val conclusionSequent = getSequent(conclusion._1)
+        val sortedSubgoals = subgoals.sortWith({case (x, y) => x._2.get < y._2.get}).map({case (x, _) => x})
+        var revSequents: List[Sequent] = Nil
+        for (i <- sortedSubgoals.indices) {
+          revSequents = getSequent(sortedSubgoals(i)) :: revSequents
+        }
+        (revSequents.reverse, conclusionSequent)
       })
+    }
+
+    /** Gets the conclusion of a provable */
+    override def getConclusion(provableId: Int): Sequent = {
+      getSequents(provableId)._2
     }
 
     def printStats = {
       println("Updates: " + nUpdates + " Inserts: " + nInserts + " Selects: " + nSelects)
-      println("Searching time: " + (searchTime / 1000000000.0) + " Processing Time: " + (processTime / 1000000000.0))
+    }
+
+    def proofSteps(executionId: Int): List[ExecutionStepPOJO] = {
+      session.withTransaction({
+        var steps = Executionsteps.filter(_.executionid === executionId).list
+        var prevId: Option[Int] = None
+        var revResult: List[ExecutionStepPOJO] = Nil
+        while(steps != Nil) {
+          val (headSteps, tailSteps) = steps.partition({step => step.previousstep == prevId})
+          if (headSteps == Nil)
+            return revResult.reverse
+          val headsByAlternative =
+            headSteps.sortWith({case (x, y) => y.alternativeorder.get < x.alternativeorder.get})
+          val head = headsByAlternative.head
+          revResult =
+            new ExecutionStepPOJO(head._Id, head.executionid.get, head.previousstep, head.parentstep,
+              head.branchorder, head.branchlabel, head.alternativeorder.get, ExecutionStepStatus.fromString(head.status.get),
+              head.executableid.get, head.inputprovableid.get, head.resultprovableid, head.userexecuted.get.toBoolean)::revResult
+          prevId = head._Id
+          steps = tailSteps
+        }
+        revResult.reverse
+      })
+    }
+
+    private def getProofConclusion(proofId: Int): Sequent = {
+      val modelId = getProofInfo(proofId).modelId
+      val model = getModel(modelId)
+      KeYmaeraXProblemParser(model.keyFile) match {
+        case fml:Formula => Sequent(Nil, collection.immutable.IndexedSeq(), collection.immutable.IndexedSeq(fml))
+        case _ => throw new Exception("Failed to parse model for proof " + proofId + " model " + modelId)
+      }
+    }
+
+    private def getTacticExecution(proofId: Int): Int =
+      session.withTransaction({
+        val executionIds =
+          Tacticexecutions.filter(_.proofid === proofId)
+            .list
+            .map({case row => row._Id.get})
+        if (executionIds.length < 1) throw new Exception("getTacticExecution type should be an Option")
+        else if (executionIds.length == 1) executionIds.head
+        else throw new Exception("Primary keys aren't unique in executions table.")})
+
+    override def proofTree(proofId: Int): Tree = {
+      val executionId = getTacticExecution(proofId)
+      var steps = proofSteps(executionId)
+      var currentNodeId = 1
+
+      def treeNode(subgoal: Sequent, parent: Option[TreeNode]): TreeNode = {
+        val nodeId = currentNodeId
+        currentNodeId = currentNodeId + 1
+        TreeNode(nodeId, subgoal, parent)
+      }
+
+      /* This happens if we ask for a proof tree before we've done any actual proving, e.g. if we just created a new
+      * proof. In this case the right thing to do is display one node with the sequent we're trying to prove, which we
+      * can find by asking the proof. */
+      if (steps.isEmpty) {
+        val sequent = getProofConclusion(proofId)
+        val node = treeNode(sequent, None)
+        return Tree(proofId.toString, List(node), node, List(AgendaItem("0", "Unnamed Item", proofId.toString, node)))
+      }
+      val (rootSubgoals, conclusion) = getSequents(steps.head.inputProvableId)
+      var openGoals = rootSubgoals.map({case subgoal => treeNode(subgoal, None)})
+      var allNodes = openGoals
+      while (steps.nonEmpty && steps.head.resultProvableId.nonEmpty) {
+        val step = steps.head
+        val branch = step.branchOrder.get
+        val (endSubgoals, _) = getSequents(step.resultProvableId.get)
+        /* This step closed a branch*/
+        if(endSubgoals.length == openGoals.length - 1) {
+          openGoals = openGoals.slice(0, branch) ++ openGoals.slice(branch + 1, openGoals.length)
+        } else {
+          val (updated :: added) =
+            endSubgoals.filter({case sg => !openGoals.exists({case node => node.sequent == sg})})
+          val updatedNode = treeNode(updated, Some(openGoals(branch)))
+          val addedNodes = added.map({case sg => treeNode(sg, Some(openGoals(branch)))})
+          openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
+          allNodes = allNodes ++ (updatedNode :: addedNodes)
+        }
+        steps = steps.tail
+      }
+      var items:List[AgendaItem] = Nil
+      for (i <- openGoals.indices) {
+        items = AgendaItem(i.toString, "Unnamed Goal", proofId.toString, openGoals(i)) :: items
+      }
+      Tree(proofId.toString, allNodes, allNodes.head, items.reverse)
     }
   }
 }

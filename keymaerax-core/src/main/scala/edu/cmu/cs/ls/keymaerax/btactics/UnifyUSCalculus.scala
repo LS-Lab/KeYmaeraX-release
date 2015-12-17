@@ -17,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, AxiomIndex, Context, DerivedAxioms, FormulaTools, HereP, Position, PosInExpr, SuccPosition}
 
 import scala.collection.immutable._
+import scala.language.postfixOps
 
 /**
  * Automatic unification-based Uniform Substitution Calculus with indexing.
@@ -286,20 +287,20 @@ trait UnifyUSCalculus {
         //@todo not sure if the following two cases really work as intended, but they seem to
         case Imply(other, DotFormula) if p.isSucc && p.isTopLevel =>
           cutR(subst(other))(p) <(
-            /* use */ partial,
+            /* use */ ident partial,
             /* show */ coHideR(p) & factTactic
           )
 
         case Imply(DotFormula, other) if p.isAnte && p.isTopLevel =>
           cutL(subst(other))(p) <(
-            /* use */ partial,
+            /* use */ ident partial,
             /* show */ lastR(coHideR) & factTactic
           )
 
         case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel) =>
           val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
           cutLR(C(subst(other)))(p.top) <(
-            /* use */ partial,
+            /* use */ ident partial,
             /* show */ coHideR(cutPos) & implyR(SuccPos(0)) &
               propCMon(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
               // gather back to a single implication for axiom-based factTactic to succeed
@@ -312,7 +313,7 @@ trait UnifyUSCalculus {
           // same as "case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel)"
           val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
           cutLR(C(subst(other)))(p.top) <(
-            /* use */ partial,
+            /* use */ ident partial,
             /* show */ coHideR(cutPos) & implyR(SuccPos(0)) &
               propCMon(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
               // gather back to a single implication for axiom-based factTactic to succeed
@@ -1131,6 +1132,7 @@ trait UnifyUSCalculus {
    * ----------------
    *   G, a |- b, D
    * }}}
+    * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008. Lemma 7"
    */
   private def inverseImplyR: ForwardTactic = pr => {
     val pos = SuccPos(0)

@@ -115,16 +115,17 @@ trait Tables {
    *  @param executableid Database column executableId DBType(INTEGER)
    *  @param inputprovableid Database column inputProvableId DBType(INTEGER)
    *  @param resultprovableid Database column resultProvableId DBType(INTEGER)
-   *  @param userexecuted Database column userExecuted DBType(BOOLEAN) */
-  case class ExecutionstepsRow(_Id: Option[Int], executionid: Option[Int], previousstep: Option[Int], parentstep: Option[Int], branchorder: Option[Int], branchlabel: Option[String], alternativeorder: Option[Int], status: Option[String], executableid: Option[Int], inputprovableid: Option[Int], resultprovableid: Option[Int], userexecuted: Option[String])
+   *  @param userexecuted Database column userExecuted DBType(BOOLEAN)
+   *  @param childrenrecorded Database column childrenRecorded DBType(BOOLEAN) */
+  case class ExecutionstepsRow(_Id: Option[Int], executionid: Option[Int], previousstep: Option[Int], parentstep: Option[Int], branchorder: Option[Int], branchlabel: Option[String], alternativeorder: Option[Int], status: Option[String], executableid: Option[Int], inputprovableid: Option[Int], resultprovableid: Option[Int], userexecuted: Option[String], childrenrecorded: Option[String])
   /** GetResult implicit for fetching ExecutionstepsRow objects using plain SQL queries */
   implicit def GetResultExecutionstepsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ExecutionstepsRow] = GR{
     prs => import prs._
-    ExecutionstepsRow.tupled((<<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[Int], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[String]))
+    ExecutionstepsRow.tupled((<<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[Int], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[String]))
   }
   /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
   class Executionsteps(_tableTag: Tag) extends Table[ExecutionstepsRow](_tableTag, "executionSteps") {
-    def * = (_Id, executionid, previousstep, parentstep, branchorder, branchlabel, alternativeorder, status, executableid, inputprovableid, resultprovableid, userexecuted) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
+    def * = (_Id, executionid, previousstep, parentstep, branchorder, branchlabel, alternativeorder, status, executableid, inputprovableid, resultprovableid, userexecuted, childrenrecorded) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
     val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -150,6 +151,8 @@ trait Tables {
     val resultprovableid: Column[Option[Int]] = column[Option[Int]]("resultProvableId")
     /** Database column userExecuted DBType(BOOLEAN) */
     val userexecuted: Column[Option[String]] = column[Option[String]]("userExecuted")
+    /** Database column childrenRecorded DBType(BOOLEAN) */
+    val childrenrecorded: Column[Option[String]] = column[Option[String]]("childrenRecorded")
     
     /** Foreign key referencing Executables (database name executables_FK_1) */
     lazy val executablesFk = foreignKey("executables_FK_1", executableid, Executables)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
@@ -300,8 +303,8 @@ trait Tables {
   
   /** Entity class storing rows of table Provables
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
-   *  @param conclusionid Database column conclusionId DBType(INTEGER) */
-  case class ProvablesRow(_Id: Option[Int], conclusionid: Option[Int])
+   *  @param insertstatementwassyntacticallyvalid Database column insertStatementWasSyntacticallyValid DBType(INTEGER) */
+  case class ProvablesRow(_Id: Option[Int], insertstatementwassyntacticallyvalid: Option[Int])
   /** GetResult implicit for fetching ProvablesRow objects using plain SQL queries */
   implicit def GetResultProvablesRow(implicit e0: GR[Option[Int]]): GR[ProvablesRow] = GR{
     prs => import prs._
@@ -309,15 +312,12 @@ trait Tables {
   }
   /** Table description of table provables. Objects of this class serve as prototypes for rows in queries. */
   class Provables(_tableTag: Tag) extends Table[ProvablesRow](_tableTag, "provables") {
-    def * = (_Id, conclusionid) <> (ProvablesRow.tupled, ProvablesRow.unapply)
+    def * = (_Id, insertstatementwassyntacticallyvalid) <> (ProvablesRow.tupled, ProvablesRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
     val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
-    /** Database column conclusionId DBType(INTEGER) */
-    val conclusionid: Column[Option[Int]] = column[Option[Int]]("conclusionId")
-    
-    /** Foreign key referencing Sequents (database name sequents_FK_1) */
-    lazy val sequentsFk = foreignKey("sequents_FK_1", conclusionid, Sequents)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+    /** Database column insertStatementWasSyntacticallyValid DBType(INTEGER) */
+    val insertstatementwassyntacticallyvalid: Column[Option[Int]] = column[Option[Int]]("insertStatementWasSyntacticallyValid")
   }
   /** Collection-like TableQuery object for table Provables */
   lazy val Provables = new TableQuery(tag => new Provables(tag))
@@ -381,21 +381,24 @@ trait Tables {
   
   /** Entity class storing rows of table Sequents
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
-   *  @param provableid Database column provableId DBType(INTEGER) */
-  case class SequentsRow(_Id: Option[Int], provableid: Option[Int])
+   *  @param provableid Database column provableId DBType(INTEGER)
+   *  @param idx Database column idx DBType(INTEGER) */
+  case class SequentsRow(_Id: Option[Int], provableid: Option[Int], idx: Option[Int])
   /** GetResult implicit for fetching SequentsRow objects using plain SQL queries */
   implicit def GetResultSequentsRow(implicit e0: GR[Option[Int]]): GR[SequentsRow] = GR{
     prs => import prs._
-    SequentsRow.tupled((<<?[Int], <<?[Int]))
+    SequentsRow.tupled((<<?[Int], <<?[Int], <<?[Int]))
   }
   /** Table description of table sequents. Objects of this class serve as prototypes for rows in queries. */
   class Sequents(_tableTag: Tag) extends Table[SequentsRow](_tableTag, "sequents") {
-    def * = (_Id, provableid) <> (SequentsRow.tupled, SequentsRow.unapply)
+    def * = (_Id, provableid, idx) <> (SequentsRow.tupled, SequentsRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
     val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
     /** Database column provableId DBType(INTEGER) */
     val provableid: Column[Option[Int]] = column[Option[Int]]("provableId")
+    /** Database column idx DBType(INTEGER) */
+    val idx: Column[Option[Int]] = column[Option[Int]]("idx")
     
     /** Foreign key referencing Provables (database name provables_FK_1) */
     lazy val provablesFk = foreignKey("provables_FK_1", provableid, Provables)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)

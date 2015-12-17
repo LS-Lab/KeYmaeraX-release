@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
+import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import akka.actor.Actor
 import spray.routing._
 import spray.http._
@@ -193,17 +194,47 @@ trait RestApi extends HttpService {
 
   val proofTasksNew = path("proofs" / "user" / Segment / Segment / "agendaawesome") { (userId, proofId) => { pathEnd {
     get {
-      val request = new MockRequest("/mockdata/proof1opentasksreply.json")
+      val request = new GetAgendaAwesomeRequest(database, userId, proofId)
       complete(standardCompletion(request))
     }
   }}}
 
   val proofTasksParent = path("proofs" / "user" / Segment / Segment / Segment / Segment / "parent") { (userId, proofId, nodeId, goalId) => { pathEnd {
     get {
-      val request = goalId match {
-        case "S3" => new MockRequest("/mockdata/s23parentreply.json")
-        case "S2" => new MockRequest("/mockdata/s23parentreply.json")
-        case "S1" => new MockRequest("/mockdata/s1parentreply.json")
+      val request = new ProofTaskParentRequest(database, userId, proofId, nodeId, goalId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val proofTasksPathAll = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pathall") { (userId, proofId, nodeId, goalId) => { pathEnd {
+    get {
+      val request = new GetPathAllRequest(database, userId, proofId, nodeId, goalId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val proofTasksBranchRoot = path("proofs" / "user" / Segment / Segment / Segment / Segment / "branchroot") { (userId, proofId, nodeId, goalId) => { pathEnd {
+    get {
+      val request = new GetBranchRootRequest(database, userId, proofId, nodeId, goalId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val axiomList = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, goalId, formulaId) => { pathEnd {
+    get {
+      val request = formulaId match {
+        case "F2s0" => new MockRequest("/mockdata/andaxiomlist.json")
+        case "F2s1" => new MockRequest("/mockdata/ltaxiomlist.json")
+      }
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val useAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "use" / Segment) { (userId, proofId, nodeId, goalId, formulaId, axiomId) => { pathEnd {
+    get {
+      val request = (formulaId, axiomId) match {
+        case ("F2s0", "and true") => new MockRequest("/mockdata/andtrueresult.json")
+        case ("F2s0", "step") => new MockRequest("/mockdata/andtrueresult.json")
       }
       complete(standardCompletion(request))
     }
@@ -487,6 +518,10 @@ trait RestApi extends HttpService {
     proofCheckIsProved    ::
     proofTasksNew         ::
     proofTasksParent      ::
+    proofTasksPathAll     ::
+    proofTasksBranchRoot  ::
+    axiomList             ::
+    useAt                 ::
     proofTask             ::
     nodeFormulaTactics    ::
     nodeRunTactics        ::
@@ -511,6 +546,7 @@ trait RestApi extends HttpService {
       initializeModel :: isLocal :: shutdown ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
+
 }
 //
 //

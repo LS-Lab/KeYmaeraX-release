@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "id": "http://keymaerax.org/schemas/parentreply.json",
+  "title": "parentreply",
+  "description": "The direct parent of a goal in the proof tree",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Identifies the parent in the proof tree"
+    },
+    "sequent": {
+      "type": "object",
+      "description": "See sequent.json (TODO: cross-reference schema)"
+    },
+    "children": {
+      "type": "array",
+      "description": "References to the children of this tree node",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "description": "Identifies the child (ID)"
+      }
+    },
+    "rule": {
+      "type": "object",
+      "description": "The proof rule that derived the children from this parent",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identifies the proof rule"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name of the proof rule"
+        }
+      },
+      "required": ["id", "name"]
+    },
+    "parent": {
+      "type": "string",
+      "description": "The parent of this tree node, null if still needs to be loaded (default)."
+    }
+  },
+  "required": ["id", "sequent", "children", "rule", "parent"]
+}
