@@ -302,8 +302,7 @@ class BelleError(message: String, cause: Throwable = null)
   override def toString: String = super.toString + "\nin " + tacticContext
 }
 
-case class BelleUserGeneratedError(message: String)
-  extends Exception(s"[Bellerophon User-Generated Message] $message")
+case class BelleUserGeneratedError(message: String) extends BelleError(s"[Bellerophon User-Generated Message] $message")
 
 class CompoundException(left: BelleError, right: BelleError)
   extends BelleError(s"Left Message: ${left.getMessage}\nRight Message: ${right.getMessage})")
