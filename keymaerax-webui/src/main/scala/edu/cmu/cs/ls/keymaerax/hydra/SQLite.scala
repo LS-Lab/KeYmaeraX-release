@@ -8,7 +8,7 @@ import java.io.FileOutputStream
 import java.nio.channels.Channels
 import java.sql.SQLException
 
-import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, BelleExpr}
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Provable, Sequent}
 import _root_.edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
@@ -335,6 +335,7 @@ object SQLite {
             returning Executables.map(_._Id.get))
           .insert((None, Some(expr.toString)))
         nInserts = nInserts + 1
+        // @TODO Why do we even need parameters? These should be part of the BelleExpr
         val paramTable = Executableparameter.map({ case param => (param.executableid.get, param.idx.get,
           param.valuetype.get, param.value.get)
         })
@@ -397,6 +398,28 @@ object SQLite {
 
     /** Use escape hatch in prover core to create a new Provable */
     override def loadProvable(provableId: Int): Sequent = ???
+
+    /** Rerun all execution steps to generate a provable for the current state of the proof
+      * Assumes the execution starts with a trivial provable (one subgoal, which is the same
+      * as the conclusion) */
+    private def regenerate(executionId: Int): Provable = {
+      getExecutionSteps(executionId) match {
+        case Nil => throw new Exception("Cannot regenerate provable for empty execution")
+        case step::steps =>
+          val (rootSubgoals, conclusion) = getSequents(step.inputProvableId)
+          val initialProvable = Provable.startProof(conclusion)
+          def run(p: Provable, t:BelleExpr): Provable =
+            SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
+              case BelleProvable(p) => p
+            }
+          def loadTactic(id: Int): BelleExpr = ???
+          (step::steps).foldLeft(initialProvable)({case (provable, currStep) =>
+              run(provable, loadTactic(currStep.executableId))
+            })
+          initialProvable
+      }
+
+    }
 
     override def getExecutionSteps(executionID: Int): List[ExecutionStepPOJO] = {
       session.withTransaction({
