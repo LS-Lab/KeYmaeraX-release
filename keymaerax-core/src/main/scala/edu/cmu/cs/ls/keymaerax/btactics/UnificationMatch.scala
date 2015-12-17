@@ -185,19 +185,43 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
   //@note optimized: repeated implementation per type to enable the static type inference that Scala generics won't give.
   private def unify(s1:Expression,s2:Expression, t1:Expression,t2:Expression): List[SubstRepl] = {
     val u1 = unify(s1, t1)
-    compose(unify(Subst(u1)(s2), t2), u1)
+    try {
+      compose(unify(Subst(u1)(s2), t2), u1)
+    } catch {
+      case e: Throwable =>
+        val u2 = unify(s2, t2)
+        compose(u2, unify(s1, Subst(u2)(s1)))
+    }
   }
   private def unify(s1:Term,s2:Term, t1:Term,t2:Term): List[SubstRepl] = {
     val u1 = unify(s1, t1)
-    compose(unify(Subst(u1)(s2), t2), u1)
+    try {
+      compose(unify(Subst(u1)(s2), t2), u1)
+    } catch {
+      case e: Throwable =>
+        val u2 = unify(s2, t2)
+        compose(u2, unify(s1, Subst(u2)(s1)))
+    }
   }
   private def unify(s1:Formula,s2:Formula, t1:Formula,t2:Formula): List[SubstRepl] = {
     val u1 = unify(s1, t1)
-    compose(unify(Subst(u1)(s2), t2), u1)
+    try {
+      compose(unify(Subst(u1)(s2), t2), u1)
+    } catch {
+      case e: Throwable =>
+        val u2 = unify(s2, t2)
+        compose(u2, unify(s1, Subst(u2)(s1)))
+    }
   }
   private def unify(s1:Program,s2:Program, t1:Program,t2:Program): List[SubstRepl] = {
     val u1 = unify(s1, t1)
-    compose(unify(Subst(u1)(s2), t2), u1)
+    try {
+      compose(unify(Subst(u1)(s2), t2), u1)
+    } catch {
+      case e: Throwable =>
+        val u2 = unify(s2, t2)
+        compose(u2, unify(s1, Subst(u2)(s1)))
+    }
   }
 
 
