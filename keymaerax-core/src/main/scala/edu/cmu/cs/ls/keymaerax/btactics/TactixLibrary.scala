@@ -84,9 +84,13 @@ object TactixLibrary extends UnifyUSCalculus {
   // Propositional tactics
 
   /** Hide/weaken whether left or right */
-  lazy val hide               : BelleExpr = ProofRuleTactics.hide
+  lazy val hide               : DependentPositionTactic = ProofRuleTactics.hide
   /** Hide/weaken given formula at given position */
-  def hide(fml: Formula)(pos: Position) : BelleExpr = DebuggingTactics.assert(fml, "hiding")(pos) & ProofRuleTactics.hide(pos)
+  def hide(fml: Formula): DependentPositionTactic = new DependentPositionTactic("hide") {
+    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
+      override def computeExpr(v: BelleValue): BelleExpr = assertE(fml, "hiding")(pos) & ProofRuleTactics.hide(pos)
+    }
+  }
   /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
   lazy val hideL              : BuiltInLeftTactic = ProofRuleTactics.hideL
   /** Hide/weaken right: weaken a formula to drop it from the succcedent ([[edu.cmu.cs.ls.keymaerax.core.HideRight HideRight]]) */
