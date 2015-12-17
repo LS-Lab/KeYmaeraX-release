@@ -262,6 +262,9 @@ object Provable {
   private[core] def toolFact(goal: Sequent): Provable = {
     Provable(goal, immutable.IndexedSeq())
   }
+
+  /** @todo For use only for partially proved lemmas! */
+  private[core] def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) = Provable(conclusion, subgoals)
 }
 
 /**
