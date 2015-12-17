@@ -88,7 +88,11 @@ CREATE TABLE IF NOT EXISTS `executionSteps` (
   `resultProvableId` INTEGER REFERENCES `provables` (`_id`),
 
   -- Indicates whether this tactic was *directly* executed by the user.
-  `userExecuted`     BOOLEAN
+  `userExecuted`     BOOLEAN,
+
+  -- Indicates whether all children of this execution step are present in the database yet. By default children are not
+  -- saved in the database because they take a lot of space.
+  `childrenRecorded` BOOLEAN
 );
 
 ----------------------------------------------------------------------------------------------------
