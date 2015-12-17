@@ -150,7 +150,7 @@ object TactixLibrary extends UnifyUSCalculus {
   // modalities
 
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation */
-  lazy val assignb            : BuiltInPositionTactic = ??? //TacticLibrary.boxAssignT
+  lazy val assignb            : DependentPositionTactic = DLBySubst.assignb
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
   lazy val randomb            : DependentPositionTactic = useAt("[:*] assign nondet")
   /** testb: [?] simplifies test `[?q;]p` to an implication `q->p` */
