@@ -102,7 +102,18 @@ abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
   */
 case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic, locator: PositionLocator) extends BelleExpr {
   def computeResult(provable: Provable) : Provable = locator match {
-    case Fixed(pos) => positionTactic.computeResult(provable, pos)
+    case Fixed(pos, shape, exact) => shape match {
+      case Some(f) =>
+        require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
+        if ((exact && provable.subgoals.head(pos) == f) ||
+            (!exact && UnificationMatch.unifiable(f, provable.subgoals.head(pos)).isDefined)) {
+          positionTactic.computeResult(provable, pos)
+        } else {
+          throw new BelleError("Formula " + provable.subgoals.head(pos) + " at position " + pos +
+            " is not of expected shape " + f)
+        }
+      case None => positionTactic.computeResult(provable, pos)
+    }
     case Find(goal, shape, start, exact) =>
       require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
       tryAllAfter(provable, goal, shape, start, exact, null)
@@ -200,7 +211,20 @@ abstract case class InputTactic[T](input: T) extends BelleExpr {
 
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: PositionLocator) extends DependentTactic(pt.name) {
   override def computeExpr(v: BelleValue): BelleExpr = locator match {
-    case Fixed(pos) => pt.apply(pos).computeExpr(v)
+    case Fixed(pos, shape, exact) => shape match {
+      case Some(f) => v match {
+        case BelleProvable(provable) =>
+          require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
+          if ((exact && provable.subgoals.head(pos) == f) ||
+            (!exact && UnificationMatch.unifiable(f, provable.subgoals.head(pos)).isDefined)) {
+            pt.apply(pos).computeExpr(v)
+          } else {
+            throw new BelleError("Formula " + provable.subgoals.head(pos) + " at position " + pos +
+              " is not of expected shape " + f)
+          }
+      }
+      case None => pt.apply(pos).computeExpr(v)
+    }
     case Find(goal, shape, start, exact) =>
       tryAllAfter(goal, shape, start, exact, null)
     case LastAnte(goal) => pt.apply(v match { case BelleProvable(provable) => new AntePosition(provable.subgoals(goal).ante.size-1) })

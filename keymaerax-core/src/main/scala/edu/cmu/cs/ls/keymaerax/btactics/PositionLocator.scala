@@ -9,7 +9,7 @@ trait PositionLocator {
 }
 
 /** Locates the formula at the specified position. */
-case class Fixed(pos: Position) extends PositionLocator {
+case class Fixed(pos: Position, shape: Option[Formula] = None, exact: Boolean = true) extends PositionLocator {
   override def prettyString: String = pos.prettyString
 }
 
