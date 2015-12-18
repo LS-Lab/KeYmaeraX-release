@@ -100,16 +100,23 @@ object DebuggingTactics {
       provable
     }
   }
+
+  /** no-op tactic that raises an error if the provable is not proved */
+  lazy val assertProved = new BuiltInTactic("assert proved") {
+    override def result(provable : Provable): Provable =
+      if (provable.isProved) provable
+      else throw new BelleError("Expected proved provable, but got " + provable)
+  }
 }
 
 /**
  * @author Nathan Fulton
  */
 object Idioms {
-  def nil = PartialTactic(new BuiltInTactic("NilT") {
+  lazy val nil = PartialTactic(new BuiltInTactic("NilT") {
     override def result(provable: Provable): Provable = provable
   })
-  def ident = nil
+  lazy val ident = nil
 
   /** Optional tactic */
   def ?(t: BelleExpr): BelleExpr = (t partial) | nil
