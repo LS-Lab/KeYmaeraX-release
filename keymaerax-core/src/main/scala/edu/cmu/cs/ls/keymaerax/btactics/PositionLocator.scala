@@ -13,8 +13,8 @@ case class Fixed(pos: Position) extends PositionLocator {
   override def prettyString: String = pos.prettyString
 }
 
-/** Locates the first applicable position at or after start of goal. */
-case class Find(goal: Int, shape: Option[Formula], start: Position) extends PositionLocator {
+/** Locates the first applicable position that matches shape (exactly or unifiably) at or after start of goal. */
+case class Find(goal: Int, shape: Option[Formula], start: Position, exact: Boolean = true) extends PositionLocator {
   override def prettyString: String = "'_"
 }
 

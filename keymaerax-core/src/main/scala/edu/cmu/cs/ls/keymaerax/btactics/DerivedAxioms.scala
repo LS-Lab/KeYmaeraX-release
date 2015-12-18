@@ -631,7 +631,9 @@ object DerivedAxioms {
   lazy val allEliminateF = "(\\forall x p(??)) -> p(??)".asFormula
   lazy val allEliminateAxiom = derivedAxiom("all eliminate",
     Sequent(Nil, IndexedSeq(), IndexedSeq(allEliminateF)),
-    US(SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), PredOf(Function("p",None,Real,Bool),Anything))::Nil)
+    US(
+      USubst(SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), PredOf(Function("p",None,Real,Bool),Anything))::Nil),
+      Sequent(Nil, IndexedSeq(), IndexedSeq(allEliminateF)))
   )
   lazy val allEliminateT = derivedAxiomT(allEliminateAxiom)
 

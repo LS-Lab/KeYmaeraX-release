@@ -232,12 +232,10 @@ object HilbertCalculus extends UnifyUSCalculus {
    * @note Efficient source-level indexing implementation.
    */
   lazy val stepAt: DependentPositionTactic = new DependentPositionTactic("stepAt") {
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
-          require(provable.subgoals.size == 1, "Exactly one subgoal expected")
-          val sub = provable.subgoals.head.sub(pos)
-          if (sub.isEmpty) throw new BelleUserGeneratedError("ill-positioned " + pos + " in " + provable.subgoals.head + "\nin " + "stepAt(" + pos + ")\n(" + provable.subgoals.head + ")")
+    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+          val sub = sequent.sub(pos)
+          if (sub.isEmpty) throw new BelleUserGeneratedError("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
           sub.get match {
             case Box(a, _) => a match {
               case _: Assign    => assignb(pos)

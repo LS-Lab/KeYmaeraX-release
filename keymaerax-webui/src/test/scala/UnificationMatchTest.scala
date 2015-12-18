@@ -152,6 +152,21 @@ class UnificationMatchTest extends FlatSpec with Matchers {
         (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil)
   }
 
+  it should "unify y>0 -> [x:=2;]y>0 with p() -> [a;]p()" in {
+    UnificationMatch("p() -> [a;]p()".asFormula, "y>0 -> [x:=2;]y>0".asFormula) shouldBe RenUSubst(
+      (PredOf(Function("p", None, Unit, Bool), Nothing), "y>0".asFormula) ::
+        (ProgramConst("a"), Assign(Variable("x"), Number(2))) :: Nil
+    )
+  }
+
+  it should "unify [x:=2;]y>0 -> y>0 with [a;]p() -> p()" in {
+    // not an axiom, just to test both directions
+    UnificationMatch("[a;]p() -> p()".asFormula, "[x:=2;]y>0 -> y>0".asFormula) shouldBe RenUSubst(
+      (ProgramConst("a"), Assign(Variable("x"), Number(2))) ::
+        (PredOf(Function("p", None, Unit, Bool), Nothing), "y>0".asFormula) :: Nil
+    )
+  }
+
   //@todo this test case would need the expensive reunify to be activated in UnificationMatch again
   ignore/*"Reunifier ideally"*/ should "unify p(f()) <-> [x:=f();]p(x) with (7+x)^2>=5 <-> [x:=7+x;]x^2>=5" in {
     UnificationMatch("p(f()) <-> [x:=f();]p(x)".asFormula, "(7+x)^2>=5 <-> [x:=7+x;]x^2>=5".asFormula) shouldBe RenUSubst(
