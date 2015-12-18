@@ -8,9 +8,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXExtendedLemmaParser, KeYmaeraXLemmaParser}
-
-import scala.collection.immutable
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXExtendedLemmaParser}
 
 object Lemma {
   /**
@@ -62,9 +60,9 @@ final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[St
 
   /** A string representation of this lemma that will reparse as this lemma. */
   override def toString: String = {
-    "Lemma " + name.getOrElse("") + ".\n" +
-     "  " + sequentToString(fact.conclusion) + "\n"
-     "  " + fact.subgoals.map(sequentToString).mkString("\n") + "\n"
+    "Lemma \"" + name.getOrElse("") + "\".\n" +
+     sequentToString(fact.conclusion) + "\n" +
+     fact.subgoals.map(sequentToString).mkString("\n") + "\n" +
     "End.\n" +
      evidence.mkString("\n\n") + "\n"
   } ensuring(r => KeYmaeraXExtendedLemmaParser(r)._2.head == fact.conclusion, "Printed lemma should parse to conclusion")
