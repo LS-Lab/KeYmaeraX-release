@@ -1,19 +1,24 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core
-import edu.cmu.cs.ls.keymaerax.core.{Provable, QETool}
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.SuccPosition
+
+import scala.language.postfixOps
 
 /**
  * Tactics that execute and use the output of tools.
  * Also contains tactics for pre-processing sequents.
  * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 object ToolTactics {
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(implicit qeTool: QETool) = Idioms.NamedTactic(
     qeTool.getClass.getSimpleName + " QE",
-    toSingleFormula & qeSuccedentHd & ProofRuleTactics.closeTrue
+    toSingleFormula & qeSuccedentHd & DebuggingTactics.assertProved
   )
 
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
@@ -21,11 +26,11 @@ object ToolTactics {
     */
   def partialQE(implicit qeTool: QETool) = Idioms.NamedTactic(
     qeTool.getClass.getSimpleName + " QE",
-    toSingleFormula & qeSuccedentHd & (ProofRuleTactics.closeTrue | Idioms.ident)
+    toSingleFormula & qeSuccedentHd
   )
 
   /**
-   * Converts a sequent into a single formula. @todo unimplemented!
+   * Converts a sequent into a single formula.
    * Example:
    * {{{
    *   A, B |- S, T, U
@@ -35,34 +40,31 @@ object ToolTactics {
    *   (A ^ B) -> (S \/ T \/ U)
    * }}}
    */
-  private def toSingleFormula  = new BuiltInTactic("toSingleFormula") {
-    override def result(provable: Provable): Provable = {
-      assert(provable.subgoals.length == 1, "Should have at most one subgoal")
-      provable //@todo unimplemented!
-    } ensuring(r => r.subgoals.length == 1 && r.subgoals(0).ante.length == 0 && r.subgoals(0).succ.length == 1)
+  private lazy val toSingleFormula  = new SingleGoalDependentTactic("toSingleFormula") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      val ante = (sequent.ante ++ (True::True::Nil)).reduce(And)
+      val succ = (sequent.succ ++ (False::False::Nil)).reduce(Or)
+      cut(Imply(ante, succ)) <(
+        /* use */ implyL('Llast) <(
+          hideR(1)*sequent.succ.size  & (andR(1) <((close | skip) partial, close))*(sequent.ante.size+1),
+          hideL(-1)*sequent.ante.size & (orL(-1) <((close | skip) partial, close))*(sequent.succ.size+1)),
+        /* show */ cohide('Rlast) partial
+        )
+    }
   }
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  private def qeSuccedentHd(implicit qeTool : QETool) = new DependentTactic("QE") {
-    override def computeExpr(v: BelleValue): BelleExpr  = {
-      val provable = v match {
-        case BelleProvable(provable) => provable
-      }
-      assert(provable.subgoals.length == 1, "Provable should have at most one subgoal.")
-      assert(provable.subgoals(0).ante.length == 0 && provable.subgoals(0).succ.length == 1,
-        "Provable's subgoal should have only a single succedent.")
-
-      //Extract the formula to pass to QE.
-      val formulaToProve = provable.subgoals(0).succ(0)
+  private def qeSuccedentHd(implicit qeTool : QETool) = new SingleGoalDependentTactic("QE") {
+    override def computeExpr(sequent: Sequent): BelleExpr  = {
+      assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
 
       //Run QE and extract the resulting provable and equivalence
-      val qeFact = core.RCF.proveArithmetic(qeTool, formulaToProve).fact
-      val qeEquivalence : core.Equiv =
-        qeFact.conclusion.succ(0).asInstanceOf[core.Equiv]
+      val qeFact = core.RCF.proveArithmetic(qeTool, sequent.succ.head).fact
+      val Equiv(_, result) = qeFact.conclusion.succ.head
 
-      ProofRuleTactics.cut(qeEquivalence) < (
-        Idioms.by(qeFact),
-        ??? //@todo this needs CQ or CE, depending on the shape of the qeEquivalence. But these aren't currently implemented.
+      ProofRuleTactics.cutLR(result)(SuccPosition(0)) <(
+        (close | skip) partial,
+        equivifyR(1) & commuteEquivR(1) & by(qeFact)
       )
     }
   }
