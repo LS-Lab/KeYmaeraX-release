@@ -191,6 +191,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
       case e: Throwable =>
         val u2 = unify(s2, t2)
         compose(u2, unify(s1, Subst(u2)(s1)))
+        //@todo incomplete: match [a;]p() -> [a;]p() with [x:=x+1;]y>0 -> [x:=x+1;]y>0  will fail since both pieces need to be unified and then combined subsequently. But that's okay for now.
     }
   }
   private def unify(s1:Term,s2:Term, t1:Term,t2:Term): List[SubstRepl] = {
