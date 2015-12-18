@@ -101,24 +101,28 @@ abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
   * Useful for storing execution traces.
   */
 case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic, locator: PositionLocator) extends BelleExpr {
-  def computeResult(provable: Provable) : Provable = locator match {
-    case Fixed(pos, shape, exact) => shape match {
-      case Some(f) =>
-        require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
-        if ((exact && provable.subgoals.head(pos) == f) ||
-            (!exact && UnificationMatch.unifiable(f, provable.subgoals.head(pos)).isDefined)) {
-          positionTactic.computeResult(provable, pos)
-        } else {
-          throw new BelleError("Formula " + provable.subgoals.head(pos) + " at position " + pos +
-            " is not of expected shape " + f)
-        }
-      case None => positionTactic.computeResult(provable, pos)
+  def computeResult(provable: Provable) : Provable = try { locator match {
+      case Fixed(pos, shape, exact) => shape match {
+        case Some(f) =>
+          require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
+          if ((exact && provable.subgoals.head(pos) == f) ||
+              (!exact && UnificationMatch.unifiable(f, provable.subgoals.head(pos)).isDefined)) {
+            positionTactic.computeResult(provable, pos)
+          } else {
+            throw new BelleError("Formula " + provable.subgoals.head(pos) + " at position " + pos +
+              " is not of expected shape " + f)
+          }
+        case None => positionTactic.computeResult(provable, pos)
+      }
+      case Find(goal, shape, start, exact) =>
+        require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
+        tryAllAfter(provable, goal, shape, start, exact, null)
+      case LastAnte(goal) => positionTactic.computeResult(provable, new AntePosition(provable.subgoals(goal).ante.size-1))
+      case LastSucc(goal) => positionTactic.computeResult(provable, new SuccPosition(provable.subgoals(goal).succ.size-1))
     }
-    case Find(goal, shape, start, exact) =>
-      require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
-      tryAllAfter(provable, goal, shape, start, exact, null)
-    case LastAnte(goal) => positionTactic.computeResult(provable, new AntePosition(provable.subgoals(goal).ante.size-1))
-    case LastSucc(goal) => positionTactic.computeResult(provable, new SuccPosition(provable.subgoals(goal).succ.size-1))
+  } catch {
+    case be: BelleError => throw be
+    case t: Throwable => throw new BelleError(t.getMessage, t)
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
@@ -162,7 +166,12 @@ abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
 
 /** Motivation is similar to [[AppliedPositionTactic]], but for [[BuiltInTwoPositionTactic]] */
 case class AppliedTwoPositionTactic(positionTactic: BuiltInTwoPositionTactic, posOne: Position, posTwo: Position) extends BelleExpr {
-  def computeResult(provable: Provable) : Provable = positionTactic.computeResult(provable, posOne, posTwo)
+  def computeResult(provable: Provable) : Provable = try {
+    positionTactic.computeResult(provable, posOne, posTwo)
+  } catch {
+    case be: BelleError => throw be
+    case t: Throwable => throw new BelleError(t.getMessage, t)
+  }
 
   override def prettyString = positionTactic.prettyString + "(" + posOne.prettyString + "," + posTwo.prettyString + ")"
 }
@@ -179,9 +188,13 @@ abstract case class DependentTactic(name: String) extends BelleExpr {
   def computeExpr(provable: Provable): BelleExpr = throw new BelleError("Not implemented")
   def computeExpr(e: BelleValue with BelleError): BelleExpr = throw e
   /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleError) */
-  def computeExpr(v : BelleValue): BelleExpr = v match {
-    case BelleProvable(provable) => computeExpr(provable)
-    case e: BelleError => computeExpr(e)
+  def computeExpr(v : BelleValue): BelleExpr = try { v match {
+      case BelleProvable(provable) => computeExpr(provable)
+      case e: BelleError => computeExpr(e)
+    }
+  } catch {
+    case be: BelleError => throw be
+    case t: Throwable => throw new BelleError(t.getMessage, t)
   }
   override def prettyString: String = "DependentTactic(" + name + ")"
 }
