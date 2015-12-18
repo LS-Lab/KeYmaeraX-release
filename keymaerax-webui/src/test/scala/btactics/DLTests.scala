@@ -105,57 +105,73 @@ class DLTests extends TacticTestBase {
   it should "work in front of a loop" in {
     val result = proveBy("[x:=1;][{x:=x+1;}*]x>0".asFormula, assignb(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x_0=1".asFormula
-    result.subgoals.head.succ should contain only "[{x_0:=x_0+1;}*]x_0>0".asFormula
+    result.subgoals.head.ante should contain only "x=1".asFormula
+    result.subgoals.head.succ should contain only "[{x:=x+1;}*]x>0".asFormula
+  }
+
+  it should "not touch other assignments and formulas when undoing stuttering" in {
+    val result = proveBy(Sequent(Nil,
+      IndexedSeq("x=2".asFormula, "[x:=2;]x=2".asFormula),
+      IndexedSeq("[x:=1;][{x:=x+1;}*]x>0".asFormula, "[x:=3;]x>2".asFormula)), assignb(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x_0=2".asFormula, "[x:=2;]x=2".asFormula, "x=1".asFormula)
+    result.subgoals.head.succ should contain only ("[{x:=x+1;}*]x>0".asFormula, "[x:=3;]x>2".asFormula)
   }
 
   it should "work in front of a loop in the antecedent" in {
     val result = proveBy(Sequent(Nil, IndexedSeq("[x:=1;][{x:=x+1;}*]x>0".asFormula), IndexedSeq()), assignb(-1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "\\forall x_0 (x_0=1 -> [{x_0:=x_0+1;}*]x_0>0)".asFormula
+    result.subgoals.head.ante should contain only "\\forall x (x=1 -> [{x:=x+1;}*]x>0)".asFormula
     result.subgoals.head.succ shouldBe empty
   }
 
   it should "work in front of a loop in context" in {
-    val result = proveBy("[y:=2;][x:=1;][{x:=x+1;}*]x>0".asFormula, assignb(1, 1::Nil))
+    val result = proveBy(Sequent(Nil, IndexedSeq("x=2".asFormula), IndexedSeq("[y:=2;][x:=1;][{x:=x+1;}*]x>0".asFormula)), assignb(1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0=2".asFormula
+    result.subgoals.head.succ should contain only "[y:=2;]\\forall x (x=1 -> [{x:=x+1;}*]x>0)".asFormula
+  }
+
+  it should "work in front of a loop in context that binds x" in {
+    val result = proveBy("[x:=3;][y:=2;][x:=1;][{x:=x+1;}*]x>0".asFormula, assignb(1, 1::1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "[y:=2;]\\forall x_0 (x_0=1 -> [{x_0:=x_0+1;}*]x_0>0)".asFormula
+    result.subgoals.head.succ should contain only "[x:=3;][y:=2;]\\forall x (x=1 -> [{x:=x+1;}*]x>0)".asFormula
   }
 
   it should "work in front of an ODE, even if it is not top-level" in {
     val result = proveBy("[x:=1;][t:=0;{x'=1}]x>0".asFormula, assignb(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x_0=1".asFormula
-    result.subgoals.head.succ should contain only "[t:=0;{x_0'=1}]x_0>0".asFormula
+    result.subgoals.head.ante should contain only "x=1".asFormula
+    result.subgoals.head.succ should contain only "[t:=0;{x'=1}]x>0".asFormula
   }
 
   it should "work in front of an ODE system, even if it is not top-level" in {
     val result = proveBy("[x:=1;][t:=0;{x'=1,y'=2}]x>0".asFormula, assignb(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x_0=1".asFormula
-    result.subgoals.head.succ should contain only "[t:=0;{x_0'=1,y'=2}]x_0>0".asFormula
+    result.subgoals.head.ante should contain only "x=1".asFormula
+    result.subgoals.head.succ should contain only "[t:=0;{x'=1,y'=2}]x>0".asFormula
   }
 
   it should "work in front of an ODE, even if it is not in the next box" in {
     val result = proveBy("[x:=1;][t:=0;][t:=1;{x'=1}]x>0".asFormula, assignb(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x_0=1".asFormula
-    result.subgoals.head.succ should contain only "[t:=0;][t:=1;{x_0'=1}]x_0>0".asFormula
+    result.subgoals.head.ante should contain only "x=1".asFormula
+    result.subgoals.head.succ should contain only "[t:=0;][t:=1;{x'=1}]x>0".asFormula
   }
 
   it should "work in front of an ODE, even if it is somewhere in propositional context" in {
     val result = proveBy("[x:=1;](y>2 -> [{x'=1}]x>0)".asFormula, assignb(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x_0=1".asFormula
-    result.subgoals.head.succ should contain only "y>2 -> [{x_0'=1}]x_0>0".asFormula
+    result.subgoals.head.ante should contain only "x=1".asFormula
+    result.subgoals.head.succ should contain only "y>2 -> [{x'=1}]x>0".asFormula
   }
 
   it should "not rename assignment lhs in may-bound" in {
     val result = proveBy("[x:=z;][y:=y_0;{y:=y+1; ++ x:=x-1;}]x<=y".asFormula, assignb(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x_0=z".asFormula
-    result.subgoals.head.succ should contain only "[y:=y_0;{y:=y+1; ++ x_0:=x_0-1;}]x_0<=y".asFormula
+    result.subgoals.head.ante should contain only "x=z".asFormula
+    result.subgoals.head.succ should contain only "[y:=y_0;{y:=y+1; ++ x:=x-1;}]x<=y".asFormula
   }
 
   it should "not rename must-bound x" in {
