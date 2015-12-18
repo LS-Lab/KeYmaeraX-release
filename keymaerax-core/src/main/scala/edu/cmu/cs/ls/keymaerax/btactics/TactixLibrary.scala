@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Generator, NoneGenerate, Position, PosInExpr, SuccPosition}
 
 import scala.collection.immutable._
+import scala.language.postfixOps
 
 /**
  * Tactix: Main tactic library with simple interface.
@@ -37,13 +38,24 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val step               : DependentPositionTactic = HilbertCalculus.stepAt
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
-  def normalize               : BelleExpr = (alphaRule | closeId | allR('_) | existsL('_)
-    | close
-    | betaRule
-    | step('L)
-    | step('R))*@TheType()
+  lazy val normalize               : BelleExpr = DoAll(
+    (alphaRule partial)
+      | (closeId
+      | ((allR('_) partial)
+      | ((existsL('_) partial)
+      | (close
+      | ((betaRule partial)
+      | ((step('L) partial)
+      | (((step('R) partial)
+      | skip) partial) partial) partial) partial) partial) partial) partial)
+    partial)*@TheType()
   /** exhaust propositional logic */
-  def prop                    : BelleExpr = (closeId | close | alphaRule | betaRule)*@TheType()
+  lazy val prop                    : BelleExpr = DoAll(
+    (close
+      | ((alphaRule partial)
+      | (((betaRule partial)
+      | skip) partial) partial)
+    ) partial)*@TheType()
   /** master: master tactic that tries hard to prove whatever it could */
   def master                  : BuiltInTactic = ??? //master(new NoneGenerate(), "Mathematica")
   def master(qeTool: String)  : BuiltInTactic = ??? //master(new NoneGenerate(), qeTool)
@@ -189,6 +201,7 @@ object TactixLibrary extends UnifyUSCalculus {
   // differential equations
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
   lazy val DW                 : DependentPositionTactic = useAt("DW differential weakening") //@todo more powerful tactic that removes [{x'}], see ODETactics.diffWeakenT
+  lazy val diffWeaken         : DependentPositionTactic = ???
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
@@ -417,16 +430,30 @@ object TactixLibrary extends UnifyUSCalculus {
   // Special functions
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /** Expands abs using abs(x)=y <-> (x>=0&y=x | x<=0&y=-x), see [[EqualityTactics.abs]] */
-  def abs: DependentPositionTactic = EqualityTactics.abs
+  lazy val abs: DependentPositionTactic = EqualityTactics.abs
   /** Expands min using min(x,y)=z <-> (x<=y&z=x | x>=y&z=y), see [[EqualityTactics.minmax]] */
-  def min: DependentPositionTactic = EqualityTactics.minmax
+  lazy val min: DependentPositionTactic = EqualityTactics.minmax
   /** Expands max using max(x,y)=z <-> (x>=y&z=x | x<=y&z=y), see [[EqualityTactics.minmax]] */
-  def max: DependentPositionTactic = EqualityTactics.minmax
+  lazy val max: DependentPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
-  def alphaRule: BelleExpr = andL('_) | orR('_) | implyR('_) | notL('_) | notR('_)
+  lazy val alphaRule: BelleExpr = (andL('_) partial) |
+    ((orR('_) partial) |
+      ((implyR('_) partial) |
+        ((notL('_) partial) |
+          (notR('_) partial)
+          partial)
+        partial)
+      partial)
   /** Beta rules are propositional rules that split */
-  def betaRule: BelleExpr = andR('_) | orL('_) | implyL('_) | equivL('_) | equivR('_)
+  lazy val betaRule: BelleExpr = (andR('_) partial) |
+    ((orL('_) partial) |
+      ((implyL('_) partial) |
+        ((equivL('_) partial) |
+          (equivR('_) partial)
+          partial)
+        partial)
+      partial)
   /** Real-closed field arithmetic after consolidating sequent into a single universally-quantified formula */
   def RCF: BelleExpr = ??? //PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & FOQuantifierTacticsImpl.universalClosureT(1) & debug("Handing to Mathematica") &
     //ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")

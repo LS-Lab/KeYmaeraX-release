@@ -194,28 +194,31 @@ object DLBySubst {
    * Equational assignment: always introduces universal quantifier, which is skolemized if applied at top-level in the
    * succedent; it remains unhandled in the antecedent and in non-top-level context.
    * @example{{{
-   *    x_0=1 |- [{x_0:=x_0+1;}*]x_0>0
+   *    x=1 |- [{x:=x+1;}*]x>0
    *    ----------------------------------assignEquational(1)
-   *          |- [x:=1;][{x:=x+1;}*]x>0
+   *        |- [x:=1;][{x:=x+1;}*]x>0
    * }}}
    * @example{{{
-   *    \\forall x_0 (x_0=1 -> [{x_0:=x_0+1;}*]x_0>0) |-
-   *    -------------------------------------------------assignEquational(-1)
-   *                           [x:=1;][{x:=x+1;}*]x>0 |-
+   *    \\forall x (x=1 -> [{x:=x+1;}*]x>0) |-
+   *    ---------------------------------------assignEquational(-1)
+   *                 [x:=1;][{x:=x+1;}*]x>0 |-
    * }}}
    * @example{{{
-   *    |- [y:=2;]\\forall x_0 (x_0=1 -> x_0=1 -> [{x_0:=x_0+1;}*]x_0>0)
-   *    -----------------------------------------------------------------assignEquational(1, 1::Nil)
-   *    |- [y:=2;][x:=1;][{x:=x+1;}*]x>0
+   *    x_0=2 |- [y:=2;]\\forall x (x=1 -> [{x:=x+1;}*]x>0)
+   *    ----------------------------------------------------assignEquational(1, 1::Nil)
+   *    x=2   |- [y:=2;][x:=1;][{x:=x+1;}*]x>0
    * }}}
    */
   lazy val assignEquational: DependentPositionTactic = new DependentPositionTactic("[:=] assign equality") {
     override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(Box(Assign(x, _), _)) =>
-          ProofRuleTactics.boundRenaming(x, TacticHelper.freshNamedSymbol(x, sequent)) &
-            useAt("[:=] assign")(pos.top) & useAt("[:=] assign equality")(pos) & (
-              if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
+          val y = TacticHelper.freshNamedSymbol(x, sequent)
+          ProofRuleTactics.boundRenaming(x, y) &
+            useAt("[:=] assign equality")(pos) &
+            (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident) &
+            // TODO derived axiom for equality with exists left for ante
+            ProofRuleTactics.uniformRenaming(y, x)
       }
     }
   }
