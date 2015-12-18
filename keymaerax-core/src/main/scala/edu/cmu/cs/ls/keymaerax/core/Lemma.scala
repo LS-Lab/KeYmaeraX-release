@@ -69,17 +69,12 @@ final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[St
 
   /** Produces a sequent block in Lemma file format */
   private def sequentToString(s: Sequent) = {
-    //@todo do not use string rewriting/replacing. And change format around to use an unambiguous delimiter between subgoals. Maybe ;; or something
-    val anteFormulaStrings = s.ante.map(x => KeYmaeraXPrettyPrinter.fullPrinter(x).replace("\n", "").replace("\r", ""))
-    assert(anteFormulaStrings.forall(str => str.lines.length == 1),
-      "Formula.prettyString should produce exactly one line of output, or at least stripping newlines and carriage returns should make it so")
+    val anteFormulaStrings = s.ante.map(x => KeYmaeraXPrettyPrinter.fullPrinter(x))
 
-    val succFormulaStrings = s.succ.map(x => KeYmaeraXPrettyPrinter.fullPrinter(x).replace("\n", "").replace("\r", ""))
-    assert(succFormulaStrings.forall(str => str.lines.length == 1),
-      "Formula.prettyString should produce exactly one line of output, or at least stripping newlines and carriage returns should make it so")
+    val succFormulaStrings = s.succ.map(x => KeYmaeraXPrettyPrinter.fullPrinter(x))
 
-    //@todo check side conditions -- e.g., what if ante or succ have 0 formulas?
-
+    //@note Regarding side-conditions:
+    //If ante or succ contains no formulas, then we just get a newline. In that case the newline is ignored by the parser.
     "Sequent.\n" +
       anteFormulaStrings.map(x => "Formula: " + x).mkString("\n") +
       "\n==>\n" +
