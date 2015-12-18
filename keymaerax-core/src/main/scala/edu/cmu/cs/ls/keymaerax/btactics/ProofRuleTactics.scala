@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{SuccPosition, AntePosition, Position}
@@ -12,6 +13,9 @@ import edu.cmu.cs.ls.keymaerax.tactics.{SuccPosition, AntePosition, Position}
  * @author Nathan Fulton
  */
 object ProofRuleTactics {
+  //@note Rule.LAX_MODE not accessible outside core
+  val LAX_MODE = System.getProperty("LAX", "true")=="true"
+
   /**
    * Throw exception if there is more than one open subgoal on the provable.
    */
@@ -255,10 +259,27 @@ object ProofRuleTactics {
     }
   }
 
-  def boundRenaming(what: Variable, repl: Variable) = new BuiltInTactic("BoundRenaming") {
-    override def result(provable: Provable): Provable = {
+  def boundRenaming(what: Variable, repl: Variable): DependentTactic = new DependentTactic("BoundRenaming") {
+    override def computeExpr(provable: Provable): BelleExpr = {
       requireOneSubgoal(provable)
-      provable(core.BoundRenaming(what, repl), 0)
+      // boundRenaming potentially adds stuttering [repl:=what;]p; look for exact stuttering shape to avoid applying
+      // [:=] assign on pre-existing formulas
+      val anteAssigns: IndexedSeq[BelleExpr] = provable.subgoals.head.ante.zipWithIndex.map { case (p, i) =>
+        ?(TactixLibrary.useAt("[:=] assign")(Fixed(AntePosition(i), Some(Box(Assign(repl, what), URename(what, repl)(p)))))) }
+      val succAssigns: IndexedSeq[BelleExpr] = provable.subgoals.head.succ.zipWithIndex.map { case (p, i) =>
+        ?(TactixLibrary.useAt("[:=] assign")(Fixed(SuccPosition(i), Some(Box(Assign(repl, what), URename(what, repl)(p)))))) }
+
+      // do bound renaming and remove stuttering assignments
+      boundRenamingRule &
+        (if (LAX_MODE) ((anteAssigns :+ Idioms.ident) ++ (succAssigns :+ Idioms.ident)).reduce(_ & _)
+         else Idioms.ident)
+    }
+
+    private lazy val boundRenamingRule: BuiltInTactic = new BuiltInTactic(name) {
+      override def result(provable: Provable): Provable = {
+        requireOneSubgoal(provable)
+        provable(core.BoundRenaming(what, repl), 0)
+      }
     }
   }
 
