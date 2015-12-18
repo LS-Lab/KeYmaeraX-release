@@ -321,7 +321,8 @@ object TactixLibrary extends UnifyUSCalculus {
   // closing
 
   /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
-  lazy val QE                : BelleExpr         = {
+  //@note important to be def, otherwise the qeTool is not fetched every time (interdependence between unit tests)
+  def QE                : BelleExpr         = {
     implicit val qeTool = /*@todo get from someplace else */ edu.cmu.cs.ls.keymaerax.tactics.Tactics.MathematicaScheduler.tool.asInstanceOf[QETool]
     ToolTactics.fullQE
   }
