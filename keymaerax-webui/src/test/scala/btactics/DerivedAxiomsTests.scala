@@ -152,7 +152,7 @@ class DerivedAxiomsTests extends TacticTestBase {
   it should "prove box dual" in {check(boxDualAxiom, boxDualT)}
   it should "prove <:=> assign" in {check(assigndAxiom, assigndT)}
   it should "prove [:=] equational" in {check(assignbEquationalAxiom, assignbEquationalT)}
-  it should "prove [:=] equational exists" in {check(assignbExistsAxiom, assignbEquationalT)}
+//  it should "prove [:=] equational exists" in {check(assignbExistsAxiom, assignbEquationalT)}
   it should "prove [:=] vacuous assign" in {check(vacuousAssignbAxiom, vacuousAssignbT)}
   it should "prove <:=> vacuous assign" in {check(vacuousAssigndAxiom, vacuousAssigndT)}
   it should "prove <':=> differential assign" in {check(assignDAxiom, assignDT)}
