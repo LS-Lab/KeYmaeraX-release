@@ -62,26 +62,16 @@ final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[St
 
   /** A string representation of this lemma that will reparse as this lemma. */
   override def toString: String = {
-    val lemmaName = name match {
-      case Some(n) => n
-      case None    => ""
-    }
-
-    val conclusion = sequentToString(fact.conclusion)
-
-    val subgoalBlocks = fact.subgoals.map(sequentToString).mkString("\n")
-
-    s"""
-      |Lemma "${lemmaName}".
-      |${conclusion}
-      |${subgoalBlocks}
-      |End.
-      |${evidence.mkString("\n\n")}
-    """.stripMargin
+    "Lemma " + name.getOrElse("") + ".\n" +
+     "  " + sequentToString(fact.conclusion) + "\n"
+     "  " + fact.subgoals.map(sequentToString).mkString("\n") + "\n"
+    "End.\n" +
+     evidence.mkString("\n\n") + "\n"
   } ensuring(r => KeYmaeraXExtendedLemmaParser(r)._2.head == fact.conclusion, "Printed lemma should parse to conclusion")
 
   /** Produces a sequent block in Lemma file format */
   private def sequentToString(s: Sequent) = {
+    //@todo do not use string rewriting/replacing. And change format around to use an unambiguous delimiter between subgoals. Maybe ;; or something
     val anteFormulaStrings = s.ante.map(x => KeYmaeraXPrettyPrinter.fullPrinter(x).replace("\n", "").replace("\r", ""))
     assert(anteFormulaStrings.forall(str => str.lines.length == 1),
       "Formula.prettyString should produce exactly one line of output, or at least stripping newlines and carriage returns should make it so")

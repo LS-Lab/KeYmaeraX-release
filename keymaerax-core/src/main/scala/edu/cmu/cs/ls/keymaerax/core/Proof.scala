@@ -254,17 +254,14 @@ object Provable {
     startProof(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(goal)))
 
   /**
-   * Create a new provable for facts provided by external tools.
-   * @param goal the desired conclusion.
-   * @return a Provable without subgoals.
-   * @note soundness-critical magic, only call from RCF/Lemma within core with true facts.
-   */
-  private[core] def toolFact(goal: Sequent): Provable = {
-    Provable(goal, immutable.IndexedSeq())
-  }
-
-  /** @todo For use only for partially proved lemmas! */
-  private[core] def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) = Provable(conclusion, subgoals)
+    * Create a new provable for oracle facts provided by external tools or lemma loading.
+    * @param conclusion the desired conclusion.
+    * @param subgoals the remaining subgoals.
+    * @return a Provable of given conclusion and given subgoals.
+    * @note soundness-critical magic, only call from RCF/Lemma within core with true facts.
+    */
+  private[core] def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
+    Provable(conclusion, subgoals)
 }
 
 /**
@@ -1244,11 +1241,12 @@ object RCF {
     // Quantifier elimination determines (quantifier-free) equivalent of f.
     val (equivalent, evidence) = t.qeEvidence(f)
 
-    // soundness-critical
-    val fact = Provable.toolFact(new Sequent(
+    //@note soundness-critical
+    val fact = Provable.oracle(new Sequent(
       Nil,
       immutable.IndexedSeq(),
-      immutable.IndexedSeq(Equiv(f, equivalent))))
+      immutable.IndexedSeq(Equiv(f, equivalent))),
+      immutable.IndexedSeq())
 
     Lemma(fact, evidence :: Nil)
   }
