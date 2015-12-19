@@ -69,16 +69,12 @@ final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[St
 
   /** Produces a sequent block in Lemma file format */
   private def sequentToString(s: Sequent) = {
-    val anteFormulaStrings = s.ante.map(x => KeYmaeraXPrettyPrinter.fullPrinter(x))
-
-    val succFormulaStrings = s.succ.map(x => KeYmaeraXPrettyPrinter.fullPrinter(x))
-
     //@note Regarding side-conditions:
     //If ante or succ contains no formulas, then we just get a newline. In that case the newline is ignored by the parser.
     "Sequent.\n" +
-      anteFormulaStrings.map(x => "Formula: " + x).mkString("\n") +
+      s.ante.map(x => "Formula: " + KeYmaeraXPrettyPrinter.fullPrinter(x)).mkString("\n") +
       "\n==>\n" +
-      succFormulaStrings.map(x => "Formula: " + x).mkString("\n")
+      s.succ.map(x => "Formula: " + KeYmaeraXPrettyPrinter.fullPrinter(x)).mkString("\n")
   }
 }
 
