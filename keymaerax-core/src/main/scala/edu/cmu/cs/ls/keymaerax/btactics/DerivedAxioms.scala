@@ -756,23 +756,20 @@ object DerivedAxioms {
   lazy val K2 = derivedAxiom("K2",
     Sequent(Nil, IndexedSeq(), IndexedSeq(K2F)),
     cut(/*(9)*/"([a;](q(??)->p(??)&q(??)) -> ([a;]q(??) -> [a;](p(??)&q(??))))  ->  (([a;]p(??) & [a;]q(??)) -> [a;](p(??)&q(??)))".asFormula) <(
-      /* show */ cut(/*(8)*/"([a;]p(??) -> [a;](q(??) -> p(??)&q(??)))  ->  (([a;](q(??)->p(??)&q(??)) -> ([a;]q(??) -> [a;](p(??)&q(??))))  ->  (([a;]p(??) & [a;]q(??)) -> [a;](p(??)&q(??))))".asFormula) <(
-        /* show */ cohide(3) & prop,
-        /* use */ cut(/*(5)*/"[a;]p(??) -> [a;](q(??) -> p(??)&q(??))".asFormula) <(
-          /* show */ cohide(3) & useAt("K modal modus ponens", PosInExpr(1::Nil))(1) & useAt("-> tautology")(1, 1::Nil) & V(1) & close,
-          /* use */ modusPonens(AntePos(1), AntePos(0)) & close
-        )
-      ),
       /* use */ cut(/*(6)*/"[a;](q(??) -> (p(??)&q(??)))  ->  ([a;]q(??) -> [a;](p(??)&q(??)))".asFormula) <(
-        /* show */ cohide(2) & USubstPatternTactic(
-        (SequentType(Sequent(Nil, IndexedSeq(), IndexedSeq("[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula))),
-          (ru: RenUSubst) => ru.getRenamingTactic & ProofRuleTactics.axiomatic("K modal modus ponens", ru.substitution.usubst))::Nil),
-//          uniformSubstT(
-//            SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "q(??)".asFormula) ::
-//              SubstitutionPair(PredOf(Function("q", None, Real, Bool), Anything), "p(??)&q(??)".asFormula) :: Nil,
-//            Map(/*(6)*/"[a;](q(??) -> (p(??)&q(??)))  ->  ([a;]q(??) -> [a;](p(??)&q(??)))".asFormula -> /*K*/"[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula)) &
-//          AxiomTactic.axiomT("K modal modus ponens"),
-        /* use */ modusPonens(AntePos(1), AntePos(0)) & close
+        /* use */ modusPonens(AntePos(1), AntePos(0)) & close,
+        /* show */ cohide(2) &
+        US(USubst(SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "q(??)".asFormula) ::
+                  SubstitutionPair(PredOf(Function("q", None, Real, Bool), Anything), "p(??)&q(??)".asFormula) :: Nil),
+          Sequent(Nil, IndexedSeq(), IndexedSeq("[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula))) &
+        byUS("K modal modus ponens")
+      ),
+      /* show */ cut(/*(8)*/"([a;]p(??) -> [a;](q(??) -> p(??)&q(??)))  ->  (([a;](q(??)->p(??)&q(??)) -> ([a;]q(??) -> [a;](p(??)&q(??))))  ->  (([a;]p(??) & [a;]q(??)) -> [a;](p(??)&q(??))))".asFormula) <(
+        /* use */ cut(/*(5)*/"[a;]p(??) -> [a;](q(??) -> p(??)&q(??))".asFormula) <(
+          /* use */ modusPonens(AntePos(1), AntePos(0)) & close,
+          /* show */ cohide(3) & useAt("K modal modus ponens", PosInExpr(1::Nil))(1) & useAt("-> tautology")(1, 1::Nil) & V(1) & close
+        ),
+        /* show */ cohide(3) & prop
       )
     )
   )
@@ -808,18 +805,16 @@ object DerivedAxioms {
   lazy val boxSplitLeft = derivedAxiom("[] split left",
     Sequent(Nil, IndexedSeq(), IndexedSeq(boxSplitLeftF)),
     cut(/*(2)*/"[a;](p(??)&q(??) -> p(??))".asFormula) <(
-      /* show */ cohide(2) & useAt("PC1")(1, 1::0::Nil) & useAt("-> self")(1, 1::Nil) & V(1) & close,
       /* use */ cut(/*(4)*/"[a;](p(??)&q(??)->p(??)) -> ([a;](p(??)&q(??)) -> [a;]p(??))".asFormula) <(
-        /* show */ cohide(2) & USubstPatternTactic(
-          (SequentType(Sequent(Nil, IndexedSeq(), IndexedSeq("[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula))),
-            (ru: RenUSubst) => ru.getRenamingTactic & ProofRuleTactics.axiomatic("K modal modus ponens", ru.substitution.usubst))::Nil),
-//          uniformSubstT(
-//            SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "p(??)&q(??)".asFormula) ::
-//              SubstitutionPair(PredOf(Function("q", None, Real, Bool), Anything), "p(??)".asFormula) :: Nil,
-//            Map(/*(4)*/"[a;](p(??)&q(??)->p(??)) -> ([a;](p(??)&q(??)) -> [a;]p(??))".asFormula -> /*K*/"[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula)
-//          ) & AxiomTactic.axiomT("K modal modus ponens"),
-        /* use */ modusPonens(AntePosition(0), AntePosition(1)) & close
-      )
+        /* use */ modusPonens(AntePos(0), AntePos(1)) & close,
+        /* show */ cohide(2) &
+          US(USubst(SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "p(??)&q(??)".asFormula) ::
+                    SubstitutionPair(PredOf(Function("q", None, Real, Bool), Anything), "p(??)".asFormula) :: Nil),
+            Sequent(Nil, IndexedSeq(), IndexedSeq("[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula))
+          ) & byUS("K modal modus ponens")
+
+      ),
+      /* show */ cohide(2) & debug("Foo") & useAt("PC1")(1, 1::0::Nil) & debug("Bar") & useAt("-> self")(1, 1::Nil) & debug("Zee") & V(1) & close
     )
   )
 
@@ -871,17 +866,14 @@ object DerivedAxioms {
   lazy val boxSplitRight = derivedAxiom("[] split right",
     Sequent(Nil, IndexedSeq(), IndexedSeq(boxSplitRightF)),
     cut(/*7*/"[a;](p(??)&q(??) -> q(??))".asFormula) <(
-      /* show */ cohide(2) & useAt("PC2")(1, 1::0::Nil) & useAt("-> self")(1, 1::Nil) & V(1) & close,
       /* use */ cut(/*(8)*/"[a;](p(??)&q(??)->q(??)) -> ([a;](p(??)&q(??)) -> [a;]q(??))".asFormula) <(
-        /* show */ cohide(2) & USubstPatternTactic(
-          (SequentType(Sequent(Nil, IndexedSeq(), IndexedSeq("[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula))),
-            (ru: RenUSubst) => ru.getRenamingTactic & ProofRuleTactics.axiomatic("K modal modus ponens", ru.substitution.usubst))::Nil),
-//          uniformSubstT(
-//            SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "p(??)&q(??)".asFormula) :: Nil,
-//            Map(/*(8)*/"[a;](p(??)&q(??)->q(??)) -> ([a;](p(??)&q(??)) -> [a;]q(??))".asFormula -> /*K*/"[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula)
-//          ) & AxiomTactic.axiomT("K modal modus ponens")),
-        /* use */ modusPonens(AntePos(0), AntePos(1)) & close
-      )
+        /* use */ modusPonens(AntePos(0), AntePos(1)) & close,
+        /* show */ cohide(2) &
+          US(USubst(SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "p(??)&q(??)".asFormula) :: Nil),
+            Sequent(Nil, IndexedSeq(), IndexedSeq("[a;](p(??)->q(??)) -> (([a;]p(??)) -> ([a;]q(??)))".asFormula))) &
+          byUS("K modal modus ponens")
+      ),
+      /* show */ cohide(2) & useAt("PC2")(1, 1::0::Nil) & useAt("-> self")(1, 1::Nil) & V(1) & close
     )
   )
   lazy val boxSplitRightT = derivedAxiomT(boxSplitRight)
@@ -1147,11 +1139,10 @@ object DerivedAxioms {
     useAt("<*> iterate")(1, 1::Nil) &
       useAt("<*> iterate")(1, 1::1::1::Nil) &
       cut("<a;>p(??) -> <a;>(p(??) | <a;><{a;}*>p(??))".asFormula) <(
-      /* show */ hideR(1) & implyR('_) & mond & prop,
-      /* use */ prop
+        /* use */ prop,
+        /* show */ hideR(1) & implyR('_) & mond & prop
     )
   )
-
   lazy val loopApproxdT = derivedAxiomT(loopApproxd)
 
 
@@ -1226,10 +1217,8 @@ object DerivedAxioms {
   lazy val allSubstitute = derivedAxiom("all substitute",
     Sequent(Nil, IndexedSeq(), IndexedSeq(allSubstituteF)),
     equivR(SuccPos(0)) <(
-      //@todo check if unifications still fail -> may need to use original implementation
-      //@note unifications fail here -> proved from sequent calculus
       /* equiv left */ allL(Variable("x"), "t()".asTerm)(-1) & implyL(-1) <(cohide(2) & byUS("= reflexive"), close),
-      /* equiv right */ allR(1) & byUS("const formula congruence")
+      /* equiv right */ allR(1) & implyR(1) & eqL2R(-2)(1) & close
     )
   )
   lazy val allSubstituteT = derivedAxiomT(allSubstitute)
@@ -1604,8 +1593,8 @@ object DerivedAxioms {
     equivR(1) <(
       /* equiv left */
       cut("[{c&H(??)}](p(??)->(H(??)->p(??)))".asFormula) <(
-        /* show */ cohide(2) & G & prop,
-        /* use */ useAt("K modal modus ponens", PosInExpr(0::Nil))(-2) & implyL(-2) <(close, close)
+        /* use */ useAt("K modal modus ponens", PosInExpr(0::Nil))(-2) & implyL(-2) <(close, close),
+        /* show */ cohide(2) & G & prop
       ),
       /* equiv right */
       useAt("K modal modus ponens", PosInExpr(0::Nil))(-1) & implyL(-1) <(cohide(2) & byUS("DW"), close)
@@ -1626,7 +1615,7 @@ object DerivedAxioms {
     useAt("!! double negation", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("!& deMorgan")(1, 0::0::Nil) &
       useAt("-> expand", PosInExpr(1::Nil))(1, 0::0::Nil) &
-      useAt("DX differential skip")(1, 0::0::Nil) &
+      useAt("DX differential skip", PosInExpr(1::Nil))(1, 0::0::Nil) &
       useAt("<> dual")(1, 0::Nil) & implyR(1) & close
   )
   lazy val DskipdT = derivedAxiomT(Dskipd)
