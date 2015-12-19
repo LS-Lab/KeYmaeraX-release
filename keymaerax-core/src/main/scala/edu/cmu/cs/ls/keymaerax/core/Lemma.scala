@@ -65,7 +65,8 @@ final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[St
      fact.subgoals.map(sequentToString).mkString("\n") + "\n" +
     "End.\n" +
      evidence.mkString("\n\n") + "\n"
-  } ensuring(r => KeYmaeraXExtendedLemmaParser(r)._2.head == fact.conclusion, "Printed lemma should parse to conclusion")
+    //@note soundness-critical check that reparse succeeds as expected
+  } ensuring(r => Lemma.fromString(r) == this, "Printed lemma should reparse to this original lemma")
 
   /** Produces a sequent block in Lemma file format */
   private def sequentToString(s: Sequent) = {
