@@ -6,7 +6,9 @@ package btactics
 */
 
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{alphaRule, betaRule, normalize, prop}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -52,4 +54,130 @@ class PropositionalTests extends TacticTestBase {
     result.subgoals.head.ante should contain only "a=2".asFormula
     result.subgoals.head.succ should contain only ("x>0 -> y>0".asFormula, "b=3".asFormula)
   }
+
+  private def succImplication(t: BelleExpr) {
+    val result = proveBy("x>1 -> y>1".asFormula, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>1".asFormula
+    result.subgoals.head.succ should contain only "y>1".asFormula
+  }
+
+  private def succDisjunction(t: BelleExpr) {
+    val result = proveBy("x>1 | y>1".asFormula, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only ("x>1".asFormula, "y>1".asFormula)
+  }
+
+  private def succConjunction(t: BelleExpr) {
+    val result = proveBy("x>1 & y>1".asFormula, t)
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x>1".asFormula
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only "y>1".asFormula
+  }
+
+  private def succNegation(t: BelleExpr) {
+    val result = proveBy("!y>1".asFormula, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "y>1".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  private def succEquivalence(t: BelleExpr) {
+    val result = proveBy("x>1 <-> y>1".asFormula, t)
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only "x>1".asFormula
+    result.subgoals.head.succ should contain only "y>1".asFormula
+    result.subgoals.last.ante should contain only "y>1".asFormula
+    result.subgoals.last.succ should contain only "x>1".asFormula
+  }
+
+  private def anteImplication(t: BelleExpr) {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>1 -> y>1".asFormula), IndexedSeq()), t)
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x>1".asFormula
+    result.subgoals.last.ante should contain only "y>1".asFormula
+    result.subgoals.last.succ shouldBe empty
+  }
+
+  private def anteConjunction(t: BelleExpr) {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>1 & y>1".asFormula), IndexedSeq()), t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x>1".asFormula, "y>1".asFormula)
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  private def anteDisjunction(t: BelleExpr) {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>1 | y>1".asFormula), IndexedSeq()), t)
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only "x>1".asFormula
+    result.subgoals.head.succ shouldBe empty
+    result.subgoals.last.ante should contain only "y>1".asFormula
+    result.subgoals.last.succ shouldBe empty
+  }
+
+  private def anteNegation(t: BelleExpr) {
+    val result = proveBy(Sequent(Nil, IndexedSeq("!x>1".asFormula), IndexedSeq()), t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x>1".asFormula
+  }
+
+  "Alpha rule" should "handle implication in succedent" in succImplication(alphaRule)
+  it should "handle disjunction in succedent" in succDisjunction(alphaRule)
+  it should "handle negation in succedent" in succNegation(alphaRule)
+  it should "handle conjunction in antecedent" in anteConjunction(alphaRule)
+  it should "handle negation in antecedent" in anteNegation(alphaRule)
+
+  "Beta rule" should "handle implication in antecedent" in anteImplication(betaRule)
+  it should "handle disjunction in antecedent" in anteDisjunction(betaRule)
+  it should "handle conjunction in succedent" in succConjunction(betaRule)
+  it should "handle equivalence in antecedent" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>1 <-> y>1".asFormula), IndexedSeq()), betaRule)
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only "x>1 & y>1".asFormula
+    result.subgoals.head.succ shouldBe empty
+    result.subgoals.last.ante should contain only "!x>1 & !y>1".asFormula
+    result.subgoals.last.succ shouldBe empty
+  }
+  it should "handle equivalence in succedent" in succEquivalence(betaRule)
+
+  "Prop" should "handle implication in succedent" in succImplication(prop)
+  it should "handle disjunction in succedent" in succDisjunction(prop)
+  it should "handle negation in succedent" in succNegation(prop)
+  it should "handle conjunction in antecedent" in anteConjunction(prop)
+  it should "handle negation in antecedent" in anteNegation(prop)
+  it should "handle implication in antecedent" in anteImplication(prop)
+  it should "handle disjunction in antecedent" in anteDisjunction(prop)
+  it should "handle conjunction in succedent" in succConjunction(prop)
+  it should "handle equivalence in antecedent" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>1 <-> y>1".asFormula), IndexedSeq()), prop)
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only ("x>1".asFormula, "y>1".asFormula)
+    result.subgoals.head.succ shouldBe empty
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only ("x>1".asFormula, "y>1".asFormula)
+  }
+  it should "handle equivalence in succedent" in succEquivalence(prop)
+
+  "Normalize" should "handle implication in succedent" in succImplication(normalize)
+  it should "handle disjunction in succedent" in succDisjunction(normalize)
+  it should "handle negation in succedent" in succNegation(normalize)
+  it should "handle conjunction in antecedent" in anteConjunction(normalize)
+  it should "handle negation in antecedent" in anteNegation(normalize)
+  it should "handle implication in antecedent" in anteImplication(normalize)
+  it should "handle disjunction in antecedent" in anteDisjunction(normalize)
+  it should "handle conjunction in succedent" in succConjunction(normalize)
+  it should "handle equivalence in antecedent" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>1 <-> y>1".asFormula), IndexedSeq()), prop)
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only ("x>1".asFormula, "y>1".asFormula)
+    result.subgoals.head.succ shouldBe empty
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only ("x>1".asFormula, "y>1".asFormula)
+  }
+  it should "handle equivalence in succedent" in succEquivalence(normalize)
 }

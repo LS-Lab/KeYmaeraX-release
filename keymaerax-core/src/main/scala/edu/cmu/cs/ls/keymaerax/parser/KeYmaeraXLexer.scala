@@ -213,6 +213,19 @@ object CP extends Terminal("$$$CP")
 object MFORMULA extends Terminal("$$F")
 
 ///////////
+// Section: Terminal signals for extended lemma files.
+///////////
+object SEQUENT_BEGIN extends Terminal("Sequent.")  {
+  override def regexp = """Sequent\.""".r
+}
+object TURNSTILE extends Terminal("==>") {
+  override def regexp = """==>""".r
+}
+object FORMULA_BEGIN extends Terminal("Formula:") {
+  override def regexp = """Formula:""".r
+}
+
+///////////
 // Section: Terminal signals for tool files.
 ///////////
 object LEMMA_BEGIN extends Terminal("Lemma") {
@@ -401,6 +414,18 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case TOOL_BEGIN.startPattern(_*) => mode match {
         case LemmaFileMode() => consumeTerminalLength(TOOL_BEGIN, loc)
         case _ => throw new Exception("Encountered ``Tool`` in non-lemma lexing mode.")
+      }
+      case SEQUENT_BEGIN.startPattern(_*) => mode match {
+        case LemmaFileMode() => consumeTerminalLength(SEQUENT_BEGIN, loc)
+        case _ => throw new Exception("Encountered ``Sequent`` in a non-lemma file.")
+      }
+      case TURNSTILE.startPattern(_*) => mode match {
+        case LemmaFileMode() => consumeTerminalLength(TURNSTILE, loc)
+        case _ => throw new Exception("Encountered a turnstile symbol ==> in a non-lemma file.")
+      }
+      case FORMULA_BEGIN.startPattern(_*) => mode match {
+        case LemmaFileMode() => consumeTerminalLength(FORMULA_BEGIN, loc)
+        case _ => throw new Exception("Encountered a formula begin symbol (Formula:) in a non-lemma file.")
       }
 
       // File cases

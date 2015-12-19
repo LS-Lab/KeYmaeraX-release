@@ -128,14 +128,16 @@ object DerivedAxioms {
     "[] dual" -> "box dual",
     "K1" -> "K1",
     "K2" -> "K2",
+    "[]~><> propagation" -> "box diamond propagation",
     "[] split" -> "box split",
     "[] split left" -> "box split left",
     "[] split right" -> "box split right",
     "<> split" -> "diamond split",
     "<> split left" -> "diamond split left",
     "<:=> assign" -> "diamond assign",
-    ":= assign dual" -> "assign dial",
+    ":= assign dual" -> "assign dual",
     "[:=] assign equational" -> "box assign equational",
+    "[:=] assign equality exists" -> "box assign equational exists",
     "[:=] assign update" -> "box assign update",
     "[:=] vacuous assign" -> "box vacuous assign",
     "<:=> assign equational" -> "diamond assign equational",
@@ -148,8 +150,9 @@ object DerivedAxioms {
     "<;> compose" -> "diamond compose",
     "<*> iterate" -> "diamond iterate",
     "<*> approx" -> "diamond approx",
-    "[*] approx" -> "diamond approx",
+    "[*] approx" -> "box approx",
     "exists generalize" -> "exists generalize",
+    "all distribute" -> "all distribute",
     "all substitute" -> "all substitute",
     "vacuous exists quantifier" -> "vacuous exists quantifier",
     "V[:*] vacuous assign nondet" -> "V box vacuous assign nondet",
@@ -188,19 +191,31 @@ object DerivedAxioms {
     "' linear" -> "prime linear",
     "' linear right" -> "prime linear right",
     "DG differential pre-ghost" -> "DG differential pre-ghost",
+    "distributive" -> "distributive",
     "= reflexive" -> "equal reflexive",
     "* commute" -> "times commute",
+    "* associative" -> "times associative",
+    "* commutative" -> "times commutative",
+    "* inverse" -> "times inverse",
+    "* closed" -> "times closed",
+    "* identity" -> "times identity",
+    "+ associative" -> "plus associative",
+    "+ commutative" -> "plus commutative",
+    "+ inverse" -> "plus inverse",
+    "+ closed" -> "plus closed",
+    "positivity" -> "positivity",
     "= commute" -> "equal commute",
     "<=" -> "lessEqual expand",
+    "< negate" -> "less negate",
     "= negate" -> "equal negate",
     "!= negate" -> "notEqual negate",
-    "! <" -> "less negate",
-    "! <=" -> "lessEqual negate",
-    "! >" -> "greater negate",
+    "! <" -> "not less",
+    "! <=" -> "not lessEqual",
+    "! >" -> "not greater",
     ">= flip" -> "greaterEqual flip",
     "> flip" -> "greater flip",
     "<" -> "less normalize",
-    ">" -> "greater flip",
+    ">" -> "greater normalize",
     "abs" -> "abs",
     "min" -> "min",
     "max" -> "max",
@@ -215,8 +230,16 @@ object DerivedAxioms {
     "<=- down" -> "interval minus down",
     "<=* down" -> "interval times down",
     "<=1Div down" -> "interval 1divide down",
-    "<=Div down" -> "interval divide down"
-  )
+    "<=Div down" -> "interval divide down",
+    // these are here for unit tests only; but if we implement with renaming scheme, we loose the ability to check for duplicate file names
+    "exists dual dummy" -> "exists dual dummy",
+    "all dual dummy" -> "all dual dummy",
+    "all dual dummy 2" -> "all dual dummy 2",
+    "+id' dummy" -> "plus id prime dummy",
+    "+*' reduce dummy" -> "plus times prime reduce dummy",
+    "+*' expand dummy" -> "plus times prime expand dummy",
+    "^' dummy" -> "power prime dummy"
+  ) ensuring(r => r.values.size == r.values.toSet.size, "No duplicate file names allowed")
 
   /**
    * Looks up information about a derived axiom by name.
@@ -248,6 +271,7 @@ object DerivedAxioms {
     case "<:=> assign" => Some(assigndF, assigndT)
     case ":= assign dual" => Some(assignDualF, assignDualT)
     case "[:=] assign equational" => Some(assignbEquationalF, assignbEquationalT)
+    case "[:=] assign equality exists" => Some(assignbExistsF, assignbExistsT)
     case "[:=] assign update" => Some(assignbUpdateF, assignbUpdateT)
     case "[:=] vacuous assign" => Some(vacuousAssignbF, vacuousAssignbT)
     case "<:=> assign equational" => ??? //Some(assigndEquationalF, assigndEquationalT)
@@ -361,6 +385,7 @@ object DerivedAxioms {
       , "<:=> assign" -> Some(assigndF, assigndT)
       , ":= assign dual" -> Some(assignDualF, assignDualT)
       , "[:=] assign equational" -> Some(assignbEquationalF, assignbEquationalT)
+//      , "[:=] assign equality exists" -> Some(assignbExistsF, assignbExistsT)
       , "[:=] assign update" -> Some(assignbUpdateF, assignbUpdateT)
       , "[:=] vacuous assign" -> Some(vacuousAssignbF, vacuousAssignbT)
       //      , "<:=> assign equational" -> ??? //Some(assigndEquationalF, assigndEquationalT)
@@ -646,12 +671,7 @@ object DerivedAxioms {
   lazy val allDistributeF = "(\\forall x (p(x)->q(x))) -> ((\\forall x p(x))->(\\forall x q(x)))".asFormula
   lazy val allDistributeAxiom = derivedAxiom("all distribute",
     Sequent(Nil, IndexedSeq(), IndexedSeq(allDistributeF)),
-    implyR(1) & implyR(1) &
-      allR(1) &
-      allL(Variable("x",None,Real), Variable("x",Some(0),Real))(-2) &
-      allL(Variable("x",None,Real), Variable("x",Some(0),Real))(-1) &
-      prop
-  )
+    implyR(1) & implyR(1) & allR(1) & allL(-2) & allL(-1) & prop)
   lazy val allDistributeT = derivedAxiomT(allDistributeAxiom)
 
   /**
@@ -695,12 +715,12 @@ object DerivedAxioms {
     useAt("<> dual", PosInExpr(1::Nil))(1, 0::1::Nil) &
       useAt("<> dual", PosInExpr(1::Nil))(1, 1::Nil) &
       cut("[a;]p(??) & [a;]!(p(??)&q(??)) -> [a;]!q(??)".asFormula) <(
+      /* use */ prop,
       /* show */ hideR(1) &
         cut("[a;](p(??) & !(p(??)&q(??)))".asFormula) <(
-          /* show */ implyR(1) & splitb(1) & prop,
-          /* use */ implyR(1) & hideL(-1) & monb & prop
-      ),
-      /* use */ prop
+          /* use */ implyR(1) & hideL(-2) & monb & prop,
+          /* show */ implyR(1) & splitb(1) & prop
+      )
     )
   )
 
@@ -865,6 +885,21 @@ object DerivedAxioms {
     )
   )
   lazy val boxSplitRightT = derivedAxiomT(boxSplitRight)
+
+  /**
+   * {{{Axiom "[:=] assign equality exists".
+   *   [x:=f();]p(??) <-> \exists x (x=f() & p(??))
+   * End.
+   * }}}
+   */
+  lazy val assignbExistsF = "[x:=f();]p(??) <-> \\exists x (x=f() & p(??))".asFormula
+  lazy val assignbExistsAxiom = derivedAxiom("[:=] assign equality exists",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(assignbExistsF)),
+    useAt("[:=] assign equality")(1, 0::Nil) &
+      //@todo UnificationMatch results in substitution clash (ensuring)
+      useAt("all dual", PosInExpr(1::Nil))(1, 0::Nil)
+  )
+  lazy val assignbExistsT = derivedAxiomT(assignbExistsAxiom)
 
   /**
    * {{{Axiom "<:=> assign".

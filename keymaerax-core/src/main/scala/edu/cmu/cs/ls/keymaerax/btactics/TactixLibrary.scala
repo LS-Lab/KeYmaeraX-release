@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Generator, NoneGenerate, Position, PosInExpr, SuccPosition}
 
 import scala.collection.immutable._
+import scala.language.postfixOps
 
 /**
  * Tactix: Main tactic library with simple interface.
@@ -37,13 +38,24 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val step               : DependentPositionTactic = HilbertCalculus.stepAt
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
-  def normalize               : BelleExpr = (alphaRule | closeId | allR('_) | existsL('_)
-    | close
-    | betaRule
-    | step('L)
-    | step('R))*@TheType()
+  lazy val normalize               : BelleExpr = DoAll(
+    (alphaRule partial)
+      | (closeId
+      | ((allR('_) partial)
+      | ((existsL('_) partial)
+      | (close
+      | ((betaRule partial)
+      | ((step('L) partial)
+      | (((step('R) partial)
+      | skip) partial) partial) partial) partial) partial) partial) partial)
+    partial)*@TheType()
   /** exhaust propositional logic */
-  def prop                    : BelleExpr = (closeId | close | alphaRule | betaRule)*@TheType()
+  lazy val prop                    : BelleExpr = DoAll(
+    (close
+      | ((alphaRule partial)
+      | (((betaRule partial)
+      | skip) partial) partial)
+    ) partial)*@TheType()
   /** master: master tactic that tries hard to prove whatever it could */
   def master                  : BuiltInTactic = ??? //master(new NoneGenerate(), "Mathematica")
   def master(qeTool: String)  : BuiltInTactic = ??? //master(new NoneGenerate(), qeTool)
@@ -189,6 +201,7 @@ object TactixLibrary extends UnifyUSCalculus {
   // differential equations
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
   lazy val DW                 : DependentPositionTactic = useAt("DW differential weakening") //@todo more powerful tactic that removes [{x'}], see ODETactics.diffWeakenT
+  lazy val diffWeaken         : DependentPositionTactic = ???
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
@@ -308,8 +321,11 @@ object TactixLibrary extends UnifyUSCalculus {
   // closing
 
   /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
-  lazy val QE                : BelleExpr         = ToolTactics.fullQE(
-    /*@todo seriously?*/ edu.cmu.cs.ls.keymaerax.tactics.Tactics.MathematicaScheduler.tool.asInstanceOf[QETool])
+  //@note important to be def, otherwise the qeTool is not fetched every time (interdependence between unit tests)
+  def QE                : BelleExpr         = {
+    implicit val qeTool = /*@todo get from someplace else */ edu.cmu.cs.ls.keymaerax.tactics.Tactics.MathematicaScheduler.tool.asInstanceOf[QETool]
+    ToolTactics.fullQE
+  }
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : BelleExpr         = closeId | closeT | closeF
@@ -328,23 +344,17 @@ object TactixLibrary extends UnifyUSCalculus {
     }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
-  lazy val closeT            : DependentTactic = new DependentTactic("close true") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
-        val s = provable.subgoals.head
-        require(s.succ.contains(True), "Expects true in succedent,\n\t but succedent " + s.succ + " does not contain true")
-        ProofRuleTactics.closeTrue(new SuccPosition(s.succ.indexOf(True)))
+  lazy val closeT            : DependentTactic = new SingleGoalDependentTactic("close true") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(sequent.succ.contains(True), "Expects true in succedent,\n\t but succedent " + sequent.succ + " does not contain true")
+        ProofRuleTactics.closeTrue(new SuccPosition(sequent.succ.indexOf(True)))
     }
   }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
-  lazy val closeF            : DependentTactic = new DependentTactic("close false") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
-        val s = provable.subgoals.head
-        require(s.ante.contains(False), "Expects false in antecedent,\n\t but antecedent " + s.ante + " does not contain false")
-        ProofRuleTactics.closeFalse(new AntePosition(s.ante.indexOf(False)))
+  lazy val closeF            : DependentTactic = new SingleGoalDependentTactic("close false") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(sequent.ante.contains(False), "Expects false in antecedent,\n\t but antecedent " + sequent.ante + " does not contain false")
+        ProofRuleTactics.closeFalse(new AntePosition(sequent.ante.indexOf(False)))
     }
   }
 
@@ -417,16 +427,30 @@ object TactixLibrary extends UnifyUSCalculus {
   // Special functions
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /** Expands abs using abs(x)=y <-> (x>=0&y=x | x<=0&y=-x), see [[EqualityTactics.abs]] */
-  def abs: DependentPositionTactic = EqualityTactics.abs
+  lazy val abs: DependentPositionTactic = EqualityTactics.abs
   /** Expands min using min(x,y)=z <-> (x<=y&z=x | x>=y&z=y), see [[EqualityTactics.minmax]] */
-  def min: DependentPositionTactic = EqualityTactics.minmax
+  lazy val min: DependentPositionTactic = EqualityTactics.minmax
   /** Expands max using max(x,y)=z <-> (x>=y&z=x | x<=y&z=y), see [[EqualityTactics.minmax]] */
-  def max: DependentPositionTactic = EqualityTactics.minmax
+  lazy val max: DependentPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
-  def alphaRule: BelleExpr = andL('_) | orR('_) | implyR('_) | notL('_) | notR('_)
+  lazy val alphaRule: BelleExpr = (andL('_) partial) |
+    ((orR('_) partial) |
+      ((implyR('_) partial) |
+        ((notL('_) partial) |
+          (notR('_) partial)
+          partial)
+        partial)
+      partial)
   /** Beta rules are propositional rules that split */
-  def betaRule: BelleExpr = andR('_) | orL('_) | implyL('_) | equivL('_) | equivR('_)
+  lazy val betaRule: BelleExpr = (andR('_) partial) |
+    ((orL('_) partial) |
+      ((implyL('_) partial) |
+        ((equivL('_) partial) |
+          (equivR('_) partial)
+          partial)
+        partial)
+      partial)
   /** Real-closed field arithmetic after consolidating sequent into a single universally-quantified formula */
   def RCF: BelleExpr = ??? //PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & FOQuantifierTacticsImpl.universalClosureT(1) & debug("Handing to Mathematica") &
     //ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")

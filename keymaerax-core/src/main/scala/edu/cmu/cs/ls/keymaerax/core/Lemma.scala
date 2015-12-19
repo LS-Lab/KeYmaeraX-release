@@ -8,9 +8,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLemmaParser
-
-import scala.collection.immutable
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXExtendedLemmaParser}
 
 object Lemma {
   /**
@@ -21,12 +19,10 @@ object Lemma {
    */
   def fromString(lemma: String): Lemma = {
     //@note should ensure that string was indeed produced by KeYmaera X
-    val (name, formula, evidence) = KeYmaeraXLemmaParser(lemma)
-    val fact = Provable.toolFact(new Sequent(Nil,
-      immutable.IndexedSeq(),
-      immutable.IndexedSeq(formula)))
+    val (name, sequents, evidence) = KeYmaeraXExtendedLemmaParser(lemma)
+    val fact = Provable.oracle(sequents.head, sequents.tail.toIndexedSeq)
     Lemma(fact, evidence :: Nil, name)
-  } ensuring(r => KeYmaeraXLemmaParser(r.toString) == (r.name, r.fact.conclusion.succ.head, r.evidence.head),
+  } ensuring(r => KeYmaeraXExtendedLemmaParser(r.toString) == (r.name, r.fact.conclusion +: r.fact.subgoals, r.evidence.head),
     "Reparse of printed parse result should be original parse result")
 }
 
@@ -56,23 +52,34 @@ object Lemma {
  * @note Construction is not soundness-critical so constructor is not private, because Provables can only be constructed by prover core.
  */
 final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[String] = None) {
-  insist(fact.isProved, "Only provable facts can be added as lemmas " + fact)
+  //@note Now allowing more general forms of lemmas. @todo check for soundness.
+//  insist(fact.isProved, "Only provable facts can be added as lemmas " + fact)
   //@note could allow more general forms of lemmas.
-  require(fact.conclusion.ante.isEmpty, "Currently only lemmas with empty antecedents are allowed " + fact)
-  require(fact.conclusion.succ.size == 1, "Currently only lemmas with exactly one formula in the succedent are allowed " + fact)
+//  require(fact.conclusion.ante.isEmpty, "Currently only lemmas with empty antecedents are allowed " + fact)
+//  require(fact.conclusion.succ.size == 1, "Currently only lemmas with exactly one formula in the succedent are allowed " + fact)
 
   /** A string representation of this lemma that will reparse as this lemma. */
   override def toString: String = {
-    val lemmaName = name match {
-      case Some(n) => n
-      case None => ""
-    }
-    "Lemma \"" + lemmaName + "\".\n  " +
-      fact.conclusion.succ.head.prettyString +
-      "\nEnd.\n\n" +
-      evidence.mkString("\n\n")
-  } ensuring(r => KeYmaeraXLemmaParser(r)._2==fact.conclusion.succ.head, "Printed lemma should parse to conclusion")
+    "Lemma \"" + name.getOrElse("") + "\".\n" +
+     sequentToString(fact.conclusion) + "\n" +
+     fact.subgoals.map(sequentToString).mkString("\n") + "\n" +
+    "End.\n" +
+     evidence.mkString("\n\n") + "\n"
+  } ensuring(r => KeYmaeraXExtendedLemmaParser(r)._2.head == fact.conclusion, "Printed lemma should parse to conclusion")
 
+  /** Produces a sequent block in Lemma file format */
+  private def sequentToString(s: Sequent) = {
+    val anteFormulaStrings = s.ante.map(x => KeYmaeraXPrettyPrinter.fullPrinter(x))
+
+    val succFormulaStrings = s.succ.map(x => KeYmaeraXPrettyPrinter.fullPrinter(x))
+
+    //@note Regarding side-conditions:
+    //If ante or succ contains no formulas, then we just get a newline. In that case the newline is ignored by the parser.
+    "Sequent.\n" +
+      anteFormulaStrings.map(x => "Formula: " + x).mkString("\n") +
+      "\n==>\n" +
+      succFormulaStrings.map(x => "Formula: " + x).mkString("\n")
+  }
 }
 
 /** "Weak" Correctness evidence for lemmas */
