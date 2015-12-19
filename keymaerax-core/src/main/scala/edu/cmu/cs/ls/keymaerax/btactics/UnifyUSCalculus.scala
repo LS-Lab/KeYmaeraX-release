@@ -257,25 +257,17 @@ trait UnifyUSCalculus {
           //@note this should be similar to byUS(fact) using factTactic to prove fact after instantiation
           US(Sequent(Nil, IndexedSeq(), IndexedSeq(k.asInstanceOf[Formula]))) & factTactic
 
-        case DotFormula if !p.isTopLevel =>
-          equivStep(True, equivR(SuccPosition(0)) <(
-              coHideR(SuccPosition(0)) & factTactic,
-              closeTrue(SuccPosition(0))
-            ))
+        case DotFormula if !p.isTopLevel => equivStep(True, equivR(1) <(coHideR(1) & factTactic, closeTrue(1)))
 
-        case Equiv(DotFormula, other) =>
-          equivStep(other, (if (p.isSucc) commuteEquivR(SuccPosition(0)) else ident) & factTactic)
+        case Equiv(DotFormula, other) => equivStep(other, (if (p.isSucc) commuteEquivR(1) else ident) & factTactic)
 
-        case Equiv(other, DotFormula) =>
-          equivStep(other, (if (p.isAnte) commuteEquivR(SuccPosition(0)) else ident) & factTactic)
+        case Equiv(other, DotFormula) => equivStep(other, (if (p.isAnte) commuteEquivR(1) else ident) & factTactic)
 
-        case Equal(DotTerm, other) => ???
-          //@todo analogous swap of directions for p.isSucc/isAnte as above
-//          equivStep(other, /*@todo useAt("= commute") &*/ factTactic)
+        case Equal(DotTerm, other) =>
+          equivStep(other, (if (p.isSucc) TactixLibrary.useAt("= commute")(1) else ident) & factTactic)
 
         case Equal(other, DotTerm) =>
-          //@todo analogous swap of directions for p.isSucc/isAnte as above
-          equivStep(other, factTactic)
+          equivStep(other, (if (p.isAnte) TactixLibrary.useAt("= commute")(1) else ident) & factTactic)
 
         //@todo not sure if the following two cases really work as intended, but they seem to
         case Imply(other, DotFormula) if p.isSucc && p.isTopLevel =>
@@ -297,7 +289,7 @@ trait UnifyUSCalculus {
             /* show */ coHideR(cutPos) & implyR(SuccPos(0)) &
               propCMon(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
               // gather back to a single implication for axiom-based factTactic to succeed
-              & implyRi()
+              & implyRi
               & factTactic
           )
 
@@ -306,11 +298,11 @@ trait UnifyUSCalculus {
           // same as "case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel)"
           val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
           cutLR(C(subst(other)))(p.top) <(
-            /* use */ ident partial,
+            /* use */ ident,
             /* show */ coHideR(cutPos) & implyR(SuccPos(0)) &
               propCMon(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
               // gather back to a single implication for axiom-based factTactic to succeed
-              & implyRi()
+              & implyRi
               & factTactic
           )
 
@@ -643,7 +635,6 @@ trait UnifyUSCalculus {
     * @note The direction in the conclusion switches for negative polarity C{⎵}
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
     * @see [[CE(Context)]]
-    * @see [[PropositionalTactics.propCMon()]]
     */
   def CMon(C: Context[Formula]): ForwardTactic = impl => {
     import StaticSemantics.symbols
