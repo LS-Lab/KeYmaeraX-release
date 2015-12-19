@@ -91,6 +91,7 @@ class DerivedAxiomsTests extends TacticTestBase {
   it should "prove <;> compose" in {check(composedAxiom)}
   it should "prove <*> iterate" in {check(iteratedAxiom)}
   it should "prove <*> approx" in {check(loopApproxd)}
+  it should "prove [*] approx" in {check(loopApproxb)}
   it should "prove exists generalize" in {check(existsGeneralize)}
   it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
@@ -142,6 +143,16 @@ class DerivedAxiomsTests extends TacticTestBase {
   it should "prove abs" in {check(absDef)}
   it should "prove min" in {check(minDef)}
   it should "prove max" in {check(maxDef)}
+  it should "prove +<= up" in {check(intervalUpPlus)}
+  it should "prove -<= up" in {check(intervalUpMinus)}
+  ignore should "prove *<= up" in {check(intervalUpTimes)} //@todo QE fails???
+  it should "prove 1Div<= up" in {check(intervalUp1Divide)}
+  it should "prove Div<= up" in {check(intervalUpDivide)}
+  it should "prove <=+ down" in {check(intervalDownPlus)}
+  it should "prove <=- down" in {check(intervalDownMinus)}
+  ignore should "prove <=* down" in {check(intervalDownTimes)} //@todo QE fails???
+  it should "prove <=1Div down" in {check(intervalDown1Divide)}
+  it should "prove <=Div down" in {check(intervalDownDivide)}
 
   "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveAxiom, equivReflexiveT)}
   it should "prove !!" in {check(doubleNegationAxiom, doubleNegationT)}

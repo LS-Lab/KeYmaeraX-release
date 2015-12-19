@@ -457,12 +457,12 @@ object DerivedAxioms {
       , "<'> stuck" -> Some(odeStuckF, odeStuckT)
       , "+<= up" -> Some(intervalUpPlusF, intervalUpPlusT)
       , "-<= up" -> Some(intervalUpMinusF, intervalUpMinusT)
-      , "*<= up" -> Some(intervalUpTimesF, intervalUpTimesT)
+      //, "*<= up" -> Some(intervalUpTimesF, intervalUpTimesT)
       , "1Div<= up" -> Some(intervalUp1DivideF, intervalUp1DivideT)
       , "Div<= up" -> Some(intervalUpDivideF, intervalUpDivideT)
       , "<=+ down" -> Some(intervalDownPlusF, intervalDownPlusT)
       , "<=- down" -> Some(intervalDownMinusF, intervalDownMinusT)
-      , "<=* down" -> Some(intervalDownTimesF, intervalDownTimesT)
+      //, "<=* down" -> Some(intervalDownTimesF, intervalDownTimesT)
       , "<=1Div down" -> Some(intervalDown1DivideF, intervalDown1DivideT)
       , "<=Div down" -> Some(intervalDownDivideF, intervalDownDivideT)
     ) ensuring(r => r.forall(kv => derivedAxiomInfo(kv._1)==kv._2), "same contents as derivedAxiomInfo()")
@@ -1159,8 +1159,9 @@ object DerivedAxioms {
     useAt("[*] iterate")(1, 0::Nil) &
       useAt("[*] iterate")(1, 0::1::1::Nil) &
       cut("[a;](p(??) & [a;][{a;}*]p(??)) -> [a;]p(??)".asFormula) <(
-      /* show */ hideR(1) & implyR('_) & monb & prop,
-      /* use */ prop
+        /* use */ prop,
+        /* show */ hideR(1) & implyR('_) & monb & prop
+
     )
   )
   lazy val loopApproxbT = derivedAxiomT(loopApproxb)
