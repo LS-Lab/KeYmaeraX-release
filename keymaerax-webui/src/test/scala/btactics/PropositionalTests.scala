@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{alphaRule, betaRule, normalize, prop}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 
 import scala.collection.immutable._
@@ -180,4 +181,97 @@ class PropositionalTests extends TacticTestBase {
     result.subgoals.last.succ should contain only ("x>1".asFormula, "y>1".asFormula)
   }
   it should "handle equivalence in succedent" in succEquivalence(normalize)
+
+  "Propositional CMon" should "unpeel single negation" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("!x>0".asFormula), IndexedSeq("!y>0".asFormula)),
+      propCMon(PosInExpr(0::Nil)))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "y>0".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+  }
+
+  it should "unpeel single conjunction" in {
+    {
+      val result = proveBy(Sequent(Nil, IndexedSeq("y>0 & x>0".asFormula), IndexedSeq("z>0 & x>0".asFormula)),
+        propCMon(PosInExpr(0 :: Nil)))
+      result.subgoals should have size 1
+      result.subgoals.head.ante should contain only "y>0".asFormula
+      result.subgoals.head.succ should contain only "z>0".asFormula
+    }
+    {
+      val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & y>0".asFormula), IndexedSeq("x>0 & z>0".asFormula)),
+        propCMon(PosInExpr(1 :: Nil)))
+      result.subgoals should have size 1
+      result.subgoals.head.ante should contain only "y>0".asFormula
+      result.subgoals.head.succ should contain only "z>0".asFormula
+    }
+  }
+
+  it should "unpeel single disjunction" in {
+    {
+      val result = proveBy(Sequent(Nil, IndexedSeq("y>0 | x>0".asFormula), IndexedSeq("z>0 | x>0".asFormula)),
+        propCMon(PosInExpr(0 :: Nil)))
+      result.subgoals should have size 1
+      result.subgoals.head.ante should contain only "y>0".asFormula
+      result.subgoals.head.succ should contain only "z>0".asFormula
+    }
+    {
+      val result = proveBy(Sequent(Nil, IndexedSeq("x>0 | y>0".asFormula), IndexedSeq("x>0 | z>0".asFormula)),
+        propCMon(PosInExpr(1 :: Nil)))
+      result.subgoals should have size 1
+      result.subgoals.head.ante should contain only "y>0".asFormula
+      result.subgoals.head.succ should contain only "z>0".asFormula
+    }
+  }
+
+  it should "unpeel single implication" in {
+    {
+      val result = proveBy(Sequent(Nil, IndexedSeq("y>0 -> x>0".asFormula), IndexedSeq("z>0 -> x>0".asFormula)),
+        propCMon(PosInExpr(0 :: Nil)))
+      result.subgoals should have size 1
+      result.subgoals.head.ante should contain only "z>0".asFormula
+      result.subgoals.head.succ should contain only "y>0".asFormula
+    }
+    {
+      val result = proveBy(Sequent(Nil, IndexedSeq("x>0 -> y>0".asFormula), IndexedSeq("x>0 -> z>0".asFormula)),
+        propCMon(PosInExpr(1 :: Nil)))
+      result.subgoals should have size 1
+      result.subgoals.head.ante should contain only "y>0".asFormula
+      result.subgoals.head.succ should contain only "z>0".asFormula
+    }
+  }
+
+  it should "unpeel single box" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("[x:=2;]x>1".asFormula), IndexedSeq("[x:=2;]x>0".asFormula)),
+      propCMon(PosInExpr(1 :: Nil)))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>1".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+  }
+
+  it should "unpeel single universal quantifier" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("\\forall x x>1".asFormula), IndexedSeq("\\forall x x>0".asFormula)),
+      propCMon(PosInExpr(0 :: Nil)))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>1".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+  }
+
+  it should "unpeel single existential quantifier" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("\\exists x x>1".asFormula), IndexedSeq("\\exists x x>0".asFormula)),
+      propCMon(PosInExpr(0 :: Nil)))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>1".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+  }
+
+  it should "unpeel complicated context" in {
+    val result = proveBy(Sequent(Nil,
+      IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>0)".asFormula),
+      IndexedSeq("\\exists x (a=2 -> b>1&!\\forall x x>1)".asFormula)),
+      propCMon(PosInExpr(0::1::1::0::0::Nil)))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>1".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+  }
 }

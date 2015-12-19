@@ -1,9 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{assert, debug}
-import edu.cmu.cs.ls.keymaerax.btactics.DLTactics._
-import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
@@ -37,7 +35,7 @@ object PropositionalTactics {
       val cutUsePos = AntePos(sequent.ante.length)
       cut(Imply(left, right)) <(
         /* use */ implyL(cutUsePos) & DoAll(TactixLibrary.close),
-        /* show */ (assert(right, "")(succPos) & hideR(succPos) & assert(left, "")(antePos) & hideL(antePos)) partial /* This is the result. */)
+        /* show */ (assertE(right, "")(succPos) & hideR(succPos) & assertE(left, "")(antePos) & hideL(antePos)) partial /* This is the result. */)
     }
   }
 
@@ -55,30 +53,23 @@ object PropositionalTactics {
    * @return The tactic.
    */
   def propCMon(at: PosInExpr): DependentTactic = new SingleGoalDependentTactic("Prop. CMon") {
-    //@todo would want to use result symbol of skolemizeT, for now we have to guess it
-    def instWithGuessedSkolem(pos: SeqPos) = new SingleGoalDependentTactic("Instantiate with guessed skolem") {
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent(pos) match {
-        case Forall(v :: Nil, _) if  pos.isAnte => ??? //@todo instantiateT(v, Variable(v.name, v.index match { case None => Some(0) case Some(i) => Some(i + 1) }, v.sort))(pos)
-        case Exists(v :: Nil, _) if !pos.isAnte => ??? //@todo instantiateT(v, Variable(v.name, v.index match { case None => Some(0) case Some(i) => Some(i + 1) }, v.sort))(pos)
-      }
-    }
-
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.ante.length == 1 && sequent.succ.length == 1 &&
-        sequent.ante.head.at(at)._1 == sequent.succ.head.at(at)._1, "")
+        sequent.ante.head.at(at)._1 == sequent.succ.head.at(at)._1, s"Propositional CMon requires single antecedent " +
+        s"and single succedent formula with matching context to $at, but got $sequent")
 
       // we know that we have the same operator in antecedent and succedent with the same lhs -> we know that one
       // will branch and one of these branches will close by identity. on the other branch, we have to hide
-      debug(s"Start unpeeling towards $at") &
       // list all cases explicitly, hide appropriate formulas in order to not blow up branching
-      (((notL(AntePos(0)) & notR(SuccPos(0)) & assert(1, 1)) |
-        (andL(AntePos(0)) & andR(SuccPos(0)) <(close | hideL(AntePos(1)), close | hideL(AntePos(0))) & assert(1, 1)) |
-        (orR(SuccPos(0)) & orL(AntePos(0)) <(close | hideR(SuccPos(1)), close | hideR(SuccPos(0))) & assert(1, 1)) |
-        (implyR(SuccPos(0)) & implyL(AntePos(0)) <(close | hideR(SuccPos(0)), close | hideL(AntePos(0))) & assert(1, 1)) |
-        monb | mond |
-        (skolemize(SuccPos(0)) & instWithGuessedSkolem(AntePos(0))) |
-        (skolemize(AntePos(0)) & instWithGuessedSkolem(SuccPos(0)))
-        ) & debug("Unpeeled one layer"))*at.pos.length & debug("Unpeeling finished")
+      (((notL(-1) & notR(1) & assertT(1, 1) partial)
+        | ((andL(-1) & andR(1) <((close | (hideL(-2) partial)) partial, (close | (hideL(-1) partial)) partial) & assertT(1, 1) partial)
+        | ((orR(1) & orL(-1) <((close | (hideR(2) partial)) partial, (close | (hideR(1) partial)) partial) & assertT(1, 1) partial)
+        | ((implyR(1) & implyL(-1) <((close | (hideR(1) partial)) partial, (close | (hideL(-1) partial)) partial) & assertT(1, 1) partial)
+        | ((monb partial)
+        | ((mond partial)
+        | ((allR(1) & allL(-1) partial)
+        | (existsL(-1) & existsR(1) partial)
+        partial) partial) partial) partial) partial) partial) partial) partial)*at.pos.length
     }
   }
 
@@ -97,7 +88,7 @@ object PropositionalTactics {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
       implyL(implication) <(
-        coHide2(p, SuccPos(sequent.succ.length)) & trivialCloser,
+        cohide2(p, SuccPos(sequent.succ.length)) & close,
         Idioms.ident
         )
     }
