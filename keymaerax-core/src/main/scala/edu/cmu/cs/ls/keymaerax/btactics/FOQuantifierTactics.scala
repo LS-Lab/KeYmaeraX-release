@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, ExpressionTraversal, FormulaTools, Position, PosInExpr, SubstitutionHelper}
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 
 import scala.collection.immutable
@@ -21,28 +22,29 @@ object FOQuantifierTactics {
         override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
           case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
             require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity")
-            val pattern = SequentType(Sequent(
-              Nil,
-              immutable.IndexedSeq(),
-              immutable.IndexedSeq("(\\forall x p(x)) -> p(t())".asFormula)))
-            val allInstantiateAxiom = USubstPatternTactic((pattern, (ru:RenUSubst) =>
-              ru.getRenamingTactic & ProofRuleTactics.axiomatic("all instantiate", ru.substitution.usubst))::Nil
-            )
-
             def forall(h: Formula) = if (vars.length > 1) Forall(vars.filter(_ != vToInst(vars)), h) else h
             // cut in p(t) from axiom: \forall x. p(x) -> p(t)
-            val p = forall(SubstitutionHelper.replaceFree(qf)(vToInst(vars), inst(vars)))
+            val x = vToInst(vars)
+            val t = inst(vars)
+            val p = forall(SubstitutionHelper.replaceFree(qf)(x, t))
+
+            val subst = USubst(
+              SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), forall(SubstitutionHelper.replaceFree(qf)(x, DotTerm))) ::
+              SubstitutionPair("t()".asTerm, t) :: Nil)
+            val orig = Sequent(Nil, immutable.IndexedSeq(),
+              immutable.IndexedSeq(s"(\\forall ${x.prettyString} p(${x.prettyString})) -> p(t())".asFormula))
+
             val axiomInstance = if (pos.isAnte) Imply(ctx(f), ctx(p)) else ctx(p)
             if (pos.isAnte) {
               ProofRuleTactics.cut(axiomInstance) <(
-                (modusPonens(pos, new AntePosition(sequent.ante.length)) & hideL(pos.topLevel)) partial,
-                cohide('Rlast) & CMon(pos.inExpr) & allInstantiateAxiom
+                (modusPonens(pos, AntePos(sequent.ante.length)) & hideL(pos.topLevel)) partial,
+                cohide('Rlast) & CMon(pos.inExpr) & US(subst, orig) & byUS("all instantiate")
                 )
             } else {
               ProofRuleTactics.cut(axiomInstance) <(
                 cohide2(new AntePosition(sequent.ante.length), pos.topLevel) &
                   TactixLibrary.by(CMon(ctx)(Provable.startProof(Sequent(Nil, immutable.IndexedSeq(f), immutable.IndexedSeq(p))))) &
-                  implyRi & allInstantiateAxiom,
+                  implyRi & US(subst, orig) & byUS("all instantiate"),
                 hideR(pos.topLevel) partial
                 )
             }
@@ -119,4 +121,80 @@ object FOQuantifierTactics {
         case _ => throw new IllegalArgumentException(s"Position $where is not a term")
       }
   }
+
+  /**
+   * Converse of all instantiate.
+   * @param x The universally quantified variable to introduce.
+   * @param t The term to generalize.
+   * @return The position tactic.
+   * @example{{{\forall z \forall x x^2 >= -z^2
+   *            ------------------------------- universalGenT(z, f())
+   *            \forall x x^2 >= -f()^2
+   * }}}
+   * @example{{{\forall z \forall x x^2 >= -z^2
+   *            ------------------------------- universalGenT(z, y+5)
+   *            \forall x x^2 >= -(y+5)^2
+   * }}}
+   */
+  def universalGen(x: Option[Variable], t: Term): DependentPositionTactic = new DependentPositionTactic("all generalize") {
+    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(pos.isTopLevel, "all generalize only at top-level")
+        val quantified: Variable = x match {
+          case Some(xx) => xx
+          case None => t match {
+            case v: Variable => TacticHelper.freshNamedSymbol(v, sequent)
+            case FuncOf(fn, _) => val fresh = TacticHelper.freshNamedSymbol(fn, sequent); Variable(fresh.name, fresh.index, fresh.sort)
+            case _ => throw new IllegalStateException("Disallowed by applies")
+          }
+        }
+
+        val genFml = Forall(immutable.Seq(quantified), SubstitutionHelper.replaceFree(sequent(pos))(t, quantified))
+        cut(genFml) <(
+          /* use */ allL(quantified, t)('Llast) & closeId,
+          /* show */ hide(pos) partial
+        )
+      }
+    }
+  }
+
+  /**
+   * Computes the universal closure of the formula at the specified position. Uses the provided order of quantifiers.
+   * Reverse alphabetical order for non-mentioned variables (for all variables if order == Nil).
+   * @example{{{
+   *           |- \forall a forall z forall x (x>0 & a=2 & z<5)
+   *         ---------------------------------------------------universalClosure(Variable("a")::Nil)
+   *           |- x>0 & a=2 & z<5
+   * }}}
+   * @example{{{
+   *           |- \forall z forall x forall a (x>0 & a=2 & z<5)
+   *         ---------------------------------------------------universalClosure()
+   *           |- x>0 & a=2 & z<5
+   * }}}
+   * @param order The order of quantifiers.
+   * @return The tactic.
+   */
+  def universalClosure(order: List[NamedSymbol] = Nil): DependentPositionTactic = new DependentPositionTactic("Universal closure") {
+    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        // fetch non-bound variables and parameterless function symbols
+        require(pos.isTopLevel, "Universal closure only at top-level")
+        val varsFns: Set[NamedSymbol] = StaticSemantics.freeVars(sequent(pos)).toSet ++ StaticSemantics.signature(sequent(pos))
+        require(order.toSet.subsetOf(varsFns), "Order of variables must be a subset of the free symbols+signature, but "
+          + (order.toSet -- varsFns) + " is not in the subset")
+        // use specified order in reverse, prepend the rest alphabetically
+        // @note get both: specified order and compatibility with previous sorting, which resulted in
+        //       reverse-alphabetical ordering of quantifiers
+        val sorted: List[Term] = ((varsFns -- order).
+          filter({ case Variable(_, _, _) => true case Function(_, _, Unit, _) => true case _ => false }).
+          // guarantee stable sorting of quantifiers so that Mathematica behavior is predictable - for now: alphabetically
+          toList.sortBy(_.name) ++ order.reverse).
+          map({ case v@Variable(_, _, _) => v case fn@Function(_, _, Unit, _) => FuncOf(fn, Nothing) case _ => throw new IllegalArgumentException("Should have been filtered") })
+
+        if (sorted.isEmpty) skip
+        else sorted.map(t => universalGen(None, t)(pos)).reduce[BelleExpr](_ & _)
+      }
+    }
+  }
+  lazy val universalClosure: DependentPositionTactic = universalClosure()
 }
