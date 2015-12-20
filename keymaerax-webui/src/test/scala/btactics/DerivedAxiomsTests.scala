@@ -147,12 +147,12 @@ class DerivedAxiomsTests extends TacticTestBase {
   it should "prove max" in new DerivedAxiomsMathematicaInitializer {check(maxDef)}
   it should "prove +<= up" in new DerivedAxiomsMathematicaInitializer {check(intervalUpPlus)}
   it should "prove -<= up" in new DerivedAxiomsMathematicaInitializer {check(intervalUpMinus)}
-  ignore should "prove *<= up" in new DerivedAxiomsMathematicaInitializer {check(intervalUpTimes)} //@todo QE fails???
+  it should "prove *<= up" in new DerivedAxiomsMathematicaInitializer {check(intervalUpTimes)}
   it should "prove 1Div<= up" in new DerivedAxiomsMathematicaInitializer {check(intervalUp1Divide)}
   it should "prove Div<= up" in new DerivedAxiomsMathematicaInitializer {check(intervalUpDivide)}
   it should "prove <=+ down" in new DerivedAxiomsMathematicaInitializer {check(intervalDownPlus)}
   it should "prove <=- down" in new DerivedAxiomsMathematicaInitializer {check(intervalDownMinus)}
-  ignore should "prove <=* down" in new DerivedAxiomsMathematicaInitializer {check(intervalDownTimes)} //@todo QE fails???
+  it should "prove <=* down" in new DerivedAxiomsMathematicaInitializer {check(intervalDownTimes)}
   it should "prove <=1Div down" in new DerivedAxiomsMathematicaInitializer {check(intervalDown1Divide)}
   it should "prove <=Div down" in new DerivedAxiomsMathematicaInitializer {check(intervalDownDivide)}
 
