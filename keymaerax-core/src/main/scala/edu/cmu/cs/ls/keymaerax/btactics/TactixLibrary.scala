@@ -6,7 +6,6 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Generator, NoneGenerate, Position, PosInExpr, SuccPosition}
 
 import scala.collection.immutable._
@@ -32,8 +31,6 @@ import scala.language.postfixOps
  * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
  */
 object TactixLibrary extends UnifyUSCalculus {
-  private val parser = KeYmaeraXParser
-
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   lazy val step               : DependentPositionTactic = HilbertCalculus.stepAt
 
@@ -57,9 +54,7 @@ object TactixLibrary extends UnifyUSCalculus {
       | skip) partial) partial)
     ) partial)*@TheType()
   /** master: master tactic that tries hard to prove whatever it could */
-  def master                  : BuiltInTactic = ??? //master(new NoneGenerate(), "Mathematica")
-  def master(qeTool: String)  : BuiltInTactic = ??? //master(new NoneGenerate(), qeTool)
-  def master(gen: Generator[Formula] = new NoneGenerate(), qeTool: String = "Mathematica"): BuiltInTactic = ??? //TacticLibrary.master(gen, true, qeTool)
+  def master(gen: Generator[Formula] = new NoneGenerate())(implicit qeTool: QETool): BuiltInTactic = ??? //TacticLibrary.master(gen, true, qeTool)
 
   /*******************************************************************
     * unification and matching based auto-tactics
@@ -321,11 +316,7 @@ object TactixLibrary extends UnifyUSCalculus {
   // closing
 
   /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
-  //@note important to be def, otherwise the qeTool is not fetched every time (interdependence between unit tests)
-  def QE                : BelleExpr         = {
-    implicit val qeTool = /*@todo get from someplace else */ edu.cmu.cs.ls.keymaerax.tactics.Tactics.MathematicaScheduler.tool.asInstanceOf[QETool]
-    ToolTactics.fullQE
-  }
+  def QE(implicit qeTool: QETool)                : BelleExpr         = ToolTactics.fullQE
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : BelleExpr         = closeId | closeT | closeF
@@ -453,12 +444,11 @@ object TactixLibrary extends UnifyUSCalculus {
         partial)
       partial)
   /** Real-closed field arithmetic after consolidating sequent into a single universally-quantified formula */
-  def RCF: BelleExpr = ??? //PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & FOQuantifierTacticsImpl.universalClosureT(1) & debug("Handing to Mathematica") &
-    //ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+  def RCF(implicit qeTool: QETool): BelleExpr = QE
 
   /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
   //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
-  def lazyQE = (
+  def lazyQE(implicit qeTool: QETool) = (
     ((alphaRule | allR('_) | existsL('_)
       | close
       //@todo eqLeft|eqRight for equality rewriting directionally toward easy
