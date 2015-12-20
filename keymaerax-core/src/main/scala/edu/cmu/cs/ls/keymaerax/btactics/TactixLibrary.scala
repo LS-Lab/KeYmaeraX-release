@@ -373,7 +373,8 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val commuteEquivL      : BuiltInLeftTactic = ProofRuleTactics.commuteEquivL
   /** Commute equivalence on the right [[edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.commuteEquivR]] */
   lazy val commuteEquivR      : BuiltInRightTactic = ProofRuleTactics.commuteEquivR
-  //@todo commuteEqual
+  /** Commute equality */
+  lazy val commuteEqual       : DependentPositionTactic = useAt("= commute")
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
