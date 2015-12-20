@@ -16,10 +16,11 @@ import scala.language.postfixOps
  */
 object ToolTactics {
   /** Performs QE and fails if the goal isn't closed. */
-  def fullQE(implicit qeTool: QETool) = Idioms.NamedTactic(
+  def fullQE(order: List[NamedSymbol] = Nil)(implicit qeTool: QETool): BelleExpr = Idioms.NamedTactic(
     qeTool.getClass.getSimpleName + " QE",
-    toSingleFormula & qeSuccedentHd & DebuggingTactics.assertProved
+    toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & qeSuccedentHd & DebuggingTactics.assertProved
   )
+  def fullQE(implicit qeTool: QETool): BelleExpr = fullQE()
 
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
@@ -40,7 +41,7 @@ object ToolTactics {
    *   (A ^ B) -> (S \/ T \/ U)
    * }}}
    */
-  private lazy val toSingleFormula  = new SingleGoalDependentTactic("toSingleFormula") {
+  private lazy val toSingleFormula: DependentTactic  = new SingleGoalDependentTactic("toSingleFormula") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       val ante = (sequent.ante ++ (True::True::Nil)).reduce(And)
       val succ = (sequent.succ ++ (False::False::Nil)).reduce(Or)

@@ -316,7 +316,8 @@ object TactixLibrary extends UnifyUSCalculus {
   // closing
 
   /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
-  def QE(implicit qeTool: QETool)                : BelleExpr         = ToolTactics.fullQE
+  def QE(order: List[NamedSymbol] = Nil)(implicit qeTool: QETool): BelleExpr = ToolTactics.fullQE(order)
+  def QE(implicit qeTool: QETool): BelleExpr = QE()
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : BelleExpr         = closeId | closeT | closeF
