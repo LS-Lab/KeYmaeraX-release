@@ -113,7 +113,6 @@ object ExposedTacticsLibrary {
   val formulaTactics: Map[String, Formula => BelleExpr] = Map (
     "Cut" -> {case fml => ProofRuleTactics.cut(fml)}
   )
-  /* @TODO Do we have input versions of cut cutL cutR cutLR*/
   /* @TODO US, axiomatic, uniformRenaming, boundRenaming
   *   All of PropositionalTactics.scala */
 }
