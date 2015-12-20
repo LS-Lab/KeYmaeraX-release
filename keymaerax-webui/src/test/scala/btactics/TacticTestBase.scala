@@ -16,15 +16,18 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /**
    * Creates and initializes Mathematica for tests that want to use QE.
    * @example{{{
-   *    "My test" should "prove something with Mathematica" in new MathematicaBuilder {
+   *    "My test" should "prove something with Mathematica" in withMathematica { implicit qeTool =>
    *      // ... your test code here
    *    }
    * }}}
    * */
-  trait MathematicaBuilder {
-    implicit val qeTool = new Mathematica()
+  def withMathematica(testcode: Mathematica => Any) {
+    val qeTool = new Mathematica()
     qeTool.init(DefaultConfiguration.defaultMathematicaConfig)
     qeTool shouldBe 'initialized
+    try {
+      testcode(qeTool)
+    } finally qeTool.shutdown()
   }
 
   /** Test setup */
