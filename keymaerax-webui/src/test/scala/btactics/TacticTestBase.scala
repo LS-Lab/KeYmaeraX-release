@@ -1,6 +1,7 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms
 import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable, Formula, PrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
@@ -14,7 +15,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   val theInterpreter = SequentialInterpreter()
 
   /**
-   * Creates and initializes Mathematica for tests that want to use QE.
+   * Creates and initializes Mathematica for tests that want to use QE. Also necessary for tests that use derived
+   * axioms that are proved by QE.
    * @example{{{
    *    "My test" should "prove something with Mathematica" in withMathematica { implicit qeTool =>
    *      // ... your test code here
@@ -25,6 +27,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     val qeTool = new Mathematica()
     qeTool.init(DefaultConfiguration.defaultMathematicaConfig)
     qeTool shouldBe 'initialized
+    DerivedAxioms.qeTool = qeTool
     try {
       testcode(qeTool)
     } finally qeTool.shutdown()
@@ -33,6 +36,14 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /** Test setup */
   override def beforeEach() = {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+  }
+
+  /* Test teardown */
+  override def afterEach() = {
+    if (DerivedAxioms.qeTool != null) {
+      DerivedAxioms.qeTool match { case m: Mathematica => m.shutdown() }
+      DerivedAxioms.qeTool = null
+    }
   }
 
   /** Proves a formula using the specified tactic. Fails the test when tactic fails. */

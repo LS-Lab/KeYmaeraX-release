@@ -15,22 +15,6 @@ import testHelper.KeYmaeraXTestTags.OptimisticTest
  */
 class DerivedAxiomsTests extends TacticTestBase {
 
-  /** Initializer for those tests where deriving the axioms actually requires Mathematica; keeps non-Mathematica tests fast */
-  trait DerivedAxiomsMathematicaInitializer {
-    val mathematica = new Mathematica()
-    mathematica.init(DefaultConfiguration.defaultMathematicaConfig)
-    mathematica shouldBe 'initialized
-    DerivedAxioms.qeTool = mathematica
-  }
-
-  override def afterEach() = {
-    if (DerivedAxioms.qeTool != null) {
-      DerivedAxioms.qeTool match { case m: Mathematica => m.shutdown() }
-      DerivedAxioms.qeTool = null
-    }
-    super.afterEach()
-  }
-
   private def check(lemma: Lemma): Sequent = {
     println(lemma.name.get + "\n" + lemma.fact.conclusion)
     lemma.fact shouldBe 'proved
@@ -53,7 +37,7 @@ class DerivedAxiomsTests extends TacticTestBase {
     Provable.startProof(lemma.fact.conclusion)(lemma.fact, 0) shouldBe 'proved
   }
 
-  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in new DerivedAxiomsMathematicaInitializer {
+  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { implicit qeTool =>
     LemmaDBFactory.lemmaDB.deleteDatabase() //necessary. Perhaps we should add optional copy-and-recover.
     DerivedAxioms.prepopulateDerivedLemmaDatabase()
   }
@@ -128,33 +112,33 @@ class DerivedAxiomsTests extends TacticTestBase {
   it should "prove < negate" in {check(notGreaterEqual)}
   it should "prove >= flip" in {check(flipGreaterEqual)}
   it should "prove > flip" in {check(flipGreater)}
-  it should "prove + associative" in new DerivedAxiomsMathematicaInitializer {check(plusAssociative)}
-  it should "prove * associative" in new DerivedAxiomsMathematicaInitializer {check(timesAssociative)}
-  it should "prove + commutative" in new DerivedAxiomsMathematicaInitializer {check(plusCommutative)}
-  it should "prove * commutative" in new DerivedAxiomsMathematicaInitializer {check(timesCommutative)}
-  it should "prove distributive" in new DerivedAxiomsMathematicaInitializer {check(distributive)}
-  it should "prove + identity" in new DerivedAxiomsMathematicaInitializer {check(plusIdentity)}
-  it should "prove * identity" in new DerivedAxiomsMathematicaInitializer {check(timesIdentity)}
-  it should "prove + inverse" in new DerivedAxiomsMathematicaInitializer {check(plusInverse)}
-  it should "prove * inverse" in new DerivedAxiomsMathematicaInitializer {check(timesInverse)}
-  it should "prove positivity" in new DerivedAxiomsMathematicaInitializer {check(positivity)}
-  it should "prove + closed" in new DerivedAxiomsMathematicaInitializer {check(plusClosed)}
-  it should "prove * closed" in new DerivedAxiomsMathematicaInitializer {check(timesClosed)}
-  it should "prove <" in new DerivedAxiomsMathematicaInitializer {check(less)}
-  it should "prove >" in new DerivedAxiomsMathematicaInitializer {check(greater)}
-  it should "prove abs" in new DerivedAxiomsMathematicaInitializer {check(absDef)}
-  it should "prove min" in new DerivedAxiomsMathematicaInitializer {check(minDef)}
-  it should "prove max" in new DerivedAxiomsMathematicaInitializer {check(maxDef)}
-  it should "prove +<= up" in new DerivedAxiomsMathematicaInitializer {check(intervalUpPlus)}
-  it should "prove -<= up" in new DerivedAxiomsMathematicaInitializer {check(intervalUpMinus)}
-  it should "prove *<= up" in new DerivedAxiomsMathematicaInitializer {check(intervalUpTimes)}
-  it should "prove 1Div<= up" in new DerivedAxiomsMathematicaInitializer {check(intervalUp1Divide)}
-  it should "prove Div<= up" in new DerivedAxiomsMathematicaInitializer {check(intervalUpDivide)}
-  it should "prove <=+ down" in new DerivedAxiomsMathematicaInitializer {check(intervalDownPlus)}
-  it should "prove <=- down" in new DerivedAxiomsMathematicaInitializer {check(intervalDownMinus)}
-  it should "prove <=* down" in new DerivedAxiomsMathematicaInitializer {check(intervalDownTimes)}
-  it should "prove <=1Div down" in new DerivedAxiomsMathematicaInitializer {check(intervalDown1Divide)}
-  it should "prove <=Div down" in new DerivedAxiomsMathematicaInitializer {check(intervalDownDivide)}
+  it should "prove + associative" in withMathematica { implicit qeTool => check(plusAssociative)}
+  it should "prove * associative" in withMathematica { implicit qeTool => check(timesAssociative)}
+  it should "prove + commutative" in withMathematica { implicit qeTool => check(plusCommutative)}
+  it should "prove * commutative" in withMathematica { implicit qeTool => check(timesCommutative)}
+  it should "prove distributive" in withMathematica { implicit qeTool => check(distributive)}
+  it should "prove + identity" in withMathematica { implicit qeTool => check(plusIdentity)}
+  it should "prove * identity" in withMathematica { implicit qeTool => check(timesIdentity)}
+  it should "prove + inverse" in withMathematica { implicit qeTool => check(plusInverse)}
+  it should "prove * inverse" in withMathematica { implicit qeTool => check(timesInverse)}
+  it should "prove positivity" in withMathematica { implicit qeTool => check(positivity)}
+  it should "prove + closed" in withMathematica { implicit qeTool => check(plusClosed)}
+  it should "prove * closed" in withMathematica { implicit qeTool => check(timesClosed)}
+  it should "prove <" in withMathematica { implicit qeTool => check(less)}
+  it should "prove >" in withMathematica { implicit qeTool => check(greater)}
+  it should "prove abs" in withMathematica { implicit qeTool => check(absDef)}
+  it should "prove min" in withMathematica { implicit qeTool => check(minDef)}
+  it should "prove max" in withMathematica { implicit qeTool => check(maxDef)}
+  it should "prove +<= up" in withMathematica { implicit qeTool => check(intervalUpPlus)}
+  it should "prove -<= up" in withMathematica { implicit qeTool => check(intervalUpMinus)}
+  it should "prove *<= up" in withMathematica { implicit qeTool => check(intervalUpTimes)}
+  it should "prove 1Div<= up" in withMathematica { implicit qeTool => check(intervalUp1Divide)}
+  it should "prove Div<= up" in withMathematica { implicit qeTool => check(intervalUpDivide)}
+  it should "prove <=+ down" in withMathematica { implicit qeTool => check(intervalDownPlus)}
+  it should "prove <=- down" in withMathematica { implicit qeTool => check(intervalDownMinus)}
+  it should "prove <=* down" in withMathematica { implicit qeTool => check(intervalDownTimes)}
+  it should "prove <=1Div down" in withMathematica { implicit qeTool => check(intervalDown1Divide)}
+  it should "prove <=Div down" in withMathematica { implicit qeTool => check(intervalDownDivide)}
 
   "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveAxiom, equivReflexiveT)}
   it should "prove !!" in {check(doubleNegationAxiom, doubleNegationT)}
@@ -173,13 +157,13 @@ class DerivedAxiomsTests extends TacticTestBase {
   it should "prove <;> compose" in {check(composedAxiom, composedT)}
   it should "prove <*> iterate" in {check(iteratedAxiom, iteratedT)}
   it should "prove exists generalize" in {check(existsGeneralize, existsGeneralizeT)}
-  it should "prove = reflexive" in new DerivedAxiomsMathematicaInitializer {check(equalReflex, equalReflexiveT)}
-  it should "prove = commute" in new DerivedAxiomsMathematicaInitializer {check(equalCommute, equalCommuteT)}
-  it should "prove <=" in new DerivedAxiomsMathematicaInitializer {check(lessEqual, lessEqualT)}
-  it should "prove = negate" in new DerivedAxiomsMathematicaInitializer {check(notNotEqual, notNotEqualT)}
-  it should "prove < negate" in new DerivedAxiomsMathematicaInitializer {check(notGreaterEqual, notGreaterEqualT)}
-  it should "prove >= flip" in new DerivedAxiomsMathematicaInitializer {check(flipGreaterEqual, flipGreaterEqualT)}
-  it should "prove > flip" in new DerivedAxiomsMathematicaInitializer {check(flipGreater, flipGreaterT)}
+  it should "prove = reflexive" in withMathematica { implicit qeTool => check(equalReflex, equalReflexiveT)}
+  it should "prove = commute" in withMathematica { implicit qeTool => check(equalCommute, equalCommuteT)}
+  it should "prove <=" in withMathematica { implicit qeTool => check(lessEqual, lessEqualT)}
+  it should "prove = negate" in withMathematica { implicit qeTool => check(notNotEqual, notNotEqualT)}
+  it should "prove < negate" in withMathematica { implicit qeTool => check(notGreaterEqual, notGreaterEqualT)}
+  it should "prove >= flip" in withMathematica { implicit qeTool => check(flipGreaterEqual, flipGreaterEqualT)}
+  it should "prove > flip" in withMathematica { implicit qeTool => check(flipGreater, flipGreaterT)}
   it should "prove all substitute" in {check(allSubstitute, allSubstituteT)}
   it should "prove vacuous exists" in {check(vacuousExistsAxiom, vacuousExistsT)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom, vacuousBoxAssignNondetT)}
@@ -187,7 +171,7 @@ class DerivedAxiomsTests extends TacticTestBase {
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom, forallThenExistsT)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost, DGpreghostT)}
   it should "prove DW differential weakening" in {check(DWeakening, DWeakeningT)}
-  it should "prove abs" in new DerivedAxiomsMathematicaInitializer {check(absDef, absT)}
-  it should "prove min" in new DerivedAxiomsMathematicaInitializer {check(minDef, minT)}
-  it should "prove max" in new DerivedAxiomsMathematicaInitializer {check(maxDef, maxT)}
+  it should "prove abs" in withMathematica { implicit qeTool => check(absDef, absT)}
+  it should "prove min" in withMathematica { implicit qeTool => check(minDef, minT)}
+  it should "prove max" in withMathematica { implicit qeTool => check(maxDef, maxT)}
 }

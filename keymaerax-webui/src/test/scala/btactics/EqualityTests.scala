@@ -42,7 +42,7 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "0*y=0 & 0+3>2 | \\forall y y+0>=0 & \\exists x x>0".asFormula
   }
 
-  it should "rewrite x*y=0 to 0*y=0 using 0=x" in {
+  it should "rewrite x*y=0 to 0*y=0 using 0=x" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("0=x".asFormula), IndexedSeq("x*y=0".asFormula)),
       TactixLibrary.useAt("= commute")(-1) & eqL2R(-1)(1) & TactixLibrary.useAt("= commute")(-1))
     result.subgoals should have size 1
@@ -50,7 +50,7 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "0*y=0".asFormula
   }
 
-  "eqR2L" should "rewrite x*y=0 to 0*y=0 using 0=x" in {
+  "eqR2L" should "rewrite x*y=0 to 0*y=0 using 0=x" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("0=x".asFormula), IndexedSeq("x*y=0".asFormula)), eqR2L(-1)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "0=x".asFormula
@@ -153,21 +153,21 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.succ shouldBe empty
   }
 
-  "Abbrv tactic" should "abbreviate a+b to z" in {
+  "Abbrv tactic" should "abbreviate a+b to z" in withMathematica { implicit qeTool =>
     val result = proveBy("a+b < c".asFormula, abbrv(Variable("z"))(1, 0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "z = a+b".asFormula
     result.subgoals.head.succ should contain only "z < c".asFormula
   }
 
-  it should "abbreviate min(a,b) to z" in {
+  it should "abbreviate min(a,b) to z" in withMathematica { implicit qeTool =>
     val result = proveBy("min(a,b) < c".asFormula, abbrv(Variable("z"))(1, 0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "z = min(a,b)".asFormula
     result.subgoals.head.succ should contain only "z < c".asFormula
   }
 
-  it should "not abbreviate in places where at least one of the arguments is bound" in {
+  it should "not abbreviate in places where at least one of the arguments is bound" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("min(a,b) < c".asFormula), IndexedSeq("[a:=0;]min(a,b) < c".asFormula)),
       abbrv(Variable("z"))(-1, 0::Nil))
     result.subgoals should have size 1
@@ -175,7 +175,7 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[a:=0;]min(a,b) < c".asFormula
   }
 
-  it should "abbreviate min(a,b) to z everywhere (except at bound occurrences)" in {
+  it should "abbreviate min(a,b) to z everywhere (except at bound occurrences)" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("min(a,b) < c".asFormula, "x>y".asFormula, "5 < min(a,b)".asFormula),
       IndexedSeq("min(a,b) + 2 = 7".asFormula, "a<b".asFormula, "[b:=2;]min(a,b) < 9".asFormula)), abbrv(Variable("z"))(-1, 0::Nil))
     result.subgoals should have size 1
@@ -183,7 +183,7 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.succ should contain only ("z+2=7".asFormula, "a<b".asFormula, "[b:=2;]min(a,b)<9".asFormula)
   }
 
-  it should "abbreviate min(a,b) to z everywhere (except at bound occurrences) and pick a name automatically" in {
+  it should "abbreviate min(a,b) to z everywhere (except at bound occurrences) and pick a name automatically" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("min(a,b) < c".asFormula, "x>y".asFormula, "5 < min(a,b)".asFormula),
       IndexedSeq("min(a,b) + 2 = 7".asFormula, "a<b".asFormula, "[b:=2;]min(a,b) < 9".asFormula)), abbrv("min(a,b)".asTerm))
     result.subgoals should have size 1
@@ -191,56 +191,56 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.succ should contain only ("min_0+2=7".asFormula, "a<b".asFormula, "[b:=2;]min(a,b)<9".asFormula)
   }
 
-  it should "abbreviate any argument even if not contained in the sequent and pick a name automatically" in {
+  it should "abbreviate any argument even if not contained in the sequent and pick a name automatically" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>y".asFormula), IndexedSeq("a<b".asFormula)), abbrv("c+d".asTerm))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x_0 = c+d".asFormula, "x>y".asFormula)
     result.subgoals.head.succ should contain only "a<b".asFormula
   }
 
-  "abs" should "expand abs(x) in succedent" in {
+  "abs" should "expand abs(x) in succedent" in withMathematica { implicit qeTool =>
     val result = proveBy("abs(x) >= 5".asFormula, abs(1, 0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x>=0&abs_0=x | x<0&abs_0=-x".asFormula
     result.subgoals.head.succ should contain only "abs_0>=5".asFormula
   }
 
-  it should "expand abs(x) in non-top-level succedent" in {
+  it should "expand abs(x) in non-top-level succedent" in withMathematica { implicit qeTool =>
     val result = proveBy("y=2 | abs(x) >= 5".asFormula, abs(1, 1::0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x>=0&abs_0=x | x<0&abs_0=-x".asFormula
     result.subgoals.head.succ should contain only "y=2 | abs_0>=5".asFormula
   }
 
-  it should "expand abs(x) in antecedent" in {
+  it should "expand abs(x) in antecedent" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("abs(x) >= 5".asFormula), IndexedSeq()), abs(-1, 0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x>=0&abs_0=x | x<0&abs_0=-x".asFormula, "abs_0>=5".asFormula)
     result.subgoals.head.succ shouldBe empty
   }
 
-  "min" should "expand min(x,y) in succedent" in {
+  "min" should "expand min(x,y) in succedent" in withMathematica { implicit qeTool =>
     val result = proveBy("min(x,y) >= 5".asFormula, minmax(1, 0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x<=y&min_0=x | x>y&min_0=y".asFormula
     result.subgoals.head.succ should contain only "min_0>=5".asFormula
   }
 
-  it should "expand min(x,y) in antecedent" in {
+  it should "expand min(x,y) in antecedent" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("min(x,y) >= 5".asFormula), IndexedSeq()), minmax(-1, 0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x<=y&min_0=x | x>y&min_0=y".asFormula, "min_0>=5".asFormula)
     result.subgoals.head.succ shouldBe empty
   }
 
-  "max" should "expand max(x,y) in succedent" in {
+  "max" should "expand max(x,y) in succedent" in withMathematica { implicit qeTool =>
     val result = proveBy("max(x,y) >= 5".asFormula, minmax(1, 0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x>=y&max_0=x | x<y&max_0=y".asFormula
     result.subgoals.head.succ should contain only "max_0>=5".asFormula
   }
 
-  it should "expand max(x,y) in antecedent" in {
+  it should "expand max(x,y) in antecedent" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("max(x,y) >= 5".asFormula), IndexedSeq()), minmax(-1, 0::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x>=y&max_0=x | x<y&max_0=y".asFormula, "max_0>=5".asFormula)
