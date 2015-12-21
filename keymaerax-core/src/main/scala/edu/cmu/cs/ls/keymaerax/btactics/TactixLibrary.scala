@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Generator, NoneGenerate, Position, PosInExpr, SuccPosition}
 
@@ -181,6 +182,23 @@ object TactixLibrary extends UnifyUSCalculus {
   /** abstraction: turns '[a]p' into \\forall BV(a) p */
   lazy val abstractionb       : DependentPositionTactic = DLBySubst.abstractionb
 
+  /** 'position' tactic t with abstraction at the same position afterwards */
+  def withAbstraction(t: AtPosition[_ <: BelleExpr]): DependentPositionTactic = new DependentPositionTactic("with abstraction") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(pos.isTopLevel, "with abstraction only at top-level")
+        sequent(pos) match {
+          case Box(a, p) =>
+            val vars = StaticSemantics.boundVars(a).intersect(StaticSemantics.freeVars(p))
+            require(!vars.isInfinite, "Abstraction only for programs with finite number of bound variables, " +
+              "but bound variables of " + a + " is infinite")
+            t(pos) & abstractionb(pos) & ?(if (pos.isSucc) allR(pos)*vars.toSymbolSet.size else skip)
+          case Diamond(a, p) if pos.isAnte => ???
+        }
+      }
+    }
+  }
+
   /**
    * I: prove a property of a loop by induction with the given loop invariant (hybrid systems)
    * @see [[DLBySubst.I]]
@@ -196,7 +214,7 @@ object TactixLibrary extends UnifyUSCalculus {
   // differential equations
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
   lazy val DW                 : DependentPositionTactic = useAt("DW differential weakening")
-  lazy val diffWeaken         : DependentPositionTactic = ???
+  lazy val diffWeaken         : DependentPositionTactic = withAbstraction(DW)
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))

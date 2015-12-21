@@ -39,6 +39,27 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "y>0".asFormula
   }
 
+  "withAbstraction" should "work on top-level when abstraction produces no quantifiers" in {
+    val result = proveBy("[{x'=2}]x>0".asFormula, withAbstraction(DW)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true->x>0".asFormula
+  }
+
+  it should "work on top-level" in {
+    val result = proveBy("[{x'=2&x>0}]x>0".asFormula, withAbstraction(DW)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x>0->x>0".asFormula
+  }
+
+  it should "instantiate all abstraction-generated quantifiers" in {
+    val result = proveBy("[{x'=2,y'=3&y>x}]y>x".asFormula, withAbstraction(DW)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "y>x->y>x".asFormula
+  }
+
   "assignb" should "[y:=1;]y>0 to 1>0" in {
     val result = proveBy("[y:=1;]y>0".asFormula, assignb(1))
     result.subgoals should have size 1
