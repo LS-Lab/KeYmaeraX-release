@@ -46,7 +46,7 @@ class LocateTests extends TacticTestBase {
   it should "locate the first applicable formula of a specific shape" in {
     val result = proveBy(
       Sequent(Nil, immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula, "b=3 & c=4".asFormula), immutable.IndexedSeq()),
-      TactixLibrary.andL(Find(0, Some("b_=3 & c_=4".asFormula), new AntePosition(0)))
+      TactixLibrary.andL(Find(0, Some("b=3 & c=4".asFormula), new AntePosition(0)))
     )
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("a=2".asFormula, "x>0 & y>0".asFormula, "b=3".asFormula, "c=4".asFormula)
