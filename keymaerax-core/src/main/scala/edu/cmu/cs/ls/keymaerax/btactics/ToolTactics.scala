@@ -16,19 +16,22 @@ import scala.language.postfixOps
  */
 object ToolTactics {
   /** Performs QE and fails if the goal isn't closed. */
-  def fullQE(order: List[NamedSymbol] = Nil)(implicit qeTool: QETool): BelleExpr = Idioms.NamedTactic(
-    qeTool.getClass.getSimpleName + " QE",
-    toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & qeSuccedentHd & DebuggingTactics.assertProved
-  )
+  def fullQE(order: List[NamedSymbol] = Nil)(implicit qeTool: QETool): BelleExpr = {
+    require(qeTool != null, "No QE tool available. Use implicit parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
+    Idioms.NamedTactic(qeTool.getClass.getSimpleName + " QE",
+      toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & qeSuccedentHd(qeTool) & DebuggingTactics.assertProved
+  )}
   def fullQE(implicit qeTool: QETool): BelleExpr = fullQE()
 
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
-  def partialQE(implicit qeTool: QETool) = Idioms.NamedTactic(
-    qeTool.getClass.getSimpleName + " QE",
-    toSingleFormula & qeSuccedentHd
-  )
+  def partialQE(implicit qeTool: QETool) = {
+    require(qeTool != null, "No QE tool available. Use implicit parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
+    Idioms.NamedTactic(qeTool.getClass.getSimpleName + " QE",
+      toSingleFormula & qeSuccedentHd(qeTool)
+    )
+  }
 
   /**
    * Converts a sequent into a single formula.
@@ -55,7 +58,7 @@ object ToolTactics {
   }
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  private def qeSuccedentHd(implicit qeTool : QETool) = new SingleGoalDependentTactic("QE") {
+  private def qeSuccedentHd(qeTool : QETool) = new SingleGoalDependentTactic("QE") {
     override def computeExpr(sequent: Sequent): BelleExpr  = {
       assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
 
