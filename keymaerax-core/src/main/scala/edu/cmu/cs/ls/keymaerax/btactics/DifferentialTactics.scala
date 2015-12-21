@@ -1,9 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Position
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+
+import scala.collection.immutable.IndexedSeq
 
 /**
  * [[DifferentialTactics]] provides tactics for differential equations.
@@ -13,15 +17,41 @@ import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 object DifferentialTactics {
 
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
-    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
-          require(provable.subgoals.size == 1, "Exactly 1 subgoal expected, but has " + provable.subgoals + " subgoals")
-          if (isODESystem(provable.subgoals.head, pos)) {
-            TactixLibrary.useAt("DE differential effect (system)") * getODEDim(provable.subgoals.head, pos)
-          } else {
-            TactixLibrary.useAt("DE differential effect")
-          }
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr =
+        if (isODESystem(sequent, pos)) {
+          DESystemStep(pos)*getODEDim(sequent, pos)
+          //@todo unification fails
+          // TactixLibrary.useAt("DE differential effect (system)")(pos)*getODEDim(provable.subgoals.head, pos)
+        } else {
+          useAt("DE differential effect")(pos)
+        }
+      }
+
+    /** A single step of DE system (@todo replace with useAt when unification for this example works) */
+    private lazy val DESystemStep: DependentPositionTactic = new DependentPositionTactic("DE system step") {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+        override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
+          case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(d@DifferentialSymbol(x), t), c), h), p)) =>
+            val g = Box(
+              ODESystem(DifferentialProduct(c, AtomicODE(d, t)), h),
+              Box(DiffAssign(d, t), p)
+            )
+
+            //construct substitution
+            val aF = FuncOf(Function("f", None, Real, Real), Anything)
+            val aH = PredOf(Function("H", None, Real, Bool), Anything)
+            val aC = DifferentialProgramConst("c")
+            val aP = PredOf(Function("p", None, Real, Bool), Anything)
+
+            val subst = SubstitutionPair(aF, t) :: SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) ::
+              SubstitutionPair(aH, h) :: Nil
+            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(s"[{${d.prettyString}=f(??),c&H(??)}]p(??) <-> [{c,${d.prettyString}=f(??)&H(??)}][${d.prettyString}:=f(??);]p(??)".asFormula))
+
+            cutLR(g)(pos) <(
+              /* use */ skip,
+              /* show */ cohide('Rlast) & equivifyR(1) & commuteEquivR(1) & US(USubst(subst), origin) & byUS("DE differential effect (system)"))
+        }
       }
     }
   }
