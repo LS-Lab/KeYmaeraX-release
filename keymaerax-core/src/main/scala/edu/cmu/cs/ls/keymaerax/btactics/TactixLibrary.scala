@@ -147,13 +147,13 @@ object TactixLibrary extends UnifyUSCalculus {
 
   // quantifiers
   /** all right: Skolemize a universal quantifier in the succedent ([[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemize]]) */
-  lazy val allR               : BuiltInRightTactic = ProofRuleTactics.skolemizeR
+  lazy val allR               : DependentPositionTactic = FOQuantifierTactics.allSkolemize
   /** all left: instantiate a universal quantifier in the antecedent by a concrete instance */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
   def allL(inst: Term)              : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, Some(inst))
   lazy val allL                     : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, None)
   /** exists left: Skolemize an existential quantifier in the antecedent */
-  lazy val existsL            : BuiltInLeftTactic = ProofRuleTactics.skolemizeL
+  lazy val existsL            : DependentPositionTactic = FOQuantifierTactics.existsSkolemize
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   def existsR(inst: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(inst))

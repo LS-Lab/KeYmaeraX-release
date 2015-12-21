@@ -16,6 +16,17 @@ import scala.language.postfixOps
  * [[FOQuantifierTactics]] provides tactics for instantiating quantifiers.
  */
 object FOQuantifierTactics {
+  /** Proves exists by duality from universal base tactic */
+  def existsByDuality(base: DependentPositionTactic, atTopLevel: Boolean = false): DependentPositionTactic =
+      new DependentPositionTactic("existsByDuality") {
+    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+      override def computeExpr(provable: Provable): BelleExpr =
+        useAt("exists dual", PosInExpr(1::Nil))(pos) &
+          (if (atTopLevel) notL(pos) & base('Rlast) & notR('Rlast)
+           else base(pos.first) & useAt("!! double negation")(pos))
+    }
+  }
+
   def allInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
     new DependentPositionTactic("all instantiate") {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -62,13 +73,46 @@ object FOQuantifierTactics {
   }
 
   def existsInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
-    new DependentPositionTactic("exists instantiate") {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-        override def computeExpr(sequent: Sequent): BelleExpr =
-          useAt("exists dual", PosInExpr(1::Nil))(pos) & 
-          allInstantiate(quantified, instance)(pos.first) & useAt("!! double negation")(pos)
+    existsByDuality(allInstantiate(quantified, instance))
+
+
+  /**
+   * Skolemization with bound renaming on demand.
+   * @example{{{
+   *     |- x>0
+   *     -----------------allSkolemize(1)
+   *     |- \forall x x>0
+   * }}}
+   * @example
+   *     x_0>0 |- x>0
+   *     -----------------------allSkolemize(1)
+   *     x>0   |- \forall x x>0
+   */
+  lazy val allSkolemize: DependentPositionTactic = new DependentPositionTactic("all skolemize") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(pos.isSucc, "All skolemize only in succedent")
+        val xs = sequent.sub(pos) match {
+          case Some(Forall(vars, _)) => vars
+          case f => throw new BelleError("All skolemize expects universal quantifier at position " + pos + ", but got " + f)
+        }
+        val namePairs = xs.map(x => (x, TacticHelper.freshNamedSymbol(x, sequent)))
+        val renaming =
+          if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.boundRenaming(np._1, np._2)).reduce[BelleExpr](_ & _)
+          else {assert(namePairs.size == 1); ProofRuleTactics.boundRenaming(namePairs.head._1, namePairs.head._2)}
+        val backrenaming =
+          if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRenaming(np._2, np._1)).reduce[BelleExpr](_ & _)
+          else {assert(namePairs.size == 1); ProofRuleTactics.uniformRenaming(namePairs.head._2, namePairs.head._1)}
+        renaming & ProofRuleTactics.skolemizeR(pos) & backrenaming
       }
     }
+  }
+
+  /**
+   * Skolemizes an existential quantifier in the antecedent.
+   * @see [[allSkolemize]]
+   */
+  lazy val existsSkolemize: DependentPositionTactic = existsByDuality(allSkolemize, atTopLevel=true)
 
   /**
    * Generalizes existential quantifiers, but only at certain positions. All positions have to refer to the same term.

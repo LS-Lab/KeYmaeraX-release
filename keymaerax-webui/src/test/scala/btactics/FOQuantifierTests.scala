@@ -287,4 +287,32 @@ class FOQuantifierTests extends TacticTestBase {
   it should "not be applicable when the order is not a subset of the free variables plus signature" in {
     a [BelleError] should be thrownBy proveBy("a>0 & x>5 & y<2".asFormula, universalClosure(Variable("b")::Nil)(1))
   }
+
+  "all skolemize" should "skolemize simple" in {
+    val result = proveBy("\\forall x x>0".asFormula, allSkolemize(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "x>0".asFormula
+  }
+
+  it should "skolemize with boundrenaming when variable to skolemize is there already" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("\\forall x x>0".asFormula)), allSkolemize(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>0".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+  }
+
+  "exists skolemize" should "skolemize simple" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("\\exists x x>0".asFormula), IndexedSeq()), existsSkolemize(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>0".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "skolemize with boundrenaming when variable to skolemize is there already" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula, "\\exists x x>0".asFormula), IndexedSeq()), existsSkolemize(-2))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x_0>0".asFormula, "x>0".asFormula)
+    result.subgoals.head.succ shouldBe empty
+  }
 }
