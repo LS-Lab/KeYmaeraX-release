@@ -94,7 +94,7 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val hide               : DependentPositionTactic = ProofRuleTactics.hide
   /** Hide/weaken given formula at given position */
   def hide(fml: Formula): DependentPositionTactic = new DependentPositionTactic("hide") {
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = assertE(fml, "hiding")(pos) & ProofRuleTactics.hide(pos)
     }
   }
@@ -195,7 +195,7 @@ object TactixLibrary extends UnifyUSCalculus {
 
   // differential equations
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
-  lazy val DW                 : DependentPositionTactic = useAt("DW differential weakening") //@todo more powerful tactic that removes [{x'}], see ODETactics.diffWeakenT
+  lazy val DW                 : DependentPositionTactic = useAt("DW differential weakening")
   lazy val diffWeaken         : DependentPositionTactic = ???
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),

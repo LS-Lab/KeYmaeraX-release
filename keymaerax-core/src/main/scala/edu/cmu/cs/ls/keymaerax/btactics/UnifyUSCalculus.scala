@@ -195,7 +195,7 @@ trait UnifyUSCalculus {
   def useAt(fact: Formula, key: PosInExpr, factTactic: BelleExpr, inst: Subst=>Subst = us=>us): DependentPositionTactic = new DependentPositionTactic("useAt") {
     private val (keyCtx:Context[_],keyPart) = fact.at(key)
 
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val (ctx,expr) = sequent.at(pos)
         val subst = inst(UnificationMatch(keyPart, expr))
@@ -473,7 +473,7 @@ trait UnifyUSCalculus {
     }
     val (other, key, equivify, tactic) = splitFact
 
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(sequent.sub(pos).contains(key), "In-applicable CE(" + fact + ")\nat " + pos + "\nwhich is " + sequent.sub(pos) + "\nat " + sequent)
         val (ctx, _) = sequent.at(pos)
@@ -510,7 +510,7 @@ trait UnifyUSCalculus {
     val (other, key, equivify, tactic) = splitFact
 
 
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(sequent.sub(pos).contains(C(key)), "In-applicable CE(" + fact + ",\n" + C + ")\nat " + pos + "\nwhich is " + sequent.sub(pos).getOrElse("none") + "\nat " + sequent)
         val (posctx,c) = sequent.at(pos)
@@ -541,7 +541,7 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(Provable)]]
     */
   def cutAt(repl: Expression): DependentPositionTactic = new DependentPositionTactic("cutAt") {
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(sequent.sub(pos).isDefined, "Position " + pos + " not defined in sequent " + sequent)
         val (ctx, _) = sequent.at(pos)
@@ -1186,7 +1186,7 @@ trait UnifyUSCalculus {
   def chase(keys: Expression=>List[String],
             modifier: (String,Position)=>ForwardTactic,
             inst: String=>(Subst=>Subst) = ax=>us=>us): DependentPositionTactic = new DependentPositionTactic("chase") {
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         if (sequent.sub(pos).isEmpty) throw new BelleError("ill-positioned " + pos + " in " + sequent + "\nin " +
           "chase\n(" + sequent + ")")

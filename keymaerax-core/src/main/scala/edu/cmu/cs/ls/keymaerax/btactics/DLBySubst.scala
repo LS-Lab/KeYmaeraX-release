@@ -84,7 +84,7 @@ object DLBySubst {
    * @return the abstraction tactic.
    */
   def abstractionb: DependentPositionTactic = new DependentPositionTactic("Abstraction") {
-    def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(!pos.isAnte, "Abstraction only in succedent")
         sequent.at(pos) match {
@@ -113,7 +113,7 @@ object DLBySubst {
 
   /** Top-level abstraction: basis for abstraction tactic */
   private def topAbstraction: DependentPositionTactic = new DependentPositionTactic("Top-level abstraction") {
-    def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(!pos.isAnte, "Abstraction only in succedent")
         sequent.sub(pos) match {
@@ -182,7 +182,7 @@ object DLBySubst {
    * @see [[assignEquational]]
    */
   lazy val assignb: DependentPositionTactic = new DependentPositionTactic("[:=] assign") {
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         // slightly expensive: try substitution assignment, use equational if it fails
         case Some(Box(Assign(_, _), _)) => (useAt("[:=] assign")(pos) partial) | (assignEquational(pos) partial)
@@ -210,7 +210,7 @@ object DLBySubst {
    * }}}
    */
   lazy val assignEquational: DependentPositionTactic = new DependentPositionTactic("[:=] assign equality") {
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(Box(Assign(x, _), _)) =>
           val y = TacticHelper.freshNamedSymbol(x, sequent)
@@ -247,7 +247,7 @@ object DLBySubst {
    * @todo same for diamonds by the dual of K
    */
   def generalize(c: Formula): DependentPositionTactic = new DependentPositionTactic("generalize") {
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
         case (ctx, Box(a, _)) =>
           cutR(ctx(Box(a, c)))(pos) <(
@@ -282,7 +282,7 @@ object DLBySubst {
    * @todo same for diamonds by the dual of K
    */
   def postCut(C: Formula): DependentPositionTactic = new DependentPositionTactic("postCut") {
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       require(pos.isSucc, "postCut only in succedent")
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
         case (ctx, Box(a, post)) =>
@@ -336,7 +336,7 @@ object DLBySubst {
    * @return The tactic.
    */
   def I(invariant: Formula): DependentPositionTactic = new DependentPositionTactic("I") {
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       require(pos.isTopLevel && pos.isSucc, "I only at top-level in succedent, but got " + pos)
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(b@Box(Loop(a), p)) =>

@@ -18,7 +18,7 @@ import scala.language.postfixOps
 object FOQuantifierTactics {
   def allInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
     new DependentPositionTactic("all instantiate") {
-      override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
           case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
             require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity")
@@ -63,7 +63,7 @@ object FOQuantifierTactics {
 
   def existsInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
     new DependentPositionTactic("exists instantiate") {
-      override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr =
           useAt("exists dual", PosInExpr(1::Nil))(pos) & 
           allInstantiate(quantified, instance)(pos.first) & useAt("!! double negation")(pos)
@@ -87,7 +87,7 @@ object FOQuantifierTactics {
    * @return The tactic.
    */
   def existsGeneralize(x: Variable, where: List[PosInExpr]): DependentPositionTactic = new DependentPositionTactic("exists generalize") {
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(fml: Formula) =>
           require(where.nonEmpty, "Need at least one position to generalize")
@@ -137,7 +137,7 @@ object FOQuantifierTactics {
    * }}}
    */
   def universalGen(x: Option[Variable], t: Term): DependentPositionTactic = new DependentPositionTactic("all generalize") {
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isTopLevel, "all generalize only at top-level")
         val quantified: Variable = x match {
@@ -175,7 +175,7 @@ object FOQuantifierTactics {
    * @return The tactic.
    */
   def universalClosure(order: List[NamedSymbol] = Nil): DependentPositionTactic = new DependentPositionTactic("Universal closure") {
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         // fetch non-bound variables and parameterless function symbols
         require(pos.isTopLevel, "Universal closure only at top-level")

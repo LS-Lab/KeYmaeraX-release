@@ -157,7 +157,7 @@ object ProofRuleTactics {
   }
 
   def hide = new DependentPositionTactic("Hide") {
-    override def apply(pos: Position): DependentTactic = pos match {
+    override def factory(pos: Position): DependentTactic = pos match {
       case p: AntePosition => new DependentTactic(name) {
         override def computeExpr(v: BelleValue): BelleExpr = hideL(p)
       }
@@ -182,7 +182,7 @@ object ProofRuleTactics {
   }
 
   def coHide = new DependentPositionTactic("CoHide") {
-    override def apply(pos: Position): DependentTactic = pos match {
+    override def factory(pos: Position): DependentTactic = pos match {
       case p: AntePosition => new DependentTactic(name) {
         override def computeExpr(v: BelleValue): BelleExpr = coHideL(p)
       }

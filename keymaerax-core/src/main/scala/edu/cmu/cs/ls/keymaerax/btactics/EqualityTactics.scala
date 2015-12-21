@@ -30,7 +30,7 @@ object EqualityTactics {
    */
   def equivRewriting(eqPos: Int): DependentPositionTactic = { require(eqPos < 0, "Antecedent position expected"); equivRewriting(new AntePosition(-eqPos - 1)) }
   def equivRewriting(eqPos: AntePosition): DependentPositionTactic = new DependentPositionTactic("Equivalence Rewriting") {
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
         case BelleProvable(provable) =>
           require(eqPos.isTopLevel, "Equivalence to rewrite must occur in top-level position in antecedent")
@@ -72,7 +72,7 @@ object EqualityTactics {
    * @return The tactic.
    */
   private def exhaustiveEq(name: String): DependentPositionTactic = new DependentPositionTactic(name) {
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
         case BelleProvable(provable) =>
           require(pos.isAnte && pos.isTopLevel, "Equality must be top-level in antecedent")
@@ -125,7 +125,7 @@ object EqualityTactics {
    */
   def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(convertPos(eqPos))
   def eqL2R(eqPos: Position): DependentPositionTactic = new DependentPositionTactic("eqL2R") {
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
         case BelleProvable(provable) =>
           val sequent = provable.subgoals.head
@@ -157,7 +157,7 @@ object EqualityTactics {
    */
   def eqR2L(eqPos: Int): DependentPositionTactic = eqR2L(convertPos(eqPos))
   def eqR2L(eqPos: Position): DependentPositionTactic = new DependentPositionTactic("eqR2L") {
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
         case BelleProvable(provable) =>
           require(provable.subgoals.size == 1, "Exactly 1 subgoal expected, but got " + provable.subgoals.size)
@@ -191,7 +191,7 @@ object EqualityTactics {
    * @return The tactic.
    */
   lazy val exhaustiveEqR2L: DependentPositionTactic = new DependentPositionTactic("Find Right and Replace Right with Left") {
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
         case BelleProvable(provable) =>
           require(provable.subgoals.size == 1, "Exactly 1 subgoal expected, but got " + provable.subgoals.size)
@@ -215,7 +215,7 @@ object EqualityTactics {
    * @return The tactic.
    */
   def abbrv(abbrvV: Variable): DependentPositionTactic = new DependentPositionTactic("abbrv") {
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
         case BelleProvable(provable) =>
           val sequent = provable.subgoals.head
@@ -279,7 +279,7 @@ object EqualityTactics {
    * @return The tactic.
    */
   def abs: DependentPositionTactic = new DependentPositionTactic("abs") {
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(abs@FuncOf(Function(fn, None, Real, Real), _)) if fn == "abs" =>
           val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
@@ -302,7 +302,7 @@ object EqualityTactics {
    * @return The tactic.
    */
   def minmax: DependentPositionTactic = new DependentPositionTactic("min/max") {
-    override def apply(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real), Pair(f, g))) if fn == "min" || fn == "max" =>
           val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)

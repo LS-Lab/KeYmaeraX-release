@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 object DifferentialTactics {
 
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
-    override def apply(pos: Position): DependentTactic = new DependentTactic(name) {
+    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
         case BelleProvable(provable) =>
           require(provable.subgoals.size == 1, "Exactly 1 subgoal expected, but has " + provable.subgoals + " subgoals")
