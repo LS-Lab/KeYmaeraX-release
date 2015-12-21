@@ -7,19 +7,16 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.io.FileOutputStream
 import java.nio.channels.Channels
 import java.security.SecureRandom
-import java.security.spec.KeySpec
-import java.sql.SQLException
+import java.sql.{Blob, SQLException}
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
+import javax.xml.bind.DatatypeConverter
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, BelleExpr}
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Provable, Sequent}
+import _root_.edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 import _root_.edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
-import com.sun.crypto.provider.PBKDF2HmacSHA1Factory
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
-import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
-import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 
 import scala.collection.immutable.Nil
 
@@ -99,25 +96,43 @@ object SQLite {
       })
     }
 
+    private def configWithDefault(config: String, subconfig: String, default: Int): Int = {
+      try {
+        getConfiguration(config).config(subconfig).toInt
+      } catch {case (_: NoSuchElementException) =>
+        default
+      }
+    }
+
+    private def sanitize(s:String): String = {
+      DatatypeConverter.printBase64Binary(s.getBytes)
+    }
+
     private def hashPassword(password: Array[Char], salt: Array[Byte], iterations: Int): String = {
       val spec = new PBEKeySpec(password, salt, iterations, salt.length)
-      val skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA512")
-      skf.generateSecret(spec).getEncoded.toString
+      val skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+      sanitize(new String(skf.generateSecret(spec).getEncoded))
+    }
+
+    private def generateSalt(length: Int): String = {
+      val saltBuf = new Array[Byte] (length)
+      val rng = new SecureRandom()
+      rng.nextBytes(saltBuf)
+      val dirtyString = new String(saltBuf)
+      sanitize(dirtyString)
     }
 
     /* Store passwords as a salted hash. Use CSPRNG to generate salt. Allow configuring number of iterations
      * since we may conceivably want to change it after deployment for performance reasons */
     private def generateKey(password: String): (String, String, Int) = {
-      val iterations = getConfiguration("security").config("passwordHashIterations").toInt
-      val saltLength = getConfiguration("security").config("passwordSaltLength").toInt
-      val salt = new Array[Byte] (saltLength)
-      val rng = new SecureRandom()
-      rng.nextBytes(salt)
-      (hashPassword(password.toCharArray, salt, iterations), salt.toString, iterations)
+      val iterations = configWithDefault("security", "passwordHashIterations", 10000)
+      val saltLength = configWithDefault("security", "passwordSaltLength", 512)
+      val salt = generateSalt(saltLength)
+      (hashPassword(password.toCharArray, salt.getBytes, iterations), salt, iterations)
     }
 
     override def createUser(username: String, password: String): Unit = {
-      val (salt, hash, iterations) = generateKey(password)
+      val (hash, salt, iterations) = generateKey(password)
       session.withTransaction({
         Users.map(u => (u.email.get, u.hash.get, u.salt.get, u.iterations.get))
           .insert((username, hash, salt, iterations))
@@ -196,14 +211,14 @@ object SQLite {
       for(i <- str1.indices) {
         acc |= str1(i) ^ str2(i)
       }
-      acc != 0
+      acc == 0
     }
 
     override def checkPassword(username: String, password: String): Boolean =
       session.withTransaction({
         nSelects = nSelects + 1
         Users.filter(_.email === username).list.exists({case row =>
-          val hash = hashPassword(password.toCharArray, row.salt.get.getBytes(), row.iterations.get)
+          val hash = hashPassword(password.toCharArray, row.salt.get.getBytes, row.iterations.get)
           slowEquals(hash, row.hash.get)
         })
       })
