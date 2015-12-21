@@ -189,10 +189,8 @@ object TactixLibrary extends UnifyUSCalculus {
         require(pos.isTopLevel, "with abstraction only at top-level")
         sequent(pos) match {
           case Box(a, p) =>
-            val vars = StaticSemantics.boundVars(a).intersect(StaticSemantics.freeVars(p))
-            require(!vars.isInfinite, "Abstraction only for programs with finite number of bound variables, " +
-              "but bound variables of " + a + " is infinite")
-            t(pos) & abstractionb(pos) & ?(if (pos.isSucc) allR(pos)*vars.toSymbolSet.size else skip)
+            //@todo * saturate has unexpected behavior(throws exception when no longer applicable)
+            t(pos) & abstractionb(pos) & (if (pos.isSucc) ?(allR(pos))*@TheType() partial else skip)
           case Diamond(a, p) if pos.isAnte => ???
         }
       }
