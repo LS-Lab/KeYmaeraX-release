@@ -104,6 +104,9 @@ object SQLite {
       }
     }
 
+    /* SQLite tragically won't read string values past a NUL byte. The SQLite solution to this is using BLOB instead,
+    * which the Scala driver does not support. To get around this, make sure we only store NUL-free strings, it this
+    * case by base-64 encoding them. */
     private def sanitize(s:String): String = {
       DatatypeConverter.printBase64Binary(s.getBytes)
     }
