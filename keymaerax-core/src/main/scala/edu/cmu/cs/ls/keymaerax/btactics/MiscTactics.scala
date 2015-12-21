@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.{Position, TacticWrapper, Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaerax.tactics.{Position, TacticWrapper, Interpreter, PosInExpr, Tactics}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 
 import scala.language.postfixOps
@@ -141,6 +141,18 @@ object Idioms {
       provable(fact, 0)
     }
   }
+
+  /**
+   * shift(shift, t) does t shifted from position p to shift(p)
+   */
+  def shift(shift: PosInExpr=>PosInExpr, t: DependentPositionTactic): DependentPositionTactic =
+    new DependentPositionTactic("Shift " + t) {
+      override def factory(pos: Position): DependentTactic = t.apply(pos.navigate(shift(pos.inExpr)))
+    }
+  /**
+   * shift(child, t) does t to positions shifted by child
+   */
+  def shift(child: PosInExpr, t: DependentPositionTactic): DependentPositionTactic = shift(p => p.append(child), t)
 }
 
 /**

@@ -221,7 +221,7 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val DE                 : DependentPositionTactic = DifferentialTactics.DE
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
   lazy val DI                 : DependentPositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))
-  lazy val diffInd            : DependentPositionTactic = HilbertCalculus.diffInd
+  def diffInd(implicit qeTool: QETool): DependentPositionTactic = HilbertCalculus.diffInd(qeTool)
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */

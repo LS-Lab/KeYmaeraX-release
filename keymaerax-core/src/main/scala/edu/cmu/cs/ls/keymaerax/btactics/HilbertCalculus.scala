@@ -4,15 +4,15 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-//import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
-
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.shift
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{andR, abstractionb, close, debug, implyR, QE, skip}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Position}
-import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.collection.immutable._
+import scala.language.postfixOps
 
 /**
  * Hilbert Calculus for differential dynamic logic.
@@ -33,7 +33,7 @@ object HilbertCalculus extends UnifyUSCalculus {
   lazy val assignb            : DependentPositionTactic = new DependentPositionTactic("[:=]") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = {
-        if (INTERNAL) useAt("[:=] assign")(pos) | useAt("[:=] assign equational")(pos) | useAt("[:=] assign update")(pos)
+        if (INTERNAL) (useAt("[:=] assign")(pos) partial) | ((useAt("[:=] assign equational")(pos) partial) | (useAt("[:=] assign update")(pos) partial)) partial
         else ??? //TacticLibrary.boxAssignT
       }
     }
@@ -100,43 +100,45 @@ object HilbertCalculus extends UnifyUSCalculus {
     * @see [[diffInd()]] */
   lazy val DI                 : DependentPositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
   /** diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE) */
-  lazy val diffInd            : DependentPositionTactic = ???
-//    new PositionTactic("diffInd") {
-//      override def applies(s: Sequent, p: Position): Boolean = p.isSucc && (s.sub(p) match {
-//        case Some(Box(_: ODESystem, _)) => true
-//        case Some(_) => false
-//        case None => println("ill-positioned " + p + " in " + s + "\nin " + "diffInd(" + p + ")\n(" + s + ")"); return false
-//      })
-//      def apply(p: Position): Tactic = new ConstructionTactic(name) {
-//        override def applicable(node : ProofNode) = applies(node.sequent, p)
-//        override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-//        //@todo Dconstify usually needed for DI
-//          if (p.isTopLevel && p.isSucc)
-//            Some(DI(p) &
-//              (stepAt(p) & stepAt(p)) && (
-//              QE,
-//              //@note derive before DE to keep positions easier
-//              derive(p.append(PosInExpr(1::Nil))) &
-//                DE(p) &
-//                (Dassignb(p.append(PosInExpr(1::Nil))) * (s=>getODEDim(s,p))) &
-//                //@note DW after DE to keep positions easier
-//                ifT(hasODEDomain, DW)(p) &
-//                TacticLibrary.abstractionT(p) & QE
-//              ))
-//        else
-//            Some((DI &
-//              //@note derive before DE to keep positions easier
-//              shift(PosInExpr(1::1::Nil),
-//              shift(PosInExpr(1::Nil), derive) &
-//                DE &
-//                (shift(PosInExpr(1::Nil), Dassignb) * getODEDim) &
-//                //@note DW after DE to keep positions easier
-//                ifT(hasODEDomain, DW) &
-//                TacticLibrary.abstractionT
-//              ))(p)
-//              )
-//      }
-//    }
+  def diffInd(implicit qeTool: QETool): DependentPositionTactic = new DependentPositionTactic("diffInd") {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+        override def computeExpr(sequent: Sequent): BelleExpr = {
+          require(pos.isSucc && (sequent.sub(pos) match {
+            case Some(Box(_: ODESystem, _)) => true
+            case _ => false
+          }), "diffInd only at ODE system in succedent, but got " + sequent.sub(pos))
+          //@todo Dconstify usually needed for DI
+          if (pos.isTopLevel && pos.isSucc)
+            DI(pos) &
+              (implyR(pos) & andR(pos)) <(
+                QE,
+                //@note derive before DE to keep positions easier
+                derive(pos.append(PosInExpr(1::Nil))) &
+                  DE(pos) &
+                  Dassignb(pos.append(PosInExpr(1::Nil)))*getODEDim(sequent,pos) &
+                  //@note DW after DE to keep positions easier
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
+                  abstractionb(pos) & QE
+              )
+          else
+            DI(pos) &
+              //@note derive before DE to keep positions easier
+              shift(PosInExpr(1::1::Nil), new DependentPositionTactic("Shift") {
+                override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+                  override def computeExpr(sequent: Sequent): BelleExpr = {
+                    shift(PosInExpr(1::Nil), derive)(pos) &
+                      DE(pos) &
+                      (shift(PosInExpr(1::Nil), Dassignb)(pos) * getODEDim(sequent, pos)) &
+                      //@note DW after DE to keep positions easier
+                      (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
+                      abstractionb(pos)
+                  }
+                }
+              }
+              )(pos)
+        }
+      }
+    }
 
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
@@ -321,16 +323,9 @@ object HilbertCalculus extends UnifyUSCalculus {
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+x'*y+x*y'>=0
     * @see [[UnifyUSCalculus.chase]]
     */
-  lazy val derive: DependentPositionTactic = ???
-//    new PositionTactic("derive") {
-//      override def applies(s: Sequent, p: Position): Boolean = s.sub(p) match {
-//        case Some(Differential(_)) => true
-//        case Some(DifferentialFormula(_)) => true
-//        case Some(_) => false
-//        case None => println("ill-positioned " + p + " in " + s + "\nin " + "derive(" + p + ")\n(" + s + ")"); return false
-//      }
-//    override def apply(p: Position): Tactic = chase(p)
-//    }
+  lazy val derive: DependentPositionTactic = new DependentPositionTactic("derive") {
+    override def factory(pos: Position): DependentTactic = chase(pos)
+  }
 
 
   /*******************************************************************
