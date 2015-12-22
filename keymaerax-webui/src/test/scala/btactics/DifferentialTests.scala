@@ -1,7 +1,11 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import testHelper.KeYmaeraXTestTags
+
+import scala.collection.immutable.IndexedSeq
 
 /**
  * Tests
@@ -128,5 +132,37 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "[{y'=5, x'=2 & y>2 & x>0}][x':=2;][y':=5;]y>0".asFormula
+  }
+
+  "diffInd" should "auto-prove x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
+      implyR(1) & diffInd(qeTool)(1)
+    ) shouldBe 'proved
+  }
+
+  it should "auto-prove x>=5 -> [{x'=2&x<=10}](5<=x)" in withMathematica { implicit qeTool =>
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=10}](5<=x)".asFormula)),
+      implyR(1) & diffInd(qeTool)(1)
+    ) shouldBe 'proved
+  }
+
+  it should "auto-prove x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8" in withMathematica { implicit qeTool =>
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula)),
+      implyR(1) & diffInd(qeTool)(1)
+    ) shouldBe 'proved
+  }
+
+  it should "prove x>=5 |- [x:=x+1][{x'=2}]x>=5" in withMathematica { implicit qeTool =>
+    proveBy(Sequent(Nil, IndexedSeq("x>=5".asFormula), IndexedSeq("[x:=x+1;][{x'=2}]x>=5".asFormula)),
+      assignb(1) & diffInd(qeTool)(1)
+    ) shouldBe 'proved
+  }
+
+  it should "prove x>=5 |- [x:=x+1][{x'=2}]x>=5 in reverse" in withMathematica { implicit qeTool =>
+    proveBy(Sequent(Nil, IndexedSeq("x>=5".asFormula), IndexedSeq("[x:=x+1;][{x'=2}]x>=5".asFormula)),
+      diffInd(qeTool)(1, 1::Nil) & debug("Foo") &
+        assignb(1) & // handle updates
+        QE
+    ) shouldBe 'proved
   }
 }

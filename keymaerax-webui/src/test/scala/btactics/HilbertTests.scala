@@ -208,30 +208,11 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  it should "auto-prove x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
-      implyR(1) & diffInd(qeTool)(1)
-    ) shouldBe 'proved
-  }
-
-  it should "auto-prove x>=5 -> [{x'=2&x<=10}](5<=x)" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=10}](5<=x)".asFormula)),
-      implyR(1) & diffInd(qeTool)(1)
-    ) shouldBe 'proved
-  }
-
   //  it should "auto-prove x>=5 -> [{x'=2&x<=10}](5<=x&x<=10)" in {
   //    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=10}](5<=x&x<=10)".asFormula)),
   //      implyR(1) & diffCut(1)
   //    ) shouldBe 'proved
   //  }
-
-  it should "auto-prove x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula)),
-      implyR(1) & diffInd(qeTool)(1)
-    ) shouldBe 'proved
-  }
-
 
   ignore should "prove x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=9}](5<=x&x<=10)".asFormula)),
@@ -263,15 +244,6 @@ class HilbertTests extends TacticTestBase {
         step(1) & step(1) &
         useAt("DI differential invariant")(1) & //@todo diffInd(1)
         ((step('L) | step('R))*@TheType()) & abstractionb(1) & master()
-    ) shouldBe 'proved
-  }
-
-  it should "prove x>=5 |- [x:=x+1][{x'=2}]x>=5" in withMathematica { implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq("x>=5".asFormula), IndexedSeq("[x:=x+1;][{x'=2}]x>=5".asFormula)),
-      //@todo need to locate diffInd to after update prefix
-      diffInd(qeTool)(1, 1::Nil) &
-        assignb(1) & // handle updates
-        QE
     ) shouldBe 'proved
   }
 
@@ -358,8 +330,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  //@todo diffInd not yet there
-  ignore should "auto-prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { implicit qeTool =>
+  it should "auto-prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
       implyR(1) &
         chase(3,3)(1) &
@@ -370,8 +341,7 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  //@todo diffInd
-  ignore should "chase [{x'=22}](2*x+x*y>=5)'" taggedAs KeYmaeraXTestTags.CheckinTest in {
+  it should "chase [{x'=22}](2*x+x*y>=5)'" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { implicit qeTool =>
     proveBy("[{x'=22}](2*x+x*y>=5)'".asFormula,
       chase(1, 1 :: Nil)
     ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=22}]2*x'+(x'*y+x*y')>=0".asFormula)))
@@ -383,8 +353,7 @@ class HilbertTests extends TacticTestBase {
     ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=22}]((x>0->x+1>=1) & (x=0->1>=1))".asFormula)))
   }
 
-  //@todo diffInd
-  ignore should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { implicit qeTool =>
+  it should "prove x>=5 -> [x:=x+1;{x'=2}]x>=5" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [x:=x+1;{x'=2}]x>=5".asFormula)),
       implyR(1) & chase(1) &
         //@todo need to locate diffInd to after update prefix

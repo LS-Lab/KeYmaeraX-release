@@ -97,48 +97,8 @@ object HilbertCalculus extends UnifyUSCalculus {
   lazy val DE                 : DependentPositionTactic = DifferentialTactics.DE
   /** DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation.
     * `[x'=f(x)&q(x)]p(x)` reduces to `q(x) -> p(x) & [x'=f(x)]p(x)'`.
-    * @see [[diffInd()]] */
+    * @see [[DifferentialTactics.diffInd()]] */
   lazy val DI                 : DependentPositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
-  /** diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE) */
-  def diffInd(implicit qeTool: QETool): DependentPositionTactic = new DependentPositionTactic("diffInd") {
-      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-        override def computeExpr(sequent: Sequent): BelleExpr = {
-          require(pos.isSucc && (sequent.sub(pos) match {
-            case Some(Box(_: ODESystem, _)) => true
-            case _ => false
-          }), "diffInd only at ODE system in succedent, but got " + sequent.sub(pos))
-          //@todo Dconstify usually needed for DI
-          if (pos.isTopLevel && pos.isSucc)
-            DI(pos) &
-              (implyR(pos) & andR(pos)) <(
-                QE,
-                //@note derive before DE to keep positions easier
-                derive(pos.append(PosInExpr(1::Nil))) &
-                  DE(pos) &
-                  Dassignb(pos.append(PosInExpr(1::Nil)))*getODEDim(sequent,pos) &
-                  //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
-                  abstractionb(pos) & QE
-              )
-          else
-            DI(pos) &
-              //@note derive before DE to keep positions easier
-              shift(PosInExpr(1::1::Nil), new DependentPositionTactic("Shift") {
-                override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-                  override def computeExpr(sequent: Sequent): BelleExpr = {
-                    shift(PosInExpr(1::Nil), derive)(pos) &
-                      DE(pos) &
-                      (shift(PosInExpr(1::Nil), Dassignb)(pos) * getODEDim(sequent, pos)) &
-                      //@note DW after DE to keep positions easier
-                      (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
-                      abstractionb(pos)
-                  }
-                }
-              }
-              )(pos)
-        }
-      }
-    }
 
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
@@ -327,39 +287,4 @@ object HilbertCalculus extends UnifyUSCalculus {
     override def factory(pos: Position): DependentTactic = chase(pos)
   }
 
-
-  /*******************************************************************
-    * Internal helpers
-    *******************************************************************/
-
-  /** Computing dimension of ODE at indicated position of a sequent */
-  private val getODEDim: (Sequent, Position)=>Int = (sequent,pos) => {
-    def odeDim(ode: ODESystem): Int = StaticSemantics.boundVars(ode).toSymbolSet.filter(x=>x.isInstanceOf[DifferentialSymbol]).size
-    sequent.sub(pos) match {
-      case Some(Box(ode: ODESystem, _))     => odeDim(ode)
-      case Some(Diamond(ode: ODESystem, _)) => odeDim(ode)
-      case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
-      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
-    }
-  }
-
-  /** Whether there is a proper ODE System at the indicated position of a sequent with >=2 ODEs */
-  private val isODESystem: (Sequent,Position)=>Boolean = (sequent,pos) => {
-    sequent.sub(pos) match {
-      case Some(Box(ODESystem(_:DifferentialProduct,_), _))     => true
-      case Some(Diamond(ODESystem(_:DifferentialProduct,_), _)) => true
-      case Some(e) => false
-      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
-    }
-  }
-
-  /** Whether the ODE at indicated position of a sequent has a nontrivial domain */
-  private val hasODEDomain: (Sequent,Position)=>Boolean = (sequent,pos) => {
-    sequent.sub(pos) match {
-      case Some(Box(ode: ODESystem, _))     => ode.constraint != True
-      case Some(Diamond(ode: ODESystem, _)) => ode.constraint != True
-      case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
-      case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
-    }
-  }
 }
