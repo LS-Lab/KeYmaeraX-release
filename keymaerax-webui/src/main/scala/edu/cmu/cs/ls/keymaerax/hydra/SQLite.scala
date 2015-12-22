@@ -6,15 +6,17 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.io.FileOutputStream
 import java.nio.channels.Channels
-import java.sql.SQLException
+import java.security.SecureRandom
+import java.sql.{Blob, SQLException}
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.PBEKeySpec
+import javax.xml.bind.DatatypeConverter
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, BelleExpr}
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Provable, Sequent}
+import _root_.edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 import _root_.edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
-import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
-import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 
 import scala.collection.immutable.Nil
 
@@ -94,10 +96,49 @@ object SQLite {
       })
     }
 
+    private def configWithDefault(config: String, subconfig: String, default: Int): Int = {
+      try {
+        getConfiguration(config).config(subconfig).toInt
+      } catch {case (_: NoSuchElementException) =>
+        default
+      }
+    }
+
+    /* SQLite tragically won't read string values past a NUL byte. The SQLite solution to this is using BLOB instead,
+    * which the Scala driver does not support. To get around this, make sure we only store NUL-free strings, it this
+    * case by base-64 encoding them. */
+    private def sanitize(s:String): String = {
+      DatatypeConverter.printBase64Binary(s.getBytes)
+    }
+
+    private def hashPassword(password: Array[Char], salt: Array[Byte], iterations: Int): String = {
+      val spec = new PBEKeySpec(password, salt, iterations, salt.length)
+      val skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+      sanitize(new String(skf.generateSecret(spec).getEncoded))
+    }
+
+    private def generateSalt(length: Int): String = {
+      val saltBuf = new Array[Byte] (length)
+      val rng = new SecureRandom()
+      rng.nextBytes(saltBuf)
+      val dirtyString = new String(saltBuf)
+      sanitize(dirtyString)
+    }
+
+    /* Store passwords as a salted hash. Use CSPRNG to generate salt. Allow configuring number of iterations
+     * since we may conceivably want to change it after deployment for performance reasons */
+    private def generateKey(password: String): (String, String, Int) = {
+      val iterations = configWithDefault("security", "passwordHashIterations", 10000)
+      val saltLength = configWithDefault("security", "passwordSaltLength", 512)
+      val salt = generateSalt(saltLength)
+      (hashPassword(password.toCharArray, salt.getBytes, iterations), salt, iterations)
+    }
+
     override def createUser(username: String, password: String): Unit = {
+      val (hash, salt, iterations) = generateKey(password)
       session.withTransaction({
-        Users.map(u => (u.email.get, u.password.get))
-          .insert((username, password))
+        Users.map(u => (u.email.get, u.hash.get, u.salt.get, u.iterations.get))
+          .insert((username, hash, salt, iterations))
         nInserts = nInserts + 1
       })}
 
@@ -162,10 +203,27 @@ object SQLite {
         }).flatten
       })
 
+    /* Make a basic effort to confound timing attacks based on short-circuiting string comparisons. This is the
+    * recommended algorithm for comparing strings in a way that will never short-circuit, regardless of compiler
+    * optimizationsn. */
+    private def slowEquals(str1: String, str2: String): Boolean = {
+      if(str1.length != str2.length)
+        return false
+
+      var acc = 0
+      for(i <- str1.indices) {
+        acc |= str1(i) ^ str2(i)
+      }
+      acc == 0
+    }
+
     override def checkPassword(username: String, password: String): Boolean =
       session.withTransaction({
         nSelects = nSelects + 1
-        Users.filter(_.email === username).filter(_.password === password).list.length != 0
+        Users.filter(_.email === username).list.exists({case row =>
+          val hash = hashPassword(password.toCharArray, row.salt.get.getBytes, row.iterations.get)
+          slowEquals(hash, row.hash.get)
+        })
       })
 
     override def updateProofInfo(proof: ProofPOJO): Unit =

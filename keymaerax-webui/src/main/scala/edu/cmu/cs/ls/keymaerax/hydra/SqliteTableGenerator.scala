@@ -45,6 +45,6 @@ object SqliteTableGenerator {
 
   def main(args : Array[String]) : Unit =
     FixedCodeGenerator.writeToFile(
-      "scala.slick.driver.SQLiteDriver","keymaerax-webui/src/main/scala/edu/cmu/cs/ls/keymaerax/hydra",
-        "","Tables","Tables.scala")
+      "scala.slick.driver.SQLiteDriver","keymaerax-webui/src/main/scala/",
+        "edu.cmu.cs.ls.keymaerax.hydra","Tables","Tables.scala")
 }

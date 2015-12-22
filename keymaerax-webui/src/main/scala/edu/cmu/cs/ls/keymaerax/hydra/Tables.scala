@@ -1,4 +1,4 @@
-package 
+package edu.cmu.cs.ls.keymaerax.hydra
 // AUTO-GENERATED Slick data model
 /** Stand-alone Slick data model for immediate use */
 object Tables extends {
@@ -14,7 +14,7 @@ trait Tables {
   import scala.slick.jdbc.{GetResult => GR}
   
   /** DDL for all tables. Call .create to execute. */
-  lazy val ddl = Config.ddl ++ Executableparameter.ddl ++ Executables.ddl ++ Executionsteps.ddl ++ Lemma.ddl ++ Models.ddl ++ Patterns.ddl ++ Proofs.ddl ++ Provables.ddl ++ Scalatactics.ddl ++ Sequentformulas.ddl ++ Sequents.ddl ++ Tacticexecutions.ddl ++ Users.ddl
+  lazy val ddl = Config.ddl ++ Executableparameter.ddl ++ Executables.ddl ++ Executionsteps.ddl ++ Lemmas.ddl ++ Models.ddl ++ Patterns.ddl ++ Proofs.ddl ++ Provables.ddl ++ Scalatactics.ddl ++ Sequentformulas.ddl ++ Sequents.ddl ++ Tacticexecutions.ddl ++ Users.ddl
   
   /** Entity class storing rows of table Config
    *  @param configid Database column configId DBType(INTEGER), PrimaryKey
@@ -166,26 +166,26 @@ trait Tables {
   /** Collection-like TableQuery object for table Executionsteps */
   lazy val Executionsteps = new TableQuery(tag => new Executionsteps(tag))
   
-  /** Entity class storing rows of table Lemma
+  /** Entity class storing rows of table Lemmas
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
    *  @param lemma Database column lemma DBType(TEXT) */
-  case class LemmaRow(_Id: Option[Int], lemma: Option[String])
-  /** GetResult implicit for fetching LemmaRow objects using plain SQL queries */
-  implicit def GetResultLemmaRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[LemmaRow] = GR{
+  case class LemmasRow(_Id: Option[Int], lemma: Option[String])
+  /** GetResult implicit for fetching LemmasRow objects using plain SQL queries */
+  implicit def GetResultLemmasRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[LemmasRow] = GR{
     prs => import prs._
-    LemmaRow.tupled((<<?[Int], <<?[String]))
+    LemmasRow.tupled((<<?[Int], <<?[String]))
   }
-  /** Table description of table lemma. Objects of this class serve as prototypes for rows in queries. */
-  class Lemma(_tableTag: Tag) extends Table[LemmaRow](_tableTag, "lemma") {
-    def * = (_Id, lemma) <> (LemmaRow.tupled, LemmaRow.unapply)
+  /** Table description of table lemmas. Objects of this class serve as prototypes for rows in queries. */
+  class Lemmas(_tableTag: Tag) extends Table[LemmasRow](_tableTag, "lemmas") {
+    def * = (_Id, lemma) <> (LemmasRow.tupled, LemmasRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
     val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
     /** Database column lemma DBType(TEXT) */
     val lemma: Column[Option[String]] = column[Option[String]]("lemma")
   }
-  /** Collection-like TableQuery object for table Lemma */
-  lazy val Lemma = new TableQuery(tag => new Lemma(tag))
+  /** Collection-like TableQuery object for table Lemmas */
+  lazy val Lemmas = new TableQuery(tag => new Lemmas(tag))
   
   /** Entity class storing rows of table Models
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
@@ -432,21 +432,27 @@ trait Tables {
   
   /** Entity class storing rows of table Users
    *  @param email Database column email DBType(TEXT), PrimaryKey
-   *  @param password Database column password DBType(TEXT) */
-  case class UsersRow(email: Option[String], password: Option[String])
+   *  @param hash Database column hash DBType(TEXT)
+   *  @param salt Database column salt DBType(TEXT)
+   *  @param iterations Database column iterations DBType(INTEGER) */
+  case class UsersRow(email: Option[String], hash: Option[String], salt: Option[String], iterations: Option[Int])
   /** GetResult implicit for fetching UsersRow objects using plain SQL queries */
-  implicit def GetResultUsersRow(implicit e0: GR[Option[String]]): GR[UsersRow] = GR{
+  implicit def GetResultUsersRow(implicit e0: GR[Option[String]], e1: GR[Option[Int]]): GR[UsersRow] = GR{
     prs => import prs._
-    UsersRow.tupled((<<?[String], <<?[String]))
+    UsersRow.tupled((<<?[String], <<?[String], <<?[String], <<?[Int]))
   }
   /** Table description of table users. Objects of this class serve as prototypes for rows in queries. */
   class Users(_tableTag: Tag) extends Table[UsersRow](_tableTag, "users") {
-    def * = (email, password) <> (UsersRow.tupled, UsersRow.unapply)
+    def * = (email, hash, salt, iterations) <> (UsersRow.tupled, UsersRow.unapply)
     
     /** Database column email DBType(TEXT), PrimaryKey */
     val email: Column[Option[String]] = column[Option[String]]("email", O.PrimaryKey)
-    /** Database column password DBType(TEXT) */
-    val password: Column[Option[String]] = column[Option[String]]("password")
+    /** Database column hash DBType(TEXT) */
+    val hash: Column[Option[String]] = column[Option[String]]("hash")
+    /** Database column salt DBType(TEXT) */
+    val salt: Column[Option[String]] = column[Option[String]]("salt")
+    /** Database column iterations DBType(INTEGER) */
+    val iterations: Column[Option[Int]] = column[Option[Int]]("iterations")
   }
   /** Collection-like TableQuery object for table Users */
   lazy val Users = new TableQuery(tag => new Users(tag))

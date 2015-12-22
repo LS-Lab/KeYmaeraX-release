@@ -7,7 +7,9 @@ CREATE TABLE IF NOT EXISTS `config`  (
 
 CREATE TABLE IF NOT EXISTS `users` (
   `email` TEXT PRIMARY KEY ON CONFLICT FAIL,
-  `password` TEXT
+  `hash` TEXT,
+  `salt` TEXT,
+  `iterations` INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS `models` (
