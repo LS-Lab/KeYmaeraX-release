@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
 import edu.cmu.cs.ls.keymaerax.btactics.RenUSubst
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
@@ -128,7 +129,7 @@ abstract case class DependentPositionTactic(name: String) extends BelleExpr {
   def apply(seqIdx: Int, inExpr: List[Int] = Nil): DependentTactic = apply(PositionConverter.convertPos(seqIdx, inExpr))
   override def prettyString: String = "DependentPositionTactic(" + name + ")"
 }
-abstract case class InputTactic[T](input: T) extends BelleExpr {
+abstract case class InputTactic[T](name: SerializationName, input: T) extends BelleExpr {
   def computeExpr(): BelleExpr
   override def prettyString: String = "input(" + input + ")"
 }
