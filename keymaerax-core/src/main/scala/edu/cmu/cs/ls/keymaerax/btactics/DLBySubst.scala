@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.axiomatic
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Position, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Position, PosInExpr, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 
@@ -359,6 +359,44 @@ object DLBySubst {
 
       private def constAnteConditions(sequent: Sequent, taboo: Set[NamedSymbol]): IndexedSeq[Formula] = {
         sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
+      }
+    }
+  }
+
+  /**
+   * Introduces a ghost.
+   * @example{{{
+   *         |- [y_0:=y;]x>0
+   *         ----------------discreteGhost("y".asTerm)(1)
+   *         |- x>0
+   * }}}
+   * @example{{{
+   *         |- [z:=2;][y:=5;]x>0
+   *         ---------------------discreteGhost("0".asTerm, Some("y".asVariable))(1, 1::Nil)
+   *         |- [z:=2;]x>0
+   * }}}
+   * @param t The ghost specification.
+   * @param ghost The ghost. If None, the tactic chooses a name by inspecting t (must be a variable then).
+   * @return The tactic.
+   * @incontext
+   */
+  def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = new DependentPositionTactic("discrete ghost") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
+        case (ctx, f: Formula) =>
+          //def g(f: Formula) = Equiv(Box(Assign(ghostV(f), t), SubstitutionHelper.replaceFree(f)(t, ghostV(f))), f)
+          cutLR(ctx(Box(Assign(ghostV(f), t), SubstitutionHelper.replaceFree(f)(t, ghostV(f)))))(pos.topLevel) <(
+            /* use */ ident,
+            /* show */ cohide('Rlast) & CMon(pos.inExpr) & equivifyR(1) & byUS("[:=] assign")
+            )
+      }
+    }
+    // check specified name, or construct a new name for the ghost variable if None
+    private def ghostV(f: Formula): Variable = ghost match {
+      case Some(gv) => require(gv == t || (!StaticSemantics.symbols(f).contains(gv))); gv
+      case None => t match {
+        case v: Variable => TacticHelper.freshNamedSymbol(v, f)
+        case _ => throw new IllegalArgumentException("Only variables allowed when ghost name should be auto-provided")
       }
     }
   }

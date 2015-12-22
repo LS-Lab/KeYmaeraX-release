@@ -1,5 +1,6 @@
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -205,8 +206,8 @@ class DLTests extends TacticTestBase {
   "generalize" should "introduce intermediate condition" in {
     val result = proveBy("[x:=2;][y:=x;]y>1".asFormula, generalize("x>1".asFormula)(1))
     result.subgoals should have size 2
-    result.subgoals(0).ante shouldBe empty
-    result.subgoals(0).succ should contain only "[x:=2;]x>1".asFormula
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[x:=2;]x>1".asFormula
     result.subgoals(1).ante should contain only "x>1".asFormula
     result.subgoals(1).succ should contain only "[y:=x;]y>1".asFormula
   }
@@ -214,8 +215,8 @@ class DLTests extends TacticTestBase {
   it should "introduce intermediate condition in context" in {
     val result = proveBy("a=2 -> [z:=3;][x:=2;][y:=x;]y>1".asFormula, generalize("x>1".asFormula)(1, 1::1::Nil))
     result.subgoals should have size 2
-    result.subgoals(0).ante shouldBe empty
-    result.subgoals(0).succ should contain only "a=2 -> [z:=3;][x:=2;]x>1".asFormula
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "a=2 -> [z:=3;][x:=2;]x>1".asFormula
     result.subgoals(1).ante should contain only "x>1".asFormula
     result.subgoals(1).succ should contain only "[y:=x;]y>1".asFormula
   }
@@ -223,8 +224,8 @@ class DLTests extends TacticTestBase {
   "postCut" should "introduce implication" in {
     val result = proveBy("[x:=2;][y:=x;]y>1".asFormula, postCut("x>1".asFormula)(1))
     result.subgoals should have size 2
-    result.subgoals(0).ante shouldBe empty
-    result.subgoals(0).succ should contain only "[x:=2;](x>1 -> [y:=x;]y>1)".asFormula
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[x:=2;](x>1 -> [y:=x;]y>1)".asFormula
     result.subgoals(1).ante shouldBe empty
     result.subgoals(1).succ should contain only "[x:=2;]x>1".asFormula
   }
@@ -232,8 +233,8 @@ class DLTests extends TacticTestBase {
   it should "introduce implication in context" in {
     val result = proveBy("a=2 -> [z:=3;][x:=2;][y:=x;]y>1".asFormula, postCut("x>1".asFormula)(1, 1::1::Nil))
     result.subgoals should have size 2
-    result.subgoals(0).ante shouldBe empty
-    result.subgoals(0).succ should contain only "a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)".asFormula
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "a=2 -> [z:=3;][x:=2;](x>1 -> [y:=x;]y>1)".asFormula
     result.subgoals(1).ante shouldBe empty
     result.subgoals(1).succ should contain only "[x:=2;]x>1".asFormula
   }
@@ -244,8 +245,8 @@ class DLTests extends TacticTestBase {
 
     result.subgoals should have size 3
     // use case
-    result.subgoals(0).ante should contain only "x>1".asFormula
-    result.subgoals(0).succ should contain only "x>0".asFormula
+    result.subgoals.head.ante should contain only "x>1".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
     // init
     result.subgoals(1).ante should contain only "x>2".asFormula
     result.subgoals(1).succ should contain only "x>1".asFormula
@@ -262,8 +263,8 @@ class DLTests extends TacticTestBase {
 
     result.subgoals should have size 3
     // use case
-    result.subgoals(0).ante should contain only ("x>1".asFormula, "y>0".asFormula)
-    result.subgoals(0).succ should contain only "x>0".asFormula
+    result.subgoals.head.ante should contain only ("x>1".asFormula, "y>0".asFormula)
+    result.subgoals.head.succ should contain only "x>0".asFormula
     // init
     result.subgoals(1).ante should contain only ("x>2".asFormula, "y>0".asFormula)
     result.subgoals(1).succ should contain only "x>1".asFormula
@@ -279,8 +280,8 @@ class DLTests extends TacticTestBase {
 
     result.subgoals should have size 3
     // use case
-    result.subgoals(0).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
-    result.subgoals(0).succ should contain only "x>2".asFormula
+    result.subgoals.head.ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals.head.succ should contain only "x>2".asFormula
     // init
     result.subgoals(1).ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
     result.subgoals(1).succ should contain only ("x<3".asFormula, "y<4".asFormula, "x*y>5".asFormula)
@@ -296,8 +297,8 @@ class DLTests extends TacticTestBase {
 
     result.subgoals should have size 3
     // use case
-    result.subgoals(0).ante should contain only ("x*y>5".asFormula, "z>7".asFormula)
-    result.subgoals(0).succ should contain only "x>2".asFormula
+    result.subgoals.head.ante should contain only ("x*y>5".asFormula, "z>7".asFormula)
+    result.subgoals.head.succ should contain only "x>2".asFormula
     // init
     result.subgoals(1).ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
     result.subgoals(1).succ should contain only ("x<3".asFormula, "y<4".asFormula, "x*y>5".asFormula)
@@ -313,13 +314,109 @@ class DLTests extends TacticTestBase {
 
     result.subgoals should have size 3
     // use case
-    result.subgoals(0).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
-    result.subgoals(0).succ should contain only "x>2".asFormula
+    result.subgoals.head.ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
+    result.subgoals.head.succ should contain only "x>2".asFormula
     // init
     result.subgoals(1).ante should contain only ("x>0".asFormula, "y>1".asFormula, "z>7".asFormula)
     result.subgoals(1).succ should contain only ("x<3".asFormula, "y<4".asFormula, "x*y>5".asFormula)
     // step
     result.subgoals(2).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
     result.subgoals(2).succ should contain only "[x:=2;]x*y>5".asFormula
+  }
+
+  "Discrete ghost" should "introduce assignment to fresh variable" in {
+    val result = proveBy("y>0".asFormula, discreteGhost("y".asVariable)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[y_0:=y;]y_0>0".asFormula
+  }
+
+  it should "assign term t to fresh variable" in {
+    val result = proveBy("y+1>0".asFormula, discreteGhost("y+1".asTerm, Some("z".asVariable))(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[z:=y+1;]z>0".asFormula
+  }
+
+  it should "allow arbitrary terms t when a ghost name is specified" in {
+    val result = proveBy("y>0".asFormula, discreteGhost("x+5".asTerm, Some("z".asVariable))(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[z:=x+5;]y>0".asFormula
+  }
+
+  it should "not allow arbitrary terms t when no ghost name is specified" in {
+    a [BelleError] should be thrownBy proveBy("y>0".asFormula, discreteGhost("x+5".asTerm)(1))
+  }
+
+  it should "use same variable if asked to do so" in {
+    val result = proveBy("y>0".asFormula, discreteGhost("y".asVariable, Some("y".asVariable))(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[y:=y;]y>0".asFormula
+  }
+
+  it should "not accept variables present in f" in {
+    a [BelleError] should be thrownBy proveBy("y>z+1".asFormula, discreteGhost("y".asVariable, Some("z".asVariable))(1))
+  }
+
+  it should "work on assignments" in {
+    val result = proveBy("[y:=2;]y>0".asFormula, discreteGhost("y".asVariable)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[y_0:=y;][y:=2;]y>0".asFormula
+  }
+
+  it should "introduce ghosts in the middle of formulas" in {
+    val result = proveBy("[x:=1;][y:=2;]y>0".asFormula, discreteGhost("y".asVariable)(1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[x:=1;][y_0:=y;][y:=2;]y>0".asFormula
+  }
+
+  it should "introduce self-assignment ghosts in the middle of formulas when not bound before" in {
+    val result = proveBy("[x:=1;][y:=2;]y>0".asFormula, discreteGhost("y".asVariable, Some("y".asVariable))(1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[x:=1;][y:=y;][y:=2;]y>0".asFormula
+  }
+
+  it should "not introduce self-assignment ghosts in the middle of formulas when bound" in {
+    a [BelleError] should be thrownBy proveBy("[x:=x+1;][{x'=2}]x>0".asFormula, discreteGhost("x".asVariable, Some("x".asVariable))(1, 1::Nil))
+  }
+//
+//  ignore should "introduce ghosts in modality predicates" in {
+//    // will not work because y is bound by y:=2, so equality rewriting does not work
+//    val tactic = discreteGhostT(None, Variable("y", None, Real))(new SuccPosition(0, new PosInExpr(1 :: Nil)))
+//    getProofSequent(tactic, new RootNode(sucSequent("[y:=2;]y>0".asFormula))) should be (
+//      sucSequent("[y:=2;][y_0:=y;]y>0".asFormula))
+//  }
+
+  it should "work on loops" in {
+    val result = proveBy("[{y:=y+1;}*]y>0".asFormula, discreteGhost("y".asVariable)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[y_0:=y;][{y:=y+1;}*]y>0".asFormula
+  }
+
+  it should "work on ODEs" in {
+    val result = proveBy("[{y'=1}]y>0".asFormula, discreteGhost("y".asVariable)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[y_0:=y;][{y'=1}]y>0".asFormula
+  }
+
+  it should "not propagate arbitrary terms into ODEs" in {
+    val result = proveBy("[{y'=1}]y>0".asFormula, discreteGhost("y+1".asTerm, Some("z".asVariable))(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[z:=y+1;][{y'=1}]y>0".asFormula
+  }
+
+  it should "abbreviate terms in a formula" in {
+    val result = proveBy("[x:=5+0;]x>0".asFormula, discreteGhost("0".asTerm, Some("z".asVariable))(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[z:=0;][x:=5+z;]x>z".asFormula
   }
 }
