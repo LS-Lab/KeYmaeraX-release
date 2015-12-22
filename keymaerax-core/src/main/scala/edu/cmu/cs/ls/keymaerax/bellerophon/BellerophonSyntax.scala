@@ -1,3 +1,7 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -5,23 +9,32 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
 
 /**
- * Algebraic Data Type whose elements are well-formed Bellephoron expressions.
+ * Algebraic Data Type whose elements are well-formed Bellephoron tactic expressions.
  * See Table 1 of "Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus"
  * @author Nathan Fulton
+ * @see [[SequentialInterpreter]]
  */
 abstract class BelleExpr(val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) {
-  // Syntactic sugar for combinators.
-  //@todo copy documentation
+  // tactic combinators
+
+  /** this & other: sequential composition executes other on the output of this, failing if either fail. */
   def &(other: BelleExpr)             = SeqTactic(this, other)
+  /** this | other: alternative composition executes other if applying this fails, failing if both fail. */
   def |(other: BelleExpr)             = EitherTactic(this, other)
+  /** this*: saturating repetition executes this tactic to a fixpoint, casting result to type annotation, diverging if no fixpoint. */
   def *@(annotation: BelleType)       = SaturateTactic(this, annotation)
+  /** this*: bounded repetition executes this tactic to `times` number of times, failing if any of those repetitions fail. */
   def *(times: Int/*, annotation: BelleType*/) = RepeatTactic(this, times, null)
+  /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches. */
   def <(children: BelleExpr*)         = SeqTactic(this, BranchTactic(children))
+  /** case _ of {fi => ei} uniform substitution case pattern applies the first ei such that fi uniformly substitutes to current provable for which ei does not fail, fails if the ei of all matching fi fail. */
   def U(p: (SequentType, RenUSubst => BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
+  /** partial: marks a tactic that is allowed to not close all its goals. */
   def partial                         = PartialTactic(this)
+  //@todo Maybe support ?(e) or try(e) or optional(e) defined as this|skip
 
   override def toString: String = prettyString
-  /** pretty-printed form of this Bellerophon expression */
+  /** pretty-printed form of this Bellerophon tactic expression */
   def prettyString: String
 }
 
@@ -208,6 +221,7 @@ case class AppliedTwoPositionTactic(positionTactic: BuiltInTwoPositionTactic, po
  * @note similar to the ConstructionTactics in the old framework, except they should not be necessary
  *       nearly as often because BuiltIns have direct access to a Provable.
  * @param name The name of the tactic.
+ * @todo is there a short lambda abstraction notation as syntactic sugar?
  */
 abstract case class DependentTactic(name: String) extends BelleExpr {
   def computeExpr(provable: Provable): BelleExpr = throw new BelleError("Not implemented")
