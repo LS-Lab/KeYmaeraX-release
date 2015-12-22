@@ -88,6 +88,13 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[{x'=5 & x>2}][x':=5;]x>0".asFormula
   }
 
+  it should "introduce differential assignments exhaustively" in {
+    val result = proveBy("[{x'=5, y'=x & x>2}]x>0".asFormula, DE(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[{x'=5, y'=x & x>2}][y':=x;][x':=5;]x>0".asFormula
+  }
+
   it should "introduce a differential assignment when the postcondition is primed" in {
     val result = proveBy("[{x'=5 & x>2}](x>0)'".asFormula, DE(1))
     result.subgoals should have size 1

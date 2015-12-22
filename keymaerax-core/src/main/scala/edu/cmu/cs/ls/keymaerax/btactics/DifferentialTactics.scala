@@ -16,6 +16,25 @@ import scala.collection.immutable.IndexedSeq
  */
 object DifferentialTactics {
 
+  /**
+   * Differential effect: exhaustively extracts differential equations from an atomic ODE or an ODE system into
+   * differential assignments.
+   * {{{
+   *   G |- [{x'=f(??)&H(??)}][x':=f(??);]p(??), D
+   *   -------------------------------------------
+   *   G |- [{x'=f(??)&H(??)}]p(??), D
+   * }}}
+   * @example{{{
+   *    |- [{x'=1}][x':=1;]x>0
+   *    -----------------------DE(1)
+   *    |- [{x'=1}]x>0
+   * }}}
+   * @example{{{
+   *    |- [{x'=1, y'=x & x>0}][y':=x;][x':=1;]x>0
+   *    -------------------------------------------DE(1)
+   *    |- [{x'=1, y'=x & x>0}]x>0
+   * }}}
+   */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr =
