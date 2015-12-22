@@ -64,126 +64,113 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  //@todo not everything ported yet
-  ignore should "prove (x+2*y)'=x'+2*y'" in {
+  it should "prove (x+2*y)'=x'+2*y'" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
-      Dplus(SuccPosition(0, 0::Nil)) &
-        Dvariable(SuccPosition(0, 0::0::Nil)) &
-        useAt("' linear")(SuccPosition(0, 0::1::Nil)) & // Dtimes(SuccPosition(0, 0::1::Nil))
-        Dvariable(SuccPosition(0, 0::1::1::Nil)) &
+      Dplus(1, 0::Nil) &
+        Dvariable(1, 0::0::Nil) &
+        useAt("' linear")(1, 0::1::Nil) & // Dtimes(SuccPosition(0, 0::1::Nil))
+        Dvariable(1, 0::1::1::Nil) &
         byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  //@todo not everything ported yet
-  ignore should "prove (y)'=y forward" in {
+  it should "prove (y)'=y forward" in withMathematica { implicit qeTool =>
     val x = Variable("y")
     proveBy(
       Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
-      Dvariable(SuccPosition(0,0::Nil)) & byUS("= reflexive")) shouldBe 'proved
+      Dvariable(1,0::Nil) & byUS("= reflexive")) shouldBe 'proved
     proveBy(
       Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
-      Dvariable(SuccPosition(0,0::Nil)) & byUS("= reflexive")) shouldBe 'proved
+      Dvariable(1,0::Nil) & byUS("= reflexive")) shouldBe 'proved
   }
 
-  //@todo not everything ported yet
-  ignore should "derive (y)'=y'" in {
+  it should "derive (y)'=y'" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(y)'=y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  //@todo not everything ported yet
-  ignore should "derive (x+y)'=x'+y'" in {
+  it should "derive (x+y)'=x'+y'" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+y)'=x'+y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  //@todo not everything ported yet
-  ignore should "derive (x*y)'=x'*y+x*y'" in {
+  it should "derive (x*y)'=x'*y+x*y'" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x*y)'=x'*y+x*y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  //@todo not everything ported yet
-  ignore should "derive (x+2*y)'=x'+2*y'" taggedAs KeYmaeraXTestTags.CheckinTest in {
+  it should "derive (x+2*y)'=x'+2*y'" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  ignore should "derive (5*3+2*9)'=0*3+5*0+(0*9+2*0) unless optimized" in {
+  //@todo we only support optimized
+  ignore should "derive (5*3+2*9)'=0*3+5*0+(0*9+2*0) unless optimized" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=0*3+5*0+(0*9+2*0)".asFormula)),
-      derive(1,0::Nil)  //@todo & QE
+      derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  ignore should "derive (5*3+2*9)'=5*0+2*0 if optimized (left linear preferred but not const optimized)" in {
+  //@todo we only support optimized
+  ignore should "derive (5*3+2*9)'=5*0+2*0 if optimized (left linear preferred but not const optimized)" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=5*0+2*0".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  //@todo not everything ported yet
-  ignore should "derive (5*3+2*9)'=0 if optimized (const optimized)" in {
+  it should "derive (5*3+2*9)'=0 if optimized (const optimized)" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=0".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  //@todo not everything ported yet
-  ignore should "derive (5*x+2*y)'=5*x'+2*y'" in {
+  it should "derive (5*x+2*y)'=5*x'+2*y'" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*x+2*y)'=5*x'+2*y'".asFormula)),
       derive(1,0::Nil) & byUS("= reflexive")
     ) shouldBe 'proved
   }
 
-  //@todo not everything ported yet
-  ignore should "derive (5*x+2*y>=6)' <-> 5*x'+2*y'>=0" in {
+  it should "derive (5*x+2*y>=6)' <-> 5*x'+2*y'>=0" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*x+2*y>=6)' <-> 5*x'+2*y'>=0".asFormula)),
       derive(1,0::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
-  //@todo not everything ported yet
-  ignore should "derive (7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)" in {
+  it should "derive (7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(7*x<2*y & 22*x=4*y+8)' <-> (7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)),
       derive(1,0::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
-  //@todo not everything ported yet
-  ignore should "derive (x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in {
+  it should "derive (x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> (x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
       derive(1,0::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
-  //@todo not everything ported yet
-  ignore should "derive [{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in {
+  it should "derive [{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=7,y'=-9,z'=2}](x*x<2*y & 5*x+2*y>=6+z & 22*x=4*y+8)' <-> [{x'=7,y'=-9,z'=2}](x'*x+x*x'<=2*y' & 5*x'+2*y'>=0+z' & 22*x'=4*y'+0)".asFormula)),
       derive(1,0::1::Nil) & byUS("<-> reflexive")
     ) shouldBe 'proved
   }
 
-  //@todo not everything ported yet
-  ignore should "reduce [{x'=7}](5*x>=6)' to [{x'=7}]5*x'>=0" in {
+  it should "reduce [{x'=7}](5*x>=6)' to [{x'=7}]5*x'>=0" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=7}](5*x>=6)'".asFormula)),
       derive(1,1::Nil)
     ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=7}]5*x'>=0".asFormula)))
   }
 
-  //@todo not everything ported yet
-  ignore should "reduce [{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)' to [{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)" taggedAs KeYmaeraXTestTags.SummaryTest in {
+  it should "reduce [{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)' to [{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x<2*y & 22*x=4*y+8)'".asFormula)),
       derive(1,1::Nil)
     ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=99,y'=-3}](7*x'<=2*y' & 22*x'=4*y'+0)".asFormula)))
   }
 
-  //@todo not everything ported yet
-  ignore should "prove x>=5 -> [{x'=2}]x>=5" in withMathematica { implicit qeTool =>
+  it should "prove x>=5 -> [{x'=2}]x>=5" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) &
         DI(1) & (step(1) & step(1)) <(

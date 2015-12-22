@@ -5,10 +5,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{Position, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Position, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 
 import scala.collection.immutable.IndexedSeq
+import scala.language.postfixOps
 
 /**
  * [[DifferentialTactics]] provides tactics for differential equations.
@@ -127,6 +128,49 @@ object DifferentialTactics {
               }
             }
             )(pos)
+      }
+    }
+  }
+
+  /**
+   * Syntactically derives a differential of a variable to a differential symbol.
+   * {{{
+   *   G |- x'=f, D
+   *   --------------
+   *   G |- (x)'=f, D
+   * }}}
+   * @example{{{
+   *   |- x'=1
+   *   ----------Dvariable(1, 0::Nil)
+   *   |- (x)'=1
+   * }}}
+   * @example{{{
+   *   |- [z':=1;]z'=1
+   *   ------------------Dvariable(1, 1::0::Nil)
+   *   |- [z':=1;](z)'=1
+   * }}}
+   * @incontext
+   */
+  lazy val Dvariable: DependentPositionTactic = new DependentPositionTactic("x' derive variable") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
+        case Some(Differential(x: Variable)) =>
+          val withxprime: Formula = sequent.replaceAt(pos, DifferentialSymbol(x)).asInstanceOf[Formula]
+          val axiom = s"\\forall ${x.prettyString} (${x.prettyString})' = ${x.prettyString}'".asFormula
+          cutLR(withxprime)(pos.topLevel) <(
+              /* use */ skip,
+              /* show */ cohide(pos.topLevel) & CMon(formulaPos(sequent(pos.topLevel), pos.inExpr)) & cut(axiom) <(
+                useAt("all eliminate")(-1) & eqL2R(new AntePosition(0))(1) & useAt("-> self")(1) & close,
+                cohide('Rlast) & byUS("x' derive variable"))
+            )
+        }
+      }
+
+    /** Finds the first parent of p in f that is a formula. Returns p if f at p is a formula. */
+    private def formulaPos(f: Formula, p: PosInExpr): PosInExpr = {
+      f.sub(p) match {
+        case Some(_: Formula) => p
+        case _ => formulaPos(f, p.parent)
       }
     }
   }

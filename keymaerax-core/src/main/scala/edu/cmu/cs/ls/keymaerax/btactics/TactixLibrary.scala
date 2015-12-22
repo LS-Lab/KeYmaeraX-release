@@ -273,7 +273,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Dconstify: substitute non-bound occurences of x with x() */
   lazy val Dconstify          : BuiltInPositionTactic = ???
   /** Dvariable: v' derives a variable */
-  lazy val Dvariable          : DependentPositionTactic = ???
+  lazy val Dvariable          : DependentPositionTactic = DifferentialTactics.Dvariable
 
   /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
   lazy val Dand               : DependentPositionTactic = useAt("&' derive and")

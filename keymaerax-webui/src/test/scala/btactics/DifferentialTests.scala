@@ -1,7 +1,7 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.Sequent
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags
 
@@ -164,5 +164,51 @@ class DifferentialTests extends TacticTestBase {
         assignb(1) & // handle updates
         QE
     ) shouldBe 'proved
+  }
+
+  "Dvariable" should "work when the Differential() occurs in a formula without []'s" in withMathematica { implicit qeTool =>
+    // Equal(Differential(Variable("x")), "1".asTerm)
+    val result = proveBy("(x)'=1".asFormula, Dvariable(1, 0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    // Equal(DifferentialSymbol(Variable("x")), "1".asTerm)
+    result.subgoals.head.succ should contain only "x'=1".asFormula
+  }
+
+  it should "alpha rename if necessary" in withMathematica { implicit qeTool =>
+    val result = proveBy("(z)'=1".asFormula, Dvariable(1, 0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "z'=1".asFormula
+  }
+
+  it should "work in context" in withMathematica { implicit qeTool =>
+    val result = proveBy("[y:=1;](z)'=1".asFormula, Dvariable(1, 1::0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[y:=1;]z'=1".asFormula
+  }
+
+  it should "work in a context that binds the differential symbol" in withMathematica { implicit qeTool =>
+    val result = proveBy("[z':=1;](z)'=1".asFormula, Dvariable(1, 1::0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[z':=1;]z'=1".asFormula
+  }
+
+  it should "work in a context that binds x" in {
+    val result = proveBy("[z:=1;](z)'=1".asFormula, Dvariable(1, 1::0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[z:=1;]z'=1".asFormula
+  }
+
+  it should "work with other formulas around" in {
+    val result = proveBy(Sequent(Nil,
+      IndexedSeq("a>0".asFormula),
+      IndexedSeq("b<0".asFormula, "[z:=1;](z)'=1".asFormula, "c=0".asFormula)), Dvariable(2, 1::0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "a>0".asFormula
+    result.subgoals.head.succ should contain only ("b<0".asFormula, "[z:=1;]z'=1".asFormula, "c=0".asFormula)
   }
 }
