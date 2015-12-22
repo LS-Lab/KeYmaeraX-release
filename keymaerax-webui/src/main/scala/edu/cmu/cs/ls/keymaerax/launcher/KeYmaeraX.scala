@@ -6,6 +6,8 @@ import java.net.Socket
 import java.nio.file.{Paths, Files}
 import java.security.Permission
 
+import _root_.edu.cmu.cs.ls.keymaerax.api.TacticInputConverter
+import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.CLInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.parser._
@@ -579,13 +581,46 @@ object KeYmaeraX {
       "\n" + node.sequent.prettyString + "\n")
   }
 
-  /** Activate a security manager */
+  /** Activate a security manager
+    * Desired permissions:
+    * Allow:
+    *   Reading all necessary libraries
+    *   Reading DEBUG and LAX system properties (uses reflection)
+    *   Reading/Writing sqlite database
+    *   Reading ExposedTacticsLibrary with reflection
+    *   Read/Write web port
+    * Deny:
+    *   Reading arbitrary system files
+    *   Writing anything outside the .keymaerax directory
+    *   Writing any class with reflection
+    *   Reading anything but ExposedTacticsLibrary with reflection.
+    *   Read/Write other ports
+    *
+    *   Some of these permissions aren't defined with enough granularity for our purposes.
+    *   For example reflection permissions are all-or-nothing (and include the ability to read and write
+    *   system properties). To get around this, we have access to the call stack. We only grant access to code that we
+    *   trust to use a certain permission.
+    *   */
   private def activateSecurity(): Unit = {
     System.setSecurityManager(new SecurityManager() {
-      override def checkPermission(perm: Permission): Unit =
-        if (perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName) ||
-          perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
-          throw new SecurityException("Access denied by KeYmaera X")
+      override def checkPermission(perm: Permission): Unit = {
+        val context = getClassContext
+        def inClass[T](clazz: Class[T]) = {
+          context.exists({case other => other.getCanonicalName.equals(clazz.getCanonicalName)})
+        }
+        def allowOnly(clazzes: List[Class[_]]): Unit = {
+          if(clazzes.exists({case c => inClass(c)}))
+            return
+          else
+            throw new SecurityException("Access denied by KeYmaera X")
+        }
+        def allowNone = allowOnly(Nil)
+        if (perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName)) {
+          allowOnly(List(TacticInputConverter.getClass, CLInterpreter.getClass))
+        } else if (perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName)) {
+          allowNone
+        }
+      }
     })
   }
 
