@@ -601,27 +601,48 @@ object KeYmaeraX {
     *   system properties). To get around this, we have access to the call stack. We only grant access to code that we
     *   trust to use a certain permission.
     *   */
-  private def activateSecurity(): Unit = {
-    System.setSecurityManager(new SecurityManager() {
-      override def checkPermission(perm: Permission): Unit = {
-        val context = getClassContext
-        def inClass[T](clazz: Class[T]) = {
-          context.exists({case other => other.getCanonicalName.equals(clazz.getCanonicalName)})
-        }
-        def allowOnly(clazzes: List[Class[_]]): Unit = {
-          if(clazzes.exists({case c => inClass(c)}))
-            return
-          else
-            throw new SecurityException("Access denied by KeYmaera X")
-        }
-        def allowNone = allowOnly(Nil)
-        if (perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName)) {
-          allowOnly(List(TacticInputConverter.getClass, CLInterpreter.getClass))
-        } else if (perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName)) {
-          allowNone
+  class KeYmaeraXSecurityManager extends SecurityManager {
+    override def checkPermission(perm: Permission): Unit = {
+      // println(perm)
+      val context = getClassContext
+      def inClass(clazz: String) = {
+        context.exists({case other =>
+          val name = other.getName
+          name != null && name.startsWith(clazz)})
+      }
+      def allowOnly(strs: List[String]): Unit = {
+        if(strs.exists({case c => inClass(c)}))
+          return
+        else {
+          super.checkPermission(perm)
         }
       }
-    })
+      def allowNone = allowOnly(Nil)
+      if (perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName)) {
+        allowOnly(List(
+        /* Ours */
+          TacticInputConverter.getClass.getCanonicalName,
+          CLInterpreter.getClass.getCanonicalName,
+        /* Not ours, but needed to run */
+          "akka.actor.ReflectiveDynamicAccess",
+          "akka.util.Reflect",
+          "sun.security",
+          "java.net.InetSocketAddress",
+          "java.util.logging",
+          /* @TODO Some of these libraries almost certainly have methods that call user-supplied code, in which case
+          * you can circumvent the security checks. Try to make these more fine-grained to avoid this issue. */
+          "javax.swing",
+          "java.awt",
+          "sun.java2d",
+          "javax.crypto"))
+      } else if (perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName)) {
+        allowNone
+      } else {
+      }
+    }
+  }
+  private def activateSecurity(): Unit = {
+    System.setSecurityManager(new KeYmaeraXSecurityManager())
   }
 
   private val interactiveUsage = "Type a tactic command to apply to the current goal.\n" +

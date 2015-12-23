@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.awt.{GridLayout}
 import javax.swing._
 
+import _root_.edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig}
@@ -81,6 +82,10 @@ object Boot extends App {
   val (isHosted:Boolean, host:String, port:Int) = config match {
     case Some(c) => (c.config("isHosted").equals("true"), c.config("host"), Integer.parseInt(c.config("port")))
     case None => (false, "127.0.0.1", 8090)
+  }
+  /* The right place to install this is from launcher.KeYmaeraX, but that entry point doesn't work from IntelliJ */
+  if(System.getSecurityManager == null) {
+    System.setSecurityManager(new KeYmaeraX.KeYmaeraXSecurityManager())
   }
   try {
     DerivedAxioms.prepopulateDerivedLemmaDatabase()
