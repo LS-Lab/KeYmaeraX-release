@@ -1,7 +1,7 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, SequentialInterpreter}
-import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivedAxioms, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable, Formula, PrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
@@ -28,6 +28,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     qeTool.init(DefaultConfiguration.defaultMathematicaConfig)
     qeTool shouldBe 'initialized
     DerivedAxioms.qeTool = qeTool
+    TactixLibrary.qeTool = qeTool
     try {
       testcode(qeTool)
     } finally qeTool.shutdown()
@@ -43,6 +44,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     if (DerivedAxioms.qeTool != null) {
       DerivedAxioms.qeTool match { case m: Mathematica => m.shutdown() }
       DerivedAxioms.qeTool = null
+    }
+    if (TactixLibrary.qeTool != null) {
+      TactixLibrary.qeTool match { case m: Mathematica => m.shutdown() }
+      TactixLibrary.qeTool = null
     }
   }
 

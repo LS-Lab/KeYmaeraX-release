@@ -5,8 +5,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Position, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, ExpressionTraversal, Position, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 
 import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
@@ -128,6 +129,65 @@ object DifferentialTactics {
               }
             }
             )(pos)
+      }
+    }
+  }
+
+  /**
+   * Differential cut. Use special function old(.) to introduce a ghost for the starting value of a variable that can be
+   * used in the evolution domain constraint.
+   * @example{{{
+   *         x>0 |- [{x'=2&x>0}]x>=0     x>0 |- [{x'=2}]x>0
+   *         ----------------------------------------------diffCut("x>0".asFormula)(1)
+   *         x>0 |- [{x'=2}]x>=0
+   * }}}
+   * @example{{{
+   *         x>0, x_0=x |- [{x'=2&x>x_0}]x>=0     x>0, x_0=x |- [{x'=2}]x>x_0
+   *         ----------------------------------------------------------------diffCut("x>old(x)".asFormula)(1)
+   *         x>0 |- [{x'=2}]x>=0
+   * }}}
+   * @param f The formula to cut in as evolution domain constraint.
+   * @return The tactic.
+   */
+  def diffCut(f: Formula): DependentPositionTactic = new DependentPositionTactic("diff cut") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
+        case Some(Box(ODESystem(_, _), _)) =>
+          val ov = oldVars(f)
+          if (ov.isEmpty) {
+            DC(f)(pos)
+          } else {
+            val ghosts: Set[((Variable, Variable), BelleExpr)] = ov.map(old => {
+              val ghost = TacticHelper.freshNamedSymbol(Variable(old.name), sequent)
+              (old -> ghost,
+                discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquational(pos))
+            })
+            ghosts.map(_._2).reduce(_ & _) & DC(replaceOld(f, ghosts.map(_._1).toMap))(pos)
+          }
+      }
+    }
+
+    /** Returns a set of variables that are arguments to a special 'old' function */
+    private def oldVars(fml: Formula): Set[Variable] = {
+      var oldVars = Set[Variable]()
+      ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+          case FuncOf(Function("old", None, Real, Real), v: Variable) => oldVars += v; Left(None)
+          case _ => Left(None)
+        }
+      }, f)
+      oldVars
+    }
+
+    /** Replaces any old(.) with . in formula fml */
+    private def replaceOld(fml: Formula, ghostsByOld: Map[Variable, Variable]): Formula = {
+      ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+          case FuncOf(Function("old", None, Real, Real), v: Variable) => Right(ghostsByOld(v))
+          case _ => Left(None)
+        }
+      }, f) match {
+        case Some(g) => g
       }
     }
   }

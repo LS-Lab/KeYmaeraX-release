@@ -55,7 +55,7 @@ object TactixLibrary extends UnifyUSCalculus {
       | skip) partial) partial)
     ) partial)*@TheType()
   /** master: master tactic that tries hard to prove whatever it could */
-  def master(gen: Generator[Formula] = new NoneGenerate())(implicit qeTool: QETool): BuiltInTactic = ??? //TacticLibrary.master(gen, true, qeTool)
+  def master(gen: Generator[Formula] = new NoneGenerate())(implicit qeTool: QETool): BelleExpr = close //@todo implement
 
   /*******************************************************************
     * unification and matching based auto-tactics
@@ -217,8 +217,9 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val diffWeaken         : DependentPositionTactic = withAbstraction(DW)
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
-    (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant)))
-  )
+    (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant))))
+  /** Differential Cut a new invariant, use old(.) to refer to inital values of variables. @see[[DC]] @see[[DifferentialTactics.diffCut]] */
+  def diffCut(f: Formula)     : DependentPositionTactic = DifferentialTactics.diffCut(f)
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols as `[x'=f(x)][x':=f(x)]p(x,x')` */
   lazy val DE                 : DependentPositionTactic = DifferentialTactics.DE
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */

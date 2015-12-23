@@ -1,5 +1,6 @@
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentPositionTactic, BelleExpr}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -210,5 +211,99 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "a>0".asFormula
     result.subgoals.head.succ should contain only ("b<0".asFormula, "[z:=1;]z'=1".asFormula, "c=0".asFormula)
+  }
+
+  private def DC1(t: Formula => DependentPositionTactic): Unit = {
+    val result = proveBy("[{x'=2}]x>=0".asFormula, t("x>0".asFormula)(1))
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[{x'=2 & true & x>0}]x>=0".asFormula
+    result.subgoals(1).ante shouldBe empty
+    result.subgoals(1).succ should contain only "[{x'=2}]x>0".asFormula
+  }
+
+  private def DC2(t: Formula => DependentPositionTactic): Unit = {
+    val result = proveBy(
+      Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("y<0".asFormula, "[{x'=2}]x>=0".asFormula, "z=0".asFormula)),
+      t("x>0".asFormula)(2))
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only "x>0".asFormula
+    result.subgoals.head.succ should contain only ("y<0".asFormula, "[{x'=2 & true & x>0}]x>=0".asFormula, "z=0".asFormula)
+    result.subgoals(1).ante should contain only "x>0".asFormula
+    result.subgoals(1).succ should contain only ("y<0".asFormula, "[{x'=2}]x>0".asFormula, "z=0".asFormula)
+
+  }
+
+  private def DC3(t: Formula => DependentPositionTactic): Unit = {
+    val result = proveBy("[{x'=2, y'=3, z'=4 & y>4}]x>0".asFormula, t("x>1".asFormula)(1))
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[{x'=2,y'=3,z'=4 & (y>4&x>1)}]x>0".asFormula
+    result.subgoals(1).ante shouldBe empty
+    result.subgoals(1).succ should contain only "[{x'=2,y'=3,z'=4 & y>4}]x>1".asFormula
+  }
+
+  private def DC4(t: Formula => DependentPositionTactic): Unit = {
+    val result = proveBy("[{x'=2, y'=3}]x>0".asFormula, t("x>1".asFormula)(1))
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[{x'=2,y'=3 & (true&x>1)}]x>0".asFormula
+    result.subgoals(1).ante shouldBe empty
+    result.subgoals(1).succ should contain only "[{x'=2, y'=3}]x>1".asFormula
+  }
+
+  private def DC5(t: Formula => DependentPositionTactic): Unit = {
+    val result = proveBy("[{x'=2 & x>=0 | y<z}]x>=0".asFormula, t("x>0".asFormula)(1))
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[{x'=2 & (x>=0 | y<z) & x>0}]x>=0".asFormula
+    result.subgoals(1).ante shouldBe empty
+    result.subgoals(1).succ should contain only "[{x'=2 & x>=0 | y<z}]x>0".asFormula
+  }
+
+  private def DC6(t: Formula => DependentPositionTactic): Unit = {
+    val result = proveBy("[x:=3;][{x'=2}]x>=0".asFormula, t("x>0".asFormula)(1, 1::Nil))
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[x:=3;][{x'=2}]x>0".asFormula
+    result.subgoals(1).ante shouldBe empty
+    result.subgoals(1).succ should contain only "[x:=3;][{x'=2 & true & x>0}]x>=0".asFormula
+  }
+
+  "DC" should "cut in a simple formula" in DC1(DC)
+  it should "retain context for showing condition" in DC2(DC)
+  it should "cut formula into evolution domain constraint of rightmost ODE in ODEProduct" in DC3(DC)
+  it should "cut formula into rightmost ODE in ODEProduct, even if constraint empty" in DC4(DC)
+  it should "preserve existing evolution domain constraint" in DC5(DC)
+  ignore should "work in context" in DC6(DC)
+
+  "diffCut" should "cut in a simple formula" in DC1(diffCut)
+  it should "retain context for showing condition" in DC2(diffCut)
+  it should "cut formula into evolution domain constraint of rightmost ODE in ODEProduct" in DC3(diffCut)
+  it should "cut formula into rightmost ODE in ODEProduct, even if constraint empty" in DC4(diffCut)
+  it should "preserve existing evolution domain constraint" in DC5(diffCut)
+
+  it should "introduce ghosts when special function old is used" in {
+    val result = proveBy("[{x'=2 & x>=0 | y<z}]x>=0".asFormula, diffCut("x>old(x)".asFormula)(1))
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only "x_0=x".asFormula
+    result.subgoals.head.succ should contain only "[{x'=2 & (x>=0 | y<z) & x>x_0}]x>=0".asFormula
+    result.subgoals(1).ante should contain only "x_0=x".asFormula
+    result.subgoals(1).succ should contain only "[{x'=2 & x>=0 | y<z}]x>x_0".asFormula
+  }
+
+  it should "retain existing conditions and introduce ghosts when special function old is used" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>=0".asFormula)),
+      diffCut("x>old(x)".asFormula)(1))
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only ("x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals.head.succ should contain only "[{x'=2 & true & x>x_0}]x>=0".asFormula
+    result.subgoals(1).ante should contain only ("x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals(1).succ should contain only "[{x'=2}]x>x_0".asFormula
   }
 }
