@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import java.io.{File, PrintWriter}
+import java.io.{FilePermission, File, PrintWriter}
 import java.lang.reflect.ReflectPermission
 import java.net.Socket
 import java.nio.file.{Paths, Files}
@@ -602,21 +602,49 @@ object KeYmaeraX {
     *   trust to use a certain permission.
     *   */
   class KeYmaeraXSecurityManager extends SecurityManager {
-    override def checkPermission(perm: Permission): Unit = {
-      // println(perm)
-      val context = getClassContext
-      def inClass(clazz: String) = {
-        context.exists({case other =>
-          val name = other.getName
-          name != null && name.startsWith(clazz)})
+    val classPath = System.getProperty("java.class.path");
+    val classPaths = classPath.split(File.pathSeparator);
+    val homeDir = System.getProperty("user.home")
+    val javaHome = System.getProperty("java.home")
+    val keymaerax = homeDir + "/.keymaerax"
+    val accessibility = homeDir + "/.accessibility"
+
+    /* Fun fact 1: This can't contain anonymous functions because anonymous functions
+    * are classes and this sends the security manager into an infinite recursion with
+    * the class loader.
+    *
+    * Fun fact 2: "for" is a higher-order function, hence the while loop*/
+    def inPath(str:String): Boolean = {
+      var i:Int = 0
+      while(i < classPaths.length) {
+        if(str.startsWith(classPaths(i)))
+          return true
+        i = i + 1
       }
+      false
+    }
+
+    def contextContains(context: Array[Class[_]], clazz: String): Boolean = {
+      var i:Int = 0
+      while(i < context.length) {
+        if(context(i).getName.startsWith(clazz))
+          return true
+        i = i + 1
+      }
+      false
+    }
+    override def checkPermission(perm: Permission): Unit = {
+      val context = getClassContext
+
       def allowOnly(strs: List[String]): Unit = {
-        if(strs.exists({case c => inClass(c)}))
+        if(strs.exists({case c => contextContains(context,c)}))
           return
         else {
           try {
             super.checkPermission(perm)
-          } catch {case e => context.map{case c => println(c.getName)}; throw e}
+          } catch {case e =>
+            println("ACCESS DENIED BY KEYMAERAX SECURITY POLICY")
+            context.map{case c => println(c.getName)}; throw e}
         }
       }
       def allowNone = allowOnly(Nil)
@@ -630,10 +658,12 @@ object KeYmaeraX {
          * is so random that it is certainly (a) incomplete (b) subject to change, so it's probably best to give up on
          * this attempt at security. */
           "akka.actor.ReflectiveDynamicAccess",
+          "akka.actor.ActorCell",
           "akka.util.Reflect",
           "sun.security.jca.GetInstance",
           "java.net.InetSocketAddress",
           "java.net.ProxySelector",
+          "java.net.URL",
           "java.util.ResourceBundle",
           "javax.swing.UIManager",
           "javax.swing.JComponent",
@@ -646,6 +676,28 @@ object KeYmaeraX {
         ))
       } else if (perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName)) {
         allowNone
+      } else if (perm.isInstanceOf[FilePermission]) {
+        val filePermission = perm.asInstanceOf[FilePermission]
+        val name = filePermission.getName
+        /* Some of these look horribly system-dependent, and I expect this is just as hopeless as
+        * managing reflection permission. Perhaps we can instead give read permission freely and only restrict write
+        * permissions. */
+        if (name.startsWith(keymaerax)
+        || name.startsWith(accessibility)
+        || inPath(name)
+        || name.equals("/dev/random")
+        || name.equals("/dev/urandom")
+        || name.startsWith(javaHome)
+        || contextContains(context, "java.lang.ClassLoader")
+        || contextContains(context, "javax.crypto.SecretKeyFactory")
+        || contextContains(context, SystemWebBrowser.getClass.getName)) {
+
+        } else {
+          println("FILE ACCESS DENIED BY KEYMAERAX SECURITY POLICY")
+          context.map{case c => println(c.getName)}
+          throw new SecurityException()
+        }
+        // Allow all other permissions
       } else {
       }
     }
