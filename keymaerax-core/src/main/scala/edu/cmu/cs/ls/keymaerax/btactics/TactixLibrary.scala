@@ -218,7 +218,7 @@ object TactixLibrary extends UnifyUSCalculus {
   def DC(invariant: Formula)  : DependentPositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant))))
   /** Differential Cut a new invariant, use old(.) to refer to inital values of variables. @see[[DC]] @see[[DifferentialTactics.diffCut]] */
-  def diffCut(f: Formula)     : DependentPositionTactic = DifferentialTactics.diffCut(f)
+  def diffCut(f: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(qeTool, f:_*)
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols as `[x'=f(x)][x':=f(x)]p(x,x')` */
   lazy val DE                 : DependentPositionTactic = DifferentialTactics.DE
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
@@ -273,7 +273,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Dcompose: o' derives a function composition by chain rule */
   lazy val Dcompose           : BuiltInPositionTactic = ???
   /** Dconstify: substitute non-bound occurences of x with x() */
-  lazy val Dconstify          : BuiltInPositionTactic = ???
+  lazy val Dconstify          : DependentPositionTactic = DifferentialTactics.Dconstify
   /** Dvariable: v' derives a variable */
   lazy val Dvariable          : DependentPositionTactic = DifferentialTactics.Dvariable
 

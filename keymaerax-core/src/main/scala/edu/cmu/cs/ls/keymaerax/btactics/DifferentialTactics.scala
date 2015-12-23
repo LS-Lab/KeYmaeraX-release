@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, ExpressionTraversal, Position, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, ExpressionTraversal, Position, PosInExpr, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 
@@ -100,9 +100,8 @@ object DifferentialTactics {
           case Some(Box(_: ODESystem, _)) => true
           case _ => false
         }), "diffInd only at ODE system in succedent, but got " + sequent.sub(pos))
-        //@todo Dconstify usually needed for DI
         if (pos.isTopLevel)
-          DI(pos) &
+          Dconstify(pos) & DI(pos) &
             (implyR(pos) & andR(pos)) <(
               close | QE,
               //@note derive before DE to keep positions easier
@@ -114,7 +113,7 @@ object DifferentialTactics {
                 abstractionb(pos) & (close | QE)
               )
         else
-          DI(pos) &
+          Dconstify(pos) & DI(pos) &
             //@note derive before DE to keep positions easier
             shift(PosInExpr(1::1::Nil), new DependentPositionTactic("Shift") {
               override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -135,36 +134,46 @@ object DifferentialTactics {
 
   /**
    * Differential cut. Use special function old(.) to introduce a ghost for the starting value of a variable that can be
-   * used in the evolution domain constraint.
+   * used in the evolution domain constraint. Uses diffInd to prove that the formulas are differential invariants.
    * @example{{{
-   *         x>0 |- [{x'=2&x>0}]x>=0     x>0 |- [{x'=2}]x>0
-   *         ----------------------------------------------diffCut("x>0".asFormula)(1)
+   *         x>0 |- [{x'=2&x>0}]x>=0
+   *         ------------------------diffCut("x>0".asFormula)(1)
    *         x>0 |- [{x'=2}]x>=0
    * }}}
    * @example{{{
-   *         x>0, x_0=x |- [{x'=2&x>x_0}]x>=0     x>0, x_0=x |- [{x'=2}]x>x_0
-   *         ----------------------------------------------------------------diffCut("x>old(x)".asFormula)(1)
+   *         x>0, x_0=x |- [{x'=2&x>x_0}]x>=0
+   *         ---------------------------------diffCut("x>old(x)".asFormula)(1)
    *         x>0 |- [{x'=2}]x>=0
    * }}}
-   * @param f The formula to cut in as evolution domain constraint.
+   * @param formulas The formulas to cut in as evolution domain constraint.
    * @return The tactic.
    */
-  def diffCut(f: Formula): DependentPositionTactic = new DependentPositionTactic("diff cut") {
+  def diffCut(qeTool: QETool, formulas: Formula*): DependentPositionTactic = new DependentPositionTactic("diff cut") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
-        case Some(Box(ODESystem(_, _), _)) =>
-          val ov = oldVars(f)
-          if (ov.isEmpty) {
-            DC(f)(pos)
-          } else {
-            val ghosts: Set[((Variable, Variable), BelleExpr)] = ov.map(old => {
-              val ghost = TacticHelper.freshNamedSymbol(Variable(old.name), sequent)
-              (old -> ghost,
-                discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquational(pos))
-            })
-            ghosts.map(_._2).reduce(_ & _) & DC(replaceOld(f, ghosts.map(_._1).toMap))(pos)
-          }
+      override def computeExpr(sequent: Sequent): BelleExpr = nestDCs(formulas.map(ghostDC(_, pos, sequent)))
+    }
+
+    /** Looks for special 'old' function symbol in f and creates DC (possibly with ghost) */
+    private def ghostDC(f: Formula, pos: Position, sequent: Sequent): BelleExpr = {
+      val ov = oldVars(f)
+      if (ov.isEmpty) {
+        DC(f)(pos)
+      } else {
+        val ghosts: Set[((Variable, Variable), BelleExpr)] = ov.map(old => {
+          val ghost = TacticHelper.freshNamedSymbol(Variable(old.name), sequent)
+          (old -> ghost,
+            discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquational(pos))
+        })
+        ghosts.map(_._2).reduce(_ & _) & DC(replaceOld(f, ghosts.map(_._1).toMap))(pos)
       }
+    }
+
+    /** Turns a list of diff cuts (with possible 'old' ghost creation) tactics into nested DCs */
+    private def nestDCs(dcs: Seq[BelleExpr]): BelleExpr = {
+      dcs.head <(
+        /* use */ (if (dcs.tail.nonEmpty) nestDCs(dcs.tail) partial else skip) partial,
+        /* show */ diffInd(qeTool)('Rlast)
+        )
     }
 
     /** Returns a set of variables that are arguments to a special 'old' function */
@@ -175,7 +184,7 @@ object DifferentialTactics {
           case FuncOf(Function("old", None, Real, Real), v: Variable) => oldVars += v; Left(None)
           case _ => Left(None)
         }
-      }, f)
+      }, fml)
       oldVars
     }
 
@@ -186,8 +195,47 @@ object DifferentialTactics {
           case FuncOf(Function("old", None, Real, Real), v: Variable) => Right(ghostsByOld(v))
           case _ => Left(None)
         }
-      }, f) match {
+      }, fml) match {
         case Some(g) => g
+      }
+    }
+  }
+
+  /**
+   * Turns things that are constant in ODEs into function symbols.
+   * @example Turns v>0, a>0 |- [v'=a;]v>0, a>0 into v>0, a()>0 |- [v'=a();]v>0, a()>0
+   * @return The tactic.
+   */
+  def Dconstify: DependentPositionTactic = new DependentPositionTactic("IDC introduce differential constants") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
+        case Some(Box(ode@ODESystem(_, _), p)) =>
+          introduceConstants((StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.
+            filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable]), sequent)
+        case Some(Diamond(ode@ODESystem(_, _), p)) =>
+          introduceConstants((StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.
+            filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable]), sequent)
+      }
+
+      /** Derives non-const current sequent by substitution from consts */
+      private def introduceConstants(cnsts: Set[Variable], sequent: Sequent): BelleExpr = {
+        if (cnsts.isEmpty) {
+          skip
+        } else {
+          val subst = cnsts.map(c => SubstitutionPair(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c)).toList
+          val origin = Sequent(Nil, sequent.ante.map(constify(_, cnsts)), sequent.succ.map(constify(_, cnsts)))
+          US(USubst(subst), origin)
+        }
+      }
+
+      /** Recursively replaces variables in consts with constant function symbols in formula f. */
+      private def constify(f: Formula, consts: Set[Variable]): Formula = {
+        if (consts.isEmpty) f
+        else {
+          val c = consts.head
+          constify(SubstitutionHelper.replaceFree(f)(c, FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing)),
+            consts.tail)
+        }
       }
     }
   }
