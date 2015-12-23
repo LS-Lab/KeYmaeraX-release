@@ -39,8 +39,8 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val normalize               : BelleExpr = DoAll(
     (alphaRule partial)
       | (closeId
-      | ((allR('_) partial)
-      | ((existsL('_) partial)
+      | ((allR('R) partial)
+      | ((existsL('L) partial)
       | (close
       | ((betaRule partial)
       | ((step('L) partial)
