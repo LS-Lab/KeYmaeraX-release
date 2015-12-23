@@ -614,7 +614,9 @@ object KeYmaeraX {
         if(strs.exists({case c => inClass(c)}))
           return
         else {
-          super.checkPermission(perm)
+          try {
+            super.checkPermission(perm)
+          } catch {case e => context.map{case c => println(c.getName)}; throw e}
         }
       }
       def allowNone = allowOnly(Nil)
@@ -623,18 +625,25 @@ object KeYmaeraX {
         /* Ours */
           TacticInputConverter.getClass.getCanonicalName,
           CLInterpreter.getClass.getCanonicalName,
-        /* Not ours, but needed to run */
+        /* Not ours, but needed to run. Some of these classes (in particular AWT and Swing) seem likely to call into
+         * user-provided code, which would offer a way to circumvent this protection. Also, this gathering of classes
+         * is so random that it is certainly (a) incomplete (b) subject to change, so it's probably best to give up on
+         * this attempt at security. */
           "akka.actor.ReflectiveDynamicAccess",
           "akka.util.Reflect",
-          "sun.security",
+          "sun.security.jca.GetInstance",
           "java.net.InetSocketAddress",
-          "java.util.logging",
-          /* @TODO Some of these libraries almost certainly have methods that call user-supplied code, in which case
-          * you can circumvent the security checks. Try to make these more fine-grained to avoid this issue. */
-          "javax.swing",
-          "java.awt",
-          "sun.java2d",
-          "javax.crypto"))
+          "java.net.ProxySelector",
+          "java.util.ResourceBundle",
+          "javax.swing.UIManager",
+          "javax.swing.JComponent",
+          "com.apple.laf.AquaUtils",
+          "java.awt.Frame",
+          "java.awt.Window",
+          "java.awt.AWTEvent",
+          "sun.java2d.pipe.RenderingEngine",
+          "javax.crypto.SecretKeyFactory"
+        ))
       } else if (perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName)) {
         allowNone
       } else {
