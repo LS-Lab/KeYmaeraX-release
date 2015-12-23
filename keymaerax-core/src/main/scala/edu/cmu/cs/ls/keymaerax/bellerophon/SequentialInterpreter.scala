@@ -67,12 +67,10 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       case SaturateTactic(child, annotation, location) =>
         var prev: BelleValue = null
         var result: BelleValue = v
-        var rep = 1
         do {
           prev = result
           //@todo effect on listeners etc.
-          try { result = apply(child, result) } catch {case e: BelleError => throw e.inContext(SaturateTactic(e.context, annotation, location), "Failed * saturation on repetition " + rep + ": " + child)}
-          rep += 1
+          try { result = apply(child, result) } catch {case e: BelleError => /*@note child no longer applicable */ result = prev }
         } while (result != prev)
         result
       case RepeatTactic(child, times, annotation, location) => try {

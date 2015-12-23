@@ -191,8 +191,7 @@ object TactixLibrary extends UnifyUSCalculus {
         require(pos.isTopLevel, "with abstraction only at top-level")
         sequent(pos) match {
           case Box(a, p) =>
-            //@todo * saturate has unexpected behavior(throws exception when no longer applicable)
-            t(pos) & abstractionb(pos) & (if (pos.isSucc) ?(allR(pos))*@TheType() partial else skip)
+            t(pos) & abstractionb(pos) & (if (pos.isSucc) allR(pos)*@TheType() partial else skip)
           case Diamond(a, p) if pos.isAnte => ???
         }
       }

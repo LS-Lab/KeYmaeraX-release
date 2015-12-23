@@ -2,14 +2,13 @@ package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{RenUSubst, Legacy, Idioms}
-import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
+import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.error
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics
-import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics}
-import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera, Z3}
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.{Matchers, FlatSpec}
 
@@ -26,7 +25,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   val theInterpreter = SequentialInterpreter()
 
   "AndR" should "prove |- 1=1 ^ 2=2" in {
-    val tactic = andR(SuccPos(0))
+    val tactic = andR(1)
     val v = {
       val f = "1=1 & 2=2".asFormula
       BelleProvable(Provable.startProof(f))
@@ -38,48 +37,48 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
       Sequent(Nil, IndexedSeq(), IndexedSeq("2=2".asFormula))
     )
 
-    result.isInstanceOf[BelleProvable] shouldBe true
+    result shouldBe a[BelleProvable]
     result.asInstanceOf[BelleProvable].p.subgoals shouldBe expectedResult
   }
 
   "Sequential Combinator" should "prove |- 1=2 -> 1=2" in {
-    val tactic = implyR(SuccPos(0)) & trivialCloser
+    val tactic = implyR(1) & close
     val v = {
       val f = "1=2 -> 1=2".asFormula
       BelleProvable(Provable.startProof(f))
     }
     val result = theInterpreter.apply(tactic, v)
 
-    result.isInstanceOf[BelleProvable] shouldBe true
-    result.asInstanceOf[BelleProvable].p.isProved shouldBe true
+    result shouldBe a[BelleProvable]
+    result.asInstanceOf[BelleProvable].p shouldBe 'proved
   }
 
   "Either combinator" should "prove |- 1=2 -> 1=2 by AndR | (ImplyR & Close)" in {
-    val tactic = andR(SuccPos(0)) | (implyR(SuccPos(0)) & trivialCloser)
+    val tactic = andR(1) | (implyR(1) & close)
     val v = {
       val f = "1=2 -> 1=2".asFormula
       BelleProvable(Provable.startProof(f))
     }
     val result = theInterpreter.apply(tactic, v)
 
-    result.isInstanceOf[BelleProvable] shouldBe true
-    result.asInstanceOf[BelleProvable].p.isProved shouldBe true
+    result shouldBe a[BelleProvable]
+    result.asInstanceOf[BelleProvable].p shouldBe 'proved
   }
 
   it should "prove |- 1=2 -> 1=2 by (ImplyR & Close) | AndR" in {
-    val tactic = (implyR(SuccPos(0)) & trivialCloser) | andR(SuccPos(0))
+    val tactic = (implyR(1) & close) | andR(1)
     val v = {
       val f = "1=2 -> 1=2".asFormula
       BelleProvable(Provable.startProof(f))
     }
     val result = theInterpreter.apply(tactic, v)
 
-    result.isInstanceOf[BelleProvable] shouldBe true
-    result.asInstanceOf[BelleProvable].p.isProved shouldBe true
+    result shouldBe a[BelleProvable]
+    result.asInstanceOf[BelleProvable].p shouldBe 'proved
   }
 
   it should "failover to right whever a non-closing and non-partial tactic is provided on the left" in {
-    val tactic = (implyR(SuccPos(0))) | Idioms.ident
+    val tactic = implyR(1) | skip
 
     shouldResultIn(
       tactic,
@@ -89,22 +88,38 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "fail when neither tactic manages to close the goal and also neither is partial" in {
-    val tactic = (implyR(SuccPos(0))) | (Idioms.ident & Idioms.ident)
+    val tactic = implyR(1) | (skip & skip)
     val f = "1=2 -> 1=2".asFormula
-    a[BelleError] should be thrownBy(
-      theInterpreter(tactic, BelleProvable(Provable.startProof(f)))
+    a[BelleError] should be thrownBy theInterpreter(tactic, BelleProvable(Provable.startProof(f))
     )
+  }
+
+  "Saturate combinator" should "prove x=2&y=3&z=4 |- z=4" in {
+    shouldClose(andL('_)*@TheType() &
+      assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
+      assertE("z=4".asFormula, "z=4 not at -3")(-3) & close,
+      Sequent(Nil, IndexedSeq("x=2&y=3&z=4".asFormula), IndexedSeq("z=4".asFormula)))
+  }
+
+  it should "repeat 0 times if not applicable" in {
+    shouldClose(andL('_)*@TheType() & close,
+      Sequent(Nil, IndexedSeq("x=2".asFormula), IndexedSeq("x=2".asFormula)))
+  }
+
+  it should "saturate until no longer applicable" in {
+    shouldClose(andL('Llast)*@TheType() & debug("Foo") & close,
+      Sequent(Nil, IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)))
   }
 
   "DoAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
-    val expr = andR(SuccPos(0)) & DoAll (implyR(SuccPos(0)) & trivialCloser)
+    val expr = andR(SuccPos(0)) & DoAll (implyR(SuccPos(0)) & close)
     shouldClose(expr, f)
   }
 
   it should "move inside Eithers correctly" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
-    val expr = andR(SuccPos(0)) & DoAll (andR(SuccPos(0)) | (implyR(SuccPos(0)) & trivialCloser))
+    val expr = andR(SuccPos(0)) & DoAll (andR(SuccPos(0)) | (implyR(SuccPos(0)) & close))
     shouldClose(expr, f)
   }
 
@@ -112,14 +127,14 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = (
       DoAll(andR(SuccPos(0))) |
-      DoAll(implyR(SuccPos(0)) & trivialCloser)
-    )*@(TheType())
+      DoAll(implyR(SuccPos(0)) & close)
+    )*@TheType()
   }
 
   "Branch Combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val tactic = andR(SuccPos(0)) < (
-      implyR(SuccPos(0)) & trivialCloser,
-      implyR(SuccPos(0)) & trivialCloser
+      implyR(SuccPos(0)) & close,
+      implyR(SuccPos(0)) & close
     )
     val v = {
       val f = "(1=1->1=1) & (2=2->2=2)".asFormula
@@ -134,7 +149,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   it should "handle cases were subgoals are added." in {
     val tactic = andR(SuccPos(0)) < (
       andR(SuccPos(0)) partial,
-      implyR(SuccPos(0)) & trivialCloser
+      implyR(SuccPos(0)) & close
     )
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
     shouldResultIn(
@@ -147,7 +162,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   it should "fail whenever there's a non-partial tactic that doesn't close its goal." in {
     val tactic = andR(SuccPos(0)) < (
       andR(SuccPos(0)),
-      implyR(SuccPos(0)) & trivialCloser
+      implyR(SuccPos(0)) & close
       )
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
     a[BelleError] shouldBe thrownBy(
@@ -157,7 +172,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   it should "handle cases were subgoals are added -- switch order" in {
     val tactic = andR(SuccPos(0)) < (
-      implyR(SuccPos(0)) & trivialCloser,
+      implyR(SuccPos(0)) & close,
       andR(SuccPos(0)) partial
       )
     val f = "(1=1->1=1) & (2=2 & 3=3)".asFormula
@@ -170,7 +185,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   "Unification" should "work on 1=1->1=1" in {
     val pattern = SequentType(toSequent("p() -> p()"))
-    val e = USubstPatternTactic(Seq((pattern, (x:RenUSubst) => implyR(SuccPos(0)) & trivialCloser)))
+    val e = USubstPatternTactic(Seq((pattern, (x:RenUSubst) => implyR(SuccPos(0)) & close)))
     shouldClose(e, "1=1->1=1".asFormula)
   }
 
@@ -179,7 +194,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val pattern2 = SequentType(toSequent("p() & q()"))
     val e = USubstPatternTactic(Seq(
       (pattern2, (x:RenUSubst) => error("Should never get here.")),
-      (pattern1, (x:RenUSubst) => implyR(SuccPos(0)) & trivialCloser)
+      (pattern1, (x:RenUSubst) => implyR(SuccPos(0)) & close)
     ))
     shouldClose(e, "1=1->1=1".asFormula)
   }
@@ -188,7 +203,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val pattern1 = SequentType(toSequent("p() -> p()"))
     val pattern2 = SequentType(toSequent("p() & q()"))
     val e = USubstPatternTactic(Seq(
-      (pattern1, (x:RenUSubst) => implyR(SuccPos(0)) & trivialCloser),
+      (pattern1, (x:RenUSubst) => implyR(1) & close),
       (pattern2, (x:RenUSubst) => error("Should never get here."))
     ))
     shouldClose(e, "1=1->1=1".asFormula)
@@ -198,7 +213,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val pattern1 = SequentType(toSequent("p() -> p()"))
     val pattern2 = SequentType(toSequent("p() -> q()"))
     val e = USubstPatternTactic(Seq(
-      (pattern1, (x:RenUSubst) => implyR(SuccPos(0)) & trivialCloser),
+      (pattern1, (x:RenUSubst) => implyR(1) & close),
       (pattern2, (x:RenUSubst) => error("Should never get here."))
     ))
     shouldClose(e, "1=1->1=1".asFormula)
@@ -209,15 +224,15 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     val pattern2 = SequentType(toSequent("p() -> q()"))
     val e = USubstPatternTactic(Seq(
       (pattern2, (x:RenUSubst) => error("Should never get here.")),
-      (pattern1, (x:RenUSubst) => implyR(SuccPos(0)) & trivialCloser)
+      (pattern1, (x:RenUSubst) => implyR(1) & close)
     ))
     a[BelleUserGeneratedError] shouldBe thrownBy (shouldClose(e, "1=1->1=1".asFormula))
   }
 
   "AtSubgoal" should "work" in {
-    val t = andR(SuccPos(0)) &
-      Idioms.atSubgoal(0, implyR(SuccPos(0)) & trivialCloser) &
-      Idioms.atSubgoal(0, implyR(SuccPos(0)) & trivialCloser)
+    val t = andR(1) &
+      Idioms.atSubgoal(0, implyR(1) & close) &
+      Idioms.atSubgoal(0, implyR(1) & close)
     shouldClose(t, "(1=1->1=1) & (2=2->2=2)".asFormula)
   }
 
@@ -237,13 +252,14 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   it should "work for non-arith things" in {
     val legacyTactic = tactics.PropositionalTacticsImpl.AndRightT(SuccPos(0))
     val t = Legacy.initializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic) < (
-      implyR(SuccPos(0)) & trivialCloser,
-      implyR(SuccPos(0)) & trivialCloser
+      implyR(SuccPos(0)) & close,
+      implyR(SuccPos(0)) & close
       )
     shouldClose(t, "(1=1->1=1) & (1=2->1=2)".asFormula)
   }
 
-  "A failing tactic" should "print nice errors and provide a stack trace" in {
+  /*"A failing tactic"*/
+  ignore should "print nice errors and provide a stack trace" in {
     val itFails = new BuiltInTactic("fails") {
       override def result(provable: Provable) = throw new ProverException("Fails...")
     }
@@ -253,10 +269,9 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     // now try with defs
     def repTwo = conj*2
 
-    def split = (andR(1) <(
+    def split = andR(1) <(
         repTwo,
-        Idioms.ident partial)
-      )*@TheType()
+        skip)
 
     val thrown = intercept[Throwable] {
       theInterpreter.apply(Idioms.nil
@@ -269,7 +284,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     thrown.getMessage should include ("Fails...")
     val s = thrown.getCause.getStackTrace
     //@todo works in isolation, but when run with other tests, we pick up stack trace elements of those too
-    s.filter(_.getFileName == "SequentialInterpreterTests.scala").slice(0, 11).map(_.getLineNumber) shouldBe Array(266, 265, 264, 259, 256, 256, 254, 251, 251, 248, 247)
+    s.filter(_.getFileName == "SequentialInterpreterTests.scala").slice(0, 11).map(_.getLineNumber) shouldBe Array(280, 279, 278, 271, 271, 269, 266, 266, 263, 262, 276)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -278,17 +293,19 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
 
   private def toSequent(s : String) = new Sequent(Nil, IndexedSeq(), IndexedSeq(s.asFormula))
 
-  private def shouldClose(expr: BelleExpr, f: Formula) = {
-    val v = BelleProvable(Provable.startProof(f))
+  private def shouldClose(expr: BelleExpr, f: Formula): Unit = shouldClose(expr, Sequent(Nil, IndexedSeq(), IndexedSeq(f)))
+
+  private def shouldClose(expr: BelleExpr, sequent: Sequent): Unit = {
+    val v = BelleProvable(Provable.startProof(sequent))
     val result = theInterpreter.apply(expr, v)
-    result.isInstanceOf[BelleProvable] shouldBe true
-    result.asInstanceOf[BelleProvable].p.isProved shouldBe true
+    result shouldBe a[BelleProvable]
+    result.asInstanceOf[BelleProvable].p shouldBe 'proved
   }
 
   private def shouldResultIn(expr: BelleExpr, f: Formula, expectedResult : Seq[Sequent]) = {
     val v = BelleProvable(Provable.startProof(f))
     val result = theInterpreter.apply(expr, v)
-    result.isInstanceOf[BelleProvable] shouldBe true
+    result shouldBe a[BelleProvable]
     result.asInstanceOf[BelleProvable].p.subgoals shouldBe expectedResult
   }
 }
