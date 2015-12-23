@@ -5,8 +5,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{axiomatic, closeTrue, coHideR, commuteEquivR, cutLR, cutL,
-  cutR, equivR, equivifyR, implyR}
+import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{axiomatic, closeTrue, coHideR, coHide2, commuteEquivR,
+  cut, cutLR, cutL, cutR, equivR, equivifyR, hideL, hideR, implyR}
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
@@ -28,6 +28,9 @@ import scala.language.postfixOps
 trait UnifyUSCalculus {
   //@todo import a debug flag as in Tactics.DEBUG
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+
+  /*@note must be initialized from outside; is var so that unit tests can setup/tear down. @see [[DerivedAxioms]] */
+  implicit var qeTool: QETool = null
 
   /**
    * Throw exception if there is more than one open subgoal on the provable.
@@ -235,7 +238,7 @@ trait UnifyUSCalculus {
         debug("start useAt " + p) & cutLR(C(subst(other)))(p.top) <(
           //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
           //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-          /* use cut */ debug("    use cut") & ident partial,
+          /* use cut */ debug("    use cut") partial,
           /* show cut */
             debug("    show cut") &
             coHideR/*(expect)*/(cutPos) & assert(0, 1) & debug("    cohidden") &
@@ -247,9 +250,8 @@ trait UnifyUSCalculus {
             if (other.kind==FormulaKind) CE(p.inExpr)
             else if (other.kind==TermKind) CQ(p.inExpr)
             else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-            debug("    using fact tactic") & factTactic & debug("  done fact tactic")
-
-        ) & debug("end   useAt " + p)
+            debug("    using fact tactic") & factTactic & debug("  done fact tactic") partial
+        ) & debug("end   useAt " + p) partial
       }
 
       K.ctx match {
@@ -306,18 +308,29 @@ trait UnifyUSCalculus {
               & factTactic
           )
 
-
         case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
-          //@todo could do: if prereq provable by master then use remainder directly. Otherwise use CMon to show C{prereq} implies ....
-          //@todo only prove remainder absolutely by proving prereq if that proof works out. Otherwise preserve context to prove prereq by master.
-          //@todo check positioning etc.
-          useAt(subst, new Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(0)) <(
-            //@note the roles of cutUseLbl and cutShowLbl are really swapped here, since the implication on cutShowLbl will be handled by factTactic
-            //@todo don't work on prereq? Or make it customizable?
-            /* use */ /* prove prereq: */ /*@todo: TactixLibrary.master*/ ???,
-            /* show */ factTactic
-          ), sequent)
+          //@todo assumes no more context around remainder (no other examples so far)
+          lazy val provePrereqLocally = {
+            val (conclusion, commute) = remainder match {
+              case Equiv(DotFormula, other) => (other, if (p.isSucc) commuteEquivR(1) else ident)
+              case Equiv(other, DotFormula) => (other, if (p.isAnte) commuteEquivR(1) else ident)
+            }
 
+            // prove prereq locally
+            cut(C(subst(prereq))) <(
+              /* use */ cutR(C(subst(conclusion)))(p) <(
+                hideL('Llast) partial,
+                coHide2(AntePos(sequent.ante.size), p.top) & equivifyR(1) & commute & implyRi & CMon(p.inExpr) & factTactic) partial,
+              /* show: try to prove prereq locally by master, remains open if master fails */ hideR(p.top) & ?(TactixLibrary.master()) partial
+              )
+          }
+
+          // try to prove prereq globally, if that fails preserve context and fall back to CMon and C{prereq} -> ...
+          (useAt(subst, new Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(0)) <(
+            //@note the roles of use and show are really swapped here, since the implication on show will be handled by factTactic
+            /* use: try to prove prereq globally */ TactixLibrary.master(),
+            /* show */ factTactic), sequent) partial) |
+          (provePrereqLocally partial)
         case Forall(vars, remainder) if vars.length==1 => ???
           //useAt(subst, new Context(remainder), k, p, C, c, /*@todo instantiateQuanT(vars.head, subst(vars.head))(SuccPos(0))*/ ident, sequent)
 
