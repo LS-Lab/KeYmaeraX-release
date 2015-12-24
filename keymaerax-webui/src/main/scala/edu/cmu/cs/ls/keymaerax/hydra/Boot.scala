@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.awt.{GridLayout}
 import javax.swing._
 
+import _root_.edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig}

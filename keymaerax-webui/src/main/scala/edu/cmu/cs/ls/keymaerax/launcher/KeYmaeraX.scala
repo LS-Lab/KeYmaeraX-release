@@ -1,11 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import java.io.{File, PrintWriter}
+import java.io.{FilePermission, File, PrintWriter}
 import java.lang.reflect.ReflectPermission
 import java.net.Socket
 import java.nio.file.{Paths, Files}
 import java.security.Permission
 
+import _root_.edu.cmu.cs.ls.keymaerax.api.TacticInputConverter
+import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.CLInterpreter
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.parser._
@@ -579,14 +581,38 @@ object KeYmaeraX {
       "\n" + node.sequent.prettyString + "\n")
   }
 
-  /** Activate a security manager */
+  /** Implements the security policy for the KeYmaera X web server.
+    *
+    * Preferably we would heavily restrict uses of reflection (to prevent, for example, creating fake Provables),
+    * but we know of no way to do so except relying on extremely fragile methods such as crawling the call stack.
+    * The same goes for restricting read access to files.
+    *
+    * Instead we settle for preventing people from installing less-restrictive security managers and restricting
+    * all writes to be inside the .keymaerax directory. */
+  class KeYmaeraXSecurityManager extends SecurityManager {
+    val homeDir = System.getProperty("user.home")
+    val keymaerax = homeDir + "/.keymaerax"
+
+    override def checkPermission(perm: Permission): Unit = {
+      perm match {
+        case _:ReflectPermission => ()
+        case _:RuntimePermission =>
+          if ("setSecurityManager".equals(perm.getName))
+            throw new SecurityException()
+        case _:FilePermission =>
+          val filePermission = perm.asInstanceOf[FilePermission]
+          val name = filePermission.getName
+          val actions = filePermission.getActions
+          if ((actions.contains("write") || actions.contains("delete"))
+            && !name.startsWith(keymaerax)) {
+            throw new SecurityException("KeYmaera X security manager forbids writing to files outside ~/.keymaerax")
+          }
+      }
+    }
+  }
+
   private def activateSecurity(): Unit = {
-    System.setSecurityManager(new SecurityManager() {
-      override def checkPermission(perm: Permission): Unit =
-        if (perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName) ||
-          perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName()))
-          throw new SecurityException("Access denied by KeYmaera X")
-    })
+    System.setSecurityManager(new KeYmaeraXSecurityManager())
   }
 
   private val interactiveUsage = "Type a tactic command to apply to the current goal.\n" +
