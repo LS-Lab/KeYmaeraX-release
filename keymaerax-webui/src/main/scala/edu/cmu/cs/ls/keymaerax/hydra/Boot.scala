@@ -83,10 +83,6 @@ object Boot extends App {
     case Some(c) => (c.config("isHosted").equals("true"), c.config("host"), Integer.parseInt(c.config("port")))
     case None => (false, "127.0.0.1", 8090)
   }
-  /* The right place to install this is from launcher.KeYmaeraX, but that entry point doesn't work from IntelliJ */
-  if(System.getSecurityManager == null) {
-    System.setSecurityManager(new KeYmaeraX.KeYmaeraXSecurityManager())
-  }
   try {
     DerivedAxioms.prepopulateDerivedLemmaDatabase()
   }

@@ -581,127 +581,36 @@ object KeYmaeraX {
       "\n" + node.sequent.prettyString + "\n")
   }
 
-  /** Activate a security manager
-    * Desired permissions:
-    * Allow:
-    *   Reading all necessary libraries
-    *   Reading DEBUG and LAX system properties (uses reflection)
-    *   Reading/Writing sqlite database
-    *   Reading ExposedTacticsLibrary with reflection
-    *   Read/Write web port
-    * Deny:
-    *   Reading arbitrary system files
-    *   Writing anything outside the .keymaerax directory
-    *   Writing any class with reflection
-    *   Reading anything but ExposedTacticsLibrary with reflection.
-    *   Read/Write other ports
+  /** Implements the security policy for the KeYmaera X web server.
     *
-    *   Some of these permissions aren't defined with enough granularity for our purposes.
-    *   For example reflection permissions are all-or-nothing (and include the ability to read and write
-    *   system properties). To get around this, we have access to the call stack. We only grant access to code that we
-    *   trust to use a certain permission.
-    *   */
+    * Preferably we would heavily restrict uses of reflection (to prevent, for example, creating fake Provables),
+    * but we know of no way to do so except relying on extremely fragile methods such as crawling the call stack.
+    * The same goes for restricting read access to files.
+    *
+    * Instead we settle for preventing people from installing less-restrictive security managers and restricting
+    * all writes to be inside the .keymaerax directory. */
   class KeYmaeraXSecurityManager extends SecurityManager {
-    val classPath = System.getProperty("java.class.path");
-    val classPaths = classPath.split(File.pathSeparator);
     val homeDir = System.getProperty("user.home")
-    val javaHome = System.getProperty("java.home")
     val keymaerax = homeDir + "/.keymaerax"
-    val accessibility = homeDir + "/.accessibility"
 
-    /* Fun fact 1: This can't contain anonymous functions because anonymous functions
-    * are classes and this sends the security manager into an infinite recursion with
-    * the class loader.
-    *
-    * Fun fact 2: "for" is a higher-order function, hence the while loop*/
-    def inPath(str:String): Boolean = {
-      var i:Int = 0
-      while(i < classPaths.length) {
-        if(str.startsWith(classPaths(i)))
-          return true
-        i = i + 1
-      }
-      false
-    }
-
-    def contextContains(context: Array[Class[_]], clazz: String): Boolean = {
-      var i:Int = 0
-      while(i < context.length) {
-        if(context(i).getName.startsWith(clazz))
-          return true
-        i = i + 1
-      }
-      false
-    }
     override def checkPermission(perm: Permission): Unit = {
-      val context = getClassContext
-
-      def allowOnly(strs: List[String]): Unit = {
-        if(strs.exists({case c => contextContains(context,c)}))
-          return
-        else {
-          try {
-            super.checkPermission(perm)
-          } catch {case e =>
-            println("ACCESS DENIED BY KEYMAERAX SECURITY POLICY")
-            context.map{case c => println(c.getName)}; throw e}
-        }
-      }
-      def allowNone = allowOnly(Nil)
-      if (perm.isInstanceOf[ReflectPermission] && "suppressAccessChecks".equals(perm.getName)) {
-        allowOnly(List(
-        /* Ours */
-          TacticInputConverter.getClass.getCanonicalName,
-          CLInterpreter.getClass.getCanonicalName,
-        /* Not ours, but needed to run. Some of these classes (in particular AWT and Swing) seem likely to call into
-         * user-provided code, which would offer a way to circumvent this protection. Also, this gathering of classes
-         * is so random that it is certainly (a) incomplete (b) subject to change, so it's probably best to give up on
-         * this attempt at security. */
-          "akka.actor.ReflectiveDynamicAccess",
-          "akka.actor.ActorCell",
-          "akka.util.Reflect",
-          "sun.security.jca.GetInstance",
-          "java.net.InetSocketAddress",
-          "java.net.ProxySelector",
-          "java.net.URL",
-          "java.util.ResourceBundle",
-          "javax.swing.UIManager",
-          "javax.swing.JComponent",
-          "com.apple.laf.AquaUtils",
-          "java.awt.Frame",
-          "java.awt.Window",
-          "java.awt.AWTEvent",
-          "sun.java2d.pipe.RenderingEngine",
-          "javax.crypto.SecretKeyFactory"
-        ))
-      } else if (perm.isInstanceOf[RuntimePermission] && "setSecurityManager".equals(perm.getName)) {
-        allowNone
-      } else if (perm.isInstanceOf[FilePermission]) {
-        val filePermission = perm.asInstanceOf[FilePermission]
-        val name = filePermission.getName
-        /* Some of these look horribly system-dependent, and I expect this is just as hopeless as
-        * managing reflection permission. Perhaps we can instead give read permission freely and only restrict write
-        * permissions. */
-        if (name.startsWith(keymaerax)
-        || name.startsWith(accessibility)
-        || inPath(name)
-        || name.equals("/dev/random")
-        || name.equals("/dev/urandom")
-        || name.startsWith(javaHome)
-        || contextContains(context, "java.lang.ClassLoader")
-        || contextContains(context, "javax.crypto.SecretKeyFactory")
-        || contextContains(context, SystemWebBrowser.getClass.getName)) {
-
-        } else {
-          println("FILE ACCESS DENIED BY KEYMAERAX SECURITY POLICY")
-          context.map{case c => println(c.getName)}
-          throw new SecurityException()
-        }
-        // Allow all other permissions
-      } else {
+      perm match {
+        case _:ReflectPermission => ()
+        case _:RuntimePermission =>
+          if ("setSecurityManager".equals(perm.getName))
+            throw new SecurityException()
+        case _:FilePermission =>
+          val filePermission = perm.asInstanceOf[FilePermission]
+          val name = filePermission.getName
+          val actions = filePermission.getActions
+          if ((actions.contains("write") || actions.contains("delete"))
+            && !name.startsWith(keymaerax)) {
+            throw new SecurityException("KeYmaera X security manager forbids writing to files outside ~/.keymaerax")
+          }
       }
     }
   }
+
   private def activateSecurity(): Unit = {
     System.setSecurityManager(new KeYmaeraXSecurityManager())
   }
