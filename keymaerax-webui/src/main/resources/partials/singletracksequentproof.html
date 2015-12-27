@@ -57,10 +57,15 @@
                 <!-- proof rule -->
                 <span class="k4-proofrule"
                       uib-tooltip="{{proofTree.nodesMap[deductionPath.sections[$index].path[0]].rule.name}}"
-                      tooltip-placement="right">{{proofTree.nodesMap[deductionPath.sections[$index].path[0]].rule.name}}</span>
+                      tooltip-placement="right"
+                      ng-right-click="proofStepRightClick($event)" tabindex="-1"
+                      uib-popover-template="'proofStepPopover.html'"
+                      popover-title="Proof step" popover-placement="bottom" popover-trigger="contextmenu"
+                      ng-init="goalId=proofTree.nodesMap[deductionPath.sections[$index].path[0]].id">
+                    {{proofTree.nodesMap[deductionPath.sections[$index].path[0]].rule.name}}
+                </span>
             </li>
         </ul>
-        <!-- add buttons: rewind to here, start alternative proof attempt etc. -->
     </div>
 
     <!-- section remainder -->
@@ -98,10 +103,15 @@
                 <!-- proof rule -->
                 <span class="k4-proofrule"
                       uib-tooltip="{{proofTree.nodesMap[step].rule.name}}"
-                      tooltip-placement="right">{{proofTree.nodesMap[step].rule.name}}</span>
+                      tooltip-placement="right"
+                      ng-right-click="proofStepRightClick($event)" tabindex="-1"
+                      uib-popover-template="'proofStepPopover.html'"
+                      popover-title="Proof step" popover-placement="bottom" popover-trigger="contextmenu"
+                      ng-init="goalId=proofTree.nodesMap[step].id">
+                    {{proofTree.nodesMap[step].rule.name}}
+                </span>
             </li>
         </ul>
-        <!-- add buttons: rewind to here, start alternative proof attempt etc. -->
     </div>
     <!-- fetch parent of incomplete section, collapse/uncollapse for unfinished sections/last section-->
     <div ng-class="(outerIdx === deductionPath.sections.length-1 || (section.isComplete && !section.isCollapsed)) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'">
@@ -192,5 +202,11 @@
                         formula="f.formula" highlight="false" collapsed="true" on-axiom=""></k4-formula>
         </span>
     </span>
+    </div>
+</script>
+<script type="text/ng-template" id="proofStepPopover.html">
+    <div class="k4-nobreak">
+        <a ng-click="prune(goalId)"><span class="fa fa-eraser"> Prune</span></a><br/>
+        <a ng-click="startProof(goalId)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>
     </div>
 </script>

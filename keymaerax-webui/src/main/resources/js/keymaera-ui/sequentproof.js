@@ -140,6 +140,16 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         return -1;
       }
 
+      /** Returns the deduction index of the specified proof tree node in agendaItem (Object { section, pathStep} ). */
+      deductionIndexOf = function(agendaItem, ptNodeId) {
+        for (var i = 0; i < agendaItem.deduction.sections.length; i++) {
+          var section = agendaItem.deduction.sections[i];
+          var j = section.path.indexOf(ptNodeId);
+          if (j >= 0) return { sectionIdx: i, pathStepIdx: j };
+        }
+        return { sectionIdx: -1, pathStepIdx: -1 };
+      }
+
       /** Filters sibling candidates: removes this item's goal and path */
       scope.siblingsWithAgendaItem = function(candidates) {
         var item = scope.agenda.itemsMap[scope.nodeId];
@@ -163,6 +173,11 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         event.target.focus();
       }
 
+      scope.proofStepRightClick = function(event) {
+        event.stopPropagation();
+        event.target.focus();
+      }
+
       flatPath = function(item) {
         var result = [];
         $.each(item.deduction.sections, function(i, v) { $.merge(result, v.path); });
@@ -180,7 +195,47 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         });
       }
 
-      scope.deductionPath.sections = $.map(scope.deductionPath.sections, function(v, i) { return {path: v, isCollapsed: false}; });
+      /** Prunes the proof tree and agenda/deduction path below the specified step ID. */
+      scope.prune = function(goalId) {
+        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/pruneBelow').success(function(data) {
+          // prune proof tree
+          scope.proofTree.pruneBelow(goalId);
+
+          // update agenda: prune deduction paths
+          var agendaItems = scope.agenda.itemsByProofStep(goalId);
+          $.each(agendaItems, function(i, item) {
+            var deductionIdx = deductionIndexOf(scope.agenda.itemsMap[item.id], goalId);
+            var section = item.deduction.sections[deductionIdx.sectionIdx];
+            section.path.splice(0, deductionIdx.pathStepIdx);
+            item.deduction.sections.splice(0, deductionIdx.sectionIdx);
+          });
+
+          // sanity check: all agendaItems should have the same deductions (top item should be data.agendaItem.deduction)
+          var newTop = data.agendaItem.deduction.sections[0].path[0];
+          $.each(agendaItems, function(i, item) {
+            var oldTop = item.deduction.sections[0].path[0];
+            if (oldTop !== newTop) {
+              console.log("Unexpected deduction start after pruning: expected " + newTop + " but have " + oldTop +
+                " at agenda item " + item.id)
+            }
+            //@todo additionally check that deduction.sections are all the same (might be expensive, though)
+          });
+
+          // update agenda: copy already cached deduction path into the remaining agenda item (new top item)
+          data.agendaItem.deduction = agendaItems[0].deduction;
+          scope.agenda.itemsMap[data.agendaItem.id] = data.agendaItem;
+
+          // delete previous items
+          //@todo preserve previous tab order
+          $.each(agendaItems, function(i, item) {
+            delete scope.agenda.itemsMap[item.id];
+          });
+
+          // select new top item
+          scope.agenda.selectById(data.agendaItem.id);
+        });
+      }
+
       scope.deductionPath.isCollapsed = false;
     }
 

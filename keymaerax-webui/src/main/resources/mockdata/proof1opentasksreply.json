@@ -73,13 +73,13 @@
       "id": "N1",
       "name": "base case",
       "proofId": "P1",
-      "deduction": { "sections": [ ["S5"] ] }
+      "deduction": { "sections": [ { "path": ["S5"] } ] }
     },
     "N2": {
       "id": "N2",
       "name": "whatever",
       "proofId": "P1",
-      "deduction": { "sections": [ ["S3"] ] }
+      "deduction": { "sections": [ { "path": ["S3"] } ] }
     }
   }
 }

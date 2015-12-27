@@ -259,6 +259,16 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val pruneBelow = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId, goalId) => { pathEnd {
+    get {
+      val request = goalId match {
+        case "S2" => new MockRequest("/mockdata/s2prunereply.json")
+        case "S1" => new MockRequest("/mockdata/s1prunereply.json")
+      }
+      complete(standardCompletion(request))
+    }
+  }}}
+
   val proofTask = path("proofs" / "user" / Segment / Segment / "agendaDetails" / Segment.?) { (userId, proofId, nodeId) => { pathEnd {
     get {
       val request = new GetProofNodeInfoRequest(database, userId, proofId, nodeId)
@@ -541,6 +551,7 @@ trait RestApi extends HttpService {
     proofTasksBranchRoot  ::
     axiomList             ::
     useAt                 ::
+    pruneBelow            ::
     proofTask             ::
     nodeFormulaTactics    ::
     nodeRunTactics        ::
