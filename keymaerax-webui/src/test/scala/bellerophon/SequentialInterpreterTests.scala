@@ -77,7 +77,7 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     result.asInstanceOf[BelleProvable].p shouldBe 'proved
   }
 
-  it should "failover to right whever a non-closing and non-partial tactic is provided on the left" in {
+  it should "failover to right whenever a non-closing and non-partial tactic is provided on the left" in {
     val tactic = implyR(1) | skip
 
     shouldResultIn(
@@ -107,7 +107,14 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
   }
 
   it should "saturate until no longer applicable" in {
-    shouldClose(andL('Llast)*@TheType() & debug("Foo") & close,
+    shouldClose(andL('Llast)*@TheType() &
+      assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
+      assertE("z=4|z=5".asFormula, "z=4|z=5 not at -3")(-3) & close,
+      Sequent(Nil, IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)))
+  }
+
+  it should "work in combination with either combinator" in {
+    shouldClose((andL('Llast)*@TheType() | close)*@TheType(),
       Sequent(Nil, IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)))
   }
 

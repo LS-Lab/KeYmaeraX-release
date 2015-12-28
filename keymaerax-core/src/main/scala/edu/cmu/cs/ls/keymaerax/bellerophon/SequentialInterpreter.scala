@@ -51,6 +51,8 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           val leftResult = apply(left, v)
           (leftResult, left) match {
             case (BelleProvable(p), _) if p.isProved => leftResult
+            case (_, x: SaturateTactic) if leftResult != v => leftResult
+            case (_, x: SaturateTactic) if leftResult == v => throw new BelleError("Unchanged saturate").inContext(EitherTactic(BelleDot, right, location), "No change by left-hand side of |:" + left)
             case (_, x: PartialTactic) => leftResult
             case _ => throw new BelleError("Non-partials must close proof.").inContext(EitherTactic(BelleDot, right, location), "Failed left-hand side of |:" + left)
           }
@@ -59,8 +61,10 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           case eleft: BelleError =>
             val rightResult = try { apply(right, v) } catch {case e: BelleError => throw e.inContext(EitherTactic(eleft.context, e.context, location), "Failed: both left-hand side and right-hand side " + expr)}
             (rightResult, right) match {
-              case (_, x:PartialTactic) => rightResult
               case (BelleProvable(p), _) if p.isProved => rightResult
+              case (_, x: SaturateTactic) if rightResult != v => rightResult
+              case (_, x: SaturateTactic) if rightResult == v => throw new BelleError("Unchanged saturate").inContext(EitherTactic(left, BelleDot, location), "No change by right-hand side of |:" + right)
+              case (_, x: PartialTactic) => rightResult
               case _ => throw new BelleError("Non-partials must close proof.").inContext(EitherTactic(left, BelleDot, location), "Failed right-hand side of |: " + right)
             }
         }
