@@ -17,6 +17,7 @@ object AxiomInfo {
     axiomName match {
       case "all instantiate" => new AxiomInfo("allI")
       case "all eliminate" => new AxiomInfo("allE")
+      case "exists eliminate" => new AxiomInfo("existsE")
       case  "vacuous all quantifier" => new AxiomInfo("allV")
       case "vacuous exists quantifier" => new AxiomInfo("existV")
       case  "all dual" => new AxiomInfo("allD")
