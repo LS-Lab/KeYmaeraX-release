@@ -375,16 +375,11 @@ class AgendaAwesomeResponse(tree: Tree) extends Response {
   override val schema = Some("agendaawesome.js")
 
   val proofTree = {
-    val id = proofIdJson(tree.id)
-    /* @TODO make this less silly once debugged */
-    val nodez = tree.leavesAndRoot
-    val nodezz = nodez.map({case node => (node.id.toString, nodeJson(node))})
-    val nodes = new JsObject(nodezz.toMap)
-    val root = nodeIdJson(tree.root.id)
+    val nodes = tree.leavesAndRoot.map({case node => (node.id.toString, nodeJson(node))})
     JsObject(
-      "id" -> id,
-      "nodes" -> nodes,
-      "root" -> root)
+      "id" -> proofIdJson(tree.id),
+      "nodes" -> new JsObject(nodes.toMap),
+      "root" -> nodeIdJson(tree.root.id))
   }
 
   val agendaItems = JsObject(tree.leaves.map({case item => itemJson(item)}))
