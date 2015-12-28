@@ -2,8 +2,9 @@ package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.Sequent
+import edu.cmu.cs.ls.keymaerax.core.{Box, Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tactics.ConfigurableGenerate
 
 import scala.collection.immutable.IndexedSeq
 
@@ -322,6 +323,23 @@ class DLTests extends TacticTestBase {
     // step
     result.subgoals(2).ante should contain only ("x*y>5".asFormula, "y>1".asFormula, "z>7".asFormula)
     result.subgoals(2).succ should contain only "[x:=2;]x*y>5".asFormula
+  }
+
+  "I gen" should "work on a simple example" in {
+    val succ@Box(prg, _) = "[{x:=x+1;}*]x>0".asFormula
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>2".asFormula), IndexedSeq(succ)),
+      loop(new ConfigurableGenerate[Formula](Map((prg, "x>1".asFormula))))(1))
+
+    result.subgoals should have size 3
+    // use case
+    result.subgoals.head.ante should contain only "x>1".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+    // init
+    result.subgoals(1).ante should contain only "x>2".asFormula
+    result.subgoals(1).succ should contain only "x>1".asFormula
+    // step
+    result.subgoals(2).ante should contain only "x>1".asFormula
+    result.subgoals(2).succ should contain only "[x:=x+1;]x>1".asFormula
   }
 
   "Discrete ghost" should "introduce assignment to fresh variable" in {

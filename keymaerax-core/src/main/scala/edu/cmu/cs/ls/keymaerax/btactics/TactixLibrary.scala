@@ -55,7 +55,17 @@ object TactixLibrary extends UnifyUSCalculus {
       | skip) partial) partial)
     ) partial)*@TheType()
   /** master: master tactic that tries hard to prove whatever it could */
-  def master(gen: Generator[Formula] = new NoneGenerate())(implicit qeTool: QETool): BelleExpr = close //@todo implement
+  def master(gen: Generator[Formula] = new NoneGenerate())(implicit qeTool: QETool): BelleExpr =
+    DoAll(
+      (close
+        | (normalize
+        | ((loop(gen)('L) partial)
+        | ((loop(gen)('R) partial)
+        //@todo diffSolve
+        | ((diffInd partial)
+        | ((exhaustiveEqL2R('L) partial)
+        | skip) partial) partial) partial) partial) partial) partial
+    )*@TheType() & ?(QE) partial
 
   /*******************************************************************
     * unification and matching based auto-tactics
@@ -205,6 +215,13 @@ object TactixLibrary extends UnifyUSCalculus {
   def I(invariant : Formula)  : DependentPositionTactic = DLBySubst.I(invariant)
   /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def loop(invariant: Formula) = I(invariant)
+  /** loop=I: prove a property of a loop by induction, if the given generator finds an induction hypothesis */
+  def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = I(gen(sequent, pos).getOrElse(
+        throw new BelleError("Unable to generate an invariant for " + sequent(pos) + " at position " + pos)))(pos)
+    }
+  }
   /** K: modal modus ponens (hybrid systems) */
   lazy val K                  : DependentPositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
   /** V: vacuous box [a]p() will be discarded and replaced by p() provided a does not changes values of postcondition p */
