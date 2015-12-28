@@ -30,8 +30,7 @@ class NoneGenerate[A] extends Generator[A] {
   def peek(s: Sequent, p: Position) = None
 }
 
-class ConfigurableGenerate[A] extends Generator[A] {
-  var products = Map[Expression,A]()
+class ConfigurableGenerate[A](var products: Map[Expression,A] = Map[Expression,A]()) extends Generator[A] {
   def apply(s: Sequent, p: Position) = s.apply(p) match {
     case Box(prg, _) => products.get(prg)
     case Diamond(prg, _) => products.get(prg)
