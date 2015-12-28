@@ -22,4 +22,15 @@ class AxiomInfoTests extends FlatSpec with Matchers with BeforeAndAfterEach {
        throw e
    }
  }
+
+ it should "exist for all derived axioms" in {
+  val allDerivedAxioms = DerivedAxioms.unpopulatedAxioms ++ DerivedAxioms.derivedAxiomMap.keys
+  try {
+    allDerivedAxioms.forall({case axiomName => AxiomInfo(axiomName); true}) shouldBe true
+  } catch {
+    case e:AxiomNotFoundException =>
+      println("Test failed: Derived axiom not implemented" + e.axiomName)
+      throw e
+  }
+ }
 }

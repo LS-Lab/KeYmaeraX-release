@@ -371,11 +371,9 @@ object DerivedAxioms {
     case _ => None
   } } ensuring(r => r.isEmpty || r.get._2.rule.lemma.name.get == axiom2lemmaName(name), s"Lookup of DerivedAxiom should find the correct lemma (name: $name)")
 
-  /** populates the derived lemma database with all of the lemmas in the case statement above.*/
-  def prepopulateDerivedLemmaDatabase() = {
-    require(AUTO_INSERT, "AUTO_INSERT should be on if lemma database is being pre-populated.")
+  def derivedAxiomMap = {
     //@note copied from derivedAxiomInfo.
-    val derivedAxiomMap = HashMap(
+    HashMap(
       "<-> reflexive" -> Some(equivReflexiveF, equivReflexiveT)
       , "-> distributes over &" -> Some(implyDistAndF, implyDistAndT)
       , "-> distributes over <->" -> Some(implyDistEquivF, implyDistEquivT)
@@ -397,7 +395,6 @@ object DerivedAxioms {
       , "[:=] assign equational" -> Some(assignbEquationalF, assignbEquationalT)
       , "[:=] assign update" -> Some(assignbUpdateF, assignbUpdateT)
       , "[:=] vacuous assign" -> Some(vacuousAssignbF, vacuousAssignbT)
-//      , "<:=> assign equational" -> ??? //Some(assigndEquationalF, assigndEquationalT)
       , "<:=> assign update" -> Some(assigndUpdateF, assigndUpdateT)
       , "<:=> vacuous assign" -> Some(vacuousAssigndF, vacuousAssigndT)
       , "<':=> differential assign" -> Some(assignDF, assignDT)
@@ -437,10 +434,8 @@ object DerivedAxioms {
       , "true&" -> Some(trueAndF, trueAndT)
       , "0*" -> Some(zeroTimesF, zeroTimesT)
       , "0+" -> Some(zeroPlusF, zeroPlusT)
-      //    , "x' derive var" -> Some(DvarF, DvarT)
       , "x' derive variable" -> Some(DvariableF, DvariableT)
       , "' linear" -> Some(DlinearF, DlinearT)
-//      , "' linear right" -> Some(DlinearRightF, DlinearRightT)
       , "DG differential pre-ghost" -> Some(DGpreghostF, DGpreghostT)
       , "= reflexive" -> Some(equalReflexiveF, equalReflexiveT)
       , "* commute" -> Some(timesCommuteF, timesCommuteT)
@@ -448,12 +443,8 @@ object DerivedAxioms {
       , "<=" -> Some(lessEqualF, lessEqualT)
       , "= negate" -> Some(notNotEqualF, notNotEqualT)
       , "!= negate" -> Some(notEqualF, notEqualT)
-//      , "! !=" -> derivedAxiomInfo("= negate")
-//      , "! =" -> Some(notEqualF, notEqualT)
       , "! <" -> Some(notLessF, notLessT)
-//      , "! <=" -> Some(notLessEqualF, notLessEqualT)
       , "! >" -> Some(notGreaterF, notGreaterT)
-//      , "! >=" -> derivedAxiomInfo("< negate")
       , "< negate" -> Some(notGreaterEqualF, notGreaterEqualT)
       , ">= flip" -> Some(flipGreaterEqualF, flipGreaterEqualT)
       , "> flip" -> Some(flipGreaterF, flipGreaterT)
@@ -474,8 +465,13 @@ object DerivedAxioms {
       , "<=* down" -> Some(intervalDownTimesF, intervalDownTimesT)
       , "<=1Div down" -> Some(intervalDown1DivideF, intervalDown1DivideT)
       , "<=Div down" -> Some(intervalDownDivideF, intervalDownDivideT)
-    ) ensuring(r => r.forall(kv => derivedAxiomInfo(kv._1)==kv._2), "same contents as derivedAxiomInfo()")
+      ) ensuring(r => r.forall(kv => derivedAxiomInfo(kv._1)==kv._2), "same contents as derivedAxiomInfo()")
+  }
+  val unpopulatedAxioms = List("x' derive var", "' linear right", "! !=", "! =", "! <=", "! >=", "<:=> assign equational")
 
+  /** populates the derived lemma database with all of the lemmas in the case statement above.*/
+  def prepopulateDerivedLemmaDatabase() = {
+    require(AUTO_INSERT, "AUTO_INSERT should be on if lemma database is being pre-populated.")
     derivedAxiomMap.keys.map(key => {
       val proof: Provable = derivedAxiom(key)
       derivedAxiom(key, proof)
