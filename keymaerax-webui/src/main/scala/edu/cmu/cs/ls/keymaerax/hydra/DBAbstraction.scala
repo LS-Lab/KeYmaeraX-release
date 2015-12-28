@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.nio.channels.Channels
 
-import _root_.edu.cmu.cs.ls.keymaerax.core.Sequent
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.PositionTacticAutomation
 
 import java.io.File
@@ -147,6 +147,7 @@ case class Tree(id: String, nodes: List[TreeNode], root: TreeNode, leaves: List[
   def leavesAndRoot = root :: leaves.map({case item => item.goal})
   def parent(id: String): Option[TreeNode] =
     nodes.find({case node => node.id.toString == id}).flatMap({case node => node.parent})
+  def findFormula(id: Int): Formula = ???
 }
 
 case class AgendaItem(id: String, name: String, proofId: String, goal: TreeNode) {

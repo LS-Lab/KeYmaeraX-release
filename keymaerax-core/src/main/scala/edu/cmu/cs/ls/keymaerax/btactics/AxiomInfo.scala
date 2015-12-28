@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.core.Formula
+
 /**
   * Since axioms are always referred to by their names (which are strings), we have the following problems:
   * 1) It's hard to keep everything up to date when a new axiom is added
@@ -172,4 +174,6 @@ object AxiomInfo {
 /** The short name for an axiom is a string intended for use in the UI where space is a concern (e.g. when
   * displaying tree-style proofs). Since the goal is to be as short as possible, they are not required to be
   * unique, but should still be as suggestive as possible of what the axiom does.*/
-class AxiomInfo (shortName: String)
+class AxiomInfo (val shortName: String) {
+  def formula:Formula = ???
+}

@@ -11,6 +11,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.JSONConverter
+import _root_.edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import com.fasterxml.jackson.annotation.JsonValue
 import spray.json._
@@ -429,6 +430,17 @@ class GetBranchRootResponse(node: TreeNode) extends Response {
 //
 //  val json = JsArray(objects)
 //}
+
+class ApplicableAxiomsResponse(axiomNames : List[String]) extends Response {
+  def axiomJson(name: String) = {
+    JsObject(
+    "id" -> new JsString(AxiomInfo(name).shortName),
+    "name" -> new JsString(name),
+    "axiom" -> new JsString(AxiomInfo(name).formula.prettyString)
+    )
+  }
+  val json = JsArray(axiomNames.map({case axiom => axiomJson(axiom)}))
+}
 
 class CounterExampleResponse(cntEx: String) extends Response {
   val json = JsObject(

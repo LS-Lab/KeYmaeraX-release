@@ -222,10 +222,7 @@ trait RestApi extends HttpService {
 
   val axiomList = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, goalId, formulaId) => { pathEnd {
     get {
-      val request = formulaId match {
-        case "F2s0" => new MockRequest("/mockdata/andaxiomlist.json")
-        case "F2s1" => new MockRequest("/mockdata/ltaxiomlist.json")
-      }
+      val request = new GetApplicableAxiomsRequest(database, userId, proofId, nodeId, goalId, formulaId)
       complete(standardCompletion(request))
     }
   }}}

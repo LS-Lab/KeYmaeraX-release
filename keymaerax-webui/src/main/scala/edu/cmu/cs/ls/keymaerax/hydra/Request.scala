@@ -15,8 +15,10 @@ import java.util.{Locale, Calendar}
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
+import _root_.edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
+import _root_.edu.cmu.cs.ls.keymaerax.tactics.AxiomIndex
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
@@ -571,6 +573,14 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
 //  }
 }
 
+class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String, formulaId: String) extends Request {
+  def getResultingResponses() = {
+    val id = formulaId.toInt
+    val formula = db.proofTree(proofId.toInt).findFormula(id)
+    val applicable = AxiomIndex.axiomsFor(formula)
+    new ApplicableAxiomsResponse(applicable) :: Nil
+  }
+}
 /**
  * Runs the specified tactic on the formula with the specified ID. The sequent, which contains this formula, is
  * identified by the proof ID and the node ID.
