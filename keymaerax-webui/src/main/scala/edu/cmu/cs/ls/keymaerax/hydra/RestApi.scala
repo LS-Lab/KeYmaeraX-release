@@ -223,12 +223,15 @@ trait RestApi extends HttpService {
 
   val axiomList = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, goalId, formulaId) => { pathEnd {
     get {
+      /* Strictly positive position = SuccPosition, strictly negative = AntePosition, 0 not used */
       def parseFormulaId(id:String):Position = {
         val (idx :: inExprs) = id.split(',').toList.map({case str => str.toInt})
-        if(idx >= 0) {
-          new SuccPosition(idx, new PosInExpr(inExprs))
-        } else {
+        if(idx > 0) {
+          new SuccPosition(idx-1, new PosInExpr(inExprs))
+        } else if (idx < 0) {
           new AntePosition((-idx)-1)
+        } else {
+          throw new Exception("Invalid formulaId " + formulaId + " in axiomList")
         }
       }
       val request = new GetApplicableAxiomsRequest(database, userId, proofId, nodeId, goalId, parseFormulaId(formulaId))

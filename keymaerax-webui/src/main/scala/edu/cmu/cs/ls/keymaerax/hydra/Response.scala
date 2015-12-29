@@ -311,9 +311,10 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
       }
       def fmlsJson (isAnte:Boolean, fmls: IndexedSeq[Formula]): JsValue = {
         JsArray(fmls.zipWithIndex.map { case (fml, i) =>
-          /* Formula ID is comma-separated PosInExpr. Leftmost number in the ID is
-          * the top-level operator of the formula.*/
-          val idx = if(isAnte) {-(i+1)} else i
+          /* Formula ID is formula number followed by comma-separated PosInExpr.
+           formula number = strictly positive if succedent, strictly negative if antecedent, 0 is never used
+          */
+          val idx = if(isAnte) {-(i+1)} else {i+1}
           val fmlJson = JSONConverter.convertFormula(fml, idx.toString, "")
           JsObject(
             "id" -> JsString(fmlId),
