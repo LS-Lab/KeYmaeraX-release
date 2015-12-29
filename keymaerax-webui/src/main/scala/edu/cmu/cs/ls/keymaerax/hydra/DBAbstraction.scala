@@ -115,6 +115,11 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
   require(branchOrder.isEmpty != branchLabel.isEmpty) //also schema constraint
 }
 
+/* User-friendly representation for execution traces */
+case class ProvableSequents(conclusion: Sequent, subgoals: List[Sequent])
+case class ExecutionStep(input:ProvableSequents, output:Option[ProvableSequents], branch:Either[Int, String])
+case class ExecutionTrace(conclusion: Sequent, steps:List[ExecutionStep])
+
 case class ExecutablePOJO(executableId: Int, scalaTacticId: Option[Int], belleExpr: Option[String]) {
   require(scalaTacticId.isEmpty != belleExpr.isEmpty)
 }
@@ -265,6 +270,7 @@ trait DBAbstraction {
   def addExecutionStep(step: ExecutionStepPOJO): Int
 
   def getExecutionSteps(executionID: Int): List[ExecutionStepPOJO]
+  def getExecutionTrace(proofID: Int): ExecutionTrace
 
   /** Updates an executable step's status. @note should not be transitive */
   def updateExecutionStatus(executionStepId: Int, status: ExecutionStepStatus): Unit

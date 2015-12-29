@@ -425,7 +425,7 @@ object SQLite {
       getExecutionSteps(executionId) match {
         case Nil => throw new Exception("Cannot regenerate provable for empty execution")
         case step::steps =>
-          val (rootSubgoals, conclusion) = getSequents(step.inputProvableId)
+          val ProvableSequents(conclusion, rootSubgoals) = getSequents(step.inputProvableId)
           val initialProvable = Provable.startProof(conclusion)
           def run(p: Provable, t:BelleExpr): Provable =
             SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
@@ -530,7 +530,7 @@ object SQLite {
       Sequent(Nil, ante, succ)
     }
 
-    def getSequents(provableId: Int): (List[Sequent], Sequent) = {
+    def getSequents(provableId: Int): ProvableSequents = {
       session.withTransaction({
         nSelects = nSelects + 1
         val sequents =
@@ -548,13 +548,13 @@ object SQLite {
         for (i <- sortedSubgoals.indices) {
           revSequents = getSequent(sortedSubgoals(i)) :: revSequents
         }
-        (revSequents.reverse, conclusionSequent)
+        ProvableSequents(conclusionSequent, revSequents.reverse)
       })
     }
 
     /** Gets the conclusion of a provable */
     override def getConclusion(provableId: Int): Sequent = {
-      getSequents(provableId)._2
+      getSequents(provableId).conclusion
     }
 
     def printStats = {
@@ -603,6 +603,23 @@ object SQLite {
         else if (executionIds.length == 1) executionIds.head
         else throw new Exception("Primary keys aren't unique in executions table.")})
 
+    override def getExecutionTrace(proofId: Int): ExecutionTrace = {
+      val executionId = getTacticExecution(proofId)
+      var steps = proofSteps(executionId)
+      val traceSteps =
+        steps.map{case step =>
+            val input = getSequents(step.inputProvableId)
+            val output = step.resultProvableId.map{case id => getSequents(id)}
+            val branch = step.branchLabel match {
+              case Some(str) => Right(str)
+              case None => Left(step.branchOrder.get)
+            }
+            new ExecutionStep(input = input, output = output, branch = branch)
+        }
+      val conclusion = getProofConclusion(proofId)
+      ExecutionTrace(conclusion, traceSteps)
+    }
+
     override def proofTree(proofId: Int): Tree = {
       val executionId = getTacticExecution(proofId)
       var steps = proofSteps(executionId)
@@ -622,13 +639,13 @@ object SQLite {
         val node = treeNode(sequent, None)
         return Tree(proofId.toString, List(node), node, List(AgendaItem("0", "Unnamed Item", proofId.toString, node)))
       }
-      val (rootSubgoals, conclusion) = getSequents(steps.head.inputProvableId)
+      val ProvableSequents(conclusion, rootSubgoals) = getSequents(steps.head.inputProvableId)
       var openGoals = rootSubgoals.map({case subgoal => treeNode(subgoal, None)})
       var allNodes = openGoals
       while (steps.nonEmpty && steps.head.resultProvableId.nonEmpty) {
         val step = steps.head
         val branch = step.branchOrder.get
-        val (endSubgoals, _) = getSequents(step.resultProvableId.get)
+        val ProvableSequents(_, endSubgoals) = getSequents(step.resultProvableId.get)
         /* This step closed a branch*/
         if(endSubgoals.length == openGoals.length - 1) {
           openGoals = openGoals.slice(0, branch) ++ openGoals.slice(branch + 1, openGoals.length)
