@@ -378,7 +378,7 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
     }
   }
 
-class AgendaAwesomeResponse(tree: Tree) extends Response {
+class AgendaAwesomeResponse(tree: ProofTree) extends Response {
   import Helpers._
   override val schema = Some("agendaawesome.js")
 

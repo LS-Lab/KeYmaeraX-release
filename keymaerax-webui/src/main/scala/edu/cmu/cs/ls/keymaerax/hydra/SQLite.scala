@@ -617,53 +617,7 @@ object SQLite {
             new ExecutionStep(input = input, output = output, branch = branch)
         }
       val conclusion = getProofConclusion(proofId)
-      ExecutionTrace(conclusion, traceSteps)
-    }
-
-    override def proofTree(proofId: Int): Tree = {
-      val executionId = getTacticExecution(proofId)
-      var steps = proofSteps(executionId)
-      var currentNodeId = 1
-
-      def treeNode(subgoal: Sequent, parent: Option[TreeNode]): TreeNode = {
-        val nodeId = currentNodeId
-        currentNodeId = currentNodeId + 1
-        TreeNode(nodeId, subgoal, parent)
-      }
-
-      /* This happens if we ask for a proof tree before we've done any actual proving, e.g. if we just created a new
-      * proof. In this case the right thing to do is display one node with the sequent we're trying to prove, which we
-      * can find by asking the proof. */
-      if (steps.isEmpty) {
-        val sequent = getProofConclusion(proofId)
-        val node = treeNode(sequent, None)
-        return Tree(proofId.toString, List(node), node, List(AgendaItem("0", "Unnamed Item", proofId.toString, node)))
-      }
-      val ProvableSequents(conclusion, rootSubgoals) = getSequents(steps.head.inputProvableId)
-      var openGoals = rootSubgoals.map({case subgoal => treeNode(subgoal, None)})
-      var allNodes = openGoals
-      while (steps.nonEmpty && steps.head.resultProvableId.nonEmpty) {
-        val step = steps.head
-        val branch = step.branchOrder.get
-        val ProvableSequents(_, endSubgoals) = getSequents(step.resultProvableId.get)
-        /* This step closed a branch*/
-        if(endSubgoals.length == openGoals.length - 1) {
-          openGoals = openGoals.slice(0, branch) ++ openGoals.slice(branch + 1, openGoals.length)
-        } else {
-          val (updated :: added) =
-            endSubgoals.filter({case sg => !openGoals.exists({case node => node.sequent == sg})})
-          val updatedNode = treeNode(updated, Some(openGoals(branch)))
-          val addedNodes = added.map({case sg => treeNode(sg, Some(openGoals(branch)))})
-          openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
-          allNodes = allNodes ++ (updatedNode :: addedNodes)
-        }
-        steps = steps.tail
-      }
-      var items:List[AgendaItem] = Nil
-      for (i <- openGoals.indices) {
-        items = AgendaItem(i.toString, "Unnamed Goal", proofId.toString, openGoals(i)) :: items
-      }
-      Tree(proofId.toString, allNodes, allNodes.head, items.reverse)
+      ExecutionTrace(proofId.toString, conclusion, traceSteps)
     }
   }
 }
