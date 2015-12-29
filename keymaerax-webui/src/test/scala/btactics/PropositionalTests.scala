@@ -8,7 +8,7 @@ package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{alphaRule, betaRule, normalize, prop}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{alphaRule, betaRule, master, normalize, prop}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
@@ -173,7 +173,7 @@ class PropositionalTests extends TacticTestBase {
   it should "handle disjunction in antecedent" in anteDisjunction(normalize)
   it should "handle conjunction in succedent" in succConjunction(normalize)
   it should "handle equivalence in antecedent" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>1 <-> y>1".asFormula), IndexedSeq()), prop)
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>1 <-> y>1".asFormula), IndexedSeq()), normalize)
     result.subgoals should have size 2
     result.subgoals.head.ante should contain only ("x>1".asFormula, "y>1".asFormula)
     result.subgoals.head.succ shouldBe empty
@@ -181,6 +181,24 @@ class PropositionalTests extends TacticTestBase {
     result.subgoals.last.succ should contain only ("x>1".asFormula, "y>1".asFormula)
   }
   it should "handle equivalence in succedent" in succEquivalence(normalize)
+
+  "Master" should "handle implication in succedent" in withMathematica { implicit qeTool => succImplication(master()) }
+  it should "handle disjunction in succedent" in withMathematica { implicit qeTool => succDisjunction(master()) }
+  it should "handle negation in succedent" in withMathematica { implicit qeTool => succNegation(master()) }
+  it should "handle conjunction in antecedent" in withMathematica { implicit qeTool => anteConjunction(master()) }
+  it should "handle negation in antecedent" in withMathematica { implicit qeTool => anteNegation(master()) }
+  it should "handle implication in antecedent" in withMathematica { implicit qeTool => anteImplication(master()) }
+  it should "handle disjunction in antecedent" in withMathematica { implicit qeTool => anteDisjunction(master()) }
+  it should "handle conjunction in succedent" in withMathematica { implicit qeTool => succConjunction(master()) }
+  it should "handle equivalence in antecedent" in withMathematica { implicit qeTool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>1 <-> y>1".asFormula), IndexedSeq()), master())
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only ("x>1".asFormula, "y>1".asFormula)
+    result.subgoals.head.succ shouldBe empty
+    result.subgoals.last.ante shouldBe empty
+    result.subgoals.last.succ should contain only ("x>1".asFormula, "y>1".asFormula)
+  }
+  it should "handle equivalence in succedent" in withMathematica { implicit qeTool => succEquivalence(master()) }
 
   "Propositional CMon" should "unpeel single negation" in {
     val result = proveBy(Sequent(Nil, IndexedSeq("!x>0".asFormula), IndexedSeq("!y>0".asFormula)),

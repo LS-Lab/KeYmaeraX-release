@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Generator, NoneGenerate, Position, PosInExpr, SuccPosition}
 
@@ -36,7 +36,7 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val step               : DependentPositionTactic = HilbertCalculus.stepAt
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
-  lazy val normalize               : BelleExpr = DoAll(
+  lazy val normalize               : BelleExpr = DoAll(?(
     (alphaRule partial)
       | (closeId
       | ((allR('R) partial)
@@ -44,28 +44,24 @@ object TactixLibrary extends UnifyUSCalculus {
       | (close
       | ((betaRule partial)
       | ((step('L) partial)
-      | (((step('R) partial)
-      | skip) partial) partial) partial) partial) partial) partial) partial)
-    partial)*@TheType()
+      | ((step('R) partial) partial) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType()
+
   /** exhaust propositional logic */
-  lazy val prop                    : BelleExpr = DoAll(
+  lazy val prop                    : BelleExpr = DoAll(?(
     (close
       | ((alphaRule partial)
-      | (((betaRule partial)
-      | skip) partial) partial)
-    ) partial)*@TheType()
+      | ((betaRule partial) partial) partial) partial) partial) partial)*@TheType()
+
   /** master: master tactic that tries hard to prove whatever it could */
   def master(gen: Generator[Formula] = new NoneGenerate())(implicit qeTool: QETool): BelleExpr =
-    DoAll(
+    DoAll(?(
       (close
-        | (normalize
+        | ((must(normalize) partial)
         | ((loop(gen)('L) partial)
         | ((loop(gen)('R) partial)
         //@todo diffSolve
         | ((diffInd partial)
-        | ((exhaustiveEqL2R('L) partial)
-        | skip) partial) partial) partial) partial) partial) partial
-    )*@TheType() & ?(QE)
+        | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType() & ?(QE)
 
   /*******************************************************************
     * unification and matching based auto-tactics
