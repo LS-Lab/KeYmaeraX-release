@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.{InputStreamReader, BufferedReader, File, FileFilter,IOException,EOFException}
 import javax.swing.JOptionPane
+import edu.cmu.cs.ls.keymaerax.hydra.{SQLite, UpdateChecker}
 import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms
 
 import scala.collection.JavaConversions._
@@ -50,8 +51,24 @@ object Main {
       runCmd(java :: "-Xss20M" :: "-jar" :: keymaera :: "-ui" :: "-launch" :: Nil)
     }
     else {
+      exitIfDeprecated()
       startServer()
     }
+  }
+
+  /** Kills the current process and shows an error message if the current database is deprecated.
+    * @todo similar behavior for the cache
+    */
+  private def exitIfDeprecated() = {
+    if(UpdateChecker.upToDate().getOrElse(false) &&
+       UpdateChecker.needDatabaseUpgrade(SQLite.ProdDB.getConfiguration("version").config("version")).getOrElse(false))
+    {
+      //Exit if KeYmaera X is up to date but the production database belongs to a deprecated version of KeYmaera X.
+      //@todo maybe it makes more sense for the JSON file to associate each KeYmaera X version to a list of database and cache versions that work with that version.
+      JOptionPane.showMessageDialog(null, "Your KeYmaera X database is not compatible with this version of KeYmaera X.\nPlease revert to an old version of KeYmaera X or else delete your current database (HOME/.keymaerax/keymaerax.sqlite)")
+      System.exit(-1)
+    }
+    else {} //getOrElse(false) ignores cases where we couldn't download some needed information.
   }
 
 
