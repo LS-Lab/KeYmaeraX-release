@@ -60,7 +60,7 @@ object JSONConverter {
       }
 
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-        val cf = ("nodeId" -> JsString(nodeId)) :: ("id" -> convertPos(p)) :: Nil
+        val cf = ("id" -> convertPos(p)) :: Nil
         val o = e match {
           case True => JsObject(("name" -> JsString("true")) +: cf)
           case False => JsObject(("name" -> JsString("false")) +: cf)
@@ -87,7 +87,7 @@ object JSONConverter {
       }
 
       override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-        val cf = ("nodeId" -> JsString(nodeId)) :: ("id" -> convertPos(p)) :: Nil
+        val cf = ("id" -> convertPos(p)) :: Nil
         val o = e match {
           case Number(i) => JsObject(("name" -> JsString(i.toString())) +: cf)
           case x@Variable(_, _, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[Variable])) +: cf)
@@ -108,7 +108,7 @@ object JSONConverter {
       }
 
       override def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
-        val cf = ("nodeId" -> JsString(nodeId)) :: ("id" -> convertPos(p)) :: Nil
+        val cf = ("id" -> convertPos(p)) :: Nil
         val o = e match {
           case x@ProgramConst(_) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[ProgramConst])) +: cf)
           case x@DifferentialProgramConst(_) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[DifferentialProgramConst])) +: cf)

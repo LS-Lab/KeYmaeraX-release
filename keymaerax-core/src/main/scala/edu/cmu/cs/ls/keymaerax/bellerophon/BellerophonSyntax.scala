@@ -5,6 +5,8 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
+import edu.cmu.cs.ls.keymaerax.btactics.RenUSubst
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
 
@@ -50,6 +52,7 @@ abstract case class BuiltInTactic(name: String) extends BelleExpr {
   private[bellerophon] def result(provable : Provable): Provable
   override def prettyString = name
 }
+case class NamedTactic(name: String, tactic: BelleExpr) extends BelleExpr { override def prettyString = name }
 
 /** ⎵: Placeholder for tactics. Reserved tactic expression */
 object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
@@ -252,9 +255,12 @@ abstract case class DependentPositionTactic(name: String) extends BelleExpr with
   /** Create the actual tactic to be applied at position pos */
   def factory(pos: Position): DependentTactic
 }
-abstract case class InputTactic[T](input: T) extends BelleExpr {
+abstract case class InputTactic[T](name: SerializationName, input: T) extends BelleExpr {
   def computeExpr(): BelleExpr
   override def prettyString: String = "input(" + input + ")"
+}
+abstract case class InputPositionTactic[T](input: T, pos: Position) extends BelleExpr {
+  def computeExpr(): BelleExpr
 }
 
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: PositionLocator) extends DependentTactic(pt.name) {

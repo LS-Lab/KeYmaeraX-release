@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
+import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import akka.actor.Actor
 import spray.routing._
 import spray.http._
@@ -18,7 +19,7 @@ class RestApiActor extends Actor with RestApi {
 }
 
 /**
- * RestApi is the API router. See REAMDE.md for a description of the API.
+ * RestApi is the API router. See README.md for a description of the API.
  */
 trait RestApi extends HttpService {
   val database = DBAbstractionObj.defaultDatabase //SQLite //Not sure when or where to create this... (should be part of Boot?)
@@ -193,48 +194,28 @@ trait RestApi extends HttpService {
 
   val proofTasksNew = path("proofs" / "user" / Segment / Segment / "agendaawesome") { (userId, proofId) => { pathEnd {
     get {
-      val request = new MockRequest("/mockdata/proof1opentasksreply.json")
+      val request = new GetAgendaAwesomeRequest(database, userId, proofId)
       complete(standardCompletion(request))
     }
   }}}
 
   val proofTasksParent = path("proofs" / "user" / Segment / Segment / Segment / Segment / "parent") { (userId, proofId, nodeId, goalId) => { pathEnd {
     get {
-      val request = goalId match {
-        case "S5" => new MockRequest("/mockdata/s5parentreply.json")
-        case "S4" => new MockRequest("/mockdata/s4parentreply.json")
-        case "S3" => new MockRequest("/mockdata/s23parentreply.json")
-        case "S2" => new MockRequest("/mockdata/s23parentreply.json")
-        case "S1" => new MockRequest("/mockdata/s1parentreply.json")
-        case "S0" => new MockRequest("/mockdata/s0parentreply.json")
-        case "S-1" => new MockRequest("/mockdata/s-1parentreply.json")
-      }
+      val request = new ProofTaskParentRequest(database, userId, proofId, nodeId, goalId)
       complete(standardCompletion(request))
     }
   }}}
 
   val proofTasksPathAll = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pathall") { (userId, proofId, nodeId, goalId) => { pathEnd {
     get {
-      val request = goalId match {
-        case "S5" => new MockRequest("/mockdata/s5pathallreply.json")
-        case "S3" => new MockRequest("/mockdata/s23pathallreply.json")
-        case "S2" => new MockRequest("/mockdata/s23pathallreply.json")
-      }
+      val request = new GetPathAllRequest(database, userId, proofId, nodeId, goalId)
       complete(standardCompletion(request))
     }
   }}}
 
   val proofTasksBranchRoot = path("proofs" / "user" / Segment / Segment / Segment / Segment / "branchroot") { (userId, proofId, nodeId, goalId) => { pathEnd {
     get {
-      val request = goalId match {
-        case "S5" => new MockRequest("/mockdata/s23parentreply.json")
-        case "S4" => new MockRequest("/mockdata/s23parentreply.json")
-        case "S3" => new MockRequest("/mockdata/s23parentreply.json")
-        case "S2" => new MockRequest("/mockdata/s23parentreply.json")
-        case "S1" => new MockRequest("/mockdata/s-1parentreply.json")
-        case "S0" => new MockRequest("/mockdata/s-1parentreply.json")
-        case "S-1" => new MockRequest("/mockdata/s-1parentreply.json")
-      }
+      val request = new GetBranchRootRequest(database, userId, proofId, nodeId, goalId)
       complete(standardCompletion(request))
     }
   }}}
@@ -577,6 +558,7 @@ trait RestApi extends HttpService {
       initializeModel :: isLocal :: shutdown ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
+
 }
 //
 //

@@ -1,6 +1,6 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, Provable, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import scala.collection.immutable.IndexedSeq
@@ -12,7 +12,17 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
   * Created by nfulton on 11/3/15.
   */
 class demo extends FlatSpec with Matchers {
-  val interp = SequentialInterpreter()
+  val listener = new IOListener() {
+    override def begin(input: BelleValue, expr: BelleExpr) : Unit = {
+      println(expr.getClass)
+    }
+    override def end(input: BelleValue, expr: BelleExpr, output: BelleValue): Unit= {
+    }
+    override def kill():Unit = ()
+
+  }
+
+  val interp = SequentialInterpreter(Seq(listener))
 
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
 

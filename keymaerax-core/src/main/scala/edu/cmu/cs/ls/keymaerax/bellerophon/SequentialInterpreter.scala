@@ -19,18 +19,27 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
     listeners.foreach(_.begin(v, expr))
 
     val result = expr match {
+      case named: NamedTactic => apply(named.tactic, v)
       case builtIn : BuiltInTactic => v match {
         case BelleProvable(pr) => try { BelleProvable(builtIn.execute(pr)) } catch { case e: BelleError => throw e.inContext(BelleDot, pr.prettyString) }
         case _ => throw new BelleError(s"Attempted to apply a built-in tactic to a non-Provable value: ${v.getClass.getName}").inContext(BelleDot, "")
       }
       case BuiltInPositionTactic(_) | BuiltInLeftTactic(_) | BuiltInRightTactic(_) | BuiltInTwoPositionTactic(_) | DependentPositionTactic(_) =>
         throw new BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.").inContext(expr, "")
-      case positionTactic@AppliedPositionTactic(_, pos) => v match {
-        case BelleProvable(pr) => try { BelleProvable(positionTactic.computeResult(pr)) } catch { case e: BelleError => throw e.inContext(positionTactic, pr.prettyString) }
-      }
+      case AppliedPositionTactic(positionTactic, pos) => v match {
+        case BelleProvable(pr) => try {
+          //@todo need to pattern match on (pos: PositionLocator) and figure out what to do next.
+          ???
+//          BelleProvable(positionTactic.computeResult(pr, pos))
+        } catch {
+          case e: BelleError => throw e.inContext(positionTactic + " at " + pos, pr.prettyString)
+        }}
       case positionTactic@AppliedTwoPositionTactic(_, posOne, posTwo) => v match {
-        case BelleProvable(pr) => try { BelleProvable(positionTactic.computeResult(pr)) } catch { case e: BelleError => throw e.inContext(positionTactic, pr.prettyString) }
-      }
+        case BelleProvable(pr) => try {
+          BelleProvable(positionTactic.computeResult(pr))
+        } catch {
+          case e: BelleError => throw e.inContext(positionTactic + " at " + posOne + ", " + posTwo, pr.prettyString)
+        }}
       case SeqTactic(left, right, location) =>
         val leftResult = try { apply(left, v) } catch {case e: BelleError => throw e.inContext(SeqTactic(e.context, right, location), "Failed left-hand side of &: " + left)}
         try { apply(right, leftResult) } catch {case e: BelleError => throw e.inContext(SeqTactic(left, e.context, location), "Failed right-hand side of &: " + right)}
@@ -45,7 +54,13 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         apply(it.computeExpr(), v)
       } catch {
         case e: BelleError => throw e.inContext(it, v.prettyString)
-        case e: Throwable => throw new BelleError("Unable to create inpyt tactic", e).inContext(it, "")
+        case e: Throwable => throw new BelleError("Unable to create input tactic", e).inContext(it, "")
+      }
+      case ipt :InputPositionTactic[_] => try {
+        apply(ipt.computeExpr(), v)
+      } catch {
+        case e: BelleError => throw e.inContext(e.toString, v.prettyString)
+        case e: Throwable => throw new BelleError("Unable to create input position tactic", e).inContext(ipt, "")
       }
       case PartialTactic(child) => try { apply(child, v) } catch {case e: BelleError => throw e.inContext(PartialTactic(e.context), "Failed partial child: " + child) }
       case EitherTactic(left, right, location) => try {

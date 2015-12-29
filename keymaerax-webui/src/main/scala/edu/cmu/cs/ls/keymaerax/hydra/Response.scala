@@ -10,12 +10,12 @@
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import com.github.fge.jackson.JsonLoader
-import com.github.fge.jsonschema.main.JsonSchemaFactory
+import _root_.edu.cmu.cs.ls.keymaerax.api.JSONConverter
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
+import com.fasterxml.jackson.annotation.JsonValue
 import spray.json._
 import java.io.{PrintWriter, StringWriter, File}
 
-import scala.collection.mutable.ListBuffer
 
 /**
  * Responses are like views -- they shouldn't do anything except produce appropriately
@@ -82,7 +82,7 @@ class BooleanResponse(flag : Boolean) extends Response {
 
 class ModelListResponse(models : List[ModelPOJO]) extends Response {
   val objects = models.map(modelpojo => JsObject(
-    "id" -> JsString(modelpojo.modelId),
+    "id" -> JsString(modelpojo.modelId.toString),
     "name" -> JsString(modelpojo.name),
     "date" -> JsString(modelpojo.date),
     "description" -> JsString(modelpojo.description),
@@ -109,11 +109,11 @@ class ProofListResponse(proofs : List[(ProofPOJO, String)], models : Option[List
 
   val objects : List[JsObject] = models match {
     case None => proofs.map({case (proof, loadStatus) => JsObject(
-      "id" -> JsString(proof.proofId),
+      "id" -> JsString(proof.proofId.toString),
       "name" -> JsString(proof.name),
       "description" -> JsString(proof.description),
       "date" -> JsString(proof.date),
-      "modelId" -> JsString(proof.modelId),
+      "modelId" -> JsString(proof.modelId.toString),
       "stepCount" -> JsNumber(proof.stepCount),
       "status" -> JsBoolean(proof.closed),
       "loadStatus" -> JsString(loadStatus)
@@ -124,11 +124,11 @@ class ProofListResponse(proofs : List[(ProofPOJO, String)], models : Option[List
         val modelName = p._2
 
         JsObject(
-          "id" -> JsString(proof.proofId),
+          "id" -> JsString(proof.proofId.toString),
           "name" -> JsString(proof.name),
           "description" -> JsString(proof.description),
           "date" -> JsString(proof.date),
-          "modelId" -> JsString(proof.modelId),
+          "modelId" -> JsString(proof.modelId.toString),
           "stepCount" -> JsNumber(proof.stepCount),
           "status" -> JsBoolean(proof.closed),
           "loadStatus" -> JsString(loadStatus),
@@ -142,7 +142,7 @@ class ProofListResponse(proofs : List[(ProofPOJO, String)], models : Option[List
 
 class GetModelResponse(model : ModelPOJO) extends Response {
   val json = JsObject(
-    "id" -> JsString(model.modelId),
+    "id" -> JsString(model.modelId.toString),
     "name" -> JsString(model.name),
     "date" -> JsString(model.date),
     "description" -> JsString(model.description),
@@ -155,7 +155,7 @@ class GetModelResponse(model : ModelPOJO) extends Response {
 
 class GetModelTacticResponse(model : ModelPOJO) extends Response {
   val json = JsObject(
-    "modelId" -> JsString(model.modelId),
+    "modelId" -> JsString(model.modelId.toString),
     "modelName" -> JsString(model.name),
     "tacticBody" -> JsString(model.tactic.getOrElse(""))
   )
@@ -222,36 +222,36 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
   )
 }
 
-class DispatchedTacticResponse(t : DispatchedTacticPOJO) extends Response {
-  val nid = t.nodeId match {
-    case Some(nodeId) => nodeId
-    case None => t.proofId
-  }
+//class DispatchedTacticResponse(t : DispatchedTacticPOJO) extends Response {
+//  val nid = t.nodeId match {
+//    case Some(nodeId) => nodeId
+//    case None => t.proofId
+//  }
+//
+//  val json = JsObject(
+//    "proofId" -> JsString(t.proofId),
+//    "nodeId" -> JsString(nid),
+//    "tacticId" -> JsString(t.tacticsId),
+//    "tacticInstId" -> JsString(t.id),
+//    "tacticInstStatus" -> JsString(t.status.toString)
+//  )
+//}
 
-  val json = JsObject(
-    "proofId" -> JsString(t.proofId),
-    "nodeId" -> JsString(nid),
-    "tacticId" -> JsString(t.tacticsId),
-    "tacticInstId" -> JsString(t.id),
-    "tacticInstStatus" -> JsString(t.status.toString)
-  )
-}
-
-class DispatchedCLTermResponse(t : DispatchedCLTermPOJO) extends Response {
-  val nid = t.nodeId match {
-    case Some(nodeId) => nodeId
-    case None => t.proofId
-  }
-
-  val json = JsObject(
-    "id" -> JsString(t.id),
-    "proofId" -> JsString(t.proofId),
-    "nodeId" -> JsString(nid),
-    "termId" -> JsString(t.id),
-    "term" -> JsString(t.clTerm),
-    "status" -> JsString(t.status.get.toString)
-  )
-}
+//class DispatchedCLTermResponse(t : DispatchedCLTermPOJO) extends Response {
+//  val nid = t.nodeId match {
+//    case Some(nodeId) => nodeId
+//    case None => t.proofId
+//  }
+//
+//  val json = JsObject(
+//    "id" -> JsString(t.id),
+//    "proofId" -> JsString(t.proofId),
+//    "nodeId" -> JsString(nid),
+//    "termId" -> JsString(t.id),
+//    "term" -> JsString(t.clTerm),
+//    "status" -> JsString(t.status.get.toString)
+//  )
+//}
 
 class UpdateResponse(update: String) extends Response {
   val json = JsObject(
@@ -270,11 +270,11 @@ class ProofTreeResponse(tree: String) extends Response {
 class OpenProofResponse(proof : ProofPOJO, loadStatus : String) extends Response {
   override val schema = Some("proof.js")
   val json = JsObject(
-    "id" -> JsString(proof.proofId),
+    "id" -> JsString(proof.proofId.toString),
     "name" -> JsString(proof.name),
     "description" -> JsString(proof.description),
     "date" -> JsString(proof.date),
-    "modelId" -> JsString(proof.modelId),
+    "modelId" -> JsString(proof.modelId.toString),
     "stepCount" -> JsNumber(proof.stepCount),
     "status" -> JsBoolean(proof.closed),
     "loadStatus" -> JsString(loadStatus)
@@ -284,12 +284,115 @@ class OpenProofResponse(proof : ProofPOJO, loadStatus : String) extends Response
 class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Response {
   override val schema = Some("proofagenda.js")
   val objects = tasks.map({ case (proofPojo, nodeId, nodeJson) => JsObject(
-    "proofId" -> JsString(proofPojo.proofId),
+    "proofId" -> JsString(proofPojo.proofId.toString),
     "nodeId" -> JsString(nodeId),
     "proofNode" -> JsonParser(nodeJson)
   )})
 
   val json = JsArray(objects)
+}
+
+  object Helpers {
+    def childrenJson(children: List[TreeNode]): JsValue = {
+      /* It would probably not be a huge deal to return [] instead of null in the empty case, but this is what the
+      * JSON mockups did, so let's be consistent just in case.*/
+      children.map({ case node => nodeIdJson(node.id) }) match {
+        case Nil => JsNull
+        case lst => JsArray(lst)
+      }
+    }
+
+    def sequentJson(sequent: Sequent): JsValue = {
+      var num: Int = 0
+      def fmlId: String = {
+        num = num + 1
+        num.toString
+      }
+      def fmlsJson (fmls: IndexedSeq[Formula]): JsValue = {
+        JsArray(fmls.map { case fml =>
+          val fmlJson = JSONConverter.convertFormula(fml, "", "")
+          JsObject(
+            "id" -> JsString(fmlId),
+            "formula" -> fmlJson
+          )}.toVector)
+      }
+      JsObject(
+        "ante" -> fmlsJson(sequent.ante),
+        "succ" -> fmlsJson(sequent.succ)
+      )
+    }
+
+    def nodeJson(node: TreeNode): JsValue = {
+      val id = nodeIdJson(node.id)
+      val sequent = sequentJson(node.sequent)
+      val children = childrenJson(node.children)
+      val parentOpt = node.parent.map({ case n => nodeIdJson(n.id) })
+      val parent = parentOpt.getOrElse(JsNull)
+      JsObject(
+        "id" -> id,
+        "sequent" -> sequent,
+        "children" -> children,
+        "parent" -> parent)
+    }
+
+    def deductionJson(deduction: List[String]): JsValue =
+      JsObject("sections" -> new JsArray(List(new JsArray(deduction.map{case str => new JsString(str)}))))
+
+    def itemJson(item: AgendaItem): (String, JsValue) = {
+      val value = JsObject(
+        "id" -> JsString(item.id),
+        "name" -> JsString(item.name),
+        "proofId" -> JsString(item.proofId),
+        "deduction" -> deductionJson(item.path))
+      (item.id, value)
+    }
+
+    def nodeIdJson(n: Int):JsValue = JsString(n.toString)
+    def proofIdJson(n: String):JsValue = JsString(n)
+
+    /** @TODO Actually say what the rules are */
+    def ruleJson(rule: String):JsValue = {
+      JsObject(
+        "id" -> JsString("RulesUnimplemented"),
+        "name" -> JsString("RulesUnimplemented")
+      )
+    }
+
+    def singleNodeJson(node: TreeNode): JsValue = {
+      JsObject (
+        "id" -> nodeIdJson(node.id),
+        "sequent" -> sequentJson(node.sequent),
+        "children" -> childrenJson(node.children),
+        "rule" -> ruleJson(node.rule),
+        "parent" -> node.parent.map({case parent => nodeIdJson(parent.id)}).getOrElse(JsNull)
+      )
+    }
+  }
+
+class AgendaAwesomeResponse(tree: Tree) extends Response {
+  import Helpers._
+  override val schema = Some("agendaawesome.js")
+
+  val proofTree = {
+    val id = proofIdJson(tree.id)
+    /* @TODO make this less silly once debugged */
+    val nodez = tree.leavesAndRoot
+    val nodezz = nodez.map({case node => (node.id.toString, nodeJson(node))})
+    val nodes = new JsObject(nodezz.toMap)
+    val root = nodeIdJson(tree.root.id)
+    JsObject(
+      "id" -> id,
+      "nodes" -> nodes,
+      "root" -> root)
+  }
+
+  val agendaItems = JsObject(tree.leaves.map({case item => itemJson(item)}))
+
+  val json =
+    JsObject (
+      "proofTree" -> proofTree,
+      "agendaItems" -> agendaItems
+    )
 }
 
 class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: String) extends Response {
@@ -300,14 +403,32 @@ class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: S
   )
 }
 
-class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
-  val objects = tactics.map(tactic => JsObject(
-    "id" -> JsString(tactic.tacticId),
-    "name" -> JsString(tactic.name)
-  ))
-
-  val json = JsArray(objects)
+class ProofTaskParentResponse (parent: TreeNode) extends Response {
+  import Helpers._
+  val json = singleNodeJson(parent)
 }
+
+class GetPathAllResponse(path: List[TreeNode], parentsRemaining: Int) extends Response {
+  import Helpers._
+  val json =
+    JsObject (
+      "numParentsUntilComplete" -> JsNumber(parentsRemaining),
+      "path" -> new JsArray(path.map({case node => nodeJson(node)}))
+    )
+}
+
+class GetBranchRootResponse(node: TreeNode) extends Response {
+  val json = Helpers.singleNodeJson(node)
+}
+
+//class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
+//  val objects = tactics.map(tactic => JsObject(
+//    "id" -> JsString(tactic.tacticId),
+//    "name" -> JsString(tactic.name)
+//  ))
+//
+//  val json = JsArray(objects)
+//}
 
 class CounterExampleResponse(cntEx: String) extends Response {
   val json = JsObject(
@@ -419,25 +540,25 @@ class AngularTreeViewResponse(tree : String) extends Response {
   }
 }
 
-class ProofHistoryResponse(history : List[(DispatchedTacticPOJO, TacticPOJO)]) extends Response {
-  val json = JsArray(history.map { case (dispatched, tactic) => convert(dispatched, tactic)})
-
-  private def convert(dispatched: DispatchedTacticPOJO, tactic: TacticPOJO): JsValue = JsObject(
-    "dispatched" -> JsObject(
-      "id" -> JsString(dispatched.id),
-      "proofId" -> JsString(dispatched.proofId),
-      "nodeId" -> JsString(dispatched.nodeId match { case Some(nId) => nId case _ => "" }),
-      "status" -> JsString(dispatched.status.toString),
-      "input" -> convertInput(dispatched.input)
-    ),
-    "tactic" -> JsObject(
-      "id" -> JsString(tactic.tacticId),
-      "name" -> JsString(tactic.name)
-    )
-  )
-
-  private def convertInput(input: Map[Int, String]) = JsArray(/* TODO */)
-}
+//class ProofHistoryResponse(history : List[(DispatchedTacticPOJO, TacticPOJO)]) extends Response {
+//  val json = JsArray(history.map { case (dispatched, tactic) => convert(dispatched, tactic)})
+//
+//  private def convert(dispatched: DispatchedTacticPOJO, tactic: TacticPOJO): JsValue = JsObject(
+//    "dispatched" -> JsObject(
+//      "id" -> JsString(dispatched.id),
+//      "proofId" -> JsString(dispatched.proofId),
+//      "nodeId" -> JsString(dispatched.nodeId match { case Some(nId) => nId case _ => "" }),
+//      "status" -> JsString(dispatched.status.toString),
+//      "input" -> convertInput(dispatched.input)
+//    ),
+//    "tactic" -> JsObject(
+//      "id" -> JsString(tactic.tacticId),
+//      "name" -> JsString(tactic.name)
+//    )
+//  )
+//
+//  private def convertInput(input: Map[Int, String]) = JsArray(/* TODO */)
+//}
 
 class DashInfoResponse(openProofs:Int, allModels: Int, provedModels: Int) extends Response {
   override val schema = Some("DashInfoResponse.js")

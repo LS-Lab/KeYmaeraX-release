@@ -6,49 +6,42 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.nio.channels.Channels
 
+import _root_.edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.PositionTacticAutomation
 
 import java.io.File
 import java.io.FileOutputStream
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
+import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
+import edu.cmu.cs.ls.keymaerax.hydra.ParameterValueType.ParameterValueType
+
+import scala.collection.immutable.Nil
 import scala.io.Source
 import spray.json.DefaultJsonProtocol._
 
 //Global setting:
 object DBAbstractionObj {
-  def defaultDatabase = SQLite //this needs to be a def and not a val because DBAbstractionObj is initialized in SQLite.
-  val dblocation: String = {
+  def defaultDatabase = SQLite.ProdDB //this needs to be a def and not a val because DBAbstractionObj is initialized in SQLite.
+  def testDatabase = SQLite.TestDB
+  private def getLocation(isTest: Boolean): String = {
+    val dirname = ".keymaerax"
+    val filename = if (isTest) "testDB.sqlite" else "keymaerax.sqlite"
     new File(
-      System.getProperty("user.home") + File.separator +
-        ".keymaerax"
+      System.getProperty("user.home") + File.separator + dirname
     ).mkdirs()
-    
     val file = new File(System.getProperty("user.home") + File.separator +
-      ".keymaerax" + File.separator + "keymaerax.sqlite")
+      dirname + File.separator + filename)
     file.getCanonicalPath
   }
+
+  val dblocation: String = getLocation(isTest=false)
   println(dblocation)
+  val testLocation = getLocation(isTest=true)
 }
 
-// POJOs, short for Plain Old Java Objects, are for us just tagged products.
-object TacticKind extends Enumeration {
-  type TacticKind = Value
-  val Tactic, PositionTactic, InputTactic, InputPositionTactic, UserTactic = Value
-}
-
-object DispatchedTacticStatus extends Enumeration {
-  type DispatchedTacticStatus = Value
-  val Prepared, Running, Finished, Aborted, Error = Value
-
-  def fromString(s : String) = s match {
-    case "Prepared" => Prepared
-    case "Running" => Running
-    case "Finished" => Finished
-    case "Aborted" => Aborted
-    case "Error" => Error
-    case _ => throw new Exception("Status " + s + " not in enum.")
-  }
-}
+class ConfigurationPOJO(val name: String, val config: Map[String,String])
 
 /**
  * Data object for models.
@@ -60,7 +53,7 @@ object DispatchedTacticStatus extends Enumeration {
  * @param description The description of the model.
  * @param pubLink Link to additional information (paper) on the model.
  */
-class ModelPOJO(val modelId:String, val userId:String, val name:String, val date:String, val keyFile:String,
+class ModelPOJO(val modelId:Int, val userId:String, val name:String, val date:String, val keyFile:String,
                 val description:String, val pubLink:String, val title:String, val tactic : Option[String]) //the other guys on this linke should also be optional.
 
 /**
@@ -73,114 +66,231 @@ class ModelPOJO(val modelId:String, val userId:String, val name:String, val date
  * @param stepCount The number of proof steps in the proof.
  * @param closed Indicates whether the proof is closed (finished proof) or not (partial proof).
  */
-class ProofPOJO(val proofId:String, val modelId:String, val name:String, val description:String,
-                val date:String, val stepCount : Integer, val closed : Boolean)
+class ProofPOJO(val proofId:Int, val modelId:Int, val name:String, val description:String,
+                val date:String, val stepCount : Int, val closed : Boolean)
 
-/**
- * Data object for tactics.
- * @param tacticId Identifies the tactic.
- * @param name The name of the tactic.
- * @param clazz The tactic implementation.
- * @param kind The kind of tactic.
- */
-class TacticPOJO(val tacticId:String, val name:String, val clazz:String, val kind : TacticKind.Value)
+case class ProvablePOJO(provableId: Int, conclusionId: Int)
+
+case class SequentPOJO(sequentId: Int, provableId: Int)
+
+case class SequentFormulaPOJO(sequentFormulaId: Int, sequentId: Int, isAnte: Boolean, index: Int, formulaStr: String)
+
+object ExecutionStepStatus extends Enumeration {
+  type ExecutionStepStatus = Value
+  val Prepared, Running, Finished, Aborted, Error, DependsOnChildren = Value
+
+  def fromString(s : String): ExecutionStepStatus = s match {
+    case "Prepared" => Prepared
+    case "Running" => Running
+    case "Finished" => Finished
+    case "Aborted" => Aborted
+    case "Error" => Error
+    case "DependsOnChildren" => DependsOnChildren
+    case _ => throw new Exception("Status " + s + " not in enum.")
+  }
+
+  def toString(status: ExecutionStepStatus): String = status match {
+    case Prepared => "Prepared"
+    case Running => "Running"
+    case Finished => "Finished"
+    case Aborted => "Aborted"
+    case Error => "Error"
+    case DependsOnChildren => "DependsOnChildren"
+  }
+}
+
+case class TacticExecutionPOJO(executionId: Int, proofId: Int)
+
+case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
+                             previousStep: Option[Int], parentStep: Option[Int],
+                             branchOrder: Option[Int],
+                             branchLabel: Option[String],
+                             alternativeOrder: Int,
+                             status: ExecutionStepStatus,
+                             executableId: Int,
+                             inputProvableId: Int,
+                             resultProvableId: Option[Int],
+                             userExecuted: Boolean)
+{
+  require(branchOrder.isEmpty != branchLabel.isEmpty) //also schema constraint
+}
+
+case class ExecutablePOJO(executableId: Int, scalaTacticId: Option[Int], belleExpr: Option[String]) {
+  require(scalaTacticId.isEmpty != belleExpr.isEmpty)
+}
+
+/*
+CREATE TABLE IF NOT EXISTS `scalaTactics` (
+  `scalaTacticId` TEXT PRIMARY KEY ON CONFLICT FAIL,
+  `location`      TEXT,
+  `name`          TEXT
+);
+*/
+case class ScalaTacticPOJO(scalaTacticId: Int, location: String, name: String)
 
 
-abstract class AbstractDispatchedPOJO
+case class ParameterPOJO(parameterId: Int, executableID: Int, idx: Int, valueType: ParameterValueType, value: String)
 
-/**
- * Data object for a tactic instance running on the specified formula of a particular proof (node).
- * @param id Identifies the tactic instance.
- * @param proofId Identifies the proof.
- * @param nodeId Identifies the node. If None, it identifies the "root" node of task nodes.
- * @param formulaId Identifies the formula.
- * @param tacticsId Identifies the tactic that is being run.
- */
-case class DispatchedTacticPOJO(val id:String, val proofId:String, val nodeId:Option[String], val formulaId:Option[String],
-                           val tacticsId:String, val input:Map[Int,String],
-                           val auto:Option[PositionTacticAutomation.Value], val status:DispatchedTacticStatus.Value) extends AbstractDispatchedPOJO
 
-case class DispatchedCLTermPOJO(val id : String, val proofId : String, val nodeId : Option[String], val clTerm : String, val status:Option[DispatchedTacticStatus.Value]) extends AbstractDispatchedPOJO
+case class USubstPatternParameterPOJO(patternId: Int, executableId: Int,
+                                      index: Int, patternFormulaStr: String, resultingExecutableId: Int)
 
-class ConfigurationPOJO(val name: String, val config: Map[String,String])
+case class TreeNode (id: Int, sequent: Sequent, parent: Option[TreeNode]) {
+  var children: List[TreeNode] = Nil
+  if (parent.nonEmpty)
+    parent.get.children = this :: parent.get.children
+  def stringId = "Node" + id
+  def rule = "Unimplemented"
+}
 
-//tasks : _id, model
-//tactics: _id, name, class
-//dispatched_tactics: _id, tactic_id, task_id, node_id, count
+case class Tree(id: String, nodes: List[TreeNode], root: TreeNode, leaves: List[AgendaItem]) {
+  def leavesAndRoot = root :: leaves.map({case item => item.goal})
+  def parent(id: String): Option[TreeNode] =
+    nodes.find({case node => node.id.toString == id}).flatMap({case node => node.parent})
+}
 
+case class AgendaItem(id: String, name: String, proofId: String, goal: TreeNode) {
+  // @todo full path
+  def path = List(goal.id.toString)
+}
+
+object ParameterValueType extends Enumeration {
+  type ParameterValueType = Value
+  val String, Position, Formula, Provable = Value
+
+  def fromString(s : String) = s match {
+    case "0" => String
+    case "1" => Position
+    case "2" => Formula
+    case "3" => Provable
+    case _ => throw new Exception("ParameterValueType " + s + " not in enum.")
+  }
+}
 
 /**
  * Proof database
  */
 trait DBAbstraction {
   /**
-   * Initializes a new database.
-   */
-  def cleanup() : Unit
+    * Initializes a new database.
+    */
+  def cleanup(): Unit
 
   // Configuration
   def getAllConfigurations: Set[ConfigurationPOJO]
-  def getConfiguration(configName: String) : ConfigurationPOJO
-  def createConfiguration(configName: String) : Boolean
+
+  def getConfiguration(configName: String): ConfigurationPOJO
+
+  def createConfiguration(configName: String): Boolean
+
   def updateConfiguration(config: ConfigurationPOJO)
 
   // Users
-  def userExists(username : String) : Boolean
-  def createUser(username : String, password : String) : Unit
-  def getUsername(uid : String) : String
-  def checkPassword(username : String, password : String) : Boolean
-  def getProofsForUser(userId : String) : List[(ProofPOJO, String)] //the string is a model name.
-  def openProofs(userId : String) : List[ProofPOJO]
+  def userExists(username: String): Boolean
+
+  def createUser(username: String, password: String): Unit
+
+  def getUsername(uid: String): String
+
+  def checkPassword(username: String, password: String): Boolean
+
+  def getProofsForUser(userId: String): List[(ProofPOJO, String)]
+
+  //the string is a model name.
+  def openProofs(userId: String): List[ProofPOJO]
 
   //Models
-  def createModel(userId: String, name : String, fileContents : String, date:String,
-                  description : Option[String]=None, publink:Option[String]=None,
-                  title:Option[String]=None, tactic:Option[String]=None) : Option[String]
-  def getModel(modelId : String) : ModelPOJO
-  def getModelList(userId : String) : List[ModelPOJO] // name, date, fileContents
+  def createModel(userId: String, name: String, fileContents: String, date: String,
+                  description: Option[String] = None, publink: Option[String] = None,
+                  title: Option[String] = None, tactic: Option[String] = None): Option[Int]
+
+  def getModel(modelId: Int): ModelPOJO
+
+  def getModel(modelId: String): ModelPOJO = getModel(modelId.toInt)
+
+  def getModelList(userId: String): List[ModelPOJO]
+
+  // name, date, fileContents
   //Proofs of models
-  def createProofForModel(modelId : String, name : String, description : String, date : String) : String //returns id of create object
-  def getProofsForModel(modelId : String) : List[ProofPOJO]
+  def createProofForModel(modelId: Int, name: String, description: String, date: String): Int
+
+  //returns id of create object
+  def createProofForModel(modelId: String, name: String, description: String, date: String): String =
+    createProofForModel(modelId.toInt, name, description, date).toString
+
+  def getProofsForModel(modelId: Int): List[ProofPOJO]
+
+  def getProofsForModel(modelId: String): List[ProofPOJO] = getProofsForModel(modelId.toInt)
 
   //Proofs and Proof Nodes
-  def getProofInfo(proofId : String) : ProofPOJO
+  def getProofInfo(proofId: Int): ProofPOJO
+
+  def getProofInfo(proofId: String): ProofPOJO = getProofInfo(proofId.toInt)
+
   def updateProofInfo(proof: ProofPOJO)
-  def updateProofName(proofId : String, name : String)
-  def getProofSteps(proofId : String) : List[String]
+
+  def updateProofName(proofId: Int, name: String): Unit
+
+  def updateProofName(proofId: String, name: String): Unit = updateProofName(proofId.toInt, name)
+
+  def getProofSteps(proofId: Int): List[String]
+
+  def proofTree(executionId: Int): Tree
 
   // Tactics
-  def createTactic(name : String, clazz : String, kind : TacticKind.Value) : String
-  def tacticExists(id: String) : Boolean
-  def getTactic(id: String) : Option[TacticPOJO]
-  def getTacticByName(name: String) : Option[TacticPOJO]
-  def getTactics : List[TacticPOJO]
-  def createDispatchedTactics(taskId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String,
-                              input:Map[Int, String], auto: Option[PositionTacticAutomation.PositionTacticAutomation],
-                              status:DispatchedTacticStatus.Value) : String
-  def updateDispatchedTactics(tactic:DispatchedTacticPOJO)
-  def updateDispatchedTacticStatus(tacticId:String, message: DispatchedTacticStatus.Value)
-  def getDispatchedTactics(tId : String) : Option[DispatchedTacticPOJO]
-  def getDispatchedTermOrTactic(tId : String) : Option[AbstractDispatchedPOJO]
-  def updateProofOnTacticCompletion(proofId: String, tId: String)
+  /** Stores a Provable in the database and returns its ID */
+  def serializeProvable(p: Provable): Int
 
-  def createDispatchedCLTerm(taskId : String, nodeId : Option[String], clTerm : String) : String
-  def getDispatchedCLTerm(id : String) : Option[DispatchedCLTermPOJO]
-  def updateDispatchedCLTerm(termToUpdate : DispatchedCLTermPOJO)
-  def updateDispatchedCLTermStatus(termId: String, status: DispatchedTacticStatus.Value)
-  def updateProofOnCLTermCompletion(proofId : String, termId : String)
+  /** Gets the conclusion of a provable */
+  def getConclusion(provableId: Int): Sequent
 
+  /** Use escape hatch in prover core to create a new Provable */
+  def loadProvable(provableId: Int): Sequent
 
-  def initializeForDemo() : Unit = {
-    val dbFile = this.getClass.getResourceAsStream("/keymaerax.sqlite")
-    val target = new java.io.File(DBAbstractionObj.dblocation)
-    val targetStream = new FileOutputStream(target)
-    targetStream.getChannel.transferFrom(Channels.newChannel(dbFile), 0, Long.MaxValue)
-    targetStream.close()
-    dbFile.close()
-  }
+  /** Deletes a provable and all associated sequents / formulas */
+  def deleteProvable(provableId: Int): Unit
 
-  import spray.json._ //allows for .parseJoson on strings.
-  def initializeForDemo2() : Unit = {
+  /////////////////////
+
+  /** Creates a new execution and returns the new ID in tacticExecutions */
+  def createExecution(proofId: Int): Int
+
+  /** Deletes an execution from the database */
+  def deleteExecution(executionId: Int): Unit
+
+  /**
+    * Adds an execution step to an existing execution
+    * @note Implementations should enforce additional invarants -- never insert when branches or alt orderings overlap.
+    */
+  def addExecutionStep(step: ExecutionStepPOJO): Int
+
+  def getExecutionSteps(executionID: Int): List[ExecutionStepPOJO]
+
+  /** Updates an executable step's status. @note should not be transitive */
+  def updateExecutionStatus(executionStepId: Int, status: ExecutionStepStatus): Unit
+
+  /** Updates an executable step's result provable */
+  def updateResultProvable(executionStepId: Int, provableId: Option[Int]): Unit
+
+  /////////////////////
+
+  /** Adds a new scala tactic and returns the resulting id */
+  def addScalaTactic(scalaTactic: ScalaTacticPOJO): Int
+
+  /** Adds a bellerophon expression as an executable and returns the new executableId */
+  def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): Int
+
+  /** Adds a built-in tactic application using a set of parameters */
+  def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int
+
+  /** Returns the executable with ID executableId */
+  def getExecutable(executableId: Int): ExecutablePOJO
+
+  def proofSteps(executionId: Int): List[ExecutionStepPOJO]
+
+  import spray.json._
+  //allows for .parseJoson on strings.
+  def initializeForDemo2(): Unit = {
     println("Initializing a demo database")
 
     //Add user
@@ -192,18 +302,20 @@ trait DBAbstraction {
     source.elements.map(processJsonForSingleModel(_))
   }
 
-  private def getFileContents(file : String) = {
+  private def getFileContents(file: String) =
+  {
     val reader = this.getClass.getResourceAsStream(file)
-    if(reader == null) throw new Exception(s"Could not find problem file $file.")
+    if (reader == null) throw new Exception(s"Could not find problem file $file.")
     Source.fromInputStream(reader).getLines().foldLeft("")((file, line) => file + "\n" + line)
   }
 
-  private def processJsonForSingleModel(element : JsValue) = {
+  private def processJsonForSingleModel(element: JsValue) =
+  {
     val kvps = element.asJsObject.fields.map(kvp =>
       (kvp._1, kvp._2.convertTo[String])
     )
-    val name = kvps.getOrElse("name", throw new Exception("Expcted a name but found none."))
-    val file = kvps.getOrElse("file", throw new Exception("Expcted a file but found none."))
+    val name = kvps.getOrElse("name", throw new Exception("Expected a name but found none."))
+    val file = kvps.getOrElse("file", throw new Exception("Expected a file but found none."))
     val fileContents = getFileContents("/" + file)
     val description = kvps.get("description")
     val publink = kvps.get("pubLink")
@@ -214,7 +326,7 @@ trait DBAbstraction {
     }
 
     val id = createModel("guest", name, fileContents, new java.util.Date().toString, description, publink, title,
-                         tacticContent) match {
+      tacticContent) match {
       case Some(x) => x
       case None => throw new Exception("Could not retrieve ID generated by insert.")
     }

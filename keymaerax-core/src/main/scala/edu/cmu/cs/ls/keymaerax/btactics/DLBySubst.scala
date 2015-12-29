@@ -2,10 +2,15 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
+//import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{cut, implyL, implyR, hideR, cutR, andL, andR, cutLR, equivifyR}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.axiomatic
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, NamedTactic, SequentType, USubstPatternTactic}
+//import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
+import edu.cmu.cs.ls.keymaerax.core.Sequent
+
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Position, PosInExpr, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
@@ -27,12 +32,12 @@ object DLBySubst {
     *   [a]p |- [a]q
     * }}}
     */
-  def monb = {
+  val monb = new NamedTactic("monb", {
     val pattern = SequentType(Sequent(Nil, IndexedSeq("[a_;]p_(??)".asFormula), IndexedSeq("[a_;]q_(??)".asFormula)))
     USubstPatternTactic(
       (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("[] monotone", ru.substitution.usubst))::Nil //@todo not sure about how to handle the renaming portion?
     )
-  }
+  })
 
   /**
    * Diamond monotonicity.
@@ -42,12 +47,12 @@ object DLBySubst {
    *   <a>p |- <a>q
    * }}}
    */
-  def mond = {
+  def mond = new NamedTactic("mond", {
     val pattern = SequentType(Sequent(Nil, IndexedSeq("<a_;>p_(??)".asFormula), IndexedSeq("<a_;>q_(??)".asFormula)))
     USubstPatternTactic(
-      (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("<> monotone", ru.substitution.usubst))::Nil //@todo not sure about how to handle the renaming portion?
+      (pattern, (ru: RenUSubst) => ru.getRenamingTactic & axiomatic("<> monotone", ru.substitution.usubst)) :: Nil //@todo not sure about how to handle the renaming portion?
     )
-  }
+  })
 
   /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
     * {{{
