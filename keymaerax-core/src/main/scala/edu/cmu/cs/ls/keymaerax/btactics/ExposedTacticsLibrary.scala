@@ -66,7 +66,7 @@ object ExposedTacticsLibrary {
   /* @TODO DC, DG */
   ,"DE" ->  HilbertCalculus.DE
   ,"DI" ->  HilbertCalculus.DI
-//  ,"DiffInd" ->  //@todo this no longer exists: //HilbertCalculus.diffInd
+//  ,"DiffInd" ->  //@todo this no longer exists: HilbertCalculus.diffInd
   ,"DS" ->  HilbertCalculus.DS
   ,"BoxDifferentialAssign" ->  HilbertCalculus.Dassignb
   ,"Derive" ->  HilbertCalculus.derive
@@ -104,7 +104,7 @@ object ExposedTacticsLibrary {
   val nullaryTactics: Map[String, BelleExpr] = Map(
    "TrivialCloser" -> ProofRuleTactics.trivialCloser
   ,"Prop" -> TactixLibrary.prop)
-//  ,"Master" -> TactixLibrary.master) @todo cannot do this b/c master needs a generator.
+//  ,"Master" -> TactixLibrary.master) @todo cannot do this b/c master needs a generator
 
   val formulaPositionTactics: Map[String, Formula => Position => BelleExpr] = Map (
     "CutLR" -> {case fml => {case pos => ProofRuleTactics.cutLR(fml)(pos)}}
