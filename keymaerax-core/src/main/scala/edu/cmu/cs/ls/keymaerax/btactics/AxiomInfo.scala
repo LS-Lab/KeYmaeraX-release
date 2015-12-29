@@ -178,7 +178,7 @@ object AxiomInfo {
 class AxiomInfo (val canonicalName: String, val shortName: String) {
   def formula: Formula =
     DerivedAxioms.derivedAxiomMap.get(canonicalName) match {
-      case Some(_, fml) => fml
+      case Some(fml) => fml._1
       case None =>
         Axiom.axioms.get(canonicalName) match {
           case Some(fml) => fml

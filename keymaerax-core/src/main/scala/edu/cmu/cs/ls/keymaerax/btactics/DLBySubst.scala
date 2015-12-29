@@ -47,7 +47,7 @@ object DLBySubst {
     USubstPatternTactic(
       (pattern, (ru: RenUSubst) => ru.getRenamingTactic & axiomatic("<> monotone", ru.substitution.usubst)) :: Nil //@todo not sure about how to handle the renaming portion?
     )
-  }
+  })
 
   /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
     * {{{

@@ -28,7 +28,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         throw new BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.").inContext(expr, "")
       case AppliedPositionTactic(positionTactic, pos) => v match {
         case BelleProvable(pr) => try {
-          BelleProvable(positionTactic.computeResult(pr, pos))
+          BelleProvable(positionTactic(pos).computeResult(pr))
         } catch {
           case e: BelleError => throw e.inContext(positionTactic + " at " + pos, pr.prettyString)
         }}
