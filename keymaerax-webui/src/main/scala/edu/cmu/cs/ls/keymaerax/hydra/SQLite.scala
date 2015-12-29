@@ -35,12 +35,14 @@ object SQLite {
   import Tables._
 
   val ProdDB: SQLiteDB = new SQLiteDB(DBAbstractionObj.dblocation)
+  /** Use this for all unit tests that work with the database, so tests don't infect the production database */
   val TestDB: SQLiteDB = new SQLiteDB(DBAbstractionObj.testLocation)
 
   class SQLiteDB(dblocation: String) extends DBAbstraction {
 
     val sqldb = Database.forURL("jdbc:sqlite:" + dblocation, driver = "org.sqlite.JDBC")
     private var currentSession:Session = null
+    /* Statistics on the number of SQL operations performed in this session, useful for profiling. */
     private var nUpdates = 0
     private var nInserts = 0
     private var nSelects = 0
@@ -103,39 +105,12 @@ object SQLite {
         default
       }
     }
-
-    /* SQLite tragically won't read string values past a NUL byte. The SQLite solution to this is using BLOB instead,
-    * which the Scala driver does not support. To get around this, make sure we only store NUL-free strings, it this
-    * case by base-64 encoding them. */
-    private def sanitize(s:String): String = {
-      DatatypeConverter.printBase64Binary(s.getBytes)
-    }
-
-    private def hashPassword(password: Array[Char], salt: Array[Byte], iterations: Int): String = {
-      val spec = new PBEKeySpec(password, salt, iterations, salt.length)
-      val skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
-      sanitize(new String(skf.generateSecret(spec).getEncoded))
-    }
-
-    private def generateSalt(length: Int): String = {
-      val saltBuf = new Array[Byte] (length)
-      val rng = new SecureRandom()
-      rng.nextBytes(saltBuf)
-      val dirtyString = new String(saltBuf)
-      sanitize(dirtyString)
-    }
-
-    /* Store passwords as a salted hash. Use CSPRNG to generate salt. Allow configuring number of iterations
-     * since we may conceivably want to change it after deployment for performance reasons */
-    private def generateKey(password: String): (String, String, Int) = {
+    override def createUser(username: String, password: String): Unit = {
+      /* Store passwords as a salted hash. Use CSPRNG to generate salt. Allow configuring number of iterations
+       * since we may conceivably want to change it after deployment for performance reasons */
       val iterations = configWithDefault("security", "passwordHashIterations", 10000)
       val saltLength = configWithDefault("security", "passwordSaltLength", 512)
-      val salt = generateSalt(saltLength)
-      (hashPassword(password.toCharArray, salt.getBytes, iterations), salt, iterations)
-    }
-
-    override def createUser(username: String, password: String): Unit = {
-      val (hash, salt, iterations) = generateKey(password)
+      val (hash, salt) = Password.generateKey(password, iterations, saltLength)
       session.withTransaction({
         Users.map(u => (u.email.get, u.hash.get, u.salt.get, u.iterations.get))
           .insert((username, hash, salt, iterations))
@@ -203,26 +178,12 @@ object SQLite {
         }).flatten
       })
 
-    /* Make a basic effort to confound timing attacks based on short-circuiting string comparisons. This is the
-    * recommended algorithm for comparing strings in a way that will never short-circuit, regardless of compiler
-    * optimizationsn. */
-    private def slowEquals(str1: String, str2: String): Boolean = {
-      if(str1.length != str2.length)
-        return false
-
-      var acc = 0
-      for(i <- str1.indices) {
-        acc |= str1(i) ^ str2(i)
-      }
-      acc == 0
-    }
-
     override def checkPassword(username: String, password: String): Boolean =
       session.withTransaction({
         nSelects = nSelects + 1
         Users.filter(_.email === username).list.exists({case row =>
-          val hash = hashPassword(password.toCharArray, row.salt.get.getBytes, row.iterations.get)
-          slowEquals(hash, row.hash.get)
+          val hash = Password.hash(password.toCharArray, row.salt.get.getBytes, row.iterations.get)
+          Password.hashEquals(hash, row.hash.get)
         })
       })
 
@@ -464,7 +425,7 @@ object SQLite {
       getExecutionSteps(executionId) match {
         case Nil => throw new Exception("Cannot regenerate provable for empty execution")
         case step::steps =>
-          val (rootSubgoals, conclusion) = getSequents(step.inputProvableId)
+          val ProvableSequents(conclusion, rootSubgoals) = getSequents(step.inputProvableId)
           val initialProvable = Provable.startProof(conclusion)
           def run(p: Provable, t:BelleExpr): Provable =
             SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
@@ -569,7 +530,7 @@ object SQLite {
       Sequent(Nil, ante, succ)
     }
 
-    def getSequents(provableId: Int): (List[Sequent], Sequent) = {
+    def getSequents(provableId: Int): ProvableSequents = {
       session.withTransaction({
         nSelects = nSelects + 1
         val sequents =
@@ -587,13 +548,13 @@ object SQLite {
         for (i <- sortedSubgoals.indices) {
           revSequents = getSequent(sortedSubgoals(i)) :: revSequents
         }
-        (revSequents.reverse, conclusionSequent)
+        ProvableSequents(conclusionSequent, revSequents.reverse)
       })
     }
 
     /** Gets the conclusion of a provable */
     override def getConclusion(provableId: Int): Sequent = {
-      getSequents(provableId)._2
+      getSequents(provableId).conclusion
     }
 
     def printStats = {
@@ -642,50 +603,21 @@ object SQLite {
         else if (executionIds.length == 1) executionIds.head
         else throw new Exception("Primary keys aren't unique in executions table.")})
 
-    override def proofTree(proofId: Int): Tree = {
+    override def getExecutionTrace(proofId: Int): ExecutionTrace = {
       val executionId = getTacticExecution(proofId)
       var steps = proofSteps(executionId)
-      var currentNodeId = 1
-
-      def treeNode(subgoal: Sequent, parent: Option[TreeNode]): TreeNode = {
-        val nodeId = currentNodeId
-        currentNodeId = currentNodeId + 1
-        TreeNode(nodeId, subgoal, parent)
-      }
-
-      /* This happens if we ask for a proof tree before we've done any actual proving, e.g. if we just created a new
-      * proof. In this case the right thing to do is display one node with the sequent we're trying to prove, which we
-      * can find by asking the proof. */
-      if (steps.isEmpty) {
-        val sequent = getProofConclusion(proofId)
-        val node = treeNode(sequent, None)
-        return Tree(proofId.toString, List(node), node, List(AgendaItem("0", "Unnamed Item", proofId.toString, node)))
-      }
-      val (rootSubgoals, conclusion) = getSequents(steps.head.inputProvableId)
-      var openGoals = rootSubgoals.map({case subgoal => treeNode(subgoal, None)})
-      var allNodes = openGoals
-      while (steps.nonEmpty && steps.head.resultProvableId.nonEmpty) {
-        val step = steps.head
-        val branch = step.branchOrder.get
-        val (endSubgoals, _) = getSequents(step.resultProvableId.get)
-        /* This step closed a branch*/
-        if(endSubgoals.length == openGoals.length - 1) {
-          openGoals = openGoals.slice(0, branch) ++ openGoals.slice(branch + 1, openGoals.length)
-        } else {
-          val (updated :: added) =
-            endSubgoals.filter({case sg => !openGoals.exists({case node => node.sequent == sg})})
-          val updatedNode = treeNode(updated, Some(openGoals(branch)))
-          val addedNodes = added.map({case sg => treeNode(sg, Some(openGoals(branch)))})
-          openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
-          allNodes = allNodes ++ (updatedNode :: addedNodes)
+      val traceSteps =
+        steps.map{case step =>
+            val input = getSequents(step.inputProvableId)
+            val output = step.resultProvableId.map{case id => getSequents(id)}
+            val branch = step.branchLabel match {
+              case Some(str) => Right(str)
+              case None => Left(step.branchOrder.get)
+            }
+            new ExecutionStep(input = input, output = output, branch = branch)
         }
-        steps = steps.tail
-      }
-      var items:List[AgendaItem] = Nil
-      for (i <- openGoals.indices) {
-        items = AgendaItem(i.toString, "Unnamed Goal", proofId.toString, openGoals(i)) :: items
-      }
-      Tree(proofId.toString, allNodes, allNodes.head, items.reverse)
+      val conclusion = getProofConclusion(proofId)
+      ExecutionTrace(proofId.toString, conclusion, traceSteps)
     }
   }
 }

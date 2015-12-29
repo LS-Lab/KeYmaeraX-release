@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.nio.channels.Channels
 
-import _root_.edu.cmu.cs.ls.keymaerax.core.Sequent
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.PositionTacticAutomation
 
 import java.io.File
@@ -115,6 +115,11 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
   require(branchOrder.isEmpty != branchLabel.isEmpty) //also schema constraint
 }
 
+/* User-friendly representation for execution traces */
+case class ProvableSequents(conclusion: Sequent, subgoals: List[Sequent])
+case class ExecutionStep(input:ProvableSequents, output:Option[ProvableSequents], branch:Either[Int, String])
+case class ExecutionTrace(proofId: String, conclusion: Sequent, steps:List[ExecutionStep])
+
 case class ExecutablePOJO(executableId: Int, scalaTacticId: Option[Int], belleExpr: Option[String]) {
   require(scalaTacticId.isEmpty != belleExpr.isEmpty)
 }
@@ -134,25 +139,6 @@ case class ParameterPOJO(parameterId: Int, executableID: Int, idx: Int, valueTyp
 
 case class USubstPatternParameterPOJO(patternId: Int, executableId: Int,
                                       index: Int, patternFormulaStr: String, resultingExecutableId: Int)
-
-case class TreeNode (id: Int, sequent: Sequent, parent: Option[TreeNode]) {
-  var children: List[TreeNode] = Nil
-  if (parent.nonEmpty)
-    parent.get.children = this :: parent.get.children
-  def stringId = "Node" + id
-  def rule = "Unimplemented"
-}
-
-case class Tree(id: String, nodes: List[TreeNode], root: TreeNode, leaves: List[AgendaItem]) {
-  def leavesAndRoot = root :: leaves.map({case item => item.goal})
-  def parent(id: String): Option[TreeNode] =
-    nodes.find({case node => node.id.toString == id}).flatMap({case node => node.parent})
-}
-
-case class AgendaItem(id: String, name: String, proofId: String, goal: TreeNode) {
-  // @todo full path
-  def path = List(goal.id.toString)
-}
 
 object ParameterValueType extends Enumeration {
   type ParameterValueType = Value
@@ -235,8 +221,6 @@ trait DBAbstraction {
 
   def getProofSteps(proofId: Int): List[String]
 
-  def proofTree(executionId: Int): Tree
-
   // Tactics
   /** Stores a Provable in the database and returns its ID */
   def serializeProvable(p: Provable): Int
@@ -265,6 +249,7 @@ trait DBAbstraction {
   def addExecutionStep(step: ExecutionStepPOJO): Int
 
   def getExecutionSteps(executionID: Int): List[ExecutionStepPOJO]
+  def getExecutionTrace(proofID: Int): ExecutionTrace
 
   /** Updates an executable step's status. @note should not be transitive */
   def updateExecutionStatus(executionStepId: Int, status: ExecutionStepStatus): Unit

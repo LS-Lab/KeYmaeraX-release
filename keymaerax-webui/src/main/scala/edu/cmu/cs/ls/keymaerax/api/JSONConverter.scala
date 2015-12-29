@@ -22,7 +22,7 @@ import scala.collection.mutable
 object JSONConverter {
   val prettyPrinter = new KeYmaeraPrettyPrinter(ParseSymbols) //todo use appropriate symbol table.
 
-  def convertPos(p: PosInExpr) = JsString(p.pos.mkString(","))
+  def convertPos(formulaId:String, p: PosInExpr) = JsString(formulaId + ","+ p .pos.mkString(","))
 
   def convertNamedSymbol(n: NamedSymbol) = JsString(n.name + (n.index match { case Some(j) => "_" + j case _ => "" }))
 
@@ -60,7 +60,7 @@ object JSONConverter {
       }
 
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-        val cf = ("id" -> convertPos(p)) :: Nil
+        val cf = ("id" -> convertPos(formulaId, p)) :: Nil
         val o = e match {
           case True => JsObject(("name" -> JsString("true")) +: cf)
           case False => JsObject(("name" -> JsString("false")) +: cf)
@@ -87,7 +87,7 @@ object JSONConverter {
       }
 
       override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-        val cf = ("id" -> convertPos(p)) :: Nil
+        val cf = ("id" -> convertPos(formulaId, p)) :: Nil
         val o = e match {
           case Number(i) => JsObject(("name" -> JsString(i.toString())) +: cf)
           case x@Variable(_, _, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[Variable])) +: cf)
@@ -108,7 +108,7 @@ object JSONConverter {
       }
 
       override def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
-        val cf = ("id" -> convertPos(p)) :: Nil
+        val cf = ("id" -> convertPos(formulaId, p)) :: Nil
         val o = e match {
           case x@ProgramConst(_) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[ProgramConst])) +: cf)
           case x@DifferentialProgramConst(_) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[DifferentialProgramConst])) +: cf)
@@ -134,7 +134,7 @@ object JSONConverter {
   def convertPosition(pos : Position) = JsObject(
     "kind" -> JsString(if (pos.isAnte) "ante" else "succ"),
     "index" -> JsNumber(pos.getIndex),
-    "inExpr" -> convertPos(pos.inExpr)
+    "inExpr" -> convertPos("", pos.inExpr)
   )
 
   def convertRule(rule : Rule): JsObject = {

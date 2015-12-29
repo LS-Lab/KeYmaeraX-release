@@ -233,6 +233,26 @@ object DerivedAxioms {
     "<=* down" -> "interval times down",
     "<=1Div down" -> "interval 1divide down",
     "<=Div down" -> "interval divide down",
+    ">" -> "greater normalize",
+    "! <" -> "not less",
+    "! <=" -> "not lessEqual",
+    "! >" -> "not greater",
+    "< negate" -> "less negate",
+    "* associative" -> "times associative",
+    "* commutative" -> "times commutative",
+    "* inverse" -> "times inverse",
+    "* closed" -> "times closed",
+    "* identity" -> "times identity",
+    "+ associative" -> "plus associative",
+    "+ commutative" -> "plus commutative",
+    "+ inverse" -> "plus inverse",
+    "+ closed" -> "plus closed",
+    "positivity" -> "positivity",
+    "distributive" -> "distributive",
+    "all distribute" -> "all distribute",
+    "[*] approx" -> "box approx",
+    ":= assign dual" -> "assign dual",
+    "[]~><> propagation" -> "box diamond propagation",
     // these are here for unit tests only; but if we implement with renaming scheme, we loose the ability to check for duplicate file names
     "exists dual dummy" -> "exists dual dummy",
     "all dual dummy" -> "all dual dummy",
@@ -241,7 +261,7 @@ object DerivedAxioms {
     "+*' reduce dummy" -> "plus times prime reduce dummy",
     "+*' expand dummy" -> "plus times prime expand dummy",
     "^' dummy" -> "power prime dummy"
-  ) ensuring(r => r.values.size == r.values.toSet.size, "No duplicate file names allowed")
+    ) ensuring(r => r.values.size == r.values.toSet.size, "No duplicate file names allowed")
 
   /**
    * Looks up information about a derived axiom by name.
@@ -363,115 +383,162 @@ object DerivedAxioms {
     case _ => None
   }
 
+  val unpopulatedAxioms =
+    List(
+      "K1",
+      "K2",
+      "PC1",
+      "PC2",
+      "PC3",
+      "PC9",
+      "PC10",
+      "x' derive var",
+      "' linear right",
+      "! !=",
+      "! =",
+      "! <=",
+      "! >=",
+      "<:=> assign equational",
+      "x' derive variable",
+      "' linear" ,
+      "[:=] assign equality exists",
+      "<=Div down",
+      ">",
+      "! <",
+      "! <=",
+      "! >",
+      "< negate",
+      "* associative",
+      "* commutative",
+      "* inverse",
+      "* closed",
+      "* identity",
+      "+ associative",
+      "+ commutative",
+      "+ inverse",
+      "+ closed",
+      "positivity",
+      "distributive",
+      "all distribute",
+      "[*] approx",
+      ":= assign dual",
+      "[]~><> propagation",
+      "exists dual dummy",
+      "all dual dummy",
+      "all dual dummy 2",
+      "+id' dummy",
+      "+*' reduce dummy",
+      "+*' expand dummy",
+      "^' dummy"
+    )
+
+
+  val populatedAxioms = List("<-> reflexive"
+    , "-> distributes over &"
+    , "-> distributes over <->"
+    , "-> weaken"
+    , "!! double negation"
+    , "exists dual"
+    , "!exists"
+    , "!all"
+    , "![]"
+    , "!<>"
+    , "[] dual"
+    , "[] split"
+    , "[] split left"
+    , "[] split right"
+    , "<> split"
+    , "<> split left"
+    , "<:=> assign"
+    , ":= assign dual"
+    , "[:=] assign equational"
+    , "[:=] assign update"
+    , "[:=] vacuous assign"
+    , "<:=> assign update"
+    , "<:=> vacuous assign"
+    , "<':=> differential assign"
+    , "<:*> assign nondet"
+    , "<?> test"
+    , "<++> choice"
+    , "<;> compose"
+    , "<*> iterate"
+    , "<*> approx"
+    , "[*] approx"
+    , "exists generalize"
+    , "all substitute"
+    , "vacuous exists quantifier"
+    , "V[:*] vacuous assign nondet"
+    , "V<:*> vacuous assign nondet"
+    , "DX diamond differential skip"
+    , "DW differential weakening"
+    , "DS differential equation solution"
+    , "Dsol& differential equation solution"
+    , "Dsol differential equation solution"
+    , "Domain Constraint Conjunction Reordering"
+    , "[] post weaken"
+    , "& commute"
+    , "& associative"
+    , "!& deMorgan"
+    , "!| deMorgan"
+    , "!-> deMorgan"
+    , "!<-> deMorgan"
+    , "-> expand"
+    , "-> tautology"
+    , "->' derive imply"
+    , "\\forall->\\exists"
+    , "->true"
+    , "true->"
+    , "&true"
+    , "true&"
+    , "0*"
+    , "0+"
+    , "DG differential pre-ghost"
+    , "= reflexive"
+    , "* commute"
+    , "= commute"
+    , "<="
+    , "= negate"
+    , "!= negate"
+    , "! <"
+    , "! >"
+    , "< negate"
+    , ">= flip"
+    , "> flip"
+    , "<"
+    , ">"
+    , "abs"
+    , "min"
+    , "max"
+    , "<*> stuck"
+    , "<'> stuck"
+    , "+<= up"
+    , "-<= up"
+    , "*<= up"
+    , "1Div<= up"
+    , "Div<= up"
+    , "<=+ down"
+    , "<=- down"
+    , "<=* down"
+    , "<=1Div down"
+    , "<=Div down"
+    , "*<= up"
+    , "<=* down"
+  )
+
+  def derivedAxiomMap = {
+    populatedAxioms.foldLeft(HashMap[String,(Formula, BelleExpr)]()) { case (map, name) =>
+      derivedAxiomInfo(name) match {
+        case None => map
+        case Some(pair) => map.+((name, pair))
+      }
+    }
+  }
   /** populates the derived lemma database with all of the lemmas in the case statement above.*/
   def prepopulateDerivedLemmaDatabase() = {
     require(AUTO_INSERT, "AUTO_INSERT should be on if lemma database is being pre-populated.")
-    //@note copied from derivedAxiomInfo.
-    val derivedAxiomMap = HashMap(
-      "<-> reflexive" -> Some(equivReflexiveF, equivReflexiveT)
-      , "-> distributes over &" -> Some(implyDistAndF, implyDistAndT)
-      , "-> distributes over <->" -> Some(implyDistEquivF, implyDistEquivT)
-      , "-> weaken" -> Some(implWeakenF, implWeakenT)
-      , "!! double negation" -> Some(doubleNegationF, doubleNegationT)
-      , "exists dual" -> Some(existsDualF, existsDualT)
-      , "!exists" -> Some(notExistsF, notExistsT)
-      , "!all" -> Some(notAllF, notAllT)
-      , "![]" -> Some(notBoxF, notBoxT)
-      , "!<>" -> Some(notDiamondF, notDiamondT)
-      , "[] dual" -> Some(boxDualF, boxDualT)
-      , "[] split" -> Some(boxSplitF, boxSplitT)
-      , "[] split left" -> Some(boxSplitLeftF, boxSplitLeftT)
-      , "[] split right" -> Some(boxSplitRightF, boxSplitRightT)
-      , "<> split" -> Some(diamondSplitF, diamondSplitT)
-      , "<> split left" -> Some(diamondSplitLeftF, diamondSplitLeftT)
-      , "<:=> assign" -> Some(assigndF, assigndT)
-      , ":= assign dual" -> Some(assignDualF, assignDualT)
-      , "[:=] assign equational" -> Some(assignbEquationalF, assignbEquationalT)
-//      , "[:=] assign equality exists" -> Some(assignbExistsF, assignbExistsT)
-      , "[:=] assign update" -> Some(assignbUpdateF, assignbUpdateT)
-      , "[:=] vacuous assign" -> Some(vacuousAssignbF, vacuousAssignbT)
-      //      , "<:=> assign equational" -> ??? //Some(assigndEquationalF, assigndEquationalT)
-      , "<:=> assign update" -> Some(assigndUpdateF, assigndUpdateT)
-      , "<:=> vacuous assign" -> Some(vacuousAssigndF, vacuousAssigndT)
-      , "<':=> differential assign" -> Some(assignDF, assignDT)
-      , "<:*> assign nondet" -> Some(nondetassigndF, nondetassigndT)
-      , "<?> test" -> Some(testdF, testdT)
-      , "<++> choice" -> Some(choicedF, choicedT)
-      , "<;> compose" -> Some(composedF, composedT)
-      , "<*> iterate" -> Some(iteratedF, iteratedT)
-      , "<*> approx" -> Some(loopApproxdF, loopApproxdT)
-      , "[*] approx" -> Some(loopApproxbF, loopApproxbT)
-      , "exists generalize" -> Some(existsGeneralizeF, existsGeneralizeT)
-      //@todo , "exists eliminate" -> Some(existsEliminateF, existsEliminateT)
-      , "all substitute" -> Some(allSubstituteF, allSubstituteT)
-      , "vacuous exists quantifier" -> Some(vacuousExistsF, vacuousExistsT)
-      , "V[:*] vacuous assign nondet" -> Some(vacuousBoxAssignNondetF, vacuousBoxAssignNondetT)
-      , "V<:*> vacuous assign nondet" -> Some(vacuousDiamondAssignNondetF, vacuousDiamondAssignNondetT)
-      , "DX diamond differential skip" -> Some(DskipdF, DskipdT)
-      , "DW differential weakening" -> Some(DWeakeningF, DWeakeningT)
-      , "DS differential equation solution" -> Some(DSnodomainF, DSnodomainT)
-      , "Dsol& differential equation solution" -> Some(DSddomainF, DSddomainT)
-      , "Dsol differential equation solution" -> Some(DSdnodomainF, DSdnodomainT)
-      , "Domain Constraint Conjunction Reordering" -> Some(domainCommuteF, domainCommuteT)
-      , "[] post weaken" -> Some(postconditionWeakenF, postconditionWeakenT)
-      , "& commute" -> Some(andCommuteF, andCommuteT)
-      , "& associative" -> Some(andAssocF, andAssocT)
-      , "!& deMorgan" -> Some(notAndF, notAndT)
-      , "!| deMorgan" -> Some(notOrF, notOrT)
-      , "!-> deMorgan" -> Some(notImplyF, notImplyT)
-      , "!<-> deMorgan" -> Some(notEquivF, notEquivT)
-      , "-> expand" -> Some(implyExpandF, implyExpandT)
-      , "-> tautology" -> Some(implyTautologyF, implyTautologyT)
-      , "->' derive imply" -> Some(DimplyF, DimplyT)
-      , "\\forall->\\exists" -> Some(forallThenExistsF, forallThenExistsT)
-      , "->true" -> Some(impliesTrueF, impliesTrueT)
-      , "true->" -> Some(trueImpliesF, trueImpliesT)
-      , "&true" -> Some(andTrueF, andTrueT)
-      , "true&" -> Some(trueAndF, trueAndT)
-      , "0*" -> Some(zeroTimesF, zeroTimesT)
-      , "0+" -> Some(zeroPlusF, zeroPlusT)
-      //    , "x' derive var" -> Some(DvarF, DvarT)
-      , "x' derive variable" -> Some(DvariableF, DvariableT)
-      , "' linear" -> Some(DlinearF, DlinearT)
-      //      , "' linear right" -> Some(DlinearRightF, DlinearRightT)
-      , "DG differential pre-ghost" -> Some(DGpreghostF, DGpreghostT)
-      , "= reflexive" -> Some(equalReflexiveF, equalReflexiveT)
-      , "* commute" -> Some(timesCommuteF, timesCommuteT)
-      , "= commute" -> Some(equalCommuteF, equalCommuteT)
-      , "<=" -> Some(lessEqualF, lessEqualT)
-      , "= negate" -> Some(notNotEqualF, notNotEqualT)
-      , "!= negate" -> Some(notEqualF, notEqualT)
-      //      , "! !=" -> derivedAxiomInfo("= negate")
-      //      , "! =" -> Some(notEqualF, notEqualT)
-      , "! <" -> Some(notLessF, notLessT)
-      //      , "! <=" -> Some(notLessEqualF, notLessEqualT)
-      , "! >" -> Some(notGreaterF, notGreaterT)
-      //      , "! >=" -> derivedAxiomInfo("< negate")
-      , "< negate" -> Some(notGreaterEqualF, notGreaterEqualT)
-      , ">= flip" -> Some(flipGreaterEqualF, flipGreaterEqualT)
-      , "> flip" -> Some(flipGreaterF, flipGreaterT)
-      , "<" -> Some(lessF, lessT)
-      , ">" -> Some(greaterF, greaterT)
-      , "abs" -> Some(absF, absT)
-      , "min" -> Some(minF, minT)
-      , "max" -> Some(maxF, maxT)
-      , "<*> stuck" -> Some(loopStuckF, loopStuckT)
-      , "<'> stuck" -> Some(odeStuckF, odeStuckT)
-      , "+<= up" -> Some(intervalUpPlusF, intervalUpPlusT)
-      , "-<= up" -> Some(intervalUpMinusF, intervalUpMinusT)
-      , "*<= up" -> Some(intervalUpTimesF, intervalUpTimesT)
-      , "1Div<= up" -> Some(intervalUp1DivideF, intervalUp1DivideT)
-      , "Div<= up" -> Some(intervalUpDivideF, intervalUpDivideT)
-      , "<=+ down" -> Some(intervalDownPlusF, intervalDownPlusT)
-      , "<=- down" -> Some(intervalDownMinusF, intervalDownMinusT)
-      , "<=* down" -> Some(intervalDownTimesF, intervalDownTimesT)
-      , "<=1Div down" -> Some(intervalDown1DivideF, intervalDown1DivideT)
-      , "<=Div down" -> Some(intervalDownDivideF, intervalDownDivideT)
-    ) ensuring(r => r.forall(kv => derivedAxiomInfo(kv._1)==kv._2), "same contents as derivedAxiomInfo()")
-
     derivedAxiomMap.keys.map(key => {
-      val proof: Provable = derivedAxiom(key)
-      derivedAxiom(key, proof)
+        val proof: Provable = derivedAxiom(key)
+        derivedAxiom(key, proof)
     })
   }
 

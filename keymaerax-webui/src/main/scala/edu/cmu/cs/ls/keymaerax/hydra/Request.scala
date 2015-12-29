@@ -15,8 +15,10 @@ import java.util.{Locale, Calendar}
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
+import _root_.edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
+import _root_.edu.cmu.cs.ls.keymaerax.tactics.{Position, Augmentors, PosInExpr, AxiomIndex}
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
@@ -26,7 +28,7 @@ import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics.{ArithmeticTacticsImpl, TacticExceptionListener, Tactics}
-import edu.cmu.cs.ls.keymaerax.tacticsinterface.{CLParser, CLInterpreter}
+import edu.cmu.cs.ls.keymaerax.tacticsinterface.CLParser
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 
 import scala.io.Source
@@ -497,14 +499,14 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
   */
 class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
-    val response = new AgendaAwesomeResponse(db.proofTree(proofId.toInt))
+    val response = new AgendaAwesomeResponse(ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)))
     response :: Nil
   }
 }
 
 class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
   def getResultingResponses() = {
-    val tree = db.proofTree(proofId.toInt)
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
     tree.parent(nodeId) match {
       case None => throw new Exception("Tried to get parent of node " + nodeId + " which has no parent")
       case Some(parent) =>
@@ -516,7 +518,7 @@ class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String,
 
 case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
   def getResultingResponses() = {
-    var tree: Option[TreeNode] = Some(db.proofTree(proofId.toInt).root)
+    var tree: Option[TreeNode] = Some(ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).root)
     var path: List[TreeNode] = Nil
     while (tree.nonEmpty) {
       path = tree.get :: path
@@ -531,7 +533,7 @@ case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String,
 
 case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
   def getResultingResponses() = {
-    val node = db.proofTree(proofId.toInt).nodes.find({case node => node.id.toString == nodeId})
+    val node = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).nodes.find({case node => node.id.toString == nodeId})
     node match {
       case None => throw new Exception("Node not found")
       case Some(node) =>
@@ -571,6 +573,15 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
 //  }
 }
 
+class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String, pos:Position) extends Request {
+  def getResultingResponses() = {
+    import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+    val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
+    val subFormula = sequent.sub(pos).get
+    val applicable = AxiomIndex.axiomsFor(subFormula)
+    new ApplicableAxiomsResponse(applicable) :: Nil
+  }
+}
 /**
  * Runs the specified tactic on the formula with the specified ID. The sequent, which contains this formula, is
  * identified by the proof ID and the node ID.

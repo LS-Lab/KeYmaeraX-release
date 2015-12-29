@@ -11,6 +11,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.JSONConverter
+import _root_.edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import com.fasterxml.jackson.annotation.JsonValue
 import spray.json._
@@ -308,17 +309,21 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
         num = num + 1
         num.toString
       }
-      def fmlsJson (fmls: IndexedSeq[Formula]): JsValue = {
-        JsArray(fmls.map { case fml =>
-          val fmlJson = JSONConverter.convertFormula(fml, "", "")
+      def fmlsJson (isAnte:Boolean, fmls: IndexedSeq[Formula]): JsValue = {
+        JsArray(fmls.zipWithIndex.map { case (fml, i) =>
+          /* Formula ID is formula number followed by comma-separated PosInExpr.
+           formula number = strictly positive if succedent, strictly negative if antecedent, 0 is never used
+          */
+          val idx = if(isAnte) {-(i+1)} else {i+1}
+          val fmlJson = JSONConverter.convertFormula(fml, idx.toString, "")
           JsObject(
             "id" -> JsString(fmlId),
             "formula" -> fmlJson
           )}.toVector)
       }
       JsObject(
-        "ante" -> fmlsJson(sequent.ante),
-        "succ" -> fmlsJson(sequent.succ)
+        "ante" -> fmlsJson(isAnte = true, sequent.ante),
+        "succ" -> fmlsJson(isAnte = false, sequent.succ)
       )
     }
 
@@ -335,15 +340,19 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
         "parent" -> parent)
     }
 
-    def deductionJson(deduction: List[String]): JsValue =
-      JsObject("sections" -> new JsArray(List(new JsArray(deduction.map{case str => new JsString(str)}))))
+    def sectionJson(section: List[String]): JsValue = {
+      JsObject("path" -> new JsArray(section.map{case node => JsString(node)}))
+    }
+
+    def deductionJson(deduction: List[List[String]]): JsValue =
+      JsObject("sections" -> new JsArray(deduction.map{case section => sectionJson(section)}))
 
     def itemJson(item: AgendaItem): (String, JsValue) = {
       val value = JsObject(
         "id" -> JsString(item.id),
         "name" -> JsString(item.name),
         "proofId" -> JsString(item.proofId),
-        "deduction" -> deductionJson(item.path))
+        "deduction" -> deductionJson(List(item.path)))
       (item.id, value)
     }
 
@@ -369,21 +378,16 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
     }
   }
 
-class AgendaAwesomeResponse(tree: Tree) extends Response {
+class AgendaAwesomeResponse(tree: ProofTree) extends Response {
   import Helpers._
   override val schema = Some("agendaawesome.js")
 
   val proofTree = {
-    val id = proofIdJson(tree.id)
-    /* @TODO make this less silly once debugged */
-    val nodez = tree.leavesAndRoot
-    val nodezz = nodez.map({case node => (node.id.toString, nodeJson(node))})
-    val nodes = new JsObject(nodezz.toMap)
-    val root = nodeIdJson(tree.root.id)
+    val nodes = tree.leavesAndRoot.map({case node => (node.id.toString, nodeJson(node))})
     JsObject(
-      "id" -> id,
-      "nodes" -> nodes,
-      "root" -> root)
+      "id" -> proofIdJson(tree.id),
+      "nodes" -> new JsObject(nodes.toMap),
+      "root" -> nodeIdJson(tree.root.id))
   }
 
   val agendaItems = JsObject(tree.leaves.map({case item => itemJson(item)}))
@@ -429,6 +433,17 @@ class GetBranchRootResponse(node: TreeNode) extends Response {
 //
 //  val json = JsArray(objects)
 //}
+
+class ApplicableAxiomsResponse(axiomNames : List[String]) extends Response {
+  def axiomJson(name: String) = {
+    JsObject(
+    "id" -> new JsString(AxiomInfo(name).shortName),
+    "name" -> new JsString(name),
+    "axiom" -> new JsString(AxiomInfo(name).formula.prettyString)
+    )
+  }
+  val json = JsArray(axiomNames.map({case axiom => axiomJson(axiom)}))
+}
 
 class CounterExampleResponse(cntEx: String) extends Response {
   val json = JsObject(
