@@ -121,6 +121,16 @@ object Idioms {
   /** Optional tactic */
   def ?(t: BelleExpr): BelleExpr = (t partial) | nil
 
+  /** Mandatory change */
+  def must(t: BelleExpr): BelleExpr = new DependentTactic("must") {
+    override def computeExpr(before: Provable): BelleExpr = t & new BuiltInTactic(name) {
+      override def result(after: Provable): Provable = {
+        if (before == after) throw new BelleError("Tactic " + t + " did not result in mandatory change")
+        after
+      }
+    }
+  }
+
   def atSubgoal(subgoalIdx: Int, t: BelleExpr) = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable) =>

@@ -159,6 +159,17 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
       ((andL('Llast)+@TheType() partial) | close)*@TheType()) shouldBe 'proved
   }
 
+  "must idiom" should "fail when no change occurs" in {
+    a [BelleError] should be thrownBy proveBy("x=2".asFormula, Idioms.must(skip))
+  }
+
+  it should "do nothing when change occurred" in {
+    val result = proveBy("x=2|x=3".asFormula, Idioms.must(orR(1)))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only ("x=2".asFormula, "x=3".asFormula)
+  }
+
   "Branch Combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val tactic = andR(SuccPos(0)) < (
       implyR(SuccPos(0)) & close,
