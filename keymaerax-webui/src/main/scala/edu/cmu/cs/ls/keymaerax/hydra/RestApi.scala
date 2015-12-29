@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
+import _root_.edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
 import akka.actor.Actor
 import spray.routing._
 import spray.http._
@@ -222,7 +223,15 @@ trait RestApi extends HttpService {
 
   val axiomList = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, goalId, formulaId) => { pathEnd {
     get {
-      val request = new GetApplicableAxiomsRequest(database, userId, proofId, nodeId, goalId, formulaId)
+      def parseFormulaId(id:String):Position = {
+        val (idx :: inExprs) = id.split(',').toList.map({case str => str.toInt})
+        if(idx >= 0) {
+          new SuccPosition(idx, new PosInExpr(inExprs))
+        } else {
+          new AntePosition((-idx)-1)
+        }
+      }
+      val request = new GetApplicableAxiomsRequest(database, userId, proofId, nodeId, goalId, parseFormulaId(formulaId))
       complete(standardCompletion(request))
     }
   }}}

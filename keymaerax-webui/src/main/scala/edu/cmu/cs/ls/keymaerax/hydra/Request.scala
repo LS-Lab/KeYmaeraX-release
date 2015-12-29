@@ -18,7 +18,7 @@ import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import _root_.edu.cmu.cs.ls.keymaerax.tactics.AxiomIndex
+import _root_.edu.cmu.cs.ls.keymaerax.tactics.{Position, Augmentors, PosInExpr, AxiomIndex}
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
@@ -28,7 +28,7 @@ import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics.{ArithmeticTacticsImpl, TacticExceptionListener, Tactics}
-import edu.cmu.cs.ls.keymaerax.tacticsinterface.{CLParser, CLInterpreter}
+import edu.cmu.cs.ls.keymaerax.tacticsinterface.CLParser
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 
 import scala.io.Source
@@ -573,11 +573,12 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
 //  }
 }
 
-class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String, formulaId: String) extends Request {
+class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String, pos:Position) extends Request {
   def getResultingResponses() = {
-    val id = formulaId.toInt
-    val formula = db.proofTree(proofId.toInt).findFormula(id)
-    val applicable = AxiomIndex.axiomsFor(formula)
+    import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+    val sequent = db.proofTree(proofId.toInt).findNode(nodeId).get.sequent
+    val subFormula = sequent.sub(pos).get
+    val applicable = AxiomIndex.axiomsFor(subFormula)
     new ApplicableAxiomsResponse(applicable) :: Nil
   }
 }

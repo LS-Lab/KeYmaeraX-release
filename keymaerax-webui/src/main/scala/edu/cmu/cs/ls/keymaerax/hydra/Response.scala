@@ -309,19 +309,20 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
         num = num + 1
         num.toString
       }
-      def fmlsJson (fmls: IndexedSeq[Formula]): JsValue = {
-        JsArray(fmls.map { case fml =>
+      def fmlsJson (isAnte:Boolean, fmls: IndexedSeq[Formula]): JsValue = {
+        JsArray(fmls.zipWithIndex.map { case (fml, i) =>
           /* Formula ID is comma-separated PosInExpr. Leftmost number in the ID is
           * the top-level operator of the formula.*/
-          val fmlJson = JSONConverter.convertFormula(fml, "", "")
+          val idx = if(isAnte) {-(i+1)} else i
+          val fmlJson = JSONConverter.convertFormula(fml, idx.toString, "")
           JsObject(
             "id" -> JsString(fmlId),
             "formula" -> fmlJson
           )}.toVector)
       }
       JsObject(
-        "ante" -> fmlsJson(sequent.ante),
-        "succ" -> fmlsJson(sequent.succ)
+        "ante" -> fmlsJson(isAnte = true, sequent.ante),
+        "succ" -> fmlsJson(isAnte = false, sequent.succ)
       )
     }
 

@@ -139,7 +139,6 @@ case class TreeNode (id: Int, sequent: Sequent, parent: Option[TreeNode]) {
   var children: List[TreeNode] = Nil
   if (parent.nonEmpty)
     parent.get.children = this :: parent.get.children
-  def stringId = "Node" + id
   def rule = "Unimplemented"
 }
 
@@ -147,7 +146,7 @@ case class Tree(id: String, nodes: List[TreeNode], root: TreeNode, leaves: List[
   def leavesAndRoot = root :: leaves.map({case item => item.goal})
   def parent(id: String): Option[TreeNode] =
     nodes.find({case node => node.id.toString == id}).flatMap({case node => node.parent})
-  def findFormula(id: Int): Formula = ???
+  def findNode(id: String) = nodes.find({case node => node.id.toString.equals(id)})
 }
 
 case class AgendaItem(id: String, name: String, proofId: String, goal: TreeNode) {
