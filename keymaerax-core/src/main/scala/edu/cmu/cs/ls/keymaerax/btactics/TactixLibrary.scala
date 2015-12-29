@@ -5,11 +5,12 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Generator, NoneGenerate, Position, PosInExpr, SuccPosition}
 
 import scala.collection.immutable._
+import scala.language.postfixOps
 
 /**
  * Tactix: Main tactic library with simple interface.
@@ -31,22 +32,36 @@ import scala.collection.immutable._
  * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
  */
 object TactixLibrary extends UnifyUSCalculus {
-  private val parser = KeYmaeraXParser
-
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   lazy val step               : DependentPositionTactic = HilbertCalculus.stepAt
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
-  def normalize               : BelleExpr = (alphaRule | closeId | ls(allR) | la(existsL)
-    | close
-    | betaRule
-    | l(step))*@TheType()
+  lazy val normalize               : BelleExpr = DoAll(?(
+    (alphaRule partial)
+      | (closeId
+      | ((allR('R) partial)
+      | ((existsL('L) partial)
+      | (close
+      | ((betaRule partial)
+      | ((step('L) partial)
+      | ((step('R) partial) partial) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType()
+
   /** exhaust propositional logic */
-  def prop                    : BelleExpr = (closeId | close | alphaRule | betaRule)*@TheType()
+  lazy val prop                    : BelleExpr = DoAll(?(
+    (close
+      | ((alphaRule partial)
+      | ((betaRule partial) partial) partial) partial) partial) partial)*@TheType()
+
   /** master: master tactic that tries hard to prove whatever it could */
-  def master                  : BuiltInTactic = ??? //master(new NoneGenerate(), "Mathematica")
-  def master(qeTool: String)  : BuiltInTactic = ??? //master(new NoneGenerate(), qeTool)
-  def master(gen: Generator[Formula] = new NoneGenerate(), qeTool: String = "Mathematica"): BuiltInTactic = ??? //TacticLibrary.master(gen, true, qeTool)
+  def master(gen: Generator[Formula] = new NoneGenerate())(implicit qeTool: QETool): BelleExpr =
+    DoAll(?(
+      (close
+        | ((must(normalize) partial)
+        | ((loop(gen)('L) partial)
+        | ((loop(gen)('R) partial)
+        //@todo diffSolve
+        | ((diffInd partial)
+        | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType() & ?(QE)
 
   /*******************************************************************
     * unification and matching based auto-tactics
@@ -54,11 +69,10 @@ object TactixLibrary extends UnifyUSCalculus {
     *******************************************************************/
 
   /** US: uniform substitution ([[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule USubst]])
-    * @see [[UnifyUSCalculus]]
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]]
     * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
     */
-  def US(subst: List[SubstitutionPair], delta: (Map[Formula, Formula]) = Map()): BuiltInTactic = ??? //PropositionalTacticsImpl.uniformSubstT(subst, delta)
+  def US(subst: USubst, origin: Sequent): BuiltInTactic = ProofRuleTactics.US(subst, origin)
 
   // conditional tactics
 
@@ -80,49 +94,17 @@ object TactixLibrary extends UnifyUSCalculus {
     */
   def sublabel(s: String): BelleExpr = ??? //new SubLabelBranch(s)
 
-  // Locating applicable positions for PositionTactics
-
-
-  /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
-  def llu(tactic: PositionalTactic, shape: Formula): BuiltInTactic = ???
-//    SearchTacticsImpl.locateAnte(tactic, f => UnificationMatch.unifiable(shape, f)!=None)
-  /** Locate applicable position in antecedent on the left in which something matching the given shape occurs */
-  def llu(tactic: PositionalTactic, shape: String): BuiltInTactic = llu(tactic, parser.formulaParser(shape))
-  /** Locate applicable position in succedent on the right in which something matching the given shape occurs */
-  def lru(tactic: PositionalTactic, shape: Formula): BuiltInTactic = ???
-//    SearchTacticsImpl.locateSucc(tactic, f => UnificationMatch.unifiable(shape, f)!=None)
-  /** Locate applicable position in succedent on the right in which something matching the given shape occurs */
-  def lru(tactic: PositionalTactic, shape: String): BuiltInTactic = lru(tactic, parser.formulaParser(shape))
-
-  /** Locate applicable position in succedent on the right in which fml occurs verbatim */
-  def ls(tactic: BuiltInRightTactic, fml: String = "", key: Option[Expression] = None): BuiltInTactic = ???
-//    SearchTacticsImpl.locateSucc(tactic,
-//      if (fml == "") (_ => true) else _ == fml.asFormula,
-//      if (key.isDefined) Some(_ == key.get) else None)
-  /** Locate applicable position in succedent on the right */
-  def lR(tactic: BuiltInRightTactic): BuiltInTactic = ls(tactic)
-  /** Locate applicable position in antecedent on the left in which fml occurs verbatim  */
-  def la(tactic: BuiltInLeftTactic, fml: String = "", key: Option[Expression] = None): BuiltInTactic = ???
-//    SearchTacticsImpl.locateAnte(tactic,
-//      if (fml == "") _ => true else _ == fml.asFormula,
-//      if (key.isDefined) Some(_ == key.get) else None)
-  /** Locate applicable position in antecedent on the left */
-  def lL(tactic: BuiltInLeftTactic): BuiltInTactic = la(tactic)
-  /** Locate applicable top-level position in left or right in antecedent or succedent */
-  def l(tactic: PositionalTactic): BuiltInTactic  = ??? //TacticLibrary.locateAnteSucc(tactic)
-  /** Locate applicable top-level position in left or right in antecedent or succedent */
-  def l(tactic: DependentPositionTactic): DependentTactic = ???
-  /** Locate applicable position within a given position */
-  def lin(tactic: PositionalTactic): PositionalTactic = ???
-
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Propositional tactics
 
   /** Hide/weaken whether left or right */
-  lazy val hide               : BelleExpr = ProofRuleTactics.hide
+  lazy val hide               : DependentPositionTactic = ProofRuleTactics.hide
   /** Hide/weaken given formula at given position */
-  def hide(fml: Formula)      : BelleExpr = DebuggingTactics.assert(fml, "hiding") & ProofRuleTactics.hide
+  def hide(fml: Formula): DependentPositionTactic = new DependentPositionTactic("hide") {
+    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+      override def computeExpr(v: BelleValue): BelleExpr = assertE(fml, "hiding")(pos) & ProofRuleTactics.hide(pos)
+    }
+  }
   /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
   lazy val hideL              : BuiltInLeftTactic = ProofRuleTactics.hideL
   /** Hide/weaken right: weaken a formula to drop it from the succcedent ([[edu.cmu.cs.ls.keymaerax.core.HideRight HideRight]]) */
@@ -149,6 +131,9 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val implyL             : BuiltInLeftTactic = ProofRuleTactics.implyL
   /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side ([[edu.cmu.cs.ls.keymaerax.core.ImplyRight ImplyRight]]) */
   lazy val implyR             : BuiltInRightTactic = ProofRuleTactics.implyR
+  /** Inverse of implyR */
+  def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = PropositionalTactics.implyRi(antePos, succPos)
+  lazy val implyRi: DependentTactic = implyRi()
   /** <->L Equiv left: use an equivalence by considering both true or both false cases ([[edu.cmu.cs.ls.keymaerax.core.EquivLeft EquivLeft]]) */
   lazy val equivL             : BuiltInLeftTactic = ProofRuleTactics.equivL
   /** <->R Equiv right: prove an equivalence by proving both implications ([[edu.cmu.cs.ls.keymaerax.core.EquivRight EquivRight]]) */
@@ -168,22 +153,24 @@ object TactixLibrary extends UnifyUSCalculus {
 
   // quantifiers
   /** all right: Skolemize a universal quantifier in the succedent ([[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemize]]) */
-  lazy val allR               : BuiltInRightTactic = ProofRuleTactics.skolemizeR
+  lazy val allR               : DependentPositionTactic = FOQuantifierTactics.allSkolemize
   /** all left: instantiate a universal quantifier in the antecedent by a concrete instance */
-  def allL(x: Variable, inst: Term) : BuiltInLeftTactic = ??? //TacticLibrary.instantiateQuanT(x, inst)
-  def allL(inst: Term)        : BuiltInLeftTactic = ??? //TacticLibrary.instantiateQuanT(???, inst)
+  def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
+  def allL(inst: Term)              : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, Some(inst))
+  lazy val allL                     : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, None)
   /** exists left: Skolemize an existential quantifier in the antecedent */
-  lazy val existsL            : BuiltInLeftTactic = ProofRuleTactics.skolemizeL
-  /** exists right: instantiate an existential quantifier in the succedwent by a concrete instance as a witness */
-  def existsR(x: Variable, inst: Term) : BuiltInRightTactic = ??? //TacticLibrary.instantiateQuanT(x, inst)
-  def existsR(inst: Term)     : BuiltInRightTactic = ??? //TacticLibrary.instantiateQuanT(???, inst)
+  lazy val existsL            : DependentPositionTactic = FOQuantifierTactics.existsSkolemize
+  /** exists right: instantiate an existential quantifier in the succedent by a concrete instance as a witness */
+  def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
+  def existsR(inst: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(inst))
+  lazy val existsR                    : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, None)
 
   // modalities
 
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation */
-  lazy val assignb            : BuiltInPositionTactic = ??? //TacticLibrary.boxAssignT
+  lazy val assignb            : DependentPositionTactic = DLBySubst.assignb
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */
-  lazy val randomb            : BuiltInPositionTactic = ??? //TacticLibrary.boxNDetAssign
+  lazy val randomb            : DependentPositionTactic = useAt("[:*] assign nondet")
   /** testb: [?] simplifies test `[?q;]p` to an implication `q->p` */
   lazy val testb              : DependentPositionTactic = useAt("[?] test")
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)` */
@@ -197,11 +184,40 @@ object TactixLibrary extends UnifyUSCalculus {
 
   /** splitb: splits `[a](p&q)` into `[a]p & [a]q` */
   lazy val splitb             : DependentPositionTactic = useAt("[] split")
+  /** discreteGhost: introduces a ghost defined as term t; if ghost is None the tactic chooses a name by inspecting t */
+  def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = DLBySubst.discreteGhost(t, ghost)
 
-  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
-  def I(invariant : Formula)  : BuiltInPositionTactic = ??? //TacticLibrary.inductionT(Some(invariant))
+  /** abstraction: turns '[a]p' into \\forall BV(a) p */
+  lazy val abstractionb       : DependentPositionTactic = DLBySubst.abstractionb
+
+  /** 'position' tactic t with abstraction at the same position afterwards */
+  def withAbstraction(t: AtPosition[_ <: BelleExpr]): DependentPositionTactic = new DependentPositionTactic("with abstraction") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(pos.isTopLevel, "with abstraction only at top-level")
+        sequent(pos) match {
+          case Box(a, p) =>
+            t(pos) & abstractionb(pos) & (if (pos.isSucc) allR(pos)*@TheType() partial else skip)
+          case Diamond(a, p) if pos.isAnte => ???
+        }
+      }
+    }
+  }
+
+  /**
+   * I: prove a property of a loop by induction with the given loop invariant (hybrid systems)
+   * @see [[DLBySubst.I]]
+   */
+  def I(invariant : Formula)  : DependentPositionTactic = DLBySubst.I(invariant)
   /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
   def loop(invariant: Formula) = I(invariant)
+  /** loop=I: prove a property of a loop by induction, if the given generator finds an induction hypothesis */
+  def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = I(gen(sequent, pos).getOrElse(
+        throw new BelleError("Unable to generate an invariant for " + sequent(pos) + " at position " + pos)))(pos)
+    }
+  }
   /** K: modal modus ponens (hybrid systems) */
   lazy val K                  : DependentPositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
   /** V: vacuous box [a]p() will be discarded and replaced by p() provided a does not changes values of postcondition p */
@@ -209,13 +225,18 @@ object TactixLibrary extends UnifyUSCalculus {
 
   // differential equations
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
-  lazy val DW                 : BuiltInPositionTactic = ??? //TacticLibrary.diffWeakenT
+  lazy val DW                 : DependentPositionTactic = useAt("DW differential weakening")
+  lazy val diffWeaken         : DependentPositionTactic = withAbstraction(DW)
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
-  def DC(invariant: Formula)  : BuiltInPositionTactic = ??? //TacticLibrary.diffCutT(invariant)
+  def DC(invariant: Formula)  : DependentPositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
+    (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant))))
+  /** Differential Cut a new invariant, use old(.) to refer to inital values of variables. @see[[DC]] @see[[DifferentialTactics.diffCut]] */
+  def diffCut(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols as `[x'=f(x)][x':=f(x)]p(x,x')` */
-  lazy val DE                 : BuiltInPositionTactic = ??? //ODETactics.diffEffectT
+  lazy val DE                 : DependentPositionTactic = DifferentialTactics.DE
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
-  lazy val DI                 : BuiltInPositionTactic = ??? //TacticLibrary.diffInvariant
+  lazy val DI                 : DependentPositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))
+  def diffInd(implicit qeTool: QETool): DependentPositionTactic = DifferentialTactics.diffInd(qeTool)
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */
@@ -244,38 +265,72 @@ object TactixLibrary extends UnifyUSCalculus {
   /** DS: Differential Solution solves a differential equation */
   def DS                      : BuiltInPositionTactic = ???
 
-  /** Dassignb: Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
-  lazy val Dassignb           : BuiltInPositionTactic = ??? //HybridProgramTacticsImpl.boxDerivativeAssignT
+  lazy val derive: DependentPositionTactic = HilbertCalculus.derive
+
+  /** Dassignb: [:='] Substitute a differential assignment `[x':=f]p(x')` to `p(f)` */
+  lazy val Dassignb           : DependentPositionTactic = useAt("[':=] differential assign")
   /** Dplus: +' derives a sum `(f(x)+g(x))' = (f(x))' + (g(x))'` */
-  lazy val Dplus              : BuiltInPositionTactic = ??? //SyntacticDerivationInContext.AddDerivativeT
+  lazy val Dplus              : DependentPositionTactic = useAt("+' derive sum")
   /** neg: -' derives unary negation `(-f(x))' = -(f(x)')` */
-  lazy val Dneg               : BuiltInPositionTactic = ??? //SyntacticDerivationInContext.NegativeDerivativeT
+  lazy val Dneg               : DependentPositionTactic = useAt("-' derive neg")
   /** Dminus: -' derives a difference `(f(x)-g(x))' = (f(x))' - (g(x))'` */
-  lazy val Dminus             : BuiltInPositionTactic = ??? //SyntacticDerivationInContext.SubtractDerivativeT
+  lazy val Dminus             : DependentPositionTactic = useAt("-' derive minus")
   /** Dtimes: *' derives a product `(f(x)*g(x))' = f(x)'*g(x) + f(x)*g(x)'` */
-  lazy val Dtimes             : BuiltInPositionTactic = ??? //SyntacticDerivationInContext.MultiplyDerivativeT
+  lazy val Dtimes             : DependentPositionTactic = useAt("*' derive product")
   /** Dquotient: /' derives a quotient `(f(x)/g(x))' = (f(x)'*g(x) - f(x)*g(x)') / (g(x)^2)` */
-  lazy val Dquotient          : BuiltInPositionTactic = ??? //SyntacticDerivationInContext.DivideDerivativeT
+  lazy val Dquotient          : DependentPositionTactic = useAt("/' derive quotient")
+  /** Dpower: ^' derives a power */
+  lazy val Dpower             : DependentPositionTactic = useAt("^' derive power", PosInExpr(1::0::Nil))
+  /** Dconst: c()' derives a constant `c()' = 0` */
+  lazy val Dconst             : DependentPositionTactic = useAt("c()' derive constant fn")
   /** Dcompose: o' derives a function composition by chain rule */
   lazy val Dcompose           : BuiltInPositionTactic = ???
   /** Dconstify: substitute non-bound occurences of x with x() */
-  lazy val Dconstify          : BuiltInPositionTactic = ???
+  lazy val Dconstify          : DependentPositionTactic = DifferentialTactics.Dconstify
+  /** Dvariable: v' derives a variable */
+  lazy val Dvariable          : DependentPositionTactic = DifferentialTactics.Dvariable
+
+  /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
+  lazy val Dand               : DependentPositionTactic = useAt("&' derive and")
+  /** Dor: |' derives a disjunction `(p(x)|q(x))'` to obtain `p(x)' & q(x)'` */
+  lazy val Dor                : DependentPositionTactic = useAt("|' derive or")
+  /** Dimply: ->' derives an implication `(p(x)->q(x))'` to obtain `(!p(x) | q(x))'` */
+  lazy val Dimply             : DependentPositionTactic = useAt("->' derive imply")
+  /** Dequal: =' derives an equation `(f(x)=g(x))'` to obtain `f(x)'=g(x)'` */
+  lazy val Dequal             : DependentPositionTactic = useAt("=' derive =")
+  /** Dnotequal: !=' derives a disequation `(f(x)!=g(x))'` to obtain `f(x)'=g(x)'` */
+  lazy val Dnotequal          : DependentPositionTactic = useAt("!=' derive !=")
+  /** Dless: <' derives less-than `(f(x)<g(x))'` to obtain `f(x)'<=g(x)'` */
+  lazy val Dless              : DependentPositionTactic = useAt("<' derive <")
+  /** Dlessequal: <=' derives a less-or-equal `(f(x)<=g(x))'` to obtain `f(x)'<=g(x)'` */
+  lazy val Dlessequal         : DependentPositionTactic = useAt("<=' derive <=")
+  /** Dgreater: >' derives greater-than `(f(x)>g(x))'` to obtain `f(x)'>=g(x)'` */
+  lazy val Dgreater           : DependentPositionTactic = useAt(">' derive >")
+  /** Dgreaterequal: >=' derives a greater-or-equal `(f(x)>=g(x))'` to obtain `f(x)'>=g(x)'` */
+  lazy val Dgreaterequal      : DependentPositionTactic = useAt(">=' derive >=")
+  /** Dforall: \forall' derives an all quantifier `(\forall x p(x))'` to obtain `\forall x (p(x)')` */
+  lazy val Dforall            : DependentPositionTactic = useAt("forall' derive forall")
+  /** Dexists: \exists' derives an exists quantifier */
+  lazy val Dexists            : DependentPositionTactic = useAt("exists' derive exists")
 
   /** Prove the given list of differential invariants in that order by DC+DI */
   //@todo could change type to invariants: Formula* if considered more readable
-  def diffInvariant(invariants: List[Formula]): BuiltInPositionTactic = ???
+  def diffInvariant(invariants: Formula*): DependentPositionTactic =
+    DifferentialTactics.diffInvariant(qeTool, invariants:_*)
 
   // more
 
-  /* Generalize postcondition to C and, separately, prove that C implies postcondition
+  /**
+   * Generalize postcondition to C and, separately, prove that C implies postcondition.
    * {{{
    *   genUseLbl:        genShowLbl:
    *   G |- [a]C, D      C |- B
    *   ------------------------
    *          G |- [a]B, D
    * }}}
+   * @see [[DLBySubst.generalize]]
    */
-  def generalize(C: Formula)  : BuiltInPositionTactic = ???
+  def generalize(C: Formula)  : DependentPositionTactic = DLBySubst.generalize(C)
 
   /** Prove the given cut formula to hold for the modality at position and turn postcondition into cut->post
     * {{{
@@ -284,16 +339,17 @@ object TactixLibrary extends UnifyUSCalculus {
     *   ---------------------------------
     *          G |- [a]B, D
     * }}}
+    * @see [[DLBySubst.postCut]]
     */
-  def postCut(cut: Formula)   : BuiltInPositionTactic = ???
+  def postCut(cut: Formula)   : DependentPositionTactic = DLBySubst.postCut(cut)
 
 
 
   // closing
 
   /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
-  lazy val QE                : BelleExpr         = ToolTactics.fullQE(
-    /*@todo seriously?*/ edu.cmu.cs.ls.keymaerax.tactics.Tactics.MathematicaScheduler.tool.asInstanceOf[QETool])
+  def QE(order: List[NamedSymbol] = Nil)(implicit qeTool: QETool): BelleExpr = ToolTactics.fullQE(order)
+  def QE(implicit qeTool: QETool): BelleExpr = QE()
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : BelleExpr         = closeId | closeT | closeF
@@ -308,27 +364,21 @@ object TactixLibrary extends UnifyUSCalculus {
         val s = provable.subgoals.head
         require(s.ante.intersect(s.succ).nonEmpty, "Expects same formula in antecedent and succedent,\n\t but antecedent " + s.ante + "\n\t does not overlap with succedent " + s.succ)
         val fml = s.ante.intersect(s.succ).head
-        close(AntePosition(s.ante.indexOf(fml)), SuccPosition(s.succ.indexOf(fml)))
+        close(new AntePosition(s.ante.indexOf(fml)), new SuccPosition(s.succ.indexOf(fml)))
     }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
-  lazy val closeT            : DependentTactic = new DependentTactic("close true") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
-        val s = provable.subgoals.head
-        require(s.succ.contains(True), "Expects true in succedent,\n\t but succedent " + s.succ + " does not contain true")
-        ProofRuleTactics.closeTrue(SuccPosition(s.succ.indexOf(True)))
+  lazy val closeT            : DependentTactic = new SingleGoalDependentTactic("close true") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(sequent.succ.contains(True), "Expects true in succedent,\n\t but succedent " + sequent.succ + " does not contain true")
+        ProofRuleTactics.closeTrue(new SuccPosition(sequent.succ.indexOf(True)))
     }
   }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
-  lazy val closeF            : DependentTactic = new DependentTactic("close false") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
-        val s = provable.subgoals.head
-        require(s.ante.contains(False), "Expects false in antecedent,\n\t but antecedent " + s.ante + " does not contain false")
-        ProofRuleTactics.closeFalse(AntePosition(s.ante.indexOf(False)))
+  lazy val closeF            : DependentTactic = new SingleGoalDependentTactic("close false") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(sequent.ante.contains(False), "Expects false in antecedent,\n\t but antecedent " + sequent.ante + " does not contain false")
+        ProofRuleTactics.closeFalse(new AntePosition(sequent.ante.indexOf(False)))
     }
   }
 
@@ -347,7 +397,8 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val commuteEquivL      : BuiltInLeftTactic = ProofRuleTactics.commuteEquivL
   /** Commute equivalence on the right [[edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.commuteEquivR]] */
   lazy val commuteEquivR      : BuiltInRightTactic = ProofRuleTactics.commuteEquivR
-  //@todo commuteEqual
+  /** Commute equality */
+  lazy val commuteEqual       : DependentPositionTactic = useAt("= commute")
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
@@ -359,8 +410,18 @@ object TactixLibrary extends UnifyUSCalculus {
   /** nil: skip is a no-op tactic that has no effect */
   lazy val skip : BelleExpr = nil
 
-  /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term. */
-  def abbrv(name: Variable): BuiltInPositionTactic = ??? //EqualityRewritingImpl.abbrv(name)
+  /** abbrv(name) Abbreviate the term at the given position by a new name and use that name at all occurrences of that term ([[EqualityTactics.abbrv]]) */
+  def abbrv(name: Variable): DependentPositionTactic = EqualityTactics.abbrv(name)
+  /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side at a specific position ([[EqualityTactics.eqL2R]]). */
+  def eqL2R(eqPos: Int): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
+  def eqL2R(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqL2R(eqPos)
+  /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side at a specific position ([[EqualityTactics.eqR2L]]). */
+  def eqR2L(eqPos: Int): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
+  def eqR2L(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
+  /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively ([[EqualityTactics.exhaustiveEqL2R]]). */
+  lazy val exhaustiveEqL2R: DependentPositionTactic = EqualityTactics.exhaustiveEqL2R
+  /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
+  lazy val exhaustiveEqR2L: DependentPositionTactic = EqualityTactics.exhaustiveEqR2L
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -390,26 +451,38 @@ object TactixLibrary extends UnifyUSCalculus {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Special functions
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  /** Expands abs using abs(x)=y <-> (x>=0&y=x | x<=0&y=-x) */
-  def abs: BuiltInPositionTactic = ??? //ArithmeticTacticsImpl.AbsT
-  /** Expands min using min(x,y)=z <-> (x<=y&z=x | x>=y&z=y) */
-  def min: BuiltInPositionTactic = ??? //ArithmeticTacticsImpl.MinMaxT
-  /** Expands max using max(x,y)=z <-> (x>=y&z=x | x<=y&z=y) */
-  def max: BuiltInPositionTactic = ??? //ArithmeticTacticsImpl.MinMaxT
-
+  /** Expands abs using abs(x)=y <-> (x>=0&y=x | x<=0&y=-x), see [[EqualityTactics.abs]] */
+  lazy val abs: DependentPositionTactic = EqualityTactics.abs
+  /** Expands min using min(x,y)=z <-> (x<=y&z=x | x>=y&z=y), see [[EqualityTactics.minmax]] */
+  lazy val min: DependentPositionTactic = EqualityTactics.minmax
+  /** Expands max using max(x,y)=z <-> (x>=y&z=x | x<=y&z=y), see [[EqualityTactics.minmax]] */
+  lazy val max: DependentPositionTactic = EqualityTactics.minmax
 
   /** Alpha rules are propositional rules that do not split */
-  def alphaRule: BelleExpr = lL(andL) | lR(orR) | lR(implyR) | lL(notL) | lR(notR)
+  lazy val alphaRule: BelleExpr = (andL('_) partial) |
+    ((orR('_) partial) |
+      ((implyR('_) partial) |
+        ((notL('_) partial) |
+          (notR('_) partial)
+          partial)
+        partial)
+      partial)
   /** Beta rules are propositional rules that split */
-  def betaRule: BelleExpr = lR(andR) | lL(orL) | lL(implyL) | lL(equivL) | lR(equivR)
+  lazy val betaRule: BelleExpr = (andR('_) partial) |
+    ((orL('_) partial) |
+      ((implyL('_) partial) |
+        ((equivL('_) partial) |
+          (equivR('_) partial)
+          partial)
+        partial)
+      partial)
   /** Real-closed field arithmetic after consolidating sequent into a single universally-quantified formula */
-  def RCF: BelleExpr = ??? //PropositionalTacticsImpl.ConsolidateSequentT & assertT(0, 1) & FOQuantifierTacticsImpl.universalClosureT(1) & debug("Handing to Mathematica") &
-    //ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+  def RCF(implicit qeTool: QETool): BelleExpr = QE
 
   /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
   //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
-  def lazyQE = (
-    ((alphaRule | ls(allR) | la(existsL)
+  def lazyQE(implicit qeTool: QETool) = (
+    ((alphaRule | allR('_) | existsL('_)
       | close
       //@todo eqLeft|eqRight for equality rewriting directionally toward easy
       //| (la(TacticLibrary.eqThenHideIfChanged)*)

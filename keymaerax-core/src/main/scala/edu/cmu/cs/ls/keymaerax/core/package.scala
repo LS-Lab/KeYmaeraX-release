@@ -182,4 +182,14 @@ package object core {
     if (!requirement)
       throw new CoreException("Core requirement failed: "+ message)
   }
+
+  /** Check that the given expression e does not throw an exception.
+    * @return `true` if e completed without raising any exceptions or errors.
+    *        `false` if e raised an exception or error.
+    * @example {{{
+    *  insist(noExeption(complicatedComputation), "The complicated computation should complete without throwing exceptions")
+    * }}}
+    */
+  @inline final def noException[T](e: => T): Boolean =
+    try { e; true } catch { case _: Throwable => false }
 }

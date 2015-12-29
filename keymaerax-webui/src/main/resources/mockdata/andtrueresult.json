@@ -1,17 +1,17 @@
 {
-  "id": "S4",
+  "id": "S6",
   "sequent": {
-    "ante": [ {"id": "F4a", "formula": { "name": "lt", "id": "F4a0", "children": [ {"name": "z", "id": "F4a1"}, {"name": "1", "id": "F4a2"} ] }} ],
+    "ante": [ {"id": "F6a", "formula": { "name": "lt", "id": "F6a0", "children": [ {"name": "z", "id": "F6a1"}, {"name": "1", "id": "F6a2"} ] }} ],
     "succ": [
       {
-        "id": "F4s",
+        "id": "F6s",
         "formula": {
-          "name": "lt", "id": "F4s1", "children": [ {"name": "x", "id": "F4s2"}, {"name": "5", "id": "F4s3"} ]
+          "name": "lt", "id": "F6s1", "children": [ {"name": "x", "id": "F6s2"}, {"name": "5", "id": "F6s3"} ]
         }
       }
     ]
   },
   "children": [],
-  "parent": "S2",
+  "parent": "S5",
   "byRule": { "id": "R3", "name": "and true" }
 }

@@ -1,11 +1,16 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.RenUSubst
 import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
 import edu.cmu.cs.ls.keymaerax.btactics.{UnificationException, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 
 /**
- * Sequential interpreter for BelleExprs
+ * Sequential interpreter for Bellerophon tactic expressions.
  * @param listeners Pre- and pos-processing hooks for step-wise tactic execution.
  * @author Nathan Fulton
  */
@@ -36,16 +41,19 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       case SeqTactic(left, right, location) =>
         val leftResult = try { apply(left, v) } catch {case e: BelleError => throw e.inContext(SeqTactic(e.context, right, location), "Failed left-hand side of &: " + left)}
         try { apply(right, leftResult) } catch {case e: BelleError => throw e.inContext(SeqTactic(left, e.context, location), "Failed right-hand side of &: " + right)}
-      case d : DependentTactic => try {
+      case d: DependentTactic => try {
         val valueDependentTactic = d.computeExpr(v)
         apply(valueDependentTactic, v)
-      } catch { case e: BelleError => throw e.inContext(d.toString, v.prettyString) }
-      case e :InputPositionTactic[_] => try {
-        apply(e.computeExpr(), v)
-      } catch { case e: BelleError => throw e.inContext(e.toString, v.prettyString)}
-      case e : InputTactic[_] => try {
-        apply(e.computeExpr(), v)
-      } catch { case e: BelleError => throw e.inContext(e.toString, v.prettyString) }
+      } catch {
+        case e: BelleError => throw e.inContext(d, v.prettyString)
+        case e: Throwable => throw new BelleError("Unable to create dependent tactic", e).inContext(d, "")
+      }
+      case it: InputTactic[_] => try {
+        apply(it.computeExpr(), v)
+      } catch {
+        case e: BelleError => throw e.inContext(it, v.prettyString)
+        case e: Throwable => throw new BelleError("Unable to create inpyt tactic", e).inContext(it, "")
+      }
       case PartialTactic(child) => try { apply(child, v) } catch {case e: BelleError => throw e.inContext(PartialTactic(e.context), "Failed partial child: " + child) }
       case EitherTactic(left, right, location) => try {
           val leftResult = apply(left, v)
@@ -59,27 +67,29 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           case eleft: BelleError =>
             val rightResult = try { apply(right, v) } catch {case e: BelleError => throw e.inContext(EitherTactic(eleft.context, e.context, location), "Failed: both left-hand side and right-hand side " + expr)}
             (rightResult, right) match {
-              case (_, x:PartialTactic) => rightResult
               case (BelleProvable(p), _) if p.isProved => rightResult
+              case (_, x: PartialTactic) => rightResult
               case _ => throw new BelleError("Non-partials must close proof.").inContext(EitherTactic(left, BelleDot, location), "Failed right-hand side of |: " + right)
             }
         }
       case SaturateTactic(child, annotation, location) =>
         var prev: BelleValue = null
         var result: BelleValue = v
-        var rep = 1
         do {
           prev = result
           //@todo effect on listeners etc.
-          try { result = apply(child, result) } catch {case e: BelleError => throw e.inContext(SaturateTactic(e.context, annotation, location), "Failed * saturation on repetition " + rep + ": " + child)}
-          rep += 1
+          try { result = apply(child, result) } catch {case e: BelleError => /*@note child no longer applicable */ result = prev }
         } while (result != prev)
         result
-      case RepeatTactic(child, times, annotation, location) => try {
+      case RepeatTactic(child, times, annotation, location) =>
         var result = v
-        for (i <- 1 to times) try { result = apply(child, result) } catch {case e: BelleError => throw e.inContext(RepeatTactic(e.context, times, annotation, location), "Failed on repetition " + i + " of " + times + ": " + child)}
+        for (i <- 1 to times) try {
+          result = apply(child, result)
+        } catch {
+          case e: BelleError => throw e.inContext(RepeatTactic(e.context, times, annotation, location),
+            "Failed on repetition " + i + " of " + times + ": " + child)
+        }
         result
-      }
       case BranchTactic(children, location) => v match {
         case BelleProvable(p) =>
           if(children.length != p.subgoals.length)

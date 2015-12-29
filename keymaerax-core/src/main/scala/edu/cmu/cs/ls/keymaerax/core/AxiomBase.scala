@@ -328,6 +328,10 @@ Axiom "[:=] assign".
   [v:=t();]p(v) <-> p(t())
 End.
 
+Axiom "[:=] assign equality".
+  [x:=f();]p(??) <-> \forall x (x=f() -> p(??))
+End.
+
 Axiom "[':=] differential assign".
   [v':=t();]p(v') <-> p(t())
 End.

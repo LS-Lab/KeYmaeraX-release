@@ -85,4 +85,92 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     shouldUnify("[a;x:=7;]x>=0".asFormula, "[x:=x+5;x:=7;]x>=0".asFormula, USubst(
       SubstitutionPair("a;".asProgram, "x:=x+5;".asProgram) :: Nil))
   }
+
+  ignore/*"Old unification match"*/ should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0 (fails)" in {
+    val s1 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
+    val s2 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
+    import edu.cmu.cs.ls.keymaerax.tactics._
+    //@todo not sure about the expected result
+    UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm)) ::
+        SubstitutionPair(Variable("x"), Variable("y")) ::
+        SubstitutionPair("t()".asTerm, Variable("z")) :: Nil))
+  }
+
+  // new unification matchers from now on
+
+  import edu.cmu.cs.ls.keymaerax.btactics.UnificationMatch
+  import edu.cmu.cs.ls.keymaerax.btactics.RenUSubst
+
+  "New unification match" should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0 (failed setup)" in {
+    val s1 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
+    val s2 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
+    import edu.cmu.cs.ls.keymaerax.btactics._
+    //@todo not sure about the expected result
+    a[CoreException] shouldBe thrownBy(
+    UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm)) ::
+        SubstitutionPair(Variable("x"), Variable("y")) ::
+        SubstitutionPair("t()".asTerm, Variable("z")) :: Nil))
+    )
+  }
+
+  it should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0" in {
+    val s1 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
+    val s2 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
+    println("Unify " + s1 + "\nwith  " + s2 + "\nyields " + UnificationMatch(s1, s2))
+    //@todo not sure about the expected result
+    UnificationMatch(s1, s2) shouldBe RenUSubst(
+      (PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm)) ::
+        (Variable("x"), Variable("y")) ::
+        ("t()".asTerm, Variable("z")) :: Nil)
+  }
+
+  it should "unify [x:=f();]p(x) with [x:=7+x;]x^2>=5" in {
+    UnificationMatch("[x:=f();]p(x)".asFormula, "[x:=7+x;]x^2>=5".asFormula) shouldBe RenUSubst(
+        ("f()".asTerm, "7+x".asTerm) ::
+          (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil)
+  }
+
+  it should "unify [x:=f();]p(x) <-> p(f()) with [x:=7+x;]x^2>=5 <-> (7+x)^2>=5" in {
+    UnificationMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[x:=7+x;]x^2>=5 <-> (7+x)^2>=5".asFormula) shouldBe RenUSubst(
+      ("f()".asTerm, "7+x".asTerm) ::
+        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil)
+  }
+
+  it should "unify [x:=f();]p(x) with [y:=7+z;]y^2>=5" in {
+    UnificationMatch("[x:=f();]p(x)".asFormula, "[y:=7+z;]y^2>=5".asFormula) shouldBe RenUSubst(
+      (Variable("x"), Variable("y")) ::
+      ("f()".asTerm, "7+z".asTerm) ::
+        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil)
+  }
+
+  it should "unify [x:=f();]p(x) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
+    UnificationMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula) shouldBe RenUSubst(
+      (Variable("x"), Variable("y")) ::
+        ("f()".asTerm, "7+z".asTerm) ::
+        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil)
+  }
+
+  it should "unify y>0 -> [x:=2;]y>0 with p() -> [a;]p()" in {
+    UnificationMatch("p() -> [a;]p()".asFormula, "y>0 -> [x:=2;]y>0".asFormula) shouldBe RenUSubst(
+      (PredOf(Function("p", None, Unit, Bool), Nothing), "y>0".asFormula) ::
+        (ProgramConst("a"), Assign(Variable("x"), Number(2))) :: Nil
+    )
+  }
+
+  it should "unify [x:=2;]y>0 -> y>0 with [a;]p() -> p()" in {
+    // not an axiom, just to test both directions
+    UnificationMatch("[a;]p() -> p()".asFormula, "[x:=2;]y>0 -> y>0".asFormula) shouldBe RenUSubst(
+      (ProgramConst("a"), Assign(Variable("x"), Number(2))) ::
+        (PredOf(Function("p", None, Unit, Bool), Nothing), "y>0".asFormula) :: Nil
+    )
+  }
+
+  //@todo this test case would need the expensive reunify to be activated in UnificationMatch again
+  ignore/*"Reunifier ideally"*/ should "unify p(f()) <-> [x:=f();]p(x) with (7+x)^2>=5 <-> [x:=7+x;]x^2>=5" in {
+    UnificationMatch("p(f()) <-> [x:=f();]p(x)".asFormula, "(7+x)^2>=5 <-> [x:=7+x;]x^2>=5".asFormula) shouldBe RenUSubst(
+      ("f()".asTerm, "7+x".asTerm) ::
+        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil)
+  }
 }

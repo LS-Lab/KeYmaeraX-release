@@ -54,20 +54,6 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
           scope.proofTree.nodesMap[proofTreeNode.id].children = proofTreeNode.children;
           scope.proofTree.nodesMap[proofTreeNode.id].rule = proofTreeNode.rule;
         }
-        // update parent pointer of children, if loaded
-        if (proofTreeNode.children != null) {
-          $.each(proofTreeNode.children, function(i, v) {
-            var child = scope.proofTree.nodesMap[v];
-            if (child !== undefined) scope.proofTree.nodesMap[v].parent = proofTreeNode.id;
-          });
-        }
-        // update children of parent (tree and branch root may have been loaded without children)
-        if (proofTreeNode.parent != null && proofTreeNode.parent != proofTreeNode.id) {
-          var parent = scope.proofTree.nodesMap[proofTreeNode.parent];
-          if (parent !== undefined && parent.children.indexOf(proofTreeNode.id) < 0) {
-            parent.children.push(proofTreeNode.id);
-          }
-        }
       }
 
       /**
@@ -80,9 +66,9 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         var section = agendaItem.deduction.sections[sectionIdx];
         var sectionEnd = section.path[section.path.length-1];
         if (proofTreeNode.children != null && proofTreeNode.children.length > 1) {
-          if (sectionIdx+1 >= agendaItem.deduction.sections.length || agendaItem.deduction.sections[sectionIdx+1].path[0] !== proofTreeNode.id) {
+          if (sectionIdx+1 >= agendaItem.deduction.sections.length || agendaItem.deduction.sections[sectionIdx+1].path[0] !== null) {
             // start new section with parent, parent section is complete if parent is root
-            agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: proofTreeNode.parent === proofTreeNode.id});
+            agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: proofTreeNode.parent === null});
           } // else: parent already has its own section, see fetchBranchRoot
           // in any case: child's section is loaded completely if its ending in one of the children of the proof tree node
           section.isComplete = proofTreeNode.children.indexOf(sectionEnd) >= 0;
@@ -91,7 +77,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
           if (sectionIdx === -1) {
             console.error('Expected a unique path section ending in a child of ' + proofTreeNode.id + ', but agenda item ' + agendaItem.id +
               ' has ' + agendaItem.sections + ' as path sections');
-          } else if (proofTreeNode.parent !== proofTreeNode.id) {
+          } else if (proofTreeNode.parent !== null) {
             section.path.push(proofTreeNode.id);
             var parentCandidate =
               (sectionIdx+1 < agendaItem.deduction.sections.length
@@ -154,17 +140,21 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         return -1;
       }
 
-      /** Pretty prints sequent JSON into HTML */
-      scope.tooltip = function(sequent) {
-        // TODO call the pretty printer
-        return sequent;
+      /** Returns the deduction index of the specified proof tree node in agendaItem (Object { section, pathStep} ). */
+      deductionIndexOf = function(agendaItem, ptNodeId) {
+        for (var i = 0; i < agendaItem.deduction.sections.length; i++) {
+          var section = agendaItem.deduction.sections[i];
+          var j = section.path.indexOf(ptNodeId);
+          if (j >= 0) return { sectionIdx: i, pathStepIdx: j };
+        }
+        return { sectionIdx: -1, pathStepIdx: -1 };
       }
 
       /** Filters sibling candidates: removes this item's goal and path */
-      scope.siblingCandidates = function(candidates) {
+      scope.siblingsWithAgendaItem = function(candidates) {
         var item = scope.agenda.itemsMap[scope.nodeId];
         var fp = flatPath(item);
-        return candidates != null ? candidates.filter(function(e) { return fp.indexOf(e) === -1; }) : [];
+        return (candidates != null ? candidates.filter(function(e) { return fp.indexOf(e) < 0 && scope.agenda.itemsByProofStep(e).length > 0; }) : []);
       }
 
       scope.onUseAt = function(formulaId, axiomId) {
@@ -180,6 +170,11 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       scope.fetchParentRightClick = function(event) {
         event.stopPropagation();
         // emulate hoverable popover (to come in later ui-bootstrap version) with hide on blur (need to focus for blur)
+        event.target.focus();
+      }
+
+      scope.proofStepRightClick = function(event) {
+        event.stopPropagation();
         event.target.focus();
       }
 
@@ -200,7 +195,47 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         });
       }
 
-      scope.deductionPath.sections = $.map(scope.deductionPath.sections, function(v, i) { return {path: v, isCollapsed: false}; });
+      /** Prunes the proof tree and agenda/deduction path below the specified step ID. */
+      scope.prune = function(goalId) {
+        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/pruneBelow').success(function(data) {
+          // prune proof tree
+          scope.proofTree.pruneBelow(goalId);
+
+          // update agenda: prune deduction paths
+          var agendaItems = scope.agenda.itemsByProofStep(goalId);
+          $.each(agendaItems, function(i, item) {
+            var deductionIdx = deductionIndexOf(scope.agenda.itemsMap[item.id], goalId);
+            var section = item.deduction.sections[deductionIdx.sectionIdx];
+            section.path.splice(0, deductionIdx.pathStepIdx);
+            item.deduction.sections.splice(0, deductionIdx.sectionIdx);
+          });
+
+          // sanity check: all agendaItems should have the same deductions (top item should be data.agendaItem.deduction)
+          var newTop = data.agendaItem.deduction.sections[0].path[0];
+          $.each(agendaItems, function(i, item) {
+            var oldTop = item.deduction.sections[0].path[0];
+            if (oldTop !== newTop) {
+              console.log("Unexpected deduction start after pruning: expected " + newTop + " but have " + oldTop +
+                " at agenda item " + item.id)
+            }
+            //@todo additionally check that deduction.sections are all the same (might be expensive, though)
+          });
+
+          // update agenda: copy already cached deduction path into the remaining agenda item (new top item)
+          data.agendaItem.deduction = agendaItems[0].deduction;
+          scope.agenda.itemsMap[data.agendaItem.id] = data.agendaItem;
+
+          // delete previous items
+          //@todo preserve previous tab order
+          $.each(agendaItems, function(i, item) {
+            delete scope.agenda.itemsMap[item.id];
+          });
+
+          // select new top item
+          scope.agenda.selectById(data.agendaItem.id);
+        });
+      }
+
       scope.deductionPath.isCollapsed = false;
     }
 

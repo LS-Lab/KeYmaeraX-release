@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{SuccPosition, AntePosition, Position}
@@ -12,6 +13,9 @@ import edu.cmu.cs.ls.keymaerax.tactics.{SuccPosition, AntePosition, Position}
  * @author Nathan Fulton
  */
 object ProofRuleTactics {
+  //@note Rule.LAX_MODE not accessible outside core
+  val LAX_MODE = System.getProperty("LAX", "true")=="true"
+
   /**
    * Throw exception if there is more than one open subgoal on the provable.
    */
@@ -157,7 +161,7 @@ object ProofRuleTactics {
   }
 
   def hide = new DependentPositionTactic("Hide") {
-    override def apply(pos: Position): DependentTactic = pos match {
+    override def factory(pos: Position): DependentTactic = pos match {
       case p: AntePosition => new DependentTactic(name) {
         override def computeExpr(v: BelleValue): BelleExpr = hideL(p)
       }
@@ -182,7 +186,7 @@ object ProofRuleTactics {
   }
 
   def coHide = new DependentPositionTactic("CoHide") {
-    override def apply(pos: Position): DependentTactic = pos match {
+    override def factory(pos: Position): DependentTactic = pos match {
       case p: AntePosition => new DependentTactic(name) {
         override def computeExpr(v: BelleValue): BelleExpr = coHideL(p)
       }
@@ -237,11 +241,19 @@ object ProofRuleTactics {
     }
   }
 
-  def axiomatic(axiomName: String, subst: USubst) = new BuiltInTactic(s"US of Axiom $axiomName") {
-    override def result(provable: Provable): Provable = {
-      requireOneSubgoal(provable)
-      provable(core.AxiomaticRule(axiomName, subst), 0)
-    }
+  def axiomatic(axiomName: String, subst: USubst): DependentTactic = new DependentTactic(s"US of axiom/rule $axiomName") {
+    override def computeExpr(v: BelleValue): BelleExpr =
+      if (AxiomaticRule.rules.contains(axiomName)) new BuiltInTactic(s"US of axiomatic rule $axiomName") {
+        override def result(provable: Provable): Provable = provable(core.AxiomaticRule(axiomName, subst), 0)
+      } else if (Axiom.axioms.contains(axiomName)) {
+        US(subst, Axiom.axiom(axiomName).conclusion) & new BuiltInTactic(s"Close by axiom $axiomName") {
+          override def result(provable: Provable): Provable = provable(core.Axiom(axiomName), 0)
+        }
+      } else if (DerivedAxioms.derivedAxiomFormula(axiomName).isDefined) {
+        US(subst, DerivedAxioms.derivedAxiom(axiomName).conclusion) & new BuiltInTactic(s"Close by derived axiom $axiomName") {
+          override def result(provable: Provable): Provable = provable(DerivedAxioms.derivedAxiomR(axiomName), 0)
+        }
+      } else throw new BelleError(s"Unknown axiom/rule $axiomName")
   }
 
   def uniformRenaming(what: Variable, repl: Variable) = new BuiltInTactic("UniformRenaming") {
@@ -251,16 +263,34 @@ object ProofRuleTactics {
     }
   }
 
-  def boundRenaming(what: Variable, repl: Variable) = new BuiltInTactic("BoundRenaming") {
-    override def result(provable: Provable): Provable = {
+  def boundRenaming(what: Variable, repl: Variable): DependentTactic = new DependentTactic("BoundRenaming") {
+    override def computeExpr(provable: Provable): BelleExpr = {
       requireOneSubgoal(provable)
-      provable(core.BoundRenaming(what, repl), 0)
+      // boundRenaming potentially adds stuttering [repl:=what;]p; look for exact stuttering shape to avoid applying
+      // [:=] assign on pre-existing formulas
+      val anteAssigns: IndexedSeq[BelleExpr] = provable.subgoals.head.ante.zipWithIndex.map { case (p, i) =>
+        ?(TactixLibrary.useAt("[:=] assign")(Fixed(AntePosition(i), Some(Box(Assign(repl, what), URename(what, repl)(p)))))) }
+      val succAssigns: IndexedSeq[BelleExpr] = provable.subgoals.head.succ.zipWithIndex.map { case (p, i) =>
+        ?(TactixLibrary.useAt("[:=] assign")(Fixed(SuccPosition(i), Some(Box(Assign(repl, what), URename(what, repl)(p)))))) }
+
+      // do bound renaming and remove stuttering assignments
+      boundRenamingRule &
+        (if (LAX_MODE) ((anteAssigns :+ Idioms.ident) ++ (succAssigns :+ Idioms.ident)).reduce(_ & _)
+         else Idioms.ident)
+    }
+
+    private lazy val boundRenamingRule: BuiltInTactic = new BuiltInTactic(name) {
+      override def result(provable: Provable): Provable = {
+        requireOneSubgoal(provable)
+        provable(core.BoundRenaming(what, repl), 0)
+      }
     }
   }
 
   def skolemize = new BuiltInPositionTactic("Skolemize") {
     override def computeResult(provable: Provable, pos: Position): Provable = {
       requireOneSubgoal(provable)
+      require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos), 0)
     }
   }
@@ -268,6 +298,7 @@ object ProofRuleTactics {
   def skolemizeR = new BuiltInRightTactic("Skolemize") {
     override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable)
+      require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos), 0)
     }
   }
@@ -275,6 +306,7 @@ object ProofRuleTactics {
   def skolemizeL = new BuiltInLeftTactic("Skolemize") {
     override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable)
+      require(pos.isTopLevel, "Skolemization only at top-level")
       provable(core.Skolemize(pos), 0)
     }
   }

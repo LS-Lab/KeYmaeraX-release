@@ -28,6 +28,7 @@ object HilbertCalculus extends UnifyUSCalculus {
 
   // modalities
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation */
+  //@todo assignb = useAt("[:=] assign") | (freshBoundRename & useAt("[:=] assign equality") & Skolem & stepAt)
   lazy val assignb            : PositionTactic = if (INTERNAL) useAt("[:=] assign") | useAt("[:=] assign equational") | useAt("[:=] assign update")
   else TacticLibrary.boxAssignT
   /** randomb: [:*] simplify nondeterministic assignment `[x:=*;]p(x)` to a universal quantifier `\forall x p(x)` */

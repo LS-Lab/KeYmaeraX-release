@@ -12,6 +12,7 @@ import scala.collection.immutable
 import scala.collection.immutable._
 
 object RenUSubst {
+  def apply(subsDefsInput: immutable.Seq[(Expression,Expression)]) = new RenUSubst(subsDefsInput)
   def apply(us: USubst): RenUSubst = new RenUSubst(us.subsDefsInput.
     map(sp=>(sp.what,sp.repl)))
   def apply(us: URename): RenUSubst = new RenUSubst(List((us.what,us.repl)))
@@ -59,7 +60,7 @@ object RenUSubst {
  * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
  * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
  */
-final case class RenUSubst(subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
+final class RenUSubst(private[btactics] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops */
   private val rens: immutable.Seq[(Variable,Variable)] = RenUSubst.renamingPartOnly(subsDefsInput)
   private val subsDefs: immutable.Seq[SubstitutionPair] = try {subsDefsInput.filterNot(sp => sp._1.isInstanceOf[Variable]).
@@ -74,6 +75,14 @@ final case class RenUSubst(subsDefsInput: immutable.Seq[(Expression,Expression)]
     val lefts: List[Expression] = subsDefsInput.map(_._1).toList
     if (lefts.distinct.size != lefts.size) throw new ProverException("no duplicate substitutions with same substitutees\n" + this)
   }
+
+  //@note explicit implementation to make RenUSubst equality independent of rens/subsDefs order
+  override def equals(e: Any): Boolean = e match {
+    case a: RenUSubst => rens == a.rens && subsDefs == a.subsDefs
+    case _ => false
+  }
+
+  override def hashCode: Int = 47 * rens.hashCode() + subsDefs.hashCode()
 
   /**
    * The uniform substitution part of this renaming uniform substitution
@@ -125,6 +134,7 @@ final case class RenUSubst(subsDefsInput: immutable.Seq[(Expression,Expression)]
     case p: Program => apply(p)
   }
 
+  //@todo could optimize empty usubst or empty rens to be just identity application right away
   def apply(t: Term): Term = try {usubst(rens.foldLeft(t)((e,sp)=>URename(sp._1,sp._2)(e)))} catch {case ex: ProverException => throw ex.inContext(t.prettyString)}
 
   def apply(f: Formula): Formula = try {usubst(rens.foldLeft(f)((e,sp)=>URename(sp._1,sp._2)(e)))} catch {case ex: ProverException => throw ex.inContext(f.prettyString)}

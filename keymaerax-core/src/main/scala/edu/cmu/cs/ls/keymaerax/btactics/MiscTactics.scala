@@ -4,8 +4,10 @@ import edu.cmu.cs.ls.keymaerax
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.{Position, TacticWrapper, Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaerax.tactics.{Position, TacticWrapper, Interpreter, PosInExpr, Tactics}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
+
+import scala.language.postfixOps
 
 /**
  * @author Nathan Fulton
@@ -98,16 +100,36 @@ object DebuggingTactics {
       provable
     }
   }
+
+  /** no-op tactic that raises an error if the provable is not proved */
+  lazy val assertProved = new BuiltInTactic("assert proved") {
+    override def result(provable : Provable): Provable =
+      if (provable.isProved) provable
+      else throw new BelleError("Expected proved provable, but got " + provable)
+  }
 }
 
 /**
  * @author Nathan Fulton
  */
 object Idioms {
-  def nil = PartialTactic(new BuiltInTactic("NilT") {
+  lazy val nil = PartialTactic(new BuiltInTactic("NilT") {
     override def result(provable: Provable): Provable = provable
   })
-  def ident = nil
+  lazy val ident = nil
+
+  /** Optional tactic */
+  def ?(t: BelleExpr): BelleExpr = (t partial) | nil
+
+  /** Mandatory change */
+  def must(t: BelleExpr): BelleExpr = new DependentTactic("must") {
+    override def computeExpr(before: Provable): BelleExpr = t & new BuiltInTactic(name) {
+      override def result(after: Provable): Provable = {
+        if (before == after) throw new BelleError("Tactic " + t + " did not result in mandatory change")
+        after
+      }
+    }
+  }
 
   def atSubgoal(subgoalIdx: Int, t: BelleExpr) = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
@@ -130,25 +152,45 @@ object Idioms {
     }
   }
 
-  /** Apply the tactic t at the last position in the antecedent */
-  def lastL(t: BuiltInLeftTactic) = new DependentTactic("lastL") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        require(provable.subgoals.size == 1 && provable.subgoals.head.ante.nonEmpty,
-          "Provable must have exactly 1 subgoal with non-empty antecedent")
-        t(AntePos(provable.subgoals.head.ante.size - 1))
+  /**
+   * shift(shift, t) does t shifted from position p to shift(p)
+   */
+  def shift(shift: PosInExpr=>PosInExpr, t: DependentPositionTactic): DependentPositionTactic =
+    new DependentPositionTactic("Shift " + t) {
+      override def factory(pos: Position): DependentTactic = t.apply(pos.navigate(shift(pos.inExpr)))
+    }
+  /**
+   * shift(child, t) does t to positions shifted by child
+   */
+  def shift(child: PosInExpr, t: DependentPositionTactic): DependentPositionTactic = shift(p => p.append(child), t)
+}
+
+/** Creates tactic objects */
+object TacticFactory {
+
+  /**
+   * Creates named dependent tactics.
+   * @example{{{
+   *  "[:=] assign" by (pos => useAt("[:=] assign")(pos))
+   * }}}
+   * @param name The tactic name.
+   */
+  implicit class TacticForNameFactory(val name: String) {
+    /** Creates a dependent position tactic without inspecting the formula at that position */
+    def by(t: (Position => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+      override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+        override def computeExpr(provable: Provable): BelleExpr = t(pos)
+      }
+    }
+
+    /** Creates a dependent position tactic while inspecting the formula at that position */
+    def by(t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+        override def computeExpr(sequent: Sequent): BelleExpr = t(pos, sequent)
+      }
     }
   }
 
-  /** Apply the tactic t at the last position in the antecedent */
-  def lastR(t: BuiltInRightTactic) = new DependentTactic("lastL") {
-    override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
-        require(provable.subgoals.size == 1 && provable.subgoals.head.ante.nonEmpty,
-          "Provable must have exactly 1 subgoal with non-empty succedent")
-        t(SuccPos(provable.subgoals.head.succ.size - 1))
-    }
-  }
 }
 
 /**

@@ -239,8 +239,18 @@ trait RestApi extends HttpService {
   val useAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "use" / Segment) { (userId, proofId, nodeId, goalId, formulaId, axiomId) => { pathEnd {
     get {
       val request = (formulaId, axiomId) match {
-        case ("F2s0", "and true") => new MockRequest("/mockdata/andtrueresult.json")
-        case ("F2s0", "step") => new MockRequest("/mockdata/andtrueresult.json")
+        case ("F5s0", "and true") => new MockRequest("/mockdata/andtrueresult.json")
+        case ("F5s0", "step") => new MockRequest("/mockdata/andtrueresult.json")
+      }
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val pruneBelow = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId, goalId) => { pathEnd {
+    get {
+      val request = goalId match {
+        case "S2" => new MockRequest("/mockdata/s2prunereply.json")
+        case "S1" => new MockRequest("/mockdata/s1prunereply.json")
       }
       complete(standardCompletion(request))
     }
@@ -528,6 +538,7 @@ trait RestApi extends HttpService {
     proofTasksBranchRoot  ::
     axiomList             ::
     useAt                 ::
+    pruneBelow            ::
     proofTask             ::
     nodeFormulaTactics    ::
     nodeRunTactics        ::

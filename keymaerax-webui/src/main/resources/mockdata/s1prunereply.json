@@ -1,0 +1,8 @@
+{
+  "agendaItem": {
+    "id": "N0",
+    "name": "before andright",
+    "proofId": "P1",
+    "deduction": { "sections": [ { "path": ["S1"] } ] }
+  }
+}

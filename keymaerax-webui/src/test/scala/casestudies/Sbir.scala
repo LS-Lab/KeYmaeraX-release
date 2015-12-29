@@ -74,6 +74,7 @@ class Sbir extends FlatSpec with Matchers with BeforeAndAfterEach {
                     |      & (abs(x-xo) >= max((v^2-Vmin^2)/(2*B) + 2*(Vmin^2)/(g*tanTheta), (v^2-Vmin^2)/(2*B) + 2*(Vmin^2)/(g*tanTheta)+Vmin*((Theta-abs(theta)/W-(v-Vmin)/B)))
                     |        | abs(y-yo) >= max((v^2-Vmin^2)/(2*B) + 2*(Vmin^2)/(g*tanTheta), (v^2-Vmin^2)/(2*B) + 2*(Vmin^2)/(g*tanTheta)+Vmin*((Theta-abs(theta)/W-(v-Vmin)/B))))""".stripMargin.asFormula
 
+    //@todo this differential invariant should probably be theta = \old(theta) + w*t
     val diffInv = "t>=0".asFormula :: "dx^2+dy^2 = 1".asFormula :: "dz^2+dxy^2 = 1".asFormula :: "v = v0 + a*t".asFormula :: "theta = theta0 + wt".asFormula :: Nil
 
     val speedCtrl = ls(composeb) & ls(testb) & ls(implyR) & ls(assignb)

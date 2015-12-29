@@ -16,17 +16,18 @@
     <div ng-class="($index === deductionPath.sections.length-1 && section.path.length === 1 && section.isComplete) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'"
          ng-if="$index > 0">
         <div class="col-md-12 k4-goalwithsiblings">
-            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath.sections[0][0]"
+            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath.sections[0].path[0]"
                         sequent="proofTree.nodesMap[deductionPath.sections[$index].path[0]].sequent"
                         read-only="true" collapsed="true"
                         on-use-at="onUseAt(formulaId, axiomId)"></k4-sequent>
             <ul>
-                <li ng-repeat="sibling in siblingCandidates(proofTree.nodesMap[deductionPath.sections[$index].path[0]].children)">
+                <!-- display siblings at fork -->
+                <li ng-repeat="sibling in siblingsWithAgendaItem(proofTree.nodesMap[deductionPath.sections[$index].path[0]].children)">
                     <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
-                    <!-- todo HTML tooltip -->
                     <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
-                       uib-tooltip="{{tooltip(proofTree.nodesMap[sibling].sequent)}}"
-                       tooltip-placement="top">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
+                       class="badge"
+                       uib-tooltip-template="'siblingSequentTooltip.html'"
+                       tooltip-placement="left">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
                 </li>
             </ul>
         </div>
@@ -56,30 +57,26 @@
                 <!-- proof rule -->
                 <span class="k4-proofrule"
                       uib-tooltip="{{proofTree.nodesMap[deductionPath.sections[$index].path[0]].rule.name}}"
-                      tooltip-placement="right">{{proofTree.nodesMap[deductionPath.sections[$index].path[0]].rule.name}}</span>
+                      tooltip-placement="right"
+                      ng-right-click="proofStepRightClick($event)" tabindex="-1"
+                      uib-popover-template="'proofStepPopover.html'"
+                      popover-title="Proof step" popover-placement="bottom" popover-trigger="contextmenu"
+                      ng-init="goalId=proofTree.nodesMap[deductionPath.sections[$index].path[0]].id">
+                    {{proofTree.nodesMap[deductionPath.sections[$index].path[0]].rule.name}}
+                </span>
             </li>
         </ul>
-        <!-- add buttons: rewind to here, start alternative proof attempt etc. -->
     </div>
 
     <!-- section remainder -->
     <div ng-class="(outerIdx === deductionPath.sections.length-1 && $last && section.isComplete) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'"
          ng-repeat="step in section.path.slice(1)"
          uib-collapse="section.isCollapsed">
-        <div class="col-md-12 k4-goalwithsiblings">
-            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath.sections[0][0]"
+        <div class="col-md-12">
+            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath.sections[0].path[0]"
                         sequent="proofTree.nodesMap[step].sequent"
                         read-only="true" collapsed="true"
                         on-use-at="onUseAt(formulaId, axiomId)"></k4-sequent>
-            <ul>
-                <li ng-repeat="sibling in siblingCandidates(proofTree.nodesMap[step].children)">
-                    <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
-                    <!-- todo HTML tooltip -->
-                    <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
-                       uib-tooltip="{{tooltip(proofTree.nodesMap[sibling].sequent)}}"
-                       tooltip-placement="top">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
-                </li>
-            </ul>
         </div>
         <ul>
             <li>
@@ -106,10 +103,15 @@
                 <!-- proof rule -->
                 <span class="k4-proofrule"
                       uib-tooltip="{{proofTree.nodesMap[step].rule.name}}"
-                      tooltip-placement="right">{{proofTree.nodesMap[step].rule.name}}</span>
+                      tooltip-placement="right"
+                      ng-right-click="proofStepRightClick($event)" tabindex="-1"
+                      uib-popover-template="'proofStepPopover.html'"
+                      popover-title="Proof step" popover-placement="bottom" popover-trigger="contextmenu"
+                      ng-init="goalId=proofTree.nodesMap[step].id">
+                    {{proofTree.nodesMap[step].rule.name}}
+                </span>
             </li>
         </ul>
-        <!-- add buttons: rewind to here, start alternative proof attempt etc. -->
     </div>
     <!-- fetch parent of incomplete section, collapse/uncollapse for unfinished sections/last section-->
     <div ng-class="(outerIdx === deductionPath.sections.length-1 || (section.isComplete && !section.isCollapsed)) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'">
@@ -180,10 +182,31 @@
 </div>
 <script type="text/ng-template" id="navigateTowardsRootPopover.html">
     <div class="k4-nobreak">
-        <a ng-click="fetchBranchRoot(outerIdx)"><span class="fa fa-code-fork"> Show branch root</span></a><br/>
-        <a ng-click="showProofRoot()"><span class="fa fa-angle-down"> Show tree root</span></a><br/>
-        <a ng-click="fetchPathAll(outerIdx)">
-            <span class="fa fa-angle-double-down"> Expand all</span>
-        </a>
+        <a ng-click="fetchBranchRoot(outerIdx)"><span class="fa fa-code-fork"> Show fork</span></a><br/>
+        <a ng-click="showProofRoot()"><span class="fa fa-angle-down"> Show original conjecture</span></a><br/>
+        <a ng-click="fetchPathAll(outerIdx)"><span class="fa fa-angle-double-down"> Expand all</span></a>
+    </div>
+</script>
+<script type="text/ng-template" id="siblingSequentTooltip.html">
+    <div>
+    <span class="k4-nobreak">
+        <span ng-repeat="f in proofTree.nodesMap[sibling].sequent.ante | limitTo:1">
+            <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath.sections[0].path[0]"
+                        formula="f.formula" highlight="false" collapsed="true" on-axiom=""></k4-formula>
+            <span ng-if="proofTree.nodesMap[sibling].sequent.ante.length > 1">...</span>
+        </span>
+        <span>&#8866;</span>
+        <span ng-repeat="f in proofTree.nodesMap[sibling].sequent.succ | limitTo:-1">
+            <span ng-if="proofTree.nodesMap[sibling].sequent.succ.length > 1">... </span>
+            <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath.sections[0].path[0]"
+                        formula="f.formula" highlight="false" collapsed="true" on-axiom=""></k4-formula>
+        </span>
+    </span>
+    </div>
+</script>
+<script type="text/ng-template" id="proofStepPopover.html">
+    <div class="k4-nobreak">
+        <a ng-click="prune(goalId)"><span class="fa fa-eraser"> Prune</span></a><br/>
+        <a ng-click="startProof(goalId)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>
     </div>
 </script>

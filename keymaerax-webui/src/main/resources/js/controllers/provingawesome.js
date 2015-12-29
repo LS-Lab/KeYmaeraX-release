@@ -36,16 +36,21 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
   function($rootScope, $scope, $http, $cookies, $routeParams, $q, $uibModal, $sce, Tactics) {
     $scope.proofId = $routeParams.proofId;
     $scope.userId = $cookies.get('userId');
-    // TODO convert agenda and proof tree into a service?
+    // TODO convert agenda and proof tree into a service? they're intermingled...
     $scope.agenda = {
       itemsMap: {},           // { id: { id: String, name: String, isSelected: Bool, path: [ref PTNode] } }, ... }
       selectedId: undefined,  // ref Item
       itemIds: function() { return Object.keys(itemsMap); },
       items: function() { return $.map($scope.agenda.itemsMap, function(v) {return v;}); },
       select: function(item) {
-        if ($scope.agenda.selectedId !== undefined) $scope.agenda.itemsMap[$scope.agenda.selectedId].isSelected = false;
-        $scope.agenda.selectedId = item.id;
-        item.isSelected = true;
+        //@note bootstrap tab directive sends a select on remove -> only change selection if the item is still on the agenda
+        if ($scope.agenda.itemsMap[item.id] !== undefined) {
+          if ($scope.agenda.selectedId !== undefined && $scope.agenda.itemsMap[$scope.agenda.selectedId] !== undefined) {
+            $scope.agenda.itemsMap[$scope.agenda.selectedId].isSelected = false;
+          }
+          $scope.agenda.selectedId = item.id;
+          item.isSelected = true;
+        }
       },
       selectById: function(itemId) {
         $scope.agenda.select($scope.agenda.itemsMap[itemId]);
@@ -59,7 +64,17 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       root: undefined, // ref PTNode, i.e., String
       nodesMap: {}, // Map[String, PTNode], i.e., { id: { id: String, children: [ref PTNode], parent: ref PTNode } }
       nodeIds: function() { return Object.keys($scope.prooftree.nodesMap); },
-      nodes: function() { return $.map($scope.prooftree.nodesMap, function(v) {return v;}); }
+      nodes: function() { return $.map($scope.prooftree.nodesMap, function(v) {return v;}); },
+      pruneBelow: function(nodeId) {
+        var node = $scope.prooftree.nodesMap[nodeId];
+        if (node.children.length > 0) {
+          $.each(node.children, function(i, c) {
+            $scope.prooftree.pruneBelow(c);
+            delete $scope.prooftree.nodesMap[c];
+          });
+          node.children.splice(0, node.children.length);
+        }
+      }
     }
 
     $scope.fetchAgenda = function(userId, proofId) {
