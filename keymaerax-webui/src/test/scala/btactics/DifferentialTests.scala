@@ -1,6 +1,6 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentPositionTactic, BelleExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -213,7 +213,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only ("b<0".asFormula, "[z:=1;]z'=1".asFormula, "c=0".asFormula)
   }
 
-  "DC" should "cut in a simple formula" in {
+  "DC" should "cut in a simple formula" in withMathematica { implicit qeTool =>
     val result = proveBy("[{x'=2}]x>=0".asFormula, DC("x>0".asFormula)(1))
     result.subgoals should have size 2
     result.subgoals.head.ante shouldBe empty
@@ -222,7 +222,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain only "[{x'=2}]x>0".asFormula
   }
 
-  it should "retain context for showing condition" in {
+  it should "retain context for showing condition" in withMathematica { implicit qeTool =>
     val result = proveBy(
       Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("y<0".asFormula, "[{x'=2}]x>=0".asFormula, "z=0".asFormula)),
       DC("x>0".asFormula)(2))
@@ -234,7 +234,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain only ("y<0".asFormula, "[{x'=2}]x>0".asFormula, "z=0".asFormula)
   }
 
-  it should "cut formula into evolution domain constraint of rightmost ODE in ODEProduct" in {
+  it should "cut formula into evolution domain constraint of rightmost ODE in ODEProduct" in withMathematica { implicit qeTool =>
     val result = proveBy("[{x'=2, y'=3, z'=4 & y>4}]x>0".asFormula, DC("x>1".asFormula)(1))
 
     result.subgoals should have size 2
@@ -244,7 +244,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain only "[{x'=2,y'=3,z'=4 & y>4}]x>1".asFormula
   }
 
-  it should "cut formula into rightmost ODE in ODEProduct, even if constraint empty" in {
+  it should "cut formula into rightmost ODE in ODEProduct, even if constraint empty" in withMathematica { implicit qeTool =>
     val result = proveBy("[{x'=2, y'=3}]x>0".asFormula, DC("x>1".asFormula)(1))
 
     result.subgoals should have size 2
@@ -253,7 +253,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).ante shouldBe empty
     result.subgoals(1).succ should contain only "[{x'=2, y'=3}]x>1".asFormula
   }
-  it should "preserve existing evolution domain constraint" in {
+  it should "preserve existing evolution domain constraint" in withMathematica { implicit qeTool =>
     val result = proveBy("[{x'=2 & x>=0 | y<z}]x>=0".asFormula, DC("x>0".asFormula)(1))
 
     result.subgoals should have size 2
@@ -263,7 +263,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain only "[{x'=2 & x>=0 | y<z}]x>0".asFormula
   }
 
-  ignore should "work in context" in {
+  ignore should "work in context" in withMathematica { implicit qeTool =>
     val result = proveBy("[x:=3;][{x'=2}]x>=0".asFormula, DC("x>0".asFormula)(1, 1::Nil))
 
     result.subgoals should have size 2
@@ -276,66 +276,106 @@ class DifferentialTests extends TacticTestBase {
   "diffCut" should "cut in a simple formula" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>=0".asFormula)),
       diffCut("x>0".asFormula)(1))
-    result.subgoals should have size 1
+    result.subgoals should have size 2
     result.subgoals.head.ante should contain only "x>0".asFormula
     result.subgoals.head.succ should contain only "[{x'=2 & true & x>0}]x>=0".asFormula
+    result.subgoals(1).ante should contain only "x>0".asFormula
+    result.subgoals(1).succ should contain only "[{x'=2}]x>0".asFormula
   }
   it should "retain context for showing condition" in withMathematica { implicit qeTool =>
     val result = proveBy(
       Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("y<0".asFormula, "[{x'=2}]x>=0".asFormula, "z=0".asFormula)),
       diffCut("x>0".asFormula)(2))
 
-    result.subgoals should have size 1
+    result.subgoals should have size 2
     result.subgoals.head.ante should contain only "x>0".asFormula
     result.subgoals.head.succ should contain only ("y<0".asFormula, "[{x'=2 & true & x>0}]x>=0".asFormula, "z=0".asFormula)
+    result.subgoals(1).ante should contain only "x>0".asFormula
+    result.subgoals(1).succ should contain only ("y<0".asFormula, "[{x'=2}]x>0".asFormula, "z=0".asFormula)
   }
   it should "cut formula into evolution domain constraint of rightmost ODE in ODEProduct" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>1".asFormula), IndexedSeq("[{x'=2, y'=3, z'=4 & y>4}]x>0".asFormula)),
       diffCut("x>1".asFormula)(1))
 
-    result.subgoals should have size 1
+    result.subgoals should have size 2
     result.subgoals.head.ante should contain only "x>1".asFormula
     result.subgoals.head.succ should contain only "[{x'=2,y'=3,z'=4 & (y>4&x>1)}]x>0".asFormula
+    result.subgoals(1).ante should contain only "x>1".asFormula
+    result.subgoals(1).succ should contain only "[{x'=2,y'=3,z'=4 & y>4}]x>1".asFormula
   }
   it should "cut formula into rightmost ODE in ODEProduct, even if constraint empty" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>1".asFormula), IndexedSeq("[{x'=2, y'=3}]x>0".asFormula)),
       diffCut("x>1".asFormula)(1))
 
-    result.subgoals should have size 1
+    result.subgoals should have size 2
     result.subgoals.head.ante should contain only "x>1".asFormula
     result.subgoals.head.succ should contain only "[{x'=2,y'=3 & (true&x>1)}]x>0".asFormula
+    result.subgoals(1).ante should contain only "x>1".asFormula
+    result.subgoals(1).succ should contain only "[{x'=2,y'=3}]x>1".asFormula
   }
   it should "preserve existing evolution domain constraint" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2 & x>=0 | y<z}]x>=0".asFormula)),
       diffCut("x>0".asFormula)(1))
 
-    result.subgoals should have size 1
+    result.subgoals should have size 2
     result.subgoals.head.ante should contain only "x>0".asFormula
     result.subgoals.head.succ should contain only "[{x'=2 & (x>=0 | y<z) & x>0}]x>=0".asFormula
+    result.subgoals(1).ante should contain only "x>0".asFormula
+    result.subgoals(1).succ should contain only "[{x'=2 & (x>=0 | y<z)}]x>0".asFormula
   }
 
   it should "introduce ghosts when special function old is used" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("[{x'=2 & x>=0 | y<z}]x>=0".asFormula)),
       diffCut("x>=old(x)".asFormula)(1))
-    result.subgoals should have size 1
+    result.subgoals should have size 2
     result.subgoals.head.ante should contain only "x_0=x".asFormula
     result.subgoals.head.succ should contain only "[{x'=2 & (x>=0 | y<z) & x>=x_0}]x>=0".asFormula
+    result.subgoals(1).ante should contain only "x_0=x".asFormula
+    result.subgoals(1).succ should contain only "[{x'=2 & (x>=0 | y<z)}]x>=x_0".asFormula
   }
 
   it should "retain existing conditions and introduce ghosts when special function old is used" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>=0".asFormula)),
       diffCut("x>=old(x)".asFormula)(1))
-    result.subgoals should have size 1
+    result.subgoals should have size 2
     result.subgoals.head.ante should contain only ("x>0".asFormula, "x_0=x".asFormula)
     result.subgoals.head.succ should contain only "[{x'=2 & true & x>=x_0}]x>=0".asFormula
+    result.subgoals(1).ante should contain only ("x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals(1).succ should contain only "[{x'=2}]x>=x_0".asFormula
   }
 
   it should "cut in multiple formulas" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("v>=0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
       diffCut("v>=0".asFormula, "x>=old(x)".asFormula)(1))
+    result.subgoals should have size 3
+    result.subgoals.head.ante should contain only ("v>=0".asFormula, "x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals.head.succ should contain only "[{x'=v,v'=2 & (true & v>=0) & x>=x_0}]x>=0".asFormula
+    result.subgoals(1).ante should contain only ("v>=0".asFormula, "x>0".asFormula)
+    result.subgoals(1).succ should contain only "[{x'=v,v'=2}]v>=0".asFormula
+    result.subgoals(2).ante should contain only ("v>=0".asFormula, "x>0".asFormula, "x_0=x".asFormula)
+    result.subgoals(2).succ should contain only "[{x'=v,v'=2 & true & v>=0}]x>=x_0".asFormula
+  }
+
+  "diffInvariant" should "cut in a simple formula" in withMathematica { implicit qeTool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>=0".asFormula)),
+      diffInvariant("x>0".asFormula)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>0".asFormula
+    result.subgoals.head.succ should contain only "[{x'=2 & true & x>0}]x>=0".asFormula
+  }
+
+  it should "cut in multiple formulas" in withMathematica { implicit qeTool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("v>=0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
+      diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("v>=0".asFormula, "x>0".asFormula, "x_0=x".asFormula)
     result.subgoals.head.succ should contain only "[{x'=v,v'=2 & (true & v>=0) & x>=x_0}]x>=0".asFormula
+  }
+
+  it should "fail if any of the formulas is not an invariant" in withMathematica { implicit qeTool =>
+    a [BelleError] should be thrownBy proveBy(
+      Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
+      diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1))
   }
 
   "Differential introduce constants" should "replace a with a() in v'=a" in {

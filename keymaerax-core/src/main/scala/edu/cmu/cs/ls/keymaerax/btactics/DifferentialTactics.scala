@@ -134,21 +134,28 @@ object DifferentialTactics {
 
   /**
    * Differential cut. Use special function old(.) to introduce a ghost for the starting value of a variable that can be
-   * used in the evolution domain constraint. Uses diffInd to prove that the formulas are differential invariants.
+   * used in the evolution domain constraint.
    * @example{{{
-   *         x>0 |- [{x'=2&x>0}]x>=0
-   *         ------------------------diffCut("x>0".asFormula)(1)
+   *         x>0 |- [{x'=2&x>0}]x>=0     x>0 |- [{x'=2}]x>0
+   *         -----------------------------------------------diffCut("x>0".asFormula)(1)
    *         x>0 |- [{x'=2}]x>=0
    * }}}
    * @example{{{
-   *         x>0, x_0=x |- [{x'=2&x>x_0}]x>=0
-   *         ---------------------------------diffCut("x>old(x)".asFormula)(1)
+   *         x>0, x_0=x |- [{x'=2&x>=x_0}]x>=0     x>0, x_0=x |- [{x'=2}]x>=x_0
+   *         -------------------------------------------------------------------diffCut("x>=old(x)".asFormula)(1)
    *         x>0 |- [{x'=2}]x>=0
+   * }}}
+   * @example{{{
+   *         x>0, v>=0, x_0=x |- [{x'=v,v'=1&v>=0&x>=x_0}]x>=0
+   *                x>0, v>=0 |- [{x'=v,v'=1}]v>=0
+   *         x>0, v>=0, x_0=x |- [{x'=v,v'=1&v>=0}]x>=x_0
+   *         --------------------------------------------------diffCut("v>=0".asFormula, "x>=old(x)".asFormula)(1)
+   *                x>0, v>=0 |- [{x'=v,v'=1}]x>=0
    * }}}
    * @param formulas The formulas to cut in as evolution domain constraint.
    * @return The tactic.
    */
-  def diffCut(qeTool: QETool, formulas: Formula*): DependentPositionTactic = new DependentPositionTactic("diff cut") {
+  def diffCut(formulas: Formula*): DependentPositionTactic = new DependentPositionTactic("diff cut") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = nestDCs(formulas.map(ghostDC(_, pos, sequent)))
     }
@@ -172,7 +179,7 @@ object DifferentialTactics {
     private def nestDCs(dcs: Seq[BelleExpr]): BelleExpr = {
       dcs.head <(
         /* use */ (if (dcs.tail.nonEmpty) nestDCs(dcs.tail) partial else skip) partial,
-        /* show */ diffInd(qeTool)('Rlast)
+        /* show */ skip
         )
     }
 
@@ -197,6 +204,40 @@ object DifferentialTactics {
         }
       }, fml) match {
         case Some(g) => g
+      }
+    }
+  }
+
+  /**
+   * Combines differential cut and differential induction. Use special function old(.) to introduce a ghost for the
+   * starting value of a variable that can be used in the evolution domain constraint. Uses diffInd to prove that the
+   * formulas are differential invariants. Fails if diffInd cannot prove invariants.
+   * @example{{{
+   *         x>0 |- [{x'=2&x>0}]x>=0
+   *         ------------------------diffInvariant("x>0".asFormula)(1)
+   *         x>0 |- [{x'=2}]x>=0
+   * }}}
+   * @example{{{
+   *         x>0, x_0=x |- [{x'=2&x>x_0}]x>=0
+   *         ---------------------------------diffInvariant("x>old(x)".asFormula)(1)
+   *                x>0 |- [{x'=2}]x>=0
+   * }}}
+   * @example{{{
+   *         x>0, v>=0, x_0=x |- [{x'=v,v'=1 & v>=0&x>x_0}]x>=0
+   *         ---------------------------------------------------diffInvariant("v>=0".asFormula, "x>old(x)".asFormula)(1)
+   *                x>0, v>=0 |- [{x'=v,v'=1}]x>=0
+   * }}}
+   * @param formulas The differential invariants to cut in as evolution domain constraint.
+   * @return The tactic.
+   * @see [[diffCut]]
+   * @see [[diffInd]]
+   */
+  def diffInvariant(qeTool: QETool, formulas: Formula*): DependentPositionTactic = new DependentPositionTactic("diff invariant") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        //@note assumes that first subgoal is desired result, see diffCut
+        val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd(qeTool)('Rlast) partial)
+        diffCut(formulas: _*)(pos) <(diffIndAllButFirst:_*) partial
       }
     }
   }
