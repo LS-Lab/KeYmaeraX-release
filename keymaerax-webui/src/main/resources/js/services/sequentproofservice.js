@@ -113,8 +113,8 @@ angular.module('keymaerax.services').factory('sequentProofData', function($http)
           delete theAgenda.itemsMap[item.id];
         });
 
-        // select new top item
-        theAgenda.selectById(data.agendaItem.id);
+        // select new top item (@todo does not work with step back)
+        theAgenda.select(data.agendaItem);
       });
     },
 

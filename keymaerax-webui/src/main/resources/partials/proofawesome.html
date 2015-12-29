@@ -22,9 +22,10 @@
                 <div class="collapse navbar-collapse">
                     <ul class="nav navbar-nav">
                         <li><a href="#"><span class="fa fa-play"> Auto</span></a></li>
-                        <li><a href="#"><span class="fa fa-undo"> Undo</span></a></li>
+                        <li><a ng-click="undoLastStep()"><span class="fa fa-undo"> Step back</span></a></li>
                         <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                               aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
                             <ul class="dropdown-menu">
                                 <li><a href="#">and left <code>andL</code></a></li>
                                 <li><a href="#">imply right <code>implyR</code></a></li>
