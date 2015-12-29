@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.axiomatic
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -181,14 +182,8 @@ object DLBySubst {
    * }}}
    * @see [[assignEquational]]
    */
-  lazy val assignb: DependentPositionTactic = new DependentPositionTactic("[:=] assign") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
-        // slightly expensive: try substitution assignment, use equational if it fails
-        case Some(Box(Assign(_, _), _)) => (useAt("[:=] assign")(pos) partial) | (assignEquational(pos) partial)
-      }
-    }
-  }
+  lazy val assignb: DependentPositionTactic =
+    "[:=] assign" by (pos => (useAt("[:=] assign")(pos) partial) | (assignEquational(pos) partial))
 
   /**
    * Equational assignment: always introduces universal quantifier, which is skolemized if applied at top-level in the
@@ -209,19 +204,15 @@ object DLBySubst {
    *    x=2   |- [y:=2;][x:=1;][{x:=x+1;}*]x>0
    * }}}
    */
-  lazy val assignEquational: DependentPositionTactic = new DependentPositionTactic("[:=] assign equality") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
-        case Some(Box(Assign(x, _), _)) =>
-          val y = TacticHelper.freshNamedSymbol(x, sequent)
-          ProofRuleTactics.boundRenaming(x, y) &
-            useAt("[:=] assign equality")(pos) &
-            (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident) &
-            // TODO derived axiom for equality with exists left for ante
-            ProofRuleTactics.uniformRenaming(y, x)
-      }
-    }
-  }
+  lazy val assignEquational: DependentPositionTactic = "[:=] assign equality" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(Box(Assign(x, _), _)) =>
+      val y = TacticHelper.freshNamedSymbol(x, sequent)
+      ProofRuleTactics.boundRenaming(x, y) &
+        useAt("[:=] assign equality")(pos) &
+        (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident) &
+        // TODO derived axiom for equality with exists left for ante
+        ProofRuleTactics.uniformRenaming(y, x)
+  })
 
   /**
    * Generalize postcondition to C and, separately, prove that C implies postcondition.

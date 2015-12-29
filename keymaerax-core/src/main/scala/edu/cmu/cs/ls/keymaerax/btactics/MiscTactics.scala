@@ -165,6 +165,34 @@ object Idioms {
   def shift(child: PosInExpr, t: DependentPositionTactic): DependentPositionTactic = shift(p => p.append(child), t)
 }
 
+/** Creates tactic objects */
+object TacticFactory {
+
+  /**
+   * Creates named dependent tactics.
+   * @example{{{
+   *  "[:=] assign" by (pos => useAt("[:=] assign")(pos))
+   * }}}
+   * @param name The tactic name.
+   */
+  implicit class TacticForNameFactory(val name: String) {
+    /** Creates a dependent position tactic without inspecting the formula at that position */
+    def by(t: (Position => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+      override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+        override def computeExpr(provable: Provable): BelleExpr = t(pos)
+      }
+    }
+
+    /** Creates a dependent position tactic while inspecting the formulat at that position */
+    def by(t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+        override def computeExpr(sequent: Sequent): BelleExpr = t(pos, sequent)
+      }
+    }
+  }
+
+}
+
 /**
  * @author Nathan Fulton
  */
