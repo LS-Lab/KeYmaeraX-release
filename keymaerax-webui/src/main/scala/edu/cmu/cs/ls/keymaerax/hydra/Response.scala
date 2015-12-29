@@ -311,6 +311,8 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
       }
       def fmlsJson (fmls: IndexedSeq[Formula]): JsValue = {
         JsArray(fmls.map { case fml =>
+          /* Formula ID is comma-separated PosInExpr. Leftmost number in the ID is
+          * the top-level operator of the formula.*/
           val fmlJson = JSONConverter.convertFormula(fml, "", "")
           JsObject(
             "id" -> JsString(fmlId),
