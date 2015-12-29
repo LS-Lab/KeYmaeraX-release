@@ -94,30 +94,6 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     )
   }
 
-  "Saturate combinator" should "prove x=2&y=3&z=4 |- z=4" in {
-    shouldClose(andL('_)*@TheType() &
-      assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
-      assertE("z=4".asFormula, "z=4 not at -3")(-3) & close,
-      Sequent(Nil, IndexedSeq("x=2&y=3&z=4".asFormula), IndexedSeq("z=4".asFormula)))
-  }
-
-  it should "repeat 0 times if not applicable" in {
-    shouldClose(andL('_)*@TheType() & close,
-      Sequent(Nil, IndexedSeq("x=2".asFormula), IndexedSeq("x=2".asFormula)))
-  }
-
-  it should "saturate until no longer applicable" in {
-    shouldClose(andL('Llast)*@TheType() &
-      assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
-      assertE("z=4|z=5".asFormula, "z=4|z=5 not at -3")(-3) & close,
-      Sequent(Nil, IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)))
-  }
-
-  it should "work in combination with either combinator" in {
-    shouldClose((andL('Llast)*@TheType() | close)*@TheType(),
-      Sequent(Nil, IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)))
-  }
-
   "DoAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = andR(SuccPos(0)) & DoAll (implyR(SuccPos(0)) & close)
@@ -136,6 +112,51 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
       DoAll(andR(SuccPos(0))) |
       DoAll(implyR(SuccPos(0)) & close)
     )*@TheType()
+  }
+
+  it should "prove x=2&y=3&z=4 |- z=4" in {
+    shouldClose(andL('_)*@TheType() &
+      assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
+      assertE("z=4".asFormula, "z=4 not at -3")(-3) & close,
+      Sequent(Nil, IndexedSeq("x=2&y=3&z=4".asFormula), IndexedSeq("z=4".asFormula)))
+  }
+
+  it should "repeat 0 times if not applicable" in {
+    shouldClose(andL('_)*@TheType() & close,
+      Sequent(Nil, IndexedSeq("x=2".asFormula), IndexedSeq("x=2".asFormula)))
+  }
+
+  it should "saturate until no longer applicable" in {
+    shouldClose(andL('Llast)*@TheType() &
+      assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
+      assertE("z=4|z=5".asFormula, "z=4|z=5 not at -3")(-3) & close,
+      Sequent(Nil, IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)))
+  }
+
+  it should "not try right branch when used in combination with either combinator" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
+      ((andL('Llast)*@TheType() partial) | close)*@TheType())
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x=2".asFormula, "y=3".asFormula, "z=4 | z=5".asFormula)
+    result.subgoals.head.succ should contain only "x=2".asFormula
+  }
+
+  "+ combinator" should "saturate with at least 1 repetition" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
+      andL('Llast)+@TheType())
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x=2".asFormula, "y=3".asFormula, "z=4 | z=5".asFormula)
+    result.subgoals.head.succ should contain only "x=2".asFormula
+  }
+
+  it should "fail when not at least 1 repetition is possible" in {
+    a [BelleError] should be thrownBy proveBy(Sequent(Nil, IndexedSeq("z=4|z=5".asFormula), IndexedSeq("x=2".asFormula)),
+      andL('Llast)+@TheType())
+  }
+
+  it should "saturate with at least 1 repetition and try right branch in combination with either combinator" in {
+    proveBy(Sequent(Nil, IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
+      ((andL('Llast)+@TheType() partial) | close)*@TheType()) shouldBe 'proved
   }
 
   "Branch Combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {

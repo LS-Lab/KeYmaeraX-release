@@ -23,6 +23,8 @@ abstract class BelleExpr(val location: Array[StackTraceElement] = Thread.current
   def |(other: BelleExpr)             = EitherTactic(this, other)
   /** this*: saturating repetition executes this tactic to a fixpoint, casting result to type annotation, diverging if no fixpoint. */
   def *@(annotation: BelleType)       = SaturateTactic(this, annotation)
+  /** this+: saturating repetition executes this tactic to a fixpoint, requires at least one successful application */
+  def +@(annotation: BelleType) = this & this*@annotation
   /** this*: bounded repetition executes this tactic to `times` number of times, failing if any of those repetitions fail. */
   def *(times: Int/*, annotation: BelleType*/) = RepeatTactic(this, times, null)
   /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches. */
