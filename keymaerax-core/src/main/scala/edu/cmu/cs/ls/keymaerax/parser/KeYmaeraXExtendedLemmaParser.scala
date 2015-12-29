@@ -31,8 +31,10 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     val (decls, lemmaTokens) = KeYmaeraXDeclarationsParser(tokens)
     if (DEBUG) println("Declarations: " + decls)
     parseLemma(lemmaTokens)
-  } catch {case e: ParseException => throw e.inContext("input:  " + input)
-  case e: IllegalArgumentException => throw new ParseException(e.toString, UnknownLocation, "\ninput:  " + input).initCause(e)}
+  } catch {
+    case e: ParseException => throw e.inContext("input:  " + input)
+    case e: IllegalArgumentException => throw new ParseException(e.toString, UnknownLocation, "\ninput:  " + input, e)
+  }
 
 
   /**
