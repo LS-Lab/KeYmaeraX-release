@@ -15,9 +15,11 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
    * @param agenda          The agenda, see provingawesome.js for schema.
    * @param readOnly        Indicates whether or not the proof steps should allow interaction (optional).
    */
-  .directive('k4Sequentproof', ['$http', function($http) {
+  .directive('k4Sequentproof', ['$http', 'sequentProofData', function($http, sequentProofData) {
     /* The directive's internal control. */
     function link(scope, element, attrs) {
+
+      //@todo move relevant functionality into sequentproofservice.js
 
       scope.fetchBranchRoot = function(sectionIdx) {
         var section = scope.deductionPath.sections[sectionIdx];
@@ -40,19 +42,6 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
             // TODO use numParentsUntilComplete to display some information
             $.each(data.path, function(i, ptnode) { updateProof(ptnode); });
           });
-        }
-      }
-
-      /**
-       * Adds a node to proof tree if not already present; otherwise, updates the node with fetched rule and children
-       * @param proofTreeNode The node to add.
-       */
-      addProofTreeNode = function(proofTreeNode) {
-        if (scope.proofTree.nodesMap[proofTreeNode.id] === undefined) {
-          scope.proofTree.nodesMap[proofTreeNode.id] = proofTreeNode;
-        } else {
-          scope.proofTree.nodesMap[proofTreeNode.id].children = proofTreeNode.children;
-          scope.proofTree.nodesMap[proofTreeNode.id].rule = proofTreeNode.rule;
         }
       }
 
@@ -101,12 +90,12 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
        * Adds a proof tree node and updates the agenda sections.
        */
       updateProof = function(proofTreeNode) {
-        addProofTreeNode(proofTreeNode);
+        scope.proofTree.addNode(proofTreeNode);
 
         // append parent to the appropriate section in all relevant agenda items
         var items = $.map(proofTreeNode.children, function(e) { return scope.agenda.itemsByProofStep(e); }); // JQuery flat map
         $.each(items, function(i, v) {
-          var childSectionIdx = childSectionIndex(v, proofTreeNode);
+          var childSectionIdx = scope.agenda.childSectionIndex(v.id, proofTreeNode);
           updateSection(proofTreeNode, v, childSectionIdx);
         });
       }
@@ -115,39 +104,17 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
        * Adds the specified proof tree node as branch root to the specified section.
        */
       addBranchRoot = function(proofTreeNode, agendaItem, sectionIdx) {
-        addProofTreeNode(proofTreeNode);
+        scope.proofTree.addNode(proofTreeNode);
         updateSection(proofTreeNode, agendaItem, sectionIdx);
 
         // append parent to the appropriate section in all relevant agenda items
         if (proofTreeNode.children != null) {
           var items = $.map(proofTreeNode.children, function(e) { return scope.agenda.itemsByProofStep(e); });
           $.each(items, function(i, v) {
-            var childSectionIdx = childSectionIndex(v, proofTreeNode);
+            var childSectionIdx = scope.agenda.childSectionIndex(v.id, proofTreeNode);
             updateSection(proofTreeNode, v, childSectionIdx);
           });
         }
-      }
-
-      /**
-       *  Returns the index of the specified proof tree node's child that is referred to in agendaItem (only a unique
-       *  such child exists).
-       */
-      childSectionIndex = function(agendaItem, proofTreeNode) {
-        for (var i = 0; i < agendaItem.deduction.sections.length; i++) {
-          var section = agendaItem.deduction.sections[i];
-          if (proofTreeNode.children.indexOf(section.path[section.path.length - 1]) >= 0) return i;
-        }
-        return -1;
-      }
-
-      /** Returns the deduction index of the specified proof tree node in agendaItem (Object { section, pathStep} ). */
-      deductionIndexOf = function(agendaItem, ptNodeId) {
-        for (var i = 0; i < agendaItem.deduction.sections.length; i++) {
-          var section = agendaItem.deduction.sections[i];
-          var j = section.path.indexOf(ptNodeId);
-          if (j >= 0) return { sectionIdx: i, pathStepIdx: j };
-        }
-        return { sectionIdx: -1, pathStepIdx: -1 };
       }
 
       /** Filters sibling candidates: removes this item's goal and path */
@@ -197,43 +164,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
 
       /** Prunes the proof tree and agenda/deduction path below the specified step ID. */
       scope.prune = function(goalId) {
-        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/pruneBelow').success(function(data) {
-          // prune proof tree
-          scope.proofTree.pruneBelow(goalId);
-
-          // update agenda: prune deduction paths
-          var agendaItems = scope.agenda.itemsByProofStep(goalId);
-          $.each(agendaItems, function(i, item) {
-            var deductionIdx = deductionIndexOf(scope.agenda.itemsMap[item.id], goalId);
-            var section = item.deduction.sections[deductionIdx.sectionIdx];
-            section.path.splice(0, deductionIdx.pathStepIdx);
-            item.deduction.sections.splice(0, deductionIdx.sectionIdx);
-          });
-
-          // sanity check: all agendaItems should have the same deductions (top item should be data.agendaItem.deduction)
-          var newTop = data.agendaItem.deduction.sections[0].path[0];
-          $.each(agendaItems, function(i, item) {
-            var oldTop = item.deduction.sections[0].path[0];
-            if (oldTop !== newTop) {
-              console.log("Unexpected deduction start after pruning: expected " + newTop + " but have " + oldTop +
-                " at agenda item " + item.id)
-            }
-            //@todo additionally check that deduction.sections are all the same (might be expensive, though)
-          });
-
-          // update agenda: copy already cached deduction path into the remaining agenda item (new top item)
-          data.agendaItem.deduction = agendaItems[0].deduction;
-          scope.agenda.itemsMap[data.agendaItem.id] = data.agendaItem;
-
-          // delete previous items
-          //@todo preserve previous tab order
-          $.each(agendaItems, function(i, item) {
-            delete scope.agenda.itemsMap[item.id];
-          });
-
-          // select new top item
-          scope.agenda.selectById(data.agendaItem.id);
-        });
+        sequentProofData.prune(scope.userId, scope.proofId, scope.nodeId, goalId);
       }
 
       scope.deductionPath.isCollapsed = false;
