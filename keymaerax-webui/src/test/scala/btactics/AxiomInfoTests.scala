@@ -3,7 +3,7 @@ package btactics
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.core.Axiom
-import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms
+import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms
 import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
