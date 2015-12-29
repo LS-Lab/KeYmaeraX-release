@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, IOListener
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.{ProofRuleTactics, UnifyUSCalculus}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra.{ProofTaskParentRequest, DBAbstractionObj, SQLite}
+import edu.cmu.cs.ls.keymaerax.hydra.{ProofTree, ProofTaskParentRequest, DBAbstractionObj, SQLite}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, SuccPosition}
@@ -61,6 +61,6 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
   }
 
   it should "print out some steps for me to check by hand" in {
-    println(db.proofTree(10))
+    println(ProofTree.ofTrace(db.getExecutionTrace(10)))
   }
 }

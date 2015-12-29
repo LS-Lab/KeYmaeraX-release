@@ -73,7 +73,7 @@ trait AtPosition[T <: BelleExpr] {
   final def apply(position: Position): T = apply(Fixed(position))
   /**
    * At a fixed position given through index numbers.
-   * @param seqIdx The index in the sequent (strictily negative index for antecedent, strictly positive for succedent).
+   * @param seqIdx The index in the sequent (strictly negative index for antecedent, strictly positive for succedent).
    * @param inExpr Where to apply inside the formula at index seqIdx.
    * @return The tactic.
    * @note Convenience wrapper
