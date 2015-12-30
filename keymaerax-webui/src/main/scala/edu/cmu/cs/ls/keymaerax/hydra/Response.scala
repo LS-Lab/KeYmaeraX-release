@@ -238,6 +238,10 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
 //  )
 //}
 
+class RunBelleTermResponse() extends Response {
+  val json = JsNull
+}
+
 //class DispatchedCLTermResponse(t : DispatchedCLTermPOJO) extends Response {
 //  val nid = t.nodeId match {
 //    case Some(nodeId) => nodeId

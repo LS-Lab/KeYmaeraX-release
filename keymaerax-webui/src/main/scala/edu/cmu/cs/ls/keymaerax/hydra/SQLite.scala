@@ -598,10 +598,10 @@ object SQLite {
               case Some(str) => Right(str)
               case None => Left(step.branchOrder.get)
             }
-            new ExecutionStep(input = input, output = output, branch = branch)
+            new ExecutionStep(input = input, output = output, branch = branch, alternativeOrder = step.alternativeOrder)
         }
       val conclusion = getProofConclusion(proofId)
-      ExecutionTrace(proofId.toString, conclusion, traceSteps)
+      ExecutionTrace(proofId.toString, executionId.toString, conclusion, traceSteps)
     }
   }
 }

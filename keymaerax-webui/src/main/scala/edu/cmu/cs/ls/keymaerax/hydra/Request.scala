@@ -15,10 +15,14 @@ import java.util.{Locale, Calendar}
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
+import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter}
+import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo
+import _root_.edu.cmu.cs.ls.keymaerax.core.Provable
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import _root_.edu.cmu.cs.ls.keymaerax.tactics.{Position, Augmentors, PosInExpr, AxiomIndex}
+import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
@@ -670,6 +674,35 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
 //        db.updateProofOnTacticCompletion(proofId, tId)
 //    }
 //  }
+}
+
+class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String) extends Request {
+  def getResultingResponses() = {
+    BTacticParser(belleTerm) match {
+      case None => throw new Exception("Invalid Bellerophon expression:  " + belleTerm)
+      case Some(expr) =>
+        val trace = db.getExecutionTrace(proofId.toInt)
+        val provable =
+          trace.steps match {
+            case Nil => Provable.startProof(trace.conclusion)
+            case _ =>
+              // @todo Does this work?
+              trace.steps.last.output match {
+                case Some(provable) => provable
+                case None => trace.steps.last.input
+              }
+          }
+        val listener = new DebuggerListener(db, trace.executionId.toInt, trace.alternativeOrder, trace.branch, recursive = false)
+        //BellerophonTacticExecutor.defaultExecutor.schedule (expr, provable)
+        SequentialInterpreter(List(listener))(expr, BelleProvable(provable)) match {
+          case BelleProvable(outputProvable) =>
+            println("I proved " + outputProvable.prettyString)
+            new RunBelleTermResponse() :: Nil
+
+        }
+
+    }
+  }
 }
 
 class RunCLTermRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], clTerm : String) extends Request {

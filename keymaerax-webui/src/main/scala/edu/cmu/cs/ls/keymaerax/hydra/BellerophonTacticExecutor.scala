@@ -2,6 +2,8 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.util.concurrent.{Callable, FutureTask, ExecutorService, Executors}
 
+import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{Interpreter, SequentialInterpreter}
+import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleValue, BelleExpr, Interpreter}
 import scala.collection.mutable.Map
 
@@ -9,6 +11,12 @@ import scala.collection.mutable.Map
   * Scheduler for Bellerophon tactics
   * @author Nathan Fulton
   */
+object BellerophonTacticExecutor {
+  val defaultListeners = Nil
+  val defaultSize = 10
+  val defaultExecutor = new BellerophonTacticExecutor(new SequentialInterpreter(defaultListeners), defaultSize)
+}
+
 class BellerophonTacticExecutor(interpreter : Interpreter, poolSize: Int) {
   require(poolSize > 0, "At least one thread is needed.")
   private val pool : ExecutorService = Executors.newFixedThreadPool(poolSize)
