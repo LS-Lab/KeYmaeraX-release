@@ -201,8 +201,10 @@ object AxiomInfo {
 }
 /** The short name for an axiom is a string intended for use in the UI where space is a concern (e.g. when
   * displaying tree-style proofs). Since the goal is to be as short as possible, they are not required to be
-  * unique, but should still be as suggestive as possible of what the axiom does.*/
-//@todo could case class, right?
+  * unique, but should still be as suggestive as possible of what the axiom does.
+  * @note This can't be a case class because the auto-generated [[apply]] method conflicts with the one from
+  *       the companion object.
+  * */
 class AxiomInfo (val canonicalName: String, val shortName: String) {
   def formula: Formula =
     DerivedAxioms.derivedAxiomMap.get(canonicalName) match {
