@@ -72,16 +72,23 @@ object SQLite {
     ensureExists(DBAbstractionObj.dblocation)
     ensureExists(DBAbstractionObj.testLocation)
 
+    /* withTransaction is not thread-safe if you reuse connections, it will raise exception saying we're in autocommit
+     * mode when we shouldn't be. So only ever call withTransaction inside a synchronized block. */
+    def synchronizedTransaction[T](f: => T)(implicit session:Session): T =
+      synchronized {
+        session.withTransaction(f)
+    }
+
     //@TODO
     // Configuration
     override def getAllConfigurations: Set[ConfigurationPOJO] =
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         Config.list.filter(_.configname.isDefined).map(_.configname.get).map(getConfiguration(_)).toSet
       })
 
     override def createConfiguration(configName: String): Boolean =
-      session.withTransaction({
+      synchronizedTransaction({
         //This is unnecessary?
         true
       })
@@ -92,7 +99,7 @@ object SQLite {
     }
 
     override def getModelList(userId: String): List[ModelPOJO] = {
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element._Id.get, element.userid.get, element.name.get,
           blankOk(element.date), blankOk(element.filecontents),
@@ -113,7 +120,7 @@ object SQLite {
       val iterations = configWithDefault("security", "passwordHashIterations", 10000)
       val saltLength = configWithDefault("security", "passwordSaltLength", 512)
       val (hash, salt) = Password.generateKey(password, iterations, saltLength)
-      session.withTransaction({
+      synchronizedTransaction({
         Users.map(u => (u.email.get, u.hash.get, u.salt.get, u.iterations.get))
           .insert((username, hash, salt, iterations))
         nInserts = nInserts + 1
@@ -127,7 +134,7 @@ object SQLite {
       * @param config
       */
     override def updateConfiguration(config: ConfigurationPOJO): Unit =
-      session.withTransaction({
+      synchronizedTransaction({
         config.config.map(kvp => {
           val key = kvp._1
           val value = kvp._2
@@ -149,28 +156,28 @@ object SQLite {
 
     //Proofs and Proof Nodes
     override def getProofInfo(proofId: Int): ProofPOJO =
-      session.withTransaction({
+      synchronizedTransaction({
         val stepCount = getProofSteps(proofId).size
         nSelects = nSelects + 1
         val list = Proofs.filter(_._Id === proofId)
           .list
           .map(p => new ProofPOJO(p._Id.get, p.modelid.get, blankOk(p.name), blankOk(p.description),
             blankOk(p.date), stepCount, p.closed.getOrElse(0) == 1))
-        if (list.length > 1) throw new Exception()
-        else if (list.length == 0) throw new Exception()
+        if (list.length > 1) throw new Exception("Duplicate proof " + proofId)
+        else if (list.length == 0) throw new Exception("Proof not found: " + proofId)
         else list.head
       })
 
     // Users
     override def userExists(username: String): Boolean =
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         Users.filter(_.email === username).list.length != 0
       })
 
 
     override def getProofsForUser(userId: String): List[(ProofPOJO, String)] =
-      session.withTransaction({
+      synchronizedTransaction({
         val models = getModelList(userId)
 
         models.map(model => {
@@ -181,7 +188,7 @@ object SQLite {
       })
 
     override def checkPassword(username: String, password: String): Boolean =
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         Users.filter(_.email === username).list.exists({case row =>
           val hash = Password.hash(password.toCharArray, row.salt.get.getBytes, row.iterations.get)
@@ -190,14 +197,14 @@ object SQLite {
       })
 
     override def updateProofInfo(proof: ProofPOJO): Unit =
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         Proofs.filter(_._Id === proof.proofId).update(proofPojoToRow(proof))
         nUpdates = nUpdates + 1
       })
 
     override def updateProofName(proofId: Int, newName: String): Unit = {
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         Proofs.filter(_._Id === proofId).map(_.name).update(Some(newName))
         nUpdates = nUpdates + 1
@@ -210,7 +217,7 @@ object SQLite {
 
     //the string is a model name.
     override def openProofs(userId: String): List[ProofPOJO] =
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         getProofsForUser(userId).map(_._1).filter(!_.closed)
       })
@@ -219,7 +226,7 @@ object SQLite {
 
     //returns id of create object
     override def getProofsForModel(modelId: Int): List[ProofPOJO] =
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         Proofs.filter(_.modelid === modelId).list.map(p => {
           val stepCount = getProofSteps(p._Id.get).size
@@ -233,7 +240,7 @@ object SQLite {
     override def createModel(userId: String, name: String, fileContents: String, date: String,
                              description: Option[String] = None, publink: Option[String] = None,
                              title: Option[String] = None, tactic: Option[String] = None): Option[Int] =
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         if (Models.filter(_.userid === userId).filter(_.name === name).list.length == 0) {
           nInserts = nInserts + 1
@@ -245,7 +252,7 @@ object SQLite {
       })
 
     override def createProofForModel(modelId: Int, name: String, description: String, date: String): Int =
-      session.withTransaction({
+      synchronizedTransaction({
         nInserts = nInserts + 2
         val proofId =
           (Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get))
@@ -256,7 +263,7 @@ object SQLite {
       })
 
     override def getModel(modelId: Int): ModelPOJO =
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         val models =
           Models.filter(_._Id === modelId)
@@ -278,14 +285,13 @@ object SQLite {
     }
 
     override def getConfiguration(configName: String): ConfigurationPOJO =
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         val kvp = Config.filter(_.configname === configName)
           .filter(_.key.isDefined)
           .list
           .map(conf => (conf.key.get, blankOk(conf.value)))
           .toMap
-
         new ConfigurationPOJO(configName, kvp)
       })
 
@@ -307,7 +313,7 @@ object SQLite {
 
     /** Creates a new execution and returns the new ID in tacticExecutions */
     override def createExecution(proofId: Int): Int =
-      session.withTransaction({
+      synchronizedTransaction({
         val executionId =
           (Tacticexecutions.map(te => te.proofid.get)
             returning Tacticexecutions.map(_._Id.get))
@@ -331,7 +337,7 @@ object SQLite {
         case (Some(order), Some(label)) =>
           throw new Exception("execution steps cannot have both a branchOrder and a branchLabel")
       }
-      session.withTransaction({
+      synchronizedTransaction({
         val status = ExecutionStepStatus.toString(step.status)
         val steps =
           Executionsteps.map({case step => (step.executionid.get, step.previousstep, step.parentstep,
@@ -349,7 +355,7 @@ object SQLite {
 
     /** Adds a Bellerophon expression as an executable and returns the new executableId */
     override def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): Int =
-      session.withTransaction({
+      synchronizedTransaction({
         // @TODO Figure out whether to generate ID's here or pass them in through the params
         val executableId =
           (Executables.map({ case exe => (exe.scalatacticid, exe.belleexpr) })
@@ -389,7 +395,7 @@ object SQLite {
 
     /** Stores a Provable in the database and returns its ID */
     override def serializeProvable(p: Provable): Int = {
-      session.withTransaction({
+      synchronizedTransaction({
         val lemma = Lemma(p, List(new ToolEvidence(Map("input" -> p.prettyString, "output" -> "true"))))
         val lemmaId = LemmaDBFactory.lemmaDB.add(lemma)
         val provableId =
@@ -405,7 +411,7 @@ object SQLite {
 
     /** Returns the executable with ID executableId */
     override def getExecutable(executableId: Int): ExecutablePOJO =
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         val executables =
           Executables.filter(_._Id === executableId)
@@ -448,7 +454,7 @@ object SQLite {
     }
 
     override def getExecutionSteps(executionID: Int): List[ExecutionStepPOJO] = {
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         val steps =
           Executionsteps.filter(_.executionid === executionID)
@@ -464,7 +470,7 @@ object SQLite {
     /** Adds a new scala tactic and returns the resulting id */
     /*@TODO Understand whether to use the ID passed in or generate our own*/
     override def addScalaTactic(scalaTactic: ScalaTacticPOJO): Int = {
-      session.withTransaction({
+      synchronizedTransaction({
         (Scalatactics.map({ case tactic => tactic.location.get })
           returning Scalatactics.map(_._Id.get))
           .insert(scalaTactic.location)
@@ -485,7 +491,7 @@ object SQLite {
 
     /** Adds a built-in tactic application using a set of parameters */
     override def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int = {
-      session.withTransaction({
+      synchronizedTransaction({
         val executableId =
           (Executables.map({ case exe => ( exe.scalatacticid, exe.belleexpr)})
             returning Executables.map(_._Id.get))
@@ -503,7 +509,7 @@ object SQLite {
     /** Updates an executable step's status. @note should not be transitive */
     override def updateExecutionStatus(executionStepId: Int, status: ExecutionStepStatus): Unit = {
       val newStatus = ExecutionStepStatus.toString(status)
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         nUpdates = nUpdates + 1
         Executionsteps.filter(_._Id === executionStepId).map(_.status).update(Some(newStatus))
@@ -512,7 +518,7 @@ object SQLite {
 
 
     def updateResultProvable(executionStepId: Int, provableId: Option[Int]): Unit = {
-      session.withTransaction({
+      synchronizedTransaction({
         nSelects = nSelects + 1
         nUpdates = nUpdates + 1
         Executionsteps.filter(_._Id === executionStepId).map(_.resultprovableid).update(provableId)
@@ -547,7 +553,7 @@ object SQLite {
     }
 
     def proofSteps(executionId: Int): List[ExecutionStepPOJO] = {
-      session.withTransaction({
+      synchronizedTransaction({
         var steps = Executionsteps.filter(_.executionid === executionId).list
         var prevId: Option[Int] = None
         var revResult: List[ExecutionStepPOJO] = Nil
@@ -579,14 +585,15 @@ object SQLite {
     }
 
     private def getTacticExecution(proofId: Int): Int =
-      session.withTransaction({
-        val executionIds =
-          Tacticexecutions.filter(_.proofid === proofId)
-            .list
-            .map({case row => row._Id.get})
-        if (executionIds.length < 1) throw new Exception("getTacticExecution type should be an Option")
-        else if (executionIds.length == 1) executionIds.head
-        else throw new Exception("Primary keys aren't unique in executions table.")})
+      synchronizedTransaction({
+          val executionIds =
+            Tacticexecutions.filter(_.proofid === proofId)
+              .list
+              .map({ case row => row._Id.get })
+          if (executionIds.length < 1) throw new Exception("getTacticExecution type should be an Option")
+          else if (executionIds.length == 1) executionIds.head
+          else throw new Exception("Primary keys aren't unique in executions table.")
+        })
 
     override def getExecutionTrace(proofId: Int): ExecutionTrace = {
       val executionId = getTacticExecution(proofId)
