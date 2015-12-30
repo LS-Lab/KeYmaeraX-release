@@ -45,9 +45,7 @@ CREATE TABLE IF NOT EXISTS `lemmas` (
 -- TODO eventually remove these tables in favor of lemmas everywhere.
 CREATE TABLE IF NOT EXISTS `provables` (
   `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  -- Work around Slick bug where it's impossible to insert without specifying at least one of the columns. This is
-  -- never actually used for anything.
-  `insertStatementWasSyntacticallyValid` INTEGER
+  `lemmaId` TEXT NOT NULL -- @todo Currently an ID used with the FileLemmaDB, evaluate wheter lemmas table makes sense
 );
 
 CREATE TABLE IF NOT EXISTS `sequents` (

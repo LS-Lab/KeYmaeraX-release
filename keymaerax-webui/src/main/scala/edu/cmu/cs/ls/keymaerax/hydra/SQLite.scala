@@ -13,9 +13,10 @@ import javax.crypto.spec.PBEKeySpec
 import javax.xml.bind.DatatypeConverter
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, BelleExpr}
-import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Provable, Sequent}
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Lemma, Formula, Provable, Sequent}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
-import _root_.edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import _root_.edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import _root_.edu.cmu.cs.ls.keymaerax.parser.{ProofEvidence, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
 
 import scala.collection.immutable.Nil
@@ -388,12 +389,11 @@ object SQLite {
     /** Stores a Provable in the database and returns its ID */
     override def serializeProvable(p: Provable): Int = {
       session.withTransaction({
-        /* Working around bug in slick: The natural thing to write would be insert() without any arguments, but
-        * that generates an ill-formed SQL statement, so let's explicitly insert a row with a null conclusion - it
-        * does the same thing but generates SQL that parses.*/
+        val lemma = Lemma(p, List(ProofEvidence()))
+        val lemmaId = LemmaDBFactory.lemmaDB.add(lemma)
         val provableId =
-          (Provables.map({ case provable => provable.insertstatementwassyntacticallyvalid.get}) returning Provables.map(_._Id.get))
-            .insert(1)
+          (Provables.map({ case provable => provable.lemmaid.get}) returning Provables.map(_._Id.get))
+            .insert(lemmaId)
         serializeSequent(p.conclusion, provableId, None)
         for(i <- p.subgoals.indices) {
           serializeSequent(p.subgoals(i), provableId, Some(i))
@@ -416,7 +416,13 @@ object SQLite {
       })
 
     /** Use escape hatch in prover core to create a new Provable */
-    override def loadProvable(provableId: Int): Sequent = ???
+    override def loadProvable(provableId: Int): Provable = {
+      val lemmaId = Provables.filter(_._Id === provableId).map(_.lemmaid).list.head
+      LemmaDBFactory.lemmaDB.get(lemmaId) match {
+        case None => throw new Exception ("No lemma with ID " + lemmaId + "for provable ID " + provableId)
+        case Some(lemma) => lemma.fact
+      }
+    }
 
     /** Rerun all execution steps to generate a provable for the current state of the proof
       * Assumes the execution starts with a trivial provable (one subgoal, which is the same
