@@ -237,6 +237,13 @@ trait RestApi extends HttpService {
   val axiomList = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, goalId, formulaId) => { pathEnd {
     get {
       val request = new GetApplicableAxiomsRequest(database, userId, proofId, nodeId, goalId, parseFormulaId(formulaId))
+      //@note mock data for right-clicking formulas
+      /*val request = formulaId match {
+        case "F5s0" => new MockRequest("/mockdata/andaxiomlist.json")
+        case "F5s1" => new MockRequest("/mockdata/ltaxiomlist.json")
+        case "1," => new MockRequest("/mockdata/implyaxiomlist.json")
+        case "1,1" => new MockRequest("/mockdata/loopaxiomlist.json")
+      }*/
       complete(standardCompletion(request))
     }
   }}}
@@ -249,7 +256,7 @@ trait RestApi extends HttpService {
     }
   }
 
-  val useAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "use" / Segment) { (userId, proofId, nodeId, goalId, formulaId, axiomId) => { pathEnd {
+  val doAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, goalId, formulaId, axiomId) => { pathEnd {
     get {
       val tactic = axiomToTactic(axiomId)
       val request = new RunBelleTermRequest(database, userId, proofId, goalId, tactic, Some(parseFormulaId(formulaId)))
@@ -562,7 +569,7 @@ trait RestApi extends HttpService {
     proofTasksPathAll     ::
     proofTasksBranchRoot  ::
     axiomList             ::
-    useAt                 ::
+    doAt                  ::
     pruneBelow            ::
     proofTask             ::
     nodeFormulaTactics    ::

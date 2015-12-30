@@ -13,7 +13,8 @@ angular.module('formula')
             formula: '=',
             highlight: '=',
             collapsed: '=?',
-            onAxiom: '&'     // onAxiom(formulaId, axiomId)
+            onTactic: '&',     // onTactic(formulaId, tacticId)
+            onInputTactic: '&' // onInputTactic(formulaId, tactic)
         },
         link: function($scope, $sce) {
             var span = function(id, content, depth) {
@@ -26,8 +27,11 @@ angular.module('formula')
                              // initialize formulaId for popover template, use ng-repeat for scoping
                              'ng-repeat="formulaId in [\'' + id + '\']"' +
                              'uib-popover-template="\'js/keymaera-ui/axiomPopoverTemplate.html\'"' +
-                             'popover-title="Apply axiom"' +
-                             'popover-trigger="contextmenu" popover-placement="bottom" tabindex="-1">' + content + '</span>';
+                             'popover-title="Apply tactic"' +
+                             'popover-is-open="tacticPopover.isOpen(\'' + id + '\')"' +
+                             'popover-trigger="outsideClick"' + // in upcoming angular-ui 1.0
+                             'popover-append-to-body="true"' +
+                             'popover-placement="bottom">' + content + '</span>';
                 } else {
                     return content;
                 }
@@ -363,7 +367,7 @@ angular.module('formula')
             $scope.formulaClick = function(formulaId, event) {
               // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
               event.stopPropagation();
-              $scope.onAxiom({formulaId: formulaId, axiomId: "step"});
+              $scope.onTactic({formulaId: formulaId, tacticId: "step"});
             }
 
             $scope.formulaRightClick = function(formulaId, event) {
@@ -374,16 +378,96 @@ angular.module('formula')
                 // axioms not fetched yet
                 $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.nodeId + '/' + $scope.goalId + '/' + formulaId + '/list')
                   .success(function(data) {
-                    $scope.formulaAxiomsMap[formulaId] = data;
+                    $scope.formulaAxiomsMap[formulaId] = $.map(data, function(tactic, i) {
+                      if (tactic.deduction.type === 'sequentrule') {
+                        return convertSequentRuleToInput(tactic);
+                      } else if (tactic.deduction.type === 'axiom') {
+                        return tactic;
+                      } else {
+                        console.log("Unknown deduction type '" + tactic.deduction.type + "'");
+                      }
+                    });
+                    $scope.tacticPopover.open(formulaId);
                 });
               } else {
-                console.log("Supplying axioms for " + formulaId + " from local cache: " + $scope.formulaAxiomsMap[formulaId].length)
+                // tactic already cached
+                $scope.tacticPopover.open(formulaId);
               }
             }
 
-            $scope.applyAxiom = function(formulaId, axiomId) {
-              console.log("Applying axiom " + axiomId + " on formula " + formulaId);
-              $scope.onAxiom({formulaId: formulaId, axiomId: axiomId});
+            $scope.applyTactic = function(formulaId, tacticId) {
+              console.log("Applying tactic " + tacticId + " on formula " + formulaId);
+              $scope.onTactic({formulaId: formulaId, tacticId: tacticId});
+            }
+
+            $scope.applyInputTactic = function(formulaId, tactic) {
+              console.log("Applying input tactic " + tactic.id + " on formula " + formulaId);
+              $scope.onInputTactic({formulaId: formulaId, tacticId: tacticId});
+            }
+
+            $scope.input = function(formula, tactic) {
+              return $.grep(tactic.deduction.input, function(elem, i) { return elem.param === formula; })[0].value;
+            }
+
+            $scope.tacticPopover = {
+              openFormulaId: undefined,
+              isOpen: function(formulaId) { return $scope.tacticPopover.openFormulaId === formulaId; },
+              open: function(formulaId) { $scope.tacticPopover.openFormulaId = formulaId; },
+              close: function() { $scope.tacticPopover.openFormulaId = undefined; }
+            }
+
+            convertSequentRuleToInput = function(tactic) {
+              tactic.deduction.premise = $.map(tactic.deduction.premise, function(premise, i) {
+                return {ante: convertToInput(premise.ante, tactic), succ: convertToInput(premise.succ, tactic)};
+              });
+              return tactic;
+            }
+
+            convertToInput = function(formulas, tactic) {
+              //@note double-wrap array so that it doesn't get flattened
+              return $.map(formulas, function(formula, i) { return [convertFormulaToInput(formula, tactic)]; });
+            }
+
+            convertFormulaToInput = function(formula, tactic) {
+              var inputs = $.grep(tactic.deduction.input, function(input, i) { return formula.indexOf(input.param) >= 0; });
+              var inputBoundaries = $.map(inputs, function(input, i) {
+                var inputStart = formula.indexOf(input.param);
+                return {start: inputStart, end: inputStart + input.param.length };
+              }).sort(function(a, b) { a.start <= b.start ? -1 : 1; });
+
+              var result = [];
+              if (inputBoundaries.length > 0) {
+                result[0] = {text: formula.slice(0, inputBoundaries[0].start), isInput: false};
+                result[1] = createInput(formula, tactic, inputBoundaries[0]);
+                for (var i = 1; i < inputBoundaries.length; i++) {
+                  result[i+1] = {text: formula.slice(inputBoundaries[i-1].end, inputBoundaries[i].start), isInput: false};
+                  result[i+2] = createInput(formula, tactic, inputBoundaries[i]);
+                }
+                result[inputBoundaries.length+1] = {
+                  text: formula.slice(inputBoundaries[inputBoundaries.length-1].end, formula.length),
+                  isInput: false
+                }
+              } else {
+                result[0] = {text: formula, isInput: false};
+              }
+              return result;
+            }
+
+            createInput = function(formula, tactic, inputBoundary) {
+              var inputId = formula.slice(inputBoundary.start, inputBoundary.end);
+              return {
+                text: inputId,
+                isInput: true,
+                value: function(newValue) {
+                  if (newValue === undefined) {
+                    // get
+                    return $.grep(tactic.deduction.input, function(elem, i) { return elem.param === inputId; })[0].value;
+                  } else {
+                    // set
+                    return $.grep(tactic.deduction.input, function(elem, i) { return elem.param === inputId; })[0].value = newValue;
+                  }
+                }
+              };
             }
 
             var fmlMarkup = parseFormulaHelper($scope.formula, 0, $scope.collapsed);

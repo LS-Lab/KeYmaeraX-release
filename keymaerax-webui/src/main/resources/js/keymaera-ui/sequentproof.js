@@ -124,14 +124,18 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         return (candidates != null ? candidates.filter(function(e) { return fp.indexOf(e) < 0 && scope.agenda.itemsByProofStep(e).length > 0; }) : []);
       }
 
-      scope.onUseAt = function(formulaId, axiomId) {
-        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + scope.deductionPath.sections[0].path[0] + '/' + formulaId + '/use/' + axiomId).success(function(data) {
+      scope.onApplyTactic = function(formulaId, tacticId) {
+        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + scope.deductionPath.sections[0].path[0] + '/' + formulaId + '/doAt/' + tacticId).success(function(data) {
           scope.proofTree.nodesMap[data.id] = data;
           scope.proofTree.nodesMap[data.parent].children = [data.id];
           scope.proofTree.nodesMap[data.parent].rule = data.byRule;
           // prepend new open goal to deduction path
           scope.agenda.itemsMap[scope.nodeId].deduction.sections[0].path.unshift(data.id);
         });
+      }
+
+      scope.onApplyInputTactic = function(formulaId, tactic) {
+        console.log("Asked to apply an input tactic");
       }
 
       scope.fetchParentRightClick = function(event) {
@@ -165,6 +169,12 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       /** Prunes the proof tree and agenda/deduction path below the specified step ID. */
       scope.prune = function(goalId) {
         sequentProofData.prune(scope.userId, scope.proofId, scope.nodeId, goalId);
+      }
+
+      /* Indicates whether the section has a parent (if its last step has a parent, and the section is not complete) */
+      scope.hasParent = function(section) {
+        var step = section.path[section.path.length - 1];
+        return sequentProofData.proofTree.nodesMap[step].parent !== null && (!section.isComplete || section.isCollapsed);
       }
 
       scope.deductionPath.isCollapsed = false;

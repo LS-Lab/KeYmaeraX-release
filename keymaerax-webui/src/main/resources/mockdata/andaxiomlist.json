@@ -2,11 +2,17 @@
   {
     "id": "and commute",
     "name": "& commute",
-    "axiom": "(p() & q()) <-> (q() & p())"
+    "deduction": {
+      "type": "axiom",
+      "formula": "(p() & q()) <-> (q() & p())"
+    }
   },
   {
     "id": "and true",
     "name": "& true",
-    "axiom": "(p()&true) <-> p()"
+    "deduction": {
+      "type": "axiom",
+      "formula": "(p()&true) <-> p()"
+    }
   }
 ]

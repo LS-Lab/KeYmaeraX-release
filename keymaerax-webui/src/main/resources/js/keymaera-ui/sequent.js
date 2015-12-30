@@ -10,7 +10,8 @@ angular.module('sequent', ['ngSanitize','formula'])
             sequent: '=',
             readOnly: '=?',
             collapsed: '=?',
-            onUseAt: '&'
+            onApplyTactic: '&',
+            onApplyInputTactic: '&'
         },
         link: function($scope, $sce, $uibModal, $http, $cookies, Tactics) {
             // TODO should issue events other controllers can subscribe to
@@ -68,7 +69,13 @@ angular.module('sequent', ['ngSanitize','formula'])
                 });
             }
 
-            $scope.onAxiom = function(formulaId, axiomId) { $scope.onUseAt({formulaId: formulaId, axiomId: axiomId}); }
+            $scope.onTactic = function(formulaId, tacticId) {
+              $scope.onApplyTactic({formulaId: formulaId, tacticId: tacticId});
+            }
+
+            $scope.inInputTactic = function(formulaId, tactic) {
+              $scope.onApplyInputTactic({formulaId: formulaId, tactic: tactic});
+            }
         },
         templateUrl: 'partials/collapsiblesequent.html'
     };

@@ -13,7 +13,8 @@
                 <div class="k4-formula-content k4-abbreviate">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="false" collapsed="true"
-                                on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
+                                on-tactic="onTactic(formulaId, tacticId)"
+                                on-input-tactic="onInputTactic(formulaId, tactic)"></k4-formula>
                 </div>
             </div>
         </div>
@@ -36,7 +37,8 @@
                 <div class="k4-formula-content k4-abbreviate">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="false" collapsed="true"
-                                on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
+                                on-tactic="onTactic(formulaId, tacticId)"
+                                on-input-tactic="onInputTactic(formulaId, tactic)"></k4-formula>
                 </div>
             </div>
         </div>
@@ -63,14 +65,16 @@
                     <ul><li>-{{$index + 1}}:</li></ul>
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="true" collapsed="false"
-                                on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
+                                on-tactic="onTactic(formulaId, tacticId)"
+                                on-input-tactic="onInputTactic(formulaId, tactic)"></k4-formula>
                 </div>
             </div>
             <div class="col-md-12 k4-formula" ng-if="readOnly">
                 <div class="k4-formula-content">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="false" collapsed="false"
-                                on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
+                                on-tactic="onTactic(formulaId, tacticId)"
+                                on-input-tactic="onInputTactic(formulaId, tactic)"></k4-formula>
                 </div>
             </div>
         </div>
@@ -109,14 +113,16 @@
                     <ul><li>{{$index + 1}}:</li></ul>
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="true" collapsed="false"
-                                on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
+                                on-tactic="onTactic(formulaId, tacticId)"
+                                on-input-tactic="onInputTactic(formulaId, tactic)"></k4-formula>
                 </div>
             </div>
             <div class="col-md-12 k4-formula" ng-if="readOnly">
                 <div class="row k4-formula-content">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
-                            formula="f.formula" highlight="false" collapsed="false"
-                            on-axiom="onAxiom(formulaId, axiomId)"></k4-formula>
+                                formula="f.formula" highlight="false" collapsed="false"
+                                on-tactic="onTactic(formulaId, tacticId)"
+                                on-input-tactic="onInputTactic(formulaId, tactic)"></k4-formula>
                 </div>
 
             </div>
