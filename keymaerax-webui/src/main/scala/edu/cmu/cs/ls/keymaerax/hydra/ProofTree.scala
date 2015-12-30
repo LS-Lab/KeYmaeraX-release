@@ -35,7 +35,7 @@ object ProofTree {
     var steps = trace.steps
     while (steps.nonEmpty && steps.head.output.nonEmpty) {
       val step = steps.head
-      val branch = step.branch.left.get
+      val branch = step.branch
       val outputProvable = step.output.get
       /* This step closed a branch*/
       if(outputProvable.subgoals.length == openGoals.length - 1) {

@@ -116,11 +116,11 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
 }
 
 /* User-friendly representation for execution traces */
-case class ExecutionStep(input:Provable, output:Option[Provable], branch:Either[Int, String], alternativeOrder:Int)
+case class ExecutionStep(input:Provable, output:Option[Provable], branch:Int, alternativeOrder:Int)
 case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequent, steps:List[ExecutionStep]) {
   def branch =
     steps match {
-      case Nil => Left(0)
+      case Nil => 0
       case _ => steps.last.branch
     }
 

@@ -10,8 +10,8 @@ import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
   */
 object TacticDebugger {
 
-  class DebuggerListener (db: DBAbstraction, executionId: Int,
-                          alternativeOrder: Int, branch:Either[Int, String],
+  class DebuggerListener (db: DBAbstraction, executionId: Int, globalProvable:Provable,
+                          alternativeOrder: Int, branch:Int,
                           recursive: Boolean) extends IOListener {
     class TraceNode (isFirstNode: Boolean){
       var id: Option[Int] = None
@@ -28,8 +28,8 @@ object TacticDebugger {
        */
       var stepId: Option[Int] = None
       val altOrder = if (isFirstNode) alternativeOrder else 0
-      val branchLabel: String = branch match {case Right(label) => label case _ => null}
-      val branchOrder: Option[Int] = branch match {case Left(order) => Some(order) case _ => None}
+      val branchLabel: String = null
+      val branchOrder: Option[Int] = Some(branch)
       val userExe = isFirstNode
 
       var inputProvableId: Option[Int] = None
@@ -76,7 +76,7 @@ object TacticDebugger {
         node.sibling = youngestSibling
         node.executable = expr
         node.input = v match {
-          case BelleProvable(p) => p
+          case BelleProvable(p) => globalProvable(p, branch)
         }
         node.status = ExecutionStepStatus.Running
 
@@ -100,7 +100,7 @@ object TacticDebugger {
         node = node.parent
         youngestSibling = current
         result match {
-          case BelleProvable(p) => current.output = p
+          case BelleProvable(p) => current.output = globalProvable(p, branch)
         }
         current.status = ExecutionStepStatus.Finished
         if (node != null && !recursive) return

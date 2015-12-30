@@ -238,7 +238,7 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
 //  )
 //}
 
-class RunBelleTermResponse() extends Response {
+class RunBelleTermResponse(parent: TreeNode, children: List[TreeNode]) extends Response {
   val json = JsNull
 }
 

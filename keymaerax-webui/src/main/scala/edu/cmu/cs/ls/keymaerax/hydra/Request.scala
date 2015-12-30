@@ -682,24 +682,29 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case None => throw new Exception("Invalid Bellerophon expression:  " + belleTerm)
       case Some(expr) =>
         val trace = db.getExecutionTrace(proofId.toInt)
-        val provable =
-          trace.steps match {
-            case Nil => Provable.startProof(trace.conclusion)
-            case _ =>
-              // @todo Does this work?
-              trace.steps.last.output match {
-                case Some(provable) => provable
-                case None => trace.steps.last.input
-              }
+        val tree = ProofTree.ofTrace(trace)
+        val node =
+          tree.findNode(nodeId) match {
+            case None => throw new Exception("Invalid node " + nodeId)
+            case Some(node) => node
           }
-        val listener = new DebuggerListener(db, trace.executionId.toInt, trace.alternativeOrder, trace.branch, recursive = false)
+        val localProvable = Provable.startProof(node.sequent)
+        val globalProvable =
+          trace.steps match {
+            case Nil => localProvable
+            case steps => steps.last.output.getOrElse(steps.last.input)
+          }
+        val listener = new DebuggerListener(db, trace.executionId.toInt, globalProvable, trace.alternativeOrder, trace.branch, recursive = false)
         //BellerophonTacticExecutor.defaultExecutor.schedule (expr, provable)
-        SequentialInterpreter(List(listener))(expr, BelleProvable(provable)) match {
+        val finalProvable = SequentialInterpreter(List(listener))(expr, BelleProvable(localProvable)) match {
           case BelleProvable(outputProvable) =>
             println("I proved " + outputProvable.prettyString)
-            new RunBelleTermResponse() :: Nil
-
+            outputProvable
         }
+        val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+        val parentNode = finalTree.findNode(nodeId).get
+        val response = new RunBelleTermResponse(parentNode, parentNode.children)
+        response :: Nil
 
     }
   }

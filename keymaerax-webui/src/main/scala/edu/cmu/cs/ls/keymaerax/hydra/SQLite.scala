@@ -594,10 +594,7 @@ object SQLite {
         steps.map{case step =>
             val input = loadProvable(step.inputProvableId)
             val output = step.resultProvableId.map{case id => loadProvable(id)}
-            val branch = step.branchLabel match {
-              case Some(str) => Right(str)
-              case None => Left(step.branchOrder.get)
-            }
+            val branch = step.branchOrder.get
             new ExecutionStep(input = input, output = output, branch = branch, alternativeOrder = step.alternativeOrder)
         }
       val conclusion = getProofConclusion(proofId)
