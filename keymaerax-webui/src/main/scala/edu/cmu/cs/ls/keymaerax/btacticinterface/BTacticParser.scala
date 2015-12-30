@@ -140,7 +140,7 @@ object BTacticParser {
     }
 
     /** Parses a name to a BelleExpr.
-      * Each name should be either reserved (i.e., a key in [[RegisteredTacticNames.registeredNames]])
+      * Each name should be either reserved (i.e., a key in [[edu.cmu.cs.ls.keymaerax.btactics.ExposedTacticsLibrary.tactics]])
       * or else of the form package.method
       */
     lazy val baseTacticNoInput : PackratParser[BelleExpr] = {

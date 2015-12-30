@@ -28,21 +28,30 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         throw new BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.").inContext(expr, "")
       case AppliedPositionTactic(positionTactic, pos) => v match {
         case BelleProvable(pr) => try {
-          //@todo need to pattern match on (pos: PositionLocator) and figure out what to do next.
-          ???
-//          BelleProvable(positionTactic.computeResult(pr, pos))
+          BelleProvable(positionTactic.apply(pos).computeResult(pr))
         } catch {
           case e: BelleError => throw e.inContext(positionTactic + " at " + pos, pr.prettyString)
-        }}
+        }
+      }
       case positionTactic@AppliedTwoPositionTactic(_, posOne, posTwo) => v match {
         case BelleProvable(pr) => try {
           BelleProvable(positionTactic.computeResult(pr))
         } catch {
           case e: BelleError => throw e.inContext(positionTactic + " at " + posOne + ", " + posTwo, pr.prettyString)
         }}
-      case SeqTactic(left, right, location) =>
-        val leftResult = try { apply(left, v) } catch {case e: BelleError => throw e.inContext(SeqTactic(e.context, right, location), "Failed left-hand side of &: " + left)}
-        try { apply(right, leftResult) } catch {case e: BelleError => throw e.inContext(SeqTactic(left, e.context, location), "Failed right-hand side of &: " + right)}
+      case SeqTactic(left, right, location) => {
+        val leftResult = try {
+          apply(left, v)
+        } catch {
+          case e: BelleError => throw e.inContext(SeqTactic(e.context, right, location), "Failed left-hand side of &: " + left)
+        }
+
+        try {
+          apply(right, leftResult)
+        } catch {
+          case e: BelleError => throw e.inContext(SeqTactic(left, e.context, location), "Failed right-hand side of &: " + right)
+        }
+      }
       case d: DependentTactic => try {
         val valueDependentTactic = d.computeExpr(v)
         apply(valueDependentTactic, v)

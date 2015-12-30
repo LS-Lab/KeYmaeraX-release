@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btacticinterface
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{RegisteredTacticNames, BelleExpr}
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.btactics.ExposedTacticsLibrary
 import edu.cmu.cs.ls.keymaerax.core.{SeqPos, Formula}
 
 /**
@@ -10,15 +10,15 @@ import edu.cmu.cs.ls.keymaerax.core.{SeqPos, Formula}
   */
 object ReflectiveExpressionBuilder {
   def apply(name: String) : BelleExpr =
-    RegisteredTacticNames.registeredNames.get(name) match {
+    ExposedTacticsLibrary.tactics.get(name) match {
       case Some(e) => e
-      case None    => ???
+      case None    => ??? //@todo implement the class.method builder.
     }
 
   def apply(name: String, arguments: List[Either[Formula, SeqPos]]) : BelleExpr =
-    RegisteredTacticNames.registeredNames.get(name) match {
+    ExposedTacticsLibrary.tactics.get(name) match {
       case Some(e) => e
-      case None    => ???
+      case None    => ??? //@todo implement the class.method builder.
     }
 }
 
