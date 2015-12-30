@@ -367,7 +367,7 @@ class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request
 class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wait : Boolean = false) extends Request {
   def getResultingResponses() = {
     /* @todo Total cop-out to help the UI run until we write something better */
-    (new OpenProofResponse(db.getProofInfo(proofId), TaskManagement.TaskLoadStatus.Loaded.toString)) :: Nil
+    (new OpenProofResponse(db.getProofInfo(proofId), TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase())) :: Nil
   }
 //  {
 //    val proof = db.getProofInfo(proofId)
