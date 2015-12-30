@@ -303,21 +303,23 @@ trait Tables {
   
   /** Entity class storing rows of table Provables
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
-   *  @param insertstatementwassyntacticallyvalid Database column insertStatementWasSyntacticallyValid DBType(INTEGER) */
-  case class ProvablesRow(_Id: Option[Int], insertstatementwassyntacticallyvalid: Option[Int])
+   *  @param lemmaid Database column lemmaId DBType(TEXT) */
+  case class ProvablesRow(_Id: Option[Int], lemmaid: String)
   /** GetResult implicit for fetching ProvablesRow objects using plain SQL queries */
-  implicit def GetResultProvablesRow(implicit e0: GR[Option[Int]]): GR[ProvablesRow] = GR{
+  implicit def GetResultProvablesRow(implicit e0: GR[Option[Int]], e1: GR[String]): GR[ProvablesRow] = GR{
     prs => import prs._
-    ProvablesRow.tupled((<<?[Int], <<?[Int]))
+    ProvablesRow.tupled((<<?[Int], <<[String]))
   }
   /** Table description of table provables. Objects of this class serve as prototypes for rows in queries. */
   class Provables(_tableTag: Tag) extends Table[ProvablesRow](_tableTag, "provables") {
-    def * = (_Id, insertstatementwassyntacticallyvalid) <> (ProvablesRow.tupled, ProvablesRow.unapply)
+    def * = (_Id, lemmaid) <> (ProvablesRow.tupled, ProvablesRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = (_Id, lemmaid.?).shaped.<>({r=>import r._; _2.map(_=> ProvablesRow.tupled((_1, _2.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
     val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
-    /** Database column insertStatementWasSyntacticallyValid DBType(INTEGER) */
-    val insertstatementwassyntacticallyvalid: Column[Option[Int]] = column[Option[Int]]("insertStatementWasSyntacticallyValid")
+    /** Database column lemmaId DBType(TEXT) */
+    val lemmaid: Column[String] = column[String]("lemmaId")
   }
   /** Collection-like TableQuery object for table Provables */
   lazy val Provables = new TableQuery(tag => new Provables(tag))

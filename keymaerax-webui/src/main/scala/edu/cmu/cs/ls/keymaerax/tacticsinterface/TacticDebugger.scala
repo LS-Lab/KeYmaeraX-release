@@ -11,12 +11,14 @@ import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 object TacticDebugger {
 
   class DebuggerListener (db: DBAbstraction, executionId: Int,
-                          alternativeOrder: Int, branch:Either[Int, String],
+                          initialSibling: Option[Int],
+                          globalProvable:Provable,
+                          alternativeOrder: Int, branch:Int,
                           recursive: Boolean) extends IOListener {
     class TraceNode (isFirstNode: Boolean){
       var id: Option[Int] = None
       var parent: TraceNode = null
-      var sibling: TraceNode = null
+      var sibling: Option[Int] = None
       var input: Provable = null
       var output: Provable = null
       var executable: BelleExpr = null
@@ -28,8 +30,8 @@ object TacticDebugger {
        */
       var stepId: Option[Int] = None
       val altOrder = if (isFirstNode) alternativeOrder else 0
-      val branchLabel: String = branch match {case Right(label) => label case _ => null}
-      val branchOrder: Option[Int] = branch match {case Left(order) => Some(order) case _ => None}
+      val branchLabel: String = null
+      val branchOrder: Option[Int] = Some(branch)
       val userExe = isFirstNode
 
       var inputProvableId: Option[Int] = None
@@ -55,15 +57,14 @@ object TacticDebugger {
       }
 
       def asPOJO: ExecutionStepPOJO = {
-        val siblingStep = if (sibling == null) None else sibling.stepId
         val parentStep = if (parent == null) None else parent.stepId
-        new ExecutionStepPOJO (stepId, executionId, siblingStep, parentStep, branchOrder,
+        new ExecutionStepPOJO (stepId, executionId, sibling, parentStep, branchOrder,
           Option(branchLabel), alternativeOrder,status, getExecutableId, getInputProvableId, getOutputProvableId,
           userExe)
       }
     }
 
-    var youngestSibling: TraceNode = null
+    var youngestSibling: Option[Int] = initialSibling
     var node: TraceNode = null
     var isDead: Boolean = false
 
@@ -76,7 +77,7 @@ object TacticDebugger {
         node.sibling = youngestSibling
         node.executable = expr
         node.input = v match {
-          case BelleProvable(p) => p
+          case BelleProvable(p) => globalProvable(p, branch)
         }
         node.status = ExecutionStepStatus.Running
 
@@ -98,9 +99,9 @@ object TacticDebugger {
         if(isDead) return
         val current = node
         node = node.parent
-        youngestSibling = current
+        youngestSibling = current.id
         result match {
-          case BelleProvable(p) => current.output = p
+          case BelleProvable(p) => current.output = globalProvable(p, branch)
         }
         current.status = ExecutionStepStatus.Finished
         if (node != null && !recursive) return

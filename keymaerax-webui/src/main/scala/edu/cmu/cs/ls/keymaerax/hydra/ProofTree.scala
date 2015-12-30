@@ -7,11 +7,12 @@ import scala.collection.immutable.Nil
 /**
   * Created by bbohrer on 12/29/15.
   */
-case class ProofTree(id: String, nodes: List[TreeNode], root: TreeNode, leaves: List[AgendaItem]) {
+case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, leaves: List[AgendaItem]) {
   def leavesAndRoot = root :: leaves.map({case item => item.goal})
   def parent(id: String): Option[TreeNode] =
     nodes.find({case node => node.id.toString == id}).flatMap({case node => node.parent})
-  def findNode(id: String) = nodes.find({case node => node.id.toString.equals(id)})
+  def findNode(id: String) = nodes.find({case node =>
+    node.id.toString == id})
 }
 object ProofTree {
   def ofTrace(trace:ExecutionTrace): ProofTree = {
@@ -26,31 +27,31 @@ object ProofTree {
     if (trace.steps.isEmpty) {
       val sequent = trace.conclusion
       val node = treeNode(sequent, None)
-      return ProofTree(trace.proofId, List(node), node, List(AgendaItem(node.id.toString, "Unnamed Item", trace.toString, node)))
+      return ProofTree(trace.proofId, List(node), node, List(AgendaItem(node.id.toString, "Unnamed Item", trace.proofId, node)))
     }
 
-    val ProvableSequents(conclusion, rootSubgoals) = trace.steps.head.input
-    var openGoals = rootSubgoals.map({case subgoal => treeNode(subgoal, None)})
-    var allNodes = openGoals
+    val inputProvable = trace.steps.head.input
+    var openGoals = inputProvable.subgoals.map({case subgoal => treeNode(subgoal, None)})
+    var allNodes = openGoals.toList
     var steps = trace.steps
     while (steps.nonEmpty && steps.head.output.nonEmpty) {
       val step = steps.head
-      val branch = step.branch.left.get
-      val ProvableSequents(_, endSubgoals) = step.output.get
+      val branch = step.branch
+      val outputProvable = step.output.get
       /* This step closed a branch*/
-      if(endSubgoals.length == openGoals.length - 1) {
+      if(outputProvable.subgoals.length == openGoals.length - 1) {
         openGoals = openGoals.slice(0, branch) ++ openGoals.slice(branch + 1, openGoals.length)
       } else {
-        val (updated :: added) =
-          endSubgoals.filter({case sg => !openGoals.exists({case node => node.sequent == sg})})
-        val updatedNode = treeNode(updated, Some(openGoals(branch)))
-        val addedNodes = added.map({case sg => treeNode(sg, Some(openGoals(branch)))})
+        val delta =
+          outputProvable.subgoals.filter({case sg => !openGoals.exists({case node => node.sequent == sg})})
+        val updatedNode = treeNode(delta.head, Some(openGoals(branch)))
+        val addedNodes = delta.tail.map({case sg => treeNode(sg, Some(openGoals(branch)))})
         openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
-        allNodes = allNodes ++ (updatedNode :: addedNodes)
+        allNodes = allNodes ++ (updatedNode :: addedNodes.toList)
       }
       steps = steps.tail
     }
-    val items: List[AgendaItem] = openGoals.map(i => AgendaItem(i.id.toString, "Unnamed Goal", trace.proofId, i))
+    val items: List[AgendaItem] = openGoals.map(i => AgendaItem(i.id.toString, "Unnamed Goal", trace.proofId, i)).toList
     ProofTree(trace.proofId, allNodes, allNodes.head, items)
   }
 }
