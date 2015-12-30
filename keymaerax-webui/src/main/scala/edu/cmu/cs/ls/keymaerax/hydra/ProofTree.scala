@@ -7,11 +7,12 @@ import scala.collection.immutable.Nil
 /**
   * Created by bbohrer on 12/29/15.
   */
-case class ProofTree(id: String, nodes: List[TreeNode], root: TreeNode, leaves: List[AgendaItem]) {
+case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, leaves: List[AgendaItem]) {
   def leavesAndRoot = root :: leaves.map({case item => item.goal})
   def parent(id: String): Option[TreeNode] =
     nodes.find({case node => node.id.toString == id}).flatMap({case node => node.parent})
-  def findNode(id: String) = nodes.find({case node => node.id.toString.equals(id)})
+  def findNode(id: String) = nodes.find({case node =>
+    node.id.toString == id})
 }
 object ProofTree {
   def ofTrace(trace:ExecutionTrace): ProofTree = {
@@ -26,7 +27,7 @@ object ProofTree {
     if (trace.steps.isEmpty) {
       val sequent = trace.conclusion
       val node = treeNode(sequent, None)
-      return ProofTree(trace.proofId, List(node), node, List(AgendaItem("0", "Unnamed Item", trace.toString, node)))
+      return ProofTree(trace.proofId, List(node), node, List(AgendaItem("0", "Unnamed Item", trace.proofId, node)))
     }
 
     val inputProvable = trace.steps.head.input

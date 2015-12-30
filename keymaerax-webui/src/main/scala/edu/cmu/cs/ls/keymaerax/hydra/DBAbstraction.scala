@@ -116,7 +116,7 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
 }
 
 /* User-friendly representation for execution traces */
-case class ExecutionStep(input:Provable, output:Option[Provable], branch:Int, alternativeOrder:Int)
+case class ExecutionStep(stepId: Int, input:Provable, output:Option[Provable], branch:Int, alternativeOrder:Int)
 case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequent, steps:List[ExecutionStep]) {
   def branch =
     steps match {
@@ -129,6 +129,10 @@ case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequ
       case Nil => 0
       case _ => steps.last.alternativeOrder
     }
+
+  def lastStepId:Option[Int] = {
+    steps.lastOption.map{case step => step.stepId}
+  }
 }
 
 case class ExecutablePOJO(executableId: Int, scalaTacticId: Option[Int], belleExpr: Option[String]) {

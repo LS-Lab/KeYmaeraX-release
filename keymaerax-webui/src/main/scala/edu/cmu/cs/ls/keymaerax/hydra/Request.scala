@@ -15,7 +15,7 @@ import java.util.{Locale, Calendar}
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
-import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter}
+import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo
 import _root_.edu.cmu.cs.ls.keymaerax.core.Provable
@@ -676,11 +676,17 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
 //  }
 }
 
-class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String) extends Request {
+class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,
+                         pos: Option[Position]) extends Request {
   def getResultingResponses() = {
     BTacticParser(belleTerm) match {
       case None => throw new Exception("Invalid Bellerophon expression:  " + belleTerm)
       case Some(expr) =>
+        val appliedExpr =
+          pos match {
+            case None => expr
+            case Some(pos) => expr.asInstanceOf[AtPosition[BelleExpr]](pos)
+        }
         val trace = db.getExecutionTrace(proofId.toInt)
         val tree = ProofTree.ofTrace(trace)
         val node =
@@ -694,9 +700,9 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             case Nil => localProvable
             case steps => steps.last.output.getOrElse(steps.last.input)
           }
-        val listener = new DebuggerListener(db, trace.executionId.toInt, globalProvable, trace.alternativeOrder, trace.branch, recursive = false)
+        val listener = new DebuggerListener(db, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, trace.branch, recursive = false)
         //BellerophonTacticExecutor.defaultExecutor.schedule (expr, provable)
-        val finalProvable = SequentialInterpreter(List(listener))(expr, BelleProvable(localProvable)) match {
+        val finalProvable = SequentialInterpreter(List(listener))(appliedExpr, BelleProvable(localProvable)) match {
           case BelleProvable(outputProvable) =>
             println("I proved " + outputProvable.prettyString)
             outputProvable

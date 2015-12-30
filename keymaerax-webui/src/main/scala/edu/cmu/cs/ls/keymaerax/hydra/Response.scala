@@ -239,7 +239,7 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
 //}
 
 class RunBelleTermResponse(parent: TreeNode, children: List[TreeNode]) extends Response {
-  val json = JsNull
+  val json = Helpers.singleNodeJson(children.head)
 }
 
 //class DispatchedCLTermResponse(t : DispatchedCLTermPOJO) extends Response {
@@ -389,7 +389,7 @@ class AgendaAwesomeResponse(tree: ProofTree) extends Response {
   val proofTree = {
     val nodes = tree.leavesAndRoot.map({case node => (node.id.toString, nodeJson(node))})
     JsObject(
-      "id" -> proofIdJson(tree.id),
+      "id" -> proofIdJson(tree.proofId),
       "nodes" -> new JsObject(nodes.toMap),
       "root" -> nodeIdJson(tree.root.id))
   }

@@ -222,33 +222,46 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  /* Strictly positive position = SuccPosition, strictly negative = AntePosition, 0 not used */
+  def parseFormulaId(id:String):Position = {
+    val (idx :: inExprs) = id.split(',').toList.map({case str => str.toInt})
+    if(idx > 0) {
+      new SuccPosition(idx-1, new PosInExpr(inExprs))
+    } else if (idx < 0) {
+      new AntePosition((-idx)-1)
+    } else {
+      throw new Exception("Invalid formulaId " + id + " in axiomList")
+    }
+  }
+
   val axiomList = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, goalId, formulaId) => { pathEnd {
     get {
-      /* Strictly positive position = SuccPosition, strictly negative = AntePosition, 0 not used */
-      def parseFormulaId(id:String):Position = {
-        val (idx :: inExprs) = id.split(',').toList.map({case str => str.toInt})
-        if(idx > 0) {
-          new SuccPosition(idx-1, new PosInExpr(inExprs))
-        } else if (idx < 0) {
-          new AntePosition((-idx)-1)
-        } else {
-          throw new Exception("Invalid formulaId " + formulaId + " in axiomList")
-        }
-      }
       val request = new GetApplicableAxiomsRequest(database, userId, proofId, nodeId, goalId, parseFormulaId(formulaId))
       complete(standardCompletion(request))
     }
   }}}
 
+  // @todo replace this with AxiomInfo niceness
+  def axiomToTactic(axiom: String): String = {
+    axiom match {
+      case "step" => "Step"
+      case "and true" => "Step"
+    }
+  }
+
   val useAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "use" / Segment) { (userId, proofId, nodeId, goalId, formulaId, axiomId) => { pathEnd {
     get {
+      val tactic = axiomToTactic(axiomId)
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tactic, Some(parseFormulaId(formulaId)))
+      complete(standardCompletion(request))
+      /*
       val request = (formulaId, axiomId) match {
         case ("F5s0", "and true") => new MockRequest("/mockdata/andtrueresult.json")
         case ("F5s0", "step") => new MockRequest("/mockdata/andtrueresult.json")
       }
-      complete(standardCompletion(request))
-    }
-  }}}
+      complete(standardCompletion(request))*/
+    }}
+  }}
 
   val pruneBelow = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId, goalId) => { pathEnd {
     get {
@@ -389,7 +402,7 @@ trait RestApi extends HttpService {
     post {
       entity(as[String]) { params => {
         val term = JsonParser(params).asJsObject.fields.last._2.asInstanceOf[JsString].value
-        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, term)
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, term, None)
         complete(standardCompletion(request))
   }}}}}}
 

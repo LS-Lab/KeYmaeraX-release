@@ -17,6 +17,7 @@ import _root_.edu.cmu.cs.ls.keymaerax.core.{Lemma, Formula, Provable, Sequent}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 import _root_.edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import _root_.edu.cmu.cs.ls.keymaerax.parser.{ProofEvidence, KeYmaeraXProblemParser}
+import _root_.edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
 
 import scala.collection.immutable.Nil
@@ -389,7 +390,7 @@ object SQLite {
     /** Stores a Provable in the database and returns its ID */
     override def serializeProvable(p: Provable): Int = {
       session.withTransaction({
-        val lemma = Lemma(p, List(ProofEvidence()))
+        val lemma = Lemma(p, List(new ToolEvidence(Map("input" -> p.prettyString, "output" -> "true"))))
         val lemmaId = LemmaDBFactory.lemmaDB.add(lemma)
         val provableId =
           (Provables.map({ case provable => provable.lemmaid}) returning Provables.map(_._Id.get))
@@ -595,7 +596,7 @@ object SQLite {
             val input = loadProvable(step.inputProvableId)
             val output = step.resultProvableId.map{case id => loadProvable(id)}
             val branch = step.branchOrder.get
-            new ExecutionStep(input = input, output = output, branch = branch, alternativeOrder = step.alternativeOrder)
+            new ExecutionStep(stepId = step.stepId.get, input = input, output = output, branch = branch, alternativeOrder = step.alternativeOrder)
         }
       val conclusion = getProofConclusion(proofId)
       ExecutionTrace(proofId.toString, executionId.toString, conclusion, traceSteps)

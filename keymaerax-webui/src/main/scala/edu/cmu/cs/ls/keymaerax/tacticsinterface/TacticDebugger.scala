@@ -10,13 +10,15 @@ import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
   */
 object TacticDebugger {
 
-  class DebuggerListener (db: DBAbstraction, executionId: Int, globalProvable:Provable,
+  class DebuggerListener (db: DBAbstraction, executionId: Int,
+                          initialSibling: Option[Int],
+                          globalProvable:Provable,
                           alternativeOrder: Int, branch:Int,
                           recursive: Boolean) extends IOListener {
     class TraceNode (isFirstNode: Boolean){
       var id: Option[Int] = None
       var parent: TraceNode = null
-      var sibling: TraceNode = null
+      var sibling: Option[Int] = None
       var input: Provable = null
       var output: Provable = null
       var executable: BelleExpr = null
@@ -55,15 +57,14 @@ object TacticDebugger {
       }
 
       def asPOJO: ExecutionStepPOJO = {
-        val siblingStep = if (sibling == null) None else sibling.stepId
         val parentStep = if (parent == null) None else parent.stepId
-        new ExecutionStepPOJO (stepId, executionId, siblingStep, parentStep, branchOrder,
+        new ExecutionStepPOJO (stepId, executionId, sibling, parentStep, branchOrder,
           Option(branchLabel), alternativeOrder,status, getExecutableId, getInputProvableId, getOutputProvableId,
           userExe)
       }
     }
 
-    var youngestSibling: TraceNode = null
+    var youngestSibling: Option[Int] = initialSibling
     var node: TraceNode = null
     var isDead: Boolean = false
 
@@ -98,7 +99,7 @@ object TacticDebugger {
         if(isDead) return
         val current = node
         node = node.parent
-        youngestSibling = current
+        youngestSibling = current.id
         result match {
           case BelleProvable(p) => current.output = globalProvable(p, branch)
         }
