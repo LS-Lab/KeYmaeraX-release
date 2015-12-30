@@ -26,7 +26,7 @@ object ProofTree {
     if (trace.steps.isEmpty) {
       val sequent = trace.conclusion
       val node = treeNode(sequent, None)
-      return ProofTree(trace.proofId, List(node), node, List(AgendaItem("0", "Unnamed Item", trace.toString, node)))
+      return ProofTree(trace.proofId, List(node), node, List(AgendaItem(node.id.toString, "Unnamed Item", trace.toString, node)))
     }
 
     val ProvableSequents(conclusion, rootSubgoals) = trace.steps.head.input
@@ -50,11 +50,8 @@ object ProofTree {
       }
       steps = steps.tail
     }
-    var items:List[AgendaItem] = Nil
-    for (i <- openGoals.indices) {
-      items = AgendaItem(i.toString, "Unnamed Goal", trace.proofId, openGoals(i)) :: items
-    }
-    ProofTree(trace.proofId, allNodes, allNodes.head, items.reverse)
+    val items: List[AgendaItem] = openGoals.map(i => AgendaItem(i.id.toString, "Unnamed Goal", trace.proofId, i))
+    ProofTree(trace.proofId, allNodes, allNodes.head, items)
   }
 }
 
