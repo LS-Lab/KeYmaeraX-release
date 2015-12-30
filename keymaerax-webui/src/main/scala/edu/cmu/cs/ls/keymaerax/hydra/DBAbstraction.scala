@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.nio.channels.Channels
 
-import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Provable, Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.PositionTacticAutomation
 
 import java.io.File
@@ -116,8 +116,7 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
 }
 
 /* User-friendly representation for execution traces */
-case class ProvableSequents(conclusion: Sequent, subgoals: List[Sequent])
-case class ExecutionStep(input:ProvableSequents, output:Option[ProvableSequents], branch:Either[Int, String])
+case class ExecutionStep(input:Provable, output:Option[Provable], branch:Either[Int, String])
 case class ExecutionTrace(proofId: String, conclusion: Sequent, steps:List[ExecutionStep])
 
 case class ExecutablePOJO(executableId: Int, scalaTacticId: Option[Int], belleExpr: Option[String]) {
@@ -229,7 +228,7 @@ trait DBAbstraction {
   def getConclusion(provableId: Int): Sequent
 
   /** Use escape hatch in prover core to create a new Provable */
-  def loadProvable(provableId: Int): Sequent
+  def loadProvable(provableId: Int): Provable
 
   /** Deletes a provable and all associated sequents / formulas */
   def deleteProvable(provableId: Int): Unit

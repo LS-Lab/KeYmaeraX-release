@@ -392,7 +392,7 @@ object SQLite {
         val lemma = Lemma(p, List(ProofEvidence()))
         val lemmaId = LemmaDBFactory.lemmaDB.add(lemma)
         val provableId =
-          (Provables.map({ case provable => provable.lemmaid.get}) returning Provables.map(_._Id.get))
+          (Provables.map({ case provable => provable.lemmaid}) returning Provables.map(_._Id.get))
             .insert(lemmaId)
         serializeSequent(p.conclusion, provableId, None)
         for(i <- p.subgoals.indices) {
@@ -431,8 +431,8 @@ object SQLite {
       getExecutionSteps(executionId) match {
         case Nil => throw new Exception("Cannot regenerate provable for empty execution")
         case step::steps =>
-          val ProvableSequents(conclusion, rootSubgoals) = getSequents(step.inputProvableId)
-          val initialProvable = Provable.startProof(conclusion)
+          val inputProvable = loadProvable(step.inputProvableId)
+          val initialProvable = Provable.startProof(inputProvable.conclusion)
           def run(p: Provable, t:BelleExpr): Provable =
             SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
               case BelleProvable(p) => p
@@ -536,31 +536,9 @@ object SQLite {
       Sequent(Nil, ante, succ)
     }
 
-    def getSequents(provableId: Int): ProvableSequents = {
-      session.withTransaction({
-        nSelects = nSelects + 1
-        val sequents =
-          Sequents.filter(_.provableid === provableId)
-            .list
-            .map({ case sequent => (sequent._Id.get, sequent.idx) })
-        val (conclusions, subgoals) =
-          sequents.partition({case (id, idx) => idx.isEmpty})
-        if(conclusions.length != 1)
-          throw new Exception("Provable should have exactly one conclusion in getSequents")
-        val conclusion = conclusions.head
-        val conclusionSequent = getSequent(conclusion._1)
-        val sortedSubgoals = subgoals.sortWith({case (x, y) => x._2.get < y._2.get}).map({case (x, _) => x})
-        var revSequents: List[Sequent] = Nil
-        for (i <- sortedSubgoals.indices) {
-          revSequents = getSequent(sortedSubgoals(i)) :: revSequents
-        }
-        ProvableSequents(conclusionSequent, revSequents.reverse)
-      })
-    }
-
     /** Gets the conclusion of a provable */
     override def getConclusion(provableId: Int): Sequent = {
-      getSequents(provableId).conclusion
+      loadProvable(provableId).conclusion
     }
 
     def printStats = {
@@ -614,8 +592,8 @@ object SQLite {
       var steps = proofSteps(executionId)
       val traceSteps =
         steps.map{case step =>
-            val input = getSequents(step.inputProvableId)
-            val output = step.resultProvableId.map{case id => getSequents(id)}
+            val input = loadProvable(step.inputProvableId)
+            val output = step.resultProvableId.map{case id => loadProvable(id)}
             val branch = step.branchLabel match {
               case Some(str) => Right(str)
               case None => Left(step.branchOrder.get)
