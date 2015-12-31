@@ -123,7 +123,9 @@ object ExposedTacticsLibrary {
   ,"ExchangeR" -> ProofRuleTactics.exchangeR
   //nullary tactics
   , "TrivialCloser" -> ProofRuleTactics.trivialCloser
-  ,"Prop" -> TactixLibrary.prop
+  , "Prop" -> TactixLibrary.prop
+  , "QE" -> TactixLibrary.QE(qeTool = DerivedAxioms.qeTool)
+  , "Normalize" -> TactixLibrary.normalize
 //  ,"Master" -> TactixLibrary.master) @todo cannot do this b/c master needs a generator
   //formula position tactics @todo these are also not okay because we need a map of BelleExpr's.
 //  , "CutLR" -> {case fml => {case pos => ProofRuleTactics.cutLR(fml)(pos)}}
