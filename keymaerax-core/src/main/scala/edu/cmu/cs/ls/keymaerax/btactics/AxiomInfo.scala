@@ -1,7 +1,9 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo.AxiomNotFoundException
+import edu.cmu.cs.ls.keymaerax.btactics.RunnableInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.core.{Axiom, Formula}
+
+import scala.collection.immutable.HashMap
 
 /**
   * Since axioms are always referred to by their names (which are strings), we have the following problems:
@@ -13,206 +15,259 @@ import edu.cmu.cs.ls.keymaerax.core.{Axiom, Formula}
   * field to AxiomInfo you can ensure that all new axioms will have to have that field.
   * Created by bbohrer on 12/28/15.
   */
-object AxiomInfo {
+object RunnableInfo {
   case class AxiomNotFoundException(axiomName: String) extends Exception
 
-  def apply(axiomName: String): AxiomInfo = {
-    axiomName match {
-      case "chain rule" => new AxiomInfo("chain rule", "o'")
-      case "V vacuous" => new AxiomInfo("V vacuous", "V")
-      case "K modal modus ponens" => new AxiomInfo("K modal modus ponens", "K")
-      case "I induction" => new AxiomInfo("I induction", "I")
-      case "all instantiate" => new AxiomInfo("all instantiate", "alli")
-      case "all eliminate" => new AxiomInfo("all eliminate", "alle")
-      case "exists eliminate" => new AxiomInfo("exists eliminate", "existse")
-      case "vacuous all quantifier" => new AxiomInfo("vacuous all quantifier", "Vall")
-      case "vacuous exists quantifier" => new AxiomInfo("vacuous exists quantifier", "Vexists")
-      case "all dual" => new AxiomInfo("all dual", "alld")
-      case "exists dual" => new AxiomInfo("exists dual", "existsd")
-      case "const congruence" => new AxiomInfo("const congruence", "CCE")
-      case "const formula congruence" => new AxiomInfo("const formula congruence", "CCQ")
-      // [a] modalities and <a> modalities
-      case "<> dual" => new AxiomInfo("<> dual", "<.>")
-      case "[] dual" => new AxiomInfo("[] dual", "[.]")
-      case "[:=] assign" => new AxiomInfo("[:=] assign", "[:=]")
-      case "<:=> assign" => new AxiomInfo("<:=> assign", "<:=>")
-      case "[':=] differential assign" => new AxiomInfo("[':=] differential assign", "[':=]")
-      case "<':=> differential assign" => new AxiomInfo("<':=> differential assign", "<':=>")
-      case "[:=] assign equational" => new AxiomInfo("[:=] assign equational", "[:=]=")
-      case "<:=> assign equational" => new AxiomInfo("<:=> assign equational", "<:=>=")
-      case "[:=] assign update" => new AxiomInfo("[:=] assign update", "[:=]")
-      case "<:=> assign update" => new AxiomInfo("<:=> assign update", "<:=>")
-      case "[:*] assign nondet" => new AxiomInfo("[:*] assign nondet", "[:*]")
-      case  "<:*> assign nondet" => new AxiomInfo("<:*> assign nondet", "<:*>")
-      case "[?] test"    => new AxiomInfo("[?] test", "[?]")
-      case "<?> test"    => new AxiomInfo("<?> test", "<?>")
-      case "[++] choice" => new AxiomInfo("[++] choice", "[++]")
-      case "<++> choice" => new AxiomInfo("<++> choice", "<++>")
-      case "[;] compose" => new AxiomInfo("[;] compose", "[;]")
-      case "<;> compose" => new AxiomInfo("<;> compose", "<;>")
-      case "[*] iterate" => new AxiomInfo("[*] iterate", "[*]")
-      case "<*> iterate" => new AxiomInfo("<*> iterate", "<*>")
+  val allInfo: List[RunnableInfo] = List(
+    new CoreAxiomInfo("chain rule", "o'", ""),
+    new CoreAxiomInfo("V vacuous", "V", ""),
+    new CoreAxiomInfo("K modal modus ponens", "K", ""),
+    new CoreAxiomInfo("I induction", "I", ""),
+    new CoreAxiomInfo("all instantiate", "alli", ""),
+    new CoreAxiomInfo("all eliminate", "alle", ""),
+    new CoreAxiomInfo("exists eliminate", "existse", ""),
+    new CoreAxiomInfo("vacuous all quantifier", "Vall", ""),
+    new CoreAxiomInfo("vacuous exists quantifier", "Vexists", ""),
+    new CoreAxiomInfo("all dual", "alld", ""),
+    new CoreAxiomInfo("exists dual", "existsd", ""),
+    new CoreAxiomInfo("const congruence", "CCE", ""),
+    new CoreAxiomInfo("const formula congruence", "CCQ", ""),
+    // [a] modalities and <a> modalities
+    new CoreAxiomInfo("<> dual", "<.>", ""),
+    new CoreAxiomInfo("[] dual", "[.]", ""),
+    new CoreAxiomInfo("[:=] assign", "[:=]", ""),
+    new CoreAxiomInfo("<:=> assign", "<:=>", ""),
+    new CoreAxiomInfo("[':=] differential assign", "[':=]", ""),
+    new CoreAxiomInfo("<':=> differential assign", "<':=>", ""),
+    new CoreAxiomInfo("[:=] assign equational", "[:=]=", ""),
+    new CoreAxiomInfo("<:=> assign equational", "<:=>=", ""),
+    new CoreAxiomInfo("[:=] assign update", "[:=]", ""),
+    new CoreAxiomInfo("<:=> assign update", "<:=>", ""),
+    new CoreAxiomInfo("[:*] assign nondet", "[:*]", ""),
+    new CoreAxiomInfo("<:*> assign nondet", "<:*>", ""),
+    new CoreAxiomInfo("[?] test", "[?]", ""),
+    new CoreAxiomInfo("<?> test", "<?>", ""),
+    new CoreAxiomInfo("[++] choice", "[++]", ""),
+    new CoreAxiomInfo("<++> choice", "<++>", ""),
+    new CoreAxiomInfo("[;] compose", "[;]", ""),
+    new CoreAxiomInfo("<;> compose", "<;>", ""),
+    new CoreAxiomInfo("[*] iterate", "[*]", ""),
+    new CoreAxiomInfo("<*> iterate", "<*>", ""),
 
-      case "DW"              => new AxiomInfo("DW", "DW")
-      case "DW differential weakening" => new AxiomInfo("DW differential weakening", "DW")
-      case "DC differential cut" => new AxiomInfo("DC differential cut", "DC")
-      case "DE differential effect system" => new AxiomInfo("DE differential effect system", "DE")
-      case "DE differential effect" => new AxiomInfo("DE differential effect", "DE")
-      case "DE differential effect (system)" => new AxiomInfo("DE differential effect (system)", "DE")
-      case "DI differential invariant" => new AxiomInfo("DI differential invariant", "DI")
-      case "DG differential ghost" => new AxiomInfo("DG differential ghost", "DG")
-      case "DG differential Lipschitz ghost system" => new AxiomInfo("DG differential Lipschitz ghost system", "DG")
-      case "DG differential pre-ghost" => new AxiomInfo("DG differential pre-ghost", "DG")
-      case "DG++ System" => new AxiomInfo("DG++ System", "DG++")
-      case "DG++" => new AxiomInfo("DG++", "DG++")
-      case ", commute" => new AxiomInfo(", commute", ",")
-      case "DS differential equation solution" => new AxiomInfo("DS differential equation solution", "DS")
-      case "Dsol& differential equation solution" => new AxiomInfo("Dsol& differential equation solution", "DS&")
-      case "Dsol differential equation solution" => new AxiomInfo("Dsol differential equation solution", "DS")
-      case "DS& differential equation solution" => new AxiomInfo("DS& differential equation solution", "DS&")
-      case "DX differential skip" => new AxiomInfo("DX differential skip", "DX")
-      case "DX diamond differential skip" => new AxiomInfo("DX diamond differential skip", "DX")
-      // Derivatives
-      case "&' derive and" => new AxiomInfo("&' derive and", "&'")
-      case "|' derive or" => new AxiomInfo("|' derive or", "|'")
-      case "->' derive imply" => new AxiomInfo("->' derive imply", "->'")
-      case "forall' derive forall" => new AxiomInfo("forall' derive forall", "forall'")
-      case "exists' derive exists" => new AxiomInfo("exists' derive exists", "exists'")
-      case "c()' derive constant fn" => new AxiomInfo("c()' derive constant fn", "c()'")
-      case "=' derive ="   => new AxiomInfo("=' derive =", "='")
-      case ">=' derive >=" => new AxiomInfo(">=' derive >=", ">='")
-      case ">' derive >"   => new AxiomInfo(">' derive >", ">'")
-      case "<=' derive <=" => new AxiomInfo("<=' derive <=", "<='")
-      case "<' derive <"   => new AxiomInfo("<' derive <", "<'")
-      case "!=' derive !=" => new AxiomInfo("!=' derive !=", "!='")
-      case "-' derive neg"   => new AxiomInfo("-' derive neg", "-'")
-      case "+' derive sum"   => new AxiomInfo("+' derive sum", "+'")
-      case "-' derive minus" => new AxiomInfo("-' derive minus", "-'")
-      case "*' derive product" => new AxiomInfo("*' derive product", "*'")
-      case "/' derive quotient" => new AxiomInfo("/' derive quotient", "/'")
-      case "^' derive power" => new AxiomInfo("^' derive power", "^'")
-      case "x' derive variable" => new AxiomInfo("x' derive variable", "x'")
-      case "x' derive var"   => new AxiomInfo("x' derive var", "x'")
+    new CoreAxiomInfo("DW", "DW", ""),
+    new CoreAxiomInfo("DW differential weakening", "DW", ""),
+    new CoreAxiomInfo("DC differential cut", "DC", ""),
+    new CoreAxiomInfo("DE differential effect system", "DE", ""),
+    new CoreAxiomInfo("DE differential effect", "DE", ""),
+    new CoreAxiomInfo("DE differential effect (system)", "DE", ""),
+    new CoreAxiomInfo("DI differential invariant", "DI", ""),
+    new CoreAxiomInfo("DG differential ghost", "DG", ""),
+    new CoreAxiomInfo("DG differential Lipschitz ghost system", "DG", ""),
+    new CoreAxiomInfo("DG differential pre-ghost", "DG", ""),
+    new CoreAxiomInfo("DG++ System", "DG++", ""),
+    new CoreAxiomInfo("DG++", "DG++", ""),
+    new CoreAxiomInfo(", commute", ",", ""),
+    new CoreAxiomInfo("DS differential equation solution", "DS", ""),
+    new CoreAxiomInfo("Dsol& differential equation solution", "DS&",
+      ""),
+    new CoreAxiomInfo("Dsol differential equation solution", "DS", ""),
+    new CoreAxiomInfo("DS& differential equation solution", "DS&", ""),
+    new CoreAxiomInfo("DX differential skip", "DX", ""),
+    new CoreAxiomInfo("DX diamond differential skip", "DX", ""),
+    // Derivatives
+    new CoreAxiomInfo("&' derive and", "&'", ""),
+    new CoreAxiomInfo("|' derive or", "|'", ""),
+    new CoreAxiomInfo("->' derive imply", "->'", ""),
+    new CoreAxiomInfo("forall' derive forall", "forall'", ""),
+    new CoreAxiomInfo("exists' derive exists", "exists'", ""),
+    new CoreAxiomInfo("c()' derive constant fn", "c()'", ""),
+    new CoreAxiomInfo("=' derive =", "='", ""),
+    new CoreAxiomInfo(">=' derive >=", ">='", ""),
+    new CoreAxiomInfo(">' derive >", ">'", ""),
+    new CoreAxiomInfo("<=' derive <=", "<='", ""),
+    new CoreAxiomInfo("<' derive <", "<'", ""),
+    new CoreAxiomInfo("!=' derive !=", "!='", ""),
+    new CoreAxiomInfo("-' derive neg", "-'", ""),
+    new CoreAxiomInfo("+' derive sum", "+'", ""),
+    new CoreAxiomInfo("-' derive minus", "-'", ""),
+    new CoreAxiomInfo("*' derive product", "*'", ""),
+    new CoreAxiomInfo("/' derive quotient", "/'", ""),
+    new CoreAxiomInfo("^' derive power", "^'", ""),
+    new CoreAxiomInfo("x' derive variable", "x'", ""),
+    new CoreAxiomInfo("x' derive var", "x'", ""),
 
-      // derived axioms
-      case "' linear" => new AxiomInfo("' linear", "l'")
-      case "' linear right" => new AxiomInfo("' linear right", "l'")
-      case "!& deMorgan" => new AxiomInfo("!& deMorgan", "!&")
-      case "!| deMorgan" => new AxiomInfo("!| deMorgan", "!|")
-      case "!-> deMorgan" => new AxiomInfo("!-> deMorgan", "!->")
-      case "!<-> deMorgan" => new AxiomInfo("!<-> deMorgan", "!<->")
-      case "!all" => new AxiomInfo("!all", "!all")
-      case "!exists" => new AxiomInfo("!exists", "!exists")
-      case "![]" => new AxiomInfo("![]", "![]")
-      case "!<>" => new AxiomInfo("!<>", "!<>")
-      case "[] split" => new AxiomInfo("[] split", "[]&")
-      case "<> split" => new AxiomInfo("<> split", "<>|")
-      case "[] split left" => new AxiomInfo("[] split left", "[]&<-")
-      case "[] split right" => new AxiomInfo("[] split right", "[]&->")
-      case "<*> approx" => new AxiomInfo("<*> approx", "<*> approx")
-      case "<*> stuck" => new AxiomInfo("<*> stuck", "<*> stuck")
-      case "<'> stuck" => new AxiomInfo("<'> stuck", "<'> stuck")
-      case "[] post weaken" => new AxiomInfo("[] post weaken", "[]PW")
-      case "+<= up" => new AxiomInfo("+<= up", "+<=")
-      case "-<= up" => new AxiomInfo("-<= up", "-<=")
-      case "<=+ down" => new AxiomInfo("<=+ down", "<=+")
-      case "<=- down" => new AxiomInfo("<=- down", "<=-")
-      case "<-> reflexive" => new AxiomInfo("<-> reflexive", "<->R")
-      case "-> distributes over &" => new AxiomInfo("-> distributes over &", "->&")
-      case "-> distributes over <->" => new AxiomInfo("-> distributes over <->", "-><->")
-      case "-> weaken" => new AxiomInfo("-> weaken", "->W")
-      case "!! double negation" => new AxiomInfo("!! double negation", "!!")
-      case ":= assign dual" => new AxiomInfo(":= assign dual", ":=D")
-      case "[:=] vacuous assign" => new AxiomInfo("[:=] vacuous assign", "V[:=]")
-      case "<:=> vacuous assign" => new AxiomInfo("<:=> vacuous assign", "V<:=>")
-      case "[*] approx" => new AxiomInfo("[*] approx", "[*] approx")
-      case "exists generalize" => new AxiomInfo("exists generalize", "existsG")
-      case "all substitute" => new AxiomInfo("all substitute", "allS")
-      case "V[:*] vacuous assign nondet" => new AxiomInfo("V[:*] vacuous assign nondet", "V[:*]")
-      case "V<:*> vacuous assign nondet" => new AxiomInfo("V<:*> vacuous assign nondet", "V<:*>")
-      case "Domain Constraint Conjunction Reordering" => new AxiomInfo("Domain Constraint Conjunction Reordering", "DCCR") //@todo shortname
-      case "& commute" => new AxiomInfo("& commute", "&C")
-      case "& associative" => new AxiomInfo("& associative", "&A")
-      case "-> expand" => new AxiomInfo("-> expand", "->E")
-      case "-> tautology" => new AxiomInfo("-> tautology", "->taut")
-      case "\\forall->\\exists" => new AxiomInfo("\\forall->\\exists", "all->exists")
-      case "->true" => new AxiomInfo("->true", "->T")
-      case "true->" => new AxiomInfo("true->", "T->")
-      case "&true" => new AxiomInfo("&true", "&T")
-      case "true&" => new AxiomInfo("true&", "T&")
-      case "0*" => new AxiomInfo("0*", "0*")
-      case "0+" => new AxiomInfo("0+", "0+")
-      case "= reflexive" => new AxiomInfo("= reflexive", "=R")
-      case "* commute" => new AxiomInfo("* commute", "*C")
-      case "= commute" => new AxiomInfo("= commute", "=C")
-      case "<=" => new AxiomInfo("<=", "<=")
-      case "= negate" => new AxiomInfo("= negate", "!!=")
-      case "!= negate" => new AxiomInfo("!= negate", "! =")
-      case "! <" => new AxiomInfo("! <", "!<")
-      case "! >" => new AxiomInfo("! >", "!>")
-      case "< negate" => new AxiomInfo("< negate", "!<=")
-      case ">= flip" => new AxiomInfo(">= flip", ">=F")
-      case "> flip" => new AxiomInfo("> flip", ">F")
-      case "<" => new AxiomInfo("<", "<")
-      case ">" => new AxiomInfo(">", ">")
-      case "abs" => new AxiomInfo("abs", "abs")
-      case "min" => new AxiomInfo("min", "min")
-      case "max" => new AxiomInfo("max", "max")
-      case "*<= up" => new AxiomInfo("*<= up", "*<=")
-      case "1Div<= up" => new AxiomInfo("1Div<= up", "1/<=")
-      case "Div<= up" => new AxiomInfo("Div<= up", "/<=")
-      case "<=* down" => new AxiomInfo("<=* down", "<=*")
-      case "<=1Div down" => new AxiomInfo("<=1Div down", "<=1/")
-      case "<=Div down" => new AxiomInfo("<=Div down", "<=/")
-      case "! !=" => new AxiomInfo("! !=", "!!=")
-      case "! =" => new AxiomInfo("! =", "! =")
-      case "! <=" => new AxiomInfo("! <=", "!<=")
-      case "* associative" => new AxiomInfo("* associative", "*A")
-      case "* commutative" => new AxiomInfo("* commutative", "*C")
-      case "* inverse" => new AxiomInfo("* inverse", "*i")
-      case "* closed" => new AxiomInfo("* closed", "*c")
-      case "* identity" => new AxiomInfo("* identity", "*I")
-      case "+ associative" => new AxiomInfo("+ associative", "+A")
-      case "+ commutative" => new AxiomInfo("+ commutative", "+C")
-      case "+ inverse" => new AxiomInfo("+ inverse", "+i")
-      case "+ closed" => new AxiomInfo("+ closed", "+c")
-      case "positivity" => new AxiomInfo("positivity", "Pos")
-      case "distributive" => new AxiomInfo("distributive", "*+")
-      case "all distribute" => new AxiomInfo("all distribute", "Dall")
-      case "[]~><> propagation" => new AxiomInfo("[]~><> propagation", "[]~><>")
-      case "K1" => new AxiomInfo("K1", "K1")
-      case "K2" => new AxiomInfo("K2", "K2")
-      case "P1" => new AxiomInfo("P1", "P1")
-      case "P2" => new AxiomInfo("P2", "P2")
-      case "P3" => new AxiomInfo("P3", "P3")
-      case "P9" => new AxiomInfo("P9", "P9")
-      case "P10" => new AxiomInfo("P10", "P10")
-      // tactics for unit tests
-      case "exists dual dummy" => new AxiomInfo("exists dual dummy", "DUMMY")
-      case "all dual dummy" => new AxiomInfo("all dual dummy", "DUMMY")
-      case "all dual dummy 2" => new AxiomInfo("all dual dummy 2", "DUMMY")
-      case "+id' dummy" => new AxiomInfo("+id' dummy", "DUMMY")
-      case "+*' reduce dummy" => new AxiomInfo("+*' reduce dummy", "DUMMY")
-      case "+*' expand dummy" => new AxiomInfo("+*' expand dummy", "DUMMY")
-      case "^' dummy" => new AxiomInfo("^' dummy", "DUMMY")
-      case _ => throw new AxiomNotFoundException(axiomName)
+    // derived axioms
+    new DerivedAxiomInfo("' linear", "l'", ""),
+    new DerivedAxiomInfo("' linear right", "l'", ""),
+    new DerivedAxiomInfo("!& deMorgan", "!&", ""),
+    new DerivedAxiomInfo("!| deMorgan", "!|", ""),
+    new DerivedAxiomInfo("!-> deMorgan", "!->", ""),
+    new DerivedAxiomInfo("!<-> deMorgan", "!<->", ""),
+    new DerivedAxiomInfo("!all", "!all", ""),
+    new DerivedAxiomInfo("!exists", "!exists", ""),
+    new DerivedAxiomInfo("![]", "![]", ""),
+    new DerivedAxiomInfo("!<>", "!<>", ""),
+    new DerivedAxiomInfo("[] split", "[]&", ""),
+    new DerivedAxiomInfo("<> split", "<>|", ""),
+    new DerivedAxiomInfo("[] split left", "[]&<-", ""),
+    new DerivedAxiomInfo("[] split right", "[]&->", ""),
+    new DerivedAxiomInfo("<*> approx", "<*> approx", ""),
+    new DerivedAxiomInfo("<*> stuck", "<*> stuck", ""),
+    new DerivedAxiomInfo("<'> stuck", "<'> stuck", ""),
+    new DerivedAxiomInfo("[] post weaken", "[]PW", ""),
+    new DerivedAxiomInfo("+<= up", "+<=", ""),
+    new DerivedAxiomInfo("-<= up", "-<=", ""),
+    new DerivedAxiomInfo("<=+ down", "<=+", ""),
+    new DerivedAxiomInfo("<=- down", "<=-", ""),
+    new DerivedAxiomInfo("<-> reflexive", "<->R", ""),
+    new DerivedAxiomInfo("-> distributes over &", "->&", ""),
+    new DerivedAxiomInfo("-> distributes over <->", "-><->", ""),
+    new DerivedAxiomInfo("-> weaken", "->W", ""),
+    new DerivedAxiomInfo("!! double negation", "!!", ""),
+    new DerivedAxiomInfo(":= assign dual", ":=D", ""),
+    new DerivedAxiomInfo("[:=] vacuous assign", "V[:=]", ""),
+    new DerivedAxiomInfo("<:=> vacuous assign", "V<:=>", ""),
+    new DerivedAxiomInfo("[*] approx", "[*] approx", ""),
+    new DerivedAxiomInfo("exists generalize", "existsG", ""),
+    new DerivedAxiomInfo("all substitute", "allS", ""),
+    new DerivedAxiomInfo("V[:*] vacuous assign nondet", "V[:*]", ""),
+    new DerivedAxiomInfo("V<:*> vacuous assign nondet", "V<:*>", ""),
+    new DerivedAxiomInfo("Domain Constraint Conjunction Reordering", "DCCR", ""), //@todo shortname
+    new DerivedAxiomInfo("& commute", "&C", ""),
+    new DerivedAxiomInfo("& associative", "&A", ""),
+    new DerivedAxiomInfo("-> expand", "->E", ""),
+    new DerivedAxiomInfo("-> tautology", "->taut", ""),
+    new DerivedAxiomInfo("\\forall->\\exists", "all->exists", ""),
+    new DerivedAxiomInfo("->true", "->T", ""),
+    new DerivedAxiomInfo("true->", "T->", ""),
+    new DerivedAxiomInfo("&true", "&T", ""),
+    new DerivedAxiomInfo("true&", "T&", ""),
+    new DerivedAxiomInfo("0*", "0*", ""),
+    new DerivedAxiomInfo("0+", "0+", ""),
+    new DerivedAxiomInfo("= reflexive", "=R", ""),
+    new DerivedAxiomInfo("* commute", "*C", ""),
+    new DerivedAxiomInfo("= commute", "=C", ""),
+    new DerivedAxiomInfo("<=", "<=", ""),
+    new DerivedAxiomInfo("= negate", "!!=", ""),
+    new DerivedAxiomInfo("!= negate", "! =", ""),
+    new DerivedAxiomInfo("! <", "!<", ""),
+    new DerivedAxiomInfo("! >", "!>", ""),
+    new DerivedAxiomInfo("< negate", "!<=", ""),
+    new DerivedAxiomInfo(">= flip", ">=F", ""),
+    new DerivedAxiomInfo("> flip", ">F", ""),
+    new DerivedAxiomInfo("<", "<", ""),
+    new DerivedAxiomInfo(">", ">", ""),
+    new DerivedAxiomInfo("abs", "abs", ""),
+    new DerivedAxiomInfo("min", "min", ""),
+    new DerivedAxiomInfo("max", "max", ""),
+    new DerivedAxiomInfo("*<= up", "*<=", ""),
+    new DerivedAxiomInfo("1Div<= up", "1/<=", ""),
+    new DerivedAxiomInfo("Div<= up", "/<=", ""),
+    new DerivedAxiomInfo("<=* down", "<=*", ""),
+    new DerivedAxiomInfo("<=1Div down", "<=1/", ""),
+    new DerivedAxiomInfo("<=Div down", "<=/", ""),
+    new DerivedAxiomInfo("! !=", "!!=", ""),
+    new DerivedAxiomInfo("! =", "! =", ""),
+    new DerivedAxiomInfo("! <=", "!<=", ""),
+    new DerivedAxiomInfo("* associative", "*A", ""),
+    new DerivedAxiomInfo("* commutative", "*C", ""),
+    new DerivedAxiomInfo("* inverse", "*i", ""),
+    new DerivedAxiomInfo("* closed", "*c", ""),
+    new DerivedAxiomInfo("* identity", "*I", ""),
+    new DerivedAxiomInfo("+ associative", "+A", ""),
+    new DerivedAxiomInfo("+ commutative", "+C", ""),
+    new DerivedAxiomInfo("+ inverse", "+i", ""),
+    new DerivedAxiomInfo("+ closed", "+c", ""),
+    new DerivedAxiomInfo("positivity", "Pos", ""),
+    new DerivedAxiomInfo("distributive", "*+", ""),
+    new DerivedAxiomInfo("all distribute", "Dall", ""),
+    new DerivedAxiomInfo("[]~><> propagation", "[]~><>", ""),
+    new DerivedAxiomInfo("K1", "K1", ""),
+    new DerivedAxiomInfo("K2", "K2", ""),
+    new DerivedAxiomInfo("P1", "P1", ""),
+    new DerivedAxiomInfo("P2", "P2", ""),
+    new DerivedAxiomInfo("P3", "P3", ""),
+    new DerivedAxiomInfo("P9", "P9", ""),
+    new DerivedAxiomInfo("P10", "P10", ""),
+    // tactics for unit tests
+    new DerivedAxiomInfo("exists dual dummy", "DUMMY", ""),
+    new DerivedAxiomInfo("all dual dummy", "DUMMY", ""),
+    new DerivedAxiomInfo("all dual dummy 2", "DUMMY", ""),
+    new DerivedAxiomInfo("+id' dummy", "DUMMY", ""),
+    new DerivedAxiomInfo("+*' reduce dummy", "DUMMY", ""),
+    new DerivedAxiomInfo("+*' expand dummy", "DUMMY", ""),
+    new DerivedAxiomInfo("^' dummy", "DUMMY", ""))
+
+  val byCodeName: Map[String, RunnableInfo] =
+    allInfo.foldLeft(HashMap.empty[String,RunnableInfo]){case (acc, info) =>
+        acc.+((info.codeName, info))
+    }
+
+  val byCanonicalName: Map[String, RunnableInfo] =
+    allInfo.foldLeft(HashMap.empty[String,RunnableInfo]){case (acc, info) =>
+      acc.+((info.canonicalName, info))
+    }
+
+  def apply(axiomName: String): RunnableInfo = {
+    byCanonicalName.get(axiomName) match {
+      case Some(info) => info
+      case None => throw new AxiomNotFoundException(axiomName)
     }
   }
 }
+
+object AxiomInfo {
+  def apply(axiomName: String): AxiomInfo =
+    RunnableInfo(axiomName) match {
+      case info:AxiomInfo => info
+      case info => throw new Exception("Runnable \"" + info.canonicalName + "\" is not an axiom")
+  }
+}
+
 /** The short name for an axiom is a string intended for use in the UI where space is a concern (e.g. when
   * displaying tree-style proofs). Since the goal is to be as short as possible, they are not required to be
   * unique, but should still be as suggestive as possible of what the axiom does.
   * @note This can't be a case class because the auto-generated [[apply]] method conflicts with the one from
   *       the companion object.
   * */
-class AxiomInfo (val canonicalName: String, val shortName: String) {
-  def formula: Formula =
+
+sealed trait InputSort {}
+case class FormulaSort () extends InputSort
+
+sealed trait RunnableInfo {
+  val canonicalName: String
+  val displayName: String
+  val codeName: String
+  val isPositional: Boolean = false
+}
+
+trait AxiomInfo extends RunnableInfo {
+  def formula: Formula
+}
+
+case class CoreAxiomInfo(override val canonicalName:String, override val displayName: String, override val codeName: String) extends AxiomInfo {
+  override def formula:Formula = {
+    Axiom.axioms.get(canonicalName) match {
+      case Some(fml) => fml
+      case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
+    }
+  }
+  override val isPositional = true
+}
+
+case class DerivedAxiomInfo(override val canonicalName:String, override val displayName: String, override val codeName: String) extends AxiomInfo {
+  override def formula: Formula = {
     DerivedAxioms.derivedAxiomMap.get(canonicalName) match {
       case Some(fml) => fml._1
-      case None =>
-        Axiom.axioms.get(canonicalName) match {
-          case Some(fml) => fml
-          case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
-        }
+      case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
     }
+  }
+  override val isPositional = true
 }
+
+class TacticInfo(override val canonicalName:String, override val displayName: String, override val codeName:String) extends RunnableInfo {
+  val inputs: List[InputSort] = Nil
+}
+
+case class InputTacticInfo(override val canonicalName:String, override val displayName: String, override val codeName: String, override val inputs:List[InputSort])
+  extends TacticInfo(canonicalName, displayName, codeName)

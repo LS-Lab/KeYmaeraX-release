@@ -441,7 +441,7 @@ class GetBranchRootResponse(node: TreeNode) extends Response {
 class ApplicableAxiomsResponse(axiomNames : List[String]) extends Response {
   def axiomJson(name: String) = {
     JsObject(
-    "id" -> new JsString(AxiomInfo(name).shortName),
+    "id" -> new JsString(AxiomInfo(name).displayName),
     "name" -> new JsString(name),
     "axiom" -> new JsString(AxiomInfo(name).formula.prettyString)
     )
