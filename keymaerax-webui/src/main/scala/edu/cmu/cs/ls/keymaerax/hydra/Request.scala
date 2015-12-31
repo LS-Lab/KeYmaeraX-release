@@ -696,6 +696,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         }
         val trace = db.getExecutionTrace(proofId.toInt)
         val tree = ProofTree.ofTrace(trace)
+        val branch = tree.goalIndex(nodeId)
         val node =
           tree.findNode(nodeId) match {
             case None => throw new Exception("Invalid node " + nodeId)
@@ -707,7 +708,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             case Nil => localProvable
             case steps => steps.last.output.getOrElse(steps.last.input)
           }
-        val listener = new DebuggerListener(db, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, trace.branch, recursive = false)
+        val listener = new DebuggerListener(db, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false)
         val executor = BellerophonTacticExecutor.defaultExecutor
         val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
         val finalProvable = executor.wait(taskId) match {

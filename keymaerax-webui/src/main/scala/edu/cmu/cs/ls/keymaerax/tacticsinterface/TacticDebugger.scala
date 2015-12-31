@@ -76,9 +76,6 @@ object TacticDebugger {
         node.parent = parent
         node.sibling = youngestSibling
         node.executable = expr
-        node.input = v match {
-          case BelleProvable(p) => globalProvable(p, branch)
-        }
         node.status = ExecutionStepStatus.Running
 
         if (parent != null) {
@@ -86,6 +83,11 @@ object TacticDebugger {
           parent.reverseChildren = node :: parent.reverseChildren
           if (recursive) {
             db.updateExecutionStatus(parent.stepId.get, parent.status)
+          }
+        } else {
+          // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic
+          node.input = v match {
+            case BelleProvable(p) => globalProvable(p, branch)
           }
         }
         if (parent == null || recursive) {
@@ -100,11 +102,14 @@ object TacticDebugger {
         val current = node
         node = node.parent
         youngestSibling = current.id
-        result match {
-          case BelleProvable(p) => current.output = globalProvable(p, branch)
-        }
         current.status = ExecutionStepStatus.Finished
         if (node != null && !recursive) return
+        if (node == null) {
+          result match {
+            // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic
+            case BelleProvable(p) => current.output = globalProvable(p, branch)
+          }
+        }
         db.updateExecutionStatus(current.stepId.get, current.status)
         db.updateResultProvable(current.stepId.get, current.getOutputProvableId)
       }
