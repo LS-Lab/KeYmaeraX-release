@@ -676,6 +676,8 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
 //  }
 }
 
+/* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
+* to a Tactic */
 class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,
                          pos: Option[Position]) extends Request {
   def getResultingResponses() = {
@@ -683,9 +685,13 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case None => throw new Exception("Invalid Bellerophon expression:  " + belleTerm)
       case Some(expr) =>
         val appliedExpr =
-          pos match {
-            case None => expr
-            case Some(pos) => expr.asInstanceOf[AtPosition[BelleExpr]](pos)
+          (pos, expr) match {
+            case (None, _:AtPosition[BelleExpr]) =>
+              throw new Exception("Can't run a positional tactic without specifying a position")
+            case (None, _) => expr
+            case (Some(position), posExpr:AtPosition[BelleExpr]) => posExpr(position)
+            case (Some(_), _) =>
+              throw new Exception("Can't run nonpositional tactic using a position")
         }
         val trace = db.getExecutionTrace(proofId.toInt)
         val tree = ProofTree.ofTrace(trace)
