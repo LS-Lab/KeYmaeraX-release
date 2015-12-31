@@ -128,7 +128,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       scope.onApplyTactic = function(formulaId, tacticId) {
         $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + scope.deductionPath.sections[0].path[0] + '/' + formulaId + '/doAt/' + tacticId).success(function(data) {
           if (scope.nodeId === data.parent.id) {
-            updateAgendaAndTree(data);
+            sequentProofData.updateAgendaAndTree(data);
           } else {
             console.log("Unexpected tactic result, parent mismatch: " + " expected " + scope.nodeId + " but got " + data.parent.id)
           }
@@ -139,34 +139,11 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       scope.onApplyInputTactic = function(formulaId, tacticId, input) {
         $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + scope.deductionPath.sections[0].path[0] + '/' + formulaId + '/doInputAt/' + tacticId, input).success(function(data) {
           if (scope.nodeId === data.parent.id) {
-            updateAgendaAndTree(data);
+            sequentProofData.updateAgendaAndTree(data);
           } else {
             console.log("Unexpected tactic result, parent mismatch: " + " expected " + scope.nodeId + " but got " + data.parent.id)
           }
         });
-      }
-
-      /** Updates the agenda and the proof tree with new items resulting from a tactic */
-      updateAgendaAndTree = function(proofUpdate) {
-        var oldAgendaItem = scope.agenda.itemsMap[proofUpdate.parent.id];
-        $.each(proofUpdate.newNodes, function(i, node) {
-          // update tree
-          scope.proofTree.nodesMap[node.id] = node;
-          var parent = scope.proofTree.nodesMap[node.parent]
-          if (parent.children === undefined || parent.children === null) parent.children = [node.id];
-          else parent.children.push(node.id);
-          parent.rule = node.byRule;
-          // update agenda: prepend new open goal to deduction path
-          var newAgendaItem = {
-            id: node.id,
-            name: oldAgendaItem.name + " " + i,              // inherit name from old, append child index
-            deduction: $.extend(true, {}, oldAgendaItem.deduction), // object deep copy
-            isSelected: i === 0 ? oldAgendaItem.isSelected : false  // first new item inherits selection from old
-          }
-          newAgendaItem.deduction.sections[0].path.unshift(node.id);
-          scope.agenda.itemsMap[newAgendaItem.id] = newAgendaItem;
-        });
-        delete scope.agenda.itemsMap[oldAgendaItem.id];
       }
 
       scope.fetchParentRightClick = function(event) {

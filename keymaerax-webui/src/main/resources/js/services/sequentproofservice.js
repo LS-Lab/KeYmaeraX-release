@@ -143,6 +143,31 @@ angular.module('keymaerax.services').factory('sequentProofData', function($http)
           })
         }
       });
+    },
+
+    /** Updates the agenda and the proof tree with new items resulting from a tactic */
+    updateAgendaAndTree: function(proofUpdate) {
+      var theProofTree = this.proofTree;
+      var theAgenda = this.agenda;
+      var oldAgendaItem = theAgenda.itemsMap[proofUpdate.parent.id];
+      $.each(proofUpdate.newNodes, function(i, node) {
+        // update tree
+        theProofTree.nodesMap[node.id] = node;
+        var parent = theProofTree.nodesMap[node.parent]
+        if (parent.children === undefined || parent.children === null) parent.children = [node.id];
+        else parent.children.push(node.id);
+        parent.rule = node.byRule;
+        // update agenda: prepend new open goal to deduction path
+        var newAgendaItem = {
+          id: node.id,
+          name: oldAgendaItem.name + " " + i,              // inherit name from old, append child index
+          deduction: $.extend(true, {}, oldAgendaItem.deduction), // object deep copy
+          isSelected: i === 0 ? oldAgendaItem.isSelected : false  // first new item inherits selection from old
+        }
+        newAgendaItem.deduction.sections[0].path.unshift(node.id);
+        theAgenda.itemsMap[newAgendaItem.id] = newAgendaItem;
+      });
+      delete theAgenda.itemsMap[oldAgendaItem.id];
     }
   }
 });
