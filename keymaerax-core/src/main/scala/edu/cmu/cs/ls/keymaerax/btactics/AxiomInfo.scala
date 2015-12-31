@@ -46,8 +46,8 @@ object DerivationInfo {
     new CoreAxiomInfo("<:*> assign nondet", "<:*>", "randomd"),
     new CoreAxiomInfo("[?] test", "[?]", "testb"),
     new CoreAxiomInfo("<?> test", "<?>", "testd"),
-    new CoreAxiomInfo("[++] choice", "[++]", "choiceb"),
-    new CoreAxiomInfo("<++> choice", "<++>", "choiced"),
+    new CoreAxiomInfo("[++] choice", "[++]", "choiceb"), //@todo "[\u222A]"
+    new CoreAxiomInfo("<++> choice", "<++>", "choiced"), //@todo "<\u222A>" (or possibly even "\u2329\u222A\u232A" but why asking for trouble
     new CoreAxiomInfo("[;] compose", "[;]", "composeb"),
     new CoreAxiomInfo("<;> compose", "<;>", "composed"),
     new CoreAxiomInfo("[*] iterate", "[*]", "iterateb"),
@@ -70,8 +70,8 @@ object DerivationInfo {
     new CoreAxiomInfo("&' derive and", "&'", "Dand"),
     new CoreAxiomInfo("|' derive or", "|'", "Dor"),
     new CoreAxiomInfo("->' derive imply", "->'", "Dimply"),
-    new CoreAxiomInfo("forall' derive forall", "forall'", "Dforall"),
-    new CoreAxiomInfo("exists' derive exists", "exists'", "Dexists"),
+    new CoreAxiomInfo("forall' derive forall", "forall'", "Dforall"), //@todo "\u2200'"
+    new CoreAxiomInfo("exists' derive exists", "exists'", "Dexists"), //@todo "\u2203'"
     new CoreAxiomInfo("c()' derive constant fn", "c()'", "Dconst"),
     new CoreAxiomInfo("=' derive =", "='", "Dequal"),
     new CoreAxiomInfo(">=' derive >=", ">='", "Dgreaterequal"),
@@ -183,6 +183,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("distributive", "*+", "distributive"),
     new DerivedAxiomInfo("all distribute", "Dall", "allDistribute"),
     new DerivedAxiomInfo("[]~><> propagation", "[]~><>", "boxDiamondPropagation"),
+  //@todo internal only
     new DerivedAxiomInfo("K1", "K1", "K1"),
     new DerivedAxiomInfo("K2", "K2", "K2"),
     new DerivedAxiomInfo("P1", "P1", "P1"),
@@ -201,20 +202,20 @@ object DerivationInfo {
 
     // Note: Tactic info does not cover all tactics yet.
     // Proof rule position PositionTactics
-    new PositionTacticInfo("notL", "!L"),
+    new PositionTacticInfo("notL", "!L"),  //@todo
     new PositionTacticInfo("notR", "!R"),
-    new PositionTacticInfo("andR", "^R"),
-    new PositionTacticInfo("andL", "^L"),
-    new PositionTacticInfo("orL", "|L"),
-    new PositionTacticInfo("orR", "|R"),
-    new PositionTacticInfo("implyL", "->L"),
-    new PositionTacticInfo("implyR", "->R"),
-    new PositionTacticInfo("equivL", "<->L"),
-    new PositionTacticInfo("equivR", "<->R"),
+    new PositionTacticInfo("andR", "^R"),  //@todo "\u2227R"
+    new PositionTacticInfo("andL", "^L"), //@todo "\u2227L"
+    new PositionTacticInfo("orL", "|L"), //@todo "\u2228L"
+    new PositionTacticInfo("orR", "|R"), //@todo "\u2228R"
+    new PositionTacticInfo("implyL", "->L"), //@todo "\u2192L"
+    new PositionTacticInfo("implyR", "->R"), //@todo "\u2192R"
+    new PositionTacticInfo("equivL", "<->L"), //@todo "\u2194L"
+    new PositionTacticInfo("equivR", "<->R"), //@todo "\u2194R"
     new PositionTacticInfo("commuteEquivL", "<->CL"),
     new PositionTacticInfo("commuteEquivR", "<->CR"),
     new PositionTacticInfo("equivifyR", "<->R"),
-    new PositionTacticInfo("hideL", "hide"),
+    new PositionTacticInfo("hideL", "hide"),  //@todo W for weakening? If people know that
     new PositionTacticInfo("hideR", "hide"),
     new PositionTacticInfo("coHideL", "hide"),
     new PositionTacticInfo("coHideR", "hide"),
@@ -291,6 +292,7 @@ sealed trait DerivationInfo {
   val canonicalName: String
   val displayName: String
   val codeName: String
+  //@todo add formattedName/unicodeName: String
   val numPositionArgs: Int = 0
 }
 
