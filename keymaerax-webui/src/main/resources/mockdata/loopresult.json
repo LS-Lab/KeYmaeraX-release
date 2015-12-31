@@ -1,0 +1,59 @@
+{
+  "parent": {
+    "id": "1",
+    "children": [ "21", "22", "23" ]
+  },
+  "newNodes": [
+    {
+      "id": "21",
+      "sequent": {
+        "ante": [ {"id": "F21a", "formula": { "name": "lt", "id": "F21a0", "children": [ {"name": "a", "id": "F21a1"}, {"name": "21", "id": "F21a2"} ] }} ],
+        "succ": [
+          {
+            "id": "F21s",
+            "formula": {
+              "name": "lt", "id": "F21s1", "children": [ {"name": "s", "id": "F21s2"}, {"name": "21", "id": "F21s3"} ]
+            }
+          }
+        ]
+      },
+      "children": [],
+      "parent": "1",
+      "byRule": { "id": "R5", "name": "loop" }
+    },
+    {
+      "id": "22",
+      "sequent": {
+        "ante": [ {"id": "F22a", "formula": { "name": "lt", "id": "F22a0", "children": [ {"name": "a", "id": "F22a1"}, {"name": "22", "id": "F22a2"} ] }} ],
+        "succ": [
+          {
+            "id": "F22s",
+            "formula": {
+              "name": "lt", "id": "F22s1", "children": [ {"name": "s", "id": "F22s2"}, {"name": "22", "id": "F22s3"} ]
+            }
+          }
+        ]
+      },
+      "children": [],
+      "parent": "1",
+      "byRule": { "id": "R5", "name": "loop" }
+    },
+    {
+      "id": "23",
+      "sequent": {
+        "ante": [ {"id": "F23a", "formula": { "name": "lt", "id": "F23a0", "children": [ {"name": "a", "id": "F23a1"}, {"name": "23", "id": "F23a2"} ] }} ],
+        "succ": [
+          {
+            "id": "F23s",
+            "formula": {
+              "name": "lt", "id": "F23s1", "children": [ {"name": "s", "id": "F23s2"}, {"name": "23", "id": "F23s3"} ]
+            }
+          }
+        ]
+      },
+      "children": [],
+      "parent": "1",
+      "byRule": { "id": "R5", "name": "loop" }
+    }
+  ]
+}

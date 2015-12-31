@@ -14,7 +14,7 @@ angular.module('formula')
             highlight: '=',
             collapsed: '=?',
             onTactic: '&',     // onTactic(formulaId, tacticId)
-            onInputTactic: '&' // onInputTactic(formulaId, tactic)
+            onInputTactic: '&' // onInputTactic(formulaId, tacticId, input)
         },
         link: function($scope, $sce) {
             var span = function(id, content, depth) {
@@ -396,13 +396,15 @@ angular.module('formula')
             }
 
             $scope.applyTactic = function(formulaId, tacticId) {
-              console.log("Applying tactic " + tacticId + " on formula " + formulaId);
               $scope.onTactic({formulaId: formulaId, tacticId: tacticId});
             }
 
             $scope.applyInputTactic = function(formulaId, tactic) {
-              console.log("Applying input tactic " + tactic.id + " on formula " + formulaId);
-              $scope.onInputTactic({formulaId: formulaId, tacticId: tacticId});
+              //@note have to declare local variables with exactly the names of the event arguments,
+              //      otherwise the event parameters are undefined in the listener :-O
+              var tacticId = tactic.id;
+              var input = tactic.deduction.input;
+              $scope.onInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
             }
 
             $scope.input = function(formula, tactic) {

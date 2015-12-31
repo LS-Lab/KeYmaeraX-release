@@ -6,7 +6,7 @@
                     sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].sequent"
                     read-only="readOnly" collapsed="false"
                     on-apply-tactic="onApplyTactic(formulaId, tacticId)"
-                    on-apply-input-tactic="onApplyInputTactic(formulaId, tactic)"></k4-sequent>
+                    on-apply-input-tactic="onApplyInputTactic(formulaId, tacticId, input)"></k4-sequent>
     </div>
 </div>
 <!-- Conclusion -->
@@ -22,7 +22,7 @@
                         sequent="proofTree.nodesMap[deductionPath.sections[$index].path[0]].sequent"
                         read-only="true" collapsed="true"
                         on-apply-tactic="onApplyTactic(formulaId, tacticId)"
-                        on-apply-input-tactic="onApplyInputTactic(formulaId, tactic)"></k4-sequent>
+                        on-apply-input-tactic="onApplyInputTactic(formulaId, tacticId, input)"></k4-sequent>
             <ul>
                 <!-- display siblings at fork -->
                 <li ng-repeat="sibling in siblingsWithAgendaItem(proofTree.nodesMap[deductionPath.sections[$index].path[0]].children)">
@@ -80,7 +80,7 @@
                         sequent="proofTree.nodesMap[step].sequent"
                         read-only="true" collapsed="true"
                         on-apply-tactic="onApplyTactic(formulaId, tacticId)"
-                        on-apply-input-tactic="onApplyInputTactic(formulaId, tactic)"></k4-sequent>
+                        on-apply-input-tactic="onApplyInputTactic(formulaId, tacticId, input)"></k4-sequent>
         </div>
         <ul>
             <li>

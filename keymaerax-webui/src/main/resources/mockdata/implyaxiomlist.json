@@ -1,0 +1,20 @@
+[
+  {
+    "id": "implyright",
+    "name": "implyR",
+    "deduction": {
+      "type": "sequentrule",
+      "premise": [
+        {
+          "ante": ["&Gamma;", "P"],
+          "succ": ["Q", "&Delta;"]
+        }
+      ],
+      "conclusion": {
+        "ante": ["&Gamma;"],
+        "succ": ["P &rarr; Q", "&Delta;"]
+      },
+      "input": []
+    }
+  }
+]

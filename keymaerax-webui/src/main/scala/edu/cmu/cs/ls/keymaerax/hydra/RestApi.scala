@@ -239,12 +239,12 @@ trait RestApi extends HttpService {
     get {
       val request = new GetApplicableAxiomsRequest(database, userId, proofId, nodeId, goalId, parseFormulaId(formulaId))
       //@note mock data for right-clicking formulas
-      /*val request = formulaId match {
-        case "F5s0" => new MockRequest("/mockdata/andaxiomlist.json")
-        case "F5s1" => new MockRequest("/mockdata/ltaxiomlist.json")
-        case "1," => new MockRequest("/mockdata/implyaxiomlist.json")
-        case "1,1" => new MockRequest("/mockdata/loopaxiomlist.json")
-      }*/
+//      val request = formulaId match {
+//        case "F5s0" => new MockRequest("/mockdata/andaxiomlist.json")
+//        case "F5s1" => new MockRequest("/mockdata/ltaxiomlist.json")
+//        case "1," => new MockRequest("/mockdata/implyaxiomlist.json")
+//        case "1,1" => new MockRequest("/mockdata/loopaxiomlist.json")
+//      }
       complete(standardCompletion(request))
     }
   }}}
@@ -255,6 +255,19 @@ trait RestApi extends HttpService {
       complete(standardCompletion(request))
     }}
   }}
+
+  val doInputAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "doInputAt" / Segment) { (userId, proofId, nodeId, goalId, formulaId, tacticId) => { pathEnd {
+    post {
+      entity(as[String]) { params => {
+        val request = formulaId match {
+          case "1,1" =>
+            val input = JsonParser(params) // do something useful with the tactic input
+            new MockRequest("/mockdata/loopresult.json")
+        }
+        complete(standardCompletion(request))
+      }
+    }}
+  }}}
 
   val pruneBelow = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId, goalId) => { pathEnd {
     get {
@@ -556,6 +569,7 @@ trait RestApi extends HttpService {
     proofTasksBranchRoot  ::
     axiomList             ::
     doAt                  ::
+    doInputAt             ::
     pruneBelow            ::
     proofTask             ::
     nodeFormulaTactics    ::

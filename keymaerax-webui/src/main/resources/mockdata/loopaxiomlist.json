@@ -1,0 +1,42 @@
+[
+  {
+    "id": "loopinduction",
+    "name": "ind",
+    "deduction": {
+      "type": "sequentrule",
+      "premise": [
+        {
+          "ante": ["&Gamma;"],
+          "succ": [ "j(x)", "&Delta;"]
+        },
+        {
+          "ante": ["j(x)"],
+          "succ": ["[a]j(x)"]
+        },
+        {
+          "ante": ["j(x)"],
+          "succ": ["P"]
+        }
+      ],
+      "conclusion": {
+        "ante": ["&Gamma;"],
+        "succ": [ "[a*]P", "&Delta;"]
+      },
+      "input": [
+        {
+          "param": "j(x)",
+          "type": "formula",
+          "value": "j(x)"
+        }
+      ]
+    }
+  },
+  {
+    "id": "loopiterate",
+    "name": "[*]",
+    "deduction": {
+      "type": "axiom",
+      "formula": "[{a;}*]p(??) <-> (p(??) & [a;][{a;}*]p(??))"
+    }
+  }
+]

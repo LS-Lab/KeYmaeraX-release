@@ -73,8 +73,8 @@ angular.module('sequent', ['ngSanitize','formula'])
               $scope.onApplyTactic({formulaId: formulaId, tacticId: tacticId});
             }
 
-            $scope.inInputTactic = function(formulaId, tactic) {
-              $scope.onApplyInputTactic({formulaId: formulaId, tactic: tactic});
+            $scope.onInputTactic = function(formulaId, tacticId, input) {
+              $scope.onApplyInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
             }
         },
         templateUrl: 'partials/collapsiblesequent.html'
