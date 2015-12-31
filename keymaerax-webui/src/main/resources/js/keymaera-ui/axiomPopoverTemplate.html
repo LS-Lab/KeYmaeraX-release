@@ -20,6 +20,9 @@
         </div>
     </div>
 </div>
+<div ng-if="formulaAxiomsMap[formulaId] === undefined || formulaAxiomsMap[formulaId] === null || formulaAxiomsMap[formulaId].length == 0">
+    <span class="fa fa-exclamation-triangle"> Sorry, no tactics applicable here. Try working on formulas from outside in.</span>
+</div>
 <div class="row">
     <div class="col-md-12">
         <button class="btn btn-default pull-right" ng-click="tacticPopover.close()">
