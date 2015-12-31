@@ -1,30 +1,42 @@
-<div class="sequentRulePremise">
-    <div class="sequentRulePremisePart k4-nobreak" ng-repeat="premise in tactic.deduction.premise">
-        <span ng-repeat="ante in premise.ante">
-            <span ng-repeat="antePart in ante">
-                <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
-                <input type="text" name="antePart.text"
-                       ng-model="antePart.value" ng-model-options="{getterSetter: true}"
-                       ng-if="antePart.isInput" required></input>
-            </span>
-            {{$last ? '' : ','}}
-        </span>
-        &#8866;
-        <span ng-repeat="succ in premise.succ">
-            <span ng-repeat="succPart in succ">
-                <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
-                <input type="text" name="succPart.text"
-                       ng-model="succPart.value" ng-model-options="{getterSetter: true}"
-                       ng-if="succPart.isInput" required></input>
-            </span>
-            {{$last ? '' : ','}}
-        </span>
+<div>
+    <div class="row k4-sequentRulePremise">
+        <div class="col-md-12">
+            <div class="row" ng-repeat="premise in tactic.deduction.premise">
+                <span class="col-md-5 k4-nobreak k4-sequentRuleAnte">
+                    <span ng-repeat="ante in premise.ante">
+                        <span ng-repeat="antePart in ante">
+                            <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
+                            <input type="text" name="antePart.text"
+                                   ng-model="antePart.value" ng-model-options="{getterSetter: true}"
+                                   ng-if="antePart.isInput" required></input>
+                        </span>
+                        {{$last ? '' : ','}}
+                    </span>
+                </span>
+                <span class="col-md-1">&#8866;</span>
+                <span class="col-md-6 k4-nobreak k4-sequentRuleSucc">
+                    <span ng-repeat="succ in premise.succ">
+                        <span ng-repeat="succPart in succ">
+                            <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
+                            <input type="text" name="succPart.text"
+                                   ng-model="succPart.value" ng-model-options="{getterSetter: true}"
+                                   ng-if="succPart.isInput" required></input>
+                        </span>
+                        {{$last ? '' : ','}}
+                    </span>
+                </span>
+            </div>
+        </div>
     </div>
-</div>
-<div class="sequentRuleConclusion">
-    <div class="k4-nobreak">
-        <span ng-repeat="ante in tactic.deduction.conclusion.ante"><span ng-bind-html="ante"></span>{{$last ? '' : ','}}</span>
-        &#8866;
-        <span ng-repeat="succ in tactic.deduction.conclusion.succ"><span ng-bind-html="succ"></span>{{$last ? '' : ','}}</span>
+    <div class="row k4-sequentRuleConclusion">
+        <!--<div class="col-md-12 k4-nobreak">-->
+            <div class="col-md-5 k4-nobreak k4-sequentRuleAnte">
+                <span ng-repeat="ante in tactic.deduction.conclusion.ante"><span ng-bind-html="ante"></span>{{$last ? '' : ','}}</span>
+            </div>
+            <div class="col-md-1">&#8866;</div>
+            <div class="col-md-6 k4-nobreak k4-sequentRuleSucc">
+                <span class="k4-nobreak" ng-repeat="succ in tactic.deduction.conclusion.succ"><span ng-bind-html="succ"></span>{{$last ? '' : ','}}</span>
+            </div>
+        <!--</div>-->
     </div>
 </div>

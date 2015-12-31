@@ -54,6 +54,10 @@ table .btn{
   color: #e1edf7;
 }
 
+.popover {
+  max-width: 90%;
+}
+
 /* do not change appearance when focused for the sake of a context menu */
 .k4-withcontextmenu:focus {
   outline: none;
@@ -76,6 +80,36 @@ table .btn{
 .k4-nobreak {
   white-space: nowrap;
   display: inline-block;
+}
+
+.k4-sequentRulePremise {
+  border-style: none;
+}
+
+.k4-sequentRuleConclusion {
+  border-style: solid;
+  border-left: none;
+  border-top: thin solid black;
+  border-right: none;
+  border-bottom: none;
+}
+
+.k4-sequentRulePart {
+  padding-right: 2em;
+}
+
+.k4-sequentRuleAnte {
+  text-align: right;
+}
+
+.k4-sequentRuleSucc {
+  text-align: left;
+}
+
+.k4-tacticPopoverRow {
+    display: flex;
+    padding-bottom: 1ex;
+    align-items: center;
 }
 
 .k4-goalwithsiblings {

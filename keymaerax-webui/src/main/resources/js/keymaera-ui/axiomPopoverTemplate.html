@@ -1,22 +1,29 @@
 <!-- Despite the name: axioms and tactics -->
 <!--<div class="row"><a ng-click="tacticPopover.close()" class="pull-right"><span class="fa fa-close"></span></a></div>-->
 <div class="row" ng-repeat="tactic in formulaAxiomsMap[formulaId]">
-    <!-- axioms: execute by clicking the name -->
-    <div class="col-md-2 k4-nobreak" ng-if="tactic.deduction.type === 'axiom'">
-        <a ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</a>
-    </div>
-    <div class="col-md-10 k4-nobreak" ng-if="tactic.deduction.type === 'axiom'">{{tactic.deduction.formula}}</div>
-    <!-- sequent rules without parameters: execute by clicking the name -->
-    <div class="col-md-2 k4-nobreak" ng-if="tactic.deduction.type === 'sequentrule' && tactic.deduction.input.length === 0">
-        <a ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</a>
-    </div>
-    <!-- sequent rules with parameters: clicking the name opens a modal popup with input options -->
-    <div class="col-md-2 k4-nobreak" ng-if="tactic.deduction.type === 'sequentrule' && tactic.deduction.input.length > 0">
-        <a ng-click="applyInputTactic(formulaId, tactic)">{{tactic.name}}</a>
-    </div>
-    <div class="col-md-10 k4-nobreak" ng-if="tactic.deduction.type === 'sequentrule'" ng-include="'js/keymaera-ui/sequentRuleTemplate.html'">
+    <!-- padding around content -->
+    <div class="col-md-12 k4-tacticPopoverRow">
+        <!-- axioms: execute by clicking the name -->
+        <div ng-if="tactic.deduction.type === 'axiom'">
+            <button class="btn btn-default" ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</button>
+        </div>
+        <div class="col-md-12" ng-if="tactic.deduction.type === 'axiom'">{{tactic.deduction.formula}}</div>
+        <!-- sequent rules without parameters: execute by clicking the name -->
+        <div ng-if="tactic.deduction.type === 'sequentrule' && tactic.deduction.input.length === 0">
+            <button class="btn btn-default" ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</button>
+        </div>
+        <!-- sequent rules with parameters: clicking the name opens a modal popup with input options -->
+        <div ng-if="tactic.deduction.type === 'sequentrule' && tactic.deduction.input.length > 0">
+            <button class="btn btn-default" ng-click="applyInputTactic(formulaId, tactic)">{{tactic.name}}</button>
+        </div>
+        <div class="col-md-12" ng-if="tactic.deduction.type === 'sequentrule'" ng-include="'js/keymaera-ui/sequentRuleTemplate.html'">
+        </div>
     </div>
 </div>
 <div class="row">
-    <button class="btn btn-default pull-right" ng-click="tacticPopover.close()"><span class="fa fa-close"></span> Close</button>
+    <div class="col-md-12">
+        <button class="btn btn-default pull-right" ng-click="tacticPopover.close()">
+            <span class="fa fa-close"></span> Cancel
+        </button>
+    </div>
 </div>
