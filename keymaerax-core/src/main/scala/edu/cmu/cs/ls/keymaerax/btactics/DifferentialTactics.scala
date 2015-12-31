@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, ExpressionTraversal, Position, PosInExpr, SubstitutionHelper}
@@ -280,6 +281,34 @@ object DifferentialTactics {
       }
     }
   }
+
+  /**
+   * Differential ghost. Adds an auxiliary differential equation y'=a*y+b
+   * @example{{{
+   *         |- \exists y [{x'=2,y'=0*y+1}]x>0
+   *         ---------------------------------- DG("y".asVariable, "0".asTerm, "1".asTerm)(1)
+   *         |- [{x'=2}]x>0
+   * }}}
+   * @example{{{
+   *         |- \exists y [{x'=2,y'=f()*y+g() & x>=0}]x>0
+   *         --------------------------------------------- DG("y".asVariable, "f()".asTerm, "g()".asTerm)(1)
+   *         |- [{x'=2 & x>=0}]x>0
+   * }}}
+   * @param y The differential ghost variable.
+   * @param a The linear term in y'=a*y+b.
+   * @param b The constant term in y'=a*y+b.
+   * @return The tactic.
+   */
+  def DG(y: Variable, a: Term, b: Term): DependentPositionTactic = "DG" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
+        !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
+      cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b))), h), p)))(pos) <(
+        /* use */ skip,
+        /* show */ cohide(pos.topLevel) &
+          /* rename first, otherwise byUS fails */ ProofRuleTactics.uniformRenaming("y".asVariable, y) &
+          equivifyR('Rlast) & commuteEquivR('Rlast) & byUS("DG differential ghost")
+        )
+  })
 
   /**
    * Syntactically derives a differential of a variable to a differential symbol.
