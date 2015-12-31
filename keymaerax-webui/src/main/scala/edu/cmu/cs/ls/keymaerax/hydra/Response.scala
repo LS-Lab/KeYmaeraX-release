@@ -239,7 +239,13 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
 //}
 
 class RunBelleTermResponse(parent: TreeNode, children: List[TreeNode]) extends Response {
-  val json = Helpers.singleNodeJson(children.head)
+  val json = JsObject(
+    "parent" -> JsObject(
+      "id" -> Helpers.nodeIdJson(parent.id),
+      "children" -> Helpers.childrenJson(children)
+    ),
+    "newNodes" -> JsArray(children.map(Helpers.singleNodeJson):_*)
+  )
 }
 
 //class DispatchedCLTermResponse(t : DispatchedCLTermPOJO) extends Response {
