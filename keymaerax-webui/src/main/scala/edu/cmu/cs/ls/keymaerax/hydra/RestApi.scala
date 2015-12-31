@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
-import _root_.edu.cmu.cs.ls.keymaerax.btactics.RunnableInfo
+import edu.cmu.cs.ls.keymaerax.btactics.{Find, Fixed, RunnableInfo}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import _root_.edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
 import akka.actor.Actor
@@ -251,7 +251,7 @@ trait RestApi extends HttpService {
 
   val doAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, goalId, formulaId, tacticId) => { pathEnd {
     get {
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(parseFormulaId(formulaId)))
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Fixed(parseFormulaId(formulaId))))
       complete(standardCompletion(request))
     }}
   }}
@@ -268,6 +268,27 @@ trait RestApi extends HttpService {
       }
     }}
   }}}
+
+  val doExhaustive = path("proofs" / "user" / Segment / Segment / Segment / "doExhaustive" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
+    get {
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, None)
+      complete(standardCompletion(request))
+    }}
+  }}
+
+  val doSearchRight = path("proofs" / "user" / Segment / Segment / Segment / "doSearchR" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
+    get {
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, SuccPosition(0))))
+      complete(standardCompletion(request))
+    }}
+  }}
+
+  val doSearchLeft = path("proofs" / "user" / Segment / Segment / Segment / "doSearchL" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
+    get {
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, AntePosition(0))))
+      complete(standardCompletion(request))
+    }}
+  }}
 
   val pruneBelow = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId, goalId) => { pathEnd {
     get {
@@ -570,6 +591,9 @@ trait RestApi extends HttpService {
     axiomList             ::
     doAt                  ::
     doInputAt             ::
+    doExhaustive          ::
+    doSearchLeft          ::
+    doSearchRight         ::
     pruneBelow            ::
     proofTask             ::
     nodeFormulaTactics    ::

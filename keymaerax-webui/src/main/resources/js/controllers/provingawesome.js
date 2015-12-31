@@ -39,6 +39,11 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.agenda = sequentProofData.agenda;
     $scope.prooftree = sequentProofData.proofTree;
 
+    $scope.proof = {
+        proofName: "blah"
+    };
+    //TODO: add functions  that allow renaming.
+
     $scope.$on('agendaIsEmpty', function() {
       $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId + '/progress').success(function(data) {
         if (data.status == 'closed') {
@@ -234,6 +239,42 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         function() { return Tactics.getDispatchedTactics(); },
         function(tId) { Tactics.removeDispatchedTactics(tId); }
     );
+
+
+
+    $scope.undoLastStep = function() {
+      var nodeId = sequentProofData.agenda.selectedId;
+      var node = sequentProofData.agenda.itemsMap[nodeId];
+      var top = node.deduction.sections[0].path[0];
+      var topParent = sequentProofData.proofTree.nodesMap[top].parent;
+      sequentProofData.prune($scope.userId, $scope.proofId, nodeId, topParent);
+    }
+
+    $scope.doExhaustive = function(tacticId) {
+      var proofId = $routeParams.proofId;
+      var userId = $cookies.get('userId');
+      var nodeId = sequentProofData.agenda.selectedId;
+      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doExhaustive/' + tacticId).success(function(data) {
+        if ($scope.nodeId === data.parent.id) {
+          sequentProofData.updateAgendaAndTree(data);
+        } else {
+          console.log("Unexpected tactic result, parent mismatch: " + " expected " + $scope.nodeId + " but got " + data.parent.id)
+        }
+      });
+    }
+
+    $scope.doSearch = function(tacticId, where) {
+      var proofId = $routeParams.proofId;
+      var userId = $cookies.get('userId');
+      var nodeId = sequentProofData.agenda.selectedId;
+      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doSearch' + where + '/' + tacticId).success(function(data) {
+        if ($scope.nodeId === data.parent.id) {
+          sequentProofData.updateAgendaAndTree(data);
+        } else {
+          console.log("Unexpected tactic result, parent mismatch: " + " expected " + $scope.nodeId + " but got " + data.parent.id)
+        }
+      });
+    }
   });
 
 angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',

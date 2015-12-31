@@ -1,23 +1,6 @@
 /**
  * Controllers for proof lists and proof information pages.
  */
-
-angular.module('keymaerax.controllers').controller('ProofInfoCtrl', function($scope, $rootScope, $http, $cookies, $uibModal, $routeParams, sequentProofData) {
-  $scope.proof = {
-      proofName: "blah"
-  };
-
-  //TODO: add functions  that allow renaming.
-
-  $scope.undoLastStep = function() {
-    var nodeId = sequentProofData.agenda.selectedId
-    var node = sequentProofData.agenda.itemsMap[nodeId];
-    var top = node.deduction.sections[0].path[0];
-    var topParent = sequentProofData.proofTree.nodesMap[top].parent;
-    sequentProofData.prune($scope.userId, $scope.proofId, nodeId, topParent);
-  }
-})
-
 angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', function ($scope, $http, $cookies, $routeParams, $location) {
   /*
    * Creates a new proof using a default name, so that the user doesn't have to enter new input.

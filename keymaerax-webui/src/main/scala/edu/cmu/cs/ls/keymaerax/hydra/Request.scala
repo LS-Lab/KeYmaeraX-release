@@ -17,7 +17,7 @@ import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
-import _root_.edu.cmu.cs.ls.keymaerax.btactics.{RunnableInfo, AxiomInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.{PositionLocator, RunnableInfo, AxiomInfo}
 import _root_.edu.cmu.cs.ls.keymaerax.core.Provable
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
@@ -680,7 +680,7 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
 * to a Tactic */
 class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,
-                         pos: Option[Position]) extends Request {
+                         pos: Option[PositionLocator]) extends Request {
   def getResultingResponses() = {
     BTacticParser(belleTerm) match {
       case None => throw new Exception("Invalid Bellerophon expression:  " + belleTerm)

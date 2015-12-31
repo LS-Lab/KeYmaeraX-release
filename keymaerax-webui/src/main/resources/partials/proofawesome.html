@@ -1,52 +1,60 @@
-<div class="row" ng-controller="ProofInfoCtrl">
-    <div class="col-md-3">
-    <!-- The style forces the _ _ _ underline to only span the length of the text, not the entire paragraph block width. -->
-    <p class="lead" editable-text="proofName" onbeforesave="saveProofName($data)" style="display:inline-block">
-        {{proofName}}
-    </p>
-    </div>
-    <div class="col-md-9">
+<div class="row" ng-controller="TaskCtrl">
+    <div class="col-md-12">
         <!-- Tool box -->
-        <nav class="navbar navbar-default">
+        <div class="navbar navbar-default">
+            <div class="navbar-inner">
             <div class="container-fluid">
-                <!-- Brand and toggle get grouped for better mobile display -->
-                <!-- TODO for some reason the navbar is not collapsible -->
-                <div class="navbar-header">
-                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                    </button>
-                    <span class="navbar-brand">Tools</span>
-                </div>
-                <div class="collapse navbar-collapse">
+                <span class="brand navbar-brand">
+                    <span editable-text="proofName" onbeforesave="saveProofName($data)" style="display:inline-block">
+                        {{proofName}}
+                    </span>
+                </span>
+                <div class="nav">
                     <ul class="nav navbar-nav">
-                        <li><a href="#"><span class="fa fa-play"> Auto</span></a></li>
+                        <li><a ng-click="doExhaustive('Master')"><span class="fa fa-play"> Auto</span></a></li>
                         <li><a ng-click="undoLastStep()"><span class="fa fa-undo"> Step back</span></a></li>
+                    </ul>
+                    <ul class="nav navbar-nav pull-right">
+                        <li><a ng-click="isNavbarCollapsed=!isNavbarCollapsed"><span class="fa fa-bars"></span></a></li>
+                    </ul>
+                </div>
+                <div class="nav-collapse" uib-collapse="isNavbarCollapsed">
+                    <ul class="nav navbar-nav">
                         <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                            <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a href="#">and left <code>andL</code></a></li>
-                                <li><a href="#">imply right <code>implyR</code></a></li>
-                                <li><a href="#">or right <code>orR</code></a></li>
-                                <li><a href="#">equiv left <code>equivL</code></a></li>
+                                <li><a ng-click="doExhaustive('Prop')"> Exhaustive <code>prop</code></a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a href="#">and right <code>andR</code></a></li>
-                                <li><a href="#">or left <code>orL</code></a></li>
-                                <li><a href="#">imply left <code>implyL</code></a></li>
-                                <li><a href="#">equiv right <code>equivR</code></a></li>
+                                <li><a ng-click="doSearch('AndL', 'L')">and left <code>andL</code></a></li>
+                                <li><a ng-click="doSearch('ImplyR', 'R')">imply right <code>implyR</code></a></li>
+                                <li><a ng-click="doSearch('OrR', 'R')">or right <code>orR</code></a></li>
+                                <li><a ng-click="doSearch('EquivL', 'L')">equiv left <code>equivL</code></a></li>
+                                <li role="separator" class="divider"></li>
+                                <li><a ng-click="doSearch('AndR', 'R')">and right <code>andR</code></a></li>
+                                <li><a ng-click="doSearch('OrL', 'L')">or left <code>orL</code></a></li>
+                                <li><a ng-click="doSearch('ImplyL', 'L')">imply left <code>implyL</code></a></li>
+                                <li><a ng-click="doSearch('EquivR', 'R')">equiv right <code>equivR</code></a></li>
                             </ul>
                         </li>
                         <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Hybrid Programs <span class="caret"></span></a>
+                            <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                               aria-haspopup="true" aria-expanded="false">Hybrid Programs <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a href="#">[;] compose <code>composeb</code></a></li>
-                                <li><a href="#">[++] choice <code>choiceb</code></a></li>
+                                <li><a ng-click="doSearch('BoxCompose', 'R')">[;] compose <code>composeb</code></a></li>
+                                <li><a ng-click="doSearch('BoxChoice', 'R')">[++] choice <code>choiceb</code></a></li>
                                 <!-- TODO -->
                                 <li role="separator" class="divider"></li>
-                                <li><a href="#">&lt;;&gt; compose <code>composed</code></a></li>
-                                <li><a href="#">&lt;++&gt; compose <code>choiced</code></a></li>
+                                <li><a ng-click="doSearch('DiamondCompose', 'R')">&lt;;&gt; compose <code>composed</code></a></li>
+                                <li><a ng-click="doSearch('DiamondChoice', 'R')">&lt;++&gt; compose <code>choiced</code></a></li>
+                            </ul>
+                        </li>
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                               aria-haspopup="true" aria-expanded="false">Differential Equations <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <li><a ng-click="doSearch('DiffWeaken', 'R')">DW <code>diffWeaken</code></a></li>
+                                <!-- TODO -->
                             </ul>
                         </li>
                     </ul>
@@ -67,7 +75,8 @@
                     </form>
                 </div>
             </div>
-        </nav>
+            </div>
+        </div>
     </div>
 </div>
 
