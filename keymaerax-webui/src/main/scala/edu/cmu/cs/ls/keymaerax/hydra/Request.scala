@@ -701,11 +701,12 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             case steps => steps.last.output.getOrElse(steps.last.input)
           }
         val listener = new DebuggerListener(db, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, trace.branch, recursive = false)
-        //BellerophonTacticExecutor.defaultExecutor.schedule (expr, provable)
-        val finalProvable = SequentialInterpreter(List(listener))(appliedExpr, BelleProvable(localProvable)) match {
-          case BelleProvable(outputProvable) =>
-            println("I proved " + outputProvable.prettyString)
-            outputProvable
+        val executor = BellerophonTacticExecutor.defaultExecutor
+        val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
+        val finalProvable = executor.wait(taskId) match {
+          case Some(Left(BelleProvable(outputProvable))) => outputProvable
+          case Some(Right(error)) => throw new Exception("Tactic failed with error: " + error)
+          case None => throw new Exception("Could not get tactic result - execution cancelled? ")
         }
         val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
         val parentNode = finalTree.findNode(nodeId).get

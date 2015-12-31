@@ -261,12 +261,6 @@ trait RestApi extends HttpService {
       val tactic = axiomToTactic(axiomId)
       val request = new RunBelleTermRequest(database, userId, proofId, goalId, tactic, Some(parseFormulaId(formulaId)))
       complete(standardCompletion(request))
-      /*
-      val request = (formulaId, axiomId) match {
-        case ("F5s0", "and true") => new MockRequest("/mockdata/andtrueresult.json")
-        case ("F5s0", "step") => new MockRequest("/mockdata/andtrueresult.json")
-      }
-      complete(standardCompletion(request))*/
     }}
   }}
 

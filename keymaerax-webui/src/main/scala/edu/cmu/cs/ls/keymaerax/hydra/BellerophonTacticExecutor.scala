@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.util.concurrent.{Callable, FutureTask, ExecutorService, Executors}
 
-import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{Interpreter, SequentialInterpreter}
+import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{IOListener, Interpreter, SequentialInterpreter}
 import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleValue, BelleExpr, Interpreter}
 import scala.collection.mutable.Map
@@ -12,12 +12,11 @@ import scala.collection.mutable.Map
   * @author Nathan Fulton
   */
 object BellerophonTacticExecutor {
-  val defaultListeners = Nil
   val defaultSize = 10
-  val defaultExecutor = new BellerophonTacticExecutor(new SequentialInterpreter(defaultListeners), defaultSize)
+  val defaultExecutor = new BellerophonTacticExecutor(SequentialInterpreter, defaultSize)
 }
 
-class BellerophonTacticExecutor(interpreter : Interpreter, poolSize: Int) {
+class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, poolSize: Int) {
   require(poolSize > 0, "At least one thread is needed.")
   private val pool : ExecutorService = Executors.newFixedThreadPool(poolSize)
 
@@ -33,10 +32,10 @@ class BellerophonTacticExecutor(interpreter : Interpreter, poolSize: Int) {
     * @param value The value to apply the tactic to
     * @return The ID that [[BellerophonTacticExecutor]] uses to identify this tactic.
     */
-  def schedule(tactic: BelleExpr, value: BelleValue) : String = {
+  def schedule(tactic: BelleExpr, value: BelleValue, listeners: List[IOListener] = Nil) : String = {
     val id = java.util.UUID.randomUUID().toString
     assert(!scheduledTactics.contains(id), "All running tactic IDs should be unique.")
-    val future = makeFuture(tactic, value)
+    val future = makeFuture(tactic, value, listeners)
     pool.submit(future)
     scheduledTactics += ((id, future))
     id
@@ -72,11 +71,27 @@ class BellerophonTacticExecutor(interpreter : Interpreter, poolSize: Int) {
     }
   } ensuring(!scheduledTactics.contains(id))
 
-  private def makeFuture(tactic: BelleExpr, value: BelleValue) = {
+  /**
+    * @param id The schedule id of the tactic to wait on
+    * @param millis The duration in milliseconds to sleep between polling attempts
+    */
+  def wait(id: String, millis:Int = 10): Option[Either[BelleValue, BelleError]] = {
+    try {
+      while(!isDone(id)) {
+        Thread.sleep(millis)
+      }
+      getResult(id)
+    } catch {
+      // If the tactic execution is cancelled
+      case e:Exception => None
+    }
+  }
+
+  private def makeFuture(tactic: BelleExpr, value: BelleValue, listeners: List[IOListener]) = {
     new FutureTask[Either[BelleValue, BelleError]](new Callable[Either[BelleValue, BelleError]]() {
       override def call(): Either[BelleValue, BelleError] = {
         try {
-          Left(interpreter(tactic, value))
+          Left(interpreter(listeners)(tactic, value))
         }
         catch {
           case e : BelleError     => Right(e)
