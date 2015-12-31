@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
+import _root_.edu.cmu.cs.ls.keymaerax.btactics.RunnableInfo
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import _root_.edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
 import akka.actor.Actor
@@ -248,18 +249,9 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  // @todo replace this with AxiomInfo niceness
-  def axiomToTactic(axiom: String): String = {
-    axiom match {
-      case "step" => "Step"
-      case "and true" => "Step"
-    }
-  }
-
-  val doAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, goalId, formulaId, axiomId) => { pathEnd {
+  val doAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, goalId, formulaId, tacticId) => { pathEnd {
     get {
-      val tactic = axiomToTactic(axiomId)
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tactic, Some(parseFormulaId(formulaId)))
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(parseFormulaId(formulaId)))
       complete(standardCompletion(request))
     }}
   }}
