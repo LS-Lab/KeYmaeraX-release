@@ -199,6 +199,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("+*' expand dummy", "DUMMY", "dummyDplustimesexpandAxiom"),
     new DerivedAxiomInfo("^' dummy", "DUMMY", "dummyDpowerconsequence"),
 
+    // Note: Tactic info does not cover all tactics yet.
     // Proof rule position PositionTactics
     new PositionTacticInfo("notL", "!L"),
     new PositionTacticInfo("notR", "!R"),
@@ -238,15 +239,23 @@ object DerivationInfo {
     new InputPositionTacticInfo("cutR", "cut", List(FormulaSort())),
     new InputPositionTacticInfo("cutLR", "cut", List(FormulaSort())),
 
-    // @todo more tactic infos
-    // QE ToolTactics
-    // Differential tactics/toolTactics
-    // Tactix
-    // DLBySubst?
-    // The rest can probably wait
+    // TactixLibrary tactics
+    new PositionTacticInfo("step", "step"),
+    new PositionTacticInfo("normalize", "normalize"),
+    new PositionTacticInfo("prop", "prop"),
+    // Technically in InputPositionTactic(Generator[Formula), but the generator is optional
+    new PositionTacticInfo("master", "master"),
+    new TacticInfo("QE", "QE", needsTool = true),
 
-    new TacticInfo("", "")
+    // Differential tactics
+    new PositionTacticInfo("diffInd", "diffInd", needsTool = true),
+    new InputPositionTacticInfo("diffCut", "diffCut", List(FormulaSort()), needsTool = true),
+    new InputPositionTacticInfo("diffInvariant", "diffInv", List(FormulaSort()), needsTool = true),
+    new PositionTacticInfo("Dconstify", "Dconst"),
+    new PositionTacticInfo("Dvariable", "Dvar"),
 
+    // DLBySubst
+    new InputPositionTacticInfo("I", "I", List(FormulaSort()))
   )
 
   val byCodeName: Map[String, DerivationInfo] =
@@ -274,13 +283,6 @@ object AxiomInfo {
       case info => throw new Exception("Runnable \"" + info.canonicalName + "\" is not an axiom")
   }
 }
-
-/** The short name for an axiom is a string intended for use in the UI where space is a concern (e.g. when
-  * displaying tree-style proofs). Since the goal is to be as short as possible, they are not required to be
-  * unique, but should still be as suggestive as possible of what the axiom does.
-  * @note This can't be a case class because the auto-generated [[apply]] method conflicts with the one from
-  *       the companion object.
-  * */
 
 sealed trait InputSort {}
 case class FormulaSort () extends InputSort
@@ -316,30 +318,30 @@ case class DerivedAxiomInfo(override val canonicalName:String, override val disp
   override val numPositionArgs = 1
 }
 
-class TacticInfo(override val codeName: String, override val displayName: String) extends DerivationInfo {
+class TacticInfo(override val codeName: String, override val displayName: String, needsTool: Boolean = false) extends DerivationInfo {
   val inputs: List[InputSort] = Nil
   val canonicalName = codeName
 }
 
-case class PositionTacticInfo(override val codeName: String, override val displayName: String)
-  extends TacticInfo(codeName, displayName) {
+case class PositionTacticInfo(override val codeName: String, override val displayName: String, needsTool: Boolean = false)
+  extends TacticInfo(codeName, displayName, needsTool) {
   override val numPositionArgs = 1
 }
 
-case class TwoPositionTacticInfo(override val codeName: String, override val displayName: String)
-  extends TacticInfo(codeName, displayName) {
+case class TwoPositionTacticInfo(override val codeName: String, override val displayName: String, needsTool: Boolean = false)
+  extends TacticInfo(codeName, displayName, needsTool) {
   override val numPositionArgs = 2
 }
 
-case class InputTacticInfo(override val codeName: String, override val displayName: String, override val inputs:List[InputSort])
-  extends TacticInfo(codeName, displayName)
+case class InputTacticInfo(override val codeName: String, override val displayName: String, override val inputs:List[InputSort], needsTool: Boolean = false)
+  extends TacticInfo(codeName, displayName, needsTool)
 
-case class InputPositionTacticInfo(override val codeName: String, override val displayName: String, override val inputs:List[InputSort])
-  extends TacticInfo(codeName, displayName) {
+case class InputPositionTacticInfo(override val codeName: String, override val displayName: String, override val inputs:List[InputSort], needsTool: Boolean = false)
+  extends TacticInfo(codeName, displayName, needsTool) {
   override val numPositionArgs = 1
 }
 
-case class InputTwoPositionTacticInfo(override val codeName: String, override val displayName: String, override val inputs:List[InputSort])
-  extends TacticInfo(codeName, displayName) {
+case class InputTwoPositionTacticInfo(override val codeName: String, override val displayName: String, override val inputs:List[InputSort], needsTool: Boolean = false)
+  extends TacticInfo(codeName, displayName, needsTool) {
   override val numPositionArgs = 2
 }
