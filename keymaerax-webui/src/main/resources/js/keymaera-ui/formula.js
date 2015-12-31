@@ -367,7 +367,7 @@ angular.module('formula')
             $scope.formulaClick = function(formulaId, event) {
               // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
               event.stopPropagation();
-              $scope.onTactic({formulaId: formulaId, tacticId: "step"});
+              $scope.onTactic({formulaId: formulaId, tacticId: "StepAt"});
             }
 
             $scope.formulaRightClick = function(formulaId, event) {
