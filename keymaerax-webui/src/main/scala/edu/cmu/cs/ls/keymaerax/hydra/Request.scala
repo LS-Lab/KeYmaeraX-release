@@ -712,7 +712,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
         val finalProvable = executor.wait(taskId) match {
           case Some(Left(BelleProvable(outputProvable))) => outputProvable
-          case Some(Right(error)) => throw new Exception("Tactic failed with error: " + error)
+          case Some(Right(error: BelleError)) => throw new Exception("Tactic failed with error: " + error.getMessage, error.getCause)
           case None => throw new Exception("Could not get tactic result - execution cancelled? ")
         }
         val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
