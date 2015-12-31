@@ -185,14 +185,74 @@ object RunnableInfo {
     new DerivedAxiomInfo("[]~><> propagation", "[]~><>", "boxDiamondPropagation"),
     new DerivedAxiomInfo("K1", "K1", "K1"),
     new DerivedAxiomInfo("K2", "K2", "K2"),
-    // tactics for unit tests
+    new DerivedAxiomInfo("P1", "P1", "P1"),
+    new DerivedAxiomInfo("P2", "P2", "P2"),
+    new DerivedAxiomInfo("P3", "P3", "P3"),
+    new DerivedAxiomInfo("P9", "P9", "P9"),
+    new DerivedAxiomInfo("P10", "P10", "P10"),
+    // axioms for unit tests
     new DerivedAxiomInfo("exists dual dummy", "DUMMY", "dummyexistsDualAxiom"),
     new DerivedAxiomInfo("all dual dummy", "DUMMY", "dummyallDualAxiom"),
     new DerivedAxiomInfo("all dual dummy 2", "DUMMY", "dummyallDualAxiom2"),
     new DerivedAxiomInfo("+id' dummy", "DUMMY", "dummyDplus0"),
     new DerivedAxiomInfo("+*' reduce dummy", "DUMMY", "dummyDplustimesreduceAxiom"),
     new DerivedAxiomInfo("+*' expand dummy", "DUMMY", "dummyDplustimesexpandAxiom"),
-    new DerivedAxiomInfo("^' dummy", "DUMMY", "dummyDpowerconsequence"))
+    new DerivedAxiomInfo("^' dummy", "DUMMY", "dummyDpowerconsequence"),
+
+    // Propositional tactics
+    new TacticInfo("implyRi", "->Ri"),
+    new TacticInfo("modusPonens", "MP"),
+    new TacticInfo("propCMon", "propCE"),
+
+    // Proof rule position tactics
+    new TacticInfo("notL", "!L"),
+    new TacticInfo("notR", "!R"),
+    new TacticInfo("andR", "^R"),
+    new TacticInfo("andL", "^L"),
+    new TacticInfo("orL", "|L"),
+    new TacticInfo("orR", "|R"),
+    new TacticInfo("implyL", "->L"),
+    new TacticInfo("implyR", "->R"),
+    new TacticInfo("equivL", "<->L"),
+    new TacticInfo("equivR", "<->R"),
+    new TacticInfo("commuteEquivL", "<->CL"),
+    new TacticInfo("commuteEquivR", "<->CR"),
+    new TacticInfo("equivifyR", "<->R"),
+    new TacticInfo("hideL", "hide"),
+    new TacticInfo("hideR", "hide"),
+    new TacticInfo("coHideL", "hide"),
+    new TacticInfo("coHideR", "hide"),
+    new TacticInfo("closeFalse", "close"),
+    new TacticInfo("closeTrue", "close"),
+    new TacticInfo("skolemizeL", "skolem"),
+    new TacticInfo("skolemizeR", "skolem"),
+    new TacticInfo("skolemize", "skolem"),
+    new TacticInfo("coHide", "hide"),
+    new TacticInfo("hide", "hide"),
+
+    // Proof rule two-position tactics
+    new TacticInfo("coHide2", "hide"),
+    new TacticInfo("exchangeL", "X"),
+    new TacticInfo("exchangeR", "X"),
+    new TacticInfo("close", "close"),
+
+    // Proof rule input tactics
+    new InputTacticInfo("cut", "cut", List(FormulaSort())),
+    // Proof rule input position tactics
+    new InputTacticInfo("cutL", "cut", List(FormulaSort())),
+    new InputTacticInfo("cutR", "cut", List(FormulaSort())),
+    new InputTacticInfo("cutLR", "cut", List(FormulaSort())),
+
+    // @todo more tactic infos
+    // QE ToolTactics
+    // Differential tactics/toolTactics
+    // Tactix
+    // DLBySubst?
+    // The rest can probably wait
+
+    new TacticInfo("", "")
+
+  )
 
   val byCodeName: Map[String, RunnableInfo] =
     allInfo.foldLeft(HashMap.empty[String,RunnableInfo]){case (acc, info) =>
@@ -261,9 +321,10 @@ case class DerivedAxiomInfo(override val canonicalName:String, override val disp
   override val isPositional = true
 }
 
-class TacticInfo(override val canonicalName:String, override val displayName: String, override val codeName:String) extends RunnableInfo {
+class TacticInfo(override val codeName: String, override val displayName: String) extends RunnableInfo {
   val inputs: List[InputSort] = Nil
+  val canonicalName = codeName
 }
 
-case class InputTacticInfo(override val canonicalName:String, override val displayName: String, override val codeName: String, override val inputs:List[InputSort])
-  extends TacticInfo(canonicalName, displayName, codeName)
+case class InputTacticInfo(override val codeName: String, override val displayName: String, override val inputs:List[InputSort])
+  extends TacticInfo(codeName, displayName)
