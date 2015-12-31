@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.btactics.RunnableInfo.AxiomNotFoundException
+import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.core.{Axiom, Formula}
 
 import scala.collection.immutable.HashMap
@@ -15,12 +15,12 @@ import scala.collection.immutable.HashMap
   * field to AxiomInfo you can ensure that all new axioms will have to have that field.
   * Created by bbohrer on 12/28/15.
   */
-object RunnableInfo {
+object DerivationInfo {
   case class AxiomNotFoundException(axiomName: String) extends Exception
 
   private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
 
-  val allInfo: List[RunnableInfo] = List(
+  val allInfo: List[DerivationInfo] = List(
     new CoreAxiomInfo("chain rule", "o'", "Dcompose"),
     new CoreAxiomInfo("V vacuous", "V", "V"),
     new CoreAxiomInfo("K modal modus ponens", "K", "K"),
@@ -199,49 +199,44 @@ object RunnableInfo {
     new DerivedAxiomInfo("+*' expand dummy", "DUMMY", "dummyDplustimesexpandAxiom"),
     new DerivedAxiomInfo("^' dummy", "DUMMY", "dummyDpowerconsequence"),
 
-    // Propositional tactics
-    new TacticInfo("implyRi", "->Ri"),
-    new TacticInfo("modusPonens", "MP"),
-    new TacticInfo("propCMon", "propCE"),
-
-    // Proof rule position tactics
-    new TacticInfo("notL", "!L"),
-    new TacticInfo("notR", "!R"),
-    new TacticInfo("andR", "^R"),
-    new TacticInfo("andL", "^L"),
-    new TacticInfo("orL", "|L"),
-    new TacticInfo("orR", "|R"),
-    new TacticInfo("implyL", "->L"),
-    new TacticInfo("implyR", "->R"),
-    new TacticInfo("equivL", "<->L"),
-    new TacticInfo("equivR", "<->R"),
-    new TacticInfo("commuteEquivL", "<->CL"),
-    new TacticInfo("commuteEquivR", "<->CR"),
-    new TacticInfo("equivifyR", "<->R"),
-    new TacticInfo("hideL", "hide"),
-    new TacticInfo("hideR", "hide"),
-    new TacticInfo("coHideL", "hide"),
-    new TacticInfo("coHideR", "hide"),
-    new TacticInfo("closeFalse", "close"),
-    new TacticInfo("closeTrue", "close"),
-    new TacticInfo("skolemizeL", "skolem"),
-    new TacticInfo("skolemizeR", "skolem"),
-    new TacticInfo("skolemize", "skolem"),
-    new TacticInfo("coHide", "hide"),
-    new TacticInfo("hide", "hide"),
+    // Proof rule position PositionTactics
+    new PositionTacticInfo("notL", "!L"),
+    new PositionTacticInfo("notR", "!R"),
+    new PositionTacticInfo("andR", "^R"),
+    new PositionTacticInfo("andL", "^L"),
+    new PositionTacticInfo("orL", "|L"),
+    new PositionTacticInfo("orR", "|R"),
+    new PositionTacticInfo("implyL", "->L"),
+    new PositionTacticInfo("implyR", "->R"),
+    new PositionTacticInfo("equivL", "<->L"),
+    new PositionTacticInfo("equivR", "<->R"),
+    new PositionTacticInfo("commuteEquivL", "<->CL"),
+    new PositionTacticInfo("commuteEquivR", "<->CR"),
+    new PositionTacticInfo("equivifyR", "<->R"),
+    new PositionTacticInfo("hideL", "hide"),
+    new PositionTacticInfo("hideR", "hide"),
+    new PositionTacticInfo("coHideL", "hide"),
+    new PositionTacticInfo("coHideR", "hide"),
+    new PositionTacticInfo("closeFalse", "close"),
+    new PositionTacticInfo("closeTrue", "close"),
+    new PositionTacticInfo("skolemizeL", "skolem"),
+    new PositionTacticInfo("skolemizeR", "skolem"),
+    new PositionTacticInfo("skolemize", "skolem"),
+    new PositionTacticInfo("coHide", "hide"),
+    new PositionTacticInfo("hide", "hide"),
 
     // Proof rule two-position tactics
-    new TacticInfo("coHide2", "hide"),
-    new TacticInfo("exchangeL", "X"),
-    new TacticInfo("exchangeR", "X"),
-    new TacticInfo("close", "close"),
+    new TwoPositionTacticInfo("coHide2", "hide"),
+    new TwoPositionTacticInfo("exchangeL", "X"),
+    new TwoPositionTacticInfo("exchangeR", "X"),
+    new TwoPositionTacticInfo("close", "close"),
 
     // Proof rule input tactics
     new InputTacticInfo("cut", "cut", List(FormulaSort())),
     // Proof rule input position tactics
-    new InputTacticInfo("cutL", "cut", List(FormulaSort())),
-    new InputTacticInfo("cutR", "cut", List(FormulaSort())),
-    new InputTacticInfo("cutLR", "cut", List(FormulaSort())),
+    new InputPositionTacticInfo("cutL", "cut", List(FormulaSort())),
+    new InputPositionTacticInfo("cutR", "cut", List(FormulaSort())),
+    new InputPositionTacticInfo("cutLR", "cut", List(FormulaSort())),
 
     // @todo more tactic infos
     // QE ToolTactics
@@ -254,17 +249,17 @@ object RunnableInfo {
 
   )
 
-  val byCodeName: Map[String, RunnableInfo] =
-    allInfo.foldLeft(HashMap.empty[String,RunnableInfo]){case (acc, info) =>
+  val byCodeName: Map[String, DerivationInfo] =
+    allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
         acc.+((info.codeName, info))
     }
 
-  val byCanonicalName: Map[String, RunnableInfo] =
-    allInfo.foldLeft(HashMap.empty[String,RunnableInfo]){case (acc, info) =>
+  val byCanonicalName: Map[String, DerivationInfo] =
+    allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
       acc.+((info.canonicalName, info))
     }
 
-  def apply(axiomName: String): RunnableInfo = {
+  def apply(axiomName: String): DerivationInfo = {
     byCanonicalName.get(axiomName) match {
       case Some(info) => info
       case None => throw new AxiomNotFoundException(axiomName)
@@ -274,7 +269,7 @@ object RunnableInfo {
 
 object AxiomInfo {
   def apply(axiomName: String): AxiomInfo =
-    RunnableInfo(axiomName) match {
+    DerivationInfo(axiomName) match {
       case info:AxiomInfo => info
       case info => throw new Exception("Runnable \"" + info.canonicalName + "\" is not an axiom")
   }
@@ -290,14 +285,14 @@ object AxiomInfo {
 sealed trait InputSort {}
 case class FormulaSort () extends InputSort
 
-sealed trait RunnableInfo {
+sealed trait DerivationInfo {
   val canonicalName: String
   val displayName: String
   val codeName: String
-  val isPositional: Boolean = false
+  val numPositionArgs: Int = 0
 }
 
-trait AxiomInfo extends RunnableInfo {
+trait AxiomInfo extends DerivationInfo {
   def formula: Formula
 }
 
@@ -308,7 +303,7 @@ case class CoreAxiomInfo(override val canonicalName:String, override val display
       case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
     }
   }
-  override val isPositional = true
+  override val numPositionArgs = 1
 }
 
 case class DerivedAxiomInfo(override val canonicalName:String, override val displayName: String, override val codeName: String) extends AxiomInfo {
@@ -318,13 +313,33 @@ case class DerivedAxiomInfo(override val canonicalName:String, override val disp
       case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
     }
   }
-  override val isPositional = true
+  override val numPositionArgs = 1
 }
 
-class TacticInfo(override val codeName: String, override val displayName: String) extends RunnableInfo {
+class TacticInfo(override val codeName: String, override val displayName: String) extends DerivationInfo {
   val inputs: List[InputSort] = Nil
   val canonicalName = codeName
 }
 
+case class PositionTacticInfo(override val codeName: String, override val displayName: String)
+  extends TacticInfo(codeName, displayName) {
+  override val numPositionArgs = 1
+}
+
+case class TwoPositionTacticInfo(override val codeName: String, override val displayName: String)
+  extends TacticInfo(codeName, displayName) {
+  override val numPositionArgs = 2
+}
+
 case class InputTacticInfo(override val codeName: String, override val displayName: String, override val inputs:List[InputSort])
   extends TacticInfo(codeName, displayName)
+
+case class InputPositionTacticInfo(override val codeName: String, override val displayName: String, override val inputs:List[InputSort])
+  extends TacticInfo(codeName, displayName) {
+  override val numPositionArgs = 1
+}
+
+case class InputTwoPositionTacticInfo(override val codeName: String, override val displayName: String, override val inputs:List[InputSort])
+  extends TacticInfo(codeName, displayName) {
+  override val numPositionArgs = 2
+}

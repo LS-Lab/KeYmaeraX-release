@@ -17,7 +17,7 @@ import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
-import edu.cmu.cs.ls.keymaerax.btactics.{PositionLocator, RunnableInfo, AxiomInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.{PositionLocator, DerivationInfo, AxiomInfo}
 import _root_.edu.cmu.cs.ls.keymaerax.core.Provable
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
@@ -583,7 +583,7 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val subFormula = sequent.sub(pos).get
     val applicable = AxiomIndex.axiomsFor(subFormula)
-    val codeNames = applicable.map{case canon => RunnableInfo(canon).codeName}
+    val codeNames = applicable.map{case canon => DerivationInfo(canon).codeName}
     new ApplicableAxiomsResponse(codeNames) :: Nil
   }
 }
