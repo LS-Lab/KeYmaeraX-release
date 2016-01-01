@@ -230,21 +230,21 @@ object AxiomIndex {
   }
 
   /** Return the (non-axiom) tactic names that simplify the expression expr with simpler ones first */
-  def axiomsFor(isAnte:Boolean, expr: Expression): List[String] =
-    (expr, isAnte) match {
+  def tacticsFor(pos:Position, expr: Expression): List[String] =
+    (expr, pos.isAnte) match {
       case(Not(_), true) => "notL" :: Nil
       case(Not(_), false) => "notR" :: Nil
-      case(And(_), true) => "andL" :: Nil
-      case(And(_), false) => "andR" :: Nil
-      case(Or(_), true) => "orL" :: Nil
-      case(Or(_), false) => "orR" :: Nil
-      case(Imply(_), true) => "implyL" :: Nil
-      case(Imply(_), false) => "implyR" :: Nil
-      case(Equiv(_), true) => "equivL" :: Nil
-      case(Equiv(_), false) => "equivR" :: Nil
-      case(Box(p), _) => (p, isAnte) match {
+      case(And(_,_), true) => "andL" :: Nil
+      case(And(_,_), false) => "andR" :: Nil
+      case(Or(_,_), true) => "orL" :: Nil
+      case(Or(_,_), false) => "orR" :: Nil
+      case(Imply(_,_), true) => "implyL" :: Nil
+      case(Imply(_,_), false) => "implyR" :: Nil
+      case(Equiv(_,_), true) => "equivL" :: Nil
+      case(Equiv(_,_), false) => "equivR" :: Nil
+      case(Box(p, _), _) => (p, pos.isAnte) match {
         case (Loop(_), _) => "loop" :: Nil
-        case (ODESystem(_), _) => "diffInvariant" :: "diffInd" :: Nil
+        case (ODESystem(_, _), _) => "diffInvariant" :: "diffInd" :: Nil
       }
   }
 }
