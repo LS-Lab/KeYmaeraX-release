@@ -139,7 +139,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
 
       /** Applies the tactic 'tacticId' with input at the formula 'formulaId' */
       scope.onApplyInputTactic = function(formulaId, tacticId, input) {
-        $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + scope.deductionPath.sections[0].path[0] + '/' + formulaId + '/doInputAt/' + tacticId, input).success(function(data) {
+        $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/doInputAt/' + tacticId, input).success(function(data) {
           if (scope.nodeId === data.parent.id) {
             sequentProofData.updateAgendaAndTree(data);
           } else {
