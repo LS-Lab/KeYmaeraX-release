@@ -287,6 +287,7 @@ object DerivationInfo {
 
     // TactixLibrary tactics
     new PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),
+    new PositionTacticInfo("stepAt", "stepAt", {case () => HilbertCalculus.stepAt}),
     new PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}),
     new PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
@@ -304,12 +305,13 @@ object DerivationInfo {
     new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => DLBySubst.I(fml)})
   )
 
-  val byCodeName: Map[String, DerivationInfo] =
+  private val byCodeName: Map[String, DerivationInfo] =
+  /* @todo Decide on a naming convention. Until then, making everything case insensitive */
     allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
-        acc.+((info.codeName, info))
+        acc.+((info.codeName.toLowerCase(), info))
     }
 
-  val byCanonicalName: Map[String, DerivationInfo] =
+  private val byCanonicalName: Map[String, DerivationInfo] =
     allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
       acc.+((info.canonicalName, info))
     }
@@ -320,6 +322,8 @@ object DerivationInfo {
       case None => throw new AxiomNotFoundException(axiomName)
     }
   }
+
+  def ofCodeName(name:String) = byCodeName.get(name.toLowerCase).get
 }
 
 object AxiomInfo {
