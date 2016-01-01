@@ -502,7 +502,7 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends R
           }
       }
     JsObject(
-      "id" -> new JsString(derivationInfo.canonicalName),
+      "id" -> new JsString(derivationInfo.codeName),
       "name" -> new JsString(derivationInfo.display.name),
       "derivation" -> derivation
     )
