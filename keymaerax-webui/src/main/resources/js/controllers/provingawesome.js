@@ -44,7 +44,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     };
     //TODO: add functions  that allow renaming.
 
-    $scope.$on('agendaIsEmpty', function() {
+    $rootScope.$on('agendaIsEmpty', function() {
       $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId + '/progress').success(function(data) {
         if (data.status == 'closed') {
           var modalInstance = $uibModal.open({
