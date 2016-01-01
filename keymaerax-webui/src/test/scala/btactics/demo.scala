@@ -16,7 +16,7 @@ class demo extends FlatSpec with Matchers {
     override def begin(input: BelleValue, expr: BelleExpr) : Unit = {
       println(expr.getClass)
     }
-    override def end(input: BelleValue, expr: BelleExpr, output: BelleValue): Unit= {
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleError]): Unit= {
     }
     override def kill():Unit = ()
 
