@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
-import edu.cmu.cs.ls.keymaerax.btactics.{Find, Fixed, RunnableInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.{Find, Fixed}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import _root_.edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
 import akka.actor.Actor
@@ -202,23 +202,23 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val proofTasksParent = path("proofs" / "user" / Segment / Segment / Segment / Segment / "parent") { (userId, proofId, nodeId, goalId) => { pathEnd {
+  val proofTasksParent = path("proofs" / "user" / Segment / Segment / Segment / "parent") { (userId, proofId, nodeId) => { pathEnd {
     get {
-      val request = new ProofTaskParentRequest(database, userId, proofId, nodeId, goalId)
+      val request = new ProofTaskParentRequest(database, userId, proofId, nodeId)
       complete(standardCompletion(request))
     }
   }}}
 
-  val proofTasksPathAll = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pathall") { (userId, proofId, nodeId, goalId) => { pathEnd {
+  val proofTasksPathAll = path("proofs" / "user" / Segment / Segment / Segment / "pathall") { (userId, proofId, nodeId) => { pathEnd {
     get {
-      val request = new GetPathAllRequest(database, userId, proofId, nodeId, goalId)
+      val request = new GetPathAllRequest(database, userId, proofId, nodeId)
       complete(standardCompletion(request))
     }
   }}}
 
-  val proofTasksBranchRoot = path("proofs" / "user" / Segment / Segment / Segment / Segment / "branchroot") { (userId, proofId, nodeId, goalId) => { pathEnd {
+  val proofTasksBranchRoot = path("proofs" / "user" / Segment / Segment / Segment / "branchroot") { (userId, proofId, nodeId) => { pathEnd {
     get {
-      val request = new GetBranchRootRequest(database, userId, proofId, nodeId, goalId)
+      val request = new GetBranchRootRequest(database, userId, proofId, nodeId)
       complete(standardCompletion(request))
     }
   }}}
@@ -235,9 +235,9 @@ trait RestApi extends HttpService {
     }
   }
 
-  val axiomList = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, goalId, formulaId) => { pathEnd {
+  val axiomList = path("proofs" / "user" / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, formulaId) => { pathEnd {
     get {
-      val request = new GetApplicableAxiomsRequest(database, userId, proofId, nodeId, goalId, parseFormulaId(formulaId))
+      val request = new GetApplicableAxiomsRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId))
       //@note mock data for right-clicking formulas
 //      val request = formulaId match {
 //        case "F5s0" => new MockRequest("/mockdata/andaxiomlist.json")
@@ -249,14 +249,14 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val doAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, goalId, formulaId, tacticId) => { pathEnd {
+  val doAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     get {
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Fixed(parseFormulaId(formulaId))))
+      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))))
       complete(standardCompletion(request))
     }}
   }}
 
-  val doInputAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "doInputAt" / Segment) { (userId, proofId, nodeId, goalId, formulaId, tacticId) => { pathEnd {
+  val doInputAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / "doInputAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     post {
       entity(as[String]) { params => {
         val request = formulaId match {
@@ -269,9 +269,9 @@ trait RestApi extends HttpService {
     }}
   }}}
 
-  val doExhaustive = path("proofs" / "user" / Segment / Segment / Segment / "doExhaustive" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
+  val doTactic = path("proofs" / "user" / Segment / Segment / Segment / "do" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
     get {
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, None)
+      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None)
       complete(standardCompletion(request))
     }}
   }}
@@ -292,11 +292,7 @@ trait RestApi extends HttpService {
 
   val pruneBelow = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId, goalId) => { pathEnd {
     get {
-      val request = goalId match {
-        case "S4" => new MockRequest("/mockdata/s4prunereply.json")
-        case "S2" => new MockRequest("/mockdata/s2prunereply.json")
-        case "S1" => new MockRequest("/mockdata/s1prunereply.json")
-      }
+      val request = new PruneBelowRequest(database, userId, proofId, nodeId, goalId)
       complete(standardCompletion(request))
     }
   }}}
@@ -591,7 +587,7 @@ trait RestApi extends HttpService {
     axiomList             ::
     doAt                  ::
     doInputAt             ::
-    doExhaustive          ::
+    doTactic              ::
     doSearchLeft          ::
     doSearchRight         ::
     pruneBelow            ::

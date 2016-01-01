@@ -33,7 +33,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
   override def qeEvidence(formula: Formula): (Formula, Evidence) = jlink.qeEvidence(formula)
   def getCounterExample(formula: Formula): String = jlink.getCounterExample(formula)
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,
-                       iv: Predef.Map[Variable, Function]): Option[Formula] = jlink.diffSol(diffSys, diffArg, iv)
+                       iv: Predef.Map[Variable, Variable]): Option[Formula] = jlink.diffSol(diffSys, diffArg, iv)
 
   //@todo Implement Mathematica recovery actions
   override def restart() = ???

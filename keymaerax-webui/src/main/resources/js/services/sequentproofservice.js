@@ -1,4 +1,4 @@
-angular.module('keymaerax.services').factory('sequentProofData', function($http) {
+angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$rootScope', function($http, $rootScope) {
   return {
     /** The agenda model */
     agenda: {
@@ -168,6 +168,7 @@ angular.module('keymaerax.services').factory('sequentProofData', function($http)
         theAgenda.itemsMap[newAgendaItem.id] = newAgendaItem;
       });
       delete theAgenda.itemsMap[oldAgendaItem.id];
+      if (theAgenda.itemIds().length == 0) $rootScope.$emit('agendaIsEmpty');
     }
   }
-});
+}]);

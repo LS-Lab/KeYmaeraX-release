@@ -44,7 +44,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     };
     //TODO: add functions  that allow renaming.
 
-    $scope.$on('agendaIsEmpty', function() {
+    $rootScope.$on('agendaIsEmpty', function() {
       $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId + '/progress').success(function(data) {
         if (data.status == 'closed') {
           var modalInstance = $uibModal.open({
@@ -250,11 +250,11 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       sequentProofData.prune($scope.userId, $scope.proofId, nodeId, topParent);
     }
 
-    $scope.doExhaustive = function(tacticId) {
+    $scope.doTactic = function(tacticId) {
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
       var nodeId = sequentProofData.agenda.selectedId;
-      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doExhaustive/' + tacticId).success(function(data) {
+      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/do/' + tacticId).success(function(data) {
         if ($scope.nodeId === data.parent.id) {
           sequentProofData.updateAgendaAndTree(data);
         } else {

@@ -418,4 +418,100 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.ante should contain only ("v>=0".asFormula, "a=0".asFormula, "b()=2".asFormula, "\\forall b b<0".asFormula)
     result.subgoals.head.succ should contain only ("[{v'=a}](v>0& b()<0)".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula)
   }
+
+  "DG" should "add y'=1 to [x'=2]x>0" in {
+    val result = proveBy("[{x'=2}]x>0".asFormula, DG("y".asVariable, "0".asTerm, "1".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "\\exists y [{x'=2,y'=0*y+1}]x>0".asFormula
+  }
+
+  it should "add z'=1 to [y'=2]y>0" in {
+    val result = proveBy("[{y'=2}]y>0".asFormula, DG("z".asVariable, "0".asTerm, "1".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "\\exists z [{y'=2,z'=0*z+1}]y>0".asFormula
+  }
+
+  it should "add x'=1 to [y'=2]y>0" in {
+    val result = proveBy("[{y'=2}]y>0".asFormula, DG("x".asVariable, "0".asTerm, "1".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "\\exists x [{y'=2,x'=0*x+1}]y>0".asFormula
+  }
+
+  it should "add y'=3*y+10 to [x'=2]x>0" in {
+    val result = proveBy("[{x'=2}]x>0".asFormula, DG("y".asVariable, "3".asTerm, "10".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "\\exists y [{x'=2,y'=3*y+10}]x>0".asFormula
+  }
+
+  it should "add y'=3*y+z() to [x'=2]x>0" in {
+    val result = proveBy("[{x'=2}]x>0".asFormula, DG("y".asVariable, "3".asTerm, "z()".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "\\exists y [{x'=2,y'=3*y+z()}]x>0".asFormula
+  }
+
+  it should "preserve evolution domain" in {
+    val result = proveBy("[{x'=2 & x>=0}]x>0".asFormula, DG("y".asVariable, "3".asTerm, "10".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "\\exists y [{x'=2,y'=3*y+10 & x>=0}]x>0".asFormula
+  }
+
+  it should "work with other formulas around" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("a>1".asFormula), IndexedSeq("[{x'=2 & x>=0}]x>0".asFormula, "b=2".asFormula)),
+      DG("y".asVariable, "3".asTerm, "10".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "a>1".asFormula
+    result.subgoals.head.succ should contain only ("\\exists y [{x'=2,y'=3*y+10 & x>=0}]x>0".asFormula, "b=2".asFormula)
+  }
+
+  it should "not allow non-linear ghosts (1)" in {
+    a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("y".asVariable, "y".asTerm, "1".asTerm)(1))
+  }
+
+  it should "not allow non-linear ghosts (2)" in {
+    a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("y".asVariable, "1".asTerm, "y".asTerm)(1))
+  }
+
+  it should "not allow ghosts that are already present in the ODE" in {
+    a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("x".asVariable, "0".asTerm, "1".asTerm)(1))
+  }
+
+  "diffSolve" should "use provided solution" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2,t'=1}]x>b".asFormula)),
+      diffSolve(Some("x=x_0+2*t".asFormula))(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>b".asFormula
+    result.subgoals.head.succ should contain only "(true&t>=t_0)&x=x_0+2*(t-t_0) -> x>b".asFormula
+  }
+
+  it should "ask Mathematica if no solution provided" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2,t'=1}]x>b".asFormula)),
+      diffSolve()(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>b".asFormula
+    result.subgoals.head.succ should contain only "(true&t>=t_0)&x=2*(t-t_0)+x_0 -> x>b".asFormula
+  }
+
+  it should "find solution for x'=v if None is provided" in withMathematica { tool =>
+    //@todo requires v() instead of v, because derived axiom DlinearRight fails with substitution clash
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v()>=0".asFormula), IndexedSeq("[{x'=v(),t'=1}]x>0".asFormula)),
+      diffSolve()(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>0 & v()>=0".asFormula
+    result.subgoals.head.succ should contain only "(true&t>=t_0)&x=v()*(t-t_0)+x_0 -> x>0".asFormula
+  }
+
+  /**@todo derive not fully implemented yet */
+  ignore should "find solutions for x'=v, v'=a if None is provided" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v>=0 & a()>0".asFormula), IndexedSeq("[{x'=v,v'=a(),t'=1}]x>0".asFormula)),
+      diffSolve()(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>0 & v_0>=0 & a()>0".asFormula
+    result.subgoals.head.succ should contain only "true".asFormula
+  }
 }

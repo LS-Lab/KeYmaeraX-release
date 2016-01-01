@@ -17,7 +17,8 @@ import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
-import edu.cmu.cs.ls.keymaerax.btactics.{PositionLocator, RunnableInfo, AxiomInfo}
+import _root_.edu.cmu.cs.ls.keymaerax.btactics.{TacticInfo, AxiomInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.{PositionLocator, DerivationInfo, AxiomInfo}
 import _root_.edu.cmu.cs.ls.keymaerax.core.Provable
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
@@ -508,7 +509,7 @@ class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : Str
   }
 }
 
-class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
+class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
     tree.parent(nodeId) match {
@@ -520,9 +521,9 @@ class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String,
   }
 }
 
-case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
+case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
-    var tree: Option[TreeNode] = Some(ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).root)
+    var tree: Option[TreeNode] = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId)
     var path: List[TreeNode] = Nil
     while (tree.nonEmpty) {
       path = tree.get :: path
@@ -535,7 +536,7 @@ case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String,
   }
 }
 
-case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
+case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
     val node = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).nodes.find({case node => node.id.toString == nodeId})
     node match {
@@ -577,14 +578,14 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
 //  }
 }
 
-class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String, pos:Position) extends Request {
+class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos:Position) extends Request {
   def getResultingResponses() = {
     import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val subFormula = sequent.sub(pos).get
-    val applicable = AxiomIndex.axiomsFor(subFormula)
-    val codeNames = applicable.map{case canon => RunnableInfo(canon).codeName}
-    new ApplicableAxiomsResponse(codeNames) :: Nil
+    val axioms = AxiomIndex.axiomsFor(subFormula).map{case axiom => AxiomInfo(axiom)}
+    val tactics = AxiomIndex.tacticsFor(pos, subFormula).map{case tactic => TacticInfo(tactic)}
+    new ApplicableAxiomsResponse(axioms ++ tactics) :: Nil
   }
 }
 /**
@@ -720,8 +721,55 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val parentNode = finalTree.findNode(nodeId).get
         val response = new RunBelleTermResponse(parentNode, parentNode.children)
         response :: Nil
-
     }
+  }
+}
+
+class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String, goalId : String) extends Request {
+  def prune(trace: ExecutionTrace, pruned:Set[Int]): ExecutionTrace = {
+    val tr = trace.steps.filter{case step => step.stepId >= pruned.min}
+    val pruneRoot = tr.head
+    val prunedGoals = pruneRoot.input.subgoals.map{case _ => false}
+    val (_ ,outputSteps) =
+      tr.foldLeft((prunedGoals, Nil:List[ExecutionStep])){case ((prunedGoals, acc), step) =>
+        val delta = step.output.get.subgoals.length - step.input.subgoals.length
+        val branch = step.branch
+        val updatedGoals =
+          if (delta == 0) prunedGoals
+          else if (delta == -1) {
+            prunedGoals.slice(0, branch) ++ prunedGoals.slice(branch + 1, prunedGoals.length)
+          } else {
+            prunedGoals ++ Array.tabulate(delta){case _ => pruned.contains(step.stepId)}
+          }
+        val outputBranch =
+          prunedGoals.zipWithIndex.count{case(b,i) => i < branch && !b}
+          + (if(step.branch >= pruneRoot.branch) 1 else 0)
+
+        if(pruned.contains(step.stepId)) {
+          (updatedGoals, acc)
+        } else {
+          // @todo update rest of args correctly
+          (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder) :: acc)
+        }
+      }
+    ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps)
+  }
+
+  def getResultingResponses() = {
+    val trace = db.getExecutionTrace(proofId.toInt)
+    val tree = ProofTree.ofTrace(trace)
+    if(tree.root.id == nodeId.toInt) {
+      throw new Exception("Can't prune root")
+    }
+    val prunedSteps = tree.allDescendants(nodeId).flatMap{case node => node.endStep.toList}
+    if(prunedSteps.isEmpty) {
+      throw new Exception("No steps under node. Nothing to do.")
+    }
+    val prunedStepIds = prunedSteps.map{case step => step.stepId}.toSet
+    val prunedTrace = prune(trace, prunedStepIds)
+    db.addAlternative(prunedTrace.steps.head.stepId, prunedTrace)
+    val response = new PruneBelowResponse(nodeId, tree)
+    response :: Nil
   }
 }
 

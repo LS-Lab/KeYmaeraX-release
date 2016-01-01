@@ -11,7 +11,7 @@
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante | limitTo:1" id="{{f.id}}">
             <div class="col-md-12 k4-formula">
                 <div class="k4-formula-content k4-abbreviate">
-                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
+                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
                                 formula="f.formula" highlight="false" collapsed="true"
                                 on-tactic="onTactic(formulaId, tacticId)"
                                 on-input-tactic="onInputTactic(formulaId, tacticId, input)"></k4-formula>
@@ -35,7 +35,7 @@
         <div class="row k4-flexrow" ng-repeat="f in sequent.succ | limitTo:1" id="{{f.id}}">
             <div class="col-md-12 k4-formula">
                 <div class="k4-formula-content k4-abbreviate">
-                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
+                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
                                 formula="f.formula" highlight="false" collapsed="true"
                                 on-tactic="onTactic(formulaId, tacticId)"
                                 on-input-tactic="onInputTactic(formulaId, tacticId, input)"></k4-formula>
@@ -58,12 +58,12 @@
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
-                    <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaerax.step')"><span class="fa fa-step-forward"></span></a></li>
-                    <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="fa fa-eye-slash"></span></a></li>
+                    <li><a href="" ng-click="onTactic(f.id,'StepAt')"><span class="fa fa-step-forward"></span></a></li>
+                    <li><a href="" ng-click="onTactic(f.id,'HideL')"><span class="fa fa-eye-slash"></span></a></li>
                 </ul>
                 <div class="k4-formula-content">
                     <ul><li>-{{$index + 1}}:</li></ul>
-                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
+                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
                                 formula="f.formula" highlight="true" collapsed="false"
                                 on-tactic="onTactic(formulaId, tacticId)"
                                 on-input-tactic="onInputTactic(formulaId, tacticId, input)"></k4-formula>
@@ -71,7 +71,7 @@
             </div>
             <div class="col-md-12 k4-formula" ng-if="readOnly">
                 <div class="k4-formula-content">
-                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
+                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
                                 formula="f.formula" highlight="false" collapsed="false"
                                 on-tactic="onTactic(formulaId, tacticId)"
                                 on-input-tactic="onInputTactic(formulaId, tacticId, input)"></k4-formula>
@@ -84,12 +84,12 @@
     <!-- Turnstile -->
     <div class="col-md-1">
         <div class="row k4-flexrow">
-            <div class="col-md-12 k4-formula k4-flexcell" ng-click="handleTurnstileClick()" ng-if="!readOnly">
+            <div class="col-md-12 k4-formula k4-flexcell" ng-if="!readOnly">
                 <ul>
-                    <li><a href="" ng-click="applyTacticsByName('keymaerax.default')"><span class="fa fa-magic"></span></a></li>
-                    <li><a href="" ng-click="applyTacticsByName('keymaerax.propositional')"><span class="fa fa-forward"></span></a></li>
-                    <li><a href="" ng-click="applyTacticsByName('keymaerax.arithmetic')"><span class="fa fa-calculator"></span></a></li>
-                    <li><a href="" ng-click="applyTacticsByName('keymaerax.defaultNoArith')"><span class="fa fa-ban"></span></a></li>
+                    <li><a href="" ng-click="onTactic(undefined, 'Master')"><span class="fa fa-magic"></span></a></li>
+                    <li><a href="" ng-click="onTactic(undefined, 'Prop')"><span class="fa fa-forward"></span></a></li>
+                    <li><a href="" ng-click="onTactic(undefined, 'QE')"><span class="fa fa-calculator"></span></a></li>
+                    <li><a href="" ng-click="onTactic(undefined, 'Normalize')"><span class="fa fa-ban"></span></a></li>
                     <li><a href="" ng-click="getCounterExample()"><span class="fa fa-search"></span></a></li>
                     <!--<li><a href="" ng-click="applyTacticsByName(f,'keymaerax.cut')"><span class="fa fa-pencil"></span> Cut</a></li>-->
                 </ul>
@@ -106,8 +106,8 @@
         <div class="row k4-flexrow" ng-repeat="f in sequent.succ" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
-                    <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaerax.step')"><span class="fa fa-step-forward"></span></a></li>
-                    <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="fa fa-eye-slash"></span></a></li>
+                    <li><a href="" ng-click="onTactic(f.id,'StepAt')"><span class="fa fa-step-forward"></span></a></li>
+                    <li><a href="" ng-click="onTactic(f.id,'HideR')"><span class="fa fa-eye-slash"></span></a></li>
                 </ul>
                 <div class="k4-formula-content">
                     <ul><li>{{$index + 1}}:</li></ul>

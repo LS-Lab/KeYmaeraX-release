@@ -1,7 +1,7 @@
 <div>
     <div class="row k4-sequentRulePremise">
         <div class="col-md-12">
-            <div class="row" ng-repeat="premise in tactic.deduction.premise">
+            <div class="row" ng-repeat="premise in tactic.derivation.premise">
                 <span class="col-md-5 k4-nobreak k4-sequentRuleAnte">
                     <span ng-repeat="ante in premise.ante">
                         <span ng-repeat="antePart in ante">
@@ -31,11 +31,11 @@
     <div class="row k4-sequentRuleConclusion">
         <!--<div class="col-md-12 k4-nobreak">-->
             <div class="col-md-5 k4-nobreak k4-sequentRuleAnte">
-                <span ng-repeat="ante in tactic.deduction.conclusion.ante"><span ng-bind-html="ante"></span>{{$last ? '' : ','}}</span>
+                <span ng-repeat="ante in tactic.derivation.conclusion.ante"><span ng-bind-html="ante"></span>{{$last ? '' : ','}}</span>
             </div>
             <div class="col-md-1">&#8866;</div>
             <div class="col-md-6 k4-nobreak k4-sequentRuleSucc">
-                <span class="k4-nobreak" ng-repeat="succ in tactic.deduction.conclusion.succ"><span ng-bind-html="succ"></span>{{$last ? '' : ','}}</span>
+                <span class="k4-nobreak" ng-repeat="succ in tactic.derivation.conclusion.succ"><span ng-bind-html="succ"></span>{{$last ? '' : ','}}</span>
             </div>
         <!--</div>-->
     </div>

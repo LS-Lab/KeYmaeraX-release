@@ -3,11 +3,13 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, ExpressionTraversal, Position, PosInExpr, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
+import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 
 import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
@@ -282,6 +284,34 @@ object DifferentialTactics {
   }
 
   /**
+   * Differential ghost. Adds an auxiliary differential equation y'=a*y+b
+   * @example{{{
+   *         |- \exists y [{x'=2,y'=0*y+1}]x>0
+   *         ---------------------------------- DG("y".asVariable, "0".asTerm, "1".asTerm)(1)
+   *         |- [{x'=2}]x>0
+   * }}}
+   * @example{{{
+   *         |- \exists y [{x'=2,y'=f()*y+g() & x>=0}]x>0
+   *         --------------------------------------------- DG("y".asVariable, "f()".asTerm, "g()".asTerm)(1)
+   *         |- [{x'=2 & x>=0}]x>0
+   * }}}
+   * @param y The differential ghost variable.
+   * @param a The linear term in y'=a*y+b.
+   * @param b The constant term in y'=a*y+b.
+   * @return The tactic.
+   */
+  def DG(y: Variable, a: Term, b: Term): DependentPositionTactic = "DG" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
+        !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
+      cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b))), h), p)))(pos) <(
+        /* use */ skip,
+        /* show */ cohide(pos.topLevel) &
+          /* rename first, otherwise byUS fails */ ProofRuleTactics.uniformRenaming("y".asVariable, y) &
+          equivifyR('Rlast) & commuteEquivR('Rlast) & byUS("DG differential ghost")
+        )
+  })
+
+  /**
    * Syntactically derives a differential of a variable to a differential symbol.
    * {{{
    *   G |- x'=f, D
@@ -322,6 +352,99 @@ object DifferentialTactics {
         case _ => formulaPos(f, p.parent)
       }
     }
+  }
+
+  def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(implicit tool: DiffSolutionTool with QETool): DependentPositionTactic = "diffSolve" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(Box(odes: DifferentialProgram, _)) =>
+      require(pos.isSucc && pos.isTopLevel, "diffSolve only at top-level in succedent")
+
+      val (time, timeTactic, timeZeroInitially) = findTimeInOdes(odes) match {
+        case Some(existingTime) => (existingTime, skip, false)
+        case None =>
+          // HACK need some convention for internal names
+//          val initialTime: Variable = freshNamedSymbol(Variable("kxtime", None, Real), node.sequent)
+//          // universal quantifier and skolemization in ghost tactic (t:=0) will increment index twice
+//          val time = Variable(initialTime.name,
+//            initialTime.index match { case None => Some(1) case Some(a) => Some(a+2) }, initialTime.sort)
+//          // boxAssignT and equivRight will extend antecedent by 2 -> length + 1
+//          val introTime = nonAbbrvDiscreteGhostT(Some(initialTime), Number(0))(p) & boxAssignT(p) &
+//            diffAuxiliaryT(time, Number(0), Number(1))(p) & FOQuantifierTacticsImpl.instantiateT(time, time)(p)
+//          (time, introTime, true)
+          throw new BelleError("diffSolve requires time t'=1 in ODE")
+      }
+
+      def createTactic(ode: DifferentialProgram, solution: Formula, time: Variable, iv: Map[Variable, Variable],
+                       diffEqPos: Position): BelleExpr = {
+        val initialGhosts = primedSymbols(ode).foldLeft(skip)((a, b) =>
+          a & (discreteGhost(b)(diffEqPos) & DLBySubst.assignEquational(diffEqPos)))
+
+        // flatten conjunctions and sort by number of right-hand side symbols to approximate ODE dependencies
+        val flatSolution = flattenConjunctions(solution).
+          sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
+
+        initialGhosts & diffInvariant(tool, flatSolution:_*)(pos) & diffWeaken(pos) &
+          exhaustiveEqR2L(hide = true)('Llast)*flatSolution.size
+
+      }
+
+      // initial values
+      val iv: Map[Variable, Variable] =
+        primedSymbols(odes).map(v => v -> TacticHelper.freshNamedSymbol(v, sequent(pos.topLevel))).toMap
+
+      val theSolution = solution match {
+        case sol@Some(_) => sol
+        case None => tool.diffSol(odes, time, iv)
+      }
+
+      val diffEqPos = pos.topLevel
+      theSolution match {
+        // add relation to initial time
+        case Some(s) =>
+          val sol = And(
+            if (timeZeroInitially) s
+            else SubstitutionHelper.replaceFree(s)(time, Minus(time, iv(time))),
+            GreaterEqual(time, iv(time)))
+          createTactic(odes, sol, time, iv, diffEqPos)
+        case None => throw new BelleError("No solution found")
+      }
+
+  })
+
+  /** Searches for a time variable (some derivative x'=1) in the specified ODEs, returns None if not found. */
+  private def findTimeInOdes(odes: DifferentialProgram): Option[Variable] = {
+    var timeInOde: Option[Variable] = None
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preP(p: PosInExpr, prg: Program): Either[Option[ExpressionTraversal.StopTraversal], Program] = prg match {
+        case AtomicODE(DifferentialSymbol(v), theta) =>
+          if(theta == Number(1)) { timeInOde = Some(v); Left(Some(ExpressionTraversal.stop)) }
+          else Left(None)
+        case _ => Left(None)
+      }
+    }, odes)
+    timeInOde
+  }
+
+  private def flattenConjunctions(f: Formula): List[Formula] = {
+    var result: List[Formula] = Nil
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
+        case And(l, r) => result = result ++ flattenConjunctions(l) ++ flattenConjunctions(r); Left(Some(ExpressionTraversal.stop))
+        case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
+      }
+    }, f)
+    result
+  }
+
+  private def primedSymbols(ode: DifferentialProgram) = {
+    var primedSymbols = Set[Variable]()
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+        case DifferentialSymbol(ps) => primedSymbols += ps; Left(None)
+        case Differential(_) => throw new IllegalArgumentException("Only derivatives of variables supported")
+        case _ => Left(None)
+      }
+    }, ode)
+    primedSymbols
   }
 
   /** Indicates whether there is a proper ODE System at the indicated position of a sequent with >=2 ODEs */

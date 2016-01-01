@@ -741,6 +741,8 @@ object DerivedAxioms {
    * }}}
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K1 p. 26
+    *@todo this and several other folks here are internal derived axioms not meant for public consumption because stronger ones exist.
+    *       Remove from index and keep internal if possible.
    */
   lazy val K1F = "[a;](p(??)&q(??)) -> [a;]p(??) & [a;]q(??)".asFormula
   lazy val K1 = derivedAxiom("K1",
@@ -915,7 +917,9 @@ object DerivedAxioms {
    * }}}
    * @Derived
    */
+  @deprecated("Use axiom \"[:=] assign equality\" instead")
   lazy val assignbEquationalF = "[v:=t();]p(v) <-> \\forall v (v=t() -> p(v))".asFormula
+  @deprecated("Use axiom \"[:=] assign equality\" instead")
   lazy val assignbEquationalAxiom = derivedAxiom("[:=] assign equational",
     Sequent(Nil, IndexedSeq(), IndexedSeq(assignbEquationalF)),
     useAt("[:=] assign")(SuccPosition(0, 0::Nil)) &
@@ -923,6 +927,7 @@ object DerivedAxioms {
       byUS(allSubstitute)
   )
 
+  @deprecated("Use axiom \"[:=] assign equality\" instead")
   lazy val assignbEquationalT = derivedAxiomT(assignbEquationalAxiom)
 
   /**

@@ -259,6 +259,7 @@ trait DBAbstraction {
     */
   def addExecutionStep(step: ExecutionStepPOJO): Int
 
+  def addAlternative(alternativeTo: Int, trace:ExecutionTrace)
   def getExecutionSteps(executionID: Int): List[ExecutionStepPOJO]
   def getExecutionTrace(proofID: Int): ExecutionTrace
 

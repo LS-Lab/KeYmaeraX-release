@@ -353,6 +353,10 @@ object SQLite {
       })
     }
 
+    override def addAlternative(alternativeTo: Int, trace:ExecutionTrace):Unit = {
+      ???
+    }
+
     /** Adds a Bellerophon expression as an executable and returns the new executableId */
     override def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): Int =
       synchronizedTransaction({

@@ -18,5 +18,5 @@ class ODESolver extends DiffSolutionTool {
    * @param iv The initial values per derivative.
    * @return The solution if found; None otherwise
    */
-  override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Function]): Option[Formula] = ???
+  override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] = ???
 }
