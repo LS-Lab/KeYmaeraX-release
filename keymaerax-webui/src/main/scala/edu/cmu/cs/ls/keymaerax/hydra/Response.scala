@@ -509,6 +509,9 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends R
   }
   val json = JsArray(derivationInfos.map({case info => derivationJson(info)}))
 }
+class PruneBelowResponse(nodeId:String, tree:ProofTree) extends Response {
+  val json = ???
+}
 
 class CounterExampleResponse(cntEx: String) extends Response {
   val json = JsObject(
