@@ -934,8 +934,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
       }
     } else {
       val isProved = KeYmaeraInterface.isProved(proofId)
-      // @todo Change UI from proved vs closed to closed vs open
-      new ProofProgressResponse(proofId, isProved) :: Nil
+      new ProofVerificationResponse(proofId, isProved) :: Nil
     }
   }
 }

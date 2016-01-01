@@ -217,6 +217,9 @@ class ProofIsLoadedResponse(proofId: String) extends ProofStatusResponse(proofId
 class ProofProgressResponse(proofId: String, isClosed: Boolean)
   extends ProofStatusResponse(proofId, if(isClosed) "closed" else "open")
 
+class ProofVerificationResponse(proofId: String, isVerified: Boolean)
+  extends ProofStatusResponse(proofId, if(isVerified) "proved" else "closed")
+
 class GetProblemResponse(proofid:String, tree:String) extends Response {
   val json = JsObject(
     "proofid" -> JsString(proofid),
