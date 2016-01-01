@@ -6,8 +6,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Generator, NoneGenerate, Position, PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -419,9 +422,19 @@ object TactixLibrary extends UnifyUSCalculus {
   def eqR2L(eqPos: Int): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
   def eqR2L(eqPos: AntePosition): DependentPositionTactic = EqualityTactics.eqR2L(eqPos)
   /** Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively ([[EqualityTactics.exhaustiveEqL2R]]). */
-  lazy val exhaustiveEqL2R: DependentPositionTactic = EqualityTactics.exhaustiveEqL2R
+  lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEqL2R(false)
+  def exhaustiveEqL2R(hide: Boolean = false): DependentPositionTactic =
+    if (hide) "Find Left and Replace Left with Right" by ((pos, sequent) => sequent.sub(pos) match {
+      case Some(fml: Formula) => EqualityTactics.exhaustiveEqL2R & hideL(Find(0, Some(fml), AntePosition(0), exact=true))
+    })
+    else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
-  lazy val exhaustiveEqR2L: DependentPositionTactic = EqualityTactics.exhaustiveEqR2L
+  lazy val exhaustiveEqR2L: DependentPositionTactic = exhaustiveEqR2L(false)
+  def exhaustiveEqR2L(hide: Boolean = false): DependentPositionTactic =
+    if (hide) "Find Right and Replace Right with Left" by ((pos, sequent) => sequent.sub(pos) match {
+      case Some(fml: Formula) => EqualityTactics.exhaustiveEqR2L(pos) & debug("WTF?") & hideL(Find(0, Some(fml), AntePosition(0), exact=true)) & debug("Here")
+    })
+    else EqualityTactics.exhaustiveEqR2L
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
