@@ -709,7 +709,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             case Nil => localProvable
             case steps => steps.last.output.getOrElse(steps.last.input)
           }
-        val listener = new DebuggerListener(db, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false)
+        val listener = new DebuggerListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false)
         val executor = BellerophonTacticExecutor.defaultExecutor
         val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
         val finalProvable = executor.wait(taskId) match {
@@ -918,16 +918,9 @@ class GetProofLoadStatusRequest(db : DBAbstraction, userId : String, proofId : S
 
 class GetProofProgressStatusRequest(db: DBAbstraction, userId: String, proofId: String) extends Request {
   def getResultingResponses() = {
-    if (!KeYmaeraInterface.containsTask(proofId)) {
-      if (!KeYmaeraInterface.isLoadingTask(proofId)) {
-        new ProofNotLoadedResponse(proofId) :: Nil
-      } else {
-        new ProofIsLoadingResponse(proofId) :: Nil
-      }
-    } else {
-      val progress = KeYmaeraInterface.getTaskProgressStatus(proofId)
-      new ProofProgressResponse(proofId, progress.toString.toLowerCase) :: Nil
-    }
+    // @todo return Loading/NotLoaded when appropriate
+    val proof = db.getProofInfo(proofId)
+    new ProofProgressResponse(proofId, isClosed = proof.closed) :: Nil
   }
 }
 
@@ -941,7 +934,8 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
       }
     } else {
       val isProved = KeYmaeraInterface.isProved(proofId)
-      new ProofProgressResponse(proofId, if (isProved) "proved" else "closed") :: Nil
+      // @todo Change UI from proved vs closed to closed vs open
+      new ProofProgressResponse(proofId, isProved) :: Nil
     }
   }
 }
