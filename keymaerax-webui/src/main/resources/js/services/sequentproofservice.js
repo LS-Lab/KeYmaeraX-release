@@ -168,7 +168,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         theAgenda.itemsMap[newAgendaItem.id] = newAgendaItem;
       });
       delete theAgenda.itemsMap[oldAgendaItem.id];
-      if (proofUpdate.newNodes.length == 0) $rootScope.$emit('agendaIsEmpty');
+      if (theAgenda.itemIds().length == 0) $rootScope.$emit('agendaIsEmpty');
     }
   }
 }]);

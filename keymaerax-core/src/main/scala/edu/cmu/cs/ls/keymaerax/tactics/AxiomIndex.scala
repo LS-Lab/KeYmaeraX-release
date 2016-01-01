@@ -245,6 +245,7 @@ object AxiomIndex {
       case(Box(p, _), _) => (p, pos.isAnte) match {
         case (Loop(_), _) => "loop" :: Nil
         case (ODESystem(_, _), _) => "diffInvariant" :: "diffInd" :: Nil
+        case _ => unknown
       }
   }
 }
