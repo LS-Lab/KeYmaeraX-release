@@ -24,7 +24,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       scope.fetchBranchRoot = function(sectionIdx) {
         var section = scope.deductionPath.sections[sectionIdx];
         var sectionEnd = section.path[section.path.length-1];
-        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + sectionEnd + '/branchroot').success(function(data) {
+        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + sectionEnd + '/branchroot').success(function(data) {
           addBranchRoot(data, scope.agenda.itemsMap[scope.nodeId], sectionIdx);
         });
       }
@@ -38,7 +38,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         var section = scope.deductionPath.sections[sectionIdx];
         var sectionEnd = section.path[section.path.length-1];
         if (sectionEnd !== scope.proofTree.root) {
-          $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + sectionEnd + '/pathall').success(function(data) {
+          $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + sectionEnd + '/pathall').success(function(data) {
             // TODO use numParentsUntilComplete to display some information
             $.each(data.path, function(i, ptnode) { updateProof(ptnode); });
           });
@@ -170,8 +170,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
        * (parent appended as previous proof step below deduction view).
        */
       scope.fetchSectionParent = function(section) {
-        var goalId = section.path[section.path.length - 1];
-        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + goalId + '/parent').success(function(data) {
+        var nodeId = section.path[section.path.length - 1];
+        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + nodeId + '/parent').success(function(data) {
           updateProof(data);
         });
       }

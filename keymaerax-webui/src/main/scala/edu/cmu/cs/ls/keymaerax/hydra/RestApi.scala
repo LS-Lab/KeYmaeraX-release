@@ -202,23 +202,23 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val proofTasksParent = path("proofs" / "user" / Segment / Segment / Segment / Segment / "parent") { (userId, proofId, nodeId, goalId) => { pathEnd {
+  val proofTasksParent = path("proofs" / "user" / Segment / Segment / Segment / "parent") { (userId, proofId, nodeId) => { pathEnd {
     get {
-      val request = new ProofTaskParentRequest(database, userId, proofId, nodeId, goalId)
+      val request = new ProofTaskParentRequest(database, userId, proofId, nodeId)
       complete(standardCompletion(request))
     }
   }}}
 
-  val proofTasksPathAll = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pathall") { (userId, proofId, nodeId, goalId) => { pathEnd {
+  val proofTasksPathAll = path("proofs" / "user" / Segment / Segment / Segment / "pathall") { (userId, proofId, nodeId) => { pathEnd {
     get {
-      val request = new GetPathAllRequest(database, userId, proofId, nodeId, goalId)
+      val request = new GetPathAllRequest(database, userId, proofId, nodeId)
       complete(standardCompletion(request))
     }
   }}}
 
-  val proofTasksBranchRoot = path("proofs" / "user" / Segment / Segment / Segment / Segment / "branchroot") { (userId, proofId, nodeId, goalId) => { pathEnd {
+  val proofTasksBranchRoot = path("proofs" / "user" / Segment / Segment / Segment / "branchroot") { (userId, proofId, nodeId) => { pathEnd {
     get {
-      val request = new GetBranchRootRequest(database, userId, proofId, nodeId, goalId)
+      val request = new GetBranchRootRequest(database, userId, proofId, nodeId)
       complete(standardCompletion(request))
     }
   }}}

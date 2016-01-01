@@ -509,7 +509,7 @@ class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : Str
   }
 }
 
-class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
+class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
     tree.parent(nodeId) match {
@@ -521,9 +521,9 @@ class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String,
   }
 }
 
-case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
+case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
-    var tree: Option[TreeNode] = Some(ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).root)
+    var tree: Option[TreeNode] = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId)
     var path: List[TreeNode] = Nil
     while (tree.nonEmpty) {
       path = tree.get :: path
@@ -536,7 +536,7 @@ case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String,
   }
 }
 
-case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String) extends Request {
+case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
     val node = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).nodes.find({case node => node.id.toString == nodeId})
     node match {
