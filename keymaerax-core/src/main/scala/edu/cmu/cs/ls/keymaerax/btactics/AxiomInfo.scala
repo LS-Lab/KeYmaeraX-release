@@ -38,6 +38,9 @@ object DerivationInfo {
   private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
 
   val allInfo: List[DerivationInfo] = List(
+    new TacticInfo("TrivialCloser", "TrivialCloser", {case () => ProofRuleTactics.trivialCloser}),
+    new TacticInfo("nil", "nil", {case () => Idioms.nil}),
+  
     new CoreAxiomInfo("chain rule", "o'", "Dcompose", {case () => TactixLibrary.Dcompose}),
     new CoreAxiomInfo("V vacuous", "V", "V", {case () => TactixLibrary.V}),
     new CoreAxiomInfo("K modal modus ponens", "K", "K", {case () => TactixLibrary.K}),
