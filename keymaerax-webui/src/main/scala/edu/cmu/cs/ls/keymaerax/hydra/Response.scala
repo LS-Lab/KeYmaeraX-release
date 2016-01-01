@@ -11,7 +11,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.JSONConverter
-import _root_.edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo
+import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import com.fasterxml.jackson.annotation.JsonValue
 import spray.json._
@@ -444,15 +444,77 @@ class GetBranchRootResponse(node: TreeNode) extends Response {
 //  val json = JsArray(objects)
 //}
 
-class ApplicableAxiomsResponse(axiomNames : List[String]) extends Response {
-  def axiomJson(name: String) = {
-    JsObject(
-    "id" -> new JsString(AxiomInfo(name).displayName),
-    "name" -> new JsString(name),
-    "axiom" -> new JsString(AxiomInfo(name).formula.prettyString)
+class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends Response {
+  def inputJson(input: ArgInfo): JsValue = {
+    JsObject (
+    "type" -> JsString(input.sort),
+    "param" -> JsString(input.name)
     )
   }
-  val json = JsArray(axiomNames.map({case axiom => axiomJson(axiom)}))
+
+  def inputsJson(info:TacticInfo): Option[JsValue] = {
+    info.inputs match {
+      case Nil => None
+      case inputs => Some(new JsArray(inputs.map{case input => inputJson(input)}))
+    }
+  }
+
+  def axiomJson(info:AxiomInfo):JsValue = {
+    JsObject (
+    "type" -> JsString("axiom"),
+    "formula" -> JsString(info.formula.prettyString)
+    )
+  }
+
+  def tacticJson(info:TacticInfo) = {
+    val theType = JsString("tactic")
+    inputsJson(info) match {
+      case None => JsObject ("type" -> theType)
+      case Some(inputs) => JsObject("type" -> theType, "input" -> inputs)
+    }
+  }
+
+  def sequentJson(sequent:SequentDisplay):JsValue = {
+    JsObject (
+    "ante" -> new JsArray(sequent.ante.map{case fml => JsString(fml)}),
+    "succ" -> new JsArray(sequent.succ.map{case fml => JsString(fml)})
+    )
+  }
+
+  def ruleJson(info:TacticInfo, conclusion:SequentDisplay, premises:List[SequentDisplay]) = {
+    val conclusionJson = sequentJson(conclusion)
+    val premisesJson = new JsArray(premises.map{case sequent => sequentJson(sequent)})
+    inputsJson(info) match {
+      case None => JsObject(
+        "type" -> JsString("sequentrule"),
+        "conclusion" -> conclusionJson,
+        "premise" -> premisesJson)
+      case Some(inputs) => JsObject(
+        "type" -> JsString("sequentrule"),
+        "conclusion" -> conclusionJson,
+        "premise" -> premisesJson,
+        "input" -> inputs)
+    }
+  }
+
+  def derivationJson(derivationInfo: DerivationInfo) = {
+    val derivation =
+      derivationInfo match {
+        case info:AxiomInfo => axiomJson(info)
+        case info:TacticInfo =>
+          info.display match {
+            case SimpleDisplayInfo(_) => tacticJson(info)
+            case RuleDisplayInfo(_, conclusion, premises) =>
+              ruleJson(info, conclusion, premises)
+          }
+      }
+    JsObject(
+      "id" -> new JsString(derivationInfo.canonicalName),
+      "name" -> new JsString(derivationInfo.display.name),
+      "derivation" -> derivation
+    )
+  }
+  val json = JsArray(derivationInfos.map({case info => derivationJson(info)}))
 }
 
 class CounterExampleResponse(cntEx: String) extends Response {

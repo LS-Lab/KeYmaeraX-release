@@ -1,7 +1,7 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo
-import edu.cmu.cs.ls.keymaerax.btactics.RunnableInfo.AxiomNotFoundException
+import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.core.Axiom
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms
 import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}

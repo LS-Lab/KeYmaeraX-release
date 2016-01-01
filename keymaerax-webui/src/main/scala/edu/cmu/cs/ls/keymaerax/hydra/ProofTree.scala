@@ -9,11 +9,17 @@ import scala.collection.immutable.Nil
   */
 case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, leaves: List[AgendaItem]) {
   def leavesAndRoot = root :: leaves.map({case item => item.goal})
+
   def parent(id: String): Option[TreeNode] =
     nodes.find({case node => node.id.toString == id}).flatMap({case node => node.parent})
+
   def findNode(id: String) = nodes.find({case node =>
     node.id.toString == id})
-}
+
+  def goalIndex(id: String): Int = {
+    leaves.zipWithIndex.find({case (item, i) => item.id == id}).get._2
+  }
+ }
 object ProofTree {
   def ofTrace(trace:ExecutionTrace): ProofTree = {
     var currentNodeId = 1

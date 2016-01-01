@@ -17,7 +17,8 @@ import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
-import edu.cmu.cs.ls.keymaerax.btactics.{PositionLocator, RunnableInfo, AxiomInfo}
+import _root_.edu.cmu.cs.ls.keymaerax.btactics.{TacticInfo, AxiomInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.{PositionLocator, DerivationInfo, AxiomInfo}
 import _root_.edu.cmu.cs.ls.keymaerax.core.Provable
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
@@ -582,9 +583,9 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
     import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val subFormula = sequent.sub(pos).get
-    val applicable = AxiomIndex.axiomsFor(subFormula)
-    val codeNames = applicable.map{case canon => RunnableInfo(canon).codeName}
-    new ApplicableAxiomsResponse(codeNames) :: Nil
+    val axioms = AxiomIndex.axiomsFor(subFormula).map{case axiom => AxiomInfo(axiom)}
+    val tactics = AxiomIndex.tacticsFor(pos, subFormula).map{case tactic => TacticInfo(tactic)}
+    new ApplicableAxiomsResponse(axioms ++ tactics) :: Nil
   }
 }
 /**
@@ -696,6 +697,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         }
         val trace = db.getExecutionTrace(proofId.toInt)
         val tree = ProofTree.ofTrace(trace)
+        val branch = tree.goalIndex(nodeId)
         val node =
           tree.findNode(nodeId) match {
             case None => throw new Exception("Invalid node " + nodeId)
@@ -707,7 +709,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             case Nil => localProvable
             case steps => steps.last.output.getOrElse(steps.last.input)
           }
-        val listener = new DebuggerListener(db, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, trace.branch, recursive = false)
+        val listener = new DebuggerListener(db, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false)
         val executor = BellerophonTacticExecutor.defaultExecutor
         val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
         val finalProvable = executor.wait(taskId) match {

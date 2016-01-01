@@ -7,11 +7,12 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.awt.{GridLayout}
 import javax.swing._
 
-import _root_.edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
+import _root_.edu.cmu.cs.ls.keymaerax.btactics.{TactixLibrary, DerivedAxioms}
+import _root_.edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, KeYmaeraX}
+import _root_.edu.cmu.cs.ls.keymaerax.tools.Mathematica
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig}
-import edu.cmu.cs.ls.keymaerax.tactics.{DerivedAxioms}
 import edu.cmu.cs.ls.keymaerax.launcher.SystemWebBrowser
 import spray.can.Http
 
@@ -83,6 +84,18 @@ object Boot extends App {
     case Some(c) => (c.config("isHosted").equals("true"), c.config("host"), Integer.parseInt(c.config("port")))
     case None => (false, "127.0.0.1", 8090)
   }
+  val qeTool = new Mathematica()
+  try {
+    qeTool.init(DefaultConfiguration.defaultMathematicaConfig)
+
+    if(!qeTool.isInitialized) {
+      throw new Exception("qeTool.isInitialized = false after calling init()")
+    }
+  } catch {
+    case e:Throwable => println("===> WARNING: Failed to initialize Mathematica. " + e)
+  }
+  DerivedAxioms.qeTool = qeTool
+  TactixLibrary.qeTool = qeTool
   try {
     DerivedAxioms.prepopulateDerivedLemmaDatabase()
   }

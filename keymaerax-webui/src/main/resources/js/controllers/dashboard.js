@@ -1,6 +1,6 @@
 angular.module('keymaerax.controllers').controller('DashboardCtrl.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
   $scope.cancel = function() {
-      alert("KeYmaeraX is shut down. Please close the window and restart the server to continue using KeYmaera X.")
+      alert("KeYmaera X is shut down. Please close the window and restart the server to continue using KeYmaera X.")
       $window.close();
   }
 });
