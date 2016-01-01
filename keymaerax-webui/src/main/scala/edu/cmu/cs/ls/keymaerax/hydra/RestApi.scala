@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
-import edu.cmu.cs.ls.keymaerax.btactics.{Find, Fixed, RunnableInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.{Find, Fixed, DerivationInfo}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import _root_.edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
 import akka.actor.Actor
@@ -292,11 +292,7 @@ trait RestApi extends HttpService {
 
   val pruneBelow = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId, goalId) => { pathEnd {
     get {
-      val request = goalId match {
-        case "S4" => new MockRequest("/mockdata/s4prunereply.json")
-        case "S2" => new MockRequest("/mockdata/s2prunereply.json")
-        case "S1" => new MockRequest("/mockdata/s1prunereply.json")
-      }
+      val request = new PruneBelowRequest(database, userId, proofId, nodeId, goalId)
       complete(standardCompletion(request))
     }
   }}}

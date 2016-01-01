@@ -19,25 +19,29 @@ case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, lea
   def goalIndex(id: String): Int = {
     leaves.zipWithIndex.find({case (item, i) => item.id == id}).get._2
   }
+
+  def allDescendants(id: String): List[TreeNode] = {
+    findNode(id).get.allDescendants
+  }
  }
 object ProofTree {
   def ofTrace(trace:ExecutionTrace): ProofTree = {
     var currentNodeId = 1
 
-    def treeNode(subgoal: Sequent, parent: Option[TreeNode]): TreeNode = {
+    def treeNode(subgoal: Sequent, parent: Option[TreeNode], step:Option[ExecutionStep]): TreeNode = {
       val nodeId = currentNodeId
       currentNodeId = currentNodeId + 1
-      TreeNode(nodeId, subgoal, parent)
+      TreeNode(nodeId, subgoal, parent, step)
     }
 
     if (trace.steps.isEmpty) {
       val sequent = trace.conclusion
-      val node = treeNode(sequent, None)
+      val node = treeNode(sequent, None, None)
       return ProofTree(trace.proofId, List(node), node, List(AgendaItem(node.id.toString, "Unnamed Item", trace.proofId, node)))
     }
 
     val inputProvable = trace.steps.head.input
-    var openGoals = inputProvable.subgoals.map({case subgoal => treeNode(subgoal, None)})
+    var openGoals = inputProvable.subgoals.map({case subgoal => treeNode(subgoal, None, Some(trace.steps.head))})
     var allNodes = openGoals.toList
     var steps = trace.steps
     while (steps.nonEmpty && steps.head.output.nonEmpty) {
@@ -50,8 +54,9 @@ object ProofTree {
       } else {
         val delta =
           outputProvable.subgoals.filter({case sg => !openGoals.exists({case node => node.sequent == sg})})
-        val updatedNode = treeNode(delta.head, Some(openGoals(branch)))
-        val addedNodes = delta.tail.map({case sg => treeNode(sg, Some(openGoals(branch)))})
+        openGoals(branch).endStep = Some(step)
+        val updatedNode = treeNode(delta.head, Some(openGoals(branch)), Some(step))
+        val addedNodes = delta.tail.map({case sg => treeNode(sg, Some(openGoals(branch)), Some(step))})
         openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
         allNodes = allNodes ++ (updatedNode :: addedNodes.toList)
       }
@@ -62,11 +67,13 @@ object ProofTree {
   }
 }
 
-case class TreeNode (id: Int, sequent: Sequent, parent: Option[TreeNode]) {
+case class TreeNode (id: Int, sequent: Sequent, parent: Option[TreeNode], startStep:Option[ExecutionStep]) {
   var children: List[TreeNode] = Nil
+  var endStep: Option[ExecutionStep] = None
   if (parent.nonEmpty)
     parent.get.children = this :: parent.get.children
   def rule = "Unimplemented"
+  def allDescendants:List[TreeNode] = this :: children.flatMap{case child => child.allDescendants}
 }
 
 case class AgendaItem(id: String, name: String, proofId: String, goal: TreeNode) {

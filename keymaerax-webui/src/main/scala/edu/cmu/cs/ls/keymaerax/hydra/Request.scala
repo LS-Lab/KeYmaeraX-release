@@ -721,8 +721,55 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val parentNode = finalTree.findNode(nodeId).get
         val response = new RunBelleTermResponse(parentNode, parentNode.children)
         response :: Nil
-
     }
+  }
+}
+
+class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String, goalId : String) extends Request {
+  def prune(trace: ExecutionTrace, pruned:Set[Int]): ExecutionTrace = {
+    val tr = trace.steps.filter{case step => step.stepId >= pruned.min}
+    val pruneRoot = tr.head
+    val prunedGoals = pruneRoot.input.subgoals.map{case _ => false}
+    val (_ ,outputSteps) =
+      tr.foldLeft((prunedGoals, Nil:List[ExecutionStep])){case ((prunedGoals, acc), step) =>
+        val delta = step.output.get.subgoals.length - step.input.subgoals.length
+        val branch = step.branch
+        val updatedGoals =
+          if (delta == 0) prunedGoals
+          else if (delta == -1) {
+            prunedGoals.slice(0, branch) ++ prunedGoals.slice(branch + 1, prunedGoals.length)
+          } else {
+            prunedGoals ++ Array.tabulate(delta){case _ => pruned.contains(step.stepId)}
+          }
+        val outputBranch =
+          prunedGoals.zipWithIndex.count{case(b,i) => i < branch && !b}
+          + (if(step.branch >= pruneRoot.branch) 1 else 0)
+
+        if(pruned.contains(step.stepId)) {
+          (updatedGoals, acc)
+        } else {
+          // @todo update rest of args correctly
+          (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder) :: acc)
+        }
+      }
+    ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps)
+  }
+
+  def getResultingResponses() = {
+    val trace = db.getExecutionTrace(proofId.toInt)
+    val tree = ProofTree.ofTrace(trace)
+    if(tree.root.id == nodeId.toInt) {
+      throw new Exception("Can't prune root")
+    }
+    val prunedSteps = tree.allDescendants(nodeId).flatMap{case node => node.endStep.toList}
+    if(prunedSteps.isEmpty) {
+      throw new Exception("No steps under node. Nothing to do.")
+    }
+    val prunedStepIds = prunedSteps.map{case step => step.stepId}.toSet
+    val prunedTrace = prune(trace, prunedStepIds)
+    db.addAlternative(prunedTrace.steps.head.stepId, prunedTrace)
+    val response = new PruneBelowResponse(nodeId, tree)
+    response :: Nil
   }
 }
 
