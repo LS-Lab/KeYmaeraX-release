@@ -15,7 +15,20 @@ import scala.collection.immutable.HashMap
   * field to AxiomInfo you can ensure that all new axioms will have to have that field.
   * Created by bbohrer on 12/28/15.
   */
+
+sealed trait DisplayInfo {
+  val name: String
+}
+case class SimpleDisplayInfo(override val name: String) extends DisplayInfo
+case class RuleDisplayInfo(override val name: String, conclusion: SequentDisplay, premises:List[SequentDisplay]) extends DisplayInfo
+case class SequentDisplay(ante: List[String], succ: List[String])
+
 object DerivationInfo {
+  implicit def displayInfo(name: String): SimpleDisplayInfo = {SimpleDisplayInfo(name)}
+  implicit def sequentDisplay(succAcc:(List[String], List[String])): SequentDisplay = {
+    SequentDisplay(succAcc._1, succAcc._2)
+  }
+
   case class AxiomNotFoundException(axiomName: String) extends Exception
 
   private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
@@ -234,13 +247,20 @@ object DerivationInfo {
     new TwoPositionTacticInfo("close", "close"),
 
     // Proof rule input tactics
-    new InputTacticInfo("cut", "cut", List(FormulaSort())),
+    new InputTacticInfo("cut", "cut", List(FormulaArg("cutFormula"))),
     // Proof rule input position tactics
-    new InputPositionTacticInfo("cutL", "cut", List(FormulaSort())),
-    new InputPositionTacticInfo("cutR", "cut", List(FormulaSort())),
-    new InputPositionTacticInfo("cutLR", "cut", List(FormulaSort())),
+    new InputPositionTacticInfo("cutL", "cut", List(FormulaArg("cutFormula"))),
+    new InputPositionTacticInfo("cutR", "cut", List(FormulaArg("cutFormula"))),
+    new InputPositionTacticInfo("cutLR", "cut", List(FormulaArg("cutFormula"))),
+    new InputPositionTacticInfo("loop",
+      RuleDisplayInfo("loop",(List("&Gamma;"), List("j(&oline;x)", "&Delta;")),
+        List(
+          (List("&Gamma;"),List("j(&oline;x)", "&Delta;")),
+          (List("j(&oline;x)"),List("[a]j(&oline;x)")),
+          (List("j(&oline;x)"),List("P"))))
+      , List(FormulaArg("invariant"))),
 
-    // TactixLibrary tactics
+  // TactixLibrary tactics
     new PositionTacticInfo("step", "step"),
     new PositionTacticInfo("normalize", "normalize"),
     new PositionTacticInfo("prop", "prop"),
@@ -250,13 +270,13 @@ object DerivationInfo {
 
     // Differential tactics
     new PositionTacticInfo("diffInd", "diffInd", needsTool = true),
-    new InputPositionTacticInfo("diffCut", "diffCut", List(FormulaSort()), needsTool = true),
-    new InputPositionTacticInfo("diffInvariant", "diffInv", List(FormulaSort()), needsTool = true),
+    new InputPositionTacticInfo("diffCut", "diffCut", List(FormulaArg("cutFormula")), needsTool = true),
+    new InputPositionTacticInfo("diffInvariant", "diffInv", List(FormulaArg("invariant")), needsTool = true),
     new PositionTacticInfo("Dconstify", "Dconst"),
     new PositionTacticInfo("Dvariable", "Dvar"),
 
     // DLBySubst
-    new InputPositionTacticInfo("I", "I", List(FormulaSort()))
+    new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")))
   )
 
   val byCodeName: Map[String, DerivationInfo] =
@@ -281,16 +301,29 @@ object AxiomInfo {
   def apply(axiomName: String): AxiomInfo =
     DerivationInfo(axiomName) match {
       case info:AxiomInfo => info
-      case info => throw new Exception("Runnable \"" + info.canonicalName + "\" is not an axiom")
+      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom")
   }
 }
 
-sealed trait InputSort {}
-case class FormulaSort () extends InputSort
+object TacticInfo {
+  def apply(tacticName: String): TacticInfo =
+    DerivationInfo(tacticName) match {
+      case info:TacticInfo => info
+      case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a tactic")
+    }
+}
+
+sealed trait ArgInfo {
+  val sort: String
+  val name: String
+}
+case class FormulaArg (override val name: String) extends ArgInfo {
+  val sort = "formula"
+}
 
 sealed trait DerivationInfo {
   val canonicalName: String
-  val displayName: String
+  val display: DisplayInfo
   val codeName: String
   //@todo add formattedName/unicodeName: String
   val numPositionArgs: Int = 0
@@ -300,7 +333,7 @@ trait AxiomInfo extends DerivationInfo {
   def formula: Formula
 }
 
-case class CoreAxiomInfo(override val canonicalName:String, override val displayName: String, override val codeName: String) extends AxiomInfo {
+case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String) extends AxiomInfo {
   override def formula:Formula = {
     Axiom.axioms.get(canonicalName) match {
       case Some(fml) => fml
@@ -310,7 +343,7 @@ case class CoreAxiomInfo(override val canonicalName:String, override val display
   override val numPositionArgs = 1
 }
 
-case class DerivedAxiomInfo(override val canonicalName:String, override val displayName: String, override val codeName: String) extends AxiomInfo {
+case class DerivedAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String) extends AxiomInfo {
   override def formula: Formula = {
     DerivedAxioms.derivedAxiomMap.get(canonicalName) match {
       case Some(fml) => fml._1
@@ -320,30 +353,30 @@ case class DerivedAxiomInfo(override val canonicalName:String, override val disp
   override val numPositionArgs = 1
 }
 
-class TacticInfo(override val codeName: String, override val displayName: String, needsTool: Boolean = false) extends DerivationInfo {
-  val inputs: List[InputSort] = Nil
+class TacticInfo(override val codeName: String, override val display: DisplayInfo, needsTool: Boolean = false) extends DerivationInfo {
+  val inputs: List[ArgInfo] = Nil
   val canonicalName = codeName
 }
 
-case class PositionTacticInfo(override val codeName: String, override val displayName: String, needsTool: Boolean = false)
-  extends TacticInfo(codeName, displayName, needsTool) {
+case class PositionTacticInfo(override val codeName: String, override val display: DisplayInfo, needsTool: Boolean = false)
+  extends TacticInfo(codeName, display, needsTool) {
   override val numPositionArgs = 1
 }
 
-case class TwoPositionTacticInfo(override val codeName: String, override val displayName: String, needsTool: Boolean = false)
-  extends TacticInfo(codeName, displayName, needsTool) {
+case class TwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, needsTool: Boolean = false)
+  extends TacticInfo(codeName, display, needsTool) {
   override val numPositionArgs = 2
 }
 
-case class InputTacticInfo(override val codeName: String, override val displayName: String, override val inputs:List[InputSort], needsTool: Boolean = false)
-  extends TacticInfo(codeName, displayName, needsTool)
+case class InputTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], needsTool: Boolean = false)
+  extends TacticInfo(codeName, display, needsTool)
 
-case class InputPositionTacticInfo(override val codeName: String, override val displayName: String, override val inputs:List[InputSort], needsTool: Boolean = false)
-  extends TacticInfo(codeName, displayName, needsTool) {
+case class InputPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], needsTool: Boolean = false)
+  extends TacticInfo(codeName, display, needsTool) {
   override val numPositionArgs = 1
 }
 
-case class InputTwoPositionTacticInfo(override val codeName: String, override val displayName: String, override val inputs:List[InputSort], needsTool: Boolean = false)
-  extends TacticInfo(codeName, displayName, needsTool) {
+case class InputTwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], needsTool: Boolean = false)
+  extends TacticInfo(codeName, display, needsTool) {
   override val numPositionArgs = 2
 }
