@@ -4,19 +4,24 @@
     <!-- padding around content -->
     <div class="col-md-12 k4-tacticPopoverRow">
         <!-- axioms: execute by clicking the name -->
-        <div ng-if="tactic.deduction.type === 'axiom'">
+        <div ng-if="tactic.derivation.type === 'axiom'">
             <button class="btn btn-default" ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</button>
         </div>
-        <div class="col-md-12" ng-if="tactic.deduction.type === 'axiom'">{{tactic.deduction.formula}}</div>
+        <div class="col-md-12" ng-if="tactic.derivation.type === 'axiom'">{{tactic.derivation.formula}}</div>
+        <!-- tactics: execute by clicking the name -->
+        <div ng-if="tactic.derivation.type === 'tactic'">
+            <button class="btn btn-default" ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</button>
+        </div>
+        <div class="col-md-12" ng-if="tactic.derivation.type === 'tactic'">{{tactic.derivation.formula}}</div>
         <!-- sequent rules without parameters: execute by clicking the name -->
-        <div ng-if="tactic.deduction.type === 'sequentrule' && tactic.deduction.input.length === 0">
+        <div ng-if="tactic.derivation.type === 'sequentrule' && tactic.derivation.input.length === 0">
             <button class="btn btn-default" ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</button>
         </div>
         <!-- sequent rules with parameters: clicking the name opens a modal popup with input options -->
-        <div ng-if="tactic.deduction.type === 'sequentrule' && tactic.deduction.input.length > 0">
+        <div ng-if="tactic.derivation.type === 'sequentrule' && tactic.derivation.input.length > 0">
             <button class="btn btn-default" ng-click="applyInputTactic(formulaId, tactic)">{{tactic.name}}</button>
         </div>
-        <div class="col-md-12" ng-if="tactic.deduction.type === 'sequentrule'" ng-include="'js/keymaera-ui/sequentRuleTemplate.html'">
+        <div class="col-md-12" ng-if="tactic.derivation.type === 'sequentrule'" ng-include="'js/keymaera-ui/sequentRuleTemplate.html'">
         </div>
     </div>
 </div>

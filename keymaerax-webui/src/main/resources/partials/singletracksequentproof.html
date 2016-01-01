@@ -2,7 +2,7 @@
 <div class="row k4-proofrow">
     <div class="col-md-12">
         <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
-        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath.sections[0].path[0]"
+        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
                     sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].sequent"
                     read-only="readOnly" collapsed="false"
                     on-apply-tactic="onApplyTactic(formulaId, tacticId)"
@@ -18,7 +18,7 @@
     <div ng-class="($index === deductionPath.sections.length-1 && section.path.length === 1 && section.isComplete) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'"
          ng-if="$index > 0">
         <div class="col-md-12 k4-goalwithsiblings">
-            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath.sections[0].path[0]"
+            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
                         sequent="proofTree.nodesMap[deductionPath.sections[$index].path[0]].sequent"
                         read-only="true" collapsed="true"
                         on-apply-tactic="onApplyTactic(formulaId, tacticId)"
@@ -63,8 +63,7 @@
                       tooltip-placement="right"
                       ng-right-click="proofStepRightClick($event)" tabindex="-1"
                       uib-popover-template="'proofStepPopover.html'"
-                      popover-title="Proof step" popover-placement="bottom" popover-trigger="contextmenu"
-                      ng-init="goalId=proofTree.nodesMap[deductionPath.sections[$index].path[0]].id">
+                      popover-title="Proof step" popover-placement="bottom" popover-trigger="contextmenu">
                     {{proofTree.nodesMap[deductionPath.sections[$index].path[0]].rule.name}}
                 </span>
             </li>
@@ -76,7 +75,7 @@
          ng-repeat="step in section.path.slice(1)"
          uib-collapse="section.isCollapsed">
         <div class="col-md-12">
-            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath.sections[0].path[0]"
+            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
                         sequent="proofTree.nodesMap[step].sequent"
                         read-only="true" collapsed="true"
                         on-apply-tactic="onApplyTactic(formulaId, tacticId)"
@@ -110,8 +109,7 @@
                       tooltip-placement="right"
                       ng-right-click="proofStepRightClick($event)" tabindex="-1"
                       uib-popover-template="'proofStepPopover.html'"
-                      popover-title="Proof step" popover-placement="bottom" popover-trigger="contextmenu"
-                      ng-init="goalId=proofTree.nodesMap[step].id">
+                      popover-title="Proof step" popover-placement="bottom" popover-trigger="contextmenu">
                     {{proofTree.nodesMap[step].rule.name}}
                 </span>
             </li>
@@ -195,14 +193,14 @@
     <div>
     <span class="k4-nobreak">
         <span ng-repeat="f in proofTree.nodesMap[sibling].sequent.ante | limitTo:1">
-            <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath.sections[0].path[0]"
+            <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
                         formula="f.formula" highlight="false" collapsed="true" on-tactic=""></k4-formula>
             <span ng-if="proofTree.nodesMap[sibling].sequent.ante.length > 1">...</span>
         </span>
         <span>&#8866;</span>
         <span ng-repeat="f in proofTree.nodesMap[sibling].sequent.succ | limitTo:-1">
             <span ng-if="proofTree.nodesMap[sibling].sequent.succ.length > 1">... </span>
-            <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="deductionPath.sections[0].path[0]"
+            <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
                         formula="f.formula" highlight="false" collapsed="true" on-tactic=""></k4-formula>
         </span>
     </span>
@@ -210,7 +208,7 @@
 </script>
 <script type="text/ng-template" id="proofStepPopover.html">
     <div class="k4-nobreak">
-        <a ng-click="prune(goalId)"><span class="fa fa-eraser"> Prune</span></a><br/>
-        <a ng-click="startProof(goalId)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>
+        <a ng-click="prune(nodeId)"><span class="fa fa-eraser"> Prune</span></a><br/>
+        <a ng-click="startProof(nodeId)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>
     </div>
 </script>

@@ -11,7 +11,7 @@
                 </span>
                 <div class="nav">
                     <ul class="nav navbar-nav">
-                        <li><a ng-click="doExhaustive('Master')"><span class="fa fa-play"> Auto</span></a></li>
+                        <li><a ng-click="doTactic('Master')"><span class="fa fa-play"> Auto</span></a></li>
                         <li><a ng-click="undoLastStep()"><span class="fa fa-undo"> Step back</span></a></li>
                     </ul>
                     <ul class="nav navbar-nav pull-right">
@@ -24,7 +24,7 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doExhaustive('Prop')"> Exhaustive <code>prop</code></a></li>
+                                <li><a ng-click="doTactic('Prop')"> Exhaustive <code>prop</code></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('AndL', 'L')">and left <code>andL</code></a></li>
                                 <li><a ng-click="doSearch('ImplyR', 'R')">imply right <code>implyR</code></a></li>
@@ -54,6 +54,15 @@
                                aria-haspopup="true" aria-expanded="false">Differential Equations <span class="caret"></span></a>
                             <ul class="dropdown-menu">
                                 <li><a ng-click="doSearch('DiffWeaken', 'R')">DW <code>diffWeaken</code></a></li>
+                                <!-- TODO -->
+                            </ul>
+                        </li>
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                               aria-haspopup="true" aria-expanded="false">Closing <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <li><a ng-click="doTactic('closeId')">Close by identity <code>closeId</code></a></li>
+                                <li><a ng-click="doTactic('QE')">Quantifier elimination <code>QE</code></a></li>
                                 <!-- TODO -->
                             </ul>
                         </li>
