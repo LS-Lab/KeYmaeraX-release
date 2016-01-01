@@ -250,11 +250,11 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       sequentProofData.prune($scope.userId, $scope.proofId, nodeId, topParent);
     }
 
-    $scope.doExhaustive = function(tacticId) {
+    $scope.doTactic = function(tacticId) {
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
       var nodeId = sequentProofData.agenda.selectedId;
-      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doExhaustive/' + tacticId).success(function(data) {
+      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/do/' + tacticId).success(function(data) {
         if ($scope.nodeId === data.parent.id) {
           sequentProofData.updateAgendaAndTree(data);
         } else {

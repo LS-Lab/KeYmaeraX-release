@@ -126,7 +126,9 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
 
       /** Applies the tactic 'tacticId' without input at the formula 'formulaId' */
       scope.onApplyTactic = function(formulaId, tacticId) {
-        $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + scope.deductionPath.sections[0].path[0] + '/' + formulaId + '/doAt/' + tacticId).success(function(data) {
+        var base = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId;
+        var uri = formulaId !== undefined ?  base + '/' + formulaId + '/doAt/' + tacticId : base + '/do/' + tacticId;
+        $http.get(uri).success(function(data) {
           if (scope.nodeId === data.parent.id) {
             sequentProofData.updateAgendaAndTree(data);
           } else {

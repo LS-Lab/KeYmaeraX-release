@@ -578,7 +578,7 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
 //  }
 }
 
-class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, goalId: String, pos:Position) extends Request {
+class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos:Position) extends Request {
   def getResultingResponses() = {
     import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent

@@ -9,7 +9,6 @@ angular.module('formula')
             userId: '=',
             proofId: '=',
             nodeId: '=',
-            goalId: '=',
             formula: '=',
             highlight: '=',
             collapsed: '=?',
@@ -376,15 +375,17 @@ angular.module('formula')
               event.target.focus();
               if ($scope.formulaAxiomsMap[formulaId] === undefined) {
                 // axioms not fetched yet
-                $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.nodeId + '/' + $scope.goalId + '/' + formulaId + '/list')
+                $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.nodeId + '/' + formulaId + '/list')
                   .success(function(data) {
                     $scope.formulaAxiomsMap[formulaId] = $.map(data, function(tactic, i) {
-                      if (tactic.deduction.type === 'sequentrule') {
+                      if (tactic.derivation.type === 'sequentrule') {
                         return convertSequentRuleToInput(tactic);
-                      } else if (tactic.deduction.type === 'axiom') {
+                      } else if (tactic.derivation.type === 'axiom') {
+                        return tactic;
+                      } else if (tactic.derivation.type === 'tactic') {
                         return tactic;
                       } else {
-                        console.log("Unknown deduction type '" + tactic.deduction.type + "'");
+                        console.log("Unknown deduction type '" + tactic.derivation.type + "'");
                       }
                     });
                     $scope.tacticPopover.open(formulaId);
