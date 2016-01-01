@@ -44,12 +44,13 @@ object BTacticParser {
       seqP    ::
       eitherP ::
       repeatP ::
+      repeatPDefaultType ::
       ntimesP ::
       partialP ::
       postPartialP ::
 //      usubstCaseAnalysisP ::
-      baseTacticNoInput ::
       baseTacticWithInputs ::
+      baseTacticNoInput ::
       Nil
 
     lazy val typeParsers : List[PackratParser[BelleType]] =
@@ -69,7 +70,7 @@ object BTacticParser {
     protected val numberPattern = """[0-9]*""".r
 
     val positionPattern = """[\-?0-9]*""".r
-    val notArgumentDelimiter = """`}""".r
+    val notArgumentDelimiter = """[^`}]""".r
 //    val notDoubleQoute = """[^\"]*""".r
 
     // SYMBOLTABLE contains reserved symbols.
@@ -118,6 +119,13 @@ object BTacticParser {
       }
     }
 
+    lazy val repeatPDefaultType: PackratParser[BelleExpr] = {
+      lazy val pattern = expressionParser <~ STAR
+      log(pattern)(STAR + " with default type") ^^ {
+        case expr => SaturateTactic(expr, TheType())
+      }
+    }
+
     lazy val ntimesP : PackratParser[BelleExpr] = {
       lazy val pattern = expressionParser ~ ANNOTATED_STAR ~ ("(" ~> typeParser <~ ")") ~ numberPattern
       log(pattern)(ANNOTATED_STAR) ^^ {
@@ -151,18 +159,26 @@ object BTacticParser {
     }
 
     /** Looks like name(formula | position, formula | position, ..., formula | position) where formula = {` formula `} */
-    lazy val baseTacticWithInputs : PackratParser[BelleExpr] = {
-      lazy val formulaOrPosition = "{`".r ~> notArgumentDelimiter <~ "`}".r | positionPattern
-      lazy val argList = "(" ~> formulaOrPosition.*.? ~ formulaOrPosition <~ ")"
-      lazy val pattern = ident ~ argList
+//    lazy val baseTacticWithInputs : PackratParser[BelleExpr] = {
+//      lazy val formulaOrPosition = ("{`" ~> notArgumentDelimiter <~ "`}") | positionPattern
+//      lazy val pattern = ident ~ ("(" ~> formulaOrPosition ~ formulaOrPosition.*.? <~ ")")
+//
+//      log(pattern)("base tactic with inputs") ^^ {
+//        case name ~ arguments => {
+//          val allArguments : List[String] = arguments._2 match {
+//            case Some(args) => arguments._1 +: args
+//            case None => arguments._1 :: Nil
+//          }
+//          ReflectiveExpressionBuilder(name, allArguments.map(parseFormulaOrPosition))
+//        }
+//      }
+//    }
 
-      log(pattern)("base tactic with inputs") ^^ {
-        case name ~ arguments => {
-          val allArguments : List[String] = arguments._1 match {
-            case Some(args) => args :+ arguments._2
-            case None => arguments._2 :: Nil
-          }
-          ReflectiveExpressionBuilder(name, allArguments.map(parseFormulaOrPosition))
+    lazy val baseTacticWithInputs : PackratParser[BelleExpr] = {
+      lazy val pattern = ident ~ ("(" ~> positionPattern <~ ")")
+      log(pattern)("base tactic with position input") ^^ {
+        case name ~ argument => {
+          ReflectiveExpressionBuilder(name, (argument::Nil).map(parseFormulaOrPosition))
         }
       }
     }
