@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btacticinterface
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.{Fixed, DerivationInfo, ExposedTacticsLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{Fixed, DerivationInfo}
 import edu.cmu.cs.ls.keymaerax.core.{SeqPos, Formula}
 
 /**
