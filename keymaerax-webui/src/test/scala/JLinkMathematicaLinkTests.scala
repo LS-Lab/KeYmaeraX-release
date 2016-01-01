@@ -3,6 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.JLinkMathematicaLink
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
@@ -20,17 +21,18 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
   val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
   private var link: JLinkMathematicaLink = null
 
-  private val x = Variable("x", None, Real)
-  private val y = Variable("y", None, Real)
-  private val z = Variable("z", None, Real)
-  private val t = Variable("t", None, Real)
-  private val x0 = Function("x0", None, Unit, Real)
-  private val y0 = Function("y0", None, Unit, Real)
+  private val x = Variable("x")
+  private val y = Variable("y")
+  private val z = Variable("z")
+  private val t = Variable("t")
+  private val x0 = Variable("x", Some(0))
+  private val y0 = Variable("y", Some(0))
   private val one = Number(BigDecimal(1))
 
   override def beforeEach() = {
     link = new JLinkMathematicaLink
     link.init(mathematicaConfig("linkName"), None)
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   }
 
   override def afterEach() = {
@@ -40,7 +42,7 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
 
   "x'=1" should "x=x0+y*t with AtomicODE" in {
     val eq = AtomicODE(DifferentialSymbol(x), one)
-    val expected = Some("x=x0()+t".asFormula)
+    val expected = Some("x=t+x_0".asFormula)
     link.diffSol(eq, t,  Map(x->x0)) should be (expected)
   }
 
@@ -48,7 +50,7 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
     val eq = DifferentialProduct(
       AtomicODE(DifferentialSymbol(x), y),
       AtomicODE(DifferentialSymbol(y), z))
-    val expected = Some("x=1/2*(2*x0() + 2*y0()*t + t^2*z) & y=y0() + t*z".asFormula)
+    val expected = Some("x=1/2*(2*x_0 + 2*t*y_0 + t^2*z) & y=y_0 + t*z".asFormula)
     link.diffSol(eq, t, Map(x->x0, y->y0)) should be (expected)
   }
 
@@ -57,7 +59,7 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
     val eq = DifferentialProduct(
       AtomicODE(DifferentialSymbol(x), y),
       AtomicODE(DifferentialSymbol(t), one))
-    val expected = Some("x=x0() + t*y".asFormula)
+    val expected = Some("x=x_0+t*y".asFormula)
     link.diffSol(eq, t, Map(x->x0)) should be (expected)
   }
 

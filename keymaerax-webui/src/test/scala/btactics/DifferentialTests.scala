@@ -480,4 +480,38 @@ class DifferentialTests extends TacticTestBase {
   it should "not allow ghosts that are already present in the ODE" in {
     a [BelleError] should be thrownBy proveBy("[{x'=2}]x>0".asFormula, DG("x".asVariable, "0".asTerm, "1".asTerm)(1))
   }
+
+  "diffSolve" should "use provided solution" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2,t'=1}]x>b".asFormula)),
+      diffSolve(Some("x=x_0+2*t".asFormula))(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>b".asFormula
+    result.subgoals.head.succ should contain only "(true&t>=t_0)&x=x_0+2*(t-t_0) -> x>b".asFormula
+  }
+
+  it should "ask Mathematica if no solution provided" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2,t'=1}]x>b".asFormula)),
+      diffSolve()(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>b".asFormula
+    result.subgoals.head.succ should contain only "(true&t>=t_0)&x=2*(t-t_0)+x_0 -> x>b".asFormula
+  }
+
+  it should "find solution for x'=v if None is provided" in withMathematica { tool =>
+    //@todo requires v() instead of v, because derived axiom DlinearRight fails with substitution clash
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v()>=0".asFormula), IndexedSeq("[{x'=v(),t'=1}]x>0".asFormula)),
+      diffSolve()(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>0 & v()>=0".asFormula
+    result.subgoals.head.succ should contain only "(true&t>=t_0)&x=v()*(t-t_0)+x_0 -> x>0".asFormula
+  }
+
+  /**@todo derive not fully implemented yet */
+  ignore should "find solutions for x'=v, v'=a if None is provided" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v>=0 & a()>0".asFormula), IndexedSeq("[{x'=v,v'=a(),t'=1}]x>0".asFormula)),
+      diffSolve()(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>0 & v_0>=0 & a()>0".asFormula
+    result.subgoals.head.succ should contain only "true".asFormula
+  }
 }

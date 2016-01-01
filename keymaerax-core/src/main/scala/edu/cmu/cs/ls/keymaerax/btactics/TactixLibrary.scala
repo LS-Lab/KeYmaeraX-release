@@ -177,7 +177,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** testb: [?] simplifies test `[?q;]p` to an implication `q->p` */
   lazy val testb              : DependentPositionTactic = useAt("[?] test")
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)` */
-  lazy val diffSolve          : BuiltInPositionTactic = ??? //TacticLibrary.diffSolutionT
+  def diffSolve(solution: Option[Formula] = None)(implicit tool: DiffSolutionTool with QETool): DependentPositionTactic = DifferentialTactics.diffSolve(solution)
   /** choiceb: [++] handles both cases of a nondeterministic choice `[a++b]p(x)` separately `[a]p(x) & [b]p(x)` */
   lazy val choiceb            : DependentPositionTactic = useAt("[++] choice")
   /** composeb: [;] handle both parts of a sequential composition `[a;b]p(x)` one at a time `[a][b]p(x)` */

@@ -209,7 +209,7 @@ object ODETactics {
 
         val time = Variable("t_", None, Real)
         val theSolution = tool match {
-          case x: Mathematica => x.diffSol(diffEq, time, ivm)
+          case x: Mathematica => x.diffSol(diffEq, time, iv/*ivm*/)
           case _ => None
         }
 
@@ -499,7 +499,7 @@ object ODETactics {
         val theSolution = solution match {
           case sol@Some(_) => sol
           case None => tool match {
-            case x: Mathematica => if(x.isInitialized) x.diffSol(diffEq, time, ivm) else None
+            case x: Mathematica => if(x.isInitialized) x.diffSol(diffEq, time, iv/*ivm*/) else None
             case _ => None
           }
         }
