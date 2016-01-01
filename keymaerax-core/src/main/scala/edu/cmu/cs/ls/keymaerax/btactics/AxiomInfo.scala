@@ -1,9 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentTactic, DependentPositionTactic, BelleExpr}
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics
-import edu.cmu.cs.ls.keymaerax.core.{Term, Variable, Axiom, Formula}
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.Position
 
 import scala.collection.immutable.HashMap
 
@@ -31,6 +32,7 @@ object DerivationInfo {
     SequentDisplay(succAcc._1, succAcc._2)
   }
 
+  implicit def qeTool:QETool = DerivedAxioms.qeTool
   case class AxiomNotFoundException(axiomName: String) extends Exception
 
   private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
@@ -39,23 +41,21 @@ object DerivationInfo {
     new CoreAxiomInfo("chain rule", "o'", "Dcompose", {case () => TactixLibrary.Dcompose}),
     new CoreAxiomInfo("V vacuous", "V", "V", {case () => TactixLibrary.V}),
     new CoreAxiomInfo("K modal modus ponens", "K", "K", {case () => TactixLibrary.K}),
-    // @todo this one takes arguments
-    new CoreAxiomInfo("I induction", "I", "I", {case () => (fml:Formula) => TactixLibrary.I(fml)}),
+    // Note: the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
+    new CoreAxiomInfo("I induction", "I", needsCodeName, {case () => ???}),
     new CoreAxiomInfo("all instantiate", "alli", needsCodeName, {case () => ???}),
     new CoreAxiomInfo("vacuous all quantifier", "Vall", "vacuousAll", {case () => HilbertCalculus.vacuousAll}),
     new CoreAxiomInfo("vacuous exists quantifier", "Vexists", "vacuousExists", {case () => HilbertCalculus.vacuousExists}),
     new CoreAxiomInfo("const congruence", "CCE", needsCodeName, {case () => ???}),
     new CoreAxiomInfo("const formula congruence", "CCQ", needsCodeName, {case () => ???}),
-      //@todo derived
-    new CoreAxiomInfo("DX differential skip", "DX", "Dskipd", {case () => DerivedAxioms.Dskipd}),
+    // Note: only used to implement Dskipd
+    new CoreAxiomInfo("DX differential skip", "DX", needsCodeName, {case () => ???}),
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> dual", "<.>", needsCodeName, {case () => HilbertCalculus.duald}),
     new CoreAxiomInfo("[] dual", "[.]", needsCodeName, {case () => HilbertCalculus.dualb}),
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => HilbertCalculus.assignb}),
     new CoreAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new CoreAxiomInfo("[':=] differential assign", "[':=]", "Dassignb", {case () => HilbertCalculus.Dassignb}),
-      //@todo derived
-    new CoreAxiomInfo("<':=> differential assign", "<':=>", "assignD", {case () => DerivedAxioms.assignDAxiom}),
     new CoreAxiomInfo("[:=] assign equational", "[:=]=", "assignb", {case () => HilbertCalculus.assignb}),
     new CoreAxiomInfo("<:=> assign equational", "<:=>=", "assignd", {case () => HilbertCalculus.assignd}),
     new CoreAxiomInfo("[:=] assign update", "[:=]", "assignb", {case () => HilbertCalculus.assignb}),
@@ -78,8 +78,8 @@ object DerivationInfo {
     new CoreAxiomInfo("DE differential effect", "DE", "DE", {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DE differential effect (system)", "DE", "DE", {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DI differential invariant", "DI", "DI", {case () => HilbertCalculus.DI}),
-      //@todo args
-    new CoreAxiomInfo("DG differential ghost", "DG", "DG", {case () => (x:Variable) => (t1:Term) => (t2:Term) => HilbertCalculus.DG(x,t1,t2)}),
+    new CoreAxiomInfo("DG differential ghost", "DG", "DG", {case () => (x:Variable) => (t1:Term) => (t2:Term) => HilbertCalculus.DG(x,t1,t2)},
+      List(VariableArg("x"), TermArg("t1"), TermArg("t2"))),
     new CoreAxiomInfo("DG differential Lipschitz ghost system", "DG", "DG", {case () => ???}),
     new CoreAxiomInfo("DG++ System", "DG++", needsCodeName, {case () => ???}),
     new CoreAxiomInfo("DG++", "DG++", needsCodeName, {case () => ???}),
@@ -106,6 +106,9 @@ object DerivationInfo {
     new CoreAxiomInfo("^' derive power", "^'", "Dpower", {case () => HilbertCalculus.Dpower}),
     new CoreAxiomInfo("x' derive variable", "x'", "Dvariable", {case () => HilbertCalculus.Dvariable}),
     new CoreAxiomInfo("x' derive var", "x'", "Dvariable", {case () => HilbertCalculus.Dvariable}),
+
+    // Derived axioms
+    new DerivedAxiomInfo("<':=> differential assign", "<':=>", "assignD", {case () => DerivedAxioms.assignDAxiom}),
     new DerivedAxiomInfo("DS differential equation solution", "DS", "DSnodomain", {case () => DerivedAxioms.DSnodomainT}),
     new DerivedAxiomInfo("Dsol& differential equation solution", "DS&", "DSddomain", {case () => DerivedAxioms.DSddomainT}),
     new DerivedAxiomInfo("Dsol differential equation solution", "DS", "DSdnodomain", {case () => DerivedAxioms.DSdnodomainT}),
@@ -252,9 +255,28 @@ object DerivationInfo {
     // Proof rule input tactics
     new InputTacticInfo("cut", "cut", List(FormulaArg("cutFormula")), {case () => (fml:Formula) => ProofRuleTactics.cut(fml)}),
     // Proof rule input position tactics
-    new InputPositionTacticInfo("cutL", "cut", List(FormulaArg("cutFormula")), {case () => (fml:Formula) => ProofRuleTactics.cutL(fml)}),
-    new InputPositionTacticInfo("cutR", "cut", List(FormulaArg("cutFormula")), {case () => (fml:Formula) => ProofRuleTactics.cutR(fml)}),
-    new InputPositionTacticInfo("cutLR", "cut", List(FormulaArg("cutFormula")), {case () => (fml:Formula) => ProofRuleTactics.cutLR(fml)}),
+    //@todo Move these DependentPositionTactic wrappers to ProofRuleTactics?
+    new InputPositionTacticInfo("cutL", "cut", List(FormulaArg("cutFormula")),
+      {case () => (fml:Formula) => new DependentPositionTactic("cutL") {
+        /** Create the actual tactic to be applied at position pos */
+        override def factory(pos: Position): DependentTactic = new DependentTactic("cutL") {
+          ProofRuleTactics.cutL(fml)(pos)
+        }
+      }}),
+    new InputPositionTacticInfo("cutR", "cut", List(FormulaArg("cutFormula")),
+      {case () => (fml:Formula) => new DependentPositionTactic("cutR") {
+        /** Create the actual tactic to be applied at position pos */
+        override def factory(pos: Position): DependentTactic = new DependentTactic("cutR") {
+          ProofRuleTactics.cutR(fml)(pos)
+        }
+      }}),
+    new InputPositionTacticInfo("cutLR", "cut", List(FormulaArg("cutFormula")),
+      {case () => (fml:Formula) => new DependentPositionTactic("cutLR") {
+          /** Create the actual tactic to be applied at position pos */
+          override def factory(pos: Position): DependentTactic = new DependentTactic("cutLR") {
+            ProofRuleTactics.cutLR(fml)(pos)
+          }
+        }}),
     new InputPositionTacticInfo("loop",
       RuleDisplayInfo("loop",(List("&Gamma;"), List("j(&oline;x)", "&Delta;")),
         List(
@@ -269,12 +291,12 @@ object DerivationInfo {
     new PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new PositionTacticInfo("master", "master", {case () => TactixLibrary.master()}),
-    new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE(DerivedAxioms.qeTool)}, needsTool = true),
+    new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
 
     // Differential tactics
-    new PositionTacticInfo("diffInd", "diffInd",  {case () => DifferentialTactics.diffInd(DerivedAxioms.qeTool)}, needsTool = true),
+    new PositionTacticInfo("diffInd", "diffInd",  {case () => DifferentialTactics.diffInd}, needsTool = true),
     new InputPositionTacticInfo("diffCut", "diffCut", List(FormulaArg("cutFormula")), {case () => (fml:Formula) => DifferentialTactics.diffCut(fml)}, needsTool = true),
-    new InputPositionTacticInfo("diffInvariant", "diffInv", List(FormulaArg("invariant")), {case () => (fml:Formula) => DifferentialTactics.diffInvariant(DerivedAxioms.qeTool, fml)}, needsTool = true),
+    new InputPositionTacticInfo("diffInvariant", "diffInv", List(FormulaArg("invariant")), {case () => (fml:Formula) => DifferentialTactics.diffInvariant(qeTool, fml)}, needsTool = true),
     new PositionTacticInfo("Dconstify", "Dconst", {case () => DifferentialTactics.Dconstify}),
     new PositionTacticInfo("Dvariable", "Dvar", {case () => DifferentialTactics.Dvariable}),
 
@@ -323,11 +345,17 @@ sealed trait ArgInfo {
 case class FormulaArg (override val name: String) extends ArgInfo {
   val sort = "formula"
 }
-
+case class VariableArg (override val name: String) extends ArgInfo {
+  val sort = "variable"
+}
+case class TermArg (override val name: String) extends ArgInfo {
+  val sort = "term"
+}
 sealed trait DerivationInfo {
   val canonicalName: String
   val display: DisplayInfo
   val codeName: String
+  val inputs: List[ArgInfo] = Nil
   // This is an Any because for input tactics it's a function <inputType> => BelleExpr. For non-imput tactics sthis is a
   // BelleExpr. The input information for tactics allows us to disambiguate.
   def belleExpr: Any
@@ -339,7 +367,7 @@ trait AxiomInfo extends DerivationInfo {
   def formula: Formula
 }
 
-case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any) extends AxiomInfo {
+case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any, override val inputs:List[ArgInfo] = Nil) extends AxiomInfo {
   def belleExpr = expr()
   override def formula:Formula = {
     Axiom.axioms.get(canonicalName) match {
@@ -363,7 +391,6 @@ case class DerivedAxiomInfo(override val canonicalName:String, override val disp
 
 class TacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false) extends DerivationInfo {
   def belleExpr = expr()
-  val inputs: List[ArgInfo] = Nil
   val canonicalName = codeName
 }
 
