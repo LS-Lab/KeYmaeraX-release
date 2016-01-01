@@ -13,6 +13,7 @@ import javax.crypto.spec.PBEKeySpec
 import javax.xml.bind.DatatypeConverter
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, BelleExpr}
+import _root_.edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Lemma, Formula, Provable, Sequent}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 import _root_.edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
@@ -354,7 +355,33 @@ object SQLite {
     }
 
     override def addAlternative(alternativeTo: Int, trace:ExecutionTrace):Unit = {
-      ???
+      def get(stepId: Int) = {
+        Executionsteps.filter(_._Id === alternativeTo).list match {
+          case Nil => throw new Exception("Execution step not found")
+          case step :: _ => step
+        }
+      }
+      val oldStep = get(alternativeTo)
+      def addSteps(prev: Option[Int], steps:List[ExecutionStep]): Unit = {
+        if(steps.isEmpty) return
+        else {
+          val thisStep = steps.head
+          val thisPOJO = get(thisStep.stepId)
+          val newStep = new ExecutionStepPOJO(None, oldStep.executionid.get, prev, None, Some(thisStep.branch),
+            None, oldStep.alternativeorder.get + 1, ExecutionStepStatus.fromString(thisPOJO.status.get), thisPOJO.executableid.get, thisPOJO.inputprovableid.get,
+            thisPOJO.resultprovableid, thisPOJO.userexecuted.get.toBoolean)
+          addExecutionStep(newStep)
+          addSteps(Some(thisStep.stepId), steps.tail)
+        }
+      }
+      if(trace.steps.isEmpty) {
+        // Insert a null tactic with a higher alternative order
+        val nilExecutable = addBelleExpr(TactixLibrary.nil, Nil)
+        val step = new ExecutionStepPOJO(None, oldStep.executionid.get, oldStep.previousstep, None, Some(0), None,
+          oldStep.alternativeorder.get + 1, ExecutionStepStatus.Finished, nilExecutable, oldStep.inputprovableid.get, oldStep.inputprovableid, true)
+      } else {
+        addSteps(oldStep.previousstep, trace.steps)
+      }
     }
 
     /** Adds a Bellerophon expression as an executable and returns the new executableId */
