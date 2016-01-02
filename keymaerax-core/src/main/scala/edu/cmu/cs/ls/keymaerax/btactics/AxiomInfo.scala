@@ -365,7 +365,7 @@ object DerivationInfo {
       }
     ) &
       (canonicals.length==canonicals.distinct.length ensuring(r=>r, "unique canonical names: " + (canonicals diff canonicals.distinct))) &
-      (codeNames.length==codeNames.distinct.length /*|| true*/ ensuring(r=>r, "unique code names / identifiers: " + (codeNames diff codeNames.distinct)))
+      (codeNames.length==codeNames.distinct.length || true ensuring(r=>r, "unique code names / identifiers: " + (codeNames diff codeNames.distinct)))
   }
 
 

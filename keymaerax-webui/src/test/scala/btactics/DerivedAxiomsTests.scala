@@ -110,8 +110,8 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
   it should "prove DX diamond differential skip" in {check(Dskipd)}
   it should "prove 0*" in withMathematica { implicit qeTool => check(zeroTimes)}
   it should "prove 0+" in withMathematica { implicit qeTool => check(zeroPlus)}
-  it should "prove +0" in { check(plusZero)}
-  it should "prove *0" in { check(timesZero)}
+  it should "prove +0" in withMathematica { implicit qeTool => check(plusZero)}
+  it should "prove *0" in withMathematica { implicit qeTool => check(timesZero)}
   it should "prove = reflexive" in withMathematica {implicit qetool =>check(equalReflex)}
   it should "prove = commute" in withMathematica { implicit qetool =>check(equalCommute)}
   it should "prove <=" in withMathematica { implicit qetool =>check(lessEqual)}
