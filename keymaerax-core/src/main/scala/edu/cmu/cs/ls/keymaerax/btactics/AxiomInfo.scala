@@ -381,14 +381,9 @@ object DerivationInfo {
     }
 
   /** Retrieve meta-information on an inference by the given canonical name `axiomName` */
-  def apply(axiomName: String): DerivationInfo = {
-    byCanonicalName.get(axiomName) match {
-      case Some(info) => info
-      case None =>
-        println("Couldn't find axiom " + axiomName)
+  def apply(axiomName: String): DerivationInfo = byCanonicalName.getOrElse(axiomName,
         throw new AxiomNotFoundException(axiomName)
-    }
-  }
+  )
 
   /** Throw an AssertionError if id does not conform to the rules for code names. */
   def assertValidIdentifier(id:String) = { assert(id.forall{case c => c.isLetterOrDigit})}
