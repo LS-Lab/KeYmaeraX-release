@@ -115,17 +115,18 @@ trait Tables {
    *  @param executableid Database column executableId DBType(INTEGER)
    *  @param inputprovableid Database column inputProvableId DBType(INTEGER)
    *  @param resultprovableid Database column resultProvableId DBType(INTEGER)
+   *  @param localprovableid Database column localProvableId DBType(INTEGER)
    *  @param userexecuted Database column userExecuted DBType(BOOLEAN)
    *  @param childrenrecorded Database column childrenRecorded DBType(BOOLEAN) */
-  case class ExecutionstepsRow(_Id: Option[Int], executionid: Option[Int], previousstep: Option[Int], parentstep: Option[Int], branchorder: Option[Int], branchlabel: Option[String], alternativeorder: Option[Int], status: Option[String], executableid: Option[Int], inputprovableid: Option[Int], resultprovableid: Option[Int], userexecuted: Option[String], childrenrecorded: Option[String])
+  case class ExecutionstepsRow(_Id: Option[Int], executionid: Option[Int], previousstep: Option[Int], parentstep: Option[Int], branchorder: Option[Int], branchlabel: Option[String], alternativeorder: Option[Int], status: Option[String], executableid: Option[Int], inputprovableid: Option[Int], resultprovableid: Option[Int], localprovableid: Option[Int], userexecuted: Option[String], childrenrecorded: Option[String])
   /** GetResult implicit for fetching ExecutionstepsRow objects using plain SQL queries */
   implicit def GetResultExecutionstepsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ExecutionstepsRow] = GR{
     prs => import prs._
-    ExecutionstepsRow.tupled((<<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[Int], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[String]))
+    ExecutionstepsRow.tupled((<<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[Int], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[String]))
   }
   /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
   class Executionsteps(_tableTag: Tag) extends Table[ExecutionstepsRow](_tableTag, "executionSteps") {
-    def * = (_Id, executionid, previousstep, parentstep, branchorder, branchlabel, alternativeorder, status, executableid, inputprovableid, resultprovableid, userexecuted, childrenrecorded) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
+    def * = (_Id, executionid, previousstep, parentstep, branchorder, branchlabel, alternativeorder, status, executableid, inputprovableid, resultprovableid, localprovableid, userexecuted, childrenrecorded) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
     val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -149,6 +150,8 @@ trait Tables {
     val inputprovableid: Column[Option[Int]] = column[Option[Int]]("inputProvableId")
     /** Database column resultProvableId DBType(INTEGER) */
     val resultprovableid: Column[Option[Int]] = column[Option[Int]]("resultProvableId")
+    /** Database column localProvableId DBType(INTEGER) */
+    val localprovableid: Column[Option[Int]] = column[Option[Int]]("localProvableId")
     /** Database column userExecuted DBType(BOOLEAN) */
     val userexecuted: Column[Option[String]] = column[Option[String]]("userExecuted")
     /** Database column childrenRecorded DBType(BOOLEAN) */
@@ -159,7 +162,7 @@ trait Tables {
     /** Foreign key referencing Executionsteps (database name executionSteps_FK_2) */
     lazy val executionstepsFk = foreignKey("executionSteps_FK_2", (parentstep, previousstep), Executionsteps)(r => (r._Id, r._Id), onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
     /** Foreign key referencing Provables (database name provables_FK_3) */
-    lazy val provablesFk = foreignKey("provables_FK_3", (resultprovableid, inputprovableid), Provables)(r => (r._Id, r._Id), onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+    lazy val provablesFk = foreignKey("provables_FK_3", (localprovableid, resultprovableid, inputprovableid), Provables)(r => (r._Id, r._Id, r._Id), onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
     /** Foreign key referencing Tacticexecutions (database name tacticExecutions_FK_4) */
     lazy val tacticexecutionsFk = foreignKey("tacticExecutions_FK_4", executionid, Tacticexecutions)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
   }
