@@ -1,3 +1,7 @@
+/**
+  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+  * See LICENSE.txt for the conditions of this license.
+  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentTactic, DependentPositionTactic, BelleExpr}
@@ -53,8 +57,8 @@ object DerivationInfo {
     // Note: only used to implement Dskipd
     new CoreAxiomInfo("DX differential skip", "DX", needsCodeName, {case () => ???}),
     // [a] modalities and <a> modalities
-    new CoreAxiomInfo("<> dual", "<.>", needsCodeName, {case () => HilbertCalculus.duald}),
-    new CoreAxiomInfo("[] dual", "[.]", needsCodeName, {case () => HilbertCalculus.dualb}),
+    new CoreAxiomInfo("<> dual", "<.>", "duald", {case () => HilbertCalculus.duald}),
+    new CoreAxiomInfo("[] dual", "[.]", "dualb", {case () => HilbertCalculus.dualb}),
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => HilbertCalculus.assignb}),
     new CoreAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new CoreAxiomInfo("[':=] differential assign", "[':=]", "Dassignb", {case () => HilbertCalculus.Dassignb}),
