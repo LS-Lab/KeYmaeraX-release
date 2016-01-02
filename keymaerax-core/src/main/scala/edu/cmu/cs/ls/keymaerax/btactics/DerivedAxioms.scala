@@ -115,6 +115,7 @@ object DerivedAxioms {
    * @param name The name of the derived axiom.
    * @return The axiom formula, if found. None otherwise.
    */
+  @deprecated("Use AxiomInfo(name).formula instead")
   private def derivedAxiomFormula(name: String): Option[Formula] = derivedAxiomInfo(name) match {
     case Some((fml, _)) => Some(fml)
     case None => None
@@ -278,8 +279,9 @@ object DerivedAxioms {
    * @param name The name of the derived axiom.
    * @return The axiom formula and tactic, if found. None otherwise.
    * @note Central index for looking up derived axioms by names.
-   * @todo use AxiomInfo.allInfo instead. It's only the formula that's missing.
+   * @todo this is only used for prepopulation and nothing else now
    */
+  @deprecated("Use AxiomInfo(name) instead")
   private def derivedAxiomInfo(name: String): Option[(Formula, BelleExpr)] = (name: @switch) match {
     //@note implemented as match rather than lookup in a map to retain lazy evaluation
     //@note Every entry should be added to derivedAxiomMap (we need a map when prepopulating the lemma database, so whenever adding a case to this case match also add an entry to the hashmap below.)
@@ -396,6 +398,7 @@ object DerivedAxioms {
     case _ => None
   }
 
+  @deprecated
   val unpopulatedAxioms =
     List(
       "K1",
@@ -446,6 +449,7 @@ object DerivedAxioms {
     )
 
 
+  @deprecated
   val populatedAxioms = List("<-> reflexive"
     , "-> distributes over &"
     , "-> distributes over <->"
@@ -556,6 +560,8 @@ object DerivedAxioms {
         derivedAxiom(key, proof)
     })
   }
+
+  // derived axioms and their proofs
 
   /**
    * {{{Axiom "<-> reflexive".
