@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS `executionSteps` (
   -- Rows that identify input and output of the tactic
   `inputProvableId`  INTEGER REFERENCES `provables` (`_id`),
   `resultProvableId` INTEGER REFERENCES `provables` (`_id`),
+  `localProvableId`  INTEGER REFERENCES `provables` (`_id`),
 
   -- Indicates whether this tactic was *directly* executed by the user.
   `userExecuted`     BOOLEAN,

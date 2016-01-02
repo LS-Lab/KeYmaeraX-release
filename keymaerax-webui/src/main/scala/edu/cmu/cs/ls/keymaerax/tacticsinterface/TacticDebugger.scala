@@ -1,8 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.tacticsinterface
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleValue, BelleExpr, IOListener}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core.Provable
-import edu.cmu.cs.ls.keymaerax.hydra.{ExecutionStepPOJO, DBAbstraction, ExecutionStepStatus}
+import edu.cmu.cs.ls.keymaerax.hydra.{ProofPOJO, ExecutionStepPOJO, DBAbstraction, ExecutionStepStatus}
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 
 /**
@@ -10,7 +10,9 @@ import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
   */
 object TacticDebugger {
 
-  class DebuggerListener (db: DBAbstraction, executionId: Int,
+  class DebuggerListener (db: DBAbstraction,
+                          proofId: Int,
+                          executionId: Int,
                           initialSibling: Option[Int],
                           globalProvable:Provable,
                           alternativeOrder: Int, branch:Int,
@@ -21,6 +23,7 @@ object TacticDebugger {
       var sibling: Option[Int] = None
       var input: Provable = null
       var output: Provable = null
+      var local: Provable = null
       var executable: BelleExpr = null
       var status: ExecutionStepStatus = null
       var reverseChildren: List[TraceNode] = Nil
@@ -36,6 +39,7 @@ object TacticDebugger {
 
       var inputProvableId: Option[Int] = None
       var outputProvableId: Option[Int] = None
+      var localProvableId: Option[Int] = None
       var executableId: Option[Int] = None
 
       def getInputProvableId:Int = {
@@ -50,6 +54,12 @@ object TacticDebugger {
         outputProvableId
       }
 
+      def getLocalProvableId:Option[Int] = {
+        if (local != null && localProvableId.isEmpty)
+          localProvableId = Some(db.serializeProvable(local))
+        localProvableId
+      }
+
       def getExecutableId:Int = {
         if (executable != null && executableId.isEmpty)
           executableId = Some(db.addBelleExpr(executable, Nil))
@@ -60,7 +70,7 @@ object TacticDebugger {
         val parentStep = if (parent == null) None else parent.stepId
         new ExecutionStepPOJO (stepId, executionId, sibling, parentStep, branchOrder,
           Option(branchLabel), alternativeOrder,status, getExecutableId, getInputProvableId, getOutputProvableId,
-          userExe)
+          getLocalProvableId, userExe)
       }
     }
 
@@ -96,7 +106,7 @@ object TacticDebugger {
       }
     }
 
-    def end(v: BelleValue, expr: BelleExpr, result: BelleValue): Unit = {
+    def end(v: BelleValue, expr: BelleExpr, result: Either[BelleValue, BelleError]): Unit = {
       synchronized {
         if(isDead) return
         val current = node
@@ -107,11 +117,18 @@ object TacticDebugger {
         if (node == null) {
           result match {
             // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic
-            case BelleProvable(p) => current.output = globalProvable(p, branch)
+            case Left(BelleProvable(p)) =>
+              current.output = globalProvable(p, branch)
+              current.local = p
+          }
+          if(current.output.isProved) {
+            val p = db.getProofInfo(proofId)
+            val provedProof = new ProofPOJO(p.proofId, p.modelId,p.name, p.description, p.date, p.stepCount, closed = true)
+            db.updateProofInfo(provedProof)
           }
         }
         db.updateExecutionStatus(current.stepId.get, current.status)
-        db.updateResultProvable(current.stepId.get, current.getOutputProvableId)
+        db.updateResultProvables(current.stepId.get, current.getOutputProvableId, current.getLocalProvableId)
       }
     }
 

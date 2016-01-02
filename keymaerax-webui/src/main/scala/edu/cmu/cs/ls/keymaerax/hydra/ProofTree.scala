@@ -54,11 +54,14 @@ object ProofTree {
       } else {
         val delta =
           outputProvable.subgoals.filter({case sg => !openGoals.exists({case node => node.sequent == sg})})
-        openGoals(branch).endStep = Some(step)
-        val updatedNode = treeNode(delta.head, Some(openGoals(branch)), Some(step))
-        val addedNodes = delta.tail.map({case sg => treeNode(sg, Some(openGoals(branch)), Some(step))})
-        openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
-        allNodes = allNodes ++ (updatedNode :: addedNodes.toList)
+        // Delta can be empty if we insert a nil step during pruning. If that happens, just skip the step.
+        if (delta.nonEmpty) {
+          openGoals(branch).endStep = Some(step)
+          val updatedNode = treeNode(delta.head, Some(openGoals(branch)), Some(step))
+          val addedNodes = delta.tail.map({ case sg => treeNode(sg, Some(openGoals(branch)), Some(step)) })
+          openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
+          allNodes = allNodes ++ (updatedNode :: addedNodes.toList)
+        }
       }
       steps = steps.tail
     }

@@ -18,6 +18,7 @@ object ReflectiveExpressionBuilder {
       case (expr:(Any), fml) =>
         throw new Exception("Expected type Formula => Any , got " + expr.getClass.getSimpleName)
     }
+
     (applied, posArgs, info.numPositionArgs) match {
       // If the tactic accepts arguments but wasn't given any, return the unapplied tactic under the assumption that
       // someone is going to plug in the arguments later
@@ -36,6 +37,11 @@ object ReflectiveExpressionBuilder {
   }
 
   def apply(name: String, arguments: List[Either[Formula, SeqPos]] = Nil) : BelleExpr =
-    build(DerivationInfo.ofCodeName(name), arguments)
+    try {
+      build(DerivationInfo.ofCodeName(name), arguments)
+    }
+    catch {
+      case e:java.util.NoSuchElementException => throw new Exception(s"$name is not recognized as a tactic identifier.")
+    }
 }
 

@@ -709,7 +709,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             case Nil => localProvable
             case steps => steps.last.output.getOrElse(steps.last.input)
           }
-        val listener = new DebuggerListener(db, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false)
+        val listener = new DebuggerListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false)
         val executor = BellerophonTacticExecutor.defaultExecutor
         val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
         val finalProvable = executor.wait(taskId) match {
@@ -752,23 +752,22 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
           (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder) :: acc)
         }
       }
-    ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps)
+    ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps.reverse)
   }
 
   def getResultingResponses() = {
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
-    if(tree.root.id == nodeId.toInt) {
-      throw new Exception("Can't prune root")
-    }
-    val prunedSteps = tree.allDescendants(nodeId).flatMap{case node => node.endStep.toList}
+    val prunedSteps = tree.allDescendants(goalId).flatMap{case node => node.endStep.toList}
     if(prunedSteps.isEmpty) {
       throw new Exception("No steps under node. Nothing to do.")
     }
     val prunedStepIds = prunedSteps.map{case step => step.stepId}.toSet
     val prunedTrace = prune(trace, prunedStepIds)
-    db.addAlternative(prunedTrace.steps.head.stepId, prunedTrace)
-    val response = new PruneBelowResponse(nodeId, tree)
+    db.addAlternative(prunedStepIds.min, prunedTrace)
+    val goalNode = tree.findNode(goalId).get
+    val item = AgendaItem(goalNode.id.toString, "Unnamed Item", proofId.toString, goalNode)
+    val response = new PruneBelowResponse(item)
     response :: Nil
   }
 }
@@ -918,16 +917,9 @@ class GetProofLoadStatusRequest(db : DBAbstraction, userId : String, proofId : S
 
 class GetProofProgressStatusRequest(db: DBAbstraction, userId: String, proofId: String) extends Request {
   def getResultingResponses() = {
-    if (!KeYmaeraInterface.containsTask(proofId)) {
-      if (!KeYmaeraInterface.isLoadingTask(proofId)) {
-        new ProofNotLoadedResponse(proofId) :: Nil
-      } else {
-        new ProofIsLoadingResponse(proofId) :: Nil
-      }
-    } else {
-      val progress = KeYmaeraInterface.getTaskProgressStatus(proofId)
-      new ProofProgressResponse(proofId, progress.toString.toLowerCase) :: Nil
-    }
+    // @todo return Loading/NotLoaded when appropriate
+    val proof = db.getProofInfo(proofId)
+    new ProofProgressResponse(proofId, isClosed = proof.closed) :: Nil
   }
 }
 
@@ -941,7 +933,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
       }
     } else {
       val isProved = KeYmaeraInterface.isProved(proofId)
-      new ProofProgressResponse(proofId, if (isProved) "proved" else "closed") :: Nil
+      new ProofVerificationResponse(proofId, isProved) :: Nil
     }
   }
 }

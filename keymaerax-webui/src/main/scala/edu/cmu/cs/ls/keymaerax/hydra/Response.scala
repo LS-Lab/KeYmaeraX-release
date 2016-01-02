@@ -214,7 +214,11 @@ class ProofNotLoadedResponse(proofId : String) extends ProofStatusResponse(proof
 class ProofIsLoadedResponse(proofId: String) extends ProofStatusResponse(proofId, "loaded")
 // progress "open": open goals
 // progress "closed": no open goals but not checked for isProved
-class ProofProgressResponse(proofId: String, progress: String) extends ProofStatusResponse(proofId, progress)
+class ProofProgressResponse(proofId: String, isClosed: Boolean)
+  extends ProofStatusResponse(proofId, if(isClosed) "closed" else "open")
+
+class ProofVerificationResponse(proofId: String, isVerified: Boolean)
+  extends ProofStatusResponse(proofId, if(isVerified) "proved" else "closed")
 
 class GetProblemResponse(proofid:String, tree:String) extends Response {
   val json = JsObject(
@@ -504,13 +508,16 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends R
     JsObject(
       "id" -> new JsString(derivationInfo.codeName),
       "name" -> new JsString(derivationInfo.display.name),
-      "derivation" -> derivation
+      "deduction" -> derivation
     )
   }
   val json = JsArray(derivationInfos.map({case info => derivationJson(info)}))
 }
-class PruneBelowResponse(nodeId:String, tree:ProofTree) extends Response {
-  val json = ???
+class PruneBelowResponse(item:AgendaItem) extends Response {
+  val json = JsObject (
+  "agendaItem" -> Helpers.itemJson(item)._2
+  )
+
 }
 
 class CounterExampleResponse(cntEx: String) extends Response {

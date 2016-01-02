@@ -13,6 +13,7 @@ import javax.crypto.spec.PBEKeySpec
 import javax.xml.bind.DatatypeConverter
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, BelleExpr}
+import _root_.edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Lemma, Formula, Provable, Sequent}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 import _root_.edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
@@ -354,7 +355,41 @@ object SQLite {
     }
 
     override def addAlternative(alternativeTo: Int, trace:ExecutionTrace):Unit = {
-      ???
+      def get(stepId: Int) = {
+        Executionsteps.filter(_._Id === stepId).list match {
+          case Nil => throw new Exception("Execution step not found")
+          case step :: _ => step
+        }
+      }
+      val oldStep = get(alternativeTo)
+      def addSteps(prev: Option[Int], globalId:Int, steps:List[ExecutionStep]): Unit = {
+        if(steps.isEmpty) return
+        else {
+          val thisStep = steps.head
+          val thisPOJO = get(thisStep.stepId)
+          val localProvable = loadProvable(thisPOJO.localprovableid.get)
+          val global = loadProvable(globalId)
+          val outputProvable = global(localProvable, thisStep.branch)
+          val outputProvableId = serializeProvable(outputProvable)
+          val newStep = new ExecutionStepPOJO(None, oldStep.executionid.get, prev, None, Some(thisStep.branch),
+            None, oldStep.alternativeorder.get + 1, ExecutionStepStatus.fromString(thisPOJO.status.get), thisPOJO.executableid.get,
+            globalId,
+            Some(outputProvableId), thisPOJO.localprovableid, thisPOJO.userexecuted.get.toBoolean)
+          val newId = addExecutionStep(newStep)
+          addSteps(Some(newId), outputProvableId, steps.tail)
+        }
+      }
+      if(trace.steps.isEmpty) {
+        // Insert a null tactic with a higher alternative order
+        val nilExecutable = addBelleExpr(TactixLibrary.nil, Nil)
+        val step = new ExecutionStepPOJO(None, oldStep.executionid.get, oldStep.previousstep, None, Some(0), None,
+          oldStep.alternativeorder.get + 1, ExecutionStepStatus.Finished, nilExecutable, oldStep.inputprovableid.get,
+          oldStep.inputprovableid, oldStep.localprovableid, true)
+        addExecutionStep(step)
+      } else {
+        val inputId = oldStep.inputprovableid.get
+        addSteps(oldStep.previousstep, inputId, trace.steps)
+      }
     }
 
     /** Adds a Bellerophon expression as an executable and returns the new executableId */
@@ -465,7 +500,7 @@ object SQLite {
             .list
             .map(step => new ExecutionStepPOJO(step._Id, step.executionid.get, step.previousstep, step.parentstep,
               step.branchorder, step.branchlabel, step.alternativeorder.get, ExecutionStepStatus.fromString(step.status.get),
-              step.executableid.get, step.inputprovableid.get, step.resultprovableid, step.userexecuted.get.toBoolean))
+              step.executableid.get, step.inputprovableid.get, step.resultprovableid, step.localprovableid, step.userexecuted.get.toBoolean))
         if (steps.length < 1) throw new Exception("No steps found for execution " + executionID)
         else steps
       })
@@ -521,11 +556,14 @@ object SQLite {
     }
 
 
-    def updateResultProvable(executionStepId: Int, provableId: Option[Int]): Unit = {
+    def updateResultProvables(executionStepId: Int, provableId: Option[Int], localProvableId: Option[Int]): Unit = {
       synchronizedTransaction({
         nSelects = nSelects + 1
         nUpdates = nUpdates + 1
-        Executionsteps.filter(_._Id === executionStepId).map(_.resultprovableid).update(provableId)
+        Executionsteps
+          .filter(_._Id === executionStepId)
+          .map({row => (row.resultprovableid, row.localprovableid)})
+          .update((provableId, localProvableId))
       })
     }
 
@@ -571,7 +609,7 @@ object SQLite {
           revResult =
             new ExecutionStepPOJO(head._Id, head.executionid.get, head.previousstep, head.parentstep,
               head.branchorder, head.branchlabel, head.alternativeorder.get, ExecutionStepStatus.fromString(head.status.get),
-              head.executableid.get, head.inputprovableid.get, head.resultprovableid, head.userexecuted.get.toBoolean)::revResult
+              head.executableid.get, head.inputprovableid.get, head.resultprovableid, head.localprovableid, head.userexecuted.get.toBoolean)::revResult
           prevId = head._Id
           steps = tailSteps
         }

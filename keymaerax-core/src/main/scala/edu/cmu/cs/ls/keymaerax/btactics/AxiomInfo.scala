@@ -38,6 +38,9 @@ object DerivationInfo {
   private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
 
   val allInfo: List[DerivationInfo] = List(
+    new TacticInfo("TrivialCloser", "TrivialCloser", {case () => ProofRuleTactics.trivialCloser}),
+    new TacticInfo("nil", "nil", {case () => Idioms.nil}),
+  
     new CoreAxiomInfo("chain rule", "o'", "Dcompose", {case () => TactixLibrary.Dcompose}),
     new CoreAxiomInfo("V vacuous", "V", "V", {case () => TactixLibrary.V}),
     new CoreAxiomInfo("K modal modus ponens", "K", "K", {case () => TactixLibrary.K}),
@@ -164,6 +167,8 @@ object DerivationInfo {
     new DerivedAxiomInfo("true&", "T&", "trueAnd", {case () => DerivedAxioms.trueAndT}),
     new DerivedAxiomInfo("0*", "0*", "zeroTimes", {case () => DerivedAxioms.zeroTimesT}),
     new DerivedAxiomInfo("0+", "0+", "zeroPlus", {case () => DerivedAxioms.zeroPlusT}),
+    new DerivedAxiomInfo("*0", "*0", "timesZero", {case () => DerivedAxioms.timesZeroT}),
+    new DerivedAxiomInfo("+0", "+0", "plusZero", {case () => DerivedAxioms.plusZeroT}),
     new DerivedAxiomInfo("= reflexive", "=R", "equalReflexive", {case () => DerivedAxioms.equalReflexiveT}),
     new DerivedAxiomInfo("* commute", "*C", "timesCommute", {case () => DerivedAxioms.timesCommuteT}),
     new DerivedAxiomInfo("= commute", "=C", "equalCommute", {case () => DerivedAxioms.equalCommuteT}),
