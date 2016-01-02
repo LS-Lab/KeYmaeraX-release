@@ -110,6 +110,7 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
                              executableId: Int,
                              inputProvableId: Int,
                              resultProvableId: Option[Int],
+                             localProvableId: Option[Int],
                              userExecuted: Boolean)
 {
   require(branchOrder.isEmpty != branchLabel.isEmpty) //also schema constraint
@@ -267,7 +268,7 @@ trait DBAbstraction {
   def updateExecutionStatus(executionStepId: Int, status: ExecutionStepStatus): Unit
 
   /** Updates an executable step's result provable */
-  def updateResultProvable(executionStepId: Int, provableId: Option[Int]): Unit
+  def updateResultProvables(executionStepId: Int, provableId: Option[Int], localProvableId: Option[Int]): Unit
 
   /////////////////////
 

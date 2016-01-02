@@ -369,7 +369,7 @@ object SQLite {
           val thisPOJO = get(thisStep.stepId)
           val newStep = new ExecutionStepPOJO(None, oldStep.executionid.get, prev, None, Some(thisStep.branch),
             None, oldStep.alternativeorder.get + 1, ExecutionStepStatus.fromString(thisPOJO.status.get), thisPOJO.executableid.get, thisPOJO.inputprovableid.get,
-            thisPOJO.resultprovableid, thisPOJO.userexecuted.get.toBoolean)
+            thisPOJO.resultprovableid, thisPOJO.localprovableid, thisPOJO.userexecuted.get.toBoolean)
           val newId = addExecutionStep(newStep)
           addSteps(Some(newId), steps.tail)
         }
@@ -378,7 +378,8 @@ object SQLite {
         // Insert a null tactic with a higher alternative order
         val nilExecutable = addBelleExpr(TactixLibrary.nil, Nil)
         val step = new ExecutionStepPOJO(None, oldStep.executionid.get, oldStep.previousstep, None, Some(0), None,
-          oldStep.alternativeorder.get + 1, ExecutionStepStatus.Finished, nilExecutable, oldStep.inputprovableid.get, oldStep.inputprovableid, true)
+          oldStep.alternativeorder.get + 1, ExecutionStepStatus.Finished, nilExecutable, oldStep.inputprovableid.get,
+          oldStep.inputprovableid, oldStep.localprovableid, true)
         addExecutionStep(step)
       } else {
         addSteps(oldStep.previousstep, trace.steps)
@@ -493,7 +494,7 @@ object SQLite {
             .list
             .map(step => new ExecutionStepPOJO(step._Id, step.executionid.get, step.previousstep, step.parentstep,
               step.branchorder, step.branchlabel, step.alternativeorder.get, ExecutionStepStatus.fromString(step.status.get),
-              step.executableid.get, step.inputprovableid.get, step.resultprovableid, step.userexecuted.get.toBoolean))
+              step.executableid.get, step.inputprovableid.get, step.resultprovableid, step.localprovableid, step.userexecuted.get.toBoolean))
         if (steps.length < 1) throw new Exception("No steps found for execution " + executionID)
         else steps
       })
@@ -549,11 +550,14 @@ object SQLite {
     }
 
 
-    def updateResultProvable(executionStepId: Int, provableId: Option[Int]): Unit = {
+    def updateResultProvables(executionStepId: Int, provableId: Option[Int], localProvableId: Option[Int]): Unit = {
       synchronizedTransaction({
         nSelects = nSelects + 1
         nUpdates = nUpdates + 1
-        Executionsteps.filter(_._Id === executionStepId).map(_.resultprovableid).update(provableId)
+        Executionsteps
+          .filter(_._Id === executionStepId)
+          .map({row => (row.resultprovableid, row.localprovableid)})
+          .update((provableId, localProvableId))
       })
     }
 
@@ -599,7 +603,7 @@ object SQLite {
           revResult =
             new ExecutionStepPOJO(head._Id, head.executionid.get, head.previousstep, head.parentstep,
               head.branchorder, head.branchlabel, head.alternativeorder.get, ExecutionStepStatus.fromString(head.status.get),
-              head.executableid.get, head.inputprovableid.get, head.resultprovableid, head.userexecuted.get.toBoolean)::revResult
+              head.executableid.get, head.inputprovableid.get, head.resultprovableid, head.localprovableid, head.userexecuted.get.toBoolean)::revResult
           prevId = head._Id
           steps = tailSteps
         }

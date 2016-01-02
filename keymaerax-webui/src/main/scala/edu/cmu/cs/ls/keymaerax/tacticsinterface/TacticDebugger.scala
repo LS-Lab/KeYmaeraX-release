@@ -23,6 +23,7 @@ object TacticDebugger {
       var sibling: Option[Int] = None
       var input: Provable = null
       var output: Provable = null
+      var local: Provable = null
       var executable: BelleExpr = null
       var status: ExecutionStepStatus = null
       var reverseChildren: List[TraceNode] = Nil
@@ -38,6 +39,7 @@ object TacticDebugger {
 
       var inputProvableId: Option[Int] = None
       var outputProvableId: Option[Int] = None
+      var localProvableId: Option[Int] = None
       var executableId: Option[Int] = None
 
       def getInputProvableId:Int = {
@@ -52,6 +54,12 @@ object TacticDebugger {
         outputProvableId
       }
 
+      def getLocalProvableId:Option[Int] = {
+        if (local != null && localProvableId.isEmpty)
+          localProvableId = Some(db.serializeProvable(local))
+        localProvableId
+      }
+
       def getExecutableId:Int = {
         if (executable != null && executableId.isEmpty)
           executableId = Some(db.addBelleExpr(executable, Nil))
@@ -62,7 +70,7 @@ object TacticDebugger {
         val parentStep = if (parent == null) None else parent.stepId
         new ExecutionStepPOJO (stepId, executionId, sibling, parentStep, branchOrder,
           Option(branchLabel), alternativeOrder,status, getExecutableId, getInputProvableId, getOutputProvableId,
-          userExe)
+          getLocalProvableId, userExe)
       }
     }
 
@@ -109,7 +117,9 @@ object TacticDebugger {
         if (node == null) {
           result match {
             // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic
-            case Left(BelleProvable(p)) => current.output = globalProvable(p, branch)
+            case Left(BelleProvable(p)) =>
+              current.output = globalProvable(p, branch)
+              current.local = p
           }
           if(current.output.isProved) {
             val p = db.getProofInfo(proofId)
@@ -118,7 +128,7 @@ object TacticDebugger {
           }
         }
         db.updateExecutionStatus(current.stepId.get, current.status)
-        db.updateResultProvable(current.stepId.get, current.getOutputProvableId)
+        db.updateResultProvables(current.stepId.get, current.getOutputProvableId, current.getLocalProvableId)
       }
     }
 
