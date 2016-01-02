@@ -379,6 +379,7 @@ object SQLite {
         val nilExecutable = addBelleExpr(TactixLibrary.nil, Nil)
         val step = new ExecutionStepPOJO(None, oldStep.executionid.get, oldStep.previousstep, None, Some(0), None,
           oldStep.alternativeorder.get + 1, ExecutionStepStatus.Finished, nilExecutable, oldStep.inputprovableid.get, oldStep.inputprovableid, true)
+        addExecutionStep(step)
       } else {
         addSteps(oldStep.previousstep, trace.steps)
       }
