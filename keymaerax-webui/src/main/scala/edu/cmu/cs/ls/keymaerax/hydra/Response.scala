@@ -508,7 +508,7 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends R
     JsObject(
       "id" -> new JsString(derivationInfo.codeName),
       "name" -> new JsString(derivationInfo.display.name),
-      "deduction" -> derivation
+      "derivation" -> derivation
     )
   }
   val json = JsArray(derivationInfos.map({case info => derivationJson(info)}))
