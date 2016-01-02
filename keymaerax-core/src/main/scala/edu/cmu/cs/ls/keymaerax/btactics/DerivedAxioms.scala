@@ -116,6 +116,7 @@ object DerivedAxioms {
   }
 
   //@note enables consistent axiom names as well as valid file names on all platforms
+  //@todo use AxiomInfo().codeName instead
   private val axiom2lemmaName: Map[String, String] = Map(
     "<-> reflexive" -> "equiv reflexive",
     "-> distributes over &" -> "imply distributes over and",
@@ -268,6 +269,7 @@ object DerivedAxioms {
    * @param name The name of the derived axiom.
    * @return The axiom formula and tactic, if found. None otherwise.
    * @note Central index for looking up derived axioms by names.
+   * @todo use AxiomInfo.allInfo instead. It's only the formula that's missing.
    */
   private def derivedAxiomInfo(name: String): Option[(Formula, BelleExpr)] = (name: @switch) match {
     //@note implemented as match rather than lookup in a map to retain lazy evaluation
@@ -343,6 +345,8 @@ object DerivedAxioms {
     case "true&" => Some(trueAndF, trueAndT)
     case "0*" => Some(zeroTimesF, zeroTimesT)
     case "0+" => Some(zeroPlusF, zeroPlusT)
+    case "*0" => Some(timesZeroF, timesZeroT)
+    case "+0" => Some(plusZeroF, plusZeroT)
     //    case "x' derive var" => Some(DvarF, DvarT)
     case "x' derive variable" => Some(DvariableF, DvariableT)
     case "' linear" => Some(DlinearF, DlinearT)
@@ -492,6 +496,8 @@ object DerivedAxioms {
     , "true&"
     , "0*"
     , "0+"
+    , "*0"
+    , "+0"
     , "DG differential pre-ghost"
     , "= reflexive"
     , "* commute"
@@ -1636,6 +1642,20 @@ object DerivedAxioms {
   lazy val zeroTimesT = derivedAxiomT(zeroTimes)
 
   /**
+    * {{{Axiom "*0".
+    *    (f()*0) = 0
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val timesZeroF = "(f()*0) = 0".asFormula
+  lazy val timesZero = derivedAxiom("*0", Sequent(Nil, IndexedSeq(), IndexedSeq(timesZeroF)),
+    useAt("* commute")(1, 0::Nil) &
+      byUS("= reflexive")
+  )
+  lazy val timesZeroT = derivedAxiomT(timesZero)
+
+  /**
    * {{{Axiom "0+".
    *    (0+f()) = f()
    * End.
@@ -1645,6 +1665,20 @@ object DerivedAxioms {
   lazy val zeroPlusF = "(0+f()) = f()".asFormula
   lazy val zeroPlus = derivedAxiom("0+", Sequent(Nil, IndexedSeq(), IndexedSeq(zeroPlusF)), QE)
   lazy val zeroPlusT = derivedAxiomT(zeroPlus)
+
+  /**
+    * {{{Axiom "+0".
+    *    (f()+0) = f()
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val plusZeroF = "(f()+0) = f()".asFormula
+  lazy val plusZero = derivedAxiom("+0", Sequent(Nil, IndexedSeq(), IndexedSeq(plusZeroF)),
+    useAt("+ commute")(1, 0::Nil) &
+      byUS("= reflexive")
+  )
+  lazy val plusZeroT = derivedAxiomT(plusZero)
 
 
   // differential equations
@@ -1839,11 +1873,20 @@ object DerivedAxioms {
    */
   lazy val DlinearRightF = "(f(??)*c())' = (f(??))'*c()".asFormula
   lazy val DlinearRight = derivedAxiom("' linear right",
-    Sequent(Nil, IndexedSeq(), IndexedSeq(DlinearRightF)),
-    useAt("* commute")(1, 0::0::Nil) &
-      useAt("* commute")(1, 1::Nil) &
-      by(Dlinear)
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DlinearF)),
+    useAt("*' derive product")(1, 0::Nil) &
+      useAt("c()' derive constant fn")(1, 0::1::1::Nil) &
+      useAt(timesZero)(1, 0::1::Nil) &
+      useAt(plusZero)(1, 0::Nil) &
+      byUS("= reflexive")
   )
+  //@note elegant proof that clashes for some reason
+  //  derivedAxiom("' linear right",
+  //  Sequent(Nil, IndexedSeq(), IndexedSeq(DlinearRightF)),
+  //  useAt("* commute")(1, 0::0::Nil) &
+  //    useAt("* commute")(1, 1::Nil) &
+  //    by(Dlinear)
+  //)
   lazy val DlinearRightT = derivedAxiomT(DlinearRight)
 
   // real arithmetic

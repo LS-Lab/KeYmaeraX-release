@@ -235,10 +235,12 @@ trait UnifyUSCalculus {
         lazy val expectEquiv = if (p.isSucc) Equiv(C(subst(other)), C(subst(keyPart))) else Equiv(C(subst(keyPart)), C(subst(other)))
         //@note ctx(fml) is meant to put fml in for DotTerm in ctx, i.e apply the corresponding USubst.
         //@todo simplify substantially if subst=id
+        //@note cut instead of cutLR might be a quicker proof to avoid the equivify but changes positions which would be unfortunate.
         debug("start useAt " + p) & cutLR(C(subst(other)))(p.top) <(
           //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
           //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-          /* use cut */ debug("    use cut") partial,
+          /* use cut */ debug("    use cut") partial
+          ,
           /* show cut */
             debug("    show cut") &
             coHideR/*(expect)*/(cutPos) & assert(0, 1) & debug("    cohidden") &
