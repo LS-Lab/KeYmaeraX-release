@@ -38,10 +38,8 @@ object DerivationInfo {
 
   private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
 
-  val allInfo: List[DerivationInfo] = List(
-    new TacticInfo("TrivialCloser", "TrivialCloser", {case () => ProofRuleTactics.trivialCloser}),
-    new TacticInfo("nil", "nil", {case () => Idioms.nil}),
-  
+  /** Central registry for axiom, derived axiom, proof rule, and tactic meta-information */
+  private val allInfo: List[DerivationInfo] = List(
     new CoreAxiomInfo("chain rule", "o'", "Dcompose", {case () => TactixLibrary.Dcompose}),
     new CoreAxiomInfo("V vacuous", "V", "V", {case () => TactixLibrary.V}),
     new CoreAxiomInfo("K modal modus ponens", "K", "K", {case () => TactixLibrary.K}),
@@ -111,12 +109,14 @@ object DerivationInfo {
     new CoreAxiomInfo("x' derive variable", "x'", "Dvariable", {case () => HilbertCalculus.Dvariable}),
     new CoreAxiomInfo("x' derive var", "x'", "Dvariable", {case () => HilbertCalculus.Dvariable}),
 
+
     // Derived axioms
     new DerivedAxiomInfo("<':=> differential assign", "<':=>", "assignD", {case () => DerivedAxioms.assignDAxiom}),
     new DerivedAxiomInfo("DS differential equation solution", "DS", "DSnodomain", {case () => DerivedAxioms.DSnodomainT}),
     new DerivedAxiomInfo("Dsol& differential equation solution", "DS&", "DSddomain", {case () => DerivedAxioms.DSddomainT}),
     new DerivedAxiomInfo("Dsol differential equation solution", "DS", "DSdnodomain", {case () => DerivedAxioms.DSdnodomainT}),
     new DerivedAxiomInfo("DG differential pre-ghost", "DG", "DGpreghost", {case () => DerivedAxioms.DGpreghostT}),
+    new DerivedAxiomInfo("DW differential weakening", "DW", "DWeaken", {case () => DerivedAxioms.DWeakening}),
     new DerivedAxiomInfo("DX diamond differential skip", "DX", "Dskipd", {case () => DerivedAxioms.DskipdT}),
     new DerivedAxiomInfo("all eliminate", "alle", "allEliminate", {case () => DerivedAxioms.allEliminateT}),
     new DerivedAxiomInfo("exists eliminate", "existse", "existsEliminate", {case () => DerivedAxioms.existsEliminateT}),
@@ -290,6 +290,10 @@ object DerivationInfo {
           (List("j(x)"),List("[a]j(x)")),
           (List("j(x)"),List("P"))))
       , List(FormulaArg("j(x)")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
+
+  //
+    new TacticInfo("TrivialCloser", "TrivialCloser", {case () => ProofRuleTactics.trivialCloser}),
+    new TacticInfo("nil", "nil", {case () => Idioms.nil}),
 
     // TactixLibrary tactics
     new PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),

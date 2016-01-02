@@ -112,7 +112,7 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
   it should "prove 0+" in withMathematica { implicit qeTool => check(zeroPlus)}
   it should "prove +0" in { check(plusZero)}
   it should "prove *0" in { check(timesZero)}
-  it should "prove = reflexive" in {check(equalReflex)}
+  it should "prove = reflexive" in withMathematica {implicit qetool =>check(equalReflex)}
   it should "prove = commute" in withMathematica { implicit qetool =>check(equalCommute)}
   it should "prove <=" in withMathematica { implicit qetool =>check(lessEqual)}
   it should "prove = negate" in withMathematica { implicit qetool =>check(notNotEqual)}
