@@ -114,7 +114,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("<:*> assign nondet", "<:*>", "randomd", {case () => HilbertCalculus.randomd}),
     new DerivedAxiomInfo("[:=] assign equational", "[:=]=", "assignbeq", {case () => HilbertCalculus.assignb}),
     new DerivedAxiomInfo("<:=> assign equational", "<:=>=", "assigndeq", {case () => HilbertCalculus.assignd}),
-    new DerivedAxiomInfo("<':=> differential assign", "<':=>", "assignD", {case () => DerivedAxioms.assignDAxiom}),
+    new DerivedAxiomInfo("<':=> differential assign", "<':=>", "assignDiff", {case () => DerivedAxioms.assignDAxiom}),
     new DerivedAxiomInfo("DS differential equation solution", "DS", "DSnodomain", {case () => DerivedAxioms.DSnodomainT}),
     new DerivedAxiomInfo("Dsol& differential equation solution", "DS&", "DSddomain", {case () => DerivedAxioms.DSddomainT}),
     new DerivedAxiomInfo("Dsol differential equation solution", "DS", "DSdnodomain", {case () => DerivedAxioms.DSdnodomainT}),
@@ -356,8 +356,8 @@ object DerivationInfo {
   ) ensuring(consistentInfo _, "meta-information on AxiomInfo is consistent with source")
 
   private def consistentInfo(list: List[DerivationInfo]): Boolean = {
-    val canonicals = list.map(i => i.canonicalName)
-    val codeNames = list.map(i => i.codeName).filter(n => n!=needsCodeName)
+    val canonicals = list.map(i => i.canonicalName.toLowerCase())
+    val codeNames = list.map(i => i.codeName.toLowerCase()).filter(n => n!=needsCodeName)
     list.forall(i => i match {
         case ax: CoreAxiomInfo => Axiom.axioms.contains(ax.canonicalName) ensuring(r=>r, "core axiom correctly marked as CoreAxiomInfo: " + ax.canonicalName)
         case ax: DerivedAxiomInfo => true //@todo can't ask DerivedAxioms.derivedAxiom yet since still initializing, besides that'd be circular
@@ -394,7 +394,8 @@ object DerivationInfo {
   def ofCodeName(codeName:String): DerivationInfo = byCodeName.get(codeName.toLowerCase).get
 }
 
-object AxiomInfo {
+object
+AxiomInfo {
   /** Retrieve meta-information on an axiom by the given canonical name `axiomName` */
   def apply(axiomName: String): AxiomInfo =
     DerivationInfo(axiomName) match {
