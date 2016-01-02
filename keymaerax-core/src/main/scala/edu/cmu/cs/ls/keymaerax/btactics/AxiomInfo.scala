@@ -231,16 +231,48 @@ object DerivationInfo {
 
     // Note: Tactic info does not cover all tactics yet.
     // Proof rule position PositionTactics
-    new PositionTacticInfo("notL", "!L", {case () => ProofRuleTactics.notL}),  //@todo
-    new PositionTacticInfo("notR", "!R", {case () => ProofRuleTactics.notR}),
-    new PositionTacticInfo("andR", "^R", {case () => ProofRuleTactics.andR}),  //@todo "\u2227R"
-    new PositionTacticInfo("andL", "^L", {case () => ProofRuleTactics.andL}), //@todo "\u2227L"
-    new PositionTacticInfo("orL", "|L", {case () => ProofRuleTactics.orL}), //@todo "\u2228L"
-    new PositionTacticInfo("orR", "|R", {case () => ProofRuleTactics.orR}), //@todo "\u2228R"
-    new PositionTacticInfo("implyL", "->L", {case () => ProofRuleTactics.implyL}), //@todo "\u2192L"
-    new PositionTacticInfo("implyR", "->R", {case () => ProofRuleTactics.implyR}), //@todo "\u2192R"
-    new PositionTacticInfo("equivL", "<->L", {case () => ProofRuleTactics.equivL}), //@todo "\u2194L"
-    new PositionTacticInfo("equivR", "<->R", {case () => ProofRuleTactics.equivR}), //@todo "\u2194R"
+    new PositionTacticInfo("notL"
+      , RuleDisplayInfo("!L", (List("&Gamma;", "!p"),List("&Delta;")), List((List("&Gamma;"),List("p","&Delta;"))))
+      , {case () => ProofRuleTactics.notL}),  //@todo
+    new PositionTacticInfo("notR"
+      , RuleDisplayInfo("!R", (List("&Gamma;"),List("!p","&Delta")), List((List("&Gamma;","p"),List("&Delta;"))))
+      , {case () => ProofRuleTactics.notR}),
+    new PositionTacticInfo("andR"
+      , RuleDisplayInfo("^R", (List("&Gamma;"),List("p&q","&Delta;")),
+        List((List("&Gamma;"),List("p", "&Delta;")),
+          (List("&Gamma;"), List("q", "&Delta;"))))
+      , {case () => ProofRuleTactics.andR}),  //@todo "\u2227R"
+    new PositionTacticInfo("andL"
+      , RuleDisplayInfo("^L", (List("&Gamma;", "p&q"),List("&Delta;")), List((List("&Gamma;","p","q"),List("&Delta;"))))
+      , {case () => ProofRuleTactics.andL}), //@todo "\u2227L"
+    new PositionTacticInfo("orL"
+      , RuleDisplayInfo("|L", (List("&Gamma;", "p|q"),List("&Delta;")),
+        List((List("&Gamma;", "p"),List("&Delta;")),
+          (List("&Gamma;", "q"),List("&Delta"))))
+      , {case () => ProofRuleTactics.orL}), //@todo "\u2228L"
+    new PositionTacticInfo("orR"
+      , RuleDisplayInfo("|R", (List("&Gamma;"),List("p|q","&Delta;")), List((List("&Gamma;"),List("p","q","&Delta;"))))
+      , {case () => ProofRuleTactics.orR}), //@todo "\u2228R"
+    new PositionTacticInfo("implyR"
+      , RuleDisplayInfo("->R", (List("&Gamma;"),List("p->q", "&Delta;")), List((List("&Gamma;","p"),List("q","&Delta;"))))
+      , {case () => ProofRuleTactics.implyL}), //@todo "\u2192L"
+    new PositionTacticInfo("implyL"
+      , RuleDisplayInfo("->L", (List("&Gamma;","p->q"),List("&Delta;")),
+        List((List("&Gamma;","p"),List("&Delta;")),
+          (List("&Gamma;"),List("q","&Delta;"))))
+      , {case () => ProofRuleTactics.implyR}), //@todo "\u2192R"
+    new PositionTacticInfo("equivL"
+      , RuleDisplayInfo("<->L", (List("&Gamma;","p<->q"),List("&Delta;")),
+        List((List("&Gamma;","p&q"),List("&Delta;")),
+          (List("&Gamma;","!p&!q"),List("&Delta;"))
+         ))
+      , {case () => ProofRuleTactics.equivL}), //@todo "\u2194L"
+    new PositionTacticInfo("equivR"
+      , RuleDisplayInfo("<->R", (List("&Gamma;"),List("p<->q","&Delta;")),
+        List((List("&Gamma","p","q"),List("&Delta")),
+          (List("&Gamma","!p","!q"),List("&Delta"))))
+      , {case () => ProofRuleTactics.equivR}), //@todo "\u2194R"
+
     new PositionTacticInfo("commuteEquivL", "<->CL", {case () => ProofRuleTactics.commuteEquivL}),
     new PositionTacticInfo("commuteEquivR", "<->CR", {case () => ProofRuleTactics.commuteEquivR}),
     new PositionTacticInfo("equivifyR", "<->R", {case () => ProofRuleTactics.equivifyR}),
@@ -311,7 +343,11 @@ object DerivationInfo {
     // Differential tactics
     new PositionTacticInfo("diffInd", "diffInd",  {case () => DifferentialTactics.diffInd}, needsTool = true),
     new InputPositionTacticInfo("diffCut", "diffCut", List(FormulaArg("cutFormula")), {case () => (fml:Formula) => DifferentialTactics.diffCut(fml)}, needsTool = true),
-    new InputPositionTacticInfo("diffInvariant", "diffInv", List(FormulaArg("invariant")), {case () => (fml:Formula) => DifferentialTactics.diffInvariant(qeTool, fml)}, needsTool = true),
+    new InputPositionTacticInfo("diffInvariant",
+      RuleDisplayInfo("diffInvariant",
+        (List("&Gamma;"), List("[x' = f(x)]p", "&Delta;")),
+        List((List("&Gamma;"),List("[x' = f(x) & j(x)]"))))
+      , List(FormulaArg("invariant")), {case () => (fml:Formula) => DifferentialTactics.diffInvariant(qeTool, fml)}, needsTool = true),
     new PositionTacticInfo("Dconstify", "Dconst", {case () => DifferentialTactics.Dconstify}),
     new PositionTacticInfo("Dvariable", "Dvar", {case () => DifferentialTactics.Dvariable}),
 
@@ -349,9 +385,14 @@ object DerivationInfo {
   def apply(axiomName: String): DerivationInfo = {
     byCanonicalName.get(axiomName) match {
       case Some(info) => info
-      case None => throw new AxiomNotFoundException(axiomName)
+      case None =>
+        println("Couldn't find axiom " + axiomName)
+        throw new AxiomNotFoundException(axiomName)
     }
   }
+
+  /** Throw an AssertionError if id does not conform to the rules for code names. */
+  def assertValidIdentifier(id:String) = { assert(id.forall{case c => c.isLetterOrDigit})}
 
   /** Retrieve meta-information on an inference by the given code name `codeName` */
   def ofCodeName(codeName:String): DerivationInfo = byCodeName.get(codeName.toLowerCase).get
@@ -395,17 +436,20 @@ case class TermArg (override val name: String) extends ArgInfo {
   val sort = "term"
 }
 sealed trait DerivationInfo {
-  /** Fully qualified canonical name */
+  /** Canonical name unique across all derivations (axioms or tactics). For core axioms this is as declared in the
+    * axioms, for derived axioms and tactics it is identical to codeName. Can and will contain spaces and special chars. */
   val canonicalName: String
   /** How to display this inference step in a UI */
   val display: DisplayInfo
   /** The unique alphanumeric identifier for this inference step. */
   val codeName: String
+  /** Specification of inputs (other than positions) to the derivation, along with names to use when displaying in the UI. */
   val inputs: List[ArgInfo] = Nil
-  // This is an Any because for input tactics it's a function <inputType> => BelleExpr. For non-imput tactics sthis is a
-  // BelleExpr. The input information for tactics allows us to disambiguate.
+  /** Bellerophon tactic implementing the derivation. For non-input tactics this is simply a BelleExpr. For input tactics
+    * it is (curried) function which accepts the inputs and produces a BelleExpr. */
   def belleExpr: Any
   //@todo add formattedName/unicodeName: String
+  /** Number of positional arguments to the derivation. Can be 0, 1 or 2. */
   val numPositionArgs: Int = 0
 }
 
@@ -415,6 +459,7 @@ trait AxiomInfo extends DerivationInfo {
 
 /** Information for an axiom from the prover core */
 case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any, override val inputs:List[ArgInfo] = Nil) extends AxiomInfo {
+  DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   override def formula:Formula = {
     Axiom.axioms.get(canonicalName) match {
@@ -427,6 +472,7 @@ case class CoreAxiomInfo(override val canonicalName:String, override val display
 
 /** Information for a derived axiom proved from the core */
 case class DerivedAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any) extends AxiomInfo {
+  DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   override lazy val formula: Formula =
     DerivedAxioms.derivedAxiom(canonicalName).conclusion.succ.head
@@ -455,6 +501,7 @@ object DerivedAxiomInfo {
 }
 
 class TacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false) extends DerivationInfo {
+  DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   val canonicalName = codeName
 }
