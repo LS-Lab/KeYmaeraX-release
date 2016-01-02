@@ -363,7 +363,7 @@ object DerivationInfo {
       }
     ) &
       (canonicals.length==canonicals.distinct.length ensuring(r=>r, "unique canonical names: " + (canonicals diff canonicals.distinct))) &
-      (codeNames.length==codeNames.distinct.length ensuring(r=>r, "unique code names / identifiers: " + (codeNames diff codeNames.distinct)))
+      (codeNames.length==codeNames.distinct.length /*|| true*/ ensuring(r=>r, "unique code names / identifiers: " + (codeNames diff codeNames.distinct)))
   }
 
 
@@ -434,6 +434,8 @@ case class VariableArg (override val name: String) extends ArgInfo {
 case class TermArg (override val name: String) extends ArgInfo {
   val sort = "term"
 }
+
+/** Meta-information on a derivation step, which is an axiom, derived axiom, proof rule, or tactic. */
 sealed trait DerivationInfo {
   /** Canonical name unique across all derivations (axioms or tactics). For core axioms this is as declared in the
     * axioms, for derived axioms and tactics it is identical to codeName. Can and will contain spaces and special chars. */
@@ -452,20 +454,25 @@ sealed trait DerivationInfo {
   val numPositionArgs: Int = 0
 }
 
+/** Meta-Information for an axiom or derived axiom */
 trait AxiomInfo extends DerivationInfo {
+  /** The valid formula that this axiom represents */
   def formula: Formula
+  /** A Provable concluding this axiom */
+  def provable: Provable
 }
 
-/** Information for an axiom from the prover core */
+/** Meta-Information for an axiom from the prover core */
 case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any, override val inputs:List[ArgInfo] = Nil) extends AxiomInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
-  override def formula:Formula = {
+  override val formula:Formula = {
     Axiom.axioms.get(canonicalName) match {
       case Some(fml) => fml
       case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
     }
   }
+  override lazy val provable:Provable = Axiom.axiom(canonicalName)
   override val numPositionArgs = 1
 }
 
@@ -481,6 +488,7 @@ case class DerivedAxiomInfo(override val canonicalName:String, override val disp
 //      case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
 //    }
 //  }
+  override lazy val provable:Provable = DerivedAxioms.derivedAxiom(canonicalName)
   override val numPositionArgs = 1
 }
 
@@ -499,6 +507,9 @@ object DerivedAxiomInfo {
     }
 }
 
+// tactics
+
+/** Meta-information on a tactic performing a proof step (or more) */
 class TacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false) extends DerivationInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
