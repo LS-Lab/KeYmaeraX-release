@@ -31,7 +31,8 @@ object DerivedAxioms {
 
   /** A Provable proving the derived axiom named id (convenience) */
   def derivedAxiom(name: String): Provable =
-    Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(derivedAxiomFormula(name).get)))(derivedAxiomR(name), 0)
+    derivedAxiomR(name).lemma.fact
+    //Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(derivedAxiomFormula(name).get)))(derivedAxiomR(name), 0)
 
   private val AUTO_INSERT = true
 
@@ -77,9 +78,10 @@ object DerivedAxioms {
   /** Package a Lemma for a derived axiom up as a tactic */
   private[btactics] def derivedAxiomT(lemma: Lemma): BelleExpr = {
     require(derivedAxiomDB.contains(lemma.name.get), "Lemma has already been added")
-    val lemma2axiomName = axiom2lemmaName.map(_.swap)
-    require(lemma2axiomName.contains(lemma.name.get), s"Lemma with name ${lemma.name.get} must prove an axiom")
-    val axiomName = lemma2axiomName.get(lemma.name.get).get
+//    val lemma2axiomName = axiom2lemmaName.map(_.swap)
+//    require(lemma2axiomName.contains(lemma.name.get), s"Lemma with name ${lemma.name.get} must prove an axiom")
+//    val axiomName = lemma2axiomName.get(lemma.name.get).get
+    val axiomName = AxiomInfo.ofCodeName(lemma.name.get).canonicalName
     ProofRuleTactics.applyRule(derivedAxiomR(axiomName))
   }
 
@@ -110,159 +112,163 @@ object DerivedAxioms {
    * @param name The name of the derived axiom.
    * @return The axiom formula, if found. None otherwise.
    */
-  def derivedAxiomFormula(name: String): Option[Formula] = derivedAxiomInfo(name) match {
+  private def derivedAxiomFormula(name: String): Option[Formula] = derivedAxiomInfo(name) match {
     case Some((fml, _)) => Some(fml)
     case None => None
   }
 
   //@note enables consistent axiom names as well as valid file names on all platforms
   //@todo use AxiomInfo().codeName instead
-  private val axiom2lemmaName: Map[String, String] = Map(
-    "<-> reflexive" -> "equiv reflexive",
-    "-> distributes over &" -> "imply distributes over and",
-    "-> distributes over <->" -> "imply distributes over equiv",
-    "-> weaken" -> "imply weaken",
-    "!! double negation" -> "double negation",
-    "exists dual" -> "exists dual",
-    "!exists" -> "exists negate",
-    "!all" -> "all negate",
-    "![]" -> "box negate",
-    "!<>" -> "diamond negate",
-    "[] dual" -> "box dual",
-    "K1" -> "K1",
-    "K2" -> "K2",
-    "[]~><> propagation" -> "box diamond propagation",
-    "[] split" -> "box split",
-    "[] split left" -> "box split left",
-    "[] split right" -> "box split right",
-    "<> split" -> "diamond split",
-    "<> split left" -> "diamond split left",
-    "<:=> assign" -> "diamond assign",
-    ":= assign dual" -> "assign dual",
-    "[:=] assign equational" -> "box assign equational",
-    "[:=] assign equality exists" -> "box assign equational exists",
-    "[:=] assign update" -> "box assign update",
-    "[:=] vacuous assign" -> "box vacuous assign",
-    "<:=> assign equational" -> "diamond assign equational",
-    "<:=> assign update" -> "diamond assign update",
-    "<:=> vacuous assign" -> "diamond vacuous assign",
-    "<':=> differential assign" -> "diamond differential assign",
-    "<:*> assign nondet" -> "diamond assign nondet",
-    "<?> test" -> "diamond test",
-    "<++> choice" -> "diamond choice",
-    "<;> compose" -> "diamond compose",
-    "<*> iterate" -> "diamond iterate",
-    "<*> approx" -> "diamond approx",
-    "[*] approx" -> "box approx",
-    "exists generalize" -> "exists generalize",
-    "all distribute" -> "all distribute",
-    "all substitute" -> "all substitute",
-    "vacuous exists quantifier" -> "vacuous exists quantifier",
-    "V[:*] vacuous assign nondet" -> "V box vacuous assign nondet",
-    "V<:*> vacuous assign nondet" -> "V diamond vacuous assign nondet",
-    "DX diamond differential skip" -> "DX diamond differential skip",
-    "DW differential weakening" -> "DW differential weakening",
-    "DS differential equation solution" -> "DS differential equation solution",
-    "Dsol& differential equation solution" -> "Dsol domain differential equation solution",
-    "Dsol differential equation solution" -> "Dsol differential equation solution",
-    "Domain Constraint Conjunction Reordering" -> "Domain Constraint Conjunction Reordering",
-    "[] post weaken" -> "box post weaken",
-    "& commute" -> "and commute",
-    "& associative" -> "and associative",
-    "& reflexive" -> "and reflexive",
-    "!& deMorgan" -> "not and deMorgan",
-    "!| deMorgan" -> "not or deMorgan",
-    "!-> deMorgan" -> "not imply deMorgan",
-    "!<-> deMorgan" -> "not equiv deMorgan",
-    "-> expand" -> "imply expand",
-    "-> self" -> "imply self",
-    "PC1" -> "PC1",
-    "PC2" -> "PC2",
-    "PC3" -> "PC3",
-    "PC9" -> "PC9",
-    "PC10" -> "PC10",
-    "-> tautology" -> "imply tautology",
-    "->' derive imply" -> "derive imply",
-    "\\forall->\\exists" -> "forall imply exists",
-    "->true" -> "imply true",
-    "true->" -> "true imply",
-    "&true" -> "and true",
-    "true&" -> "true and",
-    "0*" -> "zero times",
-    "0+" -> "zero plus",
-    "x' derive variable" -> "derive variable",
-    "' linear" -> "prime linear",
-    "' linear right" -> "prime linear right",
-    "DG differential pre-ghost" -> "DG differential pre-ghost",
-    "distributive" -> "distributive",
-    "= reflexive" -> "equal reflexive",
-    "* commute" -> "times commute",
-    "* associative" -> "times associative",
-    "* commutative" -> "times commutative",
-    "* inverse" -> "times inverse",
-    "* closed" -> "times closed",
-    "* identity" -> "times identity",
-    "+ associative" -> "plus associative",
-    "+ commutative" -> "plus commutative",
-    "+ inverse" -> "plus inverse",
-    "+ closed" -> "plus closed",
-    "positivity" -> "positivity",
-    "= commute" -> "equal commute",
-    "<=" -> "lessEqual expand",
-    "< negate" -> "less negate",
-    "= negate" -> "equal negate",
-    "!= negate" -> "notEqual negate",
-    "! <" -> "not less",
-    "! <=" -> "not lessEqual",
-    "! >" -> "not greater",
-    ">= flip" -> "greaterEqual flip",
-    "> flip" -> "greater flip",
-    "<" -> "less normalize",
-    ">" -> "greater normalize",
-    "abs" -> "abs",
-    "min" -> "min",
-    "max" -> "max",
-    "<*> stuck" -> "diamond loop stuck",
-    "<'> stuck" -> "diamond prime stuck",
-    "+<= up" -> "interval plus up",
-    "-<= up" -> "interval minus up",
-    "*<= up" -> "interval times up",
-    "1Div<= up" -> "interval 1divide up",
-    "Div<= up" -> "interval divide up",
-    "<=+ down" -> "interval plus down",
-    "<=- down" -> "interval minus down",
-    "<=* down" -> "interval times down",
-    "<=1Div down" -> "interval 1divide down",
-    "<=Div down" -> "interval divide down",
-    ">" -> "greater normalize",
-    "! <" -> "not less",
-    "! <=" -> "not lessEqual",
-    "! >" -> "not greater",
-    "< negate" -> "less negate",
-    "* associative" -> "times associative",
-    "* commutative" -> "times commutative",
-    "* inverse" -> "times inverse",
-    "* closed" -> "times closed",
-    "* identity" -> "times identity",
-    "+ associative" -> "plus associative",
-    "+ commutative" -> "plus commutative",
-    "+ inverse" -> "plus inverse",
-    "+ closed" -> "plus closed",
-    "positivity" -> "positivity",
-    "distributive" -> "distributive",
-    "all distribute" -> "all distribute",
-    "[*] approx" -> "box approx",
-    ":= assign dual" -> "assign dual",
-    "[]~><> propagation" -> "box diamond propagation",
-    // these are here for unit tests only; but if we implement with renaming scheme, we loose the ability to check for duplicate file names
-    "exists dual dummy" -> "exists dual dummy",
-    "all dual dummy" -> "all dual dummy",
-    "all dual dummy 2" -> "all dual dummy 2",
-    "+id' dummy" -> "plus id prime dummy",
-    "+*' reduce dummy" -> "plus times prime reduce dummy",
-    "+*' expand dummy" -> "plus times prime expand dummy",
-    "^' dummy" -> "power prime dummy"
-    ) ensuring(r => r.values.size == r.values.toSet.size, "No duplicate file names allowed")
+  private def axiom2lemmaName(axiomName: String): String = AxiomInfo(axiomName).codeName
+
+//  private val axiom2lemmaName: Map[String, String] =
+//    Map(
+//    "<-> reflexive" -> "equiv reflexive",
+//    "-> distributes over &" -> "imply distributes over and",
+//    "-> distributes over <->" -> "imply distributes over equiv",
+//    "-> weaken" -> "imply weaken",
+//    "!! double negation" -> "double negation",
+//    "exists dual" -> "exists dual",
+//    "!exists" -> "exists negate",
+//    "!all" -> "all negate",
+//    "![]" -> "box negate",
+//    "!<>" -> "diamond negate",
+//    "[] dual" -> "box dual",
+//    "K1" -> "K1",
+//    "K2" -> "K2",
+//    "[]~><> propagation" -> "box diamond propagation",
+//    "[] split" -> "box split",
+//    "[] split left" -> "box split left",
+//    "[] split right" -> "box split right",
+//    "<> split" -> "diamond split",
+//    "<> split left" -> "diamond split left",
+//    "<:=> assign" -> "diamond assign",
+//    ":= assign dual" -> "assign dual",
+//    "[:=] assign equational" -> "box assign equational",
+//    "[:=] assign equality exists" -> "box assign equational exists",
+//    "[:=] assign update" -> "box assign update",
+//    "[:=] vacuous assign" -> "box vacuous assign",
+//    "<:=> assign equational" -> "diamond assign equational",
+//    "<:=> assign update" -> "diamond assign update",
+//    "<:=> vacuous assign" -> "diamond vacuous assign",
+//    "<':=> differential assign" -> "diamond differential assign",
+//    "<:*> assign nondet" -> "diamond assign nondet",
+//    "<?> test" -> "diamond test",
+//    "<++> choice" -> "diamond choice",
+//    "<;> compose" -> "diamond compose",
+//    "<*> iterate" -> "diamond iterate",
+//    "<*> approx" -> "diamond approx",
+//    "[*] approx" -> "box approx",
+//    "exists generalize" -> "exists generalize",
+//    "all distribute" -> "all distribute",
+//    "all substitute" -> "all substitute",
+//    "vacuous exists quantifier" -> "vacuous exists quantifier",
+//    "V[:*] vacuous assign nondet" -> "V box vacuous assign nondet",
+//    "V<:*> vacuous assign nondet" -> "V diamond vacuous assign nondet",
+//    "DX diamond differential skip" -> "DX diamond differential skip",
+//    "DW differential weakening" -> "DW differential weakening",
+//    "DS differential equation solution" -> "DS differential equation solution",
+//    "Dsol& differential equation solution" -> "Dsol domain differential equation solution",
+//    "Dsol differential equation solution" -> "Dsol differential equation solution",
+//    "Domain Constraint Conjunction Reordering" -> "Domain Constraint Conjunction Reordering",
+//    "[] post weaken" -> "box post weaken",
+//    "& commute" -> "and commute",
+//    "& associative" -> "and associative",
+//    "& reflexive" -> "and reflexive",
+//    "!& deMorgan" -> "not and deMorgan",
+//    "!| deMorgan" -> "not or deMorgan",
+//    "!-> deMorgan" -> "not imply deMorgan",
+//    "!<-> deMorgan" -> "not equiv deMorgan",
+//    "-> expand" -> "imply expand",
+//    "-> self" -> "imply self",
+//    "PC1" -> "PC1",
+//    "PC2" -> "PC2",
+//    "PC3" -> "PC3",
+//    "PC9" -> "PC9",
+//    "PC10" -> "PC10",
+//    "-> tautology" -> "imply tautology",
+//    "->' derive imply" -> "derive imply",
+//    "\\forall->\\exists" -> "forall imply exists",
+//    "->true" -> "imply true",
+//    "true->" -> "true imply",
+//    "&true" -> "and true",
+//    "true&" -> "true and",
+//    "0*" -> "zero times",
+//    "0+" -> "zero plus",
+//    "*0" -> "times zero",
+//    "+0" -> "plus zero",
+//    "x' derive variable" -> "derive variable",
+//    "' linear" -> "prime linear",
+//    "' linear right" -> "prime linear right",
+//    "DG differential pre-ghost" -> "DG differential pre-ghost",
+//    "distributive" -> "distributive",
+//    "= reflexive" -> "equal reflexive",
+//    "* commute" -> "times commute",
+//    "* associative" -> "times associative",
+//    "* inverse" -> "times inverse",
+//    "* closed" -> "times closed",
+//    "* identity" -> "times identity",
+//    "+ associative" -> "plus associative",
+//    "+ commute" -> "plus commute",
+//    "+ inverse" -> "plus inverse",
+//    "+ closed" -> "plus closed",
+//    "positivity" -> "positivity",
+//    "= commute" -> "equal commute",
+//    "<=" -> "lessEqual expand",
+//    "< negate" -> "less negate",
+//    "= negate" -> "equal negate",
+//    "!= negate" -> "notEqual negate",
+//    "! <" -> "not less",
+//    "! <=" -> "not lessEqual",
+//    "! >" -> "not greater",
+//    ">= flip" -> "greaterEqual flip",
+//    "> flip" -> "greater flip",
+//    "<" -> "less normalize",
+//    ">" -> "greater normalize",
+//    "abs" -> "abs",
+//    "min" -> "min",
+//    "max" -> "max",
+//    "<*> stuck" -> "diamond loop stuck",
+//    "<'> stuck" -> "diamond prime stuck",
+//    "+<= up" -> "interval plus up",
+//    "-<= up" -> "interval minus up",
+//    "*<= up" -> "interval times up",
+//    "1Div<= up" -> "interval 1divide up",
+//    "Div<= up" -> "interval divide up",
+//    "<=+ down" -> "interval plus down",
+//    "<=- down" -> "interval minus down",
+//    "<=* down" -> "interval times down",
+//    "<=1Div down" -> "interval 1divide down",
+//    "<=Div down" -> "interval divide down",
+//    ">" -> "greater normalize",
+//    "! <" -> "not less",
+//    "! <=" -> "not lessEqual",
+//    "! >" -> "not greater",
+//    "< negate" -> "less negate",
+//    "* associative" -> "times associative",
+//    "* commute" -> "times commute",
+//    "* inverse" -> "times inverse",
+//    "* closed" -> "times closed",
+//    "* identity" -> "times identity",
+//    "+ associative" -> "plus associative",
+//    "+ commute" -> "plus commute",
+//    "+ inverse" -> "plus inverse",
+//    "+ closed" -> "plus closed",
+//    "positivity" -> "positivity",
+//    "distributive" -> "distributive",
+//    "all distribute" -> "all distribute",
+//    "[*] approx" -> "box approx",
+//    ":= assign dual" -> "assign dual",
+//    "[]~><> propagation" -> "box diamond propagation",
+//    // these are here for unit tests only; but if we implement with renaming scheme, we loose the ability to check for duplicate file names
+//    "exists dual dummy" -> "exists dual dummy",
+//    "all dual dummy" -> "all dual dummy",
+//    "all dual dummy 2" -> "all dual dummy 2",
+//    "+id' dummy" -> "plus id prime dummy",
+//    "+*' reduce dummy" -> "plus times prime reduce dummy",
+//    "+*' expand dummy" -> "plus times prime expand dummy",
+//    "^' dummy" -> "power prime dummy"
+//    ) ensuring(r => r.values.size == r.values.toSet.size, "No duplicate file names allowed")
 
   /**
    * Looks up information about a derived axiom by name.
@@ -413,12 +419,12 @@ object DerivedAxioms {
       "! >",
       "< negate",
       "* associative",
-      "* commutative",
+      "* commute",
       "* inverse",
       "* closed",
       "* identity",
       "+ associative",
-      "+ commutative",
+      "+ commute",
       "+ inverse",
       "+ closed",
       "positivity",
@@ -531,7 +537,7 @@ object DerivedAxioms {
     , "<=* down"
   )
 
-  def derivedAxiomMap = {
+  private[btactics] def derivedAxiomMap = {
     populatedAxioms.foldLeft(HashMap[String,(Formula, BelleExpr)]()) { case (map, name) =>
       derivedAxiomInfo(name) match {
         case None => map
@@ -540,7 +546,7 @@ object DerivedAxioms {
     }
   }
   /** populates the derived lemma database with all of the lemmas in the case statement above.*/
-  def prepopulateDerivedLemmaDatabase() = {
+  private[keymaerax] def prepopulateDerivedLemmaDatabase() = {
     require(AUTO_INSERT, "AUTO_INSERT should be on if lemma database is being pre-populated.")
     derivedAxiomMap.keys.map(key => {
         val proof: Provable = derivedAxiom(key)
@@ -1651,7 +1657,7 @@ object DerivedAxioms {
   lazy val timesZeroF = "(f()*0) = 0".asFormula
   lazy val timesZero = derivedAxiom("*0", Sequent(Nil, IndexedSeq(), IndexedSeq(timesZeroF)),
     useAt("* commute")(1, 0::Nil) &
-      byUS("= reflexive")
+      byUS("0*")
   )
   lazy val timesZeroT = derivedAxiomT(timesZero)
 
@@ -1676,7 +1682,7 @@ object DerivedAxioms {
   lazy val plusZeroF = "(f()+0) = f()".asFormula
   lazy val plusZero = derivedAxiom("+0", Sequent(Nil, IndexedSeq(), IndexedSeq(plusZeroF)),
     useAt("+ commute")(1, 0::Nil) &
-      byUS("= reflexive")
+      byUS("0+")
   )
   lazy val plusZeroT = derivedAxiomT(plusZero)
 
@@ -1873,11 +1879,11 @@ object DerivedAxioms {
    */
   lazy val DlinearRightF = "(f(??)*c())' = (f(??))'*c()".asFormula
   lazy val DlinearRight = derivedAxiom("' linear right",
-    Sequent(Nil, IndexedSeq(), IndexedSeq(DlinearF)),
-    useAt("*' derive product")(1, 0::Nil) &
-      useAt("c()' derive constant fn")(1, 0::1::1::Nil) &
-      useAt(timesZero)(1, 0::1::Nil) &
-      useAt(plusZero)(1, 0::Nil) &
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DlinearRightF)),
+    useAt("*' derive product")(1, 0:: Nil) &
+      useAt("c()' derive constant fn")(1, 0:: 1::1::Nil) &
+      useAt(timesZero)(1, 0:: 1::Nil) &
+      useAt(plusZero)(1, 0:: Nil) &
       byUS("= reflexive")
   )
   //@note elegant proof that clashes for some reason
@@ -2033,23 +2039,23 @@ object DerivedAxioms {
   lazy val timesAssociativeT = derivedAxiomT(timesAssociative)
 
   /**
-   * {{{Axiom "+ commutative".
+   * {{{Axiom "+ commute".
    *    f()+g() = g()+f()
    * End.
    * }}}
    */
   lazy val plusCommutativeF = "f()+g() = g()+f()".asFormula
-  lazy val plusCommutative = derivedAxiom("+ commutative", Sequent(Nil, IndexedSeq(), IndexedSeq(plusCommutativeF)), QE)
+  lazy val plusCommutative = derivedAxiom("+ commute", Sequent(Nil, IndexedSeq(), IndexedSeq(plusCommutativeF)), QE)
   lazy val plusCommutativeT = derivedAxiomT(plusCommutative)
 
   /**
-   * {{{Axiom "* commutative".
+   * {{{Axiom "* commute".
    *    f()*g() = g()*f()
    * End.
    * }}}
    */
   lazy val timesCommutativeF = "f()*g() = g()*f()".asFormula
-  lazy val timesCommutative = derivedAxiom("* commutative", Sequent(Nil, IndexedSeq(), IndexedSeq(timesCommutativeF)), QE)
+  lazy val timesCommutative = derivedAxiom("* commute", Sequent(Nil, IndexedSeq(), IndexedSeq(timesCommutativeF)), QE)
   lazy val timesCommutativeT = derivedAxiomT(timesCommutative)
 
   /**

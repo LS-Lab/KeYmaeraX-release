@@ -249,7 +249,7 @@ object ProofRuleTactics {
         US(subst, Axiom.axiom(axiomName).conclusion) & new BuiltInTactic(s"Close by axiom $axiomName") {
           override def result(provable: Provable): Provable = provable(core.Axiom(axiomName), 0)
         }
-      } else if (DerivedAxioms.derivedAxiomFormula(axiomName).isDefined) {
+      } else if (DerivedAxiomInfo.locate(axiomName).isDefined) {
         US(subst, DerivedAxioms.derivedAxiom(axiomName).conclusion) & new BuiltInTactic(s"Close by derived axiom $axiomName") {
           override def result(provable: Provable): Provable = provable(DerivedAxioms.derivedAxiomR(axiomName), 0)
         }

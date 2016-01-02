@@ -97,11 +97,11 @@ trait UnifyUSCalculus {
   /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: String, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic =
     if (Axiom.axioms.contains(axiom)) useAt(Axiom.axiom(axiom), key, inst)
-    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(DerivedAxioms.derivedAxiom(axiom), key, inst)
+    else if (DerivedAxiomInfo.locate(axiom).isDefined) useAt(DerivedAxioms.derivedAxiom(axiom), key, inst)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
   def useAt(axiom: String, key: PosInExpr): DependentPositionTactic =
     if (Axiom.axioms.contains(axiom)) useAt(Axiom.axiom(axiom), key)
-    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useAt(DerivedAxioms.derivedAxiom(axiom), key)
+    else if (DerivedAxiomInfo.locate(axiom).isDefined) useAt(DerivedAxioms.derivedAxiom(axiom), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
   def useAt(axiom: String, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
   def useAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1)
@@ -124,7 +124,7 @@ trait UnifyUSCalculus {
   /** byUS(axiom) proves by a uniform substitution instance of axiom */
   def byUS(axiom: String)     : BelleExpr =
     if (Axiom.axioms.contains(axiom)) byUS(Axiom.axiom(axiom))
-    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) byUS(DerivedAxioms.derivedAxiom(axiom))
+    else if (DerivedAxiomInfo.locate(axiom).isDefined) byUS(DerivedAxioms.derivedAxiom(axiom))
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
   /*******************************************************************
@@ -589,12 +589,12 @@ trait UnifyUSCalculus {
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   def useFor(axiom: String, key: PosInExpr): ForwardPositionTactic =
     if (Axiom.axioms.contains(axiom)) useFor(Axiom.axiom(axiom), key)
-    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key)
+    else if (DerivedAxiomInfo.locate(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
   def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic =
     if (Axiom.axioms.contains(axiom)) useFor(Axiom.axiom(axiom), key, inst)
-    else if (DerivedAxioms.derivedAxiomFormula(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key, inst)
+    else if (DerivedAxiomInfo.locate(axiom).isDefined) useFor(DerivedAxioms.derivedAxiom(axiom), key, inst)
     else throw new IllegalArgumentException("Unknown axiom " + axiom)
 
   /** CE(C) will wrap any equivalence `left<->right` or equality `left=right` fact it gets within context C.
