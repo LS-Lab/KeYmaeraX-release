@@ -167,6 +167,8 @@ object DerivationInfo {
     new DerivedAxiomInfo("true&", "T&", "trueAnd", {case () => DerivedAxioms.trueAndT}),
     new DerivedAxiomInfo("0*", "0*", "zeroTimes", {case () => DerivedAxioms.zeroTimesT}),
     new DerivedAxiomInfo("0+", "0+", "zeroPlus", {case () => DerivedAxioms.zeroPlusT}),
+    new DerivedAxiomInfo("*0", "*0", "timesZero", {case () => DerivedAxioms.timesZeroT}),
+    new DerivedAxiomInfo("+0", "+0", "plusZero", {case () => DerivedAxioms.plusZeroT}),
     new DerivedAxiomInfo("= reflexive", "=R", "equalReflexive", {case () => DerivedAxioms.equalReflexiveT}),
     new DerivedAxiomInfo("* commute", "*C", "timesCommute", {case () => DerivedAxioms.timesCommuteT}),
     new DerivedAxiomInfo("= commute", "=C", "equalCommute", {case () => DerivedAxioms.equalCommuteT}),

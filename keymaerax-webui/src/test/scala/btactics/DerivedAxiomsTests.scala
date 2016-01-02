@@ -15,6 +15,8 @@ import testHelper.KeYmaeraXTestTags.OptimisticTest
  */
 class DerivedAxiomsTests extends TacticTestBase {
 
+  //@todo add a test case that runs through AxiomInfo.allInfos checking all its axioms
+
   private def check(lemma: Lemma): Sequent = {
     println(lemma.name.get + "\n" + lemma.fact.conclusion)
     lemma.fact shouldBe 'proved
@@ -104,7 +106,7 @@ class DerivedAxiomsTests extends TacticTestBase {
   it should "prove x' derive variable" in {check(Dvariable)}
   it should "prove 'linear" in {check(Dlinear)}
   //@todo fails with substitution clash
-  ignore should "prove 'linear right" in withMathematica { implicit qeTool => check(DlinearRight)}
+  it should "prove 'linear right" in withMathematica { implicit qeTool => check(DlinearRight)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "prove DX diamond differential skip" in {check(Dskipd)}
   it should "prove = reflexive" in {check(equalReflex)}
