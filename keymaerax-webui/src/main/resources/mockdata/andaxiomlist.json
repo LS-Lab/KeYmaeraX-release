@@ -2,7 +2,7 @@
   {
     "id": "and commute",
     "name": "& commute",
-    "deduction": {
+    "derivation": {
       "type": "axiom",
       "formula": "(p() & q()) <-> (q() & p())"
     }
@@ -10,7 +10,7 @@
   {
     "id": "and true",
     "name": "& true",
-    "deduction": {
+    "derivation": {
       "type": "axiom",
       "formula": "(p()&true) <-> p()"
     }

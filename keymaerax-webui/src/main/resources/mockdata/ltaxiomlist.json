@@ -2,7 +2,7 @@
   {
     "id": "lt",
     "name": "< normalize",
-    "deduction": {
+    "derivation": {
       "type": "axiom",
       "formula": "f() < g() <-> 0 < g()-f()"
     }

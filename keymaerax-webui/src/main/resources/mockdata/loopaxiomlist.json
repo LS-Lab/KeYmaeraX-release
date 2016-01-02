@@ -2,7 +2,7 @@
   {
     "id": "loopinduction",
     "name": "ind",
-    "deduction": {
+    "derivation": {
       "type": "sequentrule",
       "premise": [
         {
@@ -34,7 +34,7 @@
   {
     "id": "loopiterate",
     "name": "[*]",
-    "deduction": {
+    "derivation": {
       "type": "axiom",
       "formula": "[{a;}*]p(??) <-> (p(??) & [a;][{a;}*]p(??))"
     }

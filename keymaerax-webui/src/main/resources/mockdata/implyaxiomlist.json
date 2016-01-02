@@ -2,7 +2,7 @@
   {
     "id": "implyright",
     "name": "implyR",
-    "deduction": {
+    "derivation": {
       "type": "sequentrule",
       "premise": [
         {
