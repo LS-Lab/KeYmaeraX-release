@@ -445,7 +445,8 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends R
   def inputJson(input: ArgInfo): JsValue = {
     JsObject (
     "type" -> JsString(input.sort),
-    "param" -> JsString(input.name)
+    "param" -> JsString(input.name),
+    "value" -> JsString(input.name)
     )
   }
 
@@ -508,7 +509,7 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends R
     JsObject(
       "id" -> new JsString(derivationInfo.codeName),
       "name" -> new JsString(derivationInfo.display.name),
-      "deduction" -> derivation
+      "derivation" -> derivation
     )
   }
   val json = JsArray(derivationInfos.map({case info => derivationJson(info)}))

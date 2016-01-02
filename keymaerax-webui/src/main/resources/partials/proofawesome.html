@@ -11,7 +11,8 @@
                 </span>
                 <div class="nav">
                     <ul class="nav navbar-nav">
-                        <li><a ng-click="doTactic('Master')"><span class="fa fa-play"> Auto</span></a></li>
+                        <li><a ng-click="doTactic('master')"><span class="fa fa-play"> Auto</span></a></li>
+                        <li><a ng-click="doTactic('normalize')"><span class="fa fa-magic"> Normalize</span></a></li>
                         <li><a ng-click="undoLastStep()"><span class="fa fa-undo"> Step back</span></a></li>
                     </ul>
                     <ul class="nav navbar-nav pull-right">
@@ -24,36 +25,64 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doTactic('Prop')"> Exhaustive <code>prop</code></a></li>
+                                <li><a ng-click="doTactic('prop')"><span>Exhaustive</span><code class="pull-right">prop</code></a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doSearch('AndL', 'L')">and left <code>andL</code></a></li>
-                                <li><a ng-click="doSearch('ImplyR', 'R')">imply right <code>implyR</code></a></li>
-                                <li><a ng-click="doSearch('OrR', 'R')">or right <code>orR</code></a></li>
-                                <li><a ng-click="doSearch('EquivL', 'L')">equiv left <code>equivL</code></a></li>
+                                <li><a ng-click="doSearch('andL', 'L')"><span>&and;L</span><code class="pull-right">andL</code></a></li>
+                                <li><a ng-click="doSearch('implyR', 'R')"><span>&#8594;R</span><code class="pull-right">implyR</code></a></li>
+                                <li><a ng-click="doSearch('orR', 'R')"><span>&or;R</span><code class="pull-right">orR</code></a></li>
+                                <li><a ng-click="doSearch('equivL', 'L')"><span>&#8596;L</span><code class="pull-right">equivL</code></a></li>
+                                <li><a ng-click="doSearch('notL', 'L')"><span>&not;L</span><code class="pull-right">notL</code></a></li>
+                                <li><a ng-click="doSearch('notR', 'R')"><span>&not;R</span><code class="pull-right">notR</code></a></li>
+                                <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code class="pull-right">commuteEquivL</code></a></li>
+                                <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code class="pull-right">commuteEquivR</code></a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doSearch('AndR', 'R')">and right <code>andR</code></a></li>
-                                <li><a ng-click="doSearch('OrL', 'L')">or left <code>orL</code></a></li>
-                                <li><a ng-click="doSearch('ImplyL', 'L')">imply left <code>implyL</code></a></li>
-                                <li><a ng-click="doSearch('EquivR', 'R')">equiv right <code>equivR</code></a></li>
+                                <li><a ng-click="doSearch('andR', 'R')"><span>&and;R</span><code class="pull-right">andR</code></a></li>
+                                <li><a ng-click="doSearch('orL', 'L')"><span>&or;L</span><code class="pull-right">orL</code></a></li>
+                                <li><a ng-click="doSearch('implyL', 'L')"><span>&#8594;L</span><code class="pull-right">implyL</code></a></li>
+                                <li><a ng-click="doSearch('equivR', 'R')"><span>&#8596;R</span><code class="pull-right">equivR</code></a></li>
+                            </ul>
+                        </li>
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                               aria-haspopup="true" aria-expanded="false">(First-order) Arithmetic <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <li><a ng-click="doSearch('allR', 'R')"><span>&forall;R</span><code class="pull-right">allR</code></a></li>
+                                <li><a ng-click="doSearch('existsL', 'R')"><span>&exist;L</span><code class="pull-right">existsL</code></a></li>
+                                <!--<li role="separator" class="divider"></li>-->
+                                <!--<li><a ng-click="doSearch('min', 'R')"><span>min</span><code class="pull-right">min</code></a></li>-->
+                                <!--<li><a ng-click="doSearch('max', 'R')"><span>max</span><code class="pull-right">max</code></a></li>-->
+                                <!--<li><a ng-click="doSearch('abs', 'R')"><span>abs</span><code class="pull-right">abs</code></a></li>-->
+                                <!-- TODO -->
+                                <!--<li role="separator" class="divider"></li>-->
+                                <!--<li><a ng-click="doSearch('*0', 'L')"><span>&times;0</span><code class="pull-right">*0</code></a></li>-->
                             </ul>
                         </li>
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Hybrid Programs <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doSearch('BoxCompose', 'R')">[;] compose <code>composeb</code></a></li>
-                                <li><a ng-click="doSearch('BoxChoice', 'R')">[++] choice <code>choiceb</code></a></li>
-                                <!-- TODO -->
+                                <li><a ng-click="doSearch('composeb', 'R')"><span>[;]</span><code class="pull-right">composeb</code></a></li>
+                                <li><a ng-click="doSearch('choiceb', 'R')"><span>[&cup;]</span><code class="pull-right">choiceb</code></a></li>
+                                <li><a ng-click="doSearch('testb', 'R')"><span>[?]</span><code class="pull-right">testb</code></a></li>
+                                <li><a ng-click="doSearch('assignb', 'R')"><span>[:=]</span><code class="pull-right">assignb</code></a></li>
+                                <li><a ng-click="doSearch('randomb', 'R')"><span>[:*]</span><code class="pull-right">randomb</code></a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doSearch('DiamondCompose', 'R')">&lt;;&gt; compose <code>composed</code></a></li>
-                                <li><a ng-click="doSearch('DiamondChoice', 'R')">&lt;++&gt; compose <code>choiced</code></a></li>
+                                <li><a ng-click="doSearch('boxSplit', 'R')"><span>[]&and;</span><code class="pull-right">boxSplit</code></a></li>
+                                <li><a ng-click="doSearch('boxSplitLeft', 'R')"><span>[]p&and;</span><code class="pull-right">boxSplitLeft</code></a></li>
+                                <li><a ng-click="doSearch('boxSplitRight', 'R')"><span>[]&and;q</span><code class="pull-right">boxSplitRight</code></a></li>
+                                <!-- TODO -->
+                                <!--<li role="separator" class="divider"></li>-->
+                                <!--<li><a ng-click="doSearch('DiamondCompose', 'R')"><span>&lang;;&rang;</span><code class="pull-right">composed</code></a></li>-->
+                                <!--<li><a ng-click="doSearch('DiamondChoice', 'R')"><span>&rang;++&lang;</span><code class="pull-right">choiced</code></a></li>-->
                             </ul>
                         </li>
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Differential Equations <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doSearch('DiffWeaken', 'R')">DW <code>diffWeaken</code></a></li>
+                                <li><a ng-click="doSearch('diffWeaken', 'R')"><span>DW</span><code class="pull-right">diffWeaken</code></a></li>
+                                <li><a ng-click="doSearch('DE', 'R')"><span>DE</span><code class="pull-right">DE</code></a></li>
+                                <li><a ng-click="doSearch('DI', 'R')"><span>DI</span><code class="pull-right">DI</code></a></li>
                                 <!-- TODO -->
                             </ul>
                         </li>
@@ -61,8 +90,10 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Closing <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doTactic('closeId')">Close by identity <code>closeId</code></a></li>
-                                <li><a ng-click="doTactic('QE')">Quantifier elimination <code>QE</code></a></li>
+                                <li><a ng-click="doTactic('closeId')"><span>Identity</span><code class="pull-right">closeId</code></a></li>
+                                <li><a ng-click="doTactic('closeTrue')"><span>True</span><code class="pull-right">closeTrue</code></a></li>
+                                <li><a ng-click="doTactic('closeFalse')"><span>False</span><code class="pull-right">closeFalse</code></a></li>
+                                <li><a ng-click="doTactic('QE')"><span>Quantifier elimination</span><code class="pull-right">QE</code></a></li>
                                 <!-- TODO -->
                             </ul>
                         </li>

@@ -420,7 +420,7 @@ angular.module('formula')
             }
 
             convertSequentRuleToInput = function(tactic) {
-              tactic.deduction.premise = $.map(tactic.deduction.premise, function(premise, i) {
+              tactic.derivation.premise = $.map(tactic.derivation.premise, function(premise, i) {
                 return {ante: convertToInput(premise.ante, tactic), succ: convertToInput(premise.succ, tactic)};
               });
               return tactic;
@@ -432,7 +432,7 @@ angular.module('formula')
             }
 
             convertFormulaToInput = function(formula, tactic) {
-              var inputs = $.grep(tactic.deduction.input, function(input, i) { return formula.indexOf(input.param) >= 0; });
+              var inputs = $.grep(tactic.derivation.input, function(input, i) { return formula.indexOf(input.param) >= 0; });
               var inputBoundaries = $.map(inputs, function(input, i) {
                 var inputStart = formula.indexOf(input.param);
                 return {start: inputStart, end: inputStart + input.param.length };
@@ -464,10 +464,10 @@ angular.module('formula')
                 value: function(newValue) {
                   if (newValue === undefined) {
                     // get
-                    return $.grep(tactic.deduction.input, function(elem, i) { return elem.param === inputId; })[0].value;
+                    return $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value;
                   } else {
                     // set
-                    return $.grep(tactic.deduction.input, function(elem, i) { return elem.param === inputId; })[0].value = newValue;
+                    return $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value = newValue;
                   }
                 }
               };
