@@ -758,17 +758,14 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
   def getResultingResponses() = {
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
-    if(tree.root.id == nodeId.toInt) {
-      throw new Exception("Can't prune root")
-    }
-    val prunedSteps = tree.allDescendants(nodeId).flatMap{case node => node.startStep.toList}
+    val prunedSteps = tree.allDescendants(goalId).flatMap{case node => node.endStep.toList}
     if(prunedSteps.isEmpty) {
       throw new Exception("No steps under node. Nothing to do.")
     }
     val prunedStepIds = prunedSteps.map{case step => step.stepId}.toSet
     val prunedTrace = prune(trace, prunedStepIds)
     db.addAlternative(prunedStepIds.min, prunedTrace)
-    val goalNode = tree.findNode(nodeId).get.parent.get
+    val goalNode = tree.findNode(goalId).get
     val item = AgendaItem(goalNode.id.toString, "Unnamed Item", proofId.toString, goalNode)
     val response = new PruneBelowResponse(item)
     response :: Nil
