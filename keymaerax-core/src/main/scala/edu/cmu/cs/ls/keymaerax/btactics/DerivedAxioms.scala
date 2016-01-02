@@ -851,7 +851,7 @@ object DerivedAxioms {
       /* show */ cut(/*(8)*/"([a;]p(??) -> [a;](q(??) -> p(??)&q(??)))  ->  (([a;](q(??)->p(??)&q(??)) -> ([a;]q(??) -> [a;](p(??)&q(??))))  ->  (([a;]p(??) & [a;]q(??)) -> [a;](p(??)&q(??))))".asFormula) <(
         /* use */ cut(/*(5)*/"[a;]p(??) -> [a;](q(??) -> p(??)&q(??))".asFormula) <(
           /* use */ modusPonens(AntePos(1), AntePos(0)) & close,
-          /* show */ cohide(3) & useAt("K modal modus ponens", PosInExpr(1::Nil))(1) & useAt("-> tautology")(1, 1::Nil) & V(1) & close
+          /* show */ cohide(3) & useAt("K modal modus ponens", PosInExpr(1::Nil))(1) & useAt(implyTautology)(1, 1::Nil) & V(1) & close
         ),
         /* show */ cohide(3) & prop
       )
@@ -898,7 +898,7 @@ object DerivedAxioms {
           ) & byUS("K modal modus ponens")
 
       ),
-      /* show */ cohide(2) & debug("Foo") & useAt("PC1")(1, 1::0::Nil) & debug("Bar") & useAt("-> self")(1, 1::Nil) & debug("Zee") & V(1) & close
+      /* show */ cohide(2) & debug("Foo") & useAt(PC1)(1, 1::0::Nil) & debug("Bar") & useAt(implySelf)(1, 1::Nil) & debug("Zee") & V(1) & close
     )
   )
 
@@ -1302,7 +1302,7 @@ object DerivedAxioms {
   lazy val allSubstitute = derivedAxiom("all substitute",
     Sequent(Nil, IndexedSeq(), IndexedSeq(allSubstituteF)),
     equivR(SuccPos(0)) <(
-      /* equiv left */ allL(Variable("x"), "t()".asTerm)(-1) & implyL(-1) <(cohide(2) & byUS("= reflexive"), close),
+      /* equiv left */ allL(Variable("x"), "t()".asTerm)(-1) & implyL(-1) <(cohide(2) & byUS(equalReflex), close),
       /* equiv right */ allR(1) & implyR(1) & eqL2R(-2)(1) & close
     )
   )
@@ -1659,8 +1659,8 @@ object DerivedAxioms {
     */
   lazy val timesZeroF = "(f()*0) = 0".asFormula
   lazy val timesZero = derivedAxiom("*0", Sequent(Nil, IndexedSeq(), IndexedSeq(timesZeroF)),
-    useAt("* commute")(1, 0::Nil) &
-      byUS("0*")
+    useAt(timesCommutative)(1, 0::Nil) &
+      byUS(zeroTimes)
   )
   lazy val timesZeroT = derivedAxiomT(timesZero)
 

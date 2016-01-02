@@ -259,10 +259,10 @@ trait UnifyUSCalculus {
         case Equiv(other, DotFormula) => equivStep(other, (if (p.isAnte) commuteEquivR(1) else ident) & factTactic)
 
         case Equal(DotTerm, other) =>
-          equivStep(other, (if (p.isSucc) TactixLibrary.useAt("= commute")(1) else ident) & factTactic)
+          equivStep(other, (if (p.isSucc) TactixLibrary.useAt(DerivedAxioms.equalCommute)(1) else ident) & factTactic)
 
         case Equal(other, DotTerm) =>
-          equivStep(other, (if (p.isAnte) TactixLibrary.useAt("= commute")(1) else ident) & factTactic)
+          equivStep(other, (if (p.isAnte) TactixLibrary.useAt(DerivedAxioms.equalCommute)(1) else ident) & factTactic)
 
         //@todo not sure if the following two cases really work as intended, but they seem to
         case Imply(other, DotFormula) if p.isSucc && p.isTopLevel =>
@@ -941,7 +941,7 @@ trait UnifyUSCalculus {
             equivStep(o, byUS(fact))
 
           case Equal(o, DotTerm) =>
-            equivStep(o, useAt("= commute") & byUS(fact))
+            equivStep(o, useAt(DerivedAxioms.equalCommute) & byUS(fact))
 
           case Equiv(DotFormula, o) =>
             equivStep(o, byUS(fact))
