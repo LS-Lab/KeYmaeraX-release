@@ -78,8 +78,11 @@ object TacticDebugger {
     var node: TraceNode = null
     var isDead: Boolean = false
 
+    /* Debug info: Records how deep inside the tree of begin-end pairs we are */
+    var depth: Int = 0
     def begin(v: BelleValue, expr: BelleExpr): Unit = {
       synchronized {
+        depth = depth + 1
         if(isDead) return
         val parent = node
         node = new TraceNode(isFirstNode = parent == null)
@@ -108,27 +111,35 @@ object TacticDebugger {
 
     def end(v: BelleValue, expr: BelleExpr, result: Either[BelleValue, BelleError]): Unit = {
       synchronized {
+        depth = depth - 1
         if(isDead) return
         val current = node
         node = node.parent
         youngestSibling = current.id
-        current.status = ExecutionStepStatus.Finished
+        current.status =
+          result match {
+            case Left(_) => ExecutionStepStatus.Finished
+            case Right(_) => ExecutionStepStatus.Error
+          }
         if (node != null && !recursive) return
+        db.updateExecutionStatus(current.stepId.get, current.status)
         if (node == null) {
           result match {
             // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic
             case Left(BelleProvable(p)) =>
               current.output = globalProvable(p, branch)
               current.local = p
+            case _ =>
           }
-          if(current.output.isProved) {
-            val p = db.getProofInfo(proofId)
-            val provedProof = new ProofPOJO(p.proofId, p.modelId,p.name, p.description, p.date, p.stepCount, closed = true)
-            db.updateProofInfo(provedProof)
+          if (current.output != null) {
+            db.updateResultProvables(current.stepId.get, current.getOutputProvableId, current.getLocalProvableId)
+            if (current.output.isProved) {
+              val p = db.getProofInfo(proofId)
+              val provedProof = new ProofPOJO(p.proofId, p.modelId, p.name, p.description, p.date, p.stepCount, closed = true)
+              db.updateProofInfo(provedProof)
+            }
           }
         }
-        db.updateExecutionStatus(current.stepId.get, current.status)
-        db.updateResultProvables(current.stepId.get, current.getOutputProvableId, current.getLocalProvableId)
       }
     }
 

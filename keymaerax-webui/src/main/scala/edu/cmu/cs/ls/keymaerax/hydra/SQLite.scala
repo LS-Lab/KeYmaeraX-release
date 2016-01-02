@@ -596,7 +596,11 @@ object SQLite {
 
     def proofSteps(executionId: Int): List[ExecutionStepPOJO] = {
       synchronizedTransaction({
-        var steps = Executionsteps.filter(_.executionid === executionId).list
+        var steps =
+          Executionsteps
+            .filter({case row => row.executionid === executionId &&
+               row.status === ExecutionStepStatus.Finished.toString})
+            .list
         var prevId: Option[Int] = None
         var revResult: List[ExecutionStepPOJO] = Nil
         while(steps != Nil) {
