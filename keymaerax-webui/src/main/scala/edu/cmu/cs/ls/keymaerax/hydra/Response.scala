@@ -445,7 +445,8 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends R
   def inputJson(input: ArgInfo): JsValue = {
     JsObject (
     "type" -> JsString(input.sort),
-    "param" -> JsString(input.name)
+    "param" -> JsString(input.name),
+    "value" -> JsString(input.name)
     )
   }
 

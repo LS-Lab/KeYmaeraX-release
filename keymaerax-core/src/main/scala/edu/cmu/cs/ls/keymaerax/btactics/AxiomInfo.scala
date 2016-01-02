@@ -283,12 +283,12 @@ object DerivationInfo {
           }
         }}),
     new InputPositionTacticInfo("loop",
-      RuleDisplayInfo("loop",(List("&Gamma;"), List("j(&oline;x)", "&Delta;")),
+      RuleDisplayInfo("loop",(List("&Gamma;"), List("[a*]j(x)", "&Delta;")),
         List(
-          (List("&Gamma;"),List("j(&oline;x)", "&Delta;")),
-          (List("j(&oline;x)"),List("[a]j(&oline;x)")),
-          (List("j(&oline;x)"),List("P"))))
-      , List(FormulaArg("invariant")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
+          (List("&Gamma;"),List("j(x)", "&Delta;")),
+          (List("j(x)"),List("[a]j(x)")),
+          (List("j(x)"),List("P"))))
+      , List(FormulaArg("j(x)")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
 
     // TactixLibrary tactics
     new PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),
