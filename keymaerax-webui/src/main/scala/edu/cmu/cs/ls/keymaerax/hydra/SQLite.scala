@@ -367,13 +367,13 @@ object SQLite {
         else {
           val thisStep = steps.head
           val thisPOJO = get(thisStep.stepId)
-          println("Replaying old step " + thisPOJO._Id + " sibling id " + prev)
           val localProvable = loadProvable(thisPOJO.localprovableid.get)
           val global = loadProvable(globalId)
           val outputProvable = global(localProvable, thisStep.branch)
           val outputProvableId = serializeProvable(outputProvable)
           val newStep = new ExecutionStepPOJO(None, oldStep.executionid.get, prev, None, Some(thisStep.branch),
-            None, oldStep.alternativeorder.get + 1, ExecutionStepStatus.fromString(thisPOJO.status.get), thisPOJO.executableid.get, globalId,
+            None, oldStep.alternativeorder.get + 1, ExecutionStepStatus.fromString(thisPOJO.status.get), thisPOJO.executableid.get,
+            globalId,
             Some(outputProvableId), thisPOJO.localprovableid, thisPOJO.userexecuted.get.toBoolean)
           val newId = addExecutionStep(newStep)
           addSteps(Some(newId), outputProvableId, steps.tail)
@@ -387,8 +387,7 @@ object SQLite {
           oldStep.inputprovableid, oldStep.localprovableid, true)
         addExecutionStep(step)
       } else {
-        val head = trace.steps.head
-        val inputId = get(head.stepId).inputprovableid.get
+        val inputId = oldStep.inputprovableid.get
         addSteps(oldStep.previousstep, inputId, trace.steps)
       }
     }
