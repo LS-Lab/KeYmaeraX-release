@@ -259,11 +259,22 @@ trait RestApi extends HttpService {
   val doInputAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / "doInputAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     post {
       entity(as[String]) { params => {
-        val request = formulaId match {
-          case "1,1" =>
-            val input = JsonParser(params) // do something useful with the tactic input
-            new MockRequest("/mockdata/loopresult.json")
-        }
+        // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
+        val paramArray = JsonParser(params).asInstanceOf[JsArray]
+        val paramStrings: Vector[String] =
+          paramArray.elements.map({case elem =>
+            val obj = elem.asJsObject()
+            val paramType = obj.getFields("type").head.asInstanceOf[JsString].value
+            val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
+            val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
+            if(paramType == "formula") {
+              "{`" + paramValue + "`}"
+            } else {
+              paramValue
+            }
+          })
+        val expr = tacticId + "(" + paramStrings.toList.reduce[String]{case (s1, s2) => s1 + "," + s2} + ")"
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, expr, Some(Fixed(parseFormulaId(formulaId))))
         complete(standardCompletion(request))
       }
     }}
