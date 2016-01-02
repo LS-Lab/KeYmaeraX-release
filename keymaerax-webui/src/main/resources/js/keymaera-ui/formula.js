@@ -399,17 +399,17 @@ angular.module('formula')
             $scope.applyTactic = function(formulaId, tacticId) {
               $scope.onTactic({formulaId: formulaId, tacticId: tacticId});
             }
-
+;
             $scope.applyInputTactic = function(formulaId, tactic) {
               //@note have to declare local variables with exactly the names of the event arguments,
               //      otherwise the event parameters are undefined in the listener :-O
               var tacticId = tactic.id;
-              var input = tactic.deduction.input;
+              var input = tactic.derivation.input;
               $scope.onInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
             }
 
             $scope.input = function(formula, tactic) {
-              return $.grep(tactic.deduction.input, function(elem, i) { return elem.param === formula; })[0].value;
+              return $.grep(tactic.derivation.input, function(elem, i) { return elem.param === formula; })[0].value;
             }
 
             $scope.tacticPopover = {
