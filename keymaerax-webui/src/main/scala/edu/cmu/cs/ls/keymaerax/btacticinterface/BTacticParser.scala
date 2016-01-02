@@ -70,7 +70,8 @@ object BTacticParser {
     protected val numberPattern = """[0-9]*""".r
 
     val positionPattern = """[\-?0-9]*""".r
-    val notArgumentDelimiter = """[^`}]""".r
+    val formulaPattern = """\{`[^`}]*`}""".r
+    val notArgumentDelimiter = """[^`}]*""".r
 //    val notDoubleQoute = """[^\"]*""".r
 
     // SYMBOLTABLE contains reserved symbols.
@@ -160,9 +161,9 @@ object BTacticParser {
 
     /** Looks like name(formula | position, formula | position, ..., formula | position) where formula = {` formula `} */
     lazy val baseTacticWithInputs : PackratParser[BelleExpr] = {
-      lazy val formulaOrPosition = ("{`" ~> notArgumentDelimiter <~ "`}") | positionPattern
-      lazy val pattern = ident ~ ("(" ~> (positionPattern ~ ("," ~> positionPattern).*) <~ ")")
-      log(pattern)("base tactic with position input") ^^ {
+      lazy val formulaOrPosition = formulaPattern | positionPattern
+      lazy val pattern = ident ~ ("(" ~> (formulaOrPosition ~ ("," ~> formulaOrPosition).*) <~ ")")
+      log(pattern)("base tactic with position or formula input") ^^ {
         case name ~ args => {
           val arguments = (args._1 +: args._2) map parseFormulaOrPosition
           ReflectiveExpressionBuilder(name, arguments)

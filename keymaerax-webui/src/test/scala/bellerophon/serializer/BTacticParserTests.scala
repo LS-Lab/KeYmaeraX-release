@@ -66,6 +66,12 @@ class BTacticParserTests extends FlatSpec with Matchers {
     apt.positionTactic.prettyString shouldBe "ImplyR"
   }
 
+  it should "parse formula tactics" in {
+    val tactic = BTacticParser("Loop({`v >= 0`})").get
+    tactic.isInstanceOf[DependentPositionTactic] shouldBe true
+    val dpt = tactic.asInstanceOf[DependentPositionTactic]
+  }
+
   "Propositional Examples" should "close p() -> p()" in {
     val tactic = BTacticParser("ImplyR(1) & TrivialCloser").get
 //    val tactic = ExposedTacticsLibrary.tactics("ImplyR") & ExposedTacticsLibrary.tactics("TrivialCloser")
