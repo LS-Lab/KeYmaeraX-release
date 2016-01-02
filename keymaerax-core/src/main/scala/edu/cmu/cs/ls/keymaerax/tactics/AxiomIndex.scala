@@ -176,12 +176,12 @@ object AxiomIndex {
       case _: AssignAny => "[:*] assign nondet" :: Nil
       case _: Test      => "[?] test" :: Nil
       case ODESystem(_:AtomicODE,True)   => odeList :+ "DE differential effect"
-      case ODESystem(_:AtomicODE,domain) => "DW differential weaken" :: odeList ++ List("DE differential effect")
+      case ODESystem(_:AtomicODE,domain) => "DW differential weakening" :: odeList ++ List("DE differential effect")
       case ODESystem(_:DifferentialProduct,True)   => odeList :+ "DE differential effect (system)"
-      case ODESystem(_:DifferentialProduct,domain) => "DW differential weaken" :: odeList ++ List("DE differential effect (system)")
+      case ODESystem(_:DifferentialProduct,domain) => "DW differential weakening" :: odeList ++ List("DE differential effect (system)")
       case _: Compose   => "[;] compose" :: Nil
       case _: Choice    => "[++] choice" :: Nil
-      case _: Dual      => "[^d] dual" :: Nil
+      case _: Dual      => "[;] dual" :: Nil
 //      case _: Loop      => "[*] iterate" :: Nil
       case _ => unknown
     }

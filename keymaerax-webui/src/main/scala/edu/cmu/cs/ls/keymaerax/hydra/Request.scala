@@ -19,7 +19,7 @@ import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.{TacticInfo, AxiomInfo}
 import edu.cmu.cs.ls.keymaerax.btactics.{PositionLocator, DerivationInfo, AxiomInfo}
-import _root_.edu.cmu.cs.ls.keymaerax.core.Provable
+import _root_.edu.cmu.cs.ls.keymaerax.core.{ProverException, Provable}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import _root_.edu.cmu.cs.ls.keymaerax.tactics.{Position, Augmentors, PosInExpr, AxiomIndex}
@@ -684,23 +684,22 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                          pos: Option[PositionLocator]) extends Request {
   def getResultingResponses() = {
     BTacticParser(belleTerm) match {
-      case None => throw new Exception("Invalid Bellerophon expression:  " + belleTerm)
+      case None => throw new ProverException("Invalid Bellerophon expression:  " + belleTerm)
       case Some(expr) =>
         val appliedExpr =
           (pos, expr) match {
             case (None, _:AtPosition[BelleExpr]) =>
-              throw new Exception("Can't run a positional tactic without specifying a position")
+              throw new ProverException("Can't run a positional tactic without specifying a position")
             case (None, _) => expr
             case (Some(position), posExpr:AtPosition[BelleExpr]) => posExpr(position)
-            case (Some(_), _) =>
-              throw new Exception("Can't run nonpositional tactic using a position")
+            case (Some(_), expr:BelleExpr) => throw new ProverException("Can't run nonpositional tactic using a position " + expr.getClass.getName)
         }
         val trace = db.getExecutionTrace(proofId.toInt)
         val tree = ProofTree.ofTrace(trace)
         val branch = tree.goalIndex(nodeId)
         val node =
           tree.findNode(nodeId) match {
-            case None => throw new Exception("Invalid node " + nodeId)
+            case None => throw new ProverException("Invalid node " + nodeId)
             case Some(node) => node
           }
         val localProvable = Provable.startProof(node.sequent)
@@ -714,8 +713,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
         val finalProvable = executor.wait(taskId) match {
           case Some(Left(BelleProvable(outputProvable))) => outputProvable
-          case Some(Right(error: BelleError)) => throw new Exception("Tactic failed with error: " + error.getMessage, error.getCause)
-          case None => throw new Exception("Could not get tactic result - execution cancelled? ")
+          case Some(Right(error: BelleError)) => throw new ProverException("Tactic failed with error: " + error.getMessage, error.getCause)
+          case None => throw new ProverException("Could not get tactic result - execution cancelled? ")
         }
         val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
         val parentNode = finalTree.findNode(nodeId).get

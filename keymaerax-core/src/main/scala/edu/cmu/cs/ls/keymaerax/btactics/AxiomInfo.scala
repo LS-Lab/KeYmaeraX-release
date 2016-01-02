@@ -73,7 +73,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("<*> iterate", "<*>", "iterated", {case () => HilbertCalculus.iterated}),
     new CoreAxiomInfo("all dual", "alld", "alld", {case () => }),
   
-    new CoreAxiomInfo("DW", "DW", "DW", {case () => HilbertCalculus.DW}),
+    new CoreAxiomInfo("DW", "DW", "DWAxiom", {case () => HilbertCalculus.DW}),
     new CoreAxiomInfo("DC differential cut", "DC", "DC", {case () => (fml:Formula) =>  HilbertCalculus.DC(fml)}),
     new CoreAxiomInfo("DE differential effect", "DE", "DE", {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DE differential effect (system)", "DE", "DEs", {case () => HilbertCalculus.DE}),
@@ -114,12 +114,13 @@ object DerivationInfo {
     new DerivedAxiomInfo("<:*> assign nondet", "<:*>", "randomd", {case () => HilbertCalculus.randomd}),
     new DerivedAxiomInfo("[:=] assign equational", "[:=]=", "assignbeq", {case () => HilbertCalculus.assignb}),
     new DerivedAxiomInfo("<:=> assign equational", "<:=>=", "assigndeq", {case () => HilbertCalculus.assignd}),
+    /* @todo replace all the axioms with useAt(axiom) */
     new DerivedAxiomInfo("<':=> differential assign", "<':=>", "assignDiff", {case () => DerivedAxioms.assignDAxiom}),
     new DerivedAxiomInfo("DS differential equation solution", "DS", "DSnodomain", {case () => DerivedAxioms.DSnodomainT}),
     new DerivedAxiomInfo("Dsol& differential equation solution", "DS&", "DSddomain", {case () => DerivedAxioms.DSddomainT}),
     new DerivedAxiomInfo("Dsol differential equation solution", "DS", "DSdnodomain", {case () => DerivedAxioms.DSdnodomainT}),
     new DerivedAxiomInfo("DG differential pre-ghost", "DG", "DGpreghost", {case () => DerivedAxioms.DGpreghostT}),
-    new DerivedAxiomInfo("DW differential weakening", "DW", "DWeaken", {case () => DerivedAxioms.DWeakening}),
+    new DerivedAxiomInfo("DW differential weakening", "DW", "DWeaken", {case () => HilbertCalculus.DW}),
     new DerivedAxiomInfo("DX diamond differential skip", "DX", "Dskipd", {case () => DerivedAxioms.DskipdT}),
     new DerivedAxiomInfo("all eliminate", "alle", "allEliminate", {case () => DerivedAxioms.allEliminateT}),
     new DerivedAxiomInfo("exists eliminate", "existse", "existsEliminate", {case () => DerivedAxioms.existsEliminateT}),
@@ -347,7 +348,7 @@ object DerivationInfo {
       RuleDisplayInfo("diffInvariant",
         (List("&Gamma;"), List("[x' = f(x)]p", "&Delta;")),
         List((List("&Gamma;"),List("[x' = f(x) & j(x)]"))))
-      , List(FormulaArg("invariant")), {case () => (fml:Formula) => DifferentialTactics.diffInvariant(qeTool, fml)}, needsTool = true),
+      , List(FormulaArg("f(x)")), {case () => (fml:Formula) => DifferentialTactics.diffInvariant(qeTool, fml)}, needsTool = true),
     new PositionTacticInfo("Dconstify", "Dconst", {case () => DifferentialTactics.Dconstify}),
     new PositionTacticInfo("Dvariable", "Dvar", {case () => DifferentialTactics.Dvariable}),
 
