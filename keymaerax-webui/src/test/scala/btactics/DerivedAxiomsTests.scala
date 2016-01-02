@@ -1,4 +1,4 @@
-package btactics
+package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr}
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms
@@ -13,7 +13,7 @@ import testHelper.KeYmaeraXTestTags.OptimisticTest
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
  */
-class DerivedAxiomsTests extends TacticTestBase {
+class DerivedAxiomsTests extends btactics.TacticTestBase {
 
   //@todo add a test case that runs through AxiomInfo.allInfos checking all its axioms
 
