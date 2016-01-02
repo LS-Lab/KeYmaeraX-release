@@ -752,7 +752,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
           (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder) :: acc)
         }
       }
-    ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps)
+    ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps.reverse)
   }
 
   def getResultingResponses() = {
