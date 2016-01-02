@@ -190,6 +190,8 @@ object DerivedAxioms {
     "true&" -> "true and",
     "0*" -> "zero times",
     "0+" -> "zero plus",
+    "*0" -> "times zero",
+    "+0" -> "plus zero",
     "x' derive variable" -> "derive variable",
     "' linear" -> "prime linear",
     "' linear right" -> "prime linear right",
@@ -198,12 +200,11 @@ object DerivedAxioms {
     "= reflexive" -> "equal reflexive",
     "* commute" -> "times commute",
     "* associative" -> "times associative",
-    "* commutative" -> "times commutative",
     "* inverse" -> "times inverse",
     "* closed" -> "times closed",
     "* identity" -> "times identity",
     "+ associative" -> "plus associative",
-    "+ commutative" -> "plus commutative",
+    "+ commute" -> "plus commute",
     "+ inverse" -> "plus inverse",
     "+ closed" -> "plus closed",
     "positivity" -> "positivity",
@@ -240,12 +241,12 @@ object DerivedAxioms {
     "! >" -> "not greater",
     "< negate" -> "less negate",
     "* associative" -> "times associative",
-    "* commutative" -> "times commutative",
+    "* commute" -> "times commute",
     "* inverse" -> "times inverse",
     "* closed" -> "times closed",
     "* identity" -> "times identity",
     "+ associative" -> "plus associative",
-    "+ commutative" -> "plus commutative",
+    "+ commute" -> "plus commute",
     "+ inverse" -> "plus inverse",
     "+ closed" -> "plus closed",
     "positivity" -> "positivity",
@@ -413,12 +414,12 @@ object DerivedAxioms {
       "! >",
       "< negate",
       "* associative",
-      "* commutative",
+      "* commute",
       "* inverse",
       "* closed",
       "* identity",
       "+ associative",
-      "+ commutative",
+      "+ commute",
       "+ inverse",
       "+ closed",
       "positivity",
@@ -1651,7 +1652,7 @@ object DerivedAxioms {
   lazy val timesZeroF = "(f()*0) = 0".asFormula
   lazy val timesZero = derivedAxiom("*0", Sequent(Nil, IndexedSeq(), IndexedSeq(timesZeroF)),
     useAt("* commute")(1, 0::Nil) &
-      byUS("= reflexive")
+      byUS("0*")
   )
   lazy val timesZeroT = derivedAxiomT(timesZero)
 
@@ -1676,7 +1677,7 @@ object DerivedAxioms {
   lazy val plusZeroF = "(f()+0) = f()".asFormula
   lazy val plusZero = derivedAxiom("+0", Sequent(Nil, IndexedSeq(), IndexedSeq(plusZeroF)),
     useAt("+ commute")(1, 0::Nil) &
-      byUS("= reflexive")
+      byUS("0+")
   )
   lazy val plusZeroT = derivedAxiomT(plusZero)
 
@@ -1873,11 +1874,11 @@ object DerivedAxioms {
    */
   lazy val DlinearRightF = "(f(??)*c())' = (f(??))'*c()".asFormula
   lazy val DlinearRight = derivedAxiom("' linear right",
-    Sequent(Nil, IndexedSeq(), IndexedSeq(DlinearF)),
-    useAt("*' derive product")(1, 0::Nil) &
-      useAt("c()' derive constant fn")(1, 0::1::1::Nil) &
-      useAt(timesZero)(1, 0::1::Nil) &
-      useAt(plusZero)(1, 0::Nil) &
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DlinearRightF)),
+    useAt("*' derive product")(1, 0:: Nil) &
+      useAt("c()' derive constant fn")(1, 0:: 1::1::Nil) &
+      useAt(timesZero)(1, 0:: 1::Nil) &
+      useAt(plusZero)(1, 0:: Nil) &
       byUS("= reflexive")
   )
   //@note elegant proof that clashes for some reason
@@ -2033,23 +2034,23 @@ object DerivedAxioms {
   lazy val timesAssociativeT = derivedAxiomT(timesAssociative)
 
   /**
-   * {{{Axiom "+ commutative".
+   * {{{Axiom "+ commute".
    *    f()+g() = g()+f()
    * End.
    * }}}
    */
   lazy val plusCommutativeF = "f()+g() = g()+f()".asFormula
-  lazy val plusCommutative = derivedAxiom("+ commutative", Sequent(Nil, IndexedSeq(), IndexedSeq(plusCommutativeF)), QE)
+  lazy val plusCommutative = derivedAxiom("+ commute", Sequent(Nil, IndexedSeq(), IndexedSeq(plusCommutativeF)), QE)
   lazy val plusCommutativeT = derivedAxiomT(plusCommutative)
 
   /**
-   * {{{Axiom "* commutative".
+   * {{{Axiom "* commute".
    *    f()*g() = g()*f()
    * End.
    * }}}
    */
   lazy val timesCommutativeF = "f()*g() = g()*f()".asFormula
-  lazy val timesCommutative = derivedAxiom("* commutative", Sequent(Nil, IndexedSeq(), IndexedSeq(timesCommutativeF)), QE)
+  lazy val timesCommutative = derivedAxiom("* commute", Sequent(Nil, IndexedSeq(), IndexedSeq(timesCommutativeF)), QE)
   lazy val timesCommutativeT = derivedAxiomT(timesCommutative)
 
   /**

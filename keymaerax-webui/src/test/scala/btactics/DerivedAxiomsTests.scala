@@ -104,22 +104,25 @@ class DerivedAxiomsTests extends TacticTestBase {
   it should "prove Dsol& differential equation solution" in {check(DSddomain)}
   //  it should "prove x' derive var" in {check(Dvar)}
   it should "prove x' derive variable" in {check(Dvariable)}
-  it should "prove 'linear" in {check(Dlinear)}
-  //@todo fails with substitution clash
+  it should "prove 'linear" in withMathematica { implicit qetool => check(Dlinear)}
   it should "prove 'linear right" in withMathematica { implicit qeTool => check(DlinearRight)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "prove DX diamond differential skip" in {check(Dskipd)}
+  it should "prove 0*" in withMathematica { implicit qeTool => check(zeroTimes)}
+  it should "prove 0+" in withMathematica { implicit qeTool => check(zeroPlus)}
+  it should "prove +0" in { check(plusZero)}
+  it should "prove *0" in { check(timesZero)}
   it should "prove = reflexive" in {check(equalReflex)}
-  it should "prove = commute" in {check(equalCommute)}
-  it should "prove <=" in {check(lessEqual)}
-  it should "prove = negate" in {check(notNotEqual)}
-  it should "prove < negate" in {check(notGreaterEqual)}
-  it should "prove >= flip" in {check(flipGreaterEqual)}
-  it should "prove > flip" in {check(flipGreater)}
+  it should "prove = commute" in withMathematica { implicit qetool =>check(equalCommute)}
+  it should "prove <=" in withMathematica { implicit qetool =>check(lessEqual)}
+  it should "prove = negate" in withMathematica { implicit qetool =>check(notNotEqual)}
+  it should "prove < negate" in withMathematica { implicit qetool =>check(notGreaterEqual)}
+  it should "prove >= flip" in withMathematica { implicit qetool =>check(flipGreaterEqual)}
+  it should "prove > flip" in withMathematica { implicit qetool =>check(flipGreater)}
   it should "prove + associative" in withMathematica { implicit qeTool => check(plusAssociative)}
   it should "prove * associative" in withMathematica { implicit qeTool => check(timesAssociative)}
-  it should "prove + commutative" in withMathematica { implicit qeTool => check(plusCommutative)}
-  it should "prove * commutative" in withMathematica { implicit qeTool => check(timesCommutative)}
+  it should "prove + commute" in withMathematica { implicit qeTool => check(plusCommutative)}
+  it should "prove * commute" in withMathematica { implicit qeTool => check(timesCommutative)}
   it should "prove distributive" in withMathematica { implicit qeTool => check(distributive)}
   it should "prove + identity" in withMathematica { implicit qeTool => check(plusIdentity)}
   it should "prove * identity" in withMathematica { implicit qeTool => check(timesIdentity)}
