@@ -59,15 +59,11 @@ object DerivationInfo {
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> dual", "<.>", "duald", {case () => HilbertCalculus.duald}),
     new CoreAxiomInfo("[] dual", "[.]", "dualb", {case () => HilbertCalculus.dualb}),
+    /* @todo Need unique code names */
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => HilbertCalculus.assignb}),
     new CoreAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new CoreAxiomInfo("[':=] differential assign", "[':=]", "Dassignb", {case () => HilbertCalculus.Dassignb}),
-    new CoreAxiomInfo("[:=] assign equational", "[:=]=", "assignb", {case () => HilbertCalculus.assignb}),
-    new CoreAxiomInfo("<:=> assign equational", "<:=>=", "assignd", {case () => HilbertCalculus.assignd}),
-    new CoreAxiomInfo("[:=] assign update", "[:=]", "assignb", {case () => HilbertCalculus.assignb}),
-    new CoreAxiomInfo("<:=> assign update", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new CoreAxiomInfo("[:*] assign nondet", "[:*]", "randomb", {case () => HilbertCalculus.randomb}),
-    new CoreAxiomInfo("<:*> assign nondet", "<:*>", "randomd", {case () => HilbertCalculus.randomd}),
     new CoreAxiomInfo("[?] test", "[?]", "testb", {case () => HilbertCalculus.testb}),
     new CoreAxiomInfo("<?> test", "<?>", "testd", {case () => HilbertCalculus.testd}),
     new CoreAxiomInfo("[++] choice", "[++]", "choiceb", {case () => HilbertCalculus.choiceb}), //@todo "[\u222A]"
@@ -115,6 +111,11 @@ object DerivationInfo {
 
 
     // Derived axioms
+    new DerivedAxiomInfo("[:=] assign update", "[:=]", "assignb", {case () => HilbertCalculus.assignb}),
+    new DerivedAxiomInfo("<:=> assign update", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
+    new DerivedAxiomInfo("<:*> assign nondet", "<:*>", "randomd", {case () => HilbertCalculus.randomd}),
+    new DerivedAxiomInfo("[:=] assign equational", "[:=]=", "assignb", {case () => HilbertCalculus.assignb}),
+    new DerivedAxiomInfo("<:=> assign equational", "<:=>=", "assignd", {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<':=> differential assign", "<':=>", "assignD", {case () => DerivedAxioms.assignDAxiom}),
     new DerivedAxiomInfo("DS differential equation solution", "DS", "DSnodomain", {case () => DerivedAxioms.DSnodomainT}),
     new DerivedAxiomInfo("Dsol& differential equation solution", "DS&", "DSddomain", {case () => DerivedAxioms.DSddomainT}),
@@ -212,14 +213,15 @@ object DerivationInfo {
     new DerivedAxiomInfo("distributive", "*+", "distributive", {case () => DerivedAxioms.distributiveT}),
     new DerivedAxiomInfo("all distribute", "Dall", "allDistribute", {case () => DerivedAxioms.allDistributeT}),
     new DerivedAxiomInfo("[]~><> propagation", "[]~><>", "boxDiamondPropagation", {case () => DerivedAxioms.boxDiamondPropagationT}),
+    new DerivedAxiomInfo("-> self", "-> self", "implySelf", {case () => DerivedAxioms.implySelfT}),
     //@todo internal only
     new DerivedAxiomInfo("K1", "K1", "K1", {case () => ???}),
     new DerivedAxiomInfo("K2", "K2", "K2", {case () => ???}),
-    new DerivedAxiomInfo("P1", "P1", "P1", {case () => ???}),
-    new DerivedAxiomInfo("P2", "P2", "P2", {case () => ???}),
-    new DerivedAxiomInfo("P3", "P3", "P3", {case () => ???}),
-    new DerivedAxiomInfo("P9", "P9", "P9", {case () => ???}),
-    new DerivedAxiomInfo("P10", "P10", "P10", {case () => ???}),
+    new DerivedAxiomInfo("PC1", "PC1", "PC1", {case () => ???}),
+    new DerivedAxiomInfo("PC2", "PC2", "PC2", {case () => ???}),
+    new DerivedAxiomInfo("PC3", "PC3", "PC3", {case () => ???}),
+    new DerivedAxiomInfo("PC9", "PC9", "PC9", {case () => ???}),
+    new DerivedAxiomInfo("PC10", "PC10", "PC10", {case () => ???}),
     // axioms for unit tests
     new DerivedAxiomInfo("exists dual dummy", "DUMMY", "dummyexistsDualAxiomT", {case () => ???}),
     new DerivedAxiomInfo("all dual dummy", "DUMMY", "dummyallDualAxiom", {case () => ???}),
@@ -423,8 +425,8 @@ case class TermArg (override val name: String) extends ArgInfo {
   val sort = "term"
 }
 sealed trait DerivationInfo {
-  /** Canonical name unique across all derivations (axioms or tactics). For core axioms this is as declared in the
-    * axioms, for derived axioms and tactics it is identical to codeName. Can and will contain spaces and special chars. */
+  /** Canonical name unique across all derivations (axioms or tactics). For axioms this is as declared in the
+    * axioms file, for and tactics it is identical to codeName. Can and will contain spaces and special chars. */
   val canonicalName: String
   /** How to display this inference step in a UI */
   val display: DisplayInfo
