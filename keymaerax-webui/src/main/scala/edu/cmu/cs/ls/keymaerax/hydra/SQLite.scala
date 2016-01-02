@@ -356,7 +356,7 @@ object SQLite {
 
     override def addAlternative(alternativeTo: Int, trace:ExecutionTrace):Unit = {
       def get(stepId: Int) = {
-        Executionsteps.filter(_._Id === alternativeTo).list match {
+        Executionsteps.filter(_._Id === stepId).list match {
           case Nil => throw new Exception("Execution step not found")
           case step :: _ => step
         }
@@ -370,8 +370,8 @@ object SQLite {
           val newStep = new ExecutionStepPOJO(None, oldStep.executionid.get, prev, None, Some(thisStep.branch),
             None, oldStep.alternativeorder.get + 1, ExecutionStepStatus.fromString(thisPOJO.status.get), thisPOJO.executableid.get, thisPOJO.inputprovableid.get,
             thisPOJO.resultprovableid, thisPOJO.userexecuted.get.toBoolean)
-          addExecutionStep(newStep)
-          addSteps(Some(thisStep.stepId), steps.tail)
+          val newId = addExecutionStep(newStep)
+          addSteps(Some(newId), steps.tail)
         }
       }
       if(trace.steps.isEmpty) {
