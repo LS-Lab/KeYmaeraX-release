@@ -131,7 +131,6 @@ object DerivationInfo {
     new DerivedAxiomInfo("!-> deMorgan", "!->", "notImply", {case () => DerivedAxioms.notImplyT}),
     new DerivedAxiomInfo("!<-> deMorgan", "!<->", "notEquiv", {case () => DerivedAxioms.notEquivT}),
     new DerivedAxiomInfo("!all", "!all", "notAll", {case () => DerivedAxioms.notAllT}),
-    new DerivedAxiomInfo("!all", "!all", "notAll", {case () => DerivedAxioms.notAllT}),
     new DerivedAxiomInfo("!exists", "!exists", "notExists", {case () => DerivedAxioms.notExistsT}),
     new DerivedAxiomInfo("![]", "![]", "notBox", {case () => DerivedAxioms.notBoxT}),
     new DerivedAxiomInfo("!<>", "!<>", "notDiamond", {case () => DerivedAxioms.notDiamondT}),
@@ -175,7 +174,6 @@ object DerivationInfo {
     new DerivedAxiomInfo("*0", "*0", "timesZero", {case () => DerivedAxioms.timesZeroT}),
     new DerivedAxiomInfo("+0", "+0", "plusZero", {case () => DerivedAxioms.plusZeroT}),
     new DerivedAxiomInfo("= reflexive", "=R", "equalReflexive", {case () => DerivedAxioms.equalReflexiveT}),
-    new DerivedAxiomInfo("* commute", "*C", "timesCommute", {case () => DerivedAxioms.timesCommuteT}),
     new DerivedAxiomInfo("= commute", "=C", "equalCommute", {case () => DerivedAxioms.equalCommuteT}),
     new DerivedAxiomInfo("<=", "<=", "lessEqual", {case () => DerivedAxioms.lessEqualT}),
     new DerivedAxiomInfo("= negate", "!!=", "notNotEqual", {case () => DerivedAxioms.notNotEqualT}),
@@ -357,7 +355,7 @@ object DerivationInfo {
 
   private def consistentInfo(list: List[DerivationInfo]): Boolean = {
     val canonicals = list.map(i => i.canonicalName)
-    val codeNames = list.map(i => i.codeName)
+    val codeNames = list.map(i => i.codeName).filter(n => n!=needsCodeName)
     list.forall(i => i match {
         case ax: CoreAxiomInfo => Axiom.axioms.contains(ax.canonicalName) ensuring(r=>r, "core axiom correctly marked as CoreAxiomInfo: " + ax.canonicalName)
         case ax: DerivedAxiomInfo => true //@todo can't ask DerivedAxioms.derivedAxiom yet since still initializing, besides that'd be circular
@@ -367,6 +365,7 @@ object DerivationInfo {
       (canonicals.length==canonicals.distinct.length ensuring(r=>r, "unique canonical names: " + (canonicals diff canonicals.distinct))) &
       (codeNames.length==codeNames.distinct.length ensuring(r=>r, "unique code names / identifiers: " + (codeNames diff codeNames.distinct)))
   }
+
 
   /** code name mapped to derivation information */
   private val byCodeName: Map[String, DerivationInfo] =
