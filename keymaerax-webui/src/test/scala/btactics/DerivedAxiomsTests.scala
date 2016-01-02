@@ -40,6 +40,7 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
   }
 
   "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { implicit qeTool =>
+    //@note rather an invasive test
     LemmaDBFactory.lemmaDB.deleteDatabase() //necessary. Perhaps we should add optional copy-and-recover.
     DerivedAxioms.prepopulateDerivedLemmaDatabase()
   }
@@ -67,8 +68,8 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
   it should "prove <:=> assign" in {check(assigndAxiom)}
 //  it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
   it should "prove := assign dual" in {check(assignDualAxiom)}
-  it should "prove all substitute" in {check(allSubstitute)}
-  it should "prove [:=] equational" in {check(assignbEquationalAxiom)}
+  it should "prove all substitute" in withMathematica { implicit qeTool => check(allSubstitute)}
+  it should "prove [:=] equational" in withMathematica { implicit qeTool => check(assignbEquationalAxiom)}
   ignore should "prove [:=] assign equality exists" in {check(assignbExistsAxiom)}
   it should "prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
   it should "prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}
@@ -100,7 +101,6 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
   it should "prove DW differential weakening" in {check(DWeakening)}
   it should "prove DS no domain" in {check(DSnodomain)}
-  it should "prove DSol no domain" in {check(DSdnodomain)}
   it should "prove Dsol& differential equation solution" in {check(DSddomain)}
   //  it should "prove x' derive var" in {check(Dvar)}
   it should "prove x' derive variable" in {check(Dvariable)}

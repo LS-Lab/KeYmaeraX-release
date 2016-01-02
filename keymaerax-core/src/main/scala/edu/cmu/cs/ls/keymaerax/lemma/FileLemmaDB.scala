@@ -92,5 +92,7 @@ class FileLemmaDB extends LemmaDB {
 
   override def deleteDatabase(): Unit = {
     lemmadbpath.delete()
+    //@note make paths again to make sure subsequent additions to database work
+    lemmadbpath.mkdirs()
   }
 }

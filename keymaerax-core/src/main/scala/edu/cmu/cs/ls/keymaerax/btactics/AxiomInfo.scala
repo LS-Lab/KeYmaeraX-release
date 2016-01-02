@@ -503,6 +503,8 @@ object DerivedAxiomInfo {
       case info: DerivedAxiomInfo => info
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived axiom")
     }
+
+  //@todo val allInfo:List[DerivedAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[DerivedAxiomInfo])
 }
 
 // tactics
