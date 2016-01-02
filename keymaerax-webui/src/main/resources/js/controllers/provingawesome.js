@@ -255,7 +255,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var userId = $cookies.get('userId');
       var nodeId = sequentProofData.agenda.selectedId;
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/do/' + tacticId).success(function(data) {
-        if ($scope.nodeId === data.parent.id) {
+        if (nodeId === data.parent.id) {
           sequentProofData.updateAgendaAndTree(data);
         } else {
           console.log("Unexpected tactic result, parent mismatch: " + " expected " + $scope.nodeId + " but got " + data.parent.id)
@@ -268,7 +268,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var userId = $cookies.get('userId');
       var nodeId = sequentProofData.agenda.selectedId;
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doSearch' + where + '/' + tacticId).success(function(data) {
-        if ($scope.nodeId === data.parent.id) {
+        if (nodeId === data.parent.id) {
           sequentProofData.updateAgendaAndTree(data);
         } else {
           console.log("Unexpected tactic result, parent mismatch: " + " expected " + $scope.nodeId + " but got " + data.parent.id)
