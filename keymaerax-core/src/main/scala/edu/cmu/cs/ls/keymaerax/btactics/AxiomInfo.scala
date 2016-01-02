@@ -51,7 +51,7 @@ object DerivationInfo {
     new CoreAxiomInfo("I induction", "I", needsCodeName, {case () => ???}),
     new CoreAxiomInfo("all instantiate", "alli", needsCodeName, {case () => ???}),
     new CoreAxiomInfo("vacuous all quantifier", "Vall", "vacuousAll", {case () => HilbertCalculus.vacuousAll}),
-    new CoreAxiomInfo("vacuous exists quantifier", "Vexists", "vacuousExists", {case () => HilbertCalculus.vacuousExists}),
+    new DerivedAxiomInfo("vacuous exists quantifier", "Vexists", "vacuousExists", {case () => HilbertCalculus.vacuousExists}),
     new CoreAxiomInfo("const congruence", "CCE", needsCodeName, {case () => ???}),
     new CoreAxiomInfo("const formula congruence", "CCQ", needsCodeName, {case () => ???}),
     // Note: only used to implement Dskipd
@@ -60,23 +60,24 @@ object DerivationInfo {
     new CoreAxiomInfo("<> dual", "<.>", "duald", {case () => HilbertCalculus.duald}),
     new CoreAxiomInfo("[] dual", "[.]", "dualb", {case () => HilbertCalculus.dualb}),
     /* @todo Need unique code names */
+    new DerivedAxiomInfo("[] dual", "[.]", "dualb", {case () => HilbertCalculus.dualb}),
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => HilbertCalculus.assignb}),
-    new CoreAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
+    new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new CoreAxiomInfo("[':=] differential assign", "[':=]", "Dassignb", {case () => HilbertCalculus.Dassignb}),
     new CoreAxiomInfo("[:*] assign nondet", "[:*]", "randomb", {case () => HilbertCalculus.randomb}),
+    new DerivedAxiomInfo("<:*> assign nondet", "<:*>", "randomd", {case () => HilbertCalculus.randomd}),
     new CoreAxiomInfo("[?] test", "[?]", "testb", {case () => HilbertCalculus.testb}),
-    new CoreAxiomInfo("<?> test", "<?>", "testd", {case () => HilbertCalculus.testd}),
+    new DerivedAxiomInfo("<?> test", "<?>", "testd", {case () => HilbertCalculus.testd}),
     new CoreAxiomInfo("[++] choice", "[++]", "choiceb", {case () => HilbertCalculus.choiceb}), //@todo "[\u222A]"
-    new CoreAxiomInfo("<++> choice", "<++>", "choiced", {case () => HilbertCalculus.choiced}), //@todo "<\u222A>" (or possibly even "\u2329\u222A\u232A" but why asking for trouble
+    new DerivedAxiomInfo("<++> choice", "<++>", "choiced", {case () => HilbertCalculus.choiced}), //@todo "<\u222A>" (or possibly even "\u2329\u222A\u232A" but why asking for trouble
     new CoreAxiomInfo("[;] compose", "[;]", "composeb", {case () => HilbertCalculus.composeb}),
-    new CoreAxiomInfo("<;> compose", "<;>", "composed", {case () => HilbertCalculus.composed}),
+    new DerivedAxiomInfo("<;> compose", "<;>", "composed", {case () => HilbertCalculus.composed}),
     new CoreAxiomInfo("[*] iterate", "[*]", "iterateb", {case () => HilbertCalculus.iterateb}),
-    new CoreAxiomInfo("<*> iterate", "<*>", "iterated", {case () => HilbertCalculus.iterated}),
-    new CoreAxiomInfo("all dual", "alld", needsCodeName, {case () => ???}),
+    new DerivedAxiomInfo("<*> iterate", "<*>", "iterated", {case () => HilbertCalculus.iterated}),
+    new DerivedAxiomInfo("all dual", "alld", needsCodeName, {case () => ???}),
   
     new CoreAxiomInfo("DW", "DW", "DW", {case () => HilbertCalculus.DW}),
     new CoreAxiomInfo("DC differential cut", "DC", "DC", {case () => (fml:Formula) =>  HilbertCalculus.DC(fml)}),
-    new CoreAxiomInfo("DE differential effect system", "DE", "DE", {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DE differential effect", "DE", "DE", {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DE differential effect (system)", "DE", "DE", {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DI differential invariant", "DI", "DI", {case () => HilbertCalculus.DI}),
@@ -90,7 +91,7 @@ object DerivationInfo {
     // Derivatives
     new CoreAxiomInfo("&' derive and", "&'", "Dand", {case () => HilbertCalculus.Dand}),
     new CoreAxiomInfo("|' derive or", "|'", "Dor", {case () => HilbertCalculus.Dor}),
-    new CoreAxiomInfo("->' derive imply", "->'", "Dimply", {case () => HilbertCalculus.Dimply}),
+    new DerivedAxiomInfo("->' derive imply", "->'", "Dimply", {case () => HilbertCalculus.Dimply}),
     new CoreAxiomInfo("forall' derive forall", "forall'", "Dforall", {case () => HilbertCalculus.Dforall}), //@todo "\u2200'"
     new CoreAxiomInfo("exists' derive exists", "exists'", "Dexists", {case () => HilbertCalculus.Dexists}), //@todo "\u2203'"
     new CoreAxiomInfo("c()' derive constant fn", "c()'", "Dconst", {case () => HilbertCalculus.Dconst}),
@@ -106,7 +107,7 @@ object DerivationInfo {
     new CoreAxiomInfo("*' derive product", "*'", "Dtimes", {case () => HilbertCalculus.Dtimes}),
     new CoreAxiomInfo("/' derive quotient", "/'", "Dquotient", {case () => HilbertCalculus.Dquotient}),
     new CoreAxiomInfo("^' derive power", "^'", "Dpower", {case () => HilbertCalculus.Dpower}),
-    new CoreAxiomInfo("x' derive variable", "x'", "Dvariable", {case () => HilbertCalculus.Dvariable}),
+    new DerivedAxiomInfo("x' derive variable", "x'", "Dvariable", {case () => HilbertCalculus.Dvariable}),
     new CoreAxiomInfo("x' derive var", "x'", "Dvariable", {case () => HilbertCalculus.Dvariable}),
 
 
@@ -176,7 +177,6 @@ object DerivationInfo {
     new DerivedAxiomInfo("*0", "*0", "timesZero", {case () => DerivedAxioms.timesZeroT}),
     new DerivedAxiomInfo("+0", "+0", "plusZero", {case () => DerivedAxioms.plusZeroT}),
     new DerivedAxiomInfo("= reflexive", "=R", "equalReflexive", {case () => DerivedAxioms.equalReflexiveT}),
-    new DerivedAxiomInfo("* commute", "*C", "timesCommute", {case () => DerivedAxioms.timesCommuteT}),
     new DerivedAxiomInfo("= commute", "=C", "equalCommute", {case () => DerivedAxioms.equalCommuteT}),
     new DerivedAxiomInfo("<=", "<=", "lessEqual", {case () => DerivedAxioms.lessEqualT}),
     new DerivedAxiomInfo("= negate", "!!=", "notNotEqual", {case () => DerivedAxioms.notNotEqualT}),
@@ -355,7 +355,21 @@ object DerivationInfo {
 
     // DLBySubst
     new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => DLBySubst.I(fml)})
-  )
+  ) ensuring(consistentInfo _, "meta-information on AxiomInfo is consistent with source")
+
+  private def consistentInfo(list: List[DerivationInfo]): Boolean = {
+    val canonicals = list.map(i => i.canonicalName)
+    val codeNames = list.map(i => i.codeName).filter(n => n!=needsCodeName)
+    list.forall(i => i match {
+        case ax: CoreAxiomInfo => Axiom.axioms.contains(ax.canonicalName) ensuring(r=>r, "core axiom correctly marked as CoreAxiomInfo: " + ax.canonicalName)
+        case ax: DerivedAxiomInfo => true //@todo can't ask DerivedAxioms.derivedAxiom yet since still initializing, besides that'd be circular
+        case _ => true
+      }
+    ) &
+      (canonicals.length==canonicals.distinct.length ensuring(r=>r, "unique canonical names: " + (canonicals diff canonicals.distinct))) &
+      (codeNames.length==codeNames.distinct.length /*|| true*/ ensuring(r=>r, "unique code names / identifiers: " + (codeNames diff codeNames.distinct)))
+  }
+
 
   /** code name mapped to derivation information */
   private val byCodeName: Map[String, DerivationInfo] =
@@ -371,14 +385,9 @@ object DerivationInfo {
     }
 
   /** Retrieve meta-information on an inference by the given canonical name `axiomName` */
-  def apply(axiomName: String): DerivationInfo = {
-    byCanonicalName.get(axiomName) match {
-      case Some(info) => info
-      case None =>
-        println("Couldn't find axiom " + axiomName)
+  def apply(axiomName: String): DerivationInfo = byCanonicalName.getOrElse(axiomName,
         throw new AxiomNotFoundException(axiomName)
-    }
-  }
+  )
 
   /** Throw an AssertionError if id does not conform to the rules for code names. */
   def assertValidIdentifier(id:String) = { assert(id.forall{case c => c.isLetterOrDigit})}
@@ -424,6 +433,8 @@ case class VariableArg (override val name: String) extends ArgInfo {
 case class TermArg (override val name: String) extends ArgInfo {
   val sort = "term"
 }
+
+/** Meta-information on a derivation step, which is an axiom, derived axiom, proof rule, or tactic. */
 sealed trait DerivationInfo {
   /** Canonical name unique across all derivations (axioms or tactics). For axioms this is as declared in the
     * axioms file, for and tactics it is identical to codeName. Can and will contain spaces and special chars. */
@@ -442,20 +453,25 @@ sealed trait DerivationInfo {
   val numPositionArgs: Int = 0
 }
 
+/** Meta-Information for an axiom or derived axiom */
 trait AxiomInfo extends DerivationInfo {
+  /** The valid formula that this axiom represents */
   def formula: Formula
+  /** A Provable concluding this axiom */
+  def provable: Provable
 }
 
-/** Information for an axiom from the prover core */
+/** Meta-Information for an axiom from the prover core */
 case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any, override val inputs:List[ArgInfo] = Nil) extends AxiomInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
-  override def formula:Formula = {
+  override val formula:Formula = {
     Axiom.axioms.get(canonicalName) match {
       case Some(fml) => fml
       case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
     }
   }
+  override lazy val provable:Provable = Axiom.axiom(canonicalName)
   override val numPositionArgs = 1
 }
 
@@ -471,6 +487,7 @@ case class DerivedAxiomInfo(override val canonicalName:String, override val disp
 //      case None => throw new AxiomNotFoundException("No formula for axiom " + canonicalName)
 //    }
 //  }
+  override lazy val provable:Provable = DerivedAxioms.derivedAxiom(canonicalName)
   override val numPositionArgs = 1
 }
 
@@ -489,6 +506,9 @@ object DerivedAxiomInfo {
     }
 }
 
+// tactics
+
+/** Meta-information on a tactic performing a proof step (or more) */
 class TacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false) extends DerivationInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
