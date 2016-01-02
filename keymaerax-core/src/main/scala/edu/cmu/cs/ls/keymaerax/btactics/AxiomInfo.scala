@@ -423,7 +423,8 @@ case class TermArg (override val name: String) extends ArgInfo {
   val sort = "term"
 }
 sealed trait DerivationInfo {
-  /** Fully qualified canonical name */
+  /** Canonical name unique across all derivations (axioms or tactics). For core axioms this is as declared in the
+    * axioms, for derived axioms and tactics it is identical to codeName. Can and will contain spaces and special chars. */
   val canonicalName: String
   /** How to display this inference step in a UI */
   val display: DisplayInfo
