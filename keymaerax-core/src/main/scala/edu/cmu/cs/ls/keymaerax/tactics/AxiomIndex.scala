@@ -236,6 +236,11 @@ object AxiomIndex {
       //@todo could add And(False, _) etc ....
       case _ => Nil
     }
+//@todo use this
+//      case ODESystem(_:AtomicODE,True)   => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect" +: odeList else odeList :+ "DE differential effect"
+//      case ODESystem(_:AtomicODE,domain) => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect" :: "DW differential weakening" :: odeList else "DW differential weakening" :: odeList ++ List("DE differential effect")
+//      case ODESystem(_:DifferentialProduct,True)   => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect (system)" +: odeList else odeList :+ "DE differential effect (system)"
+//      case ODESystem(_:DifferentialProduct,domain) => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect (system)" :: "DW differential weakening" :: odeList else "DW differential weakening" :: odeList ++ List("DE differential effect (system)")
   }
   /** Return the (derived) axiom names that simplify the expression expr with simpler ones first */
   def axiomsFor(expr: Expression, exhaustive: Boolean = false): List[String] =
