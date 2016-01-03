@@ -23,7 +23,8 @@ class RandomParserTests extends FlatSpec with Matchers {
   val rand = new RandomFormula()
 
 
-  val pp = KeYmaeraXPrettyPrinter
+  val pp = if (false) KeYmaeraXPrettyPrinter
+  else new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
   val parser = KeYmaeraXParser
 
   def parseShouldBe(input: String, expr: Expression) = {
