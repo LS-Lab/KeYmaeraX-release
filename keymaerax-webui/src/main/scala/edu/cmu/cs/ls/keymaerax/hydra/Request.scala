@@ -583,7 +583,7 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
     import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val subFormula = sequent.sub(pos).get
-    val axioms = AxiomIndex.axiomsFor(subFormula).map{case axiom => DerivationInfo(axiom)}
+    val axioms = AxiomIndex.axiomsFor(subFormula, Some(pos)).map{case axiom => DerivationInfo(axiom)}
     new ApplicableAxiomsResponse(axioms) :: Nil
   }
 }
@@ -683,7 +683,6 @@ case class BelleTermInput(value: String, spec:Option[ArgInfo])
 * to a Tactic */
 class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,
                          pos: Option[PositionLocator], inputs:List[BelleTermInput] = Nil) extends Request {
-
   val fullExpr = {
     val paramStrings = inputs.map{
       case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
@@ -716,13 +715,17 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     BTacticParser(fullExpr) match {
       case None => throw new ProverException("Invalid Bellerophon expression:  " + belleTerm)
       case Some(expr) =>
-        val appliedExpr =
+        val appliedExpr:BelleExpr =
           (pos, expr) match {
             case (None, _:AtPosition[BelleExpr]) =>
               throw new ProverException("Can't run a positional tactic without specifying a position")
             case (None, _) => expr
-            case (Some(position), posExpr:AtPosition[BelleExpr]) => posExpr(position)
-            case (Some(_), expr:BelleExpr) => throw new ProverException("Can't run nonpositional tactic using a position " + expr.getClass.getName)
+            case (Some(position), expr:BelleExpr) =>
+              if(expr.isInstanceOf[AtPosition[BelleExpr]]) {
+                expr.asInstanceOf[AtPosition[BelleExpr]](position)
+              }
+              else expr
+            case (pos, expr) => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
         }
         val trace = db.getExecutionTrace(proofId.toInt)
         val tree = ProofTree.ofTrace(trace)

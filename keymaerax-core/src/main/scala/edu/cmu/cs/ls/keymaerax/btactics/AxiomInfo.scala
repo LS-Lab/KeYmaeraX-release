@@ -255,7 +255,7 @@ object DerivationInfo {
       , RuleDisplayInfo("!L", (List("&Gamma;", "!p"),List("&Delta;")), List((List("&Gamma;"),List("p","&Delta;"))))
       , {case () => ProofRuleTactics.notL}),  //@todo
     new PositionTacticInfo("notR"
-      , RuleDisplayInfo("!R", (List("&Gamma;"),List("!p","&Delta")), List((List("&Gamma;","p"),List("&Delta;"))))
+      , RuleDisplayInfo("!R", (List("&Gamma;"),List("!p","&Delta;")), List((List("&Gamma;","p"),List("&Delta;"))))
       , {case () => ProofRuleTactics.notR}),
     new PositionTacticInfo("andR"
       , RuleDisplayInfo("^R", (List("&Gamma;"),List("p&q","&Delta;")),
@@ -268,7 +268,7 @@ object DerivationInfo {
     new PositionTacticInfo("orL"
       , RuleDisplayInfo("|L", (List("&Gamma;", "p|q"),List("&Delta;")),
         List((List("&Gamma;", "p"),List("&Delta;")),
-          (List("&Gamma;", "q"),List("&Delta"))))
+          (List("&Gamma;", "q"),List("&Delta;"))))
       , {case () => ProofRuleTactics.orL}), //@todo "\u2228L"
     new PositionTacticInfo("orR"
       , RuleDisplayInfo("|R", (List("&Gamma;"),List("p|q","&Delta;")), List((List("&Gamma;"),List("p","q","&Delta;"))))
@@ -289,9 +289,13 @@ object DerivationInfo {
       , {case () => ProofRuleTactics.equivL}), //@todo "\u2194L"
     new PositionTacticInfo("equivR"
       , RuleDisplayInfo("<->R", (List("&Gamma;"),List("p<->q","&Delta;")),
-        List((List("&Gamma","p","q"),List("&Delta")),
-          (List("&Gamma","!p","!q"),List("&Delta"))))
+        List((List("&Gamma;","p","q"),List("&Delta;")),
+          (List("&Gamma;","!p","!q"),List("&Delta;"))))
       , {case () => ProofRuleTactics.equivR}), //@todo "\u2194R"
+    new TacticInfo("G"
+      , "G"/*RuleDisplayInfo("G", (List(""),List("[a]p")),
+        List((List(),List("p"))))*/
+      , {case () => DLBySubst.G}),
 
     new PositionTacticInfo("commuteEquivL", "<->CL", {case () => ProofRuleTactics.commuteEquivL}),
     new PositionTacticInfo("commuteEquivR", "<->CR", {case () => ProofRuleTactics.commuteEquivR}),
