@@ -147,6 +147,8 @@ object AxiomIndex {
 //      case ODESystem(_:DifferentialProduct,domain) => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect (system)" :: "DW differential weakening" :: odeList else "DW differential weakening" :: odeList ++ List("DE differential effect (system)")
   /** Return the (derived) axiom names that simplify the expression expr with simpler ones first */
   def axiomsFor(expr: Expression, pos: Option[Position] = None): List[String] = {
+    val isTop = pos.nonEmpty && pos.get.isTopLevel
+    val isAnte = pos.nonEmpty && pos.get.isAnte
     expr match {
       case Differential(t) => t match {
         case _: Variable => "x' derive var" :: Nil
@@ -179,25 +181,28 @@ object AxiomIndex {
         case _: Exists => "exists' derive exists" :: Nil
         case _ => Nil
       }
-      case Box(a, _) => a match {
+      case Box(a, _) =>
+        // @todo need to test for empty ante, singleton succ
+        val rules = if (isTop && !isAnte) {"G" :: Nil} else Nil
+        a match {
         // Note: Using this axiom name to look up a tactic via AxiomInfo actually gives you assignb,
         // which handles several assignment axioms.
-        case _: Assign => "[:=] assign" :: Nil
-        case _: AssignAny => "[:*] assign nondet" :: Nil
-        case _: Test => "[?] test" :: Nil
-        case _: Compose => "[;] compose" :: Nil
-        case _: Choice => "[++] choice" :: Nil
-        case _: Dual => "[] box" :: Nil
-        case _: Loop => "loop" :: "[*] iterate" :: Nil
+        case _: Assign => "[:=] assign" :: rules
+        case _: AssignAny => "[:*] assign nondet" :: rules
+        case _: Test => "[?] test" :: rules
+        case _: Compose => "[;] compose" :: rules
+        case _: Choice => "[++] choice" :: rules
+        case _: Dual => "[] box" :: rules
+        case _: Loop => "loop" :: "[*] iterate" :: rules
         case ODESystem(ode, constraint) =>
           val tactics = "diffInvariant" :: "diffInd" :: Nil
           (ode, constraint) match {
             // @todo diamond duals
-            case (_: AtomicODE, True) => tactics ++ odeList :+ "DE differential effect"
-            case (_: AtomicODE, domain) => tactics ++ ("DW differential weakening" :: (odeList :+ "DE differential effect"))
-            case (_: DifferentialProduct, True) => tactics ++ odeList :+ "DE differential effect (system)"
-            case (_: DifferentialProduct, domain) => "tactics ++ DW differential weakening" :: (odeList :+ "DE differential effect (system)")
-            case _ => Nil
+            case (_: AtomicODE, True) => tactics ++ odeList ++ ("DE differential effect" :: rules)
+            case (_: AtomicODE, domain) =>  tactics ++ ("DW differential weakening" :: (odeList ++ ("DE differential effect" :: rules)))
+            case (_: DifferentialProduct, True) => tactics ++ odeList ++ ("DE differential effect (system)" :: rules)
+            case (_: DifferentialProduct, domain) => tactics ++ ("DW differential weakening" :: (odeList ++ ("DE differential effect (system)" :: rules)))
+            case _ => tactics
           }
         case _ => Nil
       }
@@ -241,9 +246,9 @@ object AxiomIndex {
             case (Imply(_, True)) => "->true" :: Nil
             case _ => Nil
           }
-        if (pos.isEmpty || !pos.get.isTopLevel) axioms
+        if (!isTop) axioms
         else {
-          (expr, pos.get.isAnte) match {
+          (expr, isAnte) match {
             case (_: Not, true) => "NotL" :: Nil
             case (_: Not, false) => "NotR" :: Nil
             case (_: And, true) => axioms :+ "AndL"
