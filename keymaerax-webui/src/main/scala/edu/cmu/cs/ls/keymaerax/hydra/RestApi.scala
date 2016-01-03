@@ -250,16 +250,9 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  def getRuleName(tactic:String) = {
-    try {
-      DerivationInfo(tactic).display.name
-    } catch {
-      case _ => "Tactic"
-    }
-  }
   val doAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     get {
-      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), getRuleName(tacticId))
+      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))))
       complete(standardCompletion(request))
     }}
   }}
@@ -267,22 +260,19 @@ trait RestApi extends HttpService {
   val doInputAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / "doInputAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     post {
       entity(as[String]) { params => {
+        val info = DerivationInfo(tacticId)
+        val expectedInputs = info.inputs
         // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
         val paramArray = JsonParser(params).asInstanceOf[JsArray]
-        val paramStrings: Vector[String] =
+        val inputs =
           paramArray.elements.map({case elem =>
             val obj = elem.asJsObject()
-            val paramType = obj.getFields("type").head.asInstanceOf[JsString].value
             val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
             val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
-            if(paramType == "formula") {
-              "{`" + paramValue + "`}"
-            } else {
-              paramValue
-            }
+            val paramInfo = expectedInputs.find{case spec => spec.name == paramName}
+            BelleTermInput(paramValue, paramInfo)
           })
-        val expr = tacticId + "(" + paramStrings.toList.reduce[String]{case (s1, s2) => s1 + "," + s2} + ")"
-        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, expr, Some(Fixed(parseFormulaId(formulaId))), getRuleName(tacticId))
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), inputs.toList)
         complete(standardCompletion(request))
       }
     }}
@@ -290,24 +280,21 @@ trait RestApi extends HttpService {
 
   val doTactic = path("proofs" / "user" / Segment / Segment / Segment / "do" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
     get {
-      val ruleName = getRuleName(tacticId)
-      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None, tacticId)
+      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None)
       complete(standardCompletion(request))
     }}
   }}
 
   val doSearchRight = path("proofs" / "user" / Segment / Segment / Segment / "doSearchR" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
     get {
-      val ruleName = getRuleName(tacticId)
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, SuccPosition(0))), ruleName)
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, SuccPosition(0))))
       complete(standardCompletion(request))
     }}
   }}
 
   val doSearchLeft = path("proofs" / "user" / Segment / Segment / Segment / "doSearchL" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
     get {
-      val ruleName = getRuleName(tacticId)
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, AntePosition(0))), ruleName)
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, AntePosition(0))))
       complete(standardCompletion(request))
     }}
   }}
@@ -447,7 +434,7 @@ trait RestApi extends HttpService {
     post {
       entity(as[String]) { params => {
         val term = JsonParser(params).asJsObject.fields.last._2.asInstanceOf[JsString].value
-        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, term, None, getRuleName(term))
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, term, None)
         complete(standardCompletion(request))
   }}}}}}
 

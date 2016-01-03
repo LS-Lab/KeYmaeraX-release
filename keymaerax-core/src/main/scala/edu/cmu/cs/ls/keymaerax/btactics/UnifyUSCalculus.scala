@@ -1139,7 +1139,7 @@ trait UnifyUSCalculus {
     * @param giveUp  how many alternatives are too much so that the chase stops without trying any for applicability.
     *                Equivalent to pruning keys so that all lists longer than giveUp are replaced by Nil.
     */
-  def chase(breadth: Int, giveUp: Int): DependentPositionTactic = chase(breadth, giveUp, AxiomIndex.axiomsFor _)
+  def chase(breadth: Int, giveUp: Int): DependentPositionTactic = chase(breadth, giveUp, AxiomIndex.axiomsFor (_:Expression))
   def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String]): DependentPositionTactic = chase(breadth, giveUp, keys, (ax,pos) => pr=>pr)
   def chase(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): DependentPositionTactic =
     chaseI(breadth, giveUp,keys, modifier, ax=>us=>us)
