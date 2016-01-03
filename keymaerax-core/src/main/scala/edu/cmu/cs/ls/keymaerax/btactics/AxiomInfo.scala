@@ -293,7 +293,9 @@ object DerivationInfo {
           (List("&Gamma;","!p","!q"),List("&Delta;"))))
       , {case () => ProofRuleTactics.equivR}), //@todo "\u2194R"
     new TacticInfo("G"
-      , "G"/*RuleDisplayInfo("G", (List(""),List("[a]p")),
+      , "G"
+      /* This realy ought to be show as an inference rule, but due to a UI bug we can't support non-input rules just yet
+        RuleDisplayInfo("G", (List(""),List("[a]p")),
         List((List(),List("p"))))*/
       , {case () => DLBySubst.G}),
 

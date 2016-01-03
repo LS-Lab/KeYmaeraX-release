@@ -583,7 +583,7 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
     import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val subFormula = sequent.sub(pos).get
-    val axioms = AxiomIndex.axiomsFor(subFormula, Some(pos)).map{case axiom => DerivationInfo(axiom)}
+    val axioms = AxiomIndex.axiomsFor(subFormula, Some(pos), Some(sequent)).map{case axiom => DerivationInfo(axiom)}
     new ApplicableAxiomsResponse(axioms) :: Nil
   }
 }
