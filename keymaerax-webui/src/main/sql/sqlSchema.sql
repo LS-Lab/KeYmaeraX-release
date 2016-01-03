@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS `lemmas` (
 -- TODO eventually remove these tables in favor of lemmas everywhere.
 CREATE TABLE IF NOT EXISTS `provables` (
   `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  `lemmaId` TEXT NOT NULL -- @todo Currently an ID used with the FileLemmaDB, evaluate wheter lemmas table makes sense
+  `lemmaId` INTEGER REFERENCES `lemmas`
 );
 
 CREATE TABLE IF NOT EXISTS `sequents` (

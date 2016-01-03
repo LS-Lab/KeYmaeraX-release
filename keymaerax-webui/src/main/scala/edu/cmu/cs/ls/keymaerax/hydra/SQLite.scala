@@ -4,7 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.io.FileOutputStream
+import java.io.{File, FileOutputStream}
 import java.nio.channels.Channels
 import java.security.SecureRandom
 import java.sql.{Blob, SQLException}
@@ -14,10 +14,10 @@ import javax.xml.bind.DatatypeConverter
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, BelleExpr}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
-import _root_.edu.cmu.cs.ls.keymaerax.core.{Lemma, Formula, Provable, Sequent}
+import _root_.edu.cmu.cs.ls.keymaerax.core._
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 import _root_.edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import _root_.edu.cmu.cs.ls.keymaerax.parser.{ProofEvidence, KeYmaeraXProblemParser}
+import _root_.edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXExtendedLemmaParser, ProofEvidence, KeYmaeraXProblemParser}
 import _root_.edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
 
@@ -41,9 +41,58 @@ object SQLite {
   /** Use this for all unit tests that work with the database, so tests don't infect the production database */
   val TestDB: SQLiteDB = new SQLiteDB(DBAbstractionObj.testLocation)
 
-  class SQLiteDB(dblocation: String) extends DBAbstraction {
+  class SQLiteLemmaDB (db: SQLiteDB) extends LemmaDB {
+    override def contains(id: LemmaID): Boolean = { true }
 
+    override def get(id: LemmaID): Option[Lemma] = {
+     db.getLemma(id.toInt).map(Lemma.fromString _)
+    }
+
+    private def saveLemma(lemma:Lemma, id:Int): Unit = {
+      //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
+      val parse = KeYmaeraXExtendedLemmaParser(lemma.toString)
+      assert(parse._1 == lemma.name, "reparse of printed lemma's name should be identical to original lemma")
+      assert(parse._2 == lemma.fact.conclusion +: lemma.fact.subgoals, s"reparse of printed lemma's fact ${lemma.fact.conclusion +: lemma.fact.subgoals}should be identical to original lemma ${parse._2}")
+      assert(parse._3 == lemma.evidence.head, "reparse of printed lemma's evidence should be identical to original lemma")
+
+      val lemmaString = "/** KeYmaera X " + _root_.edu.cmu.cs.ls.keymaerax.core.VERSION + " */" ++  lemma.toString
+
+      db.updateLemma(id, lemmaString)
+      val lemmaFromDB = get(id.toString)
+      if (lemmaFromDB.isEmpty || lemmaFromDB.get != lemma) {
+        db.deleteLemma(id)
+        throw new IllegalStateException("Lemma in DB differed from lemma in memory -> deleted")
+      }
+      // assertion duplicates condition and throw statement
+      assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemma, "Lemma stored in DB should be identical to lemma in memory " + lemma)
+    }
+
+    private def isUniqueLemmaId(id: Int) = db.getLemma(id).isEmpty
+
+    override def add(lemma: Lemma): LemmaID = {
+      val id = this.synchronized {
+        // synchronize to make sure concurrent uses use new rows
+        lemma.name match {
+          case Some(n) =>
+            require(isUniqueLemmaId(n.toInt) || lemma == get(n).orNull,
+            "Lemma name '" + n + ".alp' must be unique, or file content must be the lemma: \n" + lemma)
+            n.toInt
+          case None =>  db.createLemma()
+        }
+      }
+      saveLemma(lemma, id)
+      id.toString
+    }
+
+    override def deleteDatabase(): Unit = {
+      db.deleteAllLemmas
+    }
+  }
+
+
+  class SQLiteDB(dblocation: String) extends DBAbstraction {
     val sqldb = Database.forURL("jdbc:sqlite:" + dblocation, driver = "org.sqlite.JDBC")
+    val lemmaDB = new SQLiteLemmaDB(this)
     private var currentSession:Session = null
     /* Statistics on the number of SQL operations performed in this session, useful for profiling. */
     private var nUpdates = 0
@@ -433,11 +482,45 @@ object SQLite {
       }
     }
 
+    private[SQLite] def createLemma(): Int = {
+      synchronizedTransaction({
+        (Lemmas.map(_.lemma) returning Lemmas.map(_._Id.get))
+          .insert(None)
+      })
+    }
+
+    private[SQLite] def updateLemma(lemmaId: Int, lemma:String): Unit = {
+      synchronizedTransaction({
+        Lemmas.filter(_._Id === lemmaId).map(_.lemma).update(Some(lemma))
+      })
+    }
+
+    private[SQLite] def getLemma(lemmaId: Int): Option[String] = {
+      synchronizedTransaction({
+        val rows = Lemmas.filter(_._Id === lemmaId).list
+        if (rows.isEmpty) throw new Exception("Lemma " + lemmaId + " not found")
+        else if (rows.length > 1) throw new Exception("Duplicate lemmas for id " + lemmaId)
+        else rows.head.lemma
+      })
+    }
+
+    private[SQLite] def deleteLemma(lemmaId: Int): Unit = {
+      synchronizedTransaction({
+        Lemmas.filter(_._Id === lemmaId).delete
+      })
+    }
+
+    private[SQLite] def deleteAllLemmas(): Unit = {
+      synchronizedTransaction({
+        Lemmas.delete
+      })
+    }
+
     /** Stores a Provable in the database and returns its ID */
     override def serializeProvable(p: Provable): Int = {
       synchronizedTransaction({
         val lemma = Lemma(p, List(new ToolEvidence(Map("input" -> p.prettyString, "output" -> "true"))))
-        val lemmaId = LemmaDBFactory.lemmaDB.add(lemma)
+        val lemmaId = lemmaDB.add(lemma)
         val provableId =
           (Provables.map({ case provable => provable.lemmaid}) returning Provables.map(_._Id.get))
             .insert(lemmaId)
@@ -465,7 +548,7 @@ object SQLite {
     /** Use escape hatch in prover core to create a new Provable */
     override def loadProvable(provableId: Int): Provable = {
       val lemmaId = Provables.filter(_._Id === provableId).map(_.lemmaid).list.head
-      LemmaDBFactory.lemmaDB.get(lemmaId) match {
+      lemmaDB.get(lemmaId) match {
         case None => throw new Exception ("No lemma with ID " + lemmaId + "for provable ID " + provableId)
         case Some(lemma) => lemma.fact
       }
