@@ -47,10 +47,12 @@ object DerivationInfo {
   private val allInfo: List[DerivationInfo] = List(
     // [a] modalities and <a> modalities
     //@todo diamond or determinancy
-    new CoreAxiomInfo("<> dual", "<.>", "duald", {case () => HilbertCalculus.duald}),
-    new DerivedAxiomInfo("[] dual", "[.]", "dualb", {case () => HilbertCalculus.dualb}),
+    new CoreAxiomInfo("<> dual", "<.>", "diamond", {case () => ???}),
+    new DerivedAxiomInfo("[] dual", "[.]", "box", {case () => ???}),
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => HilbertCalculus.assignb}),
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
+    new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => ???}),
+    //@todo new DerivedAxiomInfo("<:=> assign equality", "<:=>=", "assigndeq", {case () => ???}),
     new CoreAxiomInfo("[':=] differential assign", "[':=]", "Dassignb", {case () => HilbertCalculus.Dassignb}),
     new CoreAxiomInfo("[:*] assign nondet", "[:*]", "randomb", {case () => HilbertCalculus.randomb}),
     new CoreAxiomInfo("[?] test", "[?]", "testb", {case () => HilbertCalculus.testb}),
@@ -61,13 +63,16 @@ object DerivationInfo {
     new DerivedAxiomInfo("<;> compose", "<;>", "composed", {case () => HilbertCalculus.composed}),
     new CoreAxiomInfo("[*] iterate", "[*]", "iterateb", {case () => HilbertCalculus.iterateb}),
     new DerivedAxiomInfo("<*> iterate", "<*>", "iterated", {case () => HilbertCalculus.iterated}),
+    new CoreAxiomInfo("<d> dual", "<d>", "duald", {case () => HilbertCalculus.duald}),
+    new DerivedAxiomInfo("[d] dual", "[d]", "dualb", {case () => HilbertCalculus.dualb}),
     new CoreAxiomInfo("K modal modus ponens", "K", "K", {case () => TactixLibrary.K}),
     //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
+  //@todo why isn't the code name just "I"? And the belleExpr could be useAt("I")?
     new CoreAxiomInfo("I induction", "I", "induction", {case () => ???}),
     new CoreAxiomInfo("V vacuous", "V", "V", {case () => TactixLibrary.V}),
     
     // differential equation axioms
-    new CoreAxiomInfo("DW", "DW", "DWAxiom", {case () => HilbertCalculus.DW}),
+    new CoreAxiomInfo("DW", "DW", "DWaxiom", {case () => HilbertCalculus.DW}),
     new CoreAxiomInfo("DC differential cut", "DC", "DC", {case () => (fml:Formula) =>  HilbertCalculus.DC(fml)}),
     new CoreAxiomInfo("DE differential effect", "DE", "DE", {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DE differential effect (system)", "DE", "DEs", {case () => HilbertCalculus.DE}),
@@ -105,10 +110,11 @@ object DerivationInfo {
     new CoreAxiomInfo("exists' derive exists", "exists'", "Dexists", {case () => HilbertCalculus.Dexists}), //@todo "\u2203'"
 
     // first-order logic quantifiers
-    new CoreAxiomInfo("all instantiate", "alli", "alli", {case () => ???}),
-    new DerivedAxiomInfo("all distribute", "Dall", "allDistribute", {case () => useAt(DerivedAxioms.allDistributeAxiom)}),
+    new CoreAxiomInfo("all instantiate", "alli", "alli"/*@todo allinst?*/, {case () => ???}),
+    new DerivedAxiomInfo("all distribute", "all->", "allDistribute"/*@todo alldist*/, {case () => useAt(DerivedAxioms.allDistributeAxiom)}),
     new CoreAxiomInfo("vacuous all quantifier", "Vall", "vacuousAll", {case () => HilbertCalculus.vacuousAll}),
     new DerivedAxiomInfo("vacuous exists quantifier", "Vexists", "vacuousExists", {case () => HilbertCalculus.vacuousExists}),
+
     // more
     new CoreAxiomInfo("const congruence", "CCE", "constCongruence", {case () => ???}),
     new CoreAxiomInfo("const formula congruence", "CCQ", "constFormulaCongruence", {case () => ???}),
