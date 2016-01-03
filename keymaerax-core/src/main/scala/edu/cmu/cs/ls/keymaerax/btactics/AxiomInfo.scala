@@ -43,7 +43,10 @@ object DerivationInfo {
   private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
 
   private def useAt(l:Lemma):BelleExpr = HilbertCalculus.useAt(l)
-  /** Central registry for axiom, derived axiom, proof rule, and tactic meta-information */
+  /**
+    * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
+    * Transferred into subsequent maps etc for efficiency reasons.
+    */
   private val allInfo: List[DerivationInfo] = List(
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond", "<.>", "diamond", {case () => ???}),
@@ -62,8 +65,9 @@ object DerivationInfo {
     new DerivedAxiomInfo("<;> compose", "<;>", "composed", {case () => HilbertCalculus.composed}),
     new CoreAxiomInfo("[*] iterate", "[*]", "iterateb", {case () => HilbertCalculus.iterateb}),
     new DerivedAxiomInfo("<*> iterate", "<*>", "iterated", {case () => HilbertCalculus.iterated}),
-    new CoreAxiomInfo("<d> dual", "<d>", "duald", {case () => HilbertCalculus.duald}),
-    new DerivedAxiomInfo("[d] dual", "[d]", "dualb", {case () => HilbertCalculus.dualb}),
+  //@todo if hybrid games enabled
+    //new CoreAxiomInfo("<d> dual", "<d>", "duald", {case () => HilbertCalculus.duald}),
+    //new DerivedAxiomInfo("[d] dual", "[d]", "dualb", {case () => HilbertCalculus.dualb}),
     new CoreAxiomInfo("K modal modus ponens", "K", "K", {case () => TactixLibrary.K}),
     //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
   //@todo why isn't the code name just "I"? And the belleExpr could be useAt("I")?
@@ -127,8 +131,8 @@ object DerivationInfo {
     new DerivedAxiomInfo("[:=] assign update", "[:=]", "assignbup", {case () => HilbertCalculus.assignb}),
     new DerivedAxiomInfo("<:=> assign update", "<:=>", "assigndup", {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:*> assign nondet", "<:*>", "randomd", {case () => HilbertCalculus.randomd}),
-    new DerivedAxiomInfo("[:=] assign equational", "[:=]=", "assignbeq", {case () => HilbertCalculus.assignb}),
-    new DerivedAxiomInfo("<:=> assign equational", "<:=>=", "assigndeq", {case () => HilbertCalculus.assignd}),
+    new DerivedAxiomInfo("[:=] assign equational", "[:=]==", "assignbequational", {case () => HilbertCalculus.assignb}),
+    new DerivedAxiomInfo("<:=> assign equational", "<:=>==", "assigndequational", {case () => HilbertCalculus.assignd}),
     /* @todo replace all the axioms with useAt(axiom) */
     new DerivedAxiomInfo("<':=> differential assign", "<':=>", "assignDiff", {case () => useAt(DerivedAxioms.assignDAxiom)}),
     new DerivedAxiomInfo("DS differential equation solution", "DS", "DSnodomain", {case () => useAt(DerivedAxioms.DSnodomain)}),
@@ -228,8 +232,8 @@ object DerivationInfo {
     new DerivedAxiomInfo("[]~><> propagation", "[]~><>", "boxDiamondPropagation", {case () => useAt(DerivedAxioms.boxDiamondPropagation)}),
     new DerivedAxiomInfo("-> self", "-> self", "implySelf", {case () => useAt(DerivedAxioms.implySelf)}),
     //@todo internal only
-    new DerivedAxiomInfo("K1", "K1", "K1", {case () => useAt(DerivedAxioms.K1)}),
-    new DerivedAxiomInfo("K2", "K2", "K2", {case () => useAt(DerivedAxioms.K2)}),
+//    new DerivedAxiomInfo("K1", "K1", "K1", {case () => useAt(DerivedAxioms.K1)}),
+//    new DerivedAxiomInfo("K2", "K2", "K2", {case () => useAt(DerivedAxioms.K2)}),
     new DerivedAxiomInfo("PC1", "PC1", "PC1", {case () => useAt(DerivedAxioms.PC1)}),
     new DerivedAxiomInfo("PC2", "PC2", "PC2", {case () => useAt(DerivedAxioms.PC2)}),
     new DerivedAxiomInfo("PC3", "PC3", "PC3", {case () => useAt(DerivedAxioms.PC3)}),
@@ -371,6 +375,7 @@ object DerivationInfo {
   ) ensuring(consistentInfo _, "meta-information on AxiomInfo is consistent with source")
 
   private def consistentInfo(list: List[DerivationInfo]): Boolean = {
+    //@note to avoid file storage issues on some OSes, lowercase versions of names are expected to be unique.
     val canonicals = list.map(i => i.canonicalName.toLowerCase())
     val codeNames = list.map(i => i.codeName.toLowerCase()).filter(n => n!=needsCodeName)
     list.forall(i => i match {
@@ -380,7 +385,7 @@ object DerivationInfo {
       }
     ) &
       (canonicals.length==canonicals.distinct.length ensuring(r=>r, "unique canonical names: " + (canonicals diff canonicals.distinct))) &
-      (codeNames.length==codeNames.distinct.length || true ensuring(r=>r, "unique code names / identifiers: " + (codeNames diff codeNames.distinct)))
+      (codeNames.length==codeNames.distinct.length ensuring(r=>r, "unique code names / identifiers: " + (codeNames diff codeNames.distinct)))
   }
 
 
@@ -410,8 +415,7 @@ object DerivationInfo {
   def ofCodeName(codeName:String): DerivationInfo = byCodeName.get(codeName.toLowerCase).get
 }
 
-object
-AxiomInfo {
+object AxiomInfo {
   /** Retrieve meta-information on an axiom by the given canonical name `axiomName` */
   def apply(axiomName: String): AxiomInfo =
     DerivationInfo(axiomName) match {
