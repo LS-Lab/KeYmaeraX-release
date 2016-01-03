@@ -312,19 +312,15 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
 
     def sequentJson(sequent: Sequent): JsValue = {
       var num: Int = 0
-      def fmlId: String = {
-        num = num + 1
-        num.toString
-      }
       def fmlsJson (isAnte:Boolean, fmls: IndexedSeq[Formula]): JsValue = {
         JsArray(fmls.zipWithIndex.map { case (fml, i) =>
           /* Formula ID is formula number followed by comma-separated PosInExpr.
            formula number = strictly positive if succedent, strictly negative if antecedent, 0 is never used
           */
-          val idx = if(isAnte) {-(i+1)} else {i+1}
+          val idx = if(isAnte) {i-fmls.length } else {i+1}
           val fmlJson = JSONConverter.convertFormula(fml, idx.toString, "")
           JsObject(
-            "id" -> JsString(fmlId),
+            "id" -> JsString(idx.toString),
             "formula" -> fmlJson
           )}.toVector)
       }
@@ -472,10 +468,12 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends R
   }
 
   def sequentJson(sequent:SequentDisplay):JsValue = {
-    JsObject (
+    val json = JsObject (
     "ante" -> new JsArray(sequent.ante.map{case fml => JsString(fml)}),
     "succ" -> new JsArray(sequent.succ.map{case fml => JsString(fml)})
     )
+    println("Sending sequent: " + json)
+   json
   }
 
   def ruleJson(info:TacticInfo, conclusion:SequentDisplay, premises:List[SequentDisplay]) = {
