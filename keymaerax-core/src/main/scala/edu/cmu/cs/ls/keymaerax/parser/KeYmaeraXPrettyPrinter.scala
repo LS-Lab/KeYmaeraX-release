@@ -91,28 +91,9 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case f: Function => f.asString
   }
 
-  /**
-   * Whether parentheses around ``t.child`` can be skipped because they are implied.
-   */
-  protected def skipParens(t: UnaryComposite): Boolean = false
-  protected def skipParens(t: Quantified): Boolean = false
-  protected def skipParens(t: Modal): Boolean = false
-
-  /**
-   * Whether parentheses around ``t.left`` can be skipped because they are implied.
-   * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
-   */
-  protected def skipParensLeft(t: BinaryComposite): Boolean = false
-
-  /**
-   * Whether parentheses around ``t.right`` can be skipped because they are implied.
-   * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
-   */
-  protected def skipParensRight(t: BinaryComposite): Boolean = false
-
   private[parser] val negativeBrackets = false && OpSpec.negativeNumber
 
-  /**@NOTE The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ... */
+  /**@note The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ... */
   private val LEXSPACE: String = " "
 
   //@todo could add contract that TermAugmentor(original)(q) == term
@@ -130,12 +111,11 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5). OpSpec.negativeNumber
     case t@Neg(Number(n))       => op(t).opcode + "(" + pp(q+0, Number(n)) + ")"
     // special case forcing space between unary negation and numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x.
-    case t: Neg if !negativeBrackets => val c = pp(q+0, t.child); op(t).opcode + (if (c.charAt(0).isDigit) " " else "") + (if (skipParens(t)) c else "(" + c + ")")
-    case t: UnaryCompositeTerm  => op(t).opcode + (if (skipParens(t)) pp(q+0, t.child) else "(" + pp(q+0, t.child) + ")")
+    case t: Neg if !negativeBrackets => val c = pp(q+0, t.child)
+      op(t).opcode + (if (c.charAt(0).isDigit) " " else "") + wrapChild(t, c)
+    case t: UnaryCompositeTerm  => op(t).opcode + wrapChild(t, pp(q+0, t.child))
     case t: BinaryCompositeTerm =>
-      (if (skipParensLeft(t)) pp(q+0, t.left) else "(" + pp(q+0, t.left) + ")") +
-        op(t).opcode +
-        (if (skipParensRight(t)) pp(q+1, t.right) else "(" + pp(q+1, t.right) + ")")
+      wrapLeft(t, pp(q+0, t.left)) + op(t).opcode + wrapRight(t, pp(q+1, t.right))
   })
 
   private def pp(q: PosInExpr, formula: Formula): String = emit(q, formula match {
@@ -147,14 +127,12 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case f: ComparisonFormula   => pp(q+0, f.left) + op(formula).opcode + pp(q+1, f.right)
     case DifferentialFormula(g) => "(" + pp(q+0, g) + ")" + op(formula).opcode
     //@note the q position for variables is a little weird since it identifies the quantifier not the variable
-    case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp(q,_)).mkString(",") + " " + (if (skipParens(f)) pp(q+0, f.child) else "(" + pp(q+0, f.child) + ")")
-    case f: Box                 => "[" + pp(q+0, f.program) + "]" + (if (skipParens(f)) pp(q+1, f.child) else "(" + pp(q+1, f.child) + ")")
-    case f: Diamond             => "<" + pp(q+0, f.program) + ">" + (if (skipParens(f)) pp(q+1, f.child) else "(" + pp(q+1, f.child) + ")")
-    case t: UnaryCompositeFormula=> op(t).opcode + (if (skipParens(t)) pp(q+0, t.child) else "(" + pp(q+0, t.child) + ")")
+    case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp(q,_)).mkString(",") + " " + wrapChild(f, pp(q+0, f.child))
+    case f: Box                 => "[" + pp(q+0, f.program) + "]" + wrapChild(f, pp(q+1, f.child))
+    case f: Diamond             => "<" + pp(q+0, f.program) + ">" + wrapChild(f, pp(q+1, f.child))
+    case t: UnaryCompositeFormula=> op(t).opcode + wrapChild(t, pp(q+0, t.child))
     case t: BinaryCompositeFormula=>
-      (if (skipParensLeft(t)) pp(q+0, t.left) else "(" + pp(q+0, t.left) + ")") +
-        op(t).opcode +
-        (if (skipParensRight(t)) pp(q+1, t.right) else "(" + pp(q+1, t.right) + ")")
+      wrapLeft(t, pp(q+0, t.left)) + op(t).opcode + wrapRight(t, pp(q+1, t.right))
   })
 
   private def pp(q: PosInExpr, program: Program): String = emit(q, program match {
@@ -173,24 +151,75 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     //case t: UnaryCompositeProgram=> (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     case t: Compose if OpSpec.statementSemicolon =>
       //@note in statementSemicolon mode, suppress opcode of Compose since already after each statement
-      (if (skipParensLeft(t)) pp(q+0, t.left) else "{" + pp(q+0, t.left) + "}") +
-        /*op(t).opcode + */
-        (if (skipParensRight(t)) pp(q+1, t.right) else "{" + pp(q+1, t.right) + "}")
+      pwrapLeft(t, pp(q+0, t.left)) + /*op(t).opcode + */ pwrapRight(t, pp(q+1, t.right))
     case t: BinaryCompositeProgram =>
-      (if (skipParensLeft(t)) pp(q+0, t.left) else "{" + pp(q+0, t.left) + "}") +
-        op(t).opcode +
-        (if (skipParensRight(t)) pp(q+1, t.right) else "{" + pp(q+1, t.right) + "}")
+      pwrapLeft(t, pp(q+0, t.left)) + op(t).opcode + pwrapRight(t, pp(q+1, t.right))
   })
 
   private def ppODE(q: PosInExpr, program: DifferentialProgram): String = emit(q, program match {
     case a: DifferentialProgramConst => a.asString
     case AtomicODE(xp, e)       => pp(q+0, xp) + op(program).opcode + pp(q+1, e)
     case t: DifferentialProduct =>
-      (if (skipParensLeft(t)) ppODE(q+0, t.left) else "{" + ppODE(q+1, t.left) + "}") +
-        op(t).opcode +
-        (if (skipParensRight(t)) ppODE(q+1, t.right) else "{" + ppODE(q+1, t.right) + "}")
+      pwrapLeft(t, ppODE(q+0, t.left)) + op(t).opcode + pwrapRight(t, ppODE(q+1, t.right))
     case ODESystem(ode, f)      => assert(false, "ODESystem does not occur recursively"); ??? //{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
   })
+
+
+  // parentheses wrapping and emission
+
+  //@note abandoned since too fine-grained
+  //  protected def ppChild(q: PosInExpr, t:UnaryCompositeTerm): String =
+  //    if (skipParens(t)) pp(q+0, t.child) else "(" + pp(q+0, t.child) + ")"
+  //  protected def ppLeft(q: PosInExpr, t: BinaryCompositeTerm): String =
+  //    if (skipParensLeft(t)) pp(q+0, t.left) else "(" + pp(q+0, t.left) + ")"
+  //  protected def ppRight(q: PosInExpr, t: BinaryCompositeTerm): String =
+  //    if (skipParensRight(t)) pp(q+1, t.right) else "(" + pp(q+1, t.right) + ")"
+
+  /** Wrap ``childPrint`` for ``t.child`` in parentheses if they are not implicit. */
+  protected def wrapChild(t: UnaryComposite, childPrint: String): String =
+    if (skipParens(t)) childPrint else "(" + childPrint + ")"
+  /** Wrap ``childPrint`` for ``t.child`` in parentheses if they are not implicit. */
+  protected def wrapChild(t: Quantified, childPrint: String): String =
+    if (skipParens(t)) childPrint else "(" + childPrint + ")"
+  /** Wrap ``childPrint`` for ``t.child`` in parentheses if they are not implicit. */
+  protected def wrapChild(t: Modal, childPrint: String): String =
+    if (skipParens(t)) childPrint else "(" + childPrint + ")"
+
+  /** Wrap ``leftPrint`` for ``t.left`` in parentheses if they are not implicit. */
+  protected def wrapLeft(t: BinaryComposite, leftPrint: String): String =
+    if (skipParensLeft(t)) leftPrint else "(" + leftPrint + ")"
+  /** Wrap ``rightPrint`` for ``t.right`` in parentheses if they are not implicit. */
+  protected def wrapRight(t: BinaryComposite, rightPrint: String): String =
+    if (skipParensRight(t)) rightPrint else "(" + rightPrint + ")"
+
+  /** Wrap ``leftPrint`` for ``t.left`` in program parentheses if they are not implicit. */
+  protected def pwrapLeft(t: BinaryComposite/*Differential/Program*/, leftPrint: String): String =
+    if (skipParensLeft(t)) leftPrint else "{" + leftPrint + "}"
+  /** Wrap ``rightPrint`` for ``t.right`` in program parentheses if they are not implicit. */
+  protected def pwrapRight(t: BinaryComposite/*Differential/Program*/, rightPrint: String): String =
+    if (skipParensRight(t)) rightPrint else "{" + rightPrint + "}"
+
+  /**
+    * Whether parentheses around ``t.child`` can be skipped because they are implicit.
+    * @see [[wrapChild()]]
+    */
+  protected def skipParens(t: UnaryComposite): Boolean = false
+  protected def skipParens(t: Quantified): Boolean = false
+  protected def skipParens(t: Modal): Boolean = false
+
+  /**
+    * Whether parentheses around ``t.left`` can be skipped because they are implicit.
+    * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
+    * @see [[wrapLeft()]]
+    */
+  protected def skipParensLeft(t: BinaryComposite): Boolean = false
+
+  /**
+    * Whether parentheses around ``t.right`` can be skipped because they are implicit.
+    * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
+    * @see [[wrapRight()]]
+    */
+  protected def skipParensRight(t: BinaryComposite): Boolean = false
 
   /** Emit the string s as a result of the pretty-printer for an expression */
   protected def emit(q: PosInExpr, s: String): String = s
@@ -206,7 +235,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
  * with explicit statement end ``;`` operator.
  * @author Andre Platzer
  * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
- * @see doc/dL-grammar.md
+ * @see [[http://keymaeraX.org/doc/dL-grammar.md]]
  */
 class KeYmaeraXPrecedencePrinter extends KeYmaeraXPrinter {
   protected override def skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
