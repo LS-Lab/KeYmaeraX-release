@@ -214,14 +214,14 @@ object DerivationInfo {
     new DerivedAxiomInfo("[]~><> propagation", "[]~><>", "boxDiamondPropagation", {case () => DerivedAxioms.boxDiamondPropagationT}),
     new DerivedAxiomInfo("-> self", "-> self", "implySelf", {case () => DerivedAxioms.implySelfT}),
     //@todo internal only
-    new DerivedAxiomInfo("K1", "K1", "K1", {case () => DerivedAxioms.K1T}),
-    new DerivedAxiomInfo("K2", "K2", "K2", {case () => DerivedAxioms.K2T}),
+    //new DerivedAxiomInfo("K1", "K1", "K1", {case () => DerivedAxioms.K1T}),
+    //new DerivedAxiomInfo("K2", "K2", "K2", {case () => DerivedAxioms.K2T}),
     new DerivedAxiomInfo("PC1", "PC1", "PC1", {case () => DerivedAxioms.PC1T}),
     new DerivedAxiomInfo("PC2", "PC2", "PC2", {case () => DerivedAxioms.PC2T}),
     new DerivedAxiomInfo("PC3", "PC3", "PC3", {case () => DerivedAxioms.PC3T}),
     new DerivedAxiomInfo("PC9", "PC9", "PC9", {case () => DerivedAxioms.PC9T}),
     new DerivedAxiomInfo("PC10", "PC10", "PC10", {case () => DerivedAxioms.PC10T}),
-    // axioms for unit tests
+    //@internal axioms for unit tests
     new DerivedAxiomInfo("exists dual dummy", "DUMMY", "dummyexistsDualAxiomT", {case () => ???}),
     new DerivedAxiomInfo("all dual dummy", "DUMMY", "dummyallDualAxiom", {case () => ???}),
     new DerivedAxiomInfo("all dual dummy 2", "DUMMY", "dummyallDualAxiom2", {case () => ???}),

@@ -140,6 +140,7 @@ object AxiomIndex {
 
   private val unknown = Nil
 
+  //@todo purpose unclear. Document or delete.
   private def preferredAxiom(expr: Expression): Option[String] = {
     expr match {
       case Differential(t) => t match {

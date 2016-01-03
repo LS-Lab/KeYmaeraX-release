@@ -296,8 +296,8 @@ object DerivedAxioms {
     case "![]" => Some(notBoxF, notBoxT)
     case "!<>" => Some(notDiamondF, notDiamondT)
     case "[] dual" => Some(boxDualF, boxDualT)
-    case "K1" => Some(K1F, K1T)
-    case "K2" => Some(K2F, K2T)
+    //case "K1" => Some(K1F, K1T)
+    //case "K2" => Some(K2F, K2T)
     case "[] split" => Some(boxSplitF, boxSplitT)
     case "[] split left" => Some(boxSplitLeftF, boxSplitLeftT)
     case "[] split right" => Some(boxSplitRightF, boxSplitRightT)
@@ -401,9 +401,9 @@ object DerivedAxioms {
   @deprecated
   val unpopulatedAxioms =
     List(
-    //@internal
-      "K1",
-      "K2",
+//    //@internal
+//      "K1",
+//      "K2",
     //@undecided
       "PC1",
       "PC2",
@@ -829,15 +829,15 @@ object DerivedAxioms {
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K1 p. 26
     * @internal
    */
-  lazy val K1F = "[a;](p(??)&q(??)) -> [a;]p(??) & [a;]q(??)".asFormula
-  lazy val K1 = derivedAxiom("K1",
+  private lazy val K1F = "[a;](p(??)&q(??)) -> [a;]p(??) & [a;]q(??)".asFormula
+  private lazy val K1 = TactixLibrary.proveBy(//derivedAxiom("K1",
     Sequent(Nil, IndexedSeq(), IndexedSeq(K1F)),
     implyR(1) & andR(1) <(
       useAt(boxSplitLeft)(-1) & close,
       useAt(boxSplitRight)(-1) & close
       )
   )
-  lazy val K1T = derivedAxiomT(K1)
+  //private lazy val K1T = derivedAxiomT(K1)
 
   /**
    * {{{Axiom "K2".
@@ -848,8 +848,8 @@ object DerivedAxioms {
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K2 p. 27
     *      @internal
    */
-  lazy val K2F = "[a;]p(??) & [a;]q(??) -> [a;](p(??)&q(??))".asFormula
-  lazy val K2 = derivedAxiom("K2",
+  private lazy val K2F = "[a;]p(??) & [a;]q(??) -> [a;](p(??)&q(??))".asFormula
+  private lazy val K2 = TactixLibrary.proveBy(//derivedAxiom("K2",
     Sequent(Nil, IndexedSeq(), IndexedSeq(K2F)),
     cut(/*(9)*/"([a;](q(??)->p(??)&q(??)) -> ([a;]q(??) -> [a;](p(??)&q(??))))  ->  (([a;]p(??) & [a;]q(??)) -> [a;](p(??)&q(??)))".asFormula) <(
       /* use */ cut(/*(6)*/"[a;](q(??) -> (p(??)&q(??)))  ->  ([a;]q(??) -> [a;](p(??)&q(??)))".asFormula) <(
@@ -869,7 +869,7 @@ object DerivedAxioms {
       )
     )
   )
-  lazy val K2T = derivedAxiomT(K2)
+  //private lazy val K2T = derivedAxiomT(K2)
 
   /**
    * {{{Axiom "[] split".
