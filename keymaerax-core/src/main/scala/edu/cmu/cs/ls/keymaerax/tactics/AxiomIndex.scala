@@ -171,18 +171,18 @@ object AxiomIndex {
       case _: Forall    => "forall' derive forall" :: Nil
       case _: Exists    => "exists' derive exists" :: Nil
     }
-    case Box(a, _) => a match {
+    case Box(a, post) => a match {
       case _: Assign    => "[:=] assign" :: "[:=] assign equational" :: "[:=] assign update" :: Nil
       case _: AssignAny => "[:*] assign nondet" :: Nil
       case _: Test      => "[?] test" :: Nil
-      case ODESystem(_:AtomicODE,True)   => odeList :+ "DE differential effect"
-      case ODESystem(_:AtomicODE,domain) => "DW differential weakening" :: odeList ++ List("DE differential effect")
-      case ODESystem(_:DifferentialProduct,True)   => odeList :+ "DE differential effect (system)"
-      case ODESystem(_:DifferentialProduct,domain) => "DW differential weakening" :: odeList ++ List("DE differential effect (system)")
       case _: Compose   => "[;] compose" :: Nil
       case _: Choice    => "[++] choice" :: Nil
       case _: Dual      => "[;] dual" :: Nil
 //      case _: Loop      => "[*] iterate" :: Nil
+      case ODESystem(_:AtomicODE,True)   => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect" +: odeList else odeList :+ "DE differential effect"
+      case ODESystem(_:AtomicODE,domain) => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect" :: "DW differential weakening" :: odeList else "DW differential weakening" :: odeList ++ List("DE differential effect")
+      case ODESystem(_:DifferentialProduct,True)   => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect (system)" +: odeList else odeList :+ "DE differential effect (system)"
+      case ODESystem(_:DifferentialProduct,domain) => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect (system)" :: "DW differential weakening" :: odeList else "DW differential weakening" :: odeList ++ List("DE differential effect (system)")
       case _ => unknown
     }
     case Diamond(a, _) => a match {
