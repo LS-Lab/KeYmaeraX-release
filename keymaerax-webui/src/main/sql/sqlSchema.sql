@@ -98,8 +98,11 @@ CREATE TABLE IF NOT EXISTS `executionSteps` (
   `userExecuted`     BOOLEAN,
 
   -- Indicates whether all children of this execution step are present in the database yet. By default children are not
-  -- saved in the database because they take a lot of space.
-  `childrenRecorded` BOOLEAN
+  -- saved in the database because they take a lot of space
+  `childrenRecorded` BOOLEAN,
+
+  -- In theory this can be recovered from the belleExpr, but life is easier this way
+  `ruleName` STRING
 );
 
 ----------------------------------------------------------------------------------------------------

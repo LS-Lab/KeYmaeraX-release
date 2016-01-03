@@ -75,8 +75,8 @@ case class TreeNode (id: Int, sequent: Sequent, parent: Option[TreeNode], startS
   var endStep: Option[ExecutionStep] = None
   if (parent.nonEmpty)
     parent.get.children = this :: parent.get.children
-  def rule = "Unimplemented"
   def allDescendants:List[TreeNode] = this :: children.flatMap{case child => child.allDescendants}
+  def rule:String = { endStep.map{case step => step.rule}.getOrElse("")}
 }
 
 case class AgendaItem(id: String, name: String, proofId: String, goal: TreeNode) {

@@ -343,12 +343,13 @@ object SQLite {
         val steps =
           Executionsteps.map({case step => (step.executionid.get, step.previousstep, step.parentstep,
             step.branchorder.get, step.branchlabel.get, step.alternativeorder.get, step.status.get, step.executableid.get,
-            step.inputprovableid.get, step.resultprovableid, step.userexecuted.get, step.childrenrecorded.get)
+            step.inputprovableid.get, step.resultprovableid, step.userexecuted.get, step.childrenrecorded.get,
+            step.rulename.get)
           }) returning Executionsteps.map(es => es._Id.get)
         val stepId = steps
             .insert((step.executionId, step.previousStep, step.parentStep, branchOrder, branchLabel,
               step.alternativeOrder, status, step.executableId, step.inputProvableId, step.resultProvableId,
-              step.userExecuted.toString, false.toString))
+              step.userExecuted.toString, false.toString, step.ruleName))
         nInserts = nInserts + 1
         stepId
       })
@@ -374,7 +375,7 @@ object SQLite {
           val newStep = new ExecutionStepPOJO(None, oldStep.executionid.get, prev, None, Some(thisStep.branch),
             None, oldStep.alternativeorder.get + 1, ExecutionStepStatus.fromString(thisPOJO.status.get), thisPOJO.executableid.get,
             globalId,
-            Some(outputProvableId), thisPOJO.localprovableid, thisPOJO.userexecuted.get.toBoolean)
+            Some(outputProvableId), thisPOJO.localprovableid, thisPOJO.userexecuted.get.toBoolean/*, thisPOJO.rulename.get*/,???)
           val newId = addExecutionStep(newStep)
           addSteps(Some(newId), outputProvableId, steps.tail)
         }
@@ -384,7 +385,7 @@ object SQLite {
         val nilExecutable = addBelleExpr(TactixLibrary.nil, Nil)
         val step = new ExecutionStepPOJO(None, oldStep.executionid.get, oldStep.previousstep, None, Some(0), None,
           oldStep.alternativeorder.get + 1, ExecutionStepStatus.Finished, nilExecutable, oldStep.inputprovableid.get,
-          oldStep.inputprovableid, oldStep.localprovableid, true)
+          oldStep.inputprovableid, oldStep.localprovableid, true, "nil")
         addExecutionStep(step)
       } else {
         val inputId = oldStep.inputprovableid.get
@@ -500,7 +501,8 @@ object SQLite {
             .list
             .map(step => new ExecutionStepPOJO(step._Id, step.executionid.get, step.previousstep, step.parentstep,
               step.branchorder, step.branchlabel, step.alternativeorder.get, ExecutionStepStatus.fromString(step.status.get),
-              step.executableid.get, step.inputprovableid.get, step.resultprovableid, step.localprovableid, step.userexecuted.get.toBoolean))
+              step.executableid.get, step.inputprovableid.get, step.resultprovableid, step.localprovableid, step.userexecuted.get.toBoolean/*,
+              step.rulename.get*/,???))
         if (steps.length < 1) throw new Exception("No steps found for execution " + executionID)
         else steps
       })
@@ -613,7 +615,8 @@ object SQLite {
           revResult =
             new ExecutionStepPOJO(head._Id, head.executionid.get, head.previousstep, head.parentstep,
               head.branchorder, head.branchlabel, head.alternativeorder.get, ExecutionStepStatus.fromString(head.status.get),
-              head.executableid.get, head.inputprovableid.get, head.resultprovableid, head.localprovableid, head.userexecuted.get.toBoolean)::revResult
+              head.executableid.get, head.inputprovableid.get, head.resultprovableid, head.localprovableid, head.userexecuted.get.toBoolean,
+              head.rulename.get)::revResult
           prevId = head._Id
           steps = tailSteps
         }
@@ -649,7 +652,8 @@ object SQLite {
             val input = loadProvable(step.inputProvableId)
             val output = step.resultProvableId.map{case id => loadProvable(id)}
             val branch = step.branchOrder.get
-            new ExecutionStep(stepId = step.stepId.get, input = input, output = output, branch = branch, alternativeOrder = step.alternativeOrder)
+            val executable = getExecutable(step.executableId)
+            new ExecutionStep(stepId = step.stepId.get, input = input, output = output, branch = branch, alternativeOrder = step.alternativeOrder, step.ruleName)
         }
       val conclusion = getProofConclusion(proofId)
       ExecutionTrace(proofId.toString, executionId.toString, conclusion, traceSteps)

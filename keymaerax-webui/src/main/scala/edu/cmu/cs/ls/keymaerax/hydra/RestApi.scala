@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
+import _root_.edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
 import edu.cmu.cs.ls.keymaerax.btactics.{Find, Fixed}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import _root_.edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
@@ -249,9 +250,16 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  def getRuleName(tactic:String) = {
+    try {
+      DerivationInfo(tactic).display.name
+    } catch {
+      case _ => "Tactic"
+    }
+  }
   val doAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     get {
-      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))))
+      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), getRuleName(tacticId))
       complete(standardCompletion(request))
     }}
   }}
@@ -274,7 +282,7 @@ trait RestApi extends HttpService {
             }
           })
         val expr = tacticId + "(" + paramStrings.toList.reduce[String]{case (s1, s2) => s1 + "," + s2} + ")"
-        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, expr, Some(Fixed(parseFormulaId(formulaId))))
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, expr, Some(Fixed(parseFormulaId(formulaId))), getRuleName(tacticId))
         complete(standardCompletion(request))
       }
     }}
@@ -282,21 +290,24 @@ trait RestApi extends HttpService {
 
   val doTactic = path("proofs" / "user" / Segment / Segment / Segment / "do" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
     get {
-      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None)
+      val ruleName = getRuleName(tacticId)
+      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None, tacticId)
       complete(standardCompletion(request))
     }}
   }}
 
   val doSearchRight = path("proofs" / "user" / Segment / Segment / Segment / "doSearchR" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
     get {
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, SuccPosition(0))))
+      val ruleName = getRuleName(tacticId)
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, SuccPosition(0))), ruleName)
       complete(standardCompletion(request))
     }}
   }}
 
   val doSearchLeft = path("proofs" / "user" / Segment / Segment / Segment / "doSearchL" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
     get {
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, AntePosition(0))))
+      val ruleName = getRuleName(tacticId)
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, AntePosition(0))), ruleName)
       complete(standardCompletion(request))
     }}
   }}
@@ -436,7 +447,7 @@ trait RestApi extends HttpService {
     post {
       entity(as[String]) { params => {
         val term = JsonParser(params).asJsObject.fields.last._2.asInstanceOf[JsString].value
-        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, term, None)
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, term, None, getRuleName(term))
         complete(standardCompletion(request))
   }}}}}}
 

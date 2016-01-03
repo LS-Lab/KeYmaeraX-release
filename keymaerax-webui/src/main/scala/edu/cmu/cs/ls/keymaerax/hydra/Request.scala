@@ -681,7 +681,7 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
 * to a Tactic */
 class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,
-                         pos: Option[PositionLocator]) extends Request {
+                         pos: Option[PositionLocator], ruleName:String) extends Request {
   def getResultingResponses() = {
     BTacticParser(belleTerm) match {
       case None => throw new ProverException("Invalid Bellerophon expression:  " + belleTerm)
@@ -708,7 +708,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             case Nil => localProvable
             case steps => steps.last.output.getOrElse(steps.last.input)
           }
-        val listener = new DebuggerListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false)
+        val listener = new DebuggerListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
         val executor = BellerophonTacticExecutor.defaultExecutor
         val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
         val finalProvable = executor.wait(taskId) match {
@@ -748,7 +748,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
           (updatedGoals, acc)
         } else {
           // @todo update rest of args correctly
-          (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder) :: acc)
+          (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder, step.rule) :: acc)
         }
       }
     ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps.reverse)

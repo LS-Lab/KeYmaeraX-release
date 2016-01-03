@@ -366,11 +366,10 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
     def nodeIdJson(n: Int):JsValue = JsString(n.toString)
     def proofIdJson(n: String):JsValue = JsString(n)
 
-    /** @TODO Actually say what the rules are */
     def ruleJson(rule: String):JsValue = {
       JsObject(
-        "id" -> JsString("RulesUnimplemented"),
-        "name" -> JsString("RulesUnimplemented")
+        "id" -> JsString(rule),
+        "name" -> JsString(rule)
       )
     }
 

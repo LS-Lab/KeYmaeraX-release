@@ -16,7 +16,8 @@ object TacticDebugger {
                           initialSibling: Option[Int],
                           globalProvable:Provable,
                           alternativeOrder: Int, branch:Int,
-                          recursive: Boolean) extends IOListener {
+                          recursive: Boolean,
+                          ruleName: String) extends IOListener {
     class TraceNode (isFirstNode: Boolean){
       var id: Option[Int] = None
       var parent: TraceNode = null
@@ -70,7 +71,7 @@ object TacticDebugger {
         val parentStep = if (parent == null) None else parent.stepId
         new ExecutionStepPOJO (stepId, executionId, sibling, parentStep, branchOrder,
           Option(branchLabel), alternativeOrder,status, getExecutableId, getInputProvableId, getOutputProvableId,
-          getLocalProvableId, userExe)
+          getLocalProvableId, userExe, ruleName)
       }
     }
 

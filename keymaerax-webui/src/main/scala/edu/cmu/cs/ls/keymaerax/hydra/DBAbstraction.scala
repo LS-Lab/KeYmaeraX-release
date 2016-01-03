@@ -111,13 +111,14 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
                              inputProvableId: Int,
                              resultProvableId: Option[Int],
                              localProvableId: Option[Int],
-                             userExecuted: Boolean)
+                             userExecuted: Boolean,
+                             ruleName: String)
 {
   require(branchOrder.isEmpty != branchLabel.isEmpty) //also schema constraint
 }
 
 /* User-friendly representation for execution traces */
-case class ExecutionStep(stepId: Int, input:Provable, output:Option[Provable], branch:Int, alternativeOrder:Int)
+case class ExecutionStep(stepId: Int, input:Provable, output:Option[Provable], branch:Int, alternativeOrder:Int, rule:String)
 case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequent, steps:List[ExecutionStep]) {
   def branch = steps.lastOption.map{case step => step.branch}
 

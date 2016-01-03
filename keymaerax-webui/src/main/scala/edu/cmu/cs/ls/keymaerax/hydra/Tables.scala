@@ -117,16 +117,17 @@ trait Tables {
    *  @param resultprovableid Database column resultProvableId DBType(INTEGER)
    *  @param localprovableid Database column localProvableId DBType(INTEGER)
    *  @param userexecuted Database column userExecuted DBType(BOOLEAN)
-   *  @param childrenrecorded Database column childrenRecorded DBType(BOOLEAN) */
-  case class ExecutionstepsRow(_Id: Option[Int], executionid: Option[Int], previousstep: Option[Int], parentstep: Option[Int], branchorder: Option[Int], branchlabel: Option[String], alternativeorder: Option[Int], status: Option[String], executableid: Option[Int], inputprovableid: Option[Int], resultprovableid: Option[Int], localprovableid: Option[Int], userexecuted: Option[String], childrenrecorded: Option[String])
+   *  @param childrenrecorded Database column childrenRecorded DBType(BOOLEAN)
+   *  @param rulename Database column ruleName DBType(STRING) */
+  case class ExecutionstepsRow(_Id: Option[Int], executionid: Option[Int], previousstep: Option[Int], parentstep: Option[Int], branchorder: Option[Int], branchlabel: Option[String], alternativeorder: Option[Int], status: Option[String], executableid: Option[Int], inputprovableid: Option[Int], resultprovableid: Option[Int], localprovableid: Option[Int], userexecuted: Option[String], childrenrecorded: Option[String], rulename: Option[String])
   /** GetResult implicit for fetching ExecutionstepsRow objects using plain SQL queries */
   implicit def GetResultExecutionstepsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ExecutionstepsRow] = GR{
     prs => import prs._
-    ExecutionstepsRow.tupled((<<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[Int], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[String]))
+    ExecutionstepsRow.tupled((<<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[Int], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String]))
   }
   /** Table description of table executionSteps. Objects of this class serve as prototypes for rows in queries. */
   class Executionsteps(_tableTag: Tag) extends Table[ExecutionstepsRow](_tableTag, "executionSteps") {
-    def * = (_Id, executionid, previousstep, parentstep, branchorder, branchlabel, alternativeorder, status, executableid, inputprovableid, resultprovableid, localprovableid, userexecuted, childrenrecorded) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
+    def * = (_Id, executionid, previousstep, parentstep, branchorder, branchlabel, alternativeorder, status, executableid, inputprovableid, resultprovableid, localprovableid, userexecuted, childrenrecorded, rulename) <> (ExecutionstepsRow.tupled, ExecutionstepsRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
     val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -156,6 +157,8 @@ trait Tables {
     val userexecuted: Column[Option[String]] = column[Option[String]]("userExecuted")
     /** Database column childrenRecorded DBType(BOOLEAN) */
     val childrenrecorded: Column[Option[String]] = column[Option[String]]("childrenRecorded")
+    /** Database column ruleName DBType(STRING) */
+    val rulename: Column[Option[String]] = column[Option[String]]("ruleName")
     
     /** Foreign key referencing Executables (database name executables_FK_1) */
     lazy val executablesFk = foreignKey("executables_FK_1", executableid, Executables)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
