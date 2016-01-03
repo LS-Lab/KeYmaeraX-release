@@ -134,7 +134,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("[:=] assign equational", "[:=]==", "assignbequational", {case () => HilbertCalculus.assignb}),
     new DerivedAxiomInfo("<:=> assign equational", "<:=>==", "assigndequational", {case () => HilbertCalculus.assignd}),
     /* @todo replace all the axioms with useAt(axiom) */
-    new DerivedAxiomInfo("<':=> differential assign", "<':=>", "assignDiff", {case () => useAt(DerivedAxioms.assignDAxiom)}),
+    new DerivedAxiomInfo("<':=> differential assign", "<':=>", "Dassignd", {case () => useAt(DerivedAxioms.assignDAxiom)}),
     new DerivedAxiomInfo("DS differential equation solution", "DS", "DSnodomain", {case () => useAt(DerivedAxioms.DSnodomain)}),
     new DerivedAxiomInfo("Dsol& differential equation solution", "DS&", "DSddomain", {case () => useAt(DerivedAxioms.DSddomain)}),
     new DerivedAxiomInfo("Dsol differential equation solution", "DS", "DSdnodomain", {case () => useAt(DerivedAxioms.DSdnodomain)}),
@@ -154,15 +154,15 @@ object DerivationInfo {
     new DerivedAxiomInfo("!exists", "!exists", "notExists", {case () => useAt(DerivedAxioms.notExists)}),
     new DerivedAxiomInfo("![]", "![]", "notBox", {case () => useAt(DerivedAxioms.notBox)}),
     new DerivedAxiomInfo("!<>", "!<>", "notDiamond", {case () => useAt(DerivedAxioms.notDiamond)}),
-    new DerivedAxiomInfo("[] split", "[]&", "boxSplit", {case () => HilbertCalculus.useAt(DerivedAxioms.boxSplit)}),
-    new DerivedAxiomInfo("<> split", "<>|", "diamondSplit", {case () => useAt(DerivedAxioms.diamondSplit)}),
-    new DerivedAxiomInfo("<> split left", "<>|<-", "diamondSplitLeft", {case () => useAt(DerivedAxioms.diamondSplitLeft)}),
-    new DerivedAxiomInfo("[] split left", "[]&<-", "boxSplitLeft", {case () => useAt(DerivedAxioms.boxSplitLeft)}),
-    new DerivedAxiomInfo("[] split right", "[]&->", "boxSplitRight", {case () => useAt(DerivedAxioms.boxSplitRight)}),
+    new DerivedAxiomInfo("[] split", "[]&", "boxAnd", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAnd)}),
+    new DerivedAxiomInfo("<> split", "<>|", "diamondOr", {case () => useAt(DerivedAxioms.diamondOr)}),
+//    new DerivedAxiomInfo("<> split left", "<>|<-", "diamondSplitLeft", {case () => useAt(DerivedAxioms.diamondSplitLeft)}),
+//    new DerivedAxiomInfo("[] split left", "[]&<-", "boxSplitLeft", {case () => useAt(DerivedAxioms.boxSplitLeft)}),
+//    new DerivedAxiomInfo("[] split right", "[]&->", "boxSplitRight", {case () => useAt(DerivedAxioms.boxSplitRight)}),
     new DerivedAxiomInfo("<*> approx", "<*> approx", "loopApproxd", {case () => useAt(DerivedAxioms.loopApproxd)}),
     new DerivedAxiomInfo("<*> stuck", "<*> stuck", "loopStuck", {case () => useAt(DerivedAxioms.loopStuck)}),
     new DerivedAxiomInfo("<'> stuck", "<'> stuck", "odeStuck", {case () => useAt(DerivedAxioms.odeStuck)}),
-    new DerivedAxiomInfo("[] post weaken", "[]PW", "postconditionWeaken", {case () => useAt(DerivedAxioms.postconditionWeaken)}),
+    new DerivedAxiomInfo("[] post weaken", "[]PW", "postWeaken", {case () => useAt(DerivedAxioms.postconditionWeaken)}),
     new DerivedAxiomInfo("+<= up", "+<=", "intervalUpPlus", {case () => useAt(DerivedAxioms.intervalUpPlus)}),
     new DerivedAxiomInfo("-<= up", "-<=", "intervalUpMinus", {case () => useAt(DerivedAxioms.intervalUpMinus)}),
     new DerivedAxiomInfo("<=+ down", "<=+", "intervalDownPlus", {case () => useAt(DerivedAxioms.intervalDownPlus)}),
@@ -170,24 +170,25 @@ object DerivationInfo {
     new DerivedAxiomInfo("<-> reflexive", "<->R", "equivReflexive", {case () => useAt(DerivedAxioms.equivReflexiveAxiom)}),
     new DerivedAxiomInfo("-> distributes over &", "->&", "implyDistAnd", {case () => useAt(DerivedAxioms.implyDistAndAxiom)}),
     new DerivedAxiomInfo("-> distributes over <->", "-><->", "implyDistEquiv", {case () => useAt(DerivedAxioms.implyDistEquivAxiom)}),
-    new DerivedAxiomInfo("-> weaken", "->W", "implWeaken", {case () => useAt(DerivedAxioms.implWeaken)}),
+    new DerivedAxiomInfo("-> weaken", "->W", "implyWeaken", {case () => useAt(DerivedAxioms.implWeaken)}),
     new DerivedAxiomInfo("!! double negation", "!!", "doubleNegation", {case () => useAt(DerivedAxioms.doubleNegationAxiom)}),
     new DerivedAxiomInfo(":= assign dual", ":=D", "assignDual", {case () => useAt(DerivedAxioms.assignDualAxiom)}),
     new DerivedAxiomInfo("[:=] vacuous assign", "V[:=]", "vacuousAssignb", {case () => useAt(DerivedAxioms.vacuousAssignbAxiom)}),
     new DerivedAxiomInfo("<:=> vacuous assign", "V<:=>", "vacuousAssignd", {case () => useAt(DerivedAxioms.vacuousAssigndAxiom)}),
     new DerivedAxiomInfo("[*] approx", "[*] approx", "loopApproxb", {case () => useAt(DerivedAxioms.loopApproxb)}),
+  //@todo might have a better name
     new DerivedAxiomInfo("exists generalize", "existsG", "existsGeneralize", {case () => useAt(DerivedAxioms.existsGeneralize)}),
     new DerivedAxiomInfo("all substitute", "allS", "allSubstitute", {case () => useAt(DerivedAxioms.allSubstitute)}),
     new DerivedAxiomInfo("V[:*] vacuous assign nondet", "V[:*]", "vacuousBoxAssignNondet", {case () => useAt(DerivedAxioms.vacuousBoxAssignNondetAxiom)}),
     new DerivedAxiomInfo("V<:*> vacuous assign nondet", "V<:*>", "vacuousDiamondAssignNondet", {case () => useAt(DerivedAxioms.vacuousDiamondAssignNondetAxiom)}),
-    new DerivedAxiomInfo("Domain Constraint Conjunction Reordering", "DCCR", "domainCommute", {case () => useAt(DerivedAxioms.domainCommute)}), //@todo shortname
+    new DerivedAxiomInfo("Domain Constraint Conjunction Reordering", "{&}C", "domainCommute", {case () => useAt(DerivedAxioms.domainCommute)}), //@todo shortname
     new DerivedAxiomInfo("& commute", "&C", "andCommute", {case () => useAt(DerivedAxioms.andCommute)}),
     new DerivedAxiomInfo("& associative", "&A", "andAssoc", {case () => useAt(DerivedAxioms.andAssoc)}),
     new DerivedAxiomInfo("-> expand", "->E", "implyExpand", {case () => useAt(DerivedAxioms.implyExpand)}),
     new DerivedAxiomInfo("-> tautology", "->taut", "implyTautology", {case () => useAt(DerivedAxioms.implyTautology)}),
     new DerivedAxiomInfo("\\forall->\\exists", "all->exists", "forallThenExists", {case () => useAt(DerivedAxioms.forallThenExistsAxiom)}),
-    new DerivedAxiomInfo("->true", "->T", "impliesTrue", {case () => useAt(DerivedAxioms.impliesTrue)}),
-    new DerivedAxiomInfo("true->", "T->", "trueImplies", {case () => useAt(DerivedAxioms.trueImplies)}),
+    new DerivedAxiomInfo("->true", "->T", "implyTrue", {case () => useAt(DerivedAxioms.impliesTrue)}),
+    new DerivedAxiomInfo("true->", "T->", "trueImply", {case () => useAt(DerivedAxioms.trueImplies)}),
     new DerivedAxiomInfo("&true", "&T", "andTrue", {case () => useAt(DerivedAxioms.andTrue)}),
     new DerivedAxiomInfo("true&", "T&", "trueAnd", {case () => useAt(DerivedAxioms.trueAnd)}),
     new DerivedAxiomInfo("0*", "0*", "zeroTimes", {case () => useAt(DerivedAxioms.zeroTimes)}),
@@ -294,7 +295,7 @@ object DerivationInfo {
 
     new PositionTacticInfo("commuteEquivL", "<->CL", {case () => ProofRuleTactics.commuteEquivL}),
     new PositionTacticInfo("commuteEquivR", "<->CR", {case () => ProofRuleTactics.commuteEquivR}),
-    new PositionTacticInfo("equivifyR", "<->R", {case () => ProofRuleTactics.equivifyR}),
+    new PositionTacticInfo("equivifyR", "-><->", {case () => ProofRuleTactics.equivifyR}),
     new PositionTacticInfo("hideL", "hide", {case () => ProofRuleTactics.hideL}),  //@todo W for weakening? If people know that
     new PositionTacticInfo("hideR", "hide", {case () => ProofRuleTactics.hideR}),
     new PositionTacticInfo("coHideL", "hide", {case () => ProofRuleTactics.coHideL}),
@@ -372,7 +373,7 @@ object DerivationInfo {
 
     // DLBySubst
     new InputPositionTacticInfo("I", "I", List(FormulaArg("invariant")), {case () => (fml:Formula) => DLBySubst.I(fml)})
-  ) ensuring(consistentInfo _, "meta-information on AxiomInfo is consistent with source")
+  ) ensuring(consistentInfo _, "meta-information on AxiomInfo is consistent with actual (derived) axioms etc.")
 
   private def consistentInfo(list: List[DerivationInfo]): Boolean = {
     //@note to avoid file storage issues on some OSes, lowercase versions of names are expected to be unique.

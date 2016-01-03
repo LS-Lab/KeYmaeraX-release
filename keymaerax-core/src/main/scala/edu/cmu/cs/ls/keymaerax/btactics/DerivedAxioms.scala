@@ -295,14 +295,14 @@ object DerivedAxioms {
     case "!all" => Some(notAllF, notAllT)
     case "![]" => Some(notBoxF, notBoxT)
     case "!<>" => Some(notDiamondF, notDiamondT)
-    case "[] box" => Some(boxDualF, boxDualT)
+    case "[] box" => Some(boxF, boxT)
     //case "K1" => Some(K1F, K1T)
     //case "K2" => Some(K2F, K2T)
-    case "[] split" => Some(boxSplitF, boxSplitT)
-    case "[] split left" => Some(boxSplitLeftF, boxSplitLeftT)
-    case "[] split right" => Some(boxSplitRightF, boxSplitRightT)
-    case "<> split" => Some(diamondSplitF, diamondSplitT)
-    case "<> split left" => Some(diamondSplitLeftF, diamondSplitLeftT)
+    case "[] split" => Some(boxAndF, boxAndT)
+    //case "[] split left" => Some(boxSplitLeftF, boxSplitLeftT)
+    //case "[] split right" => Some(boxSplitRightF, boxSplitRightT)
+    case "<> split" => Some(diamondOrF, diamondOrT)
+    //case "<> split left" => Some(diamondSplitLeftF, diamondSplitLeftT)
     case "<:=> assign" => Some(assigndF, assigndT)
     case ":= assign dual" => Some(assignDualF, assignDualT)
     case "[:=] assign equational" => Some(assignbEquationalF, assignbEquationalT)
@@ -734,7 +734,7 @@ object DerivedAxioms {
   lazy val notDiamond = derivedAxiom("!<>",
     Sequent(Nil, IndexedSeq(), IndexedSeq(notDiamondF)),
     useAt(doubleNegationAxiom, PosInExpr(1::Nil))(1, 0::0::1::Nil) &
-      useAt(boxDualAxiom)(1, 0::Nil) &
+      useAt(boxAxiom)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -785,16 +785,16 @@ object DerivedAxioms {
    * @note almost same proof as "exists dual"
    * @Derived
    */
-  lazy val boxDualF = "(!<a;>(!p(??))) <-> [a;]p(??)".asFormula
-  lazy val boxDualAxiom = derivedAxiom("[] box",
-    Sequent(Nil, IndexedSeq(), IndexedSeq(boxDualF)),
+  lazy val boxF = "(!<a;>(!p(??))) <-> [a;]p(??)".asFormula
+  lazy val boxAxiom = derivedAxiom("[] box",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(boxF)),
     useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::0::Nil)) &
       useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
       useAt(doubleNegationAxiom)(SuccPosition(0, 0::1::Nil)) &
       byUS(equivReflexiveAxiom)
   )
 
-  lazy val boxDualT = derivedAxiomT(boxDualAxiom)
+  lazy val boxT = derivedAxiomT(boxAxiom)
 
   /**
    * {{{Axiom "[]~><> propagation".
@@ -833,8 +833,8 @@ object DerivedAxioms {
   private lazy val K1 = TactixLibrary.proveBy(//derivedAxiom("K1",
     Sequent(Nil, IndexedSeq(), IndexedSeq(K1F)),
     implyR(1) & andR(1) <(
-      useAt(boxSplitLeft)(-1) & close,
-      useAt(boxSplitRight)(-1) & close
+      useAt(boxSplitLeft, PosInExpr(0::Nil))(-1) & close,
+      useAt(boxSplitRight, PosInExpr(0::Nil))(-1) & close
       )
   )
   //private lazy val K1T = derivedAxiomT(K1)
@@ -879,15 +879,15 @@ object DerivedAxioms {
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K3 p. 28
    */
-  lazy val boxSplitF = "[a;](p(??)&q(??)) <-> [a;]p(??)&[a;]q(??)".asFormula
-  lazy val boxSplit = derivedAxiom("[] split",
-    Sequent(Nil, IndexedSeq(), IndexedSeq(boxSplitF)),
+  lazy val boxAndF = "[a;](p(??)&q(??)) <-> [a;]p(??)&[a;]q(??)".asFormula
+  lazy val boxAnd = derivedAxiom("[] split",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(boxAndF)),
     equivR(1) <(
       useAt(K1, PosInExpr(1::Nil))(1) & close,
       useAt(K2, PosInExpr(1::Nil))(1) & close
     )
   )
-  lazy val boxSplitT = derivedAxiomT(boxSplit)
+  lazy val boxAndT = derivedAxiomT(boxAnd)
 
   /**
    * {{{Axiom "boxSplitLeft".
@@ -896,9 +896,10 @@ object DerivedAxioms {
    * }}}
    * @Derived
    * @Note implements (1)-(5) of Cresswell, Hughes. A New Introduction to Modal Logic, K1
+    *      @internal
    */
-  lazy val boxSplitLeftF = "[a;](p(??)&q(??)) -> [a;]p(??)".asFormula
-  lazy val boxSplitLeft = derivedAxiom("[] split left",
+  private lazy val boxSplitLeftF = "[a;](p(??)&q(??)) -> [a;]p(??)".asFormula
+  private lazy val boxSplitLeft = TactixLibrary.proveBy(//derivedAxiom("[] split left",
     Sequent(Nil, IndexedSeq(), IndexedSeq(boxSplitLeftF)),
     cut(/*(2)*/"[a;](p(??)&q(??) -> p(??))".asFormula) <(
       /* use */ cut(/*(4)*/"[a;](p(??)&q(??)->p(??)) -> ([a;](p(??)&q(??)) -> [a;]p(??))".asFormula) <(
@@ -914,7 +915,7 @@ object DerivedAxioms {
     )
   )
 
-  lazy val boxSplitLeftT = derivedAxiomT(boxSplitLeft)
+  //private lazy val boxSplitLeftT = derivedAxiomT(boxSplitLeft)
 
   /**
    * {{{Axiom "<> split".
@@ -923,18 +924,18 @@ object DerivedAxioms {
    * }}}
    * @Derived
    */
-  lazy val diamondSplitF = "<a;>(p(??)|q(??)) <-> <a;>p(??)|<a;>q(??)".asFormula
-  lazy val diamondSplit = derivedAxiom("<> split",
-    Sequent(Nil, IndexedSeq(), IndexedSeq(diamondSplitF)),
+  lazy val diamondOrF = "<a;>(p(??)|q(??)) <-> <a;>p(??)|<a;>q(??)".asFormula
+  lazy val diamondOr = derivedAxiom("<> split",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(diamondOrF)),
     useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::Nil))) &
       useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::0::Nil))) &
       useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::1::Nil))) &
       useAt(notOr)(SuccPosition(0, PosInExpr(0::0::1::Nil))) &
-      useAt(boxSplit)(SuccPosition(0, PosInExpr(0::0::Nil))) &
+      useAt(boxAnd)(SuccPosition(0, PosInExpr(0::0::Nil))) &
       useAt(notAnd)(SuccPosition(0, PosInExpr(0::Nil))) &
       byUS(equivReflexiveAxiom)
   )
-  lazy val diamondSplitT = derivedAxiomT(diamondSplit)
+  lazy val diamondOrT = derivedAxiomT(diamondOr)
 
   /**
    * {{{Axiom "<> split left".
@@ -942,13 +943,14 @@ object DerivedAxioms {
    * End.
    * }}}
    * @Derived
+    *         @internal
    */
-  lazy val diamondSplitLeftF = "<a;>(p(??)&q(??)) -> <a;>p(??)".asFormula
-  lazy val diamondSplitLeft = derivedAxiom("<> split left",
+  private lazy val diamondSplitLeftF = "<a;>(p(??)&q(??)) -> <a;>p(??)".asFormula
+  private lazy val diamondSplitLeft = TactixLibrary.proveBy(//derivedAxiom("<> split left",
     Sequent(Nil, IndexedSeq(), IndexedSeq(diamondSplitLeftF)),
     useAt(PC1)(1, 0::1::Nil) & useAt(implySelf)(1) & close
   )
-  lazy val diamondSplitLeftT = derivedAxiomT(diamondSplitLeft)
+  //private lazy val diamondSplitLeftT = derivedAxiomT(diamondSplitLeft)
 
   /**
    * {{{Axiom "boxSplitRight".
@@ -957,9 +959,10 @@ object DerivedAxioms {
    * }}}
    * @Derived
    * @Note implements (6)-(9) of Cresswell, Hughes. A New Introduction to Modal Logic, K1
+    *      @internal
    */
-  lazy val boxSplitRightF = "[a;](p(??)&q(??)) -> [a;]q(??)".asFormula
-  lazy val boxSplitRight = derivedAxiom("[] split right",
+  private lazy val boxSplitRightF = "[a;](p(??)&q(??)) -> [a;]q(??)".asFormula
+  private lazy val boxSplitRight = TactixLibrary.proveBy(//derivedAxiom("[] split right",
     Sequent(Nil, IndexedSeq(), IndexedSeq(boxSplitRightF)),
     cut(/*7*/"[a;](p(??)&q(??) -> q(??))".asFormula) <(
       /* use */ cut(/*(8)*/"[a;](p(??)&q(??)->q(??)) -> ([a;](p(??)&q(??)) -> [a;]q(??))".asFormula) <(
@@ -972,7 +975,7 @@ object DerivedAxioms {
       /* show */ cohide(2) & useAt(PC2)(1, 1::0::Nil) & useAt(implySelf)(1, 1::Nil) & V(1) & close
     )
   )
-  lazy val boxSplitRightT = derivedAxiomT(boxSplitRight)
+  //private lazy val boxSplitRightT = derivedAxiomT(boxSplitRight)
 
   /**
    * {{{Axiom "[:=] assign equality exists".
