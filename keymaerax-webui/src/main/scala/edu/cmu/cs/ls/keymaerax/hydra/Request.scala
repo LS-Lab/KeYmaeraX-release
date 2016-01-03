@@ -583,9 +583,8 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
     import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val subFormula = sequent.sub(pos).get
-    val axioms = AxiomIndex.axiomsFor(subFormula).map{case axiom => AxiomInfo(axiom)}
-    val tactics = AxiomIndex.tacticsFor(pos, subFormula).map{case tactic => TacticInfo(tactic)}
-    new ApplicableAxiomsResponse(axioms ++ tactics) :: Nil
+    val axioms = AxiomIndex.axiomsFor(subFormula).map{case axiom => DerivationInfo(axiom)}
+    new ApplicableAxiomsResponse(axioms) :: Nil
   }
 }
 /**
@@ -694,19 +693,16 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     else belleTerm + "(" + paramStrings.mkString(",") + ")"
   }
 
-  /* Admittedly hacky, but whatever gets the job done... */
+  /* Try to figure out the most intuitive inference rule to display for this tactic. If the user asks us "StepAt" then
+   * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask AxiomInfo */
   private def getRuleName(tacticId: String, sequent:Sequent, locator:Option[PositionLocator]): String = {
     val pos = locator match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     tacticId.toLowerCase() match {
       case ("step" | "stepat") =>
         val fml = sequent(pos.get)
-        AxiomIndex.axiomFor(fml) match {
-          case Some(axiom) => AxiomInfo(axiom).display.name
-          case None =>
-            AxiomIndex.propositionalRuleFor(pos.get, fml) match {
-              case Some(tactic) => TacticInfo(tactic).display.name
-              case _ => tacticId
-            }
+        AxiomIndex.axiomFor(fml, pos) match {
+          case Some(axiom) => DerivationInfo(axiom).display.name
+          case None => tacticId
         }
       case _ => try {
         TacticInfo(tacticId).display.name

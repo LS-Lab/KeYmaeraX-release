@@ -198,13 +198,10 @@ object HilbertCalculus extends UnifyUSCalculus {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val sub = sequent.sub(pos)
         if (sub.isEmpty) throw new BelleUserGeneratedError("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
-        AxiomIndex.axiomsFor(sub.get, exhaustive = false) match {
-          case axiom :: _ => AxiomInfo(axiom).belleExpr.asInstanceOf[AtPosition[_]](pos).asInstanceOf[BelleExpr]
-          case Nil =>
-            AxiomIndex.propositionalRuleFor(pos, sub.get) match {
-              case Some(rule) => TacticInfo(rule).belleExpr.asInstanceOf[AtPosition[_]](pos).asInstanceOf[BelleExpr]
-              case None => throw new BelleUserGeneratedError("No axioms or rules applicable in stepAt")
-            }
+        AxiomIndex.axiomFor(sub.get, Some(pos)) match {
+          case Some(axiom) =>
+            DerivationInfo(axiom).belleExpr.asInstanceOf[AtPosition[_]](pos).asInstanceOf[BelleExpr]
+          case None => throw new BelleUserGeneratedError("No axioms or rules applicable in stepAt")
         }
       }
     }

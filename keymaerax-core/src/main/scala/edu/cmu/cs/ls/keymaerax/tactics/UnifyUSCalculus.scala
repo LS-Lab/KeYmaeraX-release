@@ -1371,7 +1371,7 @@ trait UnifyUSCalculus {
       // no equational assignments
       case Box(Assign(_,_),_)    => "[:=] assign" :: "[:=] assign update" :: Nil
       case Diamond(Assign(_,_),_) => "<:=> assign" :: "<:=> assign update" :: Nil
-      case _ => AxiomIndex.axiomsFor(e, exhaustive = true)
+      case _ => AxiomIndex.axiomsFor(e)
     }
   )
 
