@@ -125,7 +125,7 @@ package edu.cmu.cs.ls.keymaerax
  * `   __<v:=2*v+1;>v!=0__ <-> 2*v+1!=0 `
  *
  * it is enough to point to the highlighted position
- * using the "<> dual" axiom fact
+ * using the "<> diamond" axiom fact
  * `  ![a;]!p(??) <-> __<a;>p(??)__ `
  * at the highlighted position to reduce the proof to a proof of
  *
@@ -155,9 +155,9 @@ package edu.cmu.cs.ls.keymaerax
  * // Proof by pointing of  |- &lt;v:=2*v+1;&gt;v!=0 <-> 2*v+1!=0
  * val proof = TactixLibrary.proveBy(
  *   Sequent(Nil, IndexedSeq(), IndexedSeq("&lt;v:=2*v+1;&gt;q(v) <-> q(2*v+1)".asFormula)),
- *   // use "<> dual" axiom backwards at the indicated position on
+ *   // use "<> diamond" axiom backwards at the indicated position on
  *   // |- __&lt;v:=2*v+1;&gt;q(v)__ <-> q(2*v+1)
- *   useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+ *   useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
  *   // use "[:=] assign" axiom forward at the indicated position on
  *   // |- !__[v:=2*v+1;]!q(v)__ <-> q(2*v+1)
  *   useAt("[:=] assign")(SuccPosition(0, 0::0::Nil)) &
@@ -175,18 +175,18 @@ package edu.cmu.cs.ls.keymaerax
  * // Proof by pointing of  |- &lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))
  * val proof = TactixLibrary.proveBy(
  *   Sequent(Nil, IndexedSeq(), IndexedSeq("&lt;a;++b;&gt;p(x) <-> (&lt;a;&gt;p(x) | &lt;b;&gt;p(x))".asFormula)),
- *   // use "<> dual" axiom backwards at the indicated position on
+ *   // use "<> diamond" axiom backwards at the indicated position on
  *   // |- __&lt;a;++b;&gt;p(x)__  <->  &lt;a;&gt;p(x) | &lt;b;&gt;p(x)
- *   useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+ *   useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
  *   // use "[++] choice" axiom forward at the indicated position on
  *   // |- !__[a;++b;]!p(x)__  <->  &lt;a;&gt;p(x) | &lt;b;&gt;p(x)
  *   useAt("[++] choice")(SuccPosition(0, 0::0::Nil)) &
- *   // use "<> dual" axiom forward at the indicated position on
+ *   // use "<> diamond" axiom forward at the indicated position on
  *   // |- !([a;]!p(x) & [b;]!p(x))  <->  __&lt;a;&gt;p(x)__ | &lt;b;&gt;p(x)
- *   useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::0::Nil)) &
- *   // use "<> dual" axiom forward at the indicated position on
+ *   useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 1::0::Nil)) &
+ *   // use "<> diamond" axiom forward at the indicated position on
  *   // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | __&lt;b;&gt;p(x)__
- *   useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
+ *   useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
  *   // use propositional logic to show
  *   // |- !([a;]!p(x) & [b;]!p(x))  <->  ![a;]!p(x) | ![b;]!p(x)
  *   prop
@@ -199,9 +199,9 @@ package edu.cmu.cs.ls.keymaerax
  *  // Proof by pointing with steps of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
  *  val proof = TactixLibrary.proveBy(
  *    Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
- *    // use "<> dual" axiom backwards at the indicated position on
+ *    // use "<> diamond" axiom backwards at the indicated position on
  *    // |- __<a;++b;>p(x)__  <->  <a;>p(x) | <b;>p(x)
- *    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+ *    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
  *    // |- !__[a;++b;]!p(x)__  <->  <a;>p(x) | <b;>p(x)
  *    // step "[++] choice" axiom forward at the indicated position
  *    stepAt(SuccPosition(0, 0::0::Nil)) &
@@ -209,10 +209,10 @@ package edu.cmu.cs.ls.keymaerax
  *    // step deMorgan forward at the indicated position
  *    stepAt(SuccPosition(0, 0::Nil)) &
  *    // |- __![a;]!p(x)__ | ![b;]!p(x)  <-> <a;>p(x) | <b;>p(x)
- *    // step "<> dual" forward at the indicated position
+ *    // step "<> diamond" forward at the indicated position
  *    stepAt(SuccPosition(0, 0::0::Nil)) &
  *    // |- <a;>p(x) | __![b;]!p(x)__  <-> <a;>p(x) | <b;>p(x)
- *    // step "<> dual" forward at the indicated position
+ *    // step "<> diamond" forward at the indicated position
  *    stepAt(SuccPosition(0, 0::1::Nil)) &
  *    // |- <a;>p(x) | <b;>p(x)  <-> <a;>p(x) | <b;>p(x)
  *    byUS("<-> reflexive")

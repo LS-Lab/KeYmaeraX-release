@@ -46,9 +46,8 @@ object DerivationInfo {
   /** Central registry for axiom, derived axiom, proof rule, and tactic meta-information */
   private val allInfo: List[DerivationInfo] = List(
     // [a] modalities and <a> modalities
-    //@todo diamond or determinancy
-    new CoreAxiomInfo("<> dual", "<.>", "diamond", {case () => ???}),
-    new DerivedAxiomInfo("[] dual", "[.]", "box", {case () => ???}),
+    new CoreAxiomInfo("<> diamond", "<.>", "diamond", {case () => ???}),
+    new DerivedAxiomInfo("[] box", "[.]", "box", {case () => ???}),
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => HilbertCalculus.assignb}),
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => ???}),

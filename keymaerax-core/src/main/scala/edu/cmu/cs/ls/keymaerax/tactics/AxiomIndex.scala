@@ -36,7 +36,7 @@ object AxiomIndex {
          | "all dual" | "exists dual" => directReduction
     case "const congruence" | "const formula congruence" => reverseReduction
     // [a] modalities and <a> modalities
-    case "<> dual" | "[] dual" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
+    case "<> diamond" | "[] box" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
     case "[:=] assign" | "<:=> assign" | "[':=] differential assign" | "<':=> differential assign" => directReduction
     case "[:=] assign equational" | "<:=> assign equational" => (PosInExpr(0::Nil), PosInExpr(Nil)::PosInExpr(0::1::Nil)::Nil)
     case "[:=] assign update" | "<:=> assign update" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
@@ -182,7 +182,7 @@ object AxiomIndex {
         case _: Test => Some("[?] test")
         case _: Compose => Some("[;] compose")
         case _: Choice => Some("[++] choice")
-        case _: Dual => Some("[] dual")
+        case _: Dual => Some("[] box")
         case _ => None
       }
       case Diamond(a, _) => a match {
@@ -195,9 +195,9 @@ object AxiomIndex {
         case _ => None
       }
       case Not(f) => f match {
-        case Box(_, Not(_)) => Some("<> dual")
+        case Box(_, Not(_)) => Some("<> diamond")
         case _: Box => Some("![]")
-        case Diamond(_, Not(_)) => Some("[] dual")
+        case Diamond(_, Not(_)) => Some("[] box")
         case _: Diamond => Some("!<>")
         case _: Forall => Some("!all")
         case _: Exists => Some("!exists")
