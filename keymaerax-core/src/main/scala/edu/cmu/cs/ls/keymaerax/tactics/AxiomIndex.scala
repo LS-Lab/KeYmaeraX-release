@@ -174,7 +174,8 @@ object AxiomIndex {
         case _ => None
       }
       case Box(a, _) => a match {
-        // @todo turn this into assignb
+        // Note: Using this axiom name to look up a tactic via AxiomInfo actually gives you assignb,
+        // which handles several assignment axioms.
         case _: Assign => Some("[:=] assign")
         case _: AssignAny => Some("[:*] assign nondet")
         case _: Test => Some("[?] test")
