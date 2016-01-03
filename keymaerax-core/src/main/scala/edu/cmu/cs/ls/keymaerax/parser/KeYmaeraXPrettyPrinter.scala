@@ -10,7 +10,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.parser.OpSpec._
+import edu.cmu.cs.ls.keymaerax.parser.OpSpec.op
 import edu.cmu.cs.ls.keymaerax.tactics.{HereP, PosInExpr}
 
 import scala.collection.immutable._

@@ -53,19 +53,20 @@ object AtomicBinaryFormat extends BinaryNotation
  *       Alternatively, spacing weight can be inferred from the prec numerics and how far they are apart.
  */
 trait OpSpec extends Ordered[OpSpec] {
-  /** opcode operator code used for string representation */
+  /** opcode operator code used for string representation of this operator. */
   final def opcode: String = op.img
-  /** Token */
+  /** Token for the operator in lexing and parsing */
   def op: Terminal
-  /** prec unique precedence where smaller numbers indicate stronger binding */
+  /** prec unique precedence where smaller numbers indicate stronger binding. */
   def prec: Int
-  /** notational associativity */
+  /** notational associativity specification. */
   def assoc: OpNotation
 
+  /** Compare this operator specification to another one such that ``this<other`` says that ``this`` binds stronger than ``other``. */
   def compare(other: OpSpec): Int = {
     prec - other.prec
   } /*ensuring(r => r!=0 || this==other, "precedence assumed unique " + this + " compared to " + other)*/
-  //@note violates this: two different things can have same precedence.
+  //@note violates this ensuring clause since two different operators can have same precedence.
 }
 
 /** Nullary operator notation specification with a constructor. */
@@ -226,7 +227,7 @@ object OpSpec {
   val sNone         = sNoneUnfinished
 
 
-  /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
+  /** The operator notation of the top-level operator of ``expr`` with opcode, precedence and associativity  */
   def op(expr: Expression): OpSpec = expr match {
       //@note could replace by reflection getField("s" + expr.getClass.getSimpleName)
       //@todo could add a contract ensuring that constructor applied to expressions's children indeed produces expr.
