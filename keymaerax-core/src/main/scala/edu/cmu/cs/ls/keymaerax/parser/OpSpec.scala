@@ -53,19 +53,20 @@ object AtomicBinaryFormat extends BinaryNotation
  *       Alternatively, spacing weight can be inferred from the prec numerics and how far they are apart.
  */
 trait OpSpec extends Ordered[OpSpec] {
-  /** opcode operator code used for string representation */
+  /** opcode operator code used for string representation of this operator. */
   final def opcode: String = op.img
-  /** Token */
+  /** Token for the operator in lexing and parsing */
   def op: Terminal
-  /** prec unique precedence where smaller numbers indicate stronger binding */
+  /** prec unique precedence where smaller numbers indicate stronger binding. */
   def prec: Int
-  /** notational associativity */
+  /** notational associativity specification. */
   def assoc: OpNotation
 
+  /** Compare this operator specification to another one such that ``this<other`` says that ``this`` binds stronger than ``other``. */
   def compare(other: OpSpec): Int = {
     prec - other.prec
   } /*ensuring(r => r!=0 || this==other, "precedence assumed unique " + this + " compared to " + other)*/
-  //@note violates this: two different things can have same precedence.
+  //@note violates this ensuring clause since two different operators can have same precedence.
 }
 
 /** Nullary operator notation specification with a constructor. */
@@ -150,18 +151,18 @@ object OpSpec {
   val sDotTerm      = UnitOpSpec (DOT,      0, DotTerm)
   val sNothing      = UnitOpSpec (NOTHING,  0, Nothing)
   val sAnything     = UnitOpSpec (ANYTHING, 0, Anything)
-  val sVariable     = UnitOpSpec (none,    0, name => Variable(name, None, Real))
-  val sNumber       = UnitOpSpec (none,    0, number => Number(BigDecimal(number)))
-  val sFuncOf       = UnaryOpSpec[Term](none,    0, PrefixFormat, unterm, (name:String, e:Term) => FuncOf(Function(name, None, Real, Real), e))
-  val sDifferentialSymbol = UnaryOpSpec[Term](PRIME, 0, PostfixFormat, unterm, (v:Term) => DifferentialSymbol(v.asInstanceOf[Variable]))
-  val sPair         = BinaryOpSpec[Term](COMMA,   888, RightAssociative, binterm, Pair.apply _)
-  val sDifferential = UnaryOpSpec[Term] (PRIME,    10, PostfixFormat, unterm, Differential.apply _)
+  val sVariable     = UnitOpSpec (none,     0, name => Variable(name, None, Real))
+  val sNumber       = UnitOpSpec (none,     0, number => Number(BigDecimal(number)))
+  val sFuncOf       = UnaryOpSpec[Term](none,       0, PrefixFormat, unterm, (name:String, e:Term) => FuncOf(Function(name, None, Real, Real), e))
+  val sDifferentialSymbol = UnaryOpSpec[Term](PRIME,0, PostfixFormat, unterm, (v:Term) => DifferentialSymbol(v.asInstanceOf[Variable]))
+  val sPair         = BinaryOpSpec[Term](COMMA,   444, RightAssociative, binterm, Pair.apply _)
+  val sDifferential = UnaryOpSpec[Term] (PRIME,     5, PostfixFormat, unterm, Differential.apply _)
   val sNeg          = UnaryOpSpec[Term] (MINUS,    49/*!*/, PrefixFormat, unterm, Neg.apply _)    // -x^2 == -(x^2) != (-x)^2
   val sPower        = BinaryOpSpec[Term](POWER,    20, RightAssociative/*!*/, binterm, Power.apply _)
   val sTimes        = BinaryOpSpec[Term](STAR,     40, LeftAssociative, binterm, Times.apply _)
   val sDivide       = BinaryOpSpec[Term](SLASH,    40, LeftAssociative/*!*/, binterm, Divide.apply _)
-  val sPlus         = BinaryOpSpec[Term](PLUS,     50, LeftAssociative, binterm, Plus.apply _)
-  val sMinus        = BinaryOpSpec[Term](MINUS,    50, LeftAssociative/*!*/, binterm, Minus.apply _)
+  val sPlus         = BinaryOpSpec[Term](PLUS,     60, LeftAssociative, binterm, Plus.apply _)
+  val sMinus        = BinaryOpSpec[Term](MINUS,    60, LeftAssociative/*!*/, binterm, Minus.apply _)
 
   // formulas
   private val unfml = (FormulaKind)
@@ -170,18 +171,18 @@ object OpSpec {
   private val bintermfml = binterm
   private val quantfml = (TermKind/*Variable*/,FormulaKind)
   private val modalfml = (ProgramKind,FormulaKind)
-  val sDotFormula   = UnitOpSpec(PLACE,  0, DotFormula)
-  val sTrue         = UnitOpSpec(TRUE,   0, True)
-  val sFalse        = UnitOpSpec(FALSE,  0, False)
-  val sPredOf       = UnaryOpSpec(none,    0, PrefixFormat, untermfml, (name, e:Expression) => PredOf(Function(name, None, Real, Bool), e.asInstanceOf[Term]))
-  val sPredicationalOf = UnaryOpSpec(none,    0, PrefixFormat, unfml, (name, e:Formula) => PredicationalOf(Function(name, None, Bool, Bool), e.asInstanceOf[Formula]))
-  val sDifferentialFormula = UnaryOpSpec[Formula](PRIME, 80, PostfixFormat, unfml, DifferentialFormula.apply _)
-  val sEqual        = lBinaryOpSpec(EQ,       90, AtomicBinaryFormat, bintermfml, Equal.apply _)
-  val sNotEqual     = lBinaryOpSpec(NOTEQ,    90, AtomicBinaryFormat, bintermfml, NotEqual.apply _)
-  val sGreaterEqual = lBinaryOpSpec(GREATEREQ,90, AtomicBinaryFormat, bintermfml, GreaterEqual.apply _)
-  val sGreater      = lBinaryOpSpec(RDIA,     90, AtomicBinaryFormat, bintermfml, Greater.apply _)
-  val sLessEqual    = lBinaryOpSpec(LESSEQ,   90, AtomicBinaryFormat, bintermfml, LessEqual.apply _)
-  val sLess         = lBinaryOpSpec(LDIA,     90, AtomicBinaryFormat, bintermfml, Less.apply _ )
+  val sDotFormula   = UnitOpSpec(PLACE,                 0, DotFormula)
+  val sTrue         = UnitOpSpec(TRUE,                  0, True)
+  val sFalse        = UnitOpSpec(FALSE,                 0, False)
+  val sPredOf       = UnaryOpSpec(none,                 0, PrefixFormat, untermfml, (name, e:Expression) => PredOf(Function(name, None, Real, Bool), e.asInstanceOf[Term]))
+  val sPredicationalOf = UnaryOpSpec(none,              0, PrefixFormat, unfml, (name, e:Formula) => PredicationalOf(Function(name, None, Bool, Bool), e.asInstanceOf[Formula]))
+  val sDifferentialFormula = UnaryOpSpec[Formula](PRIME,80, PostfixFormat, unfml, DifferentialFormula.apply _)
+  val sEqual        = lBinaryOpSpec(EQ,                90, AtomicBinaryFormat, bintermfml, Equal.apply _)
+  val sNotEqual     = lBinaryOpSpec(NOTEQ,             90, AtomicBinaryFormat, bintermfml, NotEqual.apply _)
+  val sGreaterEqual = lBinaryOpSpec(GREATEREQ,         90, AtomicBinaryFormat, bintermfml, GreaterEqual.apply _)
+  val sGreater      = lBinaryOpSpec(RDIA,              90, AtomicBinaryFormat, bintermfml, Greater.apply _)
+  val sLessEqual    = lBinaryOpSpec(LESSEQ,            90, AtomicBinaryFormat, bintermfml, LessEqual.apply _)
+  val sLess         = lBinaryOpSpec(LDIA,              90, AtomicBinaryFormat, bintermfml, Less.apply _ )
   val sForall       = BinaryOpSpec[Expression](FORALL, 95, MixedBinary, quantfml, (x:Expression, f:Expression) => Forall(Seq(x.asInstanceOf[Variable]), f.asInstanceOf[Formula]))
   val sExists       = BinaryOpSpec[Expression](EXISTS, 95, MixedBinary, quantfml, (x:Expression, f:Expression) => Exists(Seq(x.asInstanceOf[Variable]), f.asInstanceOf[Formula]))
   val sBox          = BinaryOpSpec[Expression](PSEUDO, 95, MixedBinary, modalfml, (_:String, a:Expression, f:Expression) => Box(a.asInstanceOf[Program], f.asInstanceOf[Formula]))
@@ -205,19 +206,19 @@ object OpSpec {
   val sNoneDone     = UnitOpSpec  (PSEUDO, Int.MinValue, _ => throw new AssertionError("Cannot construct NONE"))
   val sProgramConst = UnitOpSpec(none,    0, name => ProgramConst(name))
   val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name))
-  val sAssign       = lBinaryOpSpec[Program](ASSIGN,200, AtomicBinaryFormat, bintermprog, (x:Term, e:Term) => Assign(x.asInstanceOf[Variable], e))
-  val sDiffAssign   = lBinaryOpSpec[Program](ASSIGN,200, AtomicBinaryFormat, bintermprog, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e))
-  val sAssignAny    = lUnaryOpSpecT[Program](ASSIGNANY, 200, PostfixFormat, untermprog, (x:Term) => AssignAny(x.asInstanceOf[Variable]))
-  val sTest         = lUnaryOpSpecF[Program](TEST,  200, PrefixFormat, unfmlprog, (f:Formula) => Test(f))
+  val sAssign       = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (x:Term, e:Term) => Assign(x.asInstanceOf[Variable], e))
+  val sDiffAssign   = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e))
+  val sAssignAny    = lUnaryOpSpecT[Program](ASSIGNANY,200, PostfixFormat, untermprog, (x:Term) => AssignAny(x.asInstanceOf[Variable]))
+  val sTest         = lUnaryOpSpecF[Program](TEST,    200, PrefixFormat, unfmlprog, (f:Formula) => Test(f))
   //@note same = operator so use sEqual.prec as precedence
-  val sAtomicODE    = BinaryOpSpec[Program](EQ,      90, AtomicBinaryFormat, bintermprog, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
-  val sDifferentialProduct = BinaryOpSpec(COMMA,     95, RightAssociative, bindiffprog, DifferentialProduct.apply _)
-  val sODESystem    = BinaryOpSpec[Expression](AMP, 150, NonAssociative, diffprogfmlprog, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
-  val sLoop         = UnaryOpSpec[Program](STAR,    220, PostfixFormat, unprog, Loop.apply _)
-  val sDual         = UnaryOpSpec[Program](DUAL,    220, PostfixFormat, unprog, Dual.apply _)
-  val sCompose      = BinaryOpSpec[Program](SEMI,   230, RightAssociative, binprog, Compose.apply _) //@todo compatibility mode for parser
+  val sAtomicODE    = BinaryOpSpec[Program](EQ,        90, AtomicBinaryFormat, bintermprog, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
+  val sDifferentialProduct = BinaryOpSpec(COMMA,       95, RightAssociative, bindiffprog, DifferentialProduct.apply _)
+  val sODESystem    = BinaryOpSpec[Expression](AMP,   150, NonAssociative, diffprogfmlprog, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
+  val sLoop         = UnaryOpSpec[Program](STAR,      220, PostfixFormat, unprog, Loop.apply _)
+  val sDual         = UnaryOpSpec[Program](DUAL,      220, PostfixFormat, unprog, Dual.apply _)
+  val sCompose      = BinaryOpSpec[Program](SEMI,     230, RightAssociative, binprog, Compose.apply _) //@todo compatibility mode for parser
   //valp: Compose     => OpNotation("",    230, RightAssociative)
-  val sChoice       = BinaryOpSpec[Program](CHOICE,  240, RightAssociative, binprog, Choice.apply _)
+  val sChoice       = BinaryOpSpec[Program](CHOICE,   240, RightAssociative, binprog, Choice.apply _)
 
   /** Parser needs a lookahead operator when actually already done, so don't dare constructing it */
   val sEOF          = UnitOpSpec  (EOF, Int.MaxValue, _ => throw new AssertionError("Cannot construct EOF"))
@@ -226,7 +227,7 @@ object OpSpec {
   val sNone         = sNoneUnfinished
 
 
-  /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
+  /** The operator notation of the top-level operator of ``expr`` with opcode, precedence and associativity  */
   def op(expr: Expression): OpSpec = expr match {
       //@note could replace by reflection getField("s" + expr.getClass.getSimpleName)
       //@todo could add a contract ensuring that constructor applied to expressions's children indeed produces expr.

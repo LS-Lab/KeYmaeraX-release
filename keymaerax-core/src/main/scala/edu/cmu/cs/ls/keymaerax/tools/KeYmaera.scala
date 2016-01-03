@@ -19,6 +19,7 @@ object KeYmaera extends ToolBase("KeYmaera") {
   override def init(config : Map[String,String]) = {
     //@todo moved this initialization outside the core. Is this the right place?
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter)
+    //PrettyPrinter.setPrinter(new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter)
     initialized = true
   }
 

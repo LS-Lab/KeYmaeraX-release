@@ -10,7 +10,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.parser.OpSpec._
+import edu.cmu.cs.ls.keymaerax.parser.OpSpec.op
 import edu.cmu.cs.ls.keymaerax.tactics.{HereP, PosInExpr}
 
 import scala.collection.immutable._
@@ -194,6 +194,8 @@ class KeYmaeraXPrinter extends PrettyPrinter {
 
 }
 
+// additional pretty printers
+
 /**
   * Fully-parenthesized pretty printer in full form with full parentheses.
   * @example
@@ -274,7 +276,7 @@ abstract class KeYmaeraXSkipPrinter extends KeYmaeraXPrinter {
  * with explicit statement end ``;`` operator.
  * @author Andre Platzer
  * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
- * @see [[http://keymaeraX.org/doc/dL-grammar.md]]
+ * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
 class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {
   protected override def skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
@@ -295,4 +297,41 @@ class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {
   protected override def skipParensRight(t: BinaryComposite): Boolean =
     op(t.right) < op(t) || op(t.right) <= op(t) && op(t).assoc == RightAssociative && op(t.right).assoc == RightAssociative
 
+}
+
+/**
+  * Weighted precedence-based: KeYmaera X Pretty Printer formats differential dynamic logic expressions with compact brackets
+  * in KeYmaera X notation according and extra space weighted according to the concrete syntax of differential dynamic logic
+  * with explicit statement end ``;`` operator.
+  * @author Andre Platzer
+  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
+  */
+class KeYmaeraXWeightedPrettyPrinter extends KeYmaeraXPrecedencePrinter {
+
+  /** Wrap ``leftPrint`` for ``t.left`` in parentheses if they are not implicit. */
+  protected override def wrapLeft(t: BinaryComposite, leftPrint: String): String =
+    if (skipParensLeft(t)) spaceLeft(t, leftPrint) else "(" + leftPrint + ")"
+  /** Wrap ``rightPrint`` for ``t.right`` in parentheses if they are not implicit. */
+  protected override def wrapRight(t: BinaryComposite, rightPrint: String): String =
+    if (skipParensRight(t)) spaceRight(t, rightPrint) else "(" + rightPrint + ")"
+
+  /** Wrap ``leftPrint`` for ``t.left`` in program parentheses if they are not implicit. */
+  protected override def pwrapLeft(t: BinaryComposite/*Differential/Program*/, leftPrint: String): String =
+    if (skipParensLeft(t)) spaceLeft(t, leftPrint) else "{" + leftPrint + "}"
+  /** Wrap ``rightPrint`` for ``t.right`` in program parentheses if they are not implicit. */
+  protected override def pwrapRight(t: BinaryComposite/*Differential/Program*/, rightPrint: String): String =
+    if (skipParensRight(t)) spaceRight(t, rightPrint) else "{" + rightPrint + "}"
+
+  protected def spaceLeft(t: BinaryComposite, leftPrint: String): String =
+    leftPrint + (" " * weight(t.left, t))
+  protected def spaceRight(t: BinaryComposite, rightPrint: String): String =
+    (" " * weight(t.right, t)) + rightPrint
+
+  protected def weight(sub: Expression, par: Expression): Int = {
+    val relative = - (op(sub).prec - op(par).prec)
+    assert(relative >= 0, "only expected to add weight if parentheses skipped so child's operator binds stronger " + sub + " versus " + par)
+    //@todo this implementation probably needs more thought
+    if (relative==0 || !(sub.isInstanceOf[Composite])) 0
+    else (relative + 39) / 40    // rounded-up division by 40
+  }
 }
