@@ -401,13 +401,16 @@ object DerivedAxioms {
   @deprecated
   val unpopulatedAxioms =
     List(
+    //@internal
       "K1",
       "K2",
+    //@undecided
       "PC1",
       "PC2",
       "PC3",
       "PC9",
       "PC10",
+    //@derived
       "x' derive var",
       "' linear right",
       "! !=",
@@ -439,6 +442,7 @@ object DerivedAxioms {
       "[*] approx",
       ":= assign dual",
       "[]~><> propagation",
+    //@internal for tests so remove?
       "exists dual dummy",
       "all dual dummy",
       "all dual dummy 2",
@@ -793,7 +797,7 @@ object DerivedAxioms {
   lazy val boxDualT = derivedAxiomT(boxDualAxiom)
 
   /**
-   * {{{Axiom "".
+   * {{{Axiom "[]~><> propagation".
    *    [a;]p(??) & <a;>q(??) -> <a;>(p(??) & q(??))
    * End.
    * }}}
@@ -823,6 +827,7 @@ object DerivedAxioms {
    * }}}
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K1 p. 26
+    * @internal
    */
   lazy val K1F = "[a;](p(??)&q(??)) -> [a;]p(??) & [a;]q(??)".asFormula
   lazy val K1 = derivedAxiom("K1",
@@ -841,6 +846,7 @@ object DerivedAxioms {
    * }}}
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K2 p. 27
+    *      @internal
    */
   lazy val K2F = "[a;]p(??) & [a;]q(??) -> [a;](p(??)&q(??))".asFormula
   lazy val K2 = derivedAxiom("K2",
