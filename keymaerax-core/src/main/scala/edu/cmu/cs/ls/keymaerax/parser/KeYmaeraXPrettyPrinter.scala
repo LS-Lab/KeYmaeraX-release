@@ -167,65 +167,104 @@ class KeYmaeraXPrinter extends PrettyPrinter {
 
   // parentheses wrapping and emission
 
-  //@note abandoned since too fine-grained
-  //  protected def ppChild(q: PosInExpr, t:UnaryCompositeTerm): String =
-  //    if (skipParens(t)) pp(q+0, t.child) else "(" + pp(q+0, t.child) + ")"
-  //  protected def ppLeft(q: PosInExpr, t: BinaryCompositeTerm): String =
-  //    if (skipParensLeft(t)) pp(q+0, t.left) else "(" + pp(q+0, t.left) + ")"
-  //  protected def ppRight(q: PosInExpr, t: BinaryCompositeTerm): String =
-  //    if (skipParensRight(t)) pp(q+1, t.right) else "(" + pp(q+1, t.right) + ")"
-
   /** Wrap ``childPrint`` for ``t.child`` in parentheses if they are not implicit. */
-  protected def wrapChild(t: UnaryComposite, childPrint: String): String =
-    if (skipParens(t)) childPrint else "(" + childPrint + ")"
+  protected def wrapChild(t: UnaryComposite, childPrint: String): String = "(" + childPrint + ")"
   /** Wrap ``childPrint`` for ``t.child`` in parentheses if they are not implicit. */
-  protected def wrapChild(t: Quantified, childPrint: String): String =
-    if (skipParens(t)) childPrint else "(" + childPrint + ")"
+  protected def wrapChild(t: Quantified, childPrint: String): String = "(" + childPrint + ")"
   /** Wrap ``childPrint`` for ``t.child`` in parentheses if they are not implicit. */
-  protected def wrapChild(t: Modal, childPrint: String): String =
-    if (skipParens(t)) childPrint else "(" + childPrint + ")"
+  protected def wrapChild(t: Modal, childPrint: String): String = "(" + childPrint + ")"
 
   /** Wrap ``leftPrint`` for ``t.left`` in parentheses if they are not implicit. */
-  protected def wrapLeft(t: BinaryComposite, leftPrint: String): String =
-    if (skipParensLeft(t)) leftPrint else "(" + leftPrint + ")"
+  protected def wrapLeft(t: BinaryComposite, leftPrint: String): String = "(" + leftPrint + ")"
   /** Wrap ``rightPrint`` for ``t.right`` in parentheses if they are not implicit. */
-  protected def wrapRight(t: BinaryComposite, rightPrint: String): String =
-    if (skipParensRight(t)) rightPrint else "(" + rightPrint + ")"
+  protected def wrapRight(t: BinaryComposite, rightPrint: String): String = "(" + rightPrint + ")"
 
   /** Wrap ``leftPrint`` for ``t.left`` in program parentheses if they are not implicit. */
   protected def pwrapLeft(t: BinaryComposite/*Differential/Program*/, leftPrint: String): String =
-    if (skipParensLeft(t)) leftPrint else "{" + leftPrint + "}"
+    "{" + leftPrint + "}"
   /** Wrap ``rightPrint`` for ``t.right`` in program parentheses if they are not implicit. */
   protected def pwrapRight(t: BinaryComposite/*Differential/Program*/, rightPrint: String): String =
-    if (skipParensRight(t)) rightPrint else "{" + rightPrint + "}"
-
-  /**
-    * Whether parentheses around ``t.child`` can be skipped because they are implicit.
-    * @see [[wrapChild()]]
-    */
-  protected def skipParens(t: UnaryComposite): Boolean = false
-  protected def skipParens(t: Quantified): Boolean = false
-  protected def skipParens(t: Modal): Boolean = false
-
-  /**
-    * Whether parentheses around ``t.left`` can be skipped because they are implicit.
-    * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
-    * @see [[wrapLeft()]]
-    */
-  protected def skipParensLeft(t: BinaryComposite): Boolean = false
-
-  /**
-    * Whether parentheses around ``t.right`` can be skipped because they are implicit.
-    * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
-    * @see [[wrapRight()]]
-    */
-  protected def skipParensRight(t: BinaryComposite): Boolean = false
+    "{" + rightPrint + "}"
 
   /** Emit the string s as a result of the pretty-printer for an expression */
   protected def emit(q: PosInExpr, s: String): String = s
 
   /** Formatting the atomic statement s */
   private def statement(s: String): String = if (statementSemicolon) s + ";" else s
+
+}
+
+/**
+  * Fully-parenthesized pretty printer in full form with full parentheses.
+  * @example
+ * Fully parenthesized strings are obtained using the [[edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter]] printer:
+  * {{{
+  * val pp = FullPrettyPrinter
+  * // "x < -(y)"
+  * val fml0 = Less(Variable("x"),Neg(Variable("y")))
+  * val fml0str = pp(fml0)
+  * // "true -> ([x:=1;](x>=0))"
+  * val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+  * val fml1str = pp(fml1)
+  * }}}
+  * @author Andre Platzer
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrinter.fullPrinter]]
+  */
+object FullPrettyPrinter extends KeYmaeraXPrinter {
+  //@note no contract to avoid recursive checking of contracts in error messages of KeYmaeraXPrinter.apply
+  override def apply(expr: Expression): String = stringify(expr)
+}
+
+/**
+  * KeYmaera X Printer base class formatting based on parentheses skipping decisions.
+  * @author Andre Platzer
+  */
+abstract class KeYmaeraXSkipPrinter extends KeYmaeraXPrinter {
+  /** Wrap ``childPrint`` for ``t.child`` in parentheses if they are not implicit. */
+  protected override def wrapChild(t: UnaryComposite, childPrint: String): String =
+    if (skipParens(t)) childPrint else "(" + childPrint + ")"
+  /** Wrap ``childPrint`` for ``t.child`` in parentheses if they are not implicit. */
+  protected override def wrapChild(t: Quantified, childPrint: String): String =
+    if (skipParens(t)) childPrint else "(" + childPrint + ")"
+  /** Wrap ``childPrint`` for ``t.child`` in parentheses if they are not implicit. */
+  protected override def wrapChild(t: Modal, childPrint: String): String =
+    if (skipParens(t)) childPrint else "(" + childPrint + ")"
+
+  /** Wrap ``leftPrint`` for ``t.left`` in parentheses if they are not implicit. */
+  protected override def wrapLeft(t: BinaryComposite, leftPrint: String): String =
+    if (skipParensLeft(t)) leftPrint else "(" + leftPrint + ")"
+  /** Wrap ``rightPrint`` for ``t.right`` in parentheses if they are not implicit. */
+  protected override def wrapRight(t: BinaryComposite, rightPrint: String): String =
+    if (skipParensRight(t)) rightPrint else "(" + rightPrint + ")"
+
+  /** Wrap ``leftPrint`` for ``t.left`` in program parentheses if they are not implicit. */
+  protected override def pwrapLeft(t: BinaryComposite/*Differential/Program*/, leftPrint: String): String =
+    if (skipParensLeft(t)) leftPrint else "{" + leftPrint + "}"
+  /** Wrap ``rightPrint`` for ``t.right`` in program parentheses if they are not implicit. */
+  protected override def pwrapRight(t: BinaryComposite/*Differential/Program*/, rightPrint: String): String =
+    if (skipParensRight(t)) rightPrint else "{" + rightPrint + "}"
+
+  /**
+    * Whether parentheses around ``t.child`` can be skipped because they are implicit.
+    * @see [[wrapChild()]]
+    */
+  protected def skipParens(t: UnaryComposite): Boolean
+  protected def skipParens(t: Quantified): Boolean
+  protected def skipParens(t: Modal): Boolean
+
+  /**
+    * Whether parentheses around ``t.left`` can be skipped because they are implicit.
+    * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
+    * @see [[wrapLeft()]]
+    */
+  protected def skipParensLeft(t: BinaryComposite): Boolean
+
+  /**
+    * Whether parentheses around ``t.right`` can be skipped because they are implicit.
+    * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
+    * @see [[wrapRight()]]
+    */
+  protected def skipParensRight(t: BinaryComposite): Boolean
 
 }
 
@@ -237,7 +276,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
  * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
  * @see [[http://keymaeraX.org/doc/dL-grammar.md]]
  */
-class KeYmaeraXPrecedencePrinter extends KeYmaeraXPrinter {
+class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {
   protected override def skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
   protected override def skipParens(t: Quantified): Boolean = op(t.child) <= op(t)
   protected override def skipParens(t: Modal): Boolean = op(t.child) <= op(t)
@@ -256,25 +295,4 @@ class KeYmaeraXPrecedencePrinter extends KeYmaeraXPrinter {
   protected override def skipParensRight(t: BinaryComposite): Boolean =
     op(t.right) < op(t) || op(t.right) <= op(t) && op(t).assoc == RightAssociative && op(t.right).assoc == RightAssociative
 
-}
-
-/**
- * Fully-parenthesized pretty printer in full form with full parentheses.
- * @example
- * Fully parenthesized strings are obtained using the [[edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter]] printer:
- * {{{
- * val pp = FullPrettyPrinter
- * // "x < -(y)"
- * val fml0 = Less(Variable("x"),Neg(Variable("y")))
- * val fml0str = pp(fml0)
- * // "true -> ([x:=1;](x>=0))"
- * val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
- * val fml1str = pp(fml1)
- * }}}
- * @author Andre Platzer
- * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrinter.fullPrinter]]
- */
-object FullPrettyPrinter extends KeYmaeraXPrinter {
-  //@note no contract to avoid recursive checking of contracts in error messages of KeYmaeraXPrinter.apply
-  override def apply(expr: Expression): String = stringify(expr)
 }
