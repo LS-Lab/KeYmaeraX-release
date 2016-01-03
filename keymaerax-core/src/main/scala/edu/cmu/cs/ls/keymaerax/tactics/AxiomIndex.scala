@@ -146,7 +146,7 @@ object AxiomIndex {
 //      case ODESystem(_:DifferentialProduct,True)   => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect (system)" +: odeList else odeList :+ "DE differential effect (system)"
 //      case ODESystem(_:DifferentialProduct,domain) => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect (system)" :: "DW differential weakening" :: odeList else "DW differential weakening" :: odeList ++ List("DE differential effect (system)")
   /** Return the (derived) axiom names that simplify the expression expr with simpler ones first */
-  def axiomsFor(expr: Expression, pos: Option[Position] = None): List[String] = {
+  def axiomsFor(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None): List[String] = {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
     val isAnte = pos.nonEmpty && pos.get.isAnte
     expr match {
@@ -182,8 +182,8 @@ object AxiomIndex {
         case _ => Nil
       }
       case Box(a, _) =>
-        // @todo need to test for empty ante, singleton succ
-        val rules = if (isTop && !isAnte) {"G" :: Nil} else Nil
+        val rules =
+          if (isTop && sequent.isDefined && sequent.get.ante.isEmpty && sequent.get.succ.length == 1) {"G" :: Nil} else Nil
         a match {
         // Note: Using this axiom name to look up a tactic via AxiomInfo actually gives you assignb,
         // which handles several assignment axioms.
