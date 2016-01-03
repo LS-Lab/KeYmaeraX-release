@@ -186,6 +186,7 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val iterateb           : BelleExpr = HilbertCalculus.iterateb
 
   /** splitb: splits `[a](p&q)` into `[a]p & [a]q` */
+  //@todo rename to boxAnd?
   lazy val splitb             : DependentPositionTactic = useAt("[] split")
   /** discreteGhost: introduces a ghost defined as term t; if ghost is None the tactic chooses a name by inspecting t */
   def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = DLBySubst.discreteGhost(t, ghost)

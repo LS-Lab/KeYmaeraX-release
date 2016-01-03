@@ -114,7 +114,7 @@ object DerivedAxioms {
     "!all" -> "all negate",
     "![]" -> "box negate",
     "!<>" -> "diamond negate",
-    "[] dual" -> "box dual",
+    "[] box" -> "box dual",
     "K1" -> "K1",
     "K2" -> "K2",
     "[]~><> propagation" -> "box diamond propagation",
@@ -271,7 +271,7 @@ object DerivedAxioms {
     case "!all" => Some(notAllF, notAllT)
     case "![]" => Some(notBoxF, notBoxT)
     case "!<>" => Some(notDiamondF, notDiamondT)
-    case "[] dual" => Some(boxDualF, boxDualT)
+    case "[] box" => Some(boxDualF, boxDualT)
     case "K1" => Some(K1F, K1T)
     case "K2" => Some(K2F, K2T)
     case "[] split" => Some(boxSplitF, boxSplitT)
@@ -384,7 +384,7 @@ object DerivedAxioms {
       , "!all" -> Some(notAllF, notAllT)
       , "![]" -> Some(notBoxF, notBoxT)
       , "!<>" -> Some(notDiamondF, notDiamondT)
-      , "[] dual" -> Some(boxDualF, boxDualT)
+      , "[] box" -> Some(boxDualF, boxDualT)
       , "[] split" -> Some(boxSplitF, boxSplitT)
       , "[] split left" -> Some(boxSplitLeftF, boxSplitLeftT)
       , "[] split right" -> Some(boxSplitRightF, boxSplitRightT)
@@ -628,7 +628,7 @@ object DerivedAxioms {
   lazy val notBox = derivedAxiom("![]",
     Sequent(Nil, IndexedSeq(), IndexedSeq(notBoxF)),
     useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::1::Nil) &
-      useAt("<> dual")(1, 0::Nil) &
+      useAt("<> diamond")(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -645,7 +645,7 @@ object DerivedAxioms {
   lazy val notDiamond = derivedAxiom("!<>",
     Sequent(Nil, IndexedSeq(), IndexedSeq(notDiamondF)),
     useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::1::Nil) &
-      useAt("[] dual")(1, 0::Nil) &
+      useAt("[] box")(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -692,7 +692,7 @@ object DerivedAxioms {
 
 
   /**
-   * {{{Axiom "[] dual".
+   * {{{Axiom "[] box".
    *    (!<a;>(!p(??))) <-> [a;]p(??)
    * End.
    * }}}
@@ -700,9 +700,9 @@ object DerivedAxioms {
    * @Derived
    */
   lazy val boxDualF = "(!<a;>(!p(??))) <-> [a;]p(??)".asFormula
-  lazy val boxDualAxiom = derivedAxiom("[] dual",
+  lazy val boxDualAxiom = derivedAxiom("[] box",
     Sequent(Nil, IndexedSeq(), IndexedSeq(boxDualF)),
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::0::Nil)) &
+    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::0::Nil)) &
       useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
       useAt(doubleNegationAxiom)(SuccPosition(0, 0::1::Nil)) &
       byUS(equivReflexiveAxiom)
@@ -720,8 +720,8 @@ object DerivedAxioms {
   lazy val boxDiamondPropagationF = "([a;]p(??) & <a;>q(??)) -> <a;>(p(??) & q(??))".asFormula
   lazy val boxDiamondPropagation = derivedAxiom("[]~><> propagation",
     Sequent(Nil, IndexedSeq(), IndexedSeq(boxDiamondPropagationF)),
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::1::Nil))) &
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
+    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::1::Nil))) &
+    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::Nil))) &
     cut("[a;]p(??) & [a;]!(p(??)&q(??)) -> [a;]!q(??)".asFormula) & onBranch(
       (cutShowLbl, hide(SuccPosition(0)) &
         cut("[a;](p(??) & !(p(??)&q(??)))".asFormula) & onBranch(
@@ -830,9 +830,9 @@ object DerivedAxioms {
   lazy val diamondSplitF = "<a;>(p(??)|q(??)) <-> <a;>p(??)|<a;>q(??)".asFormula
   lazy val diamondSplit = derivedAxiom("<> split",
     Sequent(Nil, IndexedSeq(), IndexedSeq(diamondSplitF)),
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::Nil))) &
-      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::0::Nil))) &
-      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::1::Nil))) &
+    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::Nil))) &
+      useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::0::Nil))) &
+      useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::1::Nil))) &
       useAt("!| deMorgan")(SuccPosition(0, PosInExpr(0::0::1::Nil))) &
       useAt("[] split")(SuccPosition(0, PosInExpr(0::0::Nil))) &
       useAt("!& deMorgan")(SuccPosition(0, PosInExpr(0::Nil))) &
@@ -885,7 +885,7 @@ object DerivedAxioms {
   lazy val assigndF = "<v:=t();>p(v) <-> p(t())".asFormula
   lazy val assigndAxiom = derivedAxiom("<:=> assign",
     Sequent(Nil, IndexedSeq(), IndexedSeq(assigndF)),
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
       useAt("[:=] assign")(SuccPosition(0, 0::0::Nil)) &
       useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
       byUS(equivReflexiveAxiom)
@@ -988,7 +988,7 @@ object DerivedAxioms {
   lazy val vacuousAssigndF = "<v:=t();>p() <-> p()".asFormula
   lazy val vacuousAssigndAxiom = derivedAxiom("<:=> vacuous assign",
     Sequent(Nil, IndexedSeq(), IndexedSeq(vacuousAssigndF)),
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
       useAt("[:=] vacuous assign")(SuccPosition(0, 0::0::Nil)) &
       useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
       byUS(equivReflexiveAxiom)
@@ -1006,7 +1006,7 @@ object DerivedAxioms {
   lazy val assignDF = "<v':=t();>p(v') <-> p(t())".asFormula
   lazy val assignDAxiom = derivedAxiom("<':=> differential assign",
     Sequent(Nil, IndexedSeq(), IndexedSeq(assignDF)),
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
       useAt("[':=] differential assign")(SuccPosition(0, 0::0::Nil)) &
       useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
       byUS(equivReflexiveAxiom)
@@ -1024,7 +1024,7 @@ object DerivedAxioms {
   lazy val nondetassigndF = "<x:=*;>p(x) <-> (\\exists x p(x))".asFormula
   lazy val nondetassigndAxiom = derivedAxiom("<:*> assign nondet",
     Sequent(Nil, IndexedSeq(), IndexedSeq(nondetassigndF)),
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
       useAt("[:*] assign nondet")(SuccPosition(0, 0::0::Nil)) &
       useAt("all dual", PosInExpr(1::Nil))(SuccPosition(0, 0::0::Nil)) &
       useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
@@ -1044,7 +1044,7 @@ object DerivedAxioms {
   lazy val testdF = "<?H();>p() <-> (H() & p())".asFormula
   lazy val testdAxiom = derivedAxiom("<?> test",
     Sequent(Nil, IndexedSeq(), IndexedSeq(testdF)),
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
       useAt("[?] test")(SuccPosition(0, 0::0::Nil)) &
       prop
   )
@@ -1061,10 +1061,10 @@ object DerivedAxioms {
   lazy val choicedF = "<a;++b;>p(??) <-> (<a;>p(??) | <b;>p(??))".asFormula
   lazy val choicedAxiom = derivedAxiom("<++> choice",
     Sequent(Nil, IndexedSeq(), IndexedSeq(choicedF)),
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
       useAt("[++] choice")(SuccPosition(0, 0::0::Nil)) &
-      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::0::Nil)) &
-      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
+      useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 1::0::Nil)) &
+      useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
       prop
   )
 
@@ -1080,10 +1080,10 @@ object DerivedAxioms {
   lazy val composedF = "<a;b;>p(??) <-> <a;><b;>p(??)".asFormula
   lazy val composedAxiom = derivedAxiom("<;> compose",
     Sequent(Nil, IndexedSeq(), IndexedSeq(composedF)),
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
       useAt("[;] compose")(SuccPosition(0, 0::0::Nil)) &
-      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
-      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil)) &
+      useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
+      useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 1::Nil)) &
       useAt(doubleNegationAxiom)(SuccPosition(0, 1::0::1::Nil)) &
       byUS(equivReflexiveAxiom)
   )
@@ -1100,10 +1100,10 @@ object DerivedAxioms {
   lazy val iteratedF = "<{a;}*>p(??) <-> (p(??) | <a;><{a;}*> p(??))".asFormula
   lazy val iteratedAxiom = derivedAxiom("<*> iterate",
     Sequent(Nil, IndexedSeq(), IndexedSeq(iteratedF)),
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
       useAt("[*] iterate")(SuccPosition(0, 0::0::Nil)) &
-      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::1::1::Nil)) &
-      useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
+      useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 1::1::1::Nil)) &
+      useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 1::1::Nil)) &
       HilbertCalculus.stepAt(SuccPosition(0, 0::Nil)) &
       useAt(doubleNegationAxiom)(SuccPosition(0, 1::1::0::1::Nil)) &
       prop
@@ -1681,7 +1681,7 @@ object DerivedAxioms {
     useAt("-> expand", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::0::Nil))) &
     // assumes same differential program constant name "c" in DX diamond differential skip and DX differential skip
     useAt("DX differential skip", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::0::Nil))) &
-    useAt("<> dual")(SuccPosition(0, PosInExpr(0::Nil))) & implyR(SuccPosition(0)) & close
+    useAt("<> diamond")(SuccPosition(0, PosInExpr(0::Nil))) & implyR(SuccPosition(0)) & close
   )
   lazy val DskipdT = derivedAxiomT(Dskipd)
 
@@ -1732,12 +1732,12 @@ object DerivedAxioms {
   lazy val DSddomainF = "<{x'=c()&q(x)}>p(x) <-> \\exists t (t>=0 & ((\\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))".asFormula
   lazy val DSddomain = derivedAxiom("Dsol& differential equation solution",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DSddomainF)),
-    useAt("<> dual", PosInExpr(1::Nil))(1, 0::Nil) &
+    useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("DS& differential equation solution")(1, 0::0::Nil) &
       useAt("!all")(1, 0::Nil) & //step(1, 0::Nil) &
       useAt("!-> deMorgan")(1, 0::0::Nil) &
       useAt("!-> deMorgan")(1, 0::0::1::Nil) &
-      useAt("<> dual")(1, 0::0::1::1::Nil) &
+      useAt("<> diamond")(1, 0::0::1::1::Nil) &
       //useAt("& associative", PosInExpr(1::Nil))(1, 0::0::Nil) &
       byUS("<-> reflexive")
   )

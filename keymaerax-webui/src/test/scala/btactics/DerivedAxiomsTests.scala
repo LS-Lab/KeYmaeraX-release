@@ -56,14 +56,14 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
   it should "prove ![]" in {check(notBox)}
   it should "prove !<>" in {check(notDiamond)}
   it should "prove all distribute" in {check(allDistributeAxiom)}
-  it should "prove box dual" in {check(boxDualAxiom)}
+  it should "prove box dual" in {check(boxAxiom)}
 //  it should "prove K1" in {check(K1)}
 //  it should "prove K2" in {check(K2)}
-  it should "prove box split" in {check(boxSplit)}
-  it should "prove box split left" in {check(boxSplitLeft)}
-  it should "prove box split right" in {check(boxSplitRight)}
-  it should "prove <> split" in {check(diamondSplit)}
-  it should "prove diamond split left" in {check(diamondSplitLeft)}
+  it should "prove box split" in {check(boxAnd)}
+//  it should "prove box split left" in {check(boxSplitLeft)}
+//  it should "prove box split right" in {check(boxSplitRight)}
+  it should "prove <> split" in {check(diamondOr)}
+//  it should "prove diamond split left" in {check(diamondSplitLeft)}
   it should "prove []~><> propagation" in {check{boxDiamondPropagation}}
   it should "prove <:=> assign" in {check(assigndAxiom)}
 //  it should "prove <:=> assign v" in {check(dummyassigndVvariant)}
@@ -153,7 +153,7 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
   ignore should "prove all eliminate" taggedAs OptimisticTest in {check(allEliminateAxiom, allEliminateT)}
   ignore should "prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate, existsEliminateT)}
   it should "prove all distribute" in {check(allDistributeAxiom, allDistributeT)}
-  it should "prove box dual" in {check(boxDualAxiom, boxDualT)}
+  it should "prove box dual" in {check(boxAxiom, boxT)}
   it should "prove <:=> assign" in {check(assigndAxiom, assigndT)}
   it should "prove [:=] equational" in {check(assignbEquationalAxiom, assignbEquationalT)}
 //  it should "prove [:=] equational exists" in {check(assignbExistsAxiom, assignbEquationalT)}

@@ -86,7 +86,7 @@ object HybridProgramTacticsImpl {
       case _ => False
     }
 
-    uncoverAxiomT("[] dual", g, _ => boxDualityBaseT)
+    uncoverAxiomT("[] box", g, _ => boxDualityBaseT)
   }
   /* Base tactic for boxDualityT */
   private def boxDualityBaseT: PositionTactic = {
@@ -101,7 +101,7 @@ object HybridProgramTacticsImpl {
         SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
     }
 
-    axiomLookupBaseT("[] dual", subst, _ => NilPT, (f, ax) => ax)
+    axiomLookupBaseT("[] box", subst, _ => NilPT, (f, ax) => ax)
   }
 
   def boxSeqGenT(q: Formula): PositionTactic = new PositionTactic("[;] generalize") {
@@ -136,7 +136,7 @@ object HybridProgramTacticsImpl {
       case _ => False
     }
 
-    uncoverAxiomT("<> dual", g, _ => diamondDualityBaseT)
+    uncoverAxiomT("<> diamond", g, _ => diamondDualityBaseT)
   }
   /* Base tactic for diamondDualityT */
   private def diamondDualityBaseT: PositionTactic = {
@@ -151,7 +151,7 @@ object HybridProgramTacticsImpl {
         SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
     }
 
-    axiomLookupBaseT("<> dual", subst, _ => NilPT, (f, ax) => ax)
+    axiomLookupBaseT("<> diamond", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**

@@ -216,7 +216,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 
   lazy val dummyassigndVvariant = derivedAxiom("<:=> assign",
     Sequent(Nil, IndexedSeq(), IndexedSeq("<v:=t();>p(v) <-> p(t())".asFormula)),
-    useAt("<> dual", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
+    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::Nil)) &
       useAt("[:=] assign")(SuccPosition(0, 0::0::Nil)) &
       useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
       byUS(equivReflexiveAxiom)

@@ -125,7 +125,7 @@ private[core] object AxiomBase {
        * Premise p(??) ==> q(??)
        * Conclusion [a;]p(??) ==> [a;]q(??)
        * End.
-       * @derived useAt("<> dual") & by("<> monotone")
+       * @derived useAt("<> diamond") & by("<> monotone")
        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
       ("[] monotone",
@@ -222,7 +222,7 @@ private[core] object AxiomBase {
     val H0 = PredOf(Function("H", None, Unit, Bool), Nothing)
 
     // Figure 2
-    assert(axs("<> dual") == Equiv(Not(Box(a, Not(pany))), Diamond(a, pany)), "<> dual")
+    assert(axs("<> diamond") == Equiv(Not(Box(a, Not(pany))), Diamond(a, pany)), "<> diamond")
     assert(axs("[:=] assign") == Equiv(Box(Assign(x,f0), PredOf(p,x)), PredOf(p, f0))
       || axs("[:=] assign") == Equiv(Box(Assign(v,t0), PredOf(p,v)), PredOf(p, t0)), "[:=] assign")
     assert(axs("[?] test") == Equiv(Box(Test(q0), p0), Imply(q0, p0))
@@ -320,7 +320,7 @@ End.
  * HYBRID PROGRAM MODALITIES
  */
 
-Axiom "<> dual".
+Axiom "<> diamond".
   (![a;](!p(??))) <-> <a;>p(??)
 End.
 
