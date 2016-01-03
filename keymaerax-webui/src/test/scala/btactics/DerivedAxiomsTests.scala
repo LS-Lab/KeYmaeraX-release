@@ -57,8 +57,8 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
   it should "prove !<>" in {check(notDiamond)}
   it should "prove all distribute" in {check(allDistributeAxiom)}
   it should "prove box dual" in {check(boxDualAxiom)}
-  it should "prove K1" in {check(K1)}
-  it should "prove K2" in {check(K2)}
+//  it should "prove K1" in {check(K1)}
+//  it should "prove K2" in {check(K2)}
   it should "prove box split" in {check(boxSplit)}
   it should "prove box split left" in {check(boxSplitLeft)}
   it should "prove box split right" in {check(boxSplitRight)}

@@ -214,14 +214,14 @@ object DerivationInfo {
     new DerivedAxiomInfo("[]~><> propagation", "[]~><>", "boxDiamondPropagation", {case () => DerivedAxioms.boxDiamondPropagationT}),
     new DerivedAxiomInfo("-> self", "-> self", "implySelf", {case () => DerivedAxioms.implySelfT}),
     //@todo internal only
-    new DerivedAxiomInfo("K1", "K1", "K1", {case () => DerivedAxioms.K1T}),
-    new DerivedAxiomInfo("K2", "K2", "K2", {case () => DerivedAxioms.K2T}),
+    //new DerivedAxiomInfo("K1", "K1", "K1", {case () => DerivedAxioms.K1T}),
+    //new DerivedAxiomInfo("K2", "K2", "K2", {case () => DerivedAxioms.K2T}),
     new DerivedAxiomInfo("PC1", "PC1", "PC1", {case () => DerivedAxioms.PC1T}),
     new DerivedAxiomInfo("PC2", "PC2", "PC2", {case () => DerivedAxioms.PC2T}),
     new DerivedAxiomInfo("PC3", "PC3", "PC3", {case () => DerivedAxioms.PC3T}),
     new DerivedAxiomInfo("PC9", "PC9", "PC9", {case () => DerivedAxioms.PC9T}),
     new DerivedAxiomInfo("PC10", "PC10", "PC10", {case () => DerivedAxioms.PC10T}),
-    // axioms for unit tests
+    //@internal axioms for unit tests
     new DerivedAxiomInfo("exists dual dummy", "DUMMY", "dummyexistsDualAxiomT", {case () => ???}),
     new DerivedAxiomInfo("all dual dummy", "DUMMY", "dummyallDualAxiom", {case () => ???}),
     new DerivedAxiomInfo("all dual dummy 2", "DUMMY", "dummyallDualAxiom2", {case () => ???}),
@@ -256,12 +256,12 @@ object DerivationInfo {
       , {case () => ProofRuleTactics.orR}), //@todo "\u2228R"
     new PositionTacticInfo("implyR"
       , RuleDisplayInfo("->R", (List("&Gamma;"),List("p->q", "&Delta;")), List((List("&Gamma;","p"),List("q","&Delta;"))))
-      , {case () => ProofRuleTactics.implyL}), //@todo "\u2192L"
+      , {case () => ProofRuleTactics.implyR}), //@todo "\u2192L"
     new PositionTacticInfo("implyL"
       , RuleDisplayInfo("->L", (List("&Gamma;","p->q"),List("&Delta;")),
         List((List("&Gamma;","p"),List("&Delta;")),
           (List("&Gamma;"),List("q","&Delta;"))))
-      , {case () => ProofRuleTactics.implyR}), //@todo "\u2192R"
+      , {case () => ProofRuleTactics.implyL}), //@todo "\u2192R"
     new PositionTacticInfo("equivL"
       , RuleDisplayInfo("<->L", (List("&Gamma;","p<->q"),List("&Delta;")),
         List((List("&Gamma;","p&q"),List("&Delta;")),
@@ -380,11 +380,11 @@ object DerivationInfo {
   /** canonical name mapped to derivation information */
   private val byCanonicalName: Map[String, DerivationInfo] =
     allInfo.foldLeft(HashMap.empty[String,DerivationInfo]){case (acc, info) =>
-      acc.+((info.canonicalName, info))
+      acc.+((info.canonicalName.toLowerCase, info))
     }
 
   /** Retrieve meta-information on an inference by the given canonical name `axiomName` */
-  def apply(axiomName: String): DerivationInfo = byCanonicalName.getOrElse(axiomName,
+  def apply(axiomName: String): DerivationInfo = byCanonicalName.getOrElse(axiomName.toLowerCase,
         throw new AxiomNotFoundException(axiomName)
   )
 

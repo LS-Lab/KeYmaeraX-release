@@ -17,9 +17,9 @@ import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
-import _root_.edu.cmu.cs.ls.keymaerax.btactics.{TacticInfo, AxiomInfo}
+import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.{PositionLocator, DerivationInfo, AxiomInfo}
-import _root_.edu.cmu.cs.ls.keymaerax.core.{ProverException, Provable}
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Sequent, ProverException, Provable}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import _root_.edu.cmu.cs.ls.keymaerax.tactics.{Position, Augmentors, PosInExpr, AxiomIndex}
@@ -678,12 +678,46 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
 //  }
 }
 
+case class BelleTermInput(value: String, spec:Option[ArgInfo])
+
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
 * to a Tactic */
 class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,
-                         pos: Option[PositionLocator], ruleName:String) extends Request {
+                         pos: Option[PositionLocator], inputs:List[BelleTermInput] = Nil) extends Request {
+
+  val fullExpr = {
+    val paramStrings = inputs.map{
+      case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
+      case BelleTermInput(value, None) => value
+    }
+    if(inputs.isEmpty) belleTerm
+    else belleTerm + "(" + paramStrings.mkString(",") + ")"
+  }
+
+  /* Admittedly hacky, but whatever gets the job done... */
+  private def getRuleName(tacticId: String, sequent:Sequent, locator:Option[PositionLocator]): String = {
+    val pos = locator match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
+    tacticId.toLowerCase() match {
+      case ("step" | "stepat") =>
+        val fml = sequent(pos.get)
+        AxiomIndex.axiomFor(fml) match {
+          case Some(axiom) => AxiomInfo(axiom).display.name
+          case None =>
+            AxiomIndex.propositionalRuleFor(pos.get, fml) match {
+              case Some(tactic) => TacticInfo(tactic).display.name
+              case _ => tacticId
+            }
+        }
+      case _ => try {
+        TacticInfo(tacticId).display.name
+      } catch {
+        case _ => "Tactic"
+      }
+    }
+  }
+
   def getResultingResponses() = {
-    BTacticParser(belleTerm) match {
+    BTacticParser(fullExpr) match {
       case None => throw new ProverException("Invalid Bellerophon expression:  " + belleTerm)
       case Some(expr) =>
         val appliedExpr =
@@ -702,6 +736,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             case None => throw new ProverException("Invalid node " + nodeId)
             case Some(node) => node
           }
+        val ruleName = getRuleName(belleTerm, node.sequent, pos)
         val localProvable = Provable.startProof(node.sequent)
         val globalProvable =
           trace.steps match {
