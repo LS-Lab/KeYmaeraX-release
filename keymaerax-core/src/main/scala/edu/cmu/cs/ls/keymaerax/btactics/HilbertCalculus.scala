@@ -200,7 +200,11 @@ object HilbertCalculus extends UnifyUSCalculus {
         if (sub.isEmpty) throw new BelleUserGeneratedError("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
         AxiomIndex.axiomFor(sub.get, Some(pos)) match {
           case Some(axiom) =>
-            DerivationInfo(axiom).belleExpr.asInstanceOf[AtPosition[_]](pos).asInstanceOf[BelleExpr]
+            DerivationInfo(axiom).belleExpr match {
+              case ap:AtPosition[_] => ap(pos)
+              case expr:BelleExpr => expr
+              case expr => throw new BelleUserGeneratedError("No axioms or rules applicable in stepAt")
+            }
           case None => throw new BelleUserGeneratedError("No axioms or rules applicable in stepAt")
         }
       }
