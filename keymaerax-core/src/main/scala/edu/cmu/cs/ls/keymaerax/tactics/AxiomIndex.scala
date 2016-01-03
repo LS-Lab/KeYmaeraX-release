@@ -199,9 +199,9 @@ object AxiomIndex {
           (ode, constraint) match {
             // @todo diamond duals
             case (_: AtomicODE, True) => tactics ++ odeList ++ ("DE differential effect" :: rules)
-            case (_: AtomicODE, domain) => /* tactics ++ */("DW differential weakening" :: (odeList ++ ("DE differential effect" :: rules)))
+            case (_: AtomicODE, domain) =>  tactics ++ ("DW differential weakening" :: (odeList ++ ("DE differential effect" :: rules)))
             case (_: DifferentialProduct, True) => tactics ++ odeList ++ ("DE differential effect (system)" :: rules)
-            case (_: DifferentialProduct, domain) => tactics ++ ("DW differential weakening" :: (/*odeList ++ */("DE differential effect (system)" :: rules)))
+            case (_: DifferentialProduct, domain) => tactics ++ ("DW differential weakening" :: (RemodeList ++ ("DE differential effect (system)" :: rules)))
             case _ => tactics
           }
         case _ => Nil
