@@ -45,19 +45,8 @@ object DerivationInfo {
   private def useAt(l:Lemma):BelleExpr = HilbertCalculus.useAt(l)
   /** Central registry for axiom, derived axiom, proof rule, and tactic meta-information */
   private val allInfo: List[DerivationInfo] = List(
-    new CoreAxiomInfo("chain rule", "o'", "Dcompose", {case () => TactixLibrary.Dcompose}),
-    new CoreAxiomInfo("V vacuous", "V", "V", {case () => TactixLibrary.V}),
-    new CoreAxiomInfo("K modal modus ponens", "K", "K", {case () => TactixLibrary.K}),
-    // Note: the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
-    new CoreAxiomInfo("I induction", "I", "induction", {case () => ???}),
-    new CoreAxiomInfo("all instantiate", "alli", "alli", {case () => ???}),
-    new CoreAxiomInfo("vacuous all quantifier", "Vall", "vacuousAll", {case () => HilbertCalculus.vacuousAll}),
-    new DerivedAxiomInfo("vacuous exists quantifier", "Vexists", "vacuousExists", {case () => HilbertCalculus.vacuousExists}),
-    new CoreAxiomInfo("const congruence", "CCE", "constCongruence", {case () => ???}),
-    new CoreAxiomInfo("const formula congruence", "CCQ", "constFormulaCongruence", {case () => ???}),
-    // Note: only used to implement Dskipd
-    new CoreAxiomInfo("DX differential skip", "DX", "DX", {case () => ???}),
     // [a] modalities and <a> modalities
+    //@todo diamond or determinancy
     new CoreAxiomInfo("<> dual", "<.>", "duald", {case () => HilbertCalculus.duald}),
     new DerivedAxiomInfo("[] dual", "[.]", "dualb", {case () => HilbertCalculus.dualb}),
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => HilbertCalculus.assignb}),
@@ -72,8 +61,12 @@ object DerivationInfo {
     new DerivedAxiomInfo("<;> compose", "<;>", "composed", {case () => HilbertCalculus.composed}),
     new CoreAxiomInfo("[*] iterate", "[*]", "iterateb", {case () => HilbertCalculus.iterateb}),
     new DerivedAxiomInfo("<*> iterate", "<*>", "iterated", {case () => HilbertCalculus.iterated}),
-    new CoreAxiomInfo("all dual", "alld", "alld", {case () => }),
-  
+    new CoreAxiomInfo("K modal modus ponens", "K", "K", {case () => TactixLibrary.K}),
+    //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
+    new CoreAxiomInfo("I induction", "I", "induction", {case () => ???}),
+    new CoreAxiomInfo("V vacuous", "V", "V", {case () => TactixLibrary.V}),
+    
+    // differential equation axioms
     new CoreAxiomInfo("DW", "DW", "DWAxiom", {case () => HilbertCalculus.DW}),
     new CoreAxiomInfo("DC differential cut", "DC", "DC", {case () => (fml:Formula) =>  HilbertCalculus.DC(fml)}),
     new CoreAxiomInfo("DE differential effect", "DE", "DE", {case () => HilbertCalculus.DE}),
@@ -86,28 +79,44 @@ object DerivationInfo {
     new CoreAxiomInfo("DG++", "DG++", "DGpp", {case () => ???}),
     new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", {case () => HilbertCalculus.DS}),
-    // Derivatives
-    new CoreAxiomInfo("&' derive and", "&'", "Dand", {case () => HilbertCalculus.Dand}),
-    new CoreAxiomInfo("|' derive or", "|'", "Dor", {case () => HilbertCalculus.Dor}),
-    new DerivedAxiomInfo("->' derive imply", "->'", "Dimply", {case () => HilbertCalculus.Dimply}),
-    new CoreAxiomInfo("forall' derive forall", "forall'", "Dforall", {case () => HilbertCalculus.Dforall}), //@todo "\u2200'"
-    new CoreAxiomInfo("exists' derive exists", "exists'", "Dexists", {case () => HilbertCalculus.Dexists}), //@todo "\u2203'"
+    
+    // Differential Axioms
     new CoreAxiomInfo("c()' derive constant fn", "c()'", "Dconst", {case () => HilbertCalculus.Dconst}),
+    new CoreAxiomInfo("x' derive var", "x'", "Dvar", {case () => HilbertCalculus.Dvariable}),
+    new DerivedAxiomInfo("x' derive variable", "x'", "DvariableAxiom", {case () => HilbertCalculus.Dvariable}),
+    new CoreAxiomInfo("+' derive sum", "+'", "Dplus", {case () => HilbertCalculus.Dplus}),
+    new CoreAxiomInfo("-' derive neg", "-'", "Dneg", {case () => HilbertCalculus.Dneg}),
+    new CoreAxiomInfo("-' derive minus", "-'", "Dminus", {case () => HilbertCalculus.Dminus}),
+    new CoreAxiomInfo("*' derive product", "*'", "Dtimes", {case () => HilbertCalculus.Dtimes}),
+    new CoreAxiomInfo("/' derive quotient", "/'", "Dquotient", {case () => HilbertCalculus.Dquotient}),
+    new CoreAxiomInfo("^' derive power", "^'", "Dpower", {case () => HilbertCalculus.Dpower}),
+    new CoreAxiomInfo("chain rule", "o'", "Dcompose", {case () => TactixLibrary.Dcompose}),
+
     new CoreAxiomInfo("=' derive =", "='", "Dequal", {case () => HilbertCalculus.Dequal}),
     new CoreAxiomInfo(">=' derive >=", ">='", "Dgreaterequal", {case () => HilbertCalculus.Dgreaterequal}),
     new CoreAxiomInfo(">' derive >", ">'", "Dgreater", {case () => HilbertCalculus.Dgreater}),
     new CoreAxiomInfo("<=' derive <=", "<='", "Dlessequal", {case () => HilbertCalculus.Dlessequal}),
     new CoreAxiomInfo("<' derive <", "<'", "Dless", {case () => HilbertCalculus.Dless}),
     new CoreAxiomInfo("!=' derive !=", "!='", "Dnotequal", {case () => HilbertCalculus.Dnotequal}),
-    new CoreAxiomInfo("-' derive neg", "-'", "Dneg", {case () => HilbertCalculus.Dneg}),
-    new CoreAxiomInfo("+' derive sum", "+'", "Dplus", {case () => HilbertCalculus.Dplus}),
-    new CoreAxiomInfo("-' derive minus", "-'", "Dminus", {case () => HilbertCalculus.Dminus}),
-    new CoreAxiomInfo("*' derive product", "*'", "Dtimes", {case () => HilbertCalculus.Dtimes}),
-    new CoreAxiomInfo("/' derive quotient", "/'", "Dquotient", {case () => HilbertCalculus.Dquotient}),
-    new CoreAxiomInfo("^' derive power", "^'", "Dpower", {case () => HilbertCalculus.Dpower}),
-    new DerivedAxiomInfo("x' derive variable", "x'", "DvariableAxiom", {case () => HilbertCalculus.Dvariable}),
-    new CoreAxiomInfo("x' derive var", "x'", "Dvar", {case () => HilbertCalculus.Dvariable}),
+    new CoreAxiomInfo("&' derive and", "&'", "Dand", {case () => HilbertCalculus.Dand}),
+    new CoreAxiomInfo("|' derive or", "|'", "Dor", {case () => HilbertCalculus.Dor}),
+    new DerivedAxiomInfo("->' derive imply", "->'", "Dimply", {case () => HilbertCalculus.Dimply}),
+    new CoreAxiomInfo("forall' derive forall", "forall'", "Dforall", {case () => HilbertCalculus.Dforall}), //@todo "\u2200'"
+    new CoreAxiomInfo("exists' derive exists", "exists'", "Dexists", {case () => HilbertCalculus.Dexists}), //@todo "\u2203'"
 
+    // first-order logic quantifiers
+    new CoreAxiomInfo("all instantiate", "alli", "alli", {case () => ???}),
+    new DerivedAxiomInfo("all distribute", "Dall", "allDistribute", {case () => useAt(DerivedAxioms.allDistributeAxiom)}),
+    new CoreAxiomInfo("vacuous all quantifier", "Vall", "vacuousAll", {case () => HilbertCalculus.vacuousAll}),
+    new DerivedAxiomInfo("vacuous exists quantifier", "Vexists", "vacuousExists", {case () => HilbertCalculus.vacuousExists}),
+    // more
+    new CoreAxiomInfo("const congruence", "CCE", "constCongruence", {case () => ???}),
+    new CoreAxiomInfo("const formula congruence", "CCQ", "constFormulaCongruence", {case () => ???}),
+    // Note: only used to implement Dskipd
+    new CoreAxiomInfo("DX differential skip", "DX", "DX", {case () => ???}),
+
+    new CoreAxiomInfo("all dual", "alld", "alld", {case () => }),
+  
 
     // Derived axioms
     new DerivedAxiomInfo("[:=] assign update", "[:=]", "assignbup", {case () => HilbertCalculus.assignb}),
@@ -211,7 +220,6 @@ object DerivationInfo {
     new DerivedAxiomInfo("+ closed", "+c", "plusClosed", {case () => useAt(DerivedAxioms.plusClosed)}),
     new DerivedAxiomInfo("positivity", "Pos", "positivity", {case () => useAt(DerivedAxioms.positivity)}),
     new DerivedAxiomInfo("distributive", "*+", "distributive", {case () => useAt(DerivedAxioms.distributive)}),
-    new DerivedAxiomInfo("all distribute", "Dall", "allDistribute", {case () => useAt(DerivedAxioms.allDistributeAxiom)}),
     new DerivedAxiomInfo("[]~><> propagation", "[]~><>", "boxDiamondPropagation", {case () => useAt(DerivedAxioms.boxDiamondPropagation)}),
     new DerivedAxiomInfo("-> self", "-> self", "implySelf", {case () => useAt(DerivedAxioms.implySelf)}),
     //@todo internal only
