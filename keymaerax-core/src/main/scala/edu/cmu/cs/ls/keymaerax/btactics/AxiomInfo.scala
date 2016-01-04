@@ -125,6 +125,7 @@ object DerivationInfo {
     new CoreAxiomInfo("DX differential skip", "DX", "DX", {case () => ???}),
 
     new CoreAxiomInfo("all dual", "alld", "alld", {case () => }),
+    new CoreAxiomInfo("all eliminate", "alle", "alle", {case () => }),
 
 
     // Derived axioms
@@ -141,7 +142,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("DG differential pre-ghost", "DG", "DGpreghost", {case () => useAt(DerivedAxioms.DGpreghost)}),
     new DerivedAxiomInfo("DW differential weakening", "DW", "DWeaken", {case () => HilbertCalculus.DW}),
     new DerivedAxiomInfo("DX diamond differential skip", "DX", "Dskipd", {case () => useAt(DerivedAxioms.Dskipd)}),
-    new DerivedAxiomInfo("all eliminate", "alle", "allEliminate", {case () => useAt(DerivedAxioms.allEliminateAxiom)}),
+//    new DerivedAxiomInfo("all eliminate", "alle", "allEliminate", {case () => useAt(DerivedAxioms.allEliminateAxiom)}),
     new DerivedAxiomInfo("exists eliminate", "existse", "existsEliminate", {case () => useAt(DerivedAxioms.existsEliminate)}),
     new DerivedAxiomInfo("exists dual", "existsd", "existsDual", {case () => useAt(DerivedAxioms.existsDualAxiom)}),
     new DerivedAxiomInfo("' linear", "l'", "Dlinear", {case () => useAt(DerivedAxioms.Dlinear)}),
@@ -368,6 +369,7 @@ object DerivationInfo {
 
     // Differential tactics
     new PositionTacticInfo("diffInd", "diffInd",  {case () => DifferentialTactics.diffInd}, needsTool = true),
+//    new PositionTacticInfo("diffSolve", "diffSolve",  {case () => DifferentialTactics.diffSolve}, needsTool = true),
     new InputPositionTacticInfo("diffCut", "diffCut", List(FormulaArg("cutFormula")), {case () => (fml:Formula) => DifferentialTactics.diffCut(fml)}, needsTool = true),
     new InputPositionTacticInfo("diffInvariant",
       RuleDisplayInfo("diffInvariant",

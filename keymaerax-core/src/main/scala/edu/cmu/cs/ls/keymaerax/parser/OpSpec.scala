@@ -157,7 +157,7 @@ object OpSpec {
   val sDifferentialSymbol = UnaryOpSpec[Term](PRIME,0, PostfixFormat, unterm, (v:Term) => DifferentialSymbol(v.asInstanceOf[Variable]))
   val sPair         = BinaryOpSpec[Term](COMMA,   444, RightAssociative, binterm, Pair.apply _)
   val sDifferential = UnaryOpSpec[Term] (PRIME,     5, PostfixFormat, unterm, Differential.apply _)
-  val sNeg          = UnaryOpSpec[Term] (MINUS,    49/*!*/, PrefixFormat, unterm, Neg.apply _)    // -x^2 == -(x^2) != (-x)^2
+  val sNeg          = UnaryOpSpec[Term] (MINUS,    59/*!*/, PrefixFormat, unterm, Neg.apply _)    // -x^2 == -(x^2) != (-x)^2
   val sPower        = BinaryOpSpec[Term](POWER,    20, RightAssociative/*!*/, binterm, Power.apply _)
   val sTimes        = BinaryOpSpec[Term](STAR,     40, LeftAssociative, binterm, Times.apply _)
   val sDivide       = BinaryOpSpec[Term](SLASH,    40, LeftAssociative/*!*/, binterm, Divide.apply _)
@@ -178,6 +178,7 @@ object OpSpec {
   val sPredicationalOf = UnaryOpSpec(none,              0, PrefixFormat, unfml, (name, e:Formula) => PredicationalOf(Function(name, None, Bool, Bool), e.asInstanceOf[Formula]))
   val sDifferentialFormula = UnaryOpSpec[Formula](PRIME,80, PostfixFormat, unfml, DifferentialFormula.apply _)
   val sEqual        = lBinaryOpSpec(EQ,                90, AtomicBinaryFormat, bintermfml, Equal.apply _)
+  assert(sEqual>sMinus, "formulas bind weaker than their constituent terms")
   val sNotEqual     = lBinaryOpSpec(NOTEQ,             90, AtomicBinaryFormat, bintermfml, NotEqual.apply _)
   val sGreaterEqual = lBinaryOpSpec(GREATEREQ,         90, AtomicBinaryFormat, bintermfml, GreaterEqual.apply _)
   val sGreater      = lBinaryOpSpec(RDIA,              90, AtomicBinaryFormat, bintermfml, Greater.apply _)
@@ -190,9 +191,9 @@ object OpSpec {
   val sNot          = UnaryOpSpec[Formula] (NOT,      100, PrefixFormat, unfml, Not.apply _)
   val sAnd          = BinaryOpSpec[Formula](AMP,      110, RightAssociative, binfml, And.apply _)
   val sOr           = BinaryOpSpec[Formula](OR,       120, RightAssociative, binfml, Or.apply _)
-  val sImply        = BinaryOpSpec[Formula](IMPLY,    130, RightAssociative/*!*/, binfml, Imply.apply _)
-  val sRevImply     = BinaryOpSpec[Formula](REVIMPLY, 130, LeftAssociative, binfml, (l:Formula, r:Formula) => Imply(r, l)) /* swaps arguments */
-  val sEquiv        = BinaryOpSpec[Formula](EQUIV,    140, NonAssociative/*!*/, binfml, Equiv.apply _)
+  val sImply        = BinaryOpSpec[Formula](IMPLY,    150, RightAssociative/*!*/, binfml, Imply.apply _)
+  val sRevImply     = BinaryOpSpec[Formula](REVIMPLY, 150, LeftAssociative, binfml, (l:Formula, r:Formula) => Imply(r, l)) /* swaps arguments */
+  val sEquiv        = BinaryOpSpec[Formula](EQUIV,    160, NonAssociative/*!*/, binfml, Equiv.apply _)
 
   // programs
   private val unprog = ProgramKind
@@ -207,9 +208,11 @@ object OpSpec {
   val sProgramConst = UnitOpSpec(none,    0, name => ProgramConst(name))
   val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name))
   val sAssign       = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (x:Term, e:Term) => Assign(x.asInstanceOf[Variable], e))
+  assert(sAssign>sMinus, "atomic programs bind weaker than their constituent terms")
   val sDiffAssign   = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e))
   val sAssignAny    = lUnaryOpSpecT[Program](ASSIGNANY,200, PostfixFormat, untermprog, (x:Term) => AssignAny(x.asInstanceOf[Variable]))
   val sTest         = lUnaryOpSpecF[Program](TEST,    200, PrefixFormat, unfmlprog, (f:Formula) => Test(f))
+  assert(sTest>sEquiv, "tests bind weaker than their constituent formulas")
   //@note same = operator so use sEqual.prec as precedence
   val sAtomicODE    = BinaryOpSpec[Program](EQ,        90, AtomicBinaryFormat, bintermprog, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
   val sDifferentialProduct = BinaryOpSpec(COMMA,       95, RightAssociative, bindiffprog, DifferentialProduct.apply _)
@@ -218,7 +221,7 @@ object OpSpec {
   val sDual         = UnaryOpSpec[Program](DUAL,      220, PostfixFormat, unprog, Dual.apply _)
   val sCompose      = BinaryOpSpec[Program](SEMI,     230, RightAssociative, binprog, Compose.apply _) //@todo compatibility mode for parser
   //valp: Compose     => OpNotation("",    230, RightAssociative)
-  val sChoice       = BinaryOpSpec[Program](CHOICE,   240, RightAssociative, binprog, Choice.apply _)
+  val sChoice       = BinaryOpSpec[Program](CHOICE,   250, RightAssociative, binprog, Choice.apply _)
 
   /** Parser needs a lookahead operator when actually already done, so don't dare constructing it */
   val sEOF          = UnitOpSpec  (EOF, Int.MaxValue, _ => throw new AssertionError("Cannot construct EOF"))

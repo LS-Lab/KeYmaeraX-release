@@ -123,8 +123,8 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case PredOf(p, c)           => p.asString + "(" + pp(q+0, c) + ")"
     case PredicationalOf(p, c)  => p.asString + "{" + pp(q+0, c) + "}"
     // special case to disambiguate between x<-y as in x < -y compared to x REVIMPLY y
-    case f: Less                => pp(q+0, f.left) + LEXSPACE + op(formula).opcode + LEXSPACE + pp(q+1, f.right)
-    case f: ComparisonFormula   => pp(q+0, f.left) + op(formula).opcode + pp(q+1, f.right)
+    case f: Less                => wrapLeft(f, pp(q+0, f.left)) + LEXSPACE + op(formula).opcode + LEXSPACE + wrapRight(f, pp(q+1, f.right))
+    case f: ComparisonFormula   => wrapLeft(f, pp(q+0, f.left)) + op(formula).opcode + wrapRight(f, pp(q+1, f.right))
     case DifferentialFormula(g) => "(" + pp(q+0, g) + ")" + op(formula).opcode
     //@note the q position for variables is a little weird since it identifies the quantifier not the variable
     case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp(q,_)).mkString(",") + " " + wrapChild(f, pp(q+0, f.child))
@@ -179,6 +179,11 @@ class KeYmaeraXPrinter extends PrettyPrinter {
   /** Wrap ``rightPrint`` for ``t.right`` in parentheses if they are not implicit. */
   protected def wrapRight(t: BinaryComposite, rightPrint: String): String = "(" + rightPrint + ")"
 
+//  /** Wrap ``leftPrint`` for ``t.left`` in parentheses if they are not implicit. */
+//  protected def wrapLeft(t: ComparisonFormula, leftPrint: String): String = "(" + leftPrint + ")"
+//  /** Wrap ``rightPrint`` for ``t.right`` in parentheses if they are not implicit. */
+//  protected def wrapRight(t: ComparisonFormula, rightPrint: String): String = "(" + rightPrint + ")"
+
   /** Wrap ``leftPrint`` for ``t.left`` in program parentheses if they are not implicit. */
   protected def pwrapLeft(t: BinaryComposite/*Differential/Program*/, leftPrint: String): String =
     "{" + leftPrint + "}"
@@ -222,27 +227,20 @@ object FullPrettyPrinter extends KeYmaeraXPrinter {
   * @author Andre Platzer
   */
 abstract class KeYmaeraXSkipPrinter extends KeYmaeraXPrinter {
-  /** Wrap ``childPrint`` for ``t.child`` in parentheses if they are not implicit. */
   protected override def wrapChild(t: UnaryComposite, childPrint: String): String =
     if (skipParens(t)) childPrint else "(" + childPrint + ")"
-  /** Wrap ``childPrint`` for ``t.child`` in parentheses if they are not implicit. */
   protected override def wrapChild(t: Quantified, childPrint: String): String =
     if (skipParens(t)) childPrint else "(" + childPrint + ")"
-  /** Wrap ``childPrint`` for ``t.child`` in parentheses if they are not implicit. */
   protected override def wrapChild(t: Modal, childPrint: String): String =
     if (skipParens(t)) childPrint else "(" + childPrint + ")"
 
-  /** Wrap ``leftPrint`` for ``t.left`` in parentheses if they are not implicit. */
   protected override def wrapLeft(t: BinaryComposite, leftPrint: String): String =
     if (skipParensLeft(t)) leftPrint else "(" + leftPrint + ")"
-  /** Wrap ``rightPrint`` for ``t.right`` in parentheses if they are not implicit. */
   protected override def wrapRight(t: BinaryComposite, rightPrint: String): String =
     if (skipParensRight(t)) rightPrint else "(" + rightPrint + ")"
 
-  /** Wrap ``leftPrint`` for ``t.left`` in program parentheses if they are not implicit. */
   protected override def pwrapLeft(t: BinaryComposite/*Differential/Program*/, leftPrint: String): String =
     if (skipParensLeft(t)) leftPrint else "{" + leftPrint + "}"
-  /** Wrap ``rightPrint`` for ``t.right`` in program parentheses if they are not implicit. */
   protected override def pwrapRight(t: BinaryComposite/*Differential/Program*/, rightPrint: String): String =
     if (skipParensRight(t)) rightPrint else "{" + rightPrint + "}"
 
@@ -308,30 +306,53 @@ class KeYmaeraXPrecedencePrinter extends KeYmaeraXSkipPrinter {
   */
 class KeYmaeraXWeightedPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 
-  /** Wrap ``leftPrint`` for ``t.left`` in parentheses if they are not implicit. */
-  protected override def wrapLeft(t: BinaryComposite, leftPrint: String): String =
-    if (skipParensLeft(t)) spaceLeft(t, leftPrint) else "(" + leftPrint + ")"
-  /** Wrap ``rightPrint`` for ``t.right`` in parentheses if they are not implicit. */
-  protected override def wrapRight(t: BinaryComposite, rightPrint: String): String =
-    if (skipParensRight(t)) spaceRight(t, rightPrint) else "(" + rightPrint + ")"
+  // eloquent space if no parentheses
+  protected override def wrapChild(t: Modal, childPrint: String): String =
+    if (skipParens(t)) " " + childPrint else "(" + childPrint + ")"
 
-  /** Wrap ``leftPrint`` for ``t.left`` in program parentheses if they are not implicit. */
+  protected override def wrapLeft(t: BinaryComposite, leftPrint: String): String =
+    if (skipParensLeft(t)) spaceLeft(t, leftPrint) else spaceLeft(t, "(" + leftPrint + ")")
+  protected override def wrapRight(t: BinaryComposite, rightPrint: String): String =
+    if (skipParensRight(t)) spaceRight(t, rightPrint) else spaceRight(t, "(" + rightPrint + ")")
+
   protected override def pwrapLeft(t: BinaryComposite/*Differential/Program*/, leftPrint: String): String =
-    if (skipParensLeft(t)) spaceLeft(t, leftPrint) else "{" + leftPrint + "}"
-  /** Wrap ``rightPrint`` for ``t.right`` in program parentheses if they are not implicit. */
+    if (skipParensLeft(t)) spaceLeft(t, leftPrint) else spaceLeft(t, "{" + leftPrint + "}")
   protected override def pwrapRight(t: BinaryComposite/*Differential/Program*/, rightPrint: String): String =
-    if (skipParensRight(t)) spaceRight(t, rightPrint) else "{" + rightPrint + "}"
+    if (skipParensRight(t)) spaceRight(t, rightPrint) else spaceRight(t, "{" + rightPrint + "}")
 
   protected def spaceLeft(t: BinaryComposite, leftPrint: String): String =
-    leftPrint + (" " * weight(t.left, t))
+    if (skipParensLeft(t)) leftPrint + (" " * weight(t.left, t)) else leftPrint
   protected def spaceRight(t: BinaryComposite, rightPrint: String): String =
-    (" " * weight(t.right, t)) + rightPrint
+    if (skipParensRight(t)) (" " * weight(t.right, t)) + rightPrint else rightPrint
 
-  protected def weight(sub: Expression, par: Expression): Int = {
-    val relative = - (op(sub).prec - op(par).prec)
-    assert(relative >= 0, "only expected to add weight if parentheses skipped so child's operator binds stronger " + sub + " versus " + par)
+  protected def weight(sub: Expression, par: BinaryComposite): Int = {
+    val prec = op(par).prec
+    if (prec >= 200)
+      // programs are formatted relative to one another not with their ridiculously large prec
+      (prec-150) / 50
+    else
+      prec / 50
+  }
+
+  private def weight2(sub: Expression, par: BinaryComposite): Int = {
+    val relative = Math.abs(op(sub).prec - op(par).prec)
+    if (relative <= 10 /*|| !(binaryOfKind(par.left, par) || binaryOfKind(par.right, par))*/) 0
+    else relative / 20
+  }
+
+  /** Whether sub is a binary composite of the same kind that par is a binary composite */
+  private def binaryOfKind(sub: Expression, par: BinaryComposite): Boolean = par.kind match {
+    case TermKind => sub.isInstanceOf[BinaryCompositeTerm]
+    case FormulaKind => sub.isInstanceOf[BinaryCompositeFormula]
+    case ProgramKind => sub.isInstanceOf[BinaryCompositeProgram]
+    case DifferentialProgramKind => sub.isInstanceOf[DifferentialProduct]
+  }
+
+  private def weight1(sub: Expression, par: BinaryComposite): Int = {
+    val relative = Math.abs(op(sub).prec - op(par).prec)
+    val imbalance = Math.abs(op(par.left).prec - op(par.right).prec)
     //@todo this implementation probably needs more thought
-    if (relative==0 || !(sub.isInstanceOf[Composite])) 0
-    else (relative + 39) / 40    // rounded-up division by 40
+    if (relative<10 || imbalance<10) 0
+    else (relative + 19) / 20    // rounded-up division
   }
 }

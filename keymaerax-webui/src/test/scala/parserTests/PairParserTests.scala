@@ -19,7 +19,8 @@ import scala.collection.immutable._
  */
 @SummaryTest
 class PairParserTests extends FlatSpec with Matchers {
-  val pp = KeYmaeraXPrettyPrinter
+  val pp = if (false) KeYmaeraXPrettyPrinter
+  else new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
   val parser = KeYmaeraXParser
   KeYmaera.init(Map.empty)
 
@@ -43,6 +44,7 @@ class PairParserTests extends FlatSpec with Matchers {
       } else {
         val p1 = parser(s1)
         val p2 = parser(s2)
+        println("parsed: " + pp(p1))
         p1 shouldBe p2
         parser(pp(p1)) shouldBe parser(pp(p2))
         pp(p1) shouldBe pp(p2)
@@ -510,6 +512,10 @@ class PairParserTests extends FlatSpec with Matchers {
 //    ("<{{x:=x+1;{x'=1}^@ ++ x:=x-1;}^@}*^@>(0<=x&x<1)", "<{{{{x:=x+1;{{x'=1}^@}} ++ {x:=x-1;}}^@}*}^@> (0<=x&x<1)"),
 
     ("[?x>0;x:=x+1; ++ ?x=0;x:=1; ++ x:=99; ++ ?x>=0;{{x:=x+1;++x:=x+2;};{y:=0;++y:=1;} ]x>=1", unparseable),
+
+    ("x + y*z + 3*(x+y)  >=  3+x+7", "((x+(y*z))+(3*(x+y)))>=((3+x)+7)"),
+    ("x + y*z + 3*(x+y) >= 3+x+7  &  x+1 < 2   ->   x^2 >= (x-1)^2  |  5 > 1", "((((x+(y*z))+(3*(x+y)))>=((3+x)+7))&((x+1)<2))->((x^2)>=(((x-1)^2))|(5>1))"),
+    ("2 + 3*x >= 2   ->   [{x:=x+1; x:=2*x;   ++  x:=0;}*] 3*x >= 0", "((2+(3*x))>=2)->([{{x:=(x+1);x:=(2*x);}++{x:=0;}}*]((3*x)>=0))"),
 
     ("true", "true"),
     ("false", "false")

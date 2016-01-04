@@ -135,17 +135,10 @@ object AxiomIndex {
     axiomsFor(expr, pos).headOption
   }
 
-  private val odeList = "DI differential invariant" :: "DC differential cut" :: "DG differential ghost" :: Nil
-  // :: "DS& differential equation solution"
+  private val odeList: List[String] = "DI differential invariant" :: "DC differential cut" :: "DG differential ghost" :: Nil
 
   private val unknown = Nil
 
-//@todo use this
-//      case ODESystem(_:AtomicODE,True)   => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect" +: odeList else odeList :+ "DE differential effect"
-//      case ODESystem(_:AtomicODE,domain) => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect" :: "DW differential weakening" :: odeList else "DW differential weakening" :: odeList ++ List("DE differential effect")
-//      case ODESystem(_:DifferentialProduct,True)   => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect (system)" +: odeList else odeList :+ "DE differential effect (system)"
-//      case ODESystem(_:DifferentialProduct,domain) => if (post.isInstanceOf[DifferentialFormula]) "DE differential effect (system)" :: "DW differential weakening" :: odeList else "DW differential weakening" :: odeList ++ List("DE differential effect (system)")
-  /** Return the (derived) axiom names that simplify the expression expr with simpler ones first */
   def axiomsFor(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None): List[String] = {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
     val isAnte = pos.nonEmpty && pos.get.isAnte
@@ -181,7 +174,7 @@ object AxiomIndex {
         case _: Exists => "exists' derive exists" :: Nil
         case _ => Nil
       }
-      case Box(a, _) =>
+      case Box(a, post) =>
         val rules =
           if (isTop && sequent.isDefined && sequent.get.ante.isEmpty && sequent.get.succ.length == 1) {"G" :: Nil} else Nil
         a match {
@@ -192,18 +185,20 @@ object AxiomIndex {
         case _: Test => "[?] test" :: rules
         case _: Compose => "[;] compose" :: rules
         case _: Choice => "[++] choice" :: rules
-        case _: Dual => "[] box" :: rules
+        case _: Dual => "[^d] dual" :: Nil
         case _: Loop => "loop" :: "[*] iterate" :: rules
+        case ODESystem(ode, constraint) if post.isInstanceOf[DifferentialFormula] => ode match {
+          case _: AtomicODE => "DE differential effect" :: /*"DW differential weakening" ::*/ Nil
+          case _: DifferentialProduct => "DE differential effect (system)" :: /*"DW differential weakening" ::*/ Nil
+          case _ => assert(false); ???
+        }
+        /** Return the (derived) axiom names that simplify the expression expr with simpler ones first */
         case ODESystem(ode, constraint) =>
-          val tactics = "diffInvariant" :: "diffInd" :: Nil
-          (ode, constraint) match {
-            // @todo diamond duals
-            case (_: AtomicODE, True) => tactics ++ odeList ++ ("DE differential effect" :: rules)
-            case (_: AtomicODE, domain) =>  tactics ++ ("DW differential weakening" :: (odeList ++ ("DE differential effect" :: rules)))
-            case (_: DifferentialProduct, True) => tactics ++ odeList ++ ("DE differential effect (system)" :: rules)
-            case (_: DifferentialProduct, domain) => tactics ++ ("DW differential weakening" :: (odeList ++ ("DE differential effect (system)" :: rules)))
-            case _ => tactics
-          }
+          val tactics: List[String] = "diffSolve" :: /*"diffInvariant" ::*/ "diffInd" :: Nil
+          if (constraint == True)
+            tactics ++ odeList ++ rules
+          else
+            (tactics :+ "DW differential weakening") ++ odeList ++ rules
         case _ => Nil
       }
       case Diamond(a, _) => a match {
@@ -213,6 +208,7 @@ object AxiomIndex {
         case _: Compose => "<;> compose" :: Nil
         case _: Choice => "<++> choice" :: Nil
         case _: Dual => "<^d> dual" :: Nil
+        case _: ODESystem => println("AxiomIndex for <ODE> still missing"); unknown
         case _ => Nil
       }
       case Not(f) => f match {
