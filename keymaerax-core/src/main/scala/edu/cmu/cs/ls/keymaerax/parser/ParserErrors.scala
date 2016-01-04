@@ -14,7 +14,18 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.{TokenStream, ParseState}
  * @author Andre Platzer
  */
 case class ParseException(msg: String, loc: Location, found: String/*Token*/, expect: String/**/, after: String/*ParseState*/, state: String/*ParseState*/, cause: Throwable = null)
-  extends ProverException(loc.begin + " " + msg + "\nat " + loc + "\nFound:    " + found + "\nExpected: " + expect + "\nAfter:   " + after + "\nin " + state, cause)
+  extends ProverException(loc.begin + " " + msg + "\nat " + loc + "\nFound:    " + found + "\nExpected: " + expect + "\nAfter:   " + after + "\nin " + state, cause) {
+
+  /**
+    * Add the input context information to this exception, returning the resulting exception to be thrown.
+    * @param input textual description of the input in which this prover exception occurred.
+    * @param tokenStream optionally the tokenStream lexed from the input.
+    */
+  def inInput(input: String, tokenStream: Option[TokenStream] = None): ParseException = {
+    //@todo take loc into account to project input to loc
+    throw if (tokenStream.isDefined) inContext("input:  " + input) else inContext("input:  " + input + "\nas tokens: " + tokenStream.get)
+  }
+}
 
 object ParseException {
   def apply(msg: String, state: ParseState/*, cause: Throwable = null*/): ParseException =

@@ -112,7 +112,7 @@ object KeYmaeraXParser extends Parser {
   def apply(input: String): Expression = {
     val tokenStream = KeYmaeraXLexer.inMode(input, ExpressionMode())
     try { parse(tokenStream) }
-    catch {case e: ParseException => throw if (DEBUG) e.inContext("input:  " + input + "\nas tokens: " + tokenStream) else e.inContext("input:  " + input)}
+    catch {case e: ParseException => throw e.inInput(input, Some(tokenStream))}
   }
 
   def printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
