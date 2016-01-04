@@ -340,7 +340,7 @@ object DifferentialTactics {
               /* use */ skip,
               /* show */ cohide(pos.topLevel) & CMon(formulaPos(sequent(pos.topLevel), pos.inExpr)) & cut(axiom) <(
                 useAt("all eliminate")(-1) & eqL2R(new AntePosition(0))(1) & useAt("-> self")(1) & close,
-                cohide('Rlast) & byUS("x' derive variable"))
+                cohide('Rlast) & byUS(DerivedAxioms.Dvariable))
             )
         }
       }

@@ -176,7 +176,8 @@ object AxiomIndex {
       }
       case Box(a, post) =>
         val rules =
-          if (isTop && sequent.isDefined && sequent.get.ante.isEmpty && sequent.get.succ.length == 1) {"G" :: Nil} else Nil
+          // @todo Better applicability test for V
+          if (isTop && sequent.isDefined && sequent.get.ante.isEmpty && sequent.get.succ.length == 1) {"G" :: "V vacuous" :: Nil} else { "V vacuous" :: Nil}
         a match {
         // Note: Using this axiom name to look up a tactic via AxiomInfo actually gives you assignb,
         // which handles several assignment axioms.

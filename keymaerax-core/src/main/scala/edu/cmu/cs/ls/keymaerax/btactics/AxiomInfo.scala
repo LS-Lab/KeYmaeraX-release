@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentTactic, DependentPositionTa
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.Position
+import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Position}
 
 import scala.collection.immutable.HashMap
 
@@ -98,8 +98,8 @@ object DerivationInfo {
 
     // Differential Axioms
     new CoreAxiomInfo("c()' derive constant fn", "c()'", "Dconst", {case () => HilbertCalculus.Dconst}),
-    new CoreAxiomInfo("x' derive var", "x'", "Dvar", {case () => HilbertCalculus.Dvariable}),
-    new DerivedAxiomInfo("x' derive variable", "x'", "DvariableAxiom", {case () => HilbertCalculus.Dvariable}),
+    new CoreAxiomInfo("x' derive var", "x'", "Dvar", {case () => DifferentialTactics.Dvariable}),
+    new DerivedAxiomInfo("x' derive variable", "x'", "DvariableAxiom", {case () => DifferentialTactics.Dvariable}),
     new CoreAxiomInfo("+' derive sum", "+'", "Dplus", {case () => HilbertCalculus.Dplus}),
     new CoreAxiomInfo("-' derive neg", "-'", "Dneg", {case () => HilbertCalculus.Dneg}),
     new CoreAxiomInfo("-' derive minus", "-'", "Dminus", {case () => HilbertCalculus.Dminus}),
