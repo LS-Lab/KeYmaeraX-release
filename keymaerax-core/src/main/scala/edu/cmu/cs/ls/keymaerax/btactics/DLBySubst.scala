@@ -2,13 +2,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-//import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{cut, implyL, implyR, hideR, cutR, andL, andR, cutLR, equivifyR}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.axiomatic
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, NamedTactic, SequentType, USubstPatternTactic}
-//import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -396,4 +394,23 @@ object DLBySubst {
       }
     }
   }
+
+  /**
+   * Turns an existential quantifier into an assignment.
+   * @example{{{
+   *         |- [t:=0;][x:=t;]x>=0
+   *         -------------------------assignbExists("0".asTerm)(1)
+   *         |- \exists t [x:=t;]x>=0
+   * }}}
+   * @param f The right-hand side term of the assignment.
+   * @return The tactic.
+   */
+  def assignbExists(f: Term): DependentPositionTactic = "[:=] assign exists" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(Exists(vars, p)) =>
+      require(vars.size == 1, "Cannot handle existential lists")
+      cutR(Box(Assign(vars.head, f), p))(pos) <(
+        skip,
+        cohide(pos) & byUS("[:=] assign exists")
+        )
+  })
 }

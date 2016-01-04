@@ -54,6 +54,7 @@ object DerivationInfo {
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => HilbertCalculus.assignb}),
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => ???}),
+    new CoreAxiomInfo("[:=] assign exists", "[:=]exists", "assignbexists", {case () => HilbertCalculus.useAt("[:=] assign exists") }),
     //@todo new DerivedAxiomInfo("<:=> assign equality", "<:=>=", "assigndeq", {case () => ???}),
     new CoreAxiomInfo("[':=] differential assign", "[':=]", "Dassignb", {case () => HilbertCalculus.Dassignb}),
     new CoreAxiomInfo("[:*] assign nondet", "[:*]", "randomb", {case () => HilbertCalculus.randomb}),
@@ -369,7 +370,7 @@ object DerivationInfo {
 
     // Differential tactics
     new PositionTacticInfo("diffInd", "diffInd",  {case () => DifferentialTactics.diffInd}, needsTool = true),
-//    new PositionTacticInfo("diffSolve", "diffSolve",  {case () => DifferentialTactics.diffSolve}, needsTool = true),
+    new PositionTacticInfo("diffSolve", "diffSolve",  {case () => ??? /*DifferentialTactics.diffSolve */}, needsTool = true),
     new InputPositionTacticInfo("diffCut", "diffCut", List(FormulaArg("cutFormula")), {case () => (fml:Formula) => DifferentialTactics.diffCut(fml)}, needsTool = true),
     new InputPositionTacticInfo("diffInvariant",
       RuleDisplayInfo("diffInvariant",

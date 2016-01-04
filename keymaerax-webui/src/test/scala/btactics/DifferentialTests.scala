@@ -372,6 +372,14 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[{x'=v,v'=2 & (true & v>=0) & x>=x_0}]x>=0".asFormula
   }
 
+  it should "cut in time as needed by diffSolve" in withMathematica { implicit qeTool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("t=0".asFormula), IndexedSeq("[{x'=2,t'=0*t+1}]x>=0".asFormula)),
+      diffInvariant("t>=0".asFormula)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "t=0".asFormula
+    result.subgoals.head.succ should contain only "[{x'=2,t'=0*t+1 & true & t>=0}]x>=0".asFormula
+  }
+
   it should "fail if any of the formulas is not an invariant" in withMathematica { implicit qeTool =>
     a [BelleError] should be thrownBy proveBy(
       Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
@@ -489,6 +497,14 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "(true&t>=t_0)&x=x_0+2*(t-t_0) -> x>b".asFormula
   }
 
+  it should "add time if not present" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)),
+      diffSolve(Some("x=x_0+2*t".asFormula))(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t_0=0".asFormula)
+    result.subgoals.head.succ should contain only "(true&t>=0)&x=x_0+2*t -> x>b".asFormula
+  }
+
   it should "ask Mathematica if no solution provided" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2,t'=1}]x>b".asFormula)),
       diffSolve()(tool)(1))
@@ -497,8 +513,15 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "(true&t>=t_0)&x=2*(t-t_0)+x_0 -> x>b".asFormula
   }
 
-  it should "find solution for x'=v if None is provided" in withMathematica { tool =>
-    //@todo requires v() instead of v, because derived axiom DlinearRight fails with substitution clash
+  it should "add time if not present and ask Mathematica if no solution provided" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)),
+      diffSolve(None)(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t_0=0".asFormula)
+    result.subgoals.head.succ should contain only "(true&t>=0)&x=2*t+x_0 -> x>b".asFormula
+  }
+
+  it should "find solution for x'=v() if None is provided" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v()>=0".asFormula), IndexedSeq("[{x'=v(),t'=1}]x>0".asFormula)),
       diffSolve()(tool)(1))
     result.subgoals should have size 1
@@ -506,12 +529,28 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "(true&t>=t_0)&x=v()*(t-t_0)+x_0 -> x>0".asFormula
   }
 
-  /**@todo derive not fully implemented yet */
-  ignore should "find solutions for x'=v, v'=a if None is provided" in withMathematica { tool =>
-    val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v>=0 & a()>0".asFormula), IndexedSeq("[{x'=v,v'=a(),t'=1}]x>0".asFormula)),
+  it should "find solution for x'=v if None is provided" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v>=0".asFormula), IndexedSeq("[{x'=v,t'=1}]x>0".asFormula)),
       diffSolve()(tool)(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x_0>0 & v_0>=0 & a()>0".asFormula
-    result.subgoals.head.succ should contain only "true".asFormula
+    result.subgoals.head.ante should contain only "x_0>0 & v>=0".asFormula
+    result.subgoals.head.succ should contain only "(true&t>=t_0)&x=(t-t_0)*v+x_0 -> x>0".asFormula
+  }
+
+  it should "use provided solution for x'=v, v'=a" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v>=0 & a>0".asFormula), IndexedSeq("[{x'=v,v'=a,t'=1}]x>0".asFormula)),
+      diffSolve(Some("v=a*t+v_0&x=1/2*(a*t*t+2*t*v_0+2*x_0)".asFormula))(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>0 & v_0>=0 & a>0".asFormula
+    result.subgoals.head.succ should contain only "((true&t>=t_0)&v=a*(t-t_0)+v_0)&x=1/2*(a*(t-t_0)*(t-t_0)+2*(t-t_0)*v_0+2*x_0) -> x>0".asFormula
+  }
+
+  /**@todo useFor not fully implemented yet */
+  ignore should "find solutions for x'=v, v'=a if None is provided" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v>=0 & a>0".asFormula), IndexedSeq("[{x'=v,v'=a,t'=1}]x>0".asFormula)),
+      diffSolve()(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>0 & v_0>=0 & a>0".asFormula
+    result.subgoals.head.succ should contain only "((true&t>=t_0)&v=a*(t-t_0)+v_0)&x=1/2*(a*(t-t_0)*(t-t_0)+2*(t-t_0)*v_0+2*x_0) -> x>0".asFormula
   }
 }

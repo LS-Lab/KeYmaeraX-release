@@ -300,7 +300,7 @@ Axiom "vacuous all quantifier".
 End.
 
 Axiom "all dual".
-  (!\exists x (!p(x))) <-> (\forall x p(x))
+  (!\exists x (!p(??))) <-> (\forall x p(??))
 End.
 
 /**
@@ -330,6 +330,10 @@ End.
 
 Axiom "[:=] assign equality".
   [x:=f();]p(??) <-> \forall x (x=f() -> p(??))
+End.
+
+Axiom "[:=] assign exists".
+  [x:=f();]p(??) -> \exists x p(??)
 End.
 
 Axiom "[':=] differential assign".
