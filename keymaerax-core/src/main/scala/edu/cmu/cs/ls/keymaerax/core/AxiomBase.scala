@@ -300,7 +300,7 @@ Axiom "vacuous all quantifier".
 End.
 
 Axiom "all dual".
-  (!\exists x (!p(x))) <-> (\forall x p(x))
+  (!\exists x (!p(??))) <-> (\forall x p(??))
 End.
 
 /**
