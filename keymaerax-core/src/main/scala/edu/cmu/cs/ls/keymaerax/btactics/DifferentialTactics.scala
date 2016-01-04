@@ -361,21 +361,17 @@ object DifferentialTactics {
       val (time, timeTactic, timeZeroInitially) = findTimeInOdes(odes) match {
         case Some(existingTime) => (existingTime, skip, false)
         case None =>
-          // HACK need some convention for internal names
-//          val initialTime: Variable = freshNamedSymbol(Variable("kxtime", None, Real), node.sequent)
-//          // universal quantifier and skolemization in ghost tactic (t:=0) will increment index twice
-//          val time = Variable(initialTime.name,
-//            initialTime.index match { case None => Some(1) case Some(a) => Some(a+2) }, initialTime.sort)
-//          // boxAssignT and equivRight will extend antecedent by 2 -> length + 1
-//          val introTime = nonAbbrvDiscreteGhostT(Some(initialTime), Number(0))(p) & boxAssignT(p) &
-//            diffAuxiliaryT(time, Number(0), Number(1))(p) & FOQuantifierTacticsImpl.instantiateT(time, time)(p)
-//          (time, introTime, true)
-          throw new BelleError("diffSolve requires time t'=1 in ODE")
+          val time: Variable = TacticHelper.freshNamedSymbol(Variable("t", None, Real), sequent)
+          val introTime =
+            DG(time, "0".asTerm, "1".asTerm)(pos) &
+              DLBySubst.assignbExists("0".asTerm)(pos) &
+              DLBySubst.assignEquational(pos)
+          (time, introTime, true)
       }
 
       def createTactic(ode: DifferentialProgram, solution: Formula, time: Variable, iv: Map[Variable, Variable],
                        diffEqPos: Position): BelleExpr = {
-        val initialGhosts = primedSymbols(ode).foldLeft(skip)((a, b) =>
+        val initialGhosts = (primedSymbols(ode) + time).foldLeft(skip)((a, b) =>
           a & (discreteGhost(b)(diffEqPos) & DLBySubst.assignEquational(diffEqPos)))
 
         // flatten conjunctions and sort by number of right-hand side symbols to approximate ODE dependencies
@@ -409,8 +405,8 @@ object DifferentialTactics {
           val sol = And(
             if (timeZeroInitially) s
             else SubstitutionHelper.replaceFree(s)(time, Minus(time, iv(time))),
-            GreaterEqual(time, iv(time)))
-          createTactic(odes, sol, time, iv, diffEqPos)
+            GreaterEqual(time, if (timeZeroInitially) "0".asTerm else iv(time)))
+          timeTactic & createTactic(odes, sol, time, iv, diffEqPos)
         case None => throw new BelleError("No solution found")
       }
 

@@ -372,6 +372,14 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[{x'=v,v'=2 & (true & v>=0) & x>=x_0}]x>=0".asFormula
   }
 
+  it should "cut in time as needed by diffSolve" in withMathematica { implicit qeTool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("t=0".asFormula), IndexedSeq("[{x'=2,t'=0*t+1}]x>=0".asFormula)),
+      diffInvariant("t>=0".asFormula)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "t=0".asFormula
+    result.subgoals.head.succ should contain only "[{x'=2,t'=0*t+1 & true & t>=0}]x>=0".asFormula
+  }
+
   it should "fail if any of the formulas is not an invariant" in withMathematica { implicit qeTool =>
     a [BelleError] should be thrownBy proveBy(
       Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
@@ -489,12 +497,28 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "(true&t>=t_0)&x=x_0+2*(t-t_0) -> x>b".asFormula
   }
 
+  it should "add time if not present" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)),
+      diffSolve(Some("x=x_0+2*t".asFormula))(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t_0=0".asFormula)
+    result.subgoals.head.succ should contain only "(true&t>=0)&x=x_0+2*t -> x>b".asFormula
+  }
+
   it should "ask Mathematica if no solution provided" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2,t'=1}]x>b".asFormula)),
       diffSolve()(tool)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x_0>b".asFormula
     result.subgoals.head.succ should contain only "(true&t>=t_0)&x=2*(t-t_0)+x_0 -> x>b".asFormula
+  }
+
+  it should "add time if not present and ask Mathematica if no solution provided" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)),
+      diffSolve(None)(tool)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t_0=0".asFormula)
+    result.subgoals.head.succ should contain only "(true&t>=0)&x=2*t+x_0 -> x>b".asFormula
   }
 
   it should "find solution for x'=v() if None is provided" in withMathematica { tool =>
