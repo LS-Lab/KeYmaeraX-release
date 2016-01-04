@@ -18,6 +18,7 @@ import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
+import _root_.edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.btactics.{PositionLocator, DerivationInfo, AxiomInfo}
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Sequent, ProverException, Provable}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
@@ -36,6 +37,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.{ArithmeticTacticsImpl, TacticExceptionLi
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.CLParser
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 
+import scala.collection.immutable
 import scala.io.Source
 import spray.json._
 import spray.json.DefaultJsonProtocol._
@@ -958,16 +960,14 @@ class GetProofProgressStatusRequest(db: DBAbstraction, userId: String, proofId: 
 
 class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) extends Request {
   def getResultingResponses() = {
-    if (!KeYmaeraInterface.containsTask(proofId)) {
-      if (!KeYmaeraInterface.isLoadingTask(proofId)) {
-        new ProofNotLoadedResponse(proofId) :: Nil
-      } else {
-        new ProofIsLoadingResponse(proofId) :: Nil
-      }
-    } else {
-      val isProved = KeYmaeraInterface.isProved(proofId)
-      new ProofVerificationResponse(proofId, isProved) :: Nil
-    }
+    val proof = db.getProofInfo(proofId)
+    val model = db.getModel(proof.modelId)
+    val conclusionFormula = KeYmaeraXProblemParser(model.keyFile)
+    val conclusion = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(conclusionFormula))
+    var trace = db.getExecutionTrace(proofId.toInt)
+    val provable = trace.steps.last.output.get
+    val isProved = provable.isProved && provable.conclusion == conclusion
+    new ProofVerificationResponse(proofId, isProved) :: Nil
   }
 }
 
