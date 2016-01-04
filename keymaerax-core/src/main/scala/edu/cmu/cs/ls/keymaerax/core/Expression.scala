@@ -284,7 +284,7 @@ sealed trait Formula extends Expression {
 sealed trait AtomicFormula extends Formula with Atomic
 
 /** Atomic comparison formula composed of two terms. */
-sealed trait ComparisonFormula extends AtomicFormula {
+sealed trait ComparisonFormula extends AtomicFormula with BinaryComposite {
   def reapply: (Term,Term)=>Formula
   def left: Term
   def right: Term
