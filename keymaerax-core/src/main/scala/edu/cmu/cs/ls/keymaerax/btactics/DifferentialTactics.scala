@@ -382,9 +382,15 @@ object DifferentialTactics {
         val flatSolution = flattenConjunctions(solution).
           sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
 
-        initialGhosts & diffInvariant(tool, flatSolution:_*)(pos) & diffWeaken(pos) &
-          exhaustiveEqR2L(hide = true)('Llast)*flatSolution.size
+        val rewriteEqualities = new SingleGoalDependentTactic("DiffSolveRewriteEqualities") {
+          override def computeExpr(sequent: Sequent): BelleExpr = {
+            val equalities = sequent.ante.takeRight(flatSolution.size)
+            equalities.map(eq => exhaustiveEqR2L(hide = true)(Find(0, Some(eq), AntePosition(0), exact=true))).
+              reduce[BelleExpr](_ & _)
+          }
+        }
 
+        initialGhosts & diffInvariant(tool, flatSolution:_*)(pos) & diffWeaken(pos) & rewriteEqualities
       }
 
       // initial values
