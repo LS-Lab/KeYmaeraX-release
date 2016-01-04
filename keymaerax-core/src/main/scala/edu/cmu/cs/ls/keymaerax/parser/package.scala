@@ -205,7 +205,7 @@ package object parser {
     */
   @inline final def checkInput(requirement: Boolean, message: => Any, loc: => Location, state: => String/*ParseState*/): Unit = {
     if (!requirement)
-      throw ParseException(message.toString, loc, "", state)
+      throw new ParseException(message.toString, loc, "<unknown>", "<unknown>", "", state)
   }
 
 }

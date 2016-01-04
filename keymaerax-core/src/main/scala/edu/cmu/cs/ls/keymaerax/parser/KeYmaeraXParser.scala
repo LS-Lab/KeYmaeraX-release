@@ -132,32 +132,32 @@ object KeYmaeraXParser extends Parser {
   override def termParser: (String => Term) =
     input => elaborate(eofState, OpSpec.sNone, TermKind, apply(input)) match {
       case t: Term => t
-      case e@_ => throw ParseException("Input does not parse as a term but as " + e.kind, e, input)
+      case e@_ => throw ParseException("Input does not parse as a term but as " + e.kind, e).inInput(input)
     }
 
   override def formulaParser: (String => Formula) =
     input => elaborate(eofState, OpSpec.sNone, FormulaKind, apply(input)) match {
       case f: Formula => f
-      case e@_ => throw ParseException("Input does not parse as a formula but as " + e.kind, e, input)
+      case e@_ => throw ParseException("Input does not parse as a formula but as " + e.kind, e).inInput(input)
     }
 
   /** Parse the input token stream in the concrete syntax as a differential dynamic logic formula */
   private[parser] def formulaTokenParser: (TokenStream => Formula) =
     input => elaborate(eofState, OpSpec.sNone, FormulaKind, parse(input)) match {
       case f: Formula => f
-      case e@_ => throw ParseException("Input does not parse as a formula but as " + e.kind, e, input)
+      case e@_ => throw ParseException("Input does not parse as a formula but as " + e.kind, e).inInput("<unknown>", Some(input))
     }
 
   override def programParser: (String => Program) =
     input => elaborate(eofState, OpSpec.sNone, ProgramKind, apply(input)) match {
       case p: Program => p
-      case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e, input)
+      case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput(input)
     }
 
   override def differentialProgramParser: (String => DifferentialProgram) =
     input => elaborate(eofState, OpSpec.sNone, DifferentialProgramKind, apply(input)) match {
       case p: DifferentialProgram => p
-      case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e, input)
+      case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput(input)
     }
 
   private val eofState = ParseState(Bottom, List(Token(EOF, UnknownLocation)))
@@ -172,7 +172,7 @@ object KeYmaeraXParser extends Parser {
     semanticAnalysis(parse) match {
       case None => parse
       case Some(error) => if (LAX) {if (false) println("WARNING: " + "Semantic analysis" + "\nin " + "parsed: " + printer.stringify(parse) + "\n" + error); parse}
-      else throw ParseException("Semantic analysis error", printer.stringify(parse) + "\n" + error, input)
+      else throw ParseException("Semantic analysis error " + error, parse).inInput("<unknown>", Some(input))
     }
   }
 
