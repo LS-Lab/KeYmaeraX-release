@@ -194,7 +194,7 @@ import edu.cmu.cs.ls.keymaerax.core.CoreException
  */
 package object parser {
   /** Check input for requirement being true, throwing a [[ParseException]] if false.
-    *  This method is a require` coming from the parser that cannot be disabled.
+    *  This method is a require coming from the parser that cannot be disabled.
     *  Blame is on the user input.
     *
     *  @param requirement   the expression to test for being true
@@ -205,7 +205,7 @@ package object parser {
     */
   @inline final def checkInput(requirement: Boolean, message: => Any, loc: => Location, state: => String/*ParseState*/): Unit = {
     if (!requirement)
-      throw new ParseException(message.toString, loc, state)
+      throw ParseException(message.toString, loc, "", state)
   }
 
 }

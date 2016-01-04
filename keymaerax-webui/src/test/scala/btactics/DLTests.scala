@@ -2,6 +2,7 @@ package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.assignbExists
 import edu.cmu.cs.ls.keymaerax.core.{Box, Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.ConfigurableGenerate
@@ -436,5 +437,27 @@ class DLTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "[z:=0;][x:=5+z;]x>z".asFormula
+  }
+
+  "[:=] assign exists" should "turn existential quantifier into assignment" in {
+    val result = proveBy("\\exists t [x:=t;]x>=0".asFormula, assignbExists("0".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[t:=0;][x:=t;]x>=0".asFormula
+  }
+
+  it should "turn existential quantifier into assignment for ODEs" in {
+    val result = proveBy("\\exists t [{x'=1,t'=1}]x>0".asFormula, assignbExists("0".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[t:=0;][{x'=1,t'=1}]x>0".asFormula
+  }
+
+  it should "work with other formulas around" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("\\exists t [{x'=1,t'=1}]x>0".asFormula, "z=1".asFormula)),
+      assignbExists("0".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>0".asFormula
+    result.subgoals.head.succ should contain only ("[t:=0;][{x'=1,t'=1}]x>0".asFormula, "z=1".asFormula)
   }
 }

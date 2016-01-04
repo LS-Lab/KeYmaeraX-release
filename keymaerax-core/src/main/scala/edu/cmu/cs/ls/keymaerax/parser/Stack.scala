@@ -29,6 +29,9 @@ sealed trait Stack[+A] {
 
   /** Select all elements except the top n elements of this stack, or empty if there are not that many. */
   def drop(n: Int): Stack[A]
+  /** Select only the top n elements of this stack, or less if there are not that many. */
+  def take(n: Int): Stack[A]
+
 
   /** Whether this stack is empty */
   def isEmpty: Boolean
@@ -51,6 +54,7 @@ sealed trait Stack[+A] {
 case class :+[B](tail: Stack[B], top: B) extends Stack[B] {
   def isEmpty = false
   def drop(n: Int) = {require(n>=0); if (n==0) this else tail.drop(n-1)}
+  def take(n: Int) = {require(n>=0); if (n==0) Bottom else tail.take(n-1) :+ top}
 }
 
 /** The empty stack bottom */
@@ -58,7 +62,8 @@ object Bottom extends Stack[Nothing] {
   def top = throw new UnsupportedOperationException("Empty stack has no top")
   def tail = throw new UnsupportedOperationException("Empty stack has no tail")
   def isEmpty = true
-  def drop(n: Int) = this
+  def drop(n: Int) = {require(n>=0); this}
+  def take(n: Int) = {require(n>=0); this}
 }
 
 

@@ -54,6 +54,7 @@ object DerivationInfo {
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => HilbertCalculus.assignb}),
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => ???}),
+    new CoreAxiomInfo("[:=] assign exists", "[:=]exists", "assignbexists", {case () => HilbertCalculus.useAt("[:=] assign exists") }),
     //@todo new DerivedAxiomInfo("<:=> assign equality", "<:=>=", "assigndeq", {case () => ???}),
     new CoreAxiomInfo("[':=] differential assign", "[':=]", "Dassignb", {case () => HilbertCalculus.Dassignb}),
     new CoreAxiomInfo("[:*] assign nondet", "[:*]", "randomb", {case () => HilbertCalculus.randomb}),

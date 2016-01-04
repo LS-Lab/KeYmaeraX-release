@@ -33,7 +33,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], List[Seq
     parseLemma(lemmaTokens)
   } catch {
     case e: ParseException => throw e.inContext("input:  " + input)
-    case e: IllegalArgumentException => throw new ParseException(e.toString, UnknownLocation, "\ninput:  " + input, e)
+    case e: IllegalArgumentException => throw ParseException(e.toString, "", input)
   }
 
 
