@@ -964,7 +964,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val model = db.getModel(proof.modelId)
     val conclusionFormula = KeYmaeraXProblemParser(model.keyFile)
     val conclusion = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(conclusionFormula))
-    var trace = db.getExecutionTrace(proofId.toInt)
+    val trace = db.getExecutionTrace(proofId.toInt)
     val provable = trace.steps.last.output.get
     val isProved = provable.isProved && provable.conclusion == conclusion
     new ProofVerificationResponse(proofId, isProved) :: Nil
