@@ -23,7 +23,17 @@ case class ParseException(msg: String, loc: Location, found: String/*Token*/, ex
     */
   def inInput(input: String, tokenStream: Option[TokenStream] = None): ParseException = {
     //@todo take loc into account to project input to loc
-    throw if (tokenStream.isDefined) inContext("input:  " + input) else inContext("input:  " + input + "\nas tokens: " + tokenStream.get)
+    val lineInfo = loc match {
+      case UnknownLocation => "<unknown>"
+      case _ => assert(loc.line>0 && loc.column>0);
+        val lines = input.lines
+        if (loc.line > lines.size) "<past EOF> at line " + loc.line
+        else {
+          val rem = lines.drop(loc.line-1)
+          if (rem.hasNext) rem.next() else "past EOF> at line " + loc.line
+        }
+    }
+    throw if (tokenStream.isDefined) inContext("     " + lineInfo + "\ninput:  " + input) else inContext("     " + lineInfo + "\ninput:  " + input + "\nas tokens: " + tokenStream.get)
   }
 }
 

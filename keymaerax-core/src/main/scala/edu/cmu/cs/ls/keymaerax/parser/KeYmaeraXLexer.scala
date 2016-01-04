@@ -254,6 +254,10 @@ sealed abstract class Location extends Serializable {
   def begin: Location
   /** End of this location */
   def end: Location
+  /** Beginning line or -1 */
+  def line: Int
+  /** Beginning column or -1 */
+  def column: Int
   /** The range from this region to the other region, inclusive. Starting here and ending at other. */
   //@todo review choices
   def --(other: Location): Location
@@ -268,6 +272,8 @@ object UnknownLocation extends Location {
   override def toString = "<somewhere>"
   def begin = this
   def end = this
+  def line = -1
+  def column = -1
   def --(other: Location): Location = this
 }
 case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location {
