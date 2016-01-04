@@ -576,7 +576,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
       case _ if s.isEmpty => None
         //@todo should be LexException inheriting
-      case _ => throw ParseException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s +"\n` beginning with character `" + s(0) + "`=" + s(0).getNumericValue, "", "")
+      case _ => throw LexException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s +"\n` beginning with character `" + s(0) + "`=" + s(0).getNumericValue, loc).inInput(s)
     }
   }
 

@@ -29,12 +29,12 @@ object KeYmaeraXProblemParser {
 
     val problem : Formula = parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {
       case f : Formula => f
-      case expr : Expression => throw ParseException("Expected problem to parse to a Formula", expr, "problem block")
+      case expr : Expression => throw ParseException("problem block" + ":" + "Expected problem to parse to a Formula", expr)
     }
 
     parser.semanticAnalysis(problem) match {
       case None =>
-      case Some(error) => throw ParseException("Semantic analysis error", parser.printer.stringify(problem) + "\n" + error, "")
+      case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
     }
 
     require(KeYmaeraXDeclarationsParser.typeAnalysis(decls, problem), "type analysis")
@@ -88,11 +88,11 @@ object KeYmaeraXDeclarationsParser {
       case f:Function =>
         val (domain,sort) = decls.get((f.name,f.index)) match {
           case Some(d) => d
-          case None => throw ParseException("undefined symbol " + f, "", "type analysis")
+          case None => throw ParseException("type analysis" + ": " + "undefined symbol " + f, f)
         }
         f.sort == sort && (domain match {
           case Some(d) => f.domain == d
-          case None => throw ParseException(f.name + " is declared as non-function, but used as function", "", "type analysis")
+          case None => throw ParseException("type analysis" + ": " + f.name + " is declared as non-function, but used as function", f)
         })
       case _ => true
     }) &&
@@ -100,7 +100,7 @@ object KeYmaeraXDeclarationsParser {
       case x: Variable =>
         val sort = decls.get((x.name,x.index)) match {
           case Some((None,d)) => d
-          case None => throw ParseException("undefined symbol " + x + " with index " + x.index, "", "type analysis")
+          case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index, x)
         }
         x.sort == sort
       case _ => true
@@ -232,7 +232,7 @@ object KeYmaeraXDeclarationsParser {
     case edu.cmu.cs.ls.keymaerax.parser.CP => edu.cmu.cs.ls.keymaerax.core.Trafo //@todo
     case edu.cmu.cs.ls.keymaerax.parser.MFORMULA => edu.cmu.cs.ls.keymaerax.core.Bool //@todo
     case edu.cmu.cs.ls.keymaerax.parser.TEST => edu.cmu.cs.ls.keymaerax.core.Bool //@todo this is getting stupid
-    case _ => throw ParseException("Expected sort token but found " + sortToken, sortToken.loc, "", "parse sort")
+    case _ => throw ParseException("Parse sort" + " : " + "Expected sort token but found " + sortToken, sortToken.loc)
   }
 
   private def isSort(terminal: Terminal) = terminal match {
