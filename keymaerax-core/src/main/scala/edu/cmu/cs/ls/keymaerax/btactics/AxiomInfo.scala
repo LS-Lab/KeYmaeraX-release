@@ -51,7 +51,7 @@ object DerivationInfo {
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond", "<.>", "diamond", {case () => ???}),
     new DerivedAxiomInfo("[] box", "[.]", "box", {case () => ???}),
-    new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => HilbertCalculus.assignb}),
+    new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => TactixLibrary.assignb}),
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => ???}),
     new CoreAxiomInfo("[:=] assign exists", "[:=]exists", "assignbexists", {case () => HilbertCalculus.useAt("[:=] assign exists") }),
