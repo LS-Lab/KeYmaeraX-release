@@ -42,25 +42,6 @@ CREATE TABLE IF NOT EXISTS `lemmas` (
   `lemma` TEXT -- A string that can be parsed by the Lemma parser
 );
 
--- TODO eventually remove these tables in favor of lemmas everywhere.
-CREATE TABLE IF NOT EXISTS `provables` (
-  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  `lemmaId` INTEGER REFERENCES `lemmas`
-);
-
-CREATE TABLE IF NOT EXISTS `sequents` (
-  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  `provableId` INTEGER REFERENCES `provables` (`_id`),
-  `idx` INTEGER -- index of the sequent within the provable. If null then this is the conclusion of the provable.
-);
-
-CREATE TABLE IF NOT EXISTS `sequentFormulas` (
-  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
-  `sequentId` INTEGER REFERENCES `sequents` (`_id`),
-  `isAnte` BOOLEAN,
-  `idx` INTEGER,
-  `formula` TEXT
-);
 
 ----------------------------------------------------------------------------------------------------
 -- Record of tactic execution

@@ -462,26 +462,6 @@ object SQLite {
         executableId
       })
 
-    def serializeSequent(sequent: Sequent, provableId: Int, subgoal: Option[Int]): Unit = {
-      val ante = sequent.ante
-      val succ = sequent.succ
-      val sequentId =
-        (Sequents.map({ case sequent => (sequent.provableid.get, sequent.idx) }) returning Sequents.map(_._Id.get))
-          .insert(provableId, subgoal)
-      nInserts = nInserts + 1
-      val formulas = Sequentformulas.map({ case fml => (fml.sequentid.get,
-        fml.isante.get, fml.idx.get, fml.formula.get)
-      })
-      for (i <- ante.indices) {
-        nInserts = nInserts + 1
-        formulas.insert((sequentId, true.toString, i, ante(i).prettyString))
-      }
-      for (i <- succ.indices) {
-        nInserts = nInserts + 1
-        formulas.insert((sequentId, false.toString, i, succ(i).prettyString))
-      }
-    }
-
     private[SQLite] def createLemma(): Int = {
       synchronizedTransaction({
         (Lemmas.map(_.lemma) returning Lemmas.map(_._Id.get))
@@ -520,15 +500,7 @@ object SQLite {
     override def serializeProvable(p: Provable): Int = {
       synchronizedTransaction({
         val lemma = Lemma(p, List(new ToolEvidence(Map("input" -> p.prettyString, "output" -> "true"))))
-        val lemmaId = lemmaDB.add(lemma)
-        val provableId =
-          (Provables.map({ case provable => provable.lemmaid}) returning Provables.map(_._Id.get))
-            .insert(lemmaId)
-        serializeSequent(p.conclusion, provableId, None)
-        for(i <- p.subgoals.indices) {
-          serializeSequent(p.subgoals(i), provableId, Some(i))
-        }
-        provableId
+        lemmaDB.add(lemma).toInt
       })
     }
 
@@ -546,10 +518,9 @@ object SQLite {
       })
 
     /** Use escape hatch in prover core to create a new Provable */
-    override def loadProvable(provableId: Int): Provable = {
-      val lemmaId = Provables.filter(_._Id === provableId).map(_.lemmaid).list.head
-      lemmaDB.get(lemmaId) match {
-        case None => throw new Exception ("No lemma with ID " + lemmaId + "for provable ID " + provableId)
+    override def loadProvable(lemmaId: Int): Provable = {
+      lemmaDB.get(lemmaId.toString) match {
+        case None => throw new Exception ("No lemma with ID " + lemmaId)
         case Some(lemma) => lemma.fact
       }
     }
@@ -657,17 +628,6 @@ object SQLite {
       val relevant = formulas.filter({ case formula => fromAnte == formula.isAnte })
       val sorted = relevant.sortWith({ case (f1, f2) => f1.index > f2.index })
       sorted.map({ case formula => formula.formulaStr.asFormula })
-    }
-
-    def getSequent(sequentId: Int)(implicit session: Session): Sequent = {
-      val formulas =
-        Sequentformulas.filter(_.sequentid === sequentId)
-          .list
-          .map(formula => new SequentFormulaPOJO(formula._Id.get, formula.sequentid.get,
-            formula.isante.get.toBoolean, formula.idx.get, formula.formula.get))
-      val ante = sortFormulas(fromAnte = true, formulas).toIndexedSeq
-      val succ = sortFormulas(fromAnte = false, formulas).toIndexedSeq
-      Sequent(Nil, ante, succ)
     }
 
     /** Gets the conclusion of a provable */

@@ -14,7 +14,7 @@ trait Tables {
   import scala.slick.jdbc.{GetResult => GR}
   
   /** DDL for all tables. Call .create to execute. */
-  lazy val ddl = Config.ddl ++ Executableparameter.ddl ++ Executables.ddl ++ Executionsteps.ddl ++ Lemmas.ddl ++ Models.ddl ++ Patterns.ddl ++ Proofs.ddl ++ Provables.ddl ++ Scalatactics.ddl ++ Sequentformulas.ddl ++ Sequents.ddl ++ Tacticexecutions.ddl ++ Users.ddl
+  lazy val ddl = Config.ddl ++ Executableparameter.ddl ++ Executables.ddl ++ Executionsteps.ddl ++ Lemmas.ddl ++ Models.ddl ++ Patterns.ddl ++ Proofs.ddl ++ Scalatactics.ddl ++ Tacticexecutions.ddl ++ Users.ddl
   
   /** Entity class storing rows of table Config
    *  @param configid Database column configId DBType(INTEGER), PrimaryKey
@@ -164,10 +164,8 @@ trait Tables {
     lazy val executablesFk = foreignKey("executables_FK_1", executableid, Executables)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
     /** Foreign key referencing Executionsteps (database name executionSteps_FK_2) */
     lazy val executionstepsFk = foreignKey("executionSteps_FK_2", (parentstep, previousstep), Executionsteps)(r => (r._Id, r._Id), onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
-    /** Foreign key referencing Provables (database name provables_FK_3) */
-    lazy val provablesFk = foreignKey("provables_FK_3", (localprovableid, resultprovableid, inputprovableid), Provables)(r => (r._Id, r._Id, r._Id), onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
-    /** Foreign key referencing Tacticexecutions (database name tacticExecutions_FK_4) */
-    lazy val tacticexecutionsFk = foreignKey("tacticExecutions_FK_4", executionid, Tacticexecutions)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+    /** Foreign key referencing Tacticexecutions (database name tacticExecutions_FK_3) */
+    lazy val tacticexecutionsFk = foreignKey("tacticExecutions_FK_3", executionid, Tacticexecutions)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
   }
   /** Collection-like TableQuery object for table Executionsteps */
   lazy val Executionsteps = new TableQuery(tag => new Executionsteps(tag))
@@ -307,29 +305,6 @@ trait Tables {
   /** Collection-like TableQuery object for table Proofs */
   lazy val Proofs = new TableQuery(tag => new Proofs(tag))
   
-  /** Entity class storing rows of table Provables
-   *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
-   *  @param lemmaid Database column lemmaId DBType(TEXT) */
-  case class ProvablesRow(_Id: Option[Int], lemmaid: String)
-  /** GetResult implicit for fetching ProvablesRow objects using plain SQL queries */
-  implicit def GetResultProvablesRow(implicit e0: GR[Option[Int]], e1: GR[String]): GR[ProvablesRow] = GR{
-    prs => import prs._
-    ProvablesRow.tupled((<<?[Int], <<[String]))
-  }
-  /** Table description of table provables. Objects of this class serve as prototypes for rows in queries. */
-  class Provables(_tableTag: Tag) extends Table[ProvablesRow](_tableTag, "provables") {
-    def * = (_Id, lemmaid) <> (ProvablesRow.tupled, ProvablesRow.unapply)
-    /** Maps whole row to an option. Useful for outer joins. */
-    def ? = (_Id, lemmaid.?).shaped.<>({r=>import r._; _2.map(_=> ProvablesRow.tupled((_1, _2.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
-    
-    /** Database column _id DBType(INTEGER), PrimaryKey */
-    val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
-    /** Database column lemmaId DBType(TEXT) */
-    val lemmaid: Column[String] = column[String]("lemmaId")
-  }
-  /** Collection-like TableQuery object for table Provables */
-  lazy val Provables = new TableQuery(tag => new Provables(tag))
-  
   /** Entity class storing rows of table Scalatactics
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
    *  @param location Database column location DBType(TEXT)
@@ -353,66 +328,6 @@ trait Tables {
   }
   /** Collection-like TableQuery object for table Scalatactics */
   lazy val Scalatactics = new TableQuery(tag => new Scalatactics(tag))
-  
-  /** Entity class storing rows of table Sequentformulas
-   *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
-   *  @param sequentid Database column sequentId DBType(INTEGER)
-   *  @param isante Database column isAnte DBType(BOOLEAN)
-   *  @param idx Database column idx DBType(INTEGER)
-   *  @param formula Database column formula DBType(TEXT) */
-  case class SequentformulasRow(_Id: Option[Int], sequentid: Option[Int], isante: Option[String], idx: Option[Int], formula: Option[String])
-  /** GetResult implicit for fetching SequentformulasRow objects using plain SQL queries */
-  implicit def GetResultSequentformulasRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[SequentformulasRow] = GR{
-    prs => import prs._
-    SequentformulasRow.tupled((<<?[Int], <<?[Int], <<?[String], <<?[Int], <<?[String]))
-  }
-  /** Table description of table sequentFormulas. Objects of this class serve as prototypes for rows in queries. */
-  class Sequentformulas(_tableTag: Tag) extends Table[SequentformulasRow](_tableTag, "sequentFormulas") {
-    def * = (_Id, sequentid, isante, idx, formula) <> (SequentformulasRow.tupled, SequentformulasRow.unapply)
-    
-    /** Database column _id DBType(INTEGER), PrimaryKey */
-    val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
-    /** Database column sequentId DBType(INTEGER) */
-    val sequentid: Column[Option[Int]] = column[Option[Int]]("sequentId")
-    /** Database column isAnte DBType(BOOLEAN) */
-    val isante: Column[Option[String]] = column[Option[String]]("isAnte")
-    /** Database column idx DBType(INTEGER) */
-    val idx: Column[Option[Int]] = column[Option[Int]]("idx")
-    /** Database column formula DBType(TEXT) */
-    val formula: Column[Option[String]] = column[Option[String]]("formula")
-    
-    /** Foreign key referencing Sequents (database name sequents_FK_1) */
-    lazy val sequentsFk = foreignKey("sequents_FK_1", sequentid, Sequents)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
-  }
-  /** Collection-like TableQuery object for table Sequentformulas */
-  lazy val Sequentformulas = new TableQuery(tag => new Sequentformulas(tag))
-  
-  /** Entity class storing rows of table Sequents
-   *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
-   *  @param provableid Database column provableId DBType(INTEGER)
-   *  @param idx Database column idx DBType(INTEGER) */
-  case class SequentsRow(_Id: Option[Int], provableid: Option[Int], idx: Option[Int])
-  /** GetResult implicit for fetching SequentsRow objects using plain SQL queries */
-  implicit def GetResultSequentsRow(implicit e0: GR[Option[Int]]): GR[SequentsRow] = GR{
-    prs => import prs._
-    SequentsRow.tupled((<<?[Int], <<?[Int], <<?[Int]))
-  }
-  /** Table description of table sequents. Objects of this class serve as prototypes for rows in queries. */
-  class Sequents(_tableTag: Tag) extends Table[SequentsRow](_tableTag, "sequents") {
-    def * = (_Id, provableid, idx) <> (SequentsRow.tupled, SequentsRow.unapply)
-    
-    /** Database column _id DBType(INTEGER), PrimaryKey */
-    val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
-    /** Database column provableId DBType(INTEGER) */
-    val provableid: Column[Option[Int]] = column[Option[Int]]("provableId")
-    /** Database column idx DBType(INTEGER) */
-    val idx: Column[Option[Int]] = column[Option[Int]]("idx")
-    
-    /** Foreign key referencing Provables (database name provables_FK_1) */
-    lazy val provablesFk = foreignKey("provables_FK_1", provableid, Provables)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
-  }
-  /** Collection-like TableQuery object for table Sequents */
-  lazy val Sequents = new TableQuery(tag => new Sequents(tag))
   
   /** Entity class storing rows of table Tacticexecutions
    *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
