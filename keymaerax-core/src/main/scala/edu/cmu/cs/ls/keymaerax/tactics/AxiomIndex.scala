@@ -182,6 +182,7 @@ object AxiomIndex {
         // which handles several assignment axioms.
         case _: Assign => "[:=] assign" :: rules
         case _: AssignAny => "[:*] assign nondet" :: rules
+        case _: DiffAssign => "[':=] differential assign" :: rules
         case _: Test => "[?] test" :: rules
         case _: Compose => "[;] compose" :: rules
         case _: Choice => "[++] choice" :: rules
