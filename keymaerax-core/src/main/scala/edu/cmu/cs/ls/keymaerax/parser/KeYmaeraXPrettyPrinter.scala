@@ -334,7 +334,7 @@ class KeYmaeraXWeightedPrettyPrinter extends KeYmaeraXPrecedencePrinter {
       prec / 50
   }
 
-  protected def weight2(sub: Expression, par: BinaryComposite): Int = {
+  private def weight2(sub: Expression, par: BinaryComposite): Int = {
     val relative = Math.abs(op(sub).prec - op(par).prec)
     if (relative <= 10 /*|| !(binaryOfKind(par.left, par) || binaryOfKind(par.right, par))*/) 0
     else relative / 20
@@ -348,7 +348,7 @@ class KeYmaeraXWeightedPrettyPrinter extends KeYmaeraXPrecedencePrinter {
     case DifferentialProgramKind => sub.isInstanceOf[DifferentialProduct]
   }
 
-  protected def weight1(sub: Expression, par: BinaryComposite): Int = {
+  private def weight1(sub: Expression, par: BinaryComposite): Int = {
     val relative = Math.abs(op(sub).prec - op(par).prec)
     val imbalance = Math.abs(op(par.left).prec - op(par.right).prec)
     //@todo this implementation probably needs more thought
