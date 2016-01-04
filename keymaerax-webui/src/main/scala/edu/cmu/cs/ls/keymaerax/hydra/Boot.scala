@@ -7,7 +7,8 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.awt.{GridLayout}
 import javax.swing._
 
-import _root_.edu.cmu.cs.ls.keymaerax.btactics.{TactixLibrary, DerivedAxioms}
+import _root_.edu.cmu.cs.ls.keymaerax.api.ComponentConfig
+import _root_.edu.cmu.cs.ls.keymaerax.btactics.{TactixLibrary, DerivedAxioms, UnifyUSCalculus}
 import _root_.edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, KeYmaeraX}
 import _root_.edu.cmu.cs.ls.keymaerax.tools.Mathematica
 import akka.actor.{ActorSystem, Props}
