@@ -135,7 +135,7 @@ object AxiomIndex {
     axiomsFor(expr, pos).headOption
   }
 
-  private val odeList: List[String] = "DI differential invariant" :: "DC differential cut" :: "DG differential ghost" :: Nil
+  private val odeList: List[String] = "DI differential invariant" :: "diffCut" :: "DG differential ghost" :: Nil
 
   private val unknown = Nil
 
@@ -188,6 +188,7 @@ object AxiomIndex {
         case _: Choice => "[++] choice" :: rules
         case _: Dual => "[^d] dual" :: Nil
         case _: Loop => "loop" :: "[*] iterate" :: rules
+        // @todo: This misses the case where differential symbols are not top-level.
         case ODESystem(ode, constraint) if post.isInstanceOf[DifferentialFormula] => ode match {
           case _: AtomicODE => "DE differential effect" :: /*"DW differential weakening" ::*/ Nil
           case _: DifferentialProduct => "DE differential effect (system)" :: /*"DW differential weakening" ::*/ Nil

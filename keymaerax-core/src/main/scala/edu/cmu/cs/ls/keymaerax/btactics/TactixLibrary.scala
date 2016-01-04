@@ -56,7 +56,7 @@ object TactixLibrary extends UnifyUSCalculus {
       | ((betaRule partial) partial) partial) partial) partial) partial)*@TheType()
 
   /** master: master tactic that tries hard to prove whatever it could */
-  def master(gen: Generator[Formula] = new NoneGenerate())(implicit qeTool: QETool): BelleExpr =
+  def master(gen: Generator[Formula] = new NoneGenerate()): BelleExpr =
     DoAll(?(
       (close
         | ((must(normalize) partial)
@@ -352,8 +352,8 @@ object TactixLibrary extends UnifyUSCalculus {
   // closing
 
   /** QE: Quantifier Elimination to decide arithmetic (after simplifying logical transformations) */
-  def QE(order: List[NamedSymbol] = Nil)(implicit qeTool: QETool): BelleExpr = ToolTactics.fullQE(order)
-  def QE(implicit qeTool: QETool): BelleExpr = QE()
+  def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)
+  def QE: BelleExpr = QE()
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close             : BelleExpr         = closeId | closeT | closeF
@@ -491,11 +491,11 @@ object TactixLibrary extends UnifyUSCalculus {
         partial)
       partial)
   /** Real-closed field arithmetic after consolidating sequent into a single universally-quantified formula */
-  def RCF(implicit qeTool: QETool): BelleExpr = QE
+  def RCF: BelleExpr = QE
 
   /** Lazy Quantifier Elimination after decomposing the logic in smart ways */
   //@todo ideally this should be ?RCF so only do anything of RCF if it all succeeds with true
-  def lazyQE(implicit qeTool: QETool) = (
+  def lazyQE = (
     ((alphaRule | allR('_) | existsL('_)
       | close
       //@todo eqLeft|eqRight for equality rewriting directionally toward easy

@@ -135,9 +135,9 @@ object HilbertCalculus extends UnifyUSCalculus {
   /** Dconst: c()' derives a constant `c()' = 0` */
   lazy val Dconst             : DependentPositionTactic = useAt("c()' derive constant fn")
   /** Dvariable: x' derives a variable `(x)' = x'` */
-  lazy val Dvariable          : DependentPositionTactic = ???
-//    if (false&&INTERNAL) useAt("x' derive var", PosInExpr(0::Nil)) //useAt("x' derive variable", PosInExpr(0::0::Nil))
-//    else SyntacticDerivationInContext.symbolizeDifferential
+  lazy val Dvariable          : DependentPositionTactic = useAt("x' derive var", PosInExpr(0::Nil))
+    // if (false&&INTERNAL) useAt("x' derive var", PosInExpr(0::Nil)) //useAt("x' derive variable", PosInExpr(0::0::Nil))
+    // else SyntacticDerivationInContext.symbolizeDifferential
 
   /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
   lazy val Dand               : DependentPositionTactic = useAt("&' derive and")

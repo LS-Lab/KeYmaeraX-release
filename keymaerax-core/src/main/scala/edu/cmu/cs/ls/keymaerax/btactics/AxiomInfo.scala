@@ -77,7 +77,14 @@ object DerivationInfo {
 
     // differential equation axioms
     new CoreAxiomInfo("DW", "DW", "DWaxiom", {case () => HilbertCalculus.DW}),
-    new CoreAxiomInfo("DC differential cut", "DC", "DC", {case () => (fml:Formula) =>  HilbertCalculus.DC(fml)}),
+    new CoreAxiomInfo("DC differential cut", "DC", "DCaxiom", {case () => ??? }),
+    new InputPositionTacticInfo("diffCut"
+      , RuleDisplayInfo("DC"
+        , (List("&Gamma;"),List("[x' = f(x) & q(x)]p(x)","&Delta;"))
+        , List((List("&Gamma;"), List("[x' = f(x) & q(x)]r(x)", "&Delta;")),
+          (List("&Gamma;"), List("[x' = f(x) & (q(x) & r(x))]p(x)","&Delta;"))))
+      , List(FormulaArg("r(x)"))
+      , {case () => (fml:Formula) => HilbertCalculus.DC(fml)}),
     new CoreAxiomInfo("DE differential effect", "DE", "DE", {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DE differential effect (system)", "DE", "DEs", {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DI differential invariant", "DI", "DI", {case () => HilbertCalculus.DI}),
@@ -371,7 +378,6 @@ object DerivationInfo {
     // Differential tactics
     new PositionTacticInfo("diffInd", "diffInd",  {case () => DifferentialTactics.diffInd}, needsTool = true),
     new PositionTacticInfo("diffSolve", "diffSolve",  {case () => ??? /*DifferentialTactics.diffSolve */}, needsTool = true),
-    new InputPositionTacticInfo("diffCut", "diffCut", List(FormulaArg("cutFormula")), {case () => (fml:Formula) => DifferentialTactics.diffCut(fml)}, needsTool = true),
     new InputPositionTacticInfo("diffInvariant",
       RuleDisplayInfo("diffInvariant",
         (List("&Gamma;"), List("[x' = f(x)]p", "&Delta;")),
