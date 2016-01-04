@@ -56,10 +56,14 @@ private[parser] case class Error(msg: String, loc: Location, st: String) extends
 private[parser] trait Expected
 object Expected {
   /** Terminal input expected */
-  private[parser] implicit class ExpectTerminal(tok: Terminal) extends Expected
+  private[parser] implicit class ExpectTerminal(tok: Terminal) extends Expected {
+    override def toString: String = tok.toString
+  }
 }
 /** Nonterminal or pseudo-nonterminal input expected */
-private[parser] case class ExpectNonterminal(nonterm: String) extends Expected
+private[parser] case class ExpectNonterminal(nonterm: String) extends Expected {
+  override def toString: String = nonterm
+}
 object BINARYTERMOP extends ExpectNonterminal("<BinaryTermOp>")
 object BINARYFORMULAOP extends ExpectNonterminal("<BinaryFormulaOp>")
 object BINARYPROGRAMOP extends ExpectNonterminal("<BinaryProgramOp>")
@@ -73,7 +77,7 @@ object FOLLOWSPROGRAM extends ExpectNonterminal("<FollowsProgram>")
 object FOLLOWSEXPRESSION extends ExpectNonterminal("<FollowsExpression>")
 object FOLLOWSIDENT extends ExpectNonterminal("<FollowsIdentifier>")
 /** Pseudo-nonterminal encoding that there's other possible expectations beyond what's listed */
-object MORE extends ExpectNonterminal("<more>")
+object MORE extends ExpectNonterminal("<more>") {override def toString = "..."}
 
 /**
  * KeYmaera X parser reads input strings in the concrete syntax of differential dynamic logic of KeYmaera X.
@@ -120,37 +124,39 @@ object KeYmaeraXParser extends Parser {
     /** Lookahead location of this parser state */
     private[parser] def location: Location = input.head.loc
     override def toString: String = "ParseState(" + stack + "  <|>  " + input.mkString(", ") +")"
+    /** Explanation of the top few items on the parser stack */
+    def topString: String = stack.take(5).fold("")((s, e) => s + " " + e)
   }
 
   override def termParser: (String => Term) =
     input => elaborate(eofState, OpSpec.sNone, TermKind, apply(input)) match {
       case t: Term => t
-      case e@_ => throw new ParseException("Input does not parse as a term but as " + e.kind + "\nInput: " + input, UnknownLocation, printer.stringify(e))
+      case e@_ => throw new ParseException("Input does not parse as a term but as " + e.kind + "\nInput: " + input, UnknownLocation, "<all input>", printer.stringify(e))
     }
 
   override def formulaParser: (String => Formula) =
     input => elaborate(eofState, OpSpec.sNone, FormulaKind, apply(input)) match {
       case f: Formula => f
-      case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input, UnknownLocation, printer.stringify(e))
+      case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input, UnknownLocation, "<all input>", printer.stringify(e))
     }
 
   /** Parse the input token stream in the concrete syntax as a differential dynamic logic formula */
   private[parser] def formulaTokenParser: (TokenStream => Formula) =
     input => elaborate(eofState, OpSpec.sNone, FormulaKind, parse(input)) match {
       case f: Formula => f
-      case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input, UnknownLocation, printer.stringify(e))
+      case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input, UnknownLocation, "<all input>", printer.stringify(e))
     }
 
   override def programParser: (String => Program) =
     input => elaborate(eofState, OpSpec.sNone, ProgramKind, apply(input)) match {
       case p: Program => p
-      case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input, UnknownLocation, printer.stringify(e))
+      case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input, UnknownLocation, "<all input>", printer.stringify(e))
     }
 
   override def differentialProgramParser: (String => DifferentialProgram) =
     input => elaborate(eofState, OpSpec.sNone, DifferentialProgramKind, apply(input)) match {
       case p: DifferentialProgram => p
-      case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input, UnknownLocation, printer.stringify(e))
+      case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input, UnknownLocation, "<all input>", printer.stringify(e))
     }
 
   private val eofState = ParseState(Bottom, List(Token(EOF, UnknownLocation)))
@@ -159,13 +165,13 @@ object KeYmaeraXParser extends Parser {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
     val parse = parseLoop(ParseState(Bottom, input)).stack match {
       case Bottom :+ Accept(e) => e
-      case context :+ Error(msg, loc, st) => throw new ParseException(msg, loc, st)
+      case context :+ Error(msg, loc, st) => throw new ParseException(msg, loc, st, st)
       case _ => throw new AssertionError("Parser terminated with unexpected stack")
     }
     semanticAnalysis(parse) match {
       case None => parse
       case Some(error) => if (LAX) {if (false) println("WARNING: " + "Semantic analysis" + "\nin " + "parsed: " + printer.stringify(parse) + "\n" + error); parse}
-      else throw new ParseException("Semantic analysis error", UnknownLocation, "parsed: " + printer.stringify(parse) + "\n" + error)
+      else throw new ParseException("Semantic analysis error", UnknownLocation, "<all input>", "parsed: " + printer.stringify(parse) + "\n" + error)
     }
   }
 
@@ -234,7 +240,7 @@ object KeYmaeraXParser extends Parser {
   /** Elaborate e to the expected kind of a part of op by lifting defaulted types as needed or throw exception. */
   private def elaborate(st: ParseState, op: OpSpec, kind: Kind, e: Expression): Expression = elaboratable(kind, e) match {
     case Some(e) => e
-    case None => throw new ParseException("Cannot elaborate " + e + " of kind " + e.kind + " to expected kind " + kind + " for use in operator " + op, st.location, st.toString)
+    case None => throw new ParseException("Cannot elaborate " + e + " of kind " + e.kind + " to expected kind " + kind + " for use in operator " + op, st.location, st.topString, st.toString)
   }
 
   /** Elaborate e to the expected kind of a part of op by lifting defaulted types as needed or leave as is. */
@@ -506,7 +512,7 @@ object KeYmaeraXParser extends Parser {
             //@todo op(st, la) : Potential problem: st is not the right parser state for la
             //@todo if statementSemicolon then the missing SEMI causes incorrect predictions of operator precedence ++ versus ;
             if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX
-              || (la==RDIA || la==RDIA) && (t1.kind == ProgramKind || t1.kind == DifferentialProgramKind)
+              || (la==RDIA /*|| la==RDIA*/) && (t1.kind == ProgramKind || t1.kind == DifferentialProgramKind)
               || la!=LBRACE &&
                 (optok<op(st, la, List(t2.kind, ExpressionKind))
                   || optok<=op(st, la, List(t2.kind, ExpressionKind)) && optok.assoc==LeftAssociative && op(st, la, List(t2.kind, ExpressionKind)).assoc==LeftAssociative)) {
@@ -521,7 +527,7 @@ object KeYmaeraXParser extends Parser {
               || optok>op(st, la, List(t2.kind, ExpressionKind))
               || optok>=op(st, la, List(t2.kind, ExpressionKind)) && optok.assoc==RightAssociative && op(st, la, List(t2.kind, ExpressionKind)).assoc==RightAssociative)
               shift(st)
-            else error(st, List(LBRACE, MORE))
+            else error(st, List(LPAREN, EOF, RPAREN, RBRACE, RBOX, RDIA, LBRACE, MORE))
           }
         }
 
@@ -625,11 +631,11 @@ object KeYmaeraXParser extends Parser {
 
       case Bottom =>
         if (firstExpression(la)) shift(st)
-        else if (la==EOF) throw new ParseException("Empty input is not a well-formed expression ", input.head.loc, st.toString) else error(st, List(FIRSTEXPRESSION))
+        else if (la==EOF) throw new ParseException("Empty input is not a well-formed expression ", input.head.loc, st.topString, st.toString) else error(st, List(FIRSTEXPRESSION))
 
       case _ =>
         //@todo cases should be completed to complete the parser items, but it's easier to catch-all and report legible parse error.
-        throw new ParseException("Syntax error (or incomplete parser missing an item).\nFound: " + la, input.head.loc, st.toString)
+        throw new ParseException("Syntax error (or incomplete parser missing an item).\nFound: " + la, input.head.loc, st.topString, st.toString)
         //throw new AssertionError("Incomplete parser missing an item, so does not yet know how to handle case.\nFound: " + la + "\nAfter: " + s)
     }
   }
@@ -739,7 +745,7 @@ object KeYmaeraXParser extends Parser {
   /** Shift to put the next input token la on the parser stack s. */
   private def shift(st: ParseState): ParseState = {
     val ParseState(s, (la :: rest)) = st
-    if (parseErrorsAsExceptions && la.tok == EOF) throw new ParseException("Unfinished input. Parser cannot shift past end of file\nFound: " + la, la.loc, st.toString)
+    if (parseErrorsAsExceptions && la.tok == EOF) throw new ParseException("Unfinished input. Parser cannot shift past end of file\nFound: " + la, la.loc, st.topString, st.toString)
     else require(la.tok != EOF, "Cannot shift past end of file")
     ParseState(s :+ la, rest)
   }
@@ -779,7 +785,7 @@ object KeYmaeraXParser extends Parser {
     /** Error parsing the next input token la when in parser stack s.*/
   private def errormsg(st: ParseState, expected: String): ParseState = {
     val ParseState(s, input@(la :: rest)) = st
-    if (parseErrorsAsExceptions) throw new ParseException("Unexpected token cannot be parsed\nFound: " + la + "\nExpected: " + expected, la.loc, st.toString)
+    if (parseErrorsAsExceptions) throw new ParseException("Unexpected token cannot be parsed\nFound:    " + la + "\nExpected: " + expected, la.loc, st.topString, st.toString)
     else ParseState(s :+ Error("Unexpected token cannot be parsed\nFound: " + la + "\nExpected: " + expected, la.loc, st.toString), input)
   }
 

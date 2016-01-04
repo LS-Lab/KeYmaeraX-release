@@ -29,12 +29,12 @@ object KeYmaeraXProblemParser {
 
     val problem : Formula = parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {
       case f : Formula => f
-      case expr : Expression => throw new ParseException("Expected problem to parse to a Formula, but found " + expr, UnknownLocation, "problem block")
+      case expr : Expression => throw new ParseException("Expected problem to parse to a Formula, but found " + expr, UnknownLocation, "", "problem block")
     }
 
     parser.semanticAnalysis(problem) match {
       case None =>
-      case Some(error) => throw new ParseException("Semantic analysis error", UnknownLocation, "parsed: " + parser.printer.stringify(problem) + "\n" + error)
+      case Some(error) => throw new ParseException("Semantic analysis error", UnknownLocation, "", "parsed: " + parser.printer.stringify(problem) + "\n" + error)
     }
 
     require(KeYmaeraXDeclarationsParser.typeAnalysis(decls, problem), "type analysis")
@@ -88,11 +88,11 @@ object KeYmaeraXDeclarationsParser {
       case f:Function =>
         val (domain,sort) = decls.get((f.name,f.index)) match {
           case Some(d) => d
-          case None => throw new ParseException("undefined symbol " + f, UnknownLocation, "type analysis")
+          case None => throw new ParseException("undefined symbol " + f, UnknownLocation, "<all input>", "type analysis")
         }
         f.sort == sort && (domain match {
           case Some(d) => f.domain == d
-          case None => throw new ParseException(f.name + " is declared as non-function, but used as function", UnknownLocation, "type analysis")
+          case None => throw new ParseException(f.name + " is declared as non-function, but used as function", UnknownLocation, "<all input>", "type analysis")
         })
       case _ => true
     }) &&
@@ -100,7 +100,7 @@ object KeYmaeraXDeclarationsParser {
       case x: Variable =>
         val sort = decls.get((x.name,x.index)) match {
           case Some((None,d)) => d
-          case None => throw new ParseException("undefined symbol " + x + " with index " + x.index, UnknownLocation, "type analysis")
+          case None => throw new ParseException("undefined symbol " + x + " with index " + x.index, UnknownLocation, "<all input>", "type analysis")
         }
         x.sort == sort
       case _ => true
@@ -181,7 +181,7 @@ object KeYmaeraXDeclarationsParser {
       (( (nameToken.name, nameToken.index) , (None, sort) ), afterName.tail)
     }
     else {
-      throw new ParseException("Expected complete declaration but could not find terminating period", afterName.head.loc, "declaration parse")
+      throw new ParseException("Expected complete declaration but could not find terminating period", afterName.head.loc, "", "declaration parse")
     }
   }
 
@@ -232,7 +232,7 @@ object KeYmaeraXDeclarationsParser {
     case edu.cmu.cs.ls.keymaerax.parser.CP => edu.cmu.cs.ls.keymaerax.core.Trafo //@todo
     case edu.cmu.cs.ls.keymaerax.parser.MFORMULA => edu.cmu.cs.ls.keymaerax.core.Bool //@todo
     case edu.cmu.cs.ls.keymaerax.parser.TEST => edu.cmu.cs.ls.keymaerax.core.Bool //@todo this is getting stupid
-    case _ => throw new ParseException("Expected sort token but found " + sortToken, sortToken.loc, "parse sort")
+    case _ => throw new ParseException("Expected sort token but found " + sortToken, sortToken.loc, "", "parse sort")
   }
 
   private def isSort(terminal: Terminal) = terminal match {
