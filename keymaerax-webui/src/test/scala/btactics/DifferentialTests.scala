@@ -293,6 +293,19 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).ante should contain only "x>0".asFormula
     result.subgoals(1).succ should contain only ("y<0".asFormula, "[{x'=2}]x>0".asFormula, "z=0".asFormula)
   }
+
+  it should "not branch formulas in context" in withMathematica { implicit qeTool =>
+    val result = proveBy(
+      Sequent(Nil, IndexedSeq("x>0->x>0".asFormula), IndexedSeq("y<0&z=1".asFormula, "[{x'=2}]x>=0".asFormula, "z=0".asFormula)),
+      diffCut("x>0".asFormula)(2))
+
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only "x>0->x>0".asFormula
+    result.subgoals.head.succ should contain only ("y<0&z=1".asFormula, "[{x'=2 & true & x>0}]x>=0".asFormula, "z=0".asFormula)
+    result.subgoals(1).ante should contain only "x>0->x>0".asFormula
+    result.subgoals(1).succ should contain only ("y<0&z=1".asFormula, "[{x'=2}]x>0".asFormula, "z=0".asFormula)
+  }
+
   it should "cut formula into evolution domain constraint of rightmost ODE in ODEProduct" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>1".asFormula), IndexedSeq("[{x'=2, y'=3, z'=4 & y>4}]x>0".asFormula)),
       diffCut("x>1".asFormula)(1))

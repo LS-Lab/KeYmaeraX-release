@@ -314,7 +314,7 @@ trait UnifyUSCalculus {
               /* use */ cutR(C(subst(conclusion)))(p) <(
                 hideL('Llast) partial,
                 coHide2(AntePos(sequent.ante.size), p.top) & equivifyR(1) & commute & implyRi & CMon(p.inExpr) & factTactic) partial,
-              /* show: try to prove prereq locally by master, remains open if master fails */ hideR(p.top) & ?(TactixLibrary.master()) partial
+              /* show: prereq remains open */ hideR(p.top) partial
               )
           }
 
