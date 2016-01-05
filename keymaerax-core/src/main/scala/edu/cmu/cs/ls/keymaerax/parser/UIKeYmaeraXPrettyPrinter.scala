@@ -23,5 +23,5 @@ class UIKeYmaeraXPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter {
     )
 
   protected override def emit(q: PosInExpr, s: String): String =
-    HTML_OPEN + "term id=\"" + q.pos.mkString(".") + "\"" + HTML_CLOSE + s + HTML_OPEN + "term" + HTML_CLOSE
+    HTML_OPEN + "term id=\"" + q.pos.mkString(".") + "\"" + HTML_CLOSE + s + HTML_OPEN + "/term" + HTML_CLOSE
 }
