@@ -379,7 +379,7 @@ object DerivationInfo {
 
     // Differential tactics
     new PositionTacticInfo("diffInd", "diffInd",  {case () => DifferentialTactics.diffInd}, needsTool = true),
-    new PositionTacticInfo("diffSolve", "diffSolve",  {case () => ??? /*DifferentialTactics.diffSolve */}, needsTool = true),
+    new PositionTacticInfo("diffSolve", "diffSolve",  {case () => TactixLibrary.diffSolve(None)}, needsTool = true),
     new InputPositionTacticInfo("diffInvariant",
       RuleDisplayInfo("diffInvariant",
         (List("&Gamma;"), List("[x' = f(x)]p", "&Delta;")),
