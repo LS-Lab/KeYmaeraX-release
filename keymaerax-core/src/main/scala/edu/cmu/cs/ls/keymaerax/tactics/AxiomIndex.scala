@@ -100,6 +100,7 @@ object AxiomIndex {
     case "DE differential effect" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     //@todo unclear recursor
     case "DE differential effect system" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+    case "DI differential invariant" => (PosInExpr(1::Nil), PosInExpr(1::1::Nil)::Nil)
     //@todo other axioms
 
       // derived axioms
