@@ -203,9 +203,9 @@ object HilbertCalculus extends UnifyUSCalculus {
             DerivationInfo(axiom).belleExpr match {
               case ap:AtPosition[_] => ap(pos)
               case expr:BelleExpr => expr
-              case expr => throw new BelleUserGeneratedError("No axioms or rules applicable in stepAt")
+              case expr => throw new BelleUserGeneratedError("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")" + "\ngot " + expr)
             }
-          case None => throw new BelleUserGeneratedError("No axioms or rules applicable in stepAt")
+          case None => throw new BelleUserGeneratedError("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
         }
       }
     }
