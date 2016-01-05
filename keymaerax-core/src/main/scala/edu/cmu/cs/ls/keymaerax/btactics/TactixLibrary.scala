@@ -21,7 +21,7 @@ import scala.language.postfixOps
  * This library features all main tactic elements for most common cases, except sophisticated tactics.
  * Brief documentation for the tactics is provided inline in this interface file.
  *
- * *Following tactics forward to their implementation reveals more detailed documentation*.
+ * '''Following tactics forward to their implementation reveals more detailed documentation'''
  *
  * For tactics implementing built-in rules such as sequent proof rules,
  * elaborate documentation is in the [[edu.cmu.cs.ls.keymaerax.core.Rule prover kernel]].
