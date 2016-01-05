@@ -149,7 +149,7 @@ object AxiomIndex {
     val isAnte = pos.nonEmpty && pos.get.isAnte
     expr match {
       case Differential(t) => t match {
-        case _: Variable => "x' derive var" :: Nil //@note rewired to DifferentialCalculus.Dvariable
+        case _: Variable => "DvariableTactic" :: Nil
         case _: Number => "c()' derive constant fn" :: Nil
         // optimizations
         case t: Term if StaticSemantics.freeVars(t).isEmpty => "c()' derive constant fn" :: Nil
@@ -186,7 +186,7 @@ object AxiomIndex {
           // @todo Better applicability test for V
           if (isTop && sequent.isDefined && sequent.get.ante.isEmpty && sequent.get.succ.length == 1) {"G" :: "V vacuous" :: Nil} else { "V vacuous" :: Nil}
         a match {
-        case _: Assign => "[:=] assign" :: rules  //@note rewired to TactixLibrary.assignb
+        case _: Assign => "assignbTactic" :: rules
         case _: AssignAny => "[:*] assign nondet" :: rules
         case _: DiffAssign => "[':=] differential assign" :: rules
         case _: Test => "[?] test" :: rules
