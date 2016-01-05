@@ -143,7 +143,7 @@ object AxiomIndex {
   private val unknown = Nil
 
   /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
-  def axiomsFor(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None): List[String] = {
+  def axiomsFor(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None): List[String] = autoPad(pos, sequent, {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
     val isAnte = pos.nonEmpty && pos.get.isAnte
     expr match {
@@ -254,6 +254,8 @@ object AxiomIndex {
         if (!isTop) axioms
         else {
           (expr, isAnte) match {
+            case (True, false) => "closeTrue" :: Nil
+            case (False, true) => "closeFalse" :: Nil
             case (_: Not, true) => "notL" :: Nil
             case (_: Not, false) => "notR" :: Nil
             case (_: And, true) => axioms :+ "andL"
@@ -270,5 +272,11 @@ object AxiomIndex {
           }
         }
     }
-  }
+  })
+
+  private def autoPad(pos: Option[Position], sequent: Option[Sequent], axioms: List[String]): List[String] =
+    if (!axioms.isEmpty && pos.isDefined && pos.get.isTopLevel)
+      axioms ++ (if (pos.get.isAnte) "hideL" :: "cutL" :: Nil else "hideR" :: "cutR" :: Nil)
+    else
+      axioms
 }
