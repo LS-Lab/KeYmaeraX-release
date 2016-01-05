@@ -341,7 +341,7 @@ Axiom "[':=] differential assign".
 End.
 
 Axiom "[:*] assign nondet".
-  [x:=*;]p(x) <-> (\forall x p(x))
+  [x:=*;]p(??) <-> (\forall x p(??))
 End.
 
 Axiom "[?] test".

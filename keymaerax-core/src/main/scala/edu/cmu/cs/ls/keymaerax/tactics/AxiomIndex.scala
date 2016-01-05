@@ -130,7 +130,7 @@ object AxiomIndex {
 
   // lookup canonical axioms for an expression (index)
 
-  /** Return the canonical (derived) axiom name that simplifies the expression expr */
+  /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
   def axiomFor(expr: Expression, pos: Option[Position] = None): Option[String] = {
     axiomsFor(expr, pos).headOption
   }
@@ -139,6 +139,7 @@ object AxiomIndex {
 
   private val unknown = Nil
 
+  /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
   def axiomsFor(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None): List[String] = {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
     val isAnte = pos.nonEmpty && pos.get.isAnte
@@ -248,18 +249,18 @@ object AxiomIndex {
         if (!isTop) axioms
         else {
           (expr, isAnte) match {
-            case (_: Not, true) => "NotL" :: Nil
-            case (_: Not, false) => "NotR" :: Nil
-            case (_: And, true) => axioms :+ "AndL"
-            case (_: And, false) => axioms :+ "AndR"
-            case (_: Or, true) => "OrL" :: Nil
-            case (_: Or, false) => "OrR" :: Nil
-            case (_: Imply, true) => axioms :+ "ImplyL"
-            case (_: Imply, false) => axioms :+ "ImplyR"
-            case (_: Equiv, true) => "EquivL" :: Nil
-            case (_: Equiv, false) => "EquivR" :: Nil
-            case (_: Forall, false) => "AllR" :: Nil
-            case (_: Exists, true) => "ExistsL" :: Nil
+            case (_: Not, true) => "notL" :: Nil
+            case (_: Not, false) => "notR" :: Nil
+            case (_: And, true) => axioms :+ "andL"
+            case (_: And, false) => axioms :+ "andR"
+            case (_: Or, true) => "orL" :: Nil
+            case (_: Or, false) => "orR" :: Nil
+            case (_: Imply, true) => axioms :+ "implyL"
+            case (_: Imply, false) => axioms :+ "implyR"
+            case (_: Equiv, true) => "equivL" :: Nil
+            case (_: Equiv, false) => "equivR" :: Nil
+            case (_: Forall, false) => "allR" :: Nil
+            case (_: Exists, true) => "existsL" :: Nil
             case _ => Nil
           }
         }
