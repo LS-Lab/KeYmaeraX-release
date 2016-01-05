@@ -32,7 +32,7 @@ object HilbertCalculus extends HilbertCalculi
  * @see [[HilbertCalculus.derive()]]
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
-class HilbertCalculi extends UnifyUSCalculus {
+trait HilbertCalculi extends UnifyUSCalculus {
 
   /** True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on demand. */
   private val INTERNAL = false

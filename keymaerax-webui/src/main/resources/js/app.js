@@ -11,6 +11,7 @@
   'ui.bootstrap.tooltip',
   'ui.bootstrap.popover',
   'ui.bootstrap.collapse',
+  'ui.bootstrap.accordion',
   'keymaerax.controllers',
   'keymaerax.services',
   'keymaerax.ui.mouseevents',
