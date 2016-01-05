@@ -276,7 +276,7 @@ object AxiomIndex {
 
   private def autoPad(pos: Option[Position], sequent: Option[Sequent], axioms: List[String]): List[String] =
     if (!axioms.isEmpty && pos.isDefined && pos.get.isTopLevel)
-      axioms ++ (if (pos.get.isAnte) "hideL" :: "cutL" :: Nil else "hideR" :: "cutR" :: Nil)
+      axioms ++ (if (pos.get.isAnte) "hideL" :: /*"cutL" ::*/ Nil else "hideR" :: /*"cutR" ::*/ Nil)
     else
       axioms
 }
