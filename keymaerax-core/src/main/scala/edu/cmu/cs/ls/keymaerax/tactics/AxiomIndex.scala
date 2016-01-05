@@ -200,7 +200,7 @@ object AxiomIndex {
           case _ => Nil
         }
         case ODESystem(ode, constraint) =>
-          val tactics: List[String] = "diffSolve" :: /*@todo "diffInvariant" is better? ::*/ "diffInd" :: Nil
+          val tactics: List[String] = "diffSolve" :: "diffInd" :: /*@todo "diffInvariant" with inputs instead of DC? ::*/  Nil
           if (constraint == True)
             tactics ++ odeList ++ rules
           else
