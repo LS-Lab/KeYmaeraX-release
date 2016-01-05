@@ -112,7 +112,7 @@ trait SequentCalculi {
   /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   lazy val closeId           : DependentTactic = new DependentTactic("close id") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
+      case BelleProvable(provable, _) =>
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
         val s = provable.subgoals.head
         require(s.ante.intersect(s.succ).nonEmpty, "Expects same formula in antecedent and succedent,\n\t but antecedent " + s.ante + "\n\t does not overlap with succedent " + s.succ)
