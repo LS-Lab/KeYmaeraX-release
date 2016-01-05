@@ -12,8 +12,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
   * @author Andre Platzer
   */
 class UIKeYmaeraXPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter {
-  private val HTML_OPEN = "$#@@"
-  private val HTML_CLOSE = "@@#$"
+  private val HTML_OPEN = "$#@@$"
+  private val HTML_CLOSE = "$@@#$"
 
   override def apply(expr: Expression): String = (stringify(expr)
     .replaceAllLiterally("<", "&lt;")
