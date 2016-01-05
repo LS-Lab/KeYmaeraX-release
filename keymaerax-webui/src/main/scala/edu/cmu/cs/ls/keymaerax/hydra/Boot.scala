@@ -79,6 +79,9 @@ object Boot extends App {
   // spawn dependency injection framework
   ComponentConfig.keymaeraInitializer.initialize()
 
+  // connect invariant generator to tactix library
+  TactixLibrary.invGenerator = ComponentConfig.generator
+
   val database = DBAbstractionObj.defaultDatabase
   val config = database.getAllConfigurations.filter(_.name.equals("serverconfig")).headOption
   val (isHosted:Boolean, host:String, port:Int) = config match {

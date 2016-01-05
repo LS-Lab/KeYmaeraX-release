@@ -2,9 +2,10 @@ package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivedAxioms, TactixLibrary}
-import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable, Formula, PrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.tactics.{NoneGenerate, ConfigurableGenerate}
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
@@ -37,6 +38,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /** Test setup */
   override def beforeEach() = {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+    val generator = new ConfigurableGenerate[Formula]()
+    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
+    TactixLibrary.invGenerator = generator
   }
 
   /* Test teardown */
@@ -48,6 +52,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     if (TactixLibrary.tool != null) {
       TactixLibrary.tool match { case m: Mathematica => m.shutdown() }
       TactixLibrary.tool = null
+      TactixLibrary.invGenerator = new NoneGenerate()
     }
   }
 
