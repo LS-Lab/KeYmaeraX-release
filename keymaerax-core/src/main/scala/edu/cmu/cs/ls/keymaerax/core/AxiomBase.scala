@@ -280,44 +280,7 @@ Variables.
 End.
 
 /**
- * FIRST-ORDER QUANTIFIER AXIOMS
- */
-Axiom /*\\foralli */ "all instantiate".
-  (\forall x p(x)) -> p(t())
-End.
-
-/* consequence of "all instantiate" @note generalized "all instantiate" */
-Axiom "all eliminate".
-  (\forall x p(??)) -> p(??)
-End.
-
-Axiom "exists eliminate".
-  p(??) -> (\exists x p(??))
-End.
-
-Axiom "vacuous all quantifier".
-  (\forall x p()) <-> p()
-End.
-
-Axiom "all dual".
-  (!\exists x (!p(??))) <-> (\forall x p(??))
-End.
-
-/**
- * CONGRUENCE AXIOMS (for constant terms)
- */
-
-Axiom "const congruence".
-  (s() = t()) -> (ctxT_(s()) = ctxT_(t()))
-End.
-
-Axiom "const formula congruence".
-  (s() = t()) -> (ctxF_(s()) <-> ctxF_(t()))
-End.
-
-
-/**
- * HYBRID PROGRAM MODALITIES
+ * HYBRID PROGRAM MODALITY AXIOMS
  */
 
 Axiom "<> diamond".
@@ -381,6 +344,12 @@ Axiom "DE differential effect".
   [{x'=f(x)&q(x)}]p(??) <-> [{x'=f(x)&q(x)}][x':=f(x);]p(??)
 End.
 
+Axiom "DE differential effect (system)".
+  /* @NOTE Soundness: AtomicODE requires explicit-form so f(??) cannot verbatim mention differentials/differential symbols */
+  /* @NOTE Completeness: reassociate needed in DifferentialProduct data structures */
+  [{x'=f(??),c&H(??)}]p(??) <-> [{c,x'=f(??)&H(??)}][x':=f(??);]p(??)
+End.
+
 Axiom "DI differential invariant".
   [{c&H(??)}]p(??) <- (H(??)-> (p(??) & [{c&H(??)}]((p(??))')))
 /* [x'=f(x)&q(x);]p(x) <- (q(x) -> (p(x) & [x'=f(x)&q(x);]((p(x))'))) THEORY */
@@ -428,70 +397,15 @@ Axiom "DX differential skip".
   [{c&H(??)}]p(??) -> (H(??)->p(??))
 End.
 
-/**
- * DIFFERENTIAL INVARIANTS for SYSTEMS
- */
-
-Axiom "DE differential effect (system)".
-  /* @NOTE Soundness: AtomicODE requires explicit-form so f(??) cannot verbatim mention differentials/differential symbols */
-  /* @NOTE Completeness: reassociate needed in DifferentialProduct data structures */
-  [{x'=f(??),c&H(??)}]p(??) <-> [{c,x'=f(??)&H(??)}][x':=f(??);]p(??)
-End.
-
-/**
- * DERIVATION FOR FORMULAS
- */
-
-Axiom "&' derive and".
-  (p(??) & q(??))' <-> ((p(??)') & (q(??)'))
-End.
-
-Axiom "|' derive or".
-  (p(??) | q(??))' <-> ((p(??)') & (q(??)'))
-  /* sic! yet <- */
-End.
-
-Axiom "forall' derive forall".
-  (\forall x p(??))' <-> (\forall x (p(??)'))
-End.
-
-Axiom "exists' derive exists".
-  (\exists x p(??))' <-> (\forall x (p(??)'))
-  /* sic! yet <- */
-End.
+/* DIFFERENTIAL AXIOMS FOR TERMS */
 
 Axiom "c()' derive constant fn".
   c()' = 0
 End.
 
-Axiom "=' derive =".
-  (f(??) = g(??))' <-> ((f(??)') = (g(??)'))
+Axiom "x' derive var".
+   ((x_)' = x_')
 End.
-
-Axiom ">=' derive >=".
-  (f(??) >= g(??))' <-> ((f(??)') >= (g(??)'))
-End.
-
-Axiom ">' derive >".
-  (f(??) > g(??))' <-> ((f(??)') >= (g(??)'))
-  /* sic! easier */
-End.
-
-Axiom "<=' derive <=".
-  (f(??) <= g(??))' <-> ((f(??)') <= (g(??)'))
-End.
-
-Axiom "<' derive <".
-  (f(??) < g(??))' <-> ((f(??)') <= (g(??)'))
-  /* sic! easier */
-End.
-
-Axiom "!=' derive !=".
-  (f(??) != g(??))' <-> ((f(??)') = (g(??)'))
-  /* sic! */
-End.
-
-/* DERIVATION FOR TERMS */
 
 Axiom "-' derive neg".
   (-f(??))' = -(f(??)')
@@ -521,8 +435,53 @@ Axiom "^' derive power".
 	((f(??)^(c()))' = (c()*(f(??)^(c()-1)))*(f(??)')) <- (c() != 0)
 End.
 
-Axiom "x' derive var".
-   ((x_)' = x_')
+/**
+ * DIFFERENTIAL FOR FORMULAS
+ */
+
+Axiom "=' derive =".
+  (f(??) = g(??))' <-> ((f(??)') = (g(??)'))
+End.
+
+Axiom ">=' derive >=".
+  (f(??) >= g(??))' <-> ((f(??)') >= (g(??)'))
+End.
+
+Axiom ">' derive >".
+  (f(??) > g(??))' <-> ((f(??)') >= (g(??)'))
+  /* sic! easier */
+End.
+
+Axiom "<=' derive <=".
+  (f(??) <= g(??))' <-> ((f(??)') <= (g(??)'))
+End.
+
+Axiom "<' derive <".
+  (f(??) < g(??))' <-> ((f(??)') <= (g(??)'))
+  /* sic! easier */
+End.
+
+Axiom "!=' derive !=".
+  (f(??) != g(??))' <-> ((f(??)') = (g(??)'))
+  /* sic! */
+End.
+
+Axiom "&' derive and".
+  (p(??) & q(??))' <-> ((p(??)') & (q(??)'))
+End.
+
+Axiom "|' derive or".
+  (p(??) | q(??))' <-> ((p(??)') & (q(??)'))
+  /* sic! yet <- */
+End.
+
+Axiom "forall' derive forall".
+  (\forall x p(??))' <-> (\forall x (p(??)'))
+End.
+
+Axiom "exists' derive exists".
+  (\exists x p(??))' <-> (\forall x (p(??)'))
+  /* sic! yet <- */
 End.
 
 /** EXCLUSIVELY FOR HYBRID PROGRAMS. UNSOUND FOR HYBRID GAMES. */
@@ -548,6 +507,43 @@ End.
 Axiom "I induction".
   /*@TODO Drop or Use this form instead? which is possibly more helpful: ([{a;}*](p(??) -> [a;] p(??))) -> (p(??) -> [{a;}*]p(??)) THEORY */
   (p(??) & [{a;}*](p(??) -> [a;] p(??))) -> [{a;}*]p(??)
+End.
+
+/**
+ * FIRST-ORDER QUANTIFIER AXIOMS
+ */
+
+Axiom "all dual".
+  (!\exists x (!p(??))) <-> (\forall x p(??))
+End.
+
+Axiom /*\\foralli */ "all instantiate".
+  (\forall x p(x)) -> p(t())
+End.
+
+/* consequence of "all instantiate" @note generalized "all instantiate" */
+Axiom "all eliminate".
+  (\forall x p(??)) -> p(??)
+End.
+
+Axiom "exists eliminate".
+  p(??) -> (\exists x p(??))
+End.
+
+Axiom "vacuous all quantifier".
+  (\forall x p()) <-> p()
+End.
+
+/**
+ * CONGRUENCE AXIOMS (for constant terms)
+ */
+
+Axiom "const congruence".
+  (s() = t()) -> (ctxT_(s()) = ctxT_(t()))
+End.
+
+Axiom "const formula congruence".
+  (s() = t()) -> (ctxF_(s()) <-> ctxF_(t()))
 End.
 """
 }
