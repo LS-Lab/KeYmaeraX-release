@@ -88,6 +88,7 @@ object TactixLibrary extends HilbertCalculi with SequentCalculi {
   /**
    * onBranch((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and t2 on lbl2
    * @see [[edu.cmu.cs.ls.keymaerax.tactics.BranchLabels]]
+   * @note Probably this String should be a BelleLabel, and we should move BranchLabels into BelleLabel.
    * @see [[label()]]
    */
   def onBranch(s1: (String, BelleExpr), spec: (String, BelleExpr)*): BelleExpr = ??? //SearchTacticsImpl.onBranch(s1, spec:_*)
@@ -343,7 +344,7 @@ object TactixLibrary extends HilbertCalculi with SequentCalculi {
     val v = BelleProvable(Provable.startProof(goal))
     //@todo fetch from some factory
     SequentialInterpreter()(tactic, v) match {
-      case BelleProvable(provable) => provable
+      case BelleProvable(provable, _) => provable
       case r => throw new BelleUserGeneratedError("Error in proveBy, goal\n " + goal + " was not provable but instead resulted in\n " + r)
     }
   }

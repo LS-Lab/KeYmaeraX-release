@@ -28,7 +28,7 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
     println(lemma.name.get + "\n" + lemma.fact.conclusion)
     lemma.fact shouldBe 'proved
     theInterpreter(lemT, BelleProvable(Provable.startProof(lemma.fact.conclusion))) match {
-      case BelleProvable(provable) =>
+      case BelleProvable(provable, _) =>
         provable shouldBe 'proved
         provable.conclusion
       case _ => fail()

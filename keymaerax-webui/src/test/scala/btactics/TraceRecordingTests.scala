@@ -31,7 +31,7 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
   private def proveBy(s: Sequent, tactic: BelleExpr): Provable = {
     val v = BelleProvable(Provable.startProof(s))
     theInterpreter(tactic, v) match {
-      case BelleProvable(provable) => provable
+      case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
   }
