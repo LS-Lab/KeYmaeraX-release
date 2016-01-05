@@ -534,6 +534,11 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "(true&t>=0)&x=2*t+x_0 -> x>b".asFormula
   }
 
+  it should "add time if not present and ask Mathematica if no solution provided as part of master" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)),
+      master()) shouldBe 'proved
+  }
+
   it should "find solution for x'=v() if None is provided" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v()>=0".asFormula), IndexedSeq("[{x'=v(),t'=1}]x>0".asFormula)),
       diffSolve()(tool)(1))

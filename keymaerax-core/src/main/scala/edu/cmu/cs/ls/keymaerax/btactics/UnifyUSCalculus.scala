@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, AxiomIndex, Context, FormulaTools, HereP, Position, PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -30,7 +31,7 @@ trait UnifyUSCalculus {
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   /*@note must be initialized from outside; is var so that unit tests can setup/tear down. @see [[DerivedAxioms]] */
-  implicit var qeTool: QETool = null
+  implicit var tool: QETool with DiffSolutionTool = null
 
   /**
    * Throw exception if there is more than one open subgoal on the provable.
@@ -321,7 +322,7 @@ trait UnifyUSCalculus {
           // try to prove prereq globally, if that fails preserve context and fall back to CMon and C{prereq} -> ...
           (useAt(subst, new Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(0)) <(
             //@note the roles of use and show are really swapped here, since the implication on show will be handled by factTactic
-            /* use: try to prove prereq globally */ TactixLibrary.master(),
+            /* use: try to prove prereq globally */ TactixLibrary.QE,
             /* show */ factTactic), sequent) partial) |
           (provePrereqLocally partial)
 
