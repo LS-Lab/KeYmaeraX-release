@@ -68,7 +68,7 @@ object TactixLibrary extends UnifyUSCalculus {
         | ((loop(gen)('R) partial)
         | ((diffSolve(None)('R) partial)
         | ((diffInd partial)
-        | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType() & ?(QE)
+        | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType() & DoAll(?(QE))
 
   /*******************************************************************
     * unification and matching based auto-tactics
