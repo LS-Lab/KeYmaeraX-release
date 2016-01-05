@@ -28,6 +28,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXAxiomParser
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @author Andre Platzer
+ * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.AxiomIndex]]]]
  */
