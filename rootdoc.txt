@@ -15,11 +15,12 @@ Main documentation entry points for KeYmaera X API:
 
       - [[http://keymaerax.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
 
-  - `[[edu.cmu.cs.ls.keymaerax.tactics]]` - Tactic library 
-      - `[[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary]]` - Main tactic library for most common cases
-      - `[[edu.cmu.cs.ls.keymaerax.tactics.HilbertCalculus]]` - Hilbert Calculus for differential dynamic logic
-      - `[[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus]]` - Unification-based Uniform Substitution Calculus
-      - `[[edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary]]` - Additional tactic library
+  - `[[edu.cmu.cs.ls.keymaerax.btactics]]` - Tactic language library
+      - `[[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary]]` - Main tactic library
+      - `[[edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus]]` - Hilbert Calculus for differential dynamic logic
+      - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]]` - Unification-based Uniform Substitution Calculus
+
+  - `[[edu.cmu.cs.ls.keymaerax.bellerophon]]` - Bellerophon tactic language and tactic interpreter
 
   - `[[edu.cmu.cs.ls.keymaerax.lemma]]` - Lemma mechanism
 

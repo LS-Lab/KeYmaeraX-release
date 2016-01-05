@@ -11,9 +11,10 @@ import scala.collection.immutable
  *   ProofChecker : ProofTerm * Formula => Provable
  * }}}
  * with a successful answer if the proof indeed checked successfully.
- * Not soundness-critical, because the proof checker essentially compiles the proof term into
- * subsequent proof rule and axiom applications in the prover core.
+ * Not soundness-critical, because the proof checker compiles the proof term into
+ * subsequent proof rule and axiom applications in the [[edu.cmu.cs.ls.keymaerax.core prover core]].
  * Created by nfulton on 10/15/15.
+ * @author Nathan Fulton
  * @see [[ProofTerm]]
  * @see [[Provable]]
  */

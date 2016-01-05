@@ -27,6 +27,7 @@ import scala.language.postfixOps
  * elaborate documentation is in the [[edu.cmu.cs.ls.keymaerax.core.Rule prover kernel]].
  *
  * @author Andre Platzer
+ * @author Stefan Mitsch
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see [[UnifyUSCalculus]]
@@ -197,7 +198,8 @@ object TactixLibrary extends UnifyUSCalculus {
   /** abstraction: turns '[a]p' into \\forall BV(a) p */
   lazy val abstractionb       : DependentPositionTactic = DLBySubst.abstractionb
 
-  /** 'position' tactic t with abstraction at the same position afterwards */
+  /** 'position' tactic t with universal abstraction at the same position afterwards
+    * @see [[abstractionb]] */
   def withAbstraction(t: AtPosition[_ <: BelleExpr]): DependentPositionTactic = new DependentPositionTactic("with abstraction") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -216,9 +218,11 @@ object TactixLibrary extends UnifyUSCalculus {
    * @see [[DLBySubst.I]]
    */
   def I(invariant : Formula)  : DependentPositionTactic = DLBySubst.I(invariant)
-  /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
+  /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems)
+    * @see [[I]] */
   def loop(invariant: Formula) = I(invariant)
-  /** loop=I: prove a property of a loop by induction, if the given generator finds an induction hypothesis */
+  /** loop=I: prove a property of a loop by induction, if the given generator finds a loop invariant
+    * @see [[I]] */
   def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = I(gen(sequent, pos).getOrElse(
@@ -233,17 +237,26 @@ object TactixLibrary extends UnifyUSCalculus {
   // differential equations
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)}](q(x)->p(x))` */
   lazy val DW                 : DependentPositionTactic = useAt("DW differential weakening")
+  /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))` */
   lazy val diffWeaken         : DependentPositionTactic = withAbstraction(DW)
   /** DC: Differential Cut a new invariant for a differential equation `[{x'=f(x)&q(x)}]p(x)` reduces to `[{x'=f(x)&q(x)&C(x)}]p(x)` with `[{x'=f(x)&q(x)}]C(x)`. */
   def DC(invariant: Formula)  : DependentPositionTactic = useAt("DC differential cut", PosInExpr(1::0::Nil),
     (us:Subst)=>us++RenUSubst(Seq((PredOf(Function("r",None,Real,Bool),Anything), invariant))))
-  /** Differential Cut a new invariant, use old(.) to refer to inital values of variables. @see[[DC]] @see[[DifferentialTactics.diffCut]] */
+  /** DC: Differential Cut a new invariant, use old(.) to refer to initial values of variables.
+    * @see[[DC]]
+    * @see[[DifferentialTactics.diffCut]]
+    */
   def diffCut(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
   /** DE: Differential Effect exposes the effect of a differential equation `[x'=f(x)]p(x,x')` on its differential symbols as `[x'=f(x)][x':=f(x)]p(x,x')` */
   lazy val DE                 : DependentPositionTactic = DifferentialTactics.DE
   /** DI: Differential Invariant proves a formula to be an invariant of a differential equation */
   lazy val DI                 : DependentPositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))
+  /** DI: Differential Invariant proves a formula to be an invariant of a differential equation (plus usual steps) */
   def diffInd(implicit qeTool: QETool): DependentPositionTactic = DifferentialTactics.diffInd(qeTool)
+  /** DC+DI: Prove the given list of differential invariants in that order by DC+DI via [[diffCut]] followed by [[diffInd]] */
+  def diffInvariant(invariants: Formula*): DependentPositionTactic =
+    DifferentialTactics.diffInvariant(tool, invariants:_*)
+
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     */
@@ -319,11 +332,6 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val Dforall            : DependentPositionTactic = useAt("forall' derive forall")
   /** Dexists: \exists' derives an exists quantifier */
   lazy val Dexists            : DependentPositionTactic = useAt("exists' derive exists")
-
-  /** Prove the given list of differential invariants in that order by DC+DI */
-  //@todo could change type to invariants: Formula* if considered more readable
-  def diffInvariant(invariants: Formula*): DependentPositionTactic =
-    DifferentialTactics.diffInvariant(tool, invariants:_*)
 
   // more
 

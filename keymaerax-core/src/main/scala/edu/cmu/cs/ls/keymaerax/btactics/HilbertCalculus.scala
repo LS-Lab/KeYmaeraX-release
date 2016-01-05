@@ -17,6 +17,7 @@ import scala.language.postfixOps
 /**
  * Hilbert Calculus for differential dynamic logic.
  * @author Andre Platzer
+ * @author Stefan Mitsch
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
@@ -25,16 +26,21 @@ import scala.language.postfixOps
  */
 object HilbertCalculus extends UnifyUSCalculus {
 
-  /** True when insisting on internal useAt technology, false when external tactic calls are okay. */
-  private val INTERNAL = true
+  /** True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on demand. */
+  private val INTERNAL = false
 
   // modalities
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation */
-  lazy val assignb            : DependentPositionTactic = new DependentPositionTactic("[:=]") {
+  lazy val assignb            : DependentPositionTactic =
+//    "[:=]" by(pos =>
+//    if (INTERNAL) ((useAt("[:=] assign")(pos) partial) | (useAt("[:=] assign equality")(pos) partial) /*| (useAt("[:=] assign update")(pos) partial)*/) partial
+//    else TactixLibrary.assignb(pos)
+//    )
+    new DependentPositionTactic("[:=]") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = {
-        if (INTERNAL) (useAt("[:=] assign")(pos) partial) | ((useAt("[:=] assign equational")(pos) partial) | (useAt("[:=] assign update")(pos) partial)) partial
-        else ??? //TacticLibrary.boxAssignT
+        if (INTERNAL) (useAt("[:=] assign")(pos) partial) | ((useAt("[:=] assign equality")(pos) partial) /*| (useAt("[:=] assign update")(pos) partial)*/) partial
+        else TactixLibrary.assignb(pos)
       }
     }
   }
@@ -135,9 +141,8 @@ object HilbertCalculus extends UnifyUSCalculus {
   /** Dconst: c()' derives a constant `c()' = 0` */
   lazy val Dconst             : DependentPositionTactic = useAt("c()' derive constant fn")
   /** Dvariable: x' derives a variable `(x)' = x'` */
-  lazy val Dvariable          : DependentPositionTactic = useAt("x' derive var", PosInExpr(0::Nil))
-    // if (false&&INTERNAL) useAt("x' derive var", PosInExpr(0::Nil)) //useAt("x' derive variable", PosInExpr(0::0::Nil))
-    // else SyntacticDerivationInContext.symbolizeDifferential
+  lazy val Dvariable          : DependentPositionTactic =
+    if (INTERNAL) useAt("x' derive var", PosInExpr(0::Nil)) else DifferentialTactics.Dvariable
 
   /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
   lazy val Dand               : DependentPositionTactic = useAt("&' derive and")
@@ -189,9 +194,10 @@ object HilbertCalculus extends UnifyUSCalculus {
 
   /**
    * Make the canonical simplifying proof step based at the indicated position
-   * except when a decision needs to be made (e.g. invariants for loops or for differential equations).
+   * except when an unknown decision needs to be made (e.g. invariants for loops or for differential equations).
    * @author Andre Platzer
    * @note Efficient source-level indexing implementation.
+   * @see [[edu.cmu.cs.ls.keymaerax.tactics.AxiomIndex]]
    */
   lazy val stepAt: DependentPositionTactic = new DependentPositionTactic("stepAt") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {

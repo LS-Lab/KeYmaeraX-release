@@ -51,6 +51,7 @@ object DerivationInfo {
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond", "<.>", "diamond", {case () => ???}),
     new DerivedAxiomInfo("[] box", "[.]", "box", {case () => ???}),
+    //@todo DANGEROUS: same name so rewires axiom name to something subtly different
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => TactixLibrary.assignb}),
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => ???}),
@@ -98,7 +99,8 @@ object DerivationInfo {
 
     // Differential Axioms
     new CoreAxiomInfo("c()' derive constant fn", "c()'", "Dconst", {case () => HilbertCalculus.Dconst}),
-    new CoreAxiomInfo("x' derive var", "x'", "Dvar", {case () => DifferentialTactics.Dvariable}),
+    //@todo DANGEROUS: same name so rewires axiom name to something subtly different
+    new CoreAxiomInfo("x' derive var", "x'", "Dvar", {case () => HilbertCalculus.Dvariable}),
     new DerivedAxiomInfo("x' derive variable", "x'", "DvariableAxiom", {case () => DifferentialTactics.Dvariable}),
     new CoreAxiomInfo("+' derive sum", "+'", "Dplus", {case () => HilbertCalculus.Dplus}),
     new CoreAxiomInfo("-' derive neg", "-'", "Dneg", {case () => HilbertCalculus.Dneg}),
