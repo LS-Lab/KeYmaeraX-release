@@ -238,7 +238,7 @@ object DifferentialTactics {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         //@note assumes that first subgoal is desired result, see diffCut
-        val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd(qeTool)('Rlast) partial)
+        val diffIndAllButFirst = skip +: Seq.tabulate(formulas.length)(_ => diffInd(qeTool)('Rlast))
         diffCut(formulas: _*)(pos) <(diffIndAllButFirst:_*) partial
       }
     }

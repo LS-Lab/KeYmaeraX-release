@@ -24,14 +24,14 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
    * }}}
    * */
   def withMathematica(testcode: Mathematica => Any) {
-    val qeTool = new Mathematica()
-    qeTool.init(DefaultConfiguration.defaultMathematicaConfig)
-    qeTool shouldBe 'initialized
-    DerivedAxioms.qeTool = qeTool
-    TactixLibrary.qeTool = qeTool
+    val mathematica = new Mathematica()
+    mathematica.init(DefaultConfiguration.defaultMathematicaConfig)
+    mathematica shouldBe 'initialized
+    DerivedAxioms.qeTool = mathematica
+    TactixLibrary.tool = mathematica
     try {
-      testcode(qeTool)
-    } finally qeTool.shutdown()
+      testcode(mathematica)
+    } finally mathematica.shutdown()
   }
 
   /** Test setup */
@@ -45,9 +45,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       DerivedAxioms.qeTool match { case m: Mathematica => m.shutdown() }
       DerivedAxioms.qeTool = null
     }
-    if (TactixLibrary.qeTool != null) {
-      TactixLibrary.qeTool match { case m: Mathematica => m.shutdown() }
-      TactixLibrary.qeTool = null
+    if (TactixLibrary.tool != null) {
+      TactixLibrary.tool match { case m: Mathematica => m.shutdown() }
+      TactixLibrary.tool = null
     }
   }
 

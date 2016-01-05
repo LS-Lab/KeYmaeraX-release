@@ -62,9 +62,9 @@ object TactixLibrary extends UnifyUSCalculus {
         | ((must(normalize) partial)
         | ((loop(gen)('L) partial)
         | ((loop(gen)('R) partial)
-        //@todo diffSolve
+        | ((diffSolve(None)(tool)('R) partial)
         | ((diffInd partial)
-        | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType() & ?(QE)
+        | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType() & ?(QE)
 
   /*******************************************************************
     * unification and matching based auto-tactics
@@ -320,7 +320,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** Prove the given list of differential invariants in that order by DC+DI */
   //@todo could change type to invariants: Formula* if considered more readable
   def diffInvariant(invariants: Formula*): DependentPositionTactic =
-    DifferentialTactics.diffInvariant(qeTool, invariants:_*)
+    DifferentialTactics.diffInvariant(tool, invariants:_*)
 
   // more
 

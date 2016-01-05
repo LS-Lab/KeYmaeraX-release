@@ -85,18 +85,18 @@ object Boot extends App {
     case Some(c) => (c.config("isHosted").equals("true"), c.config("host"), Integer.parseInt(c.config("port")))
     case None => (false, "127.0.0.1", 8090)
   }
-  val qeTool = new Mathematica()
+  val mathematica = new Mathematica()
   try {
-    qeTool.init(DefaultConfiguration.defaultMathematicaConfig)
+    mathematica.init(DefaultConfiguration.defaultMathematicaConfig)
 
-    if(!qeTool.isInitialized) {
+    if(!mathematica.isInitialized) {
       throw new Exception("qeTool.isInitialized = false after calling init()")
     }
   } catch {
     case e:Throwable => println("===> WARNING: Failed to initialize Mathematica. " + e)
   }
-  DerivedAxioms.qeTool = qeTool
-  TactixLibrary.qeTool = qeTool
+  DerivedAxioms.qeTool = mathematica
+  TactixLibrary.tool = mathematica
   try {
     DerivedAxioms.prepopulateDerivedLemmaDatabase()
   }
