@@ -35,6 +35,9 @@ import scala.language.postfixOps
  * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
  */
 object TactixLibrary extends UnifyUSCalculus {
+  /** Generates loop and differential invariants */
+  var invGenerator: Generator[Formula] = new NoneGenerate()
+
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   lazy val step               : DependentPositionTactic = HilbertCalculus.stepAt
 
@@ -56,7 +59,7 @@ object TactixLibrary extends UnifyUSCalculus {
       | ((betaRule partial) partial) partial) partial) partial) partial)*@TheType()
 
   /** master: master tactic that tries hard to prove whatever it could */
-  def master(gen: Generator[Formula] = new NoneGenerate()): BelleExpr =
+  def master(gen: Generator[Formula] = invGenerator): BelleExpr =
     DoAll(?(
       (close
         | ((must(normalize) partial)
