@@ -131,11 +131,12 @@ object TactixLibrary extends HilbertCalculi with SequentCalculi {
    * @see [[DLBySubst.I]]
    */
   def loop(invariant : Formula)  : DependentPositionTactic = DLBySubst.I(invariant)
+  def I(invariant: Formula)      : DependentPositionTactic = loop(invariant)
   /** loop=I: prove a property of a loop by induction, if the given generator finds a loop invariant
     * @see [[loop(Formula)]] */
   def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = I(gen(sequent, pos).getOrElse(
+      override def computeExpr(sequent: Sequent): BelleExpr = loop(gen(sequent, pos).getOrElse(
         throw new BelleError("Unable to generate an invariant for " + sequent(pos) + " at position " + pos)))(pos)
     }
   }

@@ -29,7 +29,7 @@ object SequentCalculus extends SequentCalculi
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
   * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
   */
-class SequentCalculi {
+trait SequentCalculi {
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Propositional tactics
