@@ -20,17 +20,10 @@ Main documentation entry points for KeYmaera X API:
       - `[[edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus]]` - Hilbert Calculus for differential dynamic logic
       - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]]` - Unification-based Uniform Substitution Calculus
 
-  - `[[edu.cmu.cs.ls.keymaerax.bellerophon]]` - Tactic interpreter
+  - `[[edu.cmu.cs.ls.keymaerax.bellerophon]]` - Tactic language and tactic interpreter
 
   - `[[edu.cmu.cs.ls.keymaerax.lemma]]` - Lemma mechanism
 
   - `[[edu.cmu.cs.ls.keymaerax.tools]]` - Arithmetic back-ends
     
   - `[[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]` - Command-line launcher for KeYmaera X supports command-line argument `-help` to obtain usage information
-
-  - `[[edu.cmu.cs.ls.keymaerax.tactics]]` - Older scheduled tactic library 
-      - `[[edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary]]` - Main scheduled tactic library for most common cases
-      - `[[edu.cmu.cs.ls.keymaerax.tactics.HilbertCalculus]]` - Hilbert Calculus for differential dynamic logic
-      - `[[edu.cmu.cs.ls.keymaerax.tactics.UnifyUSCalculus]]` - Unification-based Uniform Substitution Calculus
-      - `[[edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary]]` - Additional tactic library
-
