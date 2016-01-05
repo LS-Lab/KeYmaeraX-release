@@ -62,7 +62,7 @@
                     <li><a href="" ng-click="onTactic(f.id,'HideL')"><span class="fa fa-eye-slash"></span></a></li>
                 </ul>
                 <div class="k4-formula-content">
-                    <ul><li>-{{$index + 1}}:</li></ul>
+                    <ul><li>{{f.id}}:</li></ul>
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
                                 formula="f.formula" highlight="true" collapsed="false"
                                 on-tactic="onTactic(formulaId, tacticId)"
@@ -110,7 +110,7 @@
                     <li><a href="" ng-click="onTactic(f.id,'HideR')"><span class="fa fa-eye-slash"></span></a></li>
                 </ul>
                 <div class="k4-formula-content">
-                    <ul><li>{{$index + 1}}:</li></ul>
+                    <ul><li>{{f.id}}:</li></ul>
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="true" collapsed="false"
                                 on-tactic="onTactic(formulaId, tacticId)"
