@@ -58,6 +58,10 @@ table .btn{
   max-width: 90%;
 }
 
+.popover-content {
+  width: 700px;
+}
+
 /* do not change appearance when focused for the sake of a context menu */
 .k4-withcontextmenu:focus {
   outline: none;
