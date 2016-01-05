@@ -463,14 +463,12 @@ angular.module('formula')
               return {
                 text: inputId,
                 isInput: true,
+                placeholder: inputId,
                 value: function(newValue) {
-                  if (newValue === undefined) {
-                    // get
-                    return $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value;
-                  } else {
-                    // set
-                    return $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value = newValue;
-                  }
+                  //@note check arguments.length to determine if we're called as getter or as setter
+                  return arguments.length ?
+                    ($.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value = newValue) :
+                     $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value;
                 }
               };
             }

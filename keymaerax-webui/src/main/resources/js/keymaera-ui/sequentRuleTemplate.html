@@ -6,7 +6,8 @@
                     <span ng-repeat="ante in premise.ante">
                         <span ng-repeat="antePart in ante">
                             <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
-                            <input type="text" name="antePart.text"
+                            <input type="text" name="{{antePart.text}}"
+                                   placeholder="{{antePart.placeholder}}"
                                    ng-model="antePart.value" ng-model-options="{getterSetter: true}"
                                    ng-if="antePart.isInput" required></input>
                         </span>
@@ -18,7 +19,8 @@
                     <span ng-repeat="succ in premise.succ">
                         <span ng-repeat="succPart in succ">
                             <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
-                            <input type="text" name="succPart.text"
+                            <input type="text" name="{{succPart.text}}"
+                                   placeholder="{{succPart.placeholder}}"
                                    ng-model="succPart.value" ng-model-options="{getterSetter: true}"
                                    ng-if="succPart.isInput" required></input>
                         </span>
