@@ -320,7 +320,7 @@ Axiom "[;] compose".
 End.
 
 Axiom "[*] iterate".
-  [{a;}*]p(??) <-> (p(??) & [a;][{a;}*] p(??))
+  [{a;}*]p(??) <-> (p(??) & [a;][{a;}*]p(??))
 End.
 
 /**
@@ -404,7 +404,7 @@ Axiom "c()' derive constant fn".
 End.
 
 Axiom "x' derive var".
-   ((x_)' = x_')
+  (x_)' = x_'
 End.
 
 Axiom "-' derive neg".
