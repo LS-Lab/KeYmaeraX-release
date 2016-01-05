@@ -18,15 +18,19 @@ import scala.annotation.switch
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
+ * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo]]
  */
 object AxiomIndex {
 
+  /**
+    * AxiomIndex (key,recursor) where the key identifies the subformula used for matching and the recursors lists resulting siblings for subsequent chase.
+    */
   type AxiomIndex = (PosInExpr, List[PosInExpr])
 
   /**
    * Return (derived) axiom index with key for matching and list of recursors on other sibling, i.e., after useAt/useFor
-   * @see [[UnifyUSCalculus.chase()]]
-   * @see [[UnifyUSCalculus.chaseFor()]]
+   * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase()]]
+   * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
    * @todo copy documentation from chase
    */
   def axiomIndex(axiom: String): AxiomIndex = (axiom: @switch) match {
@@ -128,12 +132,11 @@ object AxiomIndex {
   private val directReduction = (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
   private val reverseReduction = (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
 
+
   // lookup canonical axioms for an expression (index)
 
   /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
-  def axiomFor(expr: Expression, pos: Option[Position] = None): Option[String] = {
-    axiomsFor(expr, pos).headOption
-  }
+  def axiomFor(expr: Expression, pos: Option[Position] = None): Option[String] = axiomsFor(expr, pos).headOption
 
   private val odeList: List[String] = "DI differential invariant" :: "diffCut" :: "DG differential ghost" :: Nil
 
@@ -145,7 +148,7 @@ object AxiomIndex {
     val isAnte = pos.nonEmpty && pos.get.isAnte
     expr match {
       case Differential(t) => t match {
-        case _: Variable => "x' derive var" :: Nil
+        case _: Variable => "x' derive var" :: Nil //@note rewired to DifferentialCalculus.Dvariable
         case _: Number => "c()' derive constant fn" :: Nil
         // optimizations
         case t: Term if StaticSemantics.freeVars(t).isEmpty => "c()' derive constant fn" :: Nil
@@ -161,6 +164,7 @@ object AxiomIndex {
         case FuncOf(_, Nothing) => "c()' derive constant fn" :: Nil
         case _ => Nil
       }
+
       case DifferentialFormula(f) => f match {
         case _: Equal => "=' derive =" :: Nil
         case _: NotEqual => "!=' derive !=" :: Nil
@@ -175,14 +179,13 @@ object AxiomIndex {
         case _: Exists => "exists' derive exists" :: Nil
         case _ => Nil
       }
+
       case Box(a, post) =>
         val rules =
           // @todo Better applicability test for V
           if (isTop && sequent.isDefined && sequent.get.ante.isEmpty && sequent.get.succ.length == 1) {"G" :: "V vacuous" :: Nil} else { "V vacuous" :: Nil}
         a match {
-        // Note: Using this axiom name to look up a tactic via AxiomInfo actually gives you assignb,
-        // which handles several assignment axioms.
-        case _: Assign => "[:=] assign" :: rules
+        case _: Assign => "[:=] assign" :: rules  //@note rewired to TactixLibrary.assignb
         case _: AssignAny => "[:*] assign nondet" :: rules
         case _: DiffAssign => "[':=] differential assign" :: rules
         case _: Test => "[?] test" :: rules
@@ -190,21 +193,21 @@ object AxiomIndex {
         case _: Choice => "[++] choice" :: rules
         case _: Dual => "[^d] dual" :: Nil
         case _: Loop => "loop" :: "[*] iterate" :: rules
-        // @todo: This misses the case where differential symbols are not top-level.
+        // @todo: This misses the case where differential formulas are not top-level, but strategically okay
         case ODESystem(ode, constraint) if post.isInstanceOf[DifferentialFormula] => ode match {
           case _: AtomicODE => "DE differential effect" :: /*"DW differential weakening" ::*/ Nil
           case _: DifferentialProduct => "DE differential effect (system)" :: /*"DW differential weakening" ::*/ Nil
-          case _ => assert(false); ???
+          case _ => Nil
         }
-        /** Return the (derived) axiom names that simplify the expression expr with simpler ones first */
         case ODESystem(ode, constraint) =>
-          val tactics: List[String] = "diffSolve" :: /*"diffInvariant" ::*/ "diffInd" :: Nil
+          val tactics: List[String] = "diffSolve" :: /*@todo "diffInvariant" is better? ::*/ "diffInd" :: Nil
           if (constraint == True)
             tactics ++ odeList ++ rules
           else
             (tactics :+ "DW differential weakening") ++ odeList ++ rules
         case _ => Nil
       }
+
       case Diamond(a, _) => a match {
         case _: Assign => "<:=> assign" :: Nil
         case _: AssignAny => "<:*> assign nondet" :: Nil
@@ -215,6 +218,7 @@ object AxiomIndex {
         case _: ODESystem => println("AxiomIndex for <ODE> still missing"); unknown
         case _ => Nil
       }
+
       case Not(f) => f match {
         case Box(_, Not(_)) => "<> diamond" :: Nil
         case _: Box => "![]" :: Nil
@@ -235,6 +239,7 @@ object AxiomIndex {
         case _: Equiv => "!<-> deMorgan" :: Nil
         case _ => Nil
       }
+
       case _ =>
         // Check for axioms vs. rules separately because sometimes we might want to apply these axioms when we don't
         // have positions available (which we need to check rule applicability
