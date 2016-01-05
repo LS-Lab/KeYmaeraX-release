@@ -611,7 +611,7 @@ class HilbertTests extends TacticTestBase {
     ).conclusion shouldBe Sequent(Nil,IndexedSeq(), IndexedSeq("<x:=1;><x:=x+1;>x=y -> bla()".asFormula))
   }
 
-  it should "use ^' derive power to forward" in {
+  it should "use ^' derive power to forward" in withMathematica { implicit qeTool =>
     useFor("^' derive power", PosInExpr(1::0::Nil))(SuccPosition(0, 0::Nil)) (
       Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("(x^2)'=0".asFormula)))
     ).conclusion shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("2*x^(2-1)*(x)'=0".asFormula))
