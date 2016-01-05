@@ -15,6 +15,14 @@ import scala.collection.immutable._
 import scala.language.postfixOps
 
 /**
+  * Hilbert Calculus for differential dynamic logic.
+  * @author Andre Platzer
+  * @author Stefan Mitsch
+  * @see [[HilbertCalculi]]
+  */
+object HilbertCalculus extends HilbertCalculi
+
+/**
  * Hilbert Calculus for differential dynamic logic.
  * @author Andre Platzer
  * @author Stefan Mitsch
@@ -233,12 +241,3 @@ trait HilbertCalculi extends UnifyUSCalculus {
   }
 
 }
-
-/**
-  * Hilbert Calculus for differential dynamic logic.
-  * @author Andre Platzer
-  * @author Stefan Mitsch
-  * @see [[HilbertCalculi]]
-  */
-object HilbertCalculus extends HilbertCalculi
-
