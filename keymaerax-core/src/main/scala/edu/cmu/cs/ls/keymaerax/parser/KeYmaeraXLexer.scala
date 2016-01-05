@@ -398,18 +398,18 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
         }, mode)
       }
 
-      case whitespace(spaces) =>
-        findNextToken(s.substring(spaces.length), loc match {
-          case UnknownLocation => UnknownLocation
-          case Region(sl,sc,el,ec) => Region(sl, sc+spaces.length, el, ec)
-          case SuffixRegion(sl,sc) => SuffixRegion(sl, sc+ spaces.length)
-        }, mode)
-
       case newline(_*) =>
         findNextToken(s.tail, loc match {
           case UnknownLocation     => UnknownLocation
           case Region(sl,sc,el,ec) => Region(sl+1,1,el,ec)
           case SuffixRegion(sl,sc) => SuffixRegion(sl+1, 1)
+        }, mode)
+
+      case whitespace(spaces) =>
+        findNextToken(s.substring(spaces.length), loc match {
+          case UnknownLocation => UnknownLocation
+          case Region(sl,sc,el,ec) => Region(sl, sc+spaces.length, el, ec)
+          case SuffixRegion(sl,sc) => SuffixRegion(sl, sc+ spaces.length)
         }, mode)
 
       //Lemma file cases
