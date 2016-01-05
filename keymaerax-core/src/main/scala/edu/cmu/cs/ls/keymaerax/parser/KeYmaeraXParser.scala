@@ -124,6 +124,8 @@ object KeYmaeraXParser extends Parser {
   private[parser] sealed case class ParseState(stack: Stack[Item], input: TokenStream) {
     /** Lookahead location of this parser state */
     private[parser] def location: Location = input.head.loc
+    /** Lookahead token of this parser state */
+    private[parser] def la: Token = input.head
     override def toString: String = "ParseState(" + stack + "  <|>  " + input.mkString(", ") +")"
     /** Explanation of the top few items on the parser stack */
     def topString: String = stack.take(5).fold("")((s, e) => s + " " + e)
@@ -782,9 +784,11 @@ object KeYmaeraXParser extends Parser {
 
   /** Error parsing the next input token la when in parser stack s.*/
   private def error(st: ParseState, expect: List[Expected]): ParseState = {
-    val ParseState(s, input@(la :: rest)) = st
     if (parseErrorsAsExceptions) throw ParseException("Unexpected token cannot be parsed", st, expect)
-    else ParseState(s :+ Error("Unexpected token cannot be parsed\nFound: " + la + "\nExpected: " + expect, la.loc, st.toString), input)
+    else {
+      val ParseState(s, input@(la :: rest)) = st
+      ParseState(s :+ Error("Unexpected token cannot be parsed\nFound: " + la + "\nExpected: " + expect, la.loc, st.toString), input)
+    }
   }
 
     /** Error parsing the next input token la when in parser stack s.*/
