@@ -748,7 +748,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val executor = BellerophonTacticExecutor.defaultExecutor
         val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
         val finalProvable = executor.wait(taskId) match {
-          case Some(Left(BelleProvable(outputProvable))) => outputProvable
+          case Some(Left(BelleProvable(outputProvable, _))) => outputProvable
           case Some(Right(error: BelleError)) => throw new ProverException("Tactic failed with error: " + error.getMessage, error.getCause)
           case None => throw new ProverException("Could not get tactic result - execution cancelled? ")
         }

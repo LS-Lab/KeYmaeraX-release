@@ -134,7 +134,7 @@ object Idioms {
 
   def atSubgoal(subgoalIdx: Int, t: BelleExpr) = new DependentTactic(s"AtSubgoal($subgoalIdx, ${t.toString})") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
+      case BelleProvable(provable, _) =>
         BranchTactic(Seq.tabulate(provable.subgoals.length)(i => if(i == subgoalIdx) t else ident))
       case _ => throw new BelleError("Cannot perform AtSubgoal on a non-Provable value.")
     }

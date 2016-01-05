@@ -60,7 +60,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   def proveBy(fml: Formula, tactic: BelleExpr): Provable = {
     val v = BelleProvable(Provable.startProof(fml))
     theInterpreter(tactic, v) match {
-      case BelleProvable(provable) => provable
+      case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
   }
@@ -69,7 +69,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   def proveBy(s: Sequent, tactic: BelleExpr): Provable = {
     val v = BelleProvable(Provable.startProof(s))
     theInterpreter(tactic, v) match {
-      case BelleProvable(provable) => provable
+      case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
   }

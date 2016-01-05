@@ -367,7 +367,7 @@ object TactixLibrary extends UnifyUSCalculus {
   /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   lazy val closeId           : DependentTactic = new DependentTactic("close id") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
+      case BelleProvable(provable, _) =>
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
         val s = provable.subgoals.head
         require(s.ante.intersect(s.succ).nonEmpty, "Expects same formula in antecedent and succedent,\n\t but antecedent " + s.ante + "\n\t does not overlap with succedent " + s.succ)
@@ -524,7 +524,7 @@ object TactixLibrary extends UnifyUSCalculus {
     val v = BelleProvable(Provable.startProof(goal))
     //@todo fetch from some factory
     SequentialInterpreter()(tactic, v) match {
-      case BelleProvable(provable) => provable
+      case BelleProvable(provable, _) => provable
       case r => throw new BelleUserGeneratedError("Error in proveBy, goal\n " + goal + " was not provable but instead resulted in\n " + r)
     }
   }

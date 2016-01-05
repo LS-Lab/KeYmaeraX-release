@@ -78,7 +78,7 @@ class BTacticParserTests extends FlatSpec with Matchers {
     val value = BelleProvable(Provable.startProof("p() -> p()".asFormula))
     val result = SequentialInterpreter()(tactic, value)
     result match {
-      case BelleProvable(resultingProvable) => resultingProvable.isProved shouldBe true
+      case BelleProvable(resultingProvable, _) => resultingProvable.isProved shouldBe true
       case _ => throw new Exception("Expected a BelleProvable.")
     }
   }

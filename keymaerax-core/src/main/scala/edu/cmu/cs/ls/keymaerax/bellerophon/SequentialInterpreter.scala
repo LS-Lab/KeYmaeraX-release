@@ -22,7 +22,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       expr match {
         case named: NamedTactic => apply(named.tactic, v)
         case builtIn: BuiltInTactic => v match {
-          case BelleProvable(pr) => try {
+          case BelleProvable(pr, _) => try {
             BelleProvable(builtIn.execute(pr))
           } catch {
             case e: BelleError => throw e.inContext(BelleDot, pr.prettyString)
@@ -32,14 +32,14 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         case BuiltInPositionTactic(_) | BuiltInLeftTactic(_) | BuiltInRightTactic(_) | BuiltInTwoPositionTactic(_) | DependentPositionTactic(_) =>
           throw new BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.").inContext(expr, "")
         case AppliedPositionTactic(positionTactic, pos) => v match {
-          case BelleProvable(pr) => try {
+          case BelleProvable(pr, _) => try {
             BelleProvable(positionTactic.apply(pos).computeResult(pr))
           } catch {
             case e: BelleError => throw e.inContext(positionTactic + " at " + pos, pr.prettyString)
           }
         }
         case positionTactic@AppliedTwoPositionTactic(_, posOne, posTwo) => v match {
-          case BelleProvable(pr) => try {
+          case BelleProvable(pr, _) => try {
             BelleProvable(positionTactic.computeResult(pr))
           } catch {
             case e: BelleError => throw e.inContext(positionTactic + " at " + posOne + ", " + posTwo, pr.prettyString)
@@ -77,7 +77,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           case e: BelleError => throw e.inContext(e.toString, v.prettyString)
           case e: Throwable => throw new BelleError("Unable to create input position tactic", e).inContext(ipt, "")
         }
-        case PartialTactic(child) => try {
+        case PartialTactic(child, _) => try {
           apply(child, v)
         } catch {
           case e: BelleError => throw e.inContext(PartialTactic(e.context), "Failed partial child: " + child)
@@ -85,7 +85,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         case EitherTactic(left, right, location) => try {
           val leftResult = apply(left, v)
           (leftResult, left) match {
-            case (BelleProvable(p), _) if p.isProved => leftResult
+            case (BelleProvable(p, _), _) if p.isProved => leftResult
             case (_, x: PartialTactic) => leftResult
             case _ => throw new BelleError("Non-partials must close proof.").inContext(EitherTactic(BelleDot, right, location), "Failed left-hand side of |:" + left)
           }
@@ -98,7 +98,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
               case e: BelleError => throw e.inContext(EitherTactic(eleft.context, e.context, location), "Failed: both left-hand side and right-hand side " + expr)
             }
             (rightResult, right) match {
-              case (BelleProvable(p), _) if p.isProved => rightResult
+              case (BelleProvable(p, _), _) if p.isProved => rightResult
               case (_, x: PartialTactic) => rightResult
               case _ => throw new BelleError("Non-partials must close proof.").inContext(EitherTactic(left, BelleDot, location), "Failed right-hand side of |: " + right)
             }
@@ -126,7 +126,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           }
           result
         case BranchTactic(children, location) => v match {
-          case BelleProvable(p) =>
+          case BelleProvable(p, _) =>
             if (children.length != p.subgoals.length)
               throw new BelleError("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(expr, "")
             //Compute the results of piecewise applications of children to provable subgoals.
@@ -140,7 +140,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
                   case e: BelleError => throw e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context), location), "Failed on branch " + e_i)
                 }
                 ithResult match {
-                  case BelleProvable(resultingProvable) =>
+                  case BelleProvable(resultingProvable, _) =>
                     if (resultingProvable.isProved || e_i.isInstanceOf[PartialTactic]) resultingProvable
                     else throw new BelleError("Every branching tactic must close its associated goal or else be annotated as a PartialTactic").inContext(expr, "")
                   case _ => throw new BelleError("Each piecewise application in a Branching tactic should result in a provable.").inContext(expr, "")
@@ -159,7 +159,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         }
         case DoAll(e, location) =>
           val provable = v match {
-            case BelleProvable(p) => p
+            case BelleProvable(p, _) => p
             case _ => throw new BelleError("Cannot attempt DoAll with a non-Provable value.").inContext(expr, "")
           }
           //@todo actually it would be nice to throw without wrapping inside an extra BranchTactic context
@@ -170,7 +170,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           }
         case t@USubstPatternTactic(children, location) => {
           val provable = v match {
-            case BelleProvable(p) => p
+            case BelleProvable(p, _) => p
             case _ => throw new BelleError("Cannot attempt US unification with a non-Provable value.").inContext(expr, "")
           }
 

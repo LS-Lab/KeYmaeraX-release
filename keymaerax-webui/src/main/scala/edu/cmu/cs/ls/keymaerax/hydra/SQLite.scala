@@ -536,7 +536,7 @@ object SQLite {
           val initialProvable = Provable.startProof(inputProvable.conclusion)
           def run(p: Provable, t:BelleExpr): Provable =
             SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
-              case BelleProvable(p) => p
+              case BelleProvable(p, _) => p
             }
           def loadTactic(id: Int): BelleExpr = ???
           (step::steps).foldLeft(initialProvable)({case (provable, currStep) =>
