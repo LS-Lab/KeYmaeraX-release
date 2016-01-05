@@ -314,8 +314,10 @@ object DerivationInfo {
     new PositionTacticInfo("commuteEquivL", "<->CL", {case () => ProofRuleTactics.commuteEquivL}),
     new PositionTacticInfo("commuteEquivR", "<->CR", {case () => ProofRuleTactics.commuteEquivR}),
     new PositionTacticInfo("equivifyR", "-><->", {case () => ProofRuleTactics.equivifyR}),
-    new PositionTacticInfo("hideL", "hide", {case () => ProofRuleTactics.hideL}),  //@todo W for weakening? If people know that
-    new PositionTacticInfo("hideR", "hide", {case () => ProofRuleTactics.hideR}),
+    new PositionTacticInfo("hideL", RuleDisplayInfo("hide", (List("&Gamma;", "p"),List("&Delta;")), List((List("&Gamma;"),List("&Delta;")))),
+      {case () => ProofRuleTactics.hideL}),  //@todo W for weakening? If people know that
+    new PositionTacticInfo("hideR", RuleDisplayInfo("hide", (List("&Gamma;"),List("p", "&Delta;")), List((List("&Gamma;"),List("&Delta;")))),
+      {case () => ProofRuleTactics.hideR}),
     new PositionTacticInfo("coHideL", "hide", {case () => ProofRuleTactics.coHideL}),
     new PositionTacticInfo("coHideR", "hide", {case () => ProofRuleTactics.coHideR}),
     new PositionTacticInfo("closeFalse", "close", {case () => ProofRuleTactics.closeFalse}),
@@ -380,7 +382,7 @@ object DerivationInfo {
 
     // Differential tactics
     new PositionTacticInfo("diffInd", "diffInd",  {case () => DifferentialTactics.diffInd}, needsTool = true),
-    new PositionTacticInfo("diffSolve", "diffSolve",  {case () => DifferentialTactics.diffSolve()}, needsTool = true),
+    new PositionTacticInfo("diffSolve", "diffSolve",  {case () => TactixLibrary.diffSolve(None)}, needsTool = true),
     new InputPositionTacticInfo("diffInvariant",
       RuleDisplayInfo("diffInvariant",
         (List("&Gamma;"), List("[x' = f(x)]p", "&Delta;")),
