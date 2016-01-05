@@ -27,7 +27,6 @@ angular.module('formula')
                              'ng-repeat="formulaId in [\'' + id + '\']"' +
                              'uib-popover-template="\'js/keymaera-ui/axiomPopoverTemplate.html\'"' +
                              'popover-is-open="tacticPopover.isOpen(\'' + id + '\')"' +
-                             'popover-trigger="outsideClick"' + // in upcoming angular-ui 1.0
                              'popover-append-to-body="true"' +
                              'popover-placement="bottom">' + content + '</span>';
                 } else {
