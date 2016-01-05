@@ -4,7 +4,7 @@
 */
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.TheType
+import edu.cmu.cs.ls.keymaerax.bellerophon.{DoAll, TheType}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Imply, Box}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -51,6 +51,32 @@ class StttTutorial extends TacticTestBase {
 
   it should "be provable with master and loop invariant from file" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
+    proveBy(s, master()) shouldBe 'proved
+  }
+
+  "Example 5 with simple control" should "be provable" in withMathematica { implicit tool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5_simplectrl.key"))
+
+    val plant = debug("plant") & composeb('R) & assignb('R) &
+      diffSolve(None)('R) & implyR('R)
+
+    val tactic = implyR('R) & (andL('L)*@TheType()) &
+      loop("v >= 0 & x+v^2/(2*B) <= S".asFormula)('R) <(
+      debug("Use Case") & QE,
+      debug("Base Case") & andR('R) & DoAll(closeId),
+      debug("Step") & andL('L) & composeb('R) & assignb('R) & plant & QE
+    )
+
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
+  it should "be provable automatically with Mathematica" in withMathematica { implicit qeTool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5_simplectrl.key"))
+    proveBy(s, master()) shouldBe 'proved
+  }
+
+  "Example 5" should "be provable automatically with Mathematica" in withMathematica { implicit qeTool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
     proveBy(s, master()) shouldBe 'proved
   }
 

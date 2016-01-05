@@ -66,9 +66,9 @@ object TactixLibrary extends HilbertCalculi {
         | ((must(normalize) partial)
         | ((loop(gen)('L) partial)
         | ((loop(gen)('R) partial)
-        | ((diffSolve(None)(tool)('R) partial)
+        | ((diffSolve(None)('R) partial)
         | ((diffInd partial)
-        | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType() & ?(QE)
+        | (exhaustiveEqL2R('L) partial) partial) partial) partial) partial) partial) partial) partial) partial)*@TheType() & ?(DoAll(QE))
 
   /*******************************************************************
     * unification and matching based auto-tactics
@@ -216,7 +216,7 @@ object TactixLibrary extends HilbertCalculi {
   // differential equations
 
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)` */
-  def diffSolve(solution: Option[Formula] = None)(implicit tool: DiffSolutionTool with QETool): DependentPositionTactic = DifferentialTactics.diffSolve(solution)
+  def diffSolve(solution: Option[Formula] = None): DependentPositionTactic = DifferentialTactics.diffSolve(solution)(tool)
 
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))` */
   lazy val diffWeaken         : DependentPositionTactic = withAbstraction(DW)
