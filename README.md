@@ -120,8 +120,9 @@ Main documentation to read for KeYmaera X API:
     http://keymaerax.org/doc/dL-grammar.md - concrete syntax for input language Differential Dynamic Logic
     edu.cmu.cs.ls.keymaerax.core.package   - KeYmaera X kernel, proof certificates, main data structures
     edu.cmu.cs.ls.keymaerax.parser.package - Parser and pretty printer with concrete syntax and notation
-    edu.cmu.cs.ls.keymaerax.tactics.package - Tactic library
-    edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary - Main tactic library for most common cases
+    edu.cmu.cs.ls.keymaerax.btactics.package - Tactic library
+    edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary - Main tactic library for most common cases
+    edu.cmu.cs.ls.keymaerax.tactics.package - Older scheduled tactic library
     edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX - command-line launcher for KeYmaera X
 
 IntelliJ IDEA Development Environment
@@ -142,6 +143,7 @@ Create a new run configuration of type Application for the KeYmaera X Web UI.
 - Main class: `edu.cmu.cs.ls.keymaerax.hydra.Boot`
 - Set the working directory to the project path
 - Use the classpath of your project module
+- Check "Single instance only"
 
 Test Cases:
 - Right click on project folder `keymaerax-webui/src/test` to mark this directory as Test Sources Root.
@@ -212,11 +214,13 @@ The project is split into two subprojects, `keymaerax-core` for the core functio
 
 Within the `edu.cmu.cs.ls.keymaerax` namespace, source code is separated according to functionality:
 
-    .core    - KeYmaera X Kernel: Soundness-critical core
-    .lemma   - Lemma mechanism (non-critical)
-    .parser  - Parsing and pretty printing
-    .tactics - Tactic framework, including tactic implementations and the scheduler
-    .tools   - Arithmetic back-ends
+    .core        - KeYmaera X Kernel: Soundness-critical core
+    .lemma       - Lemma mechanism (non-critical)
+    .bellerophon - Tactic language, framework and tactic interpreter
+    .btactics    - Tactic library
+    .parser      - Parsing and pretty printing
+    .tactics     - Older scheduled tactic framework, including tactic implementations and the scheduler
+    .tools       - Arithmetic back-ends
 
 The additional packages in the directory `keymaerax-webui/src/main/scala` are separated into:
 

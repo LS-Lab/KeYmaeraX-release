@@ -504,7 +504,7 @@ class DifferentialTests extends TacticTestBase {
 
   "diffSolve" should "use provided solution" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2,t'=1}]x>b".asFormula)),
-      diffSolve(Some("x=x_0+2*t".asFormula))(tool)(1))
+      diffSolve(Some("x=x_0+2*t".asFormula))(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x_0>b".asFormula
     result.subgoals.head.succ should contain only "(true&t>=t_0)&x=x_0+2*(t-t_0) -> x>b".asFormula
@@ -512,7 +512,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "add time if not present" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)),
-      diffSolve(Some("x=x_0+2*t".asFormula))(tool)(1))
+      diffSolve(Some("x=x_0+2*t".asFormula))(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t_0=0".asFormula)
     result.subgoals.head.succ should contain only "(true&t>=0)&x=x_0+2*t -> x>b".asFormula
@@ -520,7 +520,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "ask Mathematica if no solution provided" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2,t'=1}]x>b".asFormula)),
-      diffSolve()(tool)(1))
+      diffSolve()(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x_0>b".asFormula
     result.subgoals.head.succ should contain only "(true&t>=t_0)&x=2*(t-t_0)+x_0 -> x>b".asFormula
@@ -528,7 +528,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "add time if not present and ask Mathematica if no solution provided" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)),
-      diffSolve(None)(tool)(1))
+      diffSolve(None)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t_0=0".asFormula)
     result.subgoals.head.succ should contain only "(true&t>=0)&x=2*t+x_0 -> x>b".asFormula
@@ -541,7 +541,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "find solution for x'=v() if None is provided" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v()>=0".asFormula), IndexedSeq("[{x'=v(),t'=1}]x>0".asFormula)),
-      diffSolve()(tool)(1))
+      diffSolve()(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x_0>0 & v()>=0".asFormula
     result.subgoals.head.succ should contain only "(true&t>=t_0)&x=v()*(t-t_0)+x_0 -> x>0".asFormula
@@ -549,7 +549,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "find solution for x'=v if None is provided" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v>=0".asFormula), IndexedSeq("[{x'=v,t'=1}]x>0".asFormula)),
-      diffSolve()(tool)(1))
+      diffSolve()(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x_0>0 & v>=0".asFormula
     result.subgoals.head.succ should contain only "(true&t>=t_0)&x=(t-t_0)*v+x_0 -> x>0".asFormula
@@ -557,7 +557,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "use provided solution for x'=v, v'=a" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v>=0 & a>0".asFormula), IndexedSeq("[{x'=v,v'=a,t'=1}]x>0".asFormula)),
-      diffSolve(Some("v=a*t+v_0&x=1/2*(a*t*t+2*t*v_0+2*x_0)".asFormula))(tool)(1))
+      diffSolve(Some("v=a*t+v_0&x=1/2*(a*t*t+2*t*v_0+2*x_0)".asFormula))(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x_0>0 & v_0>=0 & a>0".asFormula
     result.subgoals.head.succ should contain only "((true&t>=t_0)&v=a*(t-t_0)+v_0)&x=1/2*(a*(t-t_0)*(t-t_0)+2*(t-t_0)*v_0+2*x_0) -> x>0".asFormula
@@ -565,7 +565,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "find solutions for x'=v, v'=a if None is provided" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v>=0 & a>0".asFormula), IndexedSeq("[{x'=v,v'=a,t'=1}]x>0".asFormula)),
-      diffSolve()(tool)(1))
+      diffSolve()(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x_0>0 & v_0>=0 & a>0".asFormula
     result.subgoals.head.succ should contain only "((true&t>=t_0)&v=a*(t-t_0)+v_0)&x=1/2*(a*(t-t_0)^2+2*(t-t_0)*v_0+2*x_0) -> x>0".asFormula

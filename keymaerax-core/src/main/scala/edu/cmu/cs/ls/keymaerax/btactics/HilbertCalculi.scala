@@ -15,15 +15,24 @@ import scala.collection.immutable._
 import scala.language.postfixOps
 
 /**
+  * Hilbert Calculus for differential dynamic logic.
+  * @author Andre Platzer
+  * @author Stefan Mitsch
+  * @see [[HilbertCalculi]]
+  */
+object HilbertCalculus extends HilbertCalculi
+
+/**
  * Hilbert Calculus for differential dynamic logic.
  * @author Andre Platzer
+ * @author Stefan Mitsch
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @see [[HilbertCalculus.derive()]]
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
-object HilbertCalculus extends UnifyUSCalculus {
+trait HilbertCalculi extends UnifyUSCalculus {
 
   /** True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on demand. */
   private val INTERNAL = false
@@ -33,13 +42,13 @@ object HilbertCalculus extends UnifyUSCalculus {
   lazy val assignb            : DependentPositionTactic =
 //    "[:=]" by(pos =>
 //    if (INTERNAL) ((useAt("[:=] assign")(pos) partial) | (useAt("[:=] assign equality")(pos) partial) /*| (useAt("[:=] assign update")(pos) partial)*/) partial
-//    else TactixLibrary.assignb(pos)
+//    else DLBySubst.assignb(pos)
 //    )
     new DependentPositionTactic("[:=]") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = {
         if (INTERNAL) (useAt("[:=] assign")(pos) partial) | ((useAt("[:=] assign equality")(pos) partial) /*| (useAt("[:=] assign update")(pos) partial)*/) partial
-        else TactixLibrary.assignb(pos)
+        else DLBySubst.assignb(pos)
       }
     }
   }
@@ -49,7 +58,7 @@ object HilbertCalculus extends UnifyUSCalculus {
   /** testb: [?] simplifies test `[?q;]p` to an implication `q->p` */
   lazy val testb              : DependentPositionTactic = useAt("[?] test")
   /** diffSolve: solve a differential equation `[x'=f]p(x)` to `\forall t>=0 [x:=solution(t)]p(x)` */
-  def diffSolve               : DependentPositionTactic = ??? //TacticLibrary.diffSolutionT
+  //def diffSolve               : DependentPositionTactic = ???
   /** choiceb: [++] handles both cases of a nondeterministic choice `[a++b]p(x)` separately `[a]p(x) & [b]p(x)` */
   lazy val choiceb            : DependentPositionTactic = useAt("[++] choice")
   /** composeb: [;] handle both parts of a sequential composition `[a;b]p(x)` one at a time `[a][b]p(x)` */
@@ -73,7 +82,7 @@ object HilbertCalculus extends UnifyUSCalculus {
   /** testd: <?> simplifies test `<?q;>p` to a conjunction `q&p` */
   lazy val testd              : DependentPositionTactic = useAt("<?> test")
   /** diffSolve: solve a differential equation `<x'=f>p(x)` to `\exists t>=0 <x:=solution(t)>p(x)` */
-  def diffSolved              : DependentPositionTactic = ???
+  //def diffSolved              : DependentPositionTactic = ???
   /** choiced: <++> handles both cases of a nondeterministic choice `<a++b>p(x)` separately `<a>p(x) | <b>p(x)` */
   lazy val choiced            : DependentPositionTactic = useAt("<++> choice")
   /** composed: <;> handle both parts of a sequential composition `<a;b>p(x)` one at a time `<a><b>p(x)` */
@@ -86,8 +95,8 @@ object HilbertCalculus extends UnifyUSCalculus {
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
 //  def I(invariant : Formula)  : PositionTactic = TacticLibrary.inductionT(Some(invariant))
 //  def loop(invariant: Formula) = I(invariant)
-  /** K: modal modus ponens */
-  //def K                       : PositionTactic = PropositionalTacticsImpl.kModalModusPonensT
+  /** K: modal modus ponens (hybrid systems) */
+  lazy val K                  : DependentPositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
   /** V: vacuous box [a]p() will be discarded and replaced by p() provided a does not changes values of postcondition p */
   lazy val V                  : DependentPositionTactic = useAt("V vacuous")
 //
@@ -103,7 +112,7 @@ object HilbertCalculus extends UnifyUSCalculus {
   /** DI: Differential Invariants are used for proving a formula to be an invariant of a differential equation.
     * `[x'=f(x)&q(x)]p(x)` reduces to `q(x) -> p(x) & [x'=f(x)]p(x)'`.
     * @see [[DifferentialTactics.diffInd()]] */
-  lazy val DI                 : DependentPositionTactic = useAt("DI differential invariant", PosInExpr(1::Nil))//TacticLibrary.diffInvariant
+  lazy val DI                 : DependentPositionTactic = useAt("DI differential invariant")
 
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
@@ -134,14 +143,16 @@ object HilbertCalculus extends UnifyUSCalculus {
   /** Dquotient: /' derives a quotient `(f(x)/g(x))' = (f(x)'*g(x) - f(x)*g(x)') / (g(x)^2)` */
   lazy val Dquotient          : DependentPositionTactic = useAt("/' derive quotient")
   /** Dpower: ^' derives a power */
-  lazy val Dpower             : DependentPositionTactic = useAt("^' derive power", PosInExpr(1::0::Nil))
+  lazy val Dpower             : DependentPositionTactic = useAt("^' derive power")
   /** Dcompose: o' derives a function composition by chain rule */
-  //lazy val Dcompose           : PositionTactic = ???
+  lazy val Dcompose           : DependentPositionTactic = ???
   /** Dconst: c()' derives a constant `c()' = 0` */
   lazy val Dconst             : DependentPositionTactic = useAt("c()' derive constant fn")
   /** Dvariable: x' derives a variable `(x)' = x'` */
   lazy val Dvariable          : DependentPositionTactic =
     if (INTERNAL) useAt("x' derive var", PosInExpr(0::Nil)) else DifferentialTactics.Dvariable
+  /** Dcompose: o' derives a function composition by chain rule */
+  //@todo lazy val Dcompose           : BuiltInPositionTactic = ???
 
   /** Dand: &' derives a conjunction `(p(x)&q(x))'` to obtain `p(x)' & q(x)'` */
   lazy val Dand               : DependentPositionTactic = useAt("&' derive and")
@@ -169,6 +180,7 @@ object HilbertCalculus extends UnifyUSCalculus {
 
 
   /** splitb: splits `[a](p&q)` into `[a]p & [a]q` */
+  //@todo rename to boxAnd?
   lazy val splitb             : DependentPositionTactic = useAt("[] split")
   /** splitd: splits `<a>(p|q)` into `<a>p | <a>q` */
   lazy val splitd             : DependentPositionTactic = useAt("<> split")

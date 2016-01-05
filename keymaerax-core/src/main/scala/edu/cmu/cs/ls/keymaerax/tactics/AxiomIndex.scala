@@ -100,6 +100,7 @@ object AxiomIndex {
     case "DE differential effect" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     //@todo unclear recursor
     case "DE differential effect system" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+    case "DI differential invariant" => (PosInExpr(1::Nil), PosInExpr(1::1::Nil)::Nil)
     //@todo other axioms
 
       // derived axioms
@@ -143,12 +144,12 @@ object AxiomIndex {
   private val unknown = Nil
 
   /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
-  def axiomsFor(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None): List[String] = {
+  def axiomsFor(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None): List[String] = autoPad(pos, sequent, {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
     val isAnte = pos.nonEmpty && pos.get.isAnte
     expr match {
       case Differential(t) => t match {
-        case _: Variable => "x' derive var" :: Nil //@note rewired to DifferentialCalculus.Dvariable
+        case _: Variable => "DvariableTactic" :: Nil
         case _: Number => "c()' derive constant fn" :: Nil
         // optimizations
         case t: Term if StaticSemantics.freeVars(t).isEmpty => "c()' derive constant fn" :: Nil
@@ -185,7 +186,7 @@ object AxiomIndex {
           // @todo Better applicability test for V
           if (isTop && sequent.isDefined && sequent.get.ante.isEmpty && sequent.get.succ.length == 1) {"G" :: "V vacuous" :: Nil} else { "V vacuous" :: Nil}
         a match {
-        case _: Assign => "[:=] assign" :: rules  //@note rewired to TactixLibrary.assignb
+        case _: Assign => "assignbTactic" :: rules
         case _: AssignAny => "[:*] assign nondet" :: rules
         case _: DiffAssign => "[':=] differential assign" :: rules
         case _: Test => "[?] test" :: rules
@@ -254,6 +255,8 @@ object AxiomIndex {
         if (!isTop) axioms
         else {
           (expr, isAnte) match {
+            case (True, false) => "closeTrue" :: Nil
+            case (False, true) => "closeFalse" :: Nil
             case (_: Not, true) => "notL" :: Nil
             case (_: Not, false) => "notR" :: Nil
             case (_: And, true) => axioms :+ "andL"
@@ -270,5 +273,11 @@ object AxiomIndex {
           }
         }
     }
-  }
+  })
+
+  private def autoPad(pos: Option[Position], sequent: Option[Sequent], axioms: List[String]): List[String] =
+    if (!axioms.isEmpty && pos.isDefined && pos.get.isTopLevel)
+      axioms ++ (if (pos.get.isAnte) "hideL" :: /*"cutL" ::*/ Nil else "hideR" :: /*"cutR" ::*/ Nil)
+    else
+      axioms
 }
