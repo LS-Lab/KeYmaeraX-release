@@ -453,7 +453,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    */
   final def apply(subderivation: Provable, subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
-    insist(subderivation.conclusion == subgoals(subgoal), "substituting Provables requires the given subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconcludes: " + subderivation.conclusion + "\nexpected:   " + subgoals(subgoal) + "\n\nwhen substituting for " + subgoal + " into " + this)
+    insist(subderivation.conclusion == subgoals(subgoal), "substituting Provables requires the given subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconclude: " + subderivation.conclusion + "\nexpected: " + subgoals(subgoal) + "\nwhile substituting this subderivation for subgoal " + subgoal + " into\n" + this)
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
     subderivation.subgoals.toList match {
       // subderivation proves given subgoal
@@ -510,8 +510,8 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
   } ensuring (r => r.conclusion == subgoals(subgoal), "sub yields Provable with expected subgoal " + subgoals(subgoal) + " as the conclusion") ensuring (
     r => r.subgoals == immutable.List(r.conclusion), "sub Provable is an unfinished Provable")
 
-  override def toString: String = "Provable(concludes " + conclusion + (if (isProved) " proved" else "\nfrom " + subgoals.mkString(",\nwith ")) + ")"
-  def prettyString: String = "Provable(concludes " + conclusion.prettyString + (if (isProved) " proved" else "\nfrom " + subgoals.map(_.prettyString).mkString(",\nwith ")) + ")"
+  override def toString: String = "Provable(" + conclusion + (if (isProved) " proved" else "\n  from   " + subgoals.mkString("\n  with   ")) + ")"
+  def prettyString: String = "Provable(" + conclusion.prettyString + (if (isProved) " proved" else "\n  from   " + subgoals.map(_.prettyString).mkString("\n  with   ")) + ")"
 }
 
 
