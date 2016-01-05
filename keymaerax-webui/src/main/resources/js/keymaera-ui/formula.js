@@ -26,7 +26,6 @@ angular.module('formula')
                              // initialize formulaId for popover template, use ng-repeat for scoping
                              'ng-repeat="formulaId in [\'' + id + '\']"' +
                              'uib-popover-template="\'js/keymaera-ui/axiomPopoverTemplate.html\'"' +
-                             'popover-title="Apply tactic"' +
                              'popover-is-open="tacticPopover.isOpen(\'' + id + '\')"' +
                              'popover-trigger="outsideClick"' + // in upcoming angular-ui 1.0
                              'popover-append-to-body="true"' +
