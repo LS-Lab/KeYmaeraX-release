@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, PosInExpr, Position, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.tools.{DiffSolutionTool, ToolEvidence}
 
 import scala.annotation.switch
 import scala.collection.immutable
@@ -29,7 +29,7 @@ object DerivedAxioms {
   /** Database for derived axioms */
   val derivedAxiomDB = LemmaDBFactory.lemmaDB
   /*@note must be initialized from outside; is var so that unit tests can setup/tear down */
-  implicit var qeTool: QETool = null
+  implicit var qeTool: QETool with DiffSolutionTool = null
   type LemmaID = String
 
   /** A Provable proving the derived axiom named id (convenience) */
@@ -53,7 +53,7 @@ object DerivedAxioms {
       val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
         // identical lemma contents with identical name, so reuse ID
         if (derivedAxiomDB.get(lemmaName).contains(lemma)) lemma.name.get
-        else throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ")")
+        else throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instnead of " + lemma )
       } else {
         derivedAxiomDB.add(lemma)
       }
@@ -74,13 +74,13 @@ object DerivedAxioms {
   /** Package a Lemma for a derived axiom up as a rule */
   private[btactics] def derivedAxiomR(name: String): LookupLemma = {
     val lemmaName = axiom2lemmaName(name)
-    require(derivedAxiomDB.contains(lemmaName), "Lemma has already been added")
+    require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " has already been added")
     LookupLemma(derivedAxiomDB, lemmaName)
   }
 
   /** Package a Lemma for a derived axiom up as a tactic */
   private[btactics] def derivedAxiomT(lemma: Lemma): BelleExpr = {
-    require(derivedAxiomDB.contains(lemma.name.get), "Lemma has already been added")
+    require(derivedAxiomDB.contains(lemma.name.get), "Lemma " + lemma.name.get + " has already been added")
 //    val lemma2axiomName = axiom2lemmaName.map(_.swap)
 //    require(lemma2axiomName.contains(lemma.name.get), s"Lemma with name ${lemma.name.get} must prove an axiom")
 //    val axiomName = lemma2axiomName.get(lemma.name.get).get

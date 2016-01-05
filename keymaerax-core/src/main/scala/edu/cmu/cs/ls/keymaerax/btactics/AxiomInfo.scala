@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 
 import scala.collection.immutable.HashMap
 
@@ -37,7 +38,7 @@ object DerivationInfo {
     SequentDisplay(succAcc._1, succAcc._2)
   }
 
-  implicit def qeTool:QETool = DerivedAxioms.qeTool
+  implicit def qeTool:QETool with DiffSolutionTool = DerivedAxioms.qeTool
   case class AxiomNotFoundException(axiomName: String) extends ProverException("Axiom with said name not found: " + axiomName)
 
   private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
@@ -379,7 +380,7 @@ object DerivationInfo {
 
     // Differential tactics
     new PositionTacticInfo("diffInd", "diffInd",  {case () => DifferentialTactics.diffInd}, needsTool = true),
-    new PositionTacticInfo("diffSolve", "diffSolve",  {case () => ??? /*DifferentialTactics.diffSolve */}, needsTool = true),
+    new PositionTacticInfo("diffSolve", "diffSolve",  {case () => DifferentialTactics.diffSolve()}, needsTool = true),
     new InputPositionTacticInfo("diffInvariant",
       RuleDisplayInfo("diffInvariant",
         (List("&Gamma;"), List("[x' = f(x)]p", "&Delta;")),
