@@ -47,14 +47,18 @@ sealed trait Stack[+A] {
     case tail :+ top => f(tail.fold(z)(f), top)
   }
 
+  /** Find the top-most element satisfying p, if any */
+  def find(p: (A) => Boolean): Option[A] = if (isEmpty) None else if (p(top)) Some(top) else tail.find(p)
+
   override def toString: String = fold("")((s, e) => s + " :+ " + e)
 }
 
 /** A stack tail :+ top with top on the top of tail */
-case class :+[B](tail: Stack[B], top: B) extends Stack[B] {
+case class :+[A](tail: Stack[A], top: A) extends Stack[A] {
   def isEmpty = false
   def drop(n: Int) = {require(n>=0); if (n==0) this else tail.drop(n-1)}
   def take(n: Int) = {require(n>=0); if (n==0) Bottom else tail.take(n-1) :+ top}
+  //def find(p: (A) => Boolean): Option[A] = if (p(top)) Some(top) else tail.find(p)
 }
 
 /** The empty stack bottom */
@@ -64,6 +68,7 @@ object Bottom extends Stack[Nothing] {
   def isEmpty = true
   def drop(n: Int) = {require(n>=0); this}
   def take(n: Int) = {require(n>=0); this}
+  //def find[A>:Nothing](p: (A) => Boolean): Option[A] = None
 }
 
 

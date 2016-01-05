@@ -637,6 +637,18 @@ object KeYmaeraXParser extends Parser {
         if (firstExpression(la)) shift(st)
         else if (la==EOF) throw ParseException("Empty input is not a well-formed expression ", st, List(FIRSTEXPRESSION)) else error(st, List(FIRSTEXPRESSION))
 
+      case rest :+ (tok@Token(RPAREN,_)) if !rest.find(tok => tok.isInstanceOf[Token] && tok.asInstanceOf[Token].tok==LPAREN).isDefined =>
+        throw ParseException("Unmatched parenthesis " + tok, st)
+
+      case rest :+ (tok@Token(RBRACE,_)) if !rest.find(tok => tok.isInstanceOf[Token] && tok.asInstanceOf[Token].tok==LBRACE).isDefined =>
+        throw ParseException("Unmatched parenthesis " + tok, st)
+
+      case rest :+ (tok@Token(RBOX,_)) if !rest.find(tok => tok.isInstanceOf[Token] && tok.asInstanceOf[Token].tok==LBOX).isDefined =>
+        throw ParseException("Unmatched modality " + tok, st)
+
+      case rest :+ (tok@Token(RDIA,_)) if !rest.find(tok => tok.isInstanceOf[Token] && tok.asInstanceOf[Token].tok==LDIA).isDefined =>
+        throw ParseException("Syntax error or unmatched modality " + tok, st)
+
       case _ =>
         //@todo cases should be completed to complete the parser items, but it's easier to catch-all and report legible parse error.
         throw ParseException("Syntax error (or incomplete parser missing an item)", st)

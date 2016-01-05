@@ -37,7 +37,7 @@ case class ParseException private[parser](msg: String, loc: Location, found: Str
           if (!rem.isEmpty) rem.head + "\n" + (" " * (loc.column-1)) + "^" else "<past EOF> unexpectedly at line " + loc.line
         }
     }
-    throw inContext("line:\n" + lineInfo + "\ninput:  \n" + input + "\ntokens: " + tokenStream.getOrElse("<unknown>"))
+    throw inContext(loc + "\n" + lineInfo + "\ninput:  \n" + input + "\ntokens: " + tokenStream.getOrElse("<unknown>"))
   }
 }
 

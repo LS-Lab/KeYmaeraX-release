@@ -191,7 +191,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
   protected def pwrapRight(t: BinaryComposite/*Differential/Program*/, rightPrint: String): String =
     "{" + rightPrint + "}"
 
-  /** Emit the string s as a result of the pretty-printer for an expression */
+  /** Emit the string ``s`` as a result of the pretty-printer for the expression at position ``q`` */
   protected def emit(q: PosInExpr, s: String): String = s
 
   /** Formatting the atomic statement s */
