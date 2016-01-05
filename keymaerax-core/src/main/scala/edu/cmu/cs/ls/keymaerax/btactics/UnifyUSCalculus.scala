@@ -921,7 +921,7 @@ trait UnifyUSCalculus {
           */
         def equivStep(o: Expression, factTactic: BelleExpr): Provable = {
           //@todo delete factTactic argument since unused or use factTactic turned argument into Provable=>Provable
-          require(fact.isProved, "currently want proved facts as input only")
+          require(fact.isProved, "currently want proved facts as input only\n" + fact)
           require(proof.conclusion.updated(p.top, C(subst(k)))==proof.conclusion, "expected context split")
           // |- fact: k=o or k<->o, respectively
           val sideUS: Provable = subst.toForward(fact)
@@ -1116,17 +1116,20 @@ trait UnifyUSCalculus {
             val prereqFact = TactixLibrary.proveBy(subst(prereq), TactixLibrary.master())
             require(prereqFact.isProved, "only globally provable requirements currently supported. Ese useAt instead " + prereqFact)
 
-            // |- subst(remainder)
-            val remFact: Provable = (Provable.startProof(subst(remainder))
+            // |- subst(remainder{k})
+            val remFact: Provable = (Provable.startProof(subst(Context(remainder)(k)))
               // |- subst(prereq)      |- subst(prereq -> remainder)
-              (CutRight(subst(Imply(prereq, remainder)), SuccPos(0)), 0)
+              (CutRight(subst(prereq), SuccPos(0)), 0)
               // prove right branch   |- subst(prereq -> remainder)
+              // right branch  |- subst(prereq -> remainder)  byUS(fact)
+              (subst.toForward(fact), 1)
               // left branch   |- subst(prereq)
-              (prereqFact, 1)
+              (prereqFact, 0)
               )
+            remFact ensuring(r => r.subgoals == fact.subgoals, "Proved / no new subgoals expected " + remFact)
 
-            val remKey: PosInExpr = key + 1
-            require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact mostly expected to succeed " + remKey + " in " + remFact + " remaining from " + key + " in " + fact)
+            val remKey: PosInExpr = key.child
+            require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
             UnifyUSCalculus.this.useFor(remFact, remKey, inst)(pos)(proof)
 
 
