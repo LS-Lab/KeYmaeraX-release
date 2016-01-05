@@ -57,6 +57,7 @@ object DebuggingTactics {
     }
   }
 
+  //@todo rename to something else otherwise scala assert no longer works!
   /** assert is a no-op tactic that raises an error if the provable has not the expected formula at the specified position. */
   def assert(fml: Formula, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") {
     override def computeResult(provable: Provable, pos: Position): Provable = {

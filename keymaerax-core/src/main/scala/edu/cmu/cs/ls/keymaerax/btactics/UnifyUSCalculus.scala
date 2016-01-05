@@ -153,7 +153,7 @@ trait UnifyUSCalculus {
    *   ------------------ useAt(__l__<->r) if s=unify(c,l)
    *     G |- C{c}, D
    * }}}
-   * and accordingly for facts that are `__l__->r` facts or conditional `c->(__l__<->r)` or `c->(__l__->r)` facts and so on,
+   * and accordingly for facts that are `__l__->r` facts or conditional `p->(__l__<->r)` or `p->(__l__->r)` facts and so on,
    * where `__l__` indicates the key part of the fact.
    * useAt automatically tries proving the required assumptions/conditions of the fact it is using.
    *
@@ -324,6 +324,7 @@ trait UnifyUSCalculus {
             /* use: try to prove prereq globally */ TactixLibrary.master(),
             /* show */ factTactic), sequent) partial) |
           (provePrereqLocally partial)
+
         case Forall(vars, remainder) if vars.length==1 => ???
           //useAt(subst, new Context(remainder), k, p, C, c, /*@todo instantiateQuanT(vars.head, subst(vars.head))(SuccPos(0))*/ ident, sequent)
 
@@ -854,34 +855,36 @@ trait UnifyUSCalculus {
     *   ------------------ useFor(__l__<->r) if s=unify(c,l)
     *     G |- C{s(r)}, D
     * }}}
-    * and accordingly for facts that are `__l__->r` facts or conditional `c->(__l__<->r)` or `c->(__l__->r)` facts and so on,
+    * and accordingly for facts that are `__l__->r` facts or conditional `p->(__l__<->r)` or `p->(__l__->r)` facts and so on,
     * where `__l__` indicates the key part of the fact.
     * useAt automatically tries proving the required assumptions/conditions of the fact it is using.
     * @author Andre Platzer
-    * @param fact the Provable whose conclusion  to use to simplify at the indicated position of the sequent
+    * @param fact the Provable fact whose conclusion to use to simplify at the indicated position of the sequent
     * @param key the part of the fact's conclusion to unify the indicated position of the sequent with
     * @param inst Transformation for instantiating additional unmatched symbols that do not occur in `fact.conclusion(key)`.
     *   Defaults to identity transformation, i.e., no change in substitution found by unification.
     *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
     * @example useFor(Axiom.axiom("[;] compose"), PosInExpr(0::Nil))
     * applied to the indicated 1::1::Nil of
-    * [x:=1;][{x'=22}] [x:=2*x;++x:=0;]x>=0
+    * ``[x:=1;][{x'=22}]__[x:=2*x;++x:=0;]x>=0__``
     * turns it into
-    * [x:=1;][{x'=22}] ([x:=2*x;]x>=0 & [x:=0;]x>=0)
+    * ``[x:=1;][{x'=22}] ([x:=2*x;]x>=0 & [x:=0;]x>=0)``
     * @see [[useAt()]]
-    * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics]]
     */
   def useFor(fact: Provable, key: PosInExpr, inst: Subst=>Subst = (us => us)): ForwardPositionTactic = {
+    // split key into keyCtx{keyPart} = fact
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).at(key)
     if (DEBUG) println("useFor(" + fact.conclusion + ") key: " + keyPart + " in key context: " + keyCtx)
 
     pos => proof => {
-
+      // split proof into ctx{expr} at pos
       val (ctx, expr) = proof.conclusion.at(pos)
+      // instantiated unification of expr against keyPart
       val subst = inst(UnificationMatch(keyPart, expr))
       if (DEBUG) println("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
       if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof)
-      Predef.assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
+      Predef.assert(expr == subst(keyPart), "unification matched key successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
 
       /** useFor(subst, K,k, p, C,c)
         *
@@ -891,8 +894,9 @@ trait UnifyUSCalculus {
         * @param p the position at which occurrence c occurs in proof.conclusion
         * @param C the context within which occurrence c occurs in proof.conclusion(p.top)==C{c}
         * @param c the occurrence c at position p in proof.conclusion
-        * @tparam T
+        * @tparam T the type of the key
         * @return The Provable following from proof by using key k of fact at p in proof.conclusion
+        * @see [[useFor()]]
         */
       def useFor[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C: Context[Formula], c: Expression): Provable = {
         Predef.assert(subst(k) == c, "correctly matched input")
@@ -901,7 +905,20 @@ trait UnifyUSCalculus {
         Predef.assert(C(c).at(p.inExpr) ==(C, c), "correctly split at position p")
         Predef.assert(List((C, DotFormula), (C, DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
-        /** Equivalence rewriting step to replace occurrence of instance of key k by instance of other o in context */
+        /** Forward equivalence rewriting step to replace occurrence of instance of key k by instance of other o in context
+          * {{{
+          * G |- C{subst(k)}, D
+          * ---------------------
+          * G |- C{subst(o)}, D
+          * }}}
+          * or
+          * {{{
+          * G, C{subst(k)} |- D
+          * ---------------------
+          * G, C{subst(o)} |- D
+          * }}}
+          * @param o
+          */
         def equivStep(o: Expression, factTactic: BelleExpr): Provable = {
           //@todo delete factTactic argument since unused or use factTactic turned argument into Provable=>Provable
           require(fact.isProved, "currently want proved facts as input only")
@@ -935,6 +952,7 @@ trait UnifyUSCalculus {
         } ensuring(r=>r.conclusion==proof.conclusion.updated(p.top, C(subst(o))), "prolonged conclusion"
           ) ensuring(r=>r.subgoals==proof.subgoals, "expected original premises")
 
+
         // in which context of the fact does the key occur
         K.ctx match {
           case Equal(DotTerm, o) =>
@@ -948,6 +966,7 @@ trait UnifyUSCalculus {
 
           case Equiv(o, DotFormula) =>
             equivStep(o, commuteEquivR(SuccPos(0)) & byUS(fact))
+
 
           case Imply(o, DotFormula) =>
             // |- o->k
@@ -1011,6 +1030,7 @@ trait UnifyUSCalculus {
             } else if (polarity == 0 && pos.isAnte) {
               ???
             } else proved(proof, 0)
+
 
           case Imply(DotFormula, o) =>
             // |- k->o
@@ -1077,8 +1097,38 @@ trait UnifyUSCalculus {
               ???
             } else proved(proof, 0)
 
+
           case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
-            throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
+            // try to prove prereq globally
+            //@todo if that fails preserve context and fall back to CMon and C{prereq} -> ...
+            /* {{{
+             *                                         fact
+             *                                   prereq -> remainder
+             * ----------------master   ----------------------------- US
+             * |- subst(prereq)         |- subst(prereq -> remainder)
+             * ------------------------------------------------------ CutRight
+             *         |- subst(remainder)
+             * }}}
+             * The resulting new fact subst(remainder) is then used via useFor
+             */
+
+            // |- subst(prereq)
+            val prereqFact = TactixLibrary.proveBy(subst(prereq), TactixLibrary.master())
+            require(prereqFact.isProved, "only globally provable requirements currently supported. Ese useAt instead " + prereqFact)
+
+            // |- subst(remainder)
+            val remFact: Provable = (Provable.startProof(subst(remainder))
+              // |- subst(prereq)      |- subst(prereq -> remainder)
+              (CutRight(subst(Imply(prereq, remainder)), SuccPos(0)), 0)
+              // prove right branch   |- subst(prereq -> remainder)
+              // left branch   |- subst(prereq)
+              (prereqFact, 1)
+              )
+
+            val remKey: PosInExpr = key + 1
+            require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact mostly expected to succeed " + remKey + " in " + remFact + " remaining from " + key + " in " + fact)
+            UnifyUSCalculus.this.useFor(remFact, remKey, inst)(pos)(proof)
+
 
           case DotFormula =>
             throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
@@ -1086,6 +1136,7 @@ trait UnifyUSCalculus {
           case _ => throw new ProverException("Not implemented for other cases yet, see useAt: " + K)
         }
       }
+
       val r = useFor(subst, keyCtx, keyPart, pos, ctx, expr)
       if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof + "\n ~~> " + r)
       r
