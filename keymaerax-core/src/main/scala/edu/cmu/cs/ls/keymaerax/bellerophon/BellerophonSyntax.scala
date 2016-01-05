@@ -358,7 +358,7 @@ trait BelleLabel {
     case topLevel: BelleTopLevelLabel    => topLevel.label
     case BelleSubLabel(parent, theLabel) => parent.prettyString + LABEL_DELIMITER + theLabel
   }
-}
+  }
 case class BelleTopLevelLabel(label: String) extends BelleLabel {require(!label.contains(LABEL_DELIMITER), s"Label should not contain the sublabel delimiter $LABEL_DELIMITER")}
 case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel {require(!label.contains(LABEL_DELIMITER), , s"Label should not contain the sublabel delimiter $LABEL_DELIMITER")}
 
