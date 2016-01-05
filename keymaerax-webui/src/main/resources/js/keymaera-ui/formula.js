@@ -432,23 +432,27 @@ angular.module('formula')
             }
 
             convertFormulaToInput = function(formula, tactic) {
-              var inputs = $.grep(tactic.derivation.input, function(input, i) { return formula.indexOf(input.param) >= 0; });
-              var inputBoundaries = $.map(inputs, function(input, i) {
-                var inputStart = formula.indexOf(input.param);
-                return {start: inputStart, end: inputStart + input.param.length };
-              }).sort(function(a, b) { a.start <= b.start ? -1 : 1; });
-
               var result = [];
-              if (inputBoundaries.length > 0) {
-                result[0] = {text: formula.slice(0, inputBoundaries[0].start), isInput: false};
-                result[1] = createInput(formula, tactic, inputBoundaries[0]);
-                for (var i = 1; i < inputBoundaries.length; i++) {
-                  result[i+1] = {text: formula.slice(inputBoundaries[i-1].end, inputBoundaries[i].start), isInput: false};
-                  result[i+2] = createInput(formula, tactic, inputBoundaries[i]);
-                }
-                result[inputBoundaries.length+1] = {
-                  text: formula.slice(inputBoundaries[inputBoundaries.length-1].end, formula.length),
-                  isInput: false
+              if (tactic.derivation.input !== undefined && tactic.derivation.input !== null) {
+                var inputs = $.grep(tactic.derivation.input, function(input, i) { return formula.indexOf(input.param) >= 0; });
+                var inputBoundaries = $.map(inputs, function(input, i) {
+                  var inputStart = formula.indexOf(input.param);
+                  return {start: inputStart, end: inputStart + input.param.length };
+                }).sort(function(a, b) { a.start <= b.start ? -1 : 1; });
+
+                if (inputBoundaries.length > 0) {
+                  result[0] = {text: formula.slice(0, inputBoundaries[0].start), isInput: false};
+                  result[1] = createInput(formula, tactic, inputBoundaries[0]);
+                  for (var i = 1; i < inputBoundaries.length; i++) {
+                    result[i+1] = {text: formula.slice(inputBoundaries[i-1].end, inputBoundaries[i].start), isInput: false};
+                    result[i+2] = createInput(formula, tactic, inputBoundaries[i]);
+                  }
+                  result[inputBoundaries.length+1] = {
+                    text: formula.slice(inputBoundaries[inputBoundaries.length-1].end, formula.length),
+                    isInput: false
+                  }
+                } else {
+                  result[0] = {text: formula, isInput: false};
                 }
               } else {
                 result[0] = {text: formula, isInput: false};
