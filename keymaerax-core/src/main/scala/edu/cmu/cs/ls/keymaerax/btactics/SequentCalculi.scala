@@ -58,6 +58,9 @@ trait SequentCalculi {
   lazy val notR               : BuiltInRightTactic = ProofRuleTactics.notR
   /** &L And left: split a conjunction in the antecedent into separate assumptions ([[edu.cmu.cs.ls.keymaerax.core.AndLeft AndLeft]]) */
   lazy val andL               : BuiltInLeftTactic = ProofRuleTactics.andL
+  /** Inverse of andL */
+  def andLi(pos1: AntePos = AntePos(0), pos2: AntePos = AntePos(1)): DependentTactic = PropositionalTactics.andLi(pos1, pos2)
+  lazy val andLi: DependentTactic = andLi()
   /** &R And right: prove a conjunction in the succedent on two separate branches ([[edu.cmu.cs.ls.keymaerax.core.AndRight AndRight]]) */
   lazy val andR               : BuiltInRightTactic = ProofRuleTactics.andR
   /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches ([[edu.cmu.cs.ls.keymaerax.core.OrLeft OrLeft]]) */
