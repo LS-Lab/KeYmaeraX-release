@@ -329,6 +329,8 @@ object DifferentialTactics {
    *   |- [z':=1;](z)'=1
    * }}}
    * @incontext
+   * @todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
+    *       Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
    */
   lazy val Dvariable: DependentPositionTactic = new DependentPositionTactic("x' derive variable") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
