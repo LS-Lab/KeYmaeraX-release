@@ -294,7 +294,7 @@ object DLBySubst {
             assertE(conditioned, "[a](cut->post)")(conditional) &
             cutR(cutted)(pos.top.asInstanceOf[SuccPos]) <(
               /* use */ assertE(cutted,"show [a]cut")(pos.top) & debug("showing post cut") &
-              hide(conditioned)(conditional) partial /*& label(BranchLabels.cutShowLbl)*/,
+              hide(conditional, conditioned) partial /*& label(BranchLabels.cutShowLbl)*/,
               /* show */
               assertE(Imply(cutted,Box(a,post)),"[a]cut->[a]post")(pos.top) &
               debug("K reduction") & useAt("K modal modus ponens", PosInExpr(1::Nil))(pos.top) &
@@ -343,13 +343,13 @@ object DLBySubst {
           cut(Box(Loop(a), q)) <(
             /* use */
             implyRi(AntePos(sequent.ante.length), pos) & cohide('Rlast) & CMon(pos.inExpr+1) & implyR(1) &
-              (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide(True)('Llast)) partial /* indUse */,
+              (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial /* indUse */,
             /* show */
-            hide(b)(pos) & useAt("I induction")('Rlast) & andR('Rlast) <(
+            hide(pos, b) & useAt("I induction")('Rlast) & andR('Rlast) <(
               andR('Rlast) <(ident /* indInit */, ((andR('Rlast) <(closeId, ident))*(consts.size-1) & closeId) | closeT) partial,
               cohide('Rlast) & G & implyR(1) & splitb(1) & andR(1) <(
-                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide(True)('Llast)) partial /* indStep */,
-                andL(-1) & hide(invariant)(-1) & V(1) & closeId) partial) partial)
+                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast,True)) partial /* indStep */,
+                andL(-1) & hide(-1,invariant) & V(1) & closeId) partial) partial)
       }
 
       private def constAnteConditions(sequent: Sequent, taboo: Set[NamedSymbol]): IndexedSeq[Formula] = {

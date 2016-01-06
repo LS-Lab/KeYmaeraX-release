@@ -37,11 +37,11 @@ trait SequentCalculi {
   /** Hide/weaken whether left or right */
   lazy val hide               : DependentPositionTactic = ProofRuleTactics.hide
   /** Hide/weaken given formula at given position */
-  def hide(fml: Formula): DependentPositionTactic = new DependentPositionTactic("hide") {
-    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = assertE(fml, "hiding")(pos) & ProofRuleTactics.hide(pos)
-    }
-  }
+//  def hide(fml: Formula): DependentPositionTactic = new DependentPositionTactic("hide") {
+//    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+//      override def computeExpr(v: BelleValue): BelleExpr = assertE(fml, "hiding")(pos) & ProofRuleTactics.hide(pos)
+//    }
+//  }
   /** Hide/weaken left: weaken a formula to drop it from the antecedent ([[edu.cmu.cs.ls.keymaerax.core.HideLeft HideLeft]]) */
   lazy val hideL              : BuiltInLeftTactic = ProofRuleTactics.hideL
   /** Hide/weaken right: weaken a formula to drop it from the succcedent ([[edu.cmu.cs.ls.keymaerax.core.HideRight HideRight]]) */
@@ -49,7 +49,7 @@ trait SequentCalculi {
   /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
   lazy val cohide             : DependentPositionTactic = ProofRuleTactics.coHide
   /** CoHide/coweaken whether left or right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHideLeft CoHideLeft]]) */
-  def cohide(fml: Formula)    : BelleExpr = DebuggingTactics.assert(fml, "cohiding") & cohide
+  //def cohide(fml: Formula)    : BelleExpr = DebuggingTactics.assert(fml, "cohiding") & cohide
   /** CoHide2/coweaken2 both left and right: drop all other formulas from the sequent ([[edu.cmu.cs.ls.keymaerax.core.CoHide2 CoHide2]]) */
   def cohide2: BuiltInTwoPositionTactic = ProofRuleTactics.coHide2
   /** !L Not left: move an negation in the antecedent to the succedent ([[edu.cmu.cs.ls.keymaerax.core.NotLeft NotLeft]]) */

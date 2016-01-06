@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.tactics._
 
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron tactic expressions.
@@ -62,7 +62,7 @@ object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
 // Positional tactics
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/** Turns a position (locator) into a tactic */
+/** Applied at a position, turns into a tactic of type T. Turns a position (locator) into a tactic */
 trait AtPosition[T <: BelleExpr] {
   /**
    * At a fixed position.
@@ -72,6 +72,8 @@ trait AtPosition[T <: BelleExpr] {
    * @see [[apply(locator: PositionLocator)]]
    */
   private[keymaerax] final def apply(position: Position): T = apply(Fixed(position))
+  //private[keymaerax] final def apply(position: SeqPos): T = apply(Fixed(PositionConverter.convertPos(position)))
+  private[keymaerax] final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
   /**
    * At a fixed position given through index numbers.
    * @param seqIdx The signed index in the sequent (strictly negative index for antecedent, strictly positive for succedent).
@@ -96,6 +98,18 @@ trait AtPosition[T <: BelleExpr] {
       case _: BuiltInRightTactic => apply(Find(0, None, SuccPosition(0)))
       case _ => throw new BelleError(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
+    case 'Llast => apply(LastAnte(0))
+    case 'Rlast => apply(LastSucc(0))
+  }
+  final def apply(locator: Symbol, expected: Formula): T = locator match {
+    case 'L => apply(Find(0, Some(expected), AntePosition(0)))
+    case 'R => apply(Find(0, Some(expected), SuccPosition(0)))
+    case '_ => this match {
+      case _: BuiltInLeftTactic => apply(Find(0, Some(expected), AntePosition(0)))
+      case _: BuiltInRightTactic => apply(Find(0, Some(expected), SuccPosition(0)))
+      case _ => throw new BelleError(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
+    }
+      //@todo check Some(expected)
     case 'Llast => apply(LastAnte(0))
     case 'Rlast => apply(LastSucc(0))
   }
@@ -379,11 +393,14 @@ case class SequentType(s : Sequent) extends BelleType
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 object PositionConverter {
+  /** Converts signed positions to position data structures. */
   def convertPos(seqIdx: Int, inExpr: List[Int] = Nil): Position = {
     require(seqIdx != 0, "Sequent index must be strictly negative (antecedent) or strictly positive (succedent)")
     if (seqIdx < 0) new AntePosition(-seqIdx - 1, PosInExpr(inExpr))
     else new SuccPosition(seqIdx - 1, PosInExpr(inExpr))
   }
+
+  //private[bellerophon] def convertPos(p: SeqPos) : Position = if (p.isAnte) new AntePosition(p.getIndex, HereP) else new SuccPosition(p.getIndex, HereP)
 }
 
 
