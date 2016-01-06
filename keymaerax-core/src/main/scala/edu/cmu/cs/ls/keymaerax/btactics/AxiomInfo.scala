@@ -147,7 +147,8 @@ object DerivationInfo {
     new DerivedAxiomInfo("<:=> assign update", "<:=>", "assigndup", {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:*> assign nondet", "<:*>", "randomd", {case () => HilbertCalculus.randomd}),
     new DerivedAxiomInfo("[:=] assign equational", "[:=]==", "assignbequational", {case () => HilbertCalculus.assignb}),
-    new DerivedAxiomInfo("<:=> assign equational", "<:=>==", "assigndequational", {case () => HilbertCalculus.assignd}),
+    //@note derived axiom <:=> assign equational not yet proven
+//    new DerivedAxiomInfo("<:=> assign equational", "<:=>==", "assigndequational", {case () => HilbertCalculus.assignd}),
     /* @todo replace all the axioms with useAt(axiom) */
     new DerivedAxiomInfo("<':=> differential assign", "<':=>", "Dassignd", {case () => useAt(DerivedAxioms.assignDAxiom)}),
     new DerivedAxiomInfo("DS differential equation solution", "DS", "DSnodomain", {case () => useAt(DerivedAxioms.DSnodomain)}),
@@ -157,7 +158,8 @@ object DerivationInfo {
     new DerivedAxiomInfo("DW differential weakening", "DW", "DWeaken", {case () => HilbertCalculus.DW}),
     new DerivedAxiomInfo("DX diamond differential skip", "DX", "Dskipd", {case () => useAt(DerivedAxioms.Dskipd)}),
 //    new DerivedAxiomInfo("all eliminate", "alle", "allEliminate", {case () => useAt(DerivedAxioms.allEliminateAxiom)}),
-    new DerivedAxiomInfo("exists eliminate", "existse", "existsEliminate", {case () => useAt(DerivedAxioms.existsEliminate)}),
+    //@note derived axiom exists eliminate not yet proven -> use core axiom instead
+//    new DerivedAxiomInfo("exists eliminate", "existse", "existsEliminate", {case () => useAt(DerivedAxioms.existsEliminate)}),
     new DerivedAxiomInfo("exists dual", "existsd", "existsDual", {case () => useAt(DerivedAxioms.existsDualAxiom)}),
     new DerivedAxiomInfo("' linear", "l'", "Dlinear", {case () => useAt(DerivedAxioms.Dlinear)}),
     new DerivedAxiomInfo("' linear right", "l'", "DlinearRight", {case () => useAt(DerivedAxioms.DlinearRight)}),
@@ -213,8 +215,6 @@ object DerivationInfo {
     new DerivedAxiomInfo("= reflexive", "=R", "equalReflexive", {case () => useAt(DerivedAxioms.equalReflex)}),
     new DerivedAxiomInfo("= commute", "=C", "equalCommute", {case () => useAt(DerivedAxioms.equalCommute)}),
     new DerivedAxiomInfo("<=", "<=", "lessEqual", {case () => useAt(DerivedAxioms.lessEqual)}),
-    new DerivedAxiomInfo("= negate", "!!=", "equalNegate", {case () => useAt(DerivedAxioms.notNotEqual)}),
-    new DerivedAxiomInfo("!= negate", "! =", "notEqualNegate", {case () => useAt(DerivedAxioms.notEqual)}),
     new DerivedAxiomInfo("! <", "!<", "notLess", {case () => useAt(DerivedAxioms.notLess)}),
     new DerivedAxiomInfo("! >", "!>", "notGreater", {case () => useAt(DerivedAxioms.notGreater)}),
     new DerivedAxiomInfo("< negate", "!<=", "notGreaterEqual", {case () => useAt(DerivedAxioms.notGreaterEqual)}),
