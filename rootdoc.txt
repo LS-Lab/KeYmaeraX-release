@@ -18,6 +18,7 @@ Main documentation entry points for KeYmaera X API:
   - `[[edu.cmu.cs.ls.keymaerax.btactics]]` - Tactic language library
       - `[[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary]]` - Main tactic library
       - `[[edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus]]` - Hilbert Calculus for differential dynamic logic
+      - `[[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus]]` - Sequent Calculus for propositional and first-order logic
       - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]]` - Unification-based Uniform Substitution Calculus
 
   - `[[edu.cmu.cs.ls.keymaerax.bellerophon]]` - Bellerophon tactic language and tactic interpreter
