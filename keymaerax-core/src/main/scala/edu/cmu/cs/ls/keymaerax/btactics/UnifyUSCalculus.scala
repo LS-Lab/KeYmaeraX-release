@@ -215,9 +215,11 @@ trait UnifyUSCalculus {
      * @tparam T
      * @return
      * @author Andre Platzer
+     * @note The implementation could be generalized because it sometimes fires irrelevant substitution clashes coming merely from the context embedding contracts.
      */
     private def useAt[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: BelleExpr, sequent: Sequent): BelleExpr = {
       require(subst(k) == c, "correctly matched input")
+      //@note might cause some irrelevant clashes
       require(C(c).at(p.inExpr) == (C,c), "correctly split at position p")
       require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
@@ -484,7 +486,7 @@ trait UnifyUSCalculus {
 
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(sequent.sub(pos).contains(key), "In-applicable CE(" + fact + ")\nat " + pos + "\nwhich is " + sequent.sub(pos) + "\nat " + sequent)
+        require(sequent.sub(pos).contains(key), "In-applicable CE(" + fact + ")\nat " + pos + " which is " + sequent.sub(pos).getOrElse("<ill-positioned>") + "\nat " + sequent)
         val (ctx, _) = sequent.at(pos)
         val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
         cutLR(ctx(other))(pos.top) <(
