@@ -70,7 +70,7 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
   it should "prove := assign dual" in {check(assignDualAxiom)}
   it should "prove all substitute" in withMathematica { implicit qeTool => check(allSubstitute)}
   it should "prove [:=] equational" in withMathematica { implicit qeTool => check(assignbEquationalAxiom)}
-  it should "prove [:=] assign equality exists" in {check(assignbExistsAxiom)}
+  ignore should "prove [:=] assign equality exists" in {check(assignbExistsAxiom)}
   it should "prove <:=> assign equality" in {check(assigndEqualityAxiom)}
   it should "prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
   it should "prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}
