@@ -71,16 +71,16 @@ trait AtPosition[T <: BelleExpr] {
    * @note Convenience wrapper
    * @see [[apply(locator: PositionLocator)]]
    */
-  final def apply(position: Position): T = apply(Fixed(position))
+  private[keymaerax] final def apply(position: Position): T = apply(Fixed(position))
   /**
    * At a fixed position given through index numbers.
-   * @param seqIdx The index in the sequent (strictly negative index for antecedent, strictly positive for succedent).
+   * @param seqIdx The signed index in the sequent (strictly negative index for antecedent, strictly positive for succedent).
    * @param inExpr Where to apply inside the formula at index seqIdx.
    * @return The tactic.
    * @note Convenience wrapper
    * @see [[apply(position: Position)]]
    */
-  final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(PositionConverter.convertPos(seqIdx, inExpr))
+  final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(PositionConverter.convertPos(seqIdx, inExpr)))
   /**
    * @param locator The locator symbol: 'L (find left), 'R (find right), '_ (find left/right appropriately for tactic),
    *                'Llast (at last position in antecedent), or 'Rlast (at last position in succedent).

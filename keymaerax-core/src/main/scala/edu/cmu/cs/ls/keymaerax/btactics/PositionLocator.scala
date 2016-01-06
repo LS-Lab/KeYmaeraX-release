@@ -4,12 +4,12 @@ import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Position, SuccPosition}
 
 /** Locates positions */
-trait PositionLocator {
+sealed trait PositionLocator {
   def prettyString: String
 }
 
-/** Locates the formula at the specified position. */
-case class Fixed(pos: Position, shape: Option[Formula] = None, exact: Boolean = true) extends PositionLocator {
+/** Locates the formula at the specified fixed position. */
+private[keymaerax] case class Fixed(pos: Position, shape: Option[Formula] = None, exact: Boolean = true) extends PositionLocator {
   override def prettyString: String = pos.prettyString
 }
 
