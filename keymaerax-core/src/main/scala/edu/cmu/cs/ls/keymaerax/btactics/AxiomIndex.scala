@@ -1,11 +1,13 @@
 /**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
- * See LICENSE.txt for the conditions of this license.
- */
-package edu.cmu.cs.ls.keymaerax.tactics
+  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+  * See LICENSE.txt for the conditions of this license.
+  */
+package edu.cmu.cs.ls.keymaerax.btactics
+
+import java.lang.Number
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.HilbertCalculus._
+import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 
 import scala.annotation.switch
 

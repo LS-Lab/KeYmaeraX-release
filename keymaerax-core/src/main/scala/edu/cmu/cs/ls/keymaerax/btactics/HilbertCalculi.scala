@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms.shift
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{andR, abstractionb, close, debug, implyR, QE, skip}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.{AxiomIndex, PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Position}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -208,7 +208,7 @@ trait HilbertCalculi extends UnifyUSCalculus {
    * except when an unknown decision needs to be made (e.g. invariants for loops or for differential equations).
    * @author Andre Platzer
    * @note Efficient source-level indexing implementation.
-   * @see [[edu.cmu.cs.ls.keymaerax.tactics.AxiomIndex]]
+   * @see [[AxiomIndex]]
    */
   lazy val stepAt: DependentPositionTactic = new DependentPositionTactic("stepAt") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
