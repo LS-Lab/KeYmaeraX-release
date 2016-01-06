@@ -82,6 +82,7 @@ trait AtPosition[T <: BelleExpr] {
    */
   final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(PositionConverter.convertPos(seqIdx, inExpr)))
   /**
+   * Returns the tactic at the position identified by `locator`.
    * @param locator The locator symbol: 'L (find left), 'R (find right), '_ (find left/right appropriately for tactic),
    *                'Llast (at last position in antecedent), or 'Rlast (at last position in succedent).
    * @note Convenience wrapper
@@ -100,7 +101,7 @@ trait AtPosition[T <: BelleExpr] {
   }
 
   /**
-   * At a position identified by the locator.
+   * Returns the tactic at the position identified by `locator`.
    * @param locator The locator: Fixed, Find, LastAnte, or LastSucc
    * @return The tactic
    * @see [[PositionLocator]]
