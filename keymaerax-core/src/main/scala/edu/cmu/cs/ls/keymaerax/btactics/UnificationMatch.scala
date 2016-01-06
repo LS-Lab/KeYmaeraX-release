@@ -20,7 +20,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
   import edu.cmu.cs.ls.keymaerax.tactics.SubstitutionHelper.replaceFree
 
   //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
   private val REUNIFY = false
 
 //  type Subst = USubst

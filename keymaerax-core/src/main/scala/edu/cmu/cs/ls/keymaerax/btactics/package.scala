@@ -68,7 +68,7 @@ package edu.cmu.cs.ls.keymaerax
   * // Explicit proof tactic for |- !!p() <-> p()
   * val proof = TactixLibrary.proveBy(
   *    Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)),
-  *    equivR(SuccPos(0)) <(
+  *    equivR(SuccPos(0)) & <(
   *      // left branch
   *      (notL(AntePos(0)) &
   *          notR(SuccPos(1)) &
@@ -89,7 +89,7 @@ package edu.cmu.cs.ls.keymaerax
   * // Explicit proof tactic for |- !!p() <-> p()
   * val proof = TactixLibrary.proveBy(
   *    Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)),
-  *    equivR(1) <(
+  *    equivR(1) & <(
   *      (notL(-1) &
   *        notR(2) &
   *        closeId)

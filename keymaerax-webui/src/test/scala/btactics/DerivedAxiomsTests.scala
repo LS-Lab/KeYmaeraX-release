@@ -105,6 +105,7 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
   it should "prove Dsol& differential equation solution" in {check(DSddomain)}
   //  it should "prove x' derive var" in {check(Dvar)}
   it should "prove x' derive variable" in {check(Dvariable)}
+  it should "prove x' derive variable commuted" in {check(DvariableCommuted)}
   it should "prove 'linear" in withMathematica { implicit qetool => check(Dlinear)}
   it should "prove 'linear right" in withMathematica { implicit qeTool => check(DlinearRight)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
