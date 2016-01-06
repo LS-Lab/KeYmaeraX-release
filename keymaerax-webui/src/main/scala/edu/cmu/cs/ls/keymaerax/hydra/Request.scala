@@ -23,7 +23,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.{PositionLocator, DerivationInfo, AxiomI
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Sequent, ProverException, Provable}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import _root_.edu.cmu.cs.ls.keymaerax.tactics.{Position, Augmentors, PosInExpr, AxiomIndex}
+import _root_.edu.cmu.cs.ls.keymaerax.tactics.{Position, Augmentors, PosInExpr}
 import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
