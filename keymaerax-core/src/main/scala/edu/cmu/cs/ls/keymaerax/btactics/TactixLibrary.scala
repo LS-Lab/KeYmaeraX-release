@@ -334,6 +334,7 @@ object TactixLibrary extends HilbertCalculi with SequentCalculi {
 
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable
+   * @see [[SequentialInterpreter]]
    * @see [[TactixLibrary.by(Provable)]]
    * @see [[proveBy()]]
    * @example {{{
@@ -347,7 +348,7 @@ object TactixLibrary extends HilbertCalculi with SequentCalculi {
     //@todo fetch from some factory
     SequentialInterpreter()(tactic, v) match {
       case BelleProvable(provable, _) => provable
-      case r => throw new BelleUserGeneratedError("Error in proveBy, goal\n " + goal + " was not provable but instead resulted in\n " + r)
+      case r => throw new BelleUserGeneratedError("Error in proveBy, goal\n" + goal + " was not provable but instead resulted in\n" + r)
     }
   }
   /**

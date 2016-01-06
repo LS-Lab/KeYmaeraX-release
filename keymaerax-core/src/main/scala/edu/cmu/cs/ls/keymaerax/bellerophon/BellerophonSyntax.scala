@@ -17,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, Po
  * @see [[SequentialInterpreter]]
  */
 abstract class BelleExpr(val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) {
+  private[keymaerax] val DEBUG = System.getProperty("DEBUG", "true")=="true"
   // tactic combinators
 
   /** this & other: sequential composition executes other on the output of this, failing if either fail. */
