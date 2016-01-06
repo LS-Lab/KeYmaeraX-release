@@ -41,9 +41,13 @@ object KeYmaeraX {
       |  -prove filename -tactic filename [-out filename] |
       |  -modelplex filename [-vars var1,var2,..,varn] [-out filename] |
       |  -codegen filename -format C|Spiral [-vars var1,var2,..,varn] [-out filename] |
-      |  -ui [filename] [web server options]
+      |  -ui [filename] [web server options] |
+      |  -parse [filename] |
+      |  -bparse [filename
       |
       |Actions:
+      |  -parse     parse problem file and return an error code (non-0) if the file does not parse
+      |  -bparse    parse a bellerophon tactic and return an error code (non-0) if the file does not parse.
       |  -prove     run KeYmaera X prover on given file with given tactic
       |  -modelplex synthesize monitor from given file with ModelPlex prover tactic
       |  -codegen   generate executable code from given file for given target language
@@ -92,6 +96,10 @@ object KeYmaeraX {
           case "-help" :: _ => {println(usage); exit(1)}
           case "-license" :: _ => {println(license); exit(1)}
           // actions
+          case "-parse" :: value :: tail =>
+            parseProblemFile(value); ???
+          case "-bparse" :: value :: tail =>
+            parseBelleTactic(value); ???
           case "-prove" :: value :: tail =>
             if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
             else optionErrorReporter("-prove")
@@ -164,6 +172,25 @@ object KeYmaeraX {
           shutdownProver()
         }
       }
+    }
+  }
+
+  private def parseProblemFile(fileName: String) = {
+    try {
+      val fileContents = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
+      KeYmaeraXProblemParser(fileContents);
+      System.exit(0)
+    }
+    catch {
+      case _ : Error => System.exit(-1)
+    }
+  }
+
+  private def parseBelleTactic(fileName: String) = {
+    val fileContents : String = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
+    edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser(fileContents) match {
+      case Some(_) => System.exit(0)
+      case None => System.exit(-1)
     }
   }
 
