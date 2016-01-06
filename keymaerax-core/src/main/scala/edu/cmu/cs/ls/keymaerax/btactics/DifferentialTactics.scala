@@ -335,7 +335,7 @@ object DifferentialTactics {
    */
   lazy val Dvariable: DependentPositionTactic = new DependentPositionTactic("x' derive variable") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      private val OPTIMIZED = true //@todo true
+      private val OPTIMIZED = false //@todo true
 
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(Differential(x: Variable)) =>
