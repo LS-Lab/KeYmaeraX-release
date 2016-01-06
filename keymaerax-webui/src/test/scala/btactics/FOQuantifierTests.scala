@@ -1,4 +1,4 @@
-package btactics
+package edu.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics._

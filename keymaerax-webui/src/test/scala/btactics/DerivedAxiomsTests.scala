@@ -13,7 +13,7 @@ import testHelper.KeYmaeraXTestTags.OptimisticTest
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
  */
-class DerivedAxiomsTests extends btactics.TacticTestBase {
+class DerivedAxiomsTests extends edu.btactics.TacticTestBase {
 
   //@todo add a test case that runs through AxiomInfo.allInfos checking all its axioms
 

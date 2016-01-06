@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
-package btactics
+package edu.btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._

@@ -72,8 +72,7 @@ trait AtPosition[T <: BelleExpr] {
    */
   private[keymaerax] final def apply(position: Position): T = apply(Fixed(position))
   private[keymaerax] final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
-  /* for test-cases only */
-  /*@todo private[keymaerax]*/ final def apply(position: SeqPos): T = apply(Fixed(PositionConverter.convertPos(position)))
+  private[edu] final def apply(position: SeqPos): T = apply(Fixed(PositionConverter.convertPos(position)))
   /**
    * At a fixed position given through index numbers.
    * @param seqIdx The signed index in the sequent (strictly negative index for antecedent, strictly positive for succedent).
