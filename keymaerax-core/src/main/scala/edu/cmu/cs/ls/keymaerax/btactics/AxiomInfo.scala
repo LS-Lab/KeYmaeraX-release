@@ -102,6 +102,7 @@ object DerivationInfo {
     new CoreAxiomInfo("c()' derive constant fn", "c()'", "Dconst", {case () => HilbertCalculus.Dconst}),
     new CoreAxiomInfo("x' derive var", "x'", "Dvar", {case () => HilbertCalculus.Dvariable}),
     new DerivedAxiomInfo("x' derive variable", "x'", "DvariableAxiom", {case () => HilbertCalculus.useAt(DerivedAxioms.Dvariable)}),
+    new DerivedAxiomInfo("x' derive var commuted", "x'+C", "DvariableCommutedAxiom", {case () => HilbertCalculus.useAt(DerivedAxioms.DvariableCommuted)}),
     new PositionTacticInfo("DvariableTactic", "x'", {case () => DifferentialTactics.Dvariable}),
     new CoreAxiomInfo("+' derive sum", "+'", "Dplus", {case () => HilbertCalculus.Dplus}),
     new CoreAxiomInfo("-' derive neg", "-'", "Dneg", {case () => HilbertCalculus.Dneg}),

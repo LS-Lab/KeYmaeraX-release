@@ -208,6 +208,7 @@ object DerivedAxioms {
     case "*0" => Some(timesZeroF, timesZeroT)
     case "+0" => Some(plusZeroF, plusZeroT)
     //    case "x' derive var" => Some(DvarF, DvarT)
+    case "x' derive var commuted" => Some(DvariableCommutedF, DvariableCommutedT)
     case "x' derive variable" => Some(DvariableF, DvariableT)
     case "' linear" => Some(DlinearF, DlinearT)
     case "' linear right" => Some(DlinearRightF, DlinearRightT)
@@ -1569,6 +1570,19 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
   lazy val DGpreghostT = derivedAxiomT(DGpreghost)
+
+  /**
+    * {{{Axiom "x' derive var commuted".
+    *    (x_') = (x_)'
+    * End.
+    * }}}
+    */
+  lazy val DvariableCommutedF = "(x_') = (x_)'".asFormula
+  lazy val DvariableCommuted = derivedAxiom("x' derive var commuted",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DvariableCommutedF)),
+    byUS(equalCommute)
+  )
+  lazy val DvariableCommutedT = derivedAxiomT(DvariableCommuted)
 
   /**
    * {{{Axiom "x' derive variable".
