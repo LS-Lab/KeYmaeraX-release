@@ -349,7 +349,7 @@ object DLBySubst {
               andR('Rlast) <(ident /* indInit */, ((andR('Rlast) <(closeId, ident))*(consts.size-1) & closeId) | closeT) partial,
               cohide('Rlast) & G & implyR(1) & splitb(1) & andR(1) <(
                 (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast,True)) partial /* indStep */,
-                andL(-1) & hide(-1,invariant) & V(1) & closeId) partial) partial)
+                andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & closeId) partial) partial)
       }
 
       private def constAnteConditions(sequent: Sequent, taboo: Set[NamedSymbol]): IndexedSeq[Formula] = {
