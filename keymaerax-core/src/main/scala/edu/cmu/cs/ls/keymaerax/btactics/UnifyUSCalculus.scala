@@ -21,12 +21,15 @@ import scala.collection.immutable._
 import scala.language.postfixOps
 
 /**
- * Automatic unification-based Uniform Substitution Calculus with indexing.
- * @author Andre Platzer
- * @author Stefan Mitsch
- * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
- * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
- */
+  * Automatic unification-based Uniform Substitution Calculus with indexing.
+  * Provides tactics for automatically applying axioms by matching inputs against them by unification
+  * according to their [[AxiomIndex]].
+  * @author Andre Platzer
+  * @see [[UnificationMatch]]
+  * @see [[AxiomIndex]]
+  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
+  */
 trait UnifyUSCalculus {
   //@todo import a debug flag as in Tactics.DEBUG
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"

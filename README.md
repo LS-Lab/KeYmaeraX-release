@@ -122,7 +122,6 @@ Main documentation to read for KeYmaera X API:
     edu.cmu.cs.ls.keymaerax.parser.package - Parser and pretty printer with concrete syntax and notation
     edu.cmu.cs.ls.keymaerax.btactics.package - Tactic library
     edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary - Main tactic library for most common cases
-    edu.cmu.cs.ls.keymaerax.tactics.package - Older scheduled tactic library
     edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX - command-line launcher for KeYmaera X
 
 IntelliJ IDEA Development Environment
@@ -219,6 +218,7 @@ Within the `edu.cmu.cs.ls.keymaerax` namespace, source code is separated accordi
     .bellerophon - Tactic language, framework and tactic interpreter
     .btactics    - Tactic library
     .parser      - Parsing and pretty printing
+    .pt          - Proof checker for proof terms
     .tactics     - Older scheduled tactic framework, including tactic implementations and the scheduler
     .tools       - Arithmetic back-ends
 

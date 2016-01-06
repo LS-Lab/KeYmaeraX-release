@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.Position
 /**
   * User-Interface Axiom/Tactic Index: Indexing data structure for all canonically applicable (derived) axioms/rules/tactics in User-Interface.
   * @author aplatzer
-  * @see [[edu.cmu.cs.ls.keymaerax.tactics.AxiomIndex]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]
   */
 object UIIndex {
   /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
@@ -25,6 +25,7 @@ object UIIndex {
   /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
   def allStepsAt(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None): List[String] = autoPad(pos, sequent, {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
+    //@note the truth-value of isAnte is nonsense if !isTop ....
     val isAnte = pos.nonEmpty && pos.get.isAnte
     expr match {
       case Differential(t) => t match {

@@ -167,7 +167,7 @@ object AxiomIndex {
         case _ => Nil
       }
 
-        //@todo
+        //@todo BigDecimal missing unapply
 //      case Plus(Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO)), _) => "0+" :: Nil
 //      case Plus(_, Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO))) => "+0" :: Nil
 //      case Times(Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO)), _) => "0*" :: Nil

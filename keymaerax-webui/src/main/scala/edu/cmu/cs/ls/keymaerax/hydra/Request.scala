@@ -695,14 +695,14 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
   }
 
   /* Try to figure out the most intuitive inference rule to display for this tactic. If the user asks us "StepAt" then
-   * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask AxiomInfo */
+   * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask TacticInfo */
   private def getRuleName(tacticId: String, sequent:Sequent, locator:Option[PositionLocator]): String = {
     val pos = locator match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     tacticId.toLowerCase() match {
       case ("step" | "stepat") =>
         val fml = sequent(pos.get)
         UIIndex.theStepAt(fml, pos) match {
-          case Some(axiom) => DerivationInfo(axiom).display.name
+          case Some(step) => DerivationInfo(step).display.name
           case None => tacticId
         }
       case _ => try {
