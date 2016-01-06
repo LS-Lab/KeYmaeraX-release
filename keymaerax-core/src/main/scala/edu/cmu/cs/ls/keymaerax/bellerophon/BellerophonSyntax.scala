@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.{SuccPosition, AntePosition, Position}
  * See Table 1 of "Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus"
  * @author Nathan Fulton
  * @see [[SequentialInterpreter]]
+ * @see [[edu.cmu.cs.ls.keymaerax.bellerophon]]
  */
 abstract class BelleExpr(val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) {
   private[keymaerax] val DEBUG = System.getProperty("DEBUG", "false")=="true"
@@ -70,8 +71,9 @@ trait AtPosition[T <: BelleExpr] {
    * @see [[apply(locator: PositionLocator)]]
    */
   private[keymaerax] final def apply(position: Position): T = apply(Fixed(position))
-  //private[keymaerax] final def apply(position: SeqPos): T = apply(Fixed(PositionConverter.convertPos(position)))
   private[keymaerax] final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
+  /* for test-cases only */
+  /*@todo private[keymaerax]*/ final def apply(position: SeqPos): T = apply(Fixed(PositionConverter.convertPos(position)))
   /**
    * At a fixed position given through index numbers.
    * @param seqIdx The signed index in the sequent (strictly negative index for antecedent, strictly positive for succedent).
