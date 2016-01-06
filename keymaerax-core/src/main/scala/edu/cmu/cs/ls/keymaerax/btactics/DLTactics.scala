@@ -19,7 +19,7 @@ object DLTactics {
    */
   def monb: DependentTactic = new DependentTactic("[] monotone") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
+      case BelleProvable(provable, _) =>
         require(provable.subgoals.size == 1, "Expected sole open goal, but got " + provable.subgoals.size + " open goals")
         val sequent = provable.subgoals.head
         require(sequent.ante.length == 1 && sequent.succ.length == 1, "Expected 1 antecedent formula and 1 succedent formula")
@@ -53,7 +53,7 @@ object DLTactics {
    */
   def mond: DependentTactic = new DependentTactic("<> monotone") {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
+      case BelleProvable(provable, _) =>
         require(provable.subgoals.size == 1, "Expected sole open goal, but got " + provable.subgoals.size + " open goals")
         val sequent = provable.subgoals.head
         require(sequent.ante.length == 1 && sequent.succ.length == 1, "Expected 1 antecedent formula and 1 succedent formula")
