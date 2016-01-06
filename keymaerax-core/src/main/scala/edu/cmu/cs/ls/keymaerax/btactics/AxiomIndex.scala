@@ -140,7 +140,7 @@ object AxiomIndex {
   def axiomFor(expr: Expression): Option[String] = axiomsFor(expr).headOption
 
   private val odeList: List[String] = "DI differential invariant" :: "DC differential cut" :: "DG differential ghost" :: Nil
-  //private val odeList: List[String] = "DI differential invariant" :: "diffCut" :: "DG differential ghost" :: Nil
+  //@note "diffCut" is more powerful than "DC differential cut" due to old(.) but only with a suitable invariant generator.
 
   private val unknown = Nil
 
@@ -149,6 +149,7 @@ object AxiomIndex {
     if (expr.kind == TermKind) expr match {
       case Differential(t) => t match {
         case _: Variable => "x' derive var" :: Nil
+        //@todo "x' derive var" still fails in context with bound x'. "DvariableTactic" only works backward, though.
         //case _: Variable => "DvariableTactic" :: Nil
         case _: Number => "c()' derive constant fn" :: Nil
         // optimizations
@@ -192,6 +193,7 @@ object AxiomIndex {
       case Box(a, post) =>
         a match {
         case _: Assign => "[:=] assign" :: "[:=] assign equality" :: "[:=] assign update" :: Nil
+        //@todo "[:=] assign equality" does not automatically do the fresh renaming of "assignbTactic", which is not available forward, though.
         //case _: Assign => "assignbTactic" :: Nil
         case _: AssignAny => "[:*] assign nondet" :: Nil
         case _: DiffAssign => "[':=] differential assign" :: Nil
@@ -199,19 +201,17 @@ object AxiomIndex {
         case _: Compose => "[;] compose" :: Nil
         case _: Choice => "[++] choice" :: Nil
         case _: Dual => "[^d] dual" :: Nil
+        //@note Neither "loop" nor "[*] iterate" are automatic if invariant generator wrong and infinite unfolding useless.
 //        case _: Loop => "loop" :: "[*] iterate" :: Nil
-        //@note This misses the case where differential formulas are not top-level, but strategically that's okay
+        //@note This misses the case where differential formulas are not top-level, but strategically that's okay. Also strategically, DW can wait until after DE.
         case ODESystem(ode, constraint) if post.isInstanceOf[DifferentialFormula] => ode match {
           case _: AtomicODE => "DE differential effect" :: Nil
           case _: DifferentialProduct => "DE differential effect (system)" :: Nil
           case _ => Nil
         }
+        //@todo The following is a global search list unlike the others
+        //@todo "diffSolve" should go first since the right thing to do for stepAt if solvable.
         case ODESystem(ode, constraint) => "DW differential weaken" :: odeList
-//        case ODESystem(ode, constraint) if post.isInstanceOf[DifferentialFormula] => ode match {
-//          case _: AtomicODE => "DE differential effect" :: /*"DW differential weakening" ::*/ Nil
-//          case _: DifferentialProduct => "DE differential effect (system)" :: /*"DW differential weakening" ::*/ Nil
-//          case _ => Nil
-//        }
 //        case ODESystem(ode, constraint) =>
 //          /*@todo strategic "diffInvariant" would be better than diffInd since it does diffCut already ::*/
 //          val tactics: List[String] = "diffSolve" :: "diffInd" :: Nil
