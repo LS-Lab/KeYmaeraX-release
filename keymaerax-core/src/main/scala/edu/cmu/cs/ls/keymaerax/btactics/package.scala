@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaerax
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst
+
 /**
   * Tactic library in the [[edu.cmu.cs.ls.keymaerax.bellerophon Bellerophon]] tactic language.
   *
@@ -11,7 +13,7 @@ package edu.cmu.cs.ls.keymaerax
   *   - Tactic tools
   *     - [[edu.cmu.cs.ls.keymaerax.tactics.Position]]: Tactic positioning types.
   *     - [[edu.cmu.cs.ls.keymaerax.btactics.UnificationMatch]]: Unification and matchers.
-  *     - [[edu.cmu.cs.ls.keymaerax.btactics.RenUSubst]]: Renaming uniform substitutions, combining uniform renaming with uniform substitution.
+  *     - [[RenUSubst]]: Renaming uniform substitutions, combining uniform renaming with uniform substitution.
   *     - [[edu.cmu.cs.ls.keymaerax.tactics.Augmentors]]: Implicit convenience additions of helper functions to formulas, terms, programs, sequents.
   *     - [[edu.cmu.cs.ls.keymaerax.tactics.Context]]: Convenience representation of formulas used as contexts that provide ways of substituting expressions in.
   *

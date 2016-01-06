@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
@@ -335,12 +336,15 @@ object DifferentialTactics {
   lazy val Dvariable: DependentPositionTactic = new DependentPositionTactic("x' derive variable") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       private val OPTIMIZED = false //@todo true
+
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(Differential(x: Variable)) =>
           if (OPTIMIZED) {
-            val axiom = AxiomInfo("x' derive var commuted")
-            val (keyCtx:Context[_],keyPart) = axiom.formula.at(PosInExpr(0::Nil))
-            val fact = UnificationMatch.apply(keyPart, sequent.sub(pos + 0).get).toForward(axiom.provable)
+             val axiom = AxiomInfo("x' derive var commuted")
+             val (keyCtx:Context[_],keyPart) = axiom.formula.at(PosInExpr(0::Nil))
+            if (DEBUG) println("Dvariable " + keyPart + " on " + x)
+            assert(x == sequent.sub(pos + 0).get, "expected child")
+            val fact = UnificationMatch.apply(keyPart, x).toForward(axiom.provable)
             CE(fact)(pos)
           } else {
             val withxprime: Formula = sequent.replaceAt(pos, DifferentialSymbol(x)).asInstanceOf[Formula]
