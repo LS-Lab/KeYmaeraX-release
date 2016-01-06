@@ -182,7 +182,7 @@ object KeYmaeraX {
       System.exit(0)
     }
     catch {
-      case _ : Error => System.exit(-1)
+      case e : Exception => System.exit(-1)
     }
   }
 
