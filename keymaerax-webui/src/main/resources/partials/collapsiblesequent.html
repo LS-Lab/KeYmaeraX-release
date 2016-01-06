@@ -6,7 +6,7 @@
     </div>
 
     <!-- Collapsed antecedent, also readonly -->
-    <div class="col-md-5">
+    <div class="col-md-2">
         <div class="pull-right">
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante | limitTo:1" id="{{f.id}}">
             <div class="col-md-12 k4-formula">
@@ -31,7 +31,7 @@
     </div>
 
     <!-- Collapsed succedent -->
-    <div class="col-md-5">
+    <div class="col-md-8">
         <div class="row k4-flexrow" ng-repeat="f in sequent.succ | limitTo:1" id="{{f.id}}">
             <div class="col-md-12 k4-formula">
                 <div class="k4-formula-content k4-abbreviate">
@@ -53,7 +53,7 @@
     </div>
 
     <!-- Antecedent -->
-    <div class="col-md-5">
+    <div class="col-md-2">
         <div class="pull-right">
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
@@ -102,7 +102,7 @@
     </div>
 
     <!-- Succedent -->
-    <div class="col-md-5">
+    <div class="col-md-8">
         <div class="row k4-flexrow" ng-repeat="f in sequent.succ" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
