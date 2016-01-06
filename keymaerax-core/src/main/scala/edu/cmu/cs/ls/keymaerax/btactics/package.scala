@@ -65,27 +65,9 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst
   *
   * ===Explicit Proofs===
   * Explicit proofs construct similarly explicit proof steps, just with explicit tactics from [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary TactixLibrary]]:
-  * {{{
-  * import TactixLibrary._
-  * // Explicit proof tactic for |- !!p() <-> p()
-  * val proof = TactixLibrary.proveBy(
-  *    Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)),
-  *    equivR(SuccPos(0)) & <(
-  *      // left branch
-  *      (notL(AntePos(0)) &
-  *          notR(SuccPos(1)) &
-  *          closeId)
-  *      ,
-  *      // right branch
-  *      (notR(SuccPos(0)) &
-  *        notL(AntePos(1)) &
-  *        closeId)  *    )
-  * )
-  * }}}
-  * The only difference is the order of the branches, which is fixed to be from left to right in
+  * The only actual difference is the order of the branches, which is fixed to be from left to right in
   * [[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr.<() tactic branching]].
   * Tactics also use more elegant signed integers to refer to antecedent positions (negative) or succedent positions (positive).
-  * This gives the same tactic as follows:
   * {{{
   * import TactixLibrary._
   * // Explicit proof tactic for |- !!p() <-> p()
