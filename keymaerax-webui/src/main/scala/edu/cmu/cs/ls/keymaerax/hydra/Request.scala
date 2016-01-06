@@ -34,6 +34,7 @@ import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics.{ArithmeticTacticsImpl, TacticExceptionListener, Tactics}
+import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.CLParser
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 
@@ -702,10 +703,17 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     val pos = locator match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     tacticId.toLowerCase match {
       case ("step" | "stepat") =>
-        val fml = sequent(pos.get)
-        UIIndex.theStepAt(fml, pos) match {
-          case Some(step) => what(DerivationInfo(step))
-          case None => tacticId
+        sequent.sub(pos.get) match {
+          case Some(fml: Formula) =>
+            UIIndex.theStepAt(fml, pos) match {
+              case Some(step) => what(DerivationInfo(step))
+              case None => tacticId
+            }
+          case _ => try {
+            what(TacticInfo(tacticId))
+          } catch {
+            case _: Throwable => "Tactic"
+          }
         }
       case _ => try {
         what(TacticInfo(tacticId))
