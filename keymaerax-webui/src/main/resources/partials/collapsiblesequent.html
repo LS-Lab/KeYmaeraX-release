@@ -58,11 +58,11 @@
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
-                    <li><a ng-click="onTactic(f.id,'StepAt')"
+                    <li><a ng-click="onTactic(f.id,'step')"
                            uib-tooltip="Step" tooltip-placement="left" tooltip-popup-delay="500">
                         <span class="fa fa-step-forward"></span></a>
                     </li>
-                    <li><a ng-click="onTactic(f.id,'HideL')"
+                    <li><a ng-click="onTactic(f.id,'hideL')"
                            uib-tooltip="Hide" tooltip-placement="left" tooltip-popup-delay="500">
                         <span class="fa fa-eye-slash"></span></a>
                     </li>
@@ -92,11 +92,11 @@
         <div class="row k4-flexrow">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
-                    <li><a ng-click="onTactic(undefined, 'Master')"
+                    <li><a ng-click="onTactic(undefined, 'master')"
                            uib-tooltip="Auto" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-magic"></span></a>
                     </li>
-                    <li><a ng-click="onTactic(undefined, 'Prop')"
+                    <li><a ng-click="onTactic(undefined, 'prop')"
                            uib-tooltip="Exhaustive propositional reasoning" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-forward"></span></a>
                     </li>
@@ -104,7 +104,7 @@
                            uib-tooltip="Quantifier elimination" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-calculator"></span></a>
                     </li>
-                    <li><a ng-click="onTactic(undefined, 'Normalize')"
+                    <li><a ng-click="onTactic(undefined, 'normalize')"
                            uib-tooltip="Auto without QE" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-ban"></span></a>
                     </li>
@@ -127,11 +127,11 @@
         <div class="row k4-flexrow" ng-repeat="f in sequent.succ" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
-                    <li><a ng-click="onTactic(f.id,'StepAt')"
+                    <li><a ng-click="onTactic(f.id,'step')"
                            uib-tooltip="Step" tooltip-placement="left" tooltip-popup-delay="500">
                         <span class="fa fa-step-forward"></span></a>
                     </li>
-                    <li><a ng-click="onTactic(f.id,'HideR')"
+                    <li><a ng-click="onTactic(f.id,'hideR')"
                            uib-tooltip="Hide" tooltip-placement="left" tooltip-popup-delay="500">
                         <span class="fa fa-eye-slash"></span></a>
                     </li>
