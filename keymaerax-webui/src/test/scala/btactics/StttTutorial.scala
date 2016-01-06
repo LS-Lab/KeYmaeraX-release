@@ -30,6 +30,12 @@ class StttTutorial extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
+  it should "be provable with diffSolve" in withMathematica { implicit qeTool =>
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
+    val tactic = implyR('_) & andL('_) & diffSolve(None)(1) & QE
+    proveBy(s, tactic) shouldBe 'proved
+  }
+
   it should "be provable with master" in withMathematica { implicit qeTool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
     proveBy(s, master()) shouldBe 'proved
