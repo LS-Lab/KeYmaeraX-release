@@ -22,9 +22,9 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
               dataType: "json",
               contentType: "application/json",
               async: false,
-              url: "/user/" + username + "/" + password,
+              url: "/user/" + $scope.username + "/" + $scope.password,
               success: function(result) {
-                 if(result.success === true) { processLogin(); }
+                 if(result.success === true) { $scope.processLogin(); }
                  else { showErrorMessage($uibModal, "Sorry, user name is already taken. Please choose a different name."); }
                },
               error: this.ajaxErrorHandler

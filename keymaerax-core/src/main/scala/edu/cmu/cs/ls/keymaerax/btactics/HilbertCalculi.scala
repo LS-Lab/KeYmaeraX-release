@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms.shift
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{andR, abstractionb, close, debug, implyR, QE, skip}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.{AxiomIndex, PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Position}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -36,6 +36,33 @@ trait HilbertCalculi extends UnifyUSCalculus {
 
   /** True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on demand. */
   private val INTERNAL = false
+
+  // axiomatic rules
+
+  /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
+    * {{{
+    *       p(??)
+    *   ----------- G
+    *    [a;]p(??)
+    * }}}
+    * @see [[monb]] with p(x)=True
+    */
+  lazy val G                  : BelleExpr         = DLBySubst.G
+  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
+  lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
+  /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality `c(f(x))=c(g(x))` to an equality `f(x)=g(x)` */
+  //def CT(inEqPos: PosInExpr)  : Tactic         = ???
+  /** CQ: Equation Congruence: Contextual Equivalence of terms at the indicated position to reduce an equivalence to an equation */
+  //def CQ(inEqPos: PosInExpr)  : Tactic
+  /** CE: Congruence: Contextual Equivalence at the indicated position to reduce an equivalence to an equivalence */
+  //def CE(inEqPos: PosInExpr)  : Tactic
+  /** monb: Monotone `[a;]p(x) |- [a;]q(x)` reduces to proving `p(x) |- q(x)` */
+  lazy val monb               : BelleExpr         = DLBySubst.monb
+  /** mond: Monotone `<a;>p(x) |- <a;>q(x)` reduces to proving `p(x) |- q(x)` */
+  lazy val mond               : BelleExpr         = DLBySubst.mond
+
+
+  // axioms
 
   // modalities
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation */
@@ -208,14 +235,14 @@ trait HilbertCalculi extends UnifyUSCalculus {
    * except when an unknown decision needs to be made (e.g. invariants for loops or for differential equations).
    * @author Andre Platzer
    * @note Efficient source-level indexing implementation.
-   * @see [[edu.cmu.cs.ls.keymaerax.tactics.AxiomIndex]]
+   * @see [[AxiomIndex]]
    */
   lazy val stepAt: DependentPositionTactic = new DependentPositionTactic("stepAt") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val sub = sequent.sub(pos)
         if (sub.isEmpty) throw new BelleUserGeneratedError("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
-        AxiomIndex.axiomFor(sub.get, Some(pos)) match {
+        AxiomIndex.axiomFor(sub.get) match {
           case Some(axiom) =>
             DerivationInfo(axiom).belleExpr match {
               case ap:AtPosition[_] => ap(pos)

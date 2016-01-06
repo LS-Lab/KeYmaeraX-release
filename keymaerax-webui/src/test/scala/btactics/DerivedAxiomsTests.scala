@@ -71,6 +71,7 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
   it should "prove all substitute" in withMathematica { implicit qeTool => check(allSubstitute)}
   it should "prove [:=] equational" in withMathematica { implicit qeTool => check(assignbEquationalAxiom)}
   ignore should "prove [:=] assign equality exists" in {check(assignbExistsAxiom)}
+  it should "prove <:=> assign equality" in {check(assigndEqualityAxiom)}
   it should "prove [:=] vacuous assign" in {check(vacuousAssignbAxiom)}
   it should "prove <:=> vacuous assign" in {check(vacuousAssigndAxiom)}
   it should "prove <':=> differential assign" in {check(assignDAxiom)}
@@ -115,7 +116,7 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
   it should "prove = reflexive" in withMathematica {implicit qetool =>check(equalReflex)}
   it should "prove = commute" in withMathematica { implicit qetool =>check(equalCommute)}
   it should "prove <=" in withMathematica { implicit qetool =>check(lessEqual)}
-  it should "prove = negate" in withMathematica { implicit qetool =>check(notNotEqual)}
+  it should "prove ! !=" in withMathematica { implicit qetool =>check(notNotEqual)}
   it should "prove < negate" in withMathematica { implicit qetool =>check(notGreaterEqual)}
   it should "prove >= flip" in withMathematica { implicit qetool =>check(flipGreaterEqual)}
   it should "prove > flip" in withMathematica { implicit qetool =>check(flipGreater)}
@@ -167,7 +168,7 @@ class DerivedAxiomsTests extends btactics.TacticTestBase {
   it should "prove = reflexive" in withMathematica { implicit qeTool => check(equalReflex, equalReflexiveT)}
   it should "prove = commute" in withMathematica { implicit qeTool => check(equalCommute, equalCommuteT)}
   it should "prove <=" in withMathematica { implicit qeTool => check(lessEqual, lessEqualT)}
-  it should "prove = negate" in withMathematica { implicit qeTool => check(notNotEqual, notNotEqualT)}
+  it should "prove ! !=" in withMathematica { implicit qeTool => check(notNotEqual, notNotEqualT)}
   it should "prove < negate" in withMathematica { implicit qeTool => check(notGreaterEqual, notGreaterEqualT)}
   it should "prove >= flip" in withMathematica { implicit qeTool => check(flipGreaterEqual, flipGreaterEqualT)}
   it should "prove > flip" in withMathematica { implicit qeTool => check(flipGreater, flipGreaterT)}

@@ -14,19 +14,22 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.StaticSemanticsTools._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, AxiomIndex, Context, FormulaTools, HereP, Position, PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Context, FormulaTools, HereP, Position, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 
 import scala.collection.immutable._
 import scala.language.postfixOps
 
 /**
- * Automatic unification-based Uniform Substitution Calculus with indexing.
- * @author Andre Platzer
- * @author Stefan Mitsch
- * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
- * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
- */
+  * Automatic unification-based Uniform Substitution Calculus with indexing.
+  * Provides tactics for automatically applying axioms by matching inputs against them by unification
+  * according to their [[AxiomIndex]].
+  * @author Andre Platzer
+  * @see [[UnificationMatch]]
+  * @see [[AxiomIndex]]
+  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
+  */
 trait UnifyUSCalculus {
   //@todo import a debug flag as in Tactics.DEBUG
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
@@ -41,30 +44,6 @@ trait UnifyUSCalculus {
     if(provable.subgoals.length != 1) throw new BelleError("Expected exactly one sequent in Provable")
 
   type Subst = UnificationMatch.Subst
-
-  /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
-    * {{{
-    *       p(??)
-    *   ----------- G
-    *    [a;]p(??)
-    * }}}
-    * @see [[monb]] with p(x)=True
-    */
-  lazy val G                  : BelleExpr         = DLBySubst.G
-  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
-  lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
-  /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality `c(f(x))=c(g(x))` to an equality `f(x)=g(x)` */
-  //def CT(inEqPos: PosInExpr)  : Tactic         = ???
-  /** CQ: Equation Congruence: Contextual Equivalence of terms at the indicated position to reduce an equivalence to an equation */
-  //def CQ(inEqPos: PosInExpr)  : Tactic
-  /** CE: Congruence: Contextual Equivalence at the indicated position to reduce an equivalence to an equivalence */
-  //def CE(inEqPos: PosInExpr)  : Tactic
-  /** monb: Monotone `[a;]p(x) |- [a;]q(x)` reduces to proving `p(x) |- q(x)` */
-  lazy val monb               : BelleExpr         = DLBySubst.monb
-  /** mond: Monotone `<a;>p(x) |- <a;>q(x)` reduces to proving `p(x) |- q(x)` */
-  lazy val mond               : BelleExpr         = DLBySubst.mond
-
-
 
   /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)
@@ -215,9 +194,11 @@ trait UnifyUSCalculus {
      * @tparam T
      * @return
      * @author Andre Platzer
+     * @note The implementation could be generalized because it sometimes fires irrelevant substitution clashes coming merely from the context embedding contracts.
      */
     private def useAt[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: BelleExpr, sequent: Sequent): BelleExpr = {
       require(subst(k) == c, "correctly matched input")
+      //@note might cause some irrelevant clashes
       require(C(c).at(p.inExpr) == (C,c), "correctly split at position p")
       require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
@@ -484,7 +465,7 @@ trait UnifyUSCalculus {
 
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(sequent.sub(pos).contains(key), "In-applicable CE(" + fact + ")\nat " + pos + "\nwhich is " + sequent.sub(pos) + "\nat " + sequent)
+        require(sequent.sub(pos).contains(key), "In-applicable CE(" + fact + ")\nat " + pos + " which is " + sequent.sub(pos).getOrElse("<ill-positioned>") + "\nat " + sequent)
         val (ctx, _) = sequent.at(pos)
         val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
         cutLR(ctx(other))(pos.top) <(

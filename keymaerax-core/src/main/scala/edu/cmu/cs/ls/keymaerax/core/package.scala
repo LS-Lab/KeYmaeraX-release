@@ -31,7 +31,7 @@ package edu.cmu.cs.ls.keymaerax
  * The KeYmaera X Kernel package provides the ''soundness-critical core of KeYmaera X''.
  * It provides ways of constructing proofs that, by construction, can only be constructed using
  * the proof rules that the KeYmaera X Kernel provides.
- * The [[[[edu.cmu.cs.ls.keymaerax.tactic tactics]] that KeYmaera X provides give you a more powerful and flexible and easier way of
+ * The [[[[edu.cmu.cs.ls.keymaerax.btactic proof tactics]] that KeYmaera X provides give you a more powerful and flexible and easier way of
  * constructing and searching for proofs, but they internally reduce to what is shown here.
  *
  * ===Constructing Proofs===
@@ -52,7 +52,7 @@ package edu.cmu.cs.ls.keymaerax
  *   // check if proof successful, i.e. no remaining subgoals
  *   if (proof.isProved) println("Successfully proved " + proof.proved)
  * }}}
- * Of course, [[edu.cmu.cs.ls.keymaerax.tactics]] make it much easier to describe proof search procedures
+ * Of course, [[edu.cmu.cs.ls.keymaerax.btactics]] make it much easier to describe proof search procedures
  * compared to the above explicit proof construction.
  * The tactics internally construct proofs this way, but add additional flexibility and
  * provide convenient ways of expressing proof search strategies in a tactic language.
@@ -118,7 +118,7 @@ package edu.cmu.cs.ls.keymaerax
  * all available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
  * which both ultimately come from the file [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]].
  * See [[http://arxiv.org/pdf/1503.01981.pdf Sections 4 and 5.0]]
- * Additional axioms are available as derived axioms and lemmas in [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]].
+ * Additional axioms are available as derived axioms and lemmas in [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]].
  *
  * ===Uniform Substitutions===
  * [[edu.cmu.cs.ls.keymaerax.core.USubst Uniform substitutions]] uniformly replace all occurrences of a given predicate p(.) by a formula in (.)

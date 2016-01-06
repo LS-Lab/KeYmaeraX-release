@@ -42,7 +42,9 @@ object TactixLibrary extends HilbertCalculi with SequentCalculi {
   var invGenerator: Generator[Formula] = new NoneGenerate()
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
-  lazy val step               : DependentPositionTactic = HilbertCalculus.stepAt
+  lazy val step               : DependentPositionTactic = "step" by (pos =>
+    //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE
+    (HilbertCalculus.stepAt(pos) partial) | (assignb(pos) partial))
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
   lazy val normalize               : BelleExpr = DoAll(?(

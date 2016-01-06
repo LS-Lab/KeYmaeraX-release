@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, ExpressionTraversal, Position, PosInExpr, SubstitutionHelper}
+import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
@@ -329,19 +329,29 @@ object DifferentialTactics {
    *   |- [z':=1;](z)'=1
    * }}}
    * @incontext
+   * @todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
+    *       Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
    */
   lazy val Dvariable: DependentPositionTactic = new DependentPositionTactic("x' derive variable") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      private val OPTIMIZED = false //@todo true
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(Differential(x: Variable)) =>
-          val withxprime: Formula = sequent.replaceAt(pos, DifferentialSymbol(x)).asInstanceOf[Formula]
-          val axiom = s"\\forall ${x.prettyString} (${x.prettyString})' = ${x.prettyString}'".asFormula
-          cutLR(withxprime)(pos.topLevel) <(
+          if (OPTIMIZED) {
+            val axiom = AxiomInfo("x' derive var commuted")
+            val (keyCtx:Context[_],keyPart) = axiom.formula.at(PosInExpr(0::Nil))
+            val fact = UnificationMatch.apply(keyPart, sequent.sub(pos + 0).get).toForward(axiom.provable)
+            CE(fact)(pos)
+          } else {
+            val withxprime: Formula = sequent.replaceAt(pos, DifferentialSymbol(x)).asInstanceOf[Formula]
+            val axiom = s"\\forall ${x.prettyString} (${x.prettyString})' = ${x.prettyString}'".asFormula
+            cutLR(withxprime)(pos.topLevel) <(
               /* use */ skip,
               /* show */ cohide(pos.topLevel) & CMon(formulaPos(sequent(pos.topLevel), pos.inExpr)) & cut(axiom) <(
-                useAt("all eliminate")(-1) & eqL2R(new AntePosition(0))(1) & useAt("-> self")(1) & close,
-                cohide('Rlast) & byUS(DerivedAxioms.Dvariable))
-            )
+              useAt("all eliminate")(-1) & eqL2R(new AntePosition(0))(1) & useAt("-> self")(1) & close,
+              cohide('Rlast) & byUS(DerivedAxioms.Dvariable))
+              )
+          }
         }
       }
 

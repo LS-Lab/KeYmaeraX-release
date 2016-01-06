@@ -159,6 +159,7 @@ object DerivedAxioms {
     case "[:=] assign update" => Some(assignbUpdateF, assignbUpdateT)
     case "[:=] vacuous assign" => Some(vacuousAssignbF, vacuousAssignbT)
     case "<:=> assign equational" => ??? //Some(assigndEquationalF, assigndEquationalT)
+    case "<:=> assign equality" => Some(assigndEqualityF, assigndEqualityT)
     case "<:=> assign update" => Some(assigndUpdateF, assigndUpdateT)
     case "<:=> vacuous assign" => Some(vacuousAssigndF, vacuousAssigndT)
     case "<':=> differential assign" => Some(assignDF, assignDT)
@@ -208,6 +209,7 @@ object DerivedAxioms {
     case "*0" => Some(timesZeroF, timesZeroT)
     case "+0" => Some(plusZeroF, plusZeroT)
     //    case "x' derive var" => Some(DvarF, DvarT)
+    case "x' derive var commuted" => Some(DvariableCommutedF, DvariableCommutedT)
     case "x' derive variable" => Some(DvariableF, DvariableT)
     case "' linear" => Some(DlinearF, DlinearT)
     case "' linear right" => Some(DlinearRightF, DlinearRightT)
@@ -216,9 +218,7 @@ object DerivedAxioms {
     case "* commute" => Some(timesCommuteF, timesCommuteT)
     case "= commute" => Some(equalCommuteF, equalCommuteT)
     case "<=" => Some(lessEqualF, lessEqualT)
-    case "= negate" => Some(notNotEqualF, notNotEqualT)
-    case "!= negate" => Some(notEqualF, notEqualT)
-    case "! !=" => derivedAxiomInfo("= negate")
+    case "! !=" => Some(notNotEqualF, notNotEqualT)
     case "! =" => Some(notEqualF, notEqualT)
     case "! <" => Some(notLessF, notLessT)
     case "! <=" => Some(notLessEqualF, notLessEqualT)
@@ -369,7 +369,7 @@ object DerivedAxioms {
    * }}}
    * @Derived
    */
-  lazy val existsDualF = "(!\\forall x (!p(x))) <-> \\exists x p(x)".asFormula
+  lazy val existsDualF = "(!\\forall x (!p(??))) <-> \\exists x p(??)".asFormula
   lazy val existsDualAxiom = derivedAxiom("exists dual",
     Sequent(Nil, IndexedSeq(), IndexedSeq(existsDualF)),
     useAt("all dual", PosInExpr(1::Nil))(SuccPosition(0, 0::0::Nil)) &
@@ -690,15 +690,39 @@ object DerivedAxioms {
    *   [x:=f();]p(??) <-> \exists x (x=f() & p(??))
    * End.
    * }}}
+   * @Derived by ":= assign dual" from "<:=> assign equality".
+   * @todo does not derive yet
    */
   lazy val assignbExistsF = "[x:=f();]p(??) <-> \\exists x (x=f() & p(??))".asFormula
   lazy val assignbExistsAxiom = derivedAxiom("[:=] assign equality exists",
     Sequent(Nil, IndexedSeq(), IndexedSeq(assignbExistsF)),
-    useAt("[:=] assign equality")(1, 0::Nil) &
-      //@todo UnificationMatch results in substitution clash (ensuring)
-      useAt("all dual", PosInExpr(1::Nil))(1, 0::Nil)
+      useAt("<:=> assign equality", PosInExpr(1::Nil))(1, 1::Nil) &
+      //@note := assign dual is not applicable since [v:=t()]p(v) <-> <v:=t()>p(t),
+      //      and [v:=t()]p(??) <-> <v:=t()>p(??) not derivable since clash in allL
+      useAt(":= assign dual")(1, 1::Nil) & byUS(equivReflexiveAxiom)
   )
   lazy val assignbExistsT = derivedAxiomT(assignbExistsAxiom)
+
+  /**
+    * {{{Axiom "<:=> assign equality".
+    *    <x:=f();>p(??) <-> \exists x (x=f() & p(??))
+    * End.
+    * }}}
+    * @Derived from [:=] assign equality, quantifier dualities
+    * @Derived by ":= assign dual" from "[:=] assign equality exists".
+    */
+  lazy val assigndEqualityF = "<x:=f();>p(??) <-> \\exists x (x=f() & p(??))".asFormula
+  lazy val assigndEqualityAxiom = derivedAxiom("<:=> assign equality",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(assigndEqualityF)),
+    useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("exists dual", PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt("!& deMorgan")(1, 1::0::0::Nil) &
+      useAt(implyExpand, PosInExpr(1::Nil))(1, 1::0::0::Nil) &
+      CE(PosInExpr(0::Nil)) &
+      byUS("[:=] assign equality")
+  )
+  lazy val assigndEqualityT = derivedAxiomT(assigndEqualityAxiom)
+
 
   /**
    * {{{Axiom "<:=> assign".
@@ -1214,7 +1238,6 @@ object DerivedAxioms {
   lazy val implyExpand = derivedAxiom("-> expand", Sequent(Nil, IndexedSeq(), IndexedSeq(implyExpandF)), prop)
   lazy val implyExpandT = derivedAxiomT(implyExpand)
 
-
   /**
    * {{{Axiom "PC1".
    *    p()&q() -> p()
@@ -1549,6 +1572,19 @@ object DerivedAxioms {
   lazy val DGpreghostT = derivedAxiomT(DGpreghost)
 
   /**
+    * {{{Axiom "x' derive var commuted".
+    *    (x_') = (x_)'
+    * End.
+    * }}}
+    */
+  lazy val DvariableCommutedF = "(x_') = (x_)'".asFormula
+  lazy val DvariableCommuted = derivedAxiom("x' derive var commuted",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(DvariableCommutedF)),
+    byUS(equalCommute)
+  )
+  lazy val DvariableCommutedT = derivedAxiomT(DvariableCommuted)
+
+  /**
    * {{{Axiom "x' derive variable".
    *    \forall x_ ((x_)' = x_')
    * End.
@@ -1664,13 +1700,13 @@ object DerivedAxioms {
   lazy val lessEqualT = derivedAxiomT(lessEqual)
 
   /**
-   * {{{Axiom "= negate".
+   * {{{Axiom "! !=".
    *   (!(f() != g())) <-> (f() = g())
    * End.
    * }}}
    */
   lazy val notNotEqualF = "(!(f() != g())) <-> (f() = g())".asFormula
-  lazy val notNotEqual = derivedAxiom("= negate", Sequent(Nil, IndexedSeq(), IndexedSeq(notNotEqualF)), QE)
+  lazy val notNotEqual = derivedAxiom("! !=", Sequent(Nil, IndexedSeq(), IndexedSeq(notNotEqualF)), QE)
   lazy val notNotEqualT = derivedAxiomT(notNotEqual)
 
   /**
@@ -1680,7 +1716,7 @@ object DerivedAxioms {
    * }}}
    */
   lazy val notEqualF = "(!(f() = g())) <-> (f() != g())".asFormula
-  lazy val notEqual = derivedAxiom("!= negate", Sequent(Nil, IndexedSeq(), IndexedSeq(notEqualF)), QE)
+  lazy val notEqual = derivedAxiom("! =", Sequent(Nil, IndexedSeq(), IndexedSeq(notEqualF)), QE)
   lazy val notEqualT = derivedAxiomT(notEqual)
 
   /**

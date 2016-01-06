@@ -16,14 +16,14 @@ import java.util.{Locale, Calendar}
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
-import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
+import edu.cmu.cs.ls.keymaerax.btacticinterface.{UIIndex, BTacticParser}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import _root_.edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.btactics.{PositionLocator, DerivationInfo, AxiomInfo}
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Sequent, ProverException, Provable}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import _root_.edu.cmu.cs.ls.keymaerax.tactics.{Position, Augmentors, PosInExpr, AxiomIndex}
+import _root_.edu.cmu.cs.ls.keymaerax.tactics.{Position, Augmentors, PosInExpr}
 import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
@@ -585,7 +585,7 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
     import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val subFormula = sequent.sub(pos).get
-    val axioms = AxiomIndex.axiomsFor(subFormula, Some(pos), Some(sequent)).map{case axiom => DerivationInfo(axiom)}
+    val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).map{case axiom => DerivationInfo(axiom)}
     new ApplicableAxiomsResponse(axioms) :: Nil
   }
 }
@@ -695,14 +695,14 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
   }
 
   /* Try to figure out the most intuitive inference rule to display for this tactic. If the user asks us "StepAt" then
-   * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask AxiomInfo */
+   * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask TacticInfo */
   private def getRuleName(tacticId: String, sequent:Sequent, locator:Option[PositionLocator]): String = {
     val pos = locator match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     tacticId.toLowerCase() match {
       case ("step" | "stepat") =>
         val fml = sequent(pos.get)
-        AxiomIndex.axiomFor(fml, pos) match {
-          case Some(axiom) => DerivationInfo(axiom).display.name
+        UIIndex.theStepAt(fml, pos) match {
+          case Some(step) => DerivationInfo(step).display.name
           case None => tacticId
         }
       case _ => try {

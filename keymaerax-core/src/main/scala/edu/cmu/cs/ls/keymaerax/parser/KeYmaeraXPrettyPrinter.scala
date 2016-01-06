@@ -355,4 +355,6 @@ class KeYmaeraXWeightedPrettyPrinter extends KeYmaeraXPrecedencePrinter {
     if (relative<10 || imbalance<10) 0
     else (relative + 19) / 20    // rounded-up division
   }
+
+  override def stringify(e: Expression): String = super.stringify(e)
 }

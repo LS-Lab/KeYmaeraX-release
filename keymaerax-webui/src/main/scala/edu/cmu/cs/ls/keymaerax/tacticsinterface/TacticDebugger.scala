@@ -101,7 +101,7 @@ object TacticDebugger {
         } else {
           // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic
           node.input = v match {
-            case BelleProvable(p) => globalProvable(p, branch)
+            case BelleProvable(p, _) => globalProvable(p, branch)
           }
         }
         if (parent == null || recursive) {
@@ -127,7 +127,7 @@ object TacticDebugger {
         if (node == null) {
           result match {
             // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic
-            case Left(BelleProvable(p)) =>
+            case Left(BelleProvable(p, _)) =>
               current.output = globalProvable(p, branch)
               current.local = p
             case _ =>

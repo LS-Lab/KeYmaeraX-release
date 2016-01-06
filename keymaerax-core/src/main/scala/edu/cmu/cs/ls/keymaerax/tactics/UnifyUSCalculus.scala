@@ -4,6 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
