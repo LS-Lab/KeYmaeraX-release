@@ -1,19 +1,20 @@
-==KeYmaera X: An Axiomatic Tactical Theorem Prover==
-================================================
+==KeYmaera X: An aXiomatic Tactical Theorem Prover==
+====================================================
 
 [[http://keymaeraX.org/ KeYmaera X]] is a theorem prover for [[http://www.cs.cmu.edu/~aplatzer/logic/dL.html differential dynamic logic]] (dL), a logic for specifying and verifying properties of hybrid systems with mixed discrete and continuous dynamics. Reasoning about complicated hybrid systems requires support for sophisticated proof techniques, efficient computation, and a user interface that crystallizes salient properties of the system. KeYmaera X allows users to specify custom proof search techniques as tactics, execute tactics in parallel, and interface with partial proofs via an extensible user interface.
 
   [[http://keymaeraX.org/]]
+
+  [[http://keymaerax.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
 
 ==Package Structure==
 
 Main documentation entry points for KeYmaera X API:
 
   - `[[edu.cmu.cs.ls.keymaerax.core]]` - KeYmaera X kernel, proof certificates, main data structures
-
-  - `[[edu.cmu.cs.ls.keymaerax.parser]]` - Parser and pretty printer with concrete syntax and notation
-
-      - [[http://keymaerax.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
+      - `[[edu.cmu.cs.ls.keymaerax.core.Expression]]` - Differential dynamic logic expressions
+      - `[[edu.cmu.cs.ls.keymaerax.core.Rule]]` - Proof rules
+      - `[[edu.cmu.cs.ls.keymaerax.core.Provable]]` - Proof certificate
 
   - `[[edu.cmu.cs.ls.keymaerax.btactics]]` - Tactic language library
       - `[[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary]]` - Main tactic library
@@ -22,6 +23,14 @@ Main documentation entry points for KeYmaera X API:
       - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]]` - Unification-based Uniform Substitution Calculus
 
   - `[[edu.cmu.cs.ls.keymaerax.bellerophon]]` - Bellerophon tactic language and tactic interpreter
+      - `[[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr]]` - Tactic language expressions
+      - `[[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter]]` - Sequential tactic interpreter
+
+  - `[[edu.cmu.cs.ls.keymaerax.parser]]` - Parser and pretty printer with concrete syntax and notation
+
+      - [[http://keymaerax.org/doc/dL-grammar.md Concrete syntax for input language Differential Dynamic Logic]]
+      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser]]` - Parser for concrete KeYmaera X syntax
+      - `[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter]]` - Pretty printer for concrete KeYmaera X syntax
 
   - `[[edu.cmu.cs.ls.keymaerax.lemma]]` - Lemma mechanism
 

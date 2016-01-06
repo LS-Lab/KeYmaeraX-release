@@ -21,12 +21,15 @@ import scala.collection.immutable._
 import scala.language.postfixOps
 
 /**
- * Automatic unification-based Uniform Substitution Calculus with indexing.
- * @author Andre Platzer
- * @author Stefan Mitsch
- * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
- * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
- */
+  * Automatic unification-based Uniform Substitution Calculus with indexing.
+  * Provides tactics for automatically applying axioms by matching inputs against them by unification
+  * according to their [[AxiomIndex]].
+  * @author Andre Platzer
+  * @see [[UnificationMatch]]
+  * @see [[AxiomIndex]]
+  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
+  */
 trait UnifyUSCalculus {
   //@todo import a debug flag as in Tactics.DEBUG
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
@@ -41,30 +44,6 @@ trait UnifyUSCalculus {
     if(provable.subgoals.length != 1) throw new BelleError("Expected exactly one sequent in Provable")
 
   type Subst = UnificationMatch.Subst
-
-  /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
-    * {{{
-    *       p(??)
-    *   ----------- G
-    *    [a;]p(??)
-    * }}}
-    * @see [[monb]] with p(x)=True
-    */
-  lazy val G                  : BelleExpr         = DLBySubst.G
-  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
-  lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
-  /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality `c(f(x))=c(g(x))` to an equality `f(x)=g(x)` */
-  //def CT(inEqPos: PosInExpr)  : Tactic         = ???
-  /** CQ: Equation Congruence: Contextual Equivalence of terms at the indicated position to reduce an equivalence to an equation */
-  //def CQ(inEqPos: PosInExpr)  : Tactic
-  /** CE: Congruence: Contextual Equivalence at the indicated position to reduce an equivalence to an equivalence */
-  //def CE(inEqPos: PosInExpr)  : Tactic
-  /** monb: Monotone `[a;]p(x) |- [a;]q(x)` reduces to proving `p(x) |- q(x)` */
-  lazy val monb               : BelleExpr         = DLBySubst.monb
-  /** mond: Monotone `<a;>p(x) |- <a;>q(x)` reduces to proving `p(x) |- q(x)` */
-  lazy val mond               : BelleExpr         = DLBySubst.mond
-
-
 
   /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)

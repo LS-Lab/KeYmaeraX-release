@@ -29,6 +29,8 @@ object HilbertCalculus extends HilbertCalculi
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+ * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012
+ * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
  * @see [[HilbertCalculus.derive()]]
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
@@ -36,6 +38,33 @@ trait HilbertCalculi extends UnifyUSCalculus {
 
   /** True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on demand. */
   private val INTERNAL = false
+
+  // axiomatic rules
+
+  /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
+    * {{{
+    *       p(??)
+    *   ----------- G
+    *    [a;]p(??)
+    * }}}
+    * @see [[monb]] with p(x)=True
+    */
+  lazy val G                  : BelleExpr         = DLBySubst.G
+  /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
+  lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
+  /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality `c(f(x))=c(g(x))` to an equality `f(x)=g(x)` */
+  //def CT(inEqPos: PosInExpr)  : Tactic         = ???
+  /** CQ: Equation Congruence: Contextual Equivalence of terms at the indicated position to reduce an equivalence to an equation */
+  //def CQ(inEqPos: PosInExpr)  : Tactic
+  /** CE: Congruence: Contextual Equivalence at the indicated position to reduce an equivalence to an equivalence */
+  //def CE(inEqPos: PosInExpr)  : Tactic
+  /** monb: Monotone `[a;]p(x) |- [a;]q(x)` reduces to proving `p(x) |- q(x)` */
+  lazy val monb               : BelleExpr         = DLBySubst.monb
+  /** mond: Monotone `<a;>p(x) |- <a;>q(x)` reduces to proving `p(x) |- q(x)` */
+  lazy val mond               : BelleExpr         = DLBySubst.mond
+
+
+  // axioms
 
   // modalities
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation */
@@ -204,12 +233,13 @@ trait HilbertCalculi extends UnifyUSCalculus {
     *******************************************************************/
 
   /**
-   * Make the canonical simplifying proof step based at the indicated position
-   * except when an unknown decision needs to be made (e.g. invariants for loops or for differential equations).
-   * @author Andre Platzer
-   * @note Efficient source-level indexing implementation.
-   * @see [[AxiomIndex]]
-   */
+    * Make the canonical simplifying proof step based at the indicated position
+    * except when an unknown decision needs to be made (e.g. invariants for loops or for differential equations).
+    * Using the canonical [[AxiomIndex]].
+    * @author Andre Platzer
+    * @note Efficient source-level indexing implementation.
+    * @see [[AxiomIndex]]
+    */
   lazy val stepAt: DependentPositionTactic = new DependentPositionTactic("stepAt") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
