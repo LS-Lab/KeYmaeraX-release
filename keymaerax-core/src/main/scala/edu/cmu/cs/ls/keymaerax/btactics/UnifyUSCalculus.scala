@@ -34,6 +34,9 @@ trait UnifyUSCalculus {
   //@todo import a debug flag as in Tactics.DEBUG
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
+  /** Liberal context via replaceAt instead of Context substitutions (true) */
+  private val LIBERAL = true
+
   /*@note must be initialized from outside; is var so that unit tests can setup/tear down. @see [[DerivedAxioms]] */
   implicit var tool: QETool with DiffSolutionTool = null
 
@@ -469,7 +472,8 @@ trait UnifyUSCalculus {
         require(sequent.sub(pos).contains(key), "In-applicable CE(" + fact + ")\nat " + pos + " which is " + sequent.sub(pos).getOrElse("<ill-positioned>") + "\nat " + sequent)
         val (ctx, _) = sequent.at(pos)
         val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
-        cutLR(ctx(other))(pos.top) <(
+        val ctxOther = if (!LIBERAL) ctx(other) else sequent.replaceAt(pos, other).asInstanceOf[Formula]
+        cutLR(ctxOther)(pos.top) <(
           /* use */ ident,
           /* show */ coHideR(cutPos) & equivify & tactic(pos.inExpr) & by(fact)
           )
