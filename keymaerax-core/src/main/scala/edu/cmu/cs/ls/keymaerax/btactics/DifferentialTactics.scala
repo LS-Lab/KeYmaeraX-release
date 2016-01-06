@@ -334,10 +334,10 @@ object DifferentialTactics {
     *       Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
    */
   lazy val Dvariable: DependentPositionTactic = new DependentPositionTactic("x' derive variable") {
+    private val OPTIMIZED = true //@todo true
+    private val axiom = AxiomInfo("x' derive var commuted")
+    private val (keyCtx:Context[_],keyPart) = axiom.formula.at(PosInExpr(1::Nil))
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      private val OPTIMIZED = true //@todo true
-      private val axiom = AxiomInfo("x' derive var commuted")
-      private val (keyCtx:Context[_],keyPart) = axiom.formula.at(PosInExpr(1::Nil))
 
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(Differential(x: Variable)) =>
