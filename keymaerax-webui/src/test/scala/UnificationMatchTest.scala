@@ -98,9 +98,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   // new unification matchers from now on
-
-  import edu.cmu.cs.ls.keymaerax.btactics.UnificationMatch
-  import edu.cmu.cs.ls.keymaerax.btactics.RenUSubst
+  import edu.cmu.cs.ls.keymaerax.bellerophon.{RenUSubst, UnificationMatch}
 
   "New unification match" should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0 (failed setup)" in {
     val s1 = Sequent(Nil, IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))

@@ -1,7 +1,7 @@
 package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.{RenUSubst, Legacy, Idioms}
+import edu.cmu.cs.ls.keymaerax.btactics.{Legacy, Idioms}
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.error
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
