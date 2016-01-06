@@ -124,7 +124,7 @@
     <div class="col-md-12">
         <!-- TODO restrict to < 10 tasks as tabs, then complement the rest with dropdown -->
         <uib-tabset justified="true">
-            <uib-tab active="task.isSelected" ng-repeat="task in agenda.items()" select="agenda.select(task)">
+            <uib-tab active="task.isSelected" ng-repeat="task in agenda.items()">
                 <uib-tab-heading>
                     <!-- ng-class={'fa fa-tasks':openGoal, 'fa fa-check-square-o':closedGoal} -->
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
@@ -133,7 +133,7 @@
                             <span class="fa fa-tasks"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
                             <span editable-text="task.name" onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
-                                {{task.name}}
+                                {{task.name}} {{task.id}}
                             </span>
                         </div>
                         <!-- TODO failed attempt to provide a preview of the goal -->
