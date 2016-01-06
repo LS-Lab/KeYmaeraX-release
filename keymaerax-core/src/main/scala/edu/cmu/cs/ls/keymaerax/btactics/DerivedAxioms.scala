@@ -719,6 +719,14 @@ object DerivedAxioms {
   lazy val assigndT = derivedAxiomT(assigndAxiom)
 
   /**
+   * {{{Axiom "<:=> assign equality".
+   *    <x:=t();>p(??) <-> \exists x (x=t() & p(??))
+   * End.
+   * }}}
+   * @Derived from [:=] assign equality, quantifier dualities
+   */
+
+  /**
    * {{{Axiom ":= assign dual".
    *    <v:=t();>p(v) <-> [v:=t();]p(v)
    * End.

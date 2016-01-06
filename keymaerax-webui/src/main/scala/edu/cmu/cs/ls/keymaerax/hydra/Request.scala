@@ -16,7 +16,7 @@ import java.util.{Locale, Calendar}
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
 import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
-import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
+import edu.cmu.cs.ls.keymaerax.btacticinterface.{UIIndex, BTacticParser}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import _root_.edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.btactics.{PositionLocator, DerivationInfo, AxiomInfo}
@@ -585,7 +585,7 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
     import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val subFormula = sequent.sub(pos).get
-    val axioms = AxiomIndex.axiomsFor(subFormula, Some(pos), Some(sequent)).map{case axiom => DerivationInfo(axiom)}
+    val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).map{case axiom => DerivationInfo(axiom)}
     new ApplicableAxiomsResponse(axioms) :: Nil
   }
 }
@@ -701,7 +701,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     tacticId.toLowerCase() match {
       case ("step" | "stepat") =>
         val fml = sequent(pos.get)
-        AxiomIndex.axiomFor(fml, pos) match {
+        UIIndex.theStepAt(fml, pos) match {
           case Some(axiom) => DerivationInfo(axiom).display.name
           case None => tacticId
         }

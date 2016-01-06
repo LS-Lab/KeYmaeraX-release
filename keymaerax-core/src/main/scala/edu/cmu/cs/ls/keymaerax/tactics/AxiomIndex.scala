@@ -4,15 +4,13 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import java.lang.Number
-
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.HilbertCalculus._
 
 import scala.annotation.switch
 
 /**
- * Axiom Indexing data structures.
+ * Axiom Indexing data structures for canonical proof strategies.
  * @note Could be generated automatically, yet better in a precomputation fashion, not on the fly.
  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
@@ -28,7 +26,7 @@ object AxiomIndex {
   type AxiomIndex = (PosInExpr, List[PosInExpr])
 
   /**
-   * Return (derived) axiom index with key for matching and list of recursors on other sibling, i.e., after useAt/useFor
+   * Return (derived) axiom index with key for matching and list of recursors on other sibling, i.e., for chasing after useAt/useFor.
    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase()]]
    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
    * @todo copy documentation from chase
@@ -136,18 +134,16 @@ object AxiomIndex {
 
   // lookup canonical axioms for an expression (index)
 
-  /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
-  def axiomFor(expr: Expression, pos: Option[Position] = None): Option[String] = axiomsFor(expr, pos).headOption
+  /** Give the first canonical (derived) axiom name or tactic name that simplifies the expression `expr`. */
+  def axiomFor(expr: Expression): Option[String] = axiomsFor(expr).headOption
 
   private val odeList: List[String] = "DI differential invariant" :: "diffCut" :: "DG differential ghost" :: Nil
 
   private val unknown = Nil
 
-  /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
-  def axiomsFor(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None): List[String] = autoPad(pos, sequent, {
-    val isTop = pos.nonEmpty && pos.get.isTopLevel
-    val isAnte = pos.nonEmpty && pos.get.isAnte
-    expr match {
+  /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression `expr`. */
+  def axiomsFor(expr: Expression): List[String] = {
+    if (expr.kind == TermKind) expr match {
       case Differential(t) => t match {
         case _: Variable => "DvariableTactic" :: Nil
         case _: Number => "c()' derive constant fn" :: Nil
@@ -166,6 +162,14 @@ object AxiomIndex {
         case _ => Nil
       }
 
+        //@todo
+//      case Plus(Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO)), _) => "0+" :: Nil
+//      case Plus(_, Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO))) => "+0" :: Nil
+//      case Times(Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO)), _) => "0*" :: Nil
+//      case Times(_, Number(scala.math.BigDecimal(java.math.BigDecimal.ZERO))) => "*0" :: Nil
+
+      case _ => Nil
+    } else expr match {
       case DifferentialFormula(f) => f match {
         case _: Equal => "=' derive =" :: Nil
         case _: NotEqual => "!=' derive !=" :: Nil
@@ -182,44 +186,44 @@ object AxiomIndex {
       }
 
       case Box(a, post) =>
-        val rules =
-          // @todo Better applicability test for V
-          if (isTop && sequent.isDefined && sequent.get.ante.isEmpty && sequent.get.succ.length == 1) {"G" :: "V vacuous" :: Nil} else { "V vacuous" :: Nil}
         a match {
-        case _: Assign => "assignbTactic" :: rules
-        case _: AssignAny => "[:*] assign nondet" :: rules
-        case _: DiffAssign => "[':=] differential assign" :: rules
-        case _: Test => "[?] test" :: rules
-        case _: Compose => "[;] compose" :: rules
-        case _: Choice => "[++] choice" :: rules
+        case _: Assign => "assignbTactic" :: Nil
+        case _: AssignAny => "[:*] assign nondet" :: Nil
+        case _: DiffAssign => "[':=] differential assign" :: Nil
+        case _: Test => "[?] test" :: Nil
+        case _: Compose => "[;] compose" :: Nil
+        case _: Choice => "[++] choice" :: Nil
         case _: Dual => "[^d] dual" :: Nil
-        case _: Loop => "loop" :: "[*] iterate" :: rules
-        // @todo: This misses the case where differential formulas are not top-level, but strategically okay
+        case _: Loop => "loop" :: "[*] iterate" :: Nil
+        //@note This misses the case where differential formulas are not top-level, but strategically that's okay
         case ODESystem(ode, constraint) if post.isInstanceOf[DifferentialFormula] => ode match {
           case _: AtomicODE => "DE differential effect" :: /*"DW differential weakening" ::*/ Nil
           case _: DifferentialProduct => "DE differential effect (system)" :: /*"DW differential weakening" ::*/ Nil
           case _ => Nil
         }
         case ODESystem(ode, constraint) =>
-          val tactics: List[String] = "diffSolve" :: "diffInd" :: /*@todo "diffInvariant" with inputs instead of DC? ::*/  Nil
+          /*@todo strategic "diffInvariant" would be better than diffInd since it does diffCut already ::*/
+          val tactics: List[String] = "diffSolve" :: "diffInd" :: Nil
           if (constraint == True)
-            tactics ++ odeList ++ rules
+            tactics ++ odeList
           else
-            (tactics :+ "DW differential weakening") ++ odeList ++ rules
+            (tactics :+ "DW differential weakening") ++ odeList
         case _ => Nil
       }
 
       case Diamond(a, _) => a match {
-        case _: Assign => "<:=> assign" :: Nil
+        case _: Assign => "<:=> assign" :: "<:=> assign equality" :: Nil
         case _: AssignAny => "<:*> assign nondet" :: Nil
         case _: Test => "<?> test" :: Nil
         case _: Compose => "<;> compose" :: Nil
         case _: Choice => "<++> choice" :: Nil
         case _: Dual => "<^d> dual" :: Nil
+        case _: Loop => "<*> iterate" :: unknown
         case _: ODESystem => println("AxiomIndex for <ODE> still missing"); unknown
         case _ => Nil
       }
 
+        // push negations in
       case Not(f) => f match {
         case Box(_, Not(_)) => "<> diamond" :: Nil
         case _: Box => "![]" :: Nil
@@ -241,43 +245,13 @@ object AxiomIndex {
         case _ => Nil
       }
 
-      case _ =>
-        // Check for axioms vs. rules separately because sometimes we might want to apply these axioms when we don't
-        // have positions available (which we need to check rule applicability
-        val axioms =
-          expr match {
-            case (And(True, _)) => "true&" :: Nil
-            case (And(_, True)) => "&true" :: Nil
-            case (Imply(True, _)) => "true->" :: Nil
-            case (Imply(_, True)) => "->true" :: Nil
-            case _ => Nil
-          }
-        if (!isTop) axioms
-        else {
-          (expr, isAnte) match {
-            case (True, false) => "closeTrue" :: Nil
-            case (False, true) => "closeFalse" :: Nil
-            case (_: Not, true) => "notL" :: Nil
-            case (_: Not, false) => "notR" :: Nil
-            case (_: And, true) => axioms :+ "andL"
-            case (_: And, false) => axioms :+ "andR"
-            case (_: Or, true) => "orL" :: Nil
-            case (_: Or, false) => "orR" :: Nil
-            case (_: Imply, true) => axioms :+ "implyL"
-            case (_: Imply, false) => axioms :+ "implyR"
-            case (_: Equiv, true) => "equivL" :: Nil
-            case (_: Equiv, false) => "equivR" :: Nil
-            case (_: Forall, false) => "allR" :: Nil
-            case (_: Exists, true) => "existsL" :: Nil
-            case _ => Nil
-          }
-        }
-    }
-  })
+      case And(True, _) => "true&" :: Nil
+      case And(_, True) => "&true" :: Nil
+      case Imply(True, _) => "true->" :: Nil
+      case Imply(_, True) => "->true" :: Nil
 
-  private def autoPad(pos: Option[Position], sequent: Option[Sequent], axioms: List[String]): List[String] =
-//    if (!axioms.isEmpty && pos.isDefined && pos.get.isTopLevel)
-//      axioms ++ (if (pos.get.isAnte) "hideL" :: /*"cutL" ::*/ Nil else "hideR" :: /*"cutR" ::*/ Nil)
-//    else
-      axioms
+      case _ => Nil
+    }
+  }
+
 }

@@ -215,7 +215,7 @@ trait HilbertCalculi extends UnifyUSCalculus {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val sub = sequent.sub(pos)
         if (sub.isEmpty) throw new BelleUserGeneratedError("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
-        AxiomIndex.axiomFor(sub.get, Some(pos)) match {
+        AxiomIndex.axiomFor(sub.get) match {
           case Some(axiom) =>
             DerivationInfo(axiom).belleExpr match {
               case ap:AtPosition[_] => ap(pos)
