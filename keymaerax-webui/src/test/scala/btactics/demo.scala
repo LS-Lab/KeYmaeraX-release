@@ -30,7 +30,7 @@ class demo extends FlatSpec with Matchers {
     val s = Sequent(Nil, IndexedSeq("[x:=1;]x>0".asFormula), IndexedSeq("[x:=1;]x>0".asFormula))
     val output = interp(DLBySubst.monb, BelleProvable(Provable.startProof(s)))
     output match {
-      case BelleProvable(p) => println(p.prettyString)
+      case BelleProvable(p, _) => println(p.prettyString)
     }
   }
 }

@@ -32,7 +32,7 @@ object EqualityTactics {
   def equivRewriting(eqPos: AntePosition): DependentPositionTactic = new DependentPositionTactic("Equivalence Rewriting") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
+        case BelleProvable(provable, _) =>
           require(eqPos.isTopLevel, "Equivalence to rewrite must occur in top-level position in antecedent")
           val sequent = provable.subgoals.head
           sequent.sub(eqPos) match {
@@ -74,7 +74,7 @@ object EqualityTactics {
   private def exhaustiveEq(name: String): DependentPositionTactic = new DependentPositionTactic(name) {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
+        case BelleProvable(provable, _) =>
           require(pos.isAnte && pos.isTopLevel, "Equality must be top-level in antecedent")
           val sequent = provable.subgoals.head
           sequent.sub(pos) match {
@@ -127,7 +127,7 @@ object EqualityTactics {
   def eqL2R(eqPos: Position): DependentPositionTactic = new DependentPositionTactic("eqL2R") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
+        case BelleProvable(provable, _) =>
           val sequent = provable.subgoals.head
           sequent.sub(eqPos) match {
             case Some(eq@Equal(lhs, rhs)) =>
@@ -159,7 +159,7 @@ object EqualityTactics {
   def eqR2L(eqPos: Position): DependentPositionTactic = new DependentPositionTactic("eqR2L") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
+        case BelleProvable(provable, _) =>
           require(provable.subgoals.size == 1, "Exactly 1 subgoal expected, but got " + provable.subgoals.size)
           require(eqPos.isTopLevel, "Equality must be at top level, but is " + pos)
           val Equal(lhs, rhs) = provable.subgoals.head(eqPos)
@@ -193,7 +193,7 @@ object EqualityTactics {
   lazy val exhaustiveEqR2L: DependentPositionTactic = new DependentPositionTactic("Find Right and Replace Right with Left") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
+        case BelleProvable(provable, _) =>
           require(provable.subgoals.size == 1, "Exactly 1 subgoal expected, but got " + provable.subgoals.size)
           require(pos.isTopLevel, "Equality must be at top level, but is " + pos)
           val Equal(lhs, rhs) = provable.subgoals.head(pos)
@@ -217,7 +217,7 @@ object EqualityTactics {
   def abbrv(abbrvV: Variable): DependentPositionTactic = new DependentPositionTactic("abbrv") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable) =>
+        case BelleProvable(provable, _) =>
           val sequent = provable.subgoals.head
           sequent.sub(pos) match {
             case Some(t: Term) => abbrv(t, Some(abbrvV))

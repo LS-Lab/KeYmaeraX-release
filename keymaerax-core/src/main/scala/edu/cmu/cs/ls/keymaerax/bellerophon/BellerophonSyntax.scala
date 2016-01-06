@@ -233,7 +233,7 @@ abstract case class DependentTactic(name: String) extends BelleExpr {
   def computeExpr(e: BelleValue with BelleError): BelleExpr = throw e
   /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleError) */
   def computeExpr(v : BelleValue): BelleExpr = try { v match {
-      case BelleProvable(provable) => computeExpr(provable)
+      case BelleProvable(provable, _) => computeExpr(provable)
       case e: BelleError => computeExpr(e)
     }
   } catch {
@@ -267,7 +267,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: P
   final override def computeExpr(v: BelleValue): BelleExpr = locator match {
     case Fixed(pos, shape, exact) => shape match {
       case Some(f) => v match {
-        case BelleProvable(provable) =>
+        case BelleProvable(provable, _) =>
           require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
           if ((exact && provable.subgoals.head(pos) == f) ||
             (!exact && UnificationMatch.unifiable(f, provable.subgoals.head(pos)).isDefined)) {
@@ -281,15 +281,15 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: P
     }
     case Find(goal, shape, start, exact) =>
       tryAllAfter(goal, shape, start, exact, null)
-    case LastAnte(goal) => pt.factory(v match { case BelleProvable(provable) => new AntePosition(provable.subgoals(goal).ante.size-1) })
-    case LastSucc(goal) => pt.factory(v match { case BelleProvable(provable) => new SuccPosition(provable.subgoals(goal).succ.size-1) })
+    case LastAnte(goal) => pt.factory(v match { case BelleProvable(provable, _) => new AntePosition(provable.subgoals(goal).ante.size-1) })
+    case LastSucc(goal) => pt.factory(v match { case BelleProvable(provable, _) => new SuccPosition(provable.subgoals(goal).succ.size-1) })
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
   private def tryAllAfter(goal: Int, shape: Option[Formula], pos: Position, exact: Boolean,
                           cause: BelleError): DependentTactic = new DependentTactic(name) {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
-      case BelleProvable(provable) =>
+      case BelleProvable(provable, _) =>
         if (pos.isIndexDefined(provable.subgoals(goal))) {
           try {
             shape match {
@@ -318,7 +318,12 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: P
 }
 
 /** A partial tactic is allowed to leave its subgoals around as unproved */
-case class PartialTactic(child: BelleExpr) extends BelleExpr { override def prettyString = "partial(" + child.prettyString + ")" }
+case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) extends BelleExpr {
+  override def prettyString = label match {
+    case Some(theLabel) => s"partial(${child.prettyString})@(${theLabel.prettyString})"
+    case None => s"partial(${child.prettyString})"
+  }
+}
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "(" + left.prettyString + "&" + right.prettyString + ")" }
 case class EitherTactic(left: BelleExpr, right: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "(" + left.prettyString + "|" + right.prettyString + ")" }
@@ -332,19 +337,30 @@ case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]
   */
 case class DoAll(e: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
 
-
-
-
 /**
  * Bellerophon expressions that are values.
  */
 trait BelleValue {
   def prettyString: String = toString
 }
-case class BelleProvable(p : Provable) extends BelleExpr with BelleValue {
+case class BelleProvable(p : Provable, label: Option[BelleLabel] = None) extends BelleExpr with BelleValue {
   override def toString: String = p.prettyString
   override def prettyString: String = p.prettyString
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Bellerophon Labels
+////////////////////////////////////////////////////////////////////////////////////////////////////
+trait BelleLabel {
+  protected val LABEL_DELIMITER: String = ":"
+
+  def prettyString : String = this match {
+    case topLevel: BelleTopLevelLabel    => topLevel.label
+    case BelleSubLabel(parent, theLabel) => parent.prettyString + LABEL_DELIMITER + theLabel
+  }
+}
+case class BelleTopLevelLabel(label: String) extends BelleLabel {require(!label.contains(LABEL_DELIMITER), s"Label should not contain the sublabel delimiter $LABEL_DELIMITER")}
+case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel {require(!label.contains(LABEL_DELIMITER), , s"Label should not contain the sublabel delimiter $LABEL_DELIMITER")}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Bellerophon Types

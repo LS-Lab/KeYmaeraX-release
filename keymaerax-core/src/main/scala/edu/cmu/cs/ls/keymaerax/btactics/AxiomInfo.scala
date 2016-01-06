@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 
 import scala.collection.immutable.HashMap
 
@@ -37,7 +38,7 @@ object DerivationInfo {
     SequentDisplay(succAcc._1, succAcc._2)
   }
 
-  implicit def qeTool:QETool = DerivedAxioms.qeTool
+  implicit def qeTool:QETool with DiffSolutionTool = DerivedAxioms.qeTool
   case class AxiomNotFoundException(axiomName: String) extends ProverException("Axiom with said name not found: " + axiomName)
 
   private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
@@ -47,14 +48,14 @@ object DerivationInfo {
     * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
     * Transferred into subsequent maps etc for efficiency reasons.
     */
-  private val allInfo: List[DerivationInfo] = List(
+  private [btactics] val allInfo: List[DerivationInfo] = List(
     // [a] modalities and <a> modalities
-    new CoreAxiomInfo("<> diamond", "<.>", "diamond", {case () => ???}),
-    new DerivedAxiomInfo("[] box", "[.]", "box", {case () => ???}),
-    //@todo DANGEROUS: same name so rewires axiom name to something subtly different
-    new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => TactixLibrary.assignb}),
+    new CoreAxiomInfo("<> diamond", "<.>", "diamond", {case () => HilbertCalculus.useAt("<> diamond")}),
+    new DerivedAxiomInfo("[] box", "[.]", "box", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom)}),
+    new PositionTacticInfo("assignbTactic", "[:=]", {case () => TactixLibrary.assignb}),
+    new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => HilbertCalculus.useAt("[:=] assign")}),
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
-    new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => ???}),
+    new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => HilbertCalculus.useAt("[:=] assign equality")}),
     new CoreAxiomInfo("[:=] assign exists", "[:=]exists", "assignbexists", {case () => HilbertCalculus.useAt("[:=] assign exists") }),
     //@todo new DerivedAxiomInfo("<:=> assign equality", "<:=>=", "assigndeq", {case () => ???}),
     new CoreAxiomInfo("[':=] differential assign", "[':=]", "Dassignb", {case () => HilbertCalculus.Dassignb}),
@@ -99,9 +100,9 @@ object DerivationInfo {
 
     // Differential Axioms
     new CoreAxiomInfo("c()' derive constant fn", "c()'", "Dconst", {case () => HilbertCalculus.Dconst}),
-    //@todo DANGEROUS: same name so rewires axiom name to something subtly different
     new CoreAxiomInfo("x' derive var", "x'", "Dvar", {case () => HilbertCalculus.Dvariable}),
-    new DerivedAxiomInfo("x' derive variable", "x'", "DvariableAxiom", {case () => DifferentialTactics.Dvariable}),
+    new DerivedAxiomInfo("x' derive variable", "x'", "DvariableAxiom", {case () => HilbertCalculus.useAt(DerivedAxioms.Dvariable)}),
+    new PositionTacticInfo("DvariableTactic", "x'", {case () => DifferentialTactics.Dvariable}),
     new CoreAxiomInfo("+' derive sum", "+'", "Dplus", {case () => HilbertCalculus.Dplus}),
     new CoreAxiomInfo("-' derive neg", "-'", "Dneg", {case () => HilbertCalculus.Dneg}),
     new CoreAxiomInfo("-' derive minus", "-'", "Dminus", {case () => HilbertCalculus.Dminus}),
@@ -544,7 +545,7 @@ object DerivedAxiomInfo {
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a derived axiom")
     }
 
-  //@todo val allInfo:List[DerivedAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[DerivedAxiomInfo])
+  val allInfo:List[DerivedAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[DerivedAxiomInfo]).map(_.asInstanceOf[DerivedAxiomInfo])
 }
 
 // tactics
