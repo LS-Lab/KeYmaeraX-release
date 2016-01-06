@@ -306,7 +306,7 @@ object DifferentialTactics {
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
       cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b))), h), p)))(pos) <(
         /* use */ skip,
-        /* show */ cohide(pos.topLevel) &
+        /* show */ cohide(pos.top) &
           /* rename first, otherwise byUS fails */ ProofRuleTactics.uniformRenaming("y".asVariable, y) &
           equivifyR('Rlast) & commuteEquivR('Rlast) & byUS("DG differential ghost")
         )
@@ -351,7 +351,7 @@ object DifferentialTactics {
             val axiom = s"\\forall ${x.prettyString} (${x.prettyString})' = ${x.prettyString}'".asFormula
             cutLR(withxprime)(pos.topLevel) <(
               /* use */ skip,
-              /* show */ cohide(pos.topLevel) & CMon(formulaPos(sequent(pos.topLevel), pos.inExpr)) & cut(axiom) <(
+              /* show */ cohide(pos.top) & CMon(formulaPos(sequent(pos.topLevel), pos.inExpr)) & cut(axiom) <(
               useAt("all eliminate")(-1) & eqL2R(new AntePosition(0))(1) & useAt("-> self")(1) & close,
               cohide('Rlast) & byUS(DerivedAxioms.Dvariable))
               )

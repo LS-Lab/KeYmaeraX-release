@@ -411,7 +411,7 @@ object DLBySubst {
       require(vars.size == 1, "Cannot handle existential lists")
       cutR(Box(Assign(vars.head, f), p))(pos) <(
         skip,
-        cohide(pos) & byUS("[:=] assign exists")
+        cohide(pos.top) & byUS("[:=] assign exists")
         )
   })
 }

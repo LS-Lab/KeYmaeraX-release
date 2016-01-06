@@ -196,7 +196,7 @@ object FOQuantifierTactics {
         val genFml = Forall(immutable.Seq(quantified), SubstitutionHelper.replaceFree(sequent(pos))(t, quantified))
         cut(genFml) <(
           /* use */ allL(quantified, t)('Llast) & closeId,
-          /* show */ hide(pos) partial
+          /* show */ hide(pos.top) partial
         )
       }
     }
