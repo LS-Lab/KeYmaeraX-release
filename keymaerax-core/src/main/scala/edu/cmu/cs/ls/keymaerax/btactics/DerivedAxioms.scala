@@ -690,7 +690,8 @@ object DerivedAxioms {
    *   [x:=f();]p(??) <-> \exists x (x=f() & p(??))
    * End.
    * }}}
-    * @Derived by ":= assign dual" from "<:=> assign equality".
+   * @Derived by ":= assign dual" from "<:=> assign equality".
+   * @todo does not derive yet
    */
   lazy val assignbExistsF = "[x:=f();]p(??) <-> \\exists x (x=f() & p(??))".asFormula
   lazy val assignbExistsAxiom = derivedAxiom("[:=] assign equality exists",
