@@ -23,7 +23,7 @@ class PairParserTests extends FlatSpec with Matchers {
   else new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
   val parser = KeYmaeraXParser
   KeYmaera.init(Map.empty)
-  val uipp = new UIKeYmaeraXPrettyPrinter()
+  val uipp = new UIKeYmaeraXPrettyPrinter("-7")
 
   def parseShouldBe(input: String, expr: Expression) = {
     val parse = parser(input)
