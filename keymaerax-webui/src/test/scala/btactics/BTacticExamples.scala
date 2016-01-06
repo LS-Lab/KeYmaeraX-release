@@ -65,6 +65,25 @@ class BTacticExamples extends TacticTestBase  {
     proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula))
   }
 
+  it should "prove !!p() <-> p() with modern index" in {
+    import TactixLibrary._
+    // Explicit proof tactic for |- !!p() <-> p()
+    val proof = TactixLibrary.proveBy(
+      Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula)),
+      equivR(1) <(
+        (notL(-1) &
+          notR(2) &
+          closeId)
+        ,
+        (notR(1) &
+          notL(-2) &
+          closeId)
+        )
+    )
+    proof shouldBe 'proved
+    proof.proved shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("!!p() <-> p()".asFormula))
+  }
+
 
   "Proof by Search" should "prove (p() & q()) & r() <-> p() & (q() & r())" in {
     import TactixLibrary._

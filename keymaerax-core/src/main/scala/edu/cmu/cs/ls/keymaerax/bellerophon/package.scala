@@ -19,12 +19,11 @@ package edu.cmu.cs.ls.keymaerax
   *     `fi` uniformly substitutes to current provable for which `ei` does not fail, fails if the `ei` of all matching `fi` fail.`
   *   - `t partial` [[edu.cmu.cs.ls.keymaerax.bellerophon.PartialTactic partial tactic marker]] marks that tactic `t` is allowed to not close all its goals.
   *
-  * A formal specification for the language is given in:
- *    Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus
- *    To be published
- *    Nathan Fulton and Andre Platzer
- * @author Nathan Fulton
- * @author Stefan Mitsch
- * @author Andre Platzer
+  *
+  * @author Nathan Fulton
+  * @author Stefan Mitsch
+  * @author Andre Platzer
+  * @see Nathan Fulton and Andre Platzer. Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus
+  *    To be published.
  */
 package object bellerophon {}
