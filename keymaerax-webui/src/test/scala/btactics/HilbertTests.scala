@@ -173,7 +173,7 @@ class HilbertTests extends TacticTestBase {
   it should "prove x>=5 -> [{x'=2}]x>=5" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) &
-        DI(1) & (step(1) & step(1)) <(
+        DI(1) & (implyR(1) & andR(1)) <(
         prop,
         DE(1) &
           Dgreaterequal(1, 1::1::Nil) &
@@ -187,7 +187,7 @@ class HilbertTests extends TacticTestBase {
   it should "prove/derive x>=5 -> [{x'=2}]x>=5" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) &
-        DI(1) & (step(1) & step(1)) <(
+        DI(1) & (implyR(1) & andR(1)) <(
         prop,
         DE(1) & derive(1, 1::1::Nil) &
           Dassignb(SuccPosition(0, 1::Nil)) & abstractionb(1) & QE
