@@ -15,6 +15,9 @@ import edu.cmu.cs.ls.keymaerax.tactics.Position
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]
   */
 object UIIndex {
+  //@todo import a debug flag as in Tactics.DEBUG
+  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+
   /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
   def theStepAt(expr: Expression, pos: Option[Position] = None): Option[String] = allStepsAt(expr, pos).headOption
 
@@ -27,6 +30,7 @@ object UIIndex {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
     //@note the truth-value of isAnte is nonsense if !isTop ....
     val isAnte = pos.nonEmpty && pos.get.isAnte
+    if (DEBUG) println("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
     expr match {
       case Differential(t) => t match {
         case _: Variable => "DvariableTactic" :: Nil
@@ -155,12 +159,13 @@ object UIIndex {
     }
   })
 
-  private def autoPad(pos: Option[Position], sequent: Option[Sequent], axioms: List[String]): List[String] =
-  //@note don't augment with hide since UI has a special button for it already.
-  //@note don't augment with cutL+cutR since too cluttered.
-  //    if (!axioms.isEmpty && pos.isDefined && pos.get.isTopLevel)
-  //      axioms ++ (if (pos.get.isAnte) "hideL" :: /*"cutL" ::*/ Nil else "hideR" :: /*"cutR" ::*/ Nil)
-  //    else
+  private def autoPad(pos: Option[Position], sequent: Option[Sequent], axioms: List[String]): List[String] = {
+    //@note don't augment with hide since UI has a special button for it already.
+    //@note don't augment with cutL+cutR since too cluttered.
+    //    if (!axioms.isEmpty && pos.isDefined && pos.get.isTopLevel)
+    //      axioms ++ (if (pos.get.isAnte) "hideL" :: /*"cutL" ::*/ Nil else "hideR" :: /*"cutR" ::*/ Nil)
+    //    else
+    if (DEBUG) println("allStepsAt=" + axioms)
     axioms
-
+  }
 }
