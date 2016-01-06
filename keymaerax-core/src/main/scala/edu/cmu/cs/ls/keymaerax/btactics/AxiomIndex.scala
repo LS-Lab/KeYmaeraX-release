@@ -197,22 +197,13 @@ object AxiomIndex {
         case _: Choice => "[++] choice" :: Nil
         case _: Dual => "[^d] dual" :: Nil
 //        case _: Loop => "[*] iterate" :: Nil
-        case ODESystem(_:AtomicODE,domain) => "DW differential weaken" :: odeList ++ List("DE differential effect")
-        case ODESystem(_:DifferentialProduct,True)   => odeList :+ "DE differential effect (system)"
-        case ODESystem(_:DifferentialProduct,domain) => "DW differential weaken" :: odeList ++ List("DE differential effect (system)")
         //@note This misses the case where differential formulas are not top-level, but strategically that's okay
-//        case ODESystem(ode, constraint) if post.isInstanceOf[DifferentialFormula] => ode match {
-//          case _: AtomicODE => "DE differential effect" :: /*"DW differential weakening" ::*/ Nil
-//          case _: DifferentialProduct => "DE differential effect (system)" :: /*"DW differential weakening" ::*/ Nil
-//          case _ => Nil
-//        }
-//        case ODESystem(ode, constraint) =>
-//          /*@todo strategic "diffInvariant" would be better than diffInd since it does diffCut already ::*/
-//          val tactics: List[String] = "diffSolve" :: "diffInd" :: Nil
-//          if (constraint == True)
-//            tactics ++ odeList
-//          else
-//            (tactics :+ "DW differential weakening") ++ odeList
+        case ODESystem(ode, constraint) if post.isInstanceOf[DifferentialFormula] => ode match {
+          case _: AtomicODE => "DE differential effect" :: Nil
+          case _: DifferentialProduct => "DE differential effect (system)" :: Nil
+          case _ => Nil
+        }
+        case ODESystem(ode, constraint) => "DW differential weaken" :: odeList
         case _ => Nil
       }
 
