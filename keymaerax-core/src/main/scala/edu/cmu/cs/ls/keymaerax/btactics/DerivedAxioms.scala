@@ -690,6 +690,7 @@ object DerivedAxioms {
    *   [x:=f();]p(??) <-> \exists x (x=f() & p(??))
    * End.
    * }}}
+    * @Derived by ":= assign dual" from "<:=> assign equality".
    */
   lazy val assignbExistsF = "[x:=f();]p(??) <-> \\exists x (x=f() & p(??))".asFormula
   lazy val assignbExistsAxiom = derivedAxiom("[:=] assign equality exists",
@@ -699,6 +700,27 @@ object DerivedAxioms {
       useAt("all dual", PosInExpr(1::Nil))(1, 0::Nil)
   )
   lazy val assignbExistsT = derivedAxiomT(assignbExistsAxiom)
+
+  /**
+    * {{{Axiom "<:=> assign equality".
+    *    <x:=f();>p(??) <-> \exists x (x=f() & p(??))
+    * End.
+    * }}}
+    * @Derived from [:=] assign equality, quantifier dualities
+    * @Derived by ":= assign dual" from "[:=] assign equality exists".
+    */
+  lazy val assigndEqualityF = "<x:=f();>p(??) <-> \\exists x (x=f() & p(??))".asFormula
+  lazy val assigndEqualityAxiom = derivedAxiom("<:=> assign equality",
+    Sequent(Nil, IndexedSeq(), IndexedSeq(assignbExistsF)),
+    useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("all dual", PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt("!& deMorgan")(1, 1::0::0::Nil) &
+      useAt(implyExpand, PosInExpr(1::Nil))(1, 1::0::0::Nil) &
+      CE(PosInExpr(0::Nil)) &
+      byUS("[:=] assign equality")
+  )
+  lazy val assigndEqualityT = derivedAxiomT(assigndEqualityAxiom)
+
 
   /**
    * {{{Axiom "<:=> assign".
@@ -717,14 +739,6 @@ object DerivedAxioms {
   )
 
   lazy val assigndT = derivedAxiomT(assigndAxiom)
-
-  /**
-   * {{{Axiom "<:=> assign equality".
-   *    <x:=t();>p(??) <-> \exists x (x=t() & p(??))
-   * End.
-   * }}}
-   * @Derived from [:=] assign equality, quantifier dualities
-   */
 
   /**
    * {{{Axiom ":= assign dual".
