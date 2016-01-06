@@ -62,6 +62,9 @@ trait SequentCalculi {
   lazy val andR               : BuiltInRightTactic = ProofRuleTactics.andR
   /** |L Or left: use a disjunction in the antecedent by assuming each option on separate branches ([[edu.cmu.cs.ls.keymaerax.core.OrLeft OrLeft]]) */
   lazy val orL                : BuiltInLeftTactic = ProofRuleTactics.orL
+  /** Inverse of orR */
+  def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = PropositionalTactics.orRi(pos1, pos2)
+  lazy val orRi: DependentTactic = orRi()
   /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively ([[edu.cmu.cs.ls.keymaerax.core.OrRight OrRight]]) */
   lazy val orR                : BuiltInRightTactic = ProofRuleTactics.orR
   /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch ([[edu.cmu.cs.ls.keymaerax.core.ImplyLeft ImplyLeft]]) */

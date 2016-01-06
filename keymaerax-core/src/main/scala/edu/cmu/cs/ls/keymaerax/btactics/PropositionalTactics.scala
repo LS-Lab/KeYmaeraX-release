@@ -40,6 +40,34 @@ object PropositionalTactics {
   }
 
   /**
+   * Inverse of [[ProofRuleTactics.orR]].
+   * {{{
+   *   G |- D, D', D'', a | b
+   * -------------------------
+   *   G |- D, a, D', b, D''
+   * }}}
+   * @author Stefan Mitsch
+   * @see [[ProofRuleTactics.orR]]
+   */
+  lazy val orRi: DependentTactic = orRi()
+  def orRi(pos1: SuccPos = SuccPos(0), pos2: SuccPos = SuccPos(1)): DependentTactic = new SingleGoalDependentTactic("inverse or right") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      require(pos1 != pos2, "Two distinct positions required")
+      require(sequent.succ.length > pos1.getIndex && sequent.succ.length > pos2.getIndex,
+        "Position " + pos1 + " or position " + pos2 + " is out of bounds; provable has succ size " + sequent.succ.length)
+      val left = sequent.succ(pos1.getIndex)
+      val right = sequent.succ(pos2.getIndex)
+      val cutUsePos = AntePos(sequent.ante.length)
+      cut(Or(left, right)) <(
+        /* use */ orL(cutUsePos) & DoAll(TactixLibrary.close),
+        /* show */
+          if (pos1.getIndex > pos2.getIndex) (assertE(left, "")(pos1) & hideR(pos1) & assertE(right, "")(pos2) & hideR(pos2)) partial
+          else (assertE(right, "")(pos2) & hideR(pos2) & assertE(left, "")(pos1) & hideR(pos1)) partial
+        )
+    }
+  }
+
+  /**
    * Returns a tactic for propositional CE with purely propositional unpeeling. Useful when unpeeled fact is not
    * an equivalence, as needed by CE. May perform better than CE for small contexts.
    * @see [[UnifyUSCalculus.CMon(Context)]]
