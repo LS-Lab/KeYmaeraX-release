@@ -215,7 +215,7 @@ private case class SuccPositionImpl (top: SuccPos, inExpr: PosInExpr) extends Su
 
 
 @deprecated("Automated position converters should be removed.")
-object Position {
+private[keymaerax] object Position {
   //@deprecated("Move as implicit definition to tactics and then ultimately remove")
   //@todo could also use p.top
   implicit def position2SeqPos[T <: SeqPos](p: Position): T = p.top.asInstanceOf[T]
