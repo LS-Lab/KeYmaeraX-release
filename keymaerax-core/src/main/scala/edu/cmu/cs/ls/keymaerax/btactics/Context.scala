@@ -29,7 +29,7 @@ import scala.collection.immutable._
   */
 object Context {
   /** `true` gives slower guarded contexts that fail inadmissible term instantiation. `false` gives fast unguarded replacement contexts */
-  private val GUARDED = true
+  private val GUARDED = false
   /** Make a context for expression `ctx` guarded by the protection of uniform substitutions. */
   def apply[T <: Expression](ctx: T): Context[T] = new GuardedContext[T](ctx)
 
