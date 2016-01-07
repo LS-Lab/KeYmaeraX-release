@@ -6,6 +6,7 @@ package casestudies
 
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.btactics.Context
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 
 import scala.collection.immutable

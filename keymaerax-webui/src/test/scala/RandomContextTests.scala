@@ -3,12 +3,13 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
-import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Context, Position}
+import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, Context}
+import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import testHelper.KeYmaeraXTestTags.{SlowTest, UsualTest, SummaryTest, CheckinTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+import Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}

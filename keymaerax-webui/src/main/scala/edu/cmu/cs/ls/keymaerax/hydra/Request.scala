@@ -23,7 +23,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, AxiomInfo}
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Sequent, ProverException, Provable}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import _root_.edu.cmu.cs.ls.keymaerax.tactics.{Position, Augmentors, PosInExpr}
+import _root_.edu.cmu.cs.ls.keymaerax.tactics.{Position, PosInExpr}
 import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
@@ -34,7 +34,7 @@ import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics.{ArithmeticTacticsImpl, TacticExceptionListener, Tactics}
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.CLParser
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 
@@ -583,7 +583,7 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
 
 class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos:Position) extends Request {
   def getResultingResponses() = {
-    import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+    import Augmentors._
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val subFormula = sequent.sub(pos).get
     val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).map{case axiom => DerivationInfo(axiom)}

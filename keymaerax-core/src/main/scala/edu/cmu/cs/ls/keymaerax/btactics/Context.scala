@@ -2,11 +2,13 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
-package edu.cmu.cs.ls.keymaerax.tactics
+package edu.cmu.cs.ls.keymaerax.btactics
+
+import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, StaticSemanticsTools}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature
 
 /** Context management, splitting, and extraction tools.
   * @author Andre Platzer
@@ -14,7 +16,6 @@ import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature
   * @see [[Augmentors]]
   */
 object Context {
-  import Reconstructors._
 
   /** Whether to check split results redundantly */
   private val REDUNDANT = false
@@ -328,8 +329,7 @@ object Context {
  * @author Stefan Mitsch
  */
 sealed case class Context[+T <: Expression](ctx: T) {
-  import Context.DotProgram
-  import Context.DotDiffProgram
+  import Context.{DotDiffProgram, DotProgram}
   // either a term or a formula context, not both
   require(!(signature(ctx).contains(DotFormula) && signature(ctx).contains(DotTerm)), "Contexts are either DotFormula or DotTerm contexts, not both at once: " + ctx)
 

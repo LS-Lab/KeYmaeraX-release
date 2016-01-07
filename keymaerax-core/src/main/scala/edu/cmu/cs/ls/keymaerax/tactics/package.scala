@@ -4,6 +4,8 @@
  */
 package edu.cmu.cs.ls.keymaerax
 
+import edu.cmu.cs.ls.keymaerax.btactics.Context
+
 /**
  * Tactics framework providing base tactics, tactic combinators,
  * tactics execution and scheduling and continuations engine,
@@ -31,7 +33,7 @@ package edu.cmu.cs.ls.keymaerax
  *     - [[edu.cmu.cs.ls.keymaerax.tactics.UnificationMatch]]: Unification matchers.
  *     - [[edu.cmu.cs.ls.keymaerax.tactics.RenUSubst]]: Renaming uniform substitutions, combining uniform renaming with uniform substitution.
  *     - [[edu.cmu.cs.ls.keymaerax.tactics.Augmentors]]: Implicit convenience additions of helper functions to formulas, terms, programs, sequents.
- *     - [[edu.cmu.cs.ls.keymaerax.tactics.Context]]: Convenience representation of formulas used as contexts that provide ways of substituting expressions in.
+ *     - [[Context]]: Convenience representation of formulas used as contexts that provide ways of substituting expressions in.
  *
  * All tactics are implemented on top of [[edu.cmu.cs.ls.keymaerax.core.Provable]] proof certificates.
  * [[edu.cmu.cs.ls.keymaerax.tactics.ProofNode]] provide a useful data structure for the tactics to

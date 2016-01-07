@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, ExpressionTraversal, FormulaTools, Position, PosInExpr, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+import Augmentors._
 
 import scala.collection.immutable
 import scala.language.postfixOps

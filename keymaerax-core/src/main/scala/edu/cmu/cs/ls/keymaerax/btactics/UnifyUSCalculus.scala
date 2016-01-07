@@ -12,9 +12,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.StaticSemanticsTools._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Context, FormulaTools, HereP, Position, PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, FormulaTools, HereP, Position, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 
 import scala.collection.immutable._

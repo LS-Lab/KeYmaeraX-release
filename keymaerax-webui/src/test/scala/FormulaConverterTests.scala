@@ -2,9 +2,10 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+
+import edu.cmu.cs.ls.keymaerax.btactics.Context
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.Context
 import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 import org.scalatest.{Matchers, FlatSpec}
 import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._

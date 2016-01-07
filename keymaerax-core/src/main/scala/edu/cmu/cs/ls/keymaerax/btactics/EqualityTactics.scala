@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, ExpressionTraversal, Position, PosInExpr, SubstitutionHelper, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.StaticSemanticsTools._
 
 import scala.language.postfixOps

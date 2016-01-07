@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.{Position, TacticWrapper, Interpreter, PosInExpr, Tactics}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 
