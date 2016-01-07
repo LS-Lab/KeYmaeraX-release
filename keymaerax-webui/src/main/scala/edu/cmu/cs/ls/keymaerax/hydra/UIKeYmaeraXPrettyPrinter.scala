@@ -41,7 +41,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String) extends KeYmaeraXWeightedPrett
     | ng-click="formulaClick('$id', $$event)"
     | ng-right-click="formulaRightClick('$id', $$event)"
     | ng-repeat="formulaId in ['$id']"
-    | uib-popover-template="'js/keymaera-ui/axiomPopoverTemplate.html'"
+    | uib-popover-template="'templates/axiomPopoverTemplate.html'"
     | popover-is-open="tacticPopover.isOpen('$id')"
     | popover-append-to-body="true"
     | popover-placement="bottom"$$@@#$$$content$$#@@$$/span$$@@#$$

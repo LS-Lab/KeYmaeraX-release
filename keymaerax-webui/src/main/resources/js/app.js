@@ -34,8 +34,8 @@ keymaeraProofApp.run(function(editableOptions) {
 
 keymaeraProofApp.run(function($templateCache, $http) {
   // cache templates for popovers, otherwise they're only populated on second show
-  $http.get('js/keymaera-ui/axiomPopoverTemplate.html', { cache: $templateCache });
-  $http.get('js/keymaera-ui/sequentRuleTemplate.html', { cache: $templateCache });
+  $http.get('templates/axiomPopoverTemplate.html', { cache: $templateCache });
+  $http.get('templates/sequentRuleTemplate.html', { cache: $templateCache });
 });
 
 keymaeraProofApp.config(['$routeProvider',

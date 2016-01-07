@@ -25,7 +25,7 @@ angular.module('formula')
                              'ng-right-click="formulaRightClick(\'' + id + '\', $event)"' +
                              // initialize formulaId for popover template, use ng-repeat for scoping
                              'ng-repeat="formulaId in [\'' + id + '\']"' +
-                             'uib-popover-template="\'js/keymaera-ui/axiomPopoverTemplate.html\'"' +
+                             'uib-popover-template="\'templates/axiomPopoverTemplate.html\'"' +
                              'popover-is-open="tacticPopover.isOpen(\'' + id + '\')"' +
                              'popover-append-to-body="true"' +
                              'popover-trigger="none"' +
