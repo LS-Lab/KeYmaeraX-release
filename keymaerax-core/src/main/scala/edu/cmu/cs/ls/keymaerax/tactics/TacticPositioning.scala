@@ -160,7 +160,7 @@ object Position {
   def seqPos2Position(p: SeqPos, posInExpr: List[Int]) : Position = if (p.isAnte) new AntePosition(p.getIndex, PosInExpr(posInExpr)) else new SuccPosition(p.getIndex, PosInExpr(posInExpr))
 }
 
-  class AntePosition private[keymaerax](index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
+  class AntePosition private[edu](index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
     def isAnte = true
     protected def clone(i: Int, e: PosInExpr): Position = new AntePosition(i, e)
     /** Return a position with inExpr replaced by p */
@@ -179,7 +179,7 @@ object Position {
     def apply(index: Int, inExpr: List[Int]): Position = new AntePosition(index, PosInExpr(inExpr))
   }
 
-  class SuccPosition private[keymaerax](index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
+  class SuccPosition private[edu] (index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
     def isAnte = false
     protected def clone(i: Int, e: PosInExpr): Position = new SuccPosition(i, e)
     def navigate(p : PosInExpr): SuccPosition = {new SuccPosition(this.index, p)
