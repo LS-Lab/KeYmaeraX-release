@@ -158,7 +158,6 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           var parent = theProofTree.nodesMap[node.parent]
           if (parent.children === undefined || parent.children === null) parent.children = [node.id];
           else parent.children.push(node.id);
-          parent.rule = node.rule;
           // update agenda: prepend new open goal to deduction path
           var newAgendaItem = {
             id: node.id,

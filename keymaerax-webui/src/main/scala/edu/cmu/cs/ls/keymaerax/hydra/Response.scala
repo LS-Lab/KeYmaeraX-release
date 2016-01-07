@@ -341,6 +341,7 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
         "id" -> id,
         "sequent" -> sequent,
         "children" -> children,
+        "rule" -> ruleJson(node.rule),
         "parent" -> parent)
     }
 

@@ -207,4 +207,11 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         link: link,
         templateUrl: 'partials/singletracksequentproof.html'
     };
-  }]);
+  }])
+  .filter('childRuleName', function () {
+    return function (input, scope) {
+      var children = scope.proofTree.nodesMap[input].children;
+      var loaded = $.grep(children, function(e, i) { return scope.proofTree.nodeIds().indexOf(e) >= 0; });
+      return loaded.length > 0 ? scope.proofTree.nodesMap[loaded[0]].rule.name : undefined;
+    };
+  });
