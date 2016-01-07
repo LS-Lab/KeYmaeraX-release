@@ -15,6 +15,14 @@ import scala.collection.immutable._
   * Useful for splitting a formula at a position into the subexpression at that position and the remaining context around it.
   * Or for replacing a subexpression by another subexpression at all cost.
   * Or for splitting a position into a formula position and a term position.
+  * @example Split a formula at a position into subformula and its context
+  *  {{{
+  *   val parser = KeYmaeraXParser
+  *   val f = parser("x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1")
+  *   // split f into context ctx and subformula g such that f is ctx{g}
+  *   val (ctx,g) = Context.at(f, PosInExpr(1::1::Nil))
+  *   println(f + " is the same as " + ctx(g))
+  *  }}}
   * @author Andre Platzer
   * @see [[PosInExpr]]
   * @see [[Augmentors]]
@@ -329,11 +337,23 @@ object Context {
 
 
 /**
- * Convenience wrapper around contexts such as f(.) or p(.) or C{_} etc.
- * Created by smitsch on 3/29/15.
- * @author Stefan Mitsch
- * @author Andre Platzer
- */
+  * Convenience wrapper around contexts such as f(.) or p(.) or C{_} to make it easy to instantiate their arguments.
+  * @example Split a formula at a position into subformula and its context, then instantiate this context with other subformulas:
+  *  {{{
+  *   val parser = KeYmaeraXParser
+  *   val f = parser("x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1")
+  *   // split f into context ctx and subformula g such that f is ctx{g}
+  *   val (ctx,g) = Context.at(f, PosInExpr(1::1::Nil))
+  *   println(f + " is the same as " + ctx(g))
+  *   // put another formula h in in place of g
+  *   val h = parser("x^2>y")
+  *   // x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x^2>y)
+  *   val result = ctx(h)
+  *   println(result)
+  *  }}}
+  * @author Stefan Mitsch
+  * @author Andre Platzer
+  */
 sealed case class Context[+T <: Expression](ctx: T) {
   import Context.{DotDiffProgram, DotProgram}
   // either a term or a formula context, not both
