@@ -1,4 +1,4 @@
-package LODESolverTests
+package edu.tactics.LODESolverTests
 
 import edu.cmu.cs.ls.keymaerax.core.{Equiv, Forall, SuccPos}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
