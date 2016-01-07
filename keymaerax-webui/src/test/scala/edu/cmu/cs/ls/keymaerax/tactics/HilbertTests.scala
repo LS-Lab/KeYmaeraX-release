@@ -3,6 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
+package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms._
@@ -13,7 +14,6 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.ApplyRule
 import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Tool}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import test.RandomFormula
 import testHelper.ParserFactory._
 import testHelper.{KeYmaeraXTestTags, ProvabilityTestHelper}
 

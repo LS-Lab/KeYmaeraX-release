@@ -7,13 +7,12 @@ package edu.btactics
 
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{RenUSubst, TheType, Position, PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.btactics.{Context, TactixLibrary, UnifyUSCalculus}
+import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, Context, TactixLibrary, UnifyUSCalculus}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import test.RandomFormula
 import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable._

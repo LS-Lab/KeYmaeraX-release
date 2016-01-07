@@ -4,10 +4,11 @@ package parserTests
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+
+import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import org.scalatest.{FlatSpec, Matchers}
-import test._
 
 /**
  * Created by smitsch on 1/8/15.
