@@ -4,20 +4,19 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst
-import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
+import edu.cmu.cs.ls.keymaerax.tactics.{SuccPosition, AntePosition, Position}
 
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron tactic expressions.
  * See Table 1 of "Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus"
  * @author Nathan Fulton
  * @see [[SequentialInterpreter]]
+ * @see [[edu.cmu.cs.ls.keymaerax.bellerophon]]
  */
 abstract class BelleExpr(val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) {
-  private[keymaerax] val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private[keymaerax] val DEBUG = System.getProperty("DEBUG", "false")=="true"
   // tactic combinators
 
   /** this & other: sequential composition executes other on the output of this, failing if either fail. */
@@ -62,7 +61,7 @@ object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
 // Positional tactics
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/** Turns a position (locator) into a tactic */
+/** Applied at a position, turns into a tactic of type T. Turns a position (locator) into a tactic */
 trait AtPosition[T <: BelleExpr] {
   /**
    * At a fixed position.
@@ -71,17 +70,20 @@ trait AtPosition[T <: BelleExpr] {
    * @note Convenience wrapper
    * @see [[apply(locator: PositionLocator)]]
    */
-  final def apply(position: Position): T = apply(Fixed(position))
+  private[keymaerax] final def apply(position: Position): T = apply(Fixed(position))
+  private[keymaerax] final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
+  private[edu] final def apply(position: SeqPos): T = apply(Fixed(PositionConverter.convertPos(position)))
   /**
    * At a fixed position given through index numbers.
-   * @param seqIdx The index in the sequent (strictly negative index for antecedent, strictly positive for succedent).
+   * @param seqIdx The signed index in the sequent (strictly negative index for antecedent, strictly positive for succedent).
    * @param inExpr Where to apply inside the formula at index seqIdx.
    * @return The tactic.
    * @note Convenience wrapper
    * @see [[apply(position: Position)]]
    */
-  final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(PositionConverter.convertPos(seqIdx, inExpr))
+  final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(PositionConverter.convertPos(seqIdx, inExpr)))
   /**
+   * Returns the tactic at the position identified by `locator`.
    * @param locator The locator symbol: 'L (find left), 'R (find right), '_ (find left/right appropriately for tactic),
    *                'Llast (at last position in antecedent), or 'Rlast (at last position in succedent).
    * @note Convenience wrapper
@@ -98,9 +100,21 @@ trait AtPosition[T <: BelleExpr] {
     case 'Llast => apply(LastAnte(0))
     case 'Rlast => apply(LastSucc(0))
   }
+  final def apply(locator: Symbol, expected: Formula): T = locator match {
+    case 'L => apply(Find(0, Some(expected), AntePosition(0)))
+    case 'R => apply(Find(0, Some(expected), SuccPosition(0)))
+    case '_ => this match {
+      case _: BuiltInLeftTactic => apply(Find(0, Some(expected), AntePosition(0)))
+      case _: BuiltInRightTactic => apply(Find(0, Some(expected), SuccPosition(0)))
+      case _ => throw new BelleError(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
+    }
+      //@todo check Some(expected)
+    case 'Llast => apply(LastAnte(0))
+    case 'Rlast => apply(LastSucc(0))
+  }
 
   /**
-   * At a position identified by the locator.
+   * Returns the tactic at the position identified by `locator`.
    * @param locator The locator: Fixed, Find, LastAnte, or LastSucc
    * @return The tactic
    * @see [[PositionLocator]]
@@ -373,42 +387,3 @@ case class TheType() extends BelleType
 /** @todo Added because SequentTypes are needed for unification tactics. */
 case class SequentType(s : Sequent) extends BelleType
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Positions
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-object PositionConverter {
-  def convertPos(seqIdx: Int, inExpr: List[Int] = Nil): Position = {
-    require(seqIdx != 0, "Sequent index must be strictly negative (antecedent) or strictly positive (succedent)")
-    if (seqIdx < 0) new AntePosition(-seqIdx - 1, PosInExpr(inExpr))
-    else new SuccPosition(seqIdx - 1, PosInExpr(inExpr))
-  }
-}
-
-
-///**
-//  * Abstract positions are either actual positions, or else indicate that the tactic should point back to a position
-//  * that was generated by a previous tactic.
-//  *
-//  * Example:
-//  * {{{
-//  *   AndR(SuccPos(2)) <(
-//  *     ImplyR(GeneratedPosition()) & TrivialCloser,
-//  *     ImplyR(GeneratedPosition()) & TrivialCloser
-//  *   )
-//  * }}}
-//  *
-//  * is equivalent to:
-//  *
-//  * {{{
-//  *   AndR(SuccPos(2)) <(
-//  *     ImplyR(SuccPos(2)) & ...,
-//  *     ImplyR(SuccPos(2)) & ...
-//  *   )
-//  * }}}
-//  *
-//  * @todo Not currently using these; one thing at at a time.
-//  */
-//sealed trait AbstractPosition
-//case class AbsolutePosition(p : Position) extends AbstractPosition
-//case class GeneratedPosition()              extends AbstractPosition

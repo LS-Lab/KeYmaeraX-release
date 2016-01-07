@@ -18,11 +18,6 @@ angular.module('keymaerax.controllers').controller('ProofCtrl', function($scope,
       $scope.date = data.date;
   });
   $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
-
-  //Save a name edited using the inline editor.
-  $scope.saveProofName = function(newName) {
-    $http.post("proofs/user/" + $cookies.get('userId') + "/" + $routeParams.proofId + "/name/" + newName, {})
-  };
 });
 
 angular.module('keymaerax.controllers').controller('RunningTacticsCtrl',
@@ -38,11 +33,6 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.userId = $cookies.get('userId');
     $scope.agenda = sequentProofData.agenda;
     $scope.prooftree = sequentProofData.proofTree;
-
-    $scope.proof = {
-        proofName: "blah"
-    };
-    //TODO: add functions  that allow renaming.
 
     $rootScope.$on('agendaIsEmpty', function() {
       $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId + '/progress').success(function(data) {
@@ -274,6 +264,21 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           console.log("Unexpected tactic result, parent mismatch: " + " expected " + $scope.nodeId + " but got " + data.parent.id)
         }
       });
+    }
+
+    //Save a name edited using the inline editor.
+    $scope.saveProofName = function(newName) {
+      var proofId = $routeParams.proofId;
+      var userId = $cookies.get('userId');
+      $http.post("proofs/user/" + userId + "/" + proofId + "/name/" + newName, {})
+    }
+
+    $scope.saveTaskName = function(newName) {
+      var proofId = $routeParams.proofId;
+      var userId = $cookies.get('userId');
+      var nodeId = sequentProofData.agenda.selectedId;
+      //@todo extend RestApi
+      $http.post("proofs/user/" + userId + "/" + proofId + "/" + nodeId + "/name/" + newName, {});
     }
   });
 

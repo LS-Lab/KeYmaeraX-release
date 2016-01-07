@@ -2,6 +2,9 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+
+package edu.tactics
+
 import edu.cmu.cs.ls.keymaerax.tactics._
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction, TraverseToPosition}
 import edu.cmu.cs.ls.keymaerax.core._

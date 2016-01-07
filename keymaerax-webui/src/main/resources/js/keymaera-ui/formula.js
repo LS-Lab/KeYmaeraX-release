@@ -28,6 +28,7 @@ angular.module('formula')
                              'uib-popover-template="\'js/keymaera-ui/axiomPopoverTemplate.html\'"' +
                              'popover-is-open="tacticPopover.isOpen(\'' + id + '\')"' +
                              'popover-append-to-body="true"' +
+                             'popover-trigger="none"' +
                              'popover-placement="bottom">' + content + '</span>';
                 } else {
                     return content;
@@ -369,8 +370,6 @@ angular.module('formula')
 
             $scope.formulaRightClick = function(formulaId, event) {
               event.stopPropagation();
-              // emulate hoverable popover (to come in later ui-bootstrap version) with hide on blur (need to focus for blur)
-              event.target.focus();
               if ($scope.formulaAxiomsMap[formulaId] === undefined) {
                 // axioms not fetched yet
                 $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.nodeId + '/' + formulaId + '/list')
@@ -414,7 +413,7 @@ angular.module('formula')
 
             $scope.tacticPopover = {
               openFormulaId: undefined,
-              isOpen: function(formulaId) { return $scope.tacticPopover.openFormulaId === formulaId; },
+              isOpen: function(formulaId) { return $scope.tacticPopover.openFormulaId !== undefined && $scope.tacticPopover.openFormulaId === formulaId; },
               open: function(formulaId) { $scope.tacticPopover.openFormulaId = formulaId; },
               close: function() { $scope.tacticPopover.openFormulaId = undefined; }
             }

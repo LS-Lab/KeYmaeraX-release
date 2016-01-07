@@ -1,4 +1,4 @@
-package btactics
+package edu.btactics
 
 /**
 * Copyright (c) Carnegie Mellon University.

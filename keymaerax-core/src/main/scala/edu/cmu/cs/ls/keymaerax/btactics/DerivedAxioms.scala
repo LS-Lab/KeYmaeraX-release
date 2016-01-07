@@ -1580,7 +1580,8 @@ object DerivedAxioms {
   lazy val DvariableCommutedF = "(x_') = (x_)'".asFormula
   lazy val DvariableCommuted = derivedAxiom("x' derive var commuted",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DvariableCommutedF)),
-    byUS(equalCommute)
+    useAt(equalCommute)(1) &
+      byUS("x' derive var")
   )
   lazy val DvariableCommutedT = derivedAxiomT(DvariableCommuted)
 

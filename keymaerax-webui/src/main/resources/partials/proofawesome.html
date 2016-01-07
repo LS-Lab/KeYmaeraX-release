@@ -5,7 +5,7 @@
             <div class="navbar-inner">
             <div class="container-fluid">
                 <span class="brand navbar-brand">
-                    <span editable-text="proofName" onbeforesave="saveProofName($data)" style="display:inline-block">
+                    <span editable-text="proofName" onbeforesave="saveProofName($data)">
                         {{proofName}}
                     </span>
                 </span>
@@ -129,7 +129,13 @@
                     <!-- ng-class={'fa fa-tasks':openGoal, 'fa fa-check-square-o':closedGoal} -->
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
                     <div class="row">
-                        <div class="col-md-11"><span class="fa fa-tasks k4-nowrap k4-abbreviate"> {{task.name}} ({{task.id}})</span></div>
+                        <div class="col-md-11">
+                            <span class="fa fa-tasks"></span>
+                            <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
+                            <span editable-text="task.name" onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
+                                {{task.name}}
+                            </span>
+                        </div>
                         <!-- TODO failed attempt to provide a preview of the goal -->
                         <!--<div class="col-md-3"  ng-if="selectedTask != task"><span class="fa fa-tasks k4-nowrap k4-abbreviate"> {{task.goalLabel}}</span></div>-->
                         <!--<div class="col-md-8" ng-if="selectedTask != task">-->

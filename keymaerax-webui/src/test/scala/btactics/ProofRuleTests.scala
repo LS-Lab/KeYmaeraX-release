@@ -1,4 +1,4 @@
-package btactics
+package edu.btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics
 import edu.cmu.cs.ls.keymaerax.core._

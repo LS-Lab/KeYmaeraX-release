@@ -15,7 +15,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
    * @param agenda          The agenda, see provingawesome.js for schema.
    * @param readOnly        Indicates whether or not the proof steps should allow interaction (optional).
    */
-  .directive('k4Sequentproof', ['$http', 'sequentProofData', function($http, sequentProofData) {
+  .directive('k4Sequentproof', ['$http', '$uibModal', 'sequentProofData', function($http, $uibModal, sequentProofData) {
     /* The directive's internal control. */
     function link(scope, element, attrs) {
 
@@ -64,7 +64,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         } else {
           // parent has exactly 1 child, append parent to child's section
           if (sectionIdx === -1) {
-            console.error('Expected a unique path section ending in a child of ' + proofTreeNode.id + ', but agenda item ' + agendaItem.id +
+            showErrorMessage($uibModal, 'Expected a unique path section ending in a child of ' + proofTreeNode.id + ', but agenda item ' + agendaItem.id +
               ' has ' + agendaItem.sections + ' as path sections');
           } else if (proofTreeNode.parent !== null) {
             section.path.push(proofTreeNode.id);
@@ -76,7 +76,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
               parentCandidate !== undefined && parentCandidate.children != null && parentCandidate.children.indexOf(proofTreeNode.id) >= 0;
           } else {
             if (sectionIdx+1 < agendaItem.deduction.sections.length) {
-              console.error('Received proof tree root, which can only be added to last section, but ' + sectionIdx +
+              showErrorMessage($uibModal, 'Received proof tree root, which can only be added to last section, but ' + sectionIdx +
                 ' is not last section in ' + agendaItem.deduction.sections);
             } else {
               agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: true});
@@ -132,8 +132,10 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
           if (scope.nodeId === data.parent.id) {
             sequentProofData.updateAgendaAndTree(data);
           } else {
-            console.log("Unexpected tactic result, parent mismatch: " + " expected " + scope.nodeId + " but got " + data.parent.id)
+            showErrorMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " + scope.nodeId + " but got " + data.parent.id)
           }
+        }).error(function(data) {
+          console.log("Warning: Left-click on a formula with no applicable axiom/tactic")
         });
       }
 
@@ -143,7 +145,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
           if (scope.nodeId === data.parent.id) {
             sequentProofData.updateAgendaAndTree(data);
           } else {
-            console.log("Unexpected tactic result, parent mismatch: " + " expected " + scope.nodeId + " but got " + data.parent.id)
+            showErrorMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " + scope.nodeId + " but got " + data.parent.id)
           }
         });
       }

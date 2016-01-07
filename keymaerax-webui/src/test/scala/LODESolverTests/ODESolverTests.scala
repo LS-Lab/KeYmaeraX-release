@@ -1,4 +1,4 @@
-package LODESolverTests
+package edu.tactics.LODESolverTests
 
 /**
 * Copyright (c) Carnegie Mellon University.
