@@ -324,10 +324,12 @@ object Context {
   }} ensuring(r => r._1==noContextD || r._1.getClass == program.getClass, "Context has identical top types " + program + " at " + pos)
 }
 
+
 /**
- * Convenience wrapper around contexts such as f(.) or p(.) or C{_} etc
+ * Convenience wrapper around contexts such as f(.) or p(.) or C{_} etc.
  * Created by smitsch on 3/29/15.
  * @author Stefan Mitsch
+ * @author Andre Platzer
  */
 sealed case class Context[+T <: Expression](ctx: T) {
   import Context.{DotDiffProgram, DotProgram}
@@ -335,10 +337,11 @@ sealed case class Context[+T <: Expression](ctx: T) {
   require(!(signature(ctx).contains(DotFormula) && signature(ctx).contains(DotTerm)), "Contexts are either DotFormula or DotTerm contexts, not both at once: " + ctx)
 
   /** Return the result of filling the dot placeholder of this context with expression e */
-  //@todo why should this always be a formula?
+  //@todo why should this return type always be a formula?
   def apply(e: Expression): Formula = e match {
     case f: Formula => instantiate(f)
     case t: Term => instantiate(t)
+    case a: DifferentialProgram if isDifferentialProgramContext => instantiate(a)
     case a: Program => instantiate(a)
   }
 
@@ -350,10 +353,12 @@ sealed case class Context[+T <: Expression](ctx: T) {
   def isTermContext = signature(ctx).contains(DotTerm)
   /** True if this context has a DotProgram so expects a program as argument */
   def isProgramContext = signature(ctx).contains(DotProgram)
+  /** True if this context has a DotProgram so expects a program as argument */
+  def isDifferentialProgramContext = signature(ctx).contains(DotDiffProgram)
 
   /**
    * Instantiates the context ctx with the formula withF
-   * @param withF The formula to instantiate context ctx with.
+   * @param withF The formula to instantiate this context ctx with.
    * @return The instantiated context ctx{withF}.
    */
   def instantiate(withF: Formula): Formula = {
@@ -364,18 +369,19 @@ sealed case class Context[+T <: Expression](ctx: T) {
 
   /**
    * Instantiates the context ctx with the term withT
-   * @param withT The term to instantiate context ctx with.
+   * @param withT The term to instantiate this context ctx with.
    * @return The instantiated context ctx(withT).
+   * @todo this implementation could be generalized using predicationals or replaceAt.
    */
   def instantiate(withT: Term): Formula = {
     assert(!isFormulaContext, "can only instantiate terms within a term context " + this)
-    val context = Function("dottingC_", None, Real, Bool)
+    val context = Function("dottingCapprox_", None, Real, Bool)
     USubst(SubstitutionPair(PredOf(context, DotTerm), ctx) :: Nil)(PredOf(context, withT))
   }
 
   /**
    * Instantiates the context ctx with the program withA
-   * @param withA The program to instantiate context ctx with.
+   * @param withA The program to instantiate this context ctx with.
    * @return The instantiated context ctx{withA}.
    */
   def instantiate(withA: Program): Formula = {
@@ -389,7 +395,7 @@ sealed case class Context[+T <: Expression](ctx: T) {
 
   /**
    * Instantiates the context ctx with the program withA
-   * @param withA The program to instantiate context ctx with.
+   * @param withA The program to instantiate this context ctx with.
    * @return The instantiated context ctx{withA}.
    */
   def instantiate(withA: DifferentialProgram): Formula = {
