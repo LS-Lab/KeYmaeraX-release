@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, PosInExpr, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.tools.{DiffSolutionTool, ToolEvidence}
 
 import scala.annotation.switch

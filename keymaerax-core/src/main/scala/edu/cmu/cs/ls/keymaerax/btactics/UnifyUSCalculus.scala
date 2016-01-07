@@ -13,9 +13,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.StaticSemanticsTools._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, FormulaTools, HereP, Position, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
+import PosInExpr.HereP
+import StaticSemanticsTools._
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -1300,7 +1300,7 @@ trait UnifyUSCalculus {
           try {
             val axUse = modifier(ax,pos) (useFor(ax, key, inst(ax))(pos)(de))
             recursor.foldLeft(axUse)(
-              (pf, cursor) => doChase(pf, pos.append(cursor))
+              (pf, cursor) => doChase(pf, pos + cursor)
             )
           } catch {case e: ProverException => throw e.inContext("useFor(" + ax + ", " + key.prettyString + ")\nin " + "chase(" + de.conclusion.sub(pos).get.prettyString + ")")}
         // take the first axiom among breadth that works for one useFor step
@@ -1319,7 +1319,7 @@ trait UnifyUSCalculus {
               de
             case Some((axUse, recursor)) =>
               recursor.foldLeft(axUse)(
-                (pf, cursor) => doChase(pf, pos.append(cursor))
+                (pf, cursor) => doChase(pf, pos + cursor)
               )
           }
       }

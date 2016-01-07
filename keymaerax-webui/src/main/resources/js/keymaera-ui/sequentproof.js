@@ -179,8 +179,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       }
 
       /** Prunes the proof tree and agenda/deduction path below the specified step ID. */
-      scope.prune = function(goalId) {
-        sequentProofData.prune(scope.userId, scope.proofId, scope.nodeId, goalId);
+      scope.prune = function(nodeId) {
+        sequentProofData.prune(scope.userId, scope.proofId, nodeId);
       }
 
       /* Indicates whether the section has a parent (if its last step has a parent, and the section is not complete) */
@@ -207,4 +207,11 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
         link: link,
         templateUrl: 'partials/singletracksequentproof.html'
     };
-  }]);
+  }])
+  .filter('childRuleName', function () {
+    return function (input, scope) {
+      var children = scope.proofTree.nodesMap[input].children;
+      var loaded = $.grep(children, function(e, i) { return scope.proofTree.nodeIds().indexOf(e) >= 0; });
+      return loaded.length > 0 ? scope.proofTree.nodesMap[loaded[0]].rule.name : undefined;
+    };
+  });
