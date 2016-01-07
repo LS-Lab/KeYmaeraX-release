@@ -21,7 +21,7 @@
                 </uib-accordion-heading>
                 <div ng-if="tactic.derivation.type === 'axiom'">{{tactic.derivation.formula}}</div>
                 <div ng-if="tactic.derivation.type === 'tactic'">{{tactic.derivation.formula}}</div>
-                <div class="col-md-12" ng-if="tactic.derivation.type === 'sequentrule'" ng-include="'js/keymaera-ui/sequentRuleTemplate.html'"></div>
+                <div class="col-md-12" ng-if="tactic.derivation.type === 'sequentrule'" ng-include="'templates/sequentRuleTemplate.html'"></div>
             </uib-accordion-group>
         </uib-accordion>
     </div>
