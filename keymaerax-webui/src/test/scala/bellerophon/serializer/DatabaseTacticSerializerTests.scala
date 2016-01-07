@@ -1,4 +1,4 @@
-package bellerophon.serializer
+package edu.bellerophon.serializer
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics

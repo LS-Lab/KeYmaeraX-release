@@ -1,3 +1,5 @@
+package edu.tactics
+
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics
 import edu.cmu.cs.ls.keymaerax.core.SuccPos
 import edu.cmu.cs.ls.keymaerax.tactics._

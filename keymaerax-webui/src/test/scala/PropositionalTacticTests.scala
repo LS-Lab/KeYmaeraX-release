@@ -3,6 +3,8 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
+package edu.tactics
+
 import edu.cmu.cs.ls.keymaerax.core.{AntePos, SuccPos}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
