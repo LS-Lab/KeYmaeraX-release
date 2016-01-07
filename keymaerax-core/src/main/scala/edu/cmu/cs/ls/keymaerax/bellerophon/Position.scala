@@ -163,7 +163,7 @@ trait TopPosition extends Position {
 trait AntePosition extends Position {
   final override def isAnte: Boolean = true
   override def top: AntePos
-  override def checkTop: AntePos
+  //override def checkTop: AntePos
   final def checkAnte: AntePosition = this
   final def checkSucc = throw new IllegalArgumentException("Antecedent position was expected to be a succedent position: " + this)
   override def topLevel: AntePosition with TopPosition
@@ -177,7 +177,7 @@ trait AntePosition extends Position {
 trait SuccPosition extends Position {
   final override def isAnte: Boolean = false
   override def top: SuccPos
-  override def checkTop: SuccPos
+  //override def checkTop: SuccPos
   final def checkAnte = throw new IllegalArgumentException("Succedent position was expected to be an antecedent position: " + this)
   final def checkSucc: SuccPosition = this
   override def topLevel: SuccPosition with TopPosition
