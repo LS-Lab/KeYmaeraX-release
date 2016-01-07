@@ -28,6 +28,8 @@ import scala.collection.immutable._
   * @see [[Augmentors]]
   */
 object Context {
+  /** Make a context for expression `ctx` guarded by the protection of uniform substitutions. */
+  def apply[T <: Expression](ctx: T): Context[T] = new GuardedContext[T](ctx)
 
   /** Whether to check split results redundantly */
   private val REDUNDANT = false
@@ -351,10 +353,80 @@ object Context {
   *   val result = ctx(h)
   *   println(result)
   *  }}}
+  * @tparam T the type/kind of expression that this context is representing.
   * @author Stefan Mitsch
   * @author Andre Platzer
   */
-sealed case class Context[+T <: Expression](ctx: T) {
+sealed trait Context[+T <: Expression] extends (Expression => Formula) {
+  import Context.{DotDiffProgram, DotProgram}
+
+  /** the expression of type T representing this context. */
+  def ctx: T
+
+  /** Return the result of instantiating this context with argument `e`.
+    * That is filling the respective dot placeholder of this context with expression `e`. */
+  //@todo why should this return type always be a formula?
+  def apply(e: Expression): Formula
+
+  /** Return the result of instantiating this context with an argument `c` which is itself again a context. */
+  def apply(c: Context[Formula]): Context[Formula] = new GuardedContext(apply(c.ctx))
+
+  //@todo could turn the following into lazy val for performance space/time tradeoff
+
+  /** True if this context has a DotFormula so expects a formula as argument */
+  def isFormulaContext = signature(ctx).contains(DotFormula)
+
+  /** True if this context has a DotTerm so expects a term as argument */
+  def isTermContext = signature(ctx).contains(DotTerm)
+
+  /** True if this context has a DotProgram so expects a program as argument */
+  def isProgramContext = signature(ctx).contains(DotProgram)
+
+  /** True if this context has a DotProgram so expects a program as argument */
+  def isDifferentialProgramContext = signature(ctx).contains(DotDiffProgram)
+
+  override def toString = "Context{{" + ctx.prettyString + "}}"
+}
+
+
+// implementations
+
+/**
+  * An implementation of a context by direct replacement in unguarded ways (even if not admissible).
+  * @param replicate the expression of type T representing this context indirectly in the sense that
+  *                  instantiation replaces its position dot.
+  * @param dot the position within replicate that will be replaced when instantiating this context
+  * @tparam T the type/kind of expression that this context is representing.
+  * @author Andre Platzer
+  * @see [[Context.replaceAt()]]
+  * @note ReplacementContexts that differ only in replacee could be considered equal.
+  */
+private class ReplacementContext[+T <: Expression](replicate: T, dot: PosInExpr) extends Context[T] {
+  def ctx: T = apply(DotTerm).asInstanceOf[T]
+
+  def apply(e: Expression): Formula = Context.replaceAt(replicate, dot, e).asInstanceOf[Formula]
+
+  /** What is replaced by argument (so not part of the context in fact) */
+  private lazy val replacee: Expression = Context.at(replicate, dot)._2
+
+  override def isFormulaContext = replacee.kind==FormulaKind
+
+  override def isTermContext = replacee.kind==TermKind
+
+  override def isProgramContext =replacee.kind==ProgramKind
+
+  override def isDifferentialProgramContext = replacee.kind==DifferentialProgramKind
+}
+
+
+/**
+  * An implementation of a context guarded by the protection of uniform substitutions.
+  * @param ctx the expression of type T representing this context
+  * @tparam T the type/kind of expression that this context is representing.
+  * @author Andre Platzer
+  * @see [[USubst]]
+  */
+private case class GuardedContext[+T <: Expression](ctx: T) extends Context[T] {
   import Context.{DotDiffProgram, DotProgram}
   // either a term or a formula context, not both
   require(!(signature(ctx).contains(DotFormula) && signature(ctx).contains(DotTerm)), "Contexts are either DotFormula or DotTerm contexts, not both at once: " + ctx)
@@ -369,24 +441,12 @@ sealed case class Context[+T <: Expression](ctx: T) {
     case a: Program => instantiate(a)
   }
 
-  /** Return the result of instantiating this context with an argument `c` which is itself again a context. */
-  def apply(c: Context[Formula]): Context[Formula] = new Context(apply(c.ctx))
-
-  /** True if this context has a DotFormula so expects a formula as argument */
-  def isFormulaContext = signature(ctx).contains(DotFormula)
-  /** True if this context has a DotTerm so expects a term as argument */
-  def isTermContext = signature(ctx).contains(DotTerm)
-  /** True if this context has a DotProgram so expects a program as argument */
-  def isProgramContext = signature(ctx).contains(DotProgram)
-  /** True if this context has a DotProgram so expects a program as argument */
-  def isDifferentialProgramContext = signature(ctx).contains(DotDiffProgram)
-
   /**
    * Instantiates the context ctx with the formula withF
    * @param withF The formula to instantiate this context ctx with.
    * @return The instantiated context ctx{withF}.
    */
-  def instantiate(withF: Formula): Formula = {
+  private def instantiate(withF: Formula): Formula = {
     assert(!isTermContext, "can only instantiate formulas within a formula context " + this)
     val context = Function("dottingC_", None, Bool, Bool)//@TODO eisegesis  should be Function("dottingC_", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
     USubst(SubstitutionPair(PredicationalOf(context, DotFormula), ctx) :: Nil)(PredicationalOf(context, withF))
@@ -398,7 +458,7 @@ sealed case class Context[+T <: Expression](ctx: T) {
    * @return The instantiated context ctx(withT).
    * @todo this implementation could be generalized using predicationals or replaceAt.
    */
-  def instantiate(withT: Term): Formula = {
+  private def instantiate(withT: Term): Formula = {
     assert(!isFormulaContext, "can only instantiate terms within a term context " + this)
     val context = Function("dottingCapprox_", None, Real, Bool)
     USubst(SubstitutionPair(PredOf(context, DotTerm), ctx) :: Nil)(PredOf(context, withT))
@@ -409,7 +469,7 @@ sealed case class Context[+T <: Expression](ctx: T) {
    * @param withA The program to instantiate this context ctx with.
    * @return The instantiated context ctx{withA}.
    */
-  def instantiate(withA: Program): Formula = {
+  private def instantiate(withA: Program): Formula = {
     assert(!isFormulaContext || isTermContext, "can only instantiate programs within a program context " + this)
     if (withA.isInstanceOf[DifferentialProgram] && !withA.isInstanceOf[ODESystem])
       instantiate(withA.asInstanceOf[DifferentialProgram])
@@ -423,10 +483,9 @@ sealed case class Context[+T <: Expression](ctx: T) {
    * @param withA The program to instantiate this context ctx with.
    * @return The instantiated context ctx{withA}.
    */
-  def instantiate(withA: DifferentialProgram): Formula = {
+  private def instantiate(withA: DifferentialProgram): Formula = {
     assert(!isFormulaContext || isTermContext, "can only instantiate differential programs within a differential program context " + this)
     USubst(SubstitutionPair(DotDiffProgram, withA) :: Nil)(ctx) .asInstanceOf[Formula]
   }
 
-  override def toString = "Context{{" + ctx.prettyString + "}}"
 }

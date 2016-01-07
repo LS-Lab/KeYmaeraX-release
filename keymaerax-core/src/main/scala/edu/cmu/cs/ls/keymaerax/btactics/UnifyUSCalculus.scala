@@ -306,7 +306,7 @@ trait UnifyUSCalculus {
           }
 
           // try to prove prereq globally, if that fails preserve context and fall back to CMon and C{prereq} -> ...
-          (useAt(subst, new Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(0)) <(
+          (useAt(subst, Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(0)) <(
             //@note the roles of use and show are really swapped here, since the implication on show will be handled by factTactic
             /* use: try to prove prereq globally */ TactixLibrary.QE,
             /* show */ factTactic), sequent) partial) |
