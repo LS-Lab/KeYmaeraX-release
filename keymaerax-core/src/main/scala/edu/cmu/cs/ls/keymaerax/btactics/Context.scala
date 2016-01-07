@@ -12,6 +12,9 @@ import PosInExpr.HereP
 import scala.collection.immutable._
 
 /** Context management, splitting, and extraction tools.
+  * Useful for splitting a formula at a position into the subexpression at that position and the remaining context around it.
+  * Or for replacing a subexpression by another subexpression at all cost.
+  * Or for splitting a position into a formula position and a term position.
   * @author Andre Platzer
   * @see [[PosInExpr]]
   * @see [[Augmentors]]
