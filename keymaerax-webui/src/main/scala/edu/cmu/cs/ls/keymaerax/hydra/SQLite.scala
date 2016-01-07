@@ -424,7 +424,7 @@ object SQLite {
           val newStep = new ExecutionStepPOJO(None, oldStep.executionid.get, prev, None, Some(thisStep.branch),
             None, oldStep.alternativeorder.get + 1, ExecutionStepStatus.fromString(thisPOJO.status.get), thisPOJO.executableid.get,
             globalId,
-            Some(outputProvableId), thisPOJO.localprovableid, thisPOJO.userexecuted.get.toBoolean/*, thisPOJO.rulename.get*/,???)
+            Some(outputProvableId), thisPOJO.localprovableid, thisPOJO.userexecuted.get.toBoolean, thisPOJO.rulename.get)
           val newId = addExecutionStep(newStep)
           addSteps(Some(newId), outputProvableId, steps.tail)
         }
@@ -434,7 +434,7 @@ object SQLite {
         val nilExecutable = addBelleExpr(TactixLibrary.nil, Nil)
         val step = new ExecutionStepPOJO(None, oldStep.executionid.get, oldStep.previousstep, None, Some(0), None,
           oldStep.alternativeorder.get + 1, ExecutionStepStatus.Finished, nilExecutable, oldStep.inputprovableid.get,
-          oldStep.inputprovableid, oldStep.localprovableid, true, "nil")
+          oldStep.inputprovableid, oldStep.localprovableid, false, "nil")
         addExecutionStep(step)
       } else {
         val inputId = oldStep.inputprovableid.get
@@ -696,7 +696,7 @@ object SQLite {
             val output = step.resultProvableId.map{case id => loadProvable(id)}
             val branch = step.branchOrder.get
             val executable = getExecutable(step.executableId)
-            new ExecutionStep(stepId = step.stepId.get, input = input, output = output, branch = branch, alternativeOrder = step.alternativeOrder, step.ruleName)
+            ExecutionStep(stepId = step.stepId.get, input = input, output = output, branch = branch, alternativeOrder = step.alternativeOrder, step.ruleName, step.userExecuted)
         }
       val conclusion = getProofConclusion(proofId)
       ExecutionTrace(proofId.toString, executionId.toString, conclusion, traceSteps)

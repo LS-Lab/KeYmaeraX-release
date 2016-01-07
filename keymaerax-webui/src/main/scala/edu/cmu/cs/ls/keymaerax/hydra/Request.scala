@@ -794,8 +794,8 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
         if(pruned.contains(step.stepId)) {
           (updatedGoals, acc)
         } else {
-          // @todo update rest of args correctly
-          (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder, step.rule) :: acc)
+          // @todo double-check that all the args are set to the right values
+          (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder, step.rule, step.isUserExecuted) :: acc)
         }
       }
     ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps.reverse)
