@@ -15,6 +15,7 @@
   'keymaerax.controllers',
   'keymaerax.services',
   'keymaerax.ui.mouseevents',
+  'keymaerax.ui.directives',
   'progressMeter',
   'proofProgressChart',
   'formula',

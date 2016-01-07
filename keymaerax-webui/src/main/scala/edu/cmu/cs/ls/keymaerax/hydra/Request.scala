@@ -765,7 +765,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         }
         val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
         val parentNode = finalTree.findNode(nodeId).get
-        val response = new RunBelleTermResponse(parentNode, parentNode.children)
+        //@note distinguish between empty parentNode.children due to closed goal or due to no progress (e.g., prop)
+        val response = new RunBelleTermResponse(parentNode, parentNode.children, progress = tree.leaves != finalTree.leaves)
         response :: Nil
     }
   }

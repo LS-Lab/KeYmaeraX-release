@@ -34,7 +34,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.agenda = sequentProofData.agenda;
     $scope.prooftree = sequentProofData.proofTree;
 
-    $rootScope.$on('agendaIsEmpty', function() {
+    $rootScope.$on('agenda.isEmpty', function() {
       $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId + '/progress').success(function(data) {
         if (data.status == 'closed') {
           var modalInstance = $uibModal.open({
@@ -233,7 +233,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
 
 
     $scope.undoLastStep = function() {
-      var nodeId = sequentProofData.agenda.selectedId;
+      var nodeId = sequentProofData.agenda.selectedId();
       var node = sequentProofData.agenda.itemsMap[nodeId];
       var top = node.deduction.sections[0].path[0];
       var topParent = sequentProofData.proofTree.nodesMap[top].parent;
@@ -243,7 +243,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.doTactic = function(tacticId) {
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
-      var nodeId = sequentProofData.agenda.selectedId;
+      var nodeId = sequentProofData.agenda.selectedId();
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/do/' + tacticId).success(function(data) {
         if (nodeId === data.parent.id) {
           sequentProofData.updateAgendaAndTree(data);
@@ -256,7 +256,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.doSearch = function(tacticId, where) {
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
-      var nodeId = sequentProofData.agenda.selectedId;
+      var nodeId = sequentProofData.agenda.selectedId();
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doSearch' + where + '/' + tacticId).success(function(data) {
         if (nodeId === data.parent.id) {
           sequentProofData.updateAgendaAndTree(data);
@@ -276,10 +276,12 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.saveTaskName = function(newName) {
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
-      var nodeId = sequentProofData.agenda.selectedId;
+      var nodeId = sequentProofData.agenda.selectedId();
       //@todo extend RestApi
       $http.post("proofs/user/" + userId + "/" + proofId + "/" + nodeId + "/name/" + newName, {});
     }
+
+    $scope.onProofError = function(message) { $rootScope.$emit('proof.message', message); }
   });
 
 angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
