@@ -112,9 +112,9 @@ sealed trait Position {
     */
   def isIndexDefined(s: Sequent): Boolean =
     if (isAnte)
-      s.ante.length > top.getIndex
+      s.ante.length > index
     else
-      s.succ.length > top.getIndex
+      s.succ.length > index
 
 
   /**
@@ -207,7 +207,7 @@ private case class AntePositionImpl (top: AntePos, inExpr: PosInExpr) extends An
   def +(child : PosInExpr): AntePosition = new AntePositionImpl(top, inExpr+child)
   def topLevel = AntePosition.apply(top)
   //@note not TopLevel if HereP
-  def navigate(instead : PosInExpr): Position = new AntePositionImpl(top, instead)
+  def navigate(instead : PosInExpr): AntePosition = new AntePositionImpl(top, instead)
 }
 
 object SuccPosition {
@@ -221,7 +221,7 @@ private case class SuccPositionImpl (top: SuccPos, inExpr: PosInExpr) extends Su
   def +(child : PosInExpr): SuccPosition = new SuccPositionImpl(top, inExpr+child)
   def topLevel = SuccPosition.apply(top)
   //@note not TopLevel if HereP
-  def navigate(instead : PosInExpr): Position = new SuccPositionImpl(top, instead)
+  def navigate(instead : PosInExpr): SuccPosition = new SuccPositionImpl(top, instead)
 }
 
 
