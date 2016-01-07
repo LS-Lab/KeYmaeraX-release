@@ -29,7 +29,7 @@ import scala.collection.immutable._
   */
 object Context {
   /** `true` gives slower guarded contexts that fail inadmissible term instantiation. `false` gives fast unguarded replacement contexts */
-  private val GUARDED = false
+  private[btactics] val GUARDED = false
   /** Make a context for expression `ctx` guarded by the protection of uniform substitutions. */
   def apply[T <: Expression](ctx: T): Context[T] = new GuardedContext[T](ctx)
 
@@ -42,7 +42,9 @@ object Context {
 
   //@todo add faster replacement contexts!
 
-  /** Subexpression of `t` at the indicated position `pos` or exception if ill-defined position */
+  /** Subexpression of `t` at the indicated position `pos` or exception if ill-defined position.
+    * @ensures sub(t,pos) == at(t,pos)._2
+    */
   def sub(t: Expression, pos: PosInExpr): Expression = t match {
     case f: Term    => part (f, pos)
     case f: Formula => part (f, pos)
@@ -56,6 +58,7 @@ object Context {
    * Split `C{e}=t(pos)` expression t at position pos into the expression e at that position and the context C within which that expression occurs.
    * Thus `C{e}` will equal the original `t` and `e` occurs at position pos in `t`
    * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
+   * @ensures at(t,pos)._2 == sub(t,pos)
    */
   def at(t: Expression, pos: PosInExpr): (Context[Expression], Expression) = if (!GUARDED) {
     (new ReplacementContext[Expression](t, pos), sub(t, pos))

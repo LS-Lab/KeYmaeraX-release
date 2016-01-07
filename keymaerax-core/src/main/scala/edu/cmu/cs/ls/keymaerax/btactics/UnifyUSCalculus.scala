@@ -35,7 +35,7 @@ trait UnifyUSCalculus {
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   /** Liberal context via replaceAt instead of Context substitutions (true) */
-  private val LIBERAL = true
+  private val LIBERAL = Context.GUARDED
 
   /*@note must be initialized from outside; is var so that unit tests can setup/tear down. @see [[DerivedAxioms]] */
   implicit var tool: QETool with DiffSolutionTool = null
