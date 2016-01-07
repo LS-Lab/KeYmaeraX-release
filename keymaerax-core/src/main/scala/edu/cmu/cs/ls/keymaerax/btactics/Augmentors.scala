@@ -39,7 +39,7 @@ object Augmentors {
     /** Subexpression at indicated position */
     def apply(pos: PosInExpr): Expression = at(pos)._2
     /** Subexpression at indicated position if exists, or None */
-    def sub(pos: PosInExpr): Option[Expression] = try {Some(at(pos)._2)} catch {case e: IllegalArgumentException => None}
+    def sub(pos: PosInExpr): Option[Expression] = try {Some(Context.sub(term, pos))} catch {case e: IllegalArgumentException => None}
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Term], Expression) = Context.at(term, pos)
     /** Replace at position pos by repl */
@@ -54,7 +54,7 @@ object Augmentors {
     /** Subexpression at indicated position */
     def apply(pos: PosInExpr): Expression = at(pos)._2
     /** Subexpression at indicated position if exists, or None*/
-    def sub(pos: PosInExpr): Option[Expression] = try {Some(at(pos)._2)} catch {case e: IllegalArgumentException => None}
+    def sub(pos: PosInExpr): Option[Expression] = try {Some(Context.sub(fml, pos))} catch {case e: IllegalArgumentException => None}
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Formula], Expression) = Context.at(fml, pos)
     /** Replace at position pos by repl */
@@ -69,7 +69,7 @@ object Augmentors {
     /** Subexpression at indicated position */
     def apply(pos: PosInExpr): Expression = at(pos)._2
     /** Subexpression at indicated position if exists, or None*/
-    def sub(pos: PosInExpr): Option[Expression] = try {Some(at(pos)._2)} catch {case e: IllegalArgumentException => None}
+    def sub(pos: PosInExpr): Option[Expression] = try {Some(Context.sub(prog,pos))} catch {case e: IllegalArgumentException => None}
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Program], Expression) = Context.at(prog, pos)
     /** Replace at position pos by repl */
