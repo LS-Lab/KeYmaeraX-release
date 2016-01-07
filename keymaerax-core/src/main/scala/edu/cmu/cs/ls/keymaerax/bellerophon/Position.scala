@@ -44,9 +44,9 @@ sealed case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
 
   /** Append child to obtain position of given subexpression. */
-  def +(child: Int): PosInExpr = new PosInExpr(pos :+ child)
-  /** Append child to obtain position of given subexpression by concatenating `p2` to `this`. */
-  def +(child : PosInExpr): PosInExpr = PosInExpr(this.pos ++ child.pos) ensuring(x => this.isPrefixOf(x))
+  def +(appendChild: Int): PosInExpr = new PosInExpr(pos :+ appendChild) ensuring(r => this.isPrefixOf(r))
+  /** Append child to obtain position of given subexpression by concatenating `appendChild` to `this`. */
+  def +(appendChild : PosInExpr): PosInExpr = PosInExpr(this.pos ++ appendChild.pos) ensuring(r => this.isPrefixOf(r))
 
   /** Head: The top-most position of this position */
   def head: Int = {require(pos!=Nil); pos.head}
@@ -100,10 +100,8 @@ sealed trait Position {
 
   //  def getIndex: Int = index
 
-  /** Append child to obtain position of given subexpression. */
-  def +(child: Int): Position = this + PosInExpr(child::Nil)
   /** Append child to obtain position of given subexpression by concatenating `p2` to `this`. */
-  def +(child : PosInExpr): Position
+  def +(child: PosInExpr): Position
 
   /**
     * Check whether top-level index of this position is defined in given sequent (ignoring inExpr).
@@ -170,7 +168,6 @@ trait AntePosition extends Position {
   final def checkAnte: AntePosition = this
   final def checkSucc = throw new IllegalArgumentException("Antecedent position was expected to be a succedent position: " + this)
   override def topLevel: AntePosition with TopPosition
-  override def +(child: Int): AntePosition = this + PosInExpr(child::Nil)
   def +(child : PosInExpr): AntePosition
 }
 
@@ -184,7 +181,6 @@ trait SuccPosition extends Position {
   final def checkAnte = throw new IllegalArgumentException("Succedent position was expected to be an antecedent position: " + this)
   final def checkSucc: SuccPosition = this
   override def topLevel: SuccPosition with TopPosition
-  override def +(child: Int): SuccPosition = this + PosInExpr(child::Nil)
   def +(child : PosInExpr): SuccPosition
 }
 
