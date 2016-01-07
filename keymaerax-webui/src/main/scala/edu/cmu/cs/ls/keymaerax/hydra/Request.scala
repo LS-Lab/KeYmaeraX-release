@@ -772,7 +772,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
   }
 }
 
-class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String, goalId : String) extends Request {
+class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String) extends Request {
   def prune(trace: ExecutionTrace, pruned:Set[Int]): ExecutionTrace = {
     val tr = trace.steps.filter{case step => step.stepId >= pruned.min}
     val pruneRoot = tr.head
@@ -805,14 +805,14 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
   def getResultingResponses() = {
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
-    val prunedSteps = tree.allDescendants(goalId).flatMap{case node => node.endStep.toList}
+    val prunedSteps = tree.allDescendants(nodeId).flatMap{case node => node.endStep.toList}
     if(prunedSteps.isEmpty) {
       throw new Exception("No steps under node. Nothing to do.")
     }
     val prunedStepIds = prunedSteps.map{case step => step.stepId}.toSet
     val prunedTrace = prune(trace, prunedStepIds)
     db.addAlternative(prunedStepIds.min, prunedTrace)
-    val goalNode = tree.findNode(goalId).get
+    val goalNode = tree.findNode(nodeId).get
     val item = AgendaItem(goalNode.id.toString, "Unnamed Item", proofId.toString, goalNode)
     val response = new PruneBelowResponse(item)
     response :: Nil

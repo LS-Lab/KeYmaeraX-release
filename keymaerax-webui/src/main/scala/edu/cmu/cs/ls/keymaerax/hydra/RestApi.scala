@@ -299,9 +299,9 @@ trait RestApi extends HttpService {
     }}
   }}
 
-  val pruneBelow = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId, goalId) => { pathEnd {
+  val pruneBelow = path("proofs" / "user" / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId) => { pathEnd {
     get {
-      val request = new PruneBelowRequest(database, userId, proofId, nodeId, goalId)
+      val request = new PruneBelowRequest(database, userId, proofId, nodeId)
       complete(standardCompletion(request))
     }
   }}}

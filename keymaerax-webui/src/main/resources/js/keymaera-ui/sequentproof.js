@@ -179,8 +179,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       }
 
       /** Prunes the proof tree and agenda/deduction path below the specified step ID. */
-      scope.prune = function(goalId) {
-        sequentProofData.prune(scope.userId, scope.proofId, scope.nodeId, goalId);
+      scope.prune = function(nodeId) {
+        sequentProofData.prune(scope.userId, scope.proofId, nodeId);
       }
 
       /* Indicates whether the section has a parent (if its last step has a parent, and the section is not complete) */

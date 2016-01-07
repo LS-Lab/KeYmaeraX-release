@@ -76,18 +76,18 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     },
 
     /** Prunes the proof tree at the specified goal */
-    prune: function(userId, proofId, nodeId, goalId) {
+    prune: function(userId, proofId, nodeId) {
       //@note make model available in closure of function success
       var theProofTree = this.proofTree;
       var theAgenda = this.agenda;
-      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/' + goalId + '/pruneBelow').success(function(data) {
+      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/pruneBelow').success(function(data) {
         // prune proof tree
-        theProofTree.pruneBelow(goalId);
+        theProofTree.pruneBelow(nodeId);
 
         // update agenda: prune deduction paths
-        var agendaItems = theAgenda.itemsByProofStep(goalId);
+        var agendaItems = theAgenda.itemsByProofStep(nodeId);
         $.each(agendaItems, function(i, item) {
-          var deductionIdx = theAgenda.deductionIndexOf(item.id, goalId);
+          var deductionIdx = theAgenda.deductionIndexOf(item.id, nodeId);
           var section = item.deduction.sections[deductionIdx.sectionIdx];
           section.path.splice(0, deductionIdx.pathStepIdx);
           item.deduction.sections.splice(0, deductionIdx.sectionIdx);
