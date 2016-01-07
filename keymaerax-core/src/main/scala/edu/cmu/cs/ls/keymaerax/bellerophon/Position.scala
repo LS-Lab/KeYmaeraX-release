@@ -44,9 +44,9 @@ sealed case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
 
   /** Append child to obtain position of given subexpression. */
-  def +(child: Int): PosInExpr = new PosInExpr(pos :+ child)
-  /** Append child to obtain position of given subexpression by concatenating `p2` to `this`. */
-  def +(child : PosInExpr): PosInExpr = PosInExpr(this.pos ++ child.pos) ensuring(x => this.isPrefixOf(x))
+  def +(appendChild: Int): PosInExpr = new PosInExpr(pos :+ appendChild) ensuring(r => this.isPrefixOf(r))
+  /** Append child to obtain position of given subexpression by concatenating `appendChild` to `this`. */
+  def +(appendChild : PosInExpr): PosInExpr = PosInExpr(this.pos ++ appendChild.pos) ensuring(r => this.isPrefixOf(r))
 
   /** Head: The top-most position of this position */
   def head: Int = {require(pos!=Nil); pos.head}
@@ -101,7 +101,7 @@ sealed trait Position {
   //  def getIndex: Int = index
 
   /** Append child to obtain position of given subexpression by concatenating `p2` to `this`. */
-  def +(child : PosInExpr): Position
+  def +(child: PosInExpr): Position
 
   /** Advances the index by i on top-level positions. */
   @deprecated("Please compute top-level positions yourself")
