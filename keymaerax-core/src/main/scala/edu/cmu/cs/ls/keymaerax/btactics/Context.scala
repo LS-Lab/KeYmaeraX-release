@@ -359,7 +359,8 @@ sealed case class Context[+T <: Expression](ctx: T) {
   // either a term or a formula context, not both
   require(!(signature(ctx).contains(DotFormula) && signature(ctx).contains(DotTerm)), "Contexts are either DotFormula or DotTerm contexts, not both at once: " + ctx)
 
-  /** Return the result of filling the dot placeholder of this context with expression e */
+  /** Return the result of instantiating this context with argument `e`.
+    * That is filling the respective dot placeholder of this context with expression `e`. */
   //@todo why should this return type always be a formula?
   def apply(e: Expression): Formula = e match {
     case f: Formula => instantiate(f)
@@ -368,6 +369,7 @@ sealed case class Context[+T <: Expression](ctx: T) {
     case a: Program => instantiate(a)
   }
 
+  /** Return the result of instantiating this context with an argument `c` which is itself again a context. */
   def apply(c: Context[Formula]): Context[Formula] = new Context(apply(c.ctx))
 
   /** True if this context has a DotFormula so expects a formula as argument */
