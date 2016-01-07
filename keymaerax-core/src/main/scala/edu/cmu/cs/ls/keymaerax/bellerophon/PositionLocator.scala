@@ -6,21 +6,21 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core.Formula
-import edu.cmu.cs.ls.keymaerax.tactics._
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Positions
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-object PositionConverter {
+private[keymaerax] object PositionConverter {
+  //@todo move into object Position.apply at some point when no longer off-by-one errors around.
   /** Converts signed positions to position data structures. */
   def convertPos(seqIdx: Int, inExpr: List[Int] = Nil): Position = {
     require(seqIdx != 0, "Sequent index must be strictly negative (antecedent) or strictly positive (succedent)")
-    if (seqIdx < 0) new AntePosition(-seqIdx - 1, PosInExpr(inExpr))
-    else new SuccPosition(seqIdx - 1, PosInExpr(inExpr))
+    if (seqIdx < 0) AntePosition(-seqIdx - 1, PosInExpr(inExpr))
+    else SuccPosition(seqIdx - 1, PosInExpr(inExpr))
   }
 
-  private[bellerophon] def convertPos(p: edu.cmu.cs.ls.keymaerax.core.SeqPos) : Position = if (p.isAnte) new AntePosition(p.getIndex, HereP) else new SuccPosition(p.getIndex, HereP)
+  private[bellerophon] def convertPos(p: edu.cmu.cs.ls.keymaerax.core.SeqPos) : Position = if (p.isAnte) AntePosition(p.getIndex) else SuccPosition(p.getIndex)
 }
 
 

@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, ExpressionTraversal, FormulaTools, Position, PosInExpr, SubstitutionHelper}
+import edu.cmu.cs.ls.keymaerax.tactics.{ExpressionTraversal, FormulaTools, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 import Augmentors._
 
@@ -23,7 +23,7 @@ object FOQuantifierTactics {
       override def computeExpr(provable: Provable): BelleExpr =
         useAt("exists dual", PosInExpr(1::Nil))(pos) &
           (if (atTopLevel) notL(pos) & base('Rlast) & notR('Rlast)
-           else base(pos.first) & useAt("!! double negation")(pos))
+           else base(pos+0) & useAt("!! double negation")(pos))
     }
   }
 
@@ -53,7 +53,7 @@ object FOQuantifierTactics {
                 )
             } else {
               ProofRuleTactics.cut(axiomInstance) <(
-                cohide2(new AntePosition(sequent.ante.length), pos.topLevel) &
+                cohide2(AntePosition(sequent.ante.length), pos.topLevel) &
                   TactixLibrary.by(CMon(ctx)(Provable.startProof(Sequent(Nil, immutable.IndexedSeq(f), immutable.IndexedSeq(p))))) &
                   implyRi & US(subst, orig) & byUS("all instantiate"),
                 hideR(pos.topLevel) partial

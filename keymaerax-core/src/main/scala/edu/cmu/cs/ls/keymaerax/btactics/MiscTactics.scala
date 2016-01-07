@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.{Position, TacticWrapper, Interpreter, PosInExpr, Tactics}
+import edu.cmu.cs.ls.keymaerax.tactics.{Tactics, Interpreter, TacticWrapper}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 
 import scala.language.postfixOps
@@ -163,7 +163,7 @@ object Idioms {
   /**
    * shift(child, t) does t to positions shifted by child
    */
-  def shift(child: PosInExpr, t: DependentPositionTactic): DependentPositionTactic = shift(p => p.append(child), t)
+  def shift(child: PosInExpr, t: DependentPositionTactic): DependentPositionTactic = shift(p => p + child, t)
 }
 
 /** Creates tactic objects */

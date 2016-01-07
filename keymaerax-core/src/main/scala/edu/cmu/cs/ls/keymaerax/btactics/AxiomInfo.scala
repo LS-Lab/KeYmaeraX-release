@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentTactic, DependentPositionTa
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 
 import scala.collection.immutable.HashMap
@@ -345,14 +345,14 @@ object DerivationInfo {
       {case () => (fml:Formula) => new DependentPositionTactic("cutL") {
         /** Create the actual tactic to be applied at position pos */
         override def factory(pos: Position): DependentTactic = new DependentTactic("cutL") {
-          ProofRuleTactics.cutL(fml)(pos)
+          ProofRuleTactics.cutL(fml)(pos/*.checkAnte.checkTop*/)
         }
       }}),
     new InputPositionTacticInfo("cutR", "cut", List(FormulaArg("cutFormula")),
       {case () => (fml:Formula) => new DependentPositionTactic("cutR") {
         /** Create the actual tactic to be applied at position pos */
         override def factory(pos: Position): DependentTactic = new DependentTactic("cutR") {
-          ProofRuleTactics.cutR(fml)(pos)
+          ProofRuleTactics.cutR(fml)(pos/*.checkSucc.checkTop*/)
         }
       }}),
     new InputPositionTacticInfo("cutLR", "cut", List(FormulaArg("cutFormula")),

@@ -4,9 +4,9 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
-import edu.cmu.cs.ls.keymaerax.tactics.{SuccPosition, AntePosition, Position}
 
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron tactic expressions.
@@ -159,15 +159,17 @@ abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
   * Useful for storing execution traces.
   */
 case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic, locator: PositionLocator) extends BelleExpr {
+  import Augmentors._
   final def computeResult(provable: Provable) : Provable = try { locator match {
       case Fixed(pos, shape, exact) => shape match {
-        case Some(f) =>
+        case Some(f:Formula) =>
           require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
-          if ((exact && provable.subgoals.head(pos) == f) ||
-              (!exact && UnificationMatch.unifiable(f, provable.subgoals.head(pos)).isDefined)) {
+          //@note (implicit .apply needed to ensure subposition to pos.inExpr
+          if ((exact && provable.subgoals.head.apply(pos) == f) ||
+              (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.apply(pos)).isDefined)) {
             positionTactic.computeResult(provable, pos)
           } else {
-            throw new BelleError("Formula " + provable.subgoals.head(pos) + " at position " + pos +
+            throw new BelleError("Formula " + provable.subgoals.head.apply(pos) + " at position " + pos +
               " is not of expected shape " + f)
           }
         case None => positionTactic.computeResult(provable, pos)
@@ -175,8 +177,8 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
       case Find(goal, shape, start, exact) =>
         require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
         tryAllAfter(provable, goal, shape, start, exact, null)
-      case LastAnte(goal) => positionTactic.computeResult(provable, new AntePosition(provable.subgoals(goal).ante.size-1))
-      case LastSucc(goal) => positionTactic.computeResult(provable, new SuccPosition(provable.subgoals(goal).succ.size-1))
+      case LastAnte(goal) => positionTactic.computeResult(provable, AntePosition(provable.subgoals(goal).ante.size-1))
+      case LastSucc(goal) => positionTactic.computeResult(provable, SuccPosition(provable.subgoals(goal).succ.size-1))
     }
   } catch {
     case be: BelleError => throw be
@@ -279,16 +281,18 @@ abstract case class InputPositionTactic[T](input: T, pos: Position) extends Bell
 }
 
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: PositionLocator) extends DependentTactic(pt.name) {
+  import Augmentors._
   final override def computeExpr(v: BelleValue): BelleExpr = locator match {
     case Fixed(pos, shape, exact) => shape match {
       case Some(f) => v match {
         case BelleProvable(provable, _) =>
           require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
-          if ((exact && provable.subgoals.head(pos) == f) ||
-            (!exact && UnificationMatch.unifiable(f, provable.subgoals.head(pos)).isDefined)) {
+          //@note (implicit .apply needed to ensure subposition to pos.inExpr
+          if ((exact && provable.subgoals.head.apply(pos) == f) ||
+            (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.apply(pos)).isDefined)) {
             pt.factory(pos).computeExpr(v)
           } else {
-            throw new BelleError("Formula " + provable.subgoals.head(pos) + " at position " + pos +
+            throw new BelleError("Formula " + provable.subgoals.head.apply(pos) + " at position " + pos +
               " is not of expected shape " + f)
           }
       }
@@ -296,8 +300,8 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: P
     }
     case Find(goal, shape, start, exact) =>
       tryAllAfter(goal, shape, start, exact, null)
-    case LastAnte(goal) => pt.factory(v match { case BelleProvable(provable, _) => new AntePosition(provable.subgoals(goal).ante.size-1) })
-    case LastSucc(goal) => pt.factory(v match { case BelleProvable(provable, _) => new SuccPosition(provable.subgoals(goal).succ.size-1) })
+    case LastAnte(goal) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition(provable.subgoals(goal).ante.size-1) })
+    case LastSucc(goal) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition(provable.subgoals(goal).succ.size-1) })
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
