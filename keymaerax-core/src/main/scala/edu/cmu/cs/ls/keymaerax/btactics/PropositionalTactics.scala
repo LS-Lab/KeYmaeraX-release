@@ -5,7 +5,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 
 import scala.language.postfixOps
 

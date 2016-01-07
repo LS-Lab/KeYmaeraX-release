@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
 
 /**
  * If imported, automatically augments core data structures with convenience wrappers for tactic purposes.

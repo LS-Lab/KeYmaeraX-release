@@ -6,7 +6,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.{HereP, PosInExpr, StaticSemanticsTools}
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import PosInExpr.HereP
 
 import scala.collection.immutable._
 
@@ -87,7 +88,7 @@ object Context {
       fPos = fPos.dropRight(1)
     }
     (PosInExpr(fPos),PosInExpr(tPos))
-  } ensuring(r => r._1.append(r._2) == pos, "Concatenating split positions retains original position"
+  } ensuring(r => r._1 + r._2 == pos, "Concatenating split positions retains original position"
     ) ensuring(r => at(f,r._1)._1.isFormulaContext && at(at(f,r._1)._2,r._2)._1.isTermContext, "Split into formula and term context")
 
   // at implementation

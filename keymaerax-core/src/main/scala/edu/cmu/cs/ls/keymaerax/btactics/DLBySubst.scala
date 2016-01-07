@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, NamedTactic, SequentType,
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Position, PosInExpr, SubstitutionHelper}
+import edu.cmu.cs.ls.keymaerax.tactics.SubstitutionHelper
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 
@@ -133,7 +133,7 @@ object DLBySubst {
             cut(Imply(qPhi, Box(prg, qPhi))) <(
               /* use */ (implyL('Llast) <(
                 hideR(pos.topLevel) partial /* result */,
-                cohide2(new AntePosition(sequent.ante.length), pos.topLevel) &
+                cohide2(AntePosition(sequent.ante.length), pos.topLevel) &
                   assertT(1, 1) & assertE(Box(prg, qPhi), "abstractionb: quantified box")('Llast) &
                   assertE(b, "abstractionb: original box")('Rlast) & ?(monb) &
                   assertT(1, 1) & assertE(qPhi, "abstractionb: quantified predicate")('Llast) &
@@ -244,7 +244,7 @@ object DLBySubst {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.at(pos) match {
         case (ctx, Box(a, _)) =>
-          cutR(ctx(Box(a, c)))(pos) <(
+          cutR(ctx(Box(a, c)))(pos.checkSucc.top) <(
             /* use */ /*label(BranchLabels.genUse)*/ ident,
             /* show */(cohide(pos.top) & CMon(pos.inExpr+1) & implyR(pos.top)) partial //& label(BranchLabels.genShow)
           )
@@ -285,7 +285,7 @@ object DLBySubst {
           val conditional = AntePosition(sequent.ante.length)
           // [a]cut and its position in assumptions
           val cutted = Box(a, C)
-          cutR(ctx(conditioned))(pos) <(
+          cutR(ctx(conditioned))(pos.checkSucc.top) <(
             /* use */ assertE(conditioned, "[a](cut->post)")(pos) partial, //& label(BranchLabels.cutUseLbl)
             /* show */
             assertE(Imply(ctx(conditioned),ctx(Box(a,post))),"original implication")(pos.top) & CMon(pos.inExpr) &
@@ -342,7 +342,7 @@ object DLBySubst {
             else And(invariant, True)
           cut(Box(Loop(a), q)) <(
             /* use */
-            implyRi(AntePos(sequent.ante.length), pos) & cohide('Rlast) & CMon(pos.inExpr+1) & implyR(1) &
+            implyRi(AntePos(sequent.ante.length), pos.checkSucc.top) & cohide('Rlast) & CMon(pos.inExpr+1) & implyR(1) &
               (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial /* indUse */,
             /* show */
             hide(pos, b) & useAt("I induction")('Rlast) & andR('Rlast) <(
@@ -409,7 +409,7 @@ object DLBySubst {
   def assignbExists(f: Term): DependentPositionTactic = "[:=] assign exists" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(Exists(vars, p)) =>
       require(vars.size == 1, "Cannot handle existential lists")
-      cutR(Box(Assign(vars.head, f), p))(pos) <(
+      cutR(Box(Assign(vars.head, f), p))(pos.checkSucc.top) <(
         skip,
         cohide(pos.top) & byUS("[:=] assign exists")
         )

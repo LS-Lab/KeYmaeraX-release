@@ -9,7 +9,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms.shift
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{andR, abstractionb, close, debug, implyR, QE, skip}
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Position}
 
 import scala.collection.immutable._
 import scala.language.postfixOps

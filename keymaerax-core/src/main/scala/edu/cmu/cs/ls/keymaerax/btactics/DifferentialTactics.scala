@@ -1,6 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position, SuccPosition}
+import PosInExpr.HereP
 import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
@@ -108,9 +110,9 @@ object DifferentialTactics {
             (implyR(pos) & andR(pos)) <(
               close | QE,
               //@note derive before DE to keep positions easier
-              derive(pos.append(PosInExpr(1::Nil))) &
+              derive(pos + PosInExpr(1::Nil)) &
                 DE(pos) &
-                Dassignb(pos.append(PosInExpr(1::Nil)))*getODEDim(sequent,pos) &
+                Dassignb(pos + PosInExpr(1::Nil))*getODEDim(sequent,pos) &
                 //@note DW after DE to keep positions easier
                 (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
                 abstractionb(pos) & (close | QE)
@@ -352,7 +354,7 @@ object DifferentialTactics {
             cutLR(withxprime)(pos.topLevel) <(
               /* use */ skip,
               /* show */ cohide(pos.top) & CMon(formulaPos(sequent(pos.topLevel), pos.inExpr)) & cut(axiom) <(
-              useAt("all eliminate")(-1) & eqL2R(new AntePosition(0))(1) & useAt("-> self")(1) & close,
+              useAt("all eliminate")(-1) & eqL2R(AntePosition(0))(1) & useAt("-> self")(1) & close,
               cohide('Rlast) & byUS(DerivedAxioms.Dvariable))
               )
           }

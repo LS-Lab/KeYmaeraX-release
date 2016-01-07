@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.Position
+import edu.cmu.cs.ls.keymaerax.bellerophon.Position
 
 /**
  * Created by smitsch on 12/23/14.
