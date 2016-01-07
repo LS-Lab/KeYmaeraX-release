@@ -342,7 +342,7 @@ object DifferentialTactics {
         case Some(Differential(x: Variable)) =>
           if (OPTIMIZED) {
             if (DEBUG) println("Dvariable " + keyPart + " on " + x)
-            assert(Differential(x) == sequent.sub(pos + 0).get, "expected child: " + sequent.sub(pos + 0).get + " same as " + Differential(x))
+            assert(Differential(x) == sequent.sub(pos + PosInExpr(0::Nil)).get, "expected child: " + sequent.sub(pos + PosInExpr(0::Nil)).get + " same as " + Differential(x))
             val fact = UnificationMatch.apply(keyPart, Differential(x)).toForward(axiom.provable)
             CE(fact)(pos)
           } else {

@@ -21,7 +21,7 @@ object FOQuantifierTactics {
       override def computeExpr(provable: Provable): BelleExpr =
         useAt("exists dual", PosInExpr(1::Nil))(pos) &
           (if (atTopLevel) notL(pos) & base('Rlast) & notR('Rlast)
-           else base(pos+0) & useAt("!! double negation")(pos))
+           else base(pos+PosInExpr(0::Nil)) & useAt("!! double negation")(pos))
     }
   }
 

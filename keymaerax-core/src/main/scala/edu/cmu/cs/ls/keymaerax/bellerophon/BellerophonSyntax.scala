@@ -165,8 +165,8 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
         case Some(f:Formula) =>
           require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
           //@note (implicit .apply needed to ensure subposition to pos.inExpr
-          if ((exact && provable.subgoals.head.apply(pos) == f) ||
-              (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.apply(pos)).isDefined)) {
+          if ((exact && provable.subgoals.head.sub(pos).contains(f)) ||
+              (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
             positionTactic.computeResult(provable, pos)
           } else {
             throw new BelleError("Formula " + provable.subgoals.head.apply(pos) + " at position " + pos +
@@ -175,6 +175,7 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
         case None => positionTactic.computeResult(provable, pos)
       }
       case Find(goal, shape, start, exact) =>
+        require(start.isTopLevel, "Start position must be top-level in sequent")
         require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
         tryAllAfter(provable, goal, shape, start, exact, null)
       case LastAnte(goal) => positionTactic.computeResult(provable, AntePosition(provable.subgoals(goal).ante.size-1))
@@ -191,13 +192,13 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
     if (pos.isIndexDefined(provable.subgoals(goal))) {
       try {
         shape match {
-          case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos)).isDefined =>
+          case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isDefined =>
             positionTactic.computeResult(provable, pos)
-          case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos)).isEmpty =>
-            tryAllAfter(provable, goal, shape, pos+1, exact, new BelleError(s"Formula is not of expected shape", cause))
-          case Some(f) if exact && provable.subgoals(goal)(pos) == f => positionTactic.computeResult(provable, pos)
-          case Some(f) if exact && provable.subgoals(goal)(pos) != f =>
-            tryAllAfter(provable, goal, shape, pos+1, exact, new BelleError(s"Formula is not of expected shape", cause))
+          case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isEmpty =>
+            tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
+          case Some(f) if exact && provable.subgoals(goal)(pos.top) == f => positionTactic.computeResult(provable, pos)
+          case Some(f) if exact && provable.subgoals(goal)(pos.top) != f =>
+            tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
           case None => positionTactic.computeResult(provable, pos)
         }
       } catch {
@@ -207,7 +208,7 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
           else new CompoundException(
             new BelleError(s"Position tactic ${positionTactic.prettyString} is not applicable at ${pos.prettyString}", e),
             cause)
-          tryAllAfter(provable, goal, shape, pos+1, exact, newCause)
+          tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, newCause)
       }
     } else throw cause
 
@@ -288,17 +289,18 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: P
         case BelleProvable(provable, _) =>
           require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
           //@note (implicit .apply needed to ensure subposition to pos.inExpr
-          if ((exact && provable.subgoals.head.apply(pos) == f) ||
-            (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.apply(pos)).isDefined)) {
+          if ((exact && provable.subgoals.head.sub(pos).contains(f)) ||
+            (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
             pt.factory(pos).computeExpr(v)
           } else {
-            throw new BelleError("Formula " + provable.subgoals.head.apply(pos) + " at position " + pos +
+            throw new BelleError("Formula " + provable.subgoals.head.sub(pos) + " at position " + pos +
               " is not of expected shape " + f)
           }
       }
       case None => pt.factory(pos).computeExpr(v)
     }
     case Find(goal, shape, start, exact) =>
+      require(start.isTopLevel, "Start position must be top-level in sequent")
       tryAllAfter(goal, shape, start, exact, null)
     case LastAnte(goal) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition(provable.subgoals(goal).ante.size-1) })
     case LastSucc(goal) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition(provable.subgoals(goal).succ.size-1) })
@@ -312,13 +314,13 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: P
         if (pos.isIndexDefined(provable.subgoals(goal))) {
           try {
             shape match {
-              case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos)).isDefined =>
+              case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isDefined =>
                 pt.factory(pos).computeExpr(v)
-              case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos)).isEmpty =>
-                tryAllAfter(goal, shape, pos+1, exact, new BelleError(s"Formula is not of expected shape", cause))
-              case Some(f) if exact && f == provable.subgoals(goal)(pos) => pt.factory(pos).computeExpr(v)
-              case Some(f) if exact && f != provable.subgoals(goal)(pos) =>
-                tryAllAfter(goal, shape, pos+1, exact, new BelleError(s"Formula is not of expected shape", cause))
+              case Some(f) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isEmpty =>
+                tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
+              case Some(f) if exact && f == provable.subgoals(goal)(pos.top) => pt.factory(pos).computeExpr(v)
+              case Some(f) if exact && f != provable.subgoals(goal)(pos.top) =>
+                tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleError(s"Formula is not of expected shape", cause))
               case None => pt.factory(pos).computeExpr(v)
             }
           } catch {
@@ -328,7 +330,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: P
               else new CompoundException(
                 new BelleError(s"Dependent position tactic ${pt.prettyString} is not applicable at ${pos.prettyString}", e),
                 cause)
-              tryAllAfter(goal, shape, pos+1, exact, newCause)
+              tryAllAfter(goal, shape, pos.advanceIndex(1), exact, newCause)
           }
         } else throw cause
       case _ => pt.factory(pos).computeExpr(v) // cannot search recursively, because don't know when to abort

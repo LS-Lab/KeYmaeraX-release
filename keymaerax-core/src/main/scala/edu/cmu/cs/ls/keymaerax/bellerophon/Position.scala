@@ -100,10 +100,12 @@ sealed trait Position {
 
   //  def getIndex: Int = index
 
-  /** Append child to obtain position of given subexpression. */
-  def +(child: Int): Position = this + PosInExpr(child::Nil)
   /** Append child to obtain position of given subexpression by concatenating `p2` to `this`. */
   def +(child : PosInExpr): Position
+
+  /** Advances the index by i on top-level positions. */
+  @deprecated("Please compute top-level positions yourself")
+  def advanceIndex(i: Int): Position
 
   /**
     * Check whether top-level index of this position is defined in given sequent (ignoring inExpr).
@@ -166,11 +168,14 @@ trait TopPosition extends Position {
 trait AntePosition extends Position {
   final override def isAnte: Boolean = true
   override def top: AntePos
-  //override def checkTop: AntePos
   final def checkAnte: AntePosition = this
   final def checkSucc = throw new IllegalArgumentException("Antecedent position was expected to be a succedent position: " + this)
   override def topLevel: AntePosition with TopPosition
-  override def +(child: Int): AntePosition = this + PosInExpr(child::Nil)
+  override def advanceIndex(i: Int): AntePosition = {
+    require(isTopLevel, "Advance index only at top level")
+    require(index+i >= 0, "Cannot advance to negative index")
+    AntePosition(index+i, inExpr)
+  }
   def +(child : PosInExpr): AntePosition
 }
 
@@ -180,11 +185,14 @@ trait AntePosition extends Position {
 trait SuccPosition extends Position {
   final override def isAnte: Boolean = false
   override def top: SuccPos
-  //override def checkTop: SuccPos
   final def checkAnte = throw new IllegalArgumentException("Succedent position was expected to be an antecedent position: " + this)
   final def checkSucc: SuccPosition = this
   override def topLevel: SuccPosition with TopPosition
-  override def +(child: Int): SuccPosition = this + PosInExpr(child::Nil)
+  override def advanceIndex(i: Int): SuccPosition = {
+    require(isTopLevel, "Advance index only at top level")
+    require(index+i >= 0, "Cannot advance to negative index")
+    SuccPosition(index+i, inExpr)
+  }
   def +(child : PosInExpr): SuccPosition
 }
 
