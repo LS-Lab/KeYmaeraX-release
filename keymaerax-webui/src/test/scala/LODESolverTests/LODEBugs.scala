@@ -1,4 +1,4 @@
-package LODESolverTests
+package edu.tactics.LODESolverTests
 
 import testHelper.TacticTestSuite
 import edu.cmu.cs.ls.keymaerax.core.SuccPos
