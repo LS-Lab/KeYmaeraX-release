@@ -9,13 +9,19 @@
                         {{proofName}}
                     </span>
                 </span>
-                <div class="nav">
+                <li class="nav">
                     <ul class="nav navbar-nav">
                         <li><a ng-click="doTactic('master')"><span class="fa fa-play"> Auto</span></a></li>
                         <li><a ng-click="doTactic('normalize')"><span class="fa fa-magic"> Normalize</span></a></li>
                         <li><a ng-click="undoLastStep()"><span class="fa fa-undo"> Step back</span></a></li>
                     </ul>
                     <ul class="nav navbar-nav pull-right">
+                        <li><a ng-controller="ProofMessagesCtrl">
+                            <k4-auto-hide-alert message="proofMessage.text"
+                                                is-visible="proofMessage.isVisible" timeout="3000">
+                            </k4-auto-hide-alert>
+                            </a>
+                        </li>
                         <li><a ng-click="isNavbarCollapsed=!isNavbarCollapsed"><span class="fa fa-bars"></span></a></li>
                     </ul>
                 </div>
@@ -98,7 +104,7 @@
                             </ul>
                         </li>
                     </ul>
-                    <form class="navbar-form navbar-right" role="search">
+                    <form class="nav navbar-nav navbar-form navbar-right" role="search">
                         <div class="form-group">
                             <input type="text" class="form-control" placeholder="Custom tactic">
                         </div>
@@ -160,7 +166,8 @@
                                  deduction-path="task.deduction"
                                  proof-tree="prooftree"
                                  agenda="agenda"
-                                 read-only="false"></k4-sequentproof>
+                                 read-only="false"
+                                 on-proof-error="onProofError(message)"></k4-sequentproof>
             </uib-tab>
         </uib-tabset>
     </div>

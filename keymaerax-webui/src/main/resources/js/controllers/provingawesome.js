@@ -34,7 +34,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.agenda = sequentProofData.agenda;
     $scope.prooftree = sequentProofData.proofTree;
 
-    $rootScope.$on('agendaIsEmpty', function() {
+    $rootScope.$on('agenda.isEmpty', function() {
       $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId + '/progress').success(function(data) {
         if (data.status == 'closed') {
           var modalInstance = $uibModal.open({
@@ -280,6 +280,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       //@todo extend RestApi
       $http.post("proofs/user/" + userId + "/" + proofId + "/" + nodeId + "/name/" + newName, {});
     }
+
+    $scope.onProofError = function(message) { $rootScope.$emit('proof.message', message); }
   });
 
 angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',

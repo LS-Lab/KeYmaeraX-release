@@ -135,7 +135,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
             showErrorMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " + scope.nodeId + " but got " + data.parent.id)
           }
         }).error(function(data) {
-          console.log("Warning: Left-click on a formula with no applicable axiom/tactic")
+          scope.onProofError({message: "No axiom/tactic applicable to that formula"});
         });
       }
 
@@ -201,7 +201,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
             deductionPath: '=',
             proofTree: '=',
             agenda: '=',
-            readOnly: '=?'
+            readOnly: '=?',
+            onProofError: '&'
         },
         link: link,
         templateUrl: 'partials/singletracksequentproof.html'
