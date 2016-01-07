@@ -1,4 +1,4 @@
-package btactics
+package edu.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivedAxioms, TactixLibrary}

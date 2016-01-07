@@ -30,6 +30,7 @@ import scala.collection.immutable
 
 /**
  * Positions of formulas in a sequent, i.e. antecedent or succedent positions.
+ * @see [[SeqPos.apply()]]
  */
 sealed trait SeqPos {
   /** Whether this position is in the antecedent on the left of the sequent arrow */
@@ -57,7 +58,7 @@ sealed trait SeqPos {
  * Antecedent Positions of formulas in a sequent.
  * @param index the position base 0 in antecedent.
  */
-case class AntePos(private[core] val index: Int) extends SeqPos {
+case class AntePos private[edu] (private[core] val index: Int) extends SeqPos {
   def isAnte: Boolean = true
   /** The position base 0 in antecedent. */
   def getIndex: Int = index
@@ -67,7 +68,7 @@ case class AntePos(private[core] val index: Int) extends SeqPos {
  * Antecedent Positions of formulas in a sequent.
  * @param index the position base 0 in succedent.
  */
-case class SuccPos(private[core] val index: Int) extends SeqPos {
+case class SuccPos private[edu] (private[core] val index: Int) extends SeqPos {
   def isAnte: Boolean = false
   /** The position base 0 in succedent. */
   def getIndex: Int = index
@@ -75,6 +76,7 @@ case class SuccPos(private[core] val index: Int) extends SeqPos {
 
 object SeqPos {
   /**
+   * Sequent position of signed index `signedPos` where positive is succedent and negative antecedent.
    * @param signedPos the signed integer position of the formula in the antecedent or succedent, respectively.
    *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
    *  Positive numbers indicate succedent positions, 1, 2, 3.

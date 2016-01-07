@@ -1,6 +1,5 @@
-package bellerophon
+package edu.btactics
 
-import btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
 import edu.cmu.cs.ls.keymaerax.btactics.ToolTactics
 import edu.cmu.cs.ls.keymaerax.core.Sequent

@@ -1,4 +1,4 @@
-package bellerophon
+package edu.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{Legacy, Idioms}

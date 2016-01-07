@@ -306,7 +306,7 @@ object DifferentialTactics {
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
       cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b))), h), p)))(pos) <(
         /* use */ skip,
-        /* show */ cohide(pos.topLevel) &
+        /* show */ cohide(pos.top) &
           /* rename first, otherwise byUS fails */ ProofRuleTactics.uniformRenaming("y".asVariable, y) &
           equivifyR('Rlast) & commuteEquivR('Rlast) & byUS("DG differential ghost")
         )
@@ -334,24 +334,24 @@ object DifferentialTactics {
     *       Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.
    */
   lazy val Dvariable: DependentPositionTactic = new DependentPositionTactic("x' derive variable") {
+    private val OPTIMIZED = true //@todo true
+    private val axiom = AxiomInfo("x' derive var commuted")
+    private val (keyCtx:Context[_],keyPart) = axiom.formula.at(PosInExpr(1::Nil))
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      private val OPTIMIZED = false //@todo true
 
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(Differential(x: Variable)) =>
           if (OPTIMIZED) {
-             val axiom = AxiomInfo("x' derive var commuted")
-             val (keyCtx:Context[_],keyPart) = axiom.formula.at(PosInExpr(0::Nil))
             if (DEBUG) println("Dvariable " + keyPart + " on " + x)
-            assert(x == sequent.sub(pos + 0).get, "expected child")
-            val fact = UnificationMatch.apply(keyPart, x).toForward(axiom.provable)
+            assert(Differential(x) == sequent.sub(pos + 0).get, "expected child: " + sequent.sub(pos + 0).get + " same as " + Differential(x))
+            val fact = UnificationMatch.apply(keyPart, Differential(x)).toForward(axiom.provable)
             CE(fact)(pos)
           } else {
             val withxprime: Formula = sequent.replaceAt(pos, DifferentialSymbol(x)).asInstanceOf[Formula]
             val axiom = s"\\forall ${x.prettyString} (${x.prettyString})' = ${x.prettyString}'".asFormula
             cutLR(withxprime)(pos.topLevel) <(
               /* use */ skip,
-              /* show */ cohide(pos.topLevel) & CMon(formulaPos(sequent(pos.topLevel), pos.inExpr)) & cut(axiom) <(
+              /* show */ cohide(pos.top) & CMon(formulaPos(sequent(pos.topLevel), pos.inExpr)) & cut(axiom) <(
               useAt("all eliminate")(-1) & eqL2R(new AntePosition(0))(1) & useAt("-> self")(1) & close,
               cohide('Rlast) & byUS(DerivedAxioms.Dvariable))
               )

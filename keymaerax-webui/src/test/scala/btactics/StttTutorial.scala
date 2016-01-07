@@ -2,7 +2,7 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
-package btactics
+package edu.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{DoAll, TheType}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._

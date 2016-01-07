@@ -149,7 +149,7 @@ object FOQuantifierTactics {
             immutable.IndexedSeq(Imply("p(t())".asFormula, Exists(x::Nil, PredOf(Function("p", None, Real, Bool), x)))))
 
           cut(Imply(fml, Exists(x :: Nil, fmlRepl))) <(
-            /* use */ implyL('Llast) <(closeId, hide(fml)(pos) partial) partial,
+            /* use */ implyL('Llast) <(closeId, hide(pos,fml) partial) partial,
             /* show */ cohide('Rlast) & ProofRuleTactics.US(subst, origin) & byUS("exists generalize")
             )
         case _ => throw new BelleError("Position " + pos + " must refer to a formula in sequent " + sequent)
@@ -196,7 +196,7 @@ object FOQuantifierTactics {
         val genFml = Forall(immutable.Seq(quantified), SubstitutionHelper.replaceFree(sequent(pos))(t, quantified))
         cut(genFml) <(
           /* use */ allL(quantified, t)('Llast) & closeId,
-          /* show */ hide(pos) partial
+          /* show */ hide(pos.top) partial
         )
       }
     }

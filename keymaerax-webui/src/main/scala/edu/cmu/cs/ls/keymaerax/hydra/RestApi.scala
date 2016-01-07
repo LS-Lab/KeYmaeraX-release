@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
-import edu.cmu.cs.ls.keymaerax.btactics.{Find, Fixed}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Find, Fixed}
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import _root_.edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
 import akka.actor.Actor
