@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, StaticSemanticsTools}
+import edu.cmu.cs.ls.keymaerax.tactics.{HereP, PosInExpr, StaticSemanticsTools}
 
 import scala.collection.immutable._
 

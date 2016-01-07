@@ -5,6 +5,7 @@
 
 // favoring immutable Seqs
 
+import edu.cmu.cs.ls.keymaerax.btactics.Generate
 import edu.cmu.cs.ls.keymaerax.tactics._
 import ProofNode.ProofStep
 import org.scalatest.{Matchers, FlatSpec}
@@ -23,7 +24,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
 import java.io._
 import scala.language.postfixOps
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
-import edu.cmu.cs.ls.keymaerax.tactics.{Generate, TacticWrapper, TacticLibrary, Tactics}
+import edu.cmu.cs.ls.keymaerax.tactics.{TacticWrapper, TacticLibrary, Tactics}
 
 class TermTests extends FlatSpec with Matchers{
 

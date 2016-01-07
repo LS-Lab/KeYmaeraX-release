@@ -2,6 +2,8 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+
+import edu.cmu.cs.ls.keymaerax.btactics.Generate
 import edu.cmu.cs.ls.keymaerax.core.{AntePos, Expression, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}

@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Generator, NoneGenerate, Position, PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Position, PosInExpr, SuccPosition}
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 

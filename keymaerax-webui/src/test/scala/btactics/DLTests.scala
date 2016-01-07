@@ -1,11 +1,11 @@
 package edu.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
+import edu.cmu.cs.ls.keymaerax.btactics.ConfigurableGenerate
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.assignbExists
 import edu.cmu.cs.ls.keymaerax.core.{Box, Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.ConfigurableGenerate
 
 import scala.collection.immutable.IndexedSeq
 

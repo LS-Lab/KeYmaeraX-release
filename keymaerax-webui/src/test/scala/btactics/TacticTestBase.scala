@@ -1,11 +1,11 @@
 package edu.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, SequentialInterpreter}
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivedAxioms, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerate, NoneGenerate, DerivedAxioms, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.tactics.{NoneGenerate, ConfigurableGenerate}
+import edu.cmu.cs.ls.keymaerax.tactics.ConfigurableGenerate
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 

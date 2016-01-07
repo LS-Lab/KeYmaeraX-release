@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction, TraverseToPosition}
+import edu.cmu.cs.ls.keymaerax.btactics.Generator
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import NNFRewrite.rewriteDoubleNegationEliminationT

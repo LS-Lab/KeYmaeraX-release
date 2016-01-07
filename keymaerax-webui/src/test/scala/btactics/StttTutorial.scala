@@ -5,10 +5,10 @@
 package edu.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{DoAll, TheType}
+import edu.cmu.cs.ls.keymaerax.btactics.ConfigurableGenerate
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Imply, Box}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.ConfigurableGenerate
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
 

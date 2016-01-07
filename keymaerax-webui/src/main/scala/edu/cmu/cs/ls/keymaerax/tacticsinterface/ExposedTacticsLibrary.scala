@@ -4,8 +4,9 @@
 */
 package edu.cmu.cs.ls.keymaerax.tacticsinterface
 
+import edu.cmu.cs.ls.keymaerax.btactics.NoneGenerate
 import edu.cmu.cs.ls.keymaerax.core.Formula
-import edu.cmu.cs.ls.keymaerax.tactics.{HybridProgramTacticsImpl, NoneGenerate, Tactics, TacticLibrary}
+import edu.cmu.cs.ls.keymaerax.tactics.{HybridProgramTacticsImpl, Tactics, TacticLibrary}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
 
 /**

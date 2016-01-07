@@ -2,9 +2,10 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
-package edu.cmu.cs.ls.keymaerax.tactics
+package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.Position
 
 /**
  * Created by smitsch on 12/23/14.

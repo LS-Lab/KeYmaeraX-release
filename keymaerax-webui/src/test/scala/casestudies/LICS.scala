@@ -4,6 +4,7 @@
 */
 package casestudies
 
+import edu.cmu.cs.ls.keymaerax.btactics.Generate
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.locateAnte

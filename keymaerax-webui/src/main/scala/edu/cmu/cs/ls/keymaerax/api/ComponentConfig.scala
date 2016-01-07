@@ -4,10 +4,11 @@
 */
 package edu.cmu.cs.ls.keymaerax.api
 
+import edu.cmu.cs.ls.keymaerax.btactics.ConfigurableGenerate
 import edu.cmu.cs.ls.keymaerax.core.{Program, Formula}
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
-import edu.cmu.cs.ls.keymaerax.tactics.{TacticLibrary2, ConfigurableGenerate}
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary2
 
 /**
  * Dependency injection configuration (production system).
