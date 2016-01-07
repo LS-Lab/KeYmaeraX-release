@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  * [[ProofRuleTactics]] contains tactical implementations of the propositional sequent calculus
  * and other proof rules that are implemented by KeYmaera X.
  * @author Nathan Fulton
+ * @see [[SequentCalculi]]
  */
 object ProofRuleTactics {
   //@note Rule.LAX_MODE not accessible outside core

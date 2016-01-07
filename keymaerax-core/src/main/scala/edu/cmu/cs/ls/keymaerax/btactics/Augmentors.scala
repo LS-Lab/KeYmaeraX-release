@@ -8,7 +8,24 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
 
 /**
- * If imported, automatically augments core data structures with convenience wrappers for tactic purposes.
+ * If imported, automatically augments core data structures with convenience wrappers for tactic purposes
+ * such as subexpression positioning, context splitting, and replacements.
+  *
+ * @example To use this implicit augmentation automatically, import it via
+  * {{{
+  *   import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+  * }}}
+  * Then use it as if its methods were part of the data structures
+  * {{{
+  *   val parser = KeYmaeraXParser
+  *   val f = parser("x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1")
+  *   // will obtain the x>=1 part
+  *   val someSub = f.sub(PosInExpr(1::1::Nil))
+  *   println(someSub)
+  *   // construct x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x^2>y
+  *   val other = f.replaceAt(PosInExpr(1::1::Nil), parser("x^2>y"))
+  *   println(other)
+  * }}}
  * @author Andre Platzer
  * @see [[Context]]
  */

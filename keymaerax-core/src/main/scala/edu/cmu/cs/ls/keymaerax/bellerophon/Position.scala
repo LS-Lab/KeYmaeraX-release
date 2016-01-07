@@ -21,7 +21,7 @@ import PosInExpr.HereP
  *   print(FormulaAugmentor(fml).sub(PosInExpr(0::0::Nil)))        // x>2
 
  *   // implicitly use FormulaAugmentor functions on formulas
- *   import FormulaAugmentor._
+ *   import Augmentors._
  *   print(fml.sub(PosInExpr(0::0::Nil)))        // x>2;
 
  *   print(fml.sub(PosInExpr(0::1::Nil)))        // x+1<9
@@ -35,9 +35,12 @@ import PosInExpr.HereP
  *   print(fml.sub(PosInExpr(1::0::1::Nil)))     // y:=0;
  *   print(fml.sub(PosInExpr(1::0::0::1::Nil)))  // 2*x+1
  * }}}
- * @see [[edu.cmu.cs.ls.keymaerax.btactics.Context.at()
+ * @see [[edu.cmu.cs.ls.keymaerax.btactics.Context.at()]]
+ * @see [[edu.cmu.cs.ls.keymaerax.btactics.Context.replaceAt()]]
+ * @see [[edu.cmu.cs.ls.keymaerax.btactics.Context.splitPos()]]
+ * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors]]
  */
-case class PosInExpr(pos: List[Int] = Nil) {
+sealed case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
 
   /** Append child to obtain position of given subexpression. */
@@ -76,7 +79,7 @@ object PosInExpr {
   * @todo Position should essentially become a nice name for a pair of a SeqPos and a PosInExpr.
   * @see [[SeqPos]]
   */
-trait Position {
+sealed trait Position {
 
   /** The position within formula */
   def inExpr: PosInExpr

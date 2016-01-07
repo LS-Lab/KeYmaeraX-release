@@ -12,20 +12,20 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * - `[[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]]` Unification-based Uniform Substitution Calculus
   *
   *   - Tactic tools
-  *     - [[edu.cmu.cs.ls.keymaerax.tactics.Position]]: Tactic positioning types.
-  *     - [[edu.cmu.cs.ls.keymaerax.btactics.UnificationMatch]]: Unification and matchers.
-  *     - [[RenUSubst]]: Renaming uniform substitutions, combining uniform renaming with uniform substitution.
-  *     - [[edu.cmu.cs.ls.keymaerax.tactics.Augmentors]]: Implicit convenience additions of helper functions to formulas, terms, programs, sequents.
-  *     - [[Context]]: Convenience representation of formulas used as contexts that provide ways of substituting expressions in.
+  *     - [[edu.cmu.cs.ls.keymaerax.bellerophon.Position]]: Tactic positioning types.
+  *     - [[edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch]]: Unification and matchers.
+  *     - [[edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst]]: Renaming uniform substitutions, combining uniform renaming with uniform substitution.
+  *     - [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors]]: Implicit convenience additions of helper functions to formulas, terms, programs, sequents.
+  *     - [[edu.cmu.cs.ls.keymaerax.btactics.Context]]: Convenience representation of formulas used as contexts that provide ways of substituting expressions in.
   *
-  * All tactics are implemented in the [[edu.cmu.cs.ls.keymaerax.bellerophon Bellerophon]] tactic language,
+  * All tactics are implemented in the [[edu.cmu.cs.ls.keymaerax.bellerophon Bellerophon tactic language]],
   * including its dependent tactics, which ultimately produce
   * [[edu.cmu.cs.ls.keymaerax.core.Provable]] proof certificates by the [[edu.cmu.cs.ls.keymaerax.bellerophon.Interpreter Bellerophon interpreter]].
   * The Provables that tactics produce can be extracted, for example, with [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.proveBy()]].
   *
   *
   * =Proof Styles=
-  * KeYmaera X supports many different proof styles, including combinations of the following styles:
+  * KeYmaera X supports many different proof styles, including flexible combinations of the following styles:
   *
   *     1. [[edu.cmu.cs.ls.keymaerax.core.Provable Explicit proof certificates]] directly program the proof rules from the core.
   *
