@@ -118,6 +118,7 @@ trait UnifyUSCalculus {
    */
   def US(form: Sequent): DependentTactic = new SingleGoalDependentTactic("US") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
+      if (DEBUG) println("  US(" + form.prettyString + ") unify: " + sequent + " matches against form " + form + " ... checking")
       val subst = UnificationMatch(form, sequent)
       if (DEBUG) println("  US(" + form.prettyString + ") unify: " + sequent + " matches against form " + form + " by " + subst)
       Predef.assert(sequent == subst(form), "unification must match: " + sequent + " is " + subst(form) + " which is " + form + " instantiated by " + subst)

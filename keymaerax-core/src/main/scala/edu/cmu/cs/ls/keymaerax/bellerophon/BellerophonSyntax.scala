@@ -4,9 +4,9 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
-import edu.cmu.cs.ls.keymaerax.btactics.RenUSubst
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
 
@@ -17,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, Po
  * @see [[SequentialInterpreter]]
  */
 abstract class BelleExpr(val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) {
+  private[keymaerax] val DEBUG = System.getProperty("DEBUG", "true")=="true"
   // tactic combinators
 
   /** this & other: sequential composition executes other on the output of this, failing if either fail. */
@@ -238,7 +239,7 @@ abstract case class DependentTactic(name: String) extends BelleExpr {
     }
   } catch {
     case be: BelleError => throw be
-    case t: Throwable => throw new BelleError(t.getMessage, t)
+    case t: Throwable => if (DEBUG) t.printStackTrace(); throw new BelleError(t.getMessage, t)
   }
   override def prettyString: String = "DependentTactic(" + name + ")"
 }
@@ -373,31 +374,8 @@ case class TheType() extends BelleType
 case class SequentType(s : Sequent) extends BelleType
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// Errors
+// Positions
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//@todo extend some ProverException and use the inherited inContext functionality throughout the interpreter.
-class BelleError(message: String, cause: Throwable = null)
-    extends ProverException(s"[Bellerophon Runtime] $message", if (cause != null) cause else new Throwable(message)) {
-  /* @note mutable state for gathering the logical context that led to this exception */
-  private var tacticContext: BelleExpr = BelleDot  //@todo BelleUnknown?
-  def context: BelleExpr = tacticContext
-  def inContext(context: BelleExpr, additionalMessage: String): BelleError = {
-    this.tacticContext = context
-    context.location.find(e => !("Thread.java"::"BellerophonSyntax.scala"::"SequentialInterpreter.scala"::Nil).contains(e.getFileName)) match {
-      case Some(location) => getCause.setStackTrace(location +: getCause.getStackTrace)
-      case None => // no specific stack trace element outside the tactic framework found -> nothing to do
-    }
-    super.inContext(context.prettyString, additionalMessage)
-    this
-  }
-  override def toString: String = super.toString + "\nin " + tacticContext
-}
-
-case class BelleUserGeneratedError(message: String) extends BelleError(s"[Bellerophon User-Generated Message] $message")
-
-class CompoundException(left: BelleError, right: BelleError)
-  extends BelleError(s"Left Message: ${left.getMessage}\nRight Message: ${right.getMessage})")
 
 object PositionConverter {
   def convertPos(seqIdx: Int, inExpr: List[Int] = Nil): Position = {
@@ -406,10 +384,6 @@ object PositionConverter {
     else new SuccPosition(seqIdx - 1, PosInExpr(inExpr))
   }
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Errors
-////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 ///**

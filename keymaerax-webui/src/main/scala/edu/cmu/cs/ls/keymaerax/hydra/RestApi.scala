@@ -230,7 +230,7 @@ trait RestApi extends HttpService {
     if(idx > 0) {
       new SuccPosition(idx-1, new PosInExpr(inExprs))
     } else if (idx < 0) {
-      new AntePosition((-idx)-1)
+      new AntePosition((-idx)-1, new PosInExpr(inExprs))
     } else {
       throw new Exception("Invalid formulaId " + id + " in axiomList")
     }

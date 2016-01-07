@@ -34,6 +34,7 @@ import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics.{ArithmeticTacticsImpl, TacticExceptionListener, Tactics}
+import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.CLParser
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 
@@ -685,36 +686,53 @@ case class BelleTermInput(value: String, spec:Option[ArgInfo])
 * to a Tactic */
 class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,
                          pos: Option[PositionLocator], inputs:List[BelleTermInput] = Nil) extends Request {
-  val fullExpr = {
+  /** Turns belleTerm into a specific tactic expression, including input arguments */
+  private def fullExpr(node: TreeNode) = {
     val paramStrings = inputs.map{
       case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
       case BelleTermInput(value, None) => value
     }
-    if(inputs.isEmpty) belleTerm
-    else belleTerm + "(" + paramStrings.mkString(",") + ")"
+    val specificTerm = getSpecificName(belleTerm, node.sequent, pos, _.codeName)
+    if(inputs.isEmpty) specificTerm
+    else specificTerm + "(" + paramStrings.mkString(",") + ")"
   }
 
   /* Try to figure out the most intuitive inference rule to display for this tactic. If the user asks us "StepAt" then
    * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask TacticInfo */
-  private def getRuleName(tacticId: String, sequent:Sequent, locator:Option[PositionLocator]): String = {
+  private def getSpecificName(tacticId: String, sequent:Sequent, locator:Option[PositionLocator], what: DerivationInfo => String): String = {
     val pos = locator match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
-    tacticId.toLowerCase() match {
+    tacticId.toLowerCase match {
       case ("step" | "stepat") =>
-        val fml = sequent(pos.get)
-        UIIndex.theStepAt(fml, pos) match {
-          case Some(step) => DerivationInfo(step).display.name
-          case None => tacticId
+        sequent.sub(pos.get) match {
+          case Some(fml: Formula) =>
+            UIIndex.theStepAt(fml, pos) match {
+              case Some(step) => what(DerivationInfo(step))
+              case None => tacticId
+            }
+          case _ => try {
+            what(TacticInfo(tacticId))
+          } catch {
+            case _: Throwable => "Tactic"
+          }
         }
       case _ => try {
-        TacticInfo(tacticId).display.name
+        what(TacticInfo(tacticId))
       } catch {
-        case _ => "Tactic"
+        case _: Throwable => "Tactic"
       }
     }
   }
 
   def getResultingResponses() = {
-    BTacticParser(fullExpr) match {
+    val trace = db.getExecutionTrace(proofId.toInt)
+    val tree = ProofTree.ofTrace(trace)
+    val node =
+      tree.findNode(nodeId) match {
+        case None => throw new ProverException("Invalid node " + nodeId)
+        case Some(n) => n
+      }
+
+    BTacticParser(fullExpr(node)) match {
       case None => throw new ProverException("Invalid Bellerophon expression:  " + belleTerm)
       case Some(expr) =>
         val appliedExpr:BelleExpr =
@@ -729,15 +747,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               else expr
             case (pos, expr) => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
         }
-        val trace = db.getExecutionTrace(proofId.toInt)
-        val tree = ProofTree.ofTrace(trace)
         val branch = tree.goalIndex(nodeId)
-        val node =
-          tree.findNode(nodeId) match {
-            case None => throw new ProverException("Invalid node " + nodeId)
-            case Some(node) => node
-          }
-        val ruleName = getRuleName(belleTerm, node.sequent, pos)
+        val ruleName = getSpecificName(belleTerm, node.sequent, pos, _.display.name)
         val localProvable = Provable.startProof(node.sequent)
         val globalProvable =
           trace.steps match {

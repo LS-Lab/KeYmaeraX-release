@@ -2,9 +2,9 @@
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
-package edu.cmu.cs.ls.keymaerax.btactics
+package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, SeqTactic}
+import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, ProofRuleTactics}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.Predef.Pair
@@ -20,14 +20,14 @@ object RenUSubst {
   private def renamingPartOnly(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Seq[(Variable,Variable)] =
     subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable]).
       map(sp => (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable]))
-  private[btactics] def renamingPart(subsDefsInput: immutable.Seq[(Expression,Expression)]): RenUSubst =
+  private[bellerophon] def renamingPart(subsDefsInput: immutable.Seq[(Expression,Expression)]): RenUSubst =
     new RenUSubst(renamingPartOnly(subsDefsInput))
 
   /**
    * Occurrences of what symbol the generalized SubstitutionPair sp will be replacing.
    * @return Function/predicate/predicational or DotTerm or (Differential)ProgramConst whose occurrences we will replace.
    */
-  private[btactics] def matchKey(sp: (Expression,Expression)): NamedSymbol = sp._1 match {
+  private[bellerophon] def matchKey(sp: (Expression,Expression)): NamedSymbol = sp._1 match {
     case DotTerm => DotTerm
     case Anything => Anything
     //case Nothing => {assert(sp._2 == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing} // it makes no sense to substitute Nothing
@@ -45,7 +45,7 @@ object RenUSubst {
    * The key characteristic expression constituents that this Substitution is matching on.
    * @return union of the matchKeys of all our substitution pairs.
    */
-  private[btactics] def matchKeys(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.List[NamedSymbol] = {
+  private[bellerophon] def matchKeys(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.List[NamedSymbol] = {
     subsDefsInput.foldLeft(immutable.List[NamedSymbol]())((a,b)=>a ++ immutable.List(matchKey(b)))
   }
 
@@ -60,7 +60,7 @@ object RenUSubst {
  * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
  * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
  */
-final class RenUSubst(private[btactics] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
+final class RenUSubst(private[bellerophon] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops */
   private val rens: immutable.Seq[(Variable,Variable)] = RenUSubst.renamingPartOnly(subsDefsInput)
   private val subsDefs: immutable.Seq[SubstitutionPair] = try {subsDefsInput.filterNot(sp => sp._1.isInstanceOf[Variable]).

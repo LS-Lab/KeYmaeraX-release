@@ -6,8 +6,8 @@ package btactics
 */
 
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.TheType
-import edu.cmu.cs.ls.keymaerax.btactics.{RenUSubst, UnifyUSCalculus}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{RenUSubst, TheType}
+import edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser

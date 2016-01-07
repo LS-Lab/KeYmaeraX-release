@@ -1,14 +1,14 @@
 /**
- * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
- * See LICENSE.txt for the conditions of this license.
- */
-package edu.cmu.cs.ls.keymaerax.btactics
+  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+  * See LICENSE.txt for the conditions of this license.
+  */
+package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import scala.collection.immutable._
-import scala.collection.immutable
-
+import edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst
 import edu.cmu.cs.ls.keymaerax.core._
 
+import scala.collection.immutable
+import scala.collection.immutable.{List, Nil}
 
 /**
   * Unification/matching algorithm for tactics.
@@ -20,7 +20,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
   import edu.cmu.cs.ls.keymaerax.tactics.SubstitutionHelper.replaceFree
 
   //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
   private val REUNIFY = false
 
 //  type Subst = USubst
@@ -334,6 +334,3 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
         ).distinct
     }
 }
-
-case class UnificationException(e1: String, e2: String, info: String = "")
-  extends CoreException("Un-Unifiable: " + e1 + "\nfor:          " + e2 + "\n" + info) {}
