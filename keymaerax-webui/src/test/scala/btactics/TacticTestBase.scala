@@ -5,7 +5,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerate, NoneGenerate, Der
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.tactics.ConfigurableGenerate
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
