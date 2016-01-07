@@ -6,9 +6,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position, SuccPosition}
-import PosInExpr.HereP
-import edu.cmu.cs.ls.keymaerax.tactics.{ExpressionTraversal, SubstitutionHelper}
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 import Augmentors._
 import StaticSemanticsTools._
 

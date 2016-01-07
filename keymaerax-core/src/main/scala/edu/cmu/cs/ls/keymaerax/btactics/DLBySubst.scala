@@ -10,9 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, NamedTactic, SequentType,
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.SubstitutionHelper
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 
 import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps

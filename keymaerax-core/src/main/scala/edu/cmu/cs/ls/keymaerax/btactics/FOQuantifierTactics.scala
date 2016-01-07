@@ -4,8 +4,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{ExpressionTraversal, FormulaTools, SubstitutionHelper}
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 import Augmentors._
 
 import scala.collection.immutable
