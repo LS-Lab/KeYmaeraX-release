@@ -4,7 +4,6 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}

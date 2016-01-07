@@ -4,7 +4,6 @@
 */
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import edu.cmu.cs.ls.keymaerax.btactics.Generator
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.diffIntroduceConstantT
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper._

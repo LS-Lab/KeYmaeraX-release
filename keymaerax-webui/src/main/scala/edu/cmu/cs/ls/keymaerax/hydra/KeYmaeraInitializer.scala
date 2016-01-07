@@ -16,8 +16,7 @@ import scala.reflect.runtime.universe.TypeTag
  * Initializes KeYmaera and its database.
  * @param env The dependency injection environment
  */
-class KeYmaeraInitializer(env : {val db: DBAbstraction
-                                 val tacticLibrary: TacticLibrary2}) {
+class KeYmaeraInitializer(env : {val db: DBAbstraction}) {
 
   def initMathematicaFromDB() = {
     getMathematicaLinkName match {

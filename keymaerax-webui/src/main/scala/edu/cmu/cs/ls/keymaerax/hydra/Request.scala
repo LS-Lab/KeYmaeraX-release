@@ -13,41 +13,25 @@ import java.io.{File, FileNotFoundException, FileReader}
 import java.text.SimpleDateFormat
 import java.util.{Locale, Calendar}
 
-import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
-import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btacticinterface.{UIIndex, BTacticParser}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
-import _root_.edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, AxiomInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo}
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Sequent, ProverException, Provable}
-import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
-import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import _root_.edu.cmu.cs.ls.keymaerax.tactics.{Position, PosInExpr}
 import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
-import edu.cmu.cs.ls.keymaerax.tactics.{ArithmeticTacticsImpl, TacticExceptionListener, Tactics}
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tacticsinterface.CLParser
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 
 import scala.collection.immutable
 import scala.io.Source
 import spray.json._
 import spray.json.DefaultJsonProtocol._
-
-import scala.reflect.runtime._
-import scala.tools.reflect.{ToolBoxError, ToolBox}
-
-
-import scala.reflect.runtime._
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -118,20 +102,20 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
   }
 }
 
-
-class CounterExampleRequest(db : DBAbstraction, userId : String, proofId : String, nodeId: String) extends Request {
-  override def getResultingResponses() : List[Response] = {
-    val node = TaskManagement.getNode(proofId, nodeId) match {
-      case Some(node) => node
-      case None => throw new IllegalStateException("No proofNode for " + nodeId + " in proof " + proofId)
-    }
-    val mathematica = new Mathematica
-    mathematica.init(db.getConfiguration("mathematica").config)
-    val cntEx = ArithmeticTacticsImpl.showCounterExample(mathematica, node)
-    mathematica.shutdown()
-    new CounterExampleResponse(cntEx) :: Nil
-  }
-}
+//@todo port to new btactics framework
+//class CounterExampleRequest(db : DBAbstraction, userId : String, proofId : String, nodeId: String) extends Request {
+//  override def getResultingResponses() : List[Response] = {
+//    val node = TaskManagement.getNode(proofId, nodeId) match {
+//      case Some(node) => node
+//      case None => throw new IllegalStateException("No proofNode for " + nodeId + " in proof " + proofId)
+//    }
+//    val mathematica = new Mathematica
+//    mathematica.init(db.getConfiguration("mathematica").config)
+//    val cntEx = ArithmeticTacticsImpl.showCounterExample(mathematica, node)
+//    mathematica.shutdown()
+//    new CounterExampleResponse(cntEx) :: Nil
+//  }
+//}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // System Configuration
@@ -1113,8 +1097,12 @@ class ShutdownReqeuest() extends Request {
           //@todo figure out which of these are actually necessary.
           System.out.flush()
           System.err.flush()
-          Tactics.MathematicaScheduler.shutdown()
-          Tactics.KeYmaeraScheduler.shutdown()
+          DerivedAxioms.qeTool match {
+            case mathematica: Mathematica => mathematica.shutdown(); DerivedAxioms.qeTool = null;
+          }
+          TactixLibrary.tool match {
+            case mathematica: Mathematica => mathematica.shutdown(); TactixLibrary.tool = null;
+          }
           System.out.flush()
           System.err.flush()
           Boot.system.shutdown()

@@ -6,13 +6,12 @@ package edu.btactics
 */
 
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{RenUSubst, TheType}
-import edu.cmu.cs.ls.keymaerax.btactics.{Context, UnifyUSCalculus}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{RenUSubst, TheType, Position, PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.btactics.{Context, TactixLibrary, UnifyUSCalculus}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Position, SuccPosition, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import test.RandomFormula
 import testHelper.KeYmaeraXTestTags
@@ -408,25 +407,26 @@ class HilbertTests extends TacticTestBase {
   lazy val basicImpl = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq("x>5".asFormula), IndexedSeq("x>2".asFormula)),
     TactixLibrary.QE)
 
-  ignore should "prove C{x>5} |- C{x>2} from provable x>5 |- x>2 in random positive contexts" in {
-    println("Starting random contexts\n\n")
-    for (i <- 1 to randomTrials) {
-      val ctx = rand.nextFormulaContext(randomComplexity)
-      if (ctx.isFormulaContext) {
-        println("Context: " + ctx)
-        //@todo discard ctx unless positive
-        //@todo discard ctx if DotFormula within a program
-        //@todo discard ctx if DotFormula somewhere underneath an Equiv
-        try {
-          val done = CMon(ctx)(basicImpl)
-          done shouldBe 'proved
-          done.conclusion shouldBe Sequent(Nil, IndexedSeq(ctx("x>5".asFormula)), IndexedSeq(ctx("x>2".asFormula)))
-        } catch {
-          case e: ProverException => if (e.toString.startsWith("No monotone context")) println("context discarded") else throw e
-        }
-      }
-    }
-  }
+  //@todo port rand.nextFormulaContext to btactics
+//  ignore should "prove C{x>5} |- C{x>2} from provable x>5 |- x>2 in random positive contexts" in {
+//    println("Starting random contexts\n\n")
+//    for (i <- 1 to randomTrials) {
+//      val ctx = rand.nextFormulaContext(randomComplexity)
+//      if (ctx.isFormulaContext) {
+//        println("Context: " + ctx)
+//        //@todo discard ctx unless positive
+//        //@todo discard ctx if DotFormula within a program
+//        //@todo discard ctx if DotFormula somewhere underneath an Equiv
+//        try {
+//          val done = CMon(ctx)(basicImpl)
+//          done shouldBe 'proved
+//          done.conclusion shouldBe Sequent(Nil, IndexedSeq(ctx("x>5".asFormula)), IndexedSeq(ctx("x>2".asFormula)))
+//        } catch {
+//          case e: ProverException => if (e.toString.startsWith("No monotone context")) println("context discarded") else throw e
+//        }
+//      }
+//    }
+//  }
 
   lazy val basicEq = TactixLibrary.proveBy("1=0*x+1".asFormula, TactixLibrary.QE)
   lazy val basicEquiv = TactixLibrary.proveBy("-2<x&x<2 <-> x^2<4".asFormula, TactixLibrary.QE)

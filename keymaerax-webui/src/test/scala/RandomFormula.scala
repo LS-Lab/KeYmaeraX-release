@@ -4,7 +4,6 @@
 */
 package test
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, Context}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import scala.util.Random

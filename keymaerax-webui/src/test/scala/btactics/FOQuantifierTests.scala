@@ -1,11 +1,10 @@
 package edu.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 
 import scala.collection.immutable.IndexedSeq
 

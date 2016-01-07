@@ -5,7 +5,6 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction, TraverseToPosition}
-import edu.cmu.cs.ls.keymaerax.btactics.Context
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**

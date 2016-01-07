@@ -6,8 +6,8 @@ package edu.cmu.cs.ls.keymaerax.btacticinterface
 
 import java.lang.Number
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.Position
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.Position
 
 /**
   * User-Interface Axiom/Tactic Index: Indexing data structure for all canonically applicable (derived) axioms/rules/tactics in User-Interface.

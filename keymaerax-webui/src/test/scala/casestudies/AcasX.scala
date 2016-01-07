@@ -4,9 +4,6 @@
 */
 package edu.cmu.cs.ls.keymaerax.casestudies
 
-import java.io.File
-
-import edu.cmu.cs.ls.keymaerax.btactics.Context
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 
 import scala.collection.immutable
@@ -2527,8 +2524,6 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
    }*
   ] ((h < -hp | h > hp | r < -rp | r> rp) & ⎵)
       """.asFormula)
-
-    import TactixLibrary._
 
     TactixLibrary.proveBy(acasxexplicit,
       HilbertCalculus.CE(Provable.startProof(equivalence) /*(CommuteEquivRight(SuccPos(0)), 0)*/, shape)(SuccPosition(0))).

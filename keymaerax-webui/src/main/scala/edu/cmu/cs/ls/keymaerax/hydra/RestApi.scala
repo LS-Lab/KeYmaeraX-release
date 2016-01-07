@@ -4,11 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Find, Fixed}
-import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import _root_.edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import akka.actor.Actor
 import spray.routing._
 import spray.http._
@@ -225,12 +222,12 @@ trait RestApi extends HttpService {
   }}}
 
   /* Strictly positive position = SuccPosition, strictly negative = AntePosition, 0 not used */
-  def parseFormulaId(id:String):Position = {
+  def parseFormulaId(id:String): Position = {
     val (idx :: inExprs) = id.split(',').toList.map({case str => str.toInt})
     if(idx > 0) {
-      new SuccPosition(idx-1, new PosInExpr(inExprs))
+      SuccPosition(idx-1, new PosInExpr(inExprs))
     } else if (idx < 0) {
-      new AntePosition((-idx)-1, new PosInExpr(inExprs))
+      AntePosition((-idx)-1, new PosInExpr(inExprs))
     } else {
       throw new Exception("Invalid formulaId " + id + " in axiomList")
     }
@@ -356,14 +353,15 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val counterExample = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "counterExample") { (userId, proofId, nodeId) => {
-    pathEnd {
-      get {
-        val request = new CounterExampleRequest(database, userId, proofId, nodeId)
-        complete(standardCompletion(request))
-      }
-    }}
-  }
+  //@todo port CounterExampleRequest
+//  val counterExample = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "counterExample") { (userId, proofId, nodeId) => {
+//    pathEnd {
+//      get {
+//        val request = new CounterExampleRequest(database, userId, proofId, nodeId)
+//        complete(standardCompletion(request))
+//      }
+//    }}
+//  }
 
   val kyxConfig = path("kyxConfig") {
     pathEnd {
@@ -614,7 +612,7 @@ trait RestApi extends HttpService {
     devAction             ::
     sequent               ::
     dashInfo              ::
-    counterExample        ::
+//    counterExample        ::
     kyxConfig             ::
     keymaeraXVersion      ::
     mathematicaConfig     ::

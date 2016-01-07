@@ -5,9 +5,6 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 //import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
-
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors
-
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._

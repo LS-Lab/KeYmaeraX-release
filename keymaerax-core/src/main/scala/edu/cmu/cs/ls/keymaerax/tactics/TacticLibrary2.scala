@@ -4,7 +4,6 @@
 */
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import edu.cmu.cs.ls.keymaerax.btactics.Generator
 import edu.cmu.cs.ls.keymaerax.core.Formula
 
 /**

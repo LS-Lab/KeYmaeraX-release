@@ -5,18 +5,13 @@
 
 package edu.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
-import testHelper.{KeYmaeraXTestTags, ProvabilityTestHelper}
-import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-
-import scala.collection.immutable.Map
 
 /**
  * Tactic Examples with different proof styles.

@@ -5,7 +5,6 @@
 
 // favoring immutable Seqs
 
-import edu.cmu.cs.ls.keymaerax.btactics.Generate
 import edu.cmu.cs.ls.keymaerax.tactics._
 import ProofNode.ProofStep
 import org.scalatest.{Matchers, FlatSpec}

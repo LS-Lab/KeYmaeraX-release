@@ -1,14 +1,12 @@
 package edu.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, IOListener, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, PosInExpr, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
-import edu.cmu.cs.ls.keymaerax.btactics.{ProofRuleTactics, UnifyUSCalculus}
+import edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra.{ProofTree, ProofTaskParentRequest, DBAbstractionObj, SQLite}
+import edu.cmu.cs.ls.keymaerax.hydra.{ProofTree, DBAbstractionObj}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 

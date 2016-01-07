@@ -5,7 +5,6 @@
 
 package edu.tactics
 
-import edu.cmu.cs.ls.keymaerax.btactics.Context
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest

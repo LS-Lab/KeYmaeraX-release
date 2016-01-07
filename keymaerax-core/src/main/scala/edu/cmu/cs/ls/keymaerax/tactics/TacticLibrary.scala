@@ -6,7 +6,6 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 // favoring immutable Seqs
 
-import edu.cmu.cs.ls.keymaerax.btactics.NoneGenerate
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.collection.immutable.{List, Seq, IndexedSeq}

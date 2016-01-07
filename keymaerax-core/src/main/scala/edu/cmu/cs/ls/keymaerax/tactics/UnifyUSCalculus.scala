@@ -4,12 +4,9 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, Context, AxiomIndex}
-import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.assertT
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.collection.immutable._

@@ -1,7 +1,7 @@
 package edu.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.{Legacy, Idioms}
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.error
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -275,27 +275,27 @@ class SequentialInterpreterTests extends FlatSpec with Matchers {
     shouldClose(t, "(1=1->1=1) & (2=2->2=2)".asFormula)
   }
 
-  "Scheduled tactics" should "work" in {
-    val legacyTactic = tactics.TacticLibrary.arithmeticT
-    val t = Legacy.initializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic)
-    shouldClose(t, "1=1".asFormula)
-  }
-
-  it should "work again" in {
-    val legacyTactic = tactics.TacticLibrary.arithmeticT
-    val t = Legacy.initializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic)
-    shouldClose(t, "x = 0 -> x^2 = 0".asFormula)
-  }
-
-
-  it should "work for non-arith things" in {
-    val legacyTactic = tactics.PropositionalTacticsImpl.AndRightT(SuccPos(0))
-    val t = Legacy.initializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic) < (
-      implyR(SuccPos(0)) & close,
-      implyR(SuccPos(0)) & close
-      )
-    shouldClose(t, "(1=1->1=1) & (1=2->1=2)".asFormula)
-  }
+//  "Scheduled tactics" should "work" in {
+//    val legacyTactic = tactics.TacticLibrary.arithmeticT
+//    val t = Legacy.initializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic)
+//    shouldClose(t, "1=1".asFormula)
+//  }
+//
+//  it should "work again" in {
+//    val legacyTactic = tactics.TacticLibrary.arithmeticT
+//    val t = Legacy.initializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic)
+//    shouldClose(t, "x = 0 -> x^2 = 0".asFormula)
+//  }
+//
+//
+//  it should "work for non-arith things" in {
+//    val legacyTactic = tactics.PropositionalTacticsImpl.AndRightT(SuccPos(0))
+//    val t = Legacy.initializedScheduledTactic(DefaultConfiguration.defaultMathematicaConfig, legacyTactic) < (
+//      implyR(SuccPos(0)) & close,
+//      implyR(SuccPos(0)) & close
+//      )
+//    shouldClose(t, "(1=1->1=1) & (1=2->1=2)".asFormula)
+//  }
 
   /*"A failing tactic"*/
   ignore should "print nice errors and provide a stack trace" in {
