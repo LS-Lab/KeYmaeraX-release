@@ -44,8 +44,30 @@ object SQLite {
   class SQLiteLemmaDB (db: SQLiteDB) extends LemmaDB {
     override def contains(id: LemmaID): Boolean = { true }
 
+    private var cachedLemmas: Map[Int, Lemma] = Map.empty
+
     override def get(id: LemmaID): Option[Lemma] = {
-     db.getLemma(id.toInt).map(Lemma.fromString _)
+      get(List(id.toInt)).map(_.head)
+    }
+
+    def get(ids: List[Int]): Option[List[Lemma]] = {
+      val lemmaOptions =
+        ids.map{case id =>
+          cachedLemmas.get(id) match {
+            case Some(lemma) => Some(lemma)
+            case None =>
+              db.getLemma(id).map(Lemma.fromString _) match {
+                case Some(lemma) =>
+                  cachedLemmas = cachedLemmas.+((id, lemma))
+                  Some(lemma)
+                case None => None
+              }
+          }
+        }
+      if(lemmaOptions.forall(_.isDefined))
+        Some(lemmaOptions.map(_.get))
+      else
+        None
     }
 
     private def saveLemma(lemma:Lemma, id:Int): Unit = {
@@ -58,16 +80,18 @@ object SQLite {
       val lemmaString = "/** KeYmaera X " + _root_.edu.cmu.cs.ls.keymaerax.core.VERSION + " */" ++  lemma.toString
 
       db.updateLemma(id, lemmaString)
+      cachedLemmas = cachedLemmas.+((id, lemma))
       val lemmaFromDB = get(id.toString)
       if (lemmaFromDB.isEmpty || lemmaFromDB.get != lemma) {
         db.deleteLemma(id)
+        cachedLemmas = cachedLemmas.-(id)
         throw new IllegalStateException("Lemma in DB differed from lemma in memory -> deleted")
       }
       // assertion duplicates condition and throw statement
       assert(lemmaFromDB.isDefined && lemmaFromDB.get == lemma, "Lemma stored in DB should be identical to lemma in memory " + lemma)
     }
 
-    private def isUniqueLemmaId(id: Int) = db.getLemma(id).isEmpty
+    private def isUniqueLemmaId(id: Int) = db.getLemmas(List(id)).isEmpty
 
     override def add(lemma: Lemma): LemmaID = {
       val id = this.synchronized {
@@ -476,11 +500,22 @@ object SQLite {
     }
 
     private[SQLite] def getLemma(lemmaId: Int): Option[String] = {
+      getLemmas(List(lemmaId)) match {
+        case Some(lemmas) => lemmas.headOption
+        case None => None
+      }
+    }
+
+    private[SQLite] def getLemmas(lemmaIds: List[Int]): Option[List[String]] = {
       synchronizedTransaction({
-        val rows = Lemmas.filter(_._Id === lemmaId).list
-        if (rows.isEmpty) throw new Exception("Lemma " + lemmaId + " not found")
-        else if (rows.length > 1) throw new Exception("Duplicate lemmas for id " + lemmaId)
-        else rows.head.lemma
+        val allLemmas = Lemmas.map{case row => (row._Id.get, row.lemma.get)}.list
+        val lemmaMap =
+          allLemmas.foldLeft(Map.empty[Int, String]){case (map, (id, lemma)) => map.+((id, lemma))}
+        try {
+          Some(lemmaIds.map(lemmaMap(_)))
+        } catch {
+          case _:Exception => None
+        }
       })
     }
 
@@ -505,26 +540,37 @@ object SQLite {
     }
 
     /** Returns the executable with ID executableId */
-    override def getExecutable(executableId: Int): ExecutablePOJO =
+    override def getExecutable(executableId: Int): ExecutablePOJO = {
+      getExecutables(List(executableId)).head
+    }
+
+    def getExecutables(executableIds: List[Int]): List[ExecutablePOJO] =
       synchronizedTransaction({
         nSelects = nSelects + 1
-        val executables =
-          Executables.filter(_._Id === executableId)
-            .list
-            .map(exe => new ExecutablePOJO(exe._Id.get, exe.scalatacticid, exe.belleexpr))
-        if (executables.length < 1) throw new Exception("getExecutable type should be an Option")
-        else if (executables.length == 1) executables.head
-        else throw new Exception("Primary keys aren't unique in executables table.")
+        val executableMap =
+          Executables.map(exe => (exe._Id.get, exe.scalatacticid, exe.belleexpr))
+          .list
+          .map{case (id, tacticid, expr) => (id, ExecutablePOJO(id, tacticid, expr))}
+          .foldLeft(Map.empty[Int,ExecutablePOJO]){case (acc, (id, exe)) => acc.+((id, exe))}
+
+        try {
+          executableIds.map{case id => executableMap(id)}
+        } catch {
+          case _:Exception => throw new ProverException("getExecutable type should be an Option")
+        }
       })
 
     /** Use escape hatch in prover core to create a new Provable */
     override def loadProvable(lemmaId: Int): Provable = {
-      lemmaDB.get(lemmaId.toString) match {
-        case None => throw new Exception ("No lemma with ID " + lemmaId)
-        case Some(lemma) => lemma.fact
-      }
+      loadProvables(List(lemmaId)).head
     }
 
+    def loadProvables(lemmaIds: List[Int]): List[Provable] = {
+      lemmaDB.get(lemmaIds) match {
+        case None => throw new Exception (" No lemma for one of these IDs: " + lemmaIds)
+        case Some(lemmas) => lemmas.map(_.fact)
+      }
+    }
     /** Rerun all execution steps to generate a provable for the current state of the proof
       * Assumes the execution starts with a trivial provable (one subgoal, which is the same
       * as the conclusion) */
@@ -648,13 +694,12 @@ object SQLite {
             .list
         var prevId: Option[Int] = None
         var revResult: List[ExecutionStepPOJO] = Nil
+        steps = steps.sortWith({case (x, y) => y.alternativeorder.get < x.alternativeorder.get})
         while(steps != Nil) {
           val (headSteps, tailSteps) = steps.partition({step => step.previousstep == prevId})
           if (headSteps == Nil)
             return revResult.reverse
-          val headsByAlternative =
-            headSteps.sortWith({case (x, y) => y.alternativeorder.get < x.alternativeorder.get})
-          val head = headsByAlternative.head
+          val head = headSteps.head
           revResult =
             new ExecutionStepPOJO(head._Id, head.executionid.get, head.previousstep, head.parentstep,
               head.branchorder, head.branchlabel, head.alternativeorder.get, ExecutionStepStatus.fromString(head.status.get),
@@ -687,19 +732,33 @@ object SQLite {
           else throw new Exception("Primary keys aren't unique in executions table.")
         })
 
+    private def zipTrace(executionSteps: List[ExecutionStepPOJO], executables: List[ExecutablePOJO], provables: List[Provable]): List[ExecutionStep] = {
+      (executionSteps, executables, provables) match {
+        case (step::steps, exe:: exes, inputProvable::resultProvable::moreProvables) =>
+          ExecutionStep(step.stepId.get, inputProvable, Some(resultProvable), step.branchOrder.get, step.alternativeOrder, step.ruleName, step.userExecuted)  ::
+            (zipTrace(steps, exes, resultProvable::moreProvables))
+        case (Nil, Nil, _ :: Nil) => Nil
+        case _ => throw new ProverException("Bug in zipTrace")
+      }
+    }
+
     override def getExecutionTrace(proofId: Int): ExecutionTrace = {
+      // This method has proven itself to be a resource hog, so this implementation attempts to minimize the number of
+      // DB calls.
       val executionId = getTacticExecution(proofId)
       var steps = proofSteps(executionId)
-      val traceSteps =
-        steps.map{case step =>
-            val input = loadProvable(step.inputProvableId)
-            val output = step.resultProvableId.map{case id => loadProvable(id)}
-            val branch = step.branchOrder.get
-            val executable = getExecutable(step.executableId)
-            ExecutionStep(stepId = step.stepId.get, input = input, output = output, branch = branch, alternativeOrder = step.alternativeOrder, step.ruleName, step.userExecuted)
-        }
-      val conclusion = getProofConclusion(proofId)
-      ExecutionTrace(proofId.toString, executionId.toString, conclusion, traceSteps)
+      if (steps.isEmpty) {
+        val conclusion = getProofConclusion(proofId)
+        ExecutionTrace(proofId.toString, executionId.toString, conclusion, Nil)
+      } else {
+        val provableIds = steps.map { case step => step.inputProvableId } :+ steps.last.resultProvableId.get
+        val executableIds = steps.map { case step => step.executableId }
+        var provables = loadProvables(provableIds)
+        val conclusion = provables.head.conclusion
+        val executables = getExecutables(executableIds)
+        val traceSteps = zipTrace(steps, executables, provables)
+        ExecutionTrace(proofId.toString, executionId.toString, conclusion, traceSteps)
+      }
     }
   }
 }
