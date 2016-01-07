@@ -2,6 +2,8 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+package edu.cmu.cs.ls.keymaerax.tactics
+
 import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics, TacticLibrary}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import testHelper.ProvabilityTestHelper

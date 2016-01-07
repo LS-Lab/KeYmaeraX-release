@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.core
 
+import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, USubstTest, SummaryTest}
@@ -14,7 +15,6 @@ import scala.collection.immutable.List
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
-import test._
 
 /**
  * @author Andre Platzer

@@ -2,6 +2,9 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+
+package edu.cmu.cs.ls.keymaerax.tactics
+
 import edu.cmu.cs.ls.keymaerax.tactics.{TacticToolBinding, Scheduler}
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import org.scalamock.scalatest.MockFactory

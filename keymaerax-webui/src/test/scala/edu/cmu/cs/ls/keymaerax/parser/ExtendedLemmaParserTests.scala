@@ -1,3 +1,5 @@
+package edu.cmu.cs.ls.keymaerax.parser
+
 import edu.cmu.cs.ls.keymaerax.core.{Lemma, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser
 import org.scalatest.{Matchers, FlatSpec}
