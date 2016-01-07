@@ -380,7 +380,7 @@ object DerivationInfo {
     new PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}),
     new PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
-    new PositionTacticInfo("master", "master", {case () => TactixLibrary.master()}),
+    new PositionTacticInfo("master", "master", {case () => (gen:Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
 
     // Differential tactics
@@ -494,6 +494,8 @@ sealed trait DerivationInfo {
   //@todo add formattedName/unicodeName: String
   /** Number of positional arguments to the derivation. Can be 0, 1 or 2. */
   val numPositionArgs: Int = 0
+  /** Whether the derivation expects the caller to provide it with a way to generate invariants */
+  val needsGenerator: Boolean = false
 }
 
 /** Meta-Information for an axiom or derived axiom */
@@ -554,31 +556,31 @@ object DerivedAxiomInfo {
 // tactics
 
 /** Meta-information on a tactic performing a proof step (or more) */
-class TacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false) extends DerivationInfo {
+class TacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false) extends DerivationInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   val canonicalName = codeName
 }
 
-case class PositionTacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false)
-  extends TacticInfo(codeName, display, expr, needsTool) {
+case class PositionTacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
+  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator) {
   override val numPositionArgs = 1
 }
 
-case class TwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false)
-  extends TacticInfo(codeName, display, expr, needsTool) {
+case class TwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
+  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator) {
   override val numPositionArgs = 2
 }
 
-case class InputTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => Any, needsTool: Boolean = false)
-  extends TacticInfo(codeName, display, expr, needsTool)
+case class InputTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
+  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator)
 
-case class InputPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => Any, needsTool: Boolean = false)
-  extends TacticInfo(codeName, display, expr, needsTool) {
+case class InputPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
+  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator) {
   override val numPositionArgs = 1
 }
 
-case class InputTwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => Any, needsTool: Boolean = false)
-  extends TacticInfo(codeName, display, expr, needsTool) {
+case class InputTwoPositionTacticInfo(override val codeName: String, override val display: DisplayInfo, override val inputs:List[ArgInfo], expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
+  extends TacticInfo(codeName, display, expr, needsTool, needsGenerator) {
   override val numPositionArgs = 2
 }
