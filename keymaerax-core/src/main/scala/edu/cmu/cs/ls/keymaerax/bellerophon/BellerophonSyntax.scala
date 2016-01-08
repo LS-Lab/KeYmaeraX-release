@@ -61,7 +61,7 @@ object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
 // Positional tactics
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/** Applied at a position, turns into a tactic of type T. Turns a position (locator) into a tactic */
+/** Applied at a position, turns into a tactic of type T. Turns a position or position locator into a tactic. */
 trait AtPosition[T <: BelleExpr] {
   /**
    * At a fixed position.
@@ -84,11 +84,15 @@ trait AtPosition[T <: BelleExpr] {
   final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(PositionConverter.convertPos(seqIdx, inExpr)))
   /**
    * Returns the tactic at the position identified by `locator`.
-   * @param locator The locator symbol: 'L (find left), 'R (find right), '_ (find left/right appropriately for tactic),
-   *                'Llast (at last position in antecedent), or 'Rlast (at last position in succedent).
+   * @param locator The locator symbol:
+    *                'L (find left),
+    *                'R (find right),
+    *                '_ (find left/right appropriately for tactic),
+   *                'Llast (at last position in antecedent), or
+    *                'Rlast (at last position in succedent).
    * @note Convenience wrapper
    * @see [[apply(locator: PositionLocator)]]
-   * */
+   */
   final def apply(locator: Symbol): T = locator match {
     case 'L => apply(Find(0, None, AntePosition(0)))
     case 'R => apply(Find(0, None, SuccPosition(0)))
@@ -100,6 +104,9 @@ trait AtPosition[T <: BelleExpr] {
     case 'Llast => apply(LastAnte(0))
     case 'Rlast => apply(LastSucc(0))
   }
+  /**
+    * Returns the tactic at the position identified by `locator`, ensuring that this gives the formula `expected` verbatim.
+    * @see [[apply()]] */
   final def apply(locator: Symbol, expected: Formula): T = locator match {
     case 'L => apply(Find(0, Some(expected), AntePosition(0)))
     case 'R => apply(Find(0, Some(expected), SuccPosition(0)))
@@ -108,9 +115,9 @@ trait AtPosition[T <: BelleExpr] {
       case _: BuiltInRightTactic => apply(Find(0, Some(expected), SuccPosition(0)))
       case _ => throw new BelleError(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
-      //@todo check Some(expected)
-    case 'Llast => apply(LastAnte(0))
-    case 'Rlast => apply(LastSucc(0))
+    //@todo how to check expected formula?
+    case 'Llast => ???
+    case 'Rlast => ???
   }
 
   /**
@@ -161,11 +168,12 @@ abstract case class BuiltInRightTactic(name: String) extends PositionalTactic {
 case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic, locator: PositionLocator) extends BelleExpr {
   import Augmentors._
   final def computeResult(provable: Provable) : Provable = try { locator match {
+      //@note interprets PositionLocator
       case Fixed(pos, shape, exact) => shape match {
         case Some(f:Formula) =>
-          require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
+          require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal since otherwise ill-defined")
           //@note (implicit .apply needed to ensure subposition to pos.inExpr
-          if ((exact && provable.subgoals.head.sub(pos).contains(f)) ||
+          if (( exact && provable.subgoals.head.sub(pos).contains(f)) ||
               (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
             positionTactic.computeResult(provable, pos)
           } else {
@@ -284,6 +292,7 @@ abstract case class InputPositionTactic[T](input: T, pos: Position) extends Bell
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: PositionLocator) extends DependentTactic(pt.name) {
   import Augmentors._
   final override def computeExpr(v: BelleValue): BelleExpr = locator match {
+    //@note interprets PositionLocator
     case Fixed(pos, shape, exact) => shape match {
       case Some(f) => v match {
         case BelleProvable(provable, _) =>
