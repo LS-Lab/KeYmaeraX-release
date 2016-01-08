@@ -1,4 +1,4 @@
-angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$rootScope', function($http, $rootScope) {
+angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$rootScope', 'spinnerService', function($http, $rootScope, spinnerService) {
   return {
     /** The agenda model */
     agenda: {
@@ -80,6 +80,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       //@note make model available in closure of function success
       var theProofTree = this.proofTree;
       var theAgenda = this.agenda;
+
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/pruneBelow').success(function(data) {
         // prune proof tree
         theProofTree.pruneBelow(nodeId);
@@ -123,27 +124,25 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     fetchAgenda: function(scope, userId, proofId) {
       var theProofTree = this.proofTree;
       var theAgenda = this.agenda;
-      $http.get('proofs/user/' + userId + "/" + proofId + '/agendaawesome').success(function(data) {
-        theAgenda.itemsMap = data.agendaItems;
-        theProofTree.nodesMap = data.proofTree.nodes;
-        theProofTree.root = data.proofTree.root;
-        if (theAgenda.items().length > 0) {
-          // select first task if nothing is selected yet
-          if (theAgenda.selectedId() === undefined) theAgenda.items()[0].isSelected = true;
-        } else {
-          // proof might be finished
-          scope.$emit('agendaIsEmpty');
-        }
-      }).error(function(data) {
-        if (data.status == 'notloaded') {
-          scope.$emit('proofIsNotLoaded'); // TODO somewhere: open modal dialog and ask if proof should be loaded
-        } else if (data.status == 'loading') {
-          scope.proofIsLoading = $q.defer()
-          scope.proofIsLoading.promise.then(function() {
-            // TODO proof is now loaded, fetch tree and tasks
-          })
-        }
-      });
+      spinnerService.show('proofLoadingSpinner');
+      $http.get('proofs/user/' + userId + "/" + proofId + '/agendaawesome')
+        .then(function(response) {
+          theAgenda.itemsMap = response.data.agendaItems;
+          theProofTree.nodesMap = response.data.proofTree.nodes;
+          theProofTree.root = response.data.proofTree.root;
+          if (theAgenda.items().length > 0) {
+            // select first task if nothing is selected yet
+            if (theAgenda.selectedId() === undefined) theAgenda.items()[0].isSelected = true;
+          } else {
+            // proof might be finished
+            $rootScope.$emit('agenda.isEmpty');
+          }
+        })
+        .catch(function(data) {
+          $rootScope.$emit('agenda.loadError'); // TODO somewhere: open modal dialog and ask if proof should be loaded
+
+        })
+        .finally(function() { spinnerService.hide('proofLoadingSpinner'); });
     },
 
     /** Updates the agenda and the proof tree with new items resulting from a tactic */
