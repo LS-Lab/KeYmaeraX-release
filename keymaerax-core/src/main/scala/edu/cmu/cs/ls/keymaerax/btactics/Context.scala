@@ -33,6 +33,8 @@ object Context {
   /** Make a context for expression `ctx` guarded by the protection of uniform substitutions. */
   def apply[T <: Expression](ctx: T): Context[T] = new GuardedContext[T](ctx)
 
+  /** Whether to cross-check implementations */
+  private val CROSSCHECK = false
   /** Whether to check split results redundantly */
   private val REDUNDANT = false
   /** Placeholder for programs. Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
@@ -40,13 +42,18 @@ object Context {
   /** Placeholder for differential programs. Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
   val DotDiffProgram = DifferentialProgramConst("DotDiffProgram")
 
-  //@todo add faster replacement contexts!
-
   /** Subexpression of `t` at the indicated position `pos` or exception if ill-defined position.
     * @ensures sub(t,pos) == at(t,pos)._2
     */
-  def sub(t: Expression, pos: PosInExpr): Expression = { part(t, pos) } ensuring(
-    r => r==at(t, pos)._2, "sub(t,pos)==at(t,pos)._2")
+  def sub(t: Expression, pos: PosInExpr): Expression = { part(t, pos) } /*ensuring(
+    //@note redundant cross-contract consistency checks
+    r => !CROSSCHECK || r==at(t, pos)._2, "sub(t,pos)==at(t,pos)._2")*/
+
+  /** Direct unguarded replacement context split */
+  private def directAt[T <: Expression](t: T, pos:PosInExpr): (Context[T], Expression) =
+    (new ReplacementContext[T](t, pos), sub(t, pos)) ensuring(
+      //@note redundant cross-contract consistency checks
+      r => !CROSSCHECK || {val rat = context(t, pos); r._2==rat._2 && r._1(r._2) == t && Context(rat._1)(rat._2)==t}, "cross-contract consistency")
 
   /**
    * Split `C{e}=t(pos)` expression t at position pos into the expression e at that position and the context C within which that expression occurs.
@@ -55,7 +62,7 @@ object Context {
    * @ensures at(t,pos)._2 == sub(t,pos)
    */
   def at(t: Expression, pos: PosInExpr): (Context[Expression], Expression) = if (!GUARDED) {
-    (new ReplacementContext[Expression](t, pos), sub(t, pos))
+    directAt(t, pos)
   } else {
     val sp = t match {
       case f: Term => {context(f, pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
@@ -68,13 +75,21 @@ object Context {
   } ensuring(r => backsubstitution(r, t, pos), "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos)
   //@todo ensuring(r => r._2 == sub(t, pos))
 
+  private def context(e: Expression, pos: PosInExpr): (Expression, Expression) = e match {
+    case f: Term => context(f, pos)
+    case f: Formula => context(f, pos)
+    case f: Program => context(f, pos)
+    case f: DifferentialProgram => context(f, pos)
+    case _ => ???  // trivial totality on possibly problematic patmats
+  }
+
   /**
    * Split `C{e}=t(pos)` term t at position pos into the expression e at that position and the context C within which that expression occurs.
    * Thus `C{e}` will equal the original `t` and `e` occurs at position pos in `t`
    * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
    */
   def at(t: Term, pos: PosInExpr): (Context[Term], Expression) = if (!GUARDED) {
-    (new ReplacementContext[Term](t, pos), sub(t, pos))
+    directAt(t, pos)
   } else {
     val sp = {context(t, pos) } ensuring( r => !REDUNDANT || r==split(t,pos), "direct and generic split have same result " + t + " at " + pos)
     (Context(sp._1), sp._2)
@@ -86,7 +101,7 @@ object Context {
    * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
    */
   def at(f: Formula, pos: PosInExpr): (Context[Formula], Expression) = if (!GUARDED) {
-    (new ReplacementContext[Formula](f, pos), sub(f, pos))
+    directAt(f, pos)
   } else {
     val sp = {context(f,pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
     (Context(sp._1), sp._2)
@@ -99,7 +114,7 @@ object Context {
    * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
    */
   def at(a: Program, pos: PosInExpr): (Context[Program], Expression) = if (!GUARDED) {
-    (new ReplacementContext[Program](a, pos), sub(a, pos))
+    directAt(a, pos)
   } else {
     val sp = {context(a, pos) } ensuring( r => !REDUNDANT || r==split(a,pos), "direct and generic split have same result " + a + " at " + pos)
     (Context(sp._1), sp._2)
@@ -131,7 +146,16 @@ object Context {
   private def backsubstitution(r:(Context[Expression], Expression), t: Expression, pos: PosInExpr): Boolean = {
     if (StaticSemantics.signature(r._1.ctx).intersect(Set(noContext,noContextD)).isEmpty)
       try {
-        r._1(r._2) == t
+        if (r._1(r._2) == t) {
+          if (CROSSCHECK) {
+            //@note redundant cross-contract consistency checks
+            val rsplit = (new ReplacementContext[Expression](t, pos), sub(t, pos))
+            r._2 == rsplit._2 && r._1(r._2) == t && rsplit._1(rsplit._2) == t
+          } else {
+            true
+          }
+        } else
+          false
       }
       catch {
         // fall-back to rude replacement as a check for whether backsubstitution justifies the context splitting when otherwise non-admissible
@@ -140,7 +164,7 @@ object Context {
     else
       // no proper reassemble test for noContext
       true
-  } ensuring(_ => r._2==part(t,pos), "expression is consistent with sub(t,pos)")
+  }
 
   // elegant reapply-based context splitting
 
