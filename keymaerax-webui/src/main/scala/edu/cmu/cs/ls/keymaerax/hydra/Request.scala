@@ -794,7 +794,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
 
   def getResultingResponses() = {
     val trace = db.getExecutionTrace(proofId.toInt)
-    val tree = ProofTree.ofTrace(trace)
+    val tree = ProofTree.ofTrace(trace, includeUndos = true)
     val prunedSteps = tree.allDescendants(nodeId).flatMap{case node => node.endStep.toList}
     if(prunedSteps.isEmpty) {
       throw new Exception("No steps under node. Nothing to do.")

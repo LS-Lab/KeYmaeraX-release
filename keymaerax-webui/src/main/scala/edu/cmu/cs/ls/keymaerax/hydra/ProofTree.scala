@@ -25,7 +25,7 @@ case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, lea
   }
  }
 object ProofTree {
-  def ofTrace(trace:ExecutionTrace): ProofTree = {
+  def ofTrace(trace:ExecutionTrace, includeUndos:Boolean = false): ProofTree = {
     var currentNodeId = 1
 
     def treeNode(subgoal: Sequent, parent: Option[TreeNode], step:Option[ExecutionStep]): TreeNode = {
@@ -60,7 +60,7 @@ object ProofTree {
           val addedNodes = delta.tail.map({ case sg => treeNode(sg, Some(openGoals(branch)), Some(step)) })
           openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
           allNodes = allNodes ++ (updatedNode :: addedNodes.toList)
-        } else if (step.isUserExecuted) {
+        } else if (step.isUserExecuted || includeUndos) {
           // User ran a tactic but it had no effect. e.g. running master on a loop.
           // Only insert a node if the step was user-executed, since we use non-user-executed steps to represent
           // undos.
