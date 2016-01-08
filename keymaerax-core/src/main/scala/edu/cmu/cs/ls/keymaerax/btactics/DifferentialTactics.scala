@@ -350,7 +350,7 @@ object DifferentialTactics {
             cutLR(withxprime)(pos.topLevel) <(
               /* use */ skip,
               /* show */ cohide(pos.top) & CMon(formulaPos(sequent(pos.topLevel), pos.inExpr)) & cut(axiom) <(
-              useAt("all eliminate")(-1) & eqL2R(AntePosition(0))(1) & useAt("-> self")(1) & close,
+              useAt("all eliminate")(-1) & eqL2R(-1)(1) & useAt("-> self")(1) & close,
               cohide('Rlast) & byUS(DerivedAxioms.Dvariable))
               )
           }
@@ -393,7 +393,7 @@ object DifferentialTactics {
         val rewriteEqualities = new SingleGoalDependentTactic("DiffSolveRewriteEqualities") {
           override def computeExpr(sequent: Sequent): BelleExpr = {
             val equalities = sequent.ante.takeRight(flatSolution.size)
-            equalities.map(eq => exhaustiveEqR2L(hide = true)(Find(0, Some(eq), AntePosition(0), exact=true))).
+            equalities.map(eq => exhaustiveEqR2L(hide = true)('L, eq)).
               reduce[BelleExpr](_ & _)
           }
         }

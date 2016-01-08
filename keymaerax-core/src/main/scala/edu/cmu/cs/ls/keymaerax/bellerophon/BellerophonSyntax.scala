@@ -72,7 +72,7 @@ trait AtPosition[T <: BelleExpr] {
    */
   private[keymaerax] final def apply(position: Position): T = apply(Fixed(position))
   private[keymaerax] final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
-  private[ls] final def apply(position: SeqPos): T = apply(Fixed(PositionConverter.convertPos(position)))
+  private[ls] final def apply(position: SeqPos): T = apply(Fixed(Position.convertPos(position)))
   /**
    * At a fixed position given through index numbers.
    * @param seqIdx The signed index in the sequent (strictly negative index for antecedent, strictly positive for succedent).
@@ -81,7 +81,7 @@ trait AtPosition[T <: BelleExpr] {
    * @note Convenience wrapper
    * @see [[apply(position: Position)]]
    */
-  final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(PositionConverter.convertPos(seqIdx, inExpr)))
+  final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(Position.convertPos(seqIdx, inExpr)))
   /**
    * Returns the tactic at the position identified by `locator`.
    * @param locator The locator symbol:
@@ -93,12 +93,13 @@ trait AtPosition[T <: BelleExpr] {
    * @note Convenience wrapper
    * @see [[apply(locator: PositionLocator)]]
    */
+  import Find._
   final def apply(locator: Symbol): T = locator match {
-    case 'L => apply(Find(0, None, AntePosition(0)))
-    case 'R => apply(Find(0, None, SuccPosition(0)))
+    case 'L => apply(FindL(0, None))
+    case 'R => apply(FindR(0, None))
     case '_ => this match {
-      case _: BuiltInLeftTactic => apply(Find(0, None, AntePosition(0)))
-      case _: BuiltInRightTactic => apply(Find(0, None, SuccPosition(0)))
+      case _: BuiltInLeftTactic => apply(FindL(0, None))
+      case _: BuiltInRightTactic => apply(FindR(0, None))
       case _ => throw new BelleError(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
     case 'Llast => apply(LastAnte(0))
@@ -108,11 +109,11 @@ trait AtPosition[T <: BelleExpr] {
     * Returns the tactic at the position identified by `locator`, ensuring that this gives the formula `expected` verbatim.
     * @see [[apply()]] */
   final def apply(locator: Symbol, expected: Formula): T = locator match {
-    case 'L => apply(Find(0, Some(expected), AntePosition(0)))
-    case 'R => apply(Find(0, Some(expected), SuccPosition(0)))
+    case 'L => apply(FindL(0, Some(expected)))
+    case 'R => apply(FindR(0, Some(expected)))
     case '_ => this match {
-      case _: BuiltInLeftTactic => apply(Find(0, Some(expected), AntePosition(0)))
-      case _: BuiltInRightTactic => apply(Find(0, Some(expected), SuccPosition(0)))
+      case _: BuiltInLeftTactic => apply(FindL(0, Some(expected)))
+      case _: BuiltInRightTactic => apply(FindR(0, Some(expected)))
       case _ => throw new BelleError(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
     //@todo how to check expected formula?
@@ -186,8 +187,8 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
         require(start.isTopLevel, "Start position must be top-level in sequent")
         require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
         tryAllAfter(provable, goal, shape, start, exact, null)
-      case LastAnte(goal) => positionTactic.computeResult(provable, AntePosition(provable.subgoals(goal).ante.size-1))
-      case LastSucc(goal) => positionTactic.computeResult(provable, SuccPosition(provable.subgoals(goal).succ.size-1))
+      case LastAnte(goal) => positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size-1))
+      case LastSucc(goal) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1))
     }
   } catch {
     case be: BelleError => throw be
@@ -311,8 +312,8 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: P
     case Find(goal, shape, start, exact) =>
       require(start.isTopLevel, "Start position must be top-level in sequent")
       tryAllAfter(goal, shape, start, exact, null)
-    case LastAnte(goal) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition(provable.subgoals(goal).ante.size-1) })
-    case LastSucc(goal) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition(provable.subgoals(goal).succ.size-1) })
+    case LastAnte(goal) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size-1) })
+    case LastSucc(goal) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size-1) })
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */

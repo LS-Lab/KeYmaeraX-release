@@ -224,12 +224,10 @@ trait RestApi extends HttpService {
   /* Strictly positive position = SuccPosition, strictly negative = AntePosition, 0 not used */
   def parseFormulaId(id:String): Position = {
     val (idx :: inExprs) = id.split(',').toList.map({case str => str.toInt})
-    if(idx > 0) {
-      SuccPosition(idx-1, new PosInExpr(inExprs))
-    } else if (idx < 0) {
-      AntePosition((-idx)-1, new PosInExpr(inExprs))
-    } else {
-      throw new Exception("Invalid formulaId " + id + " in axiomList")
+    try { Position(idx, inExprs) }
+    catch {
+      case e: IllegalArgumentException =>
+        throw new Exception("Invalid formulaId " + id + " in axiomList").initCause(e)
     }
   }
 
@@ -282,16 +280,17 @@ trait RestApi extends HttpService {
     }}
   }}
 
+  import Find._
   val doSearchRight = path("proofs" / "user" / Segment / Segment / Segment / "doSearchR" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
     get {
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, SuccPosition(0))))
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(FindR(0, None)))
       complete(standardCompletion(request))
     }}
   }}
 
   val doSearchLeft = path("proofs" / "user" / Segment / Segment / Segment / "doSearchL" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
     get {
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, AntePosition(0))))
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(FindL(0, None)))
       complete(standardCompletion(request))
     }}
   }}

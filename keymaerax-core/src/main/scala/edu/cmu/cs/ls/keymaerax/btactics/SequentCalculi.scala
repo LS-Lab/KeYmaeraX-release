@@ -110,7 +110,7 @@ trait SequentCalculi {
   lazy val close             : BelleExpr         = closeId | closeT | closeF
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   def close(a: AntePosition, s: SuccPosition) : BelleExpr = cohide2(a, s) & ProofRuleTactics.trivialCloser
-  def close(a: Int, s: Int)  : BelleExpr = close(AntePosition(SeqPos(a).asInstanceOf[AntePos].getIndex), SuccPosition(SeqPos(s).asInstanceOf[SuccPos].getIndex))
+  def close(a: Int, s: Int)  : BelleExpr = close(Position.convertPos(a).asInstanceOf[AntePosition], Position.convertPos(s).asInstanceOf[SuccPosition])
   /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   lazy val closeId           : DependentTactic = new DependentTactic("close id") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {
@@ -119,21 +119,21 @@ trait SequentCalculi {
         val s = provable.subgoals.head
         require(s.ante.intersect(s.succ).nonEmpty, "Expects same formula in antecedent and succedent,\n\t but antecedent " + s.ante + "\n\t does not overlap with succedent " + s.succ)
         val fml = s.ante.intersect(s.succ).head
-        close(AntePosition(s.ante.indexOf(fml)), SuccPosition(s.succ.indexOf(fml)))
+        close(AntePosition.base0(s.ante.indexOf(fml)), SuccPosition.base0(s.succ.indexOf(fml)))
     }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
   lazy val closeT            : DependentTactic = new SingleGoalDependentTactic("close true") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.succ.contains(True), "Expects true in succedent,\n\t but succedent " + sequent.succ + " does not contain true")
-      ProofRuleTactics.closeTrue(SuccPosition(sequent.succ.indexOf(True)))
+      ProofRuleTactics.closeTrue('R, True)
     }
   }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
   lazy val closeF            : DependentTactic = new SingleGoalDependentTactic("close false") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.ante.contains(False), "Expects false in antecedent,\n\t but antecedent " + sequent.ante + " does not contain false")
-      ProofRuleTactics.closeFalse(AntePosition(sequent.ante.indexOf(False)))
+      ProofRuleTactics.closeFalse('L, False)
     }
   }
 

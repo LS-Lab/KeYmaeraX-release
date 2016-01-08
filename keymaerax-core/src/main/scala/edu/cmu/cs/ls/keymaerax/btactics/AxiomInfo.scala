@@ -64,7 +64,7 @@ object DerivationInfo {
     new CoreAxiomInfo("[:*] assign nondet", "[:*]", "randomb", {case () => HilbertCalculus.randomb}),
     new CoreAxiomInfo("[?] test", "[?]", "testb", {case () => HilbertCalculus.testb}),
     new DerivedAxiomInfo("<?> test", "<?>", "testd", {case () => HilbertCalculus.testd}),
-    new CoreAxiomInfo("[++] choice", "[++]", "choiceb", {case () => HilbertCalculus.choiceb}), //@todo "[\u222A]"
+    new CoreAxiomInfo("[++] choice", "[\u222A]" /*"[++]"*/, "choiceb", {case () => HilbertCalculus.choiceb}), //@todo "[\u222A]"
     new DerivedAxiomInfo("<++> choice", "<++>", "choiced", {case () => HilbertCalculus.choiced}), //@todo "<\u222A>" (or possibly even "\u2329\u222A\u232A" but why asking for trouble
     new CoreAxiomInfo("[;] compose", "[;]", "composeb", {case () => HilbertCalculus.composeb}),
     new DerivedAxiomInfo("<;> compose", "<;>", "composed", {case () => HilbertCalculus.composed}),
