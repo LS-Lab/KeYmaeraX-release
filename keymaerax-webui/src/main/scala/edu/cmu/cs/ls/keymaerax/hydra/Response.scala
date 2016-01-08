@@ -499,7 +499,7 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends R
         case info:AxiomInfo => axiomJson(info)
         case info:TacticInfo =>
           info.display match {
-            case SimpleDisplayInfo(_) => tacticJson(info)
+            case SimpleDisplayInfo(_, _) => tacticJson(info)
             case RuleDisplayInfo(_, conclusion, premises) =>
               ruleJson(info, conclusion, premises)
           }
