@@ -60,7 +60,7 @@ sealed case class PosInExpr(pos: List[Int] = Nil) {
   /** Whether this position is a prefix of `p` */
   def isPrefixOf(p: PosInExpr): Boolean = p.pos.startsWith(pos)
 
-  override def toString: String = "PosInExpr(" + pos.mkString(".") + ")"
+  override def toString: String = prettyString //"PosInExpr(" + pos.mkString(".") + ")"
   def prettyString: String = "." + pos.mkString(".")
 }
 
