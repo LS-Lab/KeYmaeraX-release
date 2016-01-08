@@ -313,6 +313,15 @@ object DerivationInfo {
         List((List("&Gamma;","p","q"),List("&Delta;")),
           (List("&Gamma;","\u00ACp","\u00ACq"),List("&Delta;"))))
       , {case () => ProofRuleTactics.equivR}),
+    new InputPositionTacticInfo("allL"
+      , RuleDisplayInfo(("\u2200L", "allL"), (List("&Gamma;","\u2200 x:\u211D.p"), List("&Delta;")),
+        List((List("&Gamma;", "[&theta/x]p"),List("&Delta;"))))
+      , List(TermArg("&theta"))
+      , {case () => (t:Term) => SequentCalculus.allL(t)}),
+    new PositionTacticInfo("allR"
+      , RuleDisplayInfo(("\u2200R", "allR"), (List("&Gamma;"), List("\u2200 x:\u211D.p", "&Delta;")),
+        List((List("&Gamma;"),List("p","&Delta;"))))
+      , {case () => SequentCalculus.allR}),
     new TacticInfo("G"
       , RuleDisplayInfo("G", (List(""),List("[a]p")), List((List(),List("p"))))
       , {case () => DLBySubst.G}),
