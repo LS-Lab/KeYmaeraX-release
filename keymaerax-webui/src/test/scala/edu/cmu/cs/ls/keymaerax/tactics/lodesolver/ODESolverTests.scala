@@ -1,4 +1,4 @@
-package edu.tactics.LODESolverTests
+package edu.cmu.cs.ls.keymaerax.tactics.lodesolver
 
 /**
 * Copyright (c) Carnegie Mellon University.
@@ -16,7 +16,7 @@ import scala.collection.immutable
  * @author Nathan Fulton
  * Created by nfulton on 4/23/15.
  */
-class ODESolverTests extends testHelper.TacticTestSuite with PrivateMethodTester {
+class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
   //Useful values used throughout these tests.
   val nov    = Variable("doesnotoccur", None, Real)
   val acc    = Variable("acc", None, Real) //oh wow Matchers has a publicly exposed variable named a...
@@ -113,7 +113,7 @@ class ODESolverTests extends testHelper.TacticTestSuite with PrivateMethodTester
   }
 }
 
-class InverseDiffGhostTests extends testHelper.TacticTestSuite {
+class InverseDiffGhostTests extends TacticTestSuite {
   "Comma Commute Axiom" should "work on a binary example" in {
     val f = "[{x' = v, v' = a & t >= 0}]x>0".asFormula
     val node = helper.formulaToNode(f)
@@ -182,7 +182,7 @@ class InverseDiffGhostTests extends testHelper.TacticTestSuite {
   }
 }
 
-class InverseDiffCutTests extends testHelper.TacticTestSuite {
+class InverseDiffCutTests extends TacticTestSuite {
   ////
   // Inverse Cut Tests
   ///
@@ -214,7 +214,7 @@ class InverseDiffCutTests extends testHelper.TacticTestSuite {
   }
 }
 
-class ODESolutionTactic extends testHelper.TacticTestSuite {
+class ODESolutionTactic extends TacticTestSuite {
 
   "->" should "default to correct assoc" in {
     "1=1 -> 2=2 -> 3=3".asFormula shouldBe "1=1 -> (2=2 -> 3=3)".asFormula
@@ -337,7 +337,7 @@ class ODESolutionTactic extends testHelper.TacticTestSuite {
   }
 }
 
-class GhostOfLipschitz extends testHelper.TacticTestSuite {
+class GhostOfLipschitz extends TacticTestSuite {
   "Inverse Lipschitz ghost" should "work on simple example" in {
     //Make sure things occur free and bound and such a lot.
     //@todo changing v to y creates a clash...
@@ -360,7 +360,7 @@ class GhostOfLipschitz extends testHelper.TacticTestSuite {
   }
 }
 
-class DGPlusPlus extends testHelper.TacticTestSuite {
+class DGPlusPlus extends TacticTestSuite {
   "DG++" should "work when no variables are different" in {
     val f = "\\forall y [{y' = x*v, x' = z, h' = -y, t' = 0*t + 1 & x=  0 & y = 0 & a=0 & t=0}]1=1".asFormula //nonsense
     val node = helper.formulaToNode(f)

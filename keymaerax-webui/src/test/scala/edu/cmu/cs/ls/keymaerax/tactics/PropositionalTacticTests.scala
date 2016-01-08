@@ -12,11 +12,11 @@ import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cohide2T, ConsolidateSequentT, hideT, ImplyToAndT,
   kModalModusPonensT, modusPonensT, InverseImplyRightT}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
-import testHelper.ProvabilityTestHelper
+import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest.{FlatSpec, Matchers, BeforeAndAfterEach}
-import testHelper.ProofFactory._
-import testHelper.SequentFactory._
 
+import testHelper.SequentFactory._
+import ProofFactory._
 import scala.collection.immutable.Map
 
 /**

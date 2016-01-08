@@ -2,7 +2,7 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
-package testHelper
+package edu.cmu.cs.ls.keymaerax.tactics
 
 import java.io.File
 import java.util.Locale

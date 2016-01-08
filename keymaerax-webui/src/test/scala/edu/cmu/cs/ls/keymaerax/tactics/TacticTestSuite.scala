@@ -1,4 +1,4 @@
-package testHelper
+package edu.cmu.cs.ls.keymaerax.tactics
 
 /**
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
@@ -11,7 +11,6 @@ import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{ProofNode, Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
-import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 /**

@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.ODETactics._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.{RootNode, HybridProgramTacticsImpl, ODETactics}
-import testHelper.ProofFactory._
+import ProofFactory._
 import testHelper.SequentFactory._
 
 /**
@@ -18,7 +18,7 @@ import testHelper.SequentFactory._
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class DiffInvIntegrationTests extends testHelper.TacticTestSuite {
+class DiffInvIntegrationTests extends TacticTestSuite {
 
   "Assign" should "work" in {
     val f = "[a := 0;]a = 0".asFormula

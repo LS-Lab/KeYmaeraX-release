@@ -7,7 +7,8 @@ package edu.cmu.cs.ls.keymaerax
 import edu.cmu.cs.ls.keymaerax.btactics.Context
 
 /**
- * Tactics framework providing base tactics, tactic combinators,
+ * (Deprecated).
+  * Old tactics framework providing base tactics, tactic combinators,
  * tactics execution and scheduling and continuations engine,
  * as well as presupplied proof search strategies.
  *

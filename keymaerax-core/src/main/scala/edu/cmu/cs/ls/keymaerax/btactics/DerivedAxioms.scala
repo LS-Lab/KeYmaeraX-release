@@ -364,7 +364,7 @@ object DerivedAxioms {
 
   /**
    * {{{Axiom "exists dual".
-   *   (!\forall x (!p(x))) <-> (\exists x p(x))
+   *   (!\forall x (!p(??))) <-> (\exists x p(??))
    * End.
    * }}}
    * @Derived

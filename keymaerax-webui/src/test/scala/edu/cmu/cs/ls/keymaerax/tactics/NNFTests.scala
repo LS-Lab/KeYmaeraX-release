@@ -15,7 +15,7 @@ import testHelper.KeYmaeraXTestTags
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class NNFTests extends testHelper.TacticTestSuite {
+class NNFTests extends TacticTestSuite {
   "Double negation elimination" should "eliminate" in {
     val node = helper.formulaToNode("!(!(1=1))".asFormula)
     val tactic = helper.positionTacticToTactic(rewriteDoubleNegationEliminationT)
@@ -99,7 +99,7 @@ class NNFTests extends testHelper.TacticTestSuite {
     node.openGoals().flatMap(_.sequent.succ) should contain only "( 1!=1 & 2!=2 ) | 2!=2".asFormula //OK.
   }
 
-  it should "prove example 1" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
+  it should "prove example 1" /*taggedAs(KeYmaeraXTestTags.SummaryTest)*/ in {
     import TacticLibrary.{EquivRightT,AxiomCloseT}
     import scala.language.postfixOps
 
@@ -115,7 +115,7 @@ class NNFTests extends testHelper.TacticTestSuite {
     helper.runTactic(tactic, node, mustApply = true) shouldBe 'closed
   }
 
-  it should "work 2" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
+  it should "work 2" /*taggedAs(KeYmaeraXTestTags.SummaryTest)*/ in {
     val node = helper.formulaToNode("!( (1=1 | 2=2) -> !(!(2=2)) )".asFormula)
     val tactic = NNFRewrite(SuccPosition(0))
 

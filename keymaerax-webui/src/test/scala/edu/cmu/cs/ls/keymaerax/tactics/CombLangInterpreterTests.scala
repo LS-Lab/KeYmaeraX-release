@@ -5,13 +5,13 @@
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
-import edu.cmu.cs.ls.keymaerax.tactics.{RootNode, Interpreter, Config}
+import edu.cmu.cs.ls.keymaerax.tactics.{TacticTestSuite, RootNode, Interpreter, Config}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.{CLInterpreter, CLParser}
 
 /**
  * Created by nfulton on 2/26/15.
  */
-class CombLangInterpreterTests extends testHelper.TacticTestSuite {
+class CombLangInterpreterTests extends TacticTestSuite {
   "CLInterpreter" should "not choke" in {
     val t = CLInterpreter.construct(CLParser("NilT & NilT").get)
     val n = new RootNode(

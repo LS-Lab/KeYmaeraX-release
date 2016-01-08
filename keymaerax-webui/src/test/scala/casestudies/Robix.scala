@@ -20,10 +20,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{LabelBranch, Tactic, PositionTac
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Z3}
-import org.scalatest.tags.Slow
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
-import testHelper.ProvabilityTestHelper
 
 import scala.collection.immutable.Map
 import scala.language.postfixOps

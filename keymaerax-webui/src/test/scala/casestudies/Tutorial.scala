@@ -15,7 +15,6 @@ import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.{Polya, Z3, Mathematica, KeYmaera}
-import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
 

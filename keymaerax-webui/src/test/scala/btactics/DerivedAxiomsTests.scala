@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms._
 import edu.cmu.cs.ls.keymaerax.core.{Provable, Lemma, Sequent}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 import testHelper.KeYmaeraXTestTags
 import testHelper.KeYmaeraXTestTags.OptimisticTest
@@ -13,7 +14,9 @@ import testHelper.KeYmaeraXTestTags.OptimisticTest
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
  */
-class DerivedAxiomsTests extends edu.btactics.TacticTestBase {
+@SummaryTest
+@UsualTest
+class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase {
 
   //@todo add a test case that runs through AxiomInfo.allInfos checking all its axioms
 

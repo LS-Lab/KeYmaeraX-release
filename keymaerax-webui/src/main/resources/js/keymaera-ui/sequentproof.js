@@ -1,4 +1,4 @@
-angular.module('sequentproof', ['ngSanitize','sequent','formula'])
+angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinners'])
   /**
    * A sequent deduction view focused on a single path through the deduction, with links to sibling goals when
    * branching occurs.
@@ -15,7 +15,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
    * @param agenda          The agenda, see provingawesome.js for schema.
    * @param readOnly        Indicates whether or not the proof steps should allow interaction (optional).
    */
-  .directive('k4Sequentproof', ['$http', '$uibModal', 'sequentProofData', function($http, $uibModal, sequentProofData) {
+  .directive('k4Sequentproof', ['$http', '$uibModal', 'sequentProofData', 'spinnerService', function($http, $uibModal, sequentProofData, spinnerService) {
     /* The directive's internal control. */
     function link(scope, element, attrs) {
 
@@ -128,26 +128,35 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       scope.onApplyTactic = function(formulaId, tacticId) {
         var base = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId;
         var uri = formulaId !== undefined ?  base + '/' + formulaId + '/doAt/' + tacticId : base + '/do/' + tacticId;
-        $http.get(uri).success(function(data) {
-          if (scope.nodeId === data.parent.id) {
-            sequentProofData.updateAgendaAndTree(data);
-          } else {
-            showErrorMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " + scope.nodeId + " but got " + data.parent.id)
-          }
-        }).error(function(data) {
-          scope.onProofError({message: "No axiom/tactic applicable to that formula"});
-        });
+        spinnerService.show('tacticExecutionSpinner')
+        $http.get(uri)
+          .success(function(data) {
+            if (scope.nodeId === data.parent.id) {
+              sequentProofData.updateAgendaAndTree(data);
+            } else {
+              showErrorMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " + scope.nodeId + " but got " + data.parent.id)
+            }
+          })
+          .catch(function(err) {
+            scope.onProofError({message: "No axiom/tactic applicable to that formula"});
+          })
+          .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
       }
 
       /** Applies the tactic 'tacticId' with input at the formula 'formulaId' */
       scope.onApplyInputTactic = function(formulaId, tacticId, input) {
-        $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/doInputAt/' + tacticId, input).success(function(data) {
-          if (scope.nodeId === data.parent.id) {
-            sequentProofData.updateAgendaAndTree(data);
-          } else {
-            showErrorMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " + scope.nodeId + " but got " + data.parent.id)
-          }
-        });
+        $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/doInputAt/' + tacticId, input)
+          .success(function(data) {
+            if (scope.nodeId === data.parent.id) {
+              sequentProofData.updateAgendaAndTree(data);
+            } else {
+              showErrorMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " + scope.nodeId + " but got " + data.parent.id)
+            }
+          })
+          .catch(function(err) {
+            scope.onProofError({message: "Unable to execute tactic"}); //@todo better message
+          })
+          .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
       }
 
       scope.fetchParentRightClick = function(event) {

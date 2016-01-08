@@ -2,16 +2,19 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+
+package edu.cmu.cs.ls.keymaerax.tactics
+
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
-import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import ODETactics.{diffSkipT, diffWeakenT, diffWeakenAxiomT, diffSolution, diamondDiffWeakenAxiomT}
 import testHelper.SequentFactory._
-import testHelper.ProofFactory._
+import ProvabilityTestHelper._
+import ProofFactory._
 
 
 import scala.collection.immutable

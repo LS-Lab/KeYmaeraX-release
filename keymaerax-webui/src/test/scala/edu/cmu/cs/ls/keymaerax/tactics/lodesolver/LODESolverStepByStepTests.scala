@@ -1,4 +1,4 @@
-package edu.tactics.LODESolverTests
+package edu.cmu.cs.ls.keymaerax.tactics.lodesolver
 
 import edu.cmu.cs.ls.keymaerax.core.{Equiv, Forall, SuccPos}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.tactics._
  * These tests execute the Logical ODE Solver step-by-step on a number of examples.
  * Created by nfulton on 9/11/15.
  */
-class LODESolverStepByStepTests extends testHelper.TacticTestSuite {
+class LODESolverStepByStepTests extends TacticTestSuite {
   //
   // Example 1
   //

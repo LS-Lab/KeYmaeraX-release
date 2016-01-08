@@ -58,7 +58,7 @@ sealed trait SeqPos {
  * Antecedent Positions of formulas in a sequent.
  * @param index the position base 0 in antecedent.
  */
-case class AntePos private[edu] (private[core] val index: Int) extends SeqPos {
+case class AntePos private[ls] (private[core] val index: Int) extends SeqPos {
   def isAnte: Boolean = true
   /** The position base 0 in antecedent. */
   def getIndex: Int = index
@@ -68,7 +68,7 @@ case class AntePos private[edu] (private[core] val index: Int) extends SeqPos {
  * Antecedent Positions of formulas in a sequent.
  * @param index the position base 0 in succedent.
  */
-case class SuccPos private[edu] (private[core] val index: Int) extends SeqPos {
+case class SuccPos private[ls] (private[core] val index: Int) extends SeqPos {
   def isAnte: Boolean = false
   /** The position base 0 in succedent. */
   def getIndex: Int = index
@@ -84,7 +84,7 @@ object SeqPos {
    * @see SeqPos#pos
    */
   def apply(signedPos: Int): SeqPos =
-    if (signedPos>0) {SuccPos(signedPos-1)} else {assert(signedPos<0, "nonzero positions");AntePos(-signedPos-1)}
+    if (signedPos>0) {SuccPos(signedPos-1)} else {require(signedPos<0, "nonzero positions");AntePos(-signedPos-1)}
 
 }
 

@@ -5,15 +5,16 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
-import testHelper.ProvabilityTestHelper
+import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
-import testHelper.ProofFactory._
+
 import testHelper.SequentFactory._
+import ProofFactory._
 
 import scala.collection.immutable._
 

@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, PosInExpr, RootNode, SuccP
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl._
 import edu.cmu.cs.ls.keymaerax.tactics.PolynomialForm._
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
-import testHelper.ProvabilityTestHelper
+import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.SequentFactory._
 

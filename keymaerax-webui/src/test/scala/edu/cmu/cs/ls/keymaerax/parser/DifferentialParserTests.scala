@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{LoadedAxiom, KeYmaeraParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.ProvabilityTestHelper
+import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
 
 /**

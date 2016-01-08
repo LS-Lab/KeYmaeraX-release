@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, CheckinTest}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags.{OptimisticTest, CheckinTest}
-import testHelper.{KeYmaeraXTestTags, ProvabilityTestHelper}
+import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable._
 
@@ -27,8 +27,8 @@ import scala.collection.immutable._
  * @see [[edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms]]
  * @todo add a reflection-based test at the end that checks all lazy val in DerivedAxioms, even if that does not fail separately it gives exhaustiveness.
  */
-@CheckinTest
-@SummaryTest
+/*@CheckinTest*/
+/*@SummaryTest*/
 class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))
@@ -81,7 +81,7 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     rootNode.isProved() shouldBe true
   }
 
-  "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs(KeYmaeraXTestTags.CheckinTest) in {
+  "The DerivedAxioms prepopulation procedure" should "not crash" /*taggedAs(KeYmaeraXTestTags.CheckinTest)*/ in {
     LemmaDBFactory.lemmaDB.deleteDatabase() //necessary. Perhaps we should add optional copy-and-recover.
     DerivedAxioms.prepopulateDerivedLemmaDatabase()
   }
@@ -90,8 +90,8 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
-  ignore should "prove all eliminate" taggedAs(OptimisticTest) in {check(allEliminateAxiom)}
-  ignore should "prove exists eliminate" taggedAs(OptimisticTest) in {check(existsEliminate)}
+  ignore should "prove all eliminate" /*taggedAs(OptimisticTest)*/ in {check(allEliminateAxiom)}
+  ignore should "prove exists eliminate" /*taggedAs(OptimisticTest)*/ in {check(existsEliminate)}
   it should "prove !exists" in {check(notExists)}
   it should "prove !all" in {check(notAll)}
   it should "prove ![]" in {check(notBox)}
@@ -182,8 +182,8 @@ class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   "Derived Axiom Tactics" should "prove <-> reflexive" in {check(equivReflexiveT)}
   it should "prove !!" in {check(doubleNegationT)}
   it should "prove exists dual" in {check(existsDualT)}
-  ignore should "prove all eliminate" taggedAs(OptimisticTest) in {check(allEliminateT)}
-  ignore should "prove exists eliminate" taggedAs(OptimisticTest) in {check(existsEliminateT)}
+  ignore should "prove all eliminate" /*taggedAs(OptimisticTest)*/ in {check(allEliminateT)}
+  ignore should "prove exists eliminate" /*taggedAs(OptimisticTest)*/ in {check(existsEliminateT)}
   it should "prove all distribute" in {check(allDistributeT)}
   it should "prove box dual" in {check(boxDualT)}
   it should "prove <:=> assign" in {check(assigndT)}

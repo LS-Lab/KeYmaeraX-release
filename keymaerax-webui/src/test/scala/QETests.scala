@@ -6,7 +6,7 @@ package edu.tactics
 
 import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, RootNode, Tactics}
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
-import testHelper.ProvabilityTestHelper
+import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._

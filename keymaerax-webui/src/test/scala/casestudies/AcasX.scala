@@ -26,7 +26,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, Mathematica, KeYmaera}
-import testHelper.ProvabilityTestHelper
+import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 import testHelper.ParserFactory._

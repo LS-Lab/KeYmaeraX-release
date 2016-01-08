@@ -203,7 +203,7 @@ trait UnifyUSCalculus {
     private def useAt[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: BelleExpr, sequent: Sequent): BelleExpr = {
       require(subst(k) == c, "correctly matched input")
       //@note might cause some irrelevant clashes
-      require(C(c).at(p.inExpr) == (C,c), "correctly split at position p")
+      require(C(c).at(p.inExpr) == (C,c), "correctly split at position " + p.inExpr + "\ngiving context " + C + "\nsubexpression " + c + "\nreassembling to the same " + C(c))
       require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
       /** Equivalence rewriting step */

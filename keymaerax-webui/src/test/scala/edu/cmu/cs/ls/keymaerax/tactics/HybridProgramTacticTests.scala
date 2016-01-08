@@ -14,10 +14,10 @@ import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT, skolemizeT, ImplyR
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.PositionTactic
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
-import testHelper.ProvabilityTestHelper
+import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.SequentFactory._
-import testHelper.ProofFactory._
+import ProofFactory._
 
 import scala.collection.immutable
 import scala.collection.immutable.Map

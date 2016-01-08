@@ -67,6 +67,75 @@ table .btn{
   padding: 0 25px 0 0;
 }
 
+/* Begin Spinner */
+
+.spinner {
+  width: 100px;
+  height: 100px;
+
+  position: absolute;
+  top: calc(50% - 70px);
+  left: calc(50% - 50px);
+}
+
+.spinner-double-bounce1, .spinner-double-bounce2 {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: #BACBD9;
+  border: solid 3px #4D6473;
+  opacity: 0.6;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+
+  -webkit-animation: spinner-bounce 2.0s infinite ease-in-out;
+  animation: spinner-bounce 2.0s infinite ease-in-out;
+}
+
+.spinner-double-bounce2 {
+  -webkit-animation-delay: -1.0s;
+  animation-delay: -1.0s;
+}
+
+@-webkit-keyframes spinner-bounce {
+  0%, 100% { -webkit-transform: scale(0.0) }
+  50% { -webkit-transform: scale(1.0) }
+}
+
+@keyframes spinner-bounce {
+  0%, 100% {
+    transform: scale(0.0);
+    -webkit-transform: scale(0.0);
+  } 50% {
+    transform: scale(1.0);
+    -webkit-transform: scale(1.0);
+  }
+}
+
+.spinner-overlay {
+  opacity: .75;
+  background-color: #4D6473;
+  width: calc(100% + 10px);
+  height: calc(100% + 30px);
+  position: absolute;
+  z-index: 5;
+  margin: -20px -20px;
+  border-radius: 3px;
+}
+
+.spinner-please-wait {
+  text-align: center;
+  position: absolute;
+  top: calc(50% + 45px);
+  left: calc(50% - 45px);
+  color: #fff;
+  z-index: 10;
+}
+
+/* End Spinner */
+
 /* do not change appearance when focused for the sake of a context menu */
 .k4-withcontextmenu:focus {
   outline: none;

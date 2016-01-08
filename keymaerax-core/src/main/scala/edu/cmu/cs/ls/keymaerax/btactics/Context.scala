@@ -33,6 +33,8 @@ object Context {
   /** Make a context for expression `ctx` guarded by the protection of uniform substitutions. */
   def apply[T <: Expression](ctx: T): Context[T] = new GuardedContext[T](ctx)
 
+  /** Whether to cross-check implementations */
+  private val CROSSCHECK = false
   /** Whether to check split results redundantly */
   private val REDUNDANT = false
   /** Placeholder for programs. Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
@@ -40,13 +42,18 @@ object Context {
   /** Placeholder for differential programs. Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
   val DotDiffProgram = DifferentialProgramConst("DotDiffProgram")
 
-  //@todo add faster replacement contexts!
-
   /** Subexpression of `t` at the indicated position `pos` or exception if ill-defined position.
     * @ensures sub(t,pos) == at(t,pos)._2
     */
-  def sub(t: Expression, pos: PosInExpr): Expression = { part(t, pos) } ensuring(
-    r => r==at(t, pos)._2, "sub(t,pos)==at(t,pos)._2")
+  def sub(t: Expression, pos: PosInExpr): Expression = { part(t, pos) } /*ensuring(
+    //@note redundant cross-contract consistency checks
+    r => !CROSSCHECK || r==at(t, pos)._2, "sub(t,pos)==at(t,pos)._2")*/
+
+  /** Direct unguarded replacement context split */
+  private def directAt[T <: Expression](t: T, pos:PosInExpr): (Context[T], Expression) =
+    (new ReplacementContext[T](t, pos), sub(t, pos)) ensuring(
+      //@note redundant cross-contract consistency checks
+      r => !CROSSCHECK || {val rat = context(t, pos); r._2==rat._2 && r._1(r._2) == t && Context(rat._1)(rat._2)==t}, "cross-contract consistency")
 
   /**
    * Split `C{e}=t(pos)` expression t at position pos into the expression e at that position and the context C within which that expression occurs.
@@ -55,7 +62,7 @@ object Context {
    * @ensures at(t,pos)._2 == sub(t,pos)
    */
   def at(t: Expression, pos: PosInExpr): (Context[Expression], Expression) = if (!GUARDED) {
-    (new ReplacementContext[Expression](t, pos), sub(t, pos))
+    directAt(t, pos)
   } else {
     val sp = t match {
       case f: Term => {context(f, pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
@@ -68,13 +75,21 @@ object Context {
   } ensuring(r => backsubstitution(r, t, pos), "Reassembling the expression at that position into the context returns the original formula: " + t + " at " + pos)
   //@todo ensuring(r => r._2 == sub(t, pos))
 
+  private def context(e: Expression, pos: PosInExpr): (Expression, Expression) = e match {
+    case f: Term => context(f, pos)
+    case f: Formula => context(f, pos)
+    case f: Program => context(f, pos)
+    case f: DifferentialProgram => context(f, pos)
+    case _ => ???  // trivial totality on possibly problematic patmats
+  }
+
   /**
    * Split `C{e}=t(pos)` term t at position pos into the expression e at that position and the context C within which that expression occurs.
    * Thus `C{e}` will equal the original `t` and `e` occurs at position pos in `t`
    * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
    */
   def at(t: Term, pos: PosInExpr): (Context[Term], Expression) = if (!GUARDED) {
-    (new ReplacementContext[Term](t, pos), sub(t, pos))
+    directAt(t, pos)
   } else {
     val sp = {context(t, pos) } ensuring( r => !REDUNDANT || r==split(t,pos), "direct and generic split have same result " + t + " at " + pos)
     (Context(sp._1), sp._2)
@@ -86,7 +101,7 @@ object Context {
    * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
    */
   def at(f: Formula, pos: PosInExpr): (Context[Formula], Expression) = if (!GUARDED) {
-    (new ReplacementContext[Formula](f, pos), sub(f, pos))
+    directAt(f, pos)
   } else {
     val sp = {context(f,pos) } ensuring( r => !REDUNDANT || r==split(f,pos), "direct and generic split have same result " + f + " at " + pos)
     (Context(sp._1), sp._2)
@@ -99,7 +114,7 @@ object Context {
    * (provided that back-substitution is admissible, otherwise a direct replacement in `C` at `pos` to `e` will equal `t`).
    */
   def at(a: Program, pos: PosInExpr): (Context[Program], Expression) = if (!GUARDED) {
-    (new ReplacementContext[Program](a, pos), sub(a, pos))
+    directAt(a, pos)
   } else {
     val sp = {context(a, pos) } ensuring( r => !REDUNDANT || r==split(a,pos), "direct and generic split have same result " + a + " at " + pos)
     (Context(sp._1), sp._2)
@@ -131,7 +146,16 @@ object Context {
   private def backsubstitution(r:(Context[Expression], Expression), t: Expression, pos: PosInExpr): Boolean = {
     if (StaticSemantics.signature(r._1.ctx).intersect(Set(noContext,noContextD)).isEmpty)
       try {
-        r._1(r._2) == t
+        if (r._1(r._2) == t) {
+          if (CROSSCHECK) {
+            //@note redundant cross-contract consistency checks
+            val rsplit = (new ReplacementContext[Expression](t, pos), sub(t, pos))
+            r._2 == rsplit._2 && r._1(r._2) == t && rsplit._1(rsplit._2) == t
+          } else {
+            true
+          }
+        } else
+          false
       }
       catch {
         // fall-back to rude replacement as a check for whether backsubstitution justifies the context splitting when otherwise non-admissible
@@ -140,7 +164,7 @@ object Context {
     else
       // no proper reassemble test for noContext
       true
-  } ensuring(_ => r._2==part(t,pos), "expression is consistent with sub(t,pos)")
+  }
 
   // elegant reapply-based context splitting
 
@@ -272,18 +296,39 @@ object Context {
     case _ => ???  // trivial totality on possibly problematic patmats
   }
 
+  //private def as[T <: Expression](e: Expression): Option[T] = e match { case t:T => Some(t) case _ => None }
+  //private def asFormula(e: Expression): Option[Formula] = e match { case t:Formula => Some(t) case _ => None }
+  /** Cast `e` as an expression of type `T` or else fall back to using value `default` instead. */
+//  private def asOrElse[T <: Expression](e: Expression, default: => T): T = e match {
+//    case t:T => t
+//    case _ => default
+//  }
+  private def asOrElse(e: Expression, default: => Term): Term =
+    e match { case t:Term => t case _ => default }
+  private def asOrElse(e: Expression, default: => Formula): Formula =
+    e match { case t:Formula => t case _ => default }
+  private def asOrElse(e: Expression, default: => Program): Program =
+    e match { case t:Program => t case _ => default }
+  private def asOrElseD(e: Expression, default: => DifferentialProgram): DifferentialProgram =
+    e match { case t:DifferentialProgram => t case _ => default }
+
+
   /** Replace within term at position pos by repl @see [[StaticSemanticsTools.boundAt()]] for same positions */
-  def replaceAt(term: Term, pos: PosInExpr, repl: Expression): Term = if (pos==HereP) repl.asInstanceOf[Term] else term match {
+  def replaceAt(term: Term, pos: PosInExpr, repl: Expression): Term = if (pos==HereP)
+    asOrElse(repl, throw new IllegalArgumentException("replaceAt position " + pos + " of term " + term + " by " + repl + " may not be defined"))
+  else term match {
     case FuncOf(f,t)     if pos.head==0 => FuncOf(f, replaceAt(t, pos.child, repl))
     // homomorphic cases
     case f:UnaryCompositeTerm  if pos.head==0 => f.reapply(replaceAt(f.child, pos.child, repl))
     case f:BinaryCompositeTerm if pos.head==0 => f.reapply(replaceAt(f.left, pos.child, repl), f.right)
     case f:BinaryCompositeTerm if pos.head==1 => f.reapply(f.left, replaceAt(f.right, pos.child, repl))
-    case _ => throw new IllegalArgumentException("replaceAt position " + pos + " of term " + term + " may not be defined")
+    case _ => throw new IllegalArgumentException("replaceAt position " + pos + " of term " + term + " by " + repl + " may not be defined")
   }
 
   /** Replace within formula at position pos by repl @see [[StaticSemanticsTools.boundAt()]] for same positions */
-  def replaceAt(formula: Formula, pos: PosInExpr, repl: Expression): Formula = if (pos==HereP) repl.asInstanceOf[Formula] else formula match {
+  def replaceAt(formula: Formula, pos: PosInExpr, repl: Expression): Formula = if (pos==HereP)
+    asOrElse(repl, throw new IllegalArgumentException("replaceAt position " + pos + " of formula " + formula + " by " + repl + " may not be defined"))
+  else formula match {
     // base cases
     case PredOf(p,t)          if pos.head==0 => PredOf(p, replaceAt(t, pos.child, repl))
     case PredicationalOf(c,t) if pos.head==0 => PredicationalOf(c, replaceAt(t, pos.child, repl))
@@ -297,11 +342,13 @@ object Context {
     case f:Quantified             if pos.head==0 => f.reapply(f.vars, replaceAt(f.child, pos.child, repl))
     case f:Modal                  if pos.head==0 => f.reapply(replaceAt(f.program, pos.child, repl), f.child)
     case f:Modal                  if pos.head==1 => f.reapply(f.program, replaceAt(f.child, pos.child, repl))
-    case _ => throw new IllegalArgumentException("replaceAt position " + pos + " of formula " + formula + " may not be defined")
+    case _ => throw new IllegalArgumentException("replaceAt position " + pos + " of formula " + formula + " by " + repl + " may not be defined")
   }
 
   /** Replace within program at position pos by repl @see [[StaticSemanticsTools.boundAt()]] for same positions */
-  def replaceAt(program: Program, pos: PosInExpr, repl:Expression): Program = if (pos==HereP) repl.asInstanceOf[Program] else program match {
+  def replaceAt(program: Program, pos: PosInExpr, repl:Expression): Program = if (pos==HereP)
+    asOrElse(repl, throw new IllegalArgumentException("replaceAt position " + pos + " of program " + program + " by " + repl + " may not be defined"))
+  else program match {
     case Assign(x,t)       if pos==PosInExpr(0::Nil) => Assign(repl.asInstanceOf[Variable], t)
     case Assign(x,t)       if pos.head==1 => Assign(x, replaceAt(t, pos.child, repl))
     case DiffAssign(xp,t)  if pos==PosInExpr(0::Nil) => DiffAssign(repl.asInstanceOf[DifferentialSymbol], t)
@@ -316,15 +363,17 @@ object Context {
     case f:UnaryCompositeProgram  if pos.head==0 => f.reapply(replaceAt(f.child, pos.child, repl))
     case f:BinaryCompositeProgram if pos.head==0 => f.reapply(replaceAt(f.left, pos.child, repl), f.right)
     case f:BinaryCompositeProgram if pos.head==1 => f.reapply(f.left, replaceAt(f.right, pos.child, repl))
-    case _ => throw new IllegalArgumentException("replaceAt position " + pos + " of program " + program + " may not be defined")
+    case _ => throw new IllegalArgumentException("replaceAt position " + pos + " of program " + program + " by " + repl + " may not be defined")
   }
 
-  private def replaceAtODE(program: DifferentialProgram, pos: PosInExpr, repl:Expression): DifferentialProgram = if (pos==HereP) repl.asInstanceOf[DifferentialProgram] else program match {
+  private def replaceAtODE(program: DifferentialProgram, pos: PosInExpr, repl:Expression): DifferentialProgram = if (pos==HereP)
+    asOrElseD(repl, throw new IllegalArgumentException("replaceAtODE position " + pos + " of program " + program + " by " + repl + " may not be defined"))
+  else program match {
     case AtomicODE(xp,t)          if pos==PosInExpr(0::Nil) => AtomicODE(repl.asInstanceOf[DifferentialSymbol], t)
     case AtomicODE(xp,t)          if pos.head==1 => AtomicODE(xp, replaceAt(t, pos.child, repl))
     case DifferentialProduct(l,r) if pos.head==0 => DifferentialProduct(replaceAtODE(l, pos.child, repl), r)
     case DifferentialProduct(l,r) if pos.head==1 => DifferentialProduct(l, replaceAtODE(r, pos.child, repl))
-    case _ => throw new IllegalArgumentException("replaceAtODE position " + pos + " of program " + program + " may not be defined")
+    case _ => throw new IllegalArgumentException("replaceAtODE position " + pos + " of program " + program + " by " + repl + " may not be defined")
   }
 
 
@@ -489,10 +538,12 @@ sealed trait Context[+T <: Expression] extends (Expression => Formula) {
   * @tparam T the type/kind of expression that this context is representing.
   * @author Andre Platzer
   * @see [[Context.replaceAt()]]
-  * @note ReplacementContexts that differ only in replacee could be considered equal.
+  * @note ReplacementContexts that differ only in replacee are considered equal.
   */
 private class ReplacementContext[+T <: Expression](replicate: T, dot: PosInExpr) extends Context[T] {
-  def ctx: T = apply(DotTerm).asInstanceOf[T]
+  import Context.{DotDiffProgram, DotProgram}
+  private lazy val dotty = if (isFormulaContext) DotFormula else if (isTermContext) DotTerm else if (isProgramContext) DotProgram else DotDiffProgram
+  def ctx: T = apply(dotty).asInstanceOf[T]
 
   def apply(e: Expression): Formula = Context.replaceAt(replicate, dot, e).asInstanceOf[Formula]
 
@@ -506,6 +557,17 @@ private class ReplacementContext[+T <: Expression](replicate: T, dot: PosInExpr)
   override def isProgramContext =replacee.kind==ProgramKind
 
   override def isDifferentialProgramContext = replacee.kind==DifferentialProgramKind
+
+  override def toString = "ReplContext{{" + replicate.prettyString + " at " + dot + "}}"
+
+  override def equals(e: Any): Boolean = e match {
+    case a: ReplacementContext[T] => ctx == a.ctx
+      //@todo a:GuardedContext => ctx == a.ctx     //@todo good or bad idea?
+    case _ => false
+  }
+
+  //@note expensive
+  override def hashCode: Int = ctx.hashCode()
 }
 
 
