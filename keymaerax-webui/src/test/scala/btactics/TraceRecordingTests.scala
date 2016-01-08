@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.{ProofTree, DBAbstractionObj}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
-import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import org.scalatest.{Ignore, BeforeAndAfterEach, Matchers, FlatSpec}
 
 import scala.collection.immutable._
 
@@ -16,6 +16,7 @@ import scala.collection.immutable._
   * the desired operations.
   * Created by bbohrer on 11/23/15.
   */
+@Ignore
 class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach  {
   val db = DBAbstractionObj.testDatabase
   //@todo fill in reasonable data, this is bogus
