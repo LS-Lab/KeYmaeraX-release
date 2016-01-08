@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
  * Algebraic Data Type whose elements are well-formed Bellephoron tactic expressions.
  * See Table 1 of "Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus"
  * @author Nathan Fulton
- * @see [[SequentialInterpreter]]
+ * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter]]
  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon]]
  */
 abstract class BelleExpr(val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) {
