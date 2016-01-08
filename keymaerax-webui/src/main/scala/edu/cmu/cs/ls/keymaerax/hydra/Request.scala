@@ -20,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.btacticinterface.{UIIndex, BTacticParser}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo}
 import _root_.edu.cmu.cs.ls.keymaerax.core._
-import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
+import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
@@ -745,7 +745,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             case Nil => localProvable
             case steps => steps.last.output.getOrElse(steps.last.input)
           }
-        val listener = new DebuggerListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
+        val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
         val executor = BellerophonTacticExecutor.defaultExecutor
         val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
         val finalProvable = executor.wait(taskId) match {
