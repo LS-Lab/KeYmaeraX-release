@@ -34,6 +34,14 @@ CREATE TABLE IF NOT EXISTS `proofs` (
   `closed` INTEGER -- ?
 );
 
+CREATE TABLE IF NOT EXISTS `agendaItems`(
+  `_id` INTEGER PRIMARY KEY ON CONFLICT FAIL,
+  `proofId` INTEGER REFERENCES `proofs` (`_id`),
+  `initialProofNode` INTEGER,
+  `displayName` STRING
+
+);
+
 ----------------------------------------------------------------------------------------------------
 -- Serialization of Provables
 ----------------------------------------------------------------------------------------------------
