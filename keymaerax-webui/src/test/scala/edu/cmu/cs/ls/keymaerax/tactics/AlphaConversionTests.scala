@@ -16,12 +16,14 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import testHelper.SequentFactory._
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
 * Created by smitsch on 1/13/15.
 * @author Stefan Mitsch
 * @author Ran Ji
 */
+@ObsoleteTest
 class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper((x) => println(x))
 

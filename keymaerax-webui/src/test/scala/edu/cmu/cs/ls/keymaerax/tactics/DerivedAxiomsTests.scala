@@ -18,6 +18,7 @@ import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags.{OptimisticTest, CheckinTest}
 import testHelper.KeYmaeraXTestTags
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 import scala.collection.immutable._
 
@@ -29,6 +30,7 @@ import scala.collection.immutable._
  */
 /*@CheckinTest*/
 /*@SummaryTest*/
+@ObsoleteTest
 class DerivedAxiomsTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))

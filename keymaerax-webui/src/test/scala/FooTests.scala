@@ -23,7 +23,7 @@ class FooTests extends FlatSpec with Matchers with BeforeAndAfterEach {
    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
  }
 
- "A failing tactic" should "print nice errors" in {
+ "A failing tactic" should "print nice errors (but fail!)" in {
    val itFails = new BuiltInTactic("fails") {
      override def result(provable: Provable) = throw new BelleError("I don't want to compute today...")
    }

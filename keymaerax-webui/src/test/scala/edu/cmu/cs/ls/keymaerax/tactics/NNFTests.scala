@@ -9,12 +9,14 @@ import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, SearchTacticsImpl, SuccPosition, TacticLibrary, NNFRewrite}
 import edu.cmu.cs.ls.keymaerax.tactics.NNFRewrite._
 import testHelper.KeYmaeraXTestTags
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Created by nfulton on 2/11/15.
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class NNFTests extends TacticTestSuite {
   "Double negation elimination" should "eliminate" in {
     val node = helper.formulaToNode("!(!(1=1))".asFormula)

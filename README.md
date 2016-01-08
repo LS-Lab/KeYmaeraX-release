@@ -61,7 +61,7 @@ to compile the source code. First-time compilation may take a while, since it do
 
 To run the regression test case suite, type
 
-    sbt test
+    sbt test -l edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 FAQ: Build Problems
 ===================
@@ -155,8 +155,8 @@ Run Configurations Drop-down in Toolbar
  -> Add Configuration (ScalaTest)
  -> Select "All in package" for Test Kind
  -> Under "Test options" enter:
-      -n edu.cmu.cs.ls.keymaerax.tags.CheckinTest
-      (or any other string from KeYmaeraXTestTags.scala)
+      `-n edu.cmu.cs.ls.keymaerax.tags.CheckinTest -n edu.cmu.cs.ls.keymaerax.tags.SummaryTest -l edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest`
+      (or any other string from `TestTags.scala`)
  -> Select "keymaerax" as SDK and classpath of module
  -> Apply/OK
 

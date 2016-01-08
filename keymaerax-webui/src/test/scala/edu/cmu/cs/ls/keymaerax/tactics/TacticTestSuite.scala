@@ -10,12 +10,15 @@ import edu.cmu.cs.ls.keymaerax.tactics.Position
 import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.{ProofNode, Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Created by nfulton on 2/5/15.
  */
+@ObsoleteTest
 trait TacticTestSuite extends FlatSpec with Matchers with BeforeAndAfterEach {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Boilerplate

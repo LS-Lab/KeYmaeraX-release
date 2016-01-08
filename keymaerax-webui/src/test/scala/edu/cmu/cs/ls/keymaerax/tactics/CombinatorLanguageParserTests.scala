@@ -8,10 +8,12 @@ package edu.cmu.cs.ls.keymaerax.tactics
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.CLParser
 import org.scalatest.{Matchers, FlatSpec}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Created by nfulton on 2/26/15.
  */
+@ObsoleteTest
 class CombinatorLanguageParserTests extends FlatSpec with Matchers {
   val c = BuiltInC("c")
   val m = BuiltInC("m")

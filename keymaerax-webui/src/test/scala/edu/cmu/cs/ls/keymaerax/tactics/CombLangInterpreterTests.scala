@@ -7,10 +7,12 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics.{TacticTestSuite, RootNode, Interpreter, Config}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.{CLInterpreter, CLParser}
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Created by nfulton on 2/26/15.
  */
+@ObsoleteTest
 class CombLangInterpreterTests extends TacticTestSuite {
   "CLInterpreter" should "not choke" in {
     val t = CLInterpreter.construct(CLParser("NilT & NilT").get)

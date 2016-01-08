@@ -12,6 +12,7 @@ import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import testHelper.{KeYmaeraXTestTags}
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -23,6 +24,7 @@ import scala.collection.immutable.Map
  * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
  */
 /*@SummaryTest*/
+@ObsoleteTest
 class TacticExamples extends FlatSpec with Matchers with BeforeAndAfterEach {
   //import Augmentors._
   val helper = new ProvabilityTestHelper()

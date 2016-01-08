@@ -2,11 +2,13 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.tactics.{Formatters, SearchTacticsImpl}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Tests for formatting tactics.
  * Created by nfulton on 7/20/15.
  */
+@ObsoleteTest
 class FormatterTacticTests extends TacticTestSuite {
   "And Canonizer" should "left-assoc a well-associated And." in {
     val f = "1=1 & 2=2 & 3=3".asFormula

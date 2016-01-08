@@ -18,6 +18,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{uniquify,instant
   instantiateUniversalQuanT,instantiateT,existentialGenT,existentialGenPosT,existSubstitute,vacuousExistentialQuanT,
   vacuousUniversalQuanT,decomposeQuanT,allEliminateT}
 import ProofFactory._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 import scala.collection.immutable.Map
 
@@ -25,6 +26,7 @@ import scala.collection.immutable.Map
  * Created by smitsch on 1/31/15.
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   // TODO mathematica is only necessary because of ProofFactory -> make ProofFactory configurable
 

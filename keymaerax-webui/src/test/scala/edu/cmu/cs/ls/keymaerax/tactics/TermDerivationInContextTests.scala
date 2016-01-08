@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 
 /**
@@ -14,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class TermDerivationInContextTests extends TacticTestSuite  {
 
   "subtract" should "replace" in {

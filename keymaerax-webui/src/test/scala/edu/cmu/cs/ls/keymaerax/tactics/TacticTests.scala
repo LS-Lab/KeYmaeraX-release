@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -26,7 +27,7 @@ object MyTest extends Tag("MyTest")
 object USTest extends Tag("USTest")
 object BadassignT extends Tag("BadassignT")
 
-
+@ObsoleteTest
 class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))

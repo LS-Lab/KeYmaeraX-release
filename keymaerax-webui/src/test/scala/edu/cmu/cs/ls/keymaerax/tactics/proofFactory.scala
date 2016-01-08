@@ -9,11 +9,13 @@ import edu.cmu.cs.ls.keymaerax.tactics.ProofNode
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 
 import scala.collection.immutable.List
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Created by ran on 01/27/15.
  * @author Ran Ji
  */
+@ObsoleteTest
 object ProofFactory {
 
   val helper = new ProvabilityTestHelper((x) => println(x))

@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cohide2T, Conso
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest.{FlatSpec, Matchers, BeforeAndAfterEach}
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 import testHelper.SequentFactory._
 import ProofFactory._
@@ -23,6 +24,7 @@ import scala.collection.immutable.Map
  * Created by smitsch on 2/20/15.
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))

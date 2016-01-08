@@ -9,11 +9,13 @@ import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, SuccPosition}
 import org.scalatest.{Matchers, FlatSpec}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper._
 import testHelper.SequentFactory.sequent
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Created by smitsch on 1/24/15.
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class TacticHelperTests extends FlatSpec with Matchers {
 
   "getFormula on |- x>0 at position (0, HereP)" should "return x>0" in {

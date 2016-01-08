@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration.Duration
@@ -30,6 +31,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object ProvabilityTestHelper {
   var config = DefaultConfiguration.defaultMathematicaConfig
 }
+@ObsoleteTest
 class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
 
   val superScrutiny = false

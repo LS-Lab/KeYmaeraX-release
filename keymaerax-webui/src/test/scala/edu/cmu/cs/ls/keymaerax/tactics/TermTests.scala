@@ -17,6 +17,7 @@ import scala.collection.immutable.IndexedSeq
 import scala.collection.immutable.List
 import scala.collection.immutable.Map
 import scala.collection.immutable.Set
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
@@ -27,6 +28,7 @@ import scala.language.postfixOps
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.tactics.{TacticWrapper, TacticLibrary, Tactics}
 
+@ObsoleteTest
 class TermTests extends FlatSpec with Matchers{
 
   def getTautology2: Formula = {

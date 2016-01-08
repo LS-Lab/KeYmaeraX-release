@@ -18,6 +18,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.SequentFactory._
 import ProofFactory._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 import scala.collection.immutable
 import scala.collection.immutable.Map
@@ -28,6 +29,7 @@ import scala.language.postfixOps
  * @author Stefan Mitsch
  * @author Ran Ji
  */
+@ObsoleteTest
 class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach with PrivateMethodTester {
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig: Map[String, String] = helper.mathematicaConfig

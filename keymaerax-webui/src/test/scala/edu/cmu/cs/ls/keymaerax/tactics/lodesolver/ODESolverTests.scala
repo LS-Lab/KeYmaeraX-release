@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 import org.scalatest.PrivateMethodTester
 
 import scala.collection.immutable
@@ -16,6 +17,7 @@ import scala.collection.immutable
  * @author Nathan Fulton
  * Created by nfulton on 4/23/15.
  */
+@ObsoleteTest
 class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
   //Useful values used throughout these tests.
   val nov    = Variable("doesnotoccur", None, Real)

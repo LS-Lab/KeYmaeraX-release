@@ -5,10 +5,12 @@ import edu.cmu.cs.ls.keymaerax.core.SuccPos
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
   * Created by nfulton on 12/15/15.
   */
+@ObsoleteTest
 class TutorialExamples extends TacticTestSuite {
   /**
     * @author Nathan Fulton

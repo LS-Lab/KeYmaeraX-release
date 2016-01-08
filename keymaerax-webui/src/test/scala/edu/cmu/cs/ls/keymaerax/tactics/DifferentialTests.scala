@@ -15,6 +15,7 @@ import ODETactics.{diffSkipT, diffWeakenT, diffWeakenAxiomT, diffSolution, diamo
 import testHelper.SequentFactory._
 import ProvabilityTestHelper._
 import ProofFactory._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 
 import scala.collection.immutable
@@ -26,6 +27,7 @@ import scala.collection.immutable.Map
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper((x) => println(x))
 
