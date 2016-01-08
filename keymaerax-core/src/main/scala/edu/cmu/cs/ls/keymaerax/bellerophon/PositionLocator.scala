@@ -18,7 +18,7 @@ sealed trait PositionLocator {
   def prettyString: String
 }
 
-/** Locates the formula at the specified fixed position. Can specify the expected formula or expected shape of formula at that position as contract. */
+/** Locates the formula at the specified fixed position. Can optionally specify the expected formula or expected shape of formula at that position as contract. */
 case class Fixed private[keymaerax] (pos: Position, shape: Option[Formula] = None, exact: Boolean = true) extends PositionLocator {
   override def prettyString: String = pos.prettyString
 }
