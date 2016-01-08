@@ -196,6 +196,8 @@ trait SuccPosition extends Position {
   def +(child : PosInExpr): SuccPosition
 }
 
+// Pseudo-Constructors
+
 object AntePosition {
   def apply(top: AntePos): AntePosition with TopPosition = new AntePositionImpl(top, HereP) with TopPosition
   def apply(index: Int): AntePosition with TopPosition = apply(AntePos(index))
@@ -203,18 +205,20 @@ object AntePosition {
   def apply(index: Int, inExpr: List[Int]): AntePosition = new AntePositionImpl(AntePos(index), PosInExpr(inExpr))
 }
 
-private case class AntePositionImpl (top: AntePos, inExpr: PosInExpr) extends AntePosition {
-  def +(child : PosInExpr): AntePosition = new AntePositionImpl(top, inExpr+child)
-  def topLevel = AntePosition.apply(top)
-  //@note not TopLevel if HereP
-  def navigate(instead : PosInExpr): AntePosition = new AntePositionImpl(top, instead)
-}
-
 object SuccPosition {
   def apply(top: SuccPos): SuccPosition with TopPosition = new SuccPositionImpl(top, HereP) with TopPosition
   def apply(index: Int): SuccPosition with TopPosition = apply(SuccPos(index))
   def apply(index: Int, inExpr: PosInExpr): SuccPosition = new SuccPositionImpl(SuccPos(index), inExpr)
   def apply(index: Int, inExpr: List[Int]): SuccPosition = new SuccPositionImpl(SuccPos(index), PosInExpr(inExpr))
+}
+
+// Implementations
+
+private case class AntePositionImpl (top: AntePos, inExpr: PosInExpr) extends AntePosition {
+  def +(child : PosInExpr): AntePosition = new AntePositionImpl(top, inExpr+child)
+  def topLevel = AntePosition.apply(top)
+  //@note not TopLevel if HereP
+  def navigate(instead : PosInExpr): AntePosition = new AntePositionImpl(top, instead)
 }
 
 private case class SuccPositionImpl (top: SuccPos, inExpr: PosInExpr) extends SuccPosition {
@@ -227,21 +231,10 @@ private case class SuccPositionImpl (top: SuccPos, inExpr: PosInExpr) extends Su
 
 @deprecated("Automated position converters should be removed.")
 private[keymaerax] object Position {
-  //@deprecated("Move as implicit definition to tactics and then ultimately remove")
-  //@todo could also use p.top
+  //@todo Ultimately remove
+  @deprecated("Use .top explicitly instead since lossy transformation if not top-level.")
   implicit def position2SeqPos[T <: SeqPos](p: Position): T = p.top.asInstanceOf[T]
 
-  //implicit def antePosition2AntePos(p: AntePosition) : AntePos = assert(p.isAnte); new AntePos(p.index)
-  //implicit def succPosition2AntePos(p: SuccPosition) : SuccPos = assert(!p.isAnte); new SuccPos(p.index)
-
-  //implicit def position2AntePos(p: Position) : AntePos = if (p.isAnte) new AntePos(p.index) else throw new IllegalArgumentException("Wrong position side " + p)
-
-  //implicit def position2SuccPos(p: Position) : SuccPos = if (!p.isAnte) new SuccPos(p.index) else throw new IllegalArgumentException("Wrong position side " + p)
-
-  implicit def seqPos2Position(p: SeqPos) : Position = if (p.isAnte) AntePosition.apply(p.getIndex) else SuccPosition(p.getIndex)
-
-  //  def antePos2Position(p: SeqPos) : AntePosition = if (p.isAnte) new AntePosition(p.getIndex, HereP) else throw new IllegalArgumentException("not ante")
-//  def succPos2Position(p: SeqPos) : SuccPosition = if (p.isSucc) new SuccPosition(p.getIndex, HereP) else throw new IllegalArgumentException("not succ")
-//  def seqPos2Position(p: SeqPos, posInExpr: List[Int]) : Position = if (p.isAnte) new AntePosition(p.getIndex, PosInExpr(posInExpr)) else new SuccPosition(p.getIndex, PosInExpr(posInExpr))
+  implicit def seqPos2Position(p: SeqPos) : Position = p match { case p: AntePos => AntePosition.apply(p) case p: SuccPos => SuccPosition(p) }
 }
 
