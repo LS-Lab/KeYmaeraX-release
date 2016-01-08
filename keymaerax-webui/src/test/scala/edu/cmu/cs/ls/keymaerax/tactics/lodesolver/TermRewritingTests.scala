@@ -1,10 +1,9 @@
-package LODESolverTests
+package edu.cmu.cs.ls.keymaerax.tactics.lodesolver
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 import edu.cmu.cs.ls.keymaerax.tactics._
-import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable.IndexedSeq
 
@@ -13,7 +12,7 @@ import scala.collection.immutable.IndexedSeq
  * These tactics are of more general use whenever preforming term-level rewriting.
  * Created by nfulton on 9/11/15.
  */
-class TermRewritingTests extends testHelper.TacticTestSuite {
+class TermRewritingTests extends edu.cmu.cs.ls.keymaerax.tactics.TacticTestSuite {
   "replaceSubterm" should "replace a subterm" in {
     val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula
     val posInExpr = PosInExpr(0 :: 0 :: 1 :: Nil) // select box, select diff eq, select rhs of equality.
@@ -30,7 +29,7 @@ class TermRewritingTests extends testHelper.TacticTestSuite {
     TermRewriting.replaceSubterm(f, posInExpr, _ => Number(1)).get shouldBe "[{x' = 1 & 1=1&3=3}]2=2".asFormula
   }
 
-  "Sequent calculus Tern Rewriting" should "work" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
+  "Sequent calculus Tern Rewriting" should "work" /*taggedAs(KeYmaeraXTestTags.SummaryTest)*/ in {
     val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula
     val node = helper.formulaToNode(f)
 
@@ -57,7 +56,7 @@ class TermRewritingTests extends testHelper.TacticTestSuite {
    * Does essentially the same thing as above, but using TermRewriting.hilbertTermRewrite instead of
    * doing the setup manually.
    */
-  it should "work with TermRewriting setup code" taggedAs(KeYmaeraXTestTags.SummaryTest) in {
+  it should "work with TermRewriting setup code" /*taggedAs(KeYmaeraXTestTags.SummaryTest)*/ in {
     val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula
     val node = helper.formulaToNode(f)
 

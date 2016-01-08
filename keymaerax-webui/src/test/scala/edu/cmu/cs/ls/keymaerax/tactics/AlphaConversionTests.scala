@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, ApplyRule, Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Tool}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.ProvabilityTestHelper
+import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import testHelper.SequentFactory._
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 

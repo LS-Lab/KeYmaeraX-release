@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
-import testHelper.{KeYmaeraXTestTags, ProvabilityTestHelper}
+import testHelper.{KeYmaeraXTestTags}
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._

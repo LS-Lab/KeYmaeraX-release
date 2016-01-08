@@ -3,8 +3,8 @@ package pt
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt._
-import testHelper.TacticTestSuite
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tactics.TacticTestSuite
 
 /**
  * Tests of the proof term checker from

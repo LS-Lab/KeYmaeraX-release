@@ -1,8 +1,7 @@
-package edu.tactics.LODESolverTests
+package edu.cmu.cs.ls.keymaerax.tactics.lodesolver
 
-import testHelper.TacticTestSuite
 import edu.cmu.cs.ls.keymaerax.core.SuccPos
-import edu.cmu.cs.ls.keymaerax.tactics.{SearchTacticsImpl, SuccPosition, ODETactics}
+import edu.cmu.cs.ls.keymaerax.tactics.{TacticTestSuite, SearchTacticsImpl, SuccPosition, ODETactics}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**

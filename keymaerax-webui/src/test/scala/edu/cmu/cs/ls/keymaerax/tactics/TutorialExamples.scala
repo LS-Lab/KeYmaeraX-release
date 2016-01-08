@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 /**
   * Created by nfulton on 12/15/15.
   */
-class TutorialExamples extends testHelper.TacticTestSuite {
+class TutorialExamples extends TacticTestSuite {
   /**
     * @author Nathan Fulton
     */
