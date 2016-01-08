@@ -61,25 +61,67 @@ object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
 // Positional tactics
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/** Applied at a position, turns into a tactic of type T. Turns a position or position locator into a tactic. */
+/** Applied at a position, AtPosition turns into a tactic of type T. Turns a position or position locator into a tactic.
+  *
+  * An AtPosition tactic `t` supports [[Position direct positions]] and indirect [[PositionLocator position locators]].
+  *
+  *   - t(1) applied at the first [[Sequent.succ succedent]] formula.
+  *   - t(-1) applied at the first [[Sequent.ante antecedent]] formula.
+  *   - t(-4, 0::1::1::Nil) applied at [[PosInExpr subexpression positioned at]] .0.1.1 of the fourth antecedent formula,
+  *     that is at the second child of the second child of the first child of the fourth antecedent formula in the sequent.
+  *   - t('L) applied at the first applicable position in the [[Sequent.ante antecedent]] (left side of the sequent).
+  *   - t('R) applied at the first applicable position in the [[Sequent.succ succedent]] (right side of the sequent).
+  *   - t('_) applied at the first applicable position in the side of the sequent to which tactic `t` applies.
+  *     The side of the sequent is uniquely determined by type of tactic.
+  *   - t('Last) applied at the last antecedent position (left side of the sequent).
+  *   - t('Rast) applied at the last succedent position (right side of the sequent).
+  *
+  * In addition, the formulas expected or sought for at the respective positions identified by the locators can be provided,
+  * which is useful for tactic contract and tactic documentation purposes.
+  * It is also useful for finding a corresponding formula by pattern matching.
+  *
+  *   - t('L, fml) applied at the antecedent position (left side of the sequent)
+  *     where the formula `fml` can be found (on the top level).
+  *   - t('R, fml) applied at the succedent position (right side of the sequent)
+  *     where the formula `fml` can be found (on the top level).
+  *   - t('_, fml) applied at the suitable position (uniquely determined by type of tactic)
+  *     where the formula `fml` can be found (on the top level).
+  *
+  * @author Stefan Mitsch
+  * @author Andre Platzer
+  */
 trait AtPosition[T <: BelleExpr] {
+  import Find._
+
   /**
-   * At a fixed position.
-   * @param position The position where to apply.
-   * @return The tactic.
+    * Returns the tactic that can be applied at the position identified by `locator`.
+    * @param locator The locator: Fixed, Find, LastAnte, or LastSucc
+    * @return The tactic of type `T` that can be readily applied at the position identified by `locator` to any given BelleExpr.
+    * @see [[PositionLocator]]
+    */
+  def apply(locator: PositionLocator): T
+
+  /**
+   * Applied at a fixed position.
+   * @param position The position where this tactic will be applied at.
+   * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
    * @note Convenience wrapper
    * @see [[apply(locator: PositionLocator)]]
+   * @see [[Fixed]]
    */
-  private[keymaerax] final def apply(position: Position): T = apply(Fixed(position))
-  private[keymaerax] final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
+  /*private[keymaerax]*/ final def apply(position: Position): T = apply(Fixed(position))
+  /*private[keymaerax]*/ final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
   private[ls] final def apply(position: SeqPos): T = apply(Fixed(Position.convertPos(position)))
+
   /**
-   * At a fixed position given through index numbers.
+   * Applied at a fixed position in (signed) sequent position `seqIdx` at subexpression `inExpr`.
    * @param seqIdx The signed index in the sequent (strictly negative index for antecedent, strictly positive for succedent).
-   * @param inExpr Where to apply inside the formula at index seqIdx.
-   * @return The tactic.
+   * @param inExpr Where to apply inside the formula at index seqIdx interpreted as a [[PosInExpr]].
+   * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
    * @note Convenience wrapper
+   * @see [[PosInExpr]]
    * @see [[apply(position: Position)]]
+   * @see [[Fixed]]
    */
   final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(Position.convertPos(seqIdx, inExpr)))
   /**
@@ -93,7 +135,6 @@ trait AtPosition[T <: BelleExpr] {
    * @note Convenience wrapper
    * @see [[apply(locator: PositionLocator)]]
    */
-  import Find._
   final def apply(locator: Symbol): T = locator match {
     case 'L => apply(FindL(0, None))
     case 'R => apply(FindR(0, None))
@@ -106,8 +147,9 @@ trait AtPosition[T <: BelleExpr] {
     case 'Rlast => apply(LastSucc(0))
   }
   /**
-    * Returns the tactic at the position identified by `locator`, ensuring that this gives the formula `expected` verbatim.
-    * @see [[apply()]] */
+    * Returns the tactic at the position identified by `locator`, ensuring that `locator` will yield the formula `expected` verbatim.
+    * @see [[apply()]]
+    */
   final def apply(locator: Symbol, expected: Formula): T = locator match {
     case 'L => apply(FindL(0, Some(expected)))
     case 'R => apply(FindR(0, Some(expected)))
@@ -121,13 +163,6 @@ trait AtPosition[T <: BelleExpr] {
     case 'Rlast => ???
   }
 
-  /**
-   * Returns the tactic at the position identified by `locator`.
-   * @param locator The locator: Fixed, Find, LastAnte, or LastSucc
-   * @return The tactic
-   * @see [[PositionLocator]]
-   */
-  def apply(locator: PositionLocator): T
 }
 
 /** Generalizes the built in position tactics (normal, left, right) */
