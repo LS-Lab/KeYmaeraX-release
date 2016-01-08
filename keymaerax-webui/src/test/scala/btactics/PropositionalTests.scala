@@ -1,4 +1,4 @@
-package edu.btactics
+package edu.cmu.cs.ls.keymaerax.btactics
 
 /**
 * Copyright (c) Carnegie Mellon University.
