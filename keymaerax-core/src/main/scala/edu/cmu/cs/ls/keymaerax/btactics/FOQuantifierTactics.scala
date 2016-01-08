@@ -51,7 +51,7 @@ object FOQuantifierTactics {
                 )
             } else {
               ProofRuleTactics.cut(axiomInstance) <(
-                cohide2(AntePosition(sequent.ante.length), pos.topLevel) &
+                cohide2(AntePosition(sequent.ante.length + 1), pos.topLevel) &
                   TactixLibrary.by(CMon(ctx)(Provable.startProof(Sequent(Nil, immutable.IndexedSeq(f), immutable.IndexedSeq(p))))) &
                   implyRi & US(subst, orig) & byUS("all instantiate"),
                 hideR(pos.topLevel) partial

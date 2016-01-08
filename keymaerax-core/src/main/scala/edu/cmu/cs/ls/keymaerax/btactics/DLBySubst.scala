@@ -131,7 +131,7 @@ object DLBySubst {
             cut(Imply(qPhi, Box(prg, qPhi))) <(
               /* use */ (implyL('Llast) <(
                 hideR(pos.topLevel) partial /* result */,
-                cohide2(AntePosition(sequent.ante.length), pos.topLevel) &
+                cohide2(AntePosition(sequent.ante.length + 1), pos.topLevel) &
                   assertT(1, 1) & assertE(Box(prg, qPhi), "abstractionb: quantified box")('Llast) &
                   assertE(b, "abstractionb: original box")('Rlast) & ?(monb) &
                   assertT(1, 1) & assertE(qPhi, "abstractionb: quantified predicate")('Llast) &
@@ -280,7 +280,7 @@ object DLBySubst {
         case (ctx, Box(a, post)) =>
           // [a](cut->post) and its position in assumptions
           val conditioned = Box(a, Imply(C, post))
-          val conditional = AntePosition(sequent.ante.length)
+          val conditional = AntePosition(sequent.ante.length + 1)
           // [a]cut and its position in assumptions
           val cutted = Box(a, C)
           cutR(ctx(conditioned))(pos.checkSucc.top) <(

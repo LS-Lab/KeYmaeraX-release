@@ -306,7 +306,7 @@ trait UnifyUSCalculus {
           }
 
           // try to prove prereq globally, if that fails preserve context and fall back to CMon and C{prereq} -> ...
-          (useAt(subst, Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(0)) <(
+          (useAt(subst, Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(1).top) <(
             //@note the roles of use and show are really swapped here, since the implication on show will be handled by factTactic
             /* use: try to prove prereq globally */ TactixLibrary.QE,
             /* show */ factTactic), sequent) partial) |
@@ -798,7 +798,7 @@ trait UnifyUSCalculus {
             //@note would also work with all distribute and all generalization instead
             //@note would also work with Skolemize and all instantiate but disjointness is more painful
             val rename = (us: RenUSubst) => us ++ RenUSubst(Seq((Variable("x"), vars.head)))
-            useFor("all eliminate", PosInExpr(1::Nil), rename)(AntePosition(0))(monStep(Context(c), mon)) (
+            useFor("all eliminate", PosInExpr(1::Nil), rename)(AntePosition.base0(1-1))(monStep(Context(c), mon)) (
               Sequent(Nil, ante, succ),
               Skolemize(SuccPos(0))
             )
@@ -813,7 +813,7 @@ trait UnifyUSCalculus {
             //@note would also work with exists distribute and exists generalization instead
             //@note would also work with Skolemize and all instantiate but disjointness is more painful
             val rename = (us: RenUSubst) => us ++ RenUSubst(Seq((Variable("x"), vars.head)))
-            useFor("exists eliminate", PosInExpr(0::Nil), rename)(SuccPosition(0))(monStep(Context(c), mon)) (
+            useFor("exists eliminate", PosInExpr(0::Nil), rename)(SuccPosition(1))(monStep(Context(c), mon)) (
               Sequent(Nil, ante, succ),
               Skolemize(AntePos(0))
             )
@@ -1256,7 +1256,7 @@ trait UnifyUSCalculus {
           "Proved reflexive start " + initial + " for " + e)
         if (DEBUG) println("chase starts at " + initial)
         //@note start the chase on the left-hand side
-        val r = chaseFor(keys, modifier, inst) (SuccPosition(0, PosInExpr(0::Nil)))(initial)
+        val r = chaseFor(keys, modifier, inst) (SuccPosition(1, 0::Nil))(initial)
         if (DEBUG) println("chase(" + e.prettyString + ") = ~~> " + r + " done")
         r
       } ensuring(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")

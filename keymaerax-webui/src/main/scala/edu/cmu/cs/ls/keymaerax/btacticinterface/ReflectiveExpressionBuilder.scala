@@ -49,7 +49,7 @@ object ReflectiveExpressionBuilder {
     catch {
       case e:java.util.NoSuchElementException =>
         println("Error" + e)
-        throw new Exception(s"$name is not recognized as a tactic identifier.")
+        throw new Exception(s"Identifier '$name' is not recognized as a tactic identifier.")
     }
 }
 
