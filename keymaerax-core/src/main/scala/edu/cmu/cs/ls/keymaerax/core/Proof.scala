@@ -84,7 +84,7 @@ object SeqPos {
    * @see SeqPos#pos
    */
   def apply(signedPos: Int): SeqPos =
-    if (signedPos>0) {SuccPos(signedPos-1)} else {assert(signedPos<0, "nonzero positions");AntePos(-signedPos-1)}
+    if (signedPos>0) {SuccPos(signedPos-1)} else {require(signedPos<0, "nonzero positions");AntePos(-signedPos-1)}
 
 }
 
