@@ -19,7 +19,7 @@ import scala.collection.immutable.Map
  * Created by smitsch on 3/16/15.
  * @author Stefan Mitsch
  */
-@SummaryTest
+/*@SummaryTest*/
 class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   // TODO mathematica is only necessary because of ProofFactory -> make ProofFactory configurable
 

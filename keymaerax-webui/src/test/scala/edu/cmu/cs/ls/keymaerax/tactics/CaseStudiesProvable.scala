@@ -29,9 +29,9 @@ import scala.language.postfixOps
  * @author Ran Ji
  * @author Stefan Mitsch
  */
-@UsualTest
-@SlowTest
-@CaseStudyTest
+/*@UsualTest*/
+/*@SlowTest*/
+/*@CaseStudyTest*/
 class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach with PrivateMethodTester {
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig: Map[String, String] = helper.mathematicaConfig

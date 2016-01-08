@@ -25,8 +25,8 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
  * Tests Hilbert Calculus.
  * @author Andre Platzer
  */
-@SummaryTest
-@UsualTest
+/*@SummaryTest*/
+/*@UsualTest*/
 class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   import HilbertCalculus._
 

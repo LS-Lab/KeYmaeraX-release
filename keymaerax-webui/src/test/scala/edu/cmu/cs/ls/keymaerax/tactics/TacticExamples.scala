@@ -22,7 +22,7 @@ import scala.collection.immutable.Map
  * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
  */
-@SummaryTest
+/*@SummaryTest*/
 class TacticExamples extends FlatSpec with Matchers with BeforeAndAfterEach {
   //import Augmentors._
   val helper = new ProvabilityTestHelper()
