@@ -200,6 +200,8 @@ trait SuccPosition extends Position {
 
 object AntePosition {
   def apply(top: AntePos): AntePosition with TopPosition = new AntePositionImpl(top, HereP) with TopPosition
+  def apply(top: AntePos, inExpr: PosInExpr): AntePosition = new AntePositionImpl(top, inExpr)
+//  def apply(top: AntePos, inExpr: List[Int]): AntePosition = new AntePositionImpl(top, PosInExpr(inExpr))
   def apply(index: Int): AntePosition with TopPosition = apply(AntePos(index))
   def apply(index: Int, inExpr: PosInExpr): AntePosition = new AntePositionImpl(AntePos(index), inExpr)
   def apply(index: Int, inExpr: List[Int]): AntePosition = new AntePositionImpl(AntePos(index), PosInExpr(inExpr))
@@ -207,6 +209,8 @@ object AntePosition {
 
 object SuccPosition {
   def apply(top: SuccPos): SuccPosition with TopPosition = new SuccPositionImpl(top, HereP) with TopPosition
+  def apply(top: SuccPos, inExpr: PosInExpr): SuccPosition = new SuccPositionImpl(top,inExpr)
+//  def apply(top: SuccPos, inExpr: List[Int]): SuccPosition = new SuccPositionImpl(top, PosInExpr(inExpr))
   def apply(index: Int): SuccPosition with TopPosition = apply(SuccPos(index))
   def apply(index: Int, inExpr: PosInExpr): SuccPosition = new SuccPositionImpl(SuccPos(index), inExpr)
   def apply(index: Int, inExpr: List[Int]): SuccPosition = new SuccPositionImpl(SuccPos(index), PosInExpr(inExpr))
@@ -237,4 +241,16 @@ private[keymaerax] object Position {
 
   implicit def seqPos2Position(p: SeqPos) : Position = p match { case p: AntePos => AntePosition.apply(p) case p: SuccPos => SuccPosition(p) }
 }
+
+private[keymaerax] object PositionConverter {
+  //@todo move into object Position.apply at some point when no longer off-by-one errors around.
+  /** Converts signed positions to position data structures. */
+  def convertPos(seqIdx: Int, inExpr: List[Int] = Nil): Position = SeqPos(seqIdx) match {
+    case pos: AntePos => AntePosition(pos, PosInExpr(inExpr))
+    case pos: SuccPos => SuccPosition(pos, PosInExpr(inExpr))
+  }
+
+  private[bellerophon] def convertPos(p: edu.cmu.cs.ls.keymaerax.core.SeqPos) : Position = if (p.isAnte) AntePosition(p.getIndex) else SuccPosition(p.getIndex)
+}
+
 
