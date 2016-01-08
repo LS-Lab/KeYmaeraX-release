@@ -309,7 +309,7 @@ object Context {
     e match { case t:Formula => t case _ => default }
   private def asOrElse(e: Expression, default: => Program): Program =
     e match { case t:Program => t case _ => default }
-  private def asOrElse(e: Expression, default: => DifferentialProgram): DifferentialProgram =
+  private def asOrElseD(e: Expression, default: => DifferentialProgram): DifferentialProgram =
     e match { case t:DifferentialProgram => t case _ => default }
 
 
@@ -367,7 +367,7 @@ object Context {
   }
 
   private def replaceAtODE(program: DifferentialProgram, pos: PosInExpr, repl:Expression): DifferentialProgram = if (pos==HereP)
-    asOrElse(repl, throw new IllegalArgumentException("replaceAtODE position " + pos + " of program " + program + " by " + repl + " may not be defined"))
+    asOrElseD(repl, throw new IllegalArgumentException("replaceAtODE position " + pos + " of program " + program + " by " + repl + " may not be defined"))
   else program match {
     case AtomicODE(xp,t)          if pos==PosInExpr(0::Nil) => AtomicODE(repl.asInstanceOf[DifferentialSymbol], t)
     case AtomicODE(xp,t)          if pos.head==1 => AtomicODE(xp, replaceAt(t, pos.child, repl))
