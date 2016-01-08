@@ -29,7 +29,7 @@ object Fixed {
   def apply(seqPos: Int): Fixed = new Fixed(PositionConverter.convertPos(seqPos, Nil))
 }
 
-/** Locates the first applicable top-level position that matches shape (exactly or unifiably) at or after position `start` in a sequent. */
+/** Locates the first applicable top-level position that matches shape (exactly or unifiably) at or after position `start` (remaining in antecedent/succedent as `start` says). */
 case class Find(goal: Int, shape: Option[Formula], start: Position, exact: Boolean = true) extends PositionLocator {
   override def prettyString: String = "'_"
 }

@@ -92,7 +92,7 @@ trait AtPosition[T <: BelleExpr] {
     *                'Rlast (at last position in succedent).
    * @note Convenience wrapper
    * @see [[apply(locator: PositionLocator)]]
-   * */
+   */
   final def apply(locator: Symbol): T = locator match {
     case 'L => apply(Find(0, None, AntePosition(0)))
     case 'R => apply(Find(0, None, SuccPosition(0)))
@@ -104,6 +104,9 @@ trait AtPosition[T <: BelleExpr] {
     case 'Llast => apply(LastAnte(0))
     case 'Rlast => apply(LastSucc(0))
   }
+  /**
+    * Returns the tactic at the position identified by `locator`, ensuring that this gives the formula `expected` verbatim.
+    * @see [[apply()]] */
   final def apply(locator: Symbol, expected: Formula): T = locator match {
     case 'L => apply(Find(0, Some(expected), AntePosition(0)))
     case 'R => apply(Find(0, Some(expected), SuccPosition(0)))
