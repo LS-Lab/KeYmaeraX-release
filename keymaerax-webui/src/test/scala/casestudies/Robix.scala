@@ -34,6 +34,7 @@ import scala.tools.reflect.ToolBox
  * @author Stefan Mitsch
  */
 @SlowTest
+@ObsoleteTest
 class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))
