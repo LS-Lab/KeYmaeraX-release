@@ -2,6 +2,8 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+package edu.cmu.cs.ls.keymaerax.tactics
+
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
 import testHelper.ProvabilityTestHelper
 import org.scalatest._
@@ -18,8 +20,6 @@ import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 
 import org.scalatest.Tag
-
-import test._
 
 object MyTest extends Tag("MyTest")
 object USTest extends Tag("USTest")

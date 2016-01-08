@@ -140,6 +140,7 @@ object DerivationInfo {
 
     new CoreAxiomInfo("all dual", "alld", "alld", {case () => }),
     new CoreAxiomInfo("all eliminate", "alle", "alle", {case () => }),
+    new CoreAxiomInfo("exists eliminate", "existse", "existse", {case () => }),
 
 
     // Derived axioms

@@ -2,6 +2,8 @@
  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
  * See LICENSE.txt for the conditions of this license.
  */
+package edu.tactics
+
 import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, RootNode, Tactics}
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import testHelper.ProvabilityTestHelper

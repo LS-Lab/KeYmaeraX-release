@@ -45,14 +45,8 @@ object Context {
   /** Subexpression of `t` at the indicated position `pos` or exception if ill-defined position.
     * @ensures sub(t,pos) == at(t,pos)._2
     */
-  def sub(t: Expression, pos: PosInExpr): Expression = t match {
-    case f: Term    => part (f, pos)
-    case f: Formula => part (f, pos)
-    case f: DifferentialProgram => part (f, pos)
-    case f: Program => part (f, pos)
-    case _ => ???  // trivial totality on possibly problematic patmats
-  }
-  //@todo ensuring(r => r == at(t, pos)._2) without recursive contract checking
+  def sub(t: Expression, pos: PosInExpr): Expression = { part(t, pos) } ensuring(
+    r => r==at(t, pos)._2, "sub(t,pos)==at(t,pos)._2")
 
   /**
    * Split `C{e}=t(pos)` expression t at position pos into the expression e at that position and the context C within which that expression occurs.
@@ -146,7 +140,7 @@ object Context {
     else
       // no proper reassemble test for noContext
       true
-  }
+  } ensuring(_ => r._2==part(t,pos), "expression is consistent with sub(t,pos)")
 
   // elegant reapply-based context splitting
 
@@ -205,6 +199,14 @@ object Context {
 
 
   // flat subexpression extraction (for performance and context-generality). Just by computation-irrelevance of context(e,pos)._2 since identical code
+
+  private def part(t: Expression, pos: PosInExpr): Expression = t match {
+    case f: Term    => part (f, pos)
+    case f: Formula => part (f, pos)
+    case f: DifferentialProgram => part (f, pos)
+    case f: Program => part (f, pos)
+    case _ => ???  // trivial totality on possibly problematic patmats
+  }
 
   /** @see [[StaticSemanticsTools.boundAt()]] for same positions */
   private def part(term: Term, pos: PosInExpr): Term = if (pos==HereP) term else {term match {

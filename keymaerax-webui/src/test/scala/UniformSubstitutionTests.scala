@@ -2,6 +2,8 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+
+import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.SubstitutionHelper
@@ -13,8 +15,6 @@ import scala.util.Random
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
-
-import test._
 
 /**
  * Created by rjcn on 01/09/15.
