@@ -396,10 +396,12 @@ angular.module('formula')
             }
 
             $scope.applyTactic = function(formulaId, tacticId) {
+              $scope.tacticPopover.close();
               $scope.onTactic({formulaId: formulaId, tacticId: tacticId});
             }
-;
+
             $scope.applyInputTactic = function(formulaId, tactic) {
+              $scope.tacticPopover.close();
               //@note have to declare local variables with exactly the names of the event arguments,
               //      otherwise the event parameters are undefined in the listener :-O
               var tacticId = tactic.id;
