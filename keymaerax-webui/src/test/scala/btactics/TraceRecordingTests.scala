@@ -1,4 +1,4 @@
-package edu.btactics
+package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, PosInExpr, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
@@ -18,7 +18,9 @@ import scala.collection.immutable._
   */
 class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach  {
   val db = DBAbstractionObj.testDatabase
-  val listener = new DebuggerListener(db, 1337, ???, ???, ???, 0, 1, false, ???)
+  //@todo fill in reasonable data, this is bogus
+  private val u = 999
+  val listener = new DebuggerListener(db, 1337, u, Some(u), Provable.startProof(True), 0, 1, false, "TODO")
   val theInterpreter = new SequentialInterpreter(Seq(listener))
   object TestLib extends UnifyUSCalculus
 

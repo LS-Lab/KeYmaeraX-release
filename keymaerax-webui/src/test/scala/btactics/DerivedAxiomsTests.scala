@@ -16,7 +16,7 @@ import testHelper.KeYmaeraXTestTags.OptimisticTest
  */
 @SummaryTest
 @UsualTest
-class DerivedAxiomsTests extends edu.btactics.TacticTestBase {
+class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase {
 
   //@todo add a test case that runs through AxiomInfo.allInfos checking all its axioms
 
