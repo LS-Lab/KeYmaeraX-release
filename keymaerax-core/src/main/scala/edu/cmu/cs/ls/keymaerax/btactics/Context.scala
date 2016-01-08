@@ -29,7 +29,7 @@ import scala.collection.immutable._
   */
 object Context {
   /** `true` gives slower guarded contexts that fail inadmissible term instantiation. `false` gives fast unguarded replacement contexts */
-  private[btactics] val GUARDED = false
+  private[btactics] val GUARDED = true
   /** Make a context for expression `ctx` guarded by the protection of uniform substitutions. */
   def apply[T <: Expression](ctx: T): Context[T] = new GuardedContext[T](ctx)
 
@@ -296,8 +296,27 @@ object Context {
     case _ => ???  // trivial totality on possibly problematic patmats
   }
 
+  //private def as[T <: Expression](e: Expression): Option[T] = e match { case t:T => Some(t) case _ => None }
+  //private def asFormula(e: Expression): Option[Formula] = e match { case t:Formula => Some(t) case _ => None }
+  /** Cast `e` as an expression of type `T` or else fall back to using value `default` instead. */
+//  private def asOrElse[T <: Expression](e: Expression, default: => T): T = e match {
+//    case t:T => t
+//    case _ => default
+//  }
+  private def asOrElse(e: Expression, default: => Term): Term =
+    e match { case t:Term => t case _ => default }
+  private def asOrElse(e: Expression, default: => Formula): Formula =
+    e match { case t:Formula => t case _ => default }
+  private def asOrElse(e: Expression, default: => Program): Program =
+    e match { case t:Program => t case _ => default }
+  private def asOrElse(e: Expression, default: => DifferentialProgram): DifferentialProgram =
+    e match { case t:DifferentialProgram => t case _ => default }
+
+
   /** Replace within term at position pos by repl @see [[StaticSemanticsTools.boundAt()]] for same positions */
-  def replaceAt(term: Term, pos: PosInExpr, repl: Expression): Term = if (pos==HereP) repl.asInstanceOf[Term] else term match {
+  def replaceAt(term: Term, pos: PosInExpr, repl: Expression): Term = if (pos==HereP)
+    asOrElse(repl, throw new IllegalArgumentException("replaceAt position " + pos + " of term " + term + " may not be defined"))
+  else term match {
     case FuncOf(f,t)     if pos.head==0 => FuncOf(f, replaceAt(t, pos.child, repl))
     // homomorphic cases
     case f:UnaryCompositeTerm  if pos.head==0 => f.reapply(replaceAt(f.child, pos.child, repl))
@@ -307,7 +326,10 @@ object Context {
   }
 
   /** Replace within formula at position pos by repl @see [[StaticSemanticsTools.boundAt()]] for same positions */
-  def replaceAt(formula: Formula, pos: PosInExpr, repl: Expression): Formula = if (pos==HereP) repl.asInstanceOf[Formula] else formula match {
+  def replaceAt(formula: Formula, pos: PosInExpr, repl: Expression): Formula = if (pos==HereP)
+    asOrElse(repl, throw new IllegalArgumentException("replaceAt position " + pos + " of formula " + formula + " may not be defined"))
+  //asOrElse(repl, throw new IllegalArgumentException("replaceAt position " + pos + " of formula " + formula + " may not be defined"))
+  else formula match {
     // base cases
     case PredOf(p,t)          if pos.head==0 => PredOf(p, replaceAt(t, pos.child, repl))
     case PredicationalOf(c,t) if pos.head==0 => PredicationalOf(c, replaceAt(t, pos.child, repl))
@@ -325,7 +347,9 @@ object Context {
   }
 
   /** Replace within program at position pos by repl @see [[StaticSemanticsTools.boundAt()]] for same positions */
-  def replaceAt(program: Program, pos: PosInExpr, repl:Expression): Program = if (pos==HereP) repl.asInstanceOf[Program] else program match {
+  def replaceAt(program: Program, pos: PosInExpr, repl:Expression): Program = if (pos==HereP)
+    asOrElse(repl, throw new IllegalArgumentException("replaceAt position " + pos + " of program " + program + " may not be defined"))
+  else program match {
     case Assign(x,t)       if pos==PosInExpr(0::Nil) => Assign(repl.asInstanceOf[Variable], t)
     case Assign(x,t)       if pos.head==1 => Assign(x, replaceAt(t, pos.child, repl))
     case DiffAssign(xp,t)  if pos==PosInExpr(0::Nil) => DiffAssign(repl.asInstanceOf[DifferentialSymbol], t)
@@ -343,7 +367,9 @@ object Context {
     case _ => throw new IllegalArgumentException("replaceAt position " + pos + " of program " + program + " may not be defined")
   }
 
-  private def replaceAtODE(program: DifferentialProgram, pos: PosInExpr, repl:Expression): DifferentialProgram = if (pos==HereP) repl.asInstanceOf[DifferentialProgram] else program match {
+  private def replaceAtODE(program: DifferentialProgram, pos: PosInExpr, repl:Expression): DifferentialProgram = if (pos==HereP)
+    asOrElse(repl, throw new IllegalArgumentException("replaceAtODE position " + pos + " of program " + program + " may not be defined"))
+  else program match {
     case AtomicODE(xp,t)          if pos==PosInExpr(0::Nil) => AtomicODE(repl.asInstanceOf[DifferentialSymbol], t)
     case AtomicODE(xp,t)          if pos.head==1 => AtomicODE(xp, replaceAt(t, pos.child, repl))
     case DifferentialProduct(l,r) if pos.head==0 => DifferentialProduct(replaceAtODE(l, pos.child, repl), r)
