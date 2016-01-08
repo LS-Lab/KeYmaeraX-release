@@ -26,7 +26,7 @@ abstract class BelleExpr(val location: Array[StackTraceElement] = Thread.current
   /** this*: saturating repetition executes this tactic to a fixpoint, casting result to type annotation, diverging if no fixpoint. */
   def *@(annotation: BelleType)       = SaturateTactic(this, annotation)
   /** this+: saturating repetition executes this tactic to a fixpoint, requires at least one successful application */
-  def +@(annotation: BelleType) = this & this*@annotation
+  def +@(annotation: BelleType) = this & (this*@annotation)
   /** this*: bounded repetition executes this tactic to `times` number of times, failing if any of those repetitions fail. */
   def *(times: Int/*, annotation: BelleType*/) = RepeatTactic(this, times, null)
   /** <(e1,...,en): branching to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches. */
@@ -62,15 +62,23 @@ object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** Applied at a position, AtPosition turns into a tactic of type T. Turns a position or position locator into a tactic.
+  * That is, an AtPosition[T] tactic is essentially a function of type
+  * {{{
+  *   Position => T
+  * }}}
+  * but one that also supports indirect positioning via position locators that merely identify positions
+  * {{{
+  *   PositionLocator => T
+  * }}}
   *
   * An AtPosition tactic `t` supports [[Position direct positions]] and indirect [[PositionLocator position locators]].
   *
-  *   - t(1) applied at the first [[Sequent.succ succedent]] formula.
-  *   - t(-1) applied at the first [[Sequent.ante antecedent]] formula.
+  *   - t(1) applied at the first [[edu.cmu.cs.ls.keymaerax.core.Sequent.succ succedent]] formula.
+  *   - t(-1) applied at the first [[edu.cmu.cs.ls.keymaerax.core.Sequent.ante antecedent]] formula.
   *   - t(-4, 0::1::1::Nil) applied at [[PosInExpr subexpression positioned at]] .0.1.1 of the fourth antecedent formula,
   *     that is at the second child of the second child of the first child of the fourth antecedent formula in the sequent.
-  *   - t('L) applied at the first applicable position in the [[Sequent.ante antecedent]] (left side of the sequent).
-  *   - t('R) applied at the first applicable position in the [[Sequent.succ succedent]] (right side of the sequent).
+  *   - t('L) applied at the first applicable position in the [[edu.cmu.cs.ls.keymaerax.core.Sequent.ante antecedent]] (left side of the sequent).
+  *   - t('R) applied at the first applicable position in the [[edu.cmu.cs.ls.keymaerax.core.Sequent.succ succedent]] (right side of the sequent).
   *   - t('_) applied at the first applicable position in the side of the sequent to which tactic `t` applies.
   *     The side of the sequent is uniquely determined by type of tactic.
   *   - t('Last) applied at the last antecedent position (left side of the sequent).
@@ -90,7 +98,7 @@ object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
   * @author Stefan Mitsch
   * @author Andre Platzer
   */
-trait AtPosition[T <: BelleExpr] {
+trait AtPosition[T <: BelleExpr] extends (PositionLocator => T) {
   import Find._
 
   /**
@@ -148,6 +156,7 @@ trait AtPosition[T <: BelleExpr] {
   }
   /**
     * Returns the tactic at the position identified by `locator`, ensuring that `locator` will yield the formula `expected` verbatim.
+    * @note Convenience wrapper
     * @see [[apply()]]
     */
   final def apply(locator: Symbol, expected: Formula): T = locator match {
@@ -159,13 +168,14 @@ trait AtPosition[T <: BelleExpr] {
       case _ => throw new BelleError(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
     //@todo how to check expected formula?
-    case 'Llast => ???
-    case 'Rlast => ???
+    case 'Llast => println("INFO: cannot check expected for 'Llast yet"); apply(LastAnte(0))
+    case 'Rlast => println("INFO: cannot check expected for 'Rlast yet"); apply(LastSucc(0))
   }
 
 }
 
-/** Generalizes the built in position tactics (normal, left, right) */
+/** PositionTactics are tactics that can be [[AtPosition applied at positions]] giving ordinary tactics.
+  * @see [[AtPosition]] */
 trait PositionalTactic extends BelleExpr with AtPosition[AppliedPositionTactic] {
   /** @note this should be called from within interpreters, but not by end-users */
   def computeResult(provable: Provable, position: Position): Provable
@@ -311,6 +321,8 @@ abstract class SingleGoalDependentTactic(override val name: String) extends Depe
     computeExpr(provable.subgoals.head)
   }
 }
+/** DependentPositionTactics are tactics that can be [[AtPosition applied at positions]] giving dependent tactics.
+  * @see [[AtPosition]] */
 abstract case class DependentPositionTactic(name: String) extends BelleExpr with AtPosition[DependentTactic] {
   final override def apply(locator: PositionLocator): AppliedDependentPositionTactic = new AppliedDependentPositionTactic(this, locator)
   override def prettyString: String = "DependentPositionTactic(" + name + ")"
@@ -398,10 +410,13 @@ case class RepeatTactic(child: BelleExpr, times: Int, annotation: BelleType, ove
 case class BranchTactic(children: Seq[BelleExpr], override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "<( " + children.map(_.prettyString).mkString(", ") + " )" }
 case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)], override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "case { " + options.mkString(", ") + " }"}
 
-/** @todo eisegesis
-  * DoAll(e)(BelleProvable(p)) == < (e, ..., e) where e occurs p.subgoals.length times.
+/**
+  * DoAll(e)(BelleProvable(p)) == <(e, ..., e) where e occurs the appropriate number of times, which is `p.subgoals.length` times.
+  * @todo eisegesis
   */
 case class DoAll(e: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
+
+//@todo case class DoSome[A](generator[A], e: A => BelleExpr) extends BelleExpr, which runs some (usually first) generator output whose proof succeeds.
 
 /**
  * Bellerophon expressions that are values.
