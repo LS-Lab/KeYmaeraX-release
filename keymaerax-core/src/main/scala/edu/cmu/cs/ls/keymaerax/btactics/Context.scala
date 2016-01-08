@@ -11,7 +11,7 @@ import PosInExpr.HereP
 
 import scala.collection.immutable._
 
-/** Context management, splitting, and extraction tools.
+/** Context management, position splitting, and extraction tools.
   * Useful for splitting a formula at a position into the subexpression at that position and the remaining context around it.
   * Or for replacing a subexpression by another subexpression at all cost.
   * Or for splitting a position into a formula position and a term position.
@@ -24,8 +24,8 @@ import scala.collection.immutable._
   *   println(f + " is the same as " + ctx(g))
   *  }}}
   * @author Andre Platzer
-  * @see [[PosInExpr]]
-  * @see [[Augmentors]]
+  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Augmentors]]
   */
 object Context {
   /** `true` gives slower guarded contexts that fail inadmissible term instantiation. `false` gives fast unguarded replacement contexts */
@@ -168,7 +168,7 @@ object Context {
 
   // elegant reapply-based context splitting
 
-  /** @see [[StaticSemanticsTools.boundAt()]] for same positions */
+  /** @see [[edu.cmu.cs.ls.keymaerax.btactics.StaticSemanticsTools.boundAt()]] for same positions */
   private def context(term: Term, pos: PosInExpr): (Term, Expression) = if (pos==HereP) (DotTerm,term) else {term match {
     case FuncOf(f,t)     if pos.head==0 => val sp = context(t, pos.child); (FuncOf(f, sp._1), sp._2)
     // homomorphic cases
@@ -232,7 +232,7 @@ object Context {
     case _ => ???  // trivial totality on possibly problematic patmats
   }
 
-  /** @see [[StaticSemanticsTools.boundAt()]] for same positions */
+  /** @see [[edu.cmu.cs.ls.keymaerax.btactics.StaticSemanticsTools.boundAt()]] for same positions */
   private def part(term: Term, pos: PosInExpr): Term = if (pos==HereP) term else {term match {
     case FuncOf(f,t)     if pos.head==0 => part(t, pos.child)
     // homomorphic cases
@@ -288,7 +288,8 @@ object Context {
 
   // direct replacement implementation
 
-  /** Replace within term at position pos by repl @see [[StaticSemanticsTools.boundAt()]] for same positions */
+  /** Replace within term at position pos by repl
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.StaticSemanticsTools.boundAt()]] for same positions */
   def replaceAt(expr: Expression, pos: PosInExpr, repl: Expression): Expression = expr match {
     case f: Term    => replaceAt(f, pos, repl)
     case f: Formula => replaceAt(f, pos, repl)

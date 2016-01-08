@@ -39,12 +39,12 @@ sealed trait SeqPos {
   def isSucc: Boolean = !isAnte
 
   /**
-   * The unsigned index into the antecedent or succedent list, respectively, base 0.
+   * The '''unsigned''' index into the antecedent or succedent list, respectively, '''base 0'''.
    */
-  def getIndex: Int
+  private[keymaerax] def getIndex: Int
 
   /**
-   * The signed position for the antecedent or succedent list, respectively, base 1.
+   * The '''signed''' position for the antecedent or succedent list, respectively, '''base 1'''.
    *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
    *  Positive numbers indicate succedent positions, 1, 2, 3.
    *  Zero is a degenerate case indicating whole sequent 0.
