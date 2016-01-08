@@ -16,7 +16,6 @@ import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.{Z3, Mathematica, KeYmaera}
 import org.scalatest.{FlatSpec, Matchers, BeforeAndAfterEach}
 import testHelper.ParserFactory._
-import testHelper.ProvabilityTestHelper
 
 import scala.collection.immutable.Map
 import scala.reflect.runtime._
