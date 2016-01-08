@@ -4,6 +4,7 @@
   'ngSanitize',
   'ngAnimate',
   'angularTreeview',
+  'angularSpinners',
   'ui.tree',
   'cgBusy',
   'ui.bootstrap',
