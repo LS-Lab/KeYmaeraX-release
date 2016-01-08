@@ -1,10 +1,9 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Find, BelleError}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, Find, BelleError}
 import edu.cmu.cs.ls.keymaerax.btactics.{TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.AntePosition
 
 import scala.collection.immutable
 
@@ -36,7 +35,7 @@ class LocateTests extends TacticTestBase {
   it should "locate the first applicable formula after start in antecedent" in {
     val result = proveBy(
       Sequent(Nil, immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula, "b=3 & c=4".asFormula), immutable.IndexedSeq()),
-      TactixLibrary.andL(Find(0, None, new AntePosition(2)))
+      TactixLibrary.andL(Find(0, None, AntePosition(3)))
     )
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("a=2".asFormula, "x>0 & y>0".asFormula, "b=3".asFormula, "c=4".asFormula)
@@ -46,7 +45,7 @@ class LocateTests extends TacticTestBase {
   it should "locate the first applicable formula of a specific shape" in {
     val result = proveBy(
       Sequent(Nil, immutable.IndexedSeq("a=2".asFormula, "x>0 & y>0".asFormula, "b=3 & c=4".asFormula), immutable.IndexedSeq()),
-      TactixLibrary.andL(Find(0, Some("b=3 & c=4".asFormula), new AntePosition(0)))
+      TactixLibrary.andL(Find(0, Some("b=3 & c=4".asFormula), AntePosition(1)))
     )
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("a=2".asFormula, "x>0 & y>0".asFormula, "b=3".asFormula, "c=4".asFormula)
