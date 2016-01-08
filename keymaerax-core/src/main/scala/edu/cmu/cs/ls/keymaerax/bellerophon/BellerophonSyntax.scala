@@ -73,26 +73,26 @@ object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
   *
   * An AtPosition tactic `t` supports [[Position direct positions]] and indirect [[PositionLocator position locators]].
   *
-  *   - t(1) applied at the first [[edu.cmu.cs.ls.keymaerax.core.Sequent.succ succedent]] formula.
-  *   - t(-1) applied at the first [[edu.cmu.cs.ls.keymaerax.core.Sequent.ante antecedent]] formula.
-  *   - t(-4, 0::1::1::Nil) applied at [[PosInExpr subexpression positioned at]] .0.1.1 of the fourth antecedent formula,
+  *   - `t(1)` applied at the first [[edu.cmu.cs.ls.keymaerax.core.Sequent.succ succedent]] formula.
+  *   - `t(-1)` applied at the first [[edu.cmu.cs.ls.keymaerax.core.Sequent.ante antecedent]] formula.
+  *   - `t(-4, 0::1::1::Nil)` applied at [[PosInExpr subexpression positioned at]] `.0.1.1` of the fourth antecedent formula,
   *     that is at the second child of the second child of the first child of the fourth antecedent formula in the sequent.
-  *   - t('L) applied at the first applicable position in the [[edu.cmu.cs.ls.keymaerax.core.Sequent.ante antecedent]] (left side of the sequent).
-  *   - t('R) applied at the first applicable position in the [[edu.cmu.cs.ls.keymaerax.core.Sequent.succ succedent]] (right side of the sequent).
-  *   - t('_) applied at the first applicable position in the side of the sequent to which tactic `t` applies.
+  *   - `t('L)` applied at the first applicable position in the [[edu.cmu.cs.ls.keymaerax.core.Sequent.ante antecedent]] (left side of the sequent).
+  *   - `t('R)` applied at the first applicable position in the [[edu.cmu.cs.ls.keymaerax.core.Sequent.succ succedent]] (right side of the sequent).
+  *   - `t('_)` applied at the first applicable position in the side of the sequent to which tactic `t` applies.
   *     The side of the sequent is uniquely determined by type of tactic.
-  *   - t('Last) applied at the last antecedent position (left side of the sequent).
-  *   - t('Rast) applied at the last succedent position (right side of the sequent).
+  *   - `t('Last)` applied at the last antecedent position (left side of the sequent).
+  *   - `t('Rast)` applied at the last succedent position (right side of the sequent).
   *
   * In addition, the formulas expected or sought for at the respective positions identified by the locators can be provided,
   * which is useful for tactic contract and tactic documentation purposes.
   * It is also useful for finding a corresponding formula by pattern matching.
   *
-  *   - t('L, fml) applied at the antecedent position (left side of the sequent)
+  *   - `t('L, fml)` applied at the antecedent position (left side of the sequent)
   *     where the formula `fml` can be found (on the top level).
-  *   - t('R, fml) applied at the succedent position (right side of the sequent)
+  *   - `t('R, fml)` applied at the succedent position (right side of the sequent)
   *     where the formula `fml` can be found (on the top level).
-  *   - t('_, fml) applied at the suitable position (uniquely determined by type of tactic)
+  *   - `t('_, fml)` applied at the suitable position (uniquely determined by type of tactic)
   *     where the formula `fml` can be found (on the top level).
   *
   * @author Stefan Mitsch

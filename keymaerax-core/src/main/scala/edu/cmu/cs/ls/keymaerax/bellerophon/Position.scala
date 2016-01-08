@@ -173,7 +173,7 @@ object Position {
   //@todo Ultimately remove
   @deprecated("Use .top explicitly instead since lossy transformation if not top-level.")
   implicit def position2SeqPos[T <: SeqPos](p: Position): T = if (p.isTopLevel) p.top.asInstanceOf[T] else
-    throw new IllegalArgumentException("No automatic conversion to top-level " + p)
+    throw new IllegalArgumentException("No automatic conversion from Position to top-level SeqPos: " + p)
 
   /** Embedding SeqPos into Position at top level */
   implicit def seqPos2Position(p: SeqPos) : Position = convertPos(p)
