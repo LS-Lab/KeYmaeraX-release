@@ -9,12 +9,14 @@ import edu.cmu.cs.ls.keymaerax.tactics.{TacticToolBinding, Scheduler}
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Tests the scheduler.
  * Created by smitsch on 1/2/15.
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class SchedulerTests extends FlatSpec with Matchers with MockFactory  {
 
   private var scheduler: Scheduler = null

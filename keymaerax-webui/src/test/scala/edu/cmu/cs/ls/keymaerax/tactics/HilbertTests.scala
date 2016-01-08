@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Tool}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.ParserFactory._
 import testHelper.{KeYmaeraXTestTags}
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -27,6 +28,7 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
  */
 /*@SummaryTest*/
 /*@UsualTest*/
+@ObsoleteTest
 class HilbertTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   import HilbertCalculus._
 

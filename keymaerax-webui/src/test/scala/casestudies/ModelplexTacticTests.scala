@@ -11,6 +11,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.ProofNode.ProofStep
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
+
 //import org.scalameter.{Key, Warmer, Measurer}
 import testHelper.KeYmaeraXTestTags.SlowTest
 import testHelper.ParserFactory._
@@ -27,6 +29,7 @@ import scala.language.postfixOps
  * Created by smitsch on 3/8/15.
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class ModelplexTacticTests extends TacticTestSuite {
 
   /**

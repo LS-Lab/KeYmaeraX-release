@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics, TacticLibrary}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 import scala.collection.immutable.Map
 
@@ -15,6 +16,7 @@ import scala.collection.immutable.Map
  * Created by nfulton on 12/6/14.
  * @author Nathan Fulton
  */
+@ObsoleteTest
 class ProvabilityExamples extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper()
   import helper._ // import helper methods for thests.

@@ -3,11 +3,13 @@ package edu.cmu.cs.ls.keymaerax.tactics.lodesolver
 import edu.cmu.cs.ls.keymaerax.core.{Equiv, Forall, SuccPos}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * These tests execute the Logical ODE Solver step-by-step on a number of examples.
  * Created by nfulton on 9/11/15.
  */
+@ObsoleteTest
 class LODESolverStepByStepTests extends TacticTestSuite {
   //
   // Example 1

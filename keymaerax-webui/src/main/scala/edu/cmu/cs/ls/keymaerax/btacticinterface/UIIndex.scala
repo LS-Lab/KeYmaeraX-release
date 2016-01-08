@@ -151,6 +151,7 @@ object UIIndex {
             case (_: Imply, false) => axioms :+ "implyR"
             case (_: Equiv, true) => "equivL" :: Nil
             case (_: Equiv, false) => "equivR" :: Nil
+            case (_: Forall, true) => "allL" :: Nil
             case (_: Forall, false) => "allR" :: Nil
             case (_: Exists, true) => "existsL" :: Nil
             case _ => Nil

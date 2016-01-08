@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import scala.util.Random
 import scala.collection.immutable._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Random formula generator and random term generator and random program generator
@@ -22,6 +23,7 @@ import scala.collection.immutable._
  * @author Andre Platzer
  * @param seed the random seed, for repeatable random testing purposes.
  */
+@ObsoleteTest
 class RandomFormula(val seed: Long = new Random().nextLong()) {
   println("RandomFormula(" + seed + "L) seed to regenerate\n\n")
   val rand: Random = new Random(seed)

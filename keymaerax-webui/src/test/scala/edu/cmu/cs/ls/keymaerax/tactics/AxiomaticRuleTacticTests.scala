@@ -14,12 +14,14 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.SequentFactory._
 
 import scala.collection.immutable.Map
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Created by smitsch on 3/16/15.
  * @author Stefan Mitsch
  */
 /*@SummaryTest*/
+@ObsoleteTest
 class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   // TODO mathematica is only necessary because of ProofFactory -> make ProofFactory configurable
 

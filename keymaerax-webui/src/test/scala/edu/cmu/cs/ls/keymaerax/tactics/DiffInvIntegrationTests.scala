@@ -12,12 +12,14 @@ import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.{RootNode, HybridProgramTacticsImpl, ODETactics}
 import ProofFactory._
 import testHelper.SequentFactory._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Created by nfulton on 2/22/15.
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class DiffInvIntegrationTests extends TacticTestSuite {
 
   "Assign" should "work" in {

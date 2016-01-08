@@ -18,11 +18,13 @@ import edu.cmu.cs.ls.keymaerax.tactics.ArithmeticTacticsImpl._
 import scala.collection.immutable
 import scala.collection.immutable.Map
 import scala.collection.immutable._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Created by smitsch on 2/14/15.
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig: Map[String, String] = helper.mathematicaConfig

@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.diffCutT
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.onBranch
 import edu.cmu.cs.ls.keymaerax.tactics._
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.{ObsoleteTest, SlowTest}
 import edu.cmu.cs.ls.keymaerax.tools.{Polya, Z3, Mathematica, KeYmaera}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
@@ -28,6 +28,7 @@ import scala.collection.immutable.Map
   * Created by ran on 11/13/15.
   */
 @SlowTest
+@ObsoleteTest
 class Sbir extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))

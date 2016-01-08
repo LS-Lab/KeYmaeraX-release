@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * A suite of fine-grained tests of the Differential Invariant tactics.
@@ -18,6 +19,7 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
  * Many of the formulas in these tests are absolute gibberish except that they have typical binding structures.
  * Created by nfulton on 1/13/15.
  */
+@ObsoleteTest
 class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Boilerplate

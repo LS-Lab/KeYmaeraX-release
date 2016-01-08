@@ -11,11 +11,13 @@ import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 import org.scalatest.{Matchers, FlatSpec}
 import edu.cmu.cs.ls.keymaerax.tactics.Context
 import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Created by smitsch on 3/26/15.
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class FormulaConverterTests extends FlatSpec with Matchers {
 
   "Context extraction" should "extract context from conjunction" in {

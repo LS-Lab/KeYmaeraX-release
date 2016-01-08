@@ -18,7 +18,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.{assignb,diffInvariant}
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT, hideT, inductionT}
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{LabelBranch, Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaerax.tactics._
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.{ObsoleteTest, SlowTest}
 import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica, Z3}
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
@@ -34,6 +34,7 @@ import scala.tools.reflect.ToolBox
  * @author Stefan Mitsch
  */
 @SlowTest
+@ObsoleteTest
 class Robix extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))

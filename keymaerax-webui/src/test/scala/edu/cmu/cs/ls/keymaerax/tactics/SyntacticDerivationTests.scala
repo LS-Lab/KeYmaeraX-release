@@ -11,12 +11,14 @@ import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext.ApplicableAt
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, PositionTactic}
 import testHelper.SequentFactory._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * Created by nfulton on 2/5/15.
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class SyntacticDerivationTests extends TacticTestSuite {
   "abstraction" should "at least work" in {
     val f = "[s := 0;] \\forall x x=x".asFormula

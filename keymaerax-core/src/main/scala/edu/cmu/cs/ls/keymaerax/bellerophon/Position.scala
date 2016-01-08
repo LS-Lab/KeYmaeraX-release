@@ -104,7 +104,6 @@ sealed trait Position {
   def +(child: PosInExpr): Position
 
   /** Advances the index by i on top-level positions. */
-  @deprecated("Please compute top-level positions yourself")
   def advanceIndex(i: Int): Position
 
   /**
@@ -112,9 +111,9 @@ sealed trait Position {
     */
   def isIndexDefined(s: Sequent): Boolean =
     if (isAnte)
-      s.ante.length > index
+      s.ante.length >= index0
     else
-      s.succ.length > index
+      s.succ.length >= index0
 
 
   /**
@@ -149,11 +148,36 @@ sealed trait Position {
   /** The top-level part of this position provided this position isTop (convenience) */
   def checkTop: SeqPos = if (isTopLevel) top else throw new IllegalArgumentException("Position was expected to be a top-level position: " + this)
 
-  //@todo really?
-  final def index: Int = top.getIndex
+  private[keymaerax] final def index0: Int = top.getIndex
+  //final def index1: Int = top.getIndex + 1
 
   override def toString: String = prettyString
   def prettyString: String = top.getPos + "." + inExpr.pos.mkString(".")
+}
+
+object Position {
+  /** Converts signed positions to position data structures. */
+  def convertPos(seqIdx: Int, inExpr: List[Int] = Nil): Position = SeqPos(seqIdx) match {
+    case pos: AntePos => AntePosition(pos, PosInExpr(inExpr))
+    case pos: SuccPos => SuccPosition(pos, PosInExpr(inExpr))
+  }
+  def apply(seqIdx: Int, inExpr: List[Int] = Nil): Position = convertPos(seqIdx, inExpr)
+
+  private[bellerophon] def convertPos(p: edu.cmu.cs.ls.keymaerax.core.SeqPos) : Position = p match {
+    case pos: AntePos => AntePosition(pos)
+    case pos: SuccPos => SuccPosition(pos)
+  }
+
+
+  /** Project Position down to its top-level part */
+  //@todo Ultimately remove
+  @deprecated("Use .top explicitly instead since lossy transformation if not top-level.")
+  implicit def position2SeqPos[T <: SeqPos](p: Position): T = if (p.isTopLevel) p.top.asInstanceOf[T] else
+  //{println("No automatic lossy conversion to top-level positions: " + p); p.top.asInstanceOf[T]}
+    throw new IllegalArgumentException("No automatic lossy conversion to top-level Position: " + p)
+
+  /** Embedding SeqPos into Position at top level */
+  implicit def seqPos2Position(p: SeqPos) : Position = convertPos(p)
 }
 
 /** A position guaranteed to identify a top-level position */
@@ -173,8 +197,8 @@ trait AntePosition extends Position {
   override def topLevel: AntePosition with TopPosition
   override def advanceIndex(i: Int): AntePosition = {
     require(isTopLevel, "Advance index only at top level")
-    require(index+i >= 0, "Cannot advance to negative index")
-    AntePosition(index+i, inExpr)
+    require(index0+i >= 0, "Cannot advance to negative index")
+    AntePosition.base0(index0+i, inExpr)
   }
   def +(child : PosInExpr): AntePosition
 }
@@ -190,8 +214,8 @@ trait SuccPosition extends Position {
   override def topLevel: SuccPosition with TopPosition
   override def advanceIndex(i: Int): SuccPosition = {
     require(isTopLevel, "Advance index only at top level")
-    require(index+i >= 0, "Cannot advance to negative index")
-    SuccPosition(index+i, inExpr)
+    require(index0+i >= 0, "Cannot advance to negative index")
+    SuccPosition.base0(index0+i, inExpr)
   }
   def +(child : PosInExpr): SuccPosition
 }
@@ -200,16 +224,32 @@ trait SuccPosition extends Position {
 
 object AntePosition {
   def apply(top: AntePos): AntePosition with TopPosition = new AntePositionImpl(top, HereP) with TopPosition
-  def apply(index: Int): AntePosition with TopPosition = apply(AntePos(index))
-  def apply(index: Int, inExpr: PosInExpr): AntePosition = new AntePositionImpl(AntePos(index), inExpr)
-  def apply(index: Int, inExpr: List[Int]): AntePosition = new AntePositionImpl(AntePos(index), PosInExpr(inExpr))
+  def apply(top: AntePos, inExpr: PosInExpr): AntePosition = new AntePositionImpl(top, inExpr)
+
+  def base0(index: Int, inExpr: PosInExpr = HereP): AntePosition = AntePosition.apply(AntePos(index), inExpr)
+
+
+  def apply(seqIdx: Int): AntePosition with TopPosition = apply(seqIdx2AntePos(seqIdx))
+  def apply(seqIdx: Int, inExpr: List[Int]): AntePosition = new AntePositionImpl(seqIdx2AntePos(seqIdx), PosInExpr(inExpr))
+  private def seqIdx2AntePos(base1: Int): AntePos = {
+    require(base1>0, "positive indexing base 1: " + base1)
+    AntePos(base1-1)
+  } ensuring(r => r==SeqPos(-base1), "signed int conversion identical to core but faster")
+
 }
 
 object SuccPosition {
   def apply(top: SuccPos): SuccPosition with TopPosition = new SuccPositionImpl(top, HereP) with TopPosition
-  def apply(index: Int): SuccPosition with TopPosition = apply(SuccPos(index))
-  def apply(index: Int, inExpr: PosInExpr): SuccPosition = new SuccPositionImpl(SuccPos(index), inExpr)
-  def apply(index: Int, inExpr: List[Int]): SuccPosition = new SuccPositionImpl(SuccPos(index), PosInExpr(inExpr))
+  def apply(top: SuccPos, inExpr: PosInExpr): SuccPosition = new SuccPositionImpl(top,inExpr)
+  def base0(index: Int, inExpr: PosInExpr = HereP): SuccPosition = SuccPosition.apply(SuccPos(index), inExpr)
+
+  def apply(seqIdx: Int): SuccPosition with TopPosition = apply(seqIdx2SuccPos(seqIdx))
+  def apply(seqIdx: Int, inExpr: List[Int]): SuccPosition = new SuccPositionImpl(seqIdx2SuccPos(seqIdx), PosInExpr(inExpr))
+
+  private def seqIdx2SuccPos(base1: Int): SuccPos = {
+    require(base1>0, "positive indexing base 1: " + base1)
+    SuccPos(base1-1)
+  } ensuring(r => r==SeqPos(base1), "signed int conversion identical to core but faster")
 }
 
 // Implementations
@@ -228,13 +268,4 @@ private case class SuccPositionImpl (top: SuccPos, inExpr: PosInExpr) extends Su
   def navigate(instead : PosInExpr): SuccPosition = new SuccPositionImpl(top, instead)
 }
 
-
-@deprecated("Automated position converters should be removed.")
-private[keymaerax] object Position {
-  //@todo Ultimately remove
-  @deprecated("Use .top explicitly instead since lossy transformation if not top-level.")
-  implicit def position2SeqPos[T <: SeqPos](p: Position): T = p.top.asInstanceOf[T]
-
-  implicit def seqPos2Position(p: SeqPos) : Position = p match { case p: AntePos => AntePosition.apply(p) case p: SuccPos => SuccPosition(p) }
-}
 

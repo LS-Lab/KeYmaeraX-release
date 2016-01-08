@@ -65,7 +65,7 @@ object ToolTactics {
       val qeFact = core.RCF.proveArithmetic(qeTool, sequent.succ.head).fact
       val Equiv(_, result) = qeFact.conclusion.succ.head
 
-      ProofRuleTactics.cutLR(result)(SuccPosition(0)) <(
+      ProofRuleTactics.cutLR(result)(SuccPosition(1)) <(
         (close | skip) partial,
         equivifyR(1) & commuteEquivR(1) & by(qeFact)
       )

@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
 import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 import scala.collection.immutable.IndexedSeq
 
@@ -12,6 +13,7 @@ import scala.collection.immutable.IndexedSeq
  * These tactics are of more general use whenever preforming term-level rewriting.
  * Created by nfulton on 9/11/15.
  */
+@ObsoleteTest
 class TermRewritingTests extends edu.cmu.cs.ls.keymaerax.tactics.TacticTestSuite {
   "replaceSubterm" should "replace a subterm" in {
     val f = "[{x' = 0*x+1 & 1=1}]2=2".asFormula

@@ -46,12 +46,13 @@ object FOQuantifierTactics {
             val axiomInstance = if (pos.isAnte) Imply(ctx(f), ctx(p)) else ctx(p)
             if (pos.isAnte) {
               ProofRuleTactics.cut(axiomInstance) <(
+                //@todo implicit conversion: pos.top is different from using it in context. Clarify
                 (modusPonens(pos, AntePos(sequent.ante.length)) & hideL(pos.topLevel)) partial,
                 cohide('Rlast) & CMon(pos.inExpr) & US(subst, orig) & byUS("all instantiate")
                 )
             } else {
               ProofRuleTactics.cut(axiomInstance) <(
-                cohide2(AntePosition(sequent.ante.length), pos.topLevel) &
+                cohide2(AntePosition(sequent.ante.length + 1), pos.topLevel) &
                   TactixLibrary.by(CMon(ctx)(Provable.startProof(Sequent(Nil, immutable.IndexedSeq(f), immutable.IndexedSeq(p))))) &
                   implyRi & US(subst, orig) & byUS("all instantiate"),
                 hideR(pos.topLevel) partial

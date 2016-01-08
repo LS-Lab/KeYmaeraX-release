@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, RootNode, SuccPosition, SearchTacticsImpl}
 import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext._
 import testHelper.SequentFactory._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 import scala.language.postfixOps
 
@@ -16,6 +17,7 @@ import scala.language.postfixOps
  * These are post-development "integration" tests for syntactic derivation
  * Created by nfulton on 2/10/15.
  */
+@ObsoleteTest
 class SDTests extends TacticTestSuite {
   "Subtraction derivation" should "work without context" in {
     val in = "((x)'+(y)') = 0".asFormula

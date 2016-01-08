@@ -14,10 +14,12 @@ import java.text.SimpleDateFormat
 import java.util.{Locale, Calendar}
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
+import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
+import _root_.edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.btacticinterface.{UIIndex, BTacticParser}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo}
-import _root_.edu.cmu.cs.ls.keymaerax.core.{Sequent, ProverException, Provable}
+import _root_.edu.cmu.cs.ls.keymaerax.core._
 import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
@@ -690,24 +692,28 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(fml, pos) match {
-              case Some(step) => what(DerivationInfo(step))
+              case Some(step) => what(DerivationInfo.ofCodeName(step))
               case None => tacticId
             }
-          case _ => try {
-            what(TacticInfo(tacticId))
-          } catch {
-            case _: Throwable => "Tactic"
-          }
+          case _ => what(DerivationInfo.ofCodeName(tacticId))
         }
-      case _ => try {
-        what(TacticInfo(tacticId))
-      } catch {
-        case _: Throwable => "Tactic"
-      }
+      case _ => what(DerivationInfo.ofCodeName(tacticId))
     }
   }
 
+  private def invariantGeneratorFor(keyFile: String): Generator[Formula] = {
+    var invariants: Map[Expression, Formula] = Map.empty
+    KeYmaeraXParser.setAnnotationListener{case (program, formula) =>
+      invariants = invariants.+((program, formula))
+    }
+    KeYmaeraXProblemParser(keyFile)
+    new ConfigurableGenerate(invariants)
+  }
+
   def getResultingResponses() = {
+    val proof = db.getProofInfo(proofId)
+    val model = db.getModel(proof.modelId)
+    val generator = invariantGeneratorFor(model.keyFile)
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
     val node =
@@ -716,7 +722,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         case Some(n) => n
       }
 
-    BTacticParser(fullExpr(node)) match {
+    BTacticParser(fullExpr(node), false, Some(generator)) match {
       case None => throw new ProverException("Invalid Bellerophon expression:  " + belleTerm)
       case Some(expr) =>
         val appliedExpr:BelleExpr =

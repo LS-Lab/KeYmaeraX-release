@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.SequentFactory._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 import scala.collection.immutable.{TreeSet, Map}
 
@@ -21,6 +22,7 @@ import scala.collection.immutable.{TreeSet, Map}
  * Created by smitsch on 3/16/15.
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   // TODO mathematica is only necessary because of ProofFactory -> make ProofFactory configurable
 

@@ -270,9 +270,9 @@ object ProofRuleTactics {
       // boundRenaming potentially adds stuttering [repl:=what;]p; look for exact stuttering shape to avoid applying
       // [:=] assign on pre-existing formulas
       val anteAssigns: IndexedSeq[BelleExpr] = provable.subgoals.head.ante.zipWithIndex.map { case (p, i) =>
-        ?(TactixLibrary.useAt("[:=] assign")(Fixed(AntePosition(i), Some(Box(Assign(repl, what), URename(what, repl)(p)))))) }
+        ?(TactixLibrary.useAt("[:=] assign")(Fixed(AntePosition.base0(i), Some(Box(Assign(repl, what), URename(what, repl)(p)))))) }
       val succAssigns: IndexedSeq[BelleExpr] = provable.subgoals.head.succ.zipWithIndex.map { case (p, i) =>
-        ?(TactixLibrary.useAt("[:=] assign")(Fixed(SuccPosition(i), Some(Box(Assign(repl, what), URename(what, repl)(p)))))) }
+        ?(TactixLibrary.useAt("[:=] assign")(Fixed(SuccPosition.base0(i), Some(Box(Assign(repl, what), URename(what, repl)(p)))))) }
 
       // do bound renaming and remove stuttering assignments
       boundRenamingRule &

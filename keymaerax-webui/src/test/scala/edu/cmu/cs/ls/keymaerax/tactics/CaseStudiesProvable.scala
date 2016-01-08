@@ -21,6 +21,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels.{indInitLbl,indStepLbl,indUs
 import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.onBranch
 import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.wipeContextInductionT
 import Tactics.NilT
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 import scala.language.postfixOps
 
@@ -32,6 +33,7 @@ import scala.language.postfixOps
 /*@UsualTest*/
 /*@SlowTest*/
 /*@CaseStudyTest*/
+@ObsoleteTest
 class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach with PrivateMethodTester {
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
