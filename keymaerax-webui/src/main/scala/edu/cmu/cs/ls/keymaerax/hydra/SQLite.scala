@@ -416,13 +416,13 @@ object SQLite {
         val steps =
           Executionsteps.map({case step => (step.executionid.get, step.previousstep, step.parentstep,
             step.branchorder.get, step.branchlabel.get, step.alternativeorder.get, step.status.get, step.executableid.get,
-            step.inputprovableid.get, step.resultprovableid, step.userexecuted.get, step.childrenrecorded.get,
+            step.inputprovableid.get, step.resultprovableid, step.localprovableid, step.userexecuted.get, step.childrenrecorded.get,
             step.rulename.get)
           }) returning Executionsteps.map(es => es._Id.get)
         val stepId = steps
             .insert((step.executionId, step.previousStep, step.parentStep, branchOrder, branchLabel,
               step.alternativeOrder, status, step.executableId, step.inputProvableId, step.resultProvableId,
-              step.userExecuted.toString, false.toString, step.ruleName))
+              step.localProvableId, step.userExecuted.toString, false.toString, step.ruleName))
         nInserts = nInserts + 1
         stepId
       })
@@ -456,9 +456,14 @@ object SQLite {
       if(trace.steps.isEmpty) {
         // Insert a null tactic with a higher alternative order
         val nilExecutable = addBelleExpr(TactixLibrary.nil, Nil)
+        // Generate a no-op local provable whose conclusion matches with the current state of the proof.
+        val input = loadProvable(oldStep.inputprovableid.get)
+        val localConclusion = input.subgoals(0)
+        val localProvable = Provable.startProof(localConclusion)
+        val newLocalProvableID = serializeProvable(localProvable)
         val step = new ExecutionStepPOJO(None, oldStep.executionid.get, oldStep.previousstep, None, Some(0), None,
           oldStep.alternativeorder.get + 1, ExecutionStepStatus.Finished, nilExecutable, oldStep.inputprovableid.get,
-          oldStep.inputprovableid, oldStep.localprovableid, false, "nil")
+          oldStep.inputprovableid, Some(newLocalProvableID), false, "nil")
         addExecutionStep(step)
       } else {
         val inputId = oldStep.inputprovableid.get
