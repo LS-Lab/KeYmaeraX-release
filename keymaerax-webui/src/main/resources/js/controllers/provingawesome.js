@@ -28,7 +28,7 @@ angular.module('keymaerax.controllers').controller('RunningTacticsCtrl',
 });
 
 angular.module('keymaerax.controllers').controller('TaskCtrl',
-  function($rootScope, $scope, $http, $cookies, $routeParams, $q, $uibModal, $sce, Tactics, sequentProofData) {
+  function($rootScope, $scope, $http, $cookies, $routeParams, $q, $uibModal, Tactics, sequentProofData, spinnerService) {
     $scope.proofId = $routeParams.proofId;
     $scope.userId = $cookies.get('userId');
     $scope.agenda = sequentProofData.agenda;
@@ -244,26 +244,38 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
       var nodeId = sequentProofData.agenda.selectedId();
-      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/do/' + tacticId).success(function(data) {
-        if (nodeId === data.parent.id) {
-          sequentProofData.updateAgendaAndTree(data);
-        } else {
-          console.log("Unexpected tactic result, parent mismatch: " + " expected " + $scope.nodeId + " but got " + data.parent.id)
-        }
-      });
+      spinnerService.show('tacticExecutionSpinner');
+      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/do/' + tacticId)
+        .then(function(response) {
+          if (nodeId === response.data.parent.id) {
+            sequentProofData.updateAgendaAndTree(response.data);
+          } else {
+            console.log("Unexpected tactic result, parent mismatch: " + " expected " + $scope.nodeId + " but got " + response.data.parent.id)
+          }
+        })
+        .catch(function(err) {
+          showErrorMessage($uibModal, 'Error executing tactic ' + err.data)
+        })
+        .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
     }
 
     $scope.doSearch = function(tacticId, where) {
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
       var nodeId = sequentProofData.agenda.selectedId();
-      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doSearch' + where + '/' + tacticId).success(function(data) {
-        if (nodeId === data.parent.id) {
-          sequentProofData.updateAgendaAndTree(data);
-        } else {
-          console.log("Unexpected tactic result, parent mismatch: " + " expected " + $scope.nodeId + " but got " + data.parent.id)
-        }
-      });
+      spinnerService.show('tacticExecutionSpinner');
+      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doSearch' + where + '/' + tacticId)
+        .success(function(data) {
+          if (nodeId === data.parent.id) {
+            sequentProofData.updateAgendaAndTree(data);
+          } else {
+            console.log("Unexpected tactic result, parent mismatch: " + " expected " + $scope.nodeId + " but got " + data.parent.id)
+          }
+        })
+        .catch(function(err) {
+          showErrorMessage($uibModal, 'Error executing tactic ' + err.data)
+        })
+        .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
     }
 
     //Save a name edited using the inline editor.
