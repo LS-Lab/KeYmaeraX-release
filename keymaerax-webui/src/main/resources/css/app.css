@@ -118,7 +118,7 @@ table .btn{
   opacity: .75;
   background-color: #4D6473;
   width: calc(100% + 10px);
-  height: calc(100% + 10px);
+  height: calc(100% + 30px);
   position: absolute;
   z-index: 5;
   margin: -20px -20px;
