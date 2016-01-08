@@ -8,28 +8,17 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 import edu.cmu.cs.ls.keymaerax.core.Formula
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// Positions
+// Locate Positions
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private[keymaerax] object PositionConverter {
-  //@todo move into object Position.apply at some point when no longer off-by-one errors around.
-  /** Converts signed positions to position data structures. */
-  def convertPos(seqIdx: Int, inExpr: List[Int] = Nil): Position = {
-    require(seqIdx != 0, "Sequent index must be strictly negative (antecedent) or strictly positive (succedent)")
-    if (seqIdx < 0) AntePosition(-seqIdx - 1, PosInExpr(inExpr))
-    else SuccPosition(seqIdx - 1, PosInExpr(inExpr))
-  }
-
-  private[bellerophon] def convertPos(p: edu.cmu.cs.ls.keymaerax.core.SeqPos) : Position = if (p.isAnte) AntePosition(p.getIndex) else SuccPosition(p.getIndex)
-}
-
-
-/** Locates positions */
+/** Position locators identify a position directly or indirectly in a sequent. 
+ * @see [[AtPosition.apply()]]
+ */
 sealed trait PositionLocator {
   def prettyString: String
 }
 
-/** Locates the formula at the specified fixed position. */
+/** Locates the formula at the specified fixed position. Can specify the expected formula or expected shape of formula at that position as contract. */
 case class Fixed private[keymaerax] (pos: Position, shape: Option[Formula] = None, exact: Boolean = true) extends PositionLocator {
   override def prettyString: String = pos.prettyString
 }
@@ -40,7 +29,7 @@ object Fixed {
   def apply(seqPos: Int): Fixed = new Fixed(PositionConverter.convertPos(seqPos, Nil))
 }
 
-/** Locates the first applicable top-level position that matches shape (exactly or unifiably) at or after start of goal. */
+/** Locates the first applicable top-level position that matches shape (exactly or unifiably) at or after position `start` in a sequent. */
 case class Find(goal: Int, shape: Option[Formula], start: Position, exact: Boolean = true) extends PositionLocator {
   override def prettyString: String = "'_"
 }
