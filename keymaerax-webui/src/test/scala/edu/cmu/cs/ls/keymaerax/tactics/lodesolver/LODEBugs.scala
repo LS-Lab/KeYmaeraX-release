@@ -3,11 +3,13 @@ package edu.cmu.cs.ls.keymaerax.tactics.lodesolver
 import edu.cmu.cs.ls.keymaerax.core.SuccPos
 import edu.cmu.cs.ls.keymaerax.tactics.{TacticTestSuite, SearchTacticsImpl, SuccPosition, ODETactics}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 
 /**
  * These tests reproduce bugs (both current and historical) in the Logical ODE Solver
  * Created by nfulton on 9/11/15.
  */
+@ObsoleteTest
 class LODESolverBugs extends TacticTestSuite {
   /**
    * @note this was never a bug.

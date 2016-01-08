@@ -115,6 +115,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
   }
 }
 
+@ObsoleteTest
 class InverseDiffGhostTests extends TacticTestSuite {
   "Comma Commute Axiom" should "work on a binary example" in {
     val f = "[{x' = v, v' = a & t >= 0}]x>0".asFormula
@@ -184,6 +185,7 @@ class InverseDiffGhostTests extends TacticTestSuite {
   }
 }
 
+@ObsoleteTest
 class InverseDiffCutTests extends TacticTestSuite {
   ////
   // Inverse Cut Tests
@@ -216,6 +218,7 @@ class InverseDiffCutTests extends TacticTestSuite {
   }
 }
 
+@ObsoleteTest
 class ODESolutionTactic extends TacticTestSuite {
 
   "->" should "default to correct assoc" in {
@@ -339,6 +342,7 @@ class ODESolutionTactic extends TacticTestSuite {
   }
 }
 
+@ObsoleteTest
 class GhostOfLipschitz extends TacticTestSuite {
   "Inverse Lipschitz ghost" should "work on simple example" in {
     //Make sure things occur free and bound and such a lot.
@@ -362,6 +366,7 @@ class GhostOfLipschitz extends TacticTestSuite {
   }
 }
 
+@ObsoleteTest
 class DGPlusPlus extends TacticTestSuite {
   "DG++" should "work when no variables are different" in {
     val f = "\\forall y [{y' = x*v, x' = z, h' = -y, t' = 0*t + 1 & x=  0 & y = 0 & a=0 & t=0}]1=1".asFormula //nonsense
