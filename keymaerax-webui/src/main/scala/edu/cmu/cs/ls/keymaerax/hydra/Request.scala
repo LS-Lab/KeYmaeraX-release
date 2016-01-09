@@ -493,7 +493,8 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
   */
 class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
-    val response = new AgendaAwesomeResponse(ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)))
+    val items = db.agendaItemsForProof(proofId.toInt)
+    val response = new AgendaAwesomeResponse(ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), agendaItems = items))
     response :: Nil
   }
 }
@@ -503,13 +504,10 @@ case class GetAgendaItemRequest(db: DBAbstraction, userId: String, proofId: Stri
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
     val possibleItems = db.agendaItemsForProof(proofId.toInt)
     var currNode:Option[Int] = Some(nodeId.toInt)
-    while (currNode.isDefined) {
-      possibleItems.find({case item => item.initialProofNode == currNode.get}) match {
-        case Some(item) => return new GetAgendaItemResponse(item) :: Nil
-        case None => currNode = tree.findNode(currNode.toString).get.parent.map(_.id)
-      }
+    tree.agendaItemForNode(nodeId, possibleItems) match {
+      case Some(item) => new GetAgendaItemResponse (item) :: Nil
+      case None => new ErrorResponse(new Exception("No information stored for agenda item " + nodeId)) :: Nil
     }
-    new ErrorResponse(new Exception("No information stored for agenda item " + nodeId)) :: Nil
   }
 }
 
@@ -849,7 +847,9 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
     val prunedTrace = prune(trace, prunedStepIds)
     db.addAlternative(prunedStepIds.min, prunedTrace)
     val goalNode = tree.findNode(nodeId).get
-    val item = AgendaItem(goalNode.id.toString, "Unnamed Item", proofId.toString, goalNode)
+    val allItems = db.agendaItemsForProof(proofId.toInt)
+    val itemName = tree.agendaItemForNode(goalNode.id.toString, allItems).map(_.displayName).getOrElse("Unnamed Item")
+    val item = AgendaItem(goalNode.id.toString, itemName, proofId.toString, goalNode)
     val response = new PruneBelowResponse(item)
     response :: Nil
   }
