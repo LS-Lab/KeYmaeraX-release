@@ -26,7 +26,7 @@ object EqualityTactics {
    * @param eqPos The position where the equivalence appears in the antecedent.
    * @return The tactic.
    */
-  def equivRewriting(eqPos: Int): DependentPositionTactic = equivRewriting(Position.convertPos(eqPos).asInstanceOf[AntePosition])
+  def equivRewriting(eqPos: Int): DependentPositionTactic = equivRewriting(Position(eqPos).asInstanceOf[AntePosition])
   def equivRewriting(eqPos: AntePosition): DependentPositionTactic = new DependentPositionTactic("Equivalence Rewriting") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
@@ -121,7 +121,7 @@ object EqualityTactics {
    * @param eqPos The position of the equality.
    * @return The tactic.
    */
-  def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position.convertPos(eqPos))
+  def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position(eqPos))
   def eqL2R(eqPos: Position): DependentPositionTactic = new DependentPositionTactic("eqL2R") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
@@ -154,7 +154,7 @@ object EqualityTactics {
    * @param eqPos The position of the equality.
    * @return The tactic.
    */
-  def eqR2L(eqPos: Int): DependentPositionTactic = eqR2L(Position.convertPos(eqPos))
+  def eqR2L(eqPos: Int): DependentPositionTactic = eqR2L(Position(eqPos))
   def eqR2L(eqPos: Position): DependentPositionTactic = new DependentPositionTactic("eqR2L") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {

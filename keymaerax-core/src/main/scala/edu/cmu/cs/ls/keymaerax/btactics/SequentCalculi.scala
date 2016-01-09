@@ -110,7 +110,7 @@ trait SequentCalculi {
   lazy val close             : BelleExpr         = closeId | closeT | closeF
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   def close(a: AntePosition, s: SuccPosition) : BelleExpr = cohide2(a, s) & ProofRuleTactics.trivialCloser
-  def close(a: Int, s: Int)  : BelleExpr = close(Position.convertPos(a).asInstanceOf[AntePosition], Position.convertPos(s).asInstanceOf[SuccPosition])
+  def close(a: Int, s: Int)  : BelleExpr = close(Position(a).asInstanceOf[AntePosition], Position(s).asInstanceOf[SuccPosition])
   /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   lazy val closeId           : DependentTactic = new DependentTactic("close id") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {

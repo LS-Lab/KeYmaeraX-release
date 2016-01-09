@@ -131,7 +131,7 @@ trait AtPosition[T <: BelleExpr] extends (PositionLocator => T) {
    * @see [[apply(position: Position)]]
    * @see [[Fixed]]
    */
-  final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(Position.convertPos(seqIdx, inExpr)))
+  final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(Position(seqIdx, inExpr)))
   /**
    * Returns the tactic at the position identified by `locator`.
    * @param locator The locator symbol:
