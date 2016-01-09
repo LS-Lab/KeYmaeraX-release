@@ -555,22 +555,26 @@ trait ClosingRule extends Rule {}
 
 /** A rule applied to a position */
 trait PositionRule extends Rule {
+  /** The position (on the right) where this rule will be applied at */
   def pos: SeqPos
   override def toString: String = name + " at " + pos
 }
 
 /** A rule applied to a position in the antecedent on the left */
 trait LeftRule extends PositionRule {
+  /** The position (on the left) where this rule will be applied at */
   def pos: AntePos
 }
 
 /** A rule applied to a position in the succedent on the right */
 trait RightRule extends PositionRule {
+  /** The position (on the right) where this rule will be applied at */
   def pos: SuccPos
 }
 
 /** An assumption rule, which is a position rule that has an additional position of an assumption. */
 trait AssumptionRule extends PositionRule {
+  /** The position of the assumption used for this rule when used at the position `pos` */
   def assume: SeqPos
   override def toString: String = name + " at " + pos + " assumption at " + assume
 }
@@ -1188,12 +1192,13 @@ final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
  * ----------------------- (Skolemize) provided x not in G,D
  * G |- \forall x p(x), D
  * }}}
+ * Skolemize also handles '''existential''' quantifiers on the left.
  * {{{
  *           G, p(x) |- D
  * ------------------------ (Skolemize) provided x not in G,D
  * G, \exists x p(x) |- D
  * }}}
- * @note Could replace by uniform substitution rule application mechanism for rule "all generalization"
+ * @note Could in principle replace by uniform substitution rule application mechanism for rule "all generalization"
  * along with tactics expanding scope of quantifier with axiom "all quantifier scope" at the cost of propositional repacking and unpacking.
  *      p(x)
  *  ---------------all generalize
