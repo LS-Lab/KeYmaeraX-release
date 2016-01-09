@@ -47,7 +47,7 @@ object FOQuantifierTactics {
             if (pos.isAnte) {
               ProofRuleTactics.cut(axiomInstance) <(
                 //@todo implicit conversion: pos.top is different from using it in context. Clarify
-                (modusPonens(pos, AntePos(sequent.ante.length)) & hideL(pos.topLevel)) partial,
+                (modusPonens(pos.checkAnte.top, AntePos(sequent.ante.length)) & hideL(pos.topLevel)) partial,
                 cohide('Rlast) & CMon(pos.inExpr) & US(subst, orig) & byUS("all instantiate")
                 )
             } else {
@@ -192,7 +192,7 @@ object FOQuantifierTactics {
           }
         }
 
-        val genFml = Forall(immutable.Seq(quantified), SubstitutionHelper.replaceFree(sequent(pos))(t, quantified))
+        val genFml = Forall(immutable.Seq(quantified), SubstitutionHelper.replaceFree(sequent(pos.top))(t, quantified))
         cut(genFml) <(
           /* use */ allL(quantified, t)('Llast) & closeId,
           /* show */ hide(pos.top) partial
@@ -222,7 +222,7 @@ object FOQuantifierTactics {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         // fetch non-bound variables and parameterless function symbols
         require(pos.isTopLevel, "Universal closure only at top-level")
-        val varsFns: Set[NamedSymbol] = StaticSemantics.freeVars(sequent(pos)).toSet ++ StaticSemantics.signature(sequent(pos))
+        val varsFns: Set[NamedSymbol] = StaticSemantics.freeVars(sequent(pos.top)).toSet ++ StaticSemantics.signature(sequent(pos.top))
         require(order.toSet.subsetOf(varsFns), "Order of variables must be a subset of the free symbols+signature, but "
           + (order.toSet -- varsFns) + " is not in the subset")
         // use specified order in reverse, prepend the rest alphabetically

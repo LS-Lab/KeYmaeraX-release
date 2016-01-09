@@ -303,7 +303,7 @@ object DifferentialTactics {
   def DG(y: Variable, a: Term, b: Term): DependentPositionTactic = "DG" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
-      cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b))), h), p)))(pos) <(
+      cutR(Exists(y::Nil, Box(ODESystem(DifferentialProduct(c, AtomicODE(DifferentialSymbol(y), Plus(Times(a, y), b))), h), p)))(pos.checkSucc.top) <(
         /* use */ skip,
         /* show */ cohide(pos.top) &
           /* rename first, otherwise byUS fails */ ProofRuleTactics.uniformRenaming("y".asVariable, y) &
@@ -349,7 +349,7 @@ object DifferentialTactics {
             val axiom = s"\\forall ${x.prettyString} (${x.prettyString})' = ${x.prettyString}'".asFormula
             cutLR(withxprime)(pos.topLevel) <(
               /* use */ skip,
-              /* show */ cohide(pos.top) & CMon(formulaPos(sequent(pos.topLevel), pos.inExpr)) & cut(axiom) <(
+              /* show */ cohide(pos.top) & CMon(formulaPos(sequent(pos.top), pos.inExpr)) & cut(axiom) <(
               useAt("all eliminate")(-1) & eqL2R(-1)(1) & useAt("-> self")(1) & close,
               cohide('Rlast) & byUS(DerivedAxioms.Dvariable))
               )
@@ -403,7 +403,7 @@ object DifferentialTactics {
 
       // initial values
       val iv: Map[Variable, Variable] =
-        primedSymbols(odes).map(v => v -> TacticHelper.freshNamedSymbol(v, sequent(pos.topLevel))).toMap
+        primedSymbols(odes).map(v => v -> TacticHelper.freshNamedSymbol(v, sequent(pos.top))).toMap
 
       val theSolution = solution match {
         case sol@Some(_) => sol

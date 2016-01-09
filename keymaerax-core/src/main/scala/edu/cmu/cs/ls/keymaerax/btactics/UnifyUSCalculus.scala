@@ -253,13 +253,13 @@ trait UnifyUSCalculus {
 
         //@todo not sure if the following two cases really work as intended, but they seem to
         case Imply(other, DotFormula) if p.isSucc && p.isTopLevel =>
-          cutR(subst(other))(p) <(
+          cutR(subst(other))(p.checkSucc.top) <(
             /* use */ ident partial,
             /* show */ coHideR(p) & factTactic
           )
 
         case Imply(DotFormula, other) if p.isAnte && p.isTopLevel =>
-          cutL(subst(other))(p) <(
+          cutL(subst(other))(p.checkAnte.top) <(
             /* use */ ident partial,
             /* show */ coHideR('Rlast) & factTactic
           )
@@ -298,7 +298,7 @@ trait UnifyUSCalculus {
 
             // prove prereq locally
             cut(C(subst(prereq))) <(
-              /* use */ cutR(C(subst(conclusion)))(p) <(
+              /* use */ cutR(C(subst(conclusion)))(p.checkSucc.top) <(
                 hideL('Llast) partial,
                 coHide2(AntePos(sequent.ante.size), p.top) & equivifyR(1) & commute & implyRi & CMon(p.inExpr) & factTactic) partial,
               /* show: prereq remains open */ hideR(p.top) partial
