@@ -133,16 +133,17 @@ trait AtPosition[T <: BelleExpr] extends (PositionLocator => T) {
    */
   final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(Position(seqIdx, inExpr)))
   /**
-   * Returns the tactic at the position identified by `locator`.
-   * @param locator The locator symbol:
+    * Returns the tactic at the position identified by `locator`.
+    * @param locator The locator symbol at which to apply this AtPosition:
     *                'L (find left),
     *                'R (find right),
     *                '_ (find left/right appropriately for tactic),
-   *                'Llast (at last position in antecedent), or
+    *                'Llast (at last position in antecedent), or
     *                'Rlast (at last position in succedent).
-   * @note Convenience wrapper
-   * @see [[apply(locator: PositionLocator)]]
-   */
+    * @note Convenience wrapper
+    * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.AtPosition]]
+    * @see [[apply(locator: PositionLocator)]]
+    */
   final def apply(locator: Symbol): T = locator match {
     case 'L => apply(FindL(0, None))
     case 'R => apply(FindR(0, None))
@@ -156,7 +157,15 @@ trait AtPosition[T <: BelleExpr] extends (PositionLocator => T) {
   }
   /**
     * Returns the tactic at the position identified by `locator`, ensuring that `locator` will yield the formula `expected` verbatim.
+    * @param locator The locator symbol at which to apply this AtPosition:
+    *                'L (find left),
+    *                'R (find right),
+    *                '_ (find left/right appropriately for tactic),
+    *                'Llast (at last position in antecedent), or
+    *                'Rlast (at last position in succedent).
+    * @param expected the formula expected at the position that `locator` identifies. Contract fails if that expectation is not met.
     * @note Convenience wrapper
+    * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.AtPosition]]
     * @see [[apply()]]
     */
   final def apply(locator: Symbol, expected: Formula): T = locator match {
