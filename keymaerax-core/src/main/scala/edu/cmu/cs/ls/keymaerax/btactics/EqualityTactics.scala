@@ -81,7 +81,7 @@ object EqualityTactics {
               require(!lhs.isInstanceOf[Number] && lhs != rhs, "LHS and RHS are not allowed to overlap")
 
               val occurrences = positionsOf(lhs, sequent).filter(p => p.isAnte != pos.isAnte || p.index0 != pos.index0).
-                filter(p => boundAt(sequent(p), p.inExpr).intersect(StaticSemantics.freeVars(lhs)).isEmpty)
+                filter(p => boundAt(sequent(p.top), p.inExpr).intersect(StaticSemantics.freeVars(lhs)).isEmpty)
 
               if (occurrences.isEmpty) {
                 ident

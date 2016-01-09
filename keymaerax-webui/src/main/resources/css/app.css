@@ -55,11 +55,7 @@ table .btn{
 }
 
 .popover {
-  max-width: 90%;
-}
-
-.popover-content {
-  width: 700px;
+  max-width: none;
 }
 
 .k4-narrowalert {

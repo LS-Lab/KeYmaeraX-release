@@ -357,14 +357,14 @@ object DerivationInfo {
       {case () => (fml:Formula) => new DependentPositionTactic("cutL") {
         /** Create the actual tactic to be applied at position pos */
         override def factory(pos: Position): DependentTactic = new DependentTactic("cutL") {
-          ProofRuleTactics.cutL(fml)(pos/*.checkAnte.checkTop*/)
+          ProofRuleTactics.cutL(fml)(pos.checkAnte.top)
         }
       }}),
     new InputPositionTacticInfo("cutR", "cut", List(FormulaArg("cutFormula")),
       {case () => (fml:Formula) => new DependentPositionTactic("cutR") {
         /** Create the actual tactic to be applied at position pos */
         override def factory(pos: Position): DependentTactic = new DependentTactic("cutR") {
-          ProofRuleTactics.cutR(fml)(pos/*.checkSucc.checkTop*/)
+          ProofRuleTactics.cutR(fml)(pos.checkSucc.top)
         }
       }}),
     new InputPositionTacticInfo("cutLR", "cut", List(FormulaArg("cutFormula")),
@@ -448,7 +448,9 @@ object DerivationInfo {
   def assertValidIdentifier(id:String) = { assert(id.forall{case c => c.isLetterOrDigit})}
 
   /** Retrieve meta-information on an inference by the given code name `codeName` */
-  def ofCodeName(codeName:String): DerivationInfo = byCodeName.get(codeName.toLowerCase).get
+  def ofCodeName(codeName:String): DerivationInfo = byCodeName.get(codeName.toLowerCase).getOrElse(
+    throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)
+  )
 }
 
 object AxiomInfo {
