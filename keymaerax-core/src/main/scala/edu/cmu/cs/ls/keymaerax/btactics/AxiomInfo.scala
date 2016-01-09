@@ -448,7 +448,9 @@ object DerivationInfo {
   def assertValidIdentifier(id:String) = { assert(id.forall{case c => c.isLetterOrDigit})}
 
   /** Retrieve meta-information on an inference by the given code name `codeName` */
-  def ofCodeName(codeName:String): DerivationInfo = byCodeName.get(codeName.toLowerCase).get
+  def ofCodeName(codeName:String): DerivationInfo = byCodeName.get(codeName.toLowerCase).getOrElse(
+    throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)
+  )
 }
 
 object AxiomInfo {

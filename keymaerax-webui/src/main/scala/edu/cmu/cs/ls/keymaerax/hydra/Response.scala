@@ -380,6 +380,14 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
         "parent" -> node.parent.map({case parent => nodeIdJson(parent.id)}).getOrElse(JsNull)
       )
     }
+
+    def agendaItemJson(item: AgendaItemPOJO): JsValue = {
+      JsObject(
+        "agendaItemId" -> JsString(item.initialProofNode.toString),
+        "proofId" -> JsString(item.proofId.toString),
+        "displayName" -> JsString(item.displayName)
+      )
+    }
   }
 
 class AgendaAwesomeResponse(tree: ProofTree) extends Response {
@@ -401,6 +409,14 @@ class AgendaAwesomeResponse(tree: ProofTree) extends Response {
       "proofTree" -> proofTree,
       "agendaItems" -> agendaItems
     )
+}
+
+class GetAgendaItemResponse(item: AgendaItemPOJO) extends Response {
+  val json = Helpers.agendaItemJson(item)
+}
+
+class SetAgendaItemNameResponse(item: AgendaItemPOJO) extends Response {
+  val json = Helpers.agendaItemJson(item)
 }
 
 class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: String) extends Response {

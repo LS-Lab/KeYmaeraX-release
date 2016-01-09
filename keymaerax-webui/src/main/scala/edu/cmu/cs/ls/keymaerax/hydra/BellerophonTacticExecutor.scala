@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.util.concurrent.{Callable, FutureTask, ExecutorService, Executors}
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{IOListener, Interpreter, SequentialInterpreter}
-import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
+import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, BelleValue, BelleExpr, Interpreter}
 import scala.collection.mutable.Map
 

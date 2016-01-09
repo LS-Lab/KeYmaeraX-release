@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.{ProofTree, DBAbstractionObj}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-import edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
+import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import org.scalatest.{Ignore, BeforeAndAfterEach, Matchers, FlatSpec}
 
 import scala.collection.immutable._
@@ -21,7 +21,7 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
   val db = DBAbstractionObj.testDatabase
   //@todo fill in reasonable data, this is bogus
   private val u = 999
-  val listener = new DebuggerListener(db, 1337, u, Some(u), Provable.startProof(True), 0, 1, false, "TODO")
+  val listener = new TraceRecordingListener(db, 1337, u, Some(u), Provable.startProof(True), 0, 1, false, "TODO")
   val theInterpreter = new SequentialInterpreter(Seq(listener))
   object TestLib extends UnifyUSCalculus
 

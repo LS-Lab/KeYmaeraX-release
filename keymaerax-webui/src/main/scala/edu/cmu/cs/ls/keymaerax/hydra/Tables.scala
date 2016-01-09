@@ -14,7 +14,37 @@ trait Tables {
   import scala.slick.jdbc.{GetResult => GR}
   
   /** DDL for all tables. Call .create to execute. */
-  lazy val ddl = Config.ddl ++ Executableparameter.ddl ++ Executables.ddl ++ Executionsteps.ddl ++ Lemmas.ddl ++ Models.ddl ++ Patterns.ddl ++ Proofs.ddl ++ Scalatactics.ddl ++ Tacticexecutions.ddl ++ Users.ddl
+  lazy val ddl = Agendaitems.ddl ++ Config.ddl ++ Executableparameter.ddl ++ Executables.ddl ++ Executionsteps.ddl ++ Lemmas.ddl ++ Models.ddl ++ Patterns.ddl ++ Proofs.ddl ++ Scalatactics.ddl ++ Tacticexecutions.ddl ++ Users.ddl
+  
+  /** Entity class storing rows of table Agendaitems
+   *  @param _Id Database column _id DBType(INTEGER), PrimaryKey
+   *  @param proofid Database column proofId DBType(INTEGER)
+   *  @param initialproofnode Database column initialProofNode DBType(INTEGER)
+   *  @param displayname Database column displayName DBType(STRING) */
+  case class AgendaitemsRow(_Id: Option[Int], proofid: Option[Int], initialproofnode: Option[Int], displayname: Option[String])
+  /** GetResult implicit for fetching AgendaitemsRow objects using plain SQL queries */
+  implicit def GetResultAgendaitemsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[AgendaitemsRow] = GR{
+    prs => import prs._
+    AgendaitemsRow.tupled((<<?[Int], <<?[Int], <<?[Int], <<?[String]))
+  }
+  /** Table description of table agendaItems. Objects of this class serve as prototypes for rows in queries. */
+  class Agendaitems(_tableTag: Tag) extends Table[AgendaitemsRow](_tableTag, "agendaItems") {
+    def * = (_Id, proofid, initialproofnode, displayname) <> (AgendaitemsRow.tupled, AgendaitemsRow.unapply)
+    
+    /** Database column _id DBType(INTEGER), PrimaryKey */
+    val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
+    /** Database column proofId DBType(INTEGER) */
+    val proofid: Column[Option[Int]] = column[Option[Int]]("proofId")
+    /** Database column initialProofNode DBType(INTEGER) */
+    val initialproofnode: Column[Option[Int]] = column[Option[Int]]("initialProofNode")
+    /** Database column displayName DBType(STRING) */
+    val displayname: Column[Option[String]] = column[Option[String]]("displayName")
+    
+    /** Foreign key referencing Proofs (database name proofs_FK_1) */
+    lazy val proofsFk = foreignKey("proofs_FK_1", proofid, Proofs)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+  }
+  /** Collection-like TableQuery object for table Agendaitems */
+  lazy val Agendaitems = new TableQuery(tag => new Agendaitems(tag))
   
   /** Entity class storing rows of table Config
    *  @param configid Database column configId DBType(INTEGER), PrimaryKey

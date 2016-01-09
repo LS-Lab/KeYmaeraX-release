@@ -23,9 +23,28 @@ case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, lea
   def allDescendants(id: String): List[TreeNode] = {
     findNode(id).get.allDescendants
   }
+
+  def agendaItemForNode(id: String, items: List[AgendaItemPOJO]): Option[AgendaItemPOJO] = {
+    ProofTree.agendaItemForNode(nodes, id, items)
+  }
  }
+
 object ProofTree {
-  def ofTrace(trace:ExecutionTrace): ProofTree = {
+  def agendaItemForNode(nodes: List[TreeNode], id: String, items: List[AgendaItemPOJO]): Option[AgendaItemPOJO] = {
+    nodes.find(_.id == id.toInt) match {
+      case Some(node) =>
+        var currNode:Option[Int] = Some(node.id)
+        while (currNode.isDefined) {
+          items.find({case item => item.initialProofNode == currNode.get}) match {
+            case Some(item) => return Some(item)
+            case None => currNode = nodes.find(_.id == currNode.get).get.parent.map(_.id)
+          }}
+        None
+      case None => None
+    }
+  }
+
+  def ofTrace(trace:ExecutionTrace, includeUndos:Boolean = false, agendaItems: List[AgendaItemPOJO] = Nil): ProofTree = {
     var currentNodeId = 1
 
     def treeNode(subgoal: Sequent, parent: Option[TreeNode], step:Option[ExecutionStep]): TreeNode = {
@@ -60,7 +79,7 @@ object ProofTree {
           val addedNodes = delta.tail.map({ case sg => treeNode(sg, Some(openGoals(branch)), Some(step)) })
           openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
           allNodes = allNodes ++ (updatedNode :: addedNodes.toList)
-        } else if (step.isUserExecuted) {
+        } else if (step.isUserExecuted || includeUndos) {
           // User ran a tactic but it had no effect. e.g. running master on a loop.
           // Only insert a node if the step was user-executed, since we use non-user-executed steps to represent
           // undos.
@@ -72,7 +91,10 @@ object ProofTree {
       }
       steps = steps.tail
     }
-    val items: List[AgendaItem] = openGoals.map(i => AgendaItem(i.id.toString, "Unnamed Goal", trace.proofId, i)).toList
+    val items: List[AgendaItem] = openGoals.map({case i =>
+      val item = agendaItemForNode(allNodes, i.id.toString, agendaItems)
+      val itemName = item.map(_.displayName).getOrElse("Unnamed Goal")
+      AgendaItem(i.id.toString, itemName, trace.proofId, i)}).toList
     ProofTree(trace.proofId, allNodes, allNodes.head, items)
   }
 }

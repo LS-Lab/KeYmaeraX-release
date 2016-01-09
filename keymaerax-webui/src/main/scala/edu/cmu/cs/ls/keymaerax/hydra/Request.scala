@@ -20,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.btacticinterface.{UIIndex, BTacticParser}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo}
 import _root_.edu.cmu.cs.ls.keymaerax.core._
-import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
+import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
@@ -493,8 +493,52 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
   */
 class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
-    val response = new AgendaAwesomeResponse(ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)))
+    val items = db.agendaItemsForProof(proofId.toInt)
+    val response = new AgendaAwesomeResponse(ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), agendaItems = items))
     response :: Nil
+  }
+}
+
+case class GetAgendaItemRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
+  def getResultingResponses(): List[Response] = {
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    val possibleItems = db.agendaItemsForProof(proofId.toInt)
+    var currNode:Option[Int] = Some(nodeId.toInt)
+    tree.agendaItemForNode(nodeId, possibleItems) match {
+      case Some(item) => new GetAgendaItemResponse (item) :: Nil
+      case None => new ErrorResponse(new Exception("No information stored for agenda item " + nodeId)) :: Nil
+    }
+  }
+}
+
+case class SetAgendaItemNameRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, displayName: String) extends Request {
+  def getResultingResponses() = {
+    val node = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).nodes.find({case node => node.id.toString == nodeId})
+    node match {
+      case None => throw new Exception("Node not found")
+      case Some(node) =>
+        var currNode = node
+        var done = false
+        while (currNode.parent.nonEmpty && !done) {
+          val nextNode = currNode.parent.get
+          /* Don't stop at the first node just because it branches (it may be the end of one branch and the start of the
+          * next), but if we see branching anywhere else we've found the end of our branch. */
+          if (currNode.children.size > 1) {
+            done = true
+          } else {
+            currNode = nextNode
+          }
+        }
+        db.getAgendaItem(proofId.toInt, currNode.id) match {
+          case Some(item) =>
+            val newItem = AgendaItemPOJO(item.itemId, item.proofId, item.initialProofNode, displayName)
+            db.updateAgendaItem(newItem)
+            new SetAgendaItemNameResponse(newItem) :: Nil
+          case None =>
+            val id = db.addAgendaItem(proofId.toInt, currNode.id, displayName)
+            new SetAgendaItemNameResponse(AgendaItemPOJO(id, proofId.toInt, currNode.id, displayName)) :: Nil
+        }
+    }
   }
 }
 
@@ -745,7 +789,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             case Nil => localProvable
             case steps => steps.last.output.getOrElse(steps.last.input)
           }
-        val listener = new DebuggerListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
+        val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
         val executor = BellerophonTacticExecutor.defaultExecutor
         val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
         val finalProvable = executor.wait(taskId) match {
@@ -794,7 +838,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
 
   def getResultingResponses() = {
     val trace = db.getExecutionTrace(proofId.toInt)
-    val tree = ProofTree.ofTrace(trace)
+    val tree = ProofTree.ofTrace(trace, includeUndos = true)
     val prunedSteps = tree.allDescendants(nodeId).flatMap{case node => node.endStep.toList}
     if(prunedSteps.isEmpty) {
       throw new Exception("No steps under node. Nothing to do.")
@@ -803,7 +847,9 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
     val prunedTrace = prune(trace, prunedStepIds)
     db.addAlternative(prunedStepIds.min, prunedTrace)
     val goalNode = tree.findNode(nodeId).get
-    val item = AgendaItem(goalNode.id.toString, "Unnamed Item", proofId.toString, goalNode)
+    val allItems = db.agendaItemsForProof(proofId.toInt)
+    val itemName = tree.agendaItemForNode(goalNode.id.toString, allItems).map(_.displayName).getOrElse("Unnamed Item")
+    val item = AgendaItem(goalNode.id.toString, itemName, proofId.toString, goalNode)
     val response = new PruneBelowResponse(item)
     response :: Nil
   }
