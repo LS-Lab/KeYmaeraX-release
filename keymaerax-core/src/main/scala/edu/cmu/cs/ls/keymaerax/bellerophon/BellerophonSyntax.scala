@@ -223,7 +223,7 @@ case class AppliedPositionTactic(positionTactic: BelleExpr with PositionalTactic
               (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
             positionTactic.computeResult(provable, pos)
           } else {
-            throw new BelleError("Formula " + provable.subgoals.head.apply(pos) + " at position " + pos +
+            throw new BelleError("Formula " + provable.subgoals.head.sub(pos) + " at position " + pos +
               " is not of expected shape " + f)
           }
         case None => positionTactic.computeResult(provable, pos)
