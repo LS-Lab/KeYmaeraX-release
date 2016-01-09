@@ -309,6 +309,19 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val agendaItem = path("proofs" / "user" / Segment / Segment / "agendaItem" / Segment) { (userId, proofId, nodeId) => { pathEnd {
+    get {
+      val request = new GetAgendaItemRequest(database, userId, proofId, nodeId)
+      complete(standardCompletion(request))
+    } ~
+    post {
+      entity(as[String]) { params => {
+        val p = JsonParser(params).asJsObject.fields.map(param => param._1.toString -> param._2.asInstanceOf[JsString].value)
+        val displayName = p("displayName").asInstanceOf[JsString].value
+        val request = new SetAgendaItemNameRequest(database, userId, proofId, nodeId, displayName)
+        complete(standardCompletion(request))
+    }}}}}}
+
   val proofLoadStatus = path("proofs" / "user" / Segment / Segment / "status") { (userId, proofId) => { pathEnd {
     get {
       val request = new GetProofLoadStatusRequest(database, userId, proofId)

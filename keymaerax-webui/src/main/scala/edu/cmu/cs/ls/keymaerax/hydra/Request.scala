@@ -498,6 +498,52 @@ class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : Str
   }
 }
 
+case class GetAgendaItemRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
+  def getResultingResponses(): List[Response] = {
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    val possibleItems = db.agendaItemsForProof(proofId.toInt)
+    var currNode:Option[Int] = Some(nodeId.toInt)
+    while (currNode.isDefined) {
+      possibleItems.find({case item => item.initialProofNode == currNode.get}) match {
+        case Some(item) => return new GetAgendaItemResponse(item) :: Nil
+        case None => currNode = tree.findNode(currNode.toString).get.parent.map(_.id)
+      }
+    }
+    new ErrorResponse(new Exception("No information stored for agenda item " + nodeId)) :: Nil
+  }
+}
+
+case class SetAgendaItemNameRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, displayName: String) extends Request {
+  def getResultingResponses() = {
+    val node = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).nodes.find({case node => node.id.toString == nodeId})
+    node match {
+      case None => throw new Exception("Node not found")
+      case Some(node) =>
+        var currNode = node
+        var done = false
+        while (currNode.parent.nonEmpty && !done) {
+          val nextNode = currNode.parent.get
+          /* Don't stop at the first node just because it branches (it may be the end of one branch and the start of the
+          * next), but if we see branching anywhere else we've found the end of our branch. */
+          if (currNode.children.size > 1) {
+            done = true
+          } else {
+            currNode = nextNode
+          }
+        }
+        db.getAgendaItem(proofId.toInt, currNode.id) match {
+          case Some(item) =>
+            val newItem = AgendaItemPOJO(item.itemId, item.proofId, item.initialProofNode, displayName)
+            db.updateAgendaItem(newItem)
+            new SetAgendaItemNameResponse(newItem) :: Nil
+          case None =>
+            val id = db.addAgendaItem(proofId.toInt, currNode.id, displayName)
+            new SetAgendaItemNameResponse(AgendaItemPOJO(id, proofId.toInt, currNode.id, displayName)) :: Nil
+        }
+    }
+  }
+}
+
 class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
