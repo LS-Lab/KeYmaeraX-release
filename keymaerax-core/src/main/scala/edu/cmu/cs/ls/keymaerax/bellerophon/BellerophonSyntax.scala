@@ -119,7 +119,7 @@ trait AtPosition[T <: BelleExpr] extends (PositionLocator => T) {
    */
   /*private[keymaerax]*/ final def apply(position: Position): T = apply(Fixed(position))
   /*private[keymaerax]*/ final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
-  private[ls] final def apply(position: SeqPos): T = apply(Fixed(Position.convertPos(position)))
+  private[ls] final def apply(position: SeqPos): T = apply(Fixed(Position(position)))
 
   /**
    * Applied at a fixed position in (signed) sequent position `seqIdx` at subexpression `inExpr`.

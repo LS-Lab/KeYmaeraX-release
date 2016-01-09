@@ -166,13 +166,13 @@ object Position {
     case pos: SuccPos => SuccPosition(pos, PosInExpr(inExpr))
   }
 
-  private[bellerophon] def convertPos(p: edu.cmu.cs.ls.keymaerax.core.SeqPos) : Position = p match {
+  private[bellerophon] def apply(p: edu.cmu.cs.ls.keymaerax.core.SeqPos) : Position = p match {
     case pos: AntePos => AntePosition(pos)
     case pos: SuccPos => SuccPosition(pos)
   }
 
   /** Embedding SeqPos into Position at top level */
-  implicit def seqPos2Position(p: SeqPos) : Position = convertPos(p)
+  implicit def seqPos2Position(p: SeqPos) : Position = apply(p)
 }
 
 /** A position guaranteed to identify a top-level position */
