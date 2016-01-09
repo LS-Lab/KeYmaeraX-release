@@ -595,6 +595,7 @@ trait RestApi extends HttpService {
     proofListForModel     ::
     proofList             ::
     openProof             ::
+    agendaItem            ::
     proofLoadStatus       ::
     changeProofName       ::
     proofProgressStatus   ::
