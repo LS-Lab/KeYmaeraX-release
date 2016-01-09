@@ -91,7 +91,9 @@ trait SequentCalculi {
   // First-order tactics
 
   // quantifiers
-  /** all right: Skolemize a universal quantifier in the succedent ([[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemize]]) */
+  /** all right: Skolemize a universal quantifier in the succedent ([[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemize]])
+    * @see [[edu.cmu.cs.ls.keymaerax.core.Skolemize]]
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allSkolemize]] */
   lazy val allR               : DependentPositionTactic = FOQuantifierTactics.allSkolemize
   /** all left: instantiate a universal quantifier in the antecedent by a concrete instance */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))

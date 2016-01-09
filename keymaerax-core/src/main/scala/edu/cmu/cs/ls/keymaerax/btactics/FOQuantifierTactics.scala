@@ -78,14 +78,15 @@ object FOQuantifierTactics {
   /**
    * Skolemization with bound renaming on demand.
    * @example{{{
-   *     |- x>0
-   *     -----------------allSkolemize(1)
-   *     |- \forall x x>0
+   *     y>5   |- x^2>=0
+   *     --------------------------allSkolemize(1)
+   *     y>5   |- \forall x x^2>=0
    * }}}
-   * @example
-   *     x_0>0 |- x>0
-   *     -----------------------allSkolemize(1)
-   *     x>0   |- \forall x x>0
+   * @example Uniformly renames other occurrences of the quantified variable in the context on demand. {{{
+   *     x_0>0 |- x^2>=0
+   *     --------------------------allSkolemize(1)
+   *     x>0   |- \forall x x^2>=0
+   * }}}
    */
   lazy val allSkolemize: DependentPositionTactic = new DependentPositionTactic("all skolemize") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
