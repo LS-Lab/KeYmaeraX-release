@@ -4,14 +4,20 @@ import _root_.edu.cmu.cs.ls.keymaerax.core.{ProverException, Sequent}
 
 import scala.collection.immutable.Nil
 
-/**
+/** Represents (one state of) an entire proof.
+  * A ProofTree can contain steps that are inserted automatically by HyDRA for its own purposes (namely undo) in addition
+  * to steps executed by a user
+  * @todo At the moment our handlng of undo's is quite hideous. It would be much cleaner to, most of the time,
+  *  only include nodes in the tree if they're created by a human. The motivation for always-including the undo nodes
+  *  was to get the nodeIds right, but we can always use the undo's to compute the correct nodeId's even if we don't
+  *  actually include them in the tree. This would actually be very close to the previous implementation.
   * Created by bbohrer on 12/29/15.
   */
 case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, theLeaves: List[AgendaItem]) {
   def leaves =
     theLeaves.map{case item =>
       // @note Item id and goal id are secretly the same, need to keep them in sync.
-      val realId = (findNode(item.id).get).id.toString
+      val realId = findNode(item.id).get.id.toString
       AgendaItem(item.id, item.name, item.proofId, item.goal.real())
     }
 
@@ -107,6 +113,10 @@ case class TreeNode (id: Int, sequent: Sequent, theParent: Option[TreeNode], sta
   if (parent.nonEmpty)
     parent.get.theChildren = this :: parent.get.theChildren
 
+  /* Find the non-undo node "closest" to a possibly-undo node.
+   * When taking the parent of a node, keep searching parents until
+   * we find a real node. When taking children, repeatedly take the first
+   * child until finding a real node*/
   def real(searchUpward:Boolean = false): TreeNode = {
     if (isFake) {
       if (searchUpward)
@@ -117,7 +127,6 @@ case class TreeNode (id: Int, sequent: Sequent, theParent: Option[TreeNode], sta
     else
       this
   }
-
 
   def parent: Option[TreeNode] = real().theParent.map(_.real())
 
