@@ -8,7 +8,7 @@ angular.module('keymaerax.controllers').value('cgBusyDefaults',{
     templateUrl: 'partials/running-tactics-indicator.html'
 });
 
-angular.module('keymaerax.controllers').controller('ProofCtrl', function($scope, $http, $cookies, $routeParams) {
+angular.module('keymaerax.controllers').controller('ProofCtrl', function($scope, $rootScope, $http, $cookies, $routeParams, $q, $uibModal, sequentProofData) {
   $http.get('proofs/user/' + $cookies.get('userId') + "/" + $routeParams.proofId).success(function(data) {
       $scope.proofId = data.id;
       $scope.proofName = data.name;
@@ -16,8 +16,31 @@ angular.module('keymaerax.controllers').controller('ProofCtrl', function($scope,
       $scope.closed = data.closed;
       $scope.stepCount= data.stepCount;
       $scope.date = data.date;
+      sequentProofData.fetchAgenda($scope, $cookies.get('userId'), $scope.proofId);
   });
   $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
+
+  $rootScope.$on('agenda.isEmpty', function(event) {
+    $http.get('proofs/user/' + $cookies.get('userId') + "/" + $routeParams.proofId + '/progress').success(function(data) {
+      if (data.status == 'closed') {
+        var modalInstance = $uibModal.open({
+          templateUrl: 'partials/prooffinisheddialog.html',
+          controller: 'ProofFinishedDialogCtrl',
+          size: 'md',
+          resolve: {
+            proofId: function() { return $scope.proofId; },
+            status: function() { return data.status }
+          }
+        });
+      } else {
+        // should never happen
+        showErrorMessage($uibModal, 'empty agenda even though proof is not closed (' + data.status + ')')
+      }
+    })
+    .error(function() {
+      showErrorMessage($uibModal, "error retrieving proof progress")
+    })
+  });
 });
 
 angular.module('keymaerax.controllers').controller('RunningTacticsCtrl',
@@ -33,30 +56,6 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.userId = $cookies.get('userId');
     $scope.agenda = sequentProofData.agenda;
     $scope.prooftree = sequentProofData.proofTree;
-
-    $rootScope.$on('agenda.isEmpty', function() {
-      $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId + '/progress').success(function(data) {
-        if (data.status == 'closed') {
-          var modalInstance = $uibModal.open({
-            templateUrl: 'partials/prooffinisheddialog.html',
-            controller: 'ProofFinishedDialogCtrl',
-            size: 'md',
-            resolve: {
-              proofId: function() { return $scope.proofId; },
-              status: function() { return data.status }
-            }
-          });
-        } else {
-          // should never happen
-          showErrorMessage($uibModal, 'empty agenda even though proof is not closed (' + data.status + ')')
-        }
-      })
-      .error(function() {
-        showErrorMessage($uibModal, "error retrieving proof progress")
-      })
-    });
-
-    sequentProofData.fetchAgenda($scope, $cookies.get('userId'), $scope.proofId);
 
     // Watch running tactics
     $scope.$on('handleDispatchedTactics', function(event, tId) {
