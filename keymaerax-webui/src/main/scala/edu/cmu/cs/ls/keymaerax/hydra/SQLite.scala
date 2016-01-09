@@ -635,6 +635,39 @@ object SQLite {
       stepPOJOs.map({case step => step.toString})
     }
 
+    override def addAgendaItem(proofId: Int, initialProofNode: Int, displayName:String): Int = {
+      synchronizedTransaction({
+        (Agendaitems.map({case item => (item.proofid.get, item.initialproofnode.get, item.displayname.get)})
+          returning Agendaitems.map(_._Id.get))
+          .insert(proofId, initialProofNode, displayName)
+      })
+    }
+
+    override def updateAgendaItem(item:AgendaItemPOJO) = {
+      synchronizedTransaction({
+        Agendaitems.filter(_._Id === item.itemId)
+          .map({case item => (item.proofid.get, item.initialproofnode.get, item.displayname.get)})
+          .update((item.proofId, item.initialProofNode, item.displayName))
+      })
+    }
+
+    override def agendaItemsForProof(proofId: Int): List[AgendaItemPOJO] = {
+      synchronizedTransaction({
+        Agendaitems.filter(_.proofid === proofId)
+        .list
+        .map({case item => AgendaItemPOJO(item._Id.get, item.proofid.get, item.initialproofnode.get, item.displayname.get)})
+      })
+    }
+
+    override def getAgendaItem(proofId: Int, initialProofNode: Int): Option[AgendaItemPOJO] = {
+      synchronizedTransaction({
+        Agendaitems.filter{row => row.proofid === proofId && row.initialproofnode === initialProofNode}
+          .list
+          .map({case item => AgendaItemPOJO(item._Id.get, item.proofid.get, item.initialproofnode.get, item.displayname.get)})
+          .headOption
+      })
+    }
+
     /** Adds a built-in tactic application using a set of parameters */
     override def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int = {
       synchronizedTransaction({
