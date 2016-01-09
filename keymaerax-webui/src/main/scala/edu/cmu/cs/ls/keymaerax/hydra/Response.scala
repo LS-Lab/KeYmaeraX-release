@@ -242,7 +242,24 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
 //  )
 //}
 
-class RunBelleTermResponse(parent: TreeNode, children: List[TreeNode], progress: Boolean = true) extends Response {
+class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) extends Response {
+  val json = JsObject(
+    "proofId" -> JsString(proofId),
+    "nodeId" -> JsString(nodeId),
+    "taskId" -> JsString(taskId)
+  )
+}
+
+class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status: String) extends Response {
+  val json = JsObject(
+    "proofId" -> JsString(proofId),
+    "parentId" -> JsString(nodeId),
+    "taskId" -> JsString(taskId),
+    "status" -> JsString(status)
+  )
+}
+
+class TaskResultResponse(parent: TreeNode, children: List[TreeNode], progress: Boolean = true) extends Response {
   val json = JsObject(
     "parent" -> JsObject(
       "id" -> Helpers.nodeIdJson(parent.id),

@@ -8,7 +8,10 @@ angular.module('keymaerax.controllers').value('cgBusyDefaults',{
     templateUrl: 'partials/running-tactics-indicator.html'
 });
 
-angular.module('keymaerax.controllers').controller('ProofCtrl', function($scope, $rootScope, $http, $cookies, $routeParams, $q, $uibModal, sequentProofData) {
+angular.module('keymaerax.controllers').controller('ProofCtrl',
+//    ['$http', '$rootScope', '$cookies', '$routeParams', '$q', '$uibModal', '$timeout', 'sequentProofData', 'spinnerService',
+    function($scope, $rootScope, $http, $cookies, $routeParams, $q, $uibModal, $timeout, sequentProofData, spinnerService) {
+
   $http.get('proofs/user/' + $cookies.get('userId') + "/" + $routeParams.proofId).success(function(data) {
       $scope.proofId = data.id;
       $scope.proofName = data.name;
@@ -41,6 +44,59 @@ angular.module('keymaerax.controllers').controller('ProofCtrl', function($scope,
       showErrorMessage($uibModal, "error retrieving proof progress")
     })
   });
+
+  $scope.runningTask = {
+    nodeId: undefined,
+    taskId: undefined,
+    future: undefined,
+    start: function(nodeId, taskId) {
+      $scope.runningTask.nodeId = nodeId;
+      $scope.runningTask.taskId = taskId;
+      $scope.runningTask.future = $q.defer();
+      $scope.runningTask.future.promise.then(
+        /* future resolved */ function(taskId) {
+          var userId = $cookies.get('userId');
+          var proofId = $routeParams.proofId;
+          $http.get('proofs/user/' + userId + '/' + proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/result')
+            .then(function(response) {
+              if ($scope.runningTask.nodeId === response.data.parent.id) {
+                sequentProofData.updateAgendaAndTree(response.data);
+              } else {
+                showErrorMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " +
+                  $scope.runningTask.nodeId + " but got " + response.data.parent.id);
+              }
+            })
+            .catch(function(err) {
+              //@todo send better error message, now we have to guess that probably the tactic was not applicable
+              $rootScope.$emit('proof.message', "No axiom/tactic applicable to that formula");
+            })
+            .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
+        },
+        /* future rejected */ function(reason) {
+          if (reason !== 'stopped') showErrorMessage($uibModal, reason);
+          spinnerService.hide('tacticExecutionSpinner');
+        }
+      );
+      $scope.runningTask.poll(taskId);
+    },
+    poll: function(taskId) {
+      var userId = $cookies.get('userId');
+      var proofId = $routeParams.proofId;
+      $http.get('proofs/user/' + userId + '/' + proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')
+        .then(function(response) {
+          if (response.data.status === 'done') $scope.runningTask.future.resolve(taskId);
+          else $timeout($scope.runningTask.poll(taskId), 500);
+        })
+        .catch(function(error) { $scope.runningTask.future.reject(error); });
+    },
+    stop: function() {
+      var userId = $cookies.get('userId');
+      var proofId = $routeParams.proofId;
+      $http.get('proofs/user/' + userId + '/' + proofId + '/' + $scope.runningTask.nodeId + '/' + $scope.runningTask.taskId + '/stop')
+        .then(function(response) { $scope.runningTask.future.reject('stopped'); })
+        .catch(function(err) { $scope.runningTask.future.reject(err); });
+    }
+  }
 });
 
 angular.module('keymaerax.controllers').controller('RunningTacticsCtrl',
@@ -239,23 +295,33 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       sequentProofData.prune($scope.userId, $scope.proofId, nodeId, topParent);
     }
 
-    $scope.doTactic = function(tacticId) {
+    $scope.doTactic = function(formulaId, tacticId) {
+      var proofId = $routeParams.proofId;
+      var userId = $cookies.get('userId');
+      var nodeId = sequentProofData.agenda.selectedId();
+
+      var base = 'proofs/user/' + userId + '/' + proofId + '/' + nodeId;
+      var uri = formulaId !== undefined ?  base + '/' + formulaId + '/doAt/' + tacticId : base + '/do/' + tacticId;
+      spinnerService.show('tacticExecutionSpinner')
+      $http.get(uri)
+        .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
+        .catch(function(err) {
+          spinnerService.hide('tacticExecutionSpinner');
+          showErrorMessage($uibModal, "No axiom/tactic applicable to that formula");
+        });
+    }
+
+    $scope.doInputTactic = function(formulaId, tacticId, input) {
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
       var nodeId = sequentProofData.agenda.selectedId();
       spinnerService.show('tacticExecutionSpinner');
-      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/do/' + tacticId)
-        .then(function(response) {
-          if (nodeId === response.data.parent.id) {
-            sequentProofData.updateAgendaAndTree(response.data);
-          } else {
-            console.log("Unexpected tactic result, parent mismatch: " + " expected " + $scope.nodeId + " but got " + response.data.parent.id)
-          }
-        })
+      $http.post('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/' + formulaId + '/doInputAt/' + tacticId, input)
+        .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
-          showErrorMessage($uibModal, 'Error executing tactic ' + err.data)
-        })
-        .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
+          spinnerService.hide('tacticExecutionSpinner');
+          showErrorMessage($uibModal, "No axiom/tactic applicable to that formula");
+        });
     }
 
     $scope.doSearch = function(tacticId, where) {
@@ -264,17 +330,11 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var nodeId = sequentProofData.agenda.selectedId();
       spinnerService.show('tacticExecutionSpinner');
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doSearch' + where + '/' + tacticId)
-        .success(function(data) {
-          if (nodeId === data.parent.id) {
-            sequentProofData.updateAgendaAndTree(data);
-          } else {
-            console.log("Unexpected tactic result, parent mismatch: " + " expected " + $scope.nodeId + " but got " + data.parent.id)
-          }
-        })
+        .then(function(response) { scope.runningTask.start(response.data.taskId); })
         .catch(function(err) {
-          showErrorMessage($uibModal, 'Error executing tactic ' + err.data)
-        })
-        .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
+          spinnerService.hide('tacticExecutionSpinner');
+          $rootScope.$emit('proof.message', 'No axiom/tactic applicable to that formula');
+        });
     }
 
     //Save a name edited using the inline editor.
@@ -291,8 +351,6 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       //@todo extend RestApi
       $http.post("proofs/user/" + userId + "/" + proofId + "/" + nodeId + "/name/" + newName, {});
     }
-
-    $scope.onProofError = function(message) { $rootScope.$emit('proof.message', message); }
   });
 
 angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',

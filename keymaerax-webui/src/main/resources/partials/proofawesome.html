@@ -6,7 +6,10 @@
         <div class="spinner-double-bounce1"></div>
         <div class="spinner-double-bounce2"></div>
     </div>
-    <div class="spinner-please-wait">Tactic is executing, please wait...</div>
+    <div class="spinner-please-wait">
+        Tactic is executing, please wait...<br/>
+        <button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button>
+    </div>
 </spinner>
 <spinner name="proofLoadingSpinner" ng-cloak="">
     <div class="spinner-overlay"></div>
@@ -30,8 +33,8 @@
                 </span>
                 <li class="nav">
                     <ul class="nav navbar-nav">
-                        <li><a ng-click="doTactic('master')"><span class="fa fa-play"> Auto</span></a></li>
-                        <li><a ng-click="doTactic('normalize')"><span class="fa fa-magic"> Normalize</span></a></li>
+                        <li><a ng-click="doTactic(undefined, 'master')"><span class="fa fa-play"> Auto</span></a></li>
+                        <li><a ng-click="doTactic(undefined, 'normalize')"><span class="fa fa-magic"> Normalize</span></a></li>
                         <li><a ng-click="undoLastStep()"><span class="fa fa-undo"> Step back</span></a></li>
                     </ul>
                     <ul class="nav navbar-nav pull-right">
@@ -50,7 +53,7 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doTactic('prop')"><span>Exhaustive</span><code class="pull-right">prop</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'prop')"><span>Exhaustive</span><code class="pull-right">prop</code></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('andL', 'L')"><span>&and;L</span><code class="pull-right">andL</code></a></li>
                                 <li><a ng-click="doSearch('implyR', 'R')"><span>&#8594;R</span><code class="pull-right">implyR</code></a></li>
@@ -113,10 +116,10 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Closing <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doTactic('closeId')"><span>Identity</span><code class="pull-right">closeId</code></a></li>
-                                <li><a ng-click="doTactic('closeTrue')"><span>True</span><code class="pull-right">closeTrue</code></a></li>
-                                <li><a ng-click="doTactic('closeFalse')"><span>False</span><code class="pull-right">closeFalse</code></a></li>
-                                <li><a ng-click="doTactic('QE')"><span>Quantifier elimination</span><code class="pull-right">QE</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'closeId')"><span>Identity</span><code class="pull-right">closeId</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'closeTrue')"><span>True</span><code class="pull-right">closeTrue</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'closeFalse')"><span>False</span><code class="pull-right">closeFalse</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'QE')"><span>Quantifier elimination</span><code class="pull-right">QE</code></a></li>
                                 <!-- TODO -->
                             </ul>
                         </li>
@@ -184,7 +187,8 @@
                                  proof-tree="prooftree"
                                  agenda="agenda"
                                  read-only="false"
-                                 on-proof-error="onProofError(message)"></k4-sequentproof>
+                                 on-tactic="doTactic(formulaId, tacticId)"
+                                 on-input-tactic="doInputTactic(formulaId, tacticId, input)"></k4-sequentproof>
             </uib-tab>
         </uib-tabset>
     </div>

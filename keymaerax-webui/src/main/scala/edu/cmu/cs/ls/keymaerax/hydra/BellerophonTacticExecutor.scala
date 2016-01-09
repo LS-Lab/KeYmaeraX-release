@@ -46,6 +46,8 @@ class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, p
     case None         => throw new Exception("This tactic does not exist in the list.")
   }
 
+  def contains(id: String) = scheduledTactics.contains(id)
+
   /** Returns the result of the tactic, or None if the tactic is not done running. */
   def getResult(id: String) : Option[Either[BelleValue, BelleError]] =
     if(isDone(id)) Some(scheduledTactics(id).get()) else None

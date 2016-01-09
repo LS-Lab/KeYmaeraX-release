@@ -15,6 +15,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
  */
 case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends Interpreter {
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
+    if (Thread.currentThread().isInterrupted) {
+      //@note end executing the interpreter when its thread gets interrupted
+      //@todo how to stop if stuck in QE?
+      throw new BelleError("Execution Stopped")
+    }
     listeners.foreach(_.begin(v, expr))
     try {
       val result: BelleValue =

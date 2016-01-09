@@ -295,6 +295,27 @@ trait RestApi extends HttpService {
     }}
   }}
 
+  val taskStatus = path("proofs" / "user" / Segment / Segment / Segment / Segment / "status") { (userId, proofId, nodeId, taskId) => { pathEnd {
+    get {
+      val request = new TaskStatusRequest(database, userId, proofId, nodeId, taskId)
+      complete(standardCompletion(request))
+    }}
+  }}
+
+  val taskResult = path("proofs" / "user" / Segment / Segment / Segment / Segment / "result") { (userId, proofId, nodeId, taskId) => { pathEnd {
+    get {
+      val request = new TaskResultRequest(database, userId, proofId, nodeId, taskId)
+      complete(standardCompletion(request))
+    }}
+  }}
+
+  val stopTask = path("proofs" / "user" / Segment / Segment / Segment / Segment / "stop") { (userId, proofId, nodeId, taskId) => { pathEnd {
+    get {
+      val request = new StopTaskRequest(database, userId, proofId, nodeId, taskId)
+      complete(standardCompletion(request))
+    }}
+  }}
+
   val pruneBelow = path("proofs" / "user" / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId) => { pathEnd {
     get {
       val request = new PruneBelowRequest(database, userId, proofId, nodeId)
@@ -610,6 +631,9 @@ trait RestApi extends HttpService {
     doTactic              ::
     doSearchLeft          ::
     doSearchRight         ::
+    taskStatus            ::
+    taskResult            ::
+    stopTask              ::
     pruneBelow            ::
     proofTask             ::
     nodeFormulaTactics    ::

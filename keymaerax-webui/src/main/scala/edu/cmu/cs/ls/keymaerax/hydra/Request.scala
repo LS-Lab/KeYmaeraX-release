@@ -792,19 +792,46 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
         val executor = BellerophonTacticExecutor.defaultExecutor
         val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
-        val finalProvable = executor.wait(taskId) match {
-          case Some(Left(BelleProvable(outputProvable, _))) => outputProvable
-          case Some(Right(error: BelleError)) => throw new ProverException("Tactic failed with error: " + error.getMessage, error.getCause)
-          case None => throw new ProverException("Could not get tactic result - execution cancelled? ")
-        }
-        val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
-        val parentNode = finalTree.findNode(nodeId).get
-        //@note distinguish between empty parentNode.children due to closed goal or due to no progress (e.g., prop)
-        val response = new RunBelleTermResponse(parentNode, parentNode.children, progress = tree.leaves != finalTree.leaves)
-        response :: Nil
+        new RunBelleTermResponse(proofId, nodeId, taskId) :: Nil
     }
   }
 }
+
+class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String) extends Request {
+  def getResultingResponses() = {
+    val executor = BellerophonTacticExecutor.defaultExecutor
+    val isDone = executor.synchronized { !executor.contains(taskId) || executor.isDone(taskId) }
+    new TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running") :: Nil
+  }
+}
+
+class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String) extends Request {
+  def getResultingResponses() = {
+    val executor = BellerophonTacticExecutor.defaultExecutor
+    executor.synchronized {
+      executor.wait(taskId) match {
+        case Some(Left(BelleProvable(outputProvable, _))) => outputProvable
+        case Some(Right(error: BelleError)) => throw new ProverException("Tactic failed with error: " + error.getMessage, error.getCause)
+        case None => throw new ProverException("Could not get tactic result - execution cancelled? ")
+      }
+      executor.remove(taskId)
+    }
+    val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    val parentNode = finalTree.findNode(nodeId).get
+    //@todo distinguish between empty parentNode.children due to closed goal or due to no progress (e.g., prop)
+    new TaskResultResponse(parentNode, parentNode.children, progress = true) :: Nil
+  }
+}
+
+class StopTaskRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String) extends Request {
+  def getResultingResponses() = {
+    val executor = BellerophonTacticExecutor.defaultExecutor
+    //@note may have completed in the meantime
+    executor.synchronized { if (executor.contains(taskId)) executor.remove(taskId, force = true) }
+    new GenericOKResponse() :: Nil
+  }
+}
+
 
 class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String) extends Request {
   def prune(trace: ExecutionTrace, pruned:Set[Int]): ExecutionTrace = {
