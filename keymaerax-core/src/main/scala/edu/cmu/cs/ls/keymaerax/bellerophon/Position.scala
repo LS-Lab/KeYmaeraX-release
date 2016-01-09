@@ -156,20 +156,23 @@ sealed trait Position {
 }
 
 object Position {
-  /** Converts signed positions to position data structures. */
-  def convertPos(seqIdx: Int, inExpr: List[Int] = Nil): Position = SeqPos(seqIdx) match {
+  /** Converts signed positions to position data structures.
+    * -1 is the first antecedent position,
+    * 1 the first succedent position
+    * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr]]
+    */
+  def apply(seqIdx: Int, inExpr: List[Int] = Nil): Position = SeqPos(seqIdx) match {
     case pos: AntePos => AntePosition(pos, PosInExpr(inExpr))
     case pos: SuccPos => SuccPosition(pos, PosInExpr(inExpr))
   }
-  def apply(seqIdx: Int, inExpr: List[Int] = Nil): Position = convertPos(seqIdx, inExpr)
 
-  private[bellerophon] def convertPos(p: edu.cmu.cs.ls.keymaerax.core.SeqPos) : Position = p match {
+  private[bellerophon] def apply(p: edu.cmu.cs.ls.keymaerax.core.SeqPos) : Position = p match {
     case pos: AntePos => AntePosition(pos)
     case pos: SuccPos => SuccPosition(pos)
   }
 
   /** Embedding SeqPos into Position at top level */
-  implicit def seqPos2Position(p: SeqPos) : Position = convertPos(p)
+  implicit def seqPos2Position(p: SeqPos) : Position = apply(p)
 }
 
 /** A position guaranteed to identify a top-level position */

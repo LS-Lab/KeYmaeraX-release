@@ -119,7 +119,7 @@ trait AtPosition[T <: BelleExpr] extends (PositionLocator => T) {
    */
   /*private[keymaerax]*/ final def apply(position: Position): T = apply(Fixed(position))
   /*private[keymaerax]*/ final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
-  private[ls] final def apply(position: SeqPos): T = apply(Fixed(Position.convertPos(position)))
+  private[ls] final def apply(position: SeqPos): T = apply(Fixed(Position(position)))
 
   /**
    * Applied at a fixed position in (signed) sequent position `seqIdx` at subexpression `inExpr`.
@@ -131,18 +131,19 @@ trait AtPosition[T <: BelleExpr] extends (PositionLocator => T) {
    * @see [[apply(position: Position)]]
    * @see [[Fixed]]
    */
-  final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(Position.convertPos(seqIdx, inExpr)))
+  final def apply(seqIdx: Int, inExpr: List[Int] = Nil): T = apply(Fixed(Position(seqIdx, inExpr)))
   /**
-   * Returns the tactic at the position identified by `locator`.
-   * @param locator The locator symbol:
+    * Returns the tactic at the position identified by `locator`.
+    * @param locator The locator symbol at which to apply this AtPosition:
     *                'L (find left),
     *                'R (find right),
     *                '_ (find left/right appropriately for tactic),
-   *                'Llast (at last position in antecedent), or
+    *                'Llast (at last position in antecedent), or
     *                'Rlast (at last position in succedent).
-   * @note Convenience wrapper
-   * @see [[apply(locator: PositionLocator)]]
-   */
+    * @note Convenience wrapper
+    * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.AtPosition]]
+    * @see [[apply(locator: PositionLocator)]]
+    */
   final def apply(locator: Symbol): T = locator match {
     case 'L => apply(FindL(0, None))
     case 'R => apply(FindR(0, None))
@@ -156,7 +157,15 @@ trait AtPosition[T <: BelleExpr] extends (PositionLocator => T) {
   }
   /**
     * Returns the tactic at the position identified by `locator`, ensuring that `locator` will yield the formula `expected` verbatim.
+    * @param locator The locator symbol at which to apply this AtPosition:
+    *                'L (find left),
+    *                'R (find right),
+    *                '_ (find left/right appropriately for tactic),
+    *                'Llast (at last position in antecedent), or
+    *                'Rlast (at last position in succedent).
+    * @param expected the formula expected at the position that `locator` identifies. Contract fails if that expectation is not met.
     * @note Convenience wrapper
+    * @see [[edu.cmu.cs.ls.keymaerax.bellerophon.AtPosition]]
     * @see [[apply()]]
     */
   final def apply(locator: Symbol, expected: Formula): T = locator match {
@@ -416,7 +425,7 @@ case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]
   */
 case class DoAll(e: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
 
-//@todo case class DoSome[A](generator[A], e: A => BelleExpr) extends BelleExpr, which runs some (usually first) generator output whose proof succeeds.
+//@todo case class DoSome[A](options: Iterator[A], e: A => BelleExpr) extends BelleExpr, which runs some (usually first) generator output whose proof succeeds.
 
 /**
  * Bellerophon expressions that are values.
