@@ -1194,9 +1194,9 @@ final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
  * }}}
  * Skolemize also handles '''existential''' quantifiers on the left.
  * {{{
- *           G, p(x) |- D
+ *           p(x), G |- D
  * ------------------------ (Skolemize) provided x not in G,D
- * G, \exists x p(x) |- D
+ * \exists x p(x), G |- D
  * }}}
  * @note Could in principle replace by uniform substitution rule application mechanism for rule "all generalization"
  * along with tactics expanding scope of quantifier with axiom "all quantifier scope" at the cost of propositional repacking and unpacking.
@@ -1344,6 +1344,7 @@ final case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
  * ------------- (CoHide left)
  *   p, G |- D
  * }}}
+ * @note Rarely useful (except for contradictory `p`)
  * @derived
  */
 case class CoHideLeft(pos: AntePos) extends LeftRule {
@@ -1452,33 +1453,33 @@ case class EquivifyRight(pos: SuccPos) extends RightRule {
 /**
  * Commute equivalence left
  * {{{
- * b<->a, G |-  D
+ * q<->p, G |-  D
  * -------------
- * a<->b, G |-  D
+ * p<->q, G |-  D
  * }}}
  * @derived
  */
 case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
   val name: String = "c<-> commute equivalence Left"
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(a,b) = s(pos)
-    immutable.List(s.updated(pos, Equiv(b, a)))
+    val Equiv(p,q) = s(pos)
+    immutable.List(s.updated(pos, Equiv(q, p)))
   }
 }
 
 /**
  * Commute equivalence right
  * {{{
- * G |- b<->a, D
+ * G |- q<->p, D
  * -------------
- * G |- a<->b, D
+ * G |- p<->q, D
  * }}}
  * @derived
  */
 case class CommuteEquivRight(pos: SuccPos) extends RightRule {
   val name: String = "c<-> commute equivalence Right"
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(a,b) = s(pos)
-    immutable.List(s.updated(pos, Equiv(b, a)))
+    val Equiv(p,q) = s(pos)
+    immutable.List(s.updated(pos, Equiv(q, p)))
   }
 }
