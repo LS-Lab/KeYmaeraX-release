@@ -736,7 +736,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(fml, pos) match {
-              case Some(step) => what(DerivationInfo.ofCodeName(step))
+              case Some(step) => what(DerivationInfo(step))
               case None => tacticId
             }
           case _ => what(DerivationInfo.ofCodeName(tacticId))
