@@ -416,7 +416,7 @@ case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]
   */
 case class DoAll(e: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
 
-//@todo case class DoSome[A](generator[A], e: A => BelleExpr) extends BelleExpr, which runs some (usually first) generator output whose proof succeeds.
+//@todo case class DoSome[A](options: Iterator[A], e: A => BelleExpr) extends BelleExpr, which runs some (usually first) generator output whose proof succeeds.
 
 /**
  * Bellerophon expressions that are values.
