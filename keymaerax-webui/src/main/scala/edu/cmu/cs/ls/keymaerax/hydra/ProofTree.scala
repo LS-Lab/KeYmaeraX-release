@@ -31,13 +31,13 @@ case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, lea
 
 object ProofTree {
   def agendaItemForNode(nodes: List[TreeNode], id: String, items: List[AgendaItemPOJO]): Option[AgendaItemPOJO] = {
-    nodes.find(_.id == id) match {
+    nodes.find(_.id == id.toInt) match {
       case Some(node) =>
         var currNode:Option[Int] = Some(node.id)
         while (currNode.isDefined) {
           items.find({case item => item.initialProofNode == currNode.get}) match {
             case Some(item) => return Some(item)
-            case None => currNode = nodes.find(_.id == currNode.toString).get.parent.map(_.id)
+            case None => currNode = nodes.find(_.id == currNode.get).get.parent.map(_.id)
           }}
         None
       case None => None
