@@ -145,6 +145,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
 
       /** Applies the tactic 'tacticId' with input at the formula 'formulaId' */
       scope.onApplyInputTactic = function(formulaId, tacticId, input) {
+        spinnerService.show('tacticExecutionSpinner');
         $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/doInputAt/' + tacticId, input)
           .success(function(data) {
             if (scope.nodeId === data.parent.id) {
