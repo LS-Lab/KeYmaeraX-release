@@ -375,11 +375,14 @@ trait UnifyUSCalculus {
    *   --------------------- CE
    *    C{p(x)} <-> C{q(x)}
    * }}}
-   * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
+   * Part of the differential dynamic logic Hilbert calculus.
+   * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula occurs.
    * @see [[UnifyUSCalculus.CE(Context)]]
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
    * @see [[UnifyUSCalculus.CE(Provable)]]
+   * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+   * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
    */
   def CE(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CE congruence") {
     private val p_ = PredOf(Function("p_", None, Real, Bool), Anything)
@@ -454,7 +457,7 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
-    * @example CE(fact) is equivalent to CE(fact, Context("⎵".asFormula))
+    * @example `CE(fact)` is equivalent to `CE(fact, Context("⎵".asFormula))``
     */
   def CE(fact: Provable): DependentPositionTactic = new DependentPositionTactic("CE(Provable)") {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
@@ -489,9 +492,9 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
-    * @example CE(fact, Context("⎵".asFormula)) is equivalent to CE(fact)
-    * @example CE(fact, Context("x>0&⎵".asFormula))(p) is equivalent to CE(fact)(p+1)
-    *          except that the former only accepts x>0&⎵ as the shape of the context at position p.
+    * @example `CE(fact, Context("⎵".asFormula))` is equivalent to `CE(fact)`.
+    * @example `CE(fact, Context("x>0&⎵".asFormula))(p)` is equivalent to `CE(fact)(p+PosInExpr(1::Nil))`.
+    *          Except that the former has the shape `x>0&⎵` for the context starting from position `p`.
     */
   def CE(fact: Provable, C: Context[Formula]): DependentPositionTactic = new DependentPositionTactic("CE(Provable,Context)") {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
