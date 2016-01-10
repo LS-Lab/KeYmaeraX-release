@@ -799,6 +799,29 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
 }
 
 class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String) extends Request {
+  /* It's very important not to report a branch as closed when it isn't. Other wise the user will carry on in blissful
+  * ignorance thinking the hardest part of their proof is over when it's not. This is actually a bit difficult to get
+  * right, so check the actual provables to make sure we're closing a branch. */
+  private def noBogusClosing(tree: ProofTree, parent: TreeNode): Boolean = {
+    if (parent.children.nonEmpty)
+      return true
+    if (parent.endStep.isEmpty)
+      return false
+    val endStep = parent.endStep.get
+    if (endStep.output.get.subgoals.length != endStep.input.subgoals.length - 1)
+      return false
+
+    for (i <- endStep.input.subgoals.indices) {
+      if(i < endStep.branch && !endStep.output.get.subgoals(i).equals(endStep.input.subgoals(i)))  {
+        return false
+      }
+      if(i > endStep.branch && !endStep.output.get.subgoals(i).equals(endStep.input.subgoals(i-1))) {
+        return false
+      }
+    }
+    true
+  }
+
   def getResultingResponses() = {
     val executor = BellerophonTacticExecutor.defaultExecutor
     executor.synchronized {
@@ -806,7 +829,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
         case Some(Left(BelleProvable(_, _))) =>
           val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
           val parentNode = finalTree.findNode(nodeId).get
-          //@todo distinguish between empty parentNode.children due to closed goal or due to no progress (e.g., prop)
+          assert(noBogusClosing(finalTree, parentNode), "Server thinks a goal has been closed when it clearly has not")
           new TaskResultResponse(parentNode, parentNode.children, progress = true)
         case Some(Right(error: BelleError)) => new ErrorResponse("Tactic failed with error: " + error.getMessage, error.getCause)
         case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
