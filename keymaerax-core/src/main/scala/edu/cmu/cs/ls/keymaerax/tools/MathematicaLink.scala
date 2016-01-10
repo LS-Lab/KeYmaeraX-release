@@ -25,7 +25,7 @@ import scala.collection.immutable
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-trait MathematicaLink extends QETool with DiffSolutionTool {
+trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTool {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
   type MExpr = com.wolfram.jlink.Expr
 
@@ -157,17 +157,24 @@ class JLinkMathematicaLink extends MathematicaLink {
 
     val taskId = mathematicaExecutor.schedule(_ => {
       dispatch(checkErrorMsgCmd.toString)
-      getAnswer(indexedCmd.toString, queryIndex)
+      getAnswer(indexedCmd, queryIndex)
     })
 
     mathematicaExecutor.wait(taskId) match {
       case Some(Left(result)) => result
-      case Some(Right(throwable)) => throw new ProverException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
+      case Some(Right(throwable)) => throwable match {
+        case ex: MathematicaComputationAbortedException =>
+          mathematicaExecutor.remove(taskId)
+          throw ex
+        case ex: Throwable =>
+          mathematicaExecutor.remove(taskId, force = true)
+          throw new ProverException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
+      }
       case None =>
         cancel()
         mathematicaExecutor.remove(taskId, force = true)
         if (DEBUG) println("Initiated aborting Mathematica " + checkErrorMsgCmd)
-        throw new ProverException("Aborted Mathematica " + checkErrorMsgCmd)
+        throw new MathematicaComputationAbortedException(checkErrorMsgCmd)
     }
   }
 
@@ -179,13 +186,13 @@ class JLinkMathematicaLink extends MathematicaLink {
   /**
    * blocks and returns the answer.
    */
-  private def getAnswer(input: String, cmdIdx: Long): (String, KExpr) = {
+  private def getAnswer(input: MExpr, cmdIdx: Long): (String, KExpr) = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.waitForAnswer()
     val res = ml.getExpr
     if (res == abortedExpr) {
       if (DEBUG) println("Aborted Mathematica " + input)
-      throw new ProverException("Aborted Mathematica " + input)
+      throw new MathematicaComputationAbortedException(input)
     } else if (res == exceptionExpr) {
       res.dispose()
       // an exception occurred
@@ -204,10 +211,14 @@ class JLinkMathematicaLink extends MathematicaLink {
       }
       if(res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asInt() == cmdIdx) {
         val theResult = res.args.last
-        val keymaeraResult = MathematicaToKeYmaera.fromMathematica(theResult)
-        val txtResult = theResult.toString
-        // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
-        (txtResult, keymaeraResult)
+        if (theResult == abortedExpr) {
+          throw new MathematicaComputationAbortedException(input)
+        } else {
+          val keymaeraResult = MathematicaToKeYmaera.fromMathematica(theResult)
+          val txtResult = theResult.toString
+          // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
+          (txtResult, keymaeraResult)
+        }
       } else {
         val txtResult = res.toString
         // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
@@ -237,14 +248,38 @@ class JLinkMathematicaLink extends MathematicaLink {
     }
   }
 
-  def getCounterExample(f : Formula) : String = {
+  def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Term]] = {
+    def flattenConjunctions(f: Formula): List[Formula] = {
+      var result: List[Formula] = Nil
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
+          case And(l, r) => result = result ++ flattenConjunctions(l) ++ flattenConjunctions(r); Left(Some(ExpressionTraversal.stop))
+          case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
+        }
+      }, f)
+      result
+    }
+
+    val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
+      Array(toMathematica(Not(fml)), new MExpr(listExpr, StaticSemantics.symbols(fml).toList.sorted.map(s => toMathematica(s)).toArray), new MExpr(Expr.SYMBOL, "Reals")))
+    val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
+    run(inputWithTO) match {
+      case (_, cex: Formula) =>
+        if (DEBUG) println("Counterexample " + cex.prettyString)
+        Some(flattenConjunctions(cex).map {case Equal(name: NamedSymbol, value) => name -> value}.toMap)
+      case _ => None
+    }
+  }
+
+  @deprecated("Use findCounterExample instead")
+  def getCounterExample(f : Formula): String = {
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
       Array(toMathematica(Not(f)), new MExpr(listExpr, StaticSemantics.symbols(f).toList.sorted.map(s => toMathematica(s)).toArray), new MExpr(Expr.SYMBOL, "Reals")))
     val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
     try {
       val (output, result) = run(inputWithTO)
       result match {
-        case ff : Formula => KeYmaeraXPrettyPrinter(ff)
+        case ff: Formula => KeYmaeraXPrettyPrinter(ff)
         case _ => throw new NoCountExException("Mathematica cannot find counter examples for: " + KeYmaeraXPrettyPrinter(f))
       }
     } catch {

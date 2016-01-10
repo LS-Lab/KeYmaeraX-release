@@ -12,7 +12,8 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.JSONConverter
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
-import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.core._
 import com.fasterxml.jackson.annotation.JsonValue
 import edu.cmu.cs.ls.keymaerax.parser.Location
 import spray.json._
@@ -565,10 +566,28 @@ class PruneBelowResponse(item:AgendaItem) extends Response {
 
 }
 
-class CounterExampleResponse(cntEx: String) extends Response {
+class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSymbol, Term] = Map()) extends Response {
   val json = JsObject(
-    "cntEx" -> JsString(cntEx)
+    "result" -> JsString(kind),
+    "origFormula" -> JsString(fml.prettyString),
+    "cexFormula" -> JsString(createCexFormula(fml, cex).prettyString),
+    "cexValues" -> JsArray(
+      cex.map(e => JsObject(
+        "symbol" -> JsString(e._1.prettyString),
+        "value" -> JsString(e._2.prettyString))
+      ).toList:_*
+    )
   )
+
+  private def createCexFormula(fml: Formula, cex: Map[NamedSymbol, Term]): Formula = {
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+        case v: Variable => Right(cex.get(v).get)
+        case FuncOf(fn, _) => Right(cex.get(fn).get)
+        case tt => Right(tt)
+      }
+    }, fml).get
+  }
 }
 
 class KyxConfigResponse(kyxConfig: String) extends Response {

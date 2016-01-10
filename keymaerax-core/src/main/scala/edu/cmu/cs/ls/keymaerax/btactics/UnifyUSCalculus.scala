@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
+import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, DiffSolutionTool}
 import PosInExpr.HereP
 import StaticSemanticsTools._
 
@@ -38,7 +38,7 @@ trait UnifyUSCalculus {
   private val LIBERAL = Context.GUARDED
 
   /*@note must be initialized from outside; is var so that unit tests can setup/tear down. @see [[DerivedAxioms]] */
-  implicit var tool: QETool with DiffSolutionTool = null
+  implicit var tool: QETool with DiffSolutionTool with CounterExampleTool = null
 
   /**
    * Throw exception if there is more than one open subgoal on the provable.

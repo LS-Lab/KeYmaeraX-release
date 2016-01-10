@@ -14,7 +14,7 @@ import scala.collection.immutable.Map
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
  */
-class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool {
+class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool with CounterExampleTool {
   private val jlink = new JLinkMathematicaLink
 
   // TODO replace with constructor and dependency injection
@@ -31,9 +31,17 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
 
   override def qe(formula: Formula): Formula = jlink.qe(formula)
   override def qeEvidence(formula: Formula): (Formula, Evidence) = jlink.qeEvidence(formula)
+  @deprecated("Use findCounterExample instead")
   def getCounterExample(formula: Formula): String = jlink.getCounterExample(formula)
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,
                        iv: Predef.Map[Variable, Variable]): Option[Formula] = jlink.diffSol(diffSys, diffArg, iv)
+
+  /**
+   * Returns a counterexample for the specified formula.
+   * @param formula The formula.
+   * @return A counterexample, if found. None otherwise.
+   */
+  override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Term]] = jlink.findCounterExample(formula)
 
   //@todo Implement Mathematica recovery actions
   override def restart() = ???

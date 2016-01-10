@@ -1,5 +1,5 @@
-angular.module('sequent', ['ngSanitize','formula'])
-  .directive('k4Sequent', function() {
+angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies', 'angularSpinners'])
+  .directive('k4Sequent', ['$uibModal', '$http', 'spinnerService', function($uibModal, $http, spinnerService) {
     return {
         restrict: 'AE',
         scope: {
@@ -12,27 +12,37 @@ angular.module('sequent', ['ngSanitize','formula'])
             onApplyTactic: '&',
             onApplyInputTactic: '&'
         },
-        link: function($scope, $sce, $uibModal, $http, $cookies, Tactics) {
-            $scope.getCounterExample = function() {
-                $uibModal.open({
-                    templateUrl: 'partials/counterExample.html',
-                    controller: 'counterExampleCtrl',
-                    size: 'lg',
-                    resolve: {
-                      proofId: function() { return $scope.proofId; },
-                      nodeId: function() { return $scope.nodeId; }
-                    }
-                    });
+        link: function(scope, elem, attr) {
+            scope.getCounterExample = function() {
+                spinnerService.show('counterExampleSpinner');
+                $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/counterExample')
+                    .then(function(response) {
+                      $uibModal.open({
+                        templateUrl: 'templates/counterExample.html',
+                        controller: 'CounterExampleCtrl',
+                        size: 'lg',
+                        resolve: {
+                          result: function() { return response.data.result; },
+                          origFormula: function() { return response.data.origFormula; },
+                          cexFormula: function() { return response.data.cexFormula; },
+                          cexValues: function() { return response.data.cexValues; }
+                        }
+                      });
+                    })
+                    .catch(function(error) {
+                      showErrorMessage($uibModal, "Unable to find a counter example, root cause: " + error.data);
+                    })
+                    .finally(function() { spinnerService.hide('counterExampleSpinner'); });
             }
 
-            $scope.onTactic = function(formulaId, tacticId) {
-              $scope.onApplyTactic({formulaId: formulaId, tacticId: tacticId});
+            scope.onTactic = function(formulaId, tacticId) {
+              scope.onApplyTactic({formulaId: formulaId, tacticId: tacticId});
             }
 
-            $scope.onInputTactic = function(formulaId, tacticId, input) {
-              $scope.onApplyInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
+            scope.onInputTactic = function(formulaId, tacticId, input) {
+              scope.onApplyInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
             }
         },
         templateUrl: 'partials/collapsiblesequent.html'
     };
-  });
+  }]);
