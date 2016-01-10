@@ -597,22 +597,6 @@ trait TwoPositionRule extends Rule {
  */
 
 /**
- * Hide left.
- * {{{
- *     G |- D
- * ------------- (Hide left)
- *  p, G |- D
- * }}}
- */
-case class HideLeft(pos: AntePos) extends LeftRule {
-  val name: String = "HideLeft"
-  /** weakening left = hide left */
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, s.ante.patch(pos.getIndex, Nil, 1), s.succ))
-  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-}
-
-/**
  * Hide right.
  * {{{
  *    G |- D
@@ -629,17 +613,18 @@ case class HideRight(pos: SuccPos) extends RightRule {
 }
 
 /**
- * Exchange left rule reorders antecedent.
- * {{{
- * q, p, G |- D
- * ------------- (Exchange left)
- * p, q, G |- D
- * }}}
- */
-case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRule {
-  val name: String = "ExchangeLeft"
+  * Hide left.
+  * {{{
+  *     G |- D
+  * ------------- (Hide left)
+  *  p, G |- D
+  * }}}
+  */
+case class HideLeft(pos: AntePos) extends LeftRule {
+  val name: String = "HideLeft"
+  /** weakening left = hide left */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, s.ante.updated(pos1.getIndex, s.ante(pos2.getIndex)).updated(pos2.getIndex, s.ante(pos1.getIndex)), s.succ))
+    immutable.List(Sequent(s.pref, s.ante.patch(pos.getIndex, Nil, 1), s.succ))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -655,6 +640,21 @@ case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends TwoPositionRu
   val name: String = "ExchangeRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, s.ante, s.succ.updated(pos1.getIndex, s.succ(pos2.getIndex)).updated(pos2.getIndex, s.succ(pos1.getIndex))))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
+/**
+ * Exchange left rule reorders antecedent.
+ * {{{
+ * q, p, G |- D
+ * ------------- (Exchange left)
+ * p, q, G |- D
+ * }}}
+ */
+case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRule {
+  val name: String = "ExchangeLeft"
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    immutable.List(Sequent(s.pref, s.ante.updated(pos1.getIndex, s.ante(pos2.getIndex)).updated(pos2.getIndex, s.ante(pos1.getIndex)), s.succ))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -694,7 +694,7 @@ object ContractionLeft {
  * Close / Identity rule
  * {{{
  *        *
- * ------------------ (Close)
+ * ------------------ (Id)
  *   p, G |- p, D
  * }}}
  */
@@ -806,40 +806,6 @@ case class NotLeft(pos: AntePos) extends LeftRule {
 }
 
 /**
- * |R Or right.
- * {{{
- *   G |- D, p,q
- * --------------- (|R Or right)
- *   G |- p|q, D
- * }}}
- */
-case class OrRight(pos: SuccPos) extends RightRule {
-  val name: String = "Or Right"
-  /** |R Or right */
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    val Or(p,q) = s(pos)
-    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p,q))))
-  }
-}
-
-/**
- * |L Or left.
- * {{{
- * p, G |- D     q, G |- D
- * ----------------------- (|L Or left)
- *   p|q, G |- D
- * }}}
- */
-case class OrLeft(pos: AntePos) extends LeftRule {
-  val name: String = "Or Left"
-  /** |L Or left */
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    val Or(p,q) = s(pos)
-    immutable.List(s.updated(pos, p), s.updated(pos, q))
-  }
-}
-
-/**
  * &R And right
  * {{{
  * G |- p, D    G |- q, D
@@ -870,6 +836,40 @@ case class AndLeft(pos: AntePos) extends LeftRule {
   def apply(s: Sequent): immutable.List[Sequent] = {
     val And(p,q) = s(pos)
     immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(p,q), immutable.IndexedSeq())))
+  }
+}
+
+/**
+ * |R Or right.
+ * {{{
+ *   G |- D, p,q
+ * --------------- (|R Or right)
+ *   G |- p|q, D
+ * }}}
+ */
+case class OrRight(pos: SuccPos) extends RightRule {
+  val name: String = "Or Right"
+  /** |R Or right */
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Or(p,q) = s(pos)
+    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p,q))))
+  }
+}
+
+/**
+ * |L Or left.
+ * {{{
+ * p, G |- D     q, G |- D
+ * ----------------------- (|L Or left)
+ *   p|q, G |- D
+ * }}}
+ */
+case class OrLeft(pos: AntePos) extends LeftRule {
+  val name: String = "Or Left"
+  /** |L Or left */
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Or(p,q) = s(pos)
+    immutable.List(s.updated(pos, p), s.updated(pos, q))
   }
 }
 
