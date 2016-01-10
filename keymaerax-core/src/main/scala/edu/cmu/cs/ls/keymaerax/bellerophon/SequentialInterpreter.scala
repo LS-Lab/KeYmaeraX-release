@@ -17,7 +17,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     if (Thread.currentThread().isInterrupted) {
       //@note end executing the interpreter when its thread gets interrupted
-      //@todo how to stop if stuck in QE?
+      //@todo throw an error that is easier to identify (for now: irrelevant, since Hydra Future already gone when we throw here)
       throw new BelleError("Execution Stopped")
     }
     listeners.foreach(_.begin(v, expr))
