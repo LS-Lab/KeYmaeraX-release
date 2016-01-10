@@ -901,7 +901,7 @@ case class ImplyRight(pos: SuccPos) extends RightRule {
  * @note Surprising positioning: both positions change but at least consistent for this rule.
  */
 @deprecated("Use ImplyLeft instead.")
-case class ImplyLeftOld(pos: AntePos) extends LeftRule {
+private[keymaerax] case class ImplyLeftOld(pos: AntePos) extends LeftRule {
   val name: String = "Imply Left (old)"
   /** ->L Imply left */
   def apply(s: Sequent): immutable.List[Sequent] = {

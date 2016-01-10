@@ -48,7 +48,7 @@ object ToolTactics {
       val ante = (sequent.ante ++ (True::True::Nil)).reduce(And)
       val succ = (sequent.succ ++ (False::False::Nil)).reduce(Or)
       cut(Imply(ante, succ)) <(
-        /* use */ implyL('Llast) <(
+        /* use */ implyLOld('Llast) <(
           hideR(1)*sequent.succ.size  & (andR(1) <((close | skip) partial, close))*(sequent.ante.size+1),
           hideL(-1)*sequent.ante.size & (orL(-1) <((close | skip) partial, close))*(sequent.succ.size+1)),
         /* show */ cohide('Rlast) partial
