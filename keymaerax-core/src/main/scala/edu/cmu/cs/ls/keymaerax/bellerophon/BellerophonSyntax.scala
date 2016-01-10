@@ -88,12 +88,19 @@ object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
   * which is useful for tactic contract and tactic documentation purposes.
   * It is also useful for finding a corresponding formula by pattern matching.
   *
+  *   - `t(2, fml)` applied at the second [[edu.cmu.cs.ls.keymaerax.core.Sequent.succ succedent]] formula,
+  *     ensuring that the formula `fml` is at that position.
+  *   - `t(-2, fml)` applied at the second [[edu.cmu.cs.ls.keymaerax.core.Sequent.ante antecedent]] formula,
+  *     ensuring that the formula `fml` is at that position.
+  *   - `t(5, 0::1::1::Nil, ex)` applied at [[PosInExpr subexpression positioned at]] `.0.1.1` of the fifth succedent formula,
+  *     that is at the second child of the second child of the first child of the fifth succcedent formula in the sequent,
+  *     ensuring that the expression `ex` is at that position.
   *   - `t('L, fml)` applied at the antecedent position (left side of the sequent)
-  *     where the formula `fml` can be found (on the top level).
+  *     where the expected formula `fml` can be found (on the top level).
   *   - `t('R, fml)` applied at the succedent position (right side of the sequent)
-  *     where the formula `fml` can be found (on the top level).
+  *     where the expected formula `fml` can be found (on the top level).
   *   - `t('_, fml)` applied at the suitable position (uniquely determined by type of tactic)
-  *     where the formula `fml` can be found (on the top level).
+  *     where the expected formula `fml` can be found (on the top level).
   *
   * @author Stefan Mitsch
   * @author Andre Platzer
@@ -118,7 +125,36 @@ trait AtPosition[T <: BelleExpr] extends (PositionLocator => T) {
    * @see [[Fixed]]
    */
   /*private[keymaerax]*/ final def apply(position: Position): T = apply(Fixed(position))
+  /**
+    * Applied at a fixed position, ensuring that the formula `expected` will be found at that position, verbatim.
+    * @param position The position where this tactic will be applied at.
+    * @param expected the formula expected at `position`. Contract fails if that expectation is not met.
+    * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
+    * @note Convenience wrapper
+    * @see [[apply(locator: PositionLocator)]]
+    * @see [[Fixed]]
+    */
   /*private[keymaerax]*/ final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
+  /**
+    * Applied at a fixed position, ensuring that the formula `expected` will be found at that position, verbatim.
+    * @param position The position where this tactic will be applied at.
+    * @param expected the formula expected at `position`. Contract fails if that expectation is not met.
+    * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
+    * @note Convenience wrapper
+    * @see [[apply(locator: PositionLocator)]]
+    * @see [[Fixed]]
+    */
+  final def apply(seqIdx: Int, expected: Formula): T = apply(Fixed(Position(seqIdx), Some(expected)))
+  /**
+    * Applied at a fixed position, ensuring that the formula `expected` will be found at that position, verbatim.
+    * @param position The position where this tactic will be applied at.
+    * @param expected the formula expected at `position`. Contract fails if that expectation is not met.
+    * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
+    * @note Convenience wrapper
+    * @see [[apply(locator: PositionLocator)]]
+    * @see [[Fixed]]
+    */
+  final def apply(seqIdx: Int, inExpr: List[Int], expected: Formula): T = apply(Fixed(Position(seqIdx, inExpr), Some(expected)))
   private[ls] final def apply(position: SeqPos): T = apply(Fixed(Position(position)))
 
   /**
