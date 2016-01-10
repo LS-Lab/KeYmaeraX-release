@@ -135,7 +135,7 @@ object EqualityTactics {
               }
               cut(condEquiv) <(
                 //@note could say equivRewriting('Llast) ??
-                /* use */ (implyL('Llast) <(closeId, equivRewriting(AntePosition(sequent.ante.length + 1))(pos) partial)) partial,
+                /* use */ (implyLOld('Llast) <(closeId, equivRewriting(AntePosition(sequent.ante.length + 1))(pos) partial)) partial,
                 /* show */ cohide('Rlast) & byUS("const formula congruence")
                 )
           }

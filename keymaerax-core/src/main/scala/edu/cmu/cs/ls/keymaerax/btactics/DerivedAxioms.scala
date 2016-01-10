@@ -1049,7 +1049,7 @@ object DerivedAxioms {
   lazy val allSubstitute = derivedAxiom("all substitute",
     Sequent(Nil, IndexedSeq(), IndexedSeq(allSubstituteF)),
     equivR(SuccPos(0)) <(
-      /* equiv left */ allL(Variable("x"), "t()".asTerm)(-1) & implyL(-1) <(cohide(2) & byUS(equalReflex), close),
+      /* equiv left */ allL(Variable("x"), "t()".asTerm)(-1) & implyLOld(-1) <(cohide(2) & byUS(equalReflex), close),
       /* equiv right */ allR(1) & implyR(1) & eqL2R(-2)(1) & close
     )
   )
@@ -1452,11 +1452,11 @@ object DerivedAxioms {
     equivR(1) <(
       /* equiv left */
       cut("[{c&H(??)}](p(??)->(H(??)->p(??)))".asFormula) <(
-        /* use */ useAt("K modal modus ponens", PosInExpr(0::Nil))(-2) & implyL(-2) <(close, close),
+        /* use */ useAt("K modal modus ponens", PosInExpr(0::Nil))(-2) & implyLOld(-2) <(close, close),
         /* show */ cohide(2) & G & prop
       ),
       /* equiv right */
-      useAt("K modal modus ponens", PosInExpr(0::Nil))(-1) & implyL(-1) <(cohide(2) & byUS("DW"), close)
+      useAt("K modal modus ponens", PosInExpr(0::Nil))(-1) & implyLOld(-1) <(cohide(2) & byUS("DW"), close)
     )
   )
   lazy val DWeakeningT = derivedAxiomT(DWeakening)

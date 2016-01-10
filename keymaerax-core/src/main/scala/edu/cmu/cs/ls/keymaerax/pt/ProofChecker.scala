@@ -76,7 +76,7 @@ object ProofChecker {
               (HideRight(SuccPos(0)), 1)(implCert.get, 1) // hide phi and prove psi -> phi using proof produced by IH
               (Cut(psi), 0)
               (HideLeft(AntePos(0)), 1)(HideRight(SuccPos(0)), 1)(psiCert.get, 1) // have phi -> psi |- phi, psi. Hides antecendent and phi, and proves psi by IH.
-              (ImplyLeft(AntePos(0)), 0)
+              (ImplyLeftOld(AntePos(0)), 0)
               (Close(AntePos(0), SuccPos(1)), 0)
               (Close(AntePos(1), SuccPos(0)), 0)
           )

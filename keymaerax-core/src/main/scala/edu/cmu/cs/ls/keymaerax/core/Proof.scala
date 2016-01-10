@@ -894,15 +894,34 @@ case class ImplyRight(pos: SuccPos) extends RightRule {
 /**
  * ->L Imply left.
  * {{{
- * G |- D, p    G, q |- D
+ * G |- D, p    q, G |- D
  * ---------------------- (-> Imply left)
  *   p->q, G |- D
  * }}}
- * @note Perhaps surprising that both positions change but at least consistent for this rule.
  */
 case class ImplyLeft(pos: AntePos) extends LeftRule {
-  val name: String = "Imply Left"
+  val name: String = "Imply Left (old)"
   /** ->L Imply left */
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Imply(p,q) = s(pos)
+    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))),
+      s.updated(pos, q))
+  }
+}
+
+/**
+ * ->L Imply left (old).
+ * {{{
+ * G |- D, p    G, q |- D
+ * ---------------------- (-> Imply left old)
+ *   p->q, G |- D
+ * }}}
+ * @note Surprising positioning: both positions change but at least consistent for this rule.
+ */
+@deprecated("Use ImplyLeft instead.")
+private[keymaerax] case class ImplyLeftOld(pos: AntePos) extends LeftRule {
+  val name: String = "Imply Left (old)"
+  /** ->L Imply left (old) */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(p,q) = s(pos)
     immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))),

@@ -308,7 +308,7 @@ object TactixLibrary extends HilbertCalculi with SequentCalculi {
   /** Beta rules are propositional rules that split */
   lazy val betaRule: BelleExpr = (andR('_) partial) |
     ((orL('_) partial) |
-      ((implyL('_) partial) |
+      ((implyLOld('_) partial) |
         ((equivL('_) partial) |
           (equivR('_) partial)
           partial)

@@ -2551,7 +2551,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     // right branch reduces to the proof of "equivalence"
     (CoHideRight(SuccPos(1)), 1)
       // left branch follows from "equivalence"
-      (ImplyLeft(AntePos(2)), 0)
+      (ImplyLeftOld(AntePos(2)), 0)
       // third branch e<->i |- e<->i
       (Close(AntePos(2), SuccPos(0)), 2)
       // second branch a,w |- e<->i, a&w
@@ -2680,7 +2680,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     // right branch reduces to the proof of "equivalence"
     (CoHideRight(SuccPos(1)), 1)
     // left branch follows from "equivalence"
-    (ImplyLeft(AntePos(2)), 0)
+    (ImplyLeftOld(AntePos(2)), 0)
     // third branch e<->i |- e<->i
     (Close(AntePos(2), SuccPos(0)), 2)
     // second branch a,w |- e<->i, a&w
