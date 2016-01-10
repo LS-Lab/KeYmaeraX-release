@@ -805,8 +805,9 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val globalProvable =
           trace.steps match {
             case Nil => localProvable
-            case steps => steps.last.output.getOrElse(steps.last.input)
+            case steps => steps.last.output.getOrElse{throw new ProverException("Proof trace ends in unfinished step")}
           }
+        assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
         val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
         val executor = BellerophonTacticExecutor.defaultExecutor
         val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
@@ -840,7 +841,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
       if(i < endStep.branch && !endStep.output.get.subgoals(i).equals(endStep.input.subgoals(i)))  {
         return false
       }
-      if(i > endStep.branch && !endStep.output.get.subgoals(i).equals(endStep.input.subgoals(i-1))) {
+      if(i > endStep.branch && !endStep.output.get.subgoals(i-1).equals(endStep.input.subgoals(i))) {
         return false
       }
     }
@@ -859,7 +860,8 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
         case Some(Right(error: BelleError)) => new ErrorResponse("Tactic failed with error: " + error.getMessage, error.getCause)
         case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
       }
-      executor.remove(taskId)
+      //@note may have been cancelled in the meantime
+      executor.tryRemove(taskId)
       response :: Nil
     }
   }
@@ -869,7 +871,7 @@ class StopTaskRequest(db: DBAbstraction, userId: String, proofId: String, nodeId
   def getResultingResponses() = {
     val executor = BellerophonTacticExecutor.defaultExecutor
     //@note may have completed in the meantime
-    executor.synchronized { if (executor.contains(taskId)) executor.remove(taskId, force = true) }
+    executor.tryRemove(taskId, force = true)
     new GenericOKResponse() :: Nil
   }
 }
@@ -905,12 +907,12 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
     ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps.reverse)
   }
 
-  def getResultingResponses() = {
+  def getResultingResponses(): List[Response] = {
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
     val prunedSteps = tree.allDescendants(nodeId).flatMap{case node => node.endStep.toList}
     if(prunedSteps.isEmpty) {
-      throw new Exception("No steps under node. Nothing to do.")
+      return new ErrorResponse("No steps under node. Nothing to do.") :: Nil
     }
     val prunedStepIds = prunedSteps.map{case step => step.stepId}.toSet
     val prunedTrace = prune(trace, prunedStepIds)

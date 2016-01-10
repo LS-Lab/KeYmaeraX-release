@@ -77,6 +77,7 @@ class TraceRecordingListener(db: DBAbstraction,
   var youngestSibling: Option[Int] = initialSibling
   var node: TraceNode = null
   var isDead: Boolean = false
+  var nodesWritten: List[TraceNode] = Nil
 
   /* Debug info: Records how deep inside the tree of begin-end pairs we are */
   var depth: Int = 0
@@ -105,6 +106,7 @@ class TraceRecordingListener(db: DBAbstraction,
       }
       if (parent == null || recursive) {
         node.stepId = Some(db.addExecutionStep(node.asPOJO))
+        nodesWritten = node :: nodesWritten
       }
     }
   }
@@ -152,7 +154,7 @@ class TraceRecordingListener(db: DBAbstraction,
   def kill(): Unit = {
     synchronized {
       isDead = true
-      db.updateExecutionStatus(node.stepId.get, ExecutionStepStatus.Aborted)
+      nodesWritten.foreach(_.stepId.foreach{case id => db.updateExecutionStatus(id, ExecutionStepStatus.Aborted)})
     }
   }
 }

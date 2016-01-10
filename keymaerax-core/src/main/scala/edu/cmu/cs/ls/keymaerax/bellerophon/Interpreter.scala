@@ -22,5 +22,5 @@ trait Interpreter {
 trait IOListener {
   def begin(input: BelleValue, expr: BelleExpr): Unit
   def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue,BelleError]): Unit
-  private[bellerophon] def kill(): Unit
+  def kill(): Unit
 }

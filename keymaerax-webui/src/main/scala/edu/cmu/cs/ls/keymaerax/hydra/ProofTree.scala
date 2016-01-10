@@ -14,11 +14,13 @@ import scala.collection.immutable.Nil
   * Created by bbohrer on 12/29/15.
   */
 case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, theLeaves: List[AgendaItem]) {
+  private def realItemId(itemId: String) = findNode(itemId).get.realTowardParent.id.toString
+
   def leaves =
     theLeaves.map{case item =>
       // @note Item id and goal id are secretly the same, need to keep them in sync.
-      val realId = findNode(item.id).get.id.toString
-      AgendaItem(item.id, item.name, item.proofId, item.goal.real())
+      val realId = realItemId(item.id)
+      AgendaItem(item.id, item.name, item.proofId, item.goal.realTowardParent)
     }
 
   def leavesAndRoot = root :: leaves.map({case item => item.goal})
@@ -27,7 +29,7 @@ case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, the
     node.id.toString == id})
 
   def goalIndex(id: String): Int = {
-    leaves.zipWithIndex.find({case (item, i) => item.id == id}).get._2
+    leaves.zipWithIndex.find({case (item, i) => realItemId(item.id) == realItemId(id)}).get._2
   }
 
   def allDescendants(id: String): List[TreeNode] = {
@@ -109,32 +111,30 @@ object ProofTree {
 case class TreeNode (id: Int, sequent: Sequent, theParent: Option[TreeNode], startStep:Option[ExecutionStep], var isFake:Boolean = false) {
   var theChildren: List[TreeNode] = Nil
   var endStep: Option[ExecutionStep] = None
-  if (parent.nonEmpty)
-    parent.get.theChildren = this :: parent.get.theChildren
+  if (theParent.nonEmpty)
+    theParent.get.theChildren = this :: theParent.get.theChildren
 
-  /* Find the non-undo node "closest" to a possibly-undo node.
-   * When taking the parent of a node, keep searching parents until
-   * we find a real node. When taking children, repeatedly take the first
-   * child until finding a real node*/
-  def real(searchUpward:Boolean = false): TreeNode = {
+  /* Make this node real by searching parents if necessary */
+  def realTowardParent: TreeNode = {
     if (isFake) {
-      if (searchUpward)
-        theChildren.head.real(searchUpward)
-      else
-        theParent.get.real(searchUpward)
+      theParent.get.realTowardParent
     }
     else
       this
   }
 
-  def parent: Option[TreeNode] = real().theParent.map(_.real())
+  /* Make this node real by searching children if necessary */
+  def realTowardChildren: List[TreeNode] = {
+    if (isFake) {
+      theChildren.flatMap(_.realTowardChildren)
+    } else {
+      List(this)
+    }
+  }
 
-  def children = theChildren.flatMap{case child =>
-    try {
-      List(child.real(searchUpward = true))
-    } catch {
-      case _:NoSuchElementException => Nil
-    }}
+  def parent: Option[TreeNode] = realTowardParent.theParent.map(_.realTowardParent)
+
+  def children = theChildren.flatMap(_.realTowardChildren)
 
   def allDescendants:List[TreeNode] = this :: theChildren.flatMap{case child => child.allDescendants}
   def rule:String = { startStep.map{case step => step.rule}.getOrElse("")}

@@ -16,6 +16,13 @@ object BellerophonTacticExecutor {
   val defaultExecutor = new BellerophonTacticExecutor(SequentialInterpreter, defaultSize)
 }
 
+class ListenerFuture[T] (listeners: List[IOListener], callable: Callable[T]) extends FutureTask[T] (callable) {
+  override def cancel(mayInterruptIfRunning:Boolean): Boolean = {
+    listeners.foreach(_.kill)
+    super.cancel(mayInterruptIfRunning)
+  }
+}
+
 class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, poolSize: Int) {
   require(poolSize > 0, "At least one thread is needed.")
   private val pool : ExecutorService = Executors.newFixedThreadPool(poolSize)
@@ -24,7 +31,7 @@ class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, p
     * [[scheduledTactics]] could be at any state of execution, included finished.
     * Tactics are never removed from the [[scheduledTactics]] mapping unless explicitly via .remove()
     */
-  private val scheduledTactics : scala.collection.mutable.Map[String, FutureTask[Either[BelleValue, BelleError]]] = Map()
+  private val scheduledTactics : scala.collection.mutable.Map[String, ListenerFuture[Either[BelleValue, BelleError]]] = Map()
 
   /**
     *
@@ -58,13 +65,12 @@ class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, p
     * @param force If true, then the tactic can be removed even if it is currently running.
     *              In that case, the tactic execution is halted first. Defaults to false.
     */
-  def remove(id: String, force: Boolean = false) = {
-    require(scheduledTactics.contains(id), "Cannot remove a tactic whose ID is not in the key set of scheduledTactics.")
+  def tryRemove(id: String, force: Boolean = false) = {
     if (isDone(id)) {
       scheduledTactics.remove(id)
     }
     else if (force) {
-      scheduledTactics.get(id).last.cancel(true)
+      scheduledTactics.get(id).foreach(_.cancel(true))
       scheduledTactics.remove(id)
     }
     else {
@@ -72,6 +78,17 @@ class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, p
       throw new Exception("Attempted to remove a tactic from scheduledTactics, but that tactic is not yet finished executing.")
     }
   } ensuring(!scheduledTactics.contains(id))
+
+  /**
+    *
+    * @param id The schedule id of the tactic to remove.
+    * @param force If true, then the tactic can be removed even if it is currently running.
+    *              In that case, the tactic execution is halted first. Defaults to false.
+    */
+  def remove(id: String, force: Boolean = false) = {
+    require(scheduledTactics.contains(id), "Cannot remove a tactic whose ID is not in the key set of scheduledTactics.")
+    tryRemove(id, force)
+  }
 
   /**
     * @param id The schedule id of the tactic to wait on
@@ -90,7 +107,7 @@ class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, p
   }
 
   private def makeFuture(tactic: BelleExpr, value: BelleValue, listeners: List[IOListener]) = {
-    new FutureTask[Either[BelleValue, BelleError]](new Callable[Either[BelleValue, BelleError]]() {
+    new ListenerFuture[Either[BelleValue, BelleError]](listeners, new Callable[Either[BelleValue, BelleError]]() {
       override def call(): Either[BelleValue, BelleError] = {
         try {
           Left(interpreter(listeners)(tactic, value))
