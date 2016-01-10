@@ -70,13 +70,14 @@ object ProofTree {
     }
 
     val inputProvable = trace.steps.head.input
-    var openGoals = inputProvable.subgoals.map({case subgoal => treeNode(subgoal, None, Some(trace.steps.head))})
+    var openGoals = inputProvable.subgoals.map({case subgoal => treeNode(subgoal, None, None)})
     var allNodes = openGoals.toList
     var steps = trace.steps
     while (steps.nonEmpty && steps.head.output.nonEmpty) {
       val step = steps.head
       val branch = step.branch
       val outputProvable = step.output.get
+      openGoals(branch).endStep = Some(step)
       /* This step closed a branch*/
       if(outputProvable.subgoals.length == openGoals.length - 1) {
         openGoals = openGoals.slice(0, branch) ++ openGoals.slice(branch + 1, openGoals.length)
@@ -84,14 +85,12 @@ object ProofTree {
         val delta =
           outputProvable.subgoals.filter({case sg => !openGoals.exists({case node => node.sequent == sg})})
         if (delta.nonEmpty) {
-          openGoals(branch).endStep = Some(step)
           val updatedNode = treeNode(delta.head, Some(openGoals(branch)), Some(step))
           val addedNodes = delta.tail.map({ case sg => treeNode(sg, Some(openGoals(branch)), Some(step)) })
           openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
           allNodes = allNodes ++ (updatedNode :: addedNodes.toList)
         } else  {
           val isFake = !step.isUserExecuted
-          openGoals(branch).endStep = Some(step)
           val updatedNode = treeNode(openGoals(branch).sequent, Some(openGoals(branch)), Some(step), isFake)
           openGoals = openGoals.updated(branch, updatedNode)
           allNodes = allNodes :+ updatedNode
