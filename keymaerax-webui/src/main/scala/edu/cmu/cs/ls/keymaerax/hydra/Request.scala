@@ -510,14 +510,16 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
 class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
     val items = db.agendaItemsForProof(proofId.toInt)
-    val response = new AgendaAwesomeResponse(ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), agendaItems = items))
+    val closed = db.getProofInfo(proofId).closed
+    val response = new AgendaAwesomeResponse(ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), agendaItems = items, proofFinished = closed))
     response :: Nil
   }
 }
 
 case class GetAgendaItemRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses(): List[Response] = {
-    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    val closed = db.getProofInfo(proofId).closed
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
     val possibleItems = db.agendaItemsForProof(proofId.toInt)
     var currNode:Option[Int] = Some(nodeId.toInt)
     tree.agendaItemForNode(nodeId, possibleItems) match {
@@ -529,7 +531,10 @@ case class GetAgendaItemRequest(db: DBAbstraction, userId: String, proofId: Stri
 
 case class SetAgendaItemNameRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, displayName: String) extends Request {
   def getResultingResponses() = {
-    val node = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).nodes.find({case node => node.id.toString == nodeId})
+    val closed = db.getProofInfo(proofId).closed
+    val node =
+      ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
+      .nodes.find({case node => node.id.toString == nodeId})
     node match {
       case None => throw new Exception("Node not found")
       case Some(node) =>
@@ -560,7 +565,8 @@ case class SetAgendaItemNameRequest(db: DBAbstraction, userId: String, proofId: 
 
 class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
-    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    val closed = db.getProofInfo(proofId).closed
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
     tree.findNode(nodeId).flatMap(_.parent) match {
       case None => throw new Exception("Tried to get parent of node " + nodeId + " which has no parent")
       case Some(parent) =>
@@ -572,7 +578,8 @@ class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String,
 
 case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
-    val tree: ProofTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    val closed = db.getProofInfo(proofId).closed
+    val tree: ProofTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
     var node: Option[TreeNode] = tree.findNode(nodeId)
     var path: List[TreeNode] = Nil
     while (node.nonEmpty) {
@@ -588,7 +595,8 @@ case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String,
 
 case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
-    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    val closed = db.getProofInfo(proofId).closed
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
     val node = tree.nodes.find({case node => node.id.toString == nodeId})
     node match {
       case None => throw new Exception("Node not found")
@@ -630,8 +638,11 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
 }
 
 class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos:Position) extends Request {
-  def getResultingResponses() = {
+  def getResultingResponses(): List[Response] = {
     import Augmentors._
+    val closed = db.getProofInfo(proofId).closed
+    if (closed)
+      return new ApplicableAxiomsResponse(Nil) :: Nil
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val subFormula = sequent.sub(pos).get
     val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).map{case axiom => DerivationInfo(axiom)}
@@ -772,7 +783,11 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     new ConfigurableGenerate(invariants)
   }
 
-  def getResultingResponses() = {
+  def getResultingResponses(): List[Response] = {
+    val closed = db.getProofInfo(proofId).closed
+    if (closed) {
+      return new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
+    }
     val proof = db.getProofInfo(proofId)
     val model = db.getModel(proof.modelId)
     val generator = invariantGeneratorFor(model.keyFile)
@@ -918,6 +933,10 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
   }
 
   def getResultingResponses(): List[Response] = {
+    val closed = db.getProofInfo(proofId).closed
+    if (closed) {
+      return new ErrorResponse("Pruning not allowed on closed proofs") :: Nil
+    }
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
     val prunedSteps = tree.allDescendants(nodeId).flatMap{case node => node.endStep.toList}

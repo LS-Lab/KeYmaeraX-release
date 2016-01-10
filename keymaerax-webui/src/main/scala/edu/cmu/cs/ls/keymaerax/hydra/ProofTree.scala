@@ -1,8 +1,11 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import _root_.edu.cmu.cs.ls.keymaerax.core.{ProverException, Sequent}
+import _root_.edu.cmu.cs.ls.keymaerax.btactics.Augmentors
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, ProverException, Sequent}
+import _root_.edu.cmu.cs.ls.keymaerax.parser.StringConverter
 
 import scala.collection.immutable.Nil
+import scala.collection.immutable
 
 /** Represents (one state of) an entire proof.
   * A ProofTree can contain steps that are inserted automatically by HyDRA for its own purposes (namely undo) in addition
@@ -56,7 +59,7 @@ object ProofTree {
     }
   }
 
-  def ofTrace(trace:ExecutionTrace, agendaItems: List[AgendaItemPOJO] = Nil): ProofTree = {
+  def ofTrace(trace:ExecutionTrace, agendaItems: List[AgendaItemPOJO] = Nil, proofFinished:Boolean = false): ProofTree = {
     var currentNodeId = 1
 
     def treeNode(subgoal: Sequent, parent: Option[TreeNode], step:Option[ExecutionStep], isFake:Boolean = false): TreeNode = {
@@ -102,11 +105,25 @@ object ProofTree {
       }
       steps = steps.tail
     }
-    val items: List[AgendaItem] = openGoals.map({case i =>
-      val item = agendaItemForNode(allNodes, i.id.toString, agendaItems)
+    import StringConverter._
+    val (finalNodes, goalNodes) =
+      if(!proofFinished) {
+        (allNodes, openGoals)
+      } else {
+        /* Add nodes to indicate that all the leaves have been closed, then return the new leaves as our agenda so every
+          branch is visible. Since we have to display a sequent, use  |- true to let the user know the branch is closed. */
+        val goals = allNodes.filter(_.theChildren.isEmpty)
+        val newNodes = goals.map{case goal =>
+            treeNode(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("true".asFormula)),
+              Some(goal), Some(goal.endStep.get))}
+        (allNodes ++ newNodes, newNodes)
+      }
+
+    val items: List[AgendaItem] = goalNodes.map({case i =>
+      val item = agendaItemForNode(finalNodes, i.id.toString, agendaItems)
       val itemName = item.map(_.displayName).getOrElse("Unnamed Goal")
       AgendaItem(i.id.toString, itemName, trace.proofId, i)}).toList
-    ProofTree(trace.proofId, allNodes, allNodes.head, items)
+    ProofTree(trace.proofId, finalNodes, finalNodes.head, items)
   }
 }
 
