@@ -22,7 +22,6 @@ object PropositionalTactics {
    * @author Nathan Fulton
    * @author Stefan Mitsch
    * @see [[ProofRuleTactics.implyR]]
-   * @see [[UnifyUSCalculus.implyRi]]
    */
   lazy val implyRi: DependentTactic = implyRi()
   def implyRi(antePos: AntePos = AntePos(0), succPos: SuccPos = SuccPos(0)): DependentTactic = new SingleGoalDependentTactic("inverse imply right") {
