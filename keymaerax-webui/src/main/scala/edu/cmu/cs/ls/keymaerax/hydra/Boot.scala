@@ -4,17 +4,17 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.awt.{GridLayout}
+import java.awt.GridLayout
 import javax.swing._
 
-import _root_.edu.cmu.cs.ls.keymaerax.api.ComponentConfig
-import _root_.edu.cmu.cs.ls.keymaerax.btactics.{TactixLibrary, DerivedAxioms, UnifyUSCalculus}
-import _root_.edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, KeYmaeraX}
-import _root_.edu.cmu.cs.ls.keymaerax.tools.Mathematica
+import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerate, TactixLibrary, DerivedAxioms}
+import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
+import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
-import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig}
+import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, Formula, Program}
 import edu.cmu.cs.ls.keymaerax.launcher.SystemWebBrowser
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXParser}
 import spray.can.Http
 
 import scala.concurrent.duration.FiniteDuration
@@ -33,7 +33,7 @@ class LoadingDialog {
   window.setVisible(true)
 
   def addToStatus(x : Int) = {
-    val newValue = progressBar.getValue() + x
+    val newValue = progressBar.getValue + x
     progressBar.setValue(newValue)
 //    progressMonitor.setProgress(newValue)
     progressBar.repaint()
@@ -60,14 +60,41 @@ class LoadingDialog {
 
 object Boot extends App {
   def restart(): Unit = {
-    this.system.shutdown();
-    this.system.awaitTermination();
+    this.system.shutdown()
+    this.system.awaitTermination()
 
     //Re-initialize the server
     this.system = ActorSystem("on-spray-can")
-    var service = system.actorOf(Props[RestApiActor], "hydra")
-    ComponentConfig.keymaeraInitializer.initialize()
+    val service = system.actorOf(Props[RestApiActor], "hydra")
+    init()
     IO(Http) ! Http.Bind(service, interface = host, port = port)
+  }
+
+  def init(): Unit = {
+    //@note pretty printer setup must be first, otherwise derived axioms print wrong
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+    // connect invariant generator to tactix library
+    val generator = new ConfigurableGenerate[Formula]()
+    TactixLibrary.invGenerator = generator
+    KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) => generator.products += (p->inv))
+
+    try {
+      initMathematicaFromDB(mathematica, database)
+      assert(mathematica.isInitialized, "Mathematica should be initialized after init()")
+    } catch {
+      case e:Throwable => println("===> WARNING: Failed to initialize Mathematica. " + e)
+    }
+
+    DerivedAxioms.qeTool = mathematica
+    TactixLibrary.tool = mathematica
+    try {
+      DerivedAxioms.prepopulateDerivedLemmaDatabase()
+    } catch {
+      case e : Exception =>
+        println("===> WARNING: Could not prepopulate the derived lemma database. This is a critical error -- the UI will fail to work! <===")
+        println("You should configure settings in the UI and restart KeYmaera X")
+        e.printStackTrace()
+    }
   }
 
   // we need an ActorSystem to host our application in
@@ -76,40 +103,15 @@ object Boot extends App {
   // create and start our service actor
   var service = system.actorOf(Props[RestApiActor], "hydra")
 
-  // spawn dependency injection framework
-  ComponentConfig.keymaeraInitializer.initialize()
-
-  // connect invariant generator to tactix library
-  TactixLibrary.invGenerator = ComponentConfig.generator
-
   val database = DBAbstractionObj.defaultDatabase
-  val config = database.getAllConfigurations.filter(_.name.equals("serverconfig")).headOption
+  val config = database.getAllConfigurations.find(_.name == "serverconfig")
   val (isHosted:Boolean, host:String, port:Int) = config match {
     case Some(c) => (c.config("isHosted").equals("true"), c.config("host"), Integer.parseInt(c.config("port")))
     case None => (false, "127.0.0.1", 8090)
   }
   val mathematica = new Mathematica()
-  try {
-    mathematica.init(DefaultConfiguration.defaultMathematicaConfig)
 
-    if(!mathematica.isInitialized) {
-      throw new Exception("qeTool.isInitialized = false after calling init()")
-    }
-  } catch {
-    case e:Throwable => println("===> WARNING: Failed to initialize Mathematica. " + e)
-  }
-  DerivedAxioms.qeTool = mathematica
-  TactixLibrary.tool = mathematica
-  try {
-    DerivedAxioms.prepopulateDerivedLemmaDatabase()
-  }
-  catch {
-    case e : Exception => {
-      println("===> WARNING: Could not prepopulate the derived lemma database. This is a critical error -- the UI will fail to work! <===")
-      println("You should configure settings in the UI and restart KeYmaera X")
-      e.printStackTrace()
-    }
-  }
+  init()
 
   // start a new HTTP server on port 8080 with our service actor as the handler
   val io = IO(Http)
@@ -117,20 +119,18 @@ object Boot extends App {
 
   io ! bind
 
-  val dialogOpt = if (!java.awt.GraphicsEnvironment.isHeadless()) Some(new LoadingDialog) else None;
+  val dialogOpt = if (!java.awt.GraphicsEnvironment.isHeadless) Some(new LoadingDialog) else None
 
   {
     import scala.concurrent.ExecutionContext.Implicits.global
 
     def someTime(x:Int) = new FiniteDuration(x, scala.concurrent.duration.SECONDS)
     dialogOpt match {
-      case Some(dialog) => {
-
+      case Some(dialog) =>
         this.system.scheduler.scheduleOnce(someTime(1))(dialog.addToStatus(25))
         this.system.scheduler.scheduleOnce(someTime(2))(dialog.addToStatus(25))
         this.system.scheduler.scheduleOnce(someTime(3))(dialog.addToStatus(25))
         this.system.scheduler.scheduleOnce(someTime(4))(dialog.addToStatus(25))
-      }
       case None => //...
     }
     this.system.scheduler.scheduleOnce(someTime(4))(onLoad())
@@ -147,6 +147,26 @@ object Boot extends App {
         "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
         "**********************************************************\n"
     )
-    SystemWebBrowser(s"http://${host}:${port}/")
+    SystemWebBrowser(s"http://$host:$port/")
+  }
+
+  private def initMathematicaFromDB(mathematica: Mathematica, db: DBAbstraction) = {
+    getMathematicaLinkName(db) match {
+      case Some(l) => getMathematicaLibDir(db) match {
+        case Some(libDir) => mathematica.init(Map("linkName" -> l, "libDir" -> libDir))
+        case None => mathematica.init(Map("linkName" -> l))
+      }
+      case None => mathematica.init(DefaultConfiguration.defaultMathematicaConfig)
+    }
+  }
+
+  private def getMathematicaLinkName(db: DBAbstraction): Option[String] = {
+    db.getConfiguration("mathematica").config.get("linkName")
+  }
+
+  private def getMathematicaLibDir(db: DBAbstraction): Option[String] = {
+    val config = db.getConfiguration("mathematica").config
+    if (config.contains("jlinkLibDir")) Some(config.get("jlinkLibDir").get)
+    else None
   }
 }

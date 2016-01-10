@@ -650,6 +650,7 @@ trait UnifyUSCalculus {
     if (DEBUG) println("CMon(" + C + ")" + "(" + impl + ")")
     /** Monotonicity rewriting step to replace occurrence of instance of k by instance of o in context */
     def monStep(C: Context[Formula], mon: Provable): Provable = {
+      //@todo assert(mon.ante.head == C{left or right} && mon.succ.head == C{right or left})
       if (DEBUG) println("in monStep(" + C + ", " + mon + ")") //\nin CMon(" + C + ")" + "(" + impl + ")")
 
       val localPolarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(
@@ -703,24 +704,32 @@ trait UnifyUSCalculus {
             if (DEBUG) println("CMon check case: " + C + " to prove " + Sequent(Nil, ante, succ) + "\nfrom " + mon +
               "\nnext step in context " + Context(c) + "\n having current polarity " + polarity + " and new polarity " + localPolarity)
             (Provable.startProof(Sequent(Nil, ante, succ))
-            (ImplyRight(SuccPos(0)), 0)
-            (ImplyLeftOld(AntePos(0)), 0)
-            (Close(AntePos(0), SuccPos(1)), 0)
-            // right branch
-            (CoHide2(AntePos(1), SuccPos(0)), 0)
-            ) (monStep(Context(c), mon), 0)
+              // e->c{a} |- e->c{s}
+              (ImplyRight(SuccPos(0)), 0)
+              // e->c{a}, e |- c{s}
+              (ImplyLeft(AntePos(0)), 0)
+              // e |- c{s}, e    c{a}, e |- c{s}
+              // left branch     e |- c{s}, e closes
+              (Close(AntePos(0), SuccPos(1)), 0)
+              // right branch    c{a}, e |- c{s}
+              (HideLeft(AntePos(1)),0 )    //@note was: (CoHide2(AntePos(1), SuccPos(0)), 0)
+              // right branch  c{a} |- c{s}
+              ) (monStep(Context(c), mon), 0)
 
           case Imply(c, e) if !symbols(e).contains(DotFormula) =>
             if (DEBUG) println("CMon check case: " + C + " to prove " + Sequent(Nil, ante, succ) + "\nfrom " + mon +
               "\nnext step in context " + Context(c) + "\n having current polarity " + polarity + " and new polarity " + localPolarity)
             (Provable.startProof(Sequent(Nil, ante, succ))
-            (ImplyRight(SuccPos(0)), 0)
-            (ImplyLeftOld(AntePos(0)), 0)
-            // right branch
-            (Close(AntePos(1), SuccPos(0)), 1)
-            // left branch
-            (CoHide2(AntePos(0), SuccPos(1)), 0)
-            ) (monStep(Context(c), mon), 0)
+              // c{a}->e |- c{s}->e
+              (ImplyRight(SuccPos(0)), 0)
+              // c{a}->e, c{s} |- e
+              (ImplyLeft(AntePos(0)), 0)
+              // c{s} |- e, c{a}    e, c{s} |- e
+              // right branch       e, c{s} |- e
+              (Close(AntePos(0), SuccPos(0)), 1)   //@note was: AntePos(1) for ImplyLeftOld for some reason
+              // left branch        c{s} |- e, c{a}
+              (HideRight(SuccPos(0)), 0)   //@note was: (CoHide2(AntePos(0), SuccPos(1)), 0)
+              ) (monStep(Context(c), mon), 0)
 
           case Equiv(e, c) if !symbols(e).contains(DotFormula) =>
             //@note fallback to implication
