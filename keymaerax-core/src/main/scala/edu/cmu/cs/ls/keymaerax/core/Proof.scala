@@ -555,22 +555,26 @@ trait ClosingRule extends Rule {}
 
 /** A rule applied to a position */
 trait PositionRule extends Rule {
+  /** The position (on the right) where this rule will be applied at */
   def pos: SeqPos
   override def toString: String = name + " at " + pos
 }
 
 /** A rule applied to a position in the antecedent on the left */
 trait LeftRule extends PositionRule {
+  /** The position (on the left) where this rule will be applied at */
   def pos: AntePos
 }
 
 /** A rule applied to a position in the succedent on the right */
 trait RightRule extends PositionRule {
+  /** The position (on the right) where this rule will be applied at */
   def pos: SuccPos
 }
 
 /** An assumption rule, which is a position rule that has an additional position of an assumption. */
 trait AssumptionRule extends PositionRule {
+  /** The position of the assumption used for this rule when used at the position `pos` */
   def assume: SeqPos
   override def toString: String = name + " at " + pos + " assumption at " + assume
 }
@@ -593,26 +597,10 @@ trait TwoPositionRule extends Rule {
  */
 
 /**
- * Hide left.
- * {{{
- *     G |- D
- * ------------- (Hide left)
- *  p, G |- D
- * }}}
- */
-case class HideLeft(pos: AntePos) extends LeftRule {
-  val name: String = "HideLeft"
-  /** weakening left = hide left */
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, s.ante.patch(pos.getIndex, Nil, 1), s.succ))
-  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-}
-
-/**
  * Hide right.
  * {{{
  *    G |- D
- * ------------- (Hide right)
+ * ------------- (Weaken right)
  *    G |- p, D
  * }}}
  */
@@ -625,17 +613,18 @@ case class HideRight(pos: SuccPos) extends RightRule {
 }
 
 /**
- * Exchange left rule reorders antecedent.
- * {{{
- * q, p, G |- D
- * ------------- (Exchange left)
- * p, q, G |- D
- * }}}
- */
-case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRule {
-  val name: String = "ExchangeLeft"
+  * Hide left.
+  * {{{
+  *     G |- D
+  * ------------- (Weaken left)
+  *  p, G |- D
+  * }}}
+  */
+case class HideLeft(pos: AntePos) extends LeftRule {
+  val name: String = "HideLeft"
+  /** weakening left = hide left */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, s.ante.updated(pos1.getIndex, s.ante(pos2.getIndex)).updated(pos2.getIndex, s.ante(pos1.getIndex)), s.succ))
+    immutable.List(Sequent(s.pref, s.ante.patch(pos.getIndex, Nil, 1), s.succ))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -651,6 +640,21 @@ case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends TwoPositionRu
   val name: String = "ExchangeRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, s.ante, s.succ.updated(pos1.getIndex, s.succ(pos2.getIndex)).updated(pos2.getIndex, s.succ(pos1.getIndex))))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
+/**
+ * Exchange left rule reorders antecedent.
+ * {{{
+ * q, p, G |- D
+ * ------------- (Exchange left)
+ * p, q, G |- D
+ * }}}
+ */
+case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRule {
+  val name: String = "ExchangeLeft"
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    immutable.List(Sequent(s.pref, s.ante.updated(pos1.getIndex, s.ante(pos2.getIndex)).updated(pos2.getIndex, s.ante(pos1.getIndex)), s.succ))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -690,7 +694,7 @@ object ContractionLeft {
  * Close / Identity rule
  * {{{
  *        *
- * ------------------ (Close)
+ * ------------------ (Id)
  *   p, G |- p, D
  * }}}
  */
@@ -802,40 +806,6 @@ case class NotLeft(pos: AntePos) extends LeftRule {
 }
 
 /**
- * |R Or right.
- * {{{
- *   G |- D, p,q
- * --------------- (|R Or right)
- *   G |- p|q, D
- * }}}
- */
-case class OrRight(pos: SuccPos) extends RightRule {
-  val name: String = "Or Right"
-  /** |R Or right */
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    val Or(p,q) = s(pos)
-    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p,q))))
-  }
-}
-
-/**
- * |L Or left.
- * {{{
- * p, G |- D     q, G |- D
- * ----------------------- (|L Or left)
- *   p|q, G |- D
- * }}}
- */
-case class OrLeft(pos: AntePos) extends LeftRule {
-  val name: String = "Or Left"
-  /** |L Or left */
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    val Or(p,q) = s(pos)
-    immutable.List(s.updated(pos, p), s.updated(pos, q))
-  }
-}
-
-/**
  * &R And right
  * {{{
  * G |- p, D    G |- q, D
@@ -866,6 +836,40 @@ case class AndLeft(pos: AntePos) extends LeftRule {
   def apply(s: Sequent): immutable.List[Sequent] = {
     val And(p,q) = s(pos)
     immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(p,q), immutable.IndexedSeq())))
+  }
+}
+
+/**
+ * |R Or right.
+ * {{{
+ *   G |- D, p,q
+ * --------------- (|R Or right)
+ *   G |- p|q, D
+ * }}}
+ */
+case class OrRight(pos: SuccPos) extends RightRule {
+  val name: String = "Or Right"
+  /** |R Or right */
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Or(p,q) = s(pos)
+    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p,q))))
+  }
+}
+
+/**
+ * |L Or left.
+ * {{{
+ * p, G |- D     q, G |- D
+ * ----------------------- (|L Or left)
+ *   p|q, G |- D
+ * }}}
+ */
+case class OrLeft(pos: AntePos) extends LeftRule {
+  val name: String = "Or Left"
+  /** |L Or left */
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Or(p,q) = s(pos)
+    immutable.List(s.updated(pos, p), s.updated(pos, q))
   }
 }
 
@@ -1188,12 +1192,13 @@ final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
  * ----------------------- (Skolemize) provided x not in G,D
  * G |- \forall x p(x), D
  * }}}
+ * Skolemize also handles '''existential''' quantifiers on the left.
  * {{{
- *           G, p(x) |- D
+ *           p(x), G |- D
  * ------------------------ (Skolemize) provided x not in G,D
- * G, \exists x p(x) |- D
+ * \exists x p(x), G |- D
  * }}}
- * @note Could replace by uniform substitution rule application mechanism for rule "all generalization"
+ * @note Could in principle replace by uniform substitution rule application mechanism for rule "all generalization"
  * along with tactics expanding scope of quantifier with axiom "all quantifier scope" at the cost of propositional repacking and unpacking.
  *      p(x)
  *  ---------------all generalize
@@ -1333,23 +1338,6 @@ final case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
   */
 
 /**
- * CoHide left.
- * {{{
- *      p |-
- * ------------- (CoHide left)
- *   p, G |- D
- * }}}
- * @derived
- */
-case class CoHideLeft(pos: AntePos) extends LeftRule {
-  val name: String = "CoHideLeft"
-  /** co-weakening left = co-hide left (all but indicated position) */
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos.getIndex)), immutable.IndexedSeq()))
-  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-}
-
-/**
  * CoHide right.
  * {{{
  *     |- p
@@ -1363,6 +1351,24 @@ case class CoHideRight(pos: SuccPos) extends RightRule {
   /** co-weakening right = co-hide right (all but indicated position) */
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(s.succ(pos.getIndex))))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
+/**
+  * CoHide left.
+  * {{{
+  *      p |-
+  * ------------- (CoHide left)
+  *   p, G |- D
+  * }}}
+  * @note Rarely useful (except for contradictory `p`)
+  * @derived
+  */
+case class CoHideLeft(pos: AntePos) extends LeftRule {
+  val name: String = "CoHideLeft"
+  /** co-weakening left = co-hide left (all but indicated position) */
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos.getIndex)), immutable.IndexedSeq()))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -1427,13 +1433,47 @@ case class CutLeft(c: Formula, pos: AntePos) extends Rule {
 }
 
 /**
- * Equivify Right: Convert implication to equivalence.
+ * Commute equivalence right
  * {{{
- * G |- a<->b, D
- * -------------
- * G |- a->b,  D
+ * G |- q<->p, D
+ * ------------- (<->cR)
+ * G |- p<->q, D
  * }}}
+ * @derived
  */
+case class CommuteEquivRight(pos: SuccPos) extends RightRule {
+  val name: String = "c<-> commute equivalence Right"
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Equiv(p,q) = s(pos)
+    immutable.List(s.updated(pos, Equiv(q, p)))
+  }
+}
+
+/**
+  * Commute equivalence left
+  * {{{
+  * q<->p, G |-  D
+  * -------------- (<->cL)
+  * p<->q, G |-  D
+  * }}}
+  * @derived
+  */
+case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
+  val name: String = "c<-> commute equivalence Left"
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Equiv(p,q) = s(pos)
+    immutable.List(s.updated(pos, Equiv(q, p)))
+  }
+}
+
+/**
+  * Equivify Right: Convert implication to equivalence.
+  * {{{
+  * G |- a<->b, D
+  * -------------
+  * G |- a->b,  D
+  * }}}
+  */
 // ->2<-> Equivify Right: Equivalencify Implication Right
 //@derived(cut(a<->b) & prop...)
 case class EquivifyRight(pos: SuccPos) extends RightRule {
@@ -1444,36 +1484,3 @@ case class EquivifyRight(pos: SuccPos) extends RightRule {
   }
 }
 
-/**
- * Commute equivalence left
- * {{{
- * b<->a, G |-  D
- * -------------
- * a<->b, G |-  D
- * }}}
- * @derived
- */
-case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
-  val name: String = "c<-> commute equivalence Left"
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(a,b) = s(pos)
-    immutable.List(s.updated(pos, Equiv(b, a)))
-  }
-}
-
-/**
- * Commute equivalence right
- * {{{
- * G |- b<->a, D
- * -------------
- * G |- a<->b, D
- * }}}
- * @derived
- */
-case class CommuteEquivRight(pos: SuccPos) extends RightRule {
-  val name: String = "c<-> commute equivalence Right"
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(a,b) = s(pos)
-    immutable.List(s.updated(pos, Equiv(b, a)))
-  }
-}

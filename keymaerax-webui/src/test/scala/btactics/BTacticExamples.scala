@@ -171,7 +171,7 @@ class BTacticExamples extends TacticTestBase  {
     import TactixLibrary._
     // |- x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y
     val proof = TactixLibrary.proveBy("x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y".asFormula,
-      CE(TactixLibrary.proveBy("x*(x+1)=x^2+x".asFormula, QE)) (1, 1::0::1::1::Nil) &
+      CEat(TactixLibrary.proveBy("x*(x+1)=x^2+x".asFormula, QE)) (1, 1::0::1::1::Nil) &
         // |- x*(x+1)>=0 -> [y:=0;x:=x*(x+1);]x>=y by CE/CQ using x*(x+1)=x^2+x
         // step uses top-level operator [;]
       stepAt(1, 1::Nil) &
@@ -192,7 +192,7 @@ class BTacticExamples extends TacticTestBase  {
     import TactixLibrary._
     // |- x^2<4 -> [{x'=9*x^2-x&x^2<4}](-2<x&x<2)
     val proof = TactixLibrary.proveBy("x^2<4 -> [{x'=9*x^2-x&x^2<4}](-2<x&x<2)".asFormula,
-      CE(TactixLibrary.proveBy("-2<x&x<2<->x^2<4".asFormula, QE)) (1, 1::0::1::Nil) &
+      CEat(TactixLibrary.proveBy("-2<x&x<2<->x^2<4".asFormula, QE)) (1, 1::0::1::Nil) &
         // |- x^2<4 -> [{x'=9*x^2-x&(-2<x&<2)}](-2<x&x<2) by CE using -2<x&x<2<->x^2<4
         useAt("DW")(1, 1::Nil) &
         // |- x^2<4 -> true by DW
@@ -207,7 +207,7 @@ class BTacticExamples extends TacticTestBase  {
     val C = Context("x<5 & ⎵ -> [{x' = 5*x & ⎵}](⎵ & x>=1)".asFormula)
     // |- x<5 & __x^2<4__ -> [{x' = 5*x & __x^2<4__}](__x^2<4__ & x>=1)
     val proof = TactixLibrary.proveBy("x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1)".asFormula,
-      CE(TactixLibrary.proveBy("-2<x&x<2<->x^2<4".asFormula, QE), C) (1))
+      CEat(TactixLibrary.proveBy("-2<x&x<2<->x^2<4".asFormula, QE), C) (1))
     // |- x<5 & (__-2<x&x<2__) -> [{x' = 5*x & __-2<x&x<2__}]((__-2<x&x<2__) & x>=1) by CE
     proof.subgoals should contain only (
       new Sequent(Nil, IndexedSeq(), IndexedSeq("x<5 & (-2<x&x<2) -> [{x' = 5*x & -2<x&x<2}]((-2<x&x<2) & x>=1)".asFormula))

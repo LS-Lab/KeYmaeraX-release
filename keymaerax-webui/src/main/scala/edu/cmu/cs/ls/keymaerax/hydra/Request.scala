@@ -545,7 +545,7 @@ case class SetAgendaItemNameRequest(db: DBAbstraction, userId: String, proofId: 
 class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
     val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
-    tree.parent(nodeId) match {
+    tree.findNode(nodeId).flatMap(_.parent) match {
       case None => throw new Exception("Tried to get parent of node " + nodeId + " which has no parent")
       case Some(parent) =>
         val response = new ProofTaskParentResponse(parent)
@@ -556,11 +556,12 @@ class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String,
 
 case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
-    var tree: Option[TreeNode] = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId)
+    val tree: ProofTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    var node: Option[TreeNode] = tree.findNode(nodeId)
     var path: List[TreeNode] = Nil
-    while (tree.nonEmpty) {
-      path = tree.get :: path
-      tree = tree.get.parent
+    while (node.nonEmpty) {
+      path = node.get :: path
+      node = node.get.parent
     }
     /* To start with, always send the whole path. */
     val parentsRemaining = 0
@@ -571,7 +572,8 @@ case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String,
 
 case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
-    val node = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).nodes.find({case node => node.id.toString == nodeId})
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+    val node = tree.nodes.find({case node => node.id.toString == nodeId})
     node match {
       case None => throw new Exception("Node not found")
       case Some(node) =>
@@ -736,7 +738,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(fml, pos) match {
-              case Some(step) => what(DerivationInfo.ofCodeName(step))
+              case Some(step) => what(DerivationInfo(step))
               case None => tacticId
             }
           case _ => what(DerivationInfo.ofCodeName(tacticId))
@@ -865,7 +867,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
 
   def getResultingResponses() = {
     val trace = db.getExecutionTrace(proofId.toInt)
-    val tree = ProofTree.ofTrace(trace, includeUndos = true)
+    val tree = ProofTree.ofTrace(trace)
     val prunedSteps = tree.allDescendants(nodeId).flatMap{case node => node.endStep.toList}
     if(prunedSteps.isEmpty) {
       throw new Exception("No steps under node. Nothing to do.")

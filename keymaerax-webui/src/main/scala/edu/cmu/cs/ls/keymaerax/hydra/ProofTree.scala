@@ -1,17 +1,27 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import _root_.edu.cmu.cs.ls.keymaerax.core.Sequent
+import _root_.edu.cmu.cs.ls.keymaerax.core.{ProverException, Sequent}
 
 import scala.collection.immutable.Nil
 
-/**
+/** Represents (one state of) an entire proof.
+  * A ProofTree can contain steps that are inserted automatically by HyDRA for its own purposes (namely undo) in addition
+  * to steps executed by a user
+  * @todo At the moment our handlng of undo's is quite hideous. It would be much cleaner to, most of the time,
+  *  only include nodes in the tree if they're created by a human. The motivation for always-including the undo nodes
+  *  was to get the nodeIds right, but we can always use the undo's to compute the correct nodeId's even if we don't
+  *  actually include them in the tree. This would actually be very close to the previous implementation.
   * Created by bbohrer on 12/29/15.
   */
-case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, leaves: List[AgendaItem]) {
-  def leavesAndRoot = root :: leaves.map({case item => item.goal})
+case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, theLeaves: List[AgendaItem]) {
+  def leaves =
+    theLeaves.map{case item =>
+      // @note Item id and goal id are secretly the same, need to keep them in sync.
+      val realId = findNode(item.id).get.id.toString
+      AgendaItem(item.id, item.name, item.proofId, item.goal.real())
+    }
 
-  def parent(id: String): Option[TreeNode] =
-    nodes.find({case node => node.id.toString == id}).flatMap({case node => node.parent})
+  def leavesAndRoot = root :: leaves.map({case item => item.goal})
 
   def findNode(id: String) = nodes.find({case node =>
     node.id.toString == id})
@@ -44,13 +54,13 @@ object ProofTree {
     }
   }
 
-  def ofTrace(trace:ExecutionTrace, includeUndos:Boolean = false, agendaItems: List[AgendaItemPOJO] = Nil): ProofTree = {
+  def ofTrace(trace:ExecutionTrace, agendaItems: List[AgendaItemPOJO] = Nil): ProofTree = {
     var currentNodeId = 1
 
-    def treeNode(subgoal: Sequent, parent: Option[TreeNode], step:Option[ExecutionStep]): TreeNode = {
+    def treeNode(subgoal: Sequent, parent: Option[TreeNode], step:Option[ExecutionStep], isFake:Boolean = false): TreeNode = {
       val nodeId = currentNodeId
       currentNodeId = currentNodeId + 1
-      TreeNode(nodeId, subgoal, parent, step)
+      TreeNode(nodeId, subgoal, parent, step, isFake)
     }
 
     if (trace.steps.isEmpty) {
@@ -79,12 +89,10 @@ object ProofTree {
           val addedNodes = delta.tail.map({ case sg => treeNode(sg, Some(openGoals(branch)), Some(step)) })
           openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
           allNodes = allNodes ++ (updatedNode :: addedNodes.toList)
-        } else if (step.isUserExecuted || includeUndos) {
-          // User ran a tactic but it had no effect. e.g. running master on a loop.
-          // Only insert a node if the step was user-executed, since we use non-user-executed steps to represent
-          // undos.
+        } else  {
+          val isFake = !step.isUserExecuted
           openGoals(branch).endStep = Some(step)
-          val updatedNode = treeNode(openGoals(branch).sequent, Some(openGoals(branch)), Some(step))
+          val updatedNode = treeNode(openGoals(branch).sequent, Some(openGoals(branch)), Some(step), isFake)
           openGoals = openGoals.updated(branch, updatedNode)
           allNodes = allNodes :+ updatedNode
         }
@@ -99,12 +107,37 @@ object ProofTree {
   }
 }
 
-case class TreeNode (id: Int, sequent: Sequent, parent: Option[TreeNode], startStep:Option[ExecutionStep]) {
-  var children: List[TreeNode] = Nil
+case class TreeNode (id: Int, sequent: Sequent, theParent: Option[TreeNode], startStep:Option[ExecutionStep], var isFake:Boolean = false) {
+  var theChildren: List[TreeNode] = Nil
   var endStep: Option[ExecutionStep] = None
   if (parent.nonEmpty)
-    parent.get.children = this :: parent.get.children
-  def allDescendants:List[TreeNode] = this :: children.flatMap{case child => child.allDescendants}
+    parent.get.theChildren = this :: parent.get.theChildren
+
+  /* Find the non-undo node "closest" to a possibly-undo node.
+   * When taking the parent of a node, keep searching parents until
+   * we find a real node. When taking children, repeatedly take the first
+   * child until finding a real node*/
+  def real(searchUpward:Boolean = false): TreeNode = {
+    if (isFake) {
+      if (searchUpward)
+        theChildren.head.real(searchUpward)
+      else
+        theParent.get.real(searchUpward)
+    }
+    else
+      this
+  }
+
+  def parent: Option[TreeNode] = real().theParent.map(_.real())
+
+  def children = theChildren.flatMap{case child =>
+    try {
+      List(child.real(searchUpward = true))
+    } catch {
+      case _:NoSuchElementException => Nil
+    }}
+
+  def allDescendants:List[TreeNode] = this :: theChildren.flatMap{case child => child.allDescendants}
   def rule:String = { startStep.map{case step => step.rule}.getOrElse("")}
 }
 

@@ -292,8 +292,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var node = sequentProofData.agenda.itemsMap[nodeId];
       var top = node.deduction.sections[0].path[0];
       var topParent = sequentProofData.proofTree.nodesMap[top].parent;
-      sequentProofData.prune($scope.userId, $scope.proofId, nodeId, topParent);
-    }
+      sequentProofData.prune($scope.userId, $scope.proofId, topParent);
+    };
 
     $scope.doTactic = function(formulaId, tacticId) {
       var proofId = $routeParams.proofId;

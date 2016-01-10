@@ -35,7 +35,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *
   *     4. [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.useAt() Proof by pointing]] points out facts and where to use them.
   *
-  *     5. [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.CE() Proof by congruence]] is based on equivalence or equality or implicational rewriting within a context.
+  *     5. [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.CEat() Proof by congruence]] is based on equivalence or equality or implicational rewriting within a context.
   *
   *     6. [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase() Proof by chase]] is based on chasing away operators at an indicated position.
   *
@@ -228,7 +228,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *
   *
   * ===Proof by Congruence===
-  * [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.CE() Proof by congruence]] is based on
+  * [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.CEat() Proof by congruence]] is based on
   * equivalence or equality or implicational rewriting within a context.
   * This proof style can make quite quick inferences leading to significant progress using
   * the CE, CQ, CT congruence proof rules or combinations thereof.
@@ -236,7 +236,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *    import TactixLibrary._
   *    // |- x*(x+1)>=0 -> [y:=0;x:=__x^2+x__;]x>=y
   *    val proof = TactixLibrary.proveBy("x*(x+1)>=0 -> [y:=0;x:=x^2+x;]x>=y".asFormula,
-  *      CE(TactixLibrary.proveBy("x*(x+1)=x^2+x".asFormula, QE)) (1, 1::0::1::1::Nil) &
+  *      CEat(TactixLibrary.proveBy("x*(x+1)=x^2+x".asFormula, QE)) (1, 1::0::1::1::Nil) &
   *      // |- x*(x+1)>=0 -> [y:=0;x:=__x*(x+1)__;]x>=y by CE/CQ using x*(x+1)=x^2+x at the indicated position
   *      // step uses top-level operator [;]
   *      stepAt(1, 1::Nil) &
@@ -256,7 +256,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *   val C = Context("x<5 & ⎵ -> [{x' = 5*x & ⎵}](⎵ & x>=1)".asFormula)
   *   // |- x<5 & __x^2<4__ -> [{x' = 5*x & __x^2<4__}](__x^2<4__ & x>=1)
   *   val proof = TactixLibrary.proveBy("x<5 & x^2<4 -> [{x' = 5*x & x^2<4}](x^2<4 & x>=1)".asFormula,
-  *     CE(TactixLibrary.proveBy("-2<x&x<2<->x^2<4".asFormula, QE), C) (1))
+  *     CEat(TactixLibrary.proveBy("-2<x&x<2<->x^2<4".asFormula, QE), C) (1))
   *   )
   *   // |- x<5 & (__-2<x&x<2__) -> [{x' = 5*x & __-2<x&x<2__}]((__-2<x&x<2__) & x>=1) by CE
   *   println(proof.subgoals)

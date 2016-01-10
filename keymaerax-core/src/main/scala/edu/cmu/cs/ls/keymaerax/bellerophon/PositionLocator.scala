@@ -23,10 +23,10 @@ case class Fixed private[keymaerax] (pos: Position, shape: Option[Formula] = Non
   override def prettyString: String = pos.prettyString
 }
 object Fixed {
-  def apply(seqPos: Int, inExpr: List[Int], shape: Option[Formula], exact: Boolean): Fixed = new Fixed(Position.convertPos(seqPos, inExpr), shape, exact)
-  def apply(seqPos: Int, inExpr: List[Int], shape: Option[Formula]): Fixed = new Fixed(Position.convertPos(seqPos, inExpr), shape)
-  def apply(seqPos: Int, inExpr: List[Int]): Fixed = new Fixed(Position.convertPos(seqPos, inExpr))
-  def apply(seqPos: Int): Fixed = new Fixed(Position.convertPos(seqPos, Nil))
+  def apply(seqPos: Int, inExpr: List[Int], shape: Option[Formula], exact: Boolean): Fixed = new Fixed(Position(seqPos, inExpr), shape, exact)
+  def apply(seqPos: Int, inExpr: List[Int], shape: Option[Formula]): Fixed = new Fixed(Position(seqPos, inExpr), shape)
+  def apply(seqPos: Int, inExpr: List[Int]): Fixed = new Fixed(Position(seqPos, inExpr))
+  def apply(seqPos: Int): Fixed = new Fixed(Position(seqPos, Nil))
 }
 
 /** Locates the first applicable top-level position that matches shape (exactly or unifiably) at or after position `start` (remaining in antecedent/succedent as `start` says). */

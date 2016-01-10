@@ -295,10 +295,10 @@ object DerivationInfo {
       , RuleDisplayInfo(("\u2228R", "|R"), (List("&Gamma;"),List("p\u2228q","&Delta;")), List((List("&Gamma;"),List("p","q","&Delta;"))))
       , {case () => ProofRuleTactics.orR}),
     new PositionTacticInfo("implyR"
-      , RuleDisplayInfo(("\u2192L", "->R"), (List("&Gamma;"),List("p\u2192q", "&Delta;")), List((List("&Gamma;","p"),List("q","&Delta;"))))
+      , RuleDisplayInfo(("\u2192R", "->R"), (List("&Gamma;"),List("p\u2192q", "&Delta;")), List((List("&Gamma;","p"),List("q","&Delta;"))))
       , {case () => ProofRuleTactics.implyR}),
     new PositionTacticInfo("implyL"
-      , RuleDisplayInfo(("\u2192R", "->L"), (List("&Gamma;","p\u2192q"),List("&Delta;")),
+      , RuleDisplayInfo(("\u2192L", "->L"), (List("&Gamma;","p\u2192q"),List("&Delta;")),
         List((List("&Gamma;","p"),List("&Delta;")),
           (List("&Gamma;"),List("q","&Delta;"))))
       , {case () => ProofRuleTactics.implyL}),
@@ -350,7 +350,13 @@ object DerivationInfo {
     new TwoPositionTacticInfo("close", "close", {case () => ProofRuleTactics.close}),
 
     // Proof rule input tactics
-    new InputTacticInfo("cut", "cut", List(FormulaArg("cutFormula")), {case () => (fml:Formula) => ProofRuleTactics.cut(fml)}),
+    new InputTacticInfo("cut"
+      , RuleDisplayInfo(("\u2702","cut")
+        ,(List("&Gamma;"), List("&Delta;"))
+        ,List(
+          (List("&Gamma;"),List("p", "&Delta;")),
+          (List("&Gamma;", "p"), List("&Delta;"))))
+        ,List(FormulaArg("p")), {case () => (fml:Formula) => ProofRuleTactics.cut(fml)}),
     // Proof rule input position tactics
     //@todo Move these DependentPositionTactic wrappers to ProofRuleTactics?
     new InputPositionTacticInfo("cutL", "cut", List(FormulaArg("cutFormula")),
