@@ -119,6 +119,13 @@ object ProofRuleTactics {
     }
   }
 
+  def implyL = new BuiltInLeftTactic("ImplyL") {
+    override def computeAnteResult(provable : Provable, pos: AntePosition) = {
+      requireOneSubgoal(provable)
+      provable(core.ImplyLeft(pos.top), 0)
+    }
+  }
+
   @deprecated("Use ImplyLeft instead.")
   private[btactics] def implyLOld = new BuiltInLeftTactic("ImplyLOld") {
     override def computeAnteResult(provable : Provable, pos: AntePosition) = {
