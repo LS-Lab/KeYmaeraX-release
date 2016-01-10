@@ -389,12 +389,13 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
     s match {
       //update location if we encounter whitespace/comments.
       case comment(theComment) => {
-        val lastLineCol = s.lines.toList.last.length //column of last line.
-        val lineCount = s.lines.length
+        val comment = s.substring(0, theComment.length)
+        val lastLineCol = comment.lines.toList.last.length //column of last line.
+        val lineCount = comment.lines.length
         findNextToken(s.substring(theComment.length), loc match {
           case UnknownLocation => UnknownLocation
-          case Region(sl, sc, el, ec) => Region(sl + lineCount, lastLineCol, el, ec)
-          case SuffixRegion(sl, sc) => SuffixRegion(sl + lineCount, theComment.length)
+          case Region(sl, sc, el, ec) => Region(sl + lineCount - 1, lastLineCol, el, ec)
+          case SuffixRegion(sl, sc) => SuffixRegion(sl + lineCount - 1, theComment.length)
         }, mode)
       }
 
