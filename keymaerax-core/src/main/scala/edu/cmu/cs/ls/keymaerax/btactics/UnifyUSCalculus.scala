@@ -435,7 +435,7 @@ trait UnifyUSCalculus {
           require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
           implyR(SuccPos(0)) &
             by(CMon(ctxP)(Provable.startProof(Sequent(Nil, IndexedSeq(p), IndexedSeq(q))))) &
-            by(inverseImplyR(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(p, q))))))
+            by(implyRi(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(p, q))))))
       }
     }
   }
@@ -977,7 +977,7 @@ trait UnifyUSCalculus {
 
           case Imply(o, DotFormula) =>
             // |- o->k
-            val deduct = inverseImplyR(fact)
+            val deduct = implyRi(fact)
             // o |- k
             val sideUS: Provable = subst.toForward(deduct)
             // subst(o) |- subst(k) by US
@@ -1041,7 +1041,7 @@ trait UnifyUSCalculus {
 
           case Imply(DotFormula, o) =>
             // |- k->o
-            val deduct = inverseImplyR(fact)
+            val deduct = implyRi(fact)
             // k |- o
             val sideUS: Provable = subst.toForward(deduct)
             // subst(k) |- subst(o) by US
@@ -1161,8 +1161,9 @@ trait UnifyUSCalculus {
    *   G, a |- b, D
    * }}}
     * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008. Lemma 7"
-   */
-  private def inverseImplyR: ForwardTactic = pr => {
+    * @see [[PropositionalTactics.implyRi]]
+    */
+  private def implyRi: ForwardTactic = pr => {
     val pos = SuccPos(0)
     val last = AntePos(pr.conclusion.ante.length)
     val Imply(a,b) = pr.conclusion.succ.head
