@@ -834,7 +834,8 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
         case Some(Right(error: BelleError)) => new ErrorResponse("Tactic failed with error: " + error.getMessage, error.getCause)
         case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
       }
-      executor.remove(taskId)
+      //@note may have been cancelled in the meantime
+      executor.tryRemove(taskId)
       response :: Nil
     }
   }
@@ -844,7 +845,7 @@ class StopTaskRequest(db: DBAbstraction, userId: String, proofId: String, nodeId
   def getResultingResponses() = {
     val executor = BellerophonTacticExecutor.defaultExecutor
     //@note may have completed in the meantime
-    executor.synchronized { if (executor.contains(taskId)) executor.remove(taskId, force = true) }
+    executor.tryRemove(taskId, force = true)
     new GenericOKResponse() :: Nil
   }
 }
