@@ -33,7 +33,7 @@ object PropositionalTactics {
       val right = sequent.succ(succPos.getIndex)
       val cutUsePos = AntePos(sequent.ante.length)
       cut(Imply(left, right)) <(
-        /* use */ implyLOld(cutUsePos) & DoAll(TactixLibrary.close),
+        /* use */ implyL(cutUsePos) & DoAll(TactixLibrary.close),
         /* show */ (assertE(right, "")(succPos) & hideR(succPos) & assertE(left, "")(antePos) & hideL(antePos)) partial /* This is the result. */)
     }
   }
@@ -119,7 +119,7 @@ object PropositionalTactics {
       (((notL(-1) & notR(1) & assertT(1, 1) partial)
         | ((andL(-1) & andR(1) <((close | (hideL(-2) partial)) partial, (close | (hideL(-1) partial)) partial) & assertT(1, 1) partial)
         | ((orR(1) & orL(-1) <((close | (hideR(2) partial)) partial, (close | (hideR(1) partial)) partial) & assertT(1, 1) partial)
-        | ((implyR(1) & implyLOld(-1) <((close | (hideR(1) partial)) partial, (close | (hideL(-1) partial)) partial) & assertT(1, 1) partial)
+        | ((implyR(1) & implyL(-1) <((close | (hideR(1) partial)) partial, (close | (hideL(-1) partial)) partial) & assertT(1, 1) partial)
         | ((monb partial)
         | ((mond partial)
         | ((allR(1) & allL(-1) partial)
@@ -142,6 +142,7 @@ object PropositionalTactics {
   def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = new SingleGoalDependentTactic("Modus Ponens") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
+      //@todo adapt implyLOld to implyL
       implyLOld(implication) <(
         cohide2(p, SuccPos(sequent.succ.length)) & close,
         Idioms.ident
