@@ -192,22 +192,18 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
           new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
         }
         catch {
-          case e : FileNotFoundException => {
+          case e : FileNotFoundException =>
             db.updateConfiguration(originalConfig)
             e.printStackTrace()
             new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, false) :: Nil
-          }
-
-          case e : Exception => {
-            new ErrorResponse(e) :: Nil
-          }
+          case e : Exception => new ErrorResponse(e.getMessage, e) :: Nil
         }
 
 
       }
     }
     catch {
-      case e : Exception => new ErrorResponse(e) :: Nil
+      case e : Exception => new ErrorResponse(e.getMessage, e) :: Nil
     }
   }
 }
@@ -292,17 +288,16 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
     try {
       //Return the resulting response.
       KeYmaeraXProblemParser(keyFileContents) match {
-        case f : Formula => {
+        case f : Formula =>
           createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate()).map(x => x.toString)
           new BooleanResponse(createdId.isDefined) :: Nil
-        }
-        case a => new ErrorResponse(new Exception("TODO pass back the parse error.")) :: Nil //TODO-nrf pass back useful parser error messages.
+        case a => new ErrorResponse("TODO pass back the parse error.") :: Nil //TODO-nrf pass back useful parser error messages.
       }
 
 
     }
     catch {
-      case e:Exception => e.printStackTrace(); new ErrorResponse(e) :: Nil
+      case e:Exception => e.printStackTrace(); new ErrorResponse(e.getMessage, e) :: Nil
     }
   }
 }
@@ -506,7 +501,7 @@ case class GetAgendaItemRequest(db: DBAbstraction, userId: String, proofId: Stri
     var currNode:Option[Int] = Some(nodeId.toInt)
     tree.agendaItemForNode(nodeId, possibleItems) match {
       case Some(item) => new GetAgendaItemResponse (item) :: Nil
-      case None => new ErrorResponse(new Exception("No information stored for agenda item " + nodeId)) :: Nil
+      case None => new ErrorResponse("No information stored for agenda item " + nodeId) :: Nil
     }
   }
 }
@@ -811,17 +806,18 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
   def getResultingResponses() = {
     val executor = BellerophonTacticExecutor.defaultExecutor
     executor.synchronized {
-      executor.wait(taskId) match {
-        case Some(Left(BelleProvable(outputProvable, _))) => outputProvable
-        case Some(Right(error: BelleError)) => throw new ProverException("Tactic failed with error: " + error.getMessage, error.getCause)
-        case None => throw new ProverException("Could not get tactic result - execution cancelled? ")
+      val response = executor.wait(taskId) match {
+        case Some(Left(BelleProvable(_, _))) =>
+          val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+          val parentNode = finalTree.findNode(nodeId).get
+          //@todo distinguish between empty parentNode.children due to closed goal or due to no progress (e.g., prop)
+          new TaskResultResponse(parentNode, parentNode.children, progress = true)
+        case Some(Right(error: BelleError)) => new ErrorResponse("Tactic failed with error: " + error.getMessage, error.getCause)
+        case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
       }
       executor.remove(taskId)
+      response :: Nil
     }
-    val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
-    val parentNode = finalTree.findNode(nodeId).get
-    //@todo distinguish between empty parentNode.children due to closed goal or due to no progress (e.g., prop)
-    new TaskResultResponse(parentNode, parentNode.children, progress = true) :: Nil
   }
 }
 
@@ -971,7 +967,7 @@ class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String,
         else {
           throw report.iterator().next().asException()
         }
-      case None          => new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil
+      case None          => new ErrorResponse("Could not find a node associated with these IDs") :: Nil
     }
   }
 }
@@ -1061,7 +1057,7 @@ class GetNodeRequest(db : DBAbstraction, proofId : String, nodeId : Option[Strin
     val node = KeYmaeraInterface.getSubtree(proofId, nodeId, 0, true)
     node match {
       case Some(theNode) => new NodeResponse(theNode) :: Nil
-      case None => new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil
+      case None => new ErrorResponse("Could not find a node associated with these IDs") :: Nil
     }
   }
 }
@@ -1097,7 +1093,7 @@ class RunModelInitializationTacticRequest(db : DBAbstraction, userId : String, m
         new RunCLTermRequest(db, userId, initializedProofId, None, tactic).getResultingResponses();
 
       }
-      case None => new ErrorResponse(new Exception("Could not find an initialization tactic")) :: Nil
+      case None => new ErrorResponse("Could not find an initialization tactic") :: Nil
     }
   }
 }
