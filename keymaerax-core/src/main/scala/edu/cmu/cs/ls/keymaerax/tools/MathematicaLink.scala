@@ -162,11 +162,12 @@ class JLinkMathematicaLink extends MathematicaLink {
 
     mathematicaExecutor.wait(taskId) match {
       case Some(Left(result)) => result
-      case Some(Right(throwable)) => throw new ProverException("Error executing Mathematica query " + cmd, throwable)
+      case Some(Right(throwable)) => throw new ProverException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
       case None =>
         cancel()
         mathematicaExecutor.remove(taskId, force = true)
-        throw new ProverException("Mathematica query " + cmd + " cancelled")
+        if (DEBUG) println("Aborted Mathematica " + checkErrorMsgCmd)
+        throw new ProverException("Aborted Mathematica " + checkErrorMsgCmd)
     }
   }
 
