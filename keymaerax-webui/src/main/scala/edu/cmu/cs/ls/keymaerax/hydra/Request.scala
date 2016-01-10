@@ -15,7 +15,7 @@ import java.util.{Locale, Calendar}
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
-import _root_.edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.btacticinterface.{UIIndex, BTacticParser}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo}
@@ -26,7 +26,6 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 
@@ -291,13 +290,10 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
         case f : Formula =>
           createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate()).map(x => x.toString)
           new BooleanResponse(createdId.isDefined) :: Nil
-        case a => new ErrorResponse("TODO pass back the parse error.") :: Nil //TODO-nrf pass back useful parser error messages.
       }
-
-
-    }
-    catch {
-      case e:Exception => e.printStackTrace(); new ErrorResponse(e.getMessage, e) :: Nil
+    } catch {
+      case e: ParseException => new ParseErrorResponse(e.msg, e.loc, e) :: Nil
+      case e: Exception => new ErrorResponse(e.getMessage, e) :: Nil
     }
   }
 }

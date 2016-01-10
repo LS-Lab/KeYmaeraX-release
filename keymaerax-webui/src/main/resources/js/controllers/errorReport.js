@@ -37,6 +37,19 @@ angular.module('keymaerax.controllers').controller('ErrorAlertCtrl', function($s
   }
 });
 
+angular.module('keymaerax.controllers').controller('ParseErrorCtrl', function($scope, $uibModal, $modalInstance, error, model) {
+  $scope.message = error.textStatus;
+  $scope.location = error.location;
+  $scope.dismiss = function() { $modalInstance.dismiss('OK'); }
+  $scope.modelWithErrorMsg = function() {
+    var lines = $.map(model.split('\n'), function(e, i) { return (i+1) + ': ' + e; });
+    var lineStr = error.location.line + ': ';
+    var inlineErrorMsg = new Array(lineStr.length + error.location.column).join(' ') + '^----' + error.textStatus;
+    lines.splice(error.location.line, 0, inlineErrorMsg);
+    return lines.join('\n');
+  }
+});
+
 angular.module('keymaerax.controllers').controller('ErrorReportCtrl', function($scope, $modalInstance, $http, error) {
   $http.get("/kyxConfig").success(function(data) {
     $scope.kyxConfig = data.kyxConfig;

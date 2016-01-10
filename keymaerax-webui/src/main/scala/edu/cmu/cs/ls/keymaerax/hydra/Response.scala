@@ -14,6 +14,7 @@ import _root_.edu.cmu.cs.ls.keymaerax.api.JSONConverter
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import com.fasterxml.jackson.annotation.JsonValue
+import edu.cmu.cs.ls.keymaerax.parser.Location
 import spray.json._
 import java.io.{PrintWriter, StringWriter, File}
 
@@ -182,6 +183,19 @@ class ErrorResponse(msg: String, exn: Throwable = null) extends Response {
         "errorThrown" -> (if (exn != null) JsString(exn.printStackTrace(writer).toString) else JsString("")),
         "type" -> JsString("error")
       )
+}
+
+class ParseErrorResponse(msg: String, loc: Location, exn: Throwable = null) extends Response {
+  lazy val writer = new PrintWriter(new StringWriter)
+  val json = JsObject(
+    "textStatus" -> JsString(msg),
+    "errorThrown" -> (if (exn != null) JsString(exn.printStackTrace(writer).toString) else JsString("")),
+    "type" -> JsString("error"),
+    "location" -> JsObject(
+      "line" -> JsNumber(loc.line),
+      "column" -> JsNumber(loc.column)
+    )
+  )
 }
 
 class GenericOKResponse() extends Response {
