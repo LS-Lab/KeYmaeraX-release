@@ -149,7 +149,7 @@ object TactixLibrary extends UnifyUSCalculus {
   lazy val orL                : PositionTactic = TacticLibrary.OrLeftT
   /** |R Or right: split a disjunction in the succedent into separate formulas to show alternatively ([[edu.cmu.cs.ls.keymaerax.core.OrRight OrRight]]) */
   lazy val orR                : PositionTactic = TacticLibrary.OrRightT
-  /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch ([[edu.cmu.cs.ls.keymaerax.core.ImplyLeftOld ImplyLeft]]) */
+  /** ->L Imply left: use an implication in the antecedent by proving its left-hand side on one branch and using its right-hand side on the other branch ([[edu.cmu.cs.ls.keymaerax.core.ImplyLeft ImplyLeft]]) */
   lazy val implyL             : PositionTactic = TacticLibrary.ImplyLeftT
   /** ->R Imply right: prove an implication in the succedent by assuming its left-hand side and proving its right-hand side ([[edu.cmu.cs.ls.keymaerax.core.ImplyRight ImplyRight]]) */
   lazy val implyR             : PositionTactic = TacticLibrary.ImplyRightT
