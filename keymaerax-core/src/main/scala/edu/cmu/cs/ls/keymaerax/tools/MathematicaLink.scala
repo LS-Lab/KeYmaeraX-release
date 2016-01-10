@@ -166,7 +166,7 @@ class JLinkMathematicaLink extends MathematicaLink {
       case None =>
         cancel()
         mathematicaExecutor.remove(taskId, force = true)
-        if (DEBUG) println("Aborted Mathematica " + checkErrorMsgCmd)
+        if (DEBUG) println("Initiated aborting Mathematica " + checkErrorMsgCmd)
         throw new ProverException("Aborted Mathematica " + checkErrorMsgCmd)
     }
   }
@@ -184,7 +184,8 @@ class JLinkMathematicaLink extends MathematicaLink {
     ml.waitForAnswer()
     val res = ml.getExpr
     if (res == abortedExpr) {
-      throw new ProverException("Mathematica query aborted")
+      if (DEBUG) println("Aborted Mathematica " + input)
+      throw new ProverException("Aborted Mathematica " + input)
     } else if (res == exceptionExpr) {
       res.dispose()
       // an exception occurred
