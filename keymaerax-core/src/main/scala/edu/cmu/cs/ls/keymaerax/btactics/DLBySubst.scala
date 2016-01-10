@@ -102,7 +102,7 @@ object DLBySubst {
                   foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
             cut(Imply(ctx(qPhi), ctx(b))) <(
-              /* use */ (implyL('Llast) <(hideR(pos.topLevel) partial /* result remains open */ , closeId)) partial,
+              /* use */ (implyLOld('Llast) <(hideR(pos.topLevel) partial /* result remains open */ , closeId)) partial,
               /* show */ cohide('Rlast) & implyR('Rlast) & assertT(1, 1) & implyRi &
               CMon(pos.inExpr) & implyR('_) & //PropositionalTactics.propCMon(pos.inExpr) &
               assertT(1, 1) & assertT(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionb") &
@@ -129,7 +129,7 @@ object DLBySubst {
                   foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
             cut(Imply(qPhi, Box(prg, qPhi))) <(
-              /* use */ (implyL('Llast) <(
+              /* use */ (implyLOld('Llast) <(
                 hideR(pos.topLevel) partial /* result */,
                 cohide2(AntePosition(sequent.ante.length + 1), pos.topLevel) &
                   assertT(1, 1) & assertE(Box(prg, qPhi), "abstractionb: quantified box")('Llast) &

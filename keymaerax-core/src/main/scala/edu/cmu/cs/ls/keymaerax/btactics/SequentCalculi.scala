@@ -153,4 +153,7 @@ trait SequentCalculi {
   lazy val commuteEqual       : DependentPositionTactic = useAt("= commute")
 
 
+  @deprecated("Use implyL instead.")
+  private[btactics] lazy val implyLOld : BuiltInLeftTactic = ProofRuleTactics.implyLOld
+
 }

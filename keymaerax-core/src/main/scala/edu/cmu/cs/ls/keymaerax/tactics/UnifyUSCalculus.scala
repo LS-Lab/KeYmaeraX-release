@@ -814,7 +814,7 @@ trait UnifyUSCalculus {
             else (IndexedSeq(C(left)), IndexedSeq(C(right)))
           (Provable.startProof(Sequent(Nil, ante, succ))
             (ImplyRight(SuccPos(0)), 0)
-            (ImplyLeft(AntePos(0)), 0)
+            (ImplyLeftOld(AntePos(0)), 0)
             (Close(AntePos(0), SuccPos(1)), 0)
             // right branch
             (CoHide2(AntePos(1), SuccPos(0)), 0)
@@ -829,7 +829,7 @@ trait UnifyUSCalculus {
           println("CMon check case: " + C + " to prove " + Sequent(Nil, ante, succ) + "\nfrom " + mon)
           (Provable.startProof(Sequent(Nil, ante, succ))
             (ImplyRight(SuccPos(0)), 0)
-            (ImplyLeft(AntePos(0)), 0)
+            (ImplyLeftOld(AntePos(0)), 0)
             // right branch
             (Close(AntePos(1), SuccPos(0)), 1)
             // left branch

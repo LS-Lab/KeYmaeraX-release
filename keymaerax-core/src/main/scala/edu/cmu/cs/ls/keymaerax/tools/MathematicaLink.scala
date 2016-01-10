@@ -61,7 +61,7 @@ class JLinkMathematicaLink extends MathematicaLink {
   private val TIMEOUT = 10
 
   //@todo really should be private -> fix SpiralGenerator
-  var ml: KernelLink = null
+  private[keymaerax] var ml: KernelLink = null
   private var linkName: String = null
   private var jlinkLibDir: Option[String] = None
 
