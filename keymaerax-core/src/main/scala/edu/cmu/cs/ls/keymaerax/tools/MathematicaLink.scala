@@ -35,13 +35,13 @@ trait MathematicaLink extends QETool with DiffSolutionTool {
   /**
    * @return true if the job is finished, false if it is still running.
    */
-  def ready : Boolean
+  def ready: Boolean
 
   /** Cancels the current request.
    * @return True if job is successfully cancelled, or False if the new
    * status is unknown.
    */
-  def cancel : Boolean
+  def cancel(): Boolean
 
   def toMathematica(expr : KExpr): MExpr =
     KeYmaeraToMathematica.fromKeYmaera(expr)
@@ -60,17 +60,23 @@ class JLinkMathematicaLink extends MathematicaLink {
   private val DEBUG = System.getProperty("DEBUG", "true")=="true"
   private val TIMEOUT = 10
 
+  //@todo really should be private -> fix SpiralGenerator
   var ml: KernelLink = null
+  private var linkName: String = null
+  private var jlinkLibDir: Option[String] = None
 
-  var queryIndex: Long = 0
+  private val mathematicaExecutor: ToolExecutor[(String, KExpr)] = ToolExecutor.defaultExecutor()
 
-  val checkExpr = new MExpr(Expr.SYMBOL, "Check")
-  val exceptionExpr = new MExpr("$Exception")
-  val fetchMessagesCmd = "$MessageList"
-  val listExpr = new MExpr(Expr.SYMBOL, "List")
-  val checkedMessages = (("Reduce", "nsmet") :: ("Reduce", "ratnz") :: Nil).map({ case (s, t) =>
+  private var queryIndex: Long = 0
+
+  private val checkExpr = new MExpr(Expr.SYMBOL, "Check")
+  private val exceptionExpr = new MExpr(Expr.SYMBOL, "$Exception")
+  private val abortedExpr = new MExpr(Expr.SYMBOL, "$Aborted")
+  private val fetchMessagesCmd = "$MessageList"
+  private val listExpr = new MExpr(Expr.SYMBOL, "List")
+  private val checkedMessages = (("Reduce", "nsmet") :: ("Reduce", "ratnz") :: Nil).map({ case (s, t) =>
     new MExpr(new MExpr(Expr.SYMBOL, "MessageName"), Array(new MExpr(Expr.SYMBOL, s), new MExpr(t))) })
-  val checkedMessagesExpr = new MExpr(Expr.SYM_LIST, checkedMessages.toArray)
+  private val checkedMessagesExpr = new MExpr(Expr.SYM_LIST, checkedMessages.toArray)
 
   // HACK assumed to be called before first use of ml
   // TODO replace with constructor and use dependency injection to provide JLinkMathematicaLink whereever needed
@@ -80,6 +86,8 @@ class JLinkMathematicaLink extends MathematicaLink {
    * @return true if initialization was successful
    */
   def init(linkName : String, jlinkLibDir : Option[String]): Boolean = {
+    this.linkName = linkName
+    this.jlinkLibDir = jlinkLibDir
     if(jlinkLibDir.isDefined) {
       System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
     }
@@ -115,6 +123,15 @@ class JLinkMathematicaLink extends MathematicaLink {
     }
   }
 
+  /** Restarts the Mathematica connection */
+  def restart() = {
+    val l: KernelLink = ml
+    ml = null
+    l.terminateKernel()
+    init(linkName, jlinkLibDir)
+    l.close()
+  }
+
   /**
    * Runs the command and then halts program execution until answer is returned.
    */
@@ -132,14 +149,24 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   def run(cmd: MExpr): (String, KExpr) = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
-    ml.synchronized {
-      queryIndex += 1
-      val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(queryIndex), cmd))
-      // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
-      val checkErrorMsgCmd = new MExpr(checkExpr, Array(indexedCmd, exceptionExpr/*, checkedMessagesExpr*/))
-      if (DEBUG) println("Sending to Mathematica " + checkErrorMsgCmd)
+    queryIndex += 1
+    val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(queryIndex), cmd))
+    // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
+    val checkErrorMsgCmd = new MExpr(checkExpr, Array(indexedCmd, exceptionExpr/*, checkedMessagesExpr*/))
+    if (DEBUG) println("Sending to Mathematica " + checkErrorMsgCmd)
+
+    val taskId = mathematicaExecutor.schedule(_ => {
       dispatch(checkErrorMsgCmd.toString)
       getAnswer(indexedCmd.toString, queryIndex)
+    })
+
+    mathematicaExecutor.wait(taskId) match {
+      case Some(Left(result)) => result
+      case Some(Right(throwable)) => throw new ProverException("Error executing Mathematica query " + cmd, throwable)
+      case None =>
+        cancel()
+        mathematicaExecutor.remove(taskId, force = true)
+        throw new ProverException("Mathematica query " + cmd + " cancelled")
     }
   }
 
@@ -155,7 +182,9 @@ class JLinkMathematicaLink extends MathematicaLink {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.waitForAnswer()
     val res = ml.getExpr
-    if (res == exceptionExpr) {
+    if (res == abortedExpr) {
+      throw new ProverException("Mathematica query aborted")
+    } else if (res == exceptionExpr) {
       res.dispose()
       // an exception occurred
       ml.evaluate(fetchMessagesCmd)
@@ -187,7 +216,10 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   def ready = ???
 
-  def cancel = ???
+  def cancel(): Boolean = {
+    ml.abortEvaluation()
+    true
+  }
 
   def qe(f : Formula) : Formula = {
     qeEvidence(f)._1
