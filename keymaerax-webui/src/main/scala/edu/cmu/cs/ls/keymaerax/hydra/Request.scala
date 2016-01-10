@@ -878,14 +878,25 @@ class StopTaskRequest(db: DBAbstraction, userId: String, proofId: String, nodeId
 
 
 class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String) extends Request {
+  /**
+    * Replay [trace] minus the steps specified in [prune]. The crux of the problem is branch renumbering: determining
+    * which branch a kept step (as in not-pruned) will act on once other nodes have been pruned. We compute this by
+    * maintaining at each step which goals were or were not produced by a pruned step. The branch number of an kept
+    * step is the number of kept goals that proceeds its old branch number, with a potential bonus of +1 if the pruned
+    * branch was closed in one of the pruned steps.
+    * @param trace The steps to replay (both pruned and kept steps)
+    * @param pruned ID's of the pruned steps in trace
+    * @return The kept steps of trace with updated branch numbers
+    */
   def prune(trace: ExecutionTrace, pruned:Set[Int]): ExecutionTrace = {
     val tr = trace.steps.filter{case step => step.stepId >= pruned.min}
     val pruneRoot = tr.head
-    val prunedGoals = pruneRoot.input.subgoals.map{case _ => false}
+    val prunedGoals = Array.tabulate(pruneRoot.input.subgoals.length){case i => i == pruneRoot.branch}
     val (_ ,outputSteps) =
       tr.foldLeft((prunedGoals, Nil:List[ExecutionStep])){case ((prunedGoals, acc), step) =>
         val delta = step.output.get.subgoals.length - step.input.subgoals.length
         val branch = step.branch
+        assert(prunedGoals(branch) == pruned.contains(step.stepId), "Pruning algorithm has got its branches confused")
         val updatedGoals =
           if (delta == 0) prunedGoals
           else if (delta == -1) {
@@ -894,13 +905,12 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
             prunedGoals ++ Array.tabulate(delta){case _ => pruned.contains(step.stepId)}
           }
         val outputBranch =
-          prunedGoals.zipWithIndex.count{case(b,i) => i < branch && !b}
-          + (if(step.branch >= pruneRoot.branch) 1 else 0)
-
+          prunedGoals.zipWithIndex.count{case(b,i) => i < branch && !b}  + (if(step.branch >= pruneRoot.branch) 1 else 0)
         if(pruned.contains(step.stepId)) {
           (updatedGoals, acc)
         } else {
-          // @todo double-check that all the args are set to the right values
+          // @todo This is a messy mix of the old trace (ID, Provables) and new trace (branch numbers). Perhaps add a new
+          // data structure to avoid the messiness.
           (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder, step.rule, step.isUserExecuted) :: acc)
         }
       }
