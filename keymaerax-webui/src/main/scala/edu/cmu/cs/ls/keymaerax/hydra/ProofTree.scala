@@ -85,7 +85,9 @@ object ProofTree {
         openGoals = openGoals.slice(0, branch) ++ openGoals.slice(branch + 1, openGoals.length)
       } else {
         val delta =
-          outputProvable.subgoals.filter({case sg => !openGoals.exists({case node => node.sequent == sg})})
+          outputProvable.subgoals
+            .zipWithIndex.filter({case (sg,i) => i >= openGoals.length || openGoals(i).sequent != sg})
+            .map(_._1)
         if (delta.nonEmpty) {
           val updatedNode = treeNode(delta.head, Some(openGoals(branch)), Some(step))
           val addedNodes = delta.tail.map({ case sg => treeNode(sg, Some(openGoals(branch)), Some(step)) })
