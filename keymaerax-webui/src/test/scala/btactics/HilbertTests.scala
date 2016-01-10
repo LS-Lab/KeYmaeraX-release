@@ -424,7 +424,7 @@ class HilbertTests extends TacticTestBase {
           }
         } catch {
           case e: ProverException => if (e.toString.startsWith("No monotone context")) println("context discarded") else throw e
-          case e: IllegalArgumentException => println("Requirement not met: " + e)
+          //case e: IllegalArgumentException if e.getMessage.startsWith("requirement failed:") => println("Requirement not met: " + e)
           case e: InterruptedException =>
         }
       }
