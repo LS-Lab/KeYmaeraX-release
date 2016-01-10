@@ -122,7 +122,7 @@ object ProofRuleTactics {
   def implyL = new BuiltInLeftTactic("ImplyL") {
     override def computeAnteResult(provable : Provable, pos: AntePosition) = {
       requireOneSubgoal(provable)
-      provable(core.ImplyLeft(pos.top), 0)
+      provable(core.ImplyLeftOld(pos.top), 0)
     }
   }
 
