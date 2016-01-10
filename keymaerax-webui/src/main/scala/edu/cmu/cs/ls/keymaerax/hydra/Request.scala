@@ -27,7 +27,7 @@ import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools.Mathematica
+import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Mathematica}
 
 import scala.collection.immutable
 import scala.io.Source
@@ -100,6 +100,31 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
     val provedModelsCount: Int = db.getModelList(userId).count(m => db.getProofsForModel(m.modelId).exists(_.closed))
 
     new DashInfoResponse(openProofCount, allModelsCount, provedModelsCount) :: Nil
+  }
+}
+
+class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    val trace = db.getExecutionTrace(proofId.toInt)
+    val tree = ProofTree.ofTrace(trace)
+    val node =
+      tree.findNode(nodeId) match {
+        case None => throw new ProverException("Invalid node " + nodeId)
+        case Some(n) => n
+      }
+    //@note not a tactic because we don't want to change the proof tree just by looking for counterexamples
+    val fml = Imply(
+      (node.sequent.ante ++ (True::True::Nil)).reduce(And),
+      (node.sequent.succ ++ (False::False::Nil)).reduce(Or))
+    try {
+      TactixLibrary.tool.findCounterExample(fml) match {
+        //@todo return actual sequent, use collapsiblesequentview to display counterexample
+        case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
+        case None => new CounterExampleResponse("cex.none") :: Nil
+      }
+    } catch {
+      case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
+    }
   }
 }
 

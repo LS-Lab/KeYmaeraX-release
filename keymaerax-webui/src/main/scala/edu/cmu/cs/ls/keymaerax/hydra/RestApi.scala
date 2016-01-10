@@ -386,15 +386,14 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  //@todo port CounterExampleRequest
-//  val counterExample = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "counterExample") { (userId, proofId, nodeId) => {
-//    pathEnd {
-//      get {
-//        val request = new CounterExampleRequest(database, userId, proofId, nodeId)
-//        complete(standardCompletion(request))
-//      }
-//    }}
-//  }
+  val counterExample = path("proofs" / "user" / Segment / Segment / Segment / "counterExample") { (userId, proofId, nodeId) => {
+    pathEnd {
+      get {
+        val request = new CounterExampleRequest(database, userId, proofId, nodeId)
+        complete(standardCompletion(request))
+      }
+    }}
+  }
 
   val kyxConfig = path("kyxConfig") {
     pathEnd {
@@ -634,6 +633,7 @@ trait RestApi extends HttpService {
     taskStatus            ::
     taskResult            ::
     stopTask              ::
+    counterExample        ::
     pruneBelow            ::
     proofTask             ::
     nodeFormulaTactics    ::

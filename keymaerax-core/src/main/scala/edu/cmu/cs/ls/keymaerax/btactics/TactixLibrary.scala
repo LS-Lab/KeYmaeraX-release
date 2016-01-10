@@ -223,11 +223,6 @@ object TactixLibrary extends HilbertCalculi with SequentCalculi {
   def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)
   def QE: BelleExpr = QE()
 
-  // counter example
-
-  /** Generate counter example */
-//  lazy val counterEx         : Tactic         = TacticLibrary.counterExampleT
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

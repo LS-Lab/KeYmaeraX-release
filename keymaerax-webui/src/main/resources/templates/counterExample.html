@@ -1,0 +1,39 @@
+<div class="modal-header">
+    <h3 class="modal-title">Counter-example search result</h3>
+</div>
+<div ng-if="result === 'cex.found'" class="modal-body">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title">Formula</h4>
+        </div>
+        <div class="panel-body">{{origFormula}}</div>
+    </div>
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title"><i class="fa fa-exclamation-circle"></i> Formula not valid, found a counter-example</h4>
+        </div>
+        <div class="panel-body">{{cexFormula}}</div>
+    </div>
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title">Counter-example values</h4>
+        </div>
+        <div class="panel-body">
+            <dl class="dl-horizontal">
+                <dt ng-repeat-start="cex in cexValues">{{cex.symbol}}</dt>
+                <dd ng-repeat-end>{{cex.value}}</dd>
+            </dl>
+        </div>
+    </div>
+</div>
+<div ng-if="result === 'cex.none'" class="modal-body" style="overflow: scroll; width: auto; height: 100px;">
+    No counter-example found, formula seems valid
+</div>
+<div ng-if="result === 'cex.timeout'" class="modal-body" style="overflow: scroll; width: auto; height: 100px;">
+    Sorry, no counter-example found before search timeout expired
+</div>
+<div class="modal-footer">
+    <button class="btn btn-primary" ng-click="cancel()">Ok</button>
+</div>
