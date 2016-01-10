@@ -97,9 +97,11 @@ object FOQuantifierTactics {
           case f => throw new BelleError("All skolemize expects universal quantifier at position " + pos + ", but got " + f)
         }
         val namePairs = xs.map(x => (x, TacticHelper.freshNamedSymbol(x, sequent)))
+        // rename bound variable in \forall x p(x) quantifier to fresh \forall x_0 p(x_0)
         val renaming =
           if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.boundRenaming(np._1, np._2)).reduce[BelleExpr](_ & _)
           else {assert(namePairs.size == 1); ProofRuleTactics.boundRenaming(namePairs.head._1, namePairs.head._2)}
+        // uniformly rename variable x to x_0 and simultaneously x_0 to x, effectively swapping \forall x_0 p(x_0) back to \forall x p(x) but renaming all outside occurrences of x in context to x_0.
         val backrenaming =
           if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRenaming(np._2, np._1)).reduce[BelleExpr](_ & _)
           else {assert(namePairs.size == 1); ProofRuleTactics.uniformRenaming(namePairs.head._2, namePairs.head._1)}

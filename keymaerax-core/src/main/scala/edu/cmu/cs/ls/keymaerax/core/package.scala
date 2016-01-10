@@ -106,7 +106,7 @@ package edu.cmu.cs.ls.keymaerax
  *
  * ==Theorem Prover==
  * The KeYmaera X Prover Kernel provides [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule uniform substitutions]],
- * [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming bound variable renaming]], and
+ * [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming uniform]] and [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming bound variable renaming]], and
  * [[edu.cmu.cs.ls.keymaerax.core.Axiom axioms]] of differential dynamic logic.
  * For efficiency, it also directly provides propositional sequent proof rules and
  * [[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemization]].
