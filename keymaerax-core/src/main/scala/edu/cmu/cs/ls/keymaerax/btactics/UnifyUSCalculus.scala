@@ -84,6 +84,8 @@ trait UnifyUSCalculus {
   def useAt(axiom: String, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
   def useAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1)
 
+  // prove by providing a fact
+
   /** by(provable) is a pseudo-tactic that uses the given Provable to continue or close the proof (if it fits to what has been proved) */
   //@todo auto-weaken as needed (maybe even exchangeleft)
   def by(fact: Provable)  : BuiltInTactic = new BuiltInTactic("by") {
@@ -95,11 +97,12 @@ trait UnifyUSCalculus {
   }//new ByProvable(provable)
   /** by(lemma) is a pseudo-tactic that uses the given Lemma to continue or close the proof (if it fits to what has been proved) */
   def by(lemma: Lemma)        : BelleExpr = by(lemma.fact)
-  /** byUS(provable) proves by a uniform substitution instance of provable, obtained by unification */
+  /** byUS(provable) proves by a uniform substitution instance of provable, obtained by unification.
+    * @see [[UnifyUSCalculus.US()]] */
   def byUS(provable: Provable): BelleExpr = US(provable.conclusion) & by(provable)
-  /** byUS(lemma) proves by a uniform substitution instance of lemma */
+  /** byUS(lemma) proves by a uniform substitution instance of lemma. */
   def byUS(lemma: Lemma)      : BelleExpr  = byUS(lemma.fact)
-  /** byUS(axiom) proves by a uniform substitution instance of axiom */
+  /** byUS(axiom) proves by a uniform substitution instance of axiom or derived axiom. */
   def byUS(axiom: String)     : BelleExpr = byUS(AxiomInfo(axiom).provable)
 
   /*******************************************************************
@@ -118,6 +121,7 @@ trait UnifyUSCalculus {
    *
    * @author Andre Platzer
    * @param form the sequent to reduce this proof node to by a Uniform Substitution
+   * @see [[byUS()]]
    */
   def US(form: Sequent): DependentTactic = new SingleGoalDependentTactic("US") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -327,7 +331,7 @@ trait UnifyUSCalculus {
 
   /**
    * CQ(pos) at the indicated position within an equivalence reduces contextual equivalence `p(left)<->p(right)` to argument equality `left=right`.
-   * This tactic will use [[CE()]] under the hood as needed.
+   * This tactic will use [[CEat()]] under the hood as needed.
    * {{{
    *        f(x) = g(x)
    *   --------------------- CQ
@@ -380,7 +384,7 @@ trait UnifyUSCalculus {
    * @see [[UnifyUSCalculus.CE(Context)]]
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
-   * @see [[UnifyUSCalculus.CE(Provable)]]
+   * @see [[UnifyUSCalculus.CEat(Provable)]]
    * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
    * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
    */
@@ -419,6 +423,7 @@ trait UnifyUSCalculus {
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(Context)]]
+    * @see [[UnifyUSCalculus.CEat())]]
    */
   def CMon(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CMon congruence") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -435,23 +440,23 @@ trait UnifyUSCalculus {
     }
   }
 
-  /** CE(fact) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
+  /** CEat(fact) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
     * reasoning at the indicated position to replace `right` by `left` at indicated position (literally, no substitution).
     * Efficient unification-free version of [[UnifyUSCalculus#useAt(Provable, PosInExpr):PositionTactic]]
     * {{{
     *                          fact
     *   G |- C{q(x)}, D    p(x) <-> q(x)
-    *   -------------------------------- CE(fact)
+    *   -------------------------------- CER(fact)
     *   G |- C{p(x)}, D
     * }}}
     * Similarly for antecedents or equality facts or implication facts, e.g.:
     * {{{
     *                          fact
     *   C{q(x)}, G |- D    p(x) <-> q(x)
-    *   -------------------------------- CE(fact)
+    *   -------------------------------- CEL(fact)
     *   C{p(x)}, G |- D
     * }}}
-    * @see [[UnifyUSCalculus.CE(Provable,Context)]]
+    * @see [[UnifyUSCalculus.CEat(Provable,Context)]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
@@ -459,7 +464,7 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
     * @example `CE(fact)` is equivalent to `CE(fact, Context("⎵".asFormula))``
     */
-  def CE(fact: Provable): DependentPositionTactic = new DependentPositionTactic("CE(Provable)") {
+  def CEat(fact: Provable): DependentPositionTactic = new DependentPositionTactic("CE(Provable)") {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
 
     def splitFact: (Expression, Expression, BelleExpr, (PosInExpr=>BelleExpr)) = fact.conclusion.succ.head match {
@@ -484,9 +489,9 @@ trait UnifyUSCalculus {
     }
   }
 
-  /** CE(fact,C) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
+  /** CEat(fact,C) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
     * reasoning in the given context C at the indicated position to replace `right` by `left` in that context (literally, no substitution).
-    * @see [[UnifyUSCalculus.CE(Provable)]]
+    * @see [[UnifyUSCalculus.CEat(Provable)]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
@@ -496,7 +501,7 @@ trait UnifyUSCalculus {
     * @example `CE(fact, Context("x>0&⎵".asFormula))(p)` is equivalent to `CE(fact)(p+PosInExpr(1::Nil))`.
     *          Except that the former has the shape `x>0&⎵` for the context starting from position `p`.
     */
-  def CE(fact: Provable, C: Context[Formula]): DependentPositionTactic = new DependentPositionTactic("CE(Provable,Context)") {
+  def CEat(fact: Provable, C: Context[Formula]): DependentPositionTactic = new DependentPositionTactic("CE(Provable,Context)") {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
 
     def splitFact: (Expression, Expression, BelleExpr, (Context[Formula]=>ForwardTactic)) = fact.conclusion.succ.head match {
@@ -536,7 +541,7 @@ trait UnifyUSCalculus {
     *   --------------------------------------- cutAt(repl)
     *   C{c}, G |- D
     * }}}
-    * @see [[UnifyUSCalculus.CE(Provable)]]
+    * @see [[UnifyUSCalculus.CEat(Provable)]]
     */
   def cutAt(repl: Expression): DependentPositionTactic = new DependentPositionTactic("cutAt") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -587,7 +592,7 @@ trait UnifyUSCalculus {
     *    c(f(x)) <-> c(g(x))
     * }}}
     * @see [[CE(PosInExpr]]
-    * @see [[CE(Provable)]]
+    * @see [[CEat(Provable)]]
     * @see [[CMon(Context)]]
     * @todo likewise for Context[Term] using CT instead.
     */
@@ -1140,6 +1145,7 @@ trait UnifyUSCalculus {
   }
 
   /**
+   * Inverse of imply-right rule, which is admissible since invertible.
    * {{{
    *   G |- a -> b, D
    * ----------------
@@ -1237,7 +1243,7 @@ trait UnifyUSCalculus {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         if (sequent.sub(pos).isEmpty) throw new BelleError("ill-positioned " + pos + " in " + sequent + "\nin " +
           "chase\n(" + sequent + ")")
-        CE(chaseProof(sequent.sub(pos).get))(pos)
+        CEat(chaseProof(sequent.sub(pos).get))(pos)
       }
 
       /** Construct a proof proving the answer of the chase of e, so either of e=chased(e) or e<->chased(e) */

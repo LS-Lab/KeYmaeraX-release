@@ -343,7 +343,7 @@ object DifferentialTactics {
           if (OPTIMIZED) {
             if (DEBUG) println("Dvariable " + keyPart + " on " + x)
             val fact = UnificationMatch.apply(keyPart, Differential(x)).toForward(axiom.provable)
-            CE(fact)(pos)
+            CEat(fact)(pos)
           } else {
             val withxprime: Formula = sequent.replaceAt(pos, DifferentialSymbol(x)).asInstanceOf[Formula]
             val axiom = s"\\forall ${x.prettyString} (${x.prettyString})' = ${x.prettyString}'".asFormula

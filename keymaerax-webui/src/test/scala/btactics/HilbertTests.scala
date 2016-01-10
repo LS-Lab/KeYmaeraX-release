@@ -27,7 +27,7 @@ class HilbertTests extends TacticTestBase {
 
   object TestLib extends UnifyUSCalculus
 
-  import TestLib.{CE, CMon, useAt, useFor}
+  import TestLib.{CEat, CMon, useAt, useFor}
 
   val randomTrials = 10
   val randomComplexity = 3
@@ -431,11 +431,11 @@ class HilbertTests extends TacticTestBase {
   lazy val basicEquiv = TactixLibrary.proveBy("-2<x&x<2 <-> x^2<4".asFormula, TactixLibrary.QE)
 
   private def shouldReduceTo(input: Formula, pos: Int, inExpr: PosInExpr, result: Formula, fact: Provable = basicEq): Unit =
-    proveBy(input, CE(fact)(pos, inExpr.pos)).subgoals should contain only
+    proveBy(input, CEat(fact)(pos, inExpr.pos)).subgoals should contain only
       new Sequent(Nil, IndexedSeq(), IndexedSeq(result))
 
   private def shouldReduceTo(input: Formula, pos: Int, inExpr: PosInExpr, result: Formula, fact: Provable, C: Context[Formula]): Unit =
-    proveBy(input, CE(fact, C)(pos, inExpr.pos)).subgoals should contain only
+    proveBy(input, CEat(fact, C)(pos, inExpr.pos)).subgoals should contain only
       new Sequent(Nil, IndexedSeq(), IndexedSeq(result))
 
   "CE(Provable) equation magic" should "reduce 0*x+1<=3 to 1<=3" in withMathematica { implicit qeTool =>
