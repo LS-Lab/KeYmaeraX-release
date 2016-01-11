@@ -32,32 +32,22 @@ object FOQuantifierTactics {
           case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
             require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity")
             def forall(h: Formula) = if (vars.length > 1) Forall(vars.filter(_ != vToInst(vars)), h) else h
-            // cut in p(t) from axiom: \forall x. p(x) -> p(t)
+            // cut in [x:=x;]p(t) from axiom: \forall x. p(x) -> p(t)
             val x = vToInst(vars)
             val t = inst(vars)
-            val p = forall(SubstitutionHelper.replaceFree(qf)(x, t))
+            val p = forall(qf)
 
             val subst = USubst(
-              SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), forall(SubstitutionHelper.replaceFree(qf)(x, DotTerm))) ::
+              SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), forall(Box(Assign(x, DotTerm), qf))) ::
               SubstitutionPair("t()".asTerm, t) :: Nil)
             val orig = Sequent(Nil, immutable.IndexedSeq(),
               immutable.IndexedSeq(s"(\\forall ${x.prettyString} p(${x.prettyString})) -> p(t())".asFormula))
 
-            val axiomInstance = if (pos.isAnte) Imply(ctx(f), ctx(p)) else ctx(p)
-            if (pos.isAnte) {
-              ProofRuleTactics.cut(axiomInstance) <(
-                //@todo implicit conversion: pos.top is different from using it in context. Clarify
-                (modusPonens(pos.checkAnte.top, AntePos(sequent.ante.length)) & hideL(pos.topLevel)) partial,
-                cohide('Rlast) & CMon(pos.inExpr) & US(subst, orig) & byUS("all instantiate")
-                )
-            } else {
-              ProofRuleTactics.cut(axiomInstance) <(
-                cohide2(AntePosition(sequent.ante.length + 1), pos.topLevel) &
-                  TactixLibrary.by(CMon(ctx)(Provable.startProof(Sequent(Nil, immutable.IndexedSeq(f), immutable.IndexedSeq(p))))) &
-                  implyRi & US(subst, orig) & byUS("all instantiate"),
-                hideR(pos.topLevel) partial
-                )
-            }
+            DLBySubst.selfAssign(x)(pos + PosInExpr(0::Nil)) &
+            ProofRuleTactics.cutLR(ctx(Box(Assign(x, t), p)))(pos.topLevel) <(
+              assignb(pos) partial,
+              cohide('Rlast) & CMon(pos.inExpr) & US(subst, orig) & byUS("all instantiate")
+              )
           case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
             throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
           case (_, f) =>
