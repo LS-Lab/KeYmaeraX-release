@@ -433,7 +433,10 @@ trait UnifyUSCalculus {
           val (ctxP, p: Formula) = l.at(inEqPos)
           val (ctxQ, q: Formula) = r.at(inEqPos)
           require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
-          implyR(SuccPos(0)) &
+          if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)) &
+            by(CMon(ctxP)(Provable.startProof(Sequent(Nil, IndexedSeq(q), IndexedSeq(p))))) &
+            by(inverseImplyR(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(q, p))))))
+          else implyR(SuccPos(0)) &
             by(CMon(ctxP)(Provable.startProof(Sequent(Nil, IndexedSeq(p), IndexedSeq(q))))) &
             by(inverseImplyR(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(p, q))))))
       }
