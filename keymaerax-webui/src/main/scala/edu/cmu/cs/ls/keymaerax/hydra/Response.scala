@@ -500,10 +500,15 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends R
     }
   }
 
-  def axiomJson(info:AxiomInfo):JsValue = {
+  def axiomJson(info:DerivationInfo):JsValue = {
+    val formulaText =
+      (info, info.display) match {
+        case (_, AxiomDisplayInfo(_, formulaDisplay)) => formulaDisplay
+        case (info:AxiomInfo, _) => info.formula.prettyString
+      }
     JsObject (
     "type" -> JsString("axiom"),
-    "formula" -> JsString(info.formula.prettyString)
+    "formula" -> JsString(formulaText)
     )
   }
 
@@ -547,6 +552,7 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends R
         case info:TacticInfo =>
           info.display match {
             case _: SimpleDisplayInfo => tacticJson(info)
+            case display : AxiomDisplayInfo => axiomJson(info)
             case RuleDisplayInfo(_, conclusion, premises) =>
               ruleJson(info, conclusion, premises)
           }
