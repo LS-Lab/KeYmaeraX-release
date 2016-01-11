@@ -286,6 +286,7 @@ object ProofRuleTactics {
     if (pos.isTopLevel)
       topBoundRenaming(what,repl)(pos)
     else {
+      //@note contextualize
         // [x:=f(x)]P(x)
         import Augmentors.SequentAugmentor
         val fml = sequent.apply(pos).asInstanceOf[Formula]
@@ -318,7 +319,53 @@ object ProofRuleTactics {
     }
   }
 
-      def skolemize = new BuiltInPositionTactic("Skolemize") {
+  /** contextualize(t) lifts (standard) top-level tactic `t` to also work on subpositions in any formula context C{_}.
+    * @param tactic the tactic to be lifted, which is required to
+    *               work on top-level left and right
+    *               and only leave a single goal with one single formula changed.
+    * @author Andre Platzer
+    * @note Implementation analogous to [[ProofRuleTactics.boundRenaming()]]
+    */
+  def contextualize[T <: BelleExpr](tactic: AtPosition[T], predictor: Formula=>Formula): DependentPositionTactic = "contextualize(" + tactic.prettyString + ")" by ((pos:Position, sequent:Sequent) =>
+    if (pos.isTopLevel)
+      tactic(pos)
+    else {
+      //@note contextualize
+      import Augmentors.SequentAugmentor
+      val fml: Formula = sequent.apply(pos).asInstanceOf[Formula]
+      val mod: Formula = predictor(fml)
+      // |- mod <-> fml
+      val side: Provable = TactixLibrary.proveBy(Equiv(mod, fml),
+        // |- mod <-> fml
+        equivR(1) <(
+          // left branch  mod |- fml
+          tactic(1) &
+            // mod |- mod
+            close(-1, 1)
+          ,
+          // right branch  fml |- mod
+          tactic(-1) &
+          // mod |- mod
+          close(-1,1)
+        )
+      )
+      if (true /*DEBUG*/) println("contextualize.side " + side)
+      TactixLibrary.CEat(side)(pos)
+    })
+
+  def contextualize[T <: BelleExpr](tactic: AtPosition[T]): DependentPositionTactic =
+    contextualize(tactic, (fml:Formula) => {
+      def shapeCheck(pr: Provable): Provable = {
+        require(pr.subgoals.length==1, "one subgoal only")
+        require(pr.subgoals.head.ante.isEmpty, "no antecedent")
+        require(pr.subgoals.head.succ.length==1, "one subformula in succedent only")
+        pr
+      }
+      shapeCheck(TactixLibrary.proveBy(fml, tactic(1))).subgoals.head.succ.head
+    })
+
+
+  def skolemize = new BuiltInPositionTactic("Skolemize") {
     override def computeResult(provable: Provable, pos: Position): Provable = {
       requireOneSubgoal(provable)
       require(pos.isTopLevel, "Skolemization only at top-level")
