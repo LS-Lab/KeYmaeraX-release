@@ -86,6 +86,20 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "y>2 & z<0 -> y>0".asFormula
   }
 
+  it should "weaken if ODE afterwards" in {
+    val result = proveBy("[{x'=1}][{x'=2}]x>0".asFormula, diffWeaken(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "true -> [{x'=2}]x>0".asFormula
+  }
+
+  it should "retain context" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("A>0&A>1".asFormula, "B=1".asFormula, "C=2&D=3".asFormula, "x=4".asFormula), IndexedSeq("[{x'=1&x>0}]x>0".asFormula)), diffWeaken(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("A>0&A>1".asFormula, "B=1".asFormula, "C=2&D=3".asFormula)
+    result.subgoals.head.succ should contain only "x>0 -> x>0".asFormula
+  }
+
   "Differential effect" should "introduce a differential assignment" in {
     val result = proveBy("[{x'=5 & x>2}]x>0".asFormula, DE(1))
     result.subgoals should have size 1
@@ -611,5 +625,30 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x_0>0 & v_0>=0 & a>0".asFormula
     result.subgoals.head.succ should contain only "((true&t>=t_0)&v=a*(t-t_0)+v_0)&x=1/2*(a*(t-t_0)^2+2*(t-t_0)*v_0+2*x_0) -> x>0".asFormula
+  }
+
+  //@todo
+  ignore should "solve the simplest of all ODEs" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1}]x>0".asFormula)), diffSolve()(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x_0>0".asFormula, "t_0=0".asFormula)
+    result.subgoals.head.succ should contain only "x=x_0+1*(t-t_0) -> x>0".asFormula
+  }
+
+  it should "solve simple nested ODEs" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}]x>0".asFormula)), diffSolve()(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x_0>0".asFormula, "t_0=0".asFormula)
+    result.subgoals.head.succ should contain only "(true&t>=0)&x=2*t+x_0 -> [{x'=3}]x>0".asFormula
+  }
+
+  it should "solve complicated nested ODEs" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil,
+        IndexedSeq("v=0 & x<s & 0<T".asFormula, "t=0".asFormula, "a_0=(s-x)/T2".asFormula),
+        IndexedSeq("[{x'=v,v'=a_0,t'=1&v>=0&t<=T}](t>0->\\forall a (a = (v^2/(2 *(s - x)))->[{x'=v,v'=-a,t'=1 & v>=0}](x + v^2/(2*a) <= s & (x + v^2/(2*a)) >= s)))".asFormula)),
+      diffSolve()(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("v_0=0 & x_0<s & 0<T".asFormula, "t_0=0".asFormula, "a_0=(s-x_0)/T2".asFormula)
+    result.subgoals.head.succ should contain only "(((v>=0&t<=T)&t>=t_0)&v=a_0*(t-t_0)+v_0)&x=1/2*(a_0*(t-t_0)^2+2*(t-t_0)*v_0+2*x_0)->t>0->\\forall a (a=v^2/(2*(s-x))->[{x'=v,v'=-a,t'=1&v>=0}](x+v^2/(2*a)<=s&x+v^2/(2*a)>=s))".asFormula
   }
 }
