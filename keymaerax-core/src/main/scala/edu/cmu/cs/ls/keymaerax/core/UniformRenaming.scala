@@ -57,6 +57,9 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
     ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")*/
 
   /** apply this uniform renaming everywhere in a program */
+  def apply(p: DifferentialProgram): DifferentialProgram = try renameODE(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
+
+  /** apply this uniform renaming everywhere in a program */
   def apply(p: Program): Program = try rename(p) catch { case ex: ProverException => throw ex.inContext(p.prettyString) }
   /* ensuring(r => StaticSemantics.symbols(p).intersect(taboo).isEmpty, "Renamed only to new names that do not occur yet " + repl + " cannot occur in " + p
     ) ensuring(r => repl==what || StaticSemantics.symbols(r).intersect(affected).isEmpty, "Uniform Renaming replaced all occurrences (except when identity renaming)")*/
@@ -72,7 +75,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   /** Rename a variable (that occurs in the given context for error reporting purposes) */
   private def renameVar(x: Variable, context: Expression): Variable = if (x==what) repl
-  else if (x==repl) what // throw new BoundRenamingClashException("Replacement name " + repl + " already occurs originally", context.toString)
+  else if (x==repl) what   // throw new RenamingClashException("Replacement name " + repl + " already occurs originally", this.toString, x.toString, context.toString)
   else x
 
 
@@ -98,8 +101,8 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   private def rename(formula: Formula): Formula = formula match {
     case PredOf(p, theta)   => PredOf(p, rename(theta))
-    case PredicationalOf(c, fml) => throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
-    case DotFormula         => if (semanticRenaming) DotFormula else throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, toString)
+    case PredicationalOf(c, fml) => throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
+    case DotFormula         => if (semanticRenaming) DotFormula else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: Predicational " + formula, this.toString, formula.toString)
     case True | False       => formula
 
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
@@ -132,12 +135,14 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   }
 
   private def rename(program: Program): Program = program match {
-    case a: ProgramConst             => if (semanticRenaming) a else throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, toString)
+    case a: ProgramConst             => if (semanticRenaming) a else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: ProgramConstant " + a, this.toString, program.toString)
     case Assign(x, e)                => Assign(renameVar(x,program), rename(e))
     case DiffAssign(DifferentialSymbol(x), e) => DiffAssign(DifferentialSymbol(renameVar(x,program)), rename(e))
     case AssignAny(x)                => AssignAny(renameVar(x,program))
     case Test(f)                     => Test(rename(f))
     case ODESystem(a, h)             => ODESystem(renameODE(a), rename(h))
+    //@note This case happens for standalone uniform substitutions on differential programs such as x'=f() or c as they come up in unification for example.
+    case ode: DifferentialProgram    => renameODE(ode)
     //@note the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
     // case f:BinaryCompositeProgram => f.reapply(rename(f.left), rename(f.right))
     case Choice(a, b)                => Choice(rename(a), rename(b))
@@ -148,7 +153,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   private def renameODE(ode: DifferentialProgram): DifferentialProgram = ode match {
     case AtomicODE(DifferentialSymbol(x), e) => AtomicODE(DifferentialSymbol(renameVar(x,ode)), rename(e))
-    case c: DifferentialProgramConst => if (semanticRenaming) c else throw new BoundRenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, toString)      // homomorphic cases
+    case c: DifferentialProgramConst => if (semanticRenaming) c else throw new RenamingClashException("Cannot replace semantic dependencies syntactically: DifferentialProgramConstant " + c, this.toString, ode.toString)      // homomorphic cases
     case DifferentialProduct(a, b)   => DifferentialProduct(renameODE(a), renameODE(b))
   }
 }
