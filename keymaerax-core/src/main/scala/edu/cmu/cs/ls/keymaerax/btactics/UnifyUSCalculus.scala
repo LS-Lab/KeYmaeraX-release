@@ -462,7 +462,8 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
-    * @example `CE(fact)` is equivalent to `CE(fact, Context("⎵".asFormula))``
+    * @example `CEat(fact)` is equivalent to `CEat(fact, Context("⎵".asFormula))``
+    * @todo Optimization: Would direct propositional rules make CEat faster at pos.isTopLevel?
     */
   def CEat(fact: Provable): DependentPositionTactic = new DependentPositionTactic("CE(Provable)") {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)

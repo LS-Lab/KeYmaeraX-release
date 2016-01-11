@@ -114,6 +114,7 @@ final class RenUSubst(private[bellerophon] val subsDefsInput: immutable.Seq[(Exp
   def toForward: Provable => Provable = fact => {
     //Predef.require(rens.isEmpty, "renaming conversion not yet implemented")
     // forward style: first rename fact, then US the result
+    //@todo shouldn't subst and rename be the other way around?
     UniformSubstitutionRule.UniformSubstitutionRuleForward(
       rens.foldLeft(fact)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
       ,

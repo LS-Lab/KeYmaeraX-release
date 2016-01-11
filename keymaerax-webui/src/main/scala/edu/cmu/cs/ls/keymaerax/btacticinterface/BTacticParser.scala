@@ -26,7 +26,9 @@ import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
   * @author Nathan Fulton
   */
 object BTacticParser extends (String => Option[BelleExpr]) {
-  def apply(s: String, loggingOn:Boolean=false, generator:Option[Generator[Formula]] = None): Option[BelleExpr] = {
+  def apply(s: String): Option[BelleExpr] = apply(s, false)
+
+  def apply(s: String, loggingOn:Boolean, generator:Option[Generator[Formula]] = None): Option[BelleExpr] = {
     val parser = new TheParser(loggingOn, generator)
     parser.parseAll(parser.expressionParser, s) match {
       case parser.Success(result, next) => Some(result.asInstanceOf[BelleExpr])

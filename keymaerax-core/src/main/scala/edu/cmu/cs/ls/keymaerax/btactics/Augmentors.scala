@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{TopPosition, PosInExpr, Position}
 
 /**
  * If imported, automatically augments core data structures with convenience wrappers for tactic purposes
@@ -89,5 +89,7 @@ object Augmentors {
     def at(pos: Position): (Context[Formula], Expression) = FormulaAugmentor(seq(pos.top)).at(pos.inExpr)
     /** Replace at position pos by repl */
     def replaceAt(pos: Position, repl: Expression): Expression = FormulaAugmentor(seq(pos.top)).replaceAt(pos.inExpr, repl)
+    //@todo implement returning both Ante+Succ
+    def zipWithPositions: List[(Formula, TopPosition)] = ???
   }
 }

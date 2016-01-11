@@ -34,7 +34,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           case _ => throw new BelleError(s"Attempted to apply a built-in tactic to a non-Provable value: ${v.getClass.getName}").inContext(BelleDot, "")
         }
         case BuiltInPositionTactic(_) | BuiltInLeftTactic(_) | BuiltInRightTactic(_) | BuiltInTwoPositionTactic(_) | DependentPositionTactic(_) =>
-          throw new BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.").inContext(expr, "")
+          throw new BelleError(s"Need to apply position tactic ($expr) at a position before evaluating it with top-level interpreter.").inContext(expr, "")
         case AppliedPositionTactic(positionTactic, pos) => v match {
           case BelleProvable(pr, _) => try {
             BelleProvable(positionTactic.apply(pos).computeResult(pr))
