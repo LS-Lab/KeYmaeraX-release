@@ -94,6 +94,48 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "introduce differential assignments exhaustively" in {
+    val result = proveBy("[{x'=5, y'=x}]x>0".asFormula, DE(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[{x'=5, y'=x}][y':=x;][x':=5;]x>0".asFormula
+  }
+
+  ignore should "introduce differential assignments exhaustively whatever the names (manual useAt)" in {
+    val result = proveBy("[{z'=5, y'=z}]z>0".asFormula, useAt("DE differential effect (system)")(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[{z'=5, y'=z}][z':=5;]z>0".asFormula
+  }
+
+  ignore should "introduce differential assignments in long cases exhaustively whatever the names (manual useAt)" in {
+    val result = proveBy("[{z'=5, y'=z, u'=v}]z>0".asFormula, useAt("DE differential effect (system)")(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[{z'=5, y'=z,u'=v}][z':=5;]z>0".asFormula
+  }
+
+  it should "introduce differential assignments exhaustively whatever the names" in {
+    val result = proveBy("[{z'=5, y'=3}]z>0".asFormula, DE(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[{z'=5, y'=3}][y':=3;][z':=5;]z>0".asFormula
+  }
+
+  it should "introduce differential assignments exhaustively for x" in {
+    val result = proveBy("[{x'=5, y'=3}]x>0".asFormula, DE(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[{x'=5, y'=3}][y':=3;][x':=5;]x>0".asFormula
+  }
+
+  it should "introduce differential assignments exhaustively whatever the names even mutually recursive" in {
+    val result = proveBy("[{z'=5, y'=z}]z>0".asFormula, DE(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[{z'=5, y'=z}][y':=z;][z':=5;]z>0".asFormula
+  }
+
+  it should "introduce differential assignments exhaustively despite evolution domain" in {
     val result = proveBy("[{x'=5, y'=x & x>2}]x>0".asFormula, DE(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
