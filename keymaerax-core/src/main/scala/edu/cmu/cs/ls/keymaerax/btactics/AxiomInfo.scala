@@ -85,7 +85,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("<?> test", "<?>", "testd", {case () => HilbertCalculus.testd}),
     new CoreAxiomInfo("[++] choice"
       , AxiomDisplayInfo(("[∪]", "[++]"), "[a∪b]P↔[a]P∧[b]P"), "choiceb", {case () => HilbertCalculus.choiceb}),
-    new DerivedAxiomInfo("<++> choice", ("<\u222A>", "<++>"), "choiced", {case () => HilbertCalculus.choiced}),
+    new DerivedAxiomInfo("<++> choice", ("<∪>", "<++>"), "choiced", {case () => HilbertCalculus.choiced}),
     new CoreAxiomInfo("[;] compose"
       , AxiomDisplayInfo("[;]", "[a;b]P↔[a][b]P")
       , "composeb", {case () => HilbertCalculus.composeb}),
@@ -160,16 +160,16 @@ object DerivationInfo {
       ,  AxiomDisplayInfo(("-′","-'"), "(f(x)-g(x))′=f(x)′-g(x)′")
       , "Dminus", {case () => HilbertCalculus.Dminus}),
     new CoreAxiomInfo("*' derive product"
-      ,  AxiomDisplayInfo(("*′","*'"), "(f(x)*g(x))′=(f(x))′*g(x)+f(x)*(g(x))′")
+      ,  AxiomDisplayInfo(("·′","*'"), "(f(x)·g(x))′=(f(x))′·g(x)+f(x)·(g(x))′")
       , "Dtimes", {case () => HilbertCalculus.Dtimes}),
     new CoreAxiomInfo("/' derive quotient"
-      ,  AxiomDisplayInfo(("/′","/'"), "(f(g)/g(x))′=(g(x)*(f(x))w-f(x)*(g(x))′)/g(x)^2")
+      ,  AxiomDisplayInfo(("/′","/'"), "(f(g)/g(x))′=(g(x)·(f(x))w-f(x)·(g(x))′)/g(x)^2")
       , "Dquotient", {case () => HilbertCalculus.Dquotient}),
     new CoreAxiomInfo("^' derive power"
-      ,  AxiomDisplayInfo(("^′","^'"), "(f(g)^n)′=n*f(g)^(n-1)*(f(g))′*←n!=0")
+      ,  AxiomDisplayInfo(("^′","^'"), "(f(g)^n)′=n·f(g)^(n-1)·(f(g))′←n≠0")
       , "Dpower", {case () => HilbertCalculus.Dpower}),
     new CoreAxiomInfo("chain rule"
-      ,  AxiomDisplayInfo(("∘′","o'"), "[y:=g(x)][y′:=1]((f(g(x)))′=(f(y))′*(g(x))′")
+      ,  AxiomDisplayInfo(("∘′","o'"), "[y:=g(x)][y′:=1]((f(g(x)))′=(f(y))′·(g(x))′")
       , "Dcompose", {case () => TactixLibrary.Dcompose}),
 
     new CoreAxiomInfo("=' derive ="
@@ -188,7 +188,7 @@ object DerivationInfo {
       ,  AxiomDisplayInfo(("<′","<'"),"(f(x)<g(m))′↔f(x)′≤g(x)′")
       , "Dless", {case () => HilbertCalculus.Dless}),
     new CoreAxiomInfo("!=' derive !="
-      ,  AxiomDisplayInfo(("¬=′","!='"), "(f(x)¬=g(x))′↔f(x)′=g(x)′")
+      ,  AxiomDisplayInfo(("≠′","!='"), "(f(x)¬=g(x))′↔f(x)′=g(x)′")
       , "Dnotequal", {case () => HilbertCalculus.Dnotequal}),
     new CoreAxiomInfo("&' derive and"
       ,  AxiomDisplayInfo(("∧′", "&'"),"(f(x)&g(x))′↔f(x)′∧g(x)′")
@@ -246,12 +246,24 @@ object DerivationInfo {
     new DerivedAxiomInfo("exists dual", ("∃d","existsd"), "existsDual", {case () => useAt(DerivedAxioms.existsDualAxiom)}),
     new DerivedAxiomInfo("' linear", ("l′","l'"), "Dlinear", {case () => useAt(DerivedAxioms.Dlinear)}),
     new DerivedAxiomInfo("' linear right", ("l′","l'"), "DlinearRight", {case () => useAt(DerivedAxioms.DlinearRight)}),
-    new DerivedAxiomInfo("!& deMorgan", ("¬∧", "!&"), "notAnd", {case () => useAt(DerivedAxioms.notAnd)}),
-    new DerivedAxiomInfo("!| deMorgan", ("¬∨","!|"), "notOr", {case () => useAt(DerivedAxioms.notOr)}),
-    new DerivedAxiomInfo("!-> deMorgan", ("¬→","!->"), "notImply", {case () => useAt(DerivedAxioms.notImply)}),
-    new DerivedAxiomInfo("!<-> deMorgan", ("¬↔", "!<->"), "notEquiv", {case () => useAt(DerivedAxioms.notEquiv)}),
-    new DerivedAxiomInfo("!all",("¬∀", "!all"), "notAll", {case () => useAt(DerivedAxioms.notAll)}),
-    new DerivedAxiomInfo("!exists", ("¬∃","!exists"), "notExists", {case () => useAt(DerivedAxioms.notExists)}),
+    new DerivedAxiomInfo("!& deMorgan"
+      , AxiomDisplayInfo(("¬∧", "!&"), "¬(p∧q)↔(¬p|¬q)")
+      , "notAnd", {case () => useAt(DerivedAxioms.notAnd)}),
+    new DerivedAxiomInfo("!| deMorgan"
+      , AxiomDisplayInfo(("¬∨","!|"), "(¬(p|q))↔(¬p∧¬q)")
+      , "notOr", {case () => useAt(DerivedAxioms.notOr)}),
+    new DerivedAxiomInfo("!-> deMorgan"
+      , AxiomDisplayInfo(("¬→","!->"), "¬(p->q)↔(p∧¬q)")
+      , "notImply", {case () => useAt(DerivedAxioms.notImply)}),
+    new DerivedAxiomInfo("!<-> deMorgan"
+      , AxiomDisplayInfo(("¬↔", "!<->"), "¬(p↔q)↔(p∧¬q)| (¬p∧q)")
+      , "notEquiv", {case () => useAt(DerivedAxioms.notEquiv)}),
+    new DerivedAxiomInfo("!all"
+      , AxiomDisplayInfo(("¬∀", "!all"), "¬∀x (p(x)))↔∃x (¬p(x))")
+      , "notAll", {case () => useAt(DerivedAxioms.notAll)}),
+    new DerivedAxiomInfo("!exists"
+      , AxiomDisplayInfo(("¬∃","!exists"), "(¬∃x (p(x)))↔∀x (¬p(x))")
+      , "notExists", {case () => useAt(DerivedAxioms.notExists)}),
     new DerivedAxiomInfo("![]", ("¬[]","![]"), "notBox", {case () => useAt(DerivedAxioms.notBox)}),
     new DerivedAxiomInfo("!<>", ("¬<>","!<>"), "notDiamond", {case () => useAt(DerivedAxioms.notDiamond)}),
     new DerivedAxiomInfo("[] split", ("[]∧", "[]^"), "boxAnd", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAnd)}),
@@ -271,7 +283,9 @@ object DerivationInfo {
     new DerivedAxiomInfo("-> distributes over &", ("→∧", "->&"), "implyDistAnd", {case () => useAt(DerivedAxioms.implyDistAndAxiom)}),
     new DerivedAxiomInfo("-> distributes over <->", ("→↔","-><->"), "implyDistEquiv", {case () => useAt(DerivedAxioms.implyDistEquivAxiom)}),
     new DerivedAxiomInfo("-> weaken", ("→W","->W"), "implyWeaken", {case () => useAt(DerivedAxioms.implWeaken)}),
-    new DerivedAxiomInfo("!! double negation", ("¬¬","!!"), "doubleNegation", {case () => useAt(DerivedAxioms.doubleNegationAxiom)}),
+    new DerivedAxiomInfo("!! double negation"
+      , AxiomDisplayInfo(("¬¬","!!"), "(¬¬p↔p")
+      , "doubleNegation", {case () => useAt(DerivedAxioms.doubleNegationAxiom)}),
     new DerivedAxiomInfo(":= assign dual", ":=D", "assignDual", {case () => useAt(DerivedAxioms.assignDualAxiom)}),
     new DerivedAxiomInfo("[:=] vacuous assign", "V[:=]", "vacuousAssignb", {case () => useAt(DerivedAxioms.vacuousAssignbAxiom)}),
     new DerivedAxiomInfo("<:=> vacuous assign", "V<:=>", "vacuousAssignd", {case () => useAt(DerivedAxioms.vacuousAssigndAxiom)}),
@@ -287,10 +301,18 @@ object DerivationInfo {
     new DerivedAxiomInfo("-> expand", ("→E","->E"), "implyExpand", {case () => useAt(DerivedAxioms.implyExpand)}),
     new DerivedAxiomInfo("-> tautology", ("→taut","->taut"), "implyTautology", {case () => useAt(DerivedAxioms.implyTautology)}),
     new DerivedAxiomInfo("\\forall->\\exists", ("∀→∃","all->exists"), "forallThenExists", {case () => useAt(DerivedAxioms.forallThenExistsAxiom)}),
-    new DerivedAxiomInfo("->true", ("→T","->T"), "implyTrue", {case () => useAt(DerivedAxioms.impliesTrue)}),
-    new DerivedAxiomInfo("true->", ("T→", "T->"), "trueImply", {case () => useAt(DerivedAxioms.trueImplies)}),
-    new DerivedAxiomInfo("&true", ("∧T","&T"), "andTrue", {case () => useAt(DerivedAxioms.andTrue)}),
-    new DerivedAxiomInfo("true&", ("T∧","T&"), "trueAnd", {case () => useAt(DerivedAxioms.trueAnd)}),
+    new DerivedAxiomInfo("->true"
+      , AxiomDisplayInfo(("→⊤","->T"), "(p→⊤)↔⊤")
+      , "implyTrue", {case () => useAt(DerivedAxioms.impliesTrue)}),
+    new DerivedAxiomInfo("true->"
+      , AxiomDisplayInfo(("⊤→", "T->"), "(⊤→p)↔p")
+      , "trueImply", {case () => useAt(DerivedAxioms.trueImplies)}),
+    new DerivedAxiomInfo("&true"
+      , AxiomDisplayInfo(("∧⊤","&T"), "(p∧⊤)↔p")
+      , "andTrue", {case () => useAt(DerivedAxioms.andTrue)}),
+    new DerivedAxiomInfo("true&"
+      , AxiomDisplayInfo(("⊤∧","T&"), "(v∧p)↔p")
+      , "trueAnd", {case () => useAt(DerivedAxioms.trueAnd)}),
     new DerivedAxiomInfo("0*", "0*", "zeroTimes", {case () => useAt(DerivedAxioms.zeroTimes)}),
     new DerivedAxiomInfo("0+", "0+", "zeroPlus", {case () => useAt(DerivedAxioms.zeroPlus)}),
     new DerivedAxiomInfo("*0", "*0", "timesZero", {case () => useAt(DerivedAxioms.timesZero)}),
@@ -298,8 +320,12 @@ object DerivationInfo {
     new DerivedAxiomInfo("= reflexive", "=R", "equalReflexive", {case () => useAt(DerivedAxioms.equalReflex)}),
     new DerivedAxiomInfo("= commute", "=C", "equalCommute", {case () => useAt(DerivedAxioms.equalCommute)}),
     new DerivedAxiomInfo("<=", "<=", "lessEqual", {case () => useAt(DerivedAxioms.lessEqual)}),
-    new DerivedAxiomInfo("! <", ("¬<","!<"), "notLess", {case () => useAt(DerivedAxioms.notLess)}),
-    new DerivedAxiomInfo("! >", ("¬>","!>"), "notGreater", {case () => useAt(DerivedAxioms.notGreater)}),
+    new DerivedAxiomInfo("! <"
+      , AxiomDisplayInfo(("¬<","!<"), "¬(f<g)↔(f≥g)")
+      , "notLess", {case () => useAt(DerivedAxioms.notLess)}),
+    new DerivedAxiomInfo("! >"
+      , AxiomDisplayInfo(("¬>","!>"), "¬(f>g)↔(f≤g)")
+      , "notGreater", {case () => useAt(DerivedAxioms.notGreater)}),
     new DerivedAxiomInfo("< negate", ("¬≤","!<="), "notGreaterEqual", {case () => useAt(DerivedAxioms.notGreaterEqual)}),
     new DerivedAxiomInfo(">= flip", ">=F", "flipGreaterEqual", {case () => useAt(DerivedAxioms.flipGreaterEqual)}),
     new DerivedAxiomInfo("> flip", ">F", "flipGreater", {case () => useAt(DerivedAxioms.flipGreater)}),
@@ -314,9 +340,15 @@ object DerivationInfo {
     new DerivedAxiomInfo("<=* down", "<=*", "intervalDownTimes", {case () => useAt(DerivedAxioms.intervalDownTimes)}),
     new DerivedAxiomInfo("<=1Div down", "<=1/", "intervalDown1Divide", {case () => useAt(DerivedAxioms.intervalDown1Divide)}),
     new DerivedAxiomInfo("<=Div down", "<=/", "intervalDownDivide", {case () => useAt(DerivedAxioms.intervalDownDivide)}),
-    new DerivedAxiomInfo("! !=", ("¬¬=","!!="), "notNotEqual", {case () => useAt(DerivedAxioms.notNotEqual)}),
-    new DerivedAxiomInfo("! =", ("¬ =","! ="), "notEqual", {case () => useAt(DerivedAxioms.notEqual)}),
-    new DerivedAxiomInfo("! <=", ("¬≤","!<="), "notLessEqual", {case () => useAt(DerivedAxioms.notLessEqual)}),
+    new DerivedAxiomInfo("! !="
+      , AxiomDisplayInfo(("¬≠","!!="), "(¬(f≠g)↔(f=g))")
+      , "notNotEqual", {case () => useAt(DerivedAxioms.notNotEqual)}),
+    new DerivedAxiomInfo("! ="
+      , AxiomDisplayInfo(("¬ =","! ="), "(¬(f=g))↔(f≠g)")
+      , "notEqual", {case () => useAt(DerivedAxioms.notEqual)}),
+    new DerivedAxiomInfo("! <="
+      , AxiomDisplayInfo(("¬≤","!<="), "(!(f≤g)↔(f>g)")
+      , "notLessEqual", {case () => useAt(DerivedAxioms.notLessEqual)}),
     new DerivedAxiomInfo("* associative", "*A", "timesAssociative", {case () => useAt(DerivedAxioms.timesAssociative)}),
     new DerivedAxiomInfo("* commute", "*C", "timesCommute", {case () => useAt(DerivedAxioms.timesCommutative)}),
     new DerivedAxiomInfo("* inverse", "*i", "timesInverse", {case () => useAt(DerivedAxioms.timesInverse)}),
