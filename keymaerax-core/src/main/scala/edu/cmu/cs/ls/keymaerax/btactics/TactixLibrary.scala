@@ -148,7 +148,7 @@ object TactixLibrary extends HilbertCalculi with SequentCalculi {
   def diffSolve(solution: Option[Formula] = None): DependentPositionTactic = DifferentialTactics.diffSolve(solution)(tool)
 
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))` */
-  lazy val diffWeaken         : DependentPositionTactic = withAbstraction(DW)
+  lazy val diffWeaken         : DependentPositionTactic = DifferentialTactics.diffWeaken
   /** DC: Differential Cut a new invariant, use old(.) to refer to initial values of variables.
     * @see[[DC]]
     * @see[[DifferentialTactics.diffCut]]

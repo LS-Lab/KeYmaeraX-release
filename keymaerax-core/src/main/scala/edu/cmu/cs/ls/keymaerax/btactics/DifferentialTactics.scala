@@ -398,7 +398,7 @@ object DifferentialTactics {
           }
         }
 
-        initialGhosts & diffInvariant(tool, flatSolution:_*)(pos) & diffWeaken(pos) & rewriteEqualities
+        initialGhosts & diffInvariant(tool, flatSolution:_*)(pos) & rewriteEqualities & diffWeaken(pos)
       }
 
       // initial values
@@ -423,6 +423,43 @@ object DifferentialTactics {
       }
 
   })
+
+  /** diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
+  lazy val diffWeaken: DependentPositionTactic = "diffWeaken" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(Box(a, p)) =>
+      require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
+
+      def constAnteConditions(sequent: Sequent, taboo: Set[NamedSymbol]): IndexedSeq[Formula] = {
+        sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
+      }
+      val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
+
+      if (consts.nonEmpty) {
+        // andL puts both conjuncts at the end of ante -> andL second-to-last (except first, where there's only 1 formula)
+        val dw = diffWeakenG(pos) & implyR(1) & andL(-1) & andLSecondToLast*(consts.size-1) &
+          // original evolution domain is in second-to-last ante position
+          implyRi(AntePos(consts.size-1), SuccPos(0)) partial
+
+        //@note assumes that first subgoal is desired result, see diffCut
+        val vAllButFirst = dw +: Seq.tabulate(consts.length)(_ => V('Rlast) & close)
+        //@note cut in reverse so that andL after diffWeakenG turns them into the previous order
+        diffCut(consts.reverse: _*)(pos) <(vAllButFirst:_*) partial
+      } else {
+        diffWeakenG(pos)
+      }
+  })
+
+  /** diffWeaken by DW & G */
+  lazy val diffWeakenG: DependentPositionTactic = "diffWeakenG" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(Box(_: ODESystem, p)) =>
+      require(pos.isTopLevel && pos.isSucc, "diffWeakenG only at top level in succedent")
+      cohide(pos.top) & DW(pos) & G
+  })
+
+  /** Helper for diffWeaken: andL the second-to-last formula */
+  private lazy val andLSecondToLast: DependentTactic = new SingleGoalDependentTactic("andL-2nd-to-last") {
+    override def computeExpr(sequent: Sequent): BelleExpr = andL(-(sequent.ante.length-1))
+  }
 
   /** Searches for a time variable (some derivative x'=1) in the specified ODEs, returns None if not found. */
   private def findTimeInOdes(odes: DifferentialProgram): Option[Variable] = {
