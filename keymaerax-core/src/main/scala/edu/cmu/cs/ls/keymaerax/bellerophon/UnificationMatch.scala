@@ -346,10 +346,16 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
   private def unify(s1: Sequent, s2: Sequent): List[SubstRepl] =
     if (!(s1.pref == s2.pref && s1.ante.length == s2.ante.length && s1.succ.length == s2.succ.length)) ununifiable(s1,s2)
     else {
-      //@todo this is really a zip fold
-      (
-        s1.ante.indices.foldLeft(List[SubstRepl]())((subst,i) => subst ++ unify(s1.ante(i), s2.ante(i))) ++
-          s1.succ.indices.foldLeft(List[SubstRepl]())((subst,i) => subst ++ unify(s1.succ(i), s2.succ(i)))
-        ).distinct
+      val composeFolder = (u1: List[SubstRepl], f1: Formula, f2: Formula) =>
+        compose(unify(Subst(u1)(f1), f2), u1)
+      val antesubst = s1.ante.indices.foldLeft(List[SubstRepl]()) ((subst,i) => composeFolder(subst, s1.ante(i), s2.ante(i)))
+      val succsubst = s1.succ.indices.foldLeft(antesubst) ((subst,i) => composeFolder(subst, s1.succ(i), s2.succ(i)))
+      succsubst.distinct
+      //@note if flat ++ this would be easy:
+//        //@todo this is really a zip fold
+//      (
+//        s1.ante.indices.foldLeft(List[SubstRepl]())((subst,i) => subst ++ unify(s1.ante(i), s2.ante(i))) ++
+//          s1.succ.indices.foldLeft(List[SubstRepl]())((subst,i) => subst ++ unify(s1.succ(i), s2.succ(i)))
+//        ).distinct
     }
 }
