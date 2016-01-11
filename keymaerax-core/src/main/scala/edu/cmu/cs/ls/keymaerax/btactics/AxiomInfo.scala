@@ -67,11 +67,13 @@ object DerivationInfo {
       , AxiomDisplayInfo("[:=]", "[x:=c]p(x)↔p(c)")
       , {case () => TactixLibrary.assignb}),
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => HilbertCalculus.useAt("[:=] assign")}),
+    new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", {case () => HilbertCalculus.useAt("[:=] self assign")}),
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:=> assign equality", "<:=>", "assigndEquality", {case () => HilbertCalculus.useAt("<:=> assign equality")}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => HilbertCalculus.useAt("[:=] assign equality")}),
     new CoreAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", {case () => HilbertCalculus.useAt("[:=] assign exists") }),
-    new DerivedAxiomInfo("[:=] assign equality exists", "[:=]", "assignbequalityexists", {case () => HilbertCalculus.useAt("[:=] assign equality exists") }),
+    new CoreAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", {case () => HilbertCalculus.useAt("[:=] assign equality exists") }),
+    //new DerivedAxiomInfo("[:=] assign equality exists", "[:=]", "assignbequalityexists", {case () => HilbertCalculus.useAt("[:=] assign equality exists") }),
     //@todo new DerivedAxiomInfo("<:=> assign equality", "<:=>=", "assigndeq", {case () => ???}),
     new CoreAxiomInfo("[':=] differential assign"
       , AxiomDisplayInfo(("[′:=]","[':=]"), "[x′:=c]p(x′)↔p(c)")
