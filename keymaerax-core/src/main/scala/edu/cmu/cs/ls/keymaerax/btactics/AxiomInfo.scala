@@ -431,6 +431,14 @@ object DerivationInfo {
       , RuleDisplayInfo(("∀R", "allR"), (List("&Gamma;"), List("∀x P(x)", "&Delta;")),
         List((List("&Gamma;"),List("P(x)","&Delta;"))))
       , {case () => SequentCalculus.allR}),
+    new PositionTacticInfo("existsL"
+      , RuleDisplayInfo(("∃L", "existsL"), (List("&Gamma;","∃x P(x)"),List("&Delta;")),
+        List((List("&Gamma;","P(x)"),List("&Delta;"))))
+      , {case () => SequentCalculus.existsL}),
+    new PositionTacticInfo("existsR"
+      , RuleDisplayInfo(("∃R", "existsR"), (List("&Gamma;"),List("∃x P(x)","&Delta;")),
+        List((List("&Gamma;"),List("P(&theta;)","&Delta;"))))
+      , {case () => SequentCalculus.existsR}),
     new TacticInfo("G"
       , RuleDisplayInfo("G", (List(""),List("[a]P")), List((List(),List("P"))))
       , {case () => DLBySubst.G}),
