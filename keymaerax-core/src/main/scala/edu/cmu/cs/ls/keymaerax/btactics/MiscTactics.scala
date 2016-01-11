@@ -60,7 +60,7 @@ object DebuggingTactics {
     override def computeResult(provable: Provable, pos: Position): Provable = {
       if (provable.subgoals.size != 1 || provable.subgoals.head.at(pos)._2 != fml) {
         throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal with " + fml + " at position " + pos + ",\n\t but got " +
-          provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.at(pos) + " at position " + pos + ")")
+          provable.subgoals.size + " subgoals (head subgoal with " + provable.subgoals.head.sub(pos) + " at position " + pos + ")")
       }
       provable
     }
