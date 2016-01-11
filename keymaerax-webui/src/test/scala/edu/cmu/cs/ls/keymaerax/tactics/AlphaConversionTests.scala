@@ -56,7 +56,7 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(new ApplyRule(new BoundRenaming(what, repl)) {
+        Some(new ApplyRule(new BoundRenaming(what, repl, ???)) {
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         })
       }
@@ -67,7 +67,7 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     import scala.language.postfixOps
     override def applicable(node: ProofNode): Boolean = true
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      Some(new ApplyRule(new BoundRenaming(Variable(from, None, Real), Variable(to, None, Real))) {
+      Some(new ApplyRule(new BoundRenaming(Variable(from, None, Real), Variable(to, None, Real), ???)) {
         override def applicable(node: ProofNode): Boolean = true
       })
     }
