@@ -71,7 +71,7 @@ sealed trait Expression {
   def kind : Kind
   def sort : Sort
   //override def toString : String = "(" + prettyString + ")@" + canonicalString
-  override def toString : String = "(" + prettyString + ")@" + getClass.getSimpleName
+  override def toString : String = prettyString
   /** Pretty-printed string representing this expression */
   def prettyString : String = PrettyPrinter.printer(this)
   private[core] def canonicalString : String = super.toString

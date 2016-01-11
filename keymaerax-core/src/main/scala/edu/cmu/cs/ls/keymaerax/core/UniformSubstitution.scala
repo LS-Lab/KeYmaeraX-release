@@ -284,6 +284,10 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   def apply(p: Program): Program = {try usubst(p) catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
   } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
+  /** apply this uniform substitution everywhere in a program */
+  def apply(p: DifferentialProgram): DifferentialProgram = {try usubst(p).asInstanceOf[DifferentialProgram] catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
+  } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
+    "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
 
   /**
    * Apply uniform substitution everywhere in the sequent.

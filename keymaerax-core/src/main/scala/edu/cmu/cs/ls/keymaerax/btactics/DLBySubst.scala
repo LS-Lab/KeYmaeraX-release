@@ -292,10 +292,11 @@ object DLBySubst {
       //@note modify index since Skolemization et all shift index around since dropping formula and stashing toward the end ....
       val modIdx = (ante:Boolean) => (i:Int) => if (ante==pos.isAnte && i>pos.index0) i-1 else i
       val brename = ProofRuleTactics.boundRenaming(x, y)
+      val mkBrename = (p:Position) => brename(p, sequent(p.checkTop))
       val keepContextAssigns: IndexedSeq[BelleExpr] =
       //@todo such a zipWithPositions thing for both Ante+Succ should go into SequentAugmentor
-        sequent.ante.zipWithIndex.filter(filt(true)).map { case (f, i) => brename(AntePosition.base0(modIdx(true)(i))) } ++
-        sequent.succ.zipWithIndex.filter(filt(false)).map { case (f, i) => brename(SuccPosition.base0(modIdx(false)(i))) }
+        sequent.ante.zipWithIndex.filter(filt(true)).map { case (f, i) => mkBrename(AntePosition.base0(modIdx(true)(i))) } ++
+        sequent.succ.zipWithIndex.filter(filt(false)).map { case (f, i) => mkBrename(SuccPosition.base0(modIdx(false)(i))) }
       println("assignEquationalOld on " + fml + " at " + pos + " on\n" + sequent.prettyString + "\nwill work wonders with " + brename + " for " + x.prettyString + "~>" + y.prettyString + " fresh to retain\n" + keepContextAssigns.mkString("    \n"))
       // rename bound variable in [x:=f()]p(x) assignment to [y:=f()]p(y) to make y not occur in f() anymore
       debugAt("assignEquationalOld")(pos) & ProofRuleTactics.boundRenaming(x, y)(pos) &

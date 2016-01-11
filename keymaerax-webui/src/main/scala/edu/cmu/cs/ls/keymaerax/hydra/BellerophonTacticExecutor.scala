@@ -16,7 +16,7 @@ object BellerophonTacticExecutor {
   val defaultExecutor = new BellerophonTacticExecutor(SequentialInterpreter, defaultSize)
 }
 
-class ListenerFuture[T] (listeners: List[IOListener], callable: Callable[T]) extends FutureTask[T] (callable) {
+case class ListenerFuture[T] (userId: String, listeners: List[IOListener], callable: Callable[T]) extends FutureTask[T] (callable) {
   override def cancel(mayInterruptIfRunning:Boolean): Boolean = {
     listeners.foreach(_.kill)
     super.cancel(mayInterruptIfRunning)
@@ -33,16 +33,25 @@ class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, p
     */
   private val scheduledTactics : scala.collection.mutable.Map[String, ListenerFuture[Either[BelleValue, BelleError]]] = Map()
 
+  def tasksForUser(userId: String):List[String] = {
+    scheduledTactics.flatMap{case (task, future) =>
+      if (userId == future.userId)
+        List(task)
+      else
+        Nil
+    }.toList
+  }
+
   /**
     *
     * @param tactic The tactic to run
     * @param value The value to apply the tactic to
     * @return The ID that [[BellerophonTacticExecutor]] uses to identify this tactic.
     */
-  def schedule(tactic: BelleExpr, value: BelleValue, listeners: List[IOListener] = Nil) : String = {
+  def schedule(userId: String, tactic: BelleExpr, value: BelleValue, listeners: List[IOListener] = Nil) : String = {
     val id = java.util.UUID.randomUUID().toString
     assert(!scheduledTactics.contains(id), "All running tactic IDs should be unique.")
-    val future = makeFuture(tactic, value, listeners)
+    val future = makeFuture(userId, tactic, value, listeners)
     pool.submit(future)
     scheduledTactics += ((id, future))
     id
@@ -57,7 +66,11 @@ class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, p
 
   /** Returns the result of the tactic, or None if the tactic is not done running. */
   def getResult(id: String) : Option[Either[BelleValue, BelleError]] =
-    if(isDone(id)) Some(scheduledTactics(id).get()) else None
+    synchronized {
+      if (isDone(id))
+        Some(scheduledTactics(id).get())
+      else None
+    }
 
   /**
     *
@@ -65,18 +78,21 @@ class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, p
     * @param force If true, then the tactic can be removed even if it is currently running.
     *              In that case, the tactic execution is halted first. Defaults to false.
     */
-  def tryRemove(id: String, force: Boolean = false) = {
-    if (isDone(id)) {
-      scheduledTactics.remove(id)
-    }
-    else if (force) {
-      scheduledTactics.get(id).foreach(_.cancel(true))
-      scheduledTactics.remove(id)
-    }
-    else {
-      //@note if you want to remove a tactic even if it's still running, then call remove(id, true).
-      throw new Exception("Attempted to remove a tactic from scheduledTactics, but that tactic is not yet finished executing.")
-    }
+  def tryRemove(id: String, force: Boolean = false): Unit =
+    synchronized {
+      if (!scheduledTactics.contains(id))
+        return
+      if (isDone(id)) {
+        scheduledTactics.remove(id)
+      }
+      else if (force) {
+        scheduledTactics.get(id).foreach(_.cancel(true))
+        scheduledTactics.remove(id)
+      }
+      else {
+        //@note if you want to remove a tactic even if it's still running, then call remove(id, true).
+        throw new Exception("Attempted to remove a tactic from scheduledTactics, but that tactic is not yet finished executing.")
+      }
   } ensuring(!scheduledTactics.contains(id))
 
   /**
@@ -106,8 +122,8 @@ class BellerophonTacticExecutor(interpreter : List[IOListener] => Interpreter, p
     }
   }
 
-  private def makeFuture(tactic: BelleExpr, value: BelleValue, listeners: List[IOListener]) = {
-    new ListenerFuture[Either[BelleValue, BelleError]](listeners, new Callable[Either[BelleValue, BelleError]]() {
+  private def makeFuture(userId: String, tactic: BelleExpr, value: BelleValue, listeners: List[IOListener]) = {
+    new ListenerFuture[Either[BelleValue, BelleError]](userId, listeners, new Callable[Either[BelleValue, BelleError]]() {
       override def call(): Either[BelleValue, BelleError] = {
         try {
           Left(interpreter(listeners)(tactic, value))

@@ -46,14 +46,14 @@ class ProverException(msg: String, cause: Throwable = null) extends RuntimeExcep
 class CoreException(msg: String) extends ProverException(msg)
 
 /** Substitution clash */
-case class SubstitutionClashException(subst: String/*Substitution*/, U: String/*SetLattice[NamedSymbol]*/, e: String/*Expression*/, context: String/*Expression*/, clashes: String/*SetLattice[NamedSymbol]*/, info: String = "")
+case class SubstitutionClashException(subst: String/*USubst*/, U: String/*SetLattice[NamedSymbol]*/, e: String/*Expression*/, context: String/*Expression*/, clashes: String/*SetLattice[NamedSymbol]*/, info: String = "")
   extends CoreException("Substitution clash:\n" + subst + "\nis not (" + U + ")-admissible\nfor " + e + "\nwhen substituting in " + context + "\n" + info) {
   //  def inContext(context: String): SubstitutionClashException =
     //new SubstitutionClashException(subst, U, e, this.context, clashes, info + "\nin " + context).initCause(this).asInstanceOf[SubstitutionClashException]
 }
 
-/** Bound renaming exception */
-case class BoundRenamingClashException(msg: String, ren: String/*BoundRenaming*/, info: String = "") extends CoreException(msg + "\nBoundRenaming " + ren + " because\n" + info) {
+/** Uniform or bound renaming clash exception */
+case class RenamingClashException(msg: String, ren: String/*URename*/, e: String/*Expression*/, info: String = "") extends CoreException(msg + "\nRenaming " + e + " with " + ren + " because\n" + info) {
   /**
    * Add the context information to this exception, returning the resulting exception to be thrown.
    */

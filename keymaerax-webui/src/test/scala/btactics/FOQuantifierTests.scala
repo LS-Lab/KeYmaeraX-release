@@ -103,6 +103,34 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ shouldBe empty
   }
 
+  it should "diffWeaken simple" in {
+    val result = proveBy("[{x'=5&x<7}]x<7".asFormula,
+      TactixLibrary.diffWeaken(1))
+    println(result)
+    result shouldBe 'proved
+  }
+
+  it should "diffWeaken ouch" in {
+    val result = proveBy("[{x'=1}][{x'=2}]x>0".asFormula,
+      TactixLibrary.diffWeaken(1))
+    println(result)
+    result shouldBe 'proved
+  }
+
+  it should "diffWeaken before loopy" in {
+    val result = proveBy("[{x'=1}][{x:=2;}*]x>0".asFormula,
+      TactixLibrary.diffWeaken(1))
+    println(result)
+    result shouldBe 'proved
+  }
+
+  it should "diffWeaken before semibound" in {
+    val result = proveBy("[{x'=1}][{x:=2;++y:=2;}]x>0".asFormula,
+      TactixLibrary.diffWeaken(1))
+    println(result)
+    result shouldBe 'proved
+  }
+
   it should "instantiate free ODE modality whatever the names" in {
     val result = proveBy(
       Sequent(Nil, IndexedSeq("\\forall u [{v'=u}]v>0".asFormula), IndexedSeq()),
@@ -117,6 +145,7 @@ class FOQuantifierTests extends TacticTestBase {
       Sequent(Nil, IndexedSeq("\\forall x [{x'=5}]x>=0".asFormula), IndexedSeq()),
       allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
+    //result.subgoals.head.ante should contain only "[{z'=5}]z>0".asFormula
     result.subgoals.head.ante should contain only ("x=z".asFormula, "[{x'=5}]x>=0".asFormula)
     result.subgoals.head.succ shouldBe empty
   }

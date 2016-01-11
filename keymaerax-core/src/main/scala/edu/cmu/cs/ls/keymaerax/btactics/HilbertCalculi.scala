@@ -34,7 +34,7 @@ object HilbertCalculus extends HilbertCalculi
 trait HilbertCalculi extends UnifyUSCalculus {
 
   /** True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on demand. */
-  private val INTERNAL = false
+  private[btactics] val INTERNAL = false
 
   // axiomatic rules
 
