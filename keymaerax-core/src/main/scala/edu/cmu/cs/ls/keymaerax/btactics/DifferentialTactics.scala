@@ -42,18 +42,30 @@ object DifferentialTactics {
    */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr =
+      override def computeExpr(sequent: Sequent): BelleExpr = if (RenUSubst.semanticRenaming) {
         if (isODESystem(sequent, pos)) {
-          DESystemStep(pos)*getODEDim(sequent, pos)
+          DESystemStep_SemRen(pos)*getODEDim(sequent, pos)
           //@todo unification fails
           // TactixLibrary.useAt("DE differential effect (system)")(pos)*getODEDim(provable.subgoals.head, pos)
         } else {
           useAt("DE differential effect")(pos)
         }
+      } else {
+        //@todo wrap within a CE to make sure it also works in context
+        if (isODESystem(sequent, pos)) {
+          DESystemStep_NoSemRen(pos)*getODEDim(sequent, pos)
+          //@todo unification fails
+          // TactixLibrary.useAt("DE differential effect (system)")(pos)*getODEDim(provable.subgoals.head, pos)
+        } else {
+          if (HilbertCalculus.INTERNAL) useAt("DE differential effect")(pos)
+          else DESystemStep_NoSemRen(pos)
+        }
       }
+    }
 
     /** A single step of DE system (@todo replace with useAt when unification for this example works) */
-    private lazy val DESystemStep: DependentPositionTactic = new DependentPositionTactic("DE system step") {
+    // semanticRenaming
+    private lazy val DESystemStep_SemRen: DependentPositionTactic = new DependentPositionTactic("DE system step") {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
           case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(d@DifferentialSymbol(x), t), c), h), p)) =>
@@ -75,6 +87,65 @@ object DifferentialTactics {
             cutLR(g)(pos) <(
               /* use */ skip,
               /* show */ cohide('Rlast) & equivifyR(1) & commuteEquivR(1) & US(USubst(subst), origin) & byUS("DE differential effect (system)"))
+        }
+      }
+    }
+
+    /** A single step of DE system (@todo replace with useAt when unification for this example works) */
+    // !semanticRenaming
+    private lazy val DESystemStep_NoSemRen: DependentPositionTactic = new DependentPositionTactic("DE system step") {
+      override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+        override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
+          case Some(f@Box(ODESystem(DifferentialProduct(AtomicODE(xp@DifferentialSymbol(x), t), c), h), p)) =>
+            val g = Box(
+              ODESystem(DifferentialProduct(c, AtomicODE(xp, t)), h),
+              Box(DiffAssign(xp, t), p)
+            )
+
+            //construct substitution
+            val aF = FuncOf(Function("f", None, Real, Real), Anything)
+            val aH = PredOf(Function("H", None, Real, Bool), Anything)
+            val aC = DifferentialProgramConst("c")
+            val aP = PredOf(Function("p", None, Real, Bool), Anything)
+            val aX = Variable("x_", None, Real)
+
+            val uren = URename(x, aX)
+
+            val subst = SubstitutionPair(aF, t) :: SubstitutionPair(aC, uren(c)) :: SubstitutionPair(aP, uren(p)) ::
+              SubstitutionPair(aH, uren(h)) :: Nil
+            //            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(s"[{${xp.prettyString}=f(??),c&H(??)}]p(??) <-> [{c,${xp.prettyString}=f(??)&H(??)}][${xp.prettyString}:=f(??);]p(??)".asFormula))
+            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms("DE differential effect (system)")))
+
+            if (true || DEBUG) println("DE: manual " + uren + " followed by " + USubst(subst) + " to prove " + sequent.prettyString)
+
+            cutLR(g)(pos) <(
+              /* use */ skip,
+              /* show */ cohide('Rlast) & equivifyR(1) & commuteEquivR(1) & ProofRuleTactics.uniformRenaming(x, aX) & US(USubst(subst), origin) & byVerbatim("DE differential effect (system)"))
+
+          case Some(f@Box(ODESystem(AtomicODE(xp@DifferentialSymbol(x), t), h), p)) =>
+            val g = Box(
+              ODESystem(AtomicODE(xp, t), h),
+              Box(DiffAssign(xp, t), p)
+            )
+
+            //construct substitution
+            val aF = FuncOf(Function("f", None, Real, Real), Anything)
+            val aQ = PredOf(Function("q", None, Real, Bool), Anything)
+            val aP = PredOf(Function("p", None, Real, Bool), Anything)
+            val aX = Variable("x_", None, Real)
+
+            val uren = URename(x, aX)
+
+            val subst = SubstitutionPair(aF, t) :: SubstitutionPair(aP, uren(p)) ::
+              SubstitutionPair(aQ, uren(h)) :: Nil
+            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms("DE differential effect")))
+
+            if (true || DEBUG) println("DE: manual " + uren + " followed by " + USubst(subst) + " to prove " + sequent.prettyString)
+
+            cutLR(g)(pos) <(
+              /* use */ skip,
+              /* show */ cohide('Rlast) & equivifyR(1) & commuteEquivR(1) & ProofRuleTactics.uniformRenaming(x, aX) & US(USubst(subst), origin) & byVerbatim("DE differential effect"))
+
         }
       }
     }
