@@ -264,9 +264,12 @@ class JLinkMathematicaLink extends MathematicaLink {
       Array(toMathematica(Not(fml)), new MExpr(listExpr, StaticSemantics.symbols(fml).toList.sorted.map(s => toMathematica(s)).toArray), new MExpr(Expr.SYMBOL, "Reals")))
     val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
     run(inputWithTO) match {
-      case (_, cex: Formula) =>
-        if (DEBUG) println("Counterexample " + cex.prettyString)
-        Some(flattenConjunctions(cex).map {case Equal(name: NamedSymbol, value) => name -> value}.toMap)
+      case (_, cex: Formula) => cex match {
+        case False => None
+        case _ =>
+          if (DEBUG) println("Counterexample " + cex.prettyString)
+          Some(flattenConjunctions(cex).map {case Equal(name: NamedSymbol, value) => name -> value}.toMap)
+      }
       case _ => None
     }
   }
