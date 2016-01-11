@@ -181,7 +181,7 @@ object TacticFactory {
       }
     }
 
-    /** Creates a dependent position tactic while inspecting the formula at that position */
+    /** Creates a dependent position tactic while inspecting the sequent/formula at that position */
     def by(t: ((Position, Sequent) => BelleExpr)): DependentPositionTactic = new DependentPositionTactic(name) {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = t(pos, sequent)
