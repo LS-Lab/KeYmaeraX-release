@@ -105,7 +105,7 @@ object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
   * @author Stefan Mitsch
   * @author Andre Platzer
   */
-trait AtPosition[T <: BelleExpr] extends (PositionLocator => T) {
+trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
   import Find._
 
   /**
@@ -319,7 +319,11 @@ abstract case class BuiltInTwoPositionTactic(name: String) extends BelleExpr {
   def computeResult(provable : Provable, posOne: Position, posTwo: Position) : Provable
 
   /** Returns an explicit representation of the application of this tactic to the provided positions. */
-  final def apply(posOne: Position, posTwo: Position) = AppliedTwoPositionTactic(this, posOne, posTwo)
+  final def apply(posOne: Position, posTwo: Position): AppliedTwoPositionTactic = AppliedTwoPositionTactic(this, posOne, posTwo)
+  /** Returns an explicit representation of the application of this tactic to the provided positions.
+    * @note Convenience wrapper
+    */
+  final def apply(posOne: Int, posTwo: Int): AppliedTwoPositionTactic = apply(Position(posOne), Position(posTwo))
 
   override def prettyString = name
 }
