@@ -116,6 +116,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
     val fml = Imply(
       (node.sequent.ante ++ (True::True::Nil)).reduce(And),
       (node.sequent.succ ++ (False::False::Nil)).reduce(Or))
+
     try {
       TactixLibrary.tool.findCounterExample(fml) match {
         //@todo return actual sequent, use collapsiblesequentview to display counterexample
@@ -127,21 +128,6 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
     }
   }
 }
-
-//@todo port to new btactics framework
-//class CounterExampleRequest(db : DBAbstraction, userId : String, proofId : String, nodeId: String) extends Request {
-//  override def getResultingResponses() : List[Response] = {
-//    val node = TaskManagement.getNode(proofId, nodeId) match {
-//      case Some(node) => node
-//      case None => throw new IllegalStateException("No proofNode for " + nodeId + " in proof " + proofId)
-//    }
-//    val mathematica = new Mathematica
-//    mathematica.init(db.getConfiguration("mathematica").config)
-//    val cntEx = ArithmeticTacticsImpl.showCounterExample(mathematica, node)
-//    mathematica.shutdown()
-//    new CounterExampleResponse(cntEx) :: Nil
-//  }
-//}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // System Configuration
