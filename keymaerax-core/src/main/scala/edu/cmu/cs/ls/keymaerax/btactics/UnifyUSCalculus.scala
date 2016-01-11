@@ -130,7 +130,7 @@ trait UnifyUSCalculus {
       if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " ... checking")
       val subst = UnificationMatch(form, sequent)
       if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " by " + subst)
-      Predef.assert(sequent == subst(form), "unification must match: " + sequent + " is " + subst(form) + " which is " + form + " instantiated by " + subst)
+      Predef.assert(sequent == subst(form), "unification must match:\n  unify: " + sequent + "\n  gives: " + subst(form) + " when matching against\n  form:  " + form + " by " + subst)
       subst.toTactic(form)
     }
   }
