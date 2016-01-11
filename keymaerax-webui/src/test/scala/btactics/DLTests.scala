@@ -168,7 +168,7 @@ class DLTests extends TacticTestBase {
   it should "work in front of a loop in the antecedent" in {
     val result = proveBy(Sequent(Nil, IndexedSeq("[x:=1;][{x:=x+1;}*]x>0".asFormula), IndexedSeq()), assignb(-1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "\\forall x (x=1 -> [{x:=x+1;}*]x>0)".asFormula
+    result.subgoals.head.ante should contain only ("x=1".asFormula, "[{x:=x+1;}*]x>0".asFormula)
     result.subgoals.head.succ shouldBe empty
   }
 
@@ -183,7 +183,7 @@ class DLTests extends TacticTestBase {
     val result = proveBy("[x:=3;][y:=2;][x:=1;][{x:=x+1;}*]x>0".asFormula, assignb(1, 1::1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "[x:=3;][y:=2;]\\forall x (x=1 -> [{x:=x+1;}*]x>0)".asFormula
+    result.subgoals.head.succ should contain only "[x_0:=3;][y:=2;]\\forall x (x=1 -> [{x:=x+1;}*]x>0)".asFormula
   }
 
   it should "work in front of an ODE, even if it is not top-level" in {
@@ -482,5 +482,26 @@ class DLTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x>0".asFormula
     result.subgoals.head.succ should contain only ("[t:=0;][{x'=1,t'=1}]x>0".asFormula, "z=1".asFormula)
+  }
+
+  "self assign" should "introduce self assignments for simple formula" in {
+    val result = proveBy("x>0".asFormula, DLBySubst.selfAssign("x".asVariable)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[x:=x;]x>0".asFormula
+  }
+
+  it should "introduce self assignments for simple formula in antecedent" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq()), DLBySubst.selfAssign("x".asVariable)(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "[x:=x;]x>0".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "introduce self assignments in context in antecedent" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("[x:=2;]x>0".asFormula), IndexedSeq()), DLBySubst.selfAssign("x".asVariable)(-1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "[x:=2;][x:=x;]x>0".asFormula
+    result.subgoals.head.succ shouldBe empty
   }
 }
