@@ -135,30 +135,76 @@ object DerivationInfo {
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", {case () => HilbertCalculus.DS}),
 
     // Differential Axioms
-    new CoreAxiomInfo("c()' derive constant fn", ("c()'", "c()′"), "Dconst", {case () => HilbertCalculus.Dconst}),
-    new CoreAxiomInfo("x' derive var", "x'", "Dvar", {case () => HilbertCalculus.Dvariable}),
-    new DerivedAxiomInfo("x' derive variable", ("x′","x'"), "DvariableAxiom", {case () => HilbertCalculus.useAt(DerivedAxioms.Dvariable)}),
-    new DerivedAxiomInfo("x' derive var commuted", ("x′+C","x'+C"), "DvariableCommutedAxiom", {case () => HilbertCalculus.useAt(DerivedAxioms.DvariableCommuted)}),
-    new PositionTacticInfo("DvariableTactic", ("x′","x'"), {case () => DifferentialTactics.Dvariable}),
-    new CoreAxiomInfo("+' derive sum", ("+′","+'"), "Dplus", {case () => HilbertCalculus.Dplus}),
-    new CoreAxiomInfo("-' derive neg", ("-′","-'"), "Dneg", {case () => HilbertCalculus.Dneg}),
-    new CoreAxiomInfo("-' derive minus", ("-′","-'"), "Dminus", {case () => HilbertCalculus.Dminus}),
-    new CoreAxiomInfo("*' derive product", ("*′","*'"), "Dtimes", {case () => HilbertCalculus.Dtimes}),
-    new CoreAxiomInfo("/' derive quotient", ("/′","/'"), "Dquotient", {case () => HilbertCalculus.Dquotient}),
-    new CoreAxiomInfo("^' derive power", ("^′","^'"), "Dpower", {case () => HilbertCalculus.Dpower}),
-    new CoreAxiomInfo("chain rule", ("∘′","o'"), "Dcompose", {case () => TactixLibrary.Dcompose}),
+    new CoreAxiomInfo("c()' derive constant fn"
+      , AxiomDisplayInfo(("c()'", "c()′"), "(c)′=0")
+      , "Dconst", {case () => HilbertCalculus.Dconst}),
+    new CoreAxiomInfo("x' derive var"
+      ,  AxiomDisplayInfo("x'", "(x)′=x′")
+      , "Dvar", {case () => HilbertCalculus.Dvariable}),
+    new DerivedAxiomInfo("x' derive variable"
+      ,  AxiomDisplayInfo(("x′","x'"), "(x)′=x′")
+      , "DvariableAxiom", {case () => HilbertCalculus.useAt(DerivedAxioms.Dvariable)}),
+    new DerivedAxiomInfo("x' derive var commuted"
+      ,  AxiomDisplayInfo(("x′+C","x'+C"), "x′=(x)′")
+      , "DvariableCommutedAxiom", {case () => HilbertCalculus.useAt(DerivedAxioms.DvariableCommuted)}),
+    new PositionTacticInfo("DvariableTactic"
+      ,  AxiomDisplayInfo(("x′","x'"), "(x)′=x′")
+      , {case () => DifferentialTactics.Dvariable}),
+    new CoreAxiomInfo("+' derive sum"
+      ,  AxiomDisplayInfo(("+′","+'"), "(f(x)+g(x))′=f(x)′+g(x)′")
+      , "Dplus", {case () => HilbertCalculus.Dplus}),
+    new CoreAxiomInfo("-' derive neg"
+      ,  AxiomDisplayInfo(("-′","-'"),"(-f(x))′=-(f(x))′")
+      , "Dneg", {case () => HilbertCalculus.Dneg}),
+    new CoreAxiomInfo("-' derive minus"
+      ,  AxiomDisplayInfo(("-′","-'"), "(f(x)-g(x))′=f(x)′-g(x)′")
+      , "Dminus", {case () => HilbertCalculus.Dminus}),
+    new CoreAxiomInfo("*' derive product"
+      ,  AxiomDisplayInfo(("*′","*'"), "(f(x)*g(x))′=(f(x))′*g(x)+f(x)*(g(x))′")
+      , "Dtimes", {case () => HilbertCalculus.Dtimes}),
+    new CoreAxiomInfo("/' derive quotient"
+      ,  AxiomDisplayInfo(("/′","/'"), "(f(g)/g(x))′=(g(x)*(f(x))w-f(x)*(g(x))′)/g(x)^2")
+      , "Dquotient", {case () => HilbertCalculus.Dquotient}),
+    new CoreAxiomInfo("^' derive power"
+      ,  AxiomDisplayInfo(("^′","^'"), "(f(g)^n)′=n*f(g)^(n-1)*(f(g))′*←n!=0")
+      , "Dpower", {case () => HilbertCalculus.Dpower}),
+    new CoreAxiomInfo("chain rule"
+      ,  AxiomDisplayInfo(("∘′","o'"), "[y:=g(x)][y′:=1]((f(g(x)))′=(f(y))′*(g(x))′")
+      , "Dcompose", {case () => TactixLibrary.Dcompose}),
 
-    new CoreAxiomInfo("=' derive =", ("=′","='"), "Dequal", {case () => HilbertCalculus.Dequal}),
-    new CoreAxiomInfo(">=' derive >=", (">=′",">='"), "Dgreaterequal", {case () => HilbertCalculus.Dgreaterequal}),
-    new CoreAxiomInfo(">' derive >", (">′",">'"), "Dgreater", {case () => HilbertCalculus.Dgreater}),
-    new CoreAxiomInfo("<=' derive <=", ("<=′","<='"), "Dlessequal", {case () => HilbertCalculus.Dlessequal}),
-    new CoreAxiomInfo("<' derive <", ("<′","<'"), "Dless", {case () => HilbertCalculus.Dless}),
-    new CoreAxiomInfo("!=' derive !=", ("¬=′","!='"), "Dnotequal", {case () => HilbertCalculus.Dnotequal}),
-    new CoreAxiomInfo("&' derive and", ("∧′", "&'"), "Dand", {case () => HilbertCalculus.Dand}),
-    new CoreAxiomInfo("|' derive or", ("∨′", "|'"), "Dor", {case () => HilbertCalculus.Dor}),
-    new DerivedAxiomInfo("->' derive imply", ("→′","->'"), "Dimply", {case () => HilbertCalculus.Dimply}),
-    new CoreAxiomInfo("forall' derive forall", ("∀′","forall'"), "Dforall", {case () => HilbertCalculus.Dforall}),
-    new CoreAxiomInfo("exists' derive exists", ("∃′","exists'"), "Dexists", {case () => HilbertCalculus.Dexists}), //@todo "∃'"
+    new CoreAxiomInfo("=' derive ="
+      ,  AxiomDisplayInfo(("=′","='"),"(f(x)=g(x))′↔f(x)′=g(x)′")
+      , "Dequal", {case () => HilbertCalculus.Dequal}),
+    new CoreAxiomInfo(">=' derive >="
+      ,  AxiomDisplayInfo(("≥′",">='"), "(f(x)≥g(x))′↔f(x)′≥g(x)′")
+      , "Dgreaterequal", {case () => HilbertCalculus.Dgreaterequal}),
+    new CoreAxiomInfo(">' derive >"
+      ,  AxiomDisplayInfo((">′",">'"),"(f(x)>g(x))′  f(x)′≥g(x)′")
+      , "Dgreater", {case () => HilbertCalculus.Dgreater}),
+    new CoreAxiomInfo("<=' derive <="
+      ,  AxiomDisplayInfo(("≤′","<='"), "(f(x)≤g(x))′↔f(x)′≤g(x)′")
+      , "Dlessequal", {case () => HilbertCalculus.Dlessequal}),
+    new CoreAxiomInfo("<' derive <"
+      ,  AxiomDisplayInfo(("<′","<'"),"(f(x)<g(m))′↔f(x)′≤g(x)′")
+      , "Dless", {case () => HilbertCalculus.Dless}),
+    new CoreAxiomInfo("!=' derive !="
+      ,  AxiomDisplayInfo(("¬=′","!='"), "(f(x)¬=g(x))′↔f(x)′=g(x)′")
+      , "Dnotequal", {case () => HilbertCalculus.Dnotequal}),
+    new CoreAxiomInfo("&' derive and"
+      ,  AxiomDisplayInfo(("∧′", "&'"),"(f(x)&g(x))′↔f(x)′∧g(x)′")
+      , "Dand", {case () => HilbertCalculus.Dand}),
+    new CoreAxiomInfo("|' derive or"
+      ,  AxiomDisplayInfo(("∨′", "|'"), "(f(x)|g(x))′↔f(x)′∧g(x)′")
+      , "Dor", {case () => HilbertCalculus.Dor}),
+    new DerivedAxiomInfo("->' derive imply"
+      ,  AxiomDisplayInfo(("→′","->'"), "(f(x)→g(x))′↔(¬f(x)∨g(x))′")
+      , "Dimply", {case () => HilbertCalculus.Dimply}),
+    new CoreAxiomInfo("forall' derive forall"
+      ,  AxiomDisplayInfo(("∀′","forall'"), "(∀x p(x))′↔∀x (p(x))′")
+      , "Dforall", {case () => HilbertCalculus.Dforall}),
+    new CoreAxiomInfo("exists' derive exists"
+      ,  AxiomDisplayInfo(("∃′","exists'"), "(∃x p(x))′↔∀x (p(x))′")
+      , "Dexists", {case () => HilbertCalculus.Dexists}),
 
     // first-order logic quantifiers
     new CoreAxiomInfo("all instantiate", ("∀inst","allinst"), "allinst", {case () => ???}),
@@ -254,7 +300,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("<=", "<=", "lessEqual", {case () => useAt(DerivedAxioms.lessEqual)}),
     new DerivedAxiomInfo("! <", ("¬<","!<"), "notLess", {case () => useAt(DerivedAxioms.notLess)}),
     new DerivedAxiomInfo("! >", ("¬>","!>"), "notGreater", {case () => useAt(DerivedAxioms.notGreater)}),
-    new DerivedAxiomInfo("< negate", ("¬<=","!<="), "notGreaterEqual", {case () => useAt(DerivedAxioms.notGreaterEqual)}),
+    new DerivedAxiomInfo("< negate", ("¬≤","!<="), "notGreaterEqual", {case () => useAt(DerivedAxioms.notGreaterEqual)}),
     new DerivedAxiomInfo(">= flip", ">=F", "flipGreaterEqual", {case () => useAt(DerivedAxioms.flipGreaterEqual)}),
     new DerivedAxiomInfo("> flip", ">F", "flipGreater", {case () => useAt(DerivedAxioms.flipGreater)}),
     new DerivedAxiomInfo("<", "<", "less", {case () => useAt(DerivedAxioms.less)}),
@@ -270,7 +316,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("<=Div down", "<=/", "intervalDownDivide", {case () => useAt(DerivedAxioms.intervalDownDivide)}),
     new DerivedAxiomInfo("! !=", ("¬¬=","!!="), "notNotEqual", {case () => useAt(DerivedAxioms.notNotEqual)}),
     new DerivedAxiomInfo("! =", ("¬ =","! ="), "notEqual", {case () => useAt(DerivedAxioms.notEqual)}),
-    new DerivedAxiomInfo("! <=", ("¬<=","!<="), "notLessEqual", {case () => useAt(DerivedAxioms.notLessEqual)}),
+    new DerivedAxiomInfo("! <=", ("¬≤","!<="), "notLessEqual", {case () => useAt(DerivedAxioms.notLessEqual)}),
     new DerivedAxiomInfo("* associative", "*A", "timesAssociative", {case () => useAt(DerivedAxioms.timesAssociative)}),
     new DerivedAxiomInfo("* commute", "*C", "timesCommute", {case () => useAt(DerivedAxioms.timesCommutative)}),
     new DerivedAxiomInfo("* inverse", "*i", "timesInverse", {case () => useAt(DerivedAxioms.timesInverse)}),
