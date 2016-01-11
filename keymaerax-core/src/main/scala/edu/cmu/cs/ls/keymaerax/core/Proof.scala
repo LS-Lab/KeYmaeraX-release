@@ -1130,61 +1130,34 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
  * (and its associated DifferentialSymbol) to repl.
  * @param what What variable (and its associated DifferentialSymbol) to replace.
  * @param repl The target variable to replace what with.
+ * @param pos The position at which to perform a bound renaming.
  * @requires repl is fresh in the sequent.
- * @author smitsch
  * @author Andre Platzer
+ * @author Stefan Mitsch
  */
-final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
+final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) extends PositionRule {
   insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
   val name: String = "Bound Renaming"
 
   private val renaming = URename(what, repl)
 
-  override def toString: String = name + "(" + what + "~>" + repl + ")"
+  override def toString: String = name + "(" + what + "~>" + repl + ") at " + pos
 
-  def apply(s: Sequent): immutable.List[Sequent] =
-    immutable.List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
+  def apply(s: Sequent): immutable.List[Sequent] = immutable.List(s.updated(pos, apply(s(pos))))
 
-  def apply(f: Formula): Formula = {
-    if (StaticSemantics(f).bv.intersect(SetLattice(Set[NamedSymbol](what, DifferentialSymbol(what)))).isEmpty) {
-      // old name is not bound anywhere in f, so no bound renaming needed/possible
-      f
-    } else {
-      // old name is bound somewhere in f -> check that new name is admissible (does not occur)
-      if (admissible(f)) {if (what==repl) f else renaming(f)}
-      else throw new BoundRenamingClashException("Bound renaming only to fresh names but name " +
-        repl + " is not fresh", this.toString, f.prettyString)
-    }
-  }
-
-  /**
-   * Introduce a ghost for the target variable as needed to remember the value of the previous variable.
-   * If what is bound at f, rename, otherwise introduce stuttering [what:=what] before renaming,
-   * leading to [repl:=what] after renaming.
-   * Ensures that the bound variable is literally bound on the top level, when in doubt by introducing a stutter.
-   */
-  private def ghostify(f: Formula): Formula =
-    if (StaticSemantics(f).bv.intersect(SetLattice(Set[NamedSymbol](what, DifferentialSymbol(what)))).isEmpty) {
-      // old name is not bound anywhere in f, so no bound renaming needed/possible
-      f
-    } else {
-      // old name is bound somewhere in f -> lazy check by ensuring that new name is admissible (does not occur)
-      f match {
-        case Forall(vars, _) if vars.contains(what) => apply(f)
-        case Exists(vars, _) if vars.contains(what) => apply(f)
-        //@note e is not in scope of x so, unlike g, not affected by bound renaming yet
-        case Box(Assign(x, e), g) if x == repl => Box(Assign(repl, e), renaming(g))
-        case Diamond(Assign(x, e), g) if x == repl => Diamond(Assign(repl, e), renaming(g))
-        case _ => if (Rule.LAX_MODE) {
-          /** @todo Code Review: change to false */
-          //@note turn to false after telling alphaRenamingT and globalAlphaRenamingT to add the stutter by axiom if needed
-          //println("LAX: BoundRenaming: Change alphaRenamingT and disable compatibilityMode" + (if (what==repl) " stutter " else "non-stutter") + "\nfor " + this + " in " + f.prettyString + " led to " + Box(Assign(repl, what), apply(f)).prettyString)
-          if (Provable.DEBUG && repl != what) {println("LAX: BoundRenaming: Change alphaRenamingT and disable compatibilityMode" + (if (what==repl) " stutter " else "non-stutter") + "\nfor " + this + " in " + f.prettyString + " led to " + Box(Assign(repl, what), apply(f)).prettyString)}
-          //@note uniformly rename all occurrences of what to repl in f and prefix with an assignment [repl:=what] remembering what value 'what' used to have.
-          Box(Assign(repl, what), renaming(f))
-        } else throw new BoundRenamingClashException("Bound renaming only to bound variables " +
-          what + " is not bound", this.toString, f.prettyString)
-    } } ensuring(admissible(f), s"ghostify will not work on $f because the symbols occuring in that formula intersect with ($repl')")
+  def apply(f: Formula): Formula = { if (admissible(f))
+    f match {
+      case Forall(vars, g) if vars==immutable.IndexedSeq(what) => Forall(immutable.IndexedSeq(repl), renaming(g))
+      case Exists(vars, g) if vars==immutable.IndexedSeq(what) => Exists(immutable.IndexedSeq(repl), renaming(g))
+      //@note e is not in scope of x so is, unlike g, not affected by the renaming
+      case Box    (Assign(x, e), g) if x==what => Box    (Assign(repl, e), renaming(g))
+      case Diamond(Assign(x, e), g) if x==what => Diamond(Assign(repl, e), renaming(g))
+      case _ => throw new BoundRenamingClashException("Bound renaming only to bound variables " +
+        what + " is not bound by a quantifier or single assignment", this.toString, f.prettyString)
+    } else
+    throw new BoundRenamingClashException("Bound renaming only to fresh names but name " +
+      repl + " is not fresh", this.toString, f.prettyString)
+  } ensuring(r => r.getClass == f.getClass, "shape unchanged by bound renaming " + this)
 
   /**
    * Check whether this renaming is admissible for expression e, i.e.
@@ -1193,8 +1166,7 @@ final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
    * @note This implementation currently errors if repl.sort!=Real
    */
   private def admissible(e: Expression): Boolean =
-    what == repl ||
-      StaticSemantics.symbols(e).intersect(Set(repl, DifferentialSymbol(repl))).isEmpty
+    what == repl || StaticSemantics.symbols(e).intersect(Set(repl, DifferentialSymbol(repl))).isEmpty
 }
 
 

@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -87,6 +88,7 @@ object ProofRuleTactics {
   def andR = new BuiltInRightTactic("AndR") {
     override def computeSuccResult(provable: Provable, pos : SuccPosition) = {
       requireOneSubgoal(provable)
+      //@todo how is isTopLevel ensured here and elsewhere? Call pos.checkTop.top?
       provable(core.AndRight(pos.top), 0)
     }
   }
@@ -272,31 +274,51 @@ object ProofRuleTactics {
     }
   }
 
-  def boundRenaming(what: Variable, repl: Variable): DependentTactic = new DependentTactic("BoundRenaming") {
-    override def computeExpr(provable: Provable): BelleExpr = {
+  import TacticFactory._
+  /**
+    * Bound renaming `what~>repl` renames the bound variable `what` bound at the indicated position to `what`.
+    * @param what the variable bound at the position where this tactic will be used.
+    * @param repl the new, fresh variable to be used for this bound variable instead.
+    * @author Andre Platzer
+    * @incontext
+    */
+  def boundRenaming(what: Variable, repl: Variable): DependentPositionTactic = "BoundRenaming" by ((pos:Position, sequent:Sequent) =>
+    if (pos.isTopLevel)
+      topBoundRenaming(what,repl)(pos)
+    else {
+        // [x:=f(x)]P(x)
+        import Augmentors.SequentAugmentor
+        val fml = sequent.apply(pos).asInstanceOf[Formula]
+        // renaming bound variable x in [x:=f()]p(x) assignment to [y:=f()]p(y) to make y not occur in f() anymore
+        //@note the proof is the same for \forall x p(x) etc.
+        val brenL = core.BoundRenaming(what, repl, AntePos(0))
+        val brenR = core.BoundRenaming(what, repl, SuccPos(0))
+        val mod = brenR(fml) ensuring(r => r==brenL(fml), "bound renaming for formula is independent of position")
+        // |- \forall y (y=f(x) -> P(y)) <-> [x:=f(x)]P(x)
+        val side: Provable = (Provable.startProof(Equiv(mod, fml))
+          // |- [y:=f(x)]P(y) <-> [x:=f(x)]P(x)
+          (EquivRight(SuccPos(0)), 0)
+          // right branch  [x:=f(x)]P(x) |- [y:=f(x)]P(y)
+          (brenL, 1)
+          // [y:=f(x)]P(y) |- [y:=f(x)]P(y)
+          (Close(AntePos(0), SuccPos(0)), 1)
+          // left branch  [y:=f(x)]P(y) |- [x:=f(x)]P(x)
+          (brenR, 0)
+          // [y:=f(x)]P(y) |- [y:=f(x)]P(y)
+          (Close(AntePos(0), SuccPos(0)), 0)
+        )
+        TactixLibrary.CEat(side)(pos)
+    })
+
+  private def topBoundRenaming(what: Variable, repl: Variable): PositionalTactic = new BuiltInPositionTactic("BoundRenaming") {
+    override def computeResult(provable: Provable, pos: Position): Provable = {
       requireOneSubgoal(provable)
-      // boundRenaming potentially adds stuttering [repl:=what;]p; look for exact stuttering shape to avoid applying
-      // [:=] assign on pre-existing formulas
-      val anteAssigns: IndexedSeq[BelleExpr] = provable.subgoals.head.ante.zipWithIndex.map { case (p, i) =>
-        ?(TactixLibrary.useAt("[:=] assign")(Fixed(AntePosition.base0(i), Some(Box(Assign(repl, what), URename(what, repl)(p)))))) }
-      val succAssigns: IndexedSeq[BelleExpr] = provable.subgoals.head.succ.zipWithIndex.map { case (p, i) =>
-        ?(TactixLibrary.useAt("[:=] assign")(Fixed(SuccPosition.base0(i), Some(Box(Assign(repl, what), URename(what, repl)(p)))))) }
-
-      // do bound renaming and remove stuttering assignments
-      boundRenamingRule &
-        (if (LAX_MODE) ((anteAssigns :+ Idioms.ident) ++ (succAssigns :+ Idioms.ident)).reduce(_ & _)
-         else Idioms.ident)
-    }
-
-    private lazy val boundRenamingRule: BuiltInTactic = new BuiltInTactic(name) {
-      override def result(provable: Provable): Provable = {
-        requireOneSubgoal(provable)
-        provable(core.BoundRenaming(what, repl), 0)
-      }
+      require(pos.isTopLevel, "bound renaming rule only at top-level")
+      provable(core.BoundRenaming(what, repl, pos.top), 0)
     }
   }
 
-  def skolemize = new BuiltInPositionTactic("Skolemize") {
+      def skolemize = new BuiltInPositionTactic("Skolemize") {
     override def computeResult(provable: Provable, pos: Position): Provable = {
       requireOneSubgoal(provable)
       require(pos.isTopLevel, "Skolemization only at top-level")
