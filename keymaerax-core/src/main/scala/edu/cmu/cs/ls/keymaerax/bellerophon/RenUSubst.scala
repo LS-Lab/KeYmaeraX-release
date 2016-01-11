@@ -13,7 +13,7 @@ import scala.collection.immutable._
 
 object RenUSubst {
   //@todo See UniformRenaming.semanticRenaming: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
-  private[keymaerax] val semanticRenaming = System.getProperty("LAX", "false")=="true"
+  private[keymaerax] val semanticRenaming = System.getProperty("LAX", "true")=="true"
 
   def apply(subsDefsInput: immutable.Seq[(Expression,Expression)]) = if (semanticRenaming)
     new USubstThenRen(subsDefsInput)
