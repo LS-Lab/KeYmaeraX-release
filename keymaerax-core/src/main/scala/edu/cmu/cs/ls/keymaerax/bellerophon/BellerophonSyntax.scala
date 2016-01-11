@@ -213,8 +213,8 @@ trait AtPosition[T <: BelleExpr] extends (PositionLocator => T) {
       case _ => throw new BelleError(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
     //@todo how to check expected formula?
-    case 'Llast => println("INFO: cannot check expected for 'Llast yet"); apply(LastAnte(0))
-    case 'Rlast => println("INFO: cannot check expected for 'Rlast yet"); apply(LastSucc(0))
+    case 'Llast => println("INFO: will not check expected for 'Llast yet"); apply(LastAnte(0))
+    case 'Rlast => println("INFO: will not check expected for 'Rlast yet"); apply(LastSucc(0))
   }
 
 }
@@ -384,6 +384,7 @@ abstract case class InputPositionTactic[T](input: T, pos: Position) extends Bell
 
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: PositionLocator) extends DependentTactic(pt.name) {
   import Augmentors._
+  override def prettyString: String = "AppliedDependentPositionTactic(" + pt.name + ")(" + locator.prettyString + ")"
   final override def computeExpr(v: BelleValue): BelleExpr = locator match {
     //@note interprets PositionLocator
     case Fixed(pos, shape, exact) => shape match {
