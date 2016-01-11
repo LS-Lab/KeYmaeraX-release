@@ -94,7 +94,7 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ shouldBe empty
   }
 
-  it should "instantiate ODE modality" in {
+  it should "instantiate free ODE modality" in {
     val result = proveBy(
       Sequent(Nil, IndexedSeq("\\forall x [{y'=x}]y>0".asFormula), IndexedSeq()),
       allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1))
@@ -103,8 +103,35 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ shouldBe empty
   }
 
+  it should "instantiate free ODE modality whatever the names" in {
+    val result = proveBy(
+      Sequent(Nil, IndexedSeq("\\forall u [{v'=u}]v>0".asFormula), IndexedSeq()),
+      allInstantiate(Some("u".asVariable), Some("z".asTerm))(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "[{v'=z}]v>0".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "instantiate bound ODE modality" in {
+    val result = proveBy(
+      Sequent(Nil, IndexedSeq("\\forall x [{x'=5}]x>=0".asFormula), IndexedSeq()),
+      allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "[{x'=5}]x>0".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "instantiate bound ODE modality whatever the names" in {
+    val result = proveBy(
+      Sequent(Nil, IndexedSeq("\\forall y [{y'=5}]y>=0".asFormula), IndexedSeq()),
+      allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "[{y'=5}]y>0".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
   //@todo not supported yet (but was supported in non-sequential version)
-  ignore should "instantiate more complicated ODE modality" in {
+  it should "instantiate more complicated ODE modality" in {
     val result = proveBy(
       Sequent(Nil, IndexedSeq("\\forall y [{y'=x & y>2}]y>0".asFormula), IndexedSeq()),
       allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
@@ -114,7 +141,7 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   //@todo not supported yet (but was supported in non-sequential version)
-  ignore should "instantiate even if ODE modality follows in some subformula" in {
+  it should "instantiate even if ODE modality follows in some subformula" in {
     val result = proveBy(
       Sequent(Nil, IndexedSeq("\\forall y (y=0 -> [{y'=x & y>2}]y>0)".asFormula), IndexedSeq()),
       allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
