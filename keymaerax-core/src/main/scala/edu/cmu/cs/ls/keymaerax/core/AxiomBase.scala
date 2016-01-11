@@ -296,8 +296,16 @@ Axiom "[:=] assign equality".
   [x:=f();]p(??) <-> \forall x (x=f() -> p(??))
 End.
 
+Axiom "[:=] assign equality exists".
+  [x:=f();]p(??) <-> \exists x (x=f() & p(??))
+End.
+
 Axiom "[:=] assign exists".
   [x:=f();]p(??) -> \exists x p(??)
+End.
+
+Axiom "[:=] self assign".
+  [x:=x;]p(??) <-> p(??)
 End.
 
 Axiom "[':=] differential assign".

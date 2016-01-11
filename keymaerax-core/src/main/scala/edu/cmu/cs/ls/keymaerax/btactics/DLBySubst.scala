@@ -5,7 +5,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.axiomatic
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, NamedTactic, SequentType, USubstPatternTactic}
 import edu.cmu.cs.ls.keymaerax.core.Sequent
@@ -113,6 +112,20 @@ object DLBySubst {
       }
     }
   }
+
+  /**
+   * Introduces a self assignment [x:=x;]p(??) in front of p(??).
+   * @param x The self-assigned variable.
+   * @return The tactic.
+   */
+  def selfAssign(x: Variable): DependentPositionTactic = "[:=] self assign inverse" by ((pos, sequent) => sequent.at(pos) match {
+    case (ctx, f: Formula) =>
+      val commute = if (pos.isAnte) commuteEquivR(1) else skip
+      cutLR(ctx(Box(Assign(x, x), f)))(pos) <(
+        skip,
+        cohide('Rlast) & equivifyR(1) & commute & CE(pos.inExpr) & byUS("[:=] self assign")
+      )
+  })
 
   /** Top-level abstraction: basis for abstraction tactic */
   private def topAbstraction: DependentPositionTactic = new DependentPositionTactic("Top-level abstraction") {
@@ -287,9 +300,9 @@ object DLBySubst {
       println("assignEquationalOld on " + fml + " at " + pos + " on\n" + sequent.prettyString + "\nwill work wonders with " + brename + " for " + x.prettyString + "~>" + y.prettyString + " fresh to retain\n" + keepContextAssigns.mkString("    \n"))
       // rename bound variable in [x:=f()]p(x) assignment to [y:=f()]p(y) to make y not occur in f() anymore
       debugAt("assignEquationalOld")(pos) & ProofRuleTactics.boundRenaming(x, y)(pos) &
-        debugAt("BR")(pos) &  useAt("[:=] assign equality")(pos) &
-        debugAt("[:=]=")(pos) & (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident) &
-        debugAt("all")(pos) & keepContextAssigns.fold[BelleExpr](Idioms.ident)(_ & _) &
+        debugAt("BR")(pos) & (if (pos.isAnte) useAt("[:=] assign equality exists")(pos) else useAt("[:=] assign equality")(pos)) &
+        debugAt("[:=]=")(pos) & (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos) else ident) &
+        debugAt("all/exists")(pos) & keepContextAssigns.fold[BelleExpr](Idioms.ident)(_ & _) &
       // TODO derived axiom for equality with exists left for ante
         debugAt("BR others")(pos) & ProofRuleTactics.uniformRenaming(y, x) &
       debugAt("UR")(pos)

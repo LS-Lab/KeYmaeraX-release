@@ -116,6 +116,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
     val fml = Imply(
       (node.sequent.ante ++ (True::True::Nil)).reduce(And),
       (node.sequent.succ ++ (False::False::Nil)).reduce(Or))
+
     try {
       TactixLibrary.tool.findCounterExample(fml) match {
         //@todo return actual sequent, use collapsiblesequentview to display counterexample
@@ -127,21 +128,6 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
     }
   }
 }
-
-//@todo port to new btactics framework
-//class CounterExampleRequest(db : DBAbstraction, userId : String, proofId : String, nodeId: String) extends Request {
-//  override def getResultingResponses() : List[Response] = {
-//    val node = TaskManagement.getNode(proofId, nodeId) match {
-//      case Some(node) => node
-//      case None => throw new IllegalStateException("No proofNode for " + nodeId + " in proof " + proofId)
-//    }
-//    val mathematica = new Mathematica
-//    mathematica.init(db.getConfiguration("mathematica").config)
-//    val cntEx = ArithmeticTacticsImpl.showCounterExample(mathematica, node)
-//    mathematica.shutdown()
-//    new CounterExampleResponse(cntEx) :: Nil
-//  }
-//}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // System Configuration
@@ -825,7 +811,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
         val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
         val executor = BellerophonTacticExecutor.defaultExecutor
-        val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
+        val taskId = executor.schedule (userId, appliedExpr, BelleProvable(localProvable), List(listener))
         new RunBelleTermResponse(proofId, nodeId, taskId) :: Nil
     }
   }
@@ -886,7 +872,7 @@ class StopTaskRequest(db: DBAbstraction, userId: String, proofId: String, nodeId
   def getResultingResponses() = {
     val executor = BellerophonTacticExecutor.defaultExecutor
     //@note may have completed in the meantime
-    executor.tryRemove(taskId, force = true)
+    executor.tasksForUser(userId).foreach(executor.tryRemove(_, force = true))
     new GenericOKResponse() :: Nil
   }
 }
