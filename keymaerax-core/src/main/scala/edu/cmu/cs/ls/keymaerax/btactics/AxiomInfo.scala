@@ -448,8 +448,15 @@ object DerivationInfo {
       {case () => ProofRuleTactics.hideR}),
     new PositionTacticInfo("coHideL", "W", {case () => ProofRuleTactics.coHideL}),
     new PositionTacticInfo("coHideR", "W", {case () => ProofRuleTactics.coHideR}),
-    new PositionTacticInfo("closeFalse", ("⊥L", "falseL"), {case () => ProofRuleTactics.closeFalse}),
-    new PositionTacticInfo("closeTrue", ("⊤R","trueR"), {case () => ProofRuleTactics.closeTrue}),
+    new PositionTacticInfo("closeFalse"
+      ,("⊥L", "falseL")
+      // @todo Rules with no premises display incorrectly on UI
+      //, RuleDisplayInfo(("⊥L", "falseL"), (List("⊥","&Gamma;"),List("&Delta;")), List())
+      , {case () => ProofRuleTactics.closeFalse}),
+    new PositionTacticInfo("closeTrue"
+     ,("⊤R","trueR")
+      //, RuleDisplayInfo(("⊤R","trueR"), (List("&Gamma;"), List("⊤","&Delta;")),List())
+        ,{case () => ProofRuleTactics.closeTrue}),
     new PositionTacticInfo("skolemizeL", "skolem", {case () => ProofRuleTactics.skolemizeL}),
     new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}),
     new PositionTacticInfo("skolemize", "skolem", {case () => ProofRuleTactics.skolemize}),
