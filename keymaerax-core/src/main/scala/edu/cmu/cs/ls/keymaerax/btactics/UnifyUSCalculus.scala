@@ -97,6 +97,8 @@ trait UnifyUSCalculus {
   }//new ByProvable(provable)
   /** by(lemma) is a pseudo-tactic that uses the given Lemma to continue or close the proof (if it fits to what has been proved) */
   def by(lemma: Lemma)        : BelleExpr = by(lemma.fact)
+  /** byVerbatim(axiom) is a pseudo-tactic that uses the given axiom literally to continue or close the proof (if it fits to what has been proved) */
+  def byVerbatim(axiom: String) : BelleExpr = by(AxiomInfo(axiom).provable)
   /** byUS(provable) proves by a uniform substitution instance of provable, obtained by unification.
     * @see [[UnifyUSCalculus.US()]] */
   def byUS(provable: Provable): BelleExpr = US(provable.conclusion) & by(provable)
@@ -125,10 +127,10 @@ trait UnifyUSCalculus {
    */
   def US(form: Sequent): DependentTactic = new SingleGoalDependentTactic("US") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
-      if (DEBUG) println("  US(" + form.prettyString + ")\nunify: " + sequent + " matches against\nform:  " + form + " ... checking")
+      if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " ... checking")
       val subst = UnificationMatch(form, sequent)
-      if (DEBUG) println("  US(" + form.prettyString + ")\nunify: " + sequent + " matches against\nform:  " + form + " by " + subst)
-      Predef.assert(sequent == subst(form), "unification must match: " + sequent + " is " + subst(form) + " which is " + form + " instantiated by " + subst)
+      if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " by " + subst)
+      Predef.assert(sequent == subst(form), "unification must match:\n  unify: " + sequent + "\n  gives: " + subst(form) + " when matching against\n  form:  " + form + " by " + subst)
       subst.toTactic(form)
     }
   }
@@ -182,12 +184,13 @@ trait UnifyUSCalculus {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val (ctx,expr) = sequent.at(pos)
         val subst = inst(UnificationMatch(keyPart, expr))
-        if (DEBUG) println("useAt(" + fact.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
-        Predef.assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
+        if (DEBUG) println("useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
+        Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
         useAt(subst, keyCtx, keyPart, pos, ctx, expr, factTactic, sequent)
       }
     }
+    private val RECHECK = true
 
     /**
      * useAt(K{k})(C{c}) uses, already under the given substitution subst, the key k from context K{k}
@@ -205,7 +208,7 @@ trait UnifyUSCalculus {
      * @note The implementation could be generalized because it sometimes fires irrelevant substitution clashes coming merely from the context embedding contracts.
      */
     private def useAt[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: BelleExpr, sequent: Sequent): BelleExpr = {
-      require(subst(k) == c, "correctly matched input")
+      require(!RECHECK || subst(k) == c, "correctly matched input")
       //@note might cause some irrelevant clashes
       require(C(c).at(p.inExpr) == (C,c), "correctly split at position " + p.inExpr + "\ngiving context " + C + "\nsubexpression " + c + "\nreassembling to the same " + C(c))
       require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
@@ -433,7 +436,10 @@ trait UnifyUSCalculus {
           val (ctxP, p: Formula) = l.at(inEqPos)
           val (ctxQ, q: Formula) = r.at(inEqPos)
           require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
-          implyR(SuccPos(0)) &
+          if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)) &
+            by(CMon(ctxP)(Provable.startProof(Sequent(Nil, IndexedSeq(q), IndexedSeq(p))))) &
+            by(inverseImplyR(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(q, p))))))
+          else implyR(SuccPos(0)) &
             by(CMon(ctxP)(Provable.startProof(Sequent(Nil, IndexedSeq(p), IndexedSeq(q))))) &
             by(inverseImplyR(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(p, q))))))
       }

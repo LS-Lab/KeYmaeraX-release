@@ -198,7 +198,7 @@ private[core] object AxiomBase {
 
   /** Redundant code checking expected form of axioms */
   private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
-    val x = Variable("x", None, Real)
+    val x = Variable("x_", None, Real)
     val x_ = Variable("x_", None, Real)
     val xp = DifferentialSymbol(x)
     val p0 = PredOf(Function("p", None, Unit, Bool), Nothing)
@@ -289,23 +289,31 @@ Axiom "<> diamond".
 End.
 
 Axiom "[:=] assign".
-  [v:=t();]p(v) <-> p(t())
+  [x_:=f();]p(x_) <-> p(f())
 End.
 
 Axiom "[:=] assign equality".
-  [x:=f();]p(??) <-> \forall x (x=f() -> p(??))
+  [x_:=f();]p(??) <-> \forall x_ (x_=f() -> p(??))
+End.
+
+Axiom "[:=] assign equality exists".
+  [x:=f();]p(??) <-> \exists x (x=f() & p(??))
 End.
 
 Axiom "[:=] assign exists".
-  [x:=f();]p(??) -> \exists x p(??)
+  [x_:=f();]p(??) -> \exists x_ p(??)
+End.
+
+Axiom "[:=] self assign".
+  [x:=x;]p(??) <-> p(??)
 End.
 
 Axiom "[':=] differential assign".
-  [v':=t();]p(v') <-> p(t())
+  [x_':=f();]p(x_') <-> p(f())
 End.
 
 Axiom "[:*] assign nondet".
-  [x:=*;]p(??) <-> (\forall x p(??))
+  [x_:=*;]p(??) <-> (\forall x_ p(??))
 End.
 
 Axiom "[?] test".
@@ -342,13 +350,13 @@ Axiom "DE differential effect".
   /* [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
   /* @NOTE Generalized argument compared to theory as in DE differential effect (system) */
   /* @NOTE In systems, f(x) cannot have ' by data structure invariant */
-  [{x'=f(x)&q(x)}]p(??) <-> [{x'=f(x)&q(x)}][x':=f(x);]p(??)
+  [{x_'=f(x_)&q(x_)}]p(??) <-> [{x_'=f(x_)&q(x_)}][x_':=f(x_);]p(??)
 End.
 
 Axiom "DE differential effect (system)".
   /* @NOTE Soundness: AtomicODE requires explicit-form so f(??) cannot verbatim mention differentials/differential symbols */
   /* @NOTE Completeness: reassociate needed in DifferentialProduct data structures */
-  [{x'=f(??),c&H(??)}]p(??) <-> [{c,x'=f(??)&H(??)}][x':=f(??);]p(??)
+  [{x_'=f(??),c&H(??)}]p(??) <-> [{c,x_'=f(??)&H(??)}][x_':=f(??);]p(??)
 End.
 
 Axiom "DI differential invariant".
@@ -358,30 +366,30 @@ End.
 
 /* Differential Auxiliary / Differential Ghost */
 Axiom "DG differential ghost".
-  [{c&H(??)}]p(??) <-> \exists y [{c,y'=(t()*y)+s()&H(??)}]p(??)
+  [{c&H(??)}]p(??) <-> \exists y_ [{c,y_'=(t()*y_)+s()&H(??)}]p(??)
   /* [x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=(a(x)*y)+b(x))&q(x)}]p(x) THEORY */
 End.
 
 /* DG differential ghost, general Lipschitz case */
 /*Axiom "DG differential Lipschitz ghost".
-  ([x'=f(x)&q(x);]p(x) <-> \exists y [{x'=f(x),y'=g(x,y)&q(x)}]p(x))
-  <- (\exists L \forall x \forall y \forall z (abs(g(x,y)-g(x,z)) <= L*abs(y-z)))
+  ([x_'=f(x_)&q(x_);]p(x_) <-> \exists y_ [{x_'=f(x_),y_'=g(x_,y_)&q(x_)}]p(x_))
+  <- (\exists L_ \forall x_ \forall y_ \forall z_ (abs(g(x_,y_)-g(x_,z_)) <= L_*abs(y_-z_)))
 End.*/
 
 /* DG differential ghost, general Lipschitz case, system case */
 Axiom "DG differential Lipschitz ghost system".
   /* @see "DG differential Lipschitz ghost" THEORY */
-  ([{c&H(??)}]p(??) <-> (\exists y [{y'=g(??),c&H(??)}]p(??)))
-  <- (\exists L [{c&H(??)}] (\forall a \forall b \forall u \forall v (a>=b -> [y:=a;u:=g(??);y:=b;v:=g(??);] (-L*(a-b) <= u-v & u-v <= L*(a-b)))))
-  /* <- (\exists L [{c&H(??)}] (\forall a \forall b \forall u \forall v ([y:=a;u:=g(??);y:=b;v:=g(??);] (abs(u-v) <= L*abs(a-b))))) */
+  ([{c&H(??)}]p(??) <-> (\exists y_ [{y_'=g(??),c&H(??)}]p(??)))
+  <- (\exists L_ [{c&H(??)}] (\forall a_ \forall b_ \forall u_ \forall v_ (a_>=b_ -> [y_:=a_;u_:=g(??);y_:=b_;v_:=g(??);] (-L_*(a_-b_) <= u_-v_ & u_-v_ <= L_*(a_-b_)))))
+  /* <- (\exists L_ [{c&H(??)}] (\forall a_ \forall b_ \forall u_ \forall v_ ([y_:=a_;u_:=g(??);y_:=b_;v_:=g(??);] (abs(u_-v_) <= L_*abs(a_-b_))))) */
 End.
 
 Axiom "DG++ System".
-  ([{x'=f(x), c & H(??)}]p(??))  ->  (\forall y [{y'=g(??), x'=f(x), c & H(??)}]p(??))
+  ([{x_'=f(x_), c & H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??), x_'=f(x_), c & H(??)}]p(??))
 End.
 
 Axiom "DG++".
-  ([{x'=f(x) & H(??)}]p(??))  ->  (\forall y [{y'=g(??),x'=f(x) & H(??)}]p(??))
+  ([{x_'=f(x_) & H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(x_) & H(??)}]p(??))
 End.
 
 /* Formatter axioms for diff eqs. */
@@ -390,7 +398,7 @@ Axiom ", commute".
 End.
 
 Axiom "DS& differential equation solution".
-  [{x'=c()&q(x)}]p(x) <-> \forall t (t>=0 -> ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) -> [x:=x+(c()*t);]p(x)))
+  [{x_'=c()&q(x_)}]p(x_) <-> \forall t_ (t_>=0 -> ((\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) -> [x_:=x_+(c()*t_);]p(x_)))
 End.
 
 /** @Derived from DW (not implementable for technical reasons - abstraction of c, ??) */
@@ -477,11 +485,11 @@ Axiom "|' derive or".
 End.
 
 Axiom "forall' derive forall".
-  (\forall x p(??))' <-> (\forall x (p(??)'))
+  (\forall x_ p(??))' <-> (\forall x_ (p(??)'))
 End.
 
 Axiom "exists' derive exists".
-  (\exists x p(??))' <-> (\forall x (p(??)'))
+  (\exists x_ p(??))' <-> (\forall x_ (p(??)'))
   /* sic! yet <- */
 End.
 
@@ -515,24 +523,24 @@ End.
  */
 
 Axiom "all dual".
-  (!\exists x (!p(??))) <-> (\forall x p(??))
+  (!\exists x_ (!p(??))) <-> (\forall x_ p(??))
 End.
 
 Axiom /*\\foralli */ "all instantiate".
-  (\forall x p(x)) -> p(t())
+  (\forall x_ p(x_)) -> p(t())
 End.
 
 /* consequence of "all instantiate" @note generalized "all instantiate" */
 Axiom "all eliminate".
-  (\forall x p(??)) -> p(??)
+  (\forall x_ p(??)) -> p(??)
 End.
 
 Axiom "exists eliminate".
-  p(??) -> (\exists x p(??))
+  p(??) -> (\exists x_ p(??))
 End.
 
 Axiom "vacuous all quantifier".
-  (\forall x p()) <-> p()
+  (\forall x_ p()) <-> p()
 End.
 
 /**

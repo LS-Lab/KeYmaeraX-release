@@ -243,7 +243,9 @@ class JLinkMathematicaLink extends MathematicaLink {
       Array(toMathematica(f), new MExpr(listExpr, new Array[MExpr](0)), new MExpr(Expr.SYMBOL, "Reals")))
     val (output, result) = run(input)
     result match {
-      case f : Formula => (f, new ToolEvidence(immutable.Map("input" -> input.toString, "output" -> output)))
+      case f : Formula =>
+        if (DEBUG) println("Mathematica QE result: " + f.prettyString)
+        (f, new ToolEvidence(immutable.Map("input" -> input.toString, "output" -> output)))
       case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
     }
   }
@@ -264,10 +266,17 @@ class JLinkMathematicaLink extends MathematicaLink {
       Array(toMathematica(Not(fml)), new MExpr(listExpr, StaticSemantics.symbols(fml).toList.sorted.map(s => toMathematica(s)).toArray), new MExpr(Expr.SYMBOL, "Reals")))
     val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
     run(inputWithTO) match {
-      case (_, cex: Formula) =>
-        if (DEBUG) println("Counterexample " + cex.prettyString)
-        Some(flattenConjunctions(cex).map {case Equal(name: NamedSymbol, value) => name -> value}.toMap)
-      case _ => None
+      case (_, cex: Formula) => cex match {
+        case False =>
+          if (DEBUG) println("No counterexample, Mathematica returned: " + cex.prettyString)
+          None
+        case _ =>
+          if (DEBUG) println("Counterexample " + cex.prettyString)
+          Some(flattenConjunctions(cex).map {case Equal(name: NamedSymbol, value) => name -> value}.toMap)
+      }
+      case result =>
+        if (DEBUG) println("No counterexample, Mathematica returned: " + result)
+        None
     }
   }
 

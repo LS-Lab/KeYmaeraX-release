@@ -20,8 +20,9 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
   import edu.cmu.cs.ls.keymaerax.tactics.SubstitutionHelper.replaceFree
 
   //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
   private val REUNIFY = false
+  private val RECHECK = false
 
 //  type Subst = USubst
 //  private def Subst(subs: List[SubstRepl]): Subst = USubst(subs)
@@ -70,7 +71,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
       Subst(reunify(unify(ren(e1),e2) ++ ren.subsDefsInput))
     }
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
-  } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal\n" + Subst(unify(e1, e2)))
+  } ensuring (r => !RECHECK ||r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould both be unified by their unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: Formula, e2: Formula): Subst = {try {
     if (!REUNIFY) Subst(unify(e1, e2)) else {
@@ -78,7 +79,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
       Subst(reunify(unify(ren(e1), e2) ++ ren.subsDefsInput))
     }
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
-  } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal\n" + Subst(unify(e1, e2)))
+  } ensuring (r => !RECHECK || r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould both be unified by their unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: Program, e2: Program): Subst = {try {
     if (!REUNIFY) Subst(unify(e1, e2)) else {
@@ -86,7 +87,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
       Subst(reunify(unify(ren(e1), e2) ++ ren.subsDefsInput))
     }
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
-  } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal\n" + Subst(unify(e1, e2)))
+  } ensuring (r => !RECHECK ||r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould both be unified by their unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: DifferentialProgram, e2: DifferentialProgram): Subst = {try {
     if (!REUNIFY) {if (e1.isInstanceOf[ODESystem] || e2.isInstanceOf[ODESystem]) Subst(unify(e1,e2)) else Subst(unifyODE(e1, e2))} else {
@@ -94,7 +95,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
       Subst(reunify(unify(ren(e1), e2) ++ ren.subsDefsInput))
     }
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.prettyString + "\n   with  " + e2.prettyString)}
-  } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal\n" + Subst(unifyODE(e1, e2)))
+  } ensuring (r => !RECHECK ||r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould both be unified by their unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   def apply(e1: Sequent, e2: Sequent): Subst = {try {
     if (!REUNIFY) Subst(unify(e1, e2)) else {
@@ -103,7 +104,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
       Subst(reunify(unify(ren(e1), e2) ++ ren.subsDefsInput))
     }
   } catch {case ex: ProverException => throw ex.inContext("match " + e1.toString     + "\n   with  " + e2.toString)}
-  } ensuring (r => r(e1) == e2, "unifier match makes " + e1 + " and " + e2 + " equal\n" + Subst(unify(e1, e2)))
+  } ensuring (r => !RECHECK ||r(e1) == e2, "unifier match expected to unify or fail\nunify: " + e1.prettyString + "\nwith:  " + e2.prettyString + "\nshould both be unified by their unifier\n" + Subst(unify(e1, e2)) + "\nhence: " + Subst(unify(e1, e2))(e1).prettyString + "\nwith:  " + e2.prettyString)
 
   /** Re-unify multiple replacements for the same what */
   private def reunify(subst: List[SubstRepl]): List[SubstRepl] = {
@@ -174,54 +175,68 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     case p1: Program => unify(p1, e2.asInstanceOf[Program])
   }
 
-  private def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] = {
-    val us = Subst(after)
-    try {
-      before.map(sp => (sp._1, us(sp._2))) ++ after.filter(sp => !before.exists(op => op._1 == sp._1))
-    } catch {case e:Throwable => println("UnificationMatch.compose({" + after.mkString(", ") + "} , {" + before.mkString(", ") + "})"); throw e}
-  }
+  private def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
+    if (after.isEmpty) before else if (before.isEmpty) after else {
+      val us = Subst(after)
+      try {
+        val r = before.map(sp => (sp._1, us(sp._2))) ++ after.filter(sp => !before.exists(op => op._1 == sp._1))
+        if (DEBUG) println("      unify.compose: " + after.mkString(", ") + " with " + before.mkString(", ") + " is " + r.mkString(", "))
+        r
+      } catch {case e:Throwable => println("UnificationMatch.compose({" + after.mkString(", ") + "} , {" + before.mkString(", ") + "})"); throw e}
+    }
 
   // unify(s1, t1) ++ unify(s2, t2)  // flat approximation without cross-cut
   //@note optimized: repeated implementation per type to enable the static type inference that Scala generics won't give.
-  private def unify(s1:Expression,s2:Expression, t1:Expression,t2:Expression): List[SubstRepl] = {
+  private def unifies(s1:Expression,s2:Expression, t1:Expression,t2:Expression): List[SubstRepl] = {
     val u1 = unify(s1, t1)
     try {
       compose(unify(Subst(u1)(s2), t2), u1)
     } catch {
-      case e: Throwable =>
+      case e: ProverException =>
         val u2 = unify(s2, t2)
-        compose(u2, unify(s1, Subst(u2)(s1)))
+        compose(unify(s1, Subst(u2)(s1)), u2)
         //@todo incomplete: match [a;]p() -> [a;]p() with [x:=x+1;]y>0 -> [x:=x+1;]y>0  will fail since both pieces need to be unified and then combined subsequently. But that's okay for now.
     }
   }
-  private def unify(s1:Term,s2:Term, t1:Term,t2:Term): List[SubstRepl] = {
+  private def unifies(s1:Term,s2:Term, t1:Term,t2:Term): List[SubstRepl] = {
     val u1 = unify(s1, t1)
     try {
       compose(unify(Subst(u1)(s2), t2), u1)
     } catch {
-      case e: Throwable =>
+      case e: ProverException =>
         val u2 = unify(s2, t2)
-        compose(u2, unify(s1, Subst(u2)(s1)))
+        compose(unify(s1, Subst(u2)(s1)), u2)
     }
   }
-  private def unify(s1:Formula,s2:Formula, t1:Formula,t2:Formula): List[SubstRepl] = {
+  private def unifies(s1:Formula,s2:Formula, t1:Formula,t2:Formula): List[SubstRepl] = {
     val u1 = unify(s1, t1)
     try {
       compose(unify(Subst(u1)(s2), t2), u1)
     } catch {
-      case e: Throwable =>
+      case e: ProverException =>
         val u2 = unify(s2, t2)
-        compose(u2, unify(s1, Subst(u2)(s1)))
+        compose(unify(s1, Subst(u2)(s1)), u2)
     }
   }
-  private def unify(s1:Program,s2:Program, t1:Program,t2:Program): List[SubstRepl] = {
+  private def unifies(s1:Program,s2:Program, t1:Program,t2:Program): List[SubstRepl] = {
     val u1 = unify(s1, t1)
     try {
       compose(unify(Subst(u1)(s2), t2), u1)
     } catch {
-      case e: Throwable =>
+      case e: ProverException =>
         val u2 = unify(s2, t2)
-        compose(u2, unify(s1, Subst(u2)(s1)))
+        compose(unify(s1, Subst(u2)(s1)), u2)
+    }
+  }
+  private def unifiesODE(s1:DifferentialProgram,s2:DifferentialProgram, t1:DifferentialProgram,t2:DifferentialProgram): List[SubstRepl] = {
+    val u1 = unifyODE(s1, t1)
+    try {
+      compose(unifyODE(Subst(u1)(s2).asInstanceOf[DifferentialProgram], t2), u1)
+    } catch {
+      case e: ProverException =>
+        if (DEBUG) {println("      try converse since " + e.getMessage)}
+        val u2 = unifyODE(s2, t2)
+        compose(unifyODE(s1, Subst(u2)(s1).asInstanceOf[DifferentialProgram]), u2)
     }
   }
 
@@ -246,14 +261,14 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     // homomorphic cases
     case Neg(t)       => e2 match {case Neg(t2) => unify(t,t2) case _ => ununifiable(e1,e2)}
       // case o: BinaryCompositeTerm => e2 match {case o2: BinaryCompositeTerm if o2.reapply==o.reapply => unify(o.left,o.right, o2.left,o2.right) case _ => ununifiable(e1,e2)}
-    case Plus(l, r)   => e2 match {case Plus  (l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Minus(l, r)  => e2 match {case Minus (l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Times(l, r)  => e2 match {case Times (l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Divide(l, r) => e2 match {case Divide(l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Power(l, r)  => e2 match {case Power (l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Plus(l, r)   => e2 match {case Plus  (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Minus(l, r)  => e2 match {case Minus (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Times(l, r)  => e2 match {case Times (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Divide(l, r) => e2 match {case Divide(l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Power(l, r)  => e2 match {case Power (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
     case Differential(t) => e2 match {case Differential(t2) => unify(t,t2) case _ => ununifiable(e1,e2)}
     // unofficial
-    case Pair(l, r)   => e2 match {case Pair(l2,r2)   => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Pair(l, r)   => e2 match {case Pair(l2,r2)   => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
   }
 
   private def unify(e1: Formula, e2: Formula): List[SubstRepl] = e1 match {
@@ -277,51 +292,55 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     case True | False       => if (e1==e2) id else ununifiable(e1,e2)
 
     // homomorphic base cases
-    case Equal(l, r)        => e2 match {case Equal       (l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case NotEqual(l, r)     => e2 match {case NotEqual    (l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case GreaterEqual(l, r) => e2 match {case GreaterEqual(l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Greater(l, r)      => e2 match {case Greater     (l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case LessEqual(l, r)    => e2 match {case LessEqual   (l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Less(l, r)         => e2 match {case Less        (l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Equal(l, r)        => e2 match {case Equal       (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case NotEqual(l, r)     => e2 match {case NotEqual    (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case GreaterEqual(l, r) => e2 match {case GreaterEqual(l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Greater(l, r)      => e2 match {case Greater     (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case LessEqual(l, r)    => e2 match {case LessEqual   (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Less(l, r)         => e2 match {case Less        (l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
 
     // homomorphic cases
     case Not(g)      => e2 match {case Not(g2)      => unify(g,g2) case _ => ununifiable(e1,e2)}
-    case And(l, r)   => e2 match {case And(l2,r2)   => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Or(l, r)    => e2 match {case Or(l2,r2)    => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Imply(l, r) => e2 match {case Imply(l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
-    case Equiv(l, r) => e2 match {case Equiv(l2,r2) => unify(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case And(l, r)   => e2 match {case And(l2,r2)   => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Or(l, r)    => e2 match {case Or(l2,r2)    => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Imply(l, r) => e2 match {case Imply(l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
+    case Equiv(l, r) => e2 match {case Equiv(l2,r2) => unifies(l,r, l2,r2) case _ => ununifiable(e1,e2)}
 
     // NOTE DifferentialFormula in analogy to Differential
     case DifferentialFormula(g) => e2 match {case DifferentialFormula(g2) => unify(g,g2) case _ => ununifiable(e1,e2)}
 
     // pseudo-homomorphic cases
       //@todo join should be enough for the two unifiers in this case after they have been applied to the other side
-    case Forall(vars, g) if vars.length==1 => e2 match {case Forall(v2,g2) if v2.length==1 => unify(vars.head,g, v2.head,g2) case _ => ununifiable(e1,e2)}
-    case Exists(vars, g) if vars.length==1 => e2 match {case Exists(v2,g2) if v2.length==1 => unify(vars.head,g, v2.head,g2) case _ => ununifiable(e1,e2)}
+    case Forall(vars, g) if vars.length==1 => e2 match {case Forall(v2,g2) if v2.length==1 => unifies(vars.head,g, v2.head,g2) case _ => ununifiable(e1,e2)}
+    case Exists(vars, g) if vars.length==1 => e2 match {case Exists(v2,g2) if v2.length==1 => unifies(vars.head,g, v2.head,g2) case _ => ununifiable(e1,e2)}
 
     // homomorphic cases
-    case Box(a, p)       => e2 match {case Box(a2,p2)     => unify(a,p, a2,p2) case _ => ununifiable(e1,e2)}
-    case Diamond(a, p)   => e2 match {case Diamond(a2,p2) => unify(a,p, a2,p2) case _ => ununifiable(e1,e2)}
+    case Box(a, p)       => e2 match {case Box(a2,p2)     => unifies(a,p, a2,p2) case _ => ununifiable(e1,e2)}
+    case Diamond(a, p)   => e2 match {case Diamond(a2,p2) => unifies(a,p, a2,p2) case _ => ununifiable(e1,e2)}
   }
 
   private def unify(e1: Program, e2: Program): List[SubstRepl] = e1 match {
     case a: ProgramConst             => if (e1==e2) id else List(SubstRepl(e1, e2))
-    case Assign(x, t)                => e2 match {case Assign(x2,t2) => unify(x,t, x2,t2) case _ => ununifiable(e1,e2)}
-    case DiffAssign(xp, t)           => e2 match {case DiffAssign(xp2,t2) => unify(xp,t, xp2,t2) case _ => ununifiable(e1,e2)}
+    case Assign(x, t)                => e2 match {case Assign(x2,t2) => unifies(x,t, x2,t2) case _ => ununifiable(e1,e2)}
+    case DiffAssign(xp, t)           => e2 match {case DiffAssign(xp2,t2) => unifies(xp,t, xp2,t2) case _ => ununifiable(e1,e2)}
     case AssignAny(x)                => e2 match {case AssignAny(x2)    => unify(x,x2) case _ => ununifiable(e1,e2)}
     case Test(f)                     => e2 match {case Test(f2)         => unify(f,f2) case _ => ununifiable(e1,e2)}
-    case ODESystem(a, h)             => e2 match {case ODESystem(a2,h2) => unify(a,h, a2,h2) case _ => ununifiable(e1,e2)}
+    case ODESystem(a, h)             => e2 match {case ODESystem(a2,h2) => unifies(a,h, a2,h2) case _ => ununifiable(e1,e2)}
+    //@note This case happens for standalone uniform substitutions on differential programs such as x'=f() or c as they come up in unification for example.
     case dp1: DifferentialProgram    => e2 match {case dp2: DifferentialProgram => unifyODE(dp1, dp2) case _ => ununifiable(e1, e2)}
-    case Choice(a, b)                => e2 match {case Choice(a2,b2)    => unify(a,b, a2,b2) case _ => ununifiable(e1,e2)}
-    case Compose(a, b)               => e2 match {case Compose(a2,b2)   => unify(a,b, a2,b2) case _ => ununifiable(e1,e2)}
+    case Choice(a, b)                => e2 match {case Choice(a2,b2)    => unifies(a,b, a2,b2) case _ => ununifiable(e1,e2)}
+    case Compose(a, b)               => e2 match {case Compose(a2,b2)   => unifies(a,b, a2,b2) case _ => ununifiable(e1,e2)}
     case Loop(a)                     => e2 match {case Loop(a2)         => unify(a,a2) case _ => ununifiable(e1,e2)}
     case Dual(a)                     => e2 match {case Dual(a2)         => unify(a,a2) case _ => ununifiable(e1,e2)}
   }
 
-  private def unifyODE(e1: DifferentialProgram, e2: DifferentialProgram): List[SubstRepl] = e1 match {
-    case AtomicODE(xp, t) => e2 match {case AtomicODE(xp2,t2) => unify(xp,t, xp2,t2) case _ => ununifiable(e1,e2)}
+  private def unifyODE(e1: DifferentialProgram, e2: DifferentialProgram): List[SubstRepl] = { val r = e1 match {
+    case AtomicODE(xp, t) => e2 match {case AtomicODE(xp2,t2) => unifies(xp,t, xp2,t2) case _ => ununifiable(e1,e2)}
     case c: DifferentialProgramConst => if (e1==e2) id else List(SubstRepl(e1, e2))
-    case DifferentialProduct(a, b)   => e2 match {case DifferentialProduct(a2,b2) => unify(a,b, a2,b2) case _ => ununifiable(e1,e2)}
+    case DifferentialProduct(a, b)   => e2 match {case DifferentialProduct(a2,b2) => unifiesODE(a,b, a2,b2) case _ => ununifiable(e1,e2)}
+  }
+    if (DEBUG) println("    unify: " + e1.prettyString + " with " + e2.prettyString + " is unifier " + Subst(r))
+    r
   }
 
   private def unify(s1: Sequent, s2: Sequent): List[SubstRepl] =

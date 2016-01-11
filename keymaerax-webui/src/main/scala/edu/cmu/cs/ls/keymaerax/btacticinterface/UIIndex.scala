@@ -155,6 +155,7 @@ object UIIndex {
             case (_: Forall, true) => "allL" :: alwaysApplicable
             case (_: Forall, false) => "allR" :: alwaysApplicable
             case (_: Exists, true) => "existsL" :: alwaysApplicable
+            case (_: Exists, false) => "existsR" :: alwaysApplicable
             case _ => alwaysApplicable
           }
         }
