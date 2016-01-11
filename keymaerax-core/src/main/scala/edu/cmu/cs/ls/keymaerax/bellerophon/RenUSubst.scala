@@ -24,7 +24,7 @@ object RenUSubst {
   def apply(us: URename): RenUSubst = apply(List((us.what,us.repl)))
 
   private def renamingPartOnly(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Seq[(Variable,Variable)] =
-    subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable]).
+    subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable] && sp._2!=sp._1).
       map(sp => (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable]))
   private[bellerophon] def renamingPart(subsDefsInput: immutable.Seq[(Expression,Expression)]): RenUSubst =
     apply(renamingPartOnly(subsDefsInput))
