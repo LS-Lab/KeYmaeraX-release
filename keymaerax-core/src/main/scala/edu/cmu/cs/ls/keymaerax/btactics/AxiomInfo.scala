@@ -444,6 +444,10 @@ object DerivationInfo {
     new TacticInfo("G"
       , RuleDisplayInfo("G", (List(""),List("[a]P")), List((List(),List("P"))))
       , {case () => DLBySubst.G}),
+    new PositionTacticInfo("dualFree"
+      , RuleDisplayInfo(("[]⊤", "[]T"), (List("&Gamma;"),List("[a]⊤","&Delta;")),
+        List())
+      , {case () => HilbertCalculus.dualFree}),
 
     new PositionTacticInfo("commuteEquivL", ("↔CL", "<->CL"), {case () => ProofRuleTactics.commuteEquivL}),
     new PositionTacticInfo("commuteEquivR", ("↔CR", "<->CR"), {case () => ProofRuleTactics.commuteEquivR}),
