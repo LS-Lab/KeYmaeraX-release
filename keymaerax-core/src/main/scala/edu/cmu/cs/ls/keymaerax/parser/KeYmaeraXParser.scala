@@ -577,31 +577,31 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 2, elaborate(st, OpSpec.sProgramConst, ProgramKind, t1), r)
 
       case _ :+ Expr(t1) :+ (tok@Token(STAR,_)) =>
-        if (firstTerm(la)) shift(st) else error(st, List(FIRSTTERM))
+        if (firstTerm(la) && la!=EOF) shift(st) else error(st, List(FIRSTTERM))
       //@note explicit braces around loops so can't happen:
 //        if (firstExpression(la) ||
 //          t1.isInstanceOf[Program] && followsProgram((la))) shift(st) else error(st)
 
       case _ :+ Expr(t1) :+ (tok@Token(op:OPERATOR,_)) if op != PRIME =>
-        if (firstExpression(la)) shift(st) else error(st, List(FIRSTEXPRESSION))
+        if (firstExpression(la) && la!=EOF) shift(st) else error(st, List(FIRSTEXPRESSION))
 
 
       case _ :+ Token(LPAREN,_) :+ Expr(t1) if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
-        if (followsExpression(t1, la)) shift(st)
+        if (followsExpression(t1, la) && la!=EOF) shift(st)
         else error(st, List(FOLLOWSEXPRESSION))
 
       case _ :+ Token(LBRACE,_) :+ Expr(t1:Program) =>
-        if (followsProgram(la)) shift(st)
+        if (followsProgram(la) && la!=EOF) shift(st)
         else error(st, List(FOLLOWSPROGRAM))
 
       case _ :+ Token(LBOX,_) :+ Expr(t1) =>
-        if (t1.isInstanceOf[Program] && followsProgram(la)) shift(st)
+        if (t1.isInstanceOf[Program] && followsProgram(la) && la!=EOF) shift(st)
         else if ((t1.isInstanceOf[Variable] || t1.isInstanceOf[DifferentialSymbol]) && followsIdentifier(la)) shift(st)
         else if ((elaboratable(ProgramKind, t1)!=None || elaboratable(DifferentialProgramKind, t1)!=None) && followsProgram(la)) shift(st)
         else error(st, List(FOLLOWSPROGRAM, FOLLOWSIDENT))
 
       case _ :+ Token(LDIA,_) :+ Expr(t1)  =>
-        if (followsExpression(t1, la)) shift(st)
+        if (followsExpression(t1, la) && la!=EOF) shift(st)
         else if ((t1.isInstanceOf[Variable] || t1.isInstanceOf[DifferentialSymbol]) && followsIdentifier(la)) shift(st)
         else if ((elaboratable(ProgramKind, t1)!=None || elaboratable(DifferentialProgramKind, t1)!=None) && followsProgram(la)) shift(st)
         else error(st, List(FOLLOWSEXPRESSION, FOLLOWSIDENT))
