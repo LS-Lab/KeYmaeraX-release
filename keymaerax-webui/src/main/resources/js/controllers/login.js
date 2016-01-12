@@ -14,22 +14,18 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
     }
 
     $scope.processRegistration = function() {
-      if ($scope.username === undefined || $scope.password === undefined) {
-          showErrorMessage($uibModal, "Please provide your e-mail address and choose a password for registration");
-      } else {
-        $.ajax({
-              type: "POST",
-              dataType: "json",
-              contentType: "application/json",
-              async: false,
-              url: "/user/" + $scope.username + "/" + $scope.password,
-              success: function(result) {
-                 if(result.success === true) { $scope.processLogin(); }
-                 else { showErrorMessage($uibModal, "Sorry, user name is already taken. Please choose a different name."); }
-               },
-              error: this.ajaxErrorHandler
-            });
-      }
+      $.ajax({
+            type: "POST",
+            dataType: "json",
+            contentType: "application/json",
+            async: false,
+            url: "/user/" + $scope.username + "/" + $scope.password,
+            success: function(result) {
+               if(result.success === true) { $scope.processLogin(); }
+               else { showErrorMessage($uibModal, "Sorry, user name is already taken. Please choose a different name."); }
+             },
+            error: this.ajaxErrorHandler
+          });
     }
 
     ajaxErrorHandler = function(request, textStatus, errorThrown) {
