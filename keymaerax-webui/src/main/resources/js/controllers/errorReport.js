@@ -17,12 +17,24 @@ function showErrorMessage(modal, message) {
   showCaughtErrorMessage(modal, data, message)
 }
 
-angular.module('keymaerax.controllers').controller('ErrorAlertCtrl', function($scope, $modalInstance, $uibModal, action, error) {
+function showMessage(modal, title, message, size) {
+  var modalInstance = modal.open({
+    templateUrl: 'templates/modalMessageTemplate.html',
+    controller: 'ModalMessageCtrl',
+    size: size,
+    resolve: {
+      title: function() { return title; },
+      message: function() { return message; }
+    }
+  })
+}
+
+angular.module('keymaerax.controllers').controller('ErrorAlertCtrl', function($scope, $uibModalInstance, $uibModal, action, error) {
   $scope.action = action;
   $scope.errorText = error.textStatus;
   $scope.errorTrace = error.errorThrown;
   $scope.report = function() {
-    $modalInstance.dismiss('cancel');
+    $uibModalInstance.dismiss('cancel');
     var modalInstance = $uibModal.open({
         templateUrl: 'partials/error_report.html',
         controller: 'ErrorReportCtrl',
@@ -33,14 +45,14 @@ angular.module('keymaerax.controllers').controller('ErrorAlertCtrl', function($s
     });
   }
   $scope.cancel = function() {
-      $modalInstance.dismiss('cancel');
+      $uibModalInstance.dismiss('cancel');
   }
 });
 
-angular.module('keymaerax.controllers').controller('ParseErrorCtrl', function($scope, $uibModal, $modalInstance, error, model) {
+angular.module('keymaerax.controllers').controller('ParseErrorCtrl', function($scope, $uibModal, $uibModalInstance, error, model) {
   $scope.message = error.textStatus;
   $scope.location = error.location;
-  $scope.dismiss = function() { $modalInstance.dismiss('OK'); }
+  $scope.dismiss = function() { $uibModalInstance.dismiss('OK'); }
   $scope.modelWithErrorMsg = function() {
     var lines = $.map(model.split('\n'), function(e, i) { return (i+1) + ': ' + e; });
     var lineStr = error.location.line + ': ';
@@ -50,13 +62,19 @@ angular.module('keymaerax.controllers').controller('ParseErrorCtrl', function($s
   }
 });
 
-angular.module('keymaerax.controllers').controller('ErrorReportCtrl', function($scope, $modalInstance, $http, error) {
+angular.module('keymaerax.controllers').controller('ErrorReportCtrl', function($scope, $uibModalInstance, $http, error) {
   $http.get("/kyxConfig").success(function(data) {
     $scope.kyxConfig = data.kyxConfig;
     });
   $scope.errorText = error.textStatus;
   $scope.errorTrace = error.errorThrown;
   $scope.cancel = function() {
-      $modalInstance.dismiss('cancel');
+      $uibModalInstance.dismiss('cancel');
   }
+});
+
+angular.module('keymaerax.controllers').controller('ModalMessageCtrl', function($scope, $uibModalInstance, title, message) {
+  $scope.title = title;
+  $scope.message = message;
+  $scope.ok = function() { $uibModalInstance.close(); }
 });

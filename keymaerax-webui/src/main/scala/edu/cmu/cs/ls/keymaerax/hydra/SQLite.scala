@@ -17,7 +17,7 @@ import _root_.edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import _root_.edu.cmu.cs.ls.keymaerax.core._
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 import _root_.edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import _root_.edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXExtendedLemmaParser, ProofEvidence, KeYmaeraXProblemParser}
+import _root_.edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXExtendedLemmaParser, ProofEvidence, KeYmaeraXProblemParser}
 import _root_.edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Formula, Provable, Sequent}
 
@@ -798,5 +798,16 @@ object SQLite {
         ExecutionTrace(proofId.toString, executionId.toString, conclusion, traceSteps)
       }
     }
+
+    override def getInvariants(modelId: Int): Map[Expression, Formula] = {
+      val model = getModel(modelId)
+      var invariants: Map[Expression, Formula] = Map.empty
+      KeYmaeraXParser.setAnnotationListener{case (program, formula) =>
+        invariants = invariants.+((program, formula))
+      }
+      KeYmaeraXProblemParser(model.keyFile)
+      invariants
+    }
+
   }
 }

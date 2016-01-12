@@ -245,14 +245,14 @@ object TactixLibrary extends HilbertCalculi with SequentCalculi {
   lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEqL2R(false)
   def exhaustiveEqL2R(hide: Boolean = false): DependentPositionTactic =
     if (hide) "Find Left and Replace Left with Right" by ((pos, sequent) => sequent.sub(pos) match {
-      case Some(fml: Formula) => EqualityTactics.exhaustiveEqL2R(pos) & hideL('L, fml)
+      case Some(fml@Equal(_, _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
     })
     else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
   lazy val exhaustiveEqR2L: DependentPositionTactic = exhaustiveEqR2L(false)
   def exhaustiveEqR2L(hide: Boolean = false): DependentPositionTactic =
     if (hide) "Find Right and Replace Right with Left" by ((pos, sequent) => sequent.sub(pos) match {
-      case Some(fml: Formula) => EqualityTactics.exhaustiveEqR2L(pos) & hideL('L, fml)
+      case Some(fml@Equal(_, _)) => EqualityTactics.exhaustiveEqR2L(pos) & hideL(pos, fml)
     })
     else EqualityTactics.exhaustiveEqR2L
 

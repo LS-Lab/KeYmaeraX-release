@@ -628,11 +628,14 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
     import Augmentors._
     val closed = db.getProofInfo(proofId).closed
     if (closed)
-      return new ApplicableAxiomsResponse(Nil) :: Nil
+      return new ApplicableAxiomsResponse(Nil, None) :: Nil
+    val proof = db.getProofInfo(proofId)
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val subFormula = sequent.sub(pos).get
     val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).map{case axiom => DerivationInfo(axiom)}
-    new ApplicableAxiomsResponse(axioms) :: Nil
+    val generator = new ConfigurableGenerate(db.getInvariants(proof.modelId))
+    val suggestedInput = generator(sequent, pos)
+    new ApplicableAxiomsResponse(axioms, suggestedInput) :: Nil
   }
 }
 /**
@@ -760,15 +763,6 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     }
   }
 
-  private def invariantGeneratorFor(keyFile: String): Generator[Formula] = {
-    var invariants: Map[Expression, Formula] = Map.empty
-    KeYmaeraXParser.setAnnotationListener{case (program, formula) =>
-      invariants = invariants.+((program, formula))
-    }
-    KeYmaeraXProblemParser(keyFile)
-    new ConfigurableGenerate(invariants)
-  }
-
   def getResultingResponses(): List[Response] = {
     val closed = db.getProofInfo(proofId).closed
     if (closed) {
@@ -776,7 +770,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     }
     val proof = db.getProofInfo(proofId)
     val model = db.getModel(proof.modelId)
-    val generator = invariantGeneratorFor(model.keyFile)
+    val generator = new ConfigurableGenerate(db.getInvariants(proof.modelId))
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
     val node =
