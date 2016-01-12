@@ -50,7 +50,7 @@
         </thead>
         <tbody>
         <tr ng-repeat="model in models | orderBy:'name'">
-            <td>{{ model.id.substring(0,5) + ".." + model.id.substring(model.id.length-5) }}</td>
+            <td>{{ model.id }}</td>
             <td><a href="" ng-click="open(model.id)">{{ model.name }}</a></td>
             <td><a href="{{model.pubLink}}">{{model.title}}</a></td>
             <td><a href="" ng-if="model.hasTactic" ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></a></td>
