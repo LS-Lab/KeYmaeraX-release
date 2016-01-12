@@ -40,18 +40,18 @@ object KeYmaeraX {
       |Usage: java -Xss20M -jar KeYmaeraX.jar
       |  -prove filename -tactic filename [-out filename] |
       |  -modelplex filename [-vars var1,var2,..,varn] [-out filename] |
-      |  -codegen filename -format C|Spiral [-vars var1,var2,..,varn] [-out filename] |
+      |  -codegen filename -format C|Spiral [-vars var1,var2,..,varn] [-out file] |
       |  -ui [filename] [web server options] |
       |  -parse [filename] |
-      |  -bparse [filename
+      |  -bparse [filename]
       |
       |Actions:
-      |  -parse     parse problem file and return an error code (non-0) if the file does not parse
-      |  -bparse    parse a bellerophon tactic and return an error code (non-0) if the file does not parse.
       |  -prove     run KeYmaera X prover on given file with given tactic
       |  -modelplex synthesize monitor from given file with ModelPlex prover tactic
       |  -codegen   generate executable code from given file for given target language
       |  -ui        start web user interface with optional file (if any) and arguments
+      |  -parse     return error code !=0 if the input model file does not parse
+      |  -bparse    return error code !=0 if bellerophon tactic file does not parse
       |
       |Additional options:
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
