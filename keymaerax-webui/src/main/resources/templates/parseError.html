@@ -4,6 +4,15 @@
 <div class="modal-body">
     <div class="well">At line {{location.line}}:{{location.column}}: {{message}}</div>
     <pre style="overflow: scroll; height=200px;">{{modelWithErrorMsg()}}</pre>
+    <div>
+        <a ng-click="stacktraceCollapsed=!stacktraceCollapsed">
+            <i class="fa fa-caret-right" ng-if="stacktraceCollapsed"></i>
+            <i class="fa fa-caret-down" ng-if="!stacktraceCollapsed"></i> Stacktrace
+        </a>
+        <div uib-collapse="stacktraceCollapsed">
+            <div class="well well-lg">{{errorThrown}}</div>
+        </div>
+    </div>
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="dismiss()">OK</button>

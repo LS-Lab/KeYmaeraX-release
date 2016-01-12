@@ -52,6 +52,8 @@ angular.module('keymaerax.controllers').controller('ErrorAlertCtrl', function($s
 angular.module('keymaerax.controllers').controller('ParseErrorCtrl', function($scope, $uibModal, $uibModalInstance, error, model) {
   $scope.message = error.textStatus;
   $scope.location = error.location;
+  $scope.stacktraceCollapsed=true;
+  $scope.errorThrown = error.errorThrown;
   $scope.dismiss = function() { $uibModalInstance.dismiss('OK'); }
   $scope.modelWithErrorMsg = function() {
     var lines = $.map(model.split('\n'), function(e, i) { return (i+1) + ': ' + e; });
