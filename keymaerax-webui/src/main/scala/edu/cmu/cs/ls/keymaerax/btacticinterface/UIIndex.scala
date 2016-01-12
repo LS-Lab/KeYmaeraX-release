@@ -6,8 +6,8 @@ package edu.cmu.cs.ls.keymaerax.btacticinterface
 
 import java.lang.Number
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.Position
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.Position
 
 /**
   * User-Interface Axiom/Tactic Index: Indexing data structure for all canonically applicable (derived) axioms/rules/tactics in User-Interface.
@@ -30,45 +30,46 @@ object UIIndex {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
     //@note the truth-value of isAnte is nonsense if !isTop ....
     val isAnte = pos.nonEmpty && pos.get.isAnte
+    val alwaysApplicable = "cut" :: Nil
     if (DEBUG) println("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
     expr match {
       case Differential(t) => t match {
-        case _: Variable => "DvariableTactic" :: Nil
-        case _: Number => "c()' derive constant fn" :: Nil
+        case _: Variable => "DvariableTactic" :: alwaysApplicable
+        case _: Number => "c()' derive constant fn" :: alwaysApplicable
         // optimizations
-        case t: Term if StaticSemantics.freeVars(t).isEmpty => "c()' derive constant fn" :: Nil
-        case _: Neg => "-' derive neg" :: Nil
-        case _: Plus => "+' derive sum" :: Nil
-        case _: Minus => "-' derive minus" :: Nil
+        case t: Term if StaticSemantics.freeVars(t).isEmpty => "c()' derive constant fn" :: alwaysApplicable
+        case _: Neg => "-' derive neg" :: alwaysApplicable
+        case _: Plus => "+' derive sum" :: alwaysApplicable
+        case _: Minus => "-' derive minus" :: alwaysApplicable
         // optimizations
-        case Times(num, _) if StaticSemantics.freeVars(num).isEmpty => "' linear" :: Nil
-        case Times(_, num) if StaticSemantics.freeVars(num).isEmpty => "' linear right" :: Nil
-        case _: Times => "*' derive product" :: Nil
-        case _: Divide => "/' derive quotient" :: Nil
-        case _: Power => "^' derive power" :: Nil
-        case FuncOf(_, Nothing) => "c()' derive constant fn" :: Nil
-        case _ => Nil
+        case Times(num, _) if StaticSemantics.freeVars(num).isEmpty => "' linear" :: alwaysApplicable
+        case Times(_, num) if StaticSemantics.freeVars(num).isEmpty => "' linear right" :: alwaysApplicable
+        case _: Times => "*' derive product" :: alwaysApplicable
+        case _: Divide => "/' derive quotient" :: alwaysApplicable
+        case _: Power => "^' derive power" :: alwaysApplicable
+        case FuncOf(_, Nothing) => "c()' derive constant fn" :: alwaysApplicable
+        case _ => alwaysApplicable
       }
 
       case DifferentialFormula(f) => f match {
-        case _: Equal => "=' derive =" :: Nil
-        case _: NotEqual => "!=' derive !=" :: Nil
-        case _: Greater => ">' derive >" :: Nil
-        case _: GreaterEqual => ">=' derive >=" :: Nil
-        case _: Less => "<' derive <" :: Nil
-        case _: LessEqual => "<=' derive <=" :: Nil
-        case _: And => "&' derive and" :: Nil
-        case _: Or => "|' derive or" :: Nil
-        case _: Imply => "->' derive imply" :: Nil
-        case _: Forall => "forall' derive forall" :: Nil
-        case _: Exists => "exists' derive exists" :: Nil
-        case _ => Nil
+        case _: Equal => "=' derive =" :: alwaysApplicable
+        case _: NotEqual => "!=' derive !=" :: alwaysApplicable
+        case _: Greater => ">' derive >" :: alwaysApplicable
+        case _: GreaterEqual => ">=' derive >=" :: alwaysApplicable
+        case _: Less => "<' derive <" :: alwaysApplicable
+        case _: LessEqual => "<=' derive <=" :: alwaysApplicable
+        case _: And => "&' derive and" :: alwaysApplicable
+        case _: Or => "|' derive or" :: alwaysApplicable
+        case _: Imply => "->' derive imply" :: alwaysApplicable
+        case _: Forall => "forall' derive forall" :: alwaysApplicable
+        case _: Exists => "exists' derive exists" :: alwaysApplicable
+        case _ => alwaysApplicable
       }
 
       case Box(a, post) =>
         val rules =
         // @todo Better applicability test for V
-          if (isTop && sequent.isDefined && sequent.get.ante.isEmpty && sequent.get.succ.length == 1) {"G" :: "V vacuous" :: Nil} else { "V vacuous" :: Nil}
+          if (isTop && sequent.isDefined && sequent.get.ante.isEmpty && sequent.get.succ.length == 1) {"G" :: "V vacuous" :: alwaysApplicable} else { "V vacuous" :: alwaysApplicable}
         a match {
           case _: Assign => "assignbTactic" :: rules
           case _: AssignAny => "[:*] assign nondet" :: rules
@@ -76,13 +77,13 @@ object UIIndex {
           case _: Test => "[?] test" :: rules
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
-          case _: Dual => "[^d] dual" :: Nil
+          case _: Dual => "[^d] dual" :: alwaysApplicable
           case _: Loop => "loop" :: "[*] iterate" :: rules
           // @todo: This misses the case where differential formulas are not top-level, but strategically okay
           case ODESystem(ode, constraint) if post.isInstanceOf[DifferentialFormula] => ode match {
-            case _: AtomicODE => "DE differential effect" :: /*"DW differential weakening" ::*/ Nil
-            case _: DifferentialProduct => "DE differential effect (system)" :: /*"DW differential weakening" ::*/ Nil
-            case _ => Nil
+            case _: AtomicODE => "DE differential effect" :: /*"DW differential weakening" ::*/ alwaysApplicable
+            case _: DifferentialProduct => "DE differential effect (system)" :: /*"DW differential weakening" ::*/ alwaysApplicable
+            case _ => alwaysApplicable
           }
           case ODESystem(ode, constraint) =>
             val tactics: List[String] = "diffSolve" :: "diffInd" :: /*@todo "diffInvariant" with inputs instead of DC? ::*/  Nil
@@ -90,39 +91,39 @@ object UIIndex {
               tactics ++ odeList ++ rules
             else
               (tactics :+ "DW differential weakening") ++ odeList ++ rules
-          case _ => Nil
+          case _ => alwaysApplicable
         }
 
       case Diamond(a, _) => a match {
-        case _: Assign => "<:=> assign" :: Nil
-        case _: AssignAny => "<:*> assign nondet" :: Nil
-        case _: Test => "<?> test" :: Nil
-        case _: Compose => "<;> compose" :: Nil
-        case _: Choice => "<++> choice" :: Nil
-        case _: Dual => "<^d> dual" :: Nil
+        case _: Assign => "<:=> assign" :: alwaysApplicable
+        case _: AssignAny => "<:*> assign nondet" :: alwaysApplicable
+        case _: Test => "<?> test" :: alwaysApplicable
+        case _: Compose => "<;> compose" :: alwaysApplicable
+        case _: Choice => "<++> choice" :: alwaysApplicable
+        case _: Dual => "<^d> dual" :: alwaysApplicable
         case _: ODESystem => println("AxiomIndex for <ODE> still missing"); unknown
-        case _ => Nil
+        case _ => alwaysApplicable
       }
 
       case Not(f) => f match {
-        case Box(_, Not(_)) => "<> diamond" :: Nil
-        case _: Box => "![]" :: Nil
-        case Diamond(_, Not(_)) => "[] box" :: Nil
-        case _: Diamond => "!<>" :: Nil
-        case _: Forall => "!all" :: Nil
-        case _: Exists => "!exists" :: Nil
-        case _: Equal => "! =" :: Nil
-        case _: NotEqual => "! !=" :: Nil
-        case _: Less => "! <" :: Nil
-        case _: LessEqual => "! <=" :: Nil
-        case _: Greater => "! >" :: Nil
-        case _: GreaterEqual => "! >=" :: Nil
-        case _: Not => "!! double negation" :: Nil
-        case _: And => "!& deMorgan" :: Nil
-        case _: Or => "!| deMorgan" :: Nil
-        case _: Imply => "!-> deMorgan" :: Nil
-        case _: Equiv => "!<-> deMorgan" :: Nil
-        case _ => Nil
+        case Box(_, Not(_)) => "<> diamond" :: alwaysApplicable
+        case _: Box => "![]" :: alwaysApplicable
+        case Diamond(_, Not(_)) => "[] box" :: alwaysApplicable
+        case _: Diamond => "!<>" :: alwaysApplicable
+        case _: Forall => "!all" :: alwaysApplicable
+        case _: Exists => "!exists" :: alwaysApplicable
+        case _: Equal => "! =" :: alwaysApplicable
+        case _: NotEqual => "! !=" :: alwaysApplicable
+        case _: Less => "! <" :: alwaysApplicable
+        case _: LessEqual => "! <=" :: alwaysApplicable
+        case _: Greater => "! >" :: alwaysApplicable
+        case _: GreaterEqual => "! >=" :: alwaysApplicable
+        case _: Not => "!! double negation" :: alwaysApplicable
+        case _: And => "!& deMorgan" :: alwaysApplicable
+        case _: Or => "!| deMorgan" :: alwaysApplicable
+        case _: Imply => "!-> deMorgan" :: alwaysApplicable
+        case _: Equiv => "!<-> deMorgan" :: alwaysApplicable
+        case _ => alwaysApplicable
       }
 
       case _ =>
@@ -139,21 +140,23 @@ object UIIndex {
         if (!isTop) axioms
         else {
           (expr, isAnte) match {
-            case (True, false) => "closeTrue" :: Nil
-            case (False, true) => "closeFalse" :: Nil
-            case (_: Not, true) => "notL" :: Nil
-            case (_: Not, false) => "notR" :: Nil
-            case (_: And, true) => axioms :+ "andL"
-            case (_: And, false) => axioms :+ "andR"
-            case (_: Or, true) => "orL" :: Nil
-            case (_: Or, false) => "orR" :: Nil
-            case (_: Imply, true) => axioms :+ "implyL"
-            case (_: Imply, false) => axioms :+ "implyR"
-            case (_: Equiv, true) => "equivL" :: Nil
-            case (_: Equiv, false) => "equivR" :: Nil
-            case (_: Forall, false) => "allR" :: Nil
-            case (_: Exists, true) => "existsL" :: Nil
-            case _ => Nil
+            case (True, false) => "closeTrue" :: alwaysApplicable
+            case (False, true) => "closeFalse" :: alwaysApplicable
+            case (_: Not, true) => "notL" :: alwaysApplicable
+            case (_: Not, false) => "notR" :: alwaysApplicable
+            case (_: And, true) => axioms ++ ("andL" :: alwaysApplicable)
+            case (_: And, false) => axioms ++ ("andR" :: alwaysApplicable)
+            case (_: Or, true) => "orL" :: alwaysApplicable
+            case (_: Or, false) => "orR" :: alwaysApplicable
+            case (_: Imply, true) => axioms ++ ("implyL" :: alwaysApplicable)
+            case (_: Imply, false) => axioms ++ ("implyR" :: alwaysApplicable)
+            case (_: Equiv, true) => "equivL" :: alwaysApplicable
+            case (_: Equiv, false) => "equivR" :: alwaysApplicable
+            case (_: Forall, true) => "allL" :: alwaysApplicable
+            case (_: Forall, false) => "allR" :: alwaysApplicable
+            case (_: Exists, true) => "existsL" :: alwaysApplicable
+            case (_: Exists, false) => "existsR" :: alwaysApplicable
+            case _ => alwaysApplicable
           }
         }
     }

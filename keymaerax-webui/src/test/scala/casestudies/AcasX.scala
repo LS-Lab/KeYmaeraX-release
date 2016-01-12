@@ -2,9 +2,7 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
-package casestudies
-
-import java.io.File
+package edu.cmu.cs.ls.keymaerax.casestudies
 
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 
@@ -28,7 +26,7 @@ import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, Mathematica, KeYmaera}
-import testHelper.ProvabilityTestHelper
+import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 import testHelper.ParserFactory._
@@ -2527,8 +2525,6 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
   ] ((h < -hp | h > hp | r < -rp | r> rp) & ⎵)
       """.asFormula)
 
-    import TactixLibrary._
-
     TactixLibrary.proveBy(acasxexplicit,
       HilbertCalculus.CE(Provable.startProof(equivalence) /*(CommuteEquivRight(SuccPos(0)), 0)*/, shape)(SuccPosition(0))).
       subgoals should contain only (
@@ -2555,7 +2551,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     // right branch reduces to the proof of "equivalence"
     (CoHideRight(SuccPos(1)), 1)
       // left branch follows from "equivalence"
-      (ImplyLeft(AntePos(2)), 0)
+      (ImplyLeftOld(AntePos(2)), 0)
       // third branch e<->i |- e<->i
       (Close(AntePos(2), SuccPos(0)), 2)
       // second branch a,w |- e<->i, a&w
@@ -2684,7 +2680,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
     // right branch reduces to the proof of "equivalence"
     (CoHideRight(SuccPos(1)), 1)
     // left branch follows from "equivalence"
-    (ImplyLeft(AntePos(2)), 0)
+    (ImplyLeftOld(AntePos(2)), 0)
     // third branch e<->i |- e<->i
     (Close(AntePos(2), SuccPos(0)), 2)
     // second branch a,w |- e<->i, a&w

@@ -1,3 +1,36 @@
+<div class="row">
+<div class="col-md-12">
+<spinner name="tacticExecutionSpinner" ng-cloak="">
+    <div class="spinner-overlay"></div>
+    <div class="spinner">
+        <div class="spinner-double-bounce1"></div>
+        <div class="spinner-double-bounce2"></div>
+    </div>
+    <div class="spinner-please-wait">
+        Tactic is executing, please wait...<br/>
+        <button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button>
+    </div>
+</spinner>
+<spinner name="proofLoadingSpinner" ng-cloak="">
+    <div class="spinner-overlay"></div>
+    <div class="spinner">
+        <div class="spinner-double-bounce1"></div>
+        <div class="spinner-double-bounce2"></div>
+    </div>
+    <div class="spinner-please-wait">Proof is loading, please wait...</div>
+</spinner>
+<spinner name="counterExampleSpinner" ng-cloak="">
+    <div class="spinner-overlay"></div>
+    <div class="spinner">
+        <div class="spinner-double-bounce1"></div>
+        <div class="spinner-double-bounce2"></div>
+    </div>
+    <div class="spinner-please-wait">
+        Searching for counterexample, please wait...<br/>
+        <!--<button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button>-->
+    </div>
+</spinner>
+<div>
 <div class="row" ng-controller="TaskCtrl">
     <div class="col-md-12">
         <!-- Tool box -->
@@ -9,13 +42,19 @@
                         {{proofName}}
                     </span>
                 </span>
-                <div class="nav">
+                <li class="nav">
                     <ul class="nav navbar-nav">
-                        <li><a ng-click="doTactic('master')"><span class="fa fa-play"> Auto</span></a></li>
-                        <li><a ng-click="doTactic('normalize')"><span class="fa fa-magic"> Normalize</span></a></li>
+                        <li><a ng-click="doTactic(undefined, 'master')"><span class="fa fa-play"> Auto</span></a></li>
+                        <li><a ng-click="doTactic(undefined, 'normalize')"><span class="fa fa-magic"> Normalize</span></a></li>
                         <li><a ng-click="undoLastStep()"><span class="fa fa-undo"> Step back</span></a></li>
                     </ul>
                     <ul class="nav navbar-nav pull-right">
+                        <li><a ng-controller="ProofMessagesCtrl">
+                            <k4-auto-hide-alert message="proofMessage.text"
+                                                is-visible="proofMessage.isVisible" timeout="3000">
+                            </k4-auto-hide-alert>
+                            </a>
+                        </li>
                         <li><a ng-click="isNavbarCollapsed=!isNavbarCollapsed"><span class="fa fa-bars"></span></a></li>
                     </ul>
                 </div>
@@ -25,26 +64,26 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Propositional <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doTactic('prop')"><span>Exhaustive</span><code class="pull-right">prop</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'prop')"><span>Exhaustive</span><code class="pull-right">prop</code></a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doSearch('andL', 'L')"><span>&and;L</span><code class="pull-right">andL</code></a></li>
-                                <li><a ng-click="doSearch('implyR', 'R')"><span>&#8594;R</span><code class="pull-right">implyR</code></a></li>
-                                <li><a ng-click="doSearch('orR', 'R')"><span>&or;R</span><code class="pull-right">orR</code></a></li>
-                                <li><a ng-click="doSearch('equivL', 'L')"><span>&#8596;L</span><code class="pull-right">equivL</code></a></li>
-                                <li><a ng-click="doSearch('notL', 'L')"><span>&not;L</span><code class="pull-right">notL</code></a></li>
                                 <li><a ng-click="doSearch('notR', 'R')"><span>&not;R</span><code class="pull-right">notR</code></a></li>
-                                <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code class="pull-right">commuteEquivL</code></a></li>
-                                <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code class="pull-right">commuteEquivR</code></a></li>
-                                <li role="separator" class="divider"></li>
+                                <li><a ng-click="doSearch('notL', 'L')"><span>&not;L</span><code class="pull-right">notL</code></a></li>
                                 <li><a ng-click="doSearch('andR', 'R')"><span>&and;R</span><code class="pull-right">andR</code></a></li>
+                                <li><a ng-click="doSearch('andL', 'L')"><span>&and;L</span><code class="pull-right">andL</code></a></li>
+                                <li><a ng-click="doSearch('orR', 'R')"><span>&or;R</span><code class="pull-right">orR</code></a></li>
                                 <li><a ng-click="doSearch('orL', 'L')"><span>&or;L</span><code class="pull-right">orL</code></a></li>
+                                <li><a ng-click="doSearch('implyR', 'R')"><span>&#8594;R</span><code class="pull-right">implyR</code></a></li>
                                 <li><a ng-click="doSearch('implyL', 'L')"><span>&#8594;L</span><code class="pull-right">implyL</code></a></li>
                                 <li><a ng-click="doSearch('equivR', 'R')"><span>&#8596;R</span><code class="pull-right">equivR</code></a></li>
+                                <li><a ng-click="doSearch('equivL', 'L')"><span>&#8596;L</span><code class="pull-right">equivL</code></a></li>
+                                <li role="separator" class="divider"></li>
+                                <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code class="pull-right">commuteEquivR</code></a></li>
+                                <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code class="pull-right">commuteEquivL</code></a></li>
                             </ul>
                         </li>
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
-                               aria-haspopup="true" aria-expanded="false">(First-order) Arithmetic <span class="caret"></span></a>
+                               aria-haspopup="true" aria-expanded="false" disabledtooltip="First-order Logic">Quantifiers <span class="caret"></span></a>
                             <ul class="dropdown-menu">
                                 <li><a ng-click="doSearch('allR', 'R')"><span>&forall;R</span><code class="pull-right">allR</code></a></li>
                                 <li><a ng-click="doSearch('existsL', 'R')"><span>&exist;L</span><code class="pull-right">existsL</code></a></li>
@@ -61,15 +100,14 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Hybrid Programs <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doSearch('composeb', 'R')"><span>[;]</span><code class="pull-right">composeb</code></a></li>
-                                <li><a ng-click="doSearch('choiceb', 'R')"><span>[&cup;]</span><code class="pull-right">choiceb</code></a></li>
-                                <li><a ng-click="doSearch('testb', 'R')"><span>[?]</span><code class="pull-right">testb</code></a></li>
                                 <li><a ng-click="doSearch('assignb', 'R')"><span>[:=]</span><code class="pull-right">assignb</code></a></li>
                                 <li><a ng-click="doSearch('randomb', 'R')"><span>[:*]</span><code class="pull-right">randomb</code></a></li>
+                                <li><a ng-click="doSearch('testb', 'R')"><span>[?]</span><code class="pull-right">testb</code></a></li>
+                                <li role="separator" class="divider"></li>
+                                <li><a ng-click="doSearch('choiceb', 'R')"><span>[&cup;]</span><code class="pull-right">choiceb</code></a></li>
+                                <li><a ng-click="doSearch('composeb', 'R')"><span>[;]</span><code class="pull-right">composeb</code></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('boxSplit', 'R')"><span>[]&and;</span><code class="pull-right">boxSplit</code></a></li>
-                                <li><a ng-click="doSearch('boxSplitLeft', 'R')"><span>[]p&and;</span><code class="pull-right">boxSplitLeft</code></a></li>
-                                <li><a ng-click="doSearch('boxSplitRight', 'R')"><span>[]&and;q</span><code class="pull-right">boxSplitRight</code></a></li>
                                 <!-- TODO -->
                                 <!--<li role="separator" class="divider"></li>-->
                                 <!--<li><a ng-click="doSearch('DiamondCompose', 'R')"><span>&lang;;&rang;</span><code class="pull-right">composed</code></a></li>-->
@@ -80,25 +118,25 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Differential Equations <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doSearch('diffWeaken', 'R')"><span>DW</span><code class="pull-right">diffWeaken</code></a></li>
-                                <li><a ng-click="doSearch('DE', 'R')"><span>DE</span><code class="pull-right">DE</code></a></li>
-                                <li><a ng-click="doSearch('DI', 'R')"><span>DI</span><code class="pull-right">DI</code></a></li>
+                                <li><a ng-click="doSearch('diffSolve', 'R')"><span>Solve</span><code class="pull-right">diffSolve</code></a></li>
+                                <li><a ng-click="doSearch('diffWeaken', 'R')"><span>Weaken</span><code class="pull-right">diffWeaken</code></a></li>
                                 <!-- TODO -->
+                                <!-- TODO figure out how to display input stuff (diffCut) -->
                             </ul>
                         </li>
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Closing <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doTactic('closeId')"><span>Identity</span><code class="pull-right">closeId</code></a></li>
-                                <li><a ng-click="doTactic('closeTrue')"><span>True</span><code class="pull-right">closeTrue</code></a></li>
-                                <li><a ng-click="doTactic('closeFalse')"><span>False</span><code class="pull-right">closeFalse</code></a></li>
-                                <li><a ng-click="doTactic('QE')"><span>Quantifier elimination</span><code class="pull-right">QE</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'closeId')"><span>Identity</span><code class="pull-right">closeId</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'closeTrue')"><span>True</span><code class="pull-right">closeTrue</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'closeFalse')"><span>False</span><code class="pull-right">closeFalse</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'QE')"><span>Real arithmetic</span><code class="pull-right">QE</code></a></li>
                                 <!-- TODO -->
                             </ul>
                         </li>
                     </ul>
-                    <form class="navbar-form navbar-right" role="search">
+                    <form class="nav navbar-nav navbar-form navbar-right" role="search">
                         <div class="form-group">
                             <input type="text" class="form-control" placeholder="Custom tactic">
                         </div>
@@ -124,7 +162,7 @@
     <div class="col-md-12">
         <!-- TODO restrict to < 10 tasks as tabs, then complement the rest with dropdown -->
         <uib-tabset justified="true">
-            <uib-tab active="task.isSelected" ng-repeat="task in agenda.items()" select="agenda.select(task)">
+            <uib-tab active="task.isSelected" ng-repeat="task in agenda.items()">
                 <uib-tab-heading>
                     <!-- ng-class={'fa fa-tasks':openGoal, 'fa fa-check-square-o':closedGoal} -->
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
@@ -133,7 +171,7 @@
                             <span class="fa fa-tasks"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
                             <span editable-text="task.name" onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
-                                {{task.name}}
+                                {{task.name}} {{task.id}}
                             </span>
                         </div>
                         <!-- TODO failed attempt to provide a preview of the goal -->
@@ -160,8 +198,13 @@
                                  deduction-path="task.deduction"
                                  proof-tree="prooftree"
                                  agenda="agenda"
-                                 read-only="false"></k4-sequentproof>
+                                 read-only="false"
+                                 on-tactic="doTactic(formulaId, tacticId)"
+                                 on-input-tactic="doInputTactic(formulaId, tacticId, input)"></k4-sequentproof>
             </uib-tab>
         </uib-tabset>
     </div>
+</div>
+</div>
+</div>
 </div>

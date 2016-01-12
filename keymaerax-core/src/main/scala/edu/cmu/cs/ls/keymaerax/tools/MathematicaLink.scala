@@ -25,7 +25,7 @@ import scala.collection.immutable
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-trait MathematicaLink extends QETool with DiffSolutionTool {
+trait MathematicaLink extends QETool with DiffSolutionTool with CounterExampleTool {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
   type MExpr = com.wolfram.jlink.Expr
 
@@ -35,13 +35,13 @@ trait MathematicaLink extends QETool with DiffSolutionTool {
   /**
    * @return true if the job is finished, false if it is still running.
    */
-  def ready : Boolean
+  def ready: Boolean
 
   /** Cancels the current request.
    * @return True if job is successfully cancelled, or False if the new
    * status is unknown.
    */
-  def cancel : Boolean
+  def cancel(): Boolean
 
   def toMathematica(expr : KExpr): MExpr =
     KeYmaeraToMathematica.fromKeYmaera(expr)
@@ -60,17 +60,23 @@ class JLinkMathematicaLink extends MathematicaLink {
   private val DEBUG = System.getProperty("DEBUG", "true")=="true"
   private val TIMEOUT = 10
 
-  var ml: KernelLink = null
+  //@todo really should be private -> fix SpiralGenerator
+  private[keymaerax] var ml: KernelLink = null
+  private var linkName: String = null
+  private var jlinkLibDir: Option[String] = None
 
-  var queryIndex: Long = 0
+  private val mathematicaExecutor: ToolExecutor[(String, KExpr)] = ToolExecutor.defaultExecutor()
 
-  val checkExpr = new MExpr(Expr.SYMBOL, "Check")
-  val exceptionExpr = new MExpr("$Exception")
-  val fetchMessagesCmd = "$MessageList"
-  val listExpr = new MExpr(Expr.SYMBOL, "List")
-  val checkedMessages = (("Reduce", "nsmet") :: ("Reduce", "ratnz") :: Nil).map({ case (s, t) =>
+  private var queryIndex: Long = 0
+
+  private val checkExpr = new MExpr(Expr.SYMBOL, "Check")
+  private val exceptionExpr = new MExpr(Expr.SYMBOL, "$Exception")
+  private val abortedExpr = new MExpr(Expr.SYMBOL, "$Aborted")
+  private val fetchMessagesCmd = "$MessageList"
+  private val listExpr = new MExpr(Expr.SYMBOL, "List")
+  private val checkedMessages = (("Reduce", "nsmet") :: ("Reduce", "ratnz") :: Nil).map({ case (s, t) =>
     new MExpr(new MExpr(Expr.SYMBOL, "MessageName"), Array(new MExpr(Expr.SYMBOL, s), new MExpr(t))) })
-  val checkedMessagesExpr = new MExpr(Expr.SYM_LIST, checkedMessages.toArray)
+  private val checkedMessagesExpr = new MExpr(Expr.SYM_LIST, checkedMessages.toArray)
 
   // HACK assumed to be called before first use of ml
   // TODO replace with constructor and use dependency injection to provide JLinkMathematicaLink whereever needed
@@ -80,6 +86,8 @@ class JLinkMathematicaLink extends MathematicaLink {
    * @return true if initialization was successful
    */
   def init(linkName : String, jlinkLibDir : Option[String]): Boolean = {
+    this.linkName = linkName
+    this.jlinkLibDir = jlinkLibDir
     if(jlinkLibDir.isDefined) {
       System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
     }
@@ -115,6 +123,15 @@ class JLinkMathematicaLink extends MathematicaLink {
     }
   }
 
+  /** Restarts the Mathematica connection */
+  def restart() = {
+    val l: KernelLink = ml
+    ml = null
+    l.terminateKernel()
+    init(linkName, jlinkLibDir)
+    l.close()
+  }
+
   /**
    * Runs the command and then halts program execution until answer is returned.
    */
@@ -132,14 +149,32 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   def run(cmd: MExpr): (String, KExpr) = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
-    ml.synchronized {
-      queryIndex += 1
-      val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(queryIndex), cmd))
-      // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
-      val checkErrorMsgCmd = new MExpr(checkExpr, Array(indexedCmd, exceptionExpr/*, checkedMessagesExpr*/))
-      if (DEBUG) println("Sending to Mathematica " + checkErrorMsgCmd)
+    queryIndex += 1
+    val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(queryIndex), cmd))
+    // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
+    val checkErrorMsgCmd = new MExpr(checkExpr, Array(indexedCmd, exceptionExpr/*, checkedMessagesExpr*/))
+    if (DEBUG) println("Sending to Mathematica " + checkErrorMsgCmd)
+
+    val taskId = mathematicaExecutor.schedule(_ => {
       dispatch(checkErrorMsgCmd.toString)
-      getAnswer(indexedCmd.toString, queryIndex)
+      getAnswer(indexedCmd, queryIndex)
+    })
+
+    mathematicaExecutor.wait(taskId) match {
+      case Some(Left(result)) => result
+      case Some(Right(throwable)) => throwable match {
+        case ex: MathematicaComputationAbortedException =>
+          mathematicaExecutor.remove(taskId)
+          throw ex
+        case ex: Throwable =>
+          mathematicaExecutor.remove(taskId, force = true)
+          throw new ProverException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
+      }
+      case None =>
+        cancel()
+        mathematicaExecutor.remove(taskId, force = true)
+        if (DEBUG) println("Initiated aborting Mathematica " + checkErrorMsgCmd)
+        throw new MathematicaComputationAbortedException(checkErrorMsgCmd)
     }
   }
 
@@ -151,11 +186,14 @@ class JLinkMathematicaLink extends MathematicaLink {
   /**
    * blocks and returns the answer.
    */
-  private def getAnswer(input: String, cmdIdx: Long): (String, KExpr) = {
+  private def getAnswer(input: MExpr, cmdIdx: Long): (String, KExpr) = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.waitForAnswer()
     val res = ml.getExpr
-    if (res == exceptionExpr) {
+    if (res == abortedExpr) {
+      if (DEBUG) println("Aborted Mathematica " + input)
+      throw new MathematicaComputationAbortedException(input)
+    } else if (res == exceptionExpr) {
       res.dispose()
       // an exception occurred
       ml.evaluate(fetchMessagesCmd)
@@ -173,10 +211,14 @@ class JLinkMathematicaLink extends MathematicaLink {
       }
       if(res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asInt() == cmdIdx) {
         val theResult = res.args.last
-        val keymaeraResult = MathematicaToKeYmaera.fromMathematica(theResult)
-        val txtResult = theResult.toString
-        // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
-        (txtResult, keymaeraResult)
+        if (theResult == abortedExpr) {
+          throw new MathematicaComputationAbortedException(input)
+        } else {
+          val keymaeraResult = MathematicaToKeYmaera.fromMathematica(theResult)
+          val txtResult = theResult.toString
+          // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
+          (txtResult, keymaeraResult)
+        }
       } else {
         val txtResult = res.toString
         // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
@@ -187,7 +229,10 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   def ready = ???
 
-  def cancel = ???
+  def cancel(): Boolean = {
+    ml.abortEvaluation()
+    true
+  }
 
   def qe(f : Formula) : Formula = {
     qeEvidence(f)._1
@@ -198,19 +243,52 @@ class JLinkMathematicaLink extends MathematicaLink {
       Array(toMathematica(f), new MExpr(listExpr, new Array[MExpr](0)), new MExpr(Expr.SYMBOL, "Reals")))
     val (output, result) = run(input)
     result match {
-      case f : Formula => (f, new ToolEvidence(immutable.Map("input" -> input.toString, "output" -> output)))
+      case f : Formula =>
+        if (DEBUG) println("Mathematica QE result: " + f.prettyString)
+        (f, new ToolEvidence(immutable.Map("input" -> input.toString, "output" -> output)))
       case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
     }
   }
 
-  def getCounterExample(f : Formula) : String = {
+  def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Term]] = {
+    def flattenConjunctions(f: Formula): List[Formula] = {
+      var result: List[Formula] = Nil
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
+          case And(l, r) => result = result ++ flattenConjunctions(l) ++ flattenConjunctions(r); Left(Some(ExpressionTraversal.stop))
+          case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
+        }
+      }, f)
+      result
+    }
+
+    val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
+      Array(toMathematica(Not(fml)), new MExpr(listExpr, StaticSemantics.symbols(fml).toList.sorted.map(s => toMathematica(s)).toArray), new MExpr(Expr.SYMBOL, "Reals")))
+    val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
+    run(inputWithTO) match {
+      case (_, cex: Formula) => cex match {
+        case False =>
+          if (DEBUG) println("No counterexample, Mathematica returned: " + cex.prettyString)
+          None
+        case _ =>
+          if (DEBUG) println("Counterexample " + cex.prettyString)
+          Some(flattenConjunctions(cex).map {case Equal(name: NamedSymbol, value) => name -> value}.toMap)
+      }
+      case result =>
+        if (DEBUG) println("No counterexample, Mathematica returned: " + result)
+        None
+    }
+  }
+
+  @deprecated("Use findCounterExample instead")
+  def getCounterExample(f : Formula): String = {
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
       Array(toMathematica(Not(f)), new MExpr(listExpr, StaticSemantics.symbols(f).toList.sorted.map(s => toMathematica(s)).toArray), new MExpr(Expr.SYMBOL, "Reals")))
     val inputWithTO = new MExpr(new MExpr(Expr.SYMBOL,  "TimeConstrained"), Array(input, toMathematica(Number(TIMEOUT))))
     try {
       val (output, result) = run(inputWithTO)
       result match {
-        case ff : Formula => KeYmaeraXPrettyPrinter(ff)
+        case ff: Formula => KeYmaeraXPrettyPrinter(ff)
         case _ => throw new NoCountExException("Mathematica cannot find counter examples for: " + KeYmaeraXPrettyPrinter(f))
       }
     } catch {

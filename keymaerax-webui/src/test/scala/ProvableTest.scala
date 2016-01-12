@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
-package edu
+package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, CheckinTest}
 import testHelper.KeYmaeraXTestTags._

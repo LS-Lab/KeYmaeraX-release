@@ -13,41 +13,26 @@ import java.io.{File, FileNotFoundException, FileReader}
 import java.text.SimpleDateFormat
 import java.util.{Locale, Calendar}
 
-import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface
-import _root_.edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
+import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
+import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.btacticinterface.{UIIndex, BTacticParser}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
-import _root_.edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, AxiomInfo}
-import _root_.edu.cmu.cs.ls.keymaerax.core.{Sequent, ProverException, Provable}
-import _root_.edu.cmu.cs.ls.keymaerax.hydra.AgendaAwesomeResponse
-import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import _root_.edu.cmu.cs.ls.keymaerax.tactics.{Position, Augmentors, PosInExpr}
-import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo}
+import _root_.edu.cmu.cs.ls.keymaerax.core._
+import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaerax.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
-import edu.cmu.cs.ls.keymaerax.tactics.{ArithmeticTacticsImpl, TacticExceptionListener, Tactics}
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tacticsinterface.CLParser
-import edu.cmu.cs.ls.keymaerax.tools.Mathematica
+import Augmentors._
+import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Mathematica}
 
 import scala.collection.immutable
 import scala.io.Source
 import spray.json._
 import spray.json.DefaultJsonProtocol._
-
-import scala.reflect.runtime._
-import scala.tools.reflect.{ToolBoxError, ToolBox}
-
-
-import scala.reflect.runtime._
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -118,18 +103,29 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
   }
 }
 
+class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    val trace = db.getExecutionTrace(proofId.toInt)
+    val tree = ProofTree.ofTrace(trace)
+    val node =
+      tree.findNode(nodeId) match {
+        case None => throw new ProverException("Invalid node " + nodeId)
+        case Some(n) => n
+      }
+    //@note not a tactic because we don't want to change the proof tree just by looking for counterexamples
+    val fml = Imply(
+      (node.sequent.ante ++ (True::True::Nil)).reduce(And),
+      (node.sequent.succ ++ (False::False::Nil)).reduce(Or))
 
-class CounterExampleRequest(db : DBAbstraction, userId : String, proofId : String, nodeId: String) extends Request {
-  override def getResultingResponses() : List[Response] = {
-    val node = TaskManagement.getNode(proofId, nodeId) match {
-      case Some(node) => node
-      case None => throw new IllegalStateException("No proofNode for " + nodeId + " in proof " + proofId)
+    try {
+      TactixLibrary.tool.findCounterExample(fml) match {
+        //@todo return actual sequent, use collapsiblesequentview to display counterexample
+        case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
+        case None => new CounterExampleResponse("cex.none") :: Nil
+      }
+    } catch {
+      case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
     }
-    val mathematica = new Mathematica
-    mathematica.init(db.getConfiguration("mathematica").config)
-    val cntEx = ArithmeticTacticsImpl.showCounterExample(mathematica, node)
-    mathematica.shutdown()
-    new CounterExampleResponse(cntEx) :: Nil
   }
 }
 
@@ -206,22 +202,18 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
           new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
         }
         catch {
-          case e : FileNotFoundException => {
+          case e : FileNotFoundException =>
             db.updateConfiguration(originalConfig)
             e.printStackTrace()
             new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, false) :: Nil
-          }
-
-          case e : Exception => {
-            new ErrorResponse(e) :: Nil
-          }
+          case e : Exception => new ErrorResponse(e.getMessage, e) :: Nil
         }
 
 
       }
     }
     catch {
-      case e : Exception => new ErrorResponse(e) :: Nil
+      case e : Exception => new ErrorResponse(e.getMessage, e) :: Nil
     }
   }
 }
@@ -306,17 +298,13 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
     try {
       //Return the resulting response.
       KeYmaeraXProblemParser(keyFileContents) match {
-        case f : Formula => {
+        case f : Formula =>
           createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate()).map(x => x.toString)
           new BooleanResponse(createdId.isDefined) :: Nil
-        }
-        case a => new ErrorResponse(new Exception("TODO pass back the parse error.")) :: Nil //TODO-nrf pass back useful parser error messages.
       }
-
-
-    }
-    catch {
-      case e:Exception => e.printStackTrace(); new ErrorResponse(e) :: Nil
+    } catch {
+      case e: ParseException => new ParseErrorResponse(e.msg, e.loc, e) :: Nil
+      case e: Exception => new ErrorResponse(e.getMessage, e) :: Nil
     }
   }
 }
@@ -507,15 +495,65 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
   */
 class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
-    val response = new AgendaAwesomeResponse(ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)))
+    val items = db.agendaItemsForProof(proofId.toInt)
+    val closed = db.getProofInfo(proofId).closed
+    val response = new AgendaAwesomeResponse(ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), agendaItems = items, proofFinished = closed))
     response :: Nil
+  }
+}
+
+case class GetAgendaItemRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
+  def getResultingResponses(): List[Response] = {
+    val closed = db.getProofInfo(proofId).closed
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
+    val possibleItems = db.agendaItemsForProof(proofId.toInt)
+    var currNode:Option[Int] = Some(nodeId.toInt)
+    tree.agendaItemForNode(nodeId, possibleItems) match {
+      case Some(item) => new GetAgendaItemResponse (item) :: Nil
+      case None => new ErrorResponse("No information stored for agenda item " + nodeId) :: Nil
+    }
+  }
+}
+
+case class SetAgendaItemNameRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, displayName: String) extends Request {
+  def getResultingResponses() = {
+    val closed = db.getProofInfo(proofId).closed
+    val node =
+      ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
+      .nodes.find({case node => node.id.toString == nodeId})
+    node match {
+      case None => throw new Exception("Node not found")
+      case Some(node) =>
+        var currNode = node
+        var done = false
+        while (currNode.parent.nonEmpty && !done) {
+          val nextNode = currNode.parent.get
+          /* Don't stop at the first node just because it branches (it may be the end of one branch and the start of the
+          * next), but if we see branching anywhere else we've found the end of our branch. */
+          if (currNode.children.size > 1) {
+            done = true
+          } else {
+            currNode = nextNode
+          }
+        }
+        db.getAgendaItem(proofId.toInt, currNode.id) match {
+          case Some(item) =>
+            val newItem = AgendaItemPOJO(item.itemId, item.proofId, item.initialProofNode, displayName)
+            db.updateAgendaItem(newItem)
+            new SetAgendaItemNameResponse(newItem) :: Nil
+          case None =>
+            val id = db.addAgendaItem(proofId.toInt, currNode.id, displayName)
+            new SetAgendaItemNameResponse(AgendaItemPOJO(id, proofId.toInt, currNode.id, displayName)) :: Nil
+        }
+    }
   }
 }
 
 class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
-    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
-    tree.parent(nodeId) match {
+    val closed = db.getProofInfo(proofId).closed
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
+    tree.findNode(nodeId).flatMap(_.parent) match {
       case None => throw new Exception("Tried to get parent of node " + nodeId + " which has no parent")
       case Some(parent) =>
         val response = new ProofTaskParentResponse(parent)
@@ -526,11 +564,13 @@ class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String,
 
 case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
-    var tree: Option[TreeNode] = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId)
+    val closed = db.getProofInfo(proofId).closed
+    val tree: ProofTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
+    var node: Option[TreeNode] = tree.findNode(nodeId)
     var path: List[TreeNode] = Nil
-    while (tree.nonEmpty) {
-      path = tree.get :: path
-      tree = tree.get.parent
+    while (node.nonEmpty) {
+      path = node.get :: path
+      node = node.get.parent
     }
     /* To start with, always send the whole path. */
     val parentsRemaining = 0
@@ -541,7 +581,9 @@ case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String,
 
 case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
-    val node = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).nodes.find({case node => node.id.toString == nodeId})
+    val closed = db.getProofInfo(proofId).closed
+    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
+    val node = tree.nodes.find({case node => node.id.toString == nodeId})
     node match {
       case None => throw new Exception("Node not found")
       case Some(node) =>
@@ -582,8 +624,11 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
 }
 
 class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos:Position) extends Request {
-  def getResultingResponses() = {
-    import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+  def getResultingResponses(): List[Response] = {
+    import Augmentors._
+    val closed = db.getProofInfo(proofId).closed
+    if (closed)
+      return new ApplicableAxiomsResponse(Nil) :: Nil
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val subFormula = sequent.sub(pos).get
     val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).map{case axiom => DerivationInfo(axiom)}
@@ -709,21 +754,29 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               case Some(step) => what(DerivationInfo(step))
               case None => tacticId
             }
-          case _ => try {
-            what(TacticInfo(tacticId))
-          } catch {
-            case _: Throwable => "Tactic"
-          }
+          case _ => what(DerivationInfo.ofCodeName(tacticId))
         }
-      case _ => try {
-        what(TacticInfo(tacticId))
-      } catch {
-        case _: Throwable => "Tactic"
-      }
+      case _ => what(DerivationInfo.ofCodeName(tacticId))
     }
   }
 
-  def getResultingResponses() = {
+  private def invariantGeneratorFor(keyFile: String): Generator[Formula] = {
+    var invariants: Map[Expression, Formula] = Map.empty
+    KeYmaeraXParser.setAnnotationListener{case (program, formula) =>
+      invariants = invariants.+((program, formula))
+    }
+    KeYmaeraXProblemParser(keyFile)
+    new ConfigurableGenerate(invariants)
+  }
+
+  def getResultingResponses(): List[Response] = {
+    val closed = db.getProofInfo(proofId).closed
+    if (closed) {
+      return new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
+    }
+    val proof = db.getProofInfo(proofId)
+    val model = db.getModel(proof.modelId)
+    val generator = invariantGeneratorFor(model.keyFile)
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
     val node =
@@ -732,7 +785,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         case Some(n) => n
       }
 
-    BTacticParser(fullExpr(node)) match {
+    BTacticParser(fullExpr(node), false, Some(generator)) match {
       case None => throw new ProverException("Invalid Bellerophon expression:  " + belleTerm)
       case Some(expr) =>
         val appliedExpr:BelleExpr =
@@ -753,33 +806,98 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         val globalProvable =
           trace.steps match {
             case Nil => localProvable
-            case steps => steps.last.output.getOrElse(steps.last.input)
+            case steps => steps.last.output.getOrElse{throw new ProverException("Proof trace ends in unfinished step")}
           }
-        val listener = new DebuggerListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
+        assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
+        val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
         val executor = BellerophonTacticExecutor.defaultExecutor
-        val taskId = executor.schedule (appliedExpr, BelleProvable(localProvable), List(listener))
-        val finalProvable = executor.wait(taskId) match {
-          case Some(Left(BelleProvable(outputProvable, _))) => outputProvable
-          case Some(Right(error: BelleError)) => throw new ProverException("Tactic failed with error: " + error.getMessage, error.getCause)
-          case None => throw new ProverException("Could not get tactic result - execution cancelled? ")
-        }
-        val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
-        val parentNode = finalTree.findNode(nodeId).get
-        val response = new RunBelleTermResponse(parentNode, parentNode.children)
-        response :: Nil
+        val taskId = executor.schedule (userId, appliedExpr, BelleProvable(localProvable), List(listener))
+        new RunBelleTermResponse(proofId, nodeId, taskId) :: Nil
     }
   }
 }
 
-class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String, goalId : String) extends Request {
+class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String) extends Request {
+  def getResultingResponses() = {
+    val executor = BellerophonTacticExecutor.defaultExecutor
+    val isDone = executor.synchronized { !executor.contains(taskId) || executor.isDone(taskId) }
+    new TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running") :: Nil
+  }
+}
+
+class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String) extends Request {
+  /* It's very important not to report a branch as closed when it isn't. Other wise the user will carry on in blissful
+  * ignorance thinking the hardest part of their proof is over when it's not. This is actually a bit difficult to get
+  * right, so check the actual provables to make sure we're closing a branch. */
+  private def noBogusClosing(tree: ProofTree, parent: TreeNode): Boolean = {
+    if (parent.children.nonEmpty)
+      return true
+    if (parent.endStep.isEmpty)
+      return false
+    val endStep = parent.endStep.get
+    if (endStep.output.get.subgoals.length != endStep.input.subgoals.length - 1)
+      return false
+
+    for (i <- endStep.input.subgoals.indices) {
+      if(i < endStep.branch && !endStep.output.get.subgoals(i).equals(endStep.input.subgoals(i)))  {
+        return false
+      }
+      if(i > endStep.branch && !endStep.output.get.subgoals(i-1).equals(endStep.input.subgoals(i))) {
+        return false
+      }
+    }
+    true
+  }
+
+  def getResultingResponses() = {
+    val executor = BellerophonTacticExecutor.defaultExecutor
+    executor.synchronized {
+      val response = executor.wait(taskId) match {
+        case Some(Left(BelleProvable(_, _))) =>
+          val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
+          val parentNode = finalTree.findNode(nodeId).get
+          assert(noBogusClosing(finalTree, parentNode), "Server thinks a goal has been closed when it clearly has not")
+          new TaskResultResponse(parentNode, parentNode.children, progress = true)
+        case Some(Right(error: BelleError)) => new ErrorResponse("Tactic failed with error: " + error.getMessage, error.getCause)
+        case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
+      }
+      //@note may have been cancelled in the meantime
+      executor.tryRemove(taskId)
+      response :: Nil
+    }
+  }
+}
+
+class StopTaskRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String) extends Request {
+  def getResultingResponses() = {
+    val executor = BellerophonTacticExecutor.defaultExecutor
+    //@note may have completed in the meantime
+    executor.tasksForUser(userId).foreach(executor.tryRemove(_, force = true))
+    new GenericOKResponse() :: Nil
+  }
+}
+
+
+class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String) extends Request {
+  /**
+    * Replay [trace] minus the steps specified in [prune]. The crux of the problem is branch renumbering: determining
+    * which branch a kept step (as in not-pruned) will act on once other nodes have been pruned. We compute this by
+    * maintaining at each step which goals were or were not produced by a pruned step. The branch number of an kept
+    * step is the number of kept goals that proceeds its old branch number, with a potential bonus of +1 if the pruned
+    * branch was closed in one of the pruned steps.
+    * @param trace The steps to replay (both pruned and kept steps)
+    * @param pruned ID's of the pruned steps in trace
+    * @return The kept steps of trace with updated branch numbers
+    */
   def prune(trace: ExecutionTrace, pruned:Set[Int]): ExecutionTrace = {
     val tr = trace.steps.filter{case step => step.stepId >= pruned.min}
     val pruneRoot = tr.head
-    val prunedGoals = pruneRoot.input.subgoals.map{case _ => false}
+    val prunedGoals = Array.tabulate(pruneRoot.input.subgoals.length){case i => i == pruneRoot.branch}
     val (_ ,outputSteps) =
       tr.foldLeft((prunedGoals, Nil:List[ExecutionStep])){case ((prunedGoals, acc), step) =>
         val delta = step.output.get.subgoals.length - step.input.subgoals.length
         val branch = step.branch
+        assert(prunedGoals(branch) == pruned.contains(step.stepId), "Pruning algorithm has got its branches confused")
         val updatedGoals =
           if (delta == 0) prunedGoals
           else if (delta == -1) {
@@ -788,31 +906,36 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
             prunedGoals ++ Array.tabulate(delta){case _ => pruned.contains(step.stepId)}
           }
         val outputBranch =
-          prunedGoals.zipWithIndex.count{case(b,i) => i < branch && !b}
-          + (if(step.branch >= pruneRoot.branch) 1 else 0)
-
+          prunedGoals.zipWithIndex.count{case(b,i) => i < branch && !b}  + (if(step.branch >= pruneRoot.branch) 1 else 0)
         if(pruned.contains(step.stepId)) {
           (updatedGoals, acc)
         } else {
-          // @todo update rest of args correctly
-          (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder, step.rule) :: acc)
+          // @todo This is a messy mix of the old trace (ID, Provables) and new trace (branch numbers). Perhaps add a new
+          // data structure to avoid the messiness.
+          (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder, step.rule, step.isUserExecuted) :: acc)
         }
       }
     ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps.reverse)
   }
 
-  def getResultingResponses() = {
+  def getResultingResponses(): List[Response] = {
+    val closed = db.getProofInfo(proofId).closed
+    if (closed) {
+      return new ErrorResponse("Pruning not allowed on closed proofs") :: Nil
+    }
     val trace = db.getExecutionTrace(proofId.toInt)
     val tree = ProofTree.ofTrace(trace)
-    val prunedSteps = tree.allDescendants(goalId).flatMap{case node => node.endStep.toList}
+    val prunedSteps = tree.allDescendants(nodeId).flatMap{case node => node.endStep.toList}
     if(prunedSteps.isEmpty) {
-      throw new Exception("No steps under node. Nothing to do.")
+      return new ErrorResponse("No steps under node. Nothing to do.") :: Nil
     }
     val prunedStepIds = prunedSteps.map{case step => step.stepId}.toSet
     val prunedTrace = prune(trace, prunedStepIds)
     db.addAlternative(prunedStepIds.min, prunedTrace)
-    val goalNode = tree.findNode(goalId).get
-    val item = AgendaItem(goalNode.id.toString, "Unnamed Item", proofId.toString, goalNode)
+    val goalNode = tree.findNode(nodeId).get
+    val allItems = db.agendaItemsForProof(proofId.toInt)
+    val itemName = tree.agendaItemForNode(goalNode.id.toString, allItems).map(_.displayName).getOrElse("Unnamed Item")
+    val item = AgendaItem(goalNode.id.toString, itemName, proofId.toString, goalNode)
     val response = new PruneBelowResponse(item)
     response :: Nil
   }
@@ -905,7 +1028,7 @@ class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String,
         else {
           throw report.iterator().next().asException()
         }
-      case None          => new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil
+      case None          => new ErrorResponse("Could not find a node associated with these IDs") :: Nil
     }
   }
 }
@@ -995,7 +1118,7 @@ class GetNodeRequest(db : DBAbstraction, proofId : String, nodeId : Option[Strin
     val node = KeYmaeraInterface.getSubtree(proofId, nodeId, 0, true)
     node match {
       case Some(theNode) => new NodeResponse(theNode) :: Nil
-      case None => new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil
+      case None => new ErrorResponse("Could not find a node associated with these IDs") :: Nil
     }
   }
 }
@@ -1031,7 +1154,7 @@ class RunModelInitializationTacticRequest(db : DBAbstraction, userId : String, m
         new RunCLTermRequest(db, userId, initializedProofId, None, tactic).getResultingResponses();
 
       }
-      case None => new ErrorResponse(new Exception("Could not find an initialization tactic")) :: Nil
+      case None => new ErrorResponse("Could not find an initialization tactic") :: Nil
     }
   }
 }
@@ -1112,8 +1235,12 @@ class ShutdownReqeuest() extends Request {
           //@todo figure out which of these are actually necessary.
           System.out.flush()
           System.err.flush()
-          Tactics.MathematicaScheduler.shutdown()
-          Tactics.KeYmaeraScheduler.shutdown()
+          DerivedAxioms.qeTool match {
+            case mathematica: Mathematica => mathematica.shutdown(); DerivedAxioms.qeTool = null;
+          }
+          TactixLibrary.tool match {
+            case mathematica: Mathematica => mathematica.shutdown(); TactixLibrary.tool = null;
+          }
           System.out.flush()
           System.err.flush()
           Boot.system.shutdown()

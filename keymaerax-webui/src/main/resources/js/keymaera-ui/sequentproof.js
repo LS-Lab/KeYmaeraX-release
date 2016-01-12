@@ -1,4 +1,4 @@
-angular.module('sequentproof', ['ngSanitize','sequent','formula'])
+angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinners'])
   /**
    * A sequent deduction view focused on a single path through the deduction, with links to sibling goals when
    * branching occurs.
@@ -15,7 +15,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
    * @param agenda          The agenda, see provingawesome.js for schema.
    * @param readOnly        Indicates whether or not the proof steps should allow interaction (optional).
    */
-  .directive('k4Sequentproof', ['$http', '$uibModal', 'sequentProofData', function($http, $uibModal, sequentProofData) {
+  .directive('k4Sequentproof', ['$http', '$uibModal', '$q', '$timeout', 'sequentProofData', 'spinnerService', function($http, $uibModal, $q, $timeout, sequentProofData, spinnerService) {
     /* The directive's internal control. */
     function link(scope, element, attrs) {
 
@@ -126,28 +126,12 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
 
       /** Applies the tactic 'tacticId' without input at the formula 'formulaId' */
       scope.onApplyTactic = function(formulaId, tacticId) {
-        var base = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId;
-        var uri = formulaId !== undefined ?  base + '/' + formulaId + '/doAt/' + tacticId : base + '/do/' + tacticId;
-        $http.get(uri).success(function(data) {
-          if (scope.nodeId === data.parent.id) {
-            sequentProofData.updateAgendaAndTree(data);
-          } else {
-            showErrorMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " + scope.nodeId + " but got " + data.parent.id)
-          }
-        }).error(function(data) {
-          console.log("Warning: Left-click on a formula with no applicable axiom/tactic")
-        });
+        scope.onTactic({formulaId: formulaId, tacticId: tacticId});
       }
 
       /** Applies the tactic 'tacticId' with input at the formula 'formulaId' */
       scope.onApplyInputTactic = function(formulaId, tacticId, input) {
-        $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/doInputAt/' + tacticId, input).success(function(data) {
-          if (scope.nodeId === data.parent.id) {
-            sequentProofData.updateAgendaAndTree(data);
-          } else {
-            showErrorMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " + scope.nodeId + " but got " + data.parent.id)
-          }
-        });
+        scope.onInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
       }
 
       scope.fetchParentRightClick = function(event) {
@@ -179,8 +163,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
       }
 
       /** Prunes the proof tree and agenda/deduction path below the specified step ID. */
-      scope.prune = function(goalId) {
-        sequentProofData.prune(scope.userId, scope.proofId, scope.nodeId, goalId);
+      scope.prune = function(nodeId) {
+        sequentProofData.prune(scope.userId, scope.proofId, nodeId);
       }
 
       /* Indicates whether the section has a parent (if its last step has a parent, and the section is not complete) */
@@ -201,9 +185,18 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula'])
             deductionPath: '=',
             proofTree: '=',
             agenda: '=',
-            readOnly: '=?'
+            readOnly: '=?',
+            onTactic: '&',
+            onInputTactic: '&'
         },
         link: link,
         templateUrl: 'partials/singletracksequentproof.html'
     };
-  }]);
+  }])
+  .filter('childRuleName', function () {
+    return function (input, scope) {
+      var children = scope.proofTree.nodesMap[input].children;
+      var loaded = $.grep(children, function(e, i) { return scope.proofTree.nodeIds().indexOf(e) >= 0; });
+      return loaded.length > 0 ? scope.proofTree.nodesMap[loaded[0]].rule.name : undefined;
+    };
+  });

@@ -8,9 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.{?, must}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Generator, NoneGenerate, Position, PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
+import Augmentors._
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -150,7 +148,7 @@ object TactixLibrary extends HilbertCalculi with SequentCalculi {
   def diffSolve(solution: Option[Formula] = None): DependentPositionTactic = DifferentialTactics.diffSolve(solution)(tool)
 
   /** DW: Differential Weakening to use evolution domain constraint `[{x'=f(x)&q(x)}]p(x)` reduces to `\forall x (q(x)->p(x))` */
-  lazy val diffWeaken         : DependentPositionTactic = withAbstraction(DW)
+  lazy val diffWeaken         : DependentPositionTactic = DifferentialTactics.diffWeaken
   /** DC: Differential Cut a new invariant, use old(.) to refer to initial values of variables.
     * @see[[DC]]
     * @see[[DifferentialTactics.diffCut]]
@@ -225,11 +223,6 @@ object TactixLibrary extends HilbertCalculi with SequentCalculi {
   def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)
   def QE: BelleExpr = QE()
 
-  // counter example
-
-  /** Generate counter example */
-//  lazy val counterEx         : Tactic         = TacticLibrary.counterExampleT
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Bigger Tactics.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -252,14 +245,14 @@ object TactixLibrary extends HilbertCalculi with SequentCalculi {
   lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEqL2R(false)
   def exhaustiveEqL2R(hide: Boolean = false): DependentPositionTactic =
     if (hide) "Find Left and Replace Left with Right" by ((pos, sequent) => sequent.sub(pos) match {
-      case Some(fml: Formula) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(Find(0, Some(fml), AntePosition(0), exact=true))
+      case Some(fml: Formula) => EqualityTactics.exhaustiveEqL2R(pos) & hideL('L, fml)
     })
     else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
   lazy val exhaustiveEqR2L: DependentPositionTactic = exhaustiveEqR2L(false)
   def exhaustiveEqR2L(hide: Boolean = false): DependentPositionTactic =
     if (hide) "Find Right and Replace Right with Left" by ((pos, sequent) => sequent.sub(pos) match {
-      case Some(fml: Formula) => EqualityTactics.exhaustiveEqR2L(pos) & hideL(Find(0, Some(fml), AntePosition(0), exact=true))
+      case Some(fml: Formula) => EqualityTactics.exhaustiveEqR2L(pos) & hideL('L, fml)
     })
     else EqualityTactics.exhaustiveEqR2L
 

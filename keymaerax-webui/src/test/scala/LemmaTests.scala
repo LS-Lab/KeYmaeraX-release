@@ -11,7 +11,6 @@ import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.debugT
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.{assignb, closeId, composeb, cut, ls, onBranch}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, Tool, Mathematica}
-import testHelper.ProvabilityTestHelper
 
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 

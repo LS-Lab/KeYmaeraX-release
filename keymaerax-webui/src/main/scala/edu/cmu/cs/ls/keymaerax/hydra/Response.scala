@@ -12,8 +12,10 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.JSONConverter
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
-import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.core._
 import com.fasterxml.jackson.annotation.JsonValue
+import edu.cmu.cs.ls.keymaerax.parser.Location
 import spray.json._
 import java.io.{PrintWriter, StringWriter, File}
 
@@ -175,14 +177,26 @@ class CreatedIdResponse(id : String) extends Response {
   val json = JsObject("id" -> JsString(id))
 }
 
-class ErrorResponse(exn : Exception) extends Response {
-  val sw = new StringWriter
-  exn.printStackTrace(new PrintWriter(sw))
+class ErrorResponse(msg: String, exn: Throwable = null) extends Response {
+  lazy val writer = new PrintWriter(new StringWriter)
   val json = JsObject(
-        "textStatus" -> JsString(exn.getMessage),
-        "errorThrown" -> JsString(sw.toString),
+        "textStatus" -> JsString(msg),
+        "errorThrown" -> (if (exn != null) JsString(exn.printStackTrace(writer).toString) else JsString("")),
         "type" -> JsString("error")
       )
+}
+
+class ParseErrorResponse(msg: String, loc: Location, exn: Throwable = null) extends Response {
+  lazy val writer = new PrintWriter(new StringWriter)
+  val json = JsObject(
+    "textStatus" -> JsString(msg),
+    "errorThrown" -> (if (exn != null) JsString(exn.printStackTrace(writer).toString) else JsString("")),
+    "type" -> JsString("error"),
+    "location" -> JsObject(
+      "line" -> JsNumber(loc.line),
+      "column" -> JsNumber(loc.column)
+    )
+  )
 }
 
 class GenericOKResponse() extends Response {
@@ -242,13 +256,31 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
 //  )
 //}
 
-class RunBelleTermResponse(parent: TreeNode, children: List[TreeNode]) extends Response {
+class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) extends Response {
+  val json = JsObject(
+    "proofId" -> JsString(proofId),
+    "nodeId" -> JsString(nodeId),
+    "taskId" -> JsString(taskId)
+  )
+}
+
+class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status: String) extends Response {
+  val json = JsObject(
+    "proofId" -> JsString(proofId),
+    "parentId" -> JsString(nodeId),
+    "taskId" -> JsString(taskId),
+    "status" -> JsString(status)
+  )
+}
+
+class TaskResultResponse(parent: TreeNode, children: List[TreeNode], progress: Boolean = true) extends Response {
   val json = JsObject(
     "parent" -> JsObject(
       "id" -> Helpers.nodeIdJson(parent.id),
       "children" -> Helpers.childrenJson(children)
     ),
-    "newNodes" -> JsArray(children.map(Helpers.singleNodeJson):_*)
+    "newNodes" -> JsArray(children.map(Helpers.singleNodeJson):_*),
+    "progress" -> JsBoolean(progress)
   )
 }
 
@@ -340,6 +372,7 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
         "id" -> id,
         "sequent" -> sequent,
         "children" -> children,
+        "rule" -> ruleJson(node.rule),
         "parent" -> parent)
     }
 
@@ -378,6 +411,14 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
         "parent" -> node.parent.map({case parent => nodeIdJson(parent.id)}).getOrElse(JsNull)
       )
     }
+
+    def agendaItemJson(item: AgendaItemPOJO): JsValue = {
+      JsObject(
+        "agendaItemId" -> JsString(item.initialProofNode.toString),
+        "proofId" -> JsString(item.proofId.toString),
+        "displayName" -> JsString(item.displayName)
+      )
+    }
   }
 
 class AgendaAwesomeResponse(tree: ProofTree) extends Response {
@@ -399,6 +440,14 @@ class AgendaAwesomeResponse(tree: ProofTree) extends Response {
       "proofTree" -> proofTree,
       "agendaItems" -> agendaItems
     )
+}
+
+class GetAgendaItemResponse(item: AgendaItemPOJO) extends Response {
+  val json = Helpers.agendaItemJson(item)
+}
+
+class SetAgendaItemNameResponse(item: AgendaItemPOJO) extends Response {
+  val json = Helpers.agendaItemJson(item)
 }
 
 class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: String) extends Response {
@@ -451,10 +500,15 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends R
     }
   }
 
-  def axiomJson(info:AxiomInfo):JsValue = {
+  def axiomJson(info:DerivationInfo):JsValue = {
+    val formulaText =
+      (info, info.display) match {
+        case (_, AxiomDisplayInfo(_, formulaDisplay)) => formulaDisplay
+        case (info:AxiomInfo, _) => info.formula.prettyString
+      }
     JsObject (
     "type" -> JsString("axiom"),
-    "formula" -> JsString(info.formula.prettyString)
+    "formula" -> JsString(formulaText)
     )
   }
 
@@ -497,7 +551,8 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends R
         case info:AxiomInfo => axiomJson(info)
         case info:TacticInfo =>
           info.display match {
-            case SimpleDisplayInfo(_) => tacticJson(info)
+            case _: SimpleDisplayInfo => tacticJson(info)
+            case display : AxiomDisplayInfo => axiomJson(info)
             case RuleDisplayInfo(_, conclusion, premises) =>
               ruleJson(info, conclusion, premises)
           }
@@ -517,10 +572,28 @@ class PruneBelowResponse(item:AgendaItem) extends Response {
 
 }
 
-class CounterExampleResponse(cntEx: String) extends Response {
+class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSymbol, Term] = Map()) extends Response {
   val json = JsObject(
-    "cntEx" -> JsString(cntEx)
+    "result" -> JsString(kind),
+    "origFormula" -> JsString(fml.prettyString),
+    "cexFormula" -> JsString(createCexFormula(fml, cex).prettyString),
+    "cexValues" -> JsArray(
+      cex.map(e => JsObject(
+        "symbol" -> JsString(e._1.prettyString),
+        "value" -> JsString(e._2.prettyString))
+      ).toList:_*
+    )
   )
+
+  private def createCexFormula(fml: Formula, cex: Map[NamedSymbol, Term]): Formula = {
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+        case v: Variable => Right(cex.get(v).get)
+        case FuncOf(fn, _) => Right(cex.get(fn).get)
+        case tt => Right(tt)
+      }
+    }, fml).get
+  }
 }
 
 class KyxConfigResponse(kyxConfig: String) extends Response {

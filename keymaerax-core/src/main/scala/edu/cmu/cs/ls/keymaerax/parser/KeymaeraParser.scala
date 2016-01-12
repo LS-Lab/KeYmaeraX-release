@@ -4,7 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.tactics.{ProofNode, ConfigurableGenerate}
+import edu.cmu.cs.ls.keymaerax.btactics.ConfigurableGenerate
+import edu.cmu.cs.ls.keymaerax.tactics.ProofNode
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 import scala.util.parsing.combinator._

@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import java.lang.Number
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 
 import scala.annotation.switch
 

@@ -2,10 +2,10 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
-package test
+package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import scala.util.Random
 import scala.collection.immutable._
 
@@ -55,9 +55,9 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
 
   def nextPosition(size : Int): Position = if (rand.nextBoolean())
-    AntePosition(rand.nextInt(size), PosInExpr(nextPos(size)))
+    AntePosition.base0(rand.nextInt(size), PosInExpr(nextPos(size)))
   else
-    SuccPosition(rand.nextInt(size), PosInExpr(nextPos(size)))
+    SuccPosition.base0(rand.nextInt(size), PosInExpr(nextPos(size)))
 
   def unfoldRight[A, B](seed: B)(f: B => Option[(A,B)]): List[A] = f(seed) match {
     case Some((a,b)) => a :: unfoldRight(b)(f)

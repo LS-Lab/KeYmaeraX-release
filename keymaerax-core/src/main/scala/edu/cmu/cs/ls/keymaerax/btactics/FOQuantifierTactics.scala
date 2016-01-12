@@ -4,9 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, ExpressionTraversal, FormulaTools, Position, PosInExpr, SubstitutionHelper}
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
+import Augmentors._
 
 import scala.collection.immutable
 import scala.language.postfixOps
@@ -23,7 +21,7 @@ object FOQuantifierTactics {
       override def computeExpr(provable: Provable): BelleExpr =
         useAt("exists dual", PosInExpr(1::Nil))(pos) &
           (if (atTopLevel) notL(pos) & base('Rlast) & notR('Rlast)
-           else base(pos.first) & useAt("!! double negation")(pos))
+           else base(pos+PosInExpr(0::Nil)) & useAt("!! double negation")(pos))
     }
   }
 
@@ -34,31 +32,22 @@ object FOQuantifierTactics {
           case (ctx, f@Forall(vars, qf)) if quantified.isEmpty || vars.contains(quantified.get) =>
             require((if (pos.isAnte) -1 else 1) * FormulaTools.polarityAt(ctx(f), pos.inExpr) < 0, "\\forall must have negative polarity")
             def forall(h: Formula) = if (vars.length > 1) Forall(vars.filter(_ != vToInst(vars)), h) else h
-            // cut in p(t) from axiom: \forall x. p(x) -> p(t)
+            // cut in [x:=x;]p(t) from axiom: \forall x. p(x) -> p(t)
             val x = vToInst(vars)
             val t = inst(vars)
-            val p = forall(SubstitutionHelper.replaceFree(qf)(x, t))
+            val p = forall(qf)
 
             val subst = USubst(
-              SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), forall(SubstitutionHelper.replaceFree(qf)(x, DotTerm))) ::
+              SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), forall(Box(Assign(x, DotTerm), qf))) ::
               SubstitutionPair("t()".asTerm, t) :: Nil)
             val orig = Sequent(Nil, immutable.IndexedSeq(),
               immutable.IndexedSeq(s"(\\forall ${x.prettyString} p(${x.prettyString})) -> p(t())".asFormula))
 
-            val axiomInstance = if (pos.isAnte) Imply(ctx(f), ctx(p)) else ctx(p)
-            if (pos.isAnte) {
-              ProofRuleTactics.cut(axiomInstance) <(
-                (modusPonens(pos, AntePos(sequent.ante.length)) & hideL(pos.topLevel)) partial,
-                cohide('Rlast) & CMon(pos.inExpr) & US(subst, orig) & byUS("all instantiate")
-                )
-            } else {
-              ProofRuleTactics.cut(axiomInstance) <(
-                cohide2(new AntePosition(sequent.ante.length), pos.topLevel) &
-                  TactixLibrary.by(CMon(ctx)(Provable.startProof(Sequent(Nil, immutable.IndexedSeq(f), immutable.IndexedSeq(p))))) &
-                  implyRi & US(subst, orig) & byUS("all instantiate"),
-                hideR(pos.topLevel) partial
-                )
-            }
+            DLBySubst.selfAssign(x)(pos + PosInExpr(0::Nil)) &
+            ProofRuleTactics.cutLR(ctx(Box(Assign(x, t), p)))(pos.topLevel) <(
+              assignb(pos) partial,
+              cohide('Rlast) & CMon(pos.inExpr) & US(subst, orig) & byUS("all instantiate")
+              )
           case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
             throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)
           case (_, f) =>
@@ -79,14 +68,15 @@ object FOQuantifierTactics {
   /**
    * Skolemization with bound renaming on demand.
    * @example{{{
-   *     |- x>0
-   *     -----------------allSkolemize(1)
-   *     |- \forall x x>0
+   *     y>5   |- x^2>=0
+   *     --------------------------allSkolemize(1)
+   *     y>5   |- \forall x x^2>=0
    * }}}
-   * @example
-   *     x_0>0 |- x>0
-   *     -----------------------allSkolemize(1)
-   *     x>0   |- \forall x x>0
+   * @example Uniformly renames other occurrences of the quantified variable in the context on demand. {{{
+   *     x_0>0 |- x^2>=0
+   *     --------------------------allSkolemize(1)
+   *     x>0   |- \forall x x^2>=0
+   * }}}
    */
   lazy val allSkolemize: DependentPositionTactic = new DependentPositionTactic("all skolemize") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -97,9 +87,11 @@ object FOQuantifierTactics {
           case f => throw new BelleError("All skolemize expects universal quantifier at position " + pos + ", but got " + f)
         }
         val namePairs = xs.map(x => (x, TacticHelper.freshNamedSymbol(x, sequent)))
+        // rename bound variable in \forall x p(x) quantifier to fresh \forall x_0 p(x_0)
         val renaming =
-          if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.boundRenaming(np._1, np._2)).reduce[BelleExpr](_ & _)
-          else {assert(namePairs.size == 1); ProofRuleTactics.boundRenaming(namePairs.head._1, namePairs.head._2)}
+          if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.boundRenaming(np._1, np._2)(pos)).reduce[BelleExpr](_ & _)
+          else {assert(namePairs.size == 1); ProofRuleTactics.boundRenaming(namePairs.head._1, namePairs.head._2)(pos)}
+        // uniformly rename variable x to x_0 and simultaneously x_0 to x, effectively swapping \forall x_0 p(x_0) back to \forall x p(x) but renaming all outside occurrences of x in context to x_0.
         val backrenaming =
           if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRenaming(np._2, np._1)).reduce[BelleExpr](_ & _)
           else {assert(namePairs.size == 1); ProofRuleTactics.uniformRenaming(namePairs.head._2, namePairs.head._1)}
@@ -149,7 +141,7 @@ object FOQuantifierTactics {
             immutable.IndexedSeq(Imply("p(t())".asFormula, Exists(x::Nil, PredOf(Function("p", None, Real, Bool), x)))))
 
           cut(Imply(fml, Exists(x :: Nil, fmlRepl))) <(
-            /* use */ implyL('Llast) <(closeId, hide(pos,fml) partial) partial,
+            /* use */ implyLOld('Llast) <(closeId, hide(pos,fml) partial) partial,
             /* show */ cohide('Rlast) & ProofRuleTactics.US(subst, origin) & byUS("exists generalize")
             )
         case _ => throw new BelleError("Position " + pos + " must refer to a formula in sequent " + sequent)
@@ -193,7 +185,7 @@ object FOQuantifierTactics {
           }
         }
 
-        val genFml = Forall(immutable.Seq(quantified), SubstitutionHelper.replaceFree(sequent(pos))(t, quantified))
+        val genFml = Forall(immutable.Seq(quantified), SubstitutionHelper.replaceFree(sequent(pos.top))(t, quantified))
         cut(genFml) <(
           /* use */ allL(quantified, t)('Llast) & closeId,
           /* show */ hide(pos.top) partial
@@ -223,7 +215,7 @@ object FOQuantifierTactics {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         // fetch non-bound variables and parameterless function symbols
         require(pos.isTopLevel, "Universal closure only at top-level")
-        val varsFns: Set[NamedSymbol] = StaticSemantics.freeVars(sequent(pos)).toSet ++ StaticSemantics.signature(sequent(pos))
+        val varsFns: Set[NamedSymbol] = StaticSemantics.freeVars(sequent(pos.top)).toSet ++ StaticSemantics.signature(sequent(pos.top))
         require(order.toSet.subsetOf(varsFns), "Order of variables must be a subset of the free symbols+signature, but "
           + (order.toSet -- varsFns) + " is not in the subset")
         // use specified order in reverse, prepend the rest alphabetically

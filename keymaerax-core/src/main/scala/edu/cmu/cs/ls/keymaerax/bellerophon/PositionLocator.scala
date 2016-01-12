@@ -1,51 +1,52 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
+
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core.Formula
-import edu.cmu.cs.ls.keymaerax.tactics._
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// Positions
+// Locate Positions
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-object PositionConverter {
-  /** Converts signed positions to position data structures. */
-  def convertPos(seqIdx: Int, inExpr: List[Int] = Nil): Position = {
-    require(seqIdx != 0, "Sequent index must be strictly negative (antecedent) or strictly positive (succedent)")
-    if (seqIdx < 0) new AntePosition(-seqIdx - 1, PosInExpr(inExpr))
-    else new SuccPosition(seqIdx - 1, PosInExpr(inExpr))
-  }
-
-  private[bellerophon] def convertPos(p: edu.cmu.cs.ls.keymaerax.core.SeqPos) : Position = if (p.isAnte) new AntePosition(p.getIndex, HereP) else new SuccPosition(p.getIndex, HereP)
-}
-
-
-/** Locates positions */
+/** Position locators identify a position directly or indirectly in a sequent. 
+ * @see [[AtPosition.apply()]]
+ */
 sealed trait PositionLocator {
   def prettyString: String
 }
 
-/** Locates the formula at the specified fixed position. */
+/** Locates the formula at the specified fixed position. Can optionally specify the expected formula or expected shape of formula at that position as contract. */
 case class Fixed private[keymaerax] (pos: Position, shape: Option[Formula] = None, exact: Boolean = true) extends PositionLocator {
   override def prettyString: String = pos.prettyString
 }
 object Fixed {
-  def apply(seqPos: Int, inExpr: List[Int], shape: Option[Formula], exact: Boolean): Fixed = new Fixed(PositionConverter.convertPos(seqPos, inExpr), shape, exact)
-  def apply(seqPos: Int, inExpr: List[Int], shape: Option[Formula]): Fixed = new Fixed(PositionConverter.convertPos(seqPos, inExpr), shape)
-  def apply(seqPos: Int, inExpr: List[Int]): Fixed = new Fixed(PositionConverter.convertPos(seqPos, inExpr))
-  def apply(seqPos: Int): Fixed = new Fixed(PositionConverter.convertPos(seqPos, Nil))
+  def apply(seqPos: Int, inExpr: List[Int], shape: Option[Formula], exact: Boolean): Fixed = new Fixed(Position(seqPos, inExpr), shape, exact)
+  def apply(seqPos: Int, inExpr: List[Int], shape: Option[Formula]): Fixed = new Fixed(Position(seqPos, inExpr), shape)
+  def apply(seqPos: Int, inExpr: List[Int]): Fixed = new Fixed(Position(seqPos, inExpr))
+  def apply(seqPos: Int): Fixed = new Fixed(Position(seqPos, Nil))
 }
 
-/** Locates the first applicable position that matches shape (exactly or unifiably) at or after start of goal. */
+/** Locates the first applicable top-level position that matches shape (exactly or unifiably) at or after position `start` (remaining in antecedent/succedent as `start` says). */
 case class Find(goal: Int, shape: Option[Formula], start: Position, exact: Boolean = true) extends PositionLocator {
   override def prettyString: String = "'_"
 }
 
-/** Locates the last position in the antecedent. */
+object Find {
+  /** 'L Find somewhere on the left meaning in the antecedent */
+  def FindL(goal: Int, shape: Option[Formula], exact: Boolean = true): Find = new Find(goal, shape, AntePosition(1), exact)
+  /** 'R Find somewhere on the right meaning in the succedent */
+  def FindR(goal: Int, shape: Option[Formula], exact: Boolean = true): Find = new Find(goal, shape, SuccPosition(1), exact)
+}
+
+/** 'Llast Locates the last position in the antecedent. */
 case class LastAnte(goal: Int) extends PositionLocator {
   override def prettyString: String ="'Llast"
 }
 
-/** Locates the last position in the succedent. */
+/** 'Rlast Locates the last position in the succedent. */
 case class LastSucc(goal: Int) extends PositionLocator {
   override def prettyString: String ="'Rlast"
 }

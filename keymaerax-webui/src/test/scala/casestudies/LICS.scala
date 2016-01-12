@@ -13,8 +13,9 @@ import edu.cmu.cs.ls.keymaerax.tactics.Interpreter
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics
 import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, Z3, KeYmaera}
-import testHelper.ProvabilityTestHelper
+import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
 import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.diffSolution
@@ -29,6 +30,7 @@ import scala.language.postfixOps
  * Created by ran on 3/24/15.
  * @author Ran Ji
  */
+@ObsoleteTest
 class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig: Map[String, String] = helper.mathematicaConfig

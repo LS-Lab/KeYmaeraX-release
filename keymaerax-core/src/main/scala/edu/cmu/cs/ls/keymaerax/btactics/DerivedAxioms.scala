@@ -4,12 +4,12 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{USubstPatternTactic, SequentType, BelleExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, PosInExpr, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.tools.{DiffSolutionTool, ToolEvidence}
 
 import scala.annotation.switch
@@ -364,7 +364,7 @@ object DerivedAxioms {
 
   /**
    * {{{Axiom "exists dual".
-   *   (!\forall x (!p(x))) <-> (\exists x p(x))
+   *   (!\forall x (!p(??))) <-> (\exists x p(??))
    * End.
    * }}}
    * @Derived
@@ -372,9 +372,9 @@ object DerivedAxioms {
   lazy val existsDualF = "(!\\forall x (!p(??))) <-> \\exists x p(??)".asFormula
   lazy val existsDualAxiom = derivedAxiom("exists dual",
     Sequent(Nil, IndexedSeq(), IndexedSeq(existsDualF)),
-    useAt("all dual", PosInExpr(1::Nil))(SuccPosition(0, 0::0::Nil)) &
-      useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
-      useAt(doubleNegationAxiom)(SuccPosition(0, 0::0::Nil)) &
+    useAt("all dual", PosInExpr(1::Nil))(1, 0::0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::0::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -496,9 +496,9 @@ object DerivedAxioms {
   lazy val boxF = "(!<a;>(!p(??))) <-> [a;]p(??)".asFormula
   lazy val boxAxiom = derivedAxiom("[] box",
     Sequent(Nil, IndexedSeq(), IndexedSeq(boxF)),
-    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, 0::0::Nil)) &
-      useAt(doubleNegationAxiom)(SuccPosition(0, 0::Nil)) &
-      useAt(doubleNegationAxiom)(SuccPosition(0, 0::1::Nil)) &
+    useAt("<> diamond", PosInExpr(1::Nil))(1, 0::0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::Nil) &
+      useAt(doubleNegationAxiom)(1, 0::1::Nil) &
       byUS(equivReflexiveAxiom)
   )
 
@@ -635,12 +635,12 @@ object DerivedAxioms {
   lazy val diamondOrF = "<a;>(p(??)|q(??)) <-> <a;>p(??)|<a;>q(??)".asFormula
   lazy val diamondOr = derivedAxiom("<> split",
     Sequent(Nil, IndexedSeq(), IndexedSeq(diamondOrF)),
-    useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(0::Nil))) &
-      useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::0::Nil))) &
-      useAt("<> diamond", PosInExpr(1::Nil))(SuccPosition(0, PosInExpr(1::1::Nil))) &
-      useAt(notOr)(SuccPosition(0, PosInExpr(0::0::1::Nil))) &
-      useAt(boxAnd)(SuccPosition(0, PosInExpr(0::0::Nil))) &
-      useAt(notAnd)(SuccPosition(0, PosInExpr(0::Nil))) &
+    useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::0::Nil) &
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 1::1::Nil) &
+      useAt(notOr)(1, 0::0::1::Nil) &
+      useAt(boxAnd)(1, 0::0::Nil) &
+      useAt(notAnd)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
   lazy val diamondOrT = derivedAxiomT(diamondOr)
@@ -1334,7 +1334,7 @@ object DerivedAxioms {
   lazy val forallThenExistsF = "(\\forall x p(x)) -> (\\exists x p(x))".asFormula
   lazy val forallThenExistsAxiom = derivedAxiom("\\forall->\\exists",
     Sequent(Nil, IndexedSeq(), IndexedSeq(forallThenExistsF)),
-    implyR(SuccPosition(0)) &
+    implyR(1) &
       useAt(existsGeneralize, PosInExpr(1::Nil))(1) &
       useAt("all instantiate")(-1) &
       closeId

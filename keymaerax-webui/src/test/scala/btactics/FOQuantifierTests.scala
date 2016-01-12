@@ -1,11 +1,10 @@
-package edu.btactics
+package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 
 import scala.collection.immutable.IndexedSeq
 
@@ -95,7 +94,7 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ shouldBe empty
   }
 
-  it should "instantiate ODE modality" in {
+  it should "instantiate free ODE modality" in {
     val result = proveBy(
       Sequent(Nil, IndexedSeq("\\forall x [{y'=x}]y>0".asFormula), IndexedSeq()),
       allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1))
@@ -104,23 +103,77 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ shouldBe empty
   }
 
-  //@todo not supported yet (but was supported in non-sequential version)
-  ignore should "instantiate more complicated ODE modality" in {
+  it should "diffWeaken simple" in {
+    val result = proveBy("[{x'=5&x<7}]x<7".asFormula,
+      TactixLibrary.diffWeaken(1))
+    println(result)
+    result shouldBe 'proved
+  }
+
+  it should "diffWeaken ouch" in {
+    val result = proveBy("[{x'=1}][{x'=2}]x>0".asFormula,
+      TactixLibrary.diffWeaken(1))
+    println(result)
+    result shouldBe 'proved
+  }
+
+  it should "diffWeaken before loopy" in {
+    val result = proveBy("[{x'=1}][{x:=2;}*]x>0".asFormula,
+      TactixLibrary.diffWeaken(1))
+    println(result)
+    result shouldBe 'proved
+  }
+
+  it should "diffWeaken before semibound" in {
+    val result = proveBy("[{x'=1}][{x:=2;++y:=2;}]x>0".asFormula,
+      TactixLibrary.diffWeaken(1))
+    println(result)
+    result shouldBe 'proved
+  }
+
+  it should "instantiate free ODE modality whatever the names" in {
+    val result = proveBy(
+      Sequent(Nil, IndexedSeq("\\forall u [{v'=u}]v>0".asFormula), IndexedSeq()),
+      allInstantiate(Some("u".asVariable), Some("z".asTerm))(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "[{v'=z}]v>0".asFormula
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "instantiate bound ODE modality" in {
+    val result = proveBy(
+      Sequent(Nil, IndexedSeq("\\forall x [{x'=5}]x>=0".asFormula), IndexedSeq()),
+      allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1))
+    result.subgoals should have size 1
+    //result.subgoals.head.ante should contain only "[{z'=5}]z>0".asFormula
+    result.subgoals.head.ante should contain only ("x=z".asFormula, "[{x'=5}]x>=0".asFormula)
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "instantiate bound ODE modality whatever the names" in {
+    val result = proveBy(
+      Sequent(Nil, IndexedSeq("\\forall y [{y'=5}]y>=0".asFormula), IndexedSeq()),
+      allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("y=z".asFormula, "[{y'=5}]y>=0".asFormula)
+    result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "instantiate more complicated ODE modality" in {
     val result = proveBy(
       Sequent(Nil, IndexedSeq("\\forall y [{y'=x & y>2}]y>0".asFormula), IndexedSeq()),
       allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "[{z'=x & z>2}]z>0".asFormula
+    result.subgoals.head.ante should contain only ("y=z".asFormula, "[{y'=x & y>2}]y>0".asFormula)
     result.subgoals.head.succ shouldBe empty
   }
 
-  //@todo not supported yet (but was supported in non-sequential version)
-  ignore should "instantiate even if ODE modality follows in some subformula" in {
+  it should "instantiate even if ODE modality follows in some subformula" in {
     val result = proveBy(
       Sequent(Nil, IndexedSeq("\\forall y (y=0 -> [{y'=x & y>2}]y>0)".asFormula), IndexedSeq()),
       allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "z=0 -> [{z'=x & z>2}]z>0".asFormula
+    result.subgoals.head.ante should contain only ("y=z".asFormula, "y=0 -> [{y'=x & y>2}]y>0".asFormula)
     result.subgoals.head.succ shouldBe empty
   }
 
@@ -140,6 +193,15 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "b>2 & [a:=2;]!![y:=z;][{y'=1}]y>0".asFormula
     result.subgoals.head.succ shouldBe empty
+  }
+
+  it should "instantiate in succedent when in simple negative polarity" in {
+    val result = proveBy(
+      Sequent(Nil, IndexedSeq(), IndexedSeq("!(\\forall x [y:=x;][{y'=1}]y>0)".asFormula)),
+      allInstantiate(Some("x".asVariable), Some("z".asTerm))(1, 0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "![y:=z;][{y'=1}]y>0".asFormula
   }
 
   it should "instantiate in succedent when in negative polarity" in {

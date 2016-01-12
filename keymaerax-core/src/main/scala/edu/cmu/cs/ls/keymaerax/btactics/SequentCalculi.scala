@@ -5,13 +5,9 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.shift
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics._
 
-import scala.collection.immutable._
 import scala.language.postfixOps
 
 /**
@@ -95,7 +91,9 @@ trait SequentCalculi {
   // First-order tactics
 
   // quantifiers
-  /** all right: Skolemize a universal quantifier in the succedent ([[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemize]]) */
+  /** all right: Skolemize a universal quantifier in the succedent ([[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemize]])
+    * @see [[edu.cmu.cs.ls.keymaerax.core.Skolemize]]
+    * @see [[edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allSkolemize]] */
   lazy val allR               : DependentPositionTactic = FOQuantifierTactics.allSkolemize
   /** all left: instantiate a universal quantifier in the antecedent by a concrete instance */
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
@@ -114,7 +112,7 @@ trait SequentCalculi {
   lazy val close             : BelleExpr         = closeId | closeT | closeF
   /** close: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   def close(a: AntePosition, s: SuccPosition) : BelleExpr = cohide2(a, s) & ProofRuleTactics.trivialCloser
-  def close(a: Int, s: Int)  : BelleExpr = close(new AntePosition(SeqPos(a).asInstanceOf[AntePos].getIndex), new SuccPosition(SeqPos(s).asInstanceOf[SuccPos].getIndex))
+  def close(a: Int, s: Int)  : BelleExpr = close(Position(a).asInstanceOf[AntePosition], Position(s).asInstanceOf[SuccPosition])
   /** closeId: closes the branch when the same formula is in the antecedent and succedent ([[edu.cmu.cs.ls.keymaerax.core.Close Close]]) */
   lazy val closeId           : DependentTactic = new DependentTactic("close id") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {
@@ -123,21 +121,21 @@ trait SequentCalculi {
         val s = provable.subgoals.head
         require(s.ante.intersect(s.succ).nonEmpty, "Expects same formula in antecedent and succedent,\n\t but antecedent " + s.ante + "\n\t does not overlap with succedent " + s.succ)
         val fml = s.ante.intersect(s.succ).head
-        close(new AntePosition(s.ante.indexOf(fml)), new SuccPosition(s.succ.indexOf(fml)))
+        close(AntePosition.base0(s.ante.indexOf(fml)), SuccPosition.base0(s.succ.indexOf(fml)))
     }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
   lazy val closeT            : DependentTactic = new SingleGoalDependentTactic("close true") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.succ.contains(True), "Expects true in succedent,\n\t but succedent " + sequent.succ + " does not contain true")
-      ProofRuleTactics.closeTrue(new SuccPosition(sequent.succ.indexOf(True)))
+      ProofRuleTactics.closeTrue('R, True)
     }
   }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
   lazy val closeF            : DependentTactic = new SingleGoalDependentTactic("close false") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       require(sequent.ante.contains(False), "Expects false in antecedent,\n\t but antecedent " + sequent.ante + " does not contain false")
-      ProofRuleTactics.closeFalse(new AntePosition(sequent.ante.indexOf(False)))
+      ProofRuleTactics.closeFalse('L, False)
     }
   }
 
@@ -154,5 +152,8 @@ trait SequentCalculi {
   /** Commute equality */
   lazy val commuteEqual       : DependentPositionTactic = useAt("= commute")
 
+
+  @deprecated("Use implyL instead.")
+  private[btactics] lazy val implyLOld : BuiltInLeftTactic = ProofRuleTactics.implyLOld
 
 }

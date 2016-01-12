@@ -5,11 +5,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.shift
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{andR, abstractionb, close, debug, implyR, QE, skip}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Position}
+import Augmentors._
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -37,7 +34,7 @@ object HilbertCalculus extends HilbertCalculi
 trait HilbertCalculi extends UnifyUSCalculus {
 
   /** True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on demand. */
-  private val INTERNAL = false
+  private[btactics] val INTERNAL = false
 
   // axiomatic rules
 

@@ -15,6 +15,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
  */
 case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends Interpreter {
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
+    if (Thread.currentThread().isInterrupted) {
+      //@note end executing the interpreter when its thread gets interrupted
+      //@todo throw an error that is easier to identify (for now: irrelevant, since Hydra Future already gone when we throw here)
+      throw new BelleError("Execution Stopped")
+    }
     listeners.foreach(_.begin(v, expr))
     try {
       val result: BelleValue =
@@ -29,7 +34,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           case _ => throw new BelleError(s"Attempted to apply a built-in tactic to a non-Provable value: ${v.getClass.getName}").inContext(BelleDot, "")
         }
         case BuiltInPositionTactic(_) | BuiltInLeftTactic(_) | BuiltInRightTactic(_) | BuiltInTwoPositionTactic(_) | DependentPositionTactic(_) =>
-          throw new BelleError(s"Need to instantiate position tactic ($expr) before evaluating with top-level interpreter.").inContext(expr, "")
+          throw new BelleError(s"Need to apply position tactic ($expr) at a position before evaluating it with top-level interpreter.").inContext(expr, "")
         case AppliedPositionTactic(positionTactic, pos) => v match {
           case BelleProvable(pr, _) => try {
             BelleProvable(positionTactic.apply(pos).computeResult(pr))

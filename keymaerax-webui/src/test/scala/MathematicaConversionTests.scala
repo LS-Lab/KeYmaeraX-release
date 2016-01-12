@@ -4,7 +4,7 @@
 */
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-import testHelper.ProvabilityTestHelper
+import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import org.scalatest._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._

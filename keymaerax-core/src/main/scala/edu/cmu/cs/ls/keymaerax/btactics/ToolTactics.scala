@@ -4,7 +4,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.SuccPosition
 
 import scala.language.postfixOps
 
@@ -49,7 +48,7 @@ object ToolTactics {
       val ante = (sequent.ante ++ (True::True::Nil)).reduce(And)
       val succ = (sequent.succ ++ (False::False::Nil)).reduce(Or)
       cut(Imply(ante, succ)) <(
-        /* use */ implyL('Llast) <(
+        /* use */ implyLOld('Llast) <(
           hideR(1)*sequent.succ.size  & (andR(1) <((close | skip) partial, close))*(sequent.ante.size+1),
           hideL(-1)*sequent.ante.size & (orL(-1) <((close | skip) partial, close))*(sequent.succ.size+1)),
         /* show */ cohide('Rlast) partial
@@ -66,7 +65,7 @@ object ToolTactics {
       val qeFact = core.RCF.proveArithmetic(qeTool, sequent.succ.head).fact
       val Equiv(_, result) = qeFact.conclusion.succ.head
 
-      ProofRuleTactics.cutLR(result)(SuccPosition(0)) <(
+      ProofRuleTactics.cutLR(result)(SuccPosition(1)) <(
         (close | skip) partial,
         equivifyR(1) & commuteEquivR(1) & by(qeFact)
       )

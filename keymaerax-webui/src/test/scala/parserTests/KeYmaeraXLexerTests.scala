@@ -30,6 +30,7 @@ class KeYmaeraXLexerTests extends FlatSpec with Matchers {
   }
 
   //@todo Nathan
+  //@todo do more location tests with newlines. And also with comments!
   it should "Handle newlines correctly" in {
     val input =
       """

@@ -1,16 +1,14 @@
-package edu.btactics
+package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, IOListener, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleExpr, PosInExpr, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics._
-import edu.cmu.cs.ls.keymaerax.btactics.{ProofRuleTactics, UnifyUSCalculus}
+import edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra.{ProofTree, ProofTaskParentRequest, DBAbstractionObj, SQLite}
+import edu.cmu.cs.ls.keymaerax.hydra.{ProofTree, DBAbstractionObj}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger
-import edu.cmu.cs.ls.keymaerax.tacticsinterface.TacticDebugger.DebuggerListener
-import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
+import org.scalatest.{Ignore, BeforeAndAfterEach, Matchers, FlatSpec}
 
 import scala.collection.immutable._
 
@@ -18,9 +16,12 @@ import scala.collection.immutable._
   * the desired operations.
   * Created by bbohrer on 11/23/15.
   */
+@Ignore
 class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach  {
   val db = DBAbstractionObj.testDatabase
-  val listener = new DebuggerListener(db, 1337, ???, ???, ???, 0, 1, false, ???)
+  //@todo fill in reasonable data, this is bogus
+  private val u = 999
+  val listener = new TraceRecordingListener(db, 1337, u, Some(u), Provable.startProof(True), 0, 1, false, "TODO")
   val theInterpreter = new SequentialInterpreter(Seq(listener))
   object TestLib extends UnifyUSCalculus
 

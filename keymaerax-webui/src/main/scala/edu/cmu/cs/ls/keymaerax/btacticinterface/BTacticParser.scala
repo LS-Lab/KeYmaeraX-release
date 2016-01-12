@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btacticinterface
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Generator
 import edu.cmu.cs.ls.keymaerax.core.{SuccPos, AntePos, SeqPos, Formula}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -24,9 +25,11 @@ import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
   *
   * @author Nathan Fulton
   */
-object BTacticParser {
-  def apply(s: String, loggingOn:Boolean=false): Option[BelleExpr] = {
-    val parser = new TheParser(loggingOn)
+object BTacticParser extends (String => Option[BelleExpr]) {
+  def apply(s: String): Option[BelleExpr] = apply(s, false)
+
+  def apply(s: String, loggingOn:Boolean, generator:Option[Generator[Formula]] = None): Option[BelleExpr] = {
+    val parser = new TheParser(loggingOn, generator)
     parser.parseAll(parser.expressionParser, s) match {
       case parser.Success(result, next) => Some(result.asInstanceOf[BelleExpr])
       case f: parser.Failure => None
@@ -34,7 +37,7 @@ object BTacticParser {
     }
   }
 
-  private class TheParser(enabledLogging: Boolean = false) extends RegexParsers with PackratParsers {
+  private class TheParser(enabledLogging: Boolean = false, generator:Option[Generator[Formula]] = None) extends RegexParsers with PackratParsers {
     lazy val expressionParser = expressionParsers.reduce(_ | _)
     lazy val typeParser       = typeParsers.reduce(_ | _)
 
@@ -155,7 +158,7 @@ object BTacticParser {
     lazy val baseTacticNoInput : PackratParser[BelleExpr] = {
       lazy val pattern = ident
       log(pattern)("Built-in Name") ^^ {
-        case name => ReflectiveExpressionBuilder(name)
+        case name => ReflectiveExpressionBuilder(name, Nil, generator)
       }
     }
 
@@ -166,7 +169,7 @@ object BTacticParser {
       log(pattern)("base tactic with position or formula input") ^^ {
         case name ~ args => {
           val arguments = (args._1 +: args._2) map parseFormulaOrPosition
-          ReflectiveExpressionBuilder(name, arguments)
+          ReflectiveExpressionBuilder(name, arguments, generator)
         }
       }
     }

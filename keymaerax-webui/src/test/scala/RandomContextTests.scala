@@ -3,17 +3,17 @@
 * See LICENSE.txt for the conditions of this license.
 */
 
-import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, Context, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.btactics.Context
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
 import testHelper.KeYmaeraXTestTags.{SlowTest, UsualTest, SummaryTest, CheckinTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
-
-import test.RandomFormula
 
 /**
  * Tests the context splitting on randomly generated formulas
@@ -58,6 +58,7 @@ class RandomContextTests extends FlatSpec with Matchers {
   private val noContextD = DifferentialProgramConst("noctxD")
 
 
+  //@note these tests sometimes fails for too courageous DotTerm occurrences in the wrong places caused by random positioning. For example left of assignment ...
   "The positioning" should "consistently split formulas (checkin)" taggedAs(CheckinTest) in {test(5,2)}
   it should "consistently split formulas (summary)" taggedAs(SummaryTest) in {test(20,8)}
   it should "consistently split formulas (usual)" taggedAs(UsualTest) in {test(50,10)}

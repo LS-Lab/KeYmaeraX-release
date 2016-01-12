@@ -5,9 +5,9 @@
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tactics.ProvabilityTestHelper
 import edu.cmu.cs.ls.keymaerax.tools.JLinkMathematicaLink
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
-import testHelper.ProvabilityTestHelper
 
 import scala.collection.immutable.Map
 

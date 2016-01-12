@@ -12,10 +12,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.core.StaticSemantics._
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.StaticSemanticsTools._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, Context, FormulaTools, HereP, Position, PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
+import Augmentors._
+import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, DiffSolutionTool}
+import PosInExpr.HereP
+import StaticSemanticsTools._
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -35,10 +35,10 @@ trait UnifyUSCalculus {
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   /** Liberal context via replaceAt instead of Context substitutions (true) */
-  private val LIBERAL = true
+  private val LIBERAL = Context.GUARDED
 
   /*@note must be initialized from outside; is var so that unit tests can setup/tear down. @see [[DerivedAxioms]] */
-  implicit var tool: QETool with DiffSolutionTool = null
+  implicit var tool: QETool with DiffSolutionTool with CounterExampleTool = null
 
   /**
    * Throw exception if there is more than one open subgoal on the provable.
@@ -84,6 +84,8 @@ trait UnifyUSCalculus {
   def useAt(axiom: String, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
   def useAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1)
 
+  // prove by providing a fact
+
   /** by(provable) is a pseudo-tactic that uses the given Provable to continue or close the proof (if it fits to what has been proved) */
   //@todo auto-weaken as needed (maybe even exchangeleft)
   def by(fact: Provable)  : BuiltInTactic = new BuiltInTactic("by") {
@@ -95,11 +97,14 @@ trait UnifyUSCalculus {
   }//new ByProvable(provable)
   /** by(lemma) is a pseudo-tactic that uses the given Lemma to continue or close the proof (if it fits to what has been proved) */
   def by(lemma: Lemma)        : BelleExpr = by(lemma.fact)
-  /** byUS(provable) proves by a uniform substitution instance of provable, obtained by unification */
+  /** byVerbatim(axiom) is a pseudo-tactic that uses the given axiom literally to continue or close the proof (if it fits to what has been proved) */
+  def byVerbatim(axiom: String) : BelleExpr = by(AxiomInfo(axiom).provable)
+  /** byUS(provable) proves by a uniform substitution instance of provable, obtained by unification.
+    * @see [[UnifyUSCalculus.US()]] */
   def byUS(provable: Provable): BelleExpr = US(provable.conclusion) & by(provable)
-  /** byUS(lemma) proves by a uniform substitution instance of lemma */
+  /** byUS(lemma) proves by a uniform substitution instance of lemma. */
   def byUS(lemma: Lemma)      : BelleExpr  = byUS(lemma.fact)
-  /** byUS(axiom) proves by a uniform substitution instance of axiom */
+  /** byUS(axiom) proves by a uniform substitution instance of axiom or derived axiom. */
   def byUS(axiom: String)     : BelleExpr = byUS(AxiomInfo(axiom).provable)
 
   /*******************************************************************
@@ -118,13 +123,14 @@ trait UnifyUSCalculus {
    *
    * @author Andre Platzer
    * @param form the sequent to reduce this proof node to by a Uniform Substitution
+   * @see [[byUS()]]
    */
   def US(form: Sequent): DependentTactic = new SingleGoalDependentTactic("US") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
-      if (DEBUG) println("  US(" + form.prettyString + ") unify: " + sequent + " matches against form " + form + " ... checking")
+      if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " ... checking")
       val subst = UnificationMatch(form, sequent)
-      if (DEBUG) println("  US(" + form.prettyString + ") unify: " + sequent + " matches against form " + form + " by " + subst)
-      Predef.assert(sequent == subst(form), "unification must match: " + sequent + " is " + subst(form) + " which is " + form + " instantiated by " + subst)
+      if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " by " + subst)
+      Predef.assert(sequent == subst(form), "unification must match:\n  unify: " + sequent + "\n  gives: " + subst(form) + " when matching against\n  form:  " + form + " by " + subst)
       subst.toTactic(form)
     }
   }
@@ -178,12 +184,13 @@ trait UnifyUSCalculus {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val (ctx,expr) = sequent.at(pos)
         val subst = inst(UnificationMatch(keyPart, expr))
-        if (DEBUG) println("useAt(" + fact.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
-        Predef.assert(expr == subst(keyPart), "unification matched left successfully: " + expr + " is " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
+        if (DEBUG) println("useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
+        Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
         useAt(subst, keyCtx, keyPart, pos, ctx, expr, factTactic, sequent)
       }
     }
+    private val RECHECK = true
 
     /**
      * useAt(K{k})(C{c}) uses, already under the given substitution subst, the key k from context K{k}
@@ -201,9 +208,9 @@ trait UnifyUSCalculus {
      * @note The implementation could be generalized because it sometimes fires irrelevant substitution clashes coming merely from the context embedding contracts.
      */
     private def useAt[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: BelleExpr, sequent: Sequent): BelleExpr = {
-      require(subst(k) == c, "correctly matched input")
+      require(!RECHECK || subst(k) == c, "correctly matched input")
       //@note might cause some irrelevant clashes
-      require(C(c).at(p.inExpr) == (C,c), "correctly split at position p")
+      require(C(c).at(p.inExpr) == (C,c), "correctly split at position " + p.inExpr + "\ngiving context " + C + "\nsubexpression " + c + "\nreassembling to the same " + C(c))
       require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
       /** Equivalence rewriting step */
@@ -253,13 +260,13 @@ trait UnifyUSCalculus {
 
         //@todo not sure if the following two cases really work as intended, but they seem to
         case Imply(other, DotFormula) if p.isSucc && p.isTopLevel =>
-          cutR(subst(other))(p) <(
+          cutR(subst(other))(p.checkSucc.top) <(
             /* use */ ident partial,
             /* show */ coHideR(p) & factTactic
           )
 
         case Imply(DotFormula, other) if p.isAnte && p.isTopLevel =>
-          cutL(subst(other))(p) <(
+          cutL(subst(other))(p.checkAnte.top) <(
             /* use */ ident partial,
             /* show */ coHideR('Rlast) & factTactic
           )
@@ -298,7 +305,7 @@ trait UnifyUSCalculus {
 
             // prove prereq locally
             cut(C(subst(prereq))) <(
-              /* use */ cutR(C(subst(conclusion)))(p) <(
+              /* use */ cutR(C(subst(conclusion)))(p.checkSucc.top) <(
                 hideL('Llast) partial,
                 coHide2(AntePos(sequent.ante.size), p.top) & equivifyR(1) & commute & implyRi & CMon(p.inExpr) & factTactic) partial,
               /* show: prereq remains open */ hideR(p.top) partial
@@ -306,7 +313,7 @@ trait UnifyUSCalculus {
           }
 
           // try to prove prereq globally, if that fails preserve context and fall back to CMon and C{prereq} -> ...
-          (useAt(subst, new Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(0)) <(
+          (useAt(subst, Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(1).top) <(
             //@note the roles of use and show are really swapped here, since the implication on show will be handled by factTactic
             /* use: try to prove prereq globally */ TactixLibrary.QE,
             /* show */ factTactic), sequent) partial) |
@@ -327,7 +334,7 @@ trait UnifyUSCalculus {
 
   /**
    * CQ(pos) at the indicated position within an equivalence reduces contextual equivalence `p(left)<->p(right)` to argument equality `left=right`.
-   * This tactic will use [[CE()]] under the hood as needed.
+   * This tactic will use [[CEat()]] under the hood as needed.
    * {{{
    *        f(x) = g(x)
    *   --------------------- CQ
@@ -375,11 +382,14 @@ trait UnifyUSCalculus {
    *   --------------------- CE
    *    C{p(x)} <-> C{q(x)}
    * }}}
-   * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
+   * Part of the differential dynamic logic Hilbert calculus.
+   * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula occurs.
    * @see [[UnifyUSCalculus.CE(Context)]]
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
-   * @see [[UnifyUSCalculus.CE(Provable)]]
+   * @see [[UnifyUSCalculus.CEat(Provable)]]
+   * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+   * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
    */
   def CE(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CE congruence") {
     private val p_ = PredOf(Function("p_", None, Real, Bool), Anything)
@@ -416,6 +426,7 @@ trait UnifyUSCalculus {
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(Context)]]
+    * @see [[UnifyUSCalculus.CEat())]]
    */
   def CMon(inEqPos: PosInExpr): DependentTactic = new SingleGoalDependentTactic("CMon congruence") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -425,38 +436,42 @@ trait UnifyUSCalculus {
           val (ctxP, p: Formula) = l.at(inEqPos)
           val (ctxQ, q: Formula) = r.at(inEqPos)
           require(ctxP == ctxQ, "Contexts must be equal, but " + ctxP + " != " + ctxQ)
-          implyR(SuccPos(0)) &
+          if (FormulaTools.polarityAt(l, inEqPos) < 0) implyR(SuccPos(0)) &
+            by(CMon(ctxP)(Provable.startProof(Sequent(Nil, IndexedSeq(q), IndexedSeq(p))))) &
+            by(inverseImplyR(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(q, p))))))
+          else implyR(SuccPos(0)) &
             by(CMon(ctxP)(Provable.startProof(Sequent(Nil, IndexedSeq(p), IndexedSeq(q))))) &
             by(inverseImplyR(Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(Imply(p, q))))))
       }
     }
   }
 
-  /** CE(fact) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
+  /** CEat(fact) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
     * reasoning at the indicated position to replace `right` by `left` at indicated position (literally, no substitution).
     * Efficient unification-free version of [[UnifyUSCalculus#useAt(Provable, PosInExpr):PositionTactic]]
     * {{{
     *                          fact
     *   G |- C{q(x)}, D    p(x) <-> q(x)
-    *   -------------------------------- CE(fact)
+    *   -------------------------------- CER(fact)
     *   G |- C{p(x)}, D
     * }}}
     * Similarly for antecedents or equality facts or implication facts, e.g.:
     * {{{
     *                          fact
     *   C{q(x)}, G |- D    p(x) <-> q(x)
-    *   -------------------------------- CE(fact)
+    *   -------------------------------- CEL(fact)
     *   C{p(x)}, G |- D
     * }}}
-    * @see [[UnifyUSCalculus.CE(Provable,Context)]]
+    * @see [[UnifyUSCalculus.CEat(Provable,Context)]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
-    * @example CE(fact) is equivalent to CE(fact, Context("⎵".asFormula))
+    * @example `CEat(fact)` is equivalent to `CEat(fact, Context("⎵".asFormula))``
+    * @todo Optimization: Would direct propositional rules make CEat faster at pos.isTopLevel?
     */
-  def CE(fact: Provable): DependentPositionTactic = new DependentPositionTactic("CE(Provable)") {
+  def CEat(fact: Provable): DependentPositionTactic = new DependentPositionTactic("CE(Provable)") {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
 
     def splitFact: (Expression, Expression, BelleExpr, (PosInExpr=>BelleExpr)) = fact.conclusion.succ.head match {
@@ -481,19 +496,19 @@ trait UnifyUSCalculus {
     }
   }
 
-  /** CE(fact,C) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
+  /** CEat(fact,C) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
     * reasoning in the given context C at the indicated position to replace `right` by `left` in that context (literally, no substitution).
-    * @see [[UnifyUSCalculus.CE(Provable)]]
+    * @see [[UnifyUSCalculus.CEat(Provable)]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
-    * @example CE(fact, Context("⎵".asFormula)) is equivalent to CE(fact)
-    * @example CE(fact, Context("x>0&⎵".asFormula))(p) is equivalent to CE(fact)(p+1)
-    *          except that the former only accepts x>0&⎵ as the shape of the context at position p.
+    * @example `CE(fact, Context("⎵".asFormula))` is equivalent to `CE(fact)`.
+    * @example `CE(fact, Context("x>0&⎵".asFormula))(p)` is equivalent to `CE(fact)(p+PosInExpr(1::Nil))`.
+    *          Except that the former has the shape `x>0&⎵` for the context starting from position `p`.
     */
-  def CE(fact: Provable, C: Context[Formula]): DependentPositionTactic = new DependentPositionTactic("CE(Provable,Context)") {
+  def CEat(fact: Provable, C: Context[Formula]): DependentPositionTactic = new DependentPositionTactic("CE(Provable,Context)") {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1, "expected equivalence shape without antecedent and exactly one succedent " + fact)
 
     def splitFact: (Expression, Expression, BelleExpr, (Context[Formula]=>ForwardTactic)) = fact.conclusion.succ.head match {
@@ -533,7 +548,7 @@ trait UnifyUSCalculus {
     *   --------------------------------------- cutAt(repl)
     *   C{c}, G |- D
     * }}}
-    * @see [[UnifyUSCalculus.CE(Provable)]]
+    * @see [[UnifyUSCalculus.CEat(Provable)]]
     */
   def cutAt(repl: Expression): DependentPositionTactic = new DependentPositionTactic("cutAt") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -584,7 +599,7 @@ trait UnifyUSCalculus {
     *    c(f(x)) <-> c(g(x))
     * }}}
     * @see [[CE(PosInExpr]]
-    * @see [[CE(Provable)]]
+    * @see [[CEat(Provable)]]
     * @see [[CMon(Context)]]
     * @todo likewise for Context[Term] using CT instead.
     */
@@ -642,6 +657,7 @@ trait UnifyUSCalculus {
     if (DEBUG) println("CMon(" + C + ")" + "(" + impl + ")")
     /** Monotonicity rewriting step to replace occurrence of instance of k by instance of o in context */
     def monStep(C: Context[Formula], mon: Provable): Provable = {
+      //@todo assert(mon.ante.head == C{left or right} && mon.succ.head == C{right or left})
       if (DEBUG) println("in monStep(" + C + ", " + mon + ")") //\nin CMon(" + C + ")" + "(" + impl + ")")
 
       val localPolarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(
@@ -695,24 +711,32 @@ trait UnifyUSCalculus {
             if (DEBUG) println("CMon check case: " + C + " to prove " + Sequent(Nil, ante, succ) + "\nfrom " + mon +
               "\nnext step in context " + Context(c) + "\n having current polarity " + polarity + " and new polarity " + localPolarity)
             (Provable.startProof(Sequent(Nil, ante, succ))
-            (ImplyRight(SuccPos(0)), 0)
-            (ImplyLeft(AntePos(0)), 0)
-            (Close(AntePos(0), SuccPos(1)), 0)
-            // right branch
-            (CoHide2(AntePos(1), SuccPos(0)), 0)
-            ) (monStep(Context(c), mon), 0)
+              // e->c{a} |- e->c{s}
+              (ImplyRight(SuccPos(0)), 0)
+              // e->c{a}, e |- c{s}
+              (ImplyLeft(AntePos(0)), 0)
+              // e |- c{s}, e    c{a}, e |- c{s}
+              // left branch     e |- c{s}, e closes
+              (Close(AntePos(0), SuccPos(1)), 0)
+              // right branch    c{a}, e |- c{s}
+              (HideLeft(AntePos(1)),0 )    //@note was: (CoHide2(AntePos(1), SuccPos(0)), 0)
+              // right branch  c{a} |- c{s}
+              ) (monStep(Context(c), mon), 0)
 
           case Imply(c, e) if !symbols(e).contains(DotFormula) =>
             if (DEBUG) println("CMon check case: " + C + " to prove " + Sequent(Nil, ante, succ) + "\nfrom " + mon +
               "\nnext step in context " + Context(c) + "\n having current polarity " + polarity + " and new polarity " + localPolarity)
             (Provable.startProof(Sequent(Nil, ante, succ))
-            (ImplyRight(SuccPos(0)), 0)
-            (ImplyLeft(AntePos(0)), 0)
-            // right branch
-            (Close(AntePos(1), SuccPos(0)), 1)
-            // left branch
-            (CoHide2(AntePos(0), SuccPos(1)), 0)
-            ) (monStep(Context(c), mon), 0)
+              // c{a}->e |- c{s}->e
+              (ImplyRight(SuccPos(0)), 0)
+              // c{a}->e, c{s} |- e
+              (ImplyLeft(AntePos(0)), 0)
+              // c{s} |- e, c{a}    e, c{s} |- e
+              // right branch       e, c{s} |- e
+              (Close(AntePos(0), SuccPos(0)), 1)   //@note was: AntePos(1) for ImplyLeftOld for some reason
+              // left branch        c{s} |- e, c{a}
+              (HideRight(SuccPos(0)), 0)   //@note was: (CoHide2(AntePos(0), SuccPos(1)), 0)
+              ) (monStep(Context(c), mon), 0)
 
           case Equiv(e, c) if !symbols(e).contains(DotFormula) =>
             //@note fallback to implication
@@ -798,7 +822,7 @@ trait UnifyUSCalculus {
             //@note would also work with all distribute and all generalization instead
             //@note would also work with Skolemize and all instantiate but disjointness is more painful
             val rename = (us: RenUSubst) => us ++ RenUSubst(Seq((Variable("x"), vars.head)))
-            useFor("all eliminate", PosInExpr(1::Nil), rename)(AntePosition(0))(monStep(Context(c), mon)) (
+            useFor("all eliminate", PosInExpr(1::Nil), rename)(AntePosition.base0(1-1))(monStep(Context(c), mon)) (
               Sequent(Nil, ante, succ),
               Skolemize(SuccPos(0))
             )
@@ -813,7 +837,7 @@ trait UnifyUSCalculus {
             //@note would also work with exists distribute and exists generalization instead
             //@note would also work with Skolemize and all instantiate but disjointness is more painful
             val rename = (us: RenUSubst) => us ++ RenUSubst(Seq((Variable("x"), vars.head)))
-            useFor("exists eliminate", PosInExpr(0::Nil), rename)(SuccPosition(0))(monStep(Context(c), mon)) (
+            useFor("exists eliminate", PosInExpr(0::Nil), rename)(SuccPosition(1))(monStep(Context(c), mon)) (
               Sequent(Nil, ante, succ),
               Skolemize(AntePos(0))
             )
@@ -1137,6 +1161,7 @@ trait UnifyUSCalculus {
   }
 
   /**
+   * Inverse of imply-right rule, which is admissible since invertible.
    * {{{
    *   G |- a -> b, D
    * ----------------
@@ -1234,7 +1259,7 @@ trait UnifyUSCalculus {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         if (sequent.sub(pos).isEmpty) throw new BelleError("ill-positioned " + pos + " in " + sequent + "\nin " +
           "chase\n(" + sequent + ")")
-        CE(chaseProof(sequent.sub(pos).get))(pos)
+        CEat(chaseProof(sequent.sub(pos).get))(pos)
       }
 
       /** Construct a proof proving the answer of the chase of e, so either of e=chased(e) or e<->chased(e) */
@@ -1256,7 +1281,7 @@ trait UnifyUSCalculus {
           "Proved reflexive start " + initial + " for " + e)
         if (DEBUG) println("chase starts at " + initial)
         //@note start the chase on the left-hand side
-        val r = chaseFor(keys, modifier, inst) (SuccPosition(0, PosInExpr(0::Nil)))(initial)
+        val r = chaseFor(keys, modifier, inst) (SuccPosition(1, 0::Nil))(initial)
         if (DEBUG) println("chase(" + e.prettyString + ") = ~~> " + r + " done")
         r
       } ensuring(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
@@ -1300,7 +1325,7 @@ trait UnifyUSCalculus {
           try {
             val axUse = modifier(ax,pos) (useFor(ax, key, inst(ax))(pos)(de))
             recursor.foldLeft(axUse)(
-              (pf, cursor) => doChase(pf, pos.append(cursor))
+              (pf, cursor) => doChase(pf, pos + cursor)
             )
           } catch {case e: ProverException => throw e.inContext("useFor(" + ax + ", " + key.prettyString + ")\nin " + "chase(" + de.conclusion.sub(pos).get.prettyString + ")")}
         // take the first axiom among breadth that works for one useFor step
@@ -1319,7 +1344,7 @@ trait UnifyUSCalculus {
               de
             case Some((axUse, recursor)) =>
               recursor.foldLeft(axUse)(
-                (pf, cursor) => doChase(pf, pos.append(cursor))
+                (pf, cursor) => doChase(pf, pos + cursor)
               )
           }
       }

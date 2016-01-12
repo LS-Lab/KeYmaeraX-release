@@ -19,6 +19,8 @@ package edu.cmu.cs.ls.keymaerax
   *     `fi` uniformly substitutes to current provable for which `ei` does not fail, fails if the `ei` of all matching `fi` fail.`
   *   - `t partial` [[edu.cmu.cs.ls.keymaerax.bellerophon.PartialTactic partial tactic marker]] marks that tactic `t` is allowed to not close all its goals.
   *
+  * [[edu.cmu.cs.ls.keymaerax.bellerophon.PositionTactic Positional tactics]] support flexible modes of identifying what position to apply them to via
+  * [[edu.cmu.cs.ls.keymaerax.bellerophon.AtPosition]].
   *
   * @author Nathan Fulton
   * @author Stefan Mitsch

@@ -4,11 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Find, Fixed}
-import _root_.edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import _root_.edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, SuccPosition, Position, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import akka.actor.Actor
 import spray.routing._
 import spray.http._
@@ -225,14 +222,12 @@ trait RestApi extends HttpService {
   }}}
 
   /* Strictly positive position = SuccPosition, strictly negative = AntePosition, 0 not used */
-  def parseFormulaId(id:String):Position = {
+  def parseFormulaId(id:String): Position = {
     val (idx :: inExprs) = id.split(',').toList.map({case str => str.toInt})
-    if(idx > 0) {
-      new SuccPosition(idx-1, new PosInExpr(inExprs))
-    } else if (idx < 0) {
-      new AntePosition((-idx)-1, new PosInExpr(inExprs))
-    } else {
-      throw new Exception("Invalid formulaId " + id + " in axiomList")
+    try { Position(idx, inExprs) }
+    catch {
+      case e: IllegalArgumentException =>
+        throw new Exception("Invalid formulaId " + id + " in axiomList").initCause(e)
     }
   }
 
@@ -285,23 +280,45 @@ trait RestApi extends HttpService {
     }}
   }}
 
+  import Find._
   val doSearchRight = path("proofs" / "user" / Segment / Segment / Segment / "doSearchR" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
     get {
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, SuccPosition(0))))
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(FindR(0, None)))
       complete(standardCompletion(request))
     }}
   }}
 
   val doSearchLeft = path("proofs" / "user" / Segment / Segment / Segment / "doSearchL" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
     get {
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(Find(0, None, AntePosition(0))))
+      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(FindL(0, None)))
       complete(standardCompletion(request))
     }}
   }}
 
-  val pruneBelow = path("proofs" / "user" / Segment / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId, goalId) => { pathEnd {
+  val taskStatus = path("proofs" / "user" / Segment / Segment / Segment / Segment / "status") { (userId, proofId, nodeId, taskId) => { pathEnd {
     get {
-      val request = new PruneBelowRequest(database, userId, proofId, nodeId, goalId)
+      val request = new TaskStatusRequest(database, userId, proofId, nodeId, taskId)
+      complete(standardCompletion(request))
+    }}
+  }}
+
+  val taskResult = path("proofs" / "user" / Segment / Segment / Segment / Segment / "result") { (userId, proofId, nodeId, taskId) => { pathEnd {
+    get {
+      val request = new TaskResultRequest(database, userId, proofId, nodeId, taskId)
+      complete(standardCompletion(request))
+    }}
+  }}
+
+  val stopTask = path("proofs" / "user" / Segment / Segment / Segment / Segment / "stop") { (userId, proofId, nodeId, taskId) => { pathEnd {
+    get {
+      val request = new StopTaskRequest(database, userId, proofId, nodeId, taskId)
+      complete(standardCompletion(request))
+    }}
+  }}
+
+  val pruneBelow = path("proofs" / "user" / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId) => { pathEnd {
+    get {
+      val request = new PruneBelowRequest(database, userId, proofId, nodeId)
       complete(standardCompletion(request))
     }
   }}}
@@ -312,6 +329,19 @@ trait RestApi extends HttpService {
       complete(standardCompletion(request))
     }
   }}}
+
+  val agendaItem = path("proofs" / "user" / Segment / Segment / "agendaItem" / Segment) { (userId, proofId, nodeId) => { pathEnd {
+    get {
+      val request = new GetAgendaItemRequest(database, userId, proofId, nodeId)
+      complete(standardCompletion(request))
+    } ~
+    post {
+      entity(as[String]) { params => {
+        val p = JsonParser(params).asJsObject.fields.map(param => param._1.toString -> param._2.asInstanceOf[JsString].value)
+        val displayName = p("displayName").asInstanceOf[JsString].value
+        val request = new SetAgendaItemNameRequest(database, userId, proofId, nodeId, displayName)
+        complete(standardCompletion(request))
+    }}}}}}
 
   val proofLoadStatus = path("proofs" / "user" / Segment / Segment / "status") { (userId, proofId) => { pathEnd {
     get {
@@ -356,7 +386,7 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val counterExample = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "counterExample") { (userId, proofId, nodeId) => {
+  val counterExample = path("proofs" / "user" / Segment / Segment / Segment / "counterExample") { (userId, proofId, nodeId) => {
     pathEnd {
       get {
         val request = new CounterExampleRequest(database, userId, proofId, nodeId)
@@ -585,6 +615,7 @@ trait RestApi extends HttpService {
     proofListForModel     ::
     proofList             ::
     openProof             ::
+    agendaItem            ::
     proofLoadStatus       ::
     changeProofName       ::
     proofProgressStatus   ::
@@ -599,6 +630,10 @@ trait RestApi extends HttpService {
     doTactic              ::
     doSearchLeft          ::
     doSearchRight         ::
+    taskStatus            ::
+    taskResult            ::
+    stopTask              ::
+    counterExample        ::
     pruneBelow            ::
     proofTask             ::
     nodeFormulaTactics    ::
@@ -614,7 +649,7 @@ trait RestApi extends HttpService {
     devAction             ::
     sequent               ::
     dashInfo              ::
-    counterExample        ::
+//    counterExample        ::
     kyxConfig             ::
     keymaeraXVersion      ::
     mathematicaConfig     ::

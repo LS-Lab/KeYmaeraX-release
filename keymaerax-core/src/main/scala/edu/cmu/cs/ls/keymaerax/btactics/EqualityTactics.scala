@@ -1,14 +1,12 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.PositionConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, ExpressionTraversal, Position, PosInExpr, SubstitutionHelper, SuccPosition}
-import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.StaticSemanticsTools._
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position, SuccPosition}
+import Augmentors._
+import StaticSemanticsTools._
 
 import scala.language.postfixOps
 
@@ -28,7 +26,7 @@ object EqualityTactics {
    * @param eqPos The position where the equivalence appears in the antecedent.
    * @return The tactic.
    */
-  def equivRewriting(eqPos: Int): DependentPositionTactic = { require(eqPos < 0, "Antecedent position expected"); equivRewriting(new AntePosition(-eqPos - 1)) }
+  def equivRewriting(eqPos: Int): DependentPositionTactic = equivRewriting(Position(eqPos).asInstanceOf[AntePosition])
   def equivRewriting(eqPos: AntePosition): DependentPositionTactic = new DependentPositionTactic("Equivalence Rewriting") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
@@ -44,8 +42,8 @@ object EqualityTactics {
             case Some(Equiv(a, b)) if a == sequent(pos) && pos.isAnte =>
               equivL(eqPos) <(
                 (andL(eqPos) &
-                  (if (pos.index < eqPos.index) ProofRuleTactics.hide(new AntePosition(sequent.ante.length - 1)) & ProofRuleTactics.hide(pos)
-                  else ProofRuleTactics.hide(new AntePosition(sequent.ante.length - 1)) & ProofRuleTactics.hide(AntePosition(pos.index - 1)))) partial,
+                  (if (pos.index0 < eqPos.index0) ProofRuleTactics.hide(AntePosition(sequent.ante.length)) & ProofRuleTactics.hide(pos)
+                  else ProofRuleTactics.hide(AntePosition(sequent.ante.length)) & ProofRuleTactics.hide(pos.advanceIndex(-1)))) partial,
                 andL(eqPos) & notL('Llast) & notL('Llast) & closeId
               )
             case Some(Equiv(a, b)) if b == sequent(pos) && !pos.isAnte =>
@@ -56,8 +54,8 @@ object EqualityTactics {
             case Some(Equiv(a, b)) if b == sequent(pos) && pos.isAnte =>
               equivL(eqPos) <(
                 (andL(eqPos) &
-                  (if (pos.index < eqPos.index) ProofRuleTactics.hide(AntePosition(sequent.ante.length)) & ProofRuleTactics.hide(pos)
-                  else ProofRuleTactics.hide(AntePosition(sequent.ante.length)) & ProofRuleTactics.hide(AntePosition(pos.index - 1)))) partial,
+                  (if (pos.index0 < eqPos.index0) ProofRuleTactics.hide(AntePosition(sequent.ante.length + 1)) & ProofRuleTactics.hide(pos)
+                  else ProofRuleTactics.hide(AntePosition(sequent.ante.length + 1)) & ProofRuleTactics.hide(pos.advanceIndex(-1)))) partial,
                 andL(eqPos) & notL('Llast) & notL('Llast) & closeId
               )
           }
@@ -82,22 +80,22 @@ object EqualityTactics {
               // prevent endless self rewriting (e.g., 0=0) -> compute dependencies first to figure out what to rewrite when
               require(!lhs.isInstanceOf[Number] && lhs != rhs, "LHS and RHS are not allowed to overlap")
 
-              val occurrences = positionsOf(lhs, sequent).filter(p => p.isAnte != pos.isAnte || p.index != pos.index).
-                filter(p => boundAt(sequent(p), p.inExpr).intersect(StaticSemantics.freeVars(lhs)).isEmpty)
+              val occurrences = positionsOf(lhs, sequent).filter(p => p.isAnte != pos.isAnte || p.index0 != pos.index0).
+                filter(p => boundAt(sequent(p.top), p.inExpr).intersect(StaticSemantics.freeVars(lhs)).isEmpty)
 
               if (occurrences.isEmpty) {
                 ident
               } else {
                 eqL2R(pos)(occurrences.head.top) &
-                  ?(exhaustiveEq(name)(Find(0, Some(eq), new AntePosition(0))))
+                  ?(exhaustiveEq(name)('L, eq))
               }
           }
       }
     }
 
     private def positionsOf(t: Term, s: Sequent): Set[Position] = {
-      val ante = s.ante.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => new AntePosition(i, p)) })
-      val succ = s.succ.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => new SuccPosition(i, p)) })
+      val ante = s.ante.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => AntePosition.base0(i, p)) })
+      val succ = s.succ.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => SuccPosition.base0(i, p)) })
       (ante ++ succ).toSet
     }
 
@@ -123,7 +121,7 @@ object EqualityTactics {
    * @param eqPos The position of the equality.
    * @return The tactic.
    */
-  def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(convertPos(eqPos))
+  def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position(eqPos))
   def eqL2R(eqPos: Position): DependentPositionTactic = new DependentPositionTactic("eqL2R") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
@@ -136,7 +134,8 @@ object EqualityTactics {
                 case _ => throw new BelleError("Provable " + provable + " at position " + pos + " must be a formula")
               }
               cut(condEquiv) <(
-                /* use */ (implyL('Llast) <(closeId, equivRewriting(new AntePosition(sequent.ante.length))(pos) partial)) partial,
+                //@note could say equivRewriting('Llast) ??
+                /* use */ (implyLOld('Llast) <(closeId, equivRewriting(AntePosition(sequent.ante.length + 1))(pos) partial)) partial,
                 /* show */ cohide('Rlast) & byUS("const formula congruence")
                 )
           }
@@ -155,7 +154,7 @@ object EqualityTactics {
    * @param eqPos The position of the equality.
    * @return The tactic.
    */
-  def eqR2L(eqPos: Int): DependentPositionTactic = eqR2L(convertPos(eqPos))
+  def eqR2L(eqPos: Int): DependentPositionTactic = eqR2L(Position(eqPos))
   def eqR2L(eqPos: Position): DependentPositionTactic = new DependentPositionTactic("eqR2L") {
     override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
       override def computeExpr(v: BelleValue): BelleExpr = v match {
@@ -165,7 +164,7 @@ object EqualityTactics {
           val Equal(lhs, rhs) = provable.subgoals.head(eqPos)
           //@note need to search since eqL2R may alter the position of the equality
           useAt("= commute")(eqPos) & eqL2R(eqPos)(pos) &
-            useAt("= commute")(Find(0, Some(Equal(rhs, lhs)), new AntePosition(0), exact=true))
+            useAt("= commute")('L, Equal(rhs, lhs))
       }
     }
   }
@@ -199,7 +198,7 @@ object EqualityTactics {
           val Equal(lhs, rhs) = provable.subgoals.head(pos)
           //@note need to search since exhaustiveEq may alter the position of the equality
           useAt("= commute")(pos) & exhaustiveEq(name)(pos) &
-            useAt("= commute")(Find(0, Some(Equal(rhs, lhs)), new AntePosition(0), exact=true))
+            useAt("= commute")('L, Equal(rhs, lhs))
       }
     }
   }
@@ -286,8 +285,8 @@ object EqualityTactics {
           val absVar = Variable(fn, freshAbsIdx)
 
           abbrv(abs, Some(absVar)) &
-            useAt("= commute")(Find(0, Some(Equal(absVar, abs)), new AntePosition(0), exact=true)) &
-            useAt(fn)(Find(0, Some(Equal(abs, absVar)), new AntePosition(0), exact=true))
+            useAt("= commute")('L, Equal(absVar, abs)) &
+            useAt(fn)('L, Equal(abs, absVar))
       }
     }
   }
@@ -309,8 +308,8 @@ object EqualityTactics {
           val minmaxVar = Variable(fn, freshMinMaxIdx)
 
           abbrv(minmax, Some(minmaxVar)) &
-            useAt("= commute")(Find(0, Some(Equal(minmaxVar, minmax)), new AntePosition(0), exact = true)) &
-            useAt(fn)(Find(0, Some(Equal(minmax, minmaxVar)), new AntePosition(0), exact = true))
+            useAt("= commute")('L, Equal(minmaxVar, minmax)) &
+            useAt(fn)('L, Equal(minmax, minmaxVar))
       }
     }
   }

@@ -39,12 +39,12 @@ sealed trait SeqPos {
   def isSucc: Boolean = !isAnte
 
   /**
-   * The unsigned index into the antecedent or succedent list, respectively, base 0.
+   * The '''unsigned''' index into the antecedent or succedent list, respectively, '''base 0'''.
    */
-  def getIndex: Int
+  private[keymaerax] def getIndex: Int
 
   /**
-   * The signed position for the antecedent or succedent list, respectively, base 1.
+   * The '''signed''' position for the antecedent or succedent list, respectively, '''base 1'''.
    *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
    *  Positive numbers indicate succedent positions, 1, 2, 3.
    *  Zero is a degenerate case indicating whole sequent 0.
@@ -58,7 +58,7 @@ sealed trait SeqPos {
  * Antecedent Positions of formulas in a sequent.
  * @param index the position base 0 in antecedent.
  */
-case class AntePos private[edu] (private[core] val index: Int) extends SeqPos {
+case class AntePos private[ls] (private[core] val index: Int) extends SeqPos {
   def isAnte: Boolean = true
   /** The position base 0 in antecedent. */
   def getIndex: Int = index
@@ -68,7 +68,7 @@ case class AntePos private[edu] (private[core] val index: Int) extends SeqPos {
  * Antecedent Positions of formulas in a sequent.
  * @param index the position base 0 in succedent.
  */
-case class SuccPos private[edu] (private[core] val index: Int) extends SeqPos {
+case class SuccPos private[ls] (private[core] val index: Int) extends SeqPos {
   def isAnte: Boolean = false
   /** The position base 0 in succedent. */
   def getIndex: Int = index
@@ -84,7 +84,7 @@ object SeqPos {
    * @see SeqPos#pos
    */
   def apply(signedPos: Int): SeqPos =
-    if (signedPos>0) {SuccPos(signedPos-1)} else {assert(signedPos<0, "nonzero positions");AntePos(-signedPos-1)}
+    if (signedPos>0) {SuccPos(signedPos-1)} else {require(signedPos<0, "nonzero positions");AntePos(-signedPos-1)}
 
 }
 
@@ -555,22 +555,26 @@ trait ClosingRule extends Rule {}
 
 /** A rule applied to a position */
 trait PositionRule extends Rule {
+  /** The position (on the right) where this rule will be applied at */
   def pos: SeqPos
   override def toString: String = name + " at " + pos
 }
 
 /** A rule applied to a position in the antecedent on the left */
 trait LeftRule extends PositionRule {
+  /** The position (on the left) where this rule will be applied at */
   def pos: AntePos
 }
 
 /** A rule applied to a position in the succedent on the right */
 trait RightRule extends PositionRule {
+  /** The position (on the right) where this rule will be applied at */
   def pos: SuccPos
 }
 
 /** An assumption rule, which is a position rule that has an additional position of an assumption. */
 trait AssumptionRule extends PositionRule {
+  /** The position of the assumption used for this rule when used at the position `pos` */
   def assume: SeqPos
   override def toString: String = name + " at " + pos + " assumption at " + assume
 }
@@ -593,26 +597,10 @@ trait TwoPositionRule extends Rule {
  */
 
 /**
- * Hide left.
- * {{{
- *     G |- D
- * ------------- (Hide left)
- *  p, G |- D
- * }}}
- */
-case class HideLeft(pos: AntePos) extends LeftRule {
-  val name: String = "HideLeft"
-  /** weakening left = hide left */
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, s.ante.patch(pos.getIndex, Nil, 1), s.succ))
-  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-}
-
-/**
  * Hide right.
  * {{{
  *    G |- D
- * ------------- (Hide right)
+ * ------------- (Weaken right)
  *    G |- p, D
  * }}}
  */
@@ -625,17 +613,18 @@ case class HideRight(pos: SuccPos) extends RightRule {
 }
 
 /**
- * Exchange left rule reorders antecedent.
- * {{{
- * q, p, G |- D
- * ------------- (Exchange left)
- * p, q, G |- D
- * }}}
- */
-case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRule {
-  val name: String = "ExchangeLeft"
+  * Hide left.
+  * {{{
+  *     G |- D
+  * ------------- (Weaken left)
+  *  p, G |- D
+  * }}}
+  */
+case class HideLeft(pos: AntePos) extends LeftRule {
+  val name: String = "HideLeft"
+  /** weakening left = hide left */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, s.ante.updated(pos1.getIndex, s.ante(pos2.getIndex)).updated(pos2.getIndex, s.ante(pos1.getIndex)), s.succ))
+    immutable.List(Sequent(s.pref, s.ante.patch(pos.getIndex, Nil, 1), s.succ))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -651,6 +640,21 @@ case class ExchangeRightRule(pos1: SuccPos, pos2: SuccPos) extends TwoPositionRu
   val name: String = "ExchangeRight"
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, s.ante, s.succ.updated(pos1.getIndex, s.succ(pos2.getIndex)).updated(pos2.getIndex, s.succ(pos1.getIndex))))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
+/**
+ * Exchange left rule reorders antecedent.
+ * {{{
+ * q, p, G |- D
+ * ------------- (Exchange left)
+ * p, q, G |- D
+ * }}}
+ */
+case class ExchangeLeftRule(pos1: AntePos, pos2: AntePos) extends TwoPositionRule {
+  val name: String = "ExchangeLeft"
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    immutable.List(Sequent(s.pref, s.ante.updated(pos1.getIndex, s.ante(pos2.getIndex)).updated(pos2.getIndex, s.ante(pos1.getIndex)), s.succ))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -690,7 +694,7 @@ object ContractionLeft {
  * Close / Identity rule
  * {{{
  *        *
- * ------------------ (Close)
+ * ------------------ (Id)
  *   p, G |- p, D
  * }}}
  */
@@ -802,40 +806,6 @@ case class NotLeft(pos: AntePos) extends LeftRule {
 }
 
 /**
- * |R Or right.
- * {{{
- *   G |- D, p,q
- * --------------- (|R Or right)
- *   G |- p|q, D
- * }}}
- */
-case class OrRight(pos: SuccPos) extends RightRule {
-  val name: String = "Or Right"
-  /** |R Or right */
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    val Or(p,q) = s(pos)
-    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p,q))))
-  }
-}
-
-/**
- * |L Or left.
- * {{{
- * p, G |- D     q, G |- D
- * ----------------------- (|L Or left)
- *   p|q, G |- D
- * }}}
- */
-case class OrLeft(pos: AntePos) extends LeftRule {
-  val name: String = "Or Left"
-  /** |L Or left */
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    val Or(p,q) = s(pos)
-    immutable.List(s.updated(pos, p), s.updated(pos, q))
-  }
-}
-
-/**
  * &R And right
  * {{{
  * G |- p, D    G |- q, D
@@ -870,6 +840,40 @@ case class AndLeft(pos: AntePos) extends LeftRule {
 }
 
 /**
+ * |R Or right.
+ * {{{
+ *   G |- D, p,q
+ * --------------- (|R Or right)
+ *   G |- p|q, D
+ * }}}
+ */
+case class OrRight(pos: SuccPos) extends RightRule {
+  val name: String = "Or Right"
+  /** |R Or right */
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Or(p,q) = s(pos)
+    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p,q))))
+  }
+}
+
+/**
+ * |L Or left.
+ * {{{
+ * p, G |- D     q, G |- D
+ * ----------------------- (|L Or left)
+ *   p|q, G |- D
+ * }}}
+ */
+case class OrLeft(pos: AntePos) extends LeftRule {
+  val name: String = "Or Left"
+  /** |L Or left */
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Or(p,q) = s(pos)
+    immutable.List(s.updated(pos, p), s.updated(pos, q))
+  }
+}
+
+/**
  * ->R Imply right.
  * {{{
  *   G, p |- D, q
@@ -890,15 +894,34 @@ case class ImplyRight(pos: SuccPos) extends RightRule {
 /**
  * ->L Imply left.
  * {{{
- * G |- D, p    G, q |- D
+ * G |- D, p    q, G |- D
  * ---------------------- (-> Imply left)
  *   p->q, G |- D
  * }}}
- * @note Perhaps surprising that both positions change but at least consistent for this rule.
  */
 case class ImplyLeft(pos: AntePos) extends LeftRule {
-  val name: String = "Imply Left"
+  val name: String = "Imply Left (old)"
   /** ->L Imply left */
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Imply(p,q) = s(pos)
+    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))),
+      s.updated(pos, q))
+  }
+}
+
+/**
+ * ->L Imply left (old).
+ * {{{
+ * G |- D, p    G, q |- D
+ * ---------------------- (-> Imply left old)
+ *   p->q, G |- D
+ * }}}
+ * @note Surprising positioning: both positions change but at least consistent for this rule.
+ */
+@deprecated("Use ImplyLeft instead.")
+private[keymaerax] case class ImplyLeftOld(pos: AntePos) extends LeftRule {
+  val name: String = "Imply Left (old)"
+  /** ->L Imply left (old) */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(p,q) = s(pos)
     immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))),
@@ -1107,61 +1130,34 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
  * (and its associated DifferentialSymbol) to repl.
  * @param what What variable (and its associated DifferentialSymbol) to replace.
  * @param repl The target variable to replace what with.
+ * @param pos The position at which to perform a bound renaming.
  * @requires repl is fresh in the sequent.
- * @author smitsch
  * @author Andre Platzer
+ * @author Stefan Mitsch
  */
-final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
+final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) extends PositionRule {
   insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
   val name: String = "Bound Renaming"
 
   private val renaming = URename(what, repl)
 
-  override def toString: String = name + "(" + what + "~>" + repl + ")"
+  override def toString: String = name + "(" + what + "~>" + repl + ") at " + pos
 
-  def apply(s: Sequent): immutable.List[Sequent] =
-    immutable.List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
+  def apply(s: Sequent): immutable.List[Sequent] = immutable.List(s.updated(pos, apply(s(pos))))
 
-  def apply(f: Formula): Formula = {
-    if (StaticSemantics(f).bv.intersect(SetLattice(Set[NamedSymbol](what, DifferentialSymbol(what)))).isEmpty) {
-      // old name is not bound anywhere in f, so no bound renaming needed/possible
-      f
-    } else {
-      // old name is bound somewhere in f -> check that new name is admissible (does not occur)
-      if (admissible(f)) {if (what==repl) f else renaming(f)}
-      else throw new BoundRenamingClashException("Bound renaming only to fresh names but name " +
-        repl + " is not fresh", this.toString, f.prettyString)
-    }
-  }
-
-  /**
-   * Introduce a ghost for the target variable as needed to remember the value of the previous variable.
-   * If what is bound at f, rename, otherwise introduce stuttering [what:=what] before renaming,
-   * leading to [repl:=what] after renaming.
-   * Ensures that the bound variable is literally bound on the top level, when in doubt by introducing a stutter.
-   */
-  private def ghostify(f: Formula): Formula =
-    if (StaticSemantics(f).bv.intersect(SetLattice(Set[NamedSymbol](what, DifferentialSymbol(what)))).isEmpty) {
-      // old name is not bound anywhere in f, so no bound renaming needed/possible
-      f
-    } else {
-      // old name is bound somewhere in f -> lazy check by ensuring that new name is admissible (does not occur)
-      f match {
-        case Forall(vars, _) if vars.contains(what) => apply(f)
-        case Exists(vars, _) if vars.contains(what) => apply(f)
-        //@note e is not in scope of x so, unlike g, not affected by bound renaming yet
-        case Box(Assign(x, e), g) if x == repl => Box(Assign(repl, e), renaming(g))
-        case Diamond(Assign(x, e), g) if x == repl => Diamond(Assign(repl, e), renaming(g))
-        case _ => if (Rule.LAX_MODE) {
-          /** @todo Code Review: change to false */
-          //@note turn to false after telling alphaRenamingT and globalAlphaRenamingT to add the stutter by axiom if needed
-          //println("LAX: BoundRenaming: Change alphaRenamingT and disable compatibilityMode" + (if (what==repl) " stutter " else "non-stutter") + "\nfor " + this + " in " + f.prettyString + " led to " + Box(Assign(repl, what), apply(f)).prettyString)
-          if (Provable.DEBUG && repl != what) {println("LAX: BoundRenaming: Change alphaRenamingT and disable compatibilityMode" + (if (what==repl) " stutter " else "non-stutter") + "\nfor " + this + " in " + f.prettyString + " led to " + Box(Assign(repl, what), apply(f)).prettyString)}
-          //@note uniformly rename all occurrences of what to repl in f and prefix with an assignment [repl:=what] remembering what value 'what' used to have.
-          Box(Assign(repl, what), renaming(f))
-        } else throw new BoundRenamingClashException("Bound renaming only to bound variables " +
-          what + " is not bound", this.toString, f.prettyString)
-    } } ensuring(admissible(f), s"ghostify will not work on $f because the symbols occuring in that formula intersect with ($repl')")
+  def apply(f: Formula): Formula = { if (admissible(f))
+    f match {
+      case Forall(vars, g) if vars==immutable.IndexedSeq(what) => Forall(immutable.IndexedSeq(repl), renaming(g))
+      case Exists(vars, g) if vars==immutable.IndexedSeq(what) => Exists(immutable.IndexedSeq(repl), renaming(g))
+      //@note e is not in scope of x so is, unlike g, not affected by the renaming
+      case Box    (Assign(x, e), g) if x==what => Box    (Assign(repl, e), renaming(g))
+      case Diamond(Assign(x, e), g) if x==what => Diamond(Assign(repl, e), renaming(g))
+      case _ => throw new RenamingClashException("Bound renaming only to bound variables " +
+        what + " is not bound by a quantifier or single assignment", this.toString, f.prettyString)
+    } else
+    throw new RenamingClashException("Bound renaming only to fresh names but name " +
+      repl + " is not fresh", this.toString, f.prettyString)
+  } ensuring(r => r.getClass == f.getClass, "shape unchanged by bound renaming " + this)
 
   /**
    * Check whether this renaming is admissible for expression e, i.e.
@@ -1170,8 +1166,7 @@ final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
    * @note This implementation currently errors if repl.sort!=Real
    */
   private def admissible(e: Expression): Boolean =
-    what == repl ||
-      StaticSemantics.symbols(e).intersect(Set(repl, DifferentialSymbol(repl))).isEmpty
+    what == repl || StaticSemantics.symbols(e).intersect(Set(repl, DifferentialSymbol(repl))).isEmpty
 }
 
 
@@ -1188,12 +1183,13 @@ final case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
  * ----------------------- (Skolemize) provided x not in G,D
  * G |- \forall x p(x), D
  * }}}
+ * Skolemize also handles '''existential''' quantifiers on the left.
  * {{{
- *           G, p(x) |- D
+ *           p(x), G |- D
  * ------------------------ (Skolemize) provided x not in G,D
- * G, \exists x p(x) |- D
+ * \exists x p(x), G |- D
  * }}}
- * @note Could replace by uniform substitution rule application mechanism for rule "all generalization"
+ * @note Could in principle replace by uniform substitution rule application mechanism for rule "all generalization"
  * along with tactics expanding scope of quantifier with axiom "all quantifier scope" at the cost of propositional repacking and unpacking.
  *      p(x)
  *  ---------------all generalize
@@ -1333,23 +1329,6 @@ final case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
   */
 
 /**
- * CoHide left.
- * {{{
- *      p |-
- * ------------- (CoHide left)
- *   p, G |- D
- * }}}
- * @derived
- */
-case class CoHideLeft(pos: AntePos) extends LeftRule {
-  val name: String = "CoHideLeft"
-  /** co-weakening left = co-hide left (all but indicated position) */
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos.getIndex)), immutable.IndexedSeq()))
-  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-}
-
-/**
  * CoHide right.
  * {{{
  *     |- p
@@ -1363,6 +1342,24 @@ case class CoHideRight(pos: SuccPos) extends RightRule {
   /** co-weakening right = co-hide right (all but indicated position) */
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(s.succ(pos.getIndex))))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
+/**
+  * CoHide left.
+  * {{{
+  *      p |-
+  * ------------- (CoHide left)
+  *   p, G |- D
+  * }}}
+  * @note Rarely useful (except for contradictory `p`)
+  * @derived
+  */
+case class CoHideLeft(pos: AntePos) extends LeftRule {
+  val name: String = "CoHideLeft"
+  /** co-weakening left = co-hide left (all but indicated position) */
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos.getIndex)), immutable.IndexedSeq()))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -1427,13 +1424,47 @@ case class CutLeft(c: Formula, pos: AntePos) extends Rule {
 }
 
 /**
- * Equivify Right: Convert implication to equivalence.
+ * Commute equivalence right
  * {{{
- * G |- a<->b, D
- * -------------
- * G |- a->b,  D
+ * G |- q<->p, D
+ * ------------- (<->cR)
+ * G |- p<->q, D
  * }}}
+ * @derived
  */
+case class CommuteEquivRight(pos: SuccPos) extends RightRule {
+  val name: String = "c<-> commute equivalence Right"
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Equiv(p,q) = s(pos)
+    immutable.List(s.updated(pos, Equiv(q, p)))
+  }
+}
+
+/**
+  * Commute equivalence left
+  * {{{
+  * q<->p, G |-  D
+  * -------------- (<->cL)
+  * p<->q, G |-  D
+  * }}}
+  * @derived
+  */
+case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
+  val name: String = "c<-> commute equivalence Left"
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val Equiv(p,q) = s(pos)
+    immutable.List(s.updated(pos, Equiv(q, p)))
+  }
+}
+
+/**
+  * Equivify Right: Convert implication to equivalence.
+  * {{{
+  * G |- a<->b, D
+  * -------------
+  * G |- a->b,  D
+  * }}}
+  */
 // ->2<-> Equivify Right: Equivalencify Implication Right
 //@derived(cut(a<->b) & prop...)
 case class EquivifyRight(pos: SuccPos) extends RightRule {
@@ -1444,36 +1475,3 @@ case class EquivifyRight(pos: SuccPos) extends RightRule {
   }
 }
 
-/**
- * Commute equivalence left
- * {{{
- * b<->a, G |-  D
- * -------------
- * a<->b, G |-  D
- * }}}
- * @derived
- */
-case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
-  val name: String = "c<-> commute equivalence Left"
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(a,b) = s(pos)
-    immutable.List(s.updated(pos, Equiv(b, a)))
-  }
-}
-
-/**
- * Commute equivalence right
- * {{{
- * G |- b<->a, D
- * -------------
- * G |- a<->b, D
- * }}}
- * @derived
- */
-case class CommuteEquivRight(pos: SuccPos) extends RightRule {
-  val name: String = "c<-> commute equivalence Right"
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(a,b) = s(pos)
-    immutable.List(s.updated(pos, Equiv(b, a)))
-  }
-}

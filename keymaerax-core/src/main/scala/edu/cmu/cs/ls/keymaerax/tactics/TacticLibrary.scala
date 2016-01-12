@@ -619,7 +619,7 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val fml = TacticHelper.getFormula(node.sequent, p)
         val findResultProof = Provable.startProof(Sequent(node.sequent.pref, IndexedSeq(), IndexedSeq(fml)))
-        val desiredResult = findResultProof(new BoundRenaming(from, to), 0).subgoals.head.succ.head
+        val desiredResult = findResultProof(new BoundRenaming(from, to, ???), 0).subgoals.head.succ.head
         if (p.isAnte) {
           Some(cutT(Some(node.sequent(p.topLevel).replaceAt(p.inExpr, desiredResult))) & onBranch(
             (cutShowLbl, cohide2T(p.topLevel, SuccPos(node.sequent.succ.length)) &
@@ -637,7 +637,7 @@ object TacticLibrary {
         }
       }
 
-      private def br = new ApplyRule(new BoundRenaming(from, to)) {
+      private def br = new ApplyRule(new BoundRenaming(from, to, ???)) {
         override def applicable(node: ProofNode): Boolean = true
       }
     }
@@ -652,7 +652,7 @@ object TacticLibrary {
       override def applicable(node: ProofNode): Boolean = true
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(new ApplyRule(new BoundRenaming(from, to)) {
+        Some(new ApplyRule(new BoundRenaming(from, to, ???)) {
           override def applicable(node: ProofNode): Boolean = true
         } & initialValueTactic(node.sequent.ante, AntePosition.apply)
           & initialValueTactic(node.sequent.succ, SuccPosition.apply))

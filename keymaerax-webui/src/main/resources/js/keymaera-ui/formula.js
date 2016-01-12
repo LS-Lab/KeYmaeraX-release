@@ -25,7 +25,7 @@ angular.module('formula')
                              'ng-right-click="formulaRightClick(\'' + id + '\', $event)"' +
                              // initialize formulaId for popover template, use ng-repeat for scoping
                              'ng-repeat="formulaId in [\'' + id + '\']"' +
-                             'uib-popover-template="\'js/keymaera-ui/axiomPopoverTemplate.html\'"' +
+                             'uib-popover-template="\'templates/axiomPopoverTemplate.html\'"' +
                              'popover-is-open="tacticPopover.isOpen(\'' + id + '\')"' +
                              'popover-append-to-body="true"' +
                              'popover-trigger="none"' +
@@ -396,10 +396,12 @@ angular.module('formula')
             }
 
             $scope.applyTactic = function(formulaId, tacticId) {
+              $scope.tacticPopover.close();
               $scope.onTactic({formulaId: formulaId, tacticId: tacticId});
             }
-;
+
             $scope.applyInputTactic = function(formulaId, tactic) {
+              $scope.tacticPopover.close();
               //@note have to declare local variables with exactly the names of the event arguments,
               //      otherwise the event parameters are undefined in the listener :-O
               var tacticId = tactic.id;

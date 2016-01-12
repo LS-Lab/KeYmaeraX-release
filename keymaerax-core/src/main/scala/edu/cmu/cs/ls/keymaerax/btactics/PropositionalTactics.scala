@@ -4,8 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
+import Augmentors._
 
 import scala.language.postfixOps
 
@@ -143,7 +142,8 @@ object PropositionalTactics {
   def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = new SingleGoalDependentTactic("Modus Ponens") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
-      implyL(implication) <(
+      //@todo adapt implyLOld to implyL
+      implyLOld(implication) <(
         cohide2(p, SuccPos(sequent.succ.length)) & close,
         Idioms.ident
         )

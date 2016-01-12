@@ -1,9 +1,13 @@
-angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$rootScope', function($http, $rootScope) {
+angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$rootScope', 'spinnerService', function($http, $rootScope, spinnerService) {
   return {
     /** The agenda model */
     agenda: {
       itemsMap: {},           // { id: { id: String, name: String, isSelected: Bool, path: [ref PTNode] } }, ... }
-      selectedId: undefined,  // ref Item
+      selectedId: function() {
+        var selected = $.grep(this.items(), function(e, i) { return e.isSelected; });
+        if (selected !== undefined && selected.length > 0) return selected[0].id;
+        else return undefined;
+      },
       itemIds: function() { return Object.keys(this.itemsMap); },
       items: function() {
         return $.map(this.itemsMap, function(v) {return v;});
@@ -11,10 +15,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       select: function(item) {
         //@note bootstrap tab directive sends a select on remove -> only change selection if the item is still on the agenda
         if (this.itemsMap[item.id] !== undefined) {
-          if (this.selectedId !== undefined && this.itemsMap[this.selectedId] !== undefined) {
-            this.itemsMap[this.selectedId].isSelected = false;
-          }
-          this.selectedId = item.id;
+          $.each(this.items(), function(i, e) { e.isSelected = false; });
           item.isSelected = true;
         }
       },
@@ -75,18 +76,19 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     },
 
     /** Prunes the proof tree at the specified goal */
-    prune: function(userId, proofId, nodeId, goalId) {
+    prune: function(userId, proofId, nodeId) {
       //@note make model available in closure of function success
       var theProofTree = this.proofTree;
       var theAgenda = this.agenda;
-      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/' + goalId + '/pruneBelow').success(function(data) {
+
+      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/pruneBelow').success(function(data) {
         // prune proof tree
-        theProofTree.pruneBelow(goalId);
+        theProofTree.pruneBelow(nodeId);
 
         // update agenda: prune deduction paths
-        var agendaItems = theAgenda.itemsByProofStep(goalId);
+        var agendaItems = theAgenda.itemsByProofStep(nodeId);
         $.each(agendaItems, function(i, item) {
-          var deductionIdx = theAgenda.deductionIndexOf(item.id, goalId);
+          var deductionIdx = theAgenda.deductionIndexOf(item.id, nodeId);
           var section = item.deduction.sections[deductionIdx.sectionIdx];
           section.path.splice(0, deductionIdx.pathStepIdx);
           item.deduction.sections.splice(0, deductionIdx.sectionIdx);
@@ -122,53 +124,54 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     fetchAgenda: function(scope, userId, proofId) {
       var theProofTree = this.proofTree;
       var theAgenda = this.agenda;
-      $http.get('proofs/user/' + userId + "/" + proofId + '/agendaawesome').success(function(data) {
-        theAgenda.itemsMap = data.agendaItems;
-        theProofTree.nodesMap = data.proofTree.nodes;
-        theProofTree.root = data.proofTree.root;
-        if (theAgenda.items().length > 0) {
-          // select first task if nothing is selected yet
-          if (theAgenda.selectedId === undefined) theAgenda.select(theAgenda.items()[0]);
-        } else {
-          // proof might be finished
-          scope.$emit('agendaIsEmpty');
-        }
-      }).error(function(data) {
-        if (data.status == 'notloaded') {
-          scope.$emit('proofIsNotLoaded'); // TODO somewhere: open modal dialog and ask if proof should be loaded
-        } else if (data.status == 'loading') {
-          scope.proofIsLoading = $q.defer()
-          scope.proofIsLoading.promise.then(function() {
-            // TODO proof is now loaded, fetch tree and tasks
-          })
-        }
-      });
+      spinnerService.show('proofLoadingSpinner');
+      $http.get('proofs/user/' + userId + "/" + proofId + '/agendaawesome')
+        .then(function(response) {
+          theAgenda.itemsMap = response.data.agendaItems;
+          theProofTree.nodesMap = response.data.proofTree.nodes;
+          theProofTree.root = response.data.proofTree.root;
+          if (theAgenda.items().length > 0) {
+            // select first task if nothing is selected yet
+            if (theAgenda.selectedId() === undefined) theAgenda.items()[0].isSelected = true;
+          } else {
+            // proof might be finished
+            $rootScope.$emit('agenda.isEmpty');
+          }
+        })
+        .catch(function(data) {
+          $rootScope.$emit('agenda.loadError'); // TODO somewhere: open modal dialog and ask if proof should be loaded
+
+        })
+        .finally(function() { spinnerService.hide('proofLoadingSpinner'); });
     },
 
     /** Updates the agenda and the proof tree with new items resulting from a tactic */
     updateAgendaAndTree: function(proofUpdate) {
-      var theProofTree = this.proofTree;
-      var theAgenda = this.agenda;
-      var oldAgendaItem = theAgenda.itemsMap[proofUpdate.parent.id];
-      $.each(proofUpdate.newNodes, function(i, node) {
-        // update tree
-        theProofTree.nodesMap[node.id] = node;
-        var parent = theProofTree.nodesMap[node.parent]
-        if (parent.children === undefined || parent.children === null) parent.children = [node.id];
-        else parent.children.push(node.id);
-        parent.rule = node.rule;
-        // update agenda: prepend new open goal to deduction path
-        var newAgendaItem = {
-          id: node.id,
-          name: oldAgendaItem.name + " " + i,              // inherit name from old, append child index
-          deduction: $.extend(true, {}, oldAgendaItem.deduction), // object deep copy
-          isSelected: i === 0 ? oldAgendaItem.isSelected : false  // first new item inherits selection from old
-        }
-        newAgendaItem.deduction.sections[0].path.unshift(node.id);
-        theAgenda.itemsMap[newAgendaItem.id] = newAgendaItem;
-      });
-      delete theAgenda.itemsMap[oldAgendaItem.id];
-      if (theAgenda.itemIds().length == 0) $rootScope.$emit('agendaIsEmpty');
+      if (proofUpdate.progress) {
+        var theProofTree = this.proofTree;
+        var theAgenda = this.agenda;
+        var oldAgendaItem = theAgenda.itemsMap[proofUpdate.parent.id];
+        $.each(proofUpdate.newNodes, function(i, node) {
+          // update tree
+          theProofTree.nodesMap[node.id] = node;
+          var parent = theProofTree.nodesMap[node.parent]
+          if (parent.children === undefined || parent.children === null) parent.children = [node.id];
+          else parent.children.push(node.id);
+          // update agenda: prepend new open goal to deduction path
+          var newAgendaItem = {
+            id: node.id,
+            name: oldAgendaItem.name,                               // inherit name from old
+            isSelected: i === 0 ? oldAgendaItem.isSelected : false, // first new item inherits selection from old
+            deduction: $.extend(true, {}, oldAgendaItem.deduction)  // object deep copy
+          }
+          newAgendaItem.deduction.sections[0].path.unshift(node.id);
+          theAgenda.itemsMap[newAgendaItem.id] = newAgendaItem;
+        });
+        delete theAgenda.itemsMap[oldAgendaItem.id];
+        if (theAgenda.itemIds().length == 0) $rootScope.$emit('agenda.isEmpty');
+      } else {
+        $rootScope.$emit('agenda.updateWithoutProgress');
+      }
     }
   }
 }]);

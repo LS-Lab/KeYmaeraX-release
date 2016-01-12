@@ -75,6 +75,8 @@ case class SequentPOJO(sequentId: Int, provableId: Int)
 
 case class SequentFormulaPOJO(sequentFormulaId: Int, sequentId: Int, isAnte: Boolean, index: Int, formulaStr: String)
 
+case class AgendaItemPOJO(itemId: Int, proofId: Int, initialProofNode:Int, displayName: String)
+
 object ExecutionStepStatus extends Enumeration {
   type ExecutionStepStatus = Value
   val Prepared, Running, Finished, Aborted, Error, DependsOnChildren = Value
@@ -118,7 +120,7 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
 }
 
 /* User-friendly representation for execution traces */
-case class ExecutionStep(stepId: Int, input:Provable, output:Option[Provable], branch:Int, alternativeOrder:Int, rule:String)
+case class ExecutionStep(stepId: Int, input:Provable, output:Option[Provable], branch:Int, alternativeOrder:Int, rule:String, isUserExecuted: Boolean = true)
 case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequent, steps:List[ExecutionStep]) {
   def branch = steps.lastOption.map{case step => step.branch}
 
@@ -233,6 +235,14 @@ trait DBAbstraction {
   def updateProofName(proofId: String, name: String): Unit = updateProofName(proofId.toInt, name)
 
   def getProofSteps(proofId: Int): List[String]
+
+  def addAgendaItem(proofId: Int, initialProofNode: Int, displayName:String): Int
+
+  def getAgendaItem(proofId: Int, initialProofNode: Int): Option[AgendaItemPOJO]
+
+  def updateAgendaItem(item:AgendaItemPOJO): Unit
+
+  def agendaItemsForProof(proofId: Int): List[AgendaItemPOJO]
 
   // Tactics
   /** Stores a Provable in the database and returns its ID */

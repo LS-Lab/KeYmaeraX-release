@@ -29,13 +29,13 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
                      dataType: 'json',
                      contentType: 'application/json',
                      success: function(data) {
-                         if(data.errorThrown) {
+                         if (data.errorThrown) {
                             $uibModal.open({
-                               templateUrl: 'partials/error_alert.html',
-                               controller: 'ErrorAlertCtrl',
-                               size: 'md',
+                               templateUrl: 'templates/parseError.html',
+                               controller: 'ParseErrorCtrl',
+                               size: 'lg',
                                resolve: {
-                                  action: function () { return "loading model"; },
+                                  model: function () { return e.target.result; },
                                   error: function () { return data; }
                                }});
                          }

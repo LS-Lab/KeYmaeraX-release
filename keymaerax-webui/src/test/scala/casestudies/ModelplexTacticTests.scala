@@ -1,6 +1,9 @@
+package edu.cmu.cs.ls.keymaerax.tactics
+
 import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex
+import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
@@ -8,6 +11,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.ProofNode.ProofStep
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
+
 //import org.scalameter.{Key, Warmer, Measurer}
 import testHelper.KeYmaeraXTestTags.SlowTest
 import testHelper.ParserFactory._
@@ -24,7 +29,8 @@ import scala.language.postfixOps
  * Created by smitsch on 3/8/15.
  * @author Stefan Mitsch
  */
-class ModelplexTacticTests extends testHelper.TacticTestSuite {
+@ObsoleteTest
+class ModelplexTacticTests extends TacticTestSuite {
 
   /**
    * Prove the new goal by the given tactic, returning the resulting proof node
