@@ -29,8 +29,8 @@ object ReflectiveExpressionBuilder {
       // If the tactic accepts arguments but wasn't given any, return the unapplied tactic under the assumption that
       // someone is going to plug in the arguments later
       case (expr:BelleExpr, Nil, _) => expr
-      case (expr:BelleExpr with PositionalTactic , arg::Nil, 1) =>
-        AppliedPositionTactic(expr, Fixed(arg))
+      case (expr:BelleExpr with PositionalTactic , arg::Nil, 1) => AppliedPositionTactic(expr, Fixed(arg))
+      case (expr:DependentPositionTactic, arg::Nil, 1) => new AppliedDependentPositionTactic(expr, Fixed(arg))
       case (expr:BuiltInTwoPositionTactic, arg1::arg2::Nil, 2) =>
         AppliedTwoPositionTactic(expr, arg1, arg2)
       case (expr, posArgs, num) =>
