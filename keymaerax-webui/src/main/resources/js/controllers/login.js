@@ -5,31 +5,21 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
     $scope.username = ""
     $scope.password = ""
 
-    $scope.processLogin = function() {
-      if ($scope.username === undefined || $scope.password === undefined) {
-          showErrorMessage($uibModal, "Please provide e-mail address and password for login");
-      } else {
-        login($scope.username, $scope.password)
-      }
-    }
+    $scope.processLogin = function() { login($scope.username, $scope.password) }
 
     $scope.processRegistration = function() {
-      if ($scope.username === undefined || $scope.password === undefined) {
-          showErrorMessage($uibModal, "Please provide your e-mail address and choose a password for registration");
-      } else {
-        $.ajax({
-              type: "POST",
-              dataType: "json",
-              contentType: "application/json",
-              async: false,
-              url: "/user/" + $scope.username + "/" + $scope.password,
-              success: function(result) {
-                 if(result.success === true) { $scope.processLogin(); }
-                 else { showErrorMessage($uibModal, "Sorry, user name is already taken. Please choose a different name."); }
-               },
-              error: this.ajaxErrorHandler
-            });
-      }
+      $.ajax({
+            type: "POST",
+            dataType: "json",
+            contentType: "application/json",
+            async: false,
+            url: "/user/" + $scope.username + "/" + $scope.password,
+            success: function(result) {
+               if(result.success === true) { $scope.processLogin(); }
+               else { showMessage($uibModal, "Registration failed", "Sorry, user name is already taken. Please choose a different name."); }
+             },
+            error: this.ajaxErrorHandler
+          });
     }
 
     ajaxErrorHandler = function(request, textStatus, errorThrown) {
@@ -61,7 +51,7 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
           document.cookie = obj.key + " = " + obj.value + "; path=/";
           document.location.href = "/dashboard.html"
         } else {
-          showErrorMessage($uibModal, "Login failed!");
+          showMessage($uibModal, "Login failed", "Please check user name and/or password");
         }
       }
     }
