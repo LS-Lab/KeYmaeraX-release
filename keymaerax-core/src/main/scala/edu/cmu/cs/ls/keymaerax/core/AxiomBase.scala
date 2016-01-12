@@ -242,7 +242,7 @@ private[core] object AxiomBase {
     assert(axs("x' derive var") == Equal(Differential(x), DifferentialSymbol(x)), "x' derive var")
     //assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
 
-    assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,t0)), "all instantiate")
+    assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,f0)), "all instantiate")
     // soundness-critical that these are for p() not for p(x) or p(??)
     assert(axs("vacuous all quantifier") == Equiv(Forall(immutable.IndexedSeq(x), p0), p0), "vacuous all quantifier")
 
@@ -308,7 +308,7 @@ Axiom "[:*] assign nondet".
 End.
 
 Axiom "[?] test".
-  [?H();]p() <-> (H() -> p())
+  [?q();]p() <-> (q() -> p())
 End.
 
 Axiom "[++] choice".
@@ -518,7 +518,7 @@ Axiom "all dual".
 End.
 
 Axiom /*\\foralli */ "all instantiate".
-  (\forall x_ p(x_)) -> p(t())
+  (\forall x_ p(x_)) -> p(f())
 End.
 
 /* consequence of "all instantiate" @note generalized "all instantiate" */
