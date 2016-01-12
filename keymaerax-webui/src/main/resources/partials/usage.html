@@ -17,7 +17,7 @@
             <!-- Wrapper for slides -->
             <div class="carousel-inner" role="listbox">
                 <div class="item active">
-                    <img src="images/help/modellist.png" alt="Model list">
+                    <img src="images/help/modelList.png" alt="Model list">
                     <div class="k4-carousel-caption">
                         <p>
                             The page "Your Models" lists the available models and allows you to upload new models.
@@ -27,7 +27,7 @@
                     </div>
                 </div>
                 <div class="item">
-                    <img src="images/help/modeldetails.png" alt="Model details">
+                    <img src="images/help/modelDetails.png" alt="Model details">
                     <div class="k4-carousel-caption">
                         <p>
                             Click on the model name to look at the model. Click on the description to get additional information.
@@ -35,54 +35,55 @@
                     </div>
                 </div>
                 <div class="item">
-                    <img src="images/help/prooflist.png" alt="Proof list">
+                    <img src="images/help/proofList.png" alt="Proof list">
                     <div class="k4-carousel-caption">
                         <p>
-                            The page "Your Proofs" lists the available proofs and allows you to load and reprove. While reproving, a
-                            spinning wheel indicates that the prover is busy. When reproving finished, the spinning wheel changes into
-                            a button that lets you open the proof.
+                            The page "Your Proofs" lists the available proofs and allows you to load and review proofs.
                         </p>
                     </div>
                 </div>
                 <div class="item">
-                    <img src="images/help/sequent.png" alt="Proof search on a formula">
+                    <img src="images/help/proofTree.png" alt="Proof tree view">
                     <div class="k4-carousel-caption">
                         <p>
-                            The proof view indicates your tasks in a proof agenda. Right of or below the agenda, depending on your screen
+                            The proof view indicates your tasks in a proof agenda. Below the agenda, depending on your screen
                             resolution, you can find the proof obligation of the selected agenda item. Hover the mouse over formulas in
                             the proof obligation to see your options for proof search locally at that formula.
-                            Step (<span class="fa fa-step-forward"></span> Step) performs a single proof step based on the top-level operator in that formula (here,
-                            it will execute a propositional tactic handling implication).
+                            Step (<span class="fa fa-step-forward"></span> Step) performs a single proof step based on the top-level operator in that formula.
                             Hide (<span class="fa fa-eye-slash"></span> Hide) performs weakening, which means it removes the formula from the proof obligation.
                         </p>
                     </div>
                 </div>
                 <div class="item">
-                    <img src="images/help/tacticapplication.png" alt="Manual tactic application">
+                    <img src="images/help/proofByPointing.png" alt="Proof by Pointing">
                     <div class="k4-carousel-caption">
                         <p>
                             Instead of automated proof search, you can manually interact with the prover by clicking an operator in a
-                            formula (e.g., the implication symbol). This opens a popup dialog that displays the applicable tactics.
-                            Click a tactic button to execute that tactic on the formula displayed at the top of the dialog (this
-                            is the formula selected when opening the dialog).
+                            formula (e.g., the conjunction symbol), which picks a simplifying step based on the top-level operator in the formula.
                         </p>
                     </div>
                 </div>
                 <div class="item">
-                    <img src="images/help/sequenttactics.png" alt="Proof search on an obligation">
+                    <img src="images/help/proofSuggestions.png" alt="Pick from suggested tactics">
                     <div class="k4-carousel-caption">
                         <p>
-                            To let KeYmaera search for a proof fully automated, hover the mouse over the turnstile symbol.
-                            This will show automated tactics to handle all kinds of formulas (<i class="fa fa-magic"></i> Auto),
-                            only propositional tactics (<i class="fa fa-forward"></i> Propositional), tactics to handle
-                            arithmetic (<i class="fa fa-calculator"></i> Arithmetic),
-                            or automated tactics without making arithmetic steps, such as quantifier elimination (<span class="fa-stack">
-                                <i class="fa fa-calculator fa-stack-1x"></i>
-                                <i class="fa fa-ban fa-stack-2x"></i>
-                            </span> w/o Arith.).
+                            Right-clicking on a formula opens a menu showing options relevant to that formula, complete
+                            with their definitions. If a particular proof step accepts inputs, enter them by typing in the
+                            text box. To run a tactic, click on its name.
                         </p>
                     </div>
                 </div>
+                <div class="item">
+                <img src="images/help/proofByBrowsing.png" alt="Proof by Browsing">
+                <div class="k4-carousel-caption">
+                    <p>
+                        Not sure where to start? The menu on the top of the screen allows you to browse through commonly
+                        used proof steps. To apply a step, click on its name. This is also where you can run general-purpose
+                        proof search tactics like Auto and Normalize, which performs many of the same steps as Auto, but
+                        does not attempt expensive operations such as solving differential equations.
+                    </p>
+                </div>
+            </div>
             </div>
 
             <!-- Controls -->
