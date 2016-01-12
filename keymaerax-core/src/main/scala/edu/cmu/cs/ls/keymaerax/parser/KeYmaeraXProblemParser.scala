@@ -92,7 +92,7 @@ object KeYmaeraXDeclarationsParser {
         }
         f.sort == sort && (domain match {
           case Some(d) => f.domain == d
-          case None => throw ParseException("type analysis" + ": " + f.name + " is declared as non-function, but used as function", f)
+          case None => throw ParseException("type analysis" + ": " + f.name + s" is declared as non-function, but used as function. Try using ${f.name} instead of ${f.name}()", f)
         })
       case _ => true
     }) &&
