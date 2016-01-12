@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position, SuccPosition}
@@ -27,41 +28,35 @@ object EqualityTactics {
    * @return The tactic.
    */
   def equivRewriting(eqPos: Int): DependentPositionTactic = equivRewriting(Position(eqPos).asInstanceOf[AntePosition])
-  def equivRewriting(eqPos: AntePosition): DependentPositionTactic = new DependentPositionTactic("Equivalence Rewriting") {
-    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable, _) =>
-          require(eqPos.isTopLevel, "Equivalence to rewrite must occur in top-level position in antecedent")
-          val sequent = provable.subgoals.head
-          sequent.sub(eqPos) match {
-            case Some(Equiv(a, b)) if a == sequent(pos) && !pos.isAnte =>
-              equivL(eqPos) <(
-                andL(eqPos) & closeId,
-                (andL(eqPos) & ProofRuleTactics.hide(pos) & notL('Llast) & ProofRuleTactics.hide('Llast)) partial
-              )
-            case Some(Equiv(a, b)) if a == sequent(pos) && pos.isAnte =>
-              equivL(eqPos) <(
-                (andL(eqPos) &
-                  (if (pos.index0 < eqPos.index0) ProofRuleTactics.hide(AntePosition(sequent.ante.length)) & ProofRuleTactics.hide(pos)
-                  else ProofRuleTactics.hide(AntePosition(sequent.ante.length)) & ProofRuleTactics.hide(pos.advanceIndex(-1)))) partial,
-                andL(eqPos) & notL('Llast) & notL('Llast) & closeId
-              )
-            case Some(Equiv(a, b)) if b == sequent(pos) && !pos.isAnte =>
-              equivL(eqPos) <(
-                andL(eqPos) & closeId,
-                (andL(eqPos) & ProofRuleTactics.hide(pos) & notL(eqPos) & ProofRuleTactics.hide(eqPos)) partial
-              )
-            case Some(Equiv(a, b)) if b == sequent(pos) && pos.isAnte =>
-              equivL(eqPos) <(
-                (andL(eqPos) &
-                  (if (pos.index0 < eqPos.index0) ProofRuleTactics.hide(AntePosition(sequent.ante.length + 1)) & ProofRuleTactics.hide(pos)
-                  else ProofRuleTactics.hide(AntePosition(sequent.ante.length + 1)) & ProofRuleTactics.hide(pos.advanceIndex(-1)))) partial,
-                andL(eqPos) & notL('Llast) & notL('Llast) & closeId
-              )
-          }
-      }
+  def equivRewriting(eqPos: AntePosition): DependentPositionTactic = "Equivalence Rewriting" by ((pos, sequent) => {
+    require(eqPos.isTopLevel, "Equivalence to rewrite must occur in top-level position in antecedent")
+    sequent.sub(eqPos) match {
+      case Some(Equiv(a, b)) if a == sequent(pos.top) && !pos.isAnte =>
+        equivL(eqPos) <(
+          andL(eqPos) & closeId,
+          (andL(eqPos) & ProofRuleTactics.hide(pos) & notL('Llast) & ProofRuleTactics.hide('Llast)) partial
+          )
+      case Some(Equiv(a, b)) if a == sequent(pos.top) && pos.isAnte =>
+        equivL(eqPos) <(
+          (andL(eqPos) &
+            (if (pos.index0 < eqPos.index0) ProofRuleTactics.hide(AntePosition(sequent.ante.length)) & ProofRuleTactics.hide(pos)
+            else ProofRuleTactics.hide(AntePosition(sequent.ante.length)) & ProofRuleTactics.hide(pos.advanceIndex(-1)))) partial,
+          andL(eqPos) & notL('Llast) & notL('Llast) & closeId
+          )
+      case Some(Equiv(a, b)) if b == sequent(pos.top) && !pos.isAnte =>
+        equivL(eqPos) <(
+          andL(eqPos) & closeId,
+          (andL(eqPos) & ProofRuleTactics.hide(pos) & notL(eqPos) & ProofRuleTactics.hide(eqPos)) partial
+          )
+      case Some(Equiv(a, b)) if b == sequent(pos.top) && pos.isAnte =>
+        equivL(eqPos) <(
+          (andL(eqPos) &
+            (if (pos.index0 < eqPos.index0) ProofRuleTactics.hide(AntePosition(sequent.ante.length + 1)) & ProofRuleTactics.hide(pos)
+            else ProofRuleTactics.hide(AntePosition(sequent.ante.length + 1)) & ProofRuleTactics.hide(pos.advanceIndex(-1)))) partial,
+          andL(eqPos) & notL('Llast) & notL('Llast) & closeId
+          )
     }
-  }
+  })
 
   /**
    * Rewrites an equality exhaustively from right to left (i.e., replaces occurrences of left with right).
@@ -69,46 +64,42 @@ object EqualityTactics {
    * @param name The name of the tactic.
    * @return The tactic.
    */
-  private def exhaustiveEq(name: String): DependentPositionTactic = new DependentPositionTactic(name) {
-    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable, _) =>
-          require(pos.isAnte && pos.isTopLevel, "Equality must be top-level in antecedent")
-          val sequent = provable.subgoals.head
-          sequent.sub(pos) match {
-            case Some(eq@Equal(lhs, rhs)) =>
-              // prevent endless self rewriting (e.g., 0=0) -> compute dependencies first to figure out what to rewrite when
-              require(!lhs.isInstanceOf[Number] && lhs != rhs, "LHS and RHS are not allowed to overlap")
+  private def exhaustiveEq(name: String): DependentPositionTactic = name by ((pos, sequent) => {
+    require(pos.isAnte && pos.isTopLevel, "Equality must be top-level in antecedent")
+    sequent.sub(pos) match {
+      case Some(eq@Equal(lhs, rhs)) =>
+        // prevent endless self rewriting (e.g., 0=0) -> compute dependencies first to figure out what to rewrite when
+        require(!lhs.isInstanceOf[Number] && lhs != rhs, "LHS and RHS are not allowed to overlap")
 
-              val occurrences = positionsOf(lhs, sequent).filter(p => p.isAnte != pos.isAnte || p.index0 != pos.index0).
-                filter(p => boundAt(sequent(p.top), p.inExpr).intersect(StaticSemantics.freeVars(lhs)).isEmpty)
+        val occurrences = positionsOf(lhs, sequent).filter(p => p.isAnte != pos.isAnte || p.index0 != pos.index0).
+          filter(p => boundAt(sequent(p.top), p.inExpr).intersect(StaticSemantics.freeVars(lhs)).isEmpty)
 
-              if (occurrences.isEmpty) {
-                ident
-              } else {
-                eqL2R(pos)(occurrences.head.top) &
-                  ?(exhaustiveEq(name)('L, eq))
-              }
-          }
-      }
-    }
-
-    private def positionsOf(t: Term, s: Sequent): Set[Position] = {
-      val ante = s.ante.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => AntePosition.base0(i, p)) })
-      val succ = s.succ.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => SuccPosition.base0(i, p)) })
-      (ante ++ succ).toSet
-    }
-
-    private def positionsOf(t: Term, fml: Formula): Set[PosInExpr] = {
-      var positions: Set[PosInExpr] = Set.empty
-      ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-        override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
-          if (e == t && !positions.exists(_.isPrefixOf(p))) positions += p
-          Left(None)
+        if (occurrences.isEmpty) {
+          ident
+        } else {
+          eqL2R(pos)(occurrences.head.top) &
+            ?(exhaustiveEq(name)('L, eq))
         }
-      }, fml)
-      positions
     }
+  })
+
+  /** Computes the positions of term t in sequent s */
+  private def positionsOf(t: Term, s: Sequent): Set[Position] = {
+    val ante = s.ante.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => AntePosition.base0(i, p)) })
+    val succ = s.succ.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => SuccPosition.base0(i, p)) })
+    (ante ++ succ).toSet
+  }
+
+  /** Computes the positions of term t in formula fml */
+  private def positionsOf(t: Term, fml: Formula): Set[PosInExpr] = {
+    var positions: Set[PosInExpr] = Set.empty
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
+        if (e == t && !positions.exists(_.isPrefixOf(p))) positions += p
+        Left(None)
+      }
+    }, fml)
+    positions
   }
 
   /**
@@ -122,27 +113,20 @@ object EqualityTactics {
    * @return The tactic.
    */
   def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position(eqPos))
-  def eqL2R(eqPos: Position): DependentPositionTactic = new DependentPositionTactic("eqL2R") {
-    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable, _) =>
-          val sequent = provable.subgoals.head
-          sequent.sub(eqPos) match {
-            case Some(eq@Equal(lhs, rhs)) =>
-              val condEquiv = sequent.sub(pos) match {
-                case Some(f: Formula) => Imply(eq, Equiv(f, SubstitutionHelper.replaceFree(f)(lhs, rhs)))
-                case _ => throw new BelleError("Provable " + provable + " at position " + pos + " must be a formula")
-              }
-              cut(condEquiv) <(
-                //@note could say equivRewriting('Llast) ??
-                /* use */ (implyLOld('Llast) <(closeId, equivRewriting(AntePosition(sequent.ante.length + 1))(pos) partial)) partial,
-                /* show */ cohide('Rlast) & byUS("const formula congruence")
-                )
-          }
-
-      }
+  def eqL2R(eqPos: Position): DependentPositionTactic = "eqL2R" by ((pos, sequent) => {
+    sequent.sub(eqPos) match {
+      case Some(eq@Equal(lhs, rhs)) =>
+        val condEquiv = sequent.sub(pos) match {
+          case Some(f: Formula) => Imply(eq, Equiv(f, SubstitutionHelper.replaceFree(f)(lhs, rhs)))
+          case _ => throw new BelleError("Sequent " + sequent + " at position " + pos + " must be a formula")
+        }
+        cut(condEquiv) <(
+          //@note could say equivRewriting('Llast) ??
+          /* use */ (implyLOld('Llast) <(closeId, equivRewriting(AntePosition(sequent.ante.length + 1))(pos) partial)) partial,
+          /* show */ cohide('Rlast) & byUS("const formula congruence")
+          )
     }
-  }
+  })
 
   /**
    * Rewrites a formula according to an equality appearing in the antecedent.
@@ -155,19 +139,13 @@ object EqualityTactics {
    * @return The tactic.
    */
   def eqR2L(eqPos: Int): DependentPositionTactic = eqR2L(Position(eqPos))
-  def eqR2L(eqPos: Position): DependentPositionTactic = new DependentPositionTactic("eqR2L") {
-    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable, _) =>
-          require(provable.subgoals.size == 1, "Exactly 1 subgoal expected, but got " + provable.subgoals.size)
-          require(eqPos.isTopLevel, "Equality must be at top level, but is " + pos)
-          val Equal(lhs, rhs) = provable.subgoals.head(eqPos)
-          //@note need to search since eqL2R may alter the position of the equality
-          useAt("= commute")(eqPos) & eqL2R(eqPos)(pos) &
-            useAt("= commute")('L, Equal(rhs, lhs))
-      }
+  def eqR2L(eqPos: Position): DependentPositionTactic = "eqR2L" by ((pos, sequent) => {
+    require(eqPos.isTopLevel, "Equality must be at top level, but is " + pos)
+    sequent.sub(eqPos) match {
+      case Some(Equal(lhs, rhs)) =>
+        useAt("= commute")(eqPos) & eqL2R(eqPos)(pos) & useAt("= commute")('L, Equal(rhs, lhs))
     }
-  }
+  })
 
   /**
    * Rewrites free occurrences of the left-hand side of an equality into the right-hand side exhaustively.
@@ -189,19 +167,12 @@ object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  lazy val exhaustiveEqR2L: DependentPositionTactic = new DependentPositionTactic("Find Right and Replace Right with Left") {
-    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable, _) =>
-          require(provable.subgoals.size == 1, "Exactly 1 subgoal expected, but got " + provable.subgoals.size)
-          require(pos.isTopLevel, "Equality must be at top level, but is " + pos)
-          val Equal(lhs, rhs) = provable.subgoals.head(pos)
-          //@note need to search since exhaustiveEq may alter the position of the equality
-          useAt("= commute")(pos) & exhaustiveEq(name)(pos) &
-            useAt("= commute")('L, Equal(rhs, lhs))
-      }
-    }
-  }
+  lazy val exhaustiveEqR2L: DependentPositionTactic = "Find Right and Replace Right with Left" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(Equal(lhs, rhs)) =>
+      //@note need to search since exhaustiveEq may alter the position of the equality
+      useAt("= commute")(pos) & exhaustiveEq("Find Right and Replace Right with Left")(pos) & useAt("= commute")('L, Equal(rhs, lhs))
+  })
+
 
   /**
    * Abbreviates a term at a position to a variable.
@@ -213,20 +184,11 @@ object EqualityTactics {
    * @param abbrvV The abbreviation.
    * @return The tactic.
    */
-  def abbrv(abbrvV: Variable): DependentPositionTactic = new DependentPositionTactic("abbrv") {
-    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
-      override def computeExpr(v: BelleValue): BelleExpr = v match {
-        case BelleProvable(provable, _) =>
-          val sequent = provable.subgoals.head
-          sequent.sub(pos) match {
-            case Some(t: Term) => abbrv(t, Some(abbrvV))
-            case Some(e) => throw new BelleError("Expected a term at position " + pos + ", but got " + e)
-            case _ => throw new BelleError("Position " + pos + " is undefined in sequent " + sequent)
-          }
-
-      }
-    }
-  }
+  def abbrv(abbrvV: Variable): DependentPositionTactic = "abbrv" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(t: Term) => abbrv(t, Some(abbrvV))
+    case Some(e) => throw new BelleError("Expected a term at position " + pos + ", but got " + e)
+    case _ => throw new BelleError("Position " + pos + " is undefined in sequent " + sequent)
+  })
 
   /**
    * Abbreviates a term to a variable.
@@ -277,19 +239,15 @@ object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  def abs: DependentPositionTactic = new DependentPositionTactic("abs") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
-        case Some(abs@FuncOf(Function(fn, None, Real, Real), _)) if fn == "abs" =>
-          val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
-          val absVar = Variable(fn, freshAbsIdx)
+  def abs: DependentPositionTactic = "abs" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(abs@FuncOf(Function(fn, None, Real, Real), _)) if fn == "abs" =>
+      val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
+      val absVar = Variable(fn, freshAbsIdx)
 
-          abbrv(abs, Some(absVar)) &
-            useAt("= commute")('L, Equal(absVar, abs)) &
-            useAt(fn)('L, Equal(abs, absVar))
-      }
-    }
-  }
+      abbrv(abs, Some(absVar)) &
+        useAt("= commute")('L, Equal(absVar, abs)) &
+        useAt(fn)('L, Equal(abs, absVar))
+  })
 
   /**
    * Expands min/max function.
@@ -300,17 +258,13 @@ object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  def minmax: DependentPositionTactic = new DependentPositionTactic("min/max") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
-        case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real), Pair(f, g))) if fn == "min" || fn == "max" =>
-          val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
-          val minmaxVar = Variable(fn, freshMinMaxIdx)
+  def minmax: DependentPositionTactic = "min/max" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real), Pair(f, g))) if fn == "min" || fn == "max" =>
+      val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
+      val minmaxVar = Variable(fn, freshMinMaxIdx)
 
-          abbrv(minmax, Some(minmaxVar)) &
-            useAt("= commute")('L, Equal(minmaxVar, minmax)) &
-            useAt(fn)('L, Equal(minmax, minmaxVar))
-      }
-    }
-  }
+      abbrv(minmax, Some(minmaxVar)) &
+        useAt("= commute")('L, Equal(minmaxVar, minmax)) &
+        useAt(fn)('L, Equal(minmax, minmaxVar))
+  })
 }
