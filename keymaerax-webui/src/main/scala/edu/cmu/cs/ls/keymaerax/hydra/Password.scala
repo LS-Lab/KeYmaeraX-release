@@ -2,10 +2,8 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.security.SecureRandom
 import javax.crypto.SecretKeyFactory
-import javax.crypto.spec.{SecretKeySpec, PBEKeySpec}
+import javax.crypto.spec.{PBEKeySpec}
 import javax.xml.bind.DatatypeConverter
-
-import sun.io.CharacterEncoding
 
 /**
   * Password generation and checking using PBKDF2. Based on security advice from OWASP web security project.
@@ -36,7 +34,7 @@ object Password {
   }
 
   def hash(password: Array[Char], salt: Array[Byte], iterations: Int): String = {
-    val spec = new PBEKeySpec(password, salt, iterations, salt.length*8)
+    val spec = new PBEKeySpec(password, salt, iterations, Math.min(160, salt.length*8))
     val skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
     sanitize(skf.generateSecret(spec).getEncoded)
   }

@@ -12,6 +12,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.JSONConverter
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Formula, Expression}
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.core._
 import com.fasterxml.jackson.annotation.JsonValue
@@ -485,12 +486,21 @@ class GetBranchRootResponse(node: TreeNode) extends Response {
 //  val json = JsArray(objects)
 //}
 
-class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo]) extends Response {
+class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggestedInput: Option[Expression]) extends Response {
   def inputJson(input: ArgInfo): JsValue = {
-    JsObject (
-    "type" -> JsString(input.sort),
-    "param" -> JsString(input.name)
-    )
+    (suggestedInput, input.sort.toLowerCase == "formula") match {
+      case (Some(fml), true) =>
+        JsObject (
+          "type" -> JsString(input.sort),
+          "param" -> JsString(input.name),
+          "value" -> JsString(fml.prettyString)
+        )
+      case _ =>
+        JsObject (
+          "type" -> JsString(input.sort),
+          "param" -> JsString(input.name)
+        )
+    }
   }
 
   def inputsJson(info:TacticInfo): Option[JsValue] = {

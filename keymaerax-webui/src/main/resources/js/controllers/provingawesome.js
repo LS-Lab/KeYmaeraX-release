@@ -349,7 +349,6 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
       var nodeId = sequentProofData.agenda.selectedId();
-      //@todo extend RestApi
       $http.post("proofs/user/" + userId + "/" + proofId + "/" + nodeId + "/name/" + newName, {});
     }
   });
