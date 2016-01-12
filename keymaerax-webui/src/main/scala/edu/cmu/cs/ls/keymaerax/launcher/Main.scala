@@ -21,6 +21,7 @@ import scala.collection.JavaConversions._
 object Main {
   def startServer() : Unit = {
     launcherLog("-launch -- starting KeYmaera X Web UI server HyDRA.")
+    LoadingDialogFactory() //Intialize the loading dialog.
     try {
       LemmaDatabaseInitializer.initializeFromJAR
     }
