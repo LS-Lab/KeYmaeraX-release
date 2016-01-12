@@ -44,7 +44,10 @@ trait HilbertCalculi extends UnifyUSCalculus {
     *   ----------- G
     *    [a;]p(??)
     * }}}
+    * The more flexible and more general rule [[monb]] with p(x)=True gives `G` using [[boxTrue]].
+    * @note Unsound for hybrid games
     * @see [[monb]] with p(x)=True
+    * @see [[boxTrue]]
     */
   lazy val G                  : BelleExpr         = DLBySubst.G
   /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
@@ -123,7 +126,10 @@ trait HilbertCalculi extends UnifyUSCalculus {
 //  def loop(invariant: Formula) = I(invariant)
   /** K: modal modus ponens (hybrid systems) */
   lazy val K                  : DependentPositionTactic = useAt("K modal modus ponens", PosInExpr(1::Nil))
-  /** V: vacuous box [a]p() will be discarded and replaced by p() provided a does not changes values of postcondition p */
+  /** V: vacuous box [a]p() will be discarded and replaced by p() provided a does not changes values of postcondition p.
+    * @note Unsound for hybrid games
+    * @see [[boxTrue]]
+    */
   lazy val V                  : DependentPositionTactic = useAt("V vacuous")
 //
 //  // differential equations
@@ -212,6 +218,11 @@ trait HilbertCalculi extends UnifyUSCalculus {
   lazy val splitd             : DependentPositionTactic = useAt("<> split")
 
   // def ind
+
+  /** dualFree: proves `[a]True` directly for hybrid systems `a` that are not hybrid games. */
+  val dualFree                : PositionalTactic = ProofRuleTactics.dualFree
+  //@todo could do boxTrue = dualFree | master
+  val boxTrue                 : PositionalTactic = dualFree
 
 
   /*******************************************************************
