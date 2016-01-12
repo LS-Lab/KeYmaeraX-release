@@ -185,18 +185,67 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     )
   }
 
-  it should "unify renaming and instance [y:=y;]p(??)<->p(??) and [y_0:=y_0;](y_0=0)<->(y_0=0)" in {
-    UnificationMatch("[y:=y;]p(??)<->p(??)".asFormula,
-      "[y_0:=y_0;](y_0=0)<->(y_0=0)".asFormula) shouldBe RenUSubst(
-      (Variable("y"), Variable("y",Some(0))) ::
-        (PredOf(Function("p", None, Real, Bool), Anything), "(y_0=0)".asFormula) ::
-        Nil
+  it should "unify renaming x=0 and y_0=0" in {
+    UnificationMatch("x=0".asFormula,
+      "y_0=0".asFormula) shouldBe RenUSubst(
+      (Variable("x"), Variable("y",Some(0))) :: Nil
+    )
+  }
+
+  it should "unify renaming x=0<->x=0 and y_0=0<->y_0=0" in {
+    UnificationMatch("x=0<->x=0".asFormula,
+      "y_0=0<->y_0=0".asFormula) shouldBe RenUSubst(
+      (Variable("x"), Variable("y",Some(0))) :: Nil
+    )
+  }
+
+  it should "unify renaming x=0&x=0<->x=0 and y_0=0&y_0=0<->y_0=0" in {
+    UnificationMatch("x=0&x=0<->x=0".asFormula,
+      "y_0=0&y_0=0<->y_0=0".asFormula) shouldBe RenUSubst(
+      (Variable("x"), Variable("y",Some(0))) :: Nil
+    )
+  }
+
+  it should "unify renaming x=0<->x=0&x=0 and y_0=0<->y_0=0&y_0=0" in {
+    UnificationMatch("x=0<->x=0&x=0".asFormula,
+      "y_0=0<->y_0=0&y_0=0".asFormula) shouldBe RenUSubst(
+      (Variable("x"), Variable("y",Some(0))) :: Nil
+    )
+  }
+
+  it should "unify renaming x>1&x=2<->x<3 and y_0>1&y_0=2<->y_0<3" in {
+    UnificationMatch("x>1&x=2<->x<3".asFormula,
+      "y_0>1&y_0=2<->y_0<3".asFormula) shouldBe RenUSubst(
+      (Variable("x"), Variable("y",Some(0))) :: Nil
+    )
+  }
+
+  it should "unify renaming x>1<->x=2&x<3 and y_0>1<->y_0=2&y_0<3" in {
+    UnificationMatch("x>1<->x=2&x<3".asFormula,
+      "y_0>1<->y_0=2&y_0<3".asFormula) shouldBe RenUSubst(
+      (Variable("x"), Variable("y",Some(0))) :: Nil
+    )
+  }
+
+  it should "unify renaming and instance [y:=y;]y>5<->y>5 and [y_0:=y_0;]y_0>5<->y_0>5" in {
+    UnificationMatch("[y:=y;]y>5<->y>5".asFormula,
+      "[y_0:=y_0;]y_0>5<->y_0>5".asFormula) shouldBe RenUSubst(
+      (Variable("y"), Variable("y",Some(0))) :: Nil
     )
   }
 
   it should "unify renaming and instance p(??)<->[y:=y;]p(??) and (y_0=0)<->[y_0:=y_0;](y_0=0)" in {
     UnificationMatch("p(??)<->[y:=y;]p(??)".asFormula,
       "(y_0=0)<->[y_0:=y_0;](y_0=0)".asFormula) shouldBe RenUSubst(
+      (Variable("y"), Variable("y",Some(0))) ::
+        (PredOf(Function("p", None, Real, Bool), Anything), "(y_0=0)".asFormula) ::
+        Nil
+    )
+  }
+
+  it should "unify renaming and instance [y:=y;]p(??)<->p(??) and [y_0:=y_0;](y_0=0)<->(y_0=0)" in {
+    UnificationMatch("[y:=y;]p(??)<->p(??)".asFormula,
+      "[y_0:=y_0;](y_0=0)<->(y_0=0)".asFormula) shouldBe RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
         (PredOf(Function("p", None, Real, Bool), Anything), "(y_0=0)".asFormula) ::
         Nil

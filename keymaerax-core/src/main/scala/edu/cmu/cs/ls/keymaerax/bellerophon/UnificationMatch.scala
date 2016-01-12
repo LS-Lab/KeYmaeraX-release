@@ -184,11 +184,14 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
     case p1: Program => unify(p1, e2.asInstanceOf[Program])
   }
 
+  /** Composition of renaming substitution representations: Compose renaming substitution `after` after renaming substitution `before` */
   private def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
     if (after.isEmpty) before else if (before.isEmpty) after else {
       val us = Subst(after)
       try {
-        val r = before.map(sp => try { (sp._1, us(sp._2)) } catch {case e: ProverException => throw e.inContext("unify.compose failed on " + sp._1 + " and " + sp._2 + " for " + us)}) ++
+        //@todo uniform renaming part is flat and comes first so would really need a simple transitive closure treatment. And avoid there-and-back-again renamings. Such as (x~>y) compose (x~>y) should not be (x~>x)=()
+        //@todo this is a rough approximation that may not generalize: leave vars alone
+        val r = before.map(sp => try { (sp._1, if (sp._1.isInstanceOf[Variable]) sp._2 else us(sp._2)) } catch {case e: ProverException => throw e.inContext("unify.compose failed on " + sp._1 + " and " + sp._2 + " for " + us)}) ++
           after.filter(sp => !before.exists(op => op._1 == sp._1))
         if (DEBUGALOT) println("      unify.compose: " + after.mkString(", ") + " with " + before.mkString(", ") + " is " + r.mkString(", "))
         r
