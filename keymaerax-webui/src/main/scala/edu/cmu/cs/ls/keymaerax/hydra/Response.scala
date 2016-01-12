@@ -179,10 +179,11 @@ class CreatedIdResponse(id : String) extends Response {
 }
 
 class ErrorResponse(msg: String, exn: Throwable = null) extends Response {
-  lazy val writer = new PrintWriter(new StringWriter)
+  lazy val writer = new StringWriter
+  lazy val stacktrace = if (exn != null) { exn.printStackTrace(new PrintWriter(writer)); writer.toString } else ""
   val json = JsObject(
         "textStatus" -> JsString(msg),
-        "errorThrown" -> (if (exn != null) JsString(exn.printStackTrace(writer).toString) else JsString("")),
+        "errorThrown" -> JsString(stacktrace),
         "type" -> JsString("error")
       )
 }
