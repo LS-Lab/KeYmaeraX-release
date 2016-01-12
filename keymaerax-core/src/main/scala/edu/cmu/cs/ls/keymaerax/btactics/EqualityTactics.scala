@@ -110,7 +110,8 @@ object EqualityTactics {
    *    ---------------------eqL2R(-1)(1)
    *    x=0 |- x*y=0, x+1>0
    * }}}
-   * @param eqPos The position of the equality.
+   * @param eqPos The position of the equality. If it points to a formula, it rewrites all occurrences of left in that formula.
+   *              If it points to a specific term, then only this term is rewritten.
    * @return The tactic.
    */
   def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position(eqPos).checkAnte)
@@ -118,9 +119,11 @@ object EqualityTactics {
     sequent.sub(eqPos) match {
       case Some(eq@Equal(lhs, rhs)) =>
         val condEquiv@Imply(_, Equiv(_, repl)) = sequent.sub(pos) match {
-          case Some(f: Formula) => Imply(eq, Equiv(f, SubstitutionHelper.replaceFree(f)(lhs, rhs)))
-          case _ => throw new BelleError("Sequent " + sequent + " at position " + pos + " must be a formula")
+          case Some(f: Formula) => Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, SubstitutionHelper.replaceFree(f)(lhs, rhs)).asInstanceOf[Formula]))
+          case Some(t: Term) if t == lhs => Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, rhs).asInstanceOf[Formula]))
+          case Some(t: Term) if t != lhs => Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, SubstitutionHelper.replaceFree(t)(lhs, rhs)).asInstanceOf[Formula]))
         }
+
         //@note "stupid" order of cuts, since otherwise original formula not unambiguous from result (e.g., x=0, 0*y=0 ambiguous: was original formula x*y=x or x*y=0 or 0*y=x?)
         val equivifyCommute = if (pos.isSucc) equivifyR(pos) & commuteEquivR(pos) else equivifyR('Rlast)
         cut(condEquiv) <(

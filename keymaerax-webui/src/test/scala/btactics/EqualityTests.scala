@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
 import edu.cmu.cs.ls.keymaerax.core.{Variable, Sequent}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -20,11 +19,32 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "0*y=0".asFormula
   }
 
-  it should "rewrite only at specified position" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("x=0".asFormula), IndexedSeq("x*y=0".asFormula, "x+1>0".asFormula)), eqL2R(-1)(1))
+  it should "rewrite entire formula" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x=0".asFormula), IndexedSeq("x*y=x&x+1=1".asFormula, "x+1>0".asFormula)), eqL2R(-1)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x=0".asFormula
-    result.subgoals.head.succ should contain only ("0*y=0".asFormula, "x+1>0".asFormula)
+    result.subgoals.head.succ should contain only ("0*y=0&0+1=1".asFormula, "x+1>0".asFormula)
+  }
+
+  it should "rewrite entire formula at specified position" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x=0".asFormula), IndexedSeq("x*y=x&x+1=1".asFormula, "x+1>0".asFormula)), eqL2R(-1)(1, 0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=0".asFormula
+    result.subgoals.head.succ should contain only ("0*y=0&x+1=1".asFormula, "x+1>0".asFormula)
+  }
+
+  it should "rewrite entire term at specified position" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x=0".asFormula), IndexedSeq("x*x*y=x".asFormula, "x+1>0".asFormula)), eqL2R(-1)(1, 0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=0".asFormula
+    result.subgoals.head.succ should contain only ("0*0*y=x".asFormula, "x+1>0".asFormula)
+  }
+
+  it should "rewrite only at very specified position" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x=0".asFormula), IndexedSeq("x*y=x".asFormula, "x+1>0".asFormula)), eqL2R(-1)(1, 0::0::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=0".asFormula
+    result.subgoals.head.succ should contain only ("0*y=x".asFormula, "x+1>0".asFormula)
   }
 
   it should "keep positions stable" in {
