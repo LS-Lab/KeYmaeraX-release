@@ -647,11 +647,11 @@ class DifferentialTests extends TacticTestBase {
 
   it should "solve complicated nested ODEs" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil,
-        IndexedSeq("v=0 & x<s & 0<T".asFormula, "t=0".asFormula, "a_0=(s-x)/T2".asFormula),
+        IndexedSeq("v=0 & x<s & 0<T".asFormula, "t=0".asFormula, "a_0=(s-x)/T^2".asFormula),
         IndexedSeq("[{x'=v,v'=a_0,t'=1&v>=0&t<=T}](t>0->\\forall a (a = (v^2/(2 *(s - x)))->[{x'=v,v'=-a,t'=1 & v>=0}](x + v^2/(2*a) <= s & (x + v^2/(2*a)) >= s)))".asFormula)),
       diffSolve()(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("v_0=0 & x_0<s & 0<T".asFormula, "t_0=0".asFormula, "a_0=(s-x_0)/T2".asFormula)
+    result.subgoals.head.ante should contain only ("v_0=0 & x_0<s & 0<T".asFormula, "t_0=0".asFormula, "a_0=(s-x_0)/T^2".asFormula)
     result.subgoals.head.succ should contain only "(((v>=0&t<=T)&t>=t_0)&v=a_0*(t-t_0)+v_0)&x=1/2*(a_0*(t-t_0)^2+2*(t-t_0)*v_0+2*x_0)->t>0->\\forall a (a=v^2/(2*(s-x))->[{x'=v,v'=-a,t'=1&v>=0}](x+v^2/(2*a)<=s&x+v^2/(2*a)>=s))".asFormula
   }
 }
