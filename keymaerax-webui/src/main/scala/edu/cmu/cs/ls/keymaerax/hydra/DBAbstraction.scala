@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.nio.channels.Channels
 
-import _root_.edu.cmu.cs.ls.keymaerax.core.{Provable, Formula, Sequent}
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Provable, Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.api.KeYmaeraInterface.PositionTacticAutomation
 
 import java.io.File
@@ -211,7 +211,9 @@ trait DBAbstraction {
 
   def getModelList(userId: String): List[ModelPOJO]
 
-  // name, date, fileContents
+  def getInvariants(modelId: Int): Map[Expression, Formula]
+
+    // name, date, fileContents
   //Proofs of models
   def createProofForModel(modelId: Int, name: String, description: String, date: String): Int
 
