@@ -733,14 +733,14 @@ case class BelleTermInput(value: String, spec:Option[ArgInfo])
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
 * to a Tactic */
 class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,
-                         pos: Option[PositionLocator], inputs:List[BelleTermInput] = Nil) extends Request {
+                         pos: Option[PositionLocator], inputs:List[BelleTermInput] = Nil, consultAxiomInfo: Boolean = true) extends Request {
   /** Turns belleTerm into a specific tactic expression, including input arguments */
   private def fullExpr(node: TreeNode) = {
     val paramStrings = inputs.map{
       case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
       case BelleTermInput(value, None) => value
     }
-    val specificTerm = getSpecificName(belleTerm, node.sequent, pos, _.codeName)
+    val specificTerm = if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, _.codeName) else belleTerm
     if(inputs.isEmpty) specificTerm
     else specificTerm + "(" + paramStrings.mkString(",") + ")"
   }
@@ -779,7 +779,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         case Some(n) => n
       }
 
-    BTacticParser(fullExpr(node), false, Some(generator)) match {
+    BTacticParser(fullExpr(node), loggingOn=false, Some(generator)) match {
       case None => throw new ProverException("Invalid Bellerophon expression:  " + belleTerm)
       case Some(expr) =>
         val appliedExpr:BelleExpr =
@@ -787,15 +787,14 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             case (None, _:AtPosition[BelleExpr]) =>
               throw new ProverException("Can't run a positional tactic without specifying a position")
             case (None, _) => expr
-            case (Some(position), expr:BelleExpr) =>
-              if(expr.isInstanceOf[AtPosition[BelleExpr]]) {
-                expr.asInstanceOf[AtPosition[BelleExpr]](position)
-              }
-              else expr
-            case (pos, expr) => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
+            case (Some(position), expr: AtPosition[BelleExpr]) => expr(position)
+            case (Some(position), expr: BelleExpr) => expr
+            case _ => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
         }
         val branch = tree.goalIndex(nodeId)
-        val ruleName = getSpecificName(belleTerm, node.sequent, pos, _.display.name)
+        val ruleName =
+          if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, _.display.name)
+          else "custom"
         val localProvable = Provable.startProof(node.sequent)
         val globalProvable =
           trace.steps match {

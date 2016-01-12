@@ -59,11 +59,15 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
           var proofId = $routeParams.proofId;
           $http.get('proofs/user/' + userId + '/' + proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/result')
             .then(function(response) {
-              if ($scope.runningTask.nodeId === response.data.parent.id) {
-                sequentProofData.updateAgendaAndTree(response.data);
+              if (response.data.type === 'taskresult') {
+                if ($scope.runningTask.nodeId === response.data.parent.id) {
+                  sequentProofData.updateAgendaAndTree(response.data);
+                } else {
+                  showErrorMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " +
+                    $scope.runningTask.nodeId + " but got " + response.data.parent.id);
+                }
               } else {
-                showErrorMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " +
-                  $scope.runningTask.nodeId + " but got " + response.data.parent.id);
+                showCaughtErrorMessage($uibModal, response.data, "Unable to fetch tactic result")
               }
             })
             .catch(function(err) {
@@ -331,7 +335,21 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var nodeId = sequentProofData.agenda.selectedId();
       spinnerService.show('tacticExecutionSpinner');
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doSearch' + where + '/' + tacticId)
-        .then(function(response) { scope.runningTask.start(response.data.taskId); })
+        .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
+        .catch(function(err) {
+          spinnerService.hide('tacticExecutionSpinner');
+          $rootScope.$emit('proof.message', 'No axiom/tactic applicable to that formula');
+        });
+    }
+
+    $scope.doCustomTactic = function() {
+      var proofId = $routeParams.proofId;
+      var userId = $cookies.get('userId');
+      var nodeId = sequentProofData.agenda.selectedId();
+      var tacticText = $scope.customTactic;
+      spinnerService.show('tacticExecutionSpinner');
+      $http.post('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/doCustomTactic', tacticText)
+        .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
           $rootScope.$emit('proof.message', 'No axiom/tactic applicable to that formula');

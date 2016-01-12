@@ -280,6 +280,15 @@ trait RestApi extends HttpService {
     }}
   }}
 
+  val doCustomTactic = path("proofs" / "user" / Segment / Segment / Segment / "doCustomTactic") { (userId, proofId, nodeId) => { pathEnd {
+    post {
+      entity(as[String]) { tactic => {
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tactic, None, consultAxiomInfo=false)
+        complete(standardCompletion(request))
+      }}
+    }}
+  }}
+
   import Find._
   val doSearchRight = path("proofs" / "user" / Segment / Segment / Segment / "doSearchR" / Segment) { (userId, proofId, goalId, tacticId) => { pathEnd {
     get {
@@ -630,6 +639,7 @@ trait RestApi extends HttpService {
     doAt                  ::
     doInputAt             ::
     doTactic              ::
+    doCustomTactic        ::
     doSearchLeft          ::
     doSearchRight         ::
     taskStatus            ::

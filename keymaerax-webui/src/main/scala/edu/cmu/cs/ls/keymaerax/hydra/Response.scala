@@ -263,7 +263,8 @@ class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) exte
   val json = JsObject(
     "proofId" -> JsString(proofId),
     "nodeId" -> JsString(nodeId),
-    "taskId" -> JsString(taskId)
+    "taskId" -> JsString(taskId),
+    "type" -> JsString("runbelleterm")
   )
 }
 
@@ -272,7 +273,8 @@ class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status
     "proofId" -> JsString(proofId),
     "parentId" -> JsString(nodeId),
     "taskId" -> JsString(taskId),
-    "status" -> JsString(status)
+    "status" -> JsString(status),
+    "type" -> JsString("taskstatus")
   )
 }
 
@@ -283,7 +285,8 @@ class TaskResultResponse(parent: TreeNode, children: List[TreeNode], progress: B
       "children" -> Helpers.childrenJson(children)
     ),
     "newNodes" -> JsArray(children.map(Helpers.singleNodeJson):_*),
-    "progress" -> JsBoolean(progress)
+    "progress" -> JsBoolean(progress),
+    "type" -> JsString("taskresult")
   )
 }
 

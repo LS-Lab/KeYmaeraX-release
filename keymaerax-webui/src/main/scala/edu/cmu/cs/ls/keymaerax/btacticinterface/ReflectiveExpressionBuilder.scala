@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core.{SeqPos, Formula}
   * @author Brandon Bohrer
   */
 object ReflectiveExpressionBuilder {
-  def build(info: DerivationInfo, args: List[Either[Formula, SeqPos]], generator: Option[Generator[Formula]]): BelleExpr = {
+  def build(info: DerivationInfo, args: List[Either[Formula, Position]], generator: Option[Generator[Formula]]): BelleExpr = {
     val posArgs = args.filter{case arg => arg.isRight}.map{case arg => arg.right.get}
     val withGenerator =
       if (info.needsGenerator) {
@@ -42,7 +42,7 @@ object ReflectiveExpressionBuilder {
     }
   }
 
-  def apply(name: String, arguments: List[Either[Formula, SeqPos]] = Nil, generator: Option[Generator[Formula]]) : BelleExpr =
+  def apply(name: String, arguments: List[Either[Formula, Position]] = Nil, generator: Option[Generator[Formula]]) : BelleExpr =
     try {
       build(DerivationInfo.ofCodeName(name), arguments, generator)
     }

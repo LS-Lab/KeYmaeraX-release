@@ -136,13 +136,13 @@
                             </ul>
                         </li>
                     </ul>
-                    <form class="nav navbar-nav navbar-form navbar-right" role="search">
+                    <form class="nav navbar-nav navbar-form navbar-right" role="search" ng-submit="doCustomTactic()">
                         <div class="form-group">
-                            <input type="text" class="form-control" placeholder="Custom tactic">
+                            <input type="text" class="form-control" ng-model="customTactic" placeholder="Custom tactic">
                         </div>
                         <div class="btn-group">
-                            <button type="button" class="btn btn-default">Execute</button>
-                            <button type="submit" class="btn btn-default dropdown-toggle" data-toggle="dropdown"
+                            <button type="submit" class="btn btn-default">Execute</button>
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown"
                                     aria-haspopup="true" aria-expanded="false">
                                 <span class="caret"></span>
                             </button>

@@ -174,15 +174,13 @@ object BTacticParser extends (String => Option[BelleExpr]) {
       }
     }
 
-    private def parseFormulaOrPosition(s : String) : Either[Formula, SeqPos] = {
+    private def parseFormulaOrPosition(s : String) : Either[Formula, Position] = {
       if (s.startsWith("{`") && s.endsWith("`}")) {
         Left(s.replace("{`", "").replace("`}", "").asFormula)
       }
       else {
         val i = s.toInt
-        if(i < 0) Right(AntePos(i * -1 + 1))
-        else if(i > 0) Right(SuccPos(i - 1))
-        else ??? //Not sure what pos 0 is?
+        Right(Position(i))
       }
     }
 
