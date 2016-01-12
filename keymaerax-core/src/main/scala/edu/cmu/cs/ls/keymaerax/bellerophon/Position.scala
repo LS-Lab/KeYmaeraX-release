@@ -111,9 +111,9 @@ sealed trait Position {
     */
   def isIndexDefined(s: Sequent): Boolean =
     if (isAnte)
-      s.ante.length >= index0
+      s.ante.length > index0
     else
-      s.succ.length >= index0
+      s.succ.length > index0
 
 
   /**
