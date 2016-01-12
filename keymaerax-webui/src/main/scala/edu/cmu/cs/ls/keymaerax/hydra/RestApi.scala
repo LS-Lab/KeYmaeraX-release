@@ -330,18 +330,19 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val agendaItem = path("proofs" / "user" / Segment / Segment / "agendaItem" / Segment) { (userId, proofId, nodeId) => { pathEnd {
+  val getAgendaItem = path("proofs" / "user" / Segment / Segment / "agendaItem" / Segment) { (userId, proofId, nodeId) => { pathEnd {
     get {
       val request = new GetAgendaItemRequest(database, userId, proofId, nodeId)
       complete(standardCompletion(request))
-    } ~
+    }}}}
+
+  val setAgendaItemName = path("proofs" / "user" / Segment / Segment / Segment / "name" / Segment) { (userId, proofId, nodeId, newName) => { pathEnd {
     post {
       entity(as[String]) { params => {
-        val p = JsonParser(params).asJsObject.fields.map(param => param._1.toString -> param._2.asInstanceOf[JsString].value)
-        val displayName = p("displayName").asInstanceOf[JsString].value
-        val request = new SetAgendaItemNameRequest(database, userId, proofId, nodeId, displayName)
+        val request = new SetAgendaItemNameRequest(database, userId, proofId, nodeId, newName)
         complete(standardCompletion(request))
     }}}}}}
+
 
   val proofLoadStatus = path("proofs" / "user" / Segment / Segment / "status") { (userId, proofId) => { pathEnd {
     get {
@@ -615,7 +616,8 @@ trait RestApi extends HttpService {
     proofListForModel     ::
     proofList             ::
     openProof             ::
-    agendaItem            ::
+    getAgendaItem         ::
+    setAgendaItemName     ::
     proofLoadStatus       ::
     changeProofName       ::
     proofProgressStatus   ::
