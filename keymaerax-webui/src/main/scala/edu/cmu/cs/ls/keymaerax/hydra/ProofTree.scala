@@ -68,10 +68,17 @@ object ProofTree {
       TreeNode(nodeId, subgoal, parent, step, isFake)
     }
 
+    def goalToItem(allNodes: List[TreeNode], goal: TreeNode):AgendaItem = {
+      val item = agendaItemForNode(allNodes, goal.id.toString, agendaItems)
+      val itemName = item.map(_.displayName).getOrElse("Unnamed Goal")
+      AgendaItem(goal.id.toString, itemName, trace.proofId, goal)
+    }
+
     if (trace.steps.isEmpty) {
       val sequent = trace.conclusion
       val node = treeNode(sequent, None, None)
-      return ProofTree(trace.proofId, List(node), node, List(AgendaItem(node.id.toString, "Unnamed Item", trace.proofId, node)))
+      val item = goalToItem(List(node), node)
+      return ProofTree(trace.proofId, List(node), node, List(item))
     }
 
     val inputProvable = trace.steps.head.input
@@ -119,10 +126,7 @@ object ProofTree {
         (allNodes ++ newNodes, newNodes)
       }
 
-    val items: List[AgendaItem] = goalNodes.map({case i =>
-      val item = agendaItemForNode(finalNodes, i.id.toString, agendaItems)
-      val itemName = item.map(_.displayName).getOrElse("Unnamed Goal")
-      AgendaItem(i.id.toString, itemName, trace.proofId, i)}).toList
+    val items: List[AgendaItem] = goalNodes.map(goalToItem (finalNodes, _)).toList
     ProofTree(trace.proofId, finalNodes, finalNodes.head, items)
   }
 }
