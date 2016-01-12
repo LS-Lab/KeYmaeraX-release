@@ -265,7 +265,7 @@ object SQLite {
       synchronizedTransaction({
         nSelects = nSelects + 1
         Users.filter(_.email === username).list.exists({case row =>
-          val hash = Password.hash(password.toCharArray, row.salt.get.getBytes, row.iterations.get)
+          val hash = Password.hash(password.toCharArray, row.salt.get.getBytes("UTF-8"), row.iterations.get)
           Password.hashEquals(hash, row.hash.get)
         })
       })

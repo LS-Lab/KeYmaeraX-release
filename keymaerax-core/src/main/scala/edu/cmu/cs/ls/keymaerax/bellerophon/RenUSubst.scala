@@ -24,7 +24,7 @@ object RenUSubst {
   def apply(us: URename): RenUSubst = apply(List((us.what,us.repl)))
 
   private def renamingPartOnly(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Seq[(Variable,Variable)] =
-    subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable]).
+    subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable] && sp._2!=sp._1).
       map(sp => (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable]))
   private[bellerophon] def renamingPart(subsDefsInput: immutable.Seq[(Expression,Expression)]): RenUSubst =
     apply(renamingPartOnly(subsDefsInput))
@@ -69,8 +69,8 @@ object RenUSubst {
   */
 sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops */
-  protected val rens: immutable.Seq[(Variable,Variable)] = RenUSubst.renamingPartOnly(subsDefsInput)
-  protected val subsDefs: immutable.Seq[SubstitutionPair] = try {subsDefsInput.filterNot(sp => sp._1.isInstanceOf[Variable]).
+  protected final val rens: immutable.Seq[(Variable,Variable)] = RenUSubst.renamingPartOnly(subsDefsInput)
+  protected final val subsDefs: immutable.Seq[SubstitutionPair] = try {subsDefsInput.filterNot(sp => sp._1.isInstanceOf[Variable]).
     map(sp => try {SubstitutionPair(sp._1, sp._2)} catch {case ex: ProverException => throw ex.inContext("(" + sp._1 + "~>" + sp._2 + ")")})
   } catch {case ex: ProverException => throw ex.inContext("RenUSubst{" + subsDefsInput.mkString(", ") + "}")}
 
@@ -88,7 +88,7 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
     * @see [[substitution]]
     * @note lazy val and postponing applicable() until actual use case would make it possible for useAt(inst) to modify before exception. Not sure that's worth it though.
     */
-  lazy val usubst = USubst(subsDefs)
+  lazy final val usubst = USubst(subsDefs)
 
   private[bellerophon] def reapply(subsDefs: immutable.Seq[(Expression,Expression)]): RenUSubst
 
@@ -163,7 +163,8 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
 final class RenThenUSubst(private[bellerophon] override val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends RenUSubst(subsDefsInput) {
   //@note explicit implementation to make RenUSubst equality independent of rens/subsDefs order
   override def equals(e: Any): Boolean = e match {
-    case a: RenThenUSubst => rens == a.rens && subsDefs == a.subsDefs
+    case a: RenThenUSubst => rens.toSet == a.rens.toSet && subsDefs.toSet == a.subsDefs.toSet
+      //rens == a.rens && subsDefs == a.subsDefs
     case _ => false
   }
 
@@ -206,7 +207,8 @@ final class RenThenUSubst(private[bellerophon] override val subsDefsInput: immut
 final class USubstThenRen(private[bellerophon] override val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends RenUSubst(subsDefsInput) {
   //@note explicit implementation to make RenUSubst equality independent of rens/subsDefs order
   override def equals(e: Any): Boolean = e match {
-    case a: USubstThenRen => rens == a.rens && subsDefs == a.subsDefs
+    case a: USubstThenRen => rens.toSet == a.rens.toSet && subsDefs.toSet == a.subsDefs.toSet
+      // rens == a.rens && subsDefs == a.subsDefs
     case _ => false
   }
 

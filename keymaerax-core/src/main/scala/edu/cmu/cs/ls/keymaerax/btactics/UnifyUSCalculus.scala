@@ -130,7 +130,7 @@ trait UnifyUSCalculus {
       if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " ... checking")
       val subst = UnificationMatch(form, sequent)
       if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " by " + subst)
-      Predef.assert(sequent == subst(form), "unification must match:\n  unify: " + sequent + "\n  gives: " + subst(form) + " when matching against\n  form:  " + form + " by " + subst)
+      Predef.assert(sequent == subst(form), "unification should match:\n  unify: " + sequent + "\n  gives: " + subst(form) + " when matching against\n  form:  " + form + "\n  by:    " + subst)
       subst.toTactic(form)
     }
   }
@@ -451,14 +451,14 @@ trait UnifyUSCalculus {
     * Efficient unification-free version of [[UnifyUSCalculus#useAt(Provable, PosInExpr):PositionTactic]]
     * {{{
     *                          fact
-    *   G |- C{q(x)}, D    p(x) <-> q(x)
+    *   G |- C{q(x)}, D    q(x) <-> p(x)
     *   -------------------------------- CER(fact)
     *   G |- C{p(x)}, D
     * }}}
     * Similarly for antecedents or equality facts or implication facts, e.g.:
     * {{{
     *                          fact
-    *   C{q(x)}, G |- D    p(x) <-> q(x)
+    *   C{q(x)}, G |- D    q(x) <-> p(x)
     *   -------------------------------- CEL(fact)
     *   C{p(x)}, G |- D
     * }}}

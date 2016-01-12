@@ -199,33 +199,24 @@ private[core] object AxiomBase {
   /** Redundant code checking expected form of axioms */
   private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
     val x = Variable("x_", None, Real)
-    val x_ = Variable("x_", None, Real)
-    val xp = DifferentialSymbol(x)
     val p0 = PredOf(Function("p", None, Unit, Bool), Nothing)
     val p = Function("p", None, Real, Bool)
     val pany = PredOf(p, Anything)
-    val q = Function("q", None, Real, Bool)
     val q0 = PredOf(Function("q", None, Unit, Bool), Nothing)
     val qany = PredOf(Function("q", None, Real, Bool), Anything)
-    val r = Function("r", None, Real, Bool)
     val c = FuncOf(Function("c", None, Unit, Real), Nothing)
-    val f = Function("f", None, Real, Real)
     val f0 = FuncOf(Function("f", None, Unit, Real), Nothing)
     val fany = FuncOf(Function("f", None, Real, Real), Anything)
-    val g0 = FuncOf(Function("g", None, Unit, Real), Nothing)
     val gany = FuncOf(Function("g", None, Real, Real), Anything)
-    val h0 = FuncOf(Function("h", None, Unit, Real), Nothing)
     val t0 = FuncOf(Function("t", None, Unit, Real), Nothing)
     val a = ProgramConst("a")
     val b = ProgramConst("b")
 
-    val v = Variable("v", None, Real)
     val H0 = PredOf(Function("H", None, Unit, Bool), Nothing)
 
     // Figure 2
     assert(axs("<> diamond") == Equiv(Not(Box(a, Not(pany))), Diamond(a, pany)), "<> diamond")
-    assert(axs("[:=] assign") == Equiv(Box(Assign(x,f0), PredOf(p,x)), PredOf(p, f0))
-      || axs("[:=] assign") == Equiv(Box(Assign(v,t0), PredOf(p,v)), PredOf(p, t0)), "[:=] assign")
+    assert(axs("[:=] assign") == Equiv(Box(Assign(x,f0), PredOf(p,x)), PredOf(p, f0)), "[:=] assign")
     assert(axs("[?] test") == Equiv(Box(Test(q0), p0), Imply(q0, p0))
       || axs("[?] test") == Equiv(Box(Test(H0), p0), Imply(H0, p0)), "[?] test")
     assert(axs("[++] choice") == Equiv(Box(Choice(a,b), pany), And(Box(a, pany), Box(b, pany))), "[++] choice")
@@ -248,10 +239,10 @@ private[core] object AxiomBase {
     assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(fany, gany)), Equal(Differential(fany), Differential(gany))), "!=' derive !=")
     assert(axs("&' derive and") == Equiv(DifferentialFormula(And(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))), "&' derive and")
     assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(pany, qany)), And(DifferentialFormula(pany), DifferentialFormula(qany))) || axs("|' derive or") == Imply(And(DifferentialFormula(pany), DifferentialFormula(qany)), DifferentialFormula(Or(pany, qany))), "|' derive or")
-    assert(axs("x' derive var") == Equal(Differential(x_), DifferentialSymbol(x_)), "x' derive var")
+    assert(axs("x' derive var") == Equal(Differential(x), DifferentialSymbol(x)), "x' derive var")
     //assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
 
-    assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,t0)), "all instantiate")
+    assert(axs("all instantiate") == Imply(Forall(Seq(x), PredOf(p,x)), PredOf(p,f0)), "all instantiate")
     // soundness-critical that these are for p() not for p(x) or p(??)
     assert(axs("vacuous all quantifier") == Equiv(Forall(immutable.IndexedSeq(x), p0), p0), "vacuous all quantifier")
 
@@ -297,7 +288,7 @@ Axiom "[:=] assign equality".
 End.
 
 Axiom "[:=] assign equality exists".
-  [x:=f();]p(??) <-> \exists x (x=f() & p(??))
+  [x_:=f();]p(??) <-> \exists x_ (x_=f() & p(??))
 End.
 
 Axiom "[:=] assign exists".
@@ -305,7 +296,7 @@ Axiom "[:=] assign exists".
 End.
 
 Axiom "[:=] self assign".
-  [x:=x;]p(??) <-> p(??)
+  [x_:=x_;]p(??) <-> p(??)
 End.
 
 Axiom "[':=] differential assign".
@@ -313,11 +304,11 @@ Axiom "[':=] differential assign".
 End.
 
 Axiom "[:*] assign nondet".
-  [x_:=*;]p(??) <-> (\forall x_ p(??))
+  [x_:=*;]p(??) <-> \forall x_ p(??)
 End.
 
 Axiom "[?] test".
-  [?H();]p() <-> (H() -> p())
+  [?q();]p() <-> (q() -> p())
 End.
 
 Axiom "[++] choice".
@@ -385,16 +376,16 @@ Axiom "DG differential Lipschitz ghost system".
 End.
 
 Axiom "DG++ System".
-  ([{x_'=f(x_), c & H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??), x_'=f(x_), c & H(??)}]p(??))
+  ([{x_'=f(x_),c&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(x_),c&H(??)}]p(??))
 End.
 
 Axiom "DG++".
-  ([{x_'=f(x_) & H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(x_) & H(??)}]p(??))
+  ([{x_'=f(x_)&H(??)}]p(??))  ->  (\forall y_ [{y_'=g(??),x_'=f(x_)&H(??)}]p(??))
 End.
 
 /* Formatter axioms for diff eqs. */
 Axiom ", commute".
-  [{c,d & H(??)}]p(??) <-> [{d,c & H(??)}]p(??)
+  [{c,d&H(??)}]p(??) <-> [{d,c&H(??)}]p(??)
 End.
 
 Axiom "DS& differential equation solution".
@@ -437,7 +428,7 @@ Axiom "/' derive quotient".
 End.
 
 Axiom "chain rule".
-	[y:=g(x);][y':=1;]( (f(g(x)))' = (f(y)') * (g(x)') )
+	[y_:=g(x_);][y_':=1;]( (f(g(x_)))' = (f(y_)') * (g(x_)') )
 End.
 
 Axiom "^' derive power".
@@ -527,7 +518,7 @@ Axiom "all dual".
 End.
 
 Axiom /*\\foralli */ "all instantiate".
-  (\forall x_ p(x_)) -> p(t())
+  (\forall x_ p(x_)) -> p(f())
 End.
 
 /* consequence of "all instantiate" @note generalized "all instantiate" */

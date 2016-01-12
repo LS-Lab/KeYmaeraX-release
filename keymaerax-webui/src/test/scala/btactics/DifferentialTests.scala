@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.{UsualTest, SummaryTest}
 import testHelper.KeYmaeraXTestTags
 
 import scala.collection.immutable.IndexedSeq
@@ -14,6 +15,8 @@ import scala.collection.immutable.IndexedSeq
  * [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.DW]], and
  * [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.DC]]
  */
+@SummaryTest
+@UsualTest
 class DifferentialTests extends TacticTestBase {
   "DW" should "pull out evolution domain constraint" in {
     val result = proveBy("[{x'=1 & x>2}]x>0".asFormula, DW(1))
