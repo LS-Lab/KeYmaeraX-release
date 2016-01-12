@@ -3,7 +3,6 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position, SuccPosition}
 import Augmentors._
@@ -73,14 +72,10 @@ object EqualityTactics {
         require(!lhs.isInstanceOf[Number] && lhs != rhs, "LHS and RHS are not allowed to overlap")
 
         val occurrences = positionsOf(lhs, sequent).filter(p => p.isAnte != pos.isAnte || p.index0 != pos.index0).
-          filter(p => boundAt(sequent(p.top), p.inExpr).intersect(StaticSemantics.freeVars(lhs)).isEmpty)
+          filter(p => boundAt(sequent(p.top), p.inExpr).intersect(StaticSemantics.freeVars(lhs)).isEmpty).toList
 
-        if (occurrences.isEmpty) {
-          ident
-        } else {
-          eqL2R(pos.checkAnte)(occurrences.head.top) &
-            ?(exhaustiveEq(name)('L, eq))
-        }
+        if (occurrences.isEmpty) skip
+        else occurrences.map(eqL2R(pos.checkAnte)(_)).reduce[BelleExpr](_&_)
     }
   })
 

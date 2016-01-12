@@ -98,6 +98,20 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.succ should contain only ("0*y=0".asFormula, "z>2".asFormula, "z<0+1".asFormula)
   }
 
+  it should "not fail when there are no applicable positions" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x=0".asFormula), IndexedSeq("z>2".asFormula)), exhaustiveEqL2R(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=0".asFormula
+    result.subgoals.head.succ should contain only "z>2".asFormula
+  }
+
+  it should "rewrite a single formula exhaustively for a single applicable position" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x=0".asFormula), IndexedSeq("x*y=0".asFormula, "z>2".asFormula)), exhaustiveEqL2R(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=0".asFormula
+    result.subgoals.head.succ should contain only ("0*y=0".asFormula, "z>2".asFormula)
+  }
+
   it should "rewrite formulas exhaustively" in {
     val result = proveBy(Sequent(Nil, IndexedSeq("x=0".asFormula, "z=x".asFormula), IndexedSeq("x*y=0".asFormula, "z>2".asFormula, "z<x+1".asFormula)), exhaustiveEqL2R(-1))
     result.subgoals should have size 1
