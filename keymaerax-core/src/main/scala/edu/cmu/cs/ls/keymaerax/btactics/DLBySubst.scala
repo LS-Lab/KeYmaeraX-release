@@ -57,6 +57,7 @@ object DLBySubst {
     *    [a;]p(??)
     * }}}
     * @see [[monb]] with p(x)=True
+    * @note Unsound for hybrid games
     */
   lazy val G = {
     val pattern = SequentType(Sequent(Nil, IndexedSeq(), IndexedSeq("[a_;]p_(??)".asFormula)))

@@ -48,6 +48,9 @@ object ParseException {
   def apply(msg: String, state: ParseState, expect: List[Expected] /*, cause: Throwable = null*/): ParseException =
     new ParseException(msg, state.location, state.la.toString, expect.mkString("\n      or: "), state.topString, state.toString /*, cause*/)
 
+  def apply(msg: String, state: ParseState, tok: Token, expect: String): ParseException =
+    new ParseException(msg, tok.loc, tok.toString, expect, state.topString, state.toString)
+
   def apply(msg: String, state: ParseState, expect: String): ParseException =
     new ParseException(msg, state.location, state.la.toString, expect, state.topString, state.toString)
 

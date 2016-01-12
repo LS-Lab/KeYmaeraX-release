@@ -66,6 +66,9 @@ object UIIndex {
         case _ => alwaysApplicable
       }
 
+      case Box(a, True) if isTop && !isAnte =>
+        "dualFree" :: Nil
+
       case Box(a, post) =>
         val rules =
         // @todo Better applicability test for V
