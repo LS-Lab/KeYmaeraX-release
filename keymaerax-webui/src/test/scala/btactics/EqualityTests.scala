@@ -152,6 +152,14 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[a:=2;]a=1".asFormula
   }
 
+  it should "rewrite multiple occurrences of a term in one shot" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x+2<=x+3".asFormula, "x=y".asFormula), IndexedSeq()
+      ), exhaustiveEqL2R(-2))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe IndexedSeq("y+2<=y+3".asFormula, "x=y".asFormula)
+    result.subgoals.head.succ shouldBe empty
+  }
+
   "Equivalence rewriting" should "rewrite if lhs occurs in succedent" in {
     val result = proveBy(Sequent(Nil, IndexedSeq("x>=0 <-> y>=0".asFormula), IndexedSeq("x>=0".asFormula)), equivRewriting(-1)(1))
     result.subgoals should have size 1
