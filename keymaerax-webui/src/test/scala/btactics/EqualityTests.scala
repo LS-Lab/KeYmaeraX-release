@@ -27,6 +27,13 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.head.succ should contain only ("0*y=0".asFormula, "x+1>0".asFormula)
   }
 
+  it should "keep positions stable" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x=0".asFormula), IndexedSeq("x*y=0".asFormula, "x+1>0".asFormula)), eqL2R(-1)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x=0".asFormula
+    result.subgoals.head.succ shouldBe IndexedSeq("0*y=0".asFormula, "x+1>0".asFormula)
+  }
+
   it should "rewrite complicated" in {
     val result = proveBy(Sequent(Nil, IndexedSeq("x=0".asFormula), IndexedSeq("x*y=0 & x+3>2 | \\forall y y+x>=0".asFormula)), eqL2R(-1)(1))
     result.subgoals should have size 1

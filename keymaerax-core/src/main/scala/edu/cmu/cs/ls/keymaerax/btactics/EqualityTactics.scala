@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position, S
 import Augmentors._
 import StaticSemanticsTools._
 
+import scala.collection.immutable._
 import scala.language.postfixOps
 
 /**
@@ -77,7 +78,7 @@ object EqualityTactics {
         if (occurrences.isEmpty) {
           ident
         } else {
-          eqL2R(pos)(occurrences.head.top) &
+          eqL2R(pos.checkAnte)(occurrences.head.top) &
             ?(exhaustiveEq(name)('L, eq))
         }
     }
@@ -112,17 +113,18 @@ object EqualityTactics {
    * @param eqPos The position of the equality.
    * @return The tactic.
    */
-  def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position(eqPos))
-  def eqL2R(eqPos: Position): DependentPositionTactic = "eqL2R" by ((pos, sequent) => {
+  def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position(eqPos).checkAnte)
+  def eqL2R(eqPos: AntePosition): DependentPositionTactic = "eqL2R" by ((pos, sequent) => {
     sequent.sub(eqPos) match {
       case Some(eq@Equal(lhs, rhs)) =>
-        val condEquiv = sequent.sub(pos) match {
+        val condEquiv@Imply(_, Equiv(_, repl)) = sequent.sub(pos) match {
           case Some(f: Formula) => Imply(eq, Equiv(f, SubstitutionHelper.replaceFree(f)(lhs, rhs)))
           case _ => throw new BelleError("Sequent " + sequent + " at position " + pos + " must be a formula")
         }
+        //@note "stupid" order of cuts, since otherwise original formula not unambiguous from result (e.g., x=0, 0*y=0 ambiguous: was original formula x*y=x or x*y=0 or 0*y=x?)
+        val equivifyCommute = if (pos.isSucc) equivifyR(pos) & commuteEquivR(pos) else equivifyR('Rlast)
         cut(condEquiv) <(
-          //@note could say equivRewriting('Llast) ??
-          /* use */ (implyLOld('Llast) <(closeId, equivRewriting(AntePosition(sequent.ante.length + 1))(pos) partial)) partial,
+          /* use */ (implyL('Llast) <(closeId, cutLR(repl)(pos) <(hide('Llast) partial, equivifyCommute & closeId) partial) partial) partial,
           /* show */ cohide('Rlast) & byUS("const formula congruence")
           )
     }
@@ -138,8 +140,8 @@ object EqualityTactics {
    * @param eqPos The position of the equality.
    * @return The tactic.
    */
-  def eqR2L(eqPos: Int): DependentPositionTactic = eqR2L(Position(eqPos))
-  def eqR2L(eqPos: Position): DependentPositionTactic = "eqR2L" by ((pos, sequent) => {
+  def eqR2L(eqPos: Int): DependentPositionTactic = eqR2L(Position(eqPos).checkAnte)
+  def eqR2L(eqPos: AntePosition): DependentPositionTactic = "eqR2L" by ((pos, sequent) => {
     require(eqPos.isTopLevel, "Equality must be at top level, but is " + pos)
     sequent.sub(eqPos) match {
       case Some(Equal(lhs, rhs)) =>
