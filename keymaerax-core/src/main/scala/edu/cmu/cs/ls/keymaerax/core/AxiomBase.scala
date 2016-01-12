@@ -288,7 +288,7 @@ Axiom "[:=] assign equality".
 End.
 
 Axiom "[:=] assign equality exists".
-  [x:=f();]p(??) <-> \exists x_ (x_=f() & p(??))
+  [x_:=f();]p(??) <-> \exists x_ (x_=f() & p(??))
 End.
 
 Axiom "[:=] assign exists".
