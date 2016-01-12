@@ -2,10 +2,8 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.security.SecureRandom
 import javax.crypto.SecretKeyFactory
-import javax.crypto.spec.{SecretKeySpec, PBEKeySpec}
+import javax.crypto.spec.{PBEKeySpec}
 import javax.xml.bind.DatatypeConverter
-
-import sun.io.CharacterEncoding
 
 /**
   * Password generation and checking using PBKDF2. Based on security advice from OWASP web security project.
