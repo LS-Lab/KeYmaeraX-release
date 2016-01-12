@@ -2,8 +2,10 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.security.SecureRandom
 import javax.crypto.SecretKeyFactory
-import javax.crypto.spec.PBEKeySpec
+import javax.crypto.spec.{SecretKeySpec, PBEKeySpec}
 import javax.xml.bind.DatatypeConverter
+
+import sun.io.CharacterEncoding
 
 /**
   * Password generation and checking using PBKDF2. Based on security advice from OWASP web security project.
@@ -29,27 +31,26 @@ object Password {
    * which the Scala driver does not support. To get around this, make sure we only store NUL-free strings, it this
    * case by base-64 encoding them. Since base-conversions preserve entropy, this *shouldn't* damage the quality of
    * our passwords.*/
-  def sanitize(s:String): String = {
-    DatatypeConverter.printBase64Binary(s.getBytes)
+  def sanitize(s:Array[Byte]): String = {
+    DatatypeConverter.printBase64Binary(s)
   }
 
   def hash(password: Array[Char], salt: Array[Byte], iterations: Int): String = {
-    val spec = new PBEKeySpec(password, salt, iterations, salt.length)
+    val spec = new PBEKeySpec(password, salt, iterations, salt.length*8)
     val skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
-    sanitize(new String(skf.generateSecret(spec).getEncoded))
+    sanitize(skf.generateSecret(spec).getEncoded)
   }
 
   def generateSalt(length: Int): String = {
     val saltBuf = new Array[Byte] (length)
     val rng = new SecureRandom()
     rng.nextBytes(saltBuf)
-    val dirtyString = new String(saltBuf)
-    sanitize(dirtyString)
+    sanitize(saltBuf)
   }
 
   def generateKey(password: String, iterations: Int, saltLength: Int): (String, String) = {
     val salt = generateSalt(saltLength)
-    val hash = this.hash(password.toCharArray, salt.getBytes, iterations)
+    val hash = this.hash(password.toCharArray, salt.getBytes("UTF-8"), iterations)
     (hash, salt)
   }
 }
