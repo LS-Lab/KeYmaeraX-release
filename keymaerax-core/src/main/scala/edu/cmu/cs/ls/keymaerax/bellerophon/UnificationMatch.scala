@@ -24,6 +24,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
   //@todo import a debug flag as in Tactics.DEBUG
   private val DEBUGALOT = System.getProperty("DEBUG", "true")=="true"
 
+  /** Reunify after renaming */
   private val REUNIFY = false
   private val RECHECK = false
 
@@ -116,7 +117,7 @@ object UnificationMatch extends ((Expression,Expression) => RenUSubst) {
   {if (DEBUGIO) println("  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  via:   " + us); us}
 
   /** Re-unify multiple replacements for the same what */
-  private def reunify(subst: List[SubstRepl]): List[SubstRepl] = {
+  private def reunify(subst: List[SubstRepl]): List[SubstRepl] = if (true) subst else {
     // map matchKey to all substitution pairs in subst that sahre that matchKey
     val matchKeyMap = new scala.collection.mutable.HashMap[Expression,immutable.List[SubstRepl]]()
     for (sp <- subst.distinct) {
