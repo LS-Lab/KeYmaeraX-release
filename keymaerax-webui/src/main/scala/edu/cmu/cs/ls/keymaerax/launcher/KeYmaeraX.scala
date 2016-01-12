@@ -179,18 +179,28 @@ object KeYmaeraX {
     try {
       val fileContents = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
       KeYmaeraXProblemParser(fileContents);
+      println("Parsed file successfully");
       System.exit(0)
     }
     catch {
-      case e : Exception => System.exit(-1)
+      case e : Exception => {
+        println("Failed to parse file");
+        System.exit(-1)
+      }
     }
   }
 
   private def parseBelleTactic(fileName: String) = {
     val fileContents : String = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
     edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser(fileContents) match {
-      case Some(_) => System.exit(0)
-      case None => System.exit(-1)
+      case Some(_) => {
+        println("Parsed file successfully");
+        System.exit(0)
+      }
+      case None => {
+        println("Failed to parse file.");
+        System.exit(-1)
+      }
     }
   }
 
