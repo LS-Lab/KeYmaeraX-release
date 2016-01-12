@@ -72,7 +72,7 @@ object EqualityTactics {
         require(!lhs.isInstanceOf[Number] && lhs != rhs, "LHS and RHS are not allowed to overlap")
 
         val occurrences = positionsOf(lhs, sequent).filter(p => p.isAnte != pos.isAnte || p.index0 != pos.index0).
-          filter(p => boundAt(sequent(p.top), p.inExpr).intersect(StaticSemantics.freeVars(lhs)).isEmpty).toList
+          filter(p => boundAt(sequent(p.top), p.inExpr).intersect(StaticSemantics.freeVars(lhs)).isEmpty).map(_.top).toList
 
         if (occurrences.isEmpty) skip
         else occurrences.map(eqL2R(pos.checkAnte)(_)).reduce[BelleExpr](_&_)
@@ -168,9 +168,8 @@ object EqualityTactics {
    * @return The tactic.
    */
   lazy val exhaustiveEqR2L: DependentPositionTactic = "Find Right and Replace Right with Left" by ((pos, sequent) => sequent.sub(pos) match {
-    case Some(Equal(lhs, rhs)) =>
-      //@note need to search since exhaustiveEq may alter the position of the equality
-      useAt("= commute")(pos) & exhaustiveEq("Find Right and Replace Right with Left")(pos) & useAt("= commute")('L, Equal(rhs, lhs))
+    case Some(fml@Equal(lhs, rhs)) =>
+      useAt("= commute")(pos, fml) & exhaustiveEq("Find Right and Replace Right with Left")(pos, Equal(rhs, lhs)) & useAt("= commute")(pos, Equal(rhs, lhs))
   })
 
 
