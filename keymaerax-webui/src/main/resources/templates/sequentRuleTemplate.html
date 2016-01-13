@@ -1,6 +1,11 @@
 <div class="k4-sequentRule">
     <div class="row k4-sequentRulePremise">
         <div class="col-md-12">
+            <div class="row" ng-if="tactic.derivation.premise.length === 0">
+                <span class="col-md-4 k4-sequentRuleAnt"></span>
+                <span class="col-md-1"><i class="fa fa-asterisk" style="font-size:0.5em"></i></span>
+                <span class="col-md-7 k4-sequentRuleSucc"></span>
+            </div>
             <div class="row" ng-repeat="premise in tactic.derivation.premise">
                 <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
                     <span ng-repeat="ante in premise.ante">
