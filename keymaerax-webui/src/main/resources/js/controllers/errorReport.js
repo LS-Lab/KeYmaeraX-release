@@ -38,6 +38,13 @@ function showMessage(modal, title, message, size) {
 angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['$q', '$injector', function($q, $injector) {
 
   var responseInterceptor = {
+    response: function(response) {
+      if (response.data.type === 'error') {
+        // server-created error response -> reject so that $http.get and $http.post error handlers are invoked
+        return $q.reject(response);
+      }
+      return response;
+    },
     responseError: function(rejection) {
       if (rejection.status === 500) {
         // report uncaught server-side exception
@@ -56,7 +63,7 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
         return rejection;
       } else {
         // somebody else has to handle
-        $q.reject(rejection);
+        return $q.reject(rejection);
       }
     }
   }
