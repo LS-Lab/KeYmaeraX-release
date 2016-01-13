@@ -9,12 +9,10 @@
             <dd>{{details.expect}}</dd>
             <dt>Found</dt>
             <dd>{{details.found}}</dd>
-            <dt>Details</dt>
-            <dd>{{details.detailedMsg}}</dd>
         </dl>
     </div>
-    <pre style="overflow: scroll; height=200px;">{{modelWithErrorMsg()}}</pre>
-    <div>
+    <pre style="overflow: scroll; height: 200px;">{{modelWithErrorMsg()}}</pre>
+    <div style="overflow: scroll; height: 300px">
         <a ng-click="stacktraceCollapsed=!stacktraceCollapsed">
             <i class="fa fa-caret-right" ng-if="stacktraceCollapsed"></i>
             <i class="fa fa-caret-down" ng-if="!stacktraceCollapsed"></i> Stacktrace
