@@ -53,7 +53,7 @@ case class SubstitutionClashException(subst: String/*USubst*/, U: String/*SetLat
 }
 
 /** Uniform or bound renaming clash exception */
-case class RenamingClashException(msg: String, ren: String/*URename*/, e: String/*Expression*/, info: String = "") extends CoreException(msg + "\nRenaming " + e + " with " + ren + " because\n" + info) {
+case class RenamingClashException(msg: String, ren: String/*URename*/, e: String/*Expression*/, info: String = "") extends CoreException(msg + "\nRenaming " + e + " via " + ren + "\nin " + info) {
   /**
    * Add the context information to this exception, returning the resulting exception to be thrown.
    */

@@ -1141,7 +1141,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
 
   private val renaming = URename(what, repl)
 
-  override def toString: String = name + "(" + what + "~>" + repl + ") at " + pos
+  override def toString: String = name + "(" + what.asString + "~>" + repl.asString + ") at " + pos
 
   def apply(s: Sequent): immutable.List[Sequent] = immutable.List(s.updated(pos, apply(s(pos))))
 
