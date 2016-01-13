@@ -104,14 +104,14 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove ->'" in {check(Dimply)}
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
   it should "prove DW differential weakening" in {check(DWeakening)}
-  it should "prove DS no domain" in {check(DSnodomain)}
-  it should "prove Dsol& differential equation solution" in {check(DSddomain)}
+  ignore should "prove DS no domain" in {check(DSnodomain)}
+  ignore should "prove Dsol& differential equation solution" in {check(DSddomain)}
   //  it should "prove x' derive var" in {check(Dvar)}
   it should "prove x' derive variable" in {check(Dvariable)}
   it should "prove x' derive var commuted" in {check(DvariableCommuted)}
   it should "prove 'linear" in withMathematica { implicit qetool => check(Dlinear)}
   it should "prove 'linear right" in withMathematica { implicit qeTool => check(DlinearRight)}
-  it should "prove DG differential pre-ghost" in {check(DGpreghost)}
+  ignore should "prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "prove DX diamond differential skip" in {check(Dskipd)}
   it should "prove 0*" in withMathematica { implicit qeTool => check(zeroTimes)}
   it should "prove 0+" in withMathematica { implicit qeTool => check(zeroPlus)}
@@ -181,7 +181,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom, vacuousBoxAssignNondetT)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom, vacuousDiamondAssignNondetT)}
   it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom, forallThenExistsT)}
-  it should "prove DG differential pre-ghost" in {check(DGpreghost, DGpreghostT)}
+  ignore should "prove DG differential pre-ghost" in {check(DGpreghost, DGpreghostT)}
   it should "prove DW differential weakening" in {check(DWeakening, DWeakeningT)}
   it should "prove abs" in withMathematica { implicit qeTool => check(absDef, absT)}
   it should "prove min" in withMathematica { implicit qeTool => check(minDef, minT)}
