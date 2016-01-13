@@ -303,7 +303,7 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
           new BooleanResponse(createdId.isDefined) :: Nil
       }
     } catch {
-      case e: ParseException => new ParseErrorResponse(e.msg, e.loc, e) :: Nil
+      case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
       case e: Exception => new ErrorResponse(e.getMessage, e) :: Nil
     }
   }

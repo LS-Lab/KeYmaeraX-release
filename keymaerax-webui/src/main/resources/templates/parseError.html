@@ -2,7 +2,17 @@
     <h3 class="modal-title">Error parsing model</h3>
 </div>
 <div class="modal-body">
-    <div class="well">At line {{location.line}}:{{location.column}}: {{message}}</div>
+    <div class="well">
+        <p>At line {{location.line}}:{{location.column}}: {{message}}</p>
+        <dl class="dl-horizontal">
+            <dt>Expected</dt>
+            <dd>{{details.expect}}</dd>
+            <dt>Found</dt>
+            <dd>{{details.found}}</dd>
+            <dt>Details</dt>
+            <dd>{{details.detailedMsg}}</dd>
+        </dl>
+    </div>
     <pre style="overflow: scroll; height=200px;">{{modelWithErrorMsg()}}</pre>
     <div>
         <a ng-click="stacktraceCollapsed=!stacktraceCollapsed">
