@@ -18,8 +18,8 @@ import scala.collection.immutable.{List, Nil}
   * @author Andre Platzer
   */
 //object UnificationMatch extends UnificationMatchBase {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
-//object UnificationMatch extends UnificationMatchURenAboveUSubst {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
-object UnificationMatch extends UnificationMatchUSubstAboveURen
+object UnificationMatch extends UnificationMatchURenAboveUSubst {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
+//object UnificationMatch extends UnificationMatchUSubstAboveURen
 
 /**
   * Matcher(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
