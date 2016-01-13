@@ -197,6 +197,17 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         });
     }
 
+    $scope.openTacticEditor = function() {
+      $uibModal.open({
+        templateUrl: 'templates/tacticEditor.html',
+        controller: 'TacticEditorCtrl',
+        size: 'lg',
+        resolve: {
+          parentScope: function() { return $scope; }
+        }
+      })
+    }
+
     //Save a name edited using the inline editor.
     $scope.saveProofName = function(newName) {
       var proofId = $routeParams.proofId;
