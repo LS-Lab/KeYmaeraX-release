@@ -606,8 +606,8 @@ object SQLite {
             .list
             .map(step => new ExecutionStepPOJO(step._Id, step.executionid.get, step.previousstep, step.parentstep,
               step.branchorder, step.branchlabel, step.alternativeorder.get, ExecutionStepStatus.fromString(step.status.get),
-              step.executableid.get, step.inputprovableid.get, step.resultprovableid, step.localprovableid, step.userexecuted.get.toBoolean/*,
-              step.rulename.get*/,???))
+              step.executableid.get, step.inputprovableid.get, step.resultprovableid, step.localprovableid, step.userexecuted.get.toBoolean,
+              step.rulename.get)) //@todo This used to be ??? with step.rulename.get commented out. Why isn't step.rulename.get correct here?
         if (steps.length < 1) throw new Exception("No steps found for execution " + executionID)
         else steps
       })
