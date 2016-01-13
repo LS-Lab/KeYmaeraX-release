@@ -2,7 +2,7 @@
     <h3 class="modal-title">Error parsing model</h3>
 </div>
 <div class="modal-body">
-    <div class="well">
+    <div class="well well-sm">
         <p>At line {{location.line}}:{{location.column}}: {{message}}</p>
         <dl class="dl-horizontal">
             <dt>Expected</dt>
@@ -12,7 +12,7 @@
         </dl>
     </div>
     <pre style="overflow: scroll; height: 200px;">{{modelWithErrorMsg()}}</pre>
-    <div style="overflow: scroll; height: 300px">
+    <div style="overflow: scroll; height: 200px">
         <a ng-click="stacktraceCollapsed=!stacktraceCollapsed">
             <i class="fa fa-caret-right" ng-if="stacktraceCollapsed"></i>
             <i class="fa fa-caret-down" ng-if="!stacktraceCollapsed"></i> Stacktrace

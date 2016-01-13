@@ -26,8 +26,12 @@ object KeYmaeraXProblemParser {
     checkInput(remainingTokens.head.tok.equals(PROBLEM_BLOCK), "Problem. block expected", remainingTokens.head.loc, "kyx reading problem block")
 
     val (theProblem, eof) = remainingTokens.span(x => !x.tok.equals(END_BLOCK))
-    checkInput(eof.length == 2 && eof.head.tok.equals(END_BLOCK) && eof.last.tok.equals(EOF),
-      "Expected .kyx file to end with .<EOF> but found " + eof, eof.last.loc, "kyx problem end block parser")
+    checkInput(eof.length == 2 && eof.head.tok.equals(END_BLOCK),
+      "Expected Problem block to end with 'End.' but found " + eof,
+      if (eof.nonEmpty) eof.last.loc else theProblem.last.loc, "kyx problem end block parser")
+    checkInput(eof.length == 2 && eof.last.tok.equals(EOF),
+      "Expected Problem block to be last in file, but found " + eof,
+      if (eof.nonEmpty) eof.last.loc else theProblem.last.loc, "kyx problem end block parser")
 
     val problem : Formula = parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {
       case f : Formula => f

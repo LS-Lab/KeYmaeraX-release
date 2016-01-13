@@ -114,8 +114,11 @@ angular.module('keymaerax.controllers').controller('ParseErrorCtrl', function($s
   $scope.modelWithErrorMsg = function() {
     var lines = $.map(model.split('\n'), function(e, i) { return (i+1) + ': ' + e; });
     var lineStr = error.location.line + ': ';
-    var inlineErrorMsg = new Array(lineStr.length + error.location.column).join(' ') + '^----' + error.textStatus;
-    lines.splice(error.location.line, 0, inlineErrorMsg);
+    var errorColumnIdx = error.location.column >= 0 ? error.location.column + lineStr.length :
+      error.location.line >= 0 ? lines[error.location.line-1].length+1 : lines[lines.length-1].length+1;
+    var inlineErrorMsg = new Array(errorColumnIdx).join(' ') + '^----' + error.textStatus;
+    if (error.location.line >= 0) lines.splice(error.location.line, 0, inlineErrorMsg);
+    else lines.splice(lines.length, 0, inlineErrorMsg);
     return lines.join('\n');
   }
 });
