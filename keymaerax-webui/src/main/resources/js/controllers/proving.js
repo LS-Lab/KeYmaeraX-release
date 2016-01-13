@@ -78,12 +78,9 @@ angular.module('keymaerax.controllers').controller('TaskListCtrl',
                     });
                   } else {
                     // should never happen
-                    showErrorMessage($uibModal, 'empty agenda even though proof is not closed (' + data.status + ')')
+                    showClientErrorMessage($uibModal, 'Empty agenda even though proof is not closed (' + data.status + ')')
                   }
-                })
-                .error(function() {
-                  showErrorMessage($uibModal, "error retrieving proof progress")
-                })
+                });
             }
         }).error(function(data) {
             if (data.status == 'notloaded') {
@@ -197,11 +194,7 @@ angular.module('keymaerax.controllers').controller('TaskListCtrl',
                                             }
                                             $scope.setSelected(agendaItem);
                       }
-                  })
-                  .error(function() {
-                      var msg = "Error: this proof is not on the Agenda and the server could not find it.";
-                      showErrorMessage($uibModal, msg)
-                  })
+                  });
           }
         }
     }
@@ -261,10 +254,7 @@ angular.module('keymaerax.controllers').controller('TaskListCtrl',
 //                    Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTerm(data.id)
                     $rootScope.$broadcast('handleDispatchedTerm', data.id);
                 }
-             })
-             .error(function() {
-                showErrorMessage($uibModal, "encountered error during post on runTerm.")
-             })
+             });
     }
     $scope.$on('handleDispatchedTerm', function(event, tId) {
         // TODO create defer per tId
@@ -370,14 +360,11 @@ angular.module('keymaerax.controllers').controller('TaskListCtrl',
                   }
                   $scope.proofHistory.push(historyItem)
                 } else {
-                  showErrorMessage($uibModal, "pretty printing undefined for tactic " + tacticName)
+                  showClientErrorMessage($uibModal, "Pretty printing undefined for tactic " + tacticName)
                 }
               }
             }
-        })
-        .error(function() {
-          showErrorMessage($uibModal, "error encountered while trying to retrieve the proof history.")
-        })
+        });
     }
 
     $scope.fetchNodeInfo = function(dispatched) {
@@ -386,10 +373,7 @@ angular.module('keymaerax.controllers').controller('TaskListCtrl',
         .success(function(data) {
         data.readOnly = true;
         $scope.selectedTask = data;
-      })
-      .error(function() {
-        showErrorMessage($uibModal, "error encountered while trying to retrieve the proof history details.")
-      })
+      });
     }
 
     $scope.$watch('agenda',
@@ -416,9 +400,6 @@ angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
     $scope.validateProof = function() {
       $http.get("/proofs/user/" + $cookies.get('userId') + "/" + proofId + "/validatedStatus").success(function(data) {
         $scope.validatedProofStatus = data.status
-      })
-      .error(function() {
-        showErrorMessage($uibModal, "error when validating proof")
-      })
+      });
     }
 });

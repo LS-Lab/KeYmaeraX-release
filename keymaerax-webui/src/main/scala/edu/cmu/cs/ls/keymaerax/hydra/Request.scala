@@ -169,51 +169,41 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
   }
 
   override def getResultingResponses(): List[Response] = {
-    try {
-      //check to make sure the indicated files exist and point to the correct files.
-      val linkNameFile = new java.io.File(linkName)
-      val jlinkLibFile = new java.io.File(jlinkLibFileName)
-      val jlinkLibDir : java.io.File = jlinkLibFile.getParentFile
-      val linkNameExists = isLinkNameCorrect(linkNameFile) && linkNameFile.exists()
-      val jlinkLibFileExists = isJLinkLibFileCorrect(jlinkLibFile, jlinkLibDir) && jlinkLibFile.exists()
+    //check to make sure the indicated files exist and point to the correct files.
+    val linkNameFile = new java.io.File(linkName)
+    val jlinkLibFile = new java.io.File(jlinkLibFileName)
+    val jlinkLibDir : java.io.File = jlinkLibFile.getParentFile
+    val linkNameExists = isLinkNameCorrect(linkNameFile) && linkNameFile.exists()
+    val jlinkLibFileExists = isJLinkLibFileCorrect(jlinkLibFile, jlinkLibDir) && jlinkLibFile.exists()
 
-      if(!linkNameExists || !jlinkLibFileExists) {
-        // look for the largest prefix that does exist
-        var linkNamePrefix = linkNameFile
-        while (!linkNamePrefix.exists && linkNamePrefix.getParent != null) {
-          linkNamePrefix = new java.io.File(linkNamePrefix.getParent)
-        }
-
-        new ConfigureMathematicaResponse(
-          if (linkNamePrefix.exists()) linkNamePrefix.toString else "",
-          if (jlinkLibDir.exists()) jlinkLibDir.toString else "", false) :: Nil
+    if(!linkNameExists || !jlinkLibFileExists) {
+      // look for the largest prefix that does exist
+      var linkNamePrefix = linkNameFile
+      while (!linkNamePrefix.exists && linkNamePrefix.getParent != null) {
+        linkNamePrefix = new java.io.File(linkNamePrefix.getParent)
       }
-      else {
-        val originalConfig = db.getConfiguration("mathematica")
 
-        val configMap = scala.collection.immutable.Map("linkName" -> linkName, "jlinkLibDir" -> jlinkLibDir.getAbsolutePath)
-        val newConfig = new ConfigurationPOJO("mathematica", configMap)
+      new ConfigureMathematicaResponse(
+        if (linkNamePrefix.exists()) linkNamePrefix.toString else "",
+        if (jlinkLibDir.exists()) jlinkLibDir.toString else "", false) :: Nil
+    } else {
+      val originalConfig = db.getConfiguration("mathematica")
 
-        db.updateConfiguration(newConfig)
+      val configMap = scala.collection.immutable.Map("linkName" -> linkName, "jlinkLibDir" -> jlinkLibDir.getAbsolutePath)
+      val newConfig = new ConfigurationPOJO("mathematica", configMap)
 
-        try {
-          if(!(new File(linkName).exists() || !jlinkLibFile.exists())) throw new FileNotFoundException()
-          ComponentConfig.keymaeraInitializer.initMathematicaFromDB() //um.
-          new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
-        }
-        catch {
-          case e : FileNotFoundException =>
-            db.updateConfiguration(originalConfig)
-            e.printStackTrace()
-            new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, false) :: Nil
-          case e : Exception => new ErrorResponse(e.getMessage, e) :: Nil
-        }
+      db.updateConfiguration(newConfig)
 
-
+      try {
+        if(!(new File(linkName).exists() || !jlinkLibFile.exists())) throw new FileNotFoundException()
+        ComponentConfig.keymaeraInitializer.initMathematicaFromDB() //um.
+        new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
+      } catch {
+        case e : FileNotFoundException =>
+          db.updateConfiguration(originalConfig)
+          e.printStackTrace()
+          new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, false) :: Nil
       }
-    }
-    catch {
-      case e : Exception => new ErrorResponse(e.getMessage, e) :: Nil
     }
   }
 }
@@ -304,7 +294,6 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
       }
     } catch {
       case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
-      case e: Exception => new ErrorResponse(e.getMessage, e) :: Nil
     }
   }
 }

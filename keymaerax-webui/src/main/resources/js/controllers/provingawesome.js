@@ -37,12 +37,9 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
         });
       } else {
         // should never happen
-        showErrorMessage($uibModal, 'empty agenda even though proof is not closed (' + data.status + ')')
+        showMessage($uibModal, 'Empty agenda even though proof is not closed (' + data.status + ')')
       }
-    })
-    .error(function() {
-      showErrorMessage($uibModal, "error retrieving proof progress")
-    })
+    });
   });
 
   $scope.runningTask = {
@@ -63,7 +60,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
                 if ($scope.runningTask.nodeId === response.data.parent.id) {
                   sequentProofData.updateAgendaAndTree(response.data);
                 } else {
-                  showErrorMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " +
+                  showMessage($uibModal, "Unexpected tactic result, parent mismatch: " + " expected " +
                     $scope.runningTask.nodeId + " but got " + response.data.parent.id);
                 }
               } else {
@@ -78,7 +75,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
             .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
         },
         /* future rejected */ function(reason) {
-          if (reason !== 'stopped') showErrorMessage($uibModal, reason);
+          if (reason !== 'stopped') showMessage($uibModal, reason);
           spinnerService.hide('tacticExecutionSpinner');
         }
       );
@@ -216,10 +213,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
 //                    Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTerm(data.id)
                     $rootScope.$broadcast('handleDispatchedTerm', data.id);
                 }
-             })
-             .error(function() {
-                showErrorMessage($uibModal, "encountered error during post on runTerm.")
-             })
+             });
     }
     $scope.$on('handleDispatchedTerm', function(event, tId) {
         // TODO create defer per tId
@@ -268,10 +262,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         .success(function(data) {
         data.readOnly = true;
         $scope.selectedTask = data;
-      })
-      .error(function() {
-        showErrorMessage($uibModal, "error encountered while trying to retrieve the proof history details.")
-      })
+      });
     }
 
     // forward scope queries to global Agenda/Tactics model
@@ -312,7 +303,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
-          showErrorMessage($uibModal, "No axiom/tactic applicable to that formula");
+          showMessage($uibModal, "No axiom/tactic applicable to that formula");
         });
     }
 
@@ -325,7 +316,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
-          showErrorMessage($uibModal, "No axiom/tactic applicable to that formula");
+          showMessage($uibModal, "No axiom/tactic applicable to that formula");
         });
     }
 
@@ -382,9 +373,6 @@ angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
     $scope.validateProof = function() {
       $http.get("/proofs/user/" + $cookies.get('userId') + "/" + proofId + "/validatedStatus").success(function(data) {
         $scope.validatedProofStatus = data.status
-      })
-      .error(function() {
-        showErrorMessage($uibModal, "error when validating proof")
-      })
+      });
     }
 });

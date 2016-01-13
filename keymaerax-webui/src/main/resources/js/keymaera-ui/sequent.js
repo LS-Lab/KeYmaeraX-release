@@ -29,9 +29,6 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
                         }
                       });
                     })
-                    .catch(function(error) {
-                      showErrorMessage($uibModal, "Unable to find a counter example, root cause: " + error.data);
-                    })
                     .finally(function() { spinnerService.hide('counterExampleSpinner'); });
             }
 
