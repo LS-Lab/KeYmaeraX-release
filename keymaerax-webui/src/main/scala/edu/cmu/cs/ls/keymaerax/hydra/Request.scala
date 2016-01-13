@@ -743,7 +743,9 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(fml, pos) match {
-              case Some(step) => what(DerivationInfo(step))
+              case Some(step) if step != "cut" => what(DerivationInfo(step))
+              //@todo can go away when cuts are actually available in the toolbox and on the sequent
+              case Some(step) if step == "cut" => /* can't step cut */ throw new ProverException("No step possible")
               case None => tacticId
             }
           case _ => what(DerivationInfo.ofCodeName(tacticId))
@@ -768,33 +770,37 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         case Some(n) => n
       }
 
-    BTacticParser(fullExpr(node), loggingOn=false, Some(generator)) match {
-      case None => throw new ProverException("Invalid Bellerophon expression:  " + belleTerm)
-      case Some(expr) =>
-        val appliedExpr:BelleExpr =
-          (pos, expr) match {
-            case (None, _:AtPosition[BelleExpr]) =>
-              throw new ProverException("Can't run a positional tactic without specifying a position")
-            case (None, _) => expr
-            case (Some(position), expr: AtPosition[BelleExpr]) => expr(position)
-            case (Some(position), expr: BelleExpr) => expr
-            case _ => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
-        }
-        val branch = tree.goalIndex(nodeId)
-        val ruleName =
-          if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, _.display.name)
-          else "custom"
-        val localProvable = Provable.startProof(node.sequent)
-        val globalProvable =
-          trace.steps match {
-            case Nil => localProvable
-            case steps => steps.last.output.getOrElse{throw new ProverException("Proof trace ends in unfinished step")}
-          }
-        assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
-        val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
-        val executor = BellerophonTacticExecutor.defaultExecutor
-        val taskId = executor.schedule (userId, appliedExpr, BelleProvable(localProvable), List(listener))
-        new RunBelleTermResponse(proofId, nodeId, taskId) :: Nil
+    try {
+      BTacticParser(fullExpr(node), loggingOn=false, Some(generator)) match {
+        case None => throw new ProverException("Invalid Bellerophon expression:  " + belleTerm)
+        case Some(expr) =>
+          val appliedExpr:BelleExpr =
+            (pos, expr) match {
+              case (None, _:AtPosition[BelleExpr]) =>
+                throw new ProverException("Can't run a positional tactic without specifying a position")
+              case (None, _) => expr
+              case (Some(position), expr: AtPosition[BelleExpr]) => expr(position)
+              case (Some(position), expr: BelleExpr) => expr
+              case _ => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
+            }
+          val branch = tree.goalIndex(nodeId)
+          val ruleName =
+            if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, _.display.name)
+            else "custom"
+          val localProvable = Provable.startProof(node.sequent)
+          val globalProvable =
+            trace.steps match {
+              case Nil => localProvable
+              case steps => steps.last.output.getOrElse{throw new ProverException("Proof trace ends in unfinished step")}
+            }
+          assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
+          val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
+          val executor = BellerophonTacticExecutor.defaultExecutor
+          val taskId = executor.schedule (userId, appliedExpr, BelleProvable(localProvable), List(listener))
+          new RunBelleTermResponse(proofId, nodeId, taskId) :: Nil
+      }
+    } catch {
+      case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
     }
   }
 }
