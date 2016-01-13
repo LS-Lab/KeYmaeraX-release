@@ -304,7 +304,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   }
 
   /** Union of uniform substitutions, i.e., both replacement lists merged. */
-  def ++(other: USubst): USubst = USubst(this.subsDefsInput ++ other.subsDefsInput)
+  def ++(other: USubst): USubst = USubst((this.subsDefsInput ++ other.subsDefsInput).distinct)
 
 
   /**
