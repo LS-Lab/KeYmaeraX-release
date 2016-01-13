@@ -33,8 +33,10 @@ case class ParseException private[parser](msg: String, loc: Location, found: Str
         else {
           //assert(!lines.isEmpty, "nonempty number of lines:\n" + input)
           val rem = lines.drop(loc.line-1)
+          val count = if (loc.end!=UnknownLocation && loc.line==loc.end.line) Math.max(1,loc.end.column-loc.column) else 1
+          println("LOCATION: " + loc + " from " + loc.column + " to " + loc.end.column + " is " + count)
           //assert(!rem.isEmpty, "nonempty number of lines after drop:\n" + input)
-          if (!rem.isEmpty) rem.head + "\n" + (" " * (loc.column-1)) + "^" else "<past EOF> unexpectedly at line " + loc.line
+          if (!rem.isEmpty) rem.head + "\n" + (" " * (loc.column-1)) + ("^"*count) + "\n" else "<past EOF> unexpectedly at line " + loc.line
         }
     }
     throw inContext(loc + "\n" + lineInfo + "\ninput:  \n" + input + "\ntokens: " + tokenStream.getOrElse("<unknown>"))
