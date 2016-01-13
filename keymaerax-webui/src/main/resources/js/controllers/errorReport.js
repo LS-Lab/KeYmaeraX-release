@@ -52,8 +52,10 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
             error: function () { return rejection.data; }
           }
         });
-        $q.resolve(rejection);
+        // response handled here, prevent further calls
+        return rejection;
       } else {
+        // somebody else has to handle
         $q.reject(rejection);
       }
     }
