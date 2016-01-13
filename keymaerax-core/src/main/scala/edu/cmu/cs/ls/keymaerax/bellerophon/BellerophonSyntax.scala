@@ -8,6 +8,10 @@ import edu.cmu.cs.ls.keymaerax.btactics.Augmentors
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
 
+object BelleExpr {
+  private[keymaerax] val DEBUG = System.getProperty("DEBUG", "false")=="true"
+}
+
 /**
  * Algebraic Data Type whose elements are well-formed Bellephoron tactic expressions.
  * See Table 1 of "Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus"
@@ -16,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.SerializationNames.SerializationName
  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon]]
  */
 abstract class BelleExpr(val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) {
-  private[keymaerax] val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private[keymaerax] val DEBUG = BelleExpr.DEBUG
   // tactic combinators
 
   /** this & other: sequential composition executes other on the output of this, failing if either fail. */
