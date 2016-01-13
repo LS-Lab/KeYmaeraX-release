@@ -53,7 +53,7 @@ object HilbertCalculus extends UnifyUSCalculus {
   lazy val testd              : PositionTactic = useAt("<?> test")
   /** diffSolve: solve a differential equation `<x'=f>p(x)` to `\exists t>=0 <x:=solution(t)>p(x)` */
   def diffSolved              : PositionTactic = ???
-  /** choiced: <++> handles both cases of a nondeterministic choice `<a++b>p(x)` separately `<a>p(x) | <b>p(x)` */
+  /** choiced: ⟨++⟩ handles both cases of a nondeterministic choice `⟨a++b⟩p(x)` separately `⟨a⟩p(x) | ⟨b⟩p(x)` */
   lazy val choiced            : PositionTactic = useAt("<++> choice")
   /** composed: <;> handle both parts of a sequential composition `<a;b>p(x)` one at a time `<a><b>p(x)` */
   lazy val composed           : PositionTactic = useAt("<;> compose")
