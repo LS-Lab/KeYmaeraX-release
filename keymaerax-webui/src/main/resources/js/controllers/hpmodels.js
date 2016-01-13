@@ -10,9 +10,6 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
                     console.log("yay! Take the user to the proof load page?")
                 }
             })
-            .error(function() {
-                showErrorMessage($uibModal, "Proof failed to load.");
-            })
      };
 
      $scope.addModel = function() {
@@ -21,41 +18,28 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
           var fr = new FileReader();
           fr.onerror = function(e) { alert("Could not even open your file: " + e.getMessage()); };
           fr.onload = function(e) {
-               $.ajax({
-                     url: "user/" + $cookies.get('userId') + "/modeltextupload/" + $scope.modelName,
-                     type: "POST",
-                     data: e.target.result,
-                     async: true,
-                     dataType: 'json',
-                     contentType: 'application/json',
-                     success: function(data) {
-                         if (data.errorThrown) {
-                            $uibModal.open({
-                               templateUrl: 'templates/parseError.html',
-                               controller: 'ParseErrorCtrl',
-                               size: 'lg',
-                               resolve: {
-                                  model: function () { return e.target.result; },
-                                  error: function () { return data; }
-                               }});
-                         }
-                         else {
-                            //Update the models list -- this should result in the view being updated?
-                            while (Models.getModels().length != 0) {
-                               Models.getModels().shift()
-                            }
-                            $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
-                                if(data.errorThrown) showErrorMessage($uibModal, data, "Could not get models for user " + $cookies.get('userId'))
-                                Models.addModels(data);
-                                $route.reload();
-                            })
-                            .error(function() {
-                                showErrorMessage($uibModal, "Could not retrieve model list.")
-                            })
-                         }
-                     },
-                     error: this.ajaxErrorHandler
-               });
+            $http.post("user/" + $cookies.get('userId') + "/modeltextupload/" + $scope.modelName, e.target.result)
+              .then(function(response) {
+                if (response.data.type === 'parseerror') {
+                  $uibModal.open({
+                     templateUrl: 'templates/parseError.html',
+                     controller: 'ParseErrorCtrl',
+                     size: 'lg',
+                     resolve: {
+                        model: function () { return e.target.result; },
+                        error: function () { return response.data; }
+                     }});
+                } else {
+                   //Update the models list -- this should result in the view being updated?
+                   while (Models.getModels().length != 0) {
+                      Models.getModels().shift()
+                   }
+                   $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
+                     Models.addModels(data);
+                     $route.reload();
+                   });
+                }
+              })
           };
 
           fr.readAsText(file);
@@ -71,12 +55,8 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $uibModal, $location, Models) {
   $scope.models = [];
   $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
-      if(data.errorThrown) showErrorMessage($uibModal, data, "Could not get models for user " + $cookies.get('userId'))
       $scope.models = data
-  })
-  .error(function() {
-      showErrorMessage($uibModal, "Could not retrieve model list")
-  })
+  });
 
   $scope.open = function (modelid) {
       var modalInstance = $uibModal.open({
@@ -105,9 +85,6 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     .success(function(data) {
         if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Error While Running Tactic")
         else console.log("Done running tactic")
-    })
-    .error(function() {
-      showErrorMessage($uibModal, "Error While Running Tactic")
     });
   }
 

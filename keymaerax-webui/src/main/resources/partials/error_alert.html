@@ -1,15 +1,20 @@
-<div class="modal-header" >
-    <h3 class="modal-title">Error {{action}}.</h3>
+<div class="modal-header">
+    <h3 class="modal-title">Error executing {{url}}</h3>
     <h5 class="modal-title">You can report this error to KeYmaera X team by clicking <kbd>Report Error</kbd>.</h5>
 </div>
-<div class="modal-body" style="overflow: scroll; height: 200px;">
-    Error message<br>
-    <br>
-    <pre>{{errorText}}</pre>
-    ----------------------------<br>
-    Error trace<br>
-    <br>
-    <pre>{{errorTrace}}</pre>
+<div class="modal-body" style="overflow: scroll;">
+    <div class="well well-sm">
+        <p>{{errorText}}</p>
+    </div>
+    <div>
+        <a ng-click="stacktraceCollapsed=!stacktraceCollapsed">
+            <i class="fa fa-caret-right" ng-if="stacktraceCollapsed"></i>
+            <i class="fa fa-caret-down" ng-if="!stacktraceCollapsed"></i> Stacktrace
+        </a>
+        <div uib-collapse="stacktraceCollapsed">
+            <div class="well well-lg">{{errorTrace}}</div>
+        </div>
+    </div>
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="report()">Report Error</button>

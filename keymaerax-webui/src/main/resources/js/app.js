@@ -13,7 +13,9 @@
   'ui.bootstrap.popover',
   'ui.bootstrap.collapse',
   'ui.bootstrap.accordion',
+  'ui.bootstrap.modal',
   'keymaerax.controllers',
+  'keymaerax.errorHandlers',
   'keymaerax.services',
   'keymaerax.ui.mouseevents',
   'keymaerax.ui.directives',
@@ -108,3 +110,8 @@ keymaeraProofApp.config(['$tooltipProvider', function($tooltipProvider) {
     'contextmenu': 'blur'
   });
 }]);
+
+// intercept all generic ErrorResponses
+keymaeraProofApp.config(['$httpProvider', function($httpProvider) {
+  $httpProvider.interceptors.push('ResponseErrorHandler');
+}])

@@ -8,10 +8,7 @@ angular.module('keymaerax.controllers').controller('HACMSTreeCtrl', function($sc
           .success(function(data) {
               if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Error encountered while trying to retrieve the tree.")
               $scope.treeContents = printNode(data);
-          })
-          .error(function() {
-              showErrorMessage($uibModal, "Error encountered while trying to retrieve the tree.")
-          })
+          });
   }
 
 

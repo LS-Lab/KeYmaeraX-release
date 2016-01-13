@@ -64,7 +64,7 @@ var pollProofStatus = function(proof, userId, http) {
           }
           else {
             console.error("Received unknown proof status " + data.status)
-            showErrorMessage($uibModal, "Received unknown proof status " + data.status)
+            showClientErrorMessage($uibModal, "Received unknown proof status " + data.status);
           }
       }).
       error(function(data, status, headers, config) {
@@ -138,9 +138,8 @@ angular.module('keymaerax.controllers').controller('ModelProofsCtrl', function (
       if (data.loadStatus == 'loading') {
         console.log("Start polling proof status");
         pollProofStatus(proof, $cookies.get('userId'), $http);
-      }
-      else if(data.loadStatus == 'Error') {
-          showErrorMessage($uibModal, "Error encountered while attempting to load proof")
+      } else if(data.loadStatus == 'Error') {
+          showMessage($uibModal, "Error encountered while attempting to load proof")
       }
     }).
     error(function(data, status, headers, config) {

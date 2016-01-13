@@ -182,7 +182,7 @@ class ErrorResponse(msg: String, exn: Throwable = null) extends Response {
   lazy val writer = new StringWriter
   lazy val stacktrace = if (exn != null) { exn.printStackTrace(new PrintWriter(writer)); writer.toString } else ""
   val json = JsObject(
-        "textStatus" -> JsString(msg),
+        "textStatus" -> (if (msg != null) JsString(msg) else JsString("")),
         "errorThrown" -> JsString(stacktrace),
         "type" -> JsString("error")
       )
@@ -199,7 +199,7 @@ class ParseErrorResponse(msg: String, expect: String, found: String, detailedMsg
       "detailedMsg" -> JsString(detailedMsg)
     ),
     "errorThrown" ->  JsString(stacktrace),
-    "type" -> JsString("error"),
+    "type" -> JsString("parseerror"),
     "location" -> JsObject(
       "line" -> JsNumber(loc.line),
       "column" -> JsNumber(loc.column)
