@@ -463,6 +463,11 @@ table .btn{
   border-bottom-right-radius: 3px;
   display: table-cell;
 }
+.k4-formula .k4-formula-content-abbreviate {
+  padding: 4px 4px 4px 4px;
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+}
 
 /*
  *  Overridden UI-Tree

@@ -7,10 +7,9 @@
 
     <!-- Collapsed antecedent, also readonly -->
     <div class="col-md-2">
-        <div class="pull-right">
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante | limitTo:1" id="{{f.id}}">
             <div class="col-md-12 k4-formula">
-                <div class="k4-formula-content k4-abbreviate">
+                <div class="k4-formula-content-abbreviate k4-abbreviate">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
                                 formula="f.formula" highlight="false" collapsed="true"
                                 on-tactic="onTactic(formulaId, tacticId)"
@@ -18,14 +17,13 @@
                 </div>
             </div>
         </div>
-        </div>
     </div>
 
     <!-- Turnstile -->
     <div class="col-md-1">
         <div class="row k4-flexrow">
             <div class="col-md-12 k4-formula k4-flexcell">
-                <div class="k4-formula-content">&#8866;</div>
+                <div class="k4-formula-content-abbreviate">&#8866;</div>
             </div>
         </div>
     </div>
@@ -34,7 +32,7 @@
     <div class="col-md-8">
         <div class="row k4-flexrow" ng-repeat="f in sequent.succ | limitTo:1" id="{{f.id}}">
             <div class="col-md-12 k4-formula">
-                <div class="k4-formula-content k4-abbreviate">
+                <div class="k4-formula-content-abbreviate k4-abbreviate">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
                                 formula="f.formula" highlight="false" collapsed="true"
                                 on-tactic="onTactic(formulaId, tacticId)"

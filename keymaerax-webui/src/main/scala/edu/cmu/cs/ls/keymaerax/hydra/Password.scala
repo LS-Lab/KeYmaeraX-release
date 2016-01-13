@@ -34,7 +34,7 @@ object Password {
   }
 
   def hash(password: Array[Char], salt: Array[Byte], iterations: Int): String = {
-    val spec = new PBEKeySpec(password, salt, iterations, salt.length*8)
+    val spec = new PBEKeySpec(password, salt, iterations, Math.min(160, salt.length*8))
     val skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
     sanitize(skf.generateSecret(spec).getEncoded)
   }
