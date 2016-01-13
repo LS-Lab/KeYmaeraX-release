@@ -508,10 +508,10 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
     }
   }
 
-  def inputsJson(info:TacticInfo): Option[JsValue] = {
+  def inputsJson(info:TacticInfo): JsValue = {
     info.inputs match {
-      case Nil => None
-      case inputs => Some(new JsArray(inputs.map{case input => inputJson(input)}))
+      case Nil => JsArray()
+      case inputs => JsArray(inputs.map{case input => inputJson(input)}:_*)
     }
   }
 
@@ -528,11 +528,10 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
   }
 
   def tacticJson(info:TacticInfo) = {
-    val theType = JsString("tactic")
-    inputsJson(info) match {
-      case None => JsObject ("type" -> theType)
-      case Some(inputs) => JsObject("type" -> theType, "input" -> inputs)
-    }
+    JsObject(
+      "type" -> JsString("tactic"),
+      "input" -> inputsJson(info)
+    )
   }
 
   def sequentJson(sequent:SequentDisplay):JsValue = {
@@ -546,18 +545,12 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
 
   def ruleJson(info:TacticInfo, conclusion:SequentDisplay, premises:List[SequentDisplay]) = {
     val conclusionJson = sequentJson(conclusion)
-    val premisesJson = new JsArray(premises.map{case sequent => sequentJson(sequent)})
-    inputsJson(info) match {
-      case None => JsObject(
-        "type" -> JsString("sequentrule"),
-        "conclusion" -> conclusionJson,
-        "premise" -> premisesJson)
-      case Some(inputs) => JsObject(
-        "type" -> JsString("sequentrule"),
-        "conclusion" -> conclusionJson,
-        "premise" -> premisesJson,
-        "input" -> inputs)
-    }
+    val premisesJson = JsArray(premises.map{case sequent => sequentJson(sequent)}:_*)
+    JsObject(
+      "type" -> JsString("sequentrule"),
+      "conclusion" -> conclusionJson,
+      "premise" -> premisesJson,
+      "input" -> inputsJson(info))
   }
 
   def derivationJson(derivationInfo: DerivationInfo) = {
