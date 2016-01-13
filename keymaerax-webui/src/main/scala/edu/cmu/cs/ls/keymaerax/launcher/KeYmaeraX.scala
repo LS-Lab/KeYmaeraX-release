@@ -185,6 +185,7 @@ object KeYmaeraX {
     }
     catch {
       case e : Exception => {
+        if (System.getProperty("DEBUG", "false")=="true") e.printStackTrace()
         println(e);
         println("Failed to parse file");
         System.exit(-1)

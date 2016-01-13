@@ -45,7 +45,7 @@ case class ParseException private[parser](msg: String, loc: Location, found: Str
   /** Get more details on the error message in addition to [[getContext]]. */
   def getDetails: String = "After:   " + after + "\nin " + state
 
-  override def toString: String = super.getMessage + (if (DEBUG) "\n" + getDetails else "")
+  override def toString: String = super.getMessage + getContext + (if (DEBUG) "\n" + getDetails else "")
 }
 
 object ParseException {
