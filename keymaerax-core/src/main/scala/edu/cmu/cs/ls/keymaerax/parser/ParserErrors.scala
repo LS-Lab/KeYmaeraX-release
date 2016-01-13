@@ -34,8 +34,7 @@ case class ParseException private[parser](msg: String, loc: Location, found: Str
         else {
           //assert(!lines.isEmpty, "nonempty number of lines:\n" + input)
           val rem = lines.drop(loc.line-1)
-          val count = if (loc.end!=UnknownLocation && loc.line==loc.end.line) Math.max(1,loc.end.column-loc.column) else 1
-          println("LOCATION: " + loc + " from " + loc.column + " to " + loc.end.column + " is " + count)
+          val count = if (loc.end!=UnknownLocation && loc.line==loc.end.line) Math.max(1,loc.end.column-loc.column+1) else 1
           //assert(!rem.isEmpty, "nonempty number of lines after drop:\n" + input)
           if (!rem.isEmpty) rem.head + "\n" + (" " * (loc.column-1)) + ("^"*count) + "\n" else "<past EOF> unexpectedly at line " + loc.line
         }
@@ -46,7 +45,7 @@ case class ParseException private[parser](msg: String, loc: Location, found: Str
   /** Get more details on the error message in addition to [[getContext]]. */
   def getDetails: String = "After:   " + after + "\nin " + state
 
-  override def toString: String = super.getMessage + (if (DEBUG) "\n" + getDetails else "")
+  override def toString: String = super.getMessage + getContext + (if (DEBUG) "\n" + getDetails else "")
 }
 
 object ParseException {
@@ -54,13 +53,13 @@ object ParseException {
     new ParseException(msg, state.location, state.la.toString, "", state.topString, state.toString /*, cause*/)
 
   def apply(msg: String, state: ParseState, expect: List[Expected] /*, cause: Throwable = null*/): ParseException =
-    new ParseException(msg, state.location, state.la.toString, expect.mkString("\n      or: "), state.topString, state.toString /*, cause*/)
+    new ParseException(msg, state.location, tokenDescription(state.la), expect.mkString("\n      or: "), state.topString, state.toString /*, cause*/)
 
-  def apply(msg: String, state: ParseState, tok: Token, expect: String): ParseException =
-    new ParseException(msg, tok.loc, tok.toString, expect, state.topString, state.toString)
+  def apply(msg: String, state: ParseState, found: Token, expect: String): ParseException =
+    new ParseException(msg, found.loc, tokenDescription(found), expect, state.topString, state.toString)
 
   def apply(msg: String, state: ParseState, expect: String): ParseException =
-    new ParseException(msg, state.location, state.la.toString, expect, state.topString, state.toString)
+    new ParseException(msg, state.location, tokenDescription(state.la), expect, state.topString, state.toString)
 
   def apply(msg: String, after: Expression): ParseException =
     new ParseException(msg, UnknownLocation, "<unknown>", "<unknown>", KeYmaeraXParser.printer.stringify(after), "")
@@ -71,6 +70,8 @@ object ParseException {
   def apply(msg: String, cause: Throwable): ParseException =
     new ParseException(msg, UnknownLocation, "<unknown>", "<unknown>", "", "", cause)
 
+  private[parser] def tokenDescription(tok: Token): String = tokenDescription(tok.tok)
+  private[parser] def tokenDescription(tok: Terminal): String = tok.img + " (" + tok + ")"
 }
 
 object LexException {

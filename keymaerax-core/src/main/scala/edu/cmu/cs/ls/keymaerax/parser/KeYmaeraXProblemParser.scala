@@ -14,10 +14,12 @@ import scala.annotation.tailrec
  * Created by nfulton on 6/12/15.
  */
 object KeYmaeraXProblemParser {
-  def apply(input : String): Formula = try { parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode()))._2 }
-  catch {case e: ParseException => throw e.inContext(input)}
+  def apply(input : String): Formula = try {
+    parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode()))._2
+  }
+  catch {case e: ParseException => throw e.inInput(input)}
 
-  def parseProblem(tokens: List[Token]) :  (Map[(String, Option[Int]), (Option[Sort], Sort)], Formula) = {
+  protected def parseProblem(tokens: List[Token]) :  (Map[(String, Option[Int]), (Option[Sort], Sort)], Formula) = {
     val parser = KeYmaeraXParser
     val (decls, remainingTokens) = KeYmaeraXDeclarationsParser(tokens)
     checkInput(remainingTokens.nonEmpty, "Problem. block expected", UnknownLocation, "kyx problem input problem block")
