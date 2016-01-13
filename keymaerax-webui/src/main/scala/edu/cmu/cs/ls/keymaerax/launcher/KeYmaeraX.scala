@@ -178,12 +178,14 @@ object KeYmaeraX {
   private def parseProblemFile(fileName: String) = {
     try {
       val fileContents = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
-      KeYmaeraXProblemParser(fileContents);
+      val formula = KeYmaeraXProblemParser(fileContents);
+      println(KeYmaeraXPrettyPrinter(formula))
       println("Parsed file successfully");
       System.exit(0)
     }
     catch {
       case e : Exception => {
+        println(e);
         println("Failed to parse file");
         System.exit(-1)
       }

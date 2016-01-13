@@ -12,14 +12,16 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.{TokenStream, ParseState}
  * Indicates a parse error at the given location,
  * with the context information state.
  * @author Andre Platzer
+ * @see [[ProverException.getContext]]
  */
 case class ParseException private[parser](msg: String, loc: Location, found: String/*Token*/, expect: String/**/, after: String/*ParseState*/, state: String/*ParseState*/, cause: Throwable = null)
-  extends ProverException(loc.begin + " " + msg + "\nat " + loc + "\nFound:    " + found + "\nExpected: " + expect + "\nAfter:   " + after + "\nin " + state, cause) {
-
+  extends ProverException(loc.begin + " " + msg + "\nFound:    " + found + " at " + loc + "\nExpected: " + expect, cause) {
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
   /**
     * Add the input context information to this exception, returning the resulting exception to be thrown.
     * @param input textual description of the input in which this prover exception occurred.
     * @param tokenStream optionally the tokenStream lexed from the input.
+    * @see [[ProverException.getContext]]
     */
   def inInput(input: String, tokenStream: Option[TokenStream] = None): ParseException = {
     //println("inInput\n" + input)
@@ -27,8 +29,7 @@ case class ParseException private[parser](msg: String, loc: Location, found: Str
     val lineInfo = if (input == "") "<empty>" else loc match {
       case UnknownLocation => "<unknown>"
       case _ => assert(loc.line>0 && loc.column>0, "positive location");
-        //println("location " + loc + " inInput\n" + input.lines.mkString("\n"))
-        val lines = input.lines.toList //(if (false) (input+"\n").split("\n").iterator else (input+"\n").lines).toList.iterator
+        val lines = input.lines.toList
         if (loc.line > lines.size) "<past EOF> at line " + loc.line
         else {
           //assert(!lines.isEmpty, "nonempty number of lines:\n" + input)
@@ -39,8 +40,13 @@ case class ParseException private[parser](msg: String, loc: Location, found: Str
           if (!rem.isEmpty) rem.head + "\n" + (" " * (loc.column-1)) + ("^"*count) + "\n" else "<past EOF> unexpectedly at line " + loc.line
         }
     }
-    throw inContext(loc + "\n" + lineInfo + "\ninput:  \n" + input + "\ntokens: " + tokenStream.getOrElse("<unknown>"))
+    throw inContext(loc + "\n" + lineInfo + "\ninput:  \n" + input + (if (DEBUG) "\ntokens: " + tokenStream.getOrElse("<unknown>") else ""))
   }
+
+  /** Get more details on the error message in addition to [[getContext]]. */
+  def getDetails: String = "After:   " + after + "\nin " + state
+
+  override def toString: String = super.getMessage + (if (DEBUG) "\n" + getDetails else "")
 }
 
 object ParseException {
