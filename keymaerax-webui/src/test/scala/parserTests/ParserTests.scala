@@ -24,6 +24,21 @@ class ParserParenTests extends FlatSpec with Matchers {
   val x = Variable("x", None, Real)
   val y = Variable("y", None, Real)
 
+  "The problem parser" should "reject strings containing non-ASCII characters" in {
+    def input(s: String) =
+      s"""
+        |ProgramVariables.
+        |  R x.
+        |End.
+        |Problem.
+        |  [x := ${s};]x > 3
+        |End.
+      """.stripMargin
+    KeYmaeraXProblemParser(input("1")) //the problem should be exactly the fact that we pass in some unicode.
+    a [Exception] shouldBe thrownBy(KeYmaeraXProblemParser("\\u03C0"))
+
+  }
+
   "The Parser" should "place implicit parens correctly (a.k.a. resolve abiguities correctly)" in {
     val equalPairs =
       // unary operator binds stronger than binary operator

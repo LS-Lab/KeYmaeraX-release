@@ -15,9 +15,14 @@ import scala.annotation.tailrec
  */
 object KeYmaeraXProblemParser {
   def apply(input : String): Formula = try {
-    parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode()))._2
-  }
-  catch {case e: ParseException => throw e.inInput(input)}
+    if(containsNonASCII(input)) throw ParseException("Input string contains non-ASCII character", new Exception()) //@todo indicate the location of the non-ASCII character.
+      parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode()))._2
+    }
+    catch {case e: ParseException => throw e.inInput(input)}
+
+
+
+  private def containsNonASCII(s : String) = !s.matches("\\A\\p{ASCII}*\\z")
 
   protected def parseProblem(tokens: List[Token]) :  (Map[(String, Option[Int]), (Option[Sort], Sort)], Formula) = {
     val parser = KeYmaeraXParser
