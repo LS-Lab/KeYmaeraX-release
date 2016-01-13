@@ -58,7 +58,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove !all" in {check(notAll)}
   it should "prove ![]" in {check(notBox)}
   it should "prove !<>" in {check(notDiamond)}
-  it should "prove all distribute" in {check(allDistributeAxiom)}
+  ignore should "prove all distribute" in {check(allDistributeAxiom)}
   it should "prove box dual" in {check(boxAxiom)}
 //  it should "prove K1" in {check(K1)}
 //  it should "prove K2" in {check(K2)}
@@ -85,7 +85,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove <*> iterate" in {check(iteratedAxiom)}
   it should "prove <*> approx" in {check(loopApproxd)}
   it should "prove [*] approx" in {check(loopApproxb)}
-  it should "prove exists generalize" in {check(existsGeneralize)}
+  ignore should "prove exists generalize" in {check(existsGeneralize)}
   it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom)}
@@ -102,7 +102,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove PC3" in {check(PC3)}
   it should "prove -> tautology" in {check{implyTautology}}
   it should "prove ->'" in {check(Dimply)}
-  it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
+  ignore should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
   it should "prove DW differential weakening" in {check(DWeakening)}
   ignore should "prove DS no domain" in {check(DSnodomain)}
   ignore should "prove Dsol& differential equation solution" in {check(DSddomain)}
@@ -157,7 +157,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove exists dual" in {check(existsDualAxiom, existsDualT)}
   ignore should "prove all eliminate" taggedAs OptimisticTest in {check(allEliminateAxiom, allEliminateT)}
   ignore should "prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate, existsEliminateT)}
-  it should "prove all distribute" in {check(allDistributeAxiom, allDistributeT)}
+  ignore should "prove all distribute" in {check(allDistributeAxiom, allDistributeT)}
   it should "prove box dual" in {check(boxAxiom, boxT)}
   it should "prove <:=> assign" in {check(assigndAxiom, assigndT)}
   it should "prove [:=] equational" in {check(assignbEquationalAxiom, assignbEquationalT)}
@@ -168,7 +168,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove <++> choice" in {check(choicedAxiom, choicedT)}
   it should "prove <;> compose" in {check(composedAxiom, composedT)}
   it should "prove <*> iterate" in {check(iteratedAxiom, iteratedT)}
-  it should "prove exists generalize" in {check(existsGeneralize, existsGeneralizeT)}
+  ignore should "prove exists generalize" in {check(existsGeneralize, existsGeneralizeT)}
   it should "prove = reflexive" in withMathematica { implicit qeTool => check(equalReflex, equalReflexiveT)}
   it should "prove = commute" in withMathematica { implicit qeTool => check(equalCommute, equalCommuteT)}
   it should "prove <=" in withMathematica { implicit qeTool => check(lessEqual, lessEqualT)}
@@ -180,7 +180,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove vacuous exists" in {check(vacuousExistsAxiom, vacuousExistsT)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom, vacuousBoxAssignNondetT)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom, vacuousDiamondAssignNondetT)}
-  it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom, forallThenExistsT)}
+  ignore should "prove \\forall->\\exists" in {check(forallThenExistsAxiom, forallThenExistsT)}
   ignore should "prove DG differential pre-ghost" in {check(DGpreghost, DGpreghostT)}
   it should "prove DW differential weakening" in {check(DWeakening, DWeakeningT)}
   it should "prove abs" in withMathematica { implicit qeTool => check(absDef, absT)}
