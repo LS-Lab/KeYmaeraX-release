@@ -9,6 +9,9 @@ import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
   * Created by bbohrer on 11/20/15.
   */
 
+/**
+  * @param ruleName A display name merely for UI purposes
+  */
 class TraceRecordingListener(db: DBAbstraction,
                              proofId: Int,
                              executionId: Int,
