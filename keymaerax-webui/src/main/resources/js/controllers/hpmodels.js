@@ -18,28 +18,28 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
           var fr = new FileReader();
           fr.onerror = function(e) { alert("Could not even open your file: " + e.getMessage()); };
           fr.onload = function(e) {
-            $http.post("user/" + $cookies.get('userId') + "/modeltextupload/" + $scope.modelName, e.target.result)
+            var model = e.target.result;
+            $http.post("user/" + $cookies.get('userId') + "/modeltextupload/" + $scope.modelName, model)
               .then(function(response) {
-                if (response.data.type === 'parseerror') {
-                  $uibModal.open({
-                     templateUrl: 'templates/parseError.html',
-                     controller: 'ParseErrorCtrl',
-                     size: 'lg',
-                     resolve: {
-                        model: function () { return e.target.result; },
-                        error: function () { return response.data; }
-                     }});
-                } else {
-                   //Update the models list -- this should result in the view being updated?
-                   while (Models.getModels().length != 0) {
-                      Models.getModels().shift()
-                   }
-                   $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
-                     Models.addModels(data);
-                     $route.reload();
-                   });
+                //Update the models list -- this should result in the view being updated?
+                while (Models.getModels().length != 0) {
+                  Models.getModels().shift()
                 }
+                $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
+                  Models.addModels(data);
+                  $route.reload();
+                });
               })
+              .catch(function(err) {
+                $uibModal.open({
+                  templateUrl: 'templates/parseError.html',
+                  controller: 'ParseErrorCtrl',
+                  size: 'lg',
+                  resolve: {
+                    model: function () { return model; },
+                    error: function () { return err.data; }
+                }});
+              });
           };
 
           fr.readAsText(file);

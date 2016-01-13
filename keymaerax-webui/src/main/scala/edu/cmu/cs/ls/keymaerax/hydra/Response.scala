@@ -199,7 +199,7 @@ class ParseErrorResponse(msg: String, expect: String, found: String, detailedMsg
       "detailedMsg" -> JsString(detailedMsg)
     ),
     "errorThrown" ->  JsString(stacktrace),
-    "type" -> JsString("parseerror"),
+    "type" -> JsString("error"),
     "location" -> JsObject(
       "line" -> JsNumber(loc.line),
       "column" -> JsNumber(loc.column)
