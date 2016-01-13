@@ -303,7 +303,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
-          showMessage($uibModal, "No axiom/tactic applicable to that formula");
+          $rootScope.$emit("proof.message", err.data.textStatus);
         });
     }
 
@@ -316,7 +316,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
-          showMessage($uibModal, "No axiom/tactic applicable to that formula");
+          $rootScope.$emit("proof.message", err.data.textStatus);
         });
     }
 
@@ -329,7 +329,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
-          $rootScope.$emit('proof.message', 'No axiom/tactic applicable to that formula');
+          $rootScope.$emit('proof.message', err.data.textStatus);
         });
     }
 
@@ -343,7 +343,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
-          $rootScope.$emit('proof.message', 'No axiom/tactic applicable to that formula');
+          $rootScope.$emit('proof.message', err.data.textStatus);
         });
     }
 
