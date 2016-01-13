@@ -138,6 +138,7 @@ object UIIndex {
             case (And(_, True)) => "&true" :: Nil
             case (Imply(True, _)) => "true->" :: Nil
             case (Imply(_, True)) => "->true" :: Nil
+              //@todo add true|, false&, and similar as new DerivedAxioms
             case _ => Nil
           }
         if (!isTop) axioms

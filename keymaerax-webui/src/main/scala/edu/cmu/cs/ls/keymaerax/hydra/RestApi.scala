@@ -10,13 +10,22 @@ import akka.actor.Actor
 import spray.routing._
 import spray.http._
 import spray.json._
+import spray.util.LoggingContext
 
 class RestApiActor extends Actor with RestApi {
+  implicit def eh(implicit log: LoggingContext) = ExceptionHandler {
+    case e: Throwable => ctx =>
+      val errorJson: String = new ErrorResponse(e.getMessage, e).getJson.prettyPrint
+      log.warning("Request to {} could not be handled normally", e, ctx.request)
+      ctx.complete(StatusCodes.InternalServerError, errorJson)
+  }
+
   def actorRefFactory = context
 
   //Note: separating the actor and router allows testing of the router without
   //spinning up an actor.
   def receive = runRoute(myRoute)
+
 }
 
 /**
@@ -50,8 +59,7 @@ trait RestApi extends HttpService {
     val responses = r.getResultingResponses()
     responses match {
       case hd :: Nil => hd.getJson.prettyPrint
-      case _         =>
-        responses.foldLeft("[")( (prefix, response) => prefix + "," + response.getJson.prettyPrint) + "]"
+      case _         => JsArray(responses.map(_.getJson):_*).prettyPrint
     }
   }
 
@@ -97,7 +105,7 @@ trait RestApi extends HttpService {
   val modelList = pathPrefix("models" / "users" / Segment) {userId => { pathEnd { get {
     val request = new GetModelListRequest(database, userId)
     val responses = request.getResultingResponses()
-    if(responses.length != 1) throw new Exception("Should only have a single response.")
+    require(responses.length == 1, "Should only have a single response.")
     complete(responses.last.json.prettyPrint)
   }}}}
 
@@ -277,6 +285,15 @@ trait RestApi extends HttpService {
     get {
       val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None)
       complete(standardCompletion(request))
+    }}
+  }}
+
+  val doCustomTactic = path("proofs" / "user" / Segment / Segment / Segment / "doCustomTactic") { (userId, proofId, nodeId) => { pathEnd {
+    post {
+      entity(as[String]) { tactic => {
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tactic, None, consultAxiomInfo=false)
+        complete(standardCompletion(request))
+      }}
     }}
   }}
 
@@ -630,6 +647,7 @@ trait RestApi extends HttpService {
     doAt                  ::
     doInputAt             ::
     doTactic              ::
+    doCustomTactic        ::
     doSearchLeft          ::
     doSearchRight         ::
     taskStatus            ::

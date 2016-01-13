@@ -58,7 +58,7 @@ private[parser] trait Expected
 object Expected {
   /** Terminal input expected */
   private[parser] implicit class ExpectTerminal(tok: Terminal) extends Expected {
-    override def toString: String = tok.toString
+    override def toString: String = ParseException.tokenDescription(tok)
   }
 }
 /** Nonterminal or pseudo-nonterminal input expected */

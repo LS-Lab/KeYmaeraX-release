@@ -105,6 +105,7 @@ object PolynomialForm {
         case Neg(t1:Term) => normLoop(Minus(Number(0),t1))
         case Differential(t1) => normLoop(syntacticDerivative(t1))
         case Divide(t1, Number(x)) =>
+          //@todo broken comparison due to different types
           if (x == Number(0)) {
             throw new BadDivision
           }

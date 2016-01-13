@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core.{SeqPos, Formula}
   * @author Brandon Bohrer
   */
 object ReflectiveExpressionBuilder {
-  def build(info: DerivationInfo, args: List[Either[Formula, SeqPos]], generator: Option[Generator[Formula]]): BelleExpr = {
+  def build(info: DerivationInfo, args: List[Either[Formula, Position]], generator: Option[Generator[Formula]]): BelleExpr = {
     val posArgs = args.filter{case arg => arg.isRight}.map{case arg => arg.right.get}
     val withGenerator =
       if (info.needsGenerator) {
@@ -29,8 +29,8 @@ object ReflectiveExpressionBuilder {
       // If the tactic accepts arguments but wasn't given any, return the unapplied tactic under the assumption that
       // someone is going to plug in the arguments later
       case (expr:BelleExpr, Nil, _) => expr
-      case (expr:BelleExpr with PositionalTactic , arg::Nil, 1) =>
-        AppliedPositionTactic(expr, Fixed(arg))
+      case (expr:BelleExpr with PositionalTactic , arg::Nil, 1) => AppliedPositionTactic(expr, Fixed(arg))
+      case (expr:DependentPositionTactic, arg::Nil, 1) => new AppliedDependentPositionTactic(expr, Fixed(arg))
       case (expr:BuiltInTwoPositionTactic, arg1::arg2::Nil, 2) =>
         AppliedTwoPositionTactic(expr, arg1, arg2)
       case (expr, posArgs, num) =>
@@ -42,7 +42,7 @@ object ReflectiveExpressionBuilder {
     }
   }
 
-  def apply(name: String, arguments: List[Either[Formula, SeqPos]] = Nil, generator: Option[Generator[Formula]]) : BelleExpr =
+  def apply(name: String, arguments: List[Either[Formula, Position]] = Nil, generator: Option[Generator[Formula]]) : BelleExpr =
     try {
       build(DerivationInfo.ofCodeName(name), arguments, generator)
     }

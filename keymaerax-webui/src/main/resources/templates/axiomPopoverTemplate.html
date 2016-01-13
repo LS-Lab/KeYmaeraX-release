@@ -12,10 +12,16 @@
 
         <div class="well well-sm" ng-repeat="tactic in formulaAxiomsMap[formulaId] | filter:{derivation: {type: 'axiom'}}">
             <!-- TODO transmit key from server and underline, make changeable -->
-            <b><a ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</a></b>  {{tactic.derivation.formula}}
+            <div class="row">
+                <div class="col-md-2"><b><a ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</a></b></div>
+                <div class="col-md-10">{{tactic.derivation.formula}}</div>
+            </div>
         </div>
         <div class="well well-sm" ng-repeat="tactic in formulaAxiomsMap[formulaId] | filter:{derivation: {type: 'tactic'}}">
-            <b><a ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</a></b>  {{tactic.derivation.formula}}
+            <div class="row">
+                <div class="col-md-2"><b><a ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</a></b></div>
+                <div class="col-md-10">{{tactic.derivation.formula}}</div>
+            </div>
         </div>
         <uib-accordion close-others="false">
             <uib-accordion-group ng-repeat="tactic in formulaAxiomsMap[formulaId] | filter:{derivation: {type: 'sequentrule'}}" is-open="tactic.isOpen">

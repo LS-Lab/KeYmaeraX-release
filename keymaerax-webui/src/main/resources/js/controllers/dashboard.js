@@ -27,13 +27,10 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl.LicenseDialog'
   $scope.cancel = function() {
     $http.post("/licenseacceptance")
         .success(function(data) {
-            if(data.errorThrown) {
+            if (data.errorThrown) {
                 showCaughtErrorMessage($uibModal, data, "License Acceptance Failed")
             }
         }) //ok
-        .error(function() {
-            showErrorMessage($uibModal, "License Acceptance Failed")
-        });
     $modalInstance.dismiss('cancel');
   }
 });
@@ -56,9 +53,6 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', function ($s
                 size: 'lg'
               });
           }
-       })
-       .error(function() {
-          showErrorMessage($uibModal, "Failed to Query for License Acceptance.");
        });
 
   $http.get("/keymaeraXVersion")
@@ -75,10 +69,6 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', function ($s
                   $scope.versionInfoAvailable = false
               }
           }
-      })
-      .error(function() {
-          var message = "Unhandled error when attempting to get KeYmaera X version."
-          showErrorMessage($uibModal, message);
       });
 
   $scope.mathematicaIsConfigured = true;
@@ -87,10 +77,6 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', function ($s
           if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Could not retrieve Mathematica status")
           else
               $scope.mathematicaIsConfigured = data.configured;
-      })
-      .error(function() {
-          var message = "Unhandled error when attempting to get Mathematica status.";
-          showErrorMessage($uibModal, message);
       });
 
 
@@ -102,10 +88,7 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', function ($s
                $scope.all_models_count = data.all_models_count;
               $scope.proved_models_count = data.proved_models_count;
           }
-      })
-      .error(function() {
-          showErrorMessage($uibModal, "Failed to get dashInfo for this uer.")
-      })
+      });
 
 
   $scope.isLocal = false;
@@ -113,10 +96,7 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', function ($s
       .success(function(data) {
           if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Could not determine if the KeYmaera X server is running locally")
           $scope.isLocal = data.success;
-      })
-      .error(function() {
-          showErrorMessage($uibModal, "Error encountered when trying to determine if the KeYmaera X server is running locally.")
-      })
+      });
 
   $scope.shutdown = function() {
       var modalInstance = $uibModal.open({
@@ -126,10 +106,7 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', function ($s
         size: 'sm'
       });
 
-      $http.get("/shutdown")
-           .error(function() {
-              showErrorMessage($uibModal, "Failed to shutdown! Server may already be offline.");
-           })
+      $http.get("/shutdown");
   };
 
   $scope.$emit('routeLoaded', {theview: 'dashboard'});

@@ -35,8 +35,10 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
   /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of what. */
   //@todo Code Review: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
   private val semanticRenaming: Boolean = Rule.LAX_MODE
+  /** `true` to do transpositions (replace what by repl and repl by what) or `false` to clash upon occurrences of `repl`. */
+  private val TRANSPOSITION: Boolean = true
 
-  override def toString: String = "URename{" + what + "~>" + repl + "}"
+  override def toString: String = "URename{" + what.asString + "~>" + repl.asString + "}"
 
 
   /** apply this uniform renaming everywhere in an expression, resulting in an expression of the same kind. */
@@ -75,7 +77,7 @@ final case class URename(what: Variable, repl: Variable) extends (Expression => 
 
   /** Rename a variable (that occurs in the given context for error reporting purposes) */
   private def renameVar(x: Variable, context: Expression): Variable = if (x==what) repl
-  else if (x==repl) what   // throw new RenamingClashException("Replacement name " + repl + " already occurs originally", this.toString, x.toString, context.toString)
+  else if (x==repl) if (TRANSPOSITION) what else throw new RenamingClashException("Replacement name " + repl.asString + " already occurs originally", this.toString, x.asString, context.prettyString)
   else x
 
 

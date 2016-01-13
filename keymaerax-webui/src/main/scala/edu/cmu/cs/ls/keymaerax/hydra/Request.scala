@@ -169,51 +169,41 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
   }
 
   override def getResultingResponses(): List[Response] = {
-    try {
-      //check to make sure the indicated files exist and point to the correct files.
-      val linkNameFile = new java.io.File(linkName)
-      val jlinkLibFile = new java.io.File(jlinkLibFileName)
-      val jlinkLibDir : java.io.File = jlinkLibFile.getParentFile
-      val linkNameExists = isLinkNameCorrect(linkNameFile) && linkNameFile.exists()
-      val jlinkLibFileExists = isJLinkLibFileCorrect(jlinkLibFile, jlinkLibDir) && jlinkLibFile.exists()
+    //check to make sure the indicated files exist and point to the correct files.
+    val linkNameFile = new java.io.File(linkName)
+    val jlinkLibFile = new java.io.File(jlinkLibFileName)
+    val jlinkLibDir : java.io.File = jlinkLibFile.getParentFile
+    val linkNameExists = isLinkNameCorrect(linkNameFile) && linkNameFile.exists()
+    val jlinkLibFileExists = isJLinkLibFileCorrect(jlinkLibFile, jlinkLibDir) && jlinkLibFile.exists()
 
-      if(!linkNameExists || !jlinkLibFileExists) {
-        // look for the largest prefix that does exist
-        var linkNamePrefix = linkNameFile
-        while (!linkNamePrefix.exists && linkNamePrefix.getParent != null) {
-          linkNamePrefix = new java.io.File(linkNamePrefix.getParent)
-        }
-
-        new ConfigureMathematicaResponse(
-          if (linkNamePrefix.exists()) linkNamePrefix.toString else "",
-          if (jlinkLibDir.exists()) jlinkLibDir.toString else "", false) :: Nil
+    if(!linkNameExists || !jlinkLibFileExists) {
+      // look for the largest prefix that does exist
+      var linkNamePrefix = linkNameFile
+      while (!linkNamePrefix.exists && linkNamePrefix.getParent != null) {
+        linkNamePrefix = new java.io.File(linkNamePrefix.getParent)
       }
-      else {
-        val originalConfig = db.getConfiguration("mathematica")
 
-        val configMap = scala.collection.immutable.Map("linkName" -> linkName, "jlinkLibDir" -> jlinkLibDir.getAbsolutePath)
-        val newConfig = new ConfigurationPOJO("mathematica", configMap)
+      new ConfigureMathematicaResponse(
+        if (linkNamePrefix.exists()) linkNamePrefix.toString else "",
+        if (jlinkLibDir.exists()) jlinkLibDir.toString else "", false) :: Nil
+    } else {
+      val originalConfig = db.getConfiguration("mathematica")
 
-        db.updateConfiguration(newConfig)
+      val configMap = scala.collection.immutable.Map("linkName" -> linkName, "jlinkLibDir" -> jlinkLibDir.getAbsolutePath)
+      val newConfig = new ConfigurationPOJO("mathematica", configMap)
 
-        try {
-          if(!(new File(linkName).exists() || !jlinkLibFile.exists())) throw new FileNotFoundException()
-          ComponentConfig.keymaeraInitializer.initMathematicaFromDB() //um.
-          new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
-        }
-        catch {
-          case e : FileNotFoundException =>
-            db.updateConfiguration(originalConfig)
-            e.printStackTrace()
-            new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, false) :: Nil
-          case e : Exception => new ErrorResponse(e.getMessage, e) :: Nil
-        }
+      db.updateConfiguration(newConfig)
 
-
+      try {
+        if(!(new File(linkName).exists() || !jlinkLibFile.exists())) throw new FileNotFoundException()
+        ComponentConfig.keymaeraInitializer.initMathematicaFromDB() //um.
+        new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
+      } catch {
+        case e : FileNotFoundException =>
+          db.updateConfiguration(originalConfig)
+          e.printStackTrace()
+          new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, false) :: Nil
       }
-    }
-    catch {
-      case e : Exception => new ErrorResponse(e.getMessage, e) :: Nil
     }
   }
 }
@@ -303,8 +293,7 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
           new BooleanResponse(createdId.isDefined) :: Nil
       }
     } catch {
-      case e: ParseException => new ParseErrorResponse(e.msg, e.loc, e) :: Nil
-      case e: Exception => new ErrorResponse(e.getMessage, e) :: Nil
+      case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
     }
   }
 }
@@ -733,14 +722,14 @@ case class BelleTermInput(value: String, spec:Option[ArgInfo])
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
 * to a Tactic */
 class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,
-                         pos: Option[PositionLocator], inputs:List[BelleTermInput] = Nil) extends Request {
+                         pos: Option[PositionLocator], inputs:List[BelleTermInput] = Nil, consultAxiomInfo: Boolean = true) extends Request {
   /** Turns belleTerm into a specific tactic expression, including input arguments */
   private def fullExpr(node: TreeNode) = {
     val paramStrings = inputs.map{
       case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
       case BelleTermInput(value, None) => value
     }
-    val specificTerm = getSpecificName(belleTerm, node.sequent, pos, _.codeName)
+    val specificTerm = if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, _.codeName) else belleTerm
     if(inputs.isEmpty) specificTerm
     else specificTerm + "(" + paramStrings.mkString(",") + ")"
   }
@@ -779,7 +768,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         case Some(n) => n
       }
 
-    BTacticParser(fullExpr(node), false, Some(generator)) match {
+    BTacticParser(fullExpr(node), loggingOn=false, Some(generator)) match {
       case None => throw new ProverException("Invalid Bellerophon expression:  " + belleTerm)
       case Some(expr) =>
         val appliedExpr:BelleExpr =
@@ -787,15 +776,14 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             case (None, _:AtPosition[BelleExpr]) =>
               throw new ProverException("Can't run a positional tactic without specifying a position")
             case (None, _) => expr
-            case (Some(position), expr:BelleExpr) =>
-              if(expr.isInstanceOf[AtPosition[BelleExpr]]) {
-                expr.asInstanceOf[AtPosition[BelleExpr]](position)
-              }
-              else expr
-            case (pos, expr) => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
+            case (Some(position), expr: AtPosition[BelleExpr]) => expr(position)
+            case (Some(position), expr: BelleExpr) => expr
+            case _ => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
         }
         val branch = tree.goalIndex(nodeId)
-        val ruleName = getSpecificName(belleTerm, node.sequent, pos, _.display.name)
+        val ruleName =
+          if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, _.display.name)
+          else "custom"
         val localProvable = Provable.startProof(node.sequent)
         val globalProvable =
           trace.steps match {

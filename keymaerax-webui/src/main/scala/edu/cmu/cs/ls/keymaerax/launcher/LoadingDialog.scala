@@ -44,7 +44,7 @@ class CLILoadingDialog() extends LoadingDialog {
 }
 
 class GraphicalLoadingDialog() extends LoadingDialog {
-  println("Staring GUI Loading Dialog.")
+  println("Starting GUI Loading Dialog.")
   override val msg = "KeYmaera X User Interface is Loading..."
 
   private val progressBar = new JProgressBar()

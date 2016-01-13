@@ -4,9 +4,6 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
       .success(function(data) {
           if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Encountered an error when attempting to get a suggested Mathematica configuration.")
           else $scope.mathematicaConfigSuggestion = data
-      })
-      .error(function() {
-          showErrorMessage($uibModal, "Encountered an error when attempting to get a suggested Mathematica configuration.")
       });
 
     $http.get("/config/mathematica")
@@ -25,9 +22,6 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
 //                })
 //          }
           }
-      })
-      .error(function() {
-          showErrorMessage($uibModal, "Failed to retrieve the server's current Mathematica configuration.")
       });
 
     $scope.configureMathematica = function() {

@@ -64,7 +64,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         } else {
           // parent has exactly 1 child, append parent to child's section
           if (sectionIdx === -1) {
-            showErrorMessage($uibModal, 'Expected a unique path section ending in a child of ' + proofTreeNode.id + ', but agenda item ' + agendaItem.id +
+            showClientErrorMessage($uibModal, 'Expected a unique path section ending in a child of ' + proofTreeNode.id + ', but agenda item ' + agendaItem.id +
               ' has ' + agendaItem.sections + ' as path sections');
           } else if (proofTreeNode.parent !== null) {
             section.path.push(proofTreeNode.id);
@@ -76,7 +76,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
               parentCandidate !== undefined && parentCandidate.children != null && parentCandidate.children.indexOf(proofTreeNode.id) >= 0;
           } else {
             if (sectionIdx+1 < agendaItem.deduction.sections.length) {
-              showErrorMessage($uibModal, 'Received proof tree root, which can only be added to last section, but ' + sectionIdx +
+              showClientErrorMessage($uibModal, 'Received proof tree root, which can only be added to last section, but ' + sectionIdx +
                 ' is not last section in ' + agendaItem.deduction.sections);
             } else {
               agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: true});

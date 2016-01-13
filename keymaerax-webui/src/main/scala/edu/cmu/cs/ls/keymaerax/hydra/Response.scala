@@ -179,20 +179,27 @@ class CreatedIdResponse(id : String) extends Response {
 }
 
 class ErrorResponse(msg: String, exn: Throwable = null) extends Response {
-  lazy val writer = new PrintWriter(new StringWriter)
+  lazy val writer = new StringWriter
+  lazy val stacktrace = if (exn != null) { exn.printStackTrace(new PrintWriter(writer)); writer.toString } else ""
   val json = JsObject(
-        "textStatus" -> JsString(msg),
-        "errorThrown" -> (if (exn != null) JsString(exn.printStackTrace(writer).toString) else JsString("")),
+        "textStatus" -> (if (msg != null) JsString(msg) else JsString("")),
+        "errorThrown" -> JsString(stacktrace),
         "type" -> JsString("error")
       )
 }
 
-class ParseErrorResponse(msg: String, loc: Location, exn: Throwable = null) extends Response {
-  lazy val writer = new PrintWriter(new StringWriter)
+class ParseErrorResponse(msg: String, expect: String, found: String, detailedMsg: String, loc: Location, exn: Throwable = null) extends Response {
+  lazy val writer = new StringWriter
+  lazy val stacktrace = if (exn != null) { exn.printStackTrace(new PrintWriter(writer)); writer.toString } else ""
   val json = JsObject(
     "textStatus" -> JsString(msg),
-    "errorThrown" -> (if (exn != null) JsString(exn.printStackTrace(writer).toString) else JsString("")),
-    "type" -> JsString("error"),
+    "details" -> JsObject(
+      "expect" -> JsString(expect),
+      "found" -> JsString(found),
+      "detailedMsg" -> JsString(detailedMsg)
+    ),
+    "errorThrown" ->  JsString(stacktrace),
+    "type" -> JsString("parseerror"),
     "location" -> JsObject(
       "line" -> JsNumber(loc.line),
       "column" -> JsNumber(loc.column)
@@ -261,7 +268,8 @@ class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) exte
   val json = JsObject(
     "proofId" -> JsString(proofId),
     "nodeId" -> JsString(nodeId),
-    "taskId" -> JsString(taskId)
+    "taskId" -> JsString(taskId),
+    "type" -> JsString("runbelleterm")
   )
 }
 
@@ -270,7 +278,8 @@ class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status
     "proofId" -> JsString(proofId),
     "parentId" -> JsString(nodeId),
     "taskId" -> JsString(taskId),
-    "status" -> JsString(status)
+    "status" -> JsString(status),
+    "type" -> JsString("taskstatus")
   )
 }
 
@@ -281,7 +290,8 @@ class TaskResultResponse(parent: TreeNode, children: List[TreeNode], progress: B
       "children" -> Helpers.childrenJson(children)
     ),
     "newNodes" -> JsArray(children.map(Helpers.singleNodeJson):_*),
-    "progress" -> JsBoolean(progress)
+    "progress" -> JsBoolean(progress),
+    "type" -> JsString("taskresult")
   )
 }
 
@@ -503,10 +513,10 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
     }
   }
 
-  def inputsJson(info:TacticInfo): Option[JsValue] = {
+  def inputsJson(info:TacticInfo): JsValue = {
     info.inputs match {
-      case Nil => None
-      case inputs => Some(new JsArray(inputs.map{case input => inputJson(input)}))
+      case Nil => JsArray()
+      case inputs => JsArray(inputs.map{case input => inputJson(input)}:_*)
     }
   }
 
@@ -523,11 +533,10 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
   }
 
   def tacticJson(info:TacticInfo) = {
-    val theType = JsString("tactic")
-    inputsJson(info) match {
-      case None => JsObject ("type" -> theType)
-      case Some(inputs) => JsObject("type" -> theType, "input" -> inputs)
-    }
+    JsObject(
+      "type" -> JsString("tactic"),
+      "input" -> inputsJson(info)
+    )
   }
 
   def sequentJson(sequent:SequentDisplay):JsValue = {
@@ -541,18 +550,12 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
 
   def ruleJson(info:TacticInfo, conclusion:SequentDisplay, premises:List[SequentDisplay]) = {
     val conclusionJson = sequentJson(conclusion)
-    val premisesJson = new JsArray(premises.map{case sequent => sequentJson(sequent)})
-    inputsJson(info) match {
-      case None => JsObject(
-        "type" -> JsString("sequentrule"),
-        "conclusion" -> conclusionJson,
-        "premise" -> premisesJson)
-      case Some(inputs) => JsObject(
-        "type" -> JsString("sequentrule"),
-        "conclusion" -> conclusionJson,
-        "premise" -> premisesJson,
-        "input" -> inputs)
-    }
+    val premisesJson = JsArray(premises.map{case sequent => sequentJson(sequent)}:_*)
+    JsObject(
+      "type" -> JsString("sequentrule"),
+      "conclusion" -> conclusionJson,
+      "premise" -> premisesJson,
+      "input" -> inputsJson(info))
   }
 
   def derivationJson(derivationInfo: DerivationInfo) = {
