@@ -1125,14 +1125,15 @@ object DerivedAxioms {
   )
 
   lazy val domainCommuteT = derivedAxiomT(domainCommute)
+
   /**
-   * {{{Axiom "[] post weaken".
-   *   [a;]p(??)  ->  [a;](q(??)->p(??))
-   * End.
-   * }}}
-   * @Derived from M (or also from K)
-   */
-  lazy val postconditionWeakenF = "([a;]p(??))  ->  [a;](q(??)->p(??))".asFormula
+    * {{{Axiom "[] post weaken".
+    *   [a;]p(??)  ->  [a;](q(??)->p(??))
+    * End.
+    * }}}
+    * @Derived from M (or also from K)
+    */
+  lazy val postconditionWeakenF = "([a_;]p_(??))  ->  [a_;](q_(??)->p_(??))".asFormula
   lazy val postconditionWeaken = derivedAxiom("[] post weaken",
     Sequent(Nil, IndexedSeq(), IndexedSeq(postconditionWeakenF)),
     implyR(1) & monb & prop
@@ -1141,181 +1142,181 @@ object DerivedAxioms {
 
 
   /**
-   * {{{Axiom "& commute".
-   *    (p() & q()) <-> (q() & p())
-   * End.
-   * }}}
-   * @Derived
-   */
-  lazy val andCommuteF = "(p() & q()) <-> (q() & p())".asFormula
+    * {{{Axiom "& commute".
+    *    (p() & q()) <-> (q() & p())
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val andCommuteF = "(p_() & q_()) <-> (q_() & p_())".asFormula
   lazy val andCommute = derivedAxiom("& commute", Sequent(Nil, IndexedSeq(), IndexedSeq(andCommuteF)), prop)
   lazy val andCommuteT = derivedAxiomT(andCommute)
 
   /**
-   * {{{Axiom "& associative".
-   *    ((p() & q()) & r()) <-> (p() & (q() & r()))
-   * End.
-   * }}}
-   * @Derived
-   */
-  lazy val andAssocF = "((p() & q()) & r()) <-> (p() & (q() & r()))".asFormula
+    * {{{Axiom "& associative".
+    *    ((p() & q()) & r()) <-> (p() & (q() & r()))
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val andAssocF = "((p_() & q_()) & r_()) <-> (p_() & (q_() & r_()))".asFormula
   lazy val andAssoc = derivedAxiom("& associative", Sequent(Nil, IndexedSeq(), IndexedSeq(andAssocF)), prop)
   lazy val andAssocT = derivedAxiomT(andAssoc)
 
   /**
-   * {{{Axiom "& reflexive".
-   *    p() & p() <-> p()
-   * End.
-   * }}}
-   */
-  lazy val andReflexiveF = "p() & p() <-> p()".asFormula
+    * {{{Axiom "& reflexive".
+    *    p() & p() <-> p()
+    * End.
+    * }}}
+    */
+  lazy val andReflexiveF = "p_() & p_() <-> p_()".asFormula
   lazy val andReflexive = derivedAxiom("& reflexive", Sequent(Nil, IndexedSeq(), IndexedSeq(andReflexiveF)), prop)
   lazy val andReflexiveT = derivedAxiomT(andReflexive)
 
   /**
-   * {{{Axiom "-> self".
-   *    (p() -> p()) <-> true
-   * End.
-   * }}}
-   */
-  lazy val implySelfF = "(p() -> p()) <-> true".asFormula
+    * {{{Axiom "-> self".
+    *    (p() -> p()) <-> true
+    * End.
+    * }}}
+    */
+  lazy val implySelfF = "(p_() -> p_()) <-> true".asFormula
   lazy val implySelf = derivedAxiom("-> self", Sequent(Nil, IndexedSeq(), IndexedSeq(implySelfF)), prop)
   lazy val implySelfT = derivedAxiomT(implySelf)
 
   /**
-   * {{{Axiom "!& deMorgan".
-   *    (!(p() & q())) <-> ((!p()) | (!q()))
-   * End.
-   * }}}
-   * @Derived
-   */
-  lazy val notAndF = "(!(p() & q())) <-> ((!p()) | (!q()))".asFormula
+    * {{{Axiom "!& deMorgan".
+    *    (!(p() & q())) <-> ((!p()) | (!q()))
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val notAndF = "(!(p_() & q_())) <-> ((!p_()) | (!q_()))".asFormula
   lazy val notAnd = derivedAxiom("!& deMorgan", Sequent(Nil, IndexedSeq(), IndexedSeq(notAndF)), prop)
   lazy val notAndT = derivedAxiomT(notAnd)
 
   /**
-   * {{{Axiom "!| deMorgan".
-   *    (!(p() | q())) <-> ((!p()) & (!q()))
-   * End.
-   * }}}
-   * @Derived
-   */
-  lazy val notOrF = "(!(p() | q())) <-> ((!p()) & (!q()))".asFormula
+    * {{{Axiom "!| deMorgan".
+    *    (!(p() | q())) <-> ((!p()) & (!q()))
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val notOrF = "(!(p_() | q_())) <-> ((!p_()) & (!q_()))".asFormula
   lazy val notOr = derivedAxiom("!| deMorgan", Sequent(Nil, IndexedSeq(), IndexedSeq(notOrF)), prop)
   lazy val notOrT = derivedAxiomT(notOr)
 
   /**
-   * {{{Axiom "!-> deMorgan".
-   *    (!(p() -> q())) <-> ((p()) & (!q()))
-   * End.
-   * }}}
-   * @Derived
-   */
-  lazy val notImplyF = "(!(p() -> q())) <-> ((p()) & (!q()))".asFormula
+    * {{{Axiom "!-> deMorgan".
+    *    (!(p() -> q())) <-> ((p()) & (!q()))
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val notImplyF = "(!(p_() -> q_())) <-> ((p_()) & (!q_()))".asFormula
   lazy val notImply = derivedAxiom("!-> deMorgan", Sequent(Nil, IndexedSeq(), IndexedSeq(notImplyF)), prop)
   lazy val notImplyT = derivedAxiomT(notImply)
 
   /**
-   * {{{Axiom "!<-> deMorgan".
-   *    (!(p() <-> q())) <-> (((p()) & (!q())) | ((!p()) & (q())))
-   * End.
-   * }}}
-   * @Derived
-   */
-  lazy val notEquivF = "(!(p() <-> q())) <-> (((p()) & (!q())) | ((!p()) & (q())))".asFormula
+    * {{{Axiom "!<-> deMorgan".
+    *    (!(p() <-> q())) <-> (((p()) & (!q())) | ((!p()) & (q())))
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val notEquivF = "(!(p_() <-> q_())) <-> (((p_()) & (!q_())) | ((!p_()) & (q_())))".asFormula
   lazy val notEquiv = derivedAxiom("!<-> deMorgan", Sequent(Nil, IndexedSeq(), IndexedSeq(notEquivF)), prop)
   lazy val notEquivT = derivedAxiomT(notEquiv)
 
   /**
-   * {{{Axiom "-> expand".
-   *    (p() -> q()) <-> ((!p()) | q())
-   * End.
-   * }}}
-   * @Derived
-   */
-  lazy val implyExpandF = "(p() -> q()) <-> ((!p()) | q())".asFormula
+    * {{{Axiom "-> expand".
+    *    (p() -> q()) <-> ((!p()) | q())
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val implyExpandF = "(p_() -> q_()) <-> ((!p_()) | q_())".asFormula
   lazy val implyExpand = derivedAxiom("-> expand", Sequent(Nil, IndexedSeq(), IndexedSeq(implyExpandF)), prop)
   lazy val implyExpandT = derivedAxiomT(implyExpand)
 
   /**
-   * {{{Axiom "PC1".
-   *    p()&q() -> p()
-   * End.
-   * }}}
-   * @Derived
-   * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC1
-   */
-  lazy val PC1F = "p()&q() -> p()".asFormula
+    * {{{Axiom "PC1".
+    *    p()&q() -> p()
+    * End.
+    * }}}
+    * @Derived
+    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC1
+    */
+  lazy val PC1F = "p_()&q() -> p_()".asFormula
   lazy val PC1 = derivedAxiom("PC1", Sequent(Nil, IndexedSeq(), IndexedSeq(PC1F)), prop)
   lazy val PC1T = derivedAxiomT(PC1)
 
   /**
-   * {{{Axiom "PC2".
-   *    p()&q() -> q()
-   * End.
-   * }}}
-   * @Derived
-   * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC2
-   */
-  lazy val PC2F = "p()&q() -> q()".asFormula
+    * {{{Axiom "PC2".
+    *    p()&q() -> q()
+    * End.
+    * }}}
+    * @Derived
+    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC2
+    */
+  lazy val PC2F = "p_()&q_() -> q_()".asFormula
   lazy val PC2 = derivedAxiom("PC2", Sequent(Nil, IndexedSeq(), IndexedSeq(PC2F)), prop)
   lazy val PC2T = derivedAxiomT(PC2)
 
   /**
-   * {{{Axiom "PC3".
-   *    p()&q() -> ((p()->r())->(p()->q()&r())) <-> true
-   * End.
-   * }}}
-   * @Derived
-   * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC3
-   */
-  lazy val PC3F = "p()&q() -> ((p()->r())->(p()->q()&r())) <-> true".asFormula
+    * {{{Axiom "PC3".
+    *    p()&q() -> ((p()->r())->(p()->q()&r())) <-> true
+    * End.
+    * }}}
+    * @Derived
+    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC3
+    */
+  lazy val PC3F = "p_()&q_() -> ((p_()->r_())->(p_()->q_()&r_())) <-> true".asFormula
   lazy val PC3 = derivedAxiom("PC3", Sequent(Nil, IndexedSeq(), IndexedSeq(PC3F)), prop)
   lazy val PC3T = derivedAxiomT(PC3)
 
   /**
-   * {{{Axiom "PC9".
-   *    p() -> p() | q()
-   * End.
-   * }}}
-   * @Derived
-   * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC9
-   */
-  lazy val PC9F = "p() -> p() | q()".asFormula
+    * {{{Axiom "PC9".
+    *    p() -> p() | q()
+    * End.
+    * }}}
+    * @Derived
+    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC9
+    */
+  lazy val PC9F = "p_() -> p_() | q_()".asFormula
   lazy val PC9 = derivedAxiom("PC9", Sequent(Nil, IndexedSeq(), IndexedSeq(PC9F)), prop)
   lazy val PC9T = derivedAxiomT(PC9)
 
   /**
-   * {{{Axiom "PC10".
-   *    q() -> p() | q()
-   * End.
-   * }}}
-   * @Derived
-   * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC10
-   */
-  lazy val PC10F = "q() -> p() | q()".asFormula
+    * {{{Axiom "PC10".
+    *    q() -> p() | q()
+    * End.
+    * }}}
+    * @Derived
+    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC10
+    */
+  lazy val PC10F = "q_() -> p_() | q_()".asFormula
   lazy val PC10 = derivedAxiom("PC10", Sequent(Nil, IndexedSeq(), IndexedSeq(PC10F)), prop)
   lazy val PC10T = derivedAxiomT(PC10)
 
   /**
-   * {{{Axiom "-> tautology".
-   *    (p() -> (q() -> p()&q())) <-> true
-   * End.
-   * }}}
-   * @Derived
-   */
-  lazy val implyTautologyF = "(p() -> (q() -> p()&q())) <-> true".asFormula
+    * {{{Axiom "-> tautology".
+    *    (p() -> (q() -> p()&q())) <-> true
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val implyTautologyF = "(p_() -> (q_() -> p_()&q_())) <-> true".asFormula
   lazy val implyTautology = derivedAxiom("-> tautology", Sequent(Nil, IndexedSeq(), IndexedSeq(implyTautologyF)), prop)
   lazy val implyTautologyT = derivedAxiomT(implyTautology)
 
   /**
-   * {{{Axiom "->' derive imply".
-   *    (p(??) -> q(??))' <-> (!p(??) | q(??))'
-   * End.
-   * }}}
-   * @Derived by CE
-   */
-  lazy val DimplyF = "(p(??) -> q(??))' <-> (!p(??) | q(??))'".asFormula
+    * {{{Axiom "->' derive imply".
+    *    (p(??) -> q(??))' <-> (!p(??) | q(??))'
+    * End.
+    * }}}
+    * @Derived by CE
+    */
+  lazy val DimplyF = "(p_(??) -> q_(??))' <-> (!p_(??) | q_(??))'".asFormula
   lazy val Dimply = derivedAxiom("->' derive imply",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DimplyF)),
     useAt(implyExpand)(1, 0::0::Nil) &
@@ -1324,13 +1325,13 @@ object DerivedAxioms {
   lazy val DimplyT = derivedAxiomT(Dimply)
 
   /**
-   * {{{Axiom "\forall->\exists".
-   *    (\forall x p(x)) -> (\exists x p(x))
-   * End.
-   * }}}
-   * @Derived
-   */
-  lazy val forallThenExistsF = "(\\forall x p(x)) -> (\\exists x p(x))".asFormula
+    * {{{Axiom "\forall->\exists".
+    *    (\forall x p(x)) -> (\exists x p(x))
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val forallThenExistsF = "(\\forall x_ p_(x_)) -> (\\exists x_ p_(x_))".asFormula
   lazy val forallThenExistsAxiom = derivedAxiom("\\forall->\\exists",
     Sequent(Nil, IndexedSeq(), IndexedSeq(forallThenExistsF)),
     implyR(1) &
@@ -1341,24 +1342,24 @@ object DerivedAxioms {
   lazy val forallThenExistsT = derivedAxiomT(forallThenExistsAxiom)
 
   /**
-   * {{{Axiom "->true".
-   *    (p()->true) <-> true
-   * End.
-   * }}}
-   * @Derived
-   */
-  lazy val impliesTrueF = "(p()->true) <-> true".asFormula
+    * {{{Axiom "->true".
+    *    (p()->true) <-> true
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val impliesTrueF = "(p_()->true) <-> true".asFormula
   lazy val impliesTrue = derivedAxiom("->true", Sequent(Nil, IndexedSeq(), IndexedSeq(impliesTrueF)), prop)
   lazy val impliesTrueT = derivedAxiomT(impliesTrue)
 
   /**
-   * {{{Axiom "true->".
-   *    (true->p()) <-> p()
-   * End.
-   * }}}
-   * @Derived
-   */
-  lazy val trueImpliesF = "(true->p()) <-> p()".asFormula
+    * {{{Axiom "true->".
+    *    (true->p()) <-> p()
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val trueImpliesF = "(true->p_()) <-> p_()".asFormula
   lazy val trueImplies = derivedAxiom("true->", Sequent(Nil, IndexedSeq(), IndexedSeq(trueImpliesF)), prop)
   lazy val trueImpliesT = derivedAxiomT(trueImplies)
 
@@ -1369,7 +1370,7 @@ object DerivedAxioms {
    * }}}
    * @Derived
    */
-  lazy val andTrueF = "(p()&true) <-> p()".asFormula
+  lazy val andTrueF = "(p_()&true) <-> p_()".asFormula
   lazy val andTrue = derivedAxiom("&true", Sequent(Nil, IndexedSeq(), IndexedSeq(andTrueF)), prop)
   lazy val andTrueT = derivedAxiomT(andTrue)
 
@@ -1380,7 +1381,7 @@ object DerivedAxioms {
    * }}}
    * @Derived
    */
-  lazy val trueAndF = "(true&p()) <-> p()".asFormula
+  lazy val trueAndF = "(true&p_()) <-> p_()".asFormula
   lazy val trueAnd = derivedAxiom("true&", Sequent(Nil, IndexedSeq(), IndexedSeq(trueAndF)), prop)
   lazy val trueAndT = derivedAxiomT(trueAnd)
 
