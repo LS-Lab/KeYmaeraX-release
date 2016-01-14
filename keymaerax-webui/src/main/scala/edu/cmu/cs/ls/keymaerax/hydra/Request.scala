@@ -1121,7 +1121,6 @@ class IsLicenseAcceptedRequest(db : DBAbstraction) extends Request {
 
 class AcceptLicenseRequest(db : DBAbstraction) extends Request {
   def getResultingResponses() = {
-    db.createConfiguration("license")
     val newConfiguration = new ConfigurationPOJO("license", Map("accepted" -> "true"))
     db.updateConfiguration(newConfiguration)
     new BooleanResponse(true) :: Nil

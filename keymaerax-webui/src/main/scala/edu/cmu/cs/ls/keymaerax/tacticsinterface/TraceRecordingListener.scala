@@ -62,7 +62,7 @@ class TraceRecordingListener(db: DBAbstraction,
 
     def getExecutableId:Int = {
       if (executable != null && executableId.isEmpty)
-        executableId = Some(db.addBelleExpr(executable, Nil))
+        executableId = Some(db.addBelleExpr(executable))
       executableId.get
     }
 

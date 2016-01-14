@@ -182,8 +182,6 @@ trait DBAbstraction {
 
   def getConfiguration(configName: String): ConfigurationPOJO
 
-  def createConfiguration(configName: String): Boolean
-
   def updateConfiguration(config: ConfigurationPOJO)
 
   // Users
@@ -284,12 +282,8 @@ trait DBAbstraction {
   def updateResultProvables(executionStepId: Int, provableId: Option[Int], localProvableId: Option[Int]): Unit
 
   /////////////////////
-
-  /** Adds a new scala tactic and returns the resulting id */
-  def addScalaTactic(scalaTactic: ScalaTacticPOJO): Int
-
   /** Adds a bellerophon expression as an executable and returns the new executableId */
-  def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): Int
+  def addBelleExpr(expr: BelleExpr): Int
 
   /** Adds a built-in tactic application using a set of parameters */
   def addAppliedScalaTactic(scalaTacticId: Int, params: List[ParameterPOJO]): Int
