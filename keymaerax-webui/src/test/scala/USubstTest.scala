@@ -161,7 +161,7 @@ class USubstTests extends FlatSpec with Matchers {
         Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
         Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
     }
-    e.getClass should be (SubstitutionClashException.getClass, InapplicableRuleException.getClass)
+    List(SubstitutionClashException.getClass, InapplicableRuleException.getClass) should contain (e.getClass)
   }
   
   it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {

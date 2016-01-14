@@ -470,7 +470,7 @@ object DerivedAxioms {
    * }}}
    */
   // Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x))))
-  lazy val allDistributeF = "(\\forall x (p(x)->q(x))) -> ((\\forall x p(x))->(\\forall x q(x)))".asFormula
+  lazy val allDistributeF = "(\\forall x_ (p(x_)->q(x_))) -> ((\\forall x_ p(x_))->(\\forall x_ q(x_)))".asFormula
   lazy val allDistributeAxiom = derivedAxiom("all distribute",
     Sequent(Nil, IndexedSeq(), IndexedSeq(allDistributeF)),
     implyR(1) & implyR(1) & allR(1) & allL(-2) & allL(-1) & prop)
@@ -1002,12 +1002,12 @@ object DerivedAxioms {
 
   /**
    * {{{Axiom "exists generalize".
-   *    p(t()) -> (\exists x p(x))
+   *    p(f()) -> (\exists x p(x))
    * End.
    * }}}
    * @Derived
    */
-  lazy val existsGeneralizeF = "p(t()) -> (\\exists x p(x))".asFormula
+  lazy val existsGeneralizeF = "p(f()) -> (\\exists x p(x))".asFormula
   lazy val existsGeneralize = derivedAxiom("exists generalize",
     Sequent(Nil, IndexedSeq(), IndexedSeq(existsGeneralizeF)),
     useAt(existsDualAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
@@ -1486,7 +1486,7 @@ object DerivedAxioms {
    * }}}
    * @Derived
    */
-  lazy val DSnodomainF = "[{x'=c()}]p(x) <-> \\forall t (t>=0 -> [x:=x+(c()*t);]p(x))".asFormula
+  lazy val DSnodomainF = "[{x_'=c()}]p(x_) <-> \\forall t_ (t_>=0 -> [x_:=x_+(c()*t_);]p(x_))".asFormula
   lazy val DSnodomain = derivedAxiom("DS differential equation solution",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DSnodomainF)),
     useAt("DS& differential equation solution")(1, 0::Nil) &
@@ -1523,7 +1523,7 @@ object DerivedAxioms {
    * End.
    * }}}
    */
-  lazy val DSddomainF = "<{x'=c()&q(x)}>p(x) <-> \\exists t (t>=0 & ((\\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))".asFormula
+  lazy val DSddomainF = "<{x_'=c()&q(x_)}>p(x_) <-> \\exists t_ (t_>=0 & ((\\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) & <x_:=x_+(c()*t_);>p(x_)))".asFormula
   lazy val DSddomain = derivedAxiom("Dsol& differential equation solution",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DSddomainF)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
@@ -1562,7 +1562,7 @@ object DerivedAxioms {
    * }}}
    * Pre Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work.
    */
-  lazy val DGpreghostF = "[{c&H(??)}]p(??) <-> \\exists y [{y'=(t()*y)+s(),c&H(??)}]p(??)".asFormula
+  lazy val DGpreghostF = "[{c&H(??)}]p(??) <-> \\exists y_ [{y_'=(t()*y_)+s(),c&H(??)}]p(??)".asFormula
   lazy val DGpreghost = derivedAxiom("DG differential pre-ghost",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DGpreghostF)),
     useAt("DG differential ghost")(1, 0::Nil) &
