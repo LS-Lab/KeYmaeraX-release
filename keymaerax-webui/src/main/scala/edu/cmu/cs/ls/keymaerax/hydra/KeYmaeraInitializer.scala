@@ -31,8 +31,6 @@ class KeYmaeraInitializer(env : {val db: DBAbstraction}) {
 
   def initialize() {
     Tactics.KeYmaeraScheduler.init(Map())
-    // TODO move to DB initialization
-    env.db.createConfiguration("mathematica")
     // TODO replace with dependency injection
     initMathematicaFromDB()
 

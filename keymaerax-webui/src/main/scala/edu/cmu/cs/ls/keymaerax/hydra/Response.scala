@@ -35,19 +35,6 @@ import java.io.{PrintWriter, StringWriter, File}
  * See BooleanResponse for the simplest example.
  */
 sealed trait Response {
-//  private def jsonFile() : Option[File] = schema match {
-//      case Some(schemaFile) => {
-//        val resource = this.getClass().getResource("resources/js/schema/" + schemaFile)
-//        if(resource != null && resource.getFile() != null) {
-//          Some(new File(resource.getFile()))
-//        }
-//        else {
-//          if(resource == null) throw new Exception("Could not find schema file " + schemaFile)
-//          else throw new Exception("Found sources but could not find file for " + schemaFile)
-//        }
-//      }
-//    case None => None
-//  }
 
 
   protected val json: JsValue
@@ -57,22 +44,8 @@ sealed trait Response {
   val schema: Option[String] = None
 
   def getJson = {
-//    validate()
     json
   }
-
-//  def validate() = {
-//    jsonFile() match {
-//      case None => true //OK.
-//      case Some(file) =>
-//        val schema = JsonSchemaFactory.byDefault().getJsonSchema(
-//          JsonLoader.fromFile(file)
-//        )
-//        val report = schema.validate(JsonLoader.fromString(json.prettyPrint))
-//        if (report.isSuccess) true
-//        else throw report.iterator().next().asException()
-//    }
-//  }
 }
 
 class BooleanResponse(flag : Boolean) extends Response {
@@ -249,21 +222,6 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
   )
 }
 
-//class DispatchedTacticResponse(t : DispatchedTacticPOJO) extends Response {
-//  val nid = t.nodeId match {
-//    case Some(nodeId) => nodeId
-//    case None => t.proofId
-//  }
-//
-//  val json = JsObject(
-//    "proofId" -> JsString(t.proofId),
-//    "nodeId" -> JsString(nid),
-//    "tacticId" -> JsString(t.tacticsId),
-//    "tacticInstId" -> JsString(t.id),
-//    "tacticInstStatus" -> JsString(t.status.toString)
-//  )
-//}
-
 class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) extends Response {
   val json = JsObject(
     "proofId" -> JsString(proofId),
@@ -294,22 +252,6 @@ class TaskResultResponse(parent: TreeNode, children: List[TreeNode], progress: B
     "type" -> JsString("taskresult")
   )
 }
-
-//class DispatchedCLTermResponse(t : DispatchedCLTermPOJO) extends Response {
-//  val nid = t.nodeId match {
-//    case Some(nodeId) => nodeId
-//    case None => t.proofId
-//  }
-//
-//  val json = JsObject(
-//    "id" -> JsString(t.id),
-//    "proofId" -> JsString(t.proofId),
-//    "nodeId" -> JsString(nid),
-//    "termId" -> JsString(t.id),
-//    "term" -> JsString(t.clTerm),
-//    "status" -> JsString(t.status.get.toString)
-//  )
-//}
 
 class UpdateResponse(update: String) extends Response {
   val json = JsObject(
@@ -486,15 +428,6 @@ class GetPathAllResponse(path: List[TreeNode], parentsRemaining: Int) extends Re
 class GetBranchRootResponse(node: TreeNode) extends Response {
   val json = Helpers.singleNodeJson(node)
 }
-
-//class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
-//  val objects = tactics.map(tactic => JsObject(
-//    "id" -> JsString(tactic.tacticId),
-//    "name" -> JsString(tactic.name)
-//  ))
-//
-//  val json = JsArray(objects)
-//}
 
 class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggestedInput: Option[Expression]) extends Response {
   def inputJson(input: ArgInfo): JsValue = {
@@ -713,25 +646,6 @@ class AngularTreeViewResponse(tree : String) extends Response {
   }
 }
 
-//class ProofHistoryResponse(history : List[(DispatchedTacticPOJO, TacticPOJO)]) extends Response {
-//  val json = JsArray(history.map { case (dispatched, tactic) => convert(dispatched, tactic)})
-//
-//  private def convert(dispatched: DispatchedTacticPOJO, tactic: TacticPOJO): JsValue = JsObject(
-//    "dispatched" -> JsObject(
-//      "id" -> JsString(dispatched.id),
-//      "proofId" -> JsString(dispatched.proofId),
-//      "nodeId" -> JsString(dispatched.nodeId match { case Some(nId) => nId case _ => "" }),
-//      "status" -> JsString(dispatched.status.toString),
-//      "input" -> convertInput(dispatched.input)
-//    ),
-//    "tactic" -> JsObject(
-//      "id" -> JsString(tactic.tacticId),
-//      "name" -> JsString(tactic.name)
-//    )
-//  )
-//
-//  private def convertInput(input: Map[Int, String]) = JsArray(/* TODO */)
-//}
 
 class DashInfoResponse(openProofs:Int, allModels: Int, provedModels: Int) extends Response {
   override val schema = Some("DashInfoResponse.js")
