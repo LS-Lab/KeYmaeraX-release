@@ -47,7 +47,7 @@ object DLTactics {
    * {{{
    *      p |- q
    *   -------------mond
-   *   <a>p |- <a>q
+   *   ⟨a⟩p |- ⟨a⟩q
    * }}}
    * @return The tactic.
    */
