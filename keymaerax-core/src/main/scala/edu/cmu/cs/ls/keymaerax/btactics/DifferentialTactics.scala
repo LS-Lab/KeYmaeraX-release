@@ -54,11 +54,12 @@ object DifferentialTactics {
         import ProofRuleTactics.contextualize
         //@todo wrap within a CE to make sure it also works in context
         if (isODESystem(sequent, pos)) {
-          contextualize(DESystemStep_NoSemRen, predictor)(pos)*getODEDim(sequent, pos)
+          if (true || HilbertCalculus.INTERNAL) TactixLibrary.useAt("DE differential effect (system)")(pos)*getODEDim(sequent, pos)
+          else contextualize(DESystemStep_NoSemRen, predictor)(pos)*getODEDim(sequent, pos)
           //@todo unification fails
           // TactixLibrary.useAt("DE differential effect (system)")(pos)*getODEDim(provable.subgoals.head, pos)
         } else {
-          if (HilbertCalculus.INTERNAL) useAt("DE differential effect")(pos)
+          if (true || HilbertCalculus.INTERNAL) useAt("DE differential effect")(pos)
           else contextualize(DESystemStep_NoSemRen, predictor)(pos)
         }
       }
@@ -133,7 +134,7 @@ object DifferentialTactics {
             //            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(s"[{${xp.prettyString}=f(??),c&H(??)}]p(??) <-> [{c,${xp.prettyString}=f(??)&H(??)}][${xp.prettyString}:=f(??);]p(??)".asFormula))
             val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms("DE differential effect (system)")))
 
-            if (true || DEBUG) println("DE: manual " + uren + " then " + USubst(subst) + " to prove " + sequent.prettyString)
+            if (true || DEBUG) println("DE: manual " + USubst(subst) + " above " + uren + " to prove " + sequent.prettyString)
 
             cutLR(g)(pos) <(
               /* use */ skip,
@@ -158,7 +159,7 @@ object DifferentialTactics {
               SubstitutionPair(aQ, uren(h)) :: Nil
             val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms("DE differential effect")))
 
-            if (true || DEBUG) println("DE: manual " + uren + " followed by " + USubst(subst) + " to prove " + sequent.prettyString)
+            if (true || DEBUG) println("DE: manual " + USubst(subst) + " above " + uren + " to prove " + sequent.prettyString)
 
             cutLR(g)(pos) <(
               /* use */ skip,
