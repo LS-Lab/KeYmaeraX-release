@@ -85,7 +85,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove <*> iterate" in {check(iteratedAxiom)}
   it should "prove <*> approx" in {check(loopApproxd)}
   it should "prove [*] approx" in {check(loopApproxb)}
-  ignore should "prove exists generalize" in {check(existsGeneralize)}
+  it should "prove exists generalize" in {check(existsGeneralize)}
   it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom)}
@@ -102,16 +102,16 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove PC3" in {check(PC3)}
   it should "prove -> tautology" in {check{implyTautology}}
   it should "prove ->'" in {check(Dimply)}
-  ignore should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
+  it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom)}
   it should "prove DW differential weakening" in {check(DWeakening)}
-  ignore should "prove DS no domain" in {check(DSnodomain)}
-  ignore should "prove Dsol& differential equation solution" in {check(DSddomain)}
+  it should "prove DS no domain" in {check(DSnodomain)}
+  it should "prove Dsol& differential equation solution" in {check(DSddomain)}
   //  it should "prove x' derive var" in {check(Dvar)}
   it should "prove x' derive variable" in {check(Dvariable)}
   it should "prove x' derive var commuted" in withMathematica { implicit qetool => check(DvariableCommuted)}
   it should "prove 'linear" in withMathematica { implicit qetool => check(Dlinear)}
   it should "prove 'linear right" in withMathematica { implicit qeTool => check(DlinearRight)}
-  ignore should "prove DG differential pre-ghost" in {check(DGpreghost)}
+  it should "prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "prove DX diamond differential skip" in {check(Dskipd)}
   it should "prove 0*" in withMathematica { implicit qeTool => check(zeroTimes)}
   it should "prove 0+" in withMathematica { implicit qeTool => check(zeroPlus)}
@@ -157,7 +157,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove exists dual" in {check(existsDualAxiom, existsDualT)}
   ignore should "prove all eliminate" taggedAs OptimisticTest in {check(allEliminateAxiom, allEliminateT)}
   ignore should "prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate, existsEliminateT)}
-  ignore should "prove all distribute" in {check(allDistributeAxiom, allDistributeT)}
+  it should "prove all distribute" in {check(allDistributeAxiom, allDistributeT)}
   it should "prove box dual" in {check(boxAxiom, boxT)}
   it should "prove <:=> assign" in {check(assigndAxiom, assigndT)}
   it should "prove [:=] equational" in {check(assignbEquationalAxiom, assignbEquationalT)}
@@ -168,7 +168,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove <++> choice" in {check(choicedAxiom, choicedT)}
   it should "prove <;> compose" in {check(composedAxiom, composedT)}
   it should "prove <*> iterate" in {check(iteratedAxiom, iteratedT)}
-  ignore should "prove exists generalize" in {check(existsGeneralize, existsGeneralizeT)}
+  it should "prove exists generalize" in {check(existsGeneralize, existsGeneralizeT)}
   it should "prove = reflexive" in withMathematica { implicit qeTool => check(equalReflex, equalReflexiveT)}
   it should "prove = commute" in withMathematica { implicit qeTool => check(equalCommute, equalCommuteT)}
   it should "prove <=" in withMathematica { implicit qeTool => check(lessEqual, lessEqualT)}
@@ -180,8 +180,8 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove vacuous exists" in {check(vacuousExistsAxiom, vacuousExistsT)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom, vacuousBoxAssignNondetT)}
   it should "prove V<:*> vacuous assign nondet" in {check(vacuousDiamondAssignNondetAxiom, vacuousDiamondAssignNondetT)}
-  ignore should "prove \\forall->\\exists" in {check(forallThenExistsAxiom, forallThenExistsT)}
-  ignore should "prove DG differential pre-ghost" in {check(DGpreghost, DGpreghostT)}
+  it should "prove \\forall->\\exists" in {check(forallThenExistsAxiom, forallThenExistsT)}
+  it should "prove DG differential pre-ghost" in {check(DGpreghost, DGpreghostT)}
   it should "prove DW differential weakening" in {check(DWeakening, DWeakeningT)}
   it should "prove abs" in withMathematica { implicit qeTool => check(absDef, absT)}
   it should "prove min" in withMathematica { implicit qeTool => check(minDef, minT)}

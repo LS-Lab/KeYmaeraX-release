@@ -470,7 +470,7 @@ object DerivedAxioms {
     * }}}
     */
   // Imply(Forall(Seq(x), Imply(PredOf(p,x),PredOf(q,x))), Imply(Forall(Seq(x),PredOf(p,x)), Forall(Seq(x),PredOf(q,x))))
-  lazy val allDistributeF = "(\\forall x_ (p_(x_)->q_(x_))) -> ((\\forall x_ p_(x_))->(\\forall x_ q_(x_)))".asFormula
+  lazy val allDistributeF = "(\\forall x_ (p(x_)->q(x_))) -> ((\\forall x_ p(x_))->(\\forall x_ q(x_)))".asFormula
   lazy val allDistributeAxiom = derivedAxiom("all distribute",
     Sequent(Nil, IndexedSeq(), IndexedSeq(allDistributeF)),
     implyR(1) & implyR(1) & allR(1) & allL(-2) & allL(-1) & prop)
@@ -1007,7 +1007,7 @@ object DerivedAxioms {
     * }}}
     * @Derived
     */
-  lazy val existsGeneralizeF = "p_(t_()) -> (\\exists x_ p_(x_))".asFormula
+  lazy val existsGeneralizeF = "p_(f()) -> (\\exists x_ p_(x_))".asFormula
   lazy val existsGeneralize = derivedAxiom("exists generalize",
     Sequent(Nil, IndexedSeq(), IndexedSeq(existsGeneralizeF)),
     useAt(existsDualAxiom, PosInExpr(1::Nil))(1, 1::Nil) &
@@ -1523,7 +1523,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val DSddomainF = "<{x_'=c_()&q_(x)}>p_(x) <-> \\exists t_ (t_>=0 & ((\\forall s_ ((0<=s_&s_<=t_) -> q_(x_+(c_()*s_)))) & <x_:=x_+(c_()*t_);>p_(x_)))".asFormula
+  lazy val DSddomainF = "<{x_'=c()&q(x_)}>p(x_) <-> \\exists t_ (t_>=0 & ((\\forall s_ ((0<=s_&s_<=t_) -> q(x_+(c()*s_)))) & <x_:=x_+(c()*t_);>p(x_)))".asFormula
   lazy val DSddomain = derivedAxiom("Dsol& differential equation solution",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DSddomainF)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
@@ -1562,7 +1562,7 @@ object DerivedAxioms {
     * }}}
     * Pre Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work.
     */
-  lazy val DGpreghostF = "[{c_&H_(??)}]p_(??) <-> \\exists y_ [{y_'=(t_()*y_)+s_(),c_&H_(??)}]p_(??)".asFormula
+  lazy val DGpreghostF = "[{c&H(??)}]p(??) <-> \\exists y_ [{y_'=(t()*y_)+s(),c&H(??)}]p(??)".asFormula
   lazy val DGpreghost = derivedAxiom("DG differential pre-ghost",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DGpreghostF)),
     useAt("DG differential ghost")(1, 0::Nil) &
