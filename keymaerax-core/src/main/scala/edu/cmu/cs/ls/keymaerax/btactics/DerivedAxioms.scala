@@ -1439,35 +1439,35 @@ object DerivedAxioms {
   // differential equations
 
   /**
-   * {{{Axiom "DW differential weakening".
-   *    [{c&H(??)}]p(??) <-> ([{c&H(??)}](H(??)->p(??)))
-   *    /* [x'=f(x)&q(x);]p(x) <-> ([x'=f(x)&q(x);](q(x)->p(x))) THEORY */
-   * End.
-   * }}}
-   * @see footnote 3 in "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015. arXiv 1503.01981, 2015."
-   */
-  lazy val DWeakeningF = "[{c&H(??)}]p(??) <-> ([{c&H(??)}](H(??)->p(??)))".asFormula
+    * {{{Axiom "DW differential weakening".
+    *    [{c&H(??)}]p(??) <-> ([{c&H(??)}](H(??)->p(??)))
+    *    /* [x'=f(x)&q(x);]p(x) <-> ([x'=f(x)&q(x);](q(x)->p(x))) THEORY */
+    * End.
+    * }}}
+    * @see footnote 3 in "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015. arXiv 1503.01981, 2015."
+    */
+  lazy val DWeakeningF = "[{c_&H_(??)}]p_(??) <-> ([{c_&H_(??)}](H_(??)->p_(??)))".asFormula
   lazy val DWeakening = derivedAxiom("DW differential weakening",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DWeakeningF)),
     equivR(1) <(
       /* equiv left */
-      cut("[{c&H(??)}](p(??)->(H(??)->p(??)))".asFormula) <(
+      cut("[{c_&H_(??)}](p_(??)->(H_(??)->p_(??)))".asFormula) <(
         /* use */ useAt("K modal modus ponens", PosInExpr(0::Nil))(-2) & implyL(-2) <(close, close),
         /* show */ cohide(2) & G & prop
-      ),
+        ),
       /* equiv right */
       useAt("K modal modus ponens", PosInExpr(0::Nil))(-1) & implyL(-1) <(cohide(2) & byUS("DW"), close)
-    )
+      )
   )
   lazy val DWeakeningT = derivedAxiomT(DWeakening)
 
   /**
-   * {{{Axiom "DX diamond differential skip".
-   *    <{c&H(??)}>p(??) <- H(??)&p(??)
-   * End.
-   * }}}
-   * @Derived
-   */
+    * {{{Axiom "DX diamond differential skip".
+    *    <{c&H(??)}>p(??) <- H(??)&p(??)
+    * End.
+    * }}}
+    * @Derived
+    */
   lazy val DskipdF = "<{c&H(??)}>p(??) <- H(??)&p(??)".asFormula
   lazy val Dskipd = derivedAxiom("DX diamond differential skip",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DskipdF)),
@@ -1480,13 +1480,13 @@ object DerivedAxioms {
   lazy val DskipdT = derivedAxiomT(Dskipd)
 
   /**
-   * {{{Axiom "DS differential equation solution".
-   *    [{x'=c()}]p(x) <-> \forall t (t>=0 -> [x:=x+(c()*t);]p(x))
-   * End.
-   * }}}
-   * @Derived
-   */
-  lazy val DSnodomainF = "[{x'=c()}]p(x) <-> \\forall t (t>=0 -> [x:=x+(c()*t);]p(x))".asFormula
+    * {{{Axiom "DS differential equation solution".
+    *    [{x'=c()}]p(x) <-> \forall t (t>=0 -> [x:=x+(c()*t);]p(x))
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val DSnodomainF = "[{x_'=c_()}]p_(x_) <-> \\forall t_ (t_>=0 -> [x_:=x_+(c_()*t_);]p_(x_))".asFormula
   lazy val DSnodomain = derivedAxiom("DS differential equation solution",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DSnodomainF)),
     useAt("DS& differential equation solution")(1, 0::Nil) &
@@ -1499,13 +1499,13 @@ object DerivedAxioms {
   lazy val DSnodomainT = derivedAxiomT(DSnodomain)
 
   /**
-   * {{{Axiom "Dsol differential equation solution".
-   *    <{x'=c()}>p(x) <-> \exists t (t>=0 & <x:=x+(c()*t);>p(x))
-   * End.
-   * }}}
-   * @Derived
-   */
-  lazy val DSdnodomainF = "<{x'=c()}>p(x) <-> \\exists t (t>=0 & <x:=x+(c()*t);>p(x))".asFormula
+    * {{{Axiom "Dsol differential equation solution".
+    *    <{x'=c()}>p(x) <-> \exists t (t>=0 & <x:=x+(c()*t);>p(x))
+    * End.
+    * }}}
+    * @Derived
+    */
+  lazy val DSdnodomainF = "<{x_'=c_()}>p_(x_) <-> \\exists t_ (t_>=0 & <x_:=x_+(c_()*t_);>p_(x_))".asFormula
   lazy val DSdnodomain = derivedAxiom("Dsol differential equation solution",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DSdnodomainF)),
     useAt("Dsol& differential equation solution")(1, 0::Nil) &
@@ -1518,12 +1518,12 @@ object DerivedAxioms {
   lazy val DSdnodomainT = derivedAxiomT(DSdnodomain)
 
   /**
-   * {{{Axiom "Dsol& differential equation solution".
-   *    <{x'=c()&q(x)}>p(x) <-> \exists t (t>=0 & ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))
-   * End.
-   * }}}
-   */
-  lazy val DSddomainF = "<{x'=c()&q(x)}>p(x) <-> \\exists t (t>=0 & ((\\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))".asFormula
+    * {{{Axiom "Dsol& differential equation solution".
+    *    <{x'=c()&q(x)}>p(x) <-> \exists t (t>=0 & ((\forall s ((0<=s&s<=t) -> q(x+(c()*s)))) & <x:=x+(c()*t);>p(x)))
+    * End.
+    * }}}
+    */
+  lazy val DSddomainF = "<{x_'=c_()&q_(x)}>p_(x) <-> \\exists t_ (t_>=0 & ((\\forall s_ ((0<=s_&s_<=t_) -> q_(x_+(c_()*s_)))) & <x_:=x_+(c_()*t_);>p_(x_)))".asFormula
   lazy val DSddomain = derivedAxiom("Dsol& differential equation solution",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DSddomainF)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
@@ -1555,14 +1555,14 @@ object DerivedAxioms {
 
 
   /**
-   * {{{Axiom "DG differential pre-ghost".
-   *    [{c&H(??)}]p(??) <-> \exists y [{y'=(t()*y)+s(),c&H(??)}]p(??)
-   *    // [x'=f(x)&q(x);]p(x) <-> \exists y [{y'=(a(x)*y)+b(x), x'=f(x))&q(x)}]p(x) THEORY
-   * End.
-   * }}}
-   * Pre Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work.
-   */
-  lazy val DGpreghostF = "[{c&H(??)}]p(??) <-> \\exists y [{y'=(t()*y)+s(),c&H(??)}]p(??)".asFormula
+    * {{{Axiom "DG differential pre-ghost".
+    *    [{c&H(??)}]p(??) <-> \exists y [{y'=(t()*y)+s(),c&H(??)}]p(??)
+    *    // [x'=f(x)&q(x);]p(x) <-> \exists y [{y'=(a(x)*y)+b(x), x'=f(x))&q(x)}]p(x) THEORY
+    * End.
+    * }}}
+    * Pre Differential Auxiliary / Differential Ghost -- not strictly necessary but saves a lot of reordering work.
+    */
+  lazy val DGpreghostF = "[{c_&H_(??)}]p_(??) <-> \\exists y_ [{y_'=(t_()*y_)+s_(),c_&H_(??)}]p_(??)".asFormula
   lazy val DGpreghost = derivedAxiom("DG differential pre-ghost",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DGpreghostF)),
     useAt("DG differential ghost")(1, 0::Nil) &
@@ -1586,11 +1586,11 @@ object DerivedAxioms {
   lazy val DvariableCommutedT = derivedAxiomT(DvariableCommuted)
 
   /**
-   * {{{Axiom "x' derive variable".
-   *    \forall x_ ((x_)' = x_')
-   * End.
-   * }}}
-   */
+    * {{{Axiom "x' derive variable".
+    *    \forall x_ ((x_)' = x_')
+    * End.
+    * }}}
+    */
   lazy val DvariableF = "\\forall x_ ((x_)' = x_')".asFormula
   lazy val Dvariable = derivedAxiom("x' derive variable",
     Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq(DvariableF)))
@@ -1619,12 +1619,12 @@ object DerivedAxioms {
   //  )
   //  lazy val DvarT = derivedAxiomT(Dvar)
   /**
-   * {{{Axiom "' linear".
-   *    (c()*f(??))' = c()*(f(??))'
-   * End.
-   * }}}
-   */
-  lazy val DlinearF = "(c()*f(??))' = c()*(f(??))'".asFormula
+    * {{{Axiom "' linear".
+    *    (c()*f(??))' = c()*(f(??))'
+    * End.
+    * }}}
+    */
+  lazy val DlinearF = "(c_()*f_(??))' = c_()*(f_(??))'".asFormula
   lazy val Dlinear = derivedAxiom("' linear",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DlinearF)),
     useAt("*' derive product")(1, 0::Nil) &
@@ -1635,12 +1635,12 @@ object DerivedAxioms {
   )
   lazy val DlinearT = derivedAxiomT(Dlinear)
   /**
-   * {{{Axiom "' linear right".
-   *    (f(??)*c())' = f(??)'*c()
-   * End.
-   * }}}
-   */
-  lazy val DlinearRightF = "(f(??)*c())' = (f(??))'*c()".asFormula
+    * {{{Axiom "' linear right".
+    *    (f(??)*c())' = f(??)'*c()
+    * End.
+    * }}}
+    */
+  lazy val DlinearRightF = "(f_(??)*c_())' = (f_(??))'*c_()".asFormula
   lazy val DlinearRight = derivedAxiom("' linear right",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DlinearRightF)),
     useAt("*' derive product")(1, 0:: Nil) &
