@@ -39,7 +39,7 @@ class ProofRuleTests extends TacticTestBase {
       ProofRuleTactics.axiomatic("all instantiate",
         USubst(
           SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "0".asTerm))::
-          SubstitutionPair("t()".asTerm, "z".asTerm)::Nil)))
+          SubstitutionPair("f()".asTerm, "z".asTerm)::Nil)))
     result shouldBe 'proved
   }
 

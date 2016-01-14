@@ -38,11 +38,11 @@ trait HilbertCalculi extends UnifyUSCalculus {
 
   // axiomatic rules
 
-  /** G: Gödel generalization rule reduces a proof of `|- [a;]p(x)` to proving the postcondition `|- p(x)` in isolation.
+  /** G: Gödel generalization rule reduces a proof of `|- [a]p(x)` to proving the postcondition `|- p(x)` in isolation.
     * {{{
     *       p(??)
     *   ----------- G
-    *    [a;]p(??)
+    *    [a]p(??)
     * }}}
     * The more flexible and more general rule [[monb]] with p(x)=True gives `G` using [[boxTrue]].
     * @note Unsound for hybrid games
@@ -58,9 +58,9 @@ trait HilbertCalculi extends UnifyUSCalculus {
   //def CQ(inEqPos: PosInExpr)  : Tactic
   /** CE: Congruence: Contextual Equivalence at the indicated position to reduce an equivalence to an equivalence */
   //def CE(inEqPos: PosInExpr)  : Tactic
-  /** monb: Monotone `[a;]p(x) |- [a;]q(x)` reduces to proving `p(x) |- q(x)` */
+  /** monb: Monotone `[a]p(x) |- [a]q(x)` reduces to proving `p(x) |- q(x)` */
   lazy val monb               : BelleExpr         = DLBySubst.monb
-  /** mond: Monotone `<a;>p(x) |- <a;>q(x)` reduces to proving `p(x) |- q(x)` */
+  /** mond: Monotone `⟨a⟩p(x) |- ⟨a⟩q(x)` reduces to proving `p(x) |- q(x)` */
   lazy val mond               : BelleExpr         = DLBySubst.mond
 
 
@@ -112,13 +112,13 @@ trait HilbertCalculi extends UnifyUSCalculus {
   lazy val testd              : DependentPositionTactic = useAt("<?> test")
   /** diffSolve: solve a differential equation `<x'=f>p(x)` to `\exists t>=0 <x:=solution(t)>p(x)` */
   //def diffSolved              : DependentPositionTactic = ???
-  /** choiced: <++> handles both cases of a nondeterministic choice `<a++b>p(x)` separately `<a>p(x) | <b>p(x)` */
+  /** choiced: <++> handles both cases of a nondeterministic choice `⟨a++b⟩p(x)` separately `⟨a⟩p(x) | ⟨b⟩p(x)` */
   lazy val choiced            : DependentPositionTactic = useAt("<++> choice")
-  /** composed: <;> handle both parts of a sequential composition `<a;b>p(x)` one at a time `<a><b>p(x)` */
+  /** composed: <;> handle both parts of a sequential composition `⟨a;b⟩p(x)` one at a time `⟨a⟩⟨b⟩p(x)` */
   lazy val composed           : DependentPositionTactic = useAt("<;> compose")
-  /** iterated: <*> prove a property of a loop `<{a}*>p(x)` by unrolling it once `p(x) | <a><{a}*>p(x)` */
+  /** iterated: <*> prove a property of a loop `⟨{a}*⟩p(x)` by unrolling it once `p(x) | ⟨a⟩⟨{a}*⟩p(x)` */
   lazy val iterated           : DependentPositionTactic = useAt("<*> iterate")
-  /** duald: `<^d>` handle dual game `<{a}^d>p(x)` by `!<a>!p(x)` */
+  /** duald: `<^d>` handle dual game `⟨{a}^d⟩p(x)` by `!⟨a⟩!p(x)` */
   lazy val duald              : DependentPositionTactic = useAt("<d> dual")
 
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
@@ -214,7 +214,7 @@ trait HilbertCalculi extends UnifyUSCalculus {
   /** splitb: splits `[a](p&q)` into `[a]p & [a]q` */
   //@todo rename to boxAnd?
   lazy val splitb             : DependentPositionTactic = useAt("[] split")
-  /** splitd: splits `<a>(p|q)` into `<a>p | <a>q` */
+  /** splitd: splits `⟨a⟩(p|q)` into `⟨a⟩p | ⟨a⟩q` */
   lazy val splitd             : DependentPositionTactic = useAt("<> split")
 
   // def ind

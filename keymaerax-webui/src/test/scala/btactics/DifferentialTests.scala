@@ -194,7 +194,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[{y'=5, x'=2 & y>2 & x>0}][x':=2;][y':=5;]y>0".asFormula
   }
 
-  "diffInd" should "auto-prove x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
+  "diffInd" should "auto-prove x>=5 -> [{x'=2}]x>=5" taggedAs(KeYmaeraXTestTags.SummaryTest) in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) & diffInd(qeTool)(1)
     ) shouldBe 'proved

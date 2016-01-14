@@ -4,6 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{TopPosition, PosInExpr, Position}
 
@@ -32,6 +33,13 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{TopPosition, PosInExpr, Position}
 object Augmentors {
 
   /**
+    * Augment expressions with additional tactics-only helper functions.
+    * @author Andre Platzer
+    */
+//  implicit class ExpressionAugmentor(val expr: Expression) {
+//  }
+
+  /**
    * Augment terms with additional tactics-only helper functions.
    * @author Andre Platzer
    */
@@ -44,6 +52,20 @@ object Augmentors {
     def at(pos: PosInExpr): (Context[Term], Expression) = Context.at(term, pos)
     /** Replace at position pos by repl */
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(term, pos, repl)
+    /**
+      * Find the first (i.e., left-most) position of a subexpression satisfying `condition`, if any.
+      * @param condition the condition that the subexpression sought for has to satisfy.
+      * @return The first position, or None if no subexpression satisfies `condition`.
+      */
+    def find(condition: Term => Boolean): Option[PosInExpr] = {
+      var pos: Option[PosInExpr] = None
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+          if (condition(e.asInstanceOf[Term])) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
+          else Left(None)
+      }, term)
+      pos
+    }
   }
 
   /**
@@ -59,6 +81,37 @@ object Augmentors {
     def at(pos: PosInExpr): (Context[Formula], Expression) = Context.at(fml, pos)
     /** Replace at position pos by repl */
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(fml, pos, repl)
+    /**
+      * Find the first (i.e., left-most) position of a subexpression satisfying `condition`, if any.
+      * @param condition the condition that the subexpression sought for has to satisfy.
+      * @return The first position and the subexpression at that position, or None if no subexpression satisfies `condition`.
+      */
+    def find(condition: Expression => Boolean): Option[(PosInExpr,Expression)] = {
+      var pos: Option[(PosInExpr,Expression)] = None
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
+          if (condition(e)) { pos = Some((p,e)); Left(Some(ExpressionTraversal.stop)) }
+          else Left(None)
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+          if (condition(e)) { pos = Some((p,e)); Left(Some(ExpressionTraversal.stop)) }
+          else Left(None)
+      }, fml)
+      pos
+    }
+    /**
+      * Find the first (i.e., left-most) position of a subformula satisfying `condition`, if any.
+      * @param condition the condition that the subformula sought for has to satisfy.
+      * @return The first position and subformula at that position, or None if no subformula satisfies `condition`.
+      */
+    def findSubformula(condition: Formula => Boolean): Option[(PosInExpr,Formula)] = {
+      var pos: Option[(PosInExpr,Formula)] = None
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
+          if (condition(e)) { pos = Some((p,e)); Left(Some(ExpressionTraversal.stop)) }
+          else Left(None)
+      }, fml)
+      pos
+    }
   }
 
   /**
@@ -91,5 +144,13 @@ object Augmentors {
     def replaceAt(pos: Position, repl: Expression): Expression = FormulaAugmentor(seq(pos.top)).replaceAt(pos.inExpr, repl)
     //@todo implement returning both Ante+Succ
     def zipWithPositions: List[(Formula, TopPosition)] = ???
+    /** Convert a sequent to its equivalent formula `/\antes -> \/succs` */
+    def toFormula: Formula = {
+      //@todo review and contrast with ToolTactis.toSingleFormula
+      val anteAnd = seq.ante.reduceRightOption(And).getOrElse(True)
+      val succOr = seq.succ.reduceRightOption(Or).getOrElse(False)
+      //@todo could leave out Imply if anteAnd=True
+      Imply(anteAnd, succOr)
+    }
   }
 }

@@ -153,18 +153,11 @@ object SQLite {
         session.withTransaction(f)
     }
 
-    //@TODO
     // Configuration
     override def getAllConfigurations: Set[ConfigurationPOJO] =
       synchronizedTransaction({
         nSelects = nSelects + 1
         Config.list.filter(_.configname.isDefined).map(_.configname.get).map(getConfiguration(_)).toSet
-      })
-
-    override def createConfiguration(configName: String): Boolean =
-      synchronizedTransaction({
-        //This is unnecessary?
-        true
       })
 
     private def blankOk(x: Option[String]): String = x match {
@@ -285,11 +278,11 @@ object SQLite {
       })
     }
 
-    //@todo actually these sorts of methods are rather dangerous because any schema change could mess this up.
-    private def proofPojoToRow(p: ProofPOJO): ProofsRow = new ProofsRow(Some(p.proofId), Some(p.modelId), Some(p.name), Some(p.description), Some(p.date), Some(if (p.closed) 1 else 0))
+    private def proofPojoToRow(p: ProofPOJO): ProofsRow =
+      new ProofsRow(_Id = Some(p.proofId), modelid = Some(p.modelId), name = Some(p.name)
+        , description = Some(p.description), date =Some(p.date), closed = Some(if (p.closed) 1 else 0))
 
 
-    //the string is a model name.
     override def openProofs(userId: String): List[ProofPOJO] =
       synchronizedTransaction({
         nSelects = nSelects + 1
@@ -455,7 +448,7 @@ object SQLite {
       }
       if(trace.steps.isEmpty) {
         // Insert a null tactic with a higher alternative order
-        val nilExecutable = addBelleExpr(TactixLibrary.nil, Nil)
+        val nilExecutable = addBelleExpr(TactixLibrary.nil)
         // Generate a no-op local provable whose conclusion matches with the current state of the proof.
         val input = loadProvable(oldStep.inputprovableid.get)
         val localConclusion = input.subgoals(0)
@@ -472,22 +465,13 @@ object SQLite {
     }
 
     /** Adds a Bellerophon expression as an executable and returns the new executableId */
-    override def addBelleExpr(expr: BelleExpr, params: List[ParameterPOJO]): Int =
+    override def addBelleExpr(expr: BelleExpr): Int =
       synchronizedTransaction({
-        // @TODO Figure out whether to generate ID's here or pass them in through the params
         val executableId =
           (Executables.map({ case exe => (exe.scalatacticid, exe.belleexpr) })
             returning Executables.map(_._Id.get))
           .insert((None, Some(expr.toString)))
         nInserts = nInserts + 1
-        // @TODO Why do we even need parameters? These should be part of the BelleExpr
-        val paramTable = Executableparameter.map({ case param => (param.executableid.get, param.idx.get,
-          param.valuetype.get, param.value.get)
-        })
-        for (i <- params.indices) {
-          nInserts = nInserts + 1
-          paramTable.insert((executableId, i, params(i).valueType.toString, params(i).value))
-        }
         executableId
       })
 
@@ -613,22 +597,9 @@ object SQLite {
       })
     }
 
-    /** Adds a new scala tactic and returns the resulting id */
-    /*@TODO Understand whether to use the ID passed in or generate our own*/
-    override def addScalaTactic(scalaTactic: ScalaTacticPOJO): Int = {
-      synchronizedTransaction({
-        (Scalatactics.map({ case tactic => tactic.location.get })
-          returning Scalatactics.map(_._Id.get))
-          .insert(scalaTactic.location)
-      })
-    }
-
-    /** @TODO Clarify spec for this function. Questions:
-      *       Top-level rules only?
-      *       Branches?
-      *       Alternatives?
-      *       Does order matter?
-      *       What's in each string? */
+    /** Return a string describing each step in the current state of the proof.
+      * As of this writing, callers only use the length of the list and not the
+      * individual strings, thus the exact representation is currently unspecified. */
     override def getProofSteps(proofId: Int): List[String] = {
       val execution = getTacticExecution(proofId)
       val stepPOJOs = proofSteps(execution)

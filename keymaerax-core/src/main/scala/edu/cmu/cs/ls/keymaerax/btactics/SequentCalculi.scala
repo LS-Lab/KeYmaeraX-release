@@ -119,7 +119,7 @@ trait SequentCalculi {
       case BelleProvable(provable, _) =>
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
         val s = provable.subgoals.head
-        require(s.ante.intersect(s.succ).nonEmpty, "Expects same formula in antecedent and succedent,\n\t but antecedent " + s.ante + "\n\t does not overlap with succedent " + s.succ)
+        require(s.ante.intersect(s.succ).nonEmpty, "Expects same formula in antecedent and succedent. Found:\n" + s.prettyString)
         val fml = s.ante.intersect(s.succ).head
         close(AntePosition.base0(s.ante.indexOf(fml)), SuccPosition.base0(s.succ.indexOf(fml)))
     }

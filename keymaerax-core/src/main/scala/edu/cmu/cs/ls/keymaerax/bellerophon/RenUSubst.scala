@@ -12,20 +12,29 @@ import scala.collection.immutable
 import scala.collection.immutable._
 
 object RenUSubst {
-  //@todo See UniformRenaming.semanticRenaming: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
-  private[keymaerax] val semanticRenaming = System.getProperty("LAX", "true")=="true"
+  //@note See UniformRenaming.semanticRenaming: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
+  private[keymaerax] val semanticRenaming = /*false &&*/ (try {
+    URename(Variable("quark"), Variable("quark", Some(5)))(ProgramConst("quarky"))
+    true
+  } catch { case e: RenamingClashException => false })
+
+  private[bellerophon] val TRANSPOSITION = try {
+    URename(Variable("quark"), Variable("quark", Some(5)))(Variable("quark", Some(5)))
+    true
+  } catch { case e: RenamingClashException => false }
 
   def apply(subsDefsInput: immutable.Seq[(Expression,Expression)]) = if (semanticRenaming)
-    new USubstThenRen(subsDefsInput)
-  else
-    new RenThenUSubst(subsDefsInput)
-  def apply(us: USubst): RenUSubst = apply(us.subsDefsInput.
-    map(sp=>(sp.what,sp.repl)))
-  def apply(us: URename): RenUSubst = apply(List((us.what,us.repl)))
+      new URenAboveUSubst(subsDefsInput)
+    else
+      new USubstAboveURen(subsDefsInput)
+    def apply(us: USubst): RenUSubst = apply(us.subsDefsInput.
+      map(sp=>(sp.what,sp.repl)))
+    def apply(us: URename): RenUSubst = apply(List((us.what,us.repl)))
 
   private def renamingPartOnly(subsDefsInput: immutable.Seq[(Expression,Expression)]): immutable.Seq[(Variable,Variable)] =
-    subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable] && sp._2!=sp._1).
-      map(sp => (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable]))
+      subsDefsInput.filter(sp => sp._1.isInstanceOf[Variable] && sp._2!=sp._1).
+        map(sp => {Predef.assert(sp._2.isInstanceOf[Variable], "Variable renaming expected " + sp + " in " + subsDefsInput);
+          (sp._1.asInstanceOf[Variable],sp._2.asInstanceOf[Variable])})
   private[bellerophon] def renamingPart(subsDefsInput: immutable.Seq[(Expression,Expression)]): RenUSubst =
     apply(renamingPartOnly(subsDefsInput))
 
@@ -80,7 +89,7 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   private def applicable(): Unit = {
     // check that we never replace n by something and then again replacing the same n by something
     val lefts: List[Expression] = subsDefsInput.map(_._1).toList
-    if (lefts.distinct.size != lefts.size) throw new ProverException("no duplicate substitutions with same substitutees\n" + this)
+    if (lefts.distinct.size != lefts.size) throw new ProverException("conflict: no duplicate substitutions for the same substitutee\n" + this)
   }
 
   /**
@@ -94,7 +103,7 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
 
 
   /** Union of renaming uniform substitutions, i.e., both replacement lists merged. */
-  def ++(other: RenUSubst): RenUSubst = reapply(this.subsDefsInput ++ other.subsDefsInput)
+  def ++(other: RenUSubst): RenUSubst = reapply((this.subsDefsInput ++ other.subsDefsInput).distinct)
 
 
   type RenUSubstRepl = (Expression,Expression)
@@ -120,6 +129,9 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
 
   /** Convert to forward tactic using the respective uniform renaming and uniform substitution rules */
   def toForward: Provable => Provable
+
+  /** The first step that will be performed first toward the bottom of the proof. */
+  private[bellerophon] def firstFlush: RenUSubst
 
   override def toString: String = "RenUSubst{" + rens.map(sp=>sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(", ") + " ; " + subsDefs.mkString(", ") + "}"
 
@@ -160,17 +172,17 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   */
 // US: uniform substitution to instantiate all symbols especially program constants to become renamable
 // UR: uniform renaming to rename preexisting variables to the present axioms
-final class RenThenUSubst(private[bellerophon] override val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends RenUSubst(subsDefsInput) {
+final class USubstAboveURen(private[bellerophon] override val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends RenUSubst(subsDefsInput) {
   //@note explicit implementation to make RenUSubst equality independent of rens/subsDefs order
   override def equals(e: Any): Boolean = e match {
-    case a: RenThenUSubst => rens.toSet == a.rens.toSet && subsDefs.toSet == a.subsDefs.toSet
+    case a: USubstAboveURen => rens.toSet == a.rens.toSet && subsDefs.toSet == a.subsDefs.toSet
       //rens == a.rens && subsDefs == a.subsDefs
     case _ => false
   }
 
   override def hashCode: Int = 47 * rens.hashCode() + subsDefs.hashCode()
 
-  def reapply(subs: immutable.Seq[(Expression,Expression)]) = new RenThenUSubst(subs)
+  def reapply(subs: immutable.Seq[(Expression,Expression)]) = new USubstAboveURen(subs)
 
 
   // backwards style: compose US after renaming to get the same Hilbert proof order as in toForward: US above UR
@@ -183,7 +195,9 @@ final class RenThenUSubst(private[bellerophon] override val subsDefsInput: immut
     rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
   }
 
-  override def toString: String = super.toString + "RenThenUSubst"
+  private[bellerophon] def firstFlush: RenUSubst = renaming
+
+  override def toString: String = super.toString + "USubstAboveRen"
 
   //@todo could optimize empty usubst or empty rens to be just identity application right away
   def apply(t: Term): Term = try {rens.foldLeft(usubst(t))((e,sp)=>URename(sp._1,sp._2)(e))} catch {case ex: ProverException => throw ex.inContext(t.prettyString, "with " + this)}
@@ -204,17 +218,17 @@ final class RenThenUSubst(private[bellerophon] override val subsDefsInput: immut
   * }}}
   * @param subsDefsInput
   */
-final class USubstThenRen(private[bellerophon] override val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends RenUSubst(subsDefsInput) {
+final class URenAboveUSubst(private[bellerophon] override val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends RenUSubst(subsDefsInput) {
   //@note explicit implementation to make RenUSubst equality independent of rens/subsDefs order
   override def equals(e: Any): Boolean = e match {
-    case a: USubstThenRen => rens.toSet == a.rens.toSet && subsDefs.toSet == a.subsDefs.toSet
+    case a: URenAboveUSubst => rens.toSet == a.rens.toSet && subsDefs.toSet == a.subsDefs.toSet
       // rens == a.rens && subsDefs == a.subsDefs
     case _ => false
   }
 
   override def hashCode: Int = 61 * rens.hashCode() + subsDefs.hashCode()
 
-  def reapply(subs: immutable.Seq[(Expression,Expression)]) = new USubstThenRen(subs)
+  def reapply(subs: immutable.Seq[(Expression,Expression)]) = new URenAboveUSubst(subs)
 
 
   // backwards style: compose US after renaming to get the same Hilbert proof order as in toForward: US above UR
@@ -229,7 +243,9 @@ final class USubstThenRen(private[bellerophon] override val subsDefsInput: immut
       usubst)
   }
 
-  override def toString: String = super.toString + "USubstThenRen"
+  private[bellerophon] def firstFlush: RenUSubst = substitution
+
+  override def toString: String = super.toString + "URenAboveUSubst"
 
   //@todo could optimize empty usubst or empty rens to be just identity application right away
   def apply(t: Term): Term = try {usubst(rens.foldLeft(t)((e,sp)=>URename(sp._1,sp._2)(e)))} catch {case ex: ProverException => throw ex.inContext(t.prettyString)}

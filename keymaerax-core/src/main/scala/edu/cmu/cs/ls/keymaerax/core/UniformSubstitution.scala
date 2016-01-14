@@ -221,10 +221,10 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   private def applicable(): Unit = {
     // check that we never replace n by something and then again replacing the same n by something
     val lefts = subsDefsInput.map(_.what).toList
-    insist(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefsInput)
+    insist(lefts.distinct.size == lefts.size, "conflict: no duplicate substitutions for the same substitutee " + subsDefsInput)
     // check that we never replace p(x) by something and also p(t) by something
     val lambdaNames = matchKeys
-    insist(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + this)
+    insist(lambdaNames.distinct.size == lambdaNames.size, "conflict: no duplicate substitutions for the same substitutee (modulo renaming) " + this)
   }
 
   //private def log(msg: =>String): Unit = {}  //= println(msg)
@@ -304,7 +304,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   }
 
   /** Union of uniform substitutions, i.e., both replacement lists merged. */
-  def ++(other: USubst): USubst = USubst(this.subsDefsInput ++ other.subsDefsInput)
+  def ++(other: USubst): USubst = USubst((this.subsDefsInput ++ other.subsDefsInput).distinct)
 
 
   /**

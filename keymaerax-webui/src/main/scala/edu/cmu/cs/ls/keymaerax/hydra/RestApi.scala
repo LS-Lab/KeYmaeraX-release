@@ -142,13 +142,6 @@ trait RestApi extends HttpService {
     }
   }}
 
-  val runModelTactic = path("user" / Segment / "model" / Segment / "tactic" / "run") { (userId, modelId) => pathEnd {
-    post {
-      val request = new RunModelInitializationTacticRequest(database, userId, modelId)
-      complete(standardCompletion(request))
-    }
-  }}
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proofs
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -242,13 +235,6 @@ trait RestApi extends HttpService {
   val axiomList = path("proofs" / "user" / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, formulaId) => { pathEnd {
     get {
       val request = new GetApplicableAxiomsRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId))
-      //@note mock data for right-clicking formulas
-//      val request = formulaId match {
-//        case "F5s0" => new MockRequest("/mockdata/andaxiomlist.json")
-//        case "F5s1" => new MockRequest("/mockdata/ltaxiomlist.json")
-//        case "1," => new MockRequest("/mockdata/implyaxiomlist.json")
-//        case "1,1" => new MockRequest("/mockdata/loopaxiomlist.json")
-//      }
       complete(standardCompletion(request))
     }
   }}}
@@ -382,28 +368,6 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val nodeFormulaTactics = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics") { (userId, proofId, nodeId, formulaId) => { pathEnd {
-    get {
-      val nId = if (proofId.equals(nodeId)) None else Some(nodeId)
-      val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
-      val request = new GetApplicableTacticsRequest(database, userId, proofId, nId, fId)
-      complete(standardCompletion(request))
-    }
-  }}}
-
-  val nodeRunTactics = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "run" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
-    post {
-      entity(as[String]) { params => {
-        val p = JsonParser(params).asJsObject.fields.map(param => param._1.toInt -> param._2.asInstanceOf[JsString].value)
-        val nId = if (proofId.equals(nodeId)) None else Some(nodeId)
-        val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
-        val request = new RunTacticRequest(database, userId, proofId, nId, fId, tacticId, p)
-        complete(standardCompletion(request))
-      }
-      }
-    }
-  }}}
-
   val counterExample = path("proofs" / "user" / Segment / Segment / Segment / "counterExample") { (userId, proofId, nodeId) => {
     pathEnd {
       get {
@@ -468,16 +432,6 @@ trait RestApi extends HttpService {
     }
   }
 
-  val runClTerm = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "tactics" / "runTerm") { (userId, proofId, nodeId) => { pathEnd {
-    post {
-      entity(as[String]) { params => {
-        val clTerm = JsonParser(params).asJsObject.fields.last._2.asInstanceOf[JsString].value
-        val request = new RunCLTermRequest(database, userId, proofId, Some(nodeId), clTerm)
-        complete(standardCompletion(request))
-      }}
-    }
-  }}}
-
   val runBelleTerm = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "tactics" / "runBelleTerm") { (userId, proofId, nodeId) => { pathEnd {
     post {
       entity(as[String]) { params => {
@@ -491,63 +445,6 @@ trait RestApi extends HttpService {
       entity(as[String]) { params => {
         complete(standardCompletion(new UpdateProofNameRequest(database, proofId, newName)))
       }}
-    }
-  }}}
-
-  val nodeSaturateTactics = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "run" / Segment / Segment) { (userId, proofId, nodeId, formulaId, tacticId, automation) => { pathEnd {
-    post {
-      entity(as[String]) { params => {
-        val p = JsonParser(params).asJsObject.fields.map(param => param._1.toInt -> param._2.asInstanceOf[JsString].value)
-        val nId = if (proofId.equals(nodeId)) None else Some(nodeId)
-        val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
-        val request = new RunTacticRequest(database, userId, proofId, nId, fId, tacticId, p, Some(automation))
-        complete(standardCompletion(request))
-      }
-      }
-    }
-  }}}
-
-  val nodeRunTacticsByName = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "runByName" / Segment) { (userId, proofId, nodeId, formulaId, tacticName) => { pathEnd {
-    post {
-      entity(as[String]) { params =>
-        val p = params match {
-          case s : String if !s.isEmpty => JsonParser (params).asJsObject.fields.map (param => param._1.toInt -> param._2.asInstanceOf[JsString].value)
-          case _ => Map.empty[Int,String]
-        }
-        val nId = if (proofId.equals(nodeId)) None else Some(nodeId)
-        val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
-        val request = new RunTacticByNameRequest(database, userId, proofId, nId, fId, tacticName, p)
-        complete(standardCompletion(request))
-      }
-    }
-  }}}
-
-  val nodeSaturateTacticsByName = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "runByName" / Segment / Segment) { (userId, proofId, nodeId, formulaId, tacticName, automation) => { pathEnd {
-    post {
-      entity(as[String]) { params =>
-        val p = params match {
-          case s : String if !s.isEmpty => JsonParser (params).asJsObject.fields.map (param => param._1.toInt -> param._2.asInstanceOf[JsString].value)
-          case _ => Map.empty[Int,String]
-        }
-        val nId = if (proofId.equals(nodeId)) None else Some(nodeId)
-        val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
-        val request = new RunTacticByNameRequest(database, userId, proofId, nId, fId, tacticName, p, Some(automation))
-        complete(standardCompletion(request))
-      }
-    }
-  }}}
-
-  val dispatchedTactic = path("proofs" / "user" / Segment / Segment / "dispatchedTactics" / Segment) { (userId, proofId, tacticInstId) => { pathEnd {
-    get {
-      val request = new GetDispatchedTacticRequest(database, userId, proofId, tacticInstId)
-      complete(standardCompletion(request))
-    }
-  }}}
-
-  val dispatchedTerm = path("proofs" / "user" / Segment / Segment / "dispatchedTerm" / Segment) { (userId, proofId, termId) => { pathEnd {
-    get {
-      val request = new GetDispatchedTermRequest(database, userId, proofId, termId)
-      complete(standardCompletion(request))
     }
   }}}
 
@@ -569,12 +466,6 @@ trait RestApi extends HttpService {
     }
   }}
 
-  val proofHistory = path("proofs" / "user" / Segment / Segment / "proofhistory") { (userId, proofId) => {
-    get {
-      val request = new GetProofHistoryRequest(database, userId, proofId)
-      complete(standardCompletion(request))
-    }
-  }}
 
   val devAction = path("dev" / Segment) { (action) => {
     get {
@@ -608,13 +499,6 @@ trait RestApi extends HttpService {
     }
   }}
 
-
-  val initializeModel = path("models" / "users" / Segment / "model" / Segment / "initialize") { (userId, modelId) => pathEnd {
-    post {
-      complete(standardCompletion(new RunModelInitializationTacticRequest(database, userId, modelId)))
-    }
-  }}
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Route precedence
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -628,7 +512,6 @@ trait RestApi extends HttpService {
     userModel             ::
     userModel2            ::
     cookieecho            ::
-    runModelTactic        ::
     createProof           ::
     proofListForModel     ::
     proofList             ::
@@ -656,140 +539,16 @@ trait RestApi extends HttpService {
     counterExample        ::
     pruneBelow            ::
     proofTask             ::
-    nodeFormulaTactics    ::
-    nodeRunTactics        ::
-    runClTerm             ::
-    nodeSaturateTactics   ::
-    nodeRunTacticsByName  ::
-    nodeSaturateTacticsByName ::
-    dispatchedTactic      ::
-    dispatchedTerm        ::
     proofTree             ::
-    proofHistory          ::
     devAction             ::
     sequent               ::
     dashInfo              ::
-//    counterExample        ::
     kyxConfig             ::
     keymaeraXVersion      ::
     mathematicaConfig     ::
     mathematicaStatus     ::
     mathematicaConfigSuggestion ::
-    license ::
-      initializeModel :: isLocal :: shutdown ::
+    license :: isLocal :: shutdown ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
-
 }
-//
-//
-///// Leaving the implementation of the old api for reference.
-//// Note that it's not clear when/if we need respondWithMediaType(`application/json`) ?
-////
-////  val startSession = path("startSession") {
-////    get {
-////      val newKey = ServerState.createSession()
-////      respondWithMediaType(`application/json`) {
-////        complete("{\"sessionName\": \""+newKey+"\"}") //TODO-nrf
-////      }
-////    }
-////  }
-////
-////  /**
-////   * TODO ew. See comment on ServerState.getUpdates...
-////   */
-////  val getUpdates = path("getUpdates") {
-////    get {
-////      respondWithMediaType(`application/json`) {
-////        parameter("sessionName", "count") {
-////           (sessionName, count) => complete(ServerState.getUpdates(sessionName, count))
-////        }
-////      }
-////    }
-////  }
-////
-////  val startNewProblem = path("startNewProblem") {
-////    post {
-////      parameter("sessionName") { sessionName => {
-////        decompressRequest() {
-////          entity(as[String]) {
-////            problem => {
-////              val request = new Problem(sessionName, problem)
-////              val result = KeYmaeraClient.serviceRequest(sessionName, request)
-////              complete("[]")
-////            }
-////          }
-////        }
-////      }}
-////    }
-////  }
-////
-////  val formulaToString = path("formulaToString") {
-////    get {
-////      parameter("sessionName", "uid") { (sessionName,uid) => {
-////        val request = new FormulaToStringRequest(sessionName, uid)
-////        val result = KeYmaeraClient.serviceRequest(sessionName, request)
-////        complete("[" + result.map(_.json).mkString(",") + "]")
-////      }}
-////    }
-////  }
-////
-////  val formulaToInteractiveString = path("formulaToInteractiveString") {
-////    get {
-////      parameter("sessionName", "uid") { (sessionName,uid) => {
-////        val request = new FormulaToInteractiveStringRequest(sessionName, uid)
-////        val result = KeYmaeraClient.serviceRequest(sessionName, request)
-////        complete("[" + result.map(_.json).mkString(",") + "]")
-////      }}
-////    }
-////  }
-////
-////  val formulaFromUid = path("formulaFromUid") {
-////    get {
-////      parameter("sessionName", "uid") { (sessionName,uid) => {
-////        val request = new FormulaFromUidRequest(sessionName, uid)
-////        val result = KeYmaeraClient.serviceRequest(sessionName, request)
-////        complete("[" + result.map(_.json).mkString(",") + "]")
-////      }}
-////    }
-////  }
-////
-////  val runTactic = path("runTactic") {
-////    get {
-////      parameter("sessionName", "tacticName", "uid", "parentId") {
-////        (sessionName, tacticName, uid, parentId) => {
-////          val request = RunTacticRequest(sessionName, tacticName, uid, None, parentId)
-////          val result = KeYmaeraClient.serviceRequest(sessionName, request)
-////          complete("[" + result.map(_.json).mkString(",") + "]")
-////        }
-////      }
-////    }
-////  }
-////
-////
-////  //TODO-nrf next tactic should be a runTactic that takes some user input. Pass this
-////  //input in as a list of strings where the runTactic request passes None.
-////
-//////  val nodeClosed = path("nodeClosed") undefCall
-//////  val nodePruned = path("nodePruned") undefCall
-//////  val limitExceeded = path("limitExceeded") undefCall
-//////  val startingStrategy = path("startingStrategy") undefCall
-//////  val applyTactic = path("applyTactic") undefCall
-//////  val getNode = path("getNode") undefCall
-////
-////  val routes =
-////    javascriptRoute ::
-////    cssRoute ::
-////    staticRoute ::
-////    //Real stuff begins here.
-////    getUpdates ::
-////    startSession ::
-////    startNewProblem ::
-////    formulaToString ::
-////    formulaToInteractiveString ::
-////    formulaFromUid::
-////    runTactic::
-////    Nil
-////
-////  val myRoute = routes.reduce(_ ~ _)
-////}
