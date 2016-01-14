@@ -486,11 +486,11 @@ trait UnifyUSCalculus {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(sequent.sub(pos).contains(key), "In-applicable CE(" + fact + ")\nat " + pos + " which is " + sequent.sub(pos).getOrElse("<ill-positioned>") + "\nat " + sequent)
         val (ctx, _) = sequent.at(pos)
-        val cutPos: SuccPos = pos match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
+        val (cutPos: SuccPos, commute: BelleExpr) = pos match {case p: SuccPosition => (p.top, ident) case p: AntePosition => (SuccPos(sequent.succ.length), commuteEquivR(1))}
         val ctxOther = if (!LIBERAL) ctx(other) else sequent.replaceAt(pos, other).asInstanceOf[Formula]
         cutLR(ctxOther)(pos.top) <(
           /* use */ ident,
-          /* show */ coHideR(cutPos) & equivify & tactic(pos.inExpr) & by(fact)
+          /* show */ coHideR(cutPos) & equivify & tactic(pos.inExpr) & commute &  by(fact)
           )
       }
     }
