@@ -146,10 +146,9 @@ object Augmentors {
     def zipWithPositions: List[(Formula, TopPosition)] = ???
     /** Convert a sequent to its equivalent formula `/\antes -> \/succs` */
     def toFormula: Formula = {
-      //@todo review and contrast with ToolTactis.toSingleFormula
       val anteAnd = seq.ante.reduceRightOption(And).getOrElse(True)
       val succOr = seq.succ.reduceRightOption(Or).getOrElse(False)
-      //@todo could leave out Imply if anteAnd=True
+      //@note don't optimize true-> and ->false, since otherwise we'll have to deal with two special cases
       Imply(anteAnd, succOr)
     }
   }

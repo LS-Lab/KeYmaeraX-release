@@ -1,6 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
@@ -19,7 +21,7 @@ object ToolTactics {
     require(qeTool != null, "No QE tool available. Use implicit parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic(qeTool.getClass.getSimpleName + " QE",
       alphaRule*@TheType() &
-      //@TODO reenable exhaustiveEqL2R(hide=true)('L)*@TheType() &
+      exhaustiveEqL2R(hide=true)('L)*@TheType() &
       toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & qeSuccedentHd(qeTool) &
       DebuggingTactics.assertProved
   )}
@@ -48,15 +50,10 @@ object ToolTactics {
    */
   private lazy val toSingleFormula: DependentTactic  = new SingleGoalDependentTactic("toSingleFormula") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
-      //@todo why the True::True::Nil?
-      //@todo see SequentAugmentor.toFormula and compare
-      val ante = (sequent.ante ++ (True::True::Nil)).reduce(And)
-      val succ = (sequent.succ ++ (False::False::Nil)).reduce(Or)
-      cut(Imply(ante, succ)) <(
-        //@todo why implyLOld?
-        /* use */ implyLOld('Llast) <(
-          hideR(1)*sequent.succ.size  & (andR(1) <((close | skip) partial, close))*(sequent.ante.size+1),
-          hideL(-1)*sequent.ante.size & (orL(-1) <((close | skip) partial, close))*(sequent.succ.size+1)),
+      cut(sequent.toFormula) <(
+        /* use */ implyL('Llast) <(
+          hideR(1)*sequent.succ.size & (andR(1) <(close, (close | skip) partial))*(sequent.ante.size-1) & ?(close),
+          hideL(-1)*sequent.ante.size & (orL(-1) <(close, (close | skip) partial))*(sequent.succ.size-1) & ?(close)),
         /* show */ cohide('Rlast) partial
         )
     }
