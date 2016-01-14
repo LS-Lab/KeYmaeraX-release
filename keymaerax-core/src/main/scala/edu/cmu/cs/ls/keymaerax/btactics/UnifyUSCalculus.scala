@@ -1269,12 +1269,12 @@ trait UnifyUSCalculus {
           case t: Term =>      // t=t
             DerivedAxioms.equalReflex.fact(
               Sequent(Nil, IndexedSeq(), IndexedSeq(Equal(t,t))),
-              UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), t)::Nil),
+              UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil),
                 DerivedAxioms.equalReflex.fact.conclusion))
           case f: Formula =>   // f<->f
             DerivedAxioms.equivReflexiveAxiom.fact(
               Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(f,f))),
-              UniformSubstitutionRule(USubst(SubstitutionPair(PredOf(Function("p",None,Unit,Bool),Nothing), f)::Nil),
+              UniformSubstitutionRule(USubst(SubstitutionPair(PredOf(Function("p_",None,Unit,Bool),Nothing), f)::Nil),
                 DerivedAxioms.equivReflexiveAxiom.fact.conclusion))
         }
         Predef.assert(initial.isProved && initial.conclusion.ante.isEmpty && initial.conclusion.succ.length==1,
