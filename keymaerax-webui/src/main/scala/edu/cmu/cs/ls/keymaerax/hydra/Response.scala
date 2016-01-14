@@ -292,87 +292,88 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
   val json = JsArray(objects)
 }
 
-  object Helpers {
-    def childrenJson(children: List[TreeNode]): JsValue = JsArray(children.map({ case node => nodeIdJson(node.id) }):_*)
+/** JSON conversions for frequently-used response formats */
+object Helpers {
+  def childrenJson(children: List[TreeNode]): JsValue = JsArray(children.map({ case node => nodeIdJson(node.id) }):_*)
 
-    def sequentJson(sequent: Sequent): JsValue = {
-      var num: Int = 0
-      def fmlsJson (isAnte:Boolean, fmls: IndexedSeq[Formula]): JsValue = {
-        JsArray(fmls.zipWithIndex.map { case (fml, i) =>
-          /* Formula ID is formula number followed by comma-separated PosInExpr.
-           formula number = strictly positive if succedent, strictly negative if antecedent, 0 is never used
-          */
-          val idx = if (isAnte) (-i)-1 else i+1
-          val fmlJson = JSONConverter.convertFormula(fml, idx.toString, "")
-          JsObject(
-            "id" -> JsString(idx.toString),
-            "formula" -> fmlJson
-          )}.toVector)
-      }
-      JsObject(
-        "ante" -> fmlsJson(isAnte = true, sequent.ante),
-        "succ" -> fmlsJson(isAnte = false, sequent.succ)
-      )
+  def sequentJson(sequent: Sequent): JsValue = {
+    var num: Int = 0
+    def fmlsJson (isAnte:Boolean, fmls: IndexedSeq[Formula]): JsValue = {
+      JsArray(fmls.zipWithIndex.map { case (fml, i) =>
+        /* Formula ID is formula number followed by comma-separated PosInExpr.
+         formula number = strictly positive if succedent, strictly negative if antecedent, 0 is never used
+        */
+        val idx = if (isAnte) (-i)-1 else i+1
+        val fmlJson = JSONConverter.convertFormula(fml, idx.toString, "")
+        JsObject(
+          "id" -> JsString(idx.toString),
+          "formula" -> fmlJson
+        )}.toVector)
     }
-
-    def nodeJson(node: TreeNode): JsValue = {
-      val id = nodeIdJson(node.id)
-      val sequent = sequentJson(node.sequent)
-      val children = childrenJson(node.children)
-      val parentOpt = node.parent.map({ case n => nodeIdJson(n.id) })
-      val parent = parentOpt.getOrElse(JsNull)
-      JsObject(
-        "id" -> id,
-        "sequent" -> sequent,
-        "children" -> children,
-        "rule" -> ruleJson(node.rule),
-        "parent" -> parent)
-    }
-
-    def sectionJson(section: List[String]): JsValue = {
-      JsObject("path" -> new JsArray(section.map{case node => JsString(node)}))
-    }
-
-    def deductionJson(deduction: List[List[String]]): JsValue =
-      JsObject("sections" -> new JsArray(deduction.map{case section => sectionJson(section)}))
-
-    def itemJson(item: AgendaItem): (String, JsValue) = {
-      val value = JsObject(
-        "id" -> JsString(item.id),
-        "name" -> JsString(item.name),
-        "proofId" -> JsString(item.proofId),
-        "deduction" -> deductionJson(List(item.path)))
-      (item.id, value)
-    }
-
-    def nodeIdJson(n: Int):JsValue = JsString(n.toString)
-    def proofIdJson(n: String):JsValue = JsString(n)
-
-    def ruleJson(rule: String):JsValue = {
-      JsObject(
-        "id" -> JsString(rule),
-        "name" -> JsString(rule)
-      )
-    }
-
-    def singleNodeJson(node: TreeNode): JsValue = {
-      JsObject (
-        "id" -> nodeIdJson(node.id),
-        "sequent" -> sequentJson(node.sequent),
-        "children" -> childrenJson(node.children),
-        "rule" -> ruleJson(node.rule),
-        "parent" -> node.parent.map({case parent => nodeIdJson(parent.id)}).getOrElse(JsNull)
-      )
-    }
-
-    def agendaItemJson(item: AgendaItemPOJO): JsValue = {
-      JsObject(
-        "agendaItemId" -> JsString(item.initialProofNode.toString),
-        "proofId" -> JsString(item.proofId.toString),
-        "displayName" -> JsString(item.displayName)
-      )
-    }
+    JsObject(
+      "ante" -> fmlsJson(isAnte = true, sequent.ante),
+      "succ" -> fmlsJson(isAnte = false, sequent.succ)
+    )
   }
+
+  def nodeJson(node: TreeNode): JsValue = {
+    val id = nodeIdJson(node.id)
+    val sequent = sequentJson(node.sequent)
+    val children = childrenJson(node.children)
+    val parentOpt = node.parent.map({ case n => nodeIdJson(n.id) })
+    val parent = parentOpt.getOrElse(JsNull)
+    JsObject(
+      "id" -> id,
+      "sequent" -> sequent,
+      "children" -> children,
+      "rule" -> ruleJson(node.rule),
+      "parent" -> parent)
+  }
+
+  def sectionJson(section: List[String]): JsValue = {
+    JsObject("path" -> new JsArray(section.map{case node => JsString(node)}))
+  }
+
+  def deductionJson(deduction: List[List[String]]): JsValue =
+    JsObject("sections" -> new JsArray(deduction.map{case section => sectionJson(section)}))
+
+  def itemJson(item: AgendaItem): (String, JsValue) = {
+    val value = JsObject(
+      "id" -> JsString(item.id),
+      "name" -> JsString(item.name),
+      "proofId" -> JsString(item.proofId),
+      "deduction" -> deductionJson(List(item.path)))
+    (item.id, value)
+  }
+
+  def nodeIdJson(n: Int):JsValue = JsString(n.toString)
+  def proofIdJson(n: String):JsValue = JsString(n)
+
+  def ruleJson(rule: String):JsValue = {
+    JsObject(
+      "id" -> JsString(rule),
+      "name" -> JsString(rule)
+    )
+  }
+
+  def singleNodeJson(node: TreeNode): JsValue = {
+    JsObject (
+      "id" -> nodeIdJson(node.id),
+      "sequent" -> sequentJson(node.sequent),
+      "children" -> childrenJson(node.children),
+      "rule" -> ruleJson(node.rule),
+      "parent" -> node.parent.map({case parent => nodeIdJson(parent.id)}).getOrElse(JsNull)
+    )
+  }
+
+  def agendaItemJson(item: AgendaItemPOJO): JsValue = {
+    JsObject(
+      "agendaItemId" -> JsString(item.initialProofNode.toString),
+      "proofId" -> JsString(item.proofId.toString),
+      "displayName" -> JsString(item.displayName)
+    )
+  }
+}
 
 class AgendaAwesomeResponse(tree: ProofTree) extends Response {
   import Helpers._
@@ -477,7 +478,6 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
     "ante" -> new JsArray(sequent.ante.map{case fml => JsString(fml)}),
     "succ" -> new JsArray(sequent.succ.map{case fml => JsString(fml)})
     )
-    println("Sending sequent: " + json)
    json
   }
 
@@ -515,7 +515,6 @@ class PruneBelowResponse(item:AgendaItem) extends Response {
   val json = JsObject (
   "agendaItem" -> Helpers.itemJson(item)._2
   )
-
 }
 
 class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSymbol, Term] = Map()) extends Response {

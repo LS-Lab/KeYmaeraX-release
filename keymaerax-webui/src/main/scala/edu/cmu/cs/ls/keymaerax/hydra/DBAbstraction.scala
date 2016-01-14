@@ -271,9 +271,14 @@ trait DBAbstraction {
     */
   def addExecutionStep(step: ExecutionStepPOJO): Int
 
+  /** Truncate the execution trace at the beginning of alternativeTo and replace in with trace. */
   def addAlternative(alternativeTo: Int, trace:ExecutionTrace)
+  /** @deprecated Use proofSteps instead. */
   def getExecutionSteps(executionID: Int): List[ExecutionStepPOJO]
+  /** Return the sequence of steps that led to the current state of the proof. */
   def getExecutionTrace(proofID: Int): ExecutionTrace
+  /** @deprecated Use proofSteps instead. This should be private. */
+  def proofSteps(executionId: Int): List[ExecutionStepPOJO]
 
   /** Updates an executable step's status. @note should not be transitive */
   def updateExecutionStatus(executionStepId: Int, status: ExecutionStepStatus): Unit
@@ -291,10 +296,9 @@ trait DBAbstraction {
   /** Returns the executable with ID executableId */
   def getExecutable(executableId: Int): ExecutablePOJO
 
-  def proofSteps(executionId: Int): List[ExecutionStepPOJO]
 
   import spray.json._
-  //allows for .parseJoson on strings.
+  //allows for .parseJson on strings.
   def initializeForDemo2(): Unit = {
     println("Initializing a demo database")
 

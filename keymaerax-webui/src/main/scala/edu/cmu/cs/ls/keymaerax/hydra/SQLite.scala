@@ -41,6 +41,12 @@ object SQLite {
   /** Use this for all unit tests that work with the database, so tests don't infect the production database */
   val TestDB: SQLiteDB = new SQLiteDB(DBAbstractionObj.testLocation)
 
+  /** LemmaDB using SQLite for storage. All provables that truly need to be persistent should be stored here, as this will
+    * survive .keymaerax/cache being deleted.
+    *
+    * Because parsing lemmas is a relatively expensive operation (a page load can request dozens of provables, which
+    * can take seconds), parsing operations are cached internally. All accesses to the lemma table must use this class
+    * in order for the cache to always be up to date. */
   class SQLiteLemmaDB (db: SQLiteDB) extends LemmaDB {
     override def contains(id: LemmaID): Boolean = { true }
 
@@ -109,7 +115,8 @@ object SQLite {
     }
 
     override def deleteDatabase(): Unit = {
-      db.deleteAllLemmas
+      db.deleteAllLemmas()
+      cachedLemmas = Map.empty
     }
   }
 
@@ -146,7 +153,7 @@ object SQLite {
     ensureExists(DBAbstractionObj.dblocation)
     ensureExists(DBAbstractionObj.testLocation)
 
-    /* withTransaction is not thread-safe if you reuse connections, it will raise exception saying we're in autocommit
+    /* withTransaction is not thread-safe if you reuse connections, it will raise an exception saying we're in autocommit
      * mode when we shouldn't be. So only ever call withTransaction inside a synchronized block. */
     def synchronizedTransaction[T](f: => T)(implicit session:Session): T =
       synchronized {
@@ -182,7 +189,7 @@ object SQLite {
       }
     }
     override def createUser(username: String, password: String): Unit = {
-      /* Store passwords as a salted hash. Use CSPRNG to generate salt. Allow configuring number of iterations
+      /* Store passwords as a salted hash. Allow configuring number of iterations
        * since we may conceivably want to change it after deployment for performance reasons */
       val iterations = configWithDefault("security", "passwordHashIterations", 10000)
       val saltLength = configWithDefault("security", "passwordSaltLength", 512)
@@ -196,7 +203,7 @@ object SQLite {
     private def idgen(): String = java.util.UUID.randomUUID().toString()
 
     /**
-      * Poorly names -- either update the config, or else insert an existing key.
+      * Poorly named -- either update the config, or else insert an existing key.
       * But in Mongo it was just update, because of the nested documents thing.
       * @param config
       */
@@ -495,9 +502,12 @@ object SQLite {
       }
     }
 
+    /** Allow retrieving lemmas in bulk to reduce the number of database queries */
     private[SQLite] def getLemmas(lemmaIds: List[Int]): Option[List[String]] = {
       synchronizedTransaction({
         val allLemmas = Lemmas.map{case row => (row._Id.get, row.lemma.get)}.list
+        /** Build a map from the lemmas to avoid an O(m*n) search. Since this map contains the unparsed lemmas, it does
+          * not incur the overhead of parsing every lemma in the database. */
         val lemmaMap =
           allLemmas.foldLeft(Map.empty[Int, String]){case (map, (id, lemma)) => map.+((id, lemma))}
         try {
@@ -533,6 +543,7 @@ object SQLite {
       getExecutables(List(executableId)).head
     }
 
+    /** Allow retrieving executables in bulk to reduce the number of database queries. */
     def getExecutables(executableIds: List[Int]): List[ExecutablePOJO] =
       synchronizedTransaction({
         nSelects = nSelects + 1
@@ -560,6 +571,7 @@ object SQLite {
         case Some(lemmas) => lemmas.map(_.fact)
       }
     }
+
     /** Rerun all execution steps to generate a provable for the current state of the proof
       * Assumes the execution starts with a trivial provable (one subgoal, which is the same
       * as the conclusion) */
@@ -703,6 +715,8 @@ object SQLite {
             .list
         var prevId: Option[Int] = None
         var revResult: List[ExecutionStepPOJO] = Nil
+        /* The Executionsteps table may contain many alternate histories for the same execution. In order to reconstruct
+        * the current state of the world, we must pick the most recent alternative at every opportunity.*/
         steps = steps.sortWith({case (x, y) => y.alternativeorder.get < x.alternativeorder.get})
         while(steps != Nil) {
           val (headSteps, tailSteps) = steps.partition({step => step.previousstep == prevId})
@@ -752,8 +766,8 @@ object SQLite {
     }
 
     override def getExecutionTrace(proofId: Int): ExecutionTrace = {
-      // This method has proven itself to be a resource hog, so this implementation attempts to minimize the number of
-      // DB calls.
+      /* This method has proven itself to be a resource hog, so this implementation attempts to minimize the number of
+         DB calls. */
       val executionId = getTacticExecution(proofId)
       var steps = proofSteps(executionId)
       if (steps.isEmpty) {
