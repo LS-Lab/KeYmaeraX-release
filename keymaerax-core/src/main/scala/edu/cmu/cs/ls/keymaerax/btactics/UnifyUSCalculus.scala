@@ -241,6 +241,14 @@ trait UnifyUSCalculus {
         ) & debug("end   useAt " + p) partial
       }
 
+      def implyStep(other: Expression, factTactic: BelleExpr): BelleExpr = {
+        val cohide = p match {case p: SuccPosition => coHideR(p.top) case p: AntePosition => coHideR('Rlast)}
+        cutLR(C(subst(other)))(p.topLevel) <(
+          /* use */ ident partial,
+          /* show */ cohide & CMon(p.inExpr) & factTactic
+        )
+      }
+
       K.ctx match {
         case DotFormula if p.isTopLevel =>
           //@note this should be similar to byUS(fact) using factTactic to prove fact after instantiation
@@ -258,42 +266,9 @@ trait UnifyUSCalculus {
         case Equal(other, DotTerm) =>
           equivStep(other, (if (p.isAnte) TactixLibrary.useAt(DerivedAxioms.equalCommute)(1) else ident) & factTactic)
 
-        //@todo not sure if the following two cases really work as intended, but they seem to
-        case Imply(other, DotFormula) if p.isSucc && p.isTopLevel =>
-          cutR(subst(other))(p.checkSucc.top) <(
-            /* use */ ident partial,
-            /* show */ coHideR(p) & factTactic
-          )
+        case Imply(other, DotFormula) => implyStep(other, factTactic)
 
-        case Imply(DotFormula, other) if p.isAnte && p.isTopLevel =>
-          cutL(subst(other))(p.checkAnte.top) <(
-            /* use */ ident partial,
-            /* show */ coHideR('Rlast) & factTactic
-          )
-
-        case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel) =>
-          val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
-          cutLR(C(subst(other)))(p.top) <(
-            /* use */ ident partial,
-            /* show */ coHideR(cutPos) & implyR(SuccPos(0)) &
-              propCMon(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
-              // gather back to a single implication for axiom-based factTactic to succeed
-              & implyRi
-              & factTactic
-          )
-
-        case Imply(DotFormula, other) if !(p.isAnte && p.isTopLevel) =>
-          println("Check this useAt case")
-          // same as "case Imply(other, DotFormula) if !(p.isSucc && p.isTopLevel)"
-          val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length + 1)}
-          cutLR(C(subst(other)))(p.top) <(
-            /* use */ ident,
-            /* show */ coHideR(cutPos) & implyR(SuccPos(0)) &
-              propCMon(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
-              // gather back to a single implication for axiom-based factTactic to succeed
-              & implyRi
-              & factTactic
-          )
+        case Imply(DotFormula, other) => implyStep(other, factTactic)
 
         case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
           //@todo assumes no more context around remainder (no other examples so far)

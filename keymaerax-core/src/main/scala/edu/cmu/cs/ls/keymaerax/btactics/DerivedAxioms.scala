@@ -560,7 +560,7 @@ object DerivedAxioms {
   private lazy val K2 = TactixLibrary.proveBy(//derivedAxiom("K2",
     Sequent(Nil, IndexedSeq(), IndexedSeq(K2F)),
     cut(/*(9)*/"([a_;](q_(??)->p_(??)&q_(??)) -> ([a_;]q_(??) -> [a_;](p_(??)&q_(??))))  ->  (([a_;]p_(??) & [a_;]q_(??)) -> [a_;](p_(??)&q_(??)))".asFormula) <(
-      /* use */ cut(/*(6)*/"[a_;](q_(??) -> (p_(??)&q_(??)))  ->  ([a_;]q_(??) -> [a_;](p(??)&q_(??)))".asFormula) <(
+      /* use */ cut(/*(6)*/"[a_;](q_(??) -> (p_(??)&q_(??)))  ->  ([a_;]q_(??) -> [a_;](p_(??)&q_(??)))".asFormula) <(
       /* use */ modusPonens(AntePos(1), AntePos(0)) & close,
       /* show */ cohide(2) &
       US(USubst(SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), "q_(??)".asFormula) ::
