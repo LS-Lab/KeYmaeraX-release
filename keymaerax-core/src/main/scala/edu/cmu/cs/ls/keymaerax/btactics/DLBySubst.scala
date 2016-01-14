@@ -40,7 +40,7 @@ object DLBySubst {
    * {{{
    *      p |- q
    *   -------------mond
-   *   <a>p |- <a>q
+   *   ⟨a⟩p |- ⟨a⟩q
    * }}}
    */
   def mond = new NamedTactic("mond", {
