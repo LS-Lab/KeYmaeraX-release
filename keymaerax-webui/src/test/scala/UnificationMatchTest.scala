@@ -173,22 +173,22 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   it should "unify [x:=f();]p(x) with [x:=7+x;]x^2>=5" in {
-    UnificationMatch("[x:=f();]p(x)".asFormula, "[x:=7+x;]x^2>=5".asFormula) shouldBe RenUSubst(
+    shouldMatch("[x:=f();]p(x)".asFormula, "[x:=7+x;]x^2>=5".asFormula, RenUSubst(
         ("f()".asTerm, "7+x".asTerm) ::
-          (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil)
+          (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [x:=f();]p(x) <-> p(f()) with [x:=7+x;]x^2>=5 <-> (7+x)^2>=5" in {
-    UnificationMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[x:=7+x;]x^2>=5 <-> (7+x)^2>=5".asFormula) shouldBe RenUSubst(
+    shouldMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[x:=7+x;]x^2>=5 <-> (7+x)^2>=5".asFormula, RenUSubst(
       ("f()".asTerm, "7+x".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil)
+        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [x:=f();]p(x) with [y:=7+z;]y^2>=5" in {
-    UnificationMatch("[x:=f();]p(x)".asFormula, "[y:=7+z;]y^2>=5".asFormula) shouldBe RenUSubst(
+    shouldMatch("[x:=f();]p(x)".asFormula, "[y:=7+z;]y^2>=5".asFormula, RenUSubst(
       (Variable("x"), Variable("y")) ::
       ("f()".asTerm, "7+z".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil)
+        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [x_:=f();]p(x_) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
@@ -202,22 +202,60 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     shouldMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, RenUSubst(
       (Variable("x"), Variable("y")) ::
         ("f()".asTerm, "7+z".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
+        (PredOf(Function("p", None, Real, Bool), DotTerm), Greater(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
   }
 
+  it should "unify [x_:=y;]p(x_) with [y_0:=y;]y_0>2" in {
+    shouldMatch("[x_:=y;]p(x_)".asFormula, "[y_0:=y;]y_0>2".asFormula, RenUSubst(
+      (Variable("x_"), Variable("y",Some(0))) ::
+        (PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "2".asTerm)) :: Nil))
+  }
+
+  it should "unify [x_:=f();]p(x_) with [y_0:=y;]y_0>2" in {
+    shouldMatch("[x_:=f();]p(x_)".asFormula, "[y_0:=y;]y_0>2".asFormula, RenUSubst(
+      (Variable("x_"), Variable("y",Some(0))) ::
+        ("f()".asTerm, "y".asTerm) ::
+        (PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, "2".asTerm)) :: Nil))
+  }
+
+//  it should "unify [x_:=y;]y_0>0<->y_0>0 with [y_0:=y;]y_0>0<->y>0" in {
+//    shouldMatch("[x_:=y;]y_0>0<->y_0>0".asFormula, "[y_0:=y;]y_0>0<->y>0".asFormula, RenUSubst(
+//      (Variable("x_"), Variable("y",Some(0))) :: Nil))
+//  }
+
+  it should "unify [x_:=y;]y_0>0<->y_0>0 with [a:=z;]y_0>0<->y_0>0" in {
+    shouldMatch("[x_:=y;]y_0>0<->y_0>0".asFormula, "[a:=z;]y_0>0<->y_0>0".asFormula, RenUSubst(
+      (Variable("x_"), Variable("a")) :: (Variable("y"), Variable("z")) :: Nil))
+  }
+
+  it should "unify [x_:=y;]x_>0<->y>0 with [a:=z;]a>0<->z>0" in {
+    shouldMatch("[x_:=y;]x_>0<->y>0".asFormula, "[a:=z;]a>0<->z>0".asFormula, RenUSubst(
+      (Variable("x_"), Variable("a")) :: (Variable("y"), Variable("z")) :: Nil))
+  }
+
+  it should "unify [x_:=y;]y>0<->y>0 with [a:=z;]z>0<->z>0" in {
+    shouldMatch("[x_:=y;]y>0<->y>0".asFormula, "[a:=z;]z>0<->z>0".asFormula, RenUSubst(
+      (Variable("x_"), Variable("a")) :: (Variable("y"), Variable("z")) :: Nil))
+  }
+
+  //@todo really? needs cyclic decluttering to say the least
+  ignore should "unify [x_:=y;]y_0>0<->y_0>0 with [y_0:=z;]y_0>0<->z>0" in {
+    shouldMatch("[x_:=y;]y_0>0<->y_0>0".asFormula, "[y_0:=z;]y_0>0<->z>0".asFormula, RenUSubst(
+      (Variable("x_"), Variable("y",Some(0))) :: Nil))
+  }
+
+
   it should "unify y>0 -> [x:=2;]y>0 with p() -> [a;]p()" in {
-    UnificationMatch("p() -> [a;]p()".asFormula, "y>0 -> [x:=2;]y>0".asFormula) shouldBe RenUSubst(
+    shouldMatch("p() -> [a;]p()".asFormula, "y>0 -> [x:=2;]y>0".asFormula, RenUSubst(
       (PredOf(Function("p", None, Unit, Bool), Nothing), "y>0".asFormula) ::
-        (ProgramConst("a"), Assign(Variable("x"), Number(2))) :: Nil
-    )
+        (ProgramConst("a"), Assign(Variable("x"), Number(2))) :: Nil))
   }
 
   it should "unify [x:=2;]y>0 -> y>0 with [a;]p() -> p()" in {
     // not an axiom, just to test both directions
-    UnificationMatch("[a;]p() -> p()".asFormula, "[x:=2;]y>0 -> y>0".asFormula) shouldBe RenUSubst(
+    shouldMatch("[a;]p() -> p()".asFormula, "[x:=2;]y>0 -> y>0".asFormula, RenUSubst(
       (ProgramConst("a"), Assign(Variable("x"), Number(2))) ::
-        (PredOf(Function("p", None, Unit, Bool), Nothing), "y>0".asFormula) :: Nil
-    )
+        (PredOf(Function("p", None, Unit, Bool), Nothing), "y>0".asFormula) :: Nil))
   }
 
   it should "unify renaming and instance [y:=y;]p(??) and [y_0:=y_0;](y_0>77&true)" in {
@@ -239,45 +277,43 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   it should "unify renaming x=0 and y_0=0" in {
-    UnificationMatch("x=0".asFormula,
-      "y_0=0".asFormula) shouldBe RenUSubst(
-      (Variable("x"), Variable("y",Some(0))) :: Nil
-    )
+    shouldMatch("x=0".asFormula,
+      "y_0=0".asFormula, RenUSubst(
+      (Variable("x"), Variable("y",Some(0))) :: Nil))
   }
 
   it should "unify renaming x=0<->x=0 and y_0=0<->y_0=0" in {
-    UnificationMatch("x=0<->x=0".asFormula,
-      "y_0=0<->y_0=0".asFormula) shouldBe RenUSubst(
-      (Variable("x"), Variable("y",Some(0))) :: Nil
-    )
+    shouldMatch("x=0<->x=0".asFormula,
+      "y_0=0<->y_0=0".asFormula, RenUSubst(
+      (Variable("x"), Variable("y",Some(0))) :: Nil))
   }
 
   it should "unify renaming x=0&x=0<->x=0 and y_0=0&y_0=0<->y_0=0" in {
-    UnificationMatch("x=0&x=0<->x=0".asFormula,
-      "y_0=0&y_0=0<->y_0=0".asFormula) shouldBe RenUSubst(
+    shouldMatch("x=0&x=0<->x=0".asFormula,
+      "y_0=0&y_0=0<->y_0=0".asFormula, RenUSubst(
       (Variable("x"), Variable("y",Some(0))) :: Nil
-    )
+    ))
   }
 
   it should "unify renaming x=0<->x=0&x=0 and y_0=0<->y_0=0&y_0=0" in {
-    UnificationMatch("x=0<->x=0&x=0".asFormula,
-      "y_0=0<->y_0=0&y_0=0".asFormula) shouldBe RenUSubst(
+    shouldMatch("x=0<->x=0&x=0".asFormula,
+      "y_0=0<->y_0=0&y_0=0".asFormula, RenUSubst(
       (Variable("x"), Variable("y",Some(0))) :: Nil
-    )
+    ))
   }
 
   it should "unify renaming x>1&x=2<->x<3 and y_0>1&y_0=2<->y_0<3" in {
-    UnificationMatch("x>1&x=2<->x<3".asFormula,
-      "y_0>1&y_0=2<->y_0<3".asFormula) shouldBe RenUSubst(
+    shouldMatch("x>1&x=2<->x<3".asFormula,
+      "y_0>1&y_0=2<->y_0<3".asFormula, RenUSubst(
       (Variable("x"), Variable("y",Some(0))) :: Nil
-    )
+    ))
   }
 
   it should "unify renaming x>1<->x=2&x<3 and y_0>1<->y_0=2&y_0<3" in {
-    UnificationMatch("x>1<->x=2&x<3".asFormula,
-      "y_0>1<->y_0=2&y_0<3".asFormula) shouldBe RenUSubst(
+    shouldMatch("x>1<->x=2&x<3".asFormula,
+      "y_0>1<->y_0=2&y_0<3".asFormula, RenUSubst(
       (Variable("x"), Variable("y",Some(0))) :: Nil
-    )
+    ))
   }
 
   it should "unify renaming and instance [y:=y;]y>5<->y>5 and [y_0:=y_0;]y_0>5<->y_0>5" in {

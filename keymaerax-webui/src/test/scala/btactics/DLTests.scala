@@ -68,6 +68,7 @@ class DLTests extends TacticTestBase {
 
   "assignb" should "[y:=1;]y>0 to 1>0" in {
     val result = proveBy("[y:=1;]y>0".asFormula, assignb(1))
+    println(result)
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "1>0".asFormula
