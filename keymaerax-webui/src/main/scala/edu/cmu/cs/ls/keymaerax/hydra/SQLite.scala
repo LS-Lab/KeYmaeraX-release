@@ -13,6 +13,7 @@ import javax.crypto.spec.PBEKeySpec
 import javax.xml.bind.DatatypeConverter
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, BelleExpr}
+import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import _root_.edu.cmu.cs.ls.keymaerax.core._
 import _root_.edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
@@ -200,8 +201,6 @@ object SQLite {
         nInserts = nInserts + 1
       })}
 
-    private def idgen(): String = java.util.UUID.randomUUID().toString()
-
     /**
       * Poorly named -- either update the config, or else insert an existing key.
       * But in Mongo it was just update, because of the nested documents thing.
@@ -231,7 +230,7 @@ object SQLite {
     //Proofs and Proof Nodes
     override def getProofInfo(proofId: Int): ProofPOJO =
       synchronizedTransaction({
-        val stepCount = getProofSteps(proofId).size
+        val stepCount = describeProofSteps(proofId).size
         nSelects = nSelects + 1
         val list = Proofs.filter(_._Id === proofId)
           .list
@@ -303,7 +302,7 @@ object SQLite {
       synchronizedTransaction({
         nSelects = nSelects + 1
         Proofs.filter(_.modelid === modelId).list.map(p => {
-          val stepCount = getProofSteps(p._Id.get).size
+          val stepCount = describeProofSteps(p._Id.get).size
           val closed: Boolean = sqliteBoolToBoolean(p.closed.getOrElse(0))
           new ProofPOJO(p._Id.get, p.modelid.get, blankOk(p.name), blankOk(p.description), blankOk(p.date), stepCount, closed)
         })
@@ -574,9 +573,13 @@ object SQLite {
 
     /** Rerun all execution steps to generate a provable for the current state of the proof
       * Assumes the execution starts with a trivial provable (one subgoal, which is the same
-      * as the conclusion) */
+      * as the conclusion)
+      *
+      * This is only for testing purposes. If you need the last provable of an execution,trace,
+      * you should use getExecutionTrace(id).last.outputProvable.get.
+      * */
     private def regenerate(executionId: Int): Provable = {
-      getExecutionSteps(executionId) match {
+      proofSteps(executionId) match {
         case Nil => throw new Exception("Cannot regenerate provable for empty execution")
         case step::steps =>
           val inputProvable = loadProvable(step.inputProvableId)
@@ -585,7 +588,7 @@ object SQLite {
             SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
               case BelleProvable(p, _) => p
             }
-          def loadTactic(id: Int): BelleExpr = ???
+          def loadTactic(id: Int): BelleExpr = BTacticParser(getExecutable(id).belleExpr.get).get
           (step::steps).foldLeft(initialProvable)({case (provable, currStep) =>
               run(provable, loadTactic(currStep.executableId))
             })
@@ -594,25 +597,10 @@ object SQLite {
 
     }
 
-    override def getExecutionSteps(executionID: Int): List[ExecutionStepPOJO] = {
-      synchronizedTransaction({
-        nSelects = nSelects + 1
-        val steps =
-          Executionsteps.filter(_.executionid === executionID)
-            .list
-            .map(step => new ExecutionStepPOJO(step._Id, step.executionid.get, step.previousstep, step.parentstep,
-              step.branchorder, step.branchlabel, step.alternativeorder.get, ExecutionStepStatus.fromString(step.status.get),
-              step.executableid.get, step.inputprovableid.get, step.resultprovableid, step.localprovableid, step.userexecuted.get.toBoolean,
-              step.rulename.get)) //@todo This used to be ??? with step.rulename.get commented out. Why isn't step.rulename.get correct here?
-        if (steps.length < 1) throw new Exception("No steps found for execution " + executionID)
-        else steps
-      })
-    }
-
     /** Return a string describing each step in the current state of the proof.
       * As of this writing, callers only use the length of the list and not the
       * individual strings, thus the exact representation is currently unspecified. */
-    override def getProofSteps(proofId: Int): List[String] = {
+    private def describeProofSteps(proofId: Int): List[String] = {
       val execution = getTacticExecution(proofId)
       val stepPOJOs = proofSteps(execution)
       stepPOJOs.map({case step => step.toString})

@@ -273,12 +273,9 @@ trait DBAbstraction {
 
   /** Truncate the execution trace at the beginning of alternativeTo and replace in with trace. */
   def addAlternative(alternativeTo: Int, trace:ExecutionTrace)
-  /** @deprecated Use proofSteps instead. */
-  def getExecutionSteps(executionID: Int): List[ExecutionStepPOJO]
+
   /** Return the sequence of steps that led to the current state of the proof. */
   def getExecutionTrace(proofID: Int): ExecutionTrace
-  /** @deprecated Use proofSteps instead. This should be private. */
-  def proofSteps(executionId: Int): List[ExecutionStepPOJO]
 
   /** Updates an executable step's status. @note should not be transitive */
   def updateExecutionStatus(executionStepId: Int, status: ExecutionStepStatus): Unit
