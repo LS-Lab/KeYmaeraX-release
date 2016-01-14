@@ -245,11 +245,7 @@ trait UnifyUSCalculus {
         val cohide = p match {case p: SuccPosition => coHideR(p.top) case p: AntePosition => coHideR('Rlast)}
         cutLR(C(subst(other)))(p.topLevel) <(
           /* use */ ident partial,
-          /* show */ cohide & (if (p.isTopLevel) factTactic else implyR(1) &
-            propCMon(p.inExpr) //@note simple approximation would be: ((Monb | Mond | allMon ...)*)
-            // gather back to a single implication for axiom-based factTactic to succeed
-            & implyRi
-            & factTactic)
+          /* show */ cohide & CMon(p.inExpr) & factTactic
         )
       }
 
