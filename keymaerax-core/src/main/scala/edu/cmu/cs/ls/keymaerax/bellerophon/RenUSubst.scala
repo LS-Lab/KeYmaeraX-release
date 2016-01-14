@@ -13,7 +13,7 @@ import scala.collection.immutable._
 
 object RenUSubst {
   //@note See UniformRenaming.semanticRenaming: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
-  private[keymaerax] val semanticRenaming = /*false &&*/ (try {
+  private[keymaerax] val semanticRenaming = false && (try {
     URename(Variable("quark"), Variable("quark", Some(5)))(ProgramConst("quarky"))
     true
   } catch { case e: RenamingClashException => false })
@@ -89,7 +89,7 @@ sealed abstract class RenUSubst(private[bellerophon] val subsDefsInput: immutabl
   private def applicable(): Unit = {
     // check that we never replace n by something and then again replacing the same n by something
     val lefts: List[Expression] = subsDefsInput.map(_._1).toList
-    if (lefts.distinct.size != lefts.size) throw new ProverException("no duplicate substitutions with same substitutees\n" + this)
+    if (lefts.distinct.size != lefts.size) throw new ProverException("conflict: no duplicate substitutions for the same substitutee\n" + this)
   }
 
   /**

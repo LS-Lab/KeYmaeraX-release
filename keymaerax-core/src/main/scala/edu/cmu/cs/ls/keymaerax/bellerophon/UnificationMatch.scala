@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.SubstitutionHelper
+import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.btactics.SubstitutionHelper.replaceFree
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -18,8 +18,8 @@ import scala.collection.immutable.{List, Nil}
   * @author Andre Platzer
   */
 //object UnificationMatch extends UnificationMatchBase {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
-object UnificationMatch extends UnificationMatchURenAboveUSubst {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
-//object UnificationMatch extends UnificationMatchUSubstAboveURen
+//object UnificationMatch extends UnificationMatchURenAboveUSubst {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
+object UnificationMatch extends UnificationMatchUSubstAboveURen
 
 /**
   * Matcher(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
@@ -71,7 +71,7 @@ trait InsistentMatcher extends Matcher {
 
 abstract trait BaseMatcher extends Matcher {
   //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   def apply(e1: Expression, e2: Expression): Subst = if (e1.kind==e2.kind || e1.kind==ProgramKind && e2.kind==DifferentialProgramKind)
     e1 match {
@@ -150,9 +150,7 @@ abstract trait BaseMatcher extends Matcher {
 class UnificationMatchBase extends BaseMatcher {
 
   //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUGIO = System.getProperty("DEBUG", "true")=="true"
-  //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUGALOT = System.getProperty("DEBUG", "true")=="true"
+  private val DEBUGALOT = System.getProperty("DEBUG", "false")=="true"
 
   /** Reunify after renaming */
   private val REUNIFY = false
@@ -435,21 +433,36 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
   // pass 2
   private val renUMatcher = RenUnificationMatch
 
-  private def staple(ren: Subst, subst: Subst): Subst = {
-    val posthocDottify: Expression=>Expression = (rhs: Expression) => {
+  private def staple(e: Expression, ren: Subst, subst: Subst): Subst = {
+    import Augmentors.FormulaAugmentor
+    //@note optimizable
+    val argOfPred: Function => Term = p => e.asInstanceOf[Formula].findSubformula(g => g match {
+        //@note want to know t
+      case PredOf(q,t) if q==p => true
+      case _ => false
+    }).get._2.asInstanceOf[PredOf].child
+    val posthocDottify: (Expression, Expression) =>Expression = (what: Expression, repl: Expression) => {
       //@todo could post-hoc: replaceFree(sp._2)(ren(argumentWhereOccured),DotTerm)
-      println("\t\t\tINFO: post-hoc optimizable")
-      //@note this is a ridiculous approximation but fast for matching against p(x_) or f(x_) in axioms
-      rhs match {
-        case rhs: Term    => ren(SubstitutionHelper.replaceFree(rhs)(ren(Variable("x_")),DotTerm))
-        case rhs: Formula => ren(SubstitutionHelper.replaceFree(rhs)(ren(Variable("x_")),DotTerm))
+      //@note this is a ridiculous approximation but fast for matching against p(x_) or f(x_) or p(x_') or f(x_') in axioms
+      val r = repl match {
+        case rhs: Term    => ren(
+          replaceFree(
+            replaceFree(rhs)(ren(Variable("x_")),DotTerm)
+          ) (ren(DifferentialSymbol(Variable("x_"))), DotTerm)
+        )
+        case rhs: Formula => ren(
+          //@todo if this match doesn't work, could keep looking for argument in next occurrence of what
+          replaceFree(rhs)(ren(argOfPred(what.asInstanceOf[PredOf].func)), DotTerm)
+        )
       }
+      println("\t\t\tINFO: post-hoc optimizable: " + repl + " dottify " + r)
+      r
     }
     //@note URename with TRANSPOSITION=true are their own inverses
     val inverseRename = (subst:RenUSubst) => RenUSubst(subst.subsDefsInput.map(sp =>
       (sp._1, sp._1 match {
-        case FuncOf(_, DotTerm) => posthocDottify(sp._2)
-        case PredOf(_, DotTerm) => posthocDottify(sp._2)
+        case FuncOf(_, DotTerm) => posthocDottify(sp._1, sp._2)
+        case PredOf(_, DotTerm) => posthocDottify(sp._1, sp._2)
         case _ => ren(sp._2)
       } )))
     val renamedSubst = inverseRename(subst)
@@ -460,14 +473,16 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
   private def unify(e1: Expression, e2: Expression): Subst = {
     val subst = usubstUMatcher(e1, e2)
     val ren = renUMatcher(subst(e1), e2)
-    staple(ren, subst)
+    //@note instead of post-hoc stapling could also add a third pass that unifies with the resulting renaming `ren` in mind.
+    staple(e1, ren, subst)
 //    if (true/*DEBUG*/) println("\n  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  subst: " + subst + "\n  gives: " + e1s + "\n  ren:   " + ren + "\n  invren: " + renamedSubst + "\n  sum:   " + (renamedSubst ++ ren) + "\n  result: " + (renamedSubst ++ ren)(e1))
   }
 
   private def unify(e1: Sequent, e2: Sequent): Subst = {
     val subst = usubstUMatcher(e1, e2)
     val ren = renUMatcher(subst(e1), e2)
-    staple(ren, subst)
+    import Augmentors.SequentAugmentor
+    staple(e1.toFormula, ren, subst)
   }
 
   override def apply(e1: Expression, e2: Expression): Subst = { try {
