@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 
-import scala.collection.immutable
+import scala.collection.immutable._
 import scala.language.postfixOps
 
 
@@ -39,9 +39,9 @@ object FOQuantifierTactics {
 
             val subst = USubst(
               SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), forall(Box(Assign(x, DotTerm), qf))) ::
-              SubstitutionPair("t()".asTerm, t) :: Nil)
-            val orig = Sequent(Nil, immutable.IndexedSeq(),
-              immutable.IndexedSeq(s"(\\forall ${x.prettyString} p(${x.prettyString})) -> p(t())".asFormula))
+              SubstitutionPair("f()".asTerm, t) :: Nil)
+            val orig = Sequent(Nil, IndexedSeq(),
+              IndexedSeq(s"(\\forall ${x.prettyString} p(${x.prettyString})) -> p(f())".asFormula))
 
             DLBySubst.selfAssign(x)(pos + PosInExpr(0::Nil)) &
             ProofRuleTactics.cutLR(ctx(Box(Assign(x, t), p)))(pos.topLevel) <(
@@ -87,16 +87,40 @@ object FOQuantifierTactics {
           case f => throw new BelleError("All skolemize expects universal quantifier at position " + pos + ", but got " + f)
         }
         val namePairs = xs.map(x => (x, TacticHelper.freshNamedSymbol(x, sequent)))
-        // rename bound variable in \forall x p(x) quantifier to fresh \forall x_0 p(x_0)
+        //@note rename variable x wherever bound to fresh x_0, so that final uniform renaming step renames back
         val renaming =
-          if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.boundRenaming(np._1, np._2)(pos)).reduce[BelleExpr](_ & _)
-          else {assert(namePairs.size == 1); ProofRuleTactics.boundRenaming(namePairs.head._1, namePairs.head._2)(pos)}
+          if (namePairs.size > 1) namePairs.map(np => outerMostBoundPos(np._1, sequent).map(ProofRuleTactics.boundRenaming(np._1, np._2)(_)).reduce[BelleExpr](_&_)).reduce[BelleExpr](_ & _)
+          else {assert(namePairs.size == 1); outerMostBoundPos(namePairs.head._1, sequent).map(ProofRuleTactics.boundRenaming(namePairs.head._1, namePairs.head._2)(_)).reduce[BelleExpr](_&_)}
         // uniformly rename variable x to x_0 and simultaneously x_0 to x, effectively swapping \forall x_0 p(x_0) back to \forall x p(x) but renaming all outside occurrences of x in context to x_0.
         val backrenaming =
           if (namePairs.size > 1) namePairs.map(np => ProofRuleTactics.uniformRenaming(np._2, np._1)).reduce[BelleExpr](_ & _)
           else {assert(namePairs.size == 1); ProofRuleTactics.uniformRenaming(namePairs.head._2, namePairs.head._1)}
         renaming & ProofRuleTactics.skolemizeR(pos) & backrenaming
       }
+    }
+
+    /** Finds positions where to bound rename */
+    private def outerMostBoundPos(x: Variable, s: Sequent): IndexedSeq[Position] = {
+      outerMostBoundPos(x, s.ante, AntePosition.apply) ++ outerMostBoundPos(x, s.succ, SuccPosition.apply)
+    }
+
+    private def outerMostBoundPos(x: Variable, fmls: IndexedSeq[Formula], posFactory: (Int, List[Int]) => Position): IndexedSeq[Position] = {
+      fmls.map(outerMostBoundPos(x, _)).
+        zipWithIndex.map({case (Some(posInExpr), i) => Some(posFactory(i+1, posInExpr.pos)) case (None, i) => None}).
+        filter(_.isDefined).
+        map(_.get)
+    }
+
+    private def outerMostBoundPos(x: Variable, fml: Formula): Option[PosInExpr] = {
+      var outerMostBound: Option[PosInExpr] = None
+      ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
+          case Forall(xs, _) if xs.contains(x) => outerMostBound = Some(p); Left(Some(ExpressionTraversal.stop))
+          case Box(Assign(y, _), _) if x==y => outerMostBound = Some(p); Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, fml)
+      outerMostBound
     }
   }
 
@@ -131,18 +155,18 @@ object FOQuantifierTactics {
           val fmlRepl = replaceWheres(fml, x)
 
           //@note create own substitution since UnificationMatch doesn't get it right yet
-          val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
-          val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
+          val aT = FuncOf(Function("t_", None, Unit, Real), Nothing)
+          val aP = PredOf(Function("p_", None, Real, Bool), DotTerm)
           val pDot = replaceWheres(fml, DotTerm)
           val subst = USubst(
             SubstitutionPair(aP, pDot) ::
             SubstitutionPair(aT, sequent.sub(pos.navigate(where.head)).get) :: Nil)
-          val origin = Sequent(Nil, immutable.IndexedSeq(),
-            immutable.IndexedSeq(Imply("p(t())".asFormula, Exists(x::Nil, PredOf(Function("p", None, Real, Bool), x)))))
+          val origin = Sequent(Nil, IndexedSeq(),
+            IndexedSeq(Imply("p_(t_())".asFormula, Exists(x::Nil, PredOf(Function("p_", None, Real, Bool), x)))))
 
           cut(Imply(fml, Exists(x :: Nil, fmlRepl))) <(
             /* use */ implyLOld('Llast) <(closeId, hide(pos,fml) partial) partial,
-            /* show */ cohide('Rlast) & ProofRuleTactics.US(subst, origin) & byUS("exists generalize")
+            /* show */ cohide('Rlast) & debug("Foo") & ProofRuleTactics.US(subst, origin) & debug("Foo") & byUS("exists generalize")
             )
         case _ => throw new BelleError("Position " + pos + " must refer to a formula in sequent " + sequent)
       }
@@ -185,7 +209,7 @@ object FOQuantifierTactics {
           }
         }
 
-        val genFml = Forall(immutable.Seq(quantified), SubstitutionHelper.replaceFree(sequent(pos.top))(t, quantified))
+        val genFml = Forall(Seq(quantified), SubstitutionHelper.replaceFree(sequent(pos.top))(t, quantified))
         cut(genFml) <(
           /* use */ allL(quantified, t)('Llast) & closeId,
           /* show */ hide(pos.top) partial

@@ -364,6 +364,20 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "x>0".asFormula
   }
 
+  it should "not rename variables bound somewhere else" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("\\forall x x>0".asFormula), IndexedSeq("\\forall x x>0".asFormula)), allSkolemize(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "\\forall x x>0".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+  }
+
+  it should "not rename variables bound somewhere else if not top-level" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & \\forall x x>0".asFormula), IndexedSeq("\\forall x x>0".asFormula)), allSkolemize(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x_0>0 & \\forall x x>0".asFormula
+    result.subgoals.head.succ should contain only "x>0".asFormula
+  }
+
   "exists skolemize" should "skolemize simple" in {
     val result = proveBy(Sequent(Nil, IndexedSeq("\\exists x x>0".asFormula), IndexedSeq()), existsSkolemize(-1))
     result.subgoals should have size 1
