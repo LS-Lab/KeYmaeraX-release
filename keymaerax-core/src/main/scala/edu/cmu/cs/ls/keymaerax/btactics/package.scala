@@ -110,11 +110,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * Proof by pointing works by pointing to a position in the sequent and using a given fact at that position.
   * For example, for proving
   *
-  * `   __<v:=2*v+1;>v!=0__ <-> 2*v+1!=0 `
+  * `   __⟨v:=2*v+1;⟩v!=0__ <-> 2*v+1!=0 `
   *
   * it is enough to point to the highlighted position
   * using the "<> diamond" axiom fact
-  * `  ![a;]!p(??) <-> __<a;>p(??)__ `
+  * `  ![a;]!p(??) <-> __⟨a;⟩p(??)__ `
   * at the highlighted position to reduce the proof to a proof of
   *
   * `  !__[v:=2*v+1;]!(v!=0)__ <-> 2*v+1!=0 `
@@ -184,25 +184,25 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   * but figures out the appropriate fact to use on its own. Here's a similar proof:
   * {{{
   *  import TactixLibrary._
-  *  // Proof by pointing with steps of  |- <a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))
+  *  // Proof by pointing with steps of  |- ⟨a++b⟩p(x) <-> (⟨a⟩p(x) | ⟨b⟩p(x))
   *  val proof = TactixLibrary.proveBy(
   *    Sequent(Nil, IndexedSeq(), IndexedSeq("<a;++b;>p(x) <-> (<a;>p(x) | <b;>p(x))".asFormula)),
   *    // use "<> diamond" axiom backwards at the indicated position on
-  *    // |- __<a;++b;>p(x)__  <->  <a;>p(x) | <b;>p(x)
+  *    // |- __⟨a++b⟩p(x)__  <->  ⟨a⟩p(x) | ⟨b⟩p(x)
   *    useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
-  *    // |- !__[a;++b;]!p(x)__  <->  <a;>p(x) | <b;>p(x)
+  *    // |- !__[a;++b;]!p(x)__  <->  ⟨a⟩p(x) | ⟨b⟩p(x)
   *    // step "[++] choice" axiom forward at the indicated position
   *    stepAt(1, 0::0::Nil) &
-  *    // |- __!([a;]!p(x) & [b;]!p(x))__  <-> <a;>p(x) | <b;>p(x)
+  *    // |- __!([a;]!p(x) & [b;]!p(x))__  <-> ⟨a⟩p(x) | ⟨b⟩p(x)
   *    // step deMorgan forward at the indicated position
   *    stepAt(1, 0::Nil) &
-  *    // |- __![a;]!p(x)__ | ![b;]!p(x)  <-> <a;>p(x) | <b;>p(x)
+  *    // |- __![a;]!p(x)__ | ![b;]!p(x)  <-> ⟨a⟩p(x) | ⟨b⟩p(x)
   *    // step "<> diamond" forward at the indicated position
   *    stepAt(1, 0::0::Nil) &
-  *    // |- <a;>p(x) | __![b;]!p(x)__  <-> <a;>p(x) | <b;>p(x)
+  *    // |- ⟨a⟩p(x) | __![b;]!p(x)__  <-> ⟨a⟩p(x) | ⟨b⟩p(x)
   *    // step "<> diamond" forward at the indicated position
   *    stepAt(1, 0::1::Nil) &
-  *    // |- <a;>p(x) | <b;>p(x)  <-> <a;>p(x) | <b;>p(x)
+  *    // |- ⟨a⟩p(x) | ⟨b⟩p(x)  <-> ⟨a⟩p(x) | ⟨b⟩p(x)
   *    byUS("<-> reflexive")
   *  )
   * }}}
