@@ -191,6 +191,12 @@ class UnificationMatchTest extends FlatSpec with Matchers {
         (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
   }
 
+  it should "unify [y:=f();]p(y) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
+    shouldMatch("[y:=f();]p(y) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, RenUSubst(
+      (("f()".asTerm, "7+z".asTerm) ::
+        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil)))
+  }
+
   it should "unify [x_:=f();]p(x_) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
     shouldMatch("[x_:=f();]p(x_) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, RenUSubst(
       (Variable("x_"), Variable("y")) ::
@@ -202,7 +208,7 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     shouldMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, RenUSubst(
       (Variable("x"), Variable("y")) ::
         ("f()".asTerm, "7+z".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm), Greater(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
+        (PredOf(Function("p", None, Real, Bool), DotTerm), GreaterEqual(Power(DotTerm, "2".asTerm), "5".asTerm)) :: Nil))
   }
 
   it should "unify [x_:=y;]p(x_) with [y_0:=y;]y_0>2" in {

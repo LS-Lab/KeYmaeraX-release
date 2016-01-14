@@ -155,9 +155,13 @@ class USubstTests extends FlatSpec with Matchers {
     val prem = Axiom.axioms("vacuous all quantifier")
     val conc = Forall(Seq(x), fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml)))
-    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
-      Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
-    Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+    //a [SubstitutionClashException] should be thrownBy
+    val e = intercept[ProverException] {
+      UniformSubstitutionRule(s,
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+    }
+    e.getClass should be (SubstitutionClashException.getClass, InapplicableRuleException.getClass)
   }
   
   it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.SummaryTest) in {
