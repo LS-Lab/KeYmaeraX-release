@@ -8,6 +8,8 @@ import java.lang.Number
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.Position
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, ExpressionTraversal}
+import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 
 /**
   * User-Interface Axiom/Tactic Index: Indexing data structure for all canonically applicable (derived) axioms/rules/tactics in User-Interface.
@@ -70,6 +72,20 @@ object UIIndex {
         "dualFree" :: Nil
 
       case Box(a, post) =>
+        def containsPrime = {
+          var foundPrime = false
+          ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+            override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+              case _:DifferentialFormula => foundPrime = true; Left(Some(ExpressionTraversal.stop))
+              case _ => Left(None)
+            }
+            override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+              case _:DifferentialSymbol => foundPrime = true; Left(Some(ExpressionTraversal.stop))
+              case _ => Left(None)
+            }
+          }, post)
+          foundPrime
+        }
         val rules =
         // @todo Better applicability test for V
           if (isTop && sequent.isDefined && sequent.get.ante.isEmpty && sequent.get.succ.length == 1) {"G" :: "V vacuous" :: alwaysApplicable} else { "V vacuous" :: alwaysApplicable}
@@ -82,10 +98,9 @@ object UIIndex {
           case _: Choice => "[++] choice" :: rules
           case _: Dual => "[^d] dual" :: alwaysApplicable
           case _: Loop => "loop" :: "[*] iterate" :: rules
-          // @todo: This misses the case where differential formulas are not top-level, but strategically okay
-          case ODESystem(ode, constraint) if post.isInstanceOf[DifferentialFormula] => ode match {
-            case _: AtomicODE => "DE differential effect" :: /*"DW differential weakening" ::*/ alwaysApplicable
-            case _: DifferentialProduct => "DE differential effect (system)" :: /*"DW differential weakening" ::*/ alwaysApplicable
+          case ODESystem(ode, constraint) if containsPrime => ode match {
+            case _: AtomicODE => "DE differential effect" :: "DW differential weakening" :: alwaysApplicable
+            case _: DifferentialProduct => "DE differential effect (system)" :: "DW differential weakening" :: alwaysApplicable
             case _ => alwaysApplicable
           }
           case ODESystem(ode, constraint) =>
