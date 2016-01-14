@@ -50,7 +50,7 @@ case class IDENT(name: String, index: Option[Int] = None) extends Terminal(name 
 }
 object IDENT {
   //@note Pattern is more permissive than NamedSymbol's since Lexer's IDENT will include the index, so xy_95 is acceptable.
-  def regexp = """([a-zA-Z][a-zA-Z0-9]*\_?[0-9]*)""".r
+  def regexp = """([a-zA-Z][a-zA-Z0-9]*\_?\_?[0-9]*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 case class NUMBER(value: String) extends Terminal(value) {
@@ -613,9 +613,14 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
   private def splitName(s : String) : (String, Option[Int]) =
     if(s.contains("_") && !s.endsWith("_")) {
       // a_b_2 ==> "a_b", 2
-      val parts = s.split("_")
-      val idx = Some(Integer.parseInt(parts.last))
-      val name = parts.dropRight(1).reduce(_ + "_" + _)
-      (name, idx)
+      val (namePart, idxPart) = {
+        val finalUnderscoreIdx = s.lastIndexOf("_")
+        ( s.substring(0, finalUnderscoreIdx),
+          s.substring(finalUnderscoreIdx + 1, s.length) )
+      }
+
+      val idx = Some(Integer.parseInt(idxPart))
+
+      (namePart, idx)
     } else (s, None)
 }
