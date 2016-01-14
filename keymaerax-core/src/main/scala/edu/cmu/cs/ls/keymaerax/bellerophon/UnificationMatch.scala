@@ -17,9 +17,9 @@ import scala.collection.immutable.{List, Nil}
   * Matcher leaves input alone and only substitutes into shape.
   * @author Andre Platzer
   */
-//object UnificationMatch extends UnificationMatchBase {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
+object UnificationMatch extends UnificationMatchBase {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
 //object UnificationMatch extends UnificationMatchURenAboveUSubst {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
-object UnificationMatch extends UnificationMatchUSubstAboveURen
+//object UnificationMatch extends UnificationMatchUSubstAboveURen
 
 /**
   * Matcher(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
@@ -471,6 +471,7 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
 
   private def unify(e1: Expression, e2: Expression): Subst = {
     val subst = usubstUMatcher(e1, e2)
+    if (true/*DEBUG*/) println("\n  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  subst: " + subst + "\n  gives: " + subst(e1))
     val ren = renUMatcher(subst(e1), e2)
     //@note instead of post-hoc stapling could also add a third pass that unifies with the resulting renaming `ren` in mind.
     staple(e1, ren, subst)
