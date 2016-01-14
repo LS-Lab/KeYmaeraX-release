@@ -624,7 +624,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
   * ignorance thinking the hardest part of their proof is over when it's not. This is actually a bit difficult to get
   * right, so check the actual provables to make sure we're closing a branch. */
   private def noBogusClosing(tree: ProofTree, parent: TreeNode): Boolean = {
-    if (parent.children.nonEmpty)
+    if (parent.children.nonEmpty || parent.isFake)
       return true
     if (parent.endStep.isEmpty)
       return false
