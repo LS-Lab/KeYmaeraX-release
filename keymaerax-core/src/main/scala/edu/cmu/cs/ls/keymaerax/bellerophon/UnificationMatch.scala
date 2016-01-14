@@ -170,7 +170,6 @@ class UnificationMatchBase extends BaseMatcher {
       } catch {case e:Throwable => println("UnificationMatch.compose({" + after.mkString(", ") + "} , {" + before.mkString(", ") + "})"); throw e}
     }
 
-  // unify(s1, t1) ++ unify(s2, t2)  // flat approximation without cross-cut
   //@note optimized: repeated implementation per type to enable the static type inference that Scala generics won't give.
   private def unifies(s1:Expression,s2:Expression, t1:Expression,t2:Expression): List[SubstRepl] = {
     val u1 = unify(s1, t1)
@@ -427,8 +426,8 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
     // partial so can't REVERIFY
     override private[keymaerax] val REVERIFY = false
     // Skip unifiers for variables in this pass
-    override protected def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] = id
-    override protected def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = id
+    override protected def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] = e2 match { case _: Variable => id case _ => ununifiable(x1,e2)}
+    override protected def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = e2 match { case _: DifferentialSymbol => id case _ => ununifiable(xp1,e2)}
   }
   // pass 2
   private val renUMatcher = RenUnificationMatch
