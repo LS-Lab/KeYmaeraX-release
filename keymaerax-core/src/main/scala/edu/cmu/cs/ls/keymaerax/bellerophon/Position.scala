@@ -4,7 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.{SeqPos, SuccPos, AntePos, Sequent}
+import edu.cmu.cs.ls.keymaerax.core._
 import scala.language.implicitConversions
 import PosInExpr.HereP
 
@@ -53,9 +53,9 @@ sealed case class PosInExpr(pos: List[Int] = Nil) {
   /** The child that this position refers to, i.e., the tail one level down */
   def child: PosInExpr = PosInExpr(pos.tail)
   /** The parent of this position, i.e., one level up */
-  def parent: PosInExpr = PosInExpr(pos.dropRight(1))
+  def parent: PosInExpr = if (!pos.isEmpty) PosInExpr(pos.dropRight(1)) else throw new ProverException("ill-positioned: " + this + " has no parent")
   /** The sibling of this position (flip left to right and right to left) */
-  def sibling: PosInExpr = PosInExpr(pos.dropRight(1) :+ (1-pos.last))
+  def sibling: PosInExpr = parent + (1-pos.last)
 
   /** Whether this position is a prefix of `p` */
   def isPrefixOf(p: PosInExpr): Boolean = p.pos.startsWith(pos)

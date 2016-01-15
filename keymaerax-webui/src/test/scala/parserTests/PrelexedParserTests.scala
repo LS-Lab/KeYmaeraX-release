@@ -623,18 +623,18 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   }
 
   it should "parse -x*y" in {
-    parser("-x*y") shouldBe
-      Times(Neg(Variable("x")), Variable("y"))
+    parser("-x*y") shouldBe Neg(Times(Variable("x"), Variable("y")))
+      //Times(Neg(Variable("x")), Variable("y"))
   }
 
   it should "parse -x/y" in {
-    parser("-x/y") shouldBe
-      Divide(Neg(Variable("x")), Variable("y"))
+    parser("-x/y") shouldBe Neg(Divide(Variable("x"), Variable("y")))
+      //Divide(Neg(Variable("x")), Variable("y"))
   }
 
   it should "parse -x^y" in {
-    parser("-x^y") shouldBe
-      Power(Neg(Variable("x")), Variable("y"))
+    parser("-x^y") shouldBe Neg(Power(Variable("x"), Variable("y")))
+      //Power(Neg(Variable("x")), Variable("y"))
   }
 
   it should "not parse p()+x as a formula" in {
