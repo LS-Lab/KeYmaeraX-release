@@ -17,8 +17,11 @@ import scala.collection.immutable.{List, Nil}
   * Matcher leaves input alone and only substitutes into shape.
   * @author Andre Platzer
   */
+// 1 pass for semanticRenaming
 object UnificationMatch extends UnificationMatchBase {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
+// 2 pass for semanticRenaming
 //object UnificationMatch extends UnificationMatchURenAboveUSubst {require(RenUSubst.semanticRenaming, "This implementation is meant for tactics built assuming semantic renaming")}
+// 2.5 pass for !semanticRenaming
 //object UnificationMatch extends UnificationMatchUSubstAboveURen
 
 /**
@@ -145,6 +148,7 @@ abstract trait BaseMatcher extends Matcher {
   * Generic base for unification/matching algorithm for tactics.
   * Unify(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
   * Matcher leaves input alone and only substitutes into shape.
+  * Reasonably fast single-pass matcher.
   * @author Andre Platzer
   */
 class UnificationMatchBase extends BaseMatcher {

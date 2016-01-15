@@ -54,12 +54,12 @@ object DifferentialTactics {
         import ProofRuleTactics.contextualize
         //@todo wrap within a CE to make sure it also works in context
         if (isODESystem(sequent, pos)) {
-          if (true || HilbertCalculus.INTERNAL) TactixLibrary.useAt("DE differential effect (system)")(pos)*getODEDim(sequent, pos)
+          if (HilbertCalculus.INTERNAL) TactixLibrary.useAt("DE differential effect (system)")(pos)*getODEDim(sequent, pos)
           else contextualize(DESystemStep_NoSemRen, predictor)(pos)*getODEDim(sequent, pos)
           //@todo unification fails
           // TactixLibrary.useAt("DE differential effect (system)")(pos)*getODEDim(provable.subgoals.head, pos)
         } else {
-          if (true || HilbertCalculus.INTERNAL) useAt("DE differential effect")(pos)
+          if (HilbertCalculus.INTERNAL) useAt("DE differential effect")(pos)
           else contextualize(DESystemStep_NoSemRen, predictor)(pos)
         }
       }
