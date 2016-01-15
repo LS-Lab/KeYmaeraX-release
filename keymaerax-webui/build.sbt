@@ -56,6 +56,8 @@ libraryDependencies ++= {
     "io.spray"            %%   "spray-routing" % sprayV,
     //"io.spray"            %%   "spray-testkit" % sprayV  % "test",
     "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
+    "com.typesafe.akka"   %% "akka-slf4j"     % akkaV,
+    "ch.qos.logback"      % "logback-classic" % "1.0.13",
     //"com.typesafe.akka"   %  "akka-testkit"  % akkaV   % "test",
     //"org.specs2"          % "specs2-core"    % "3.6.4" % "test",
     "com.github.fge"      % "json-schema-validator" % "2.2.6" // only update to even-numbered versions please.
