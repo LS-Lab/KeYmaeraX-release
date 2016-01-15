@@ -61,8 +61,8 @@ object Main {
     * @todo similar behavior for the cache
     */
   private def exitIfDeprecated() = {
-    if(UpdateChecker.upToDate().getOrElse(false) &&
-       UpdateChecker.needDatabaseUpgrade(SQLite.ProdDB.getConfiguration("version").config("version")).getOrElse(false))
+    val databaseVersion = SQLite.ProdDB.getConfiguration("version").config("version")
+    if(UpdateChecker.upToDate().getOrElse(false) && UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false))
     {
       //Exit if KeYmaera X is up to date but the production database belongs to a deprecated version of KeYmaera X.
       //@todo maybe it makes more sense for the JSON file to associate each KeYmaera X version to a list of database and cache versions that work with that version.
