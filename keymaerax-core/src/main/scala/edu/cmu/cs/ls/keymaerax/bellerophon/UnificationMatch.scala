@@ -469,17 +469,19 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
         case _ => ren(sp._2)
       } )))
     val renamedSubst = inverseRename(subst)
-    //if (true/*DEBUG*/) println("\n  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  subst: " + subst + "\n  gives: " + e1s + "\n  ren:   " + ren + "\n  invren: " + renamedSubst + "\n  sum:   " + (renamedSubst ++ ren) + "\n  result: " + (renamedSubst ++ ren)(e1))
+//    if (DEBUG) println("\n  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  subst: " + subst + "\n  gives: " + e1s + "\n  ren:   " + ren + "\n  invren: " + renamedSubst + "\n  sum:   " + (renamedSubst ++ ren) + "\n  result: " + (renamedSubst ++ ren)(e1))
     renamedSubst ++ ren
   }
 
+  private val DEBUG = BelleExpr.DEBUG
+
   private def unify(e1: Expression, e2: Expression): Subst = {
     val subst = usubstUMatcher(e1, e2)
-    if (true/*DEBUG*/) println("\n  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  subst: " + subst + "\n  gives: " + subst(e1))
+    if (DEBUG) println("\n  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  subst: " + subst + "\n  gives: " + subst(e1))
     val ren = renUMatcher(subst(e1), e2)
     //@note instead of post-hoc stapling could also add a third pass that unifies with the resulting renaming `ren` in mind.
     staple(e1, ren, subst)
-//    if (true/*DEBUG*/) println("\n  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  subst: " + subst + "\n  gives: " + e1s + "\n  ren:   " + ren + "\n  invren: " + renamedSubst + "\n  sum:   " + (renamedSubst ++ ren) + "\n  result: " + (renamedSubst ++ ren)(e1))
+    if (DEBUG) println("\n  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  subst: " + subst + "\n  gives: " + e1s + "\n  ren:   " + ren + "\n  invren: " + renamedSubst + "\n  sum:   " + (renamedSubst ++ ren) + "\n  result: " + (renamedSubst ++ ren)(e1))
   }
 
   private def unify(e1: Sequent, e2: Sequent): Subst = {
