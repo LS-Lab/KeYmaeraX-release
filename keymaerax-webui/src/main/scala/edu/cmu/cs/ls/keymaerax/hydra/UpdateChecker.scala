@@ -25,10 +25,10 @@ import spray.json._
   */
 object UpdateChecker {
 
-  def needDatabaseUpgrade(installedVersion: String = edu.cmu.cs.ls.keymaerax.core.VERSION) : Option[Boolean] = {
+  def needDatabaseUpgrade(databaseVersion: String) : Option[Boolean] = {
     downloadDBVersion() match {
       case Some(oldestAcceptableDBVersion) =>
-        Some(StringToVersion(installedVersion) < StringToVersion(oldestAcceptableDBVersion))
+        Some(StringToVersion(databaseVersion) <= StringToVersion(oldestAcceptableDBVersion))
       case None => None
     }
   }
@@ -82,7 +82,6 @@ object UpdateChecker {
         throw new Exception("version.json does not contain a version key.")
       else {
         val versionString = json.asJsObject.getFields("version").last.toString.replace("\"", "")
-        println("Got version string: " + versionString)
         Some(versionString)
       }
     }

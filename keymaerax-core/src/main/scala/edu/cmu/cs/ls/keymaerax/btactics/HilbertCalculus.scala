@@ -15,9 +15,9 @@ import scala.language.postfixOps
   * Hilbert Calculus for differential dynamic logic.
   * @author Andre Platzer
   * @author Stefan Mitsch
-  * @see [[HilbertCalculi]]
+  * @see [[HilbertCalculus]]
   */
-object HilbertCalculus extends HilbertCalculi
+object HilbertCalculus extends HilbertCalculus
 
 /**
  * Hilbert Calculus for differential dynamic logic.
@@ -31,7 +31,7 @@ object HilbertCalculus extends HilbertCalculi
  * @see [[HilbertCalculus.derive()]]
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
-trait HilbertCalculi extends UnifyUSCalculus {
+trait HilbertCalculus extends UnifyUSCalculus {
 
   /** True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on demand. */
   private[btactics] val INTERNAL = false
@@ -67,6 +67,8 @@ trait HilbertCalculi extends UnifyUSCalculus {
   // axioms
 
   // modalities
+  /** diamond: <.> turn diamond `⟨a⟩p(x)` into double-negated box `![a]!p(x)`. */
+  lazy val diamond            : DependentPositionTactic = useAt("<> diamond")
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation */
   lazy val assignb            : DependentPositionTactic =
 //    "[:=]" by(pos =>
@@ -94,7 +96,7 @@ trait HilbertCalculi extends UnifyUSCalculus {
   lazy val composeb           : DependentPositionTactic = useAt("[;] compose")
   /** iterateb: [*] prove a property of a loop `[{a}*]p(x)` by unrolling it once `p(x) & [a][{a}*]p(x)` */
   lazy val iterateb           : DependentPositionTactic = useAt("[*] iterate")
-  /** dualb: [^d] handle dual game `[{a}^d]p(x)` by `![a]!p(x)` */
+  /** dualb: [^d^] handle dual game `[{a}^d^]p(x)` by `![a]!p(x)` */
   lazy val dualb              : DependentPositionTactic = useAt("[d] dual")
 
   /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */
@@ -106,6 +108,8 @@ trait HilbertCalculi extends UnifyUSCalculus {
     }
   }
 
+  /** box: [.] turn box `[a]p(x)` into double-negated diamond `!⟨a⟩!p(x)`. */
+  lazy val box                : DependentPositionTactic = useAt("[] box")
   /** randomd: <:*> simplify nondeterministic assignment `<x:=*;>p(x)` to an existential quantifier `\exists x p(x)` */
   lazy val randomd            : DependentPositionTactic = useAt("<:*> assign nondet")
   /** testd: <?> simplifies test `<?q;>p` to a conjunction `q&p` */
@@ -118,7 +122,7 @@ trait HilbertCalculi extends UnifyUSCalculus {
   lazy val composed           : DependentPositionTactic = useAt("<;> compose")
   /** iterated: <*> prove a property of a loop `⟨{a}*⟩p(x)` by unrolling it once `p(x) | ⟨a⟩⟨{a}*⟩p(x)` */
   lazy val iterated           : DependentPositionTactic = useAt("<*> iterate")
-  /** duald: `<^d>` handle dual game `⟨{a}^d⟩p(x)` by `!⟨a⟩!p(x)` */
+  /** duald: `<^d^>` handle dual game `⟨{a}^d^⟩p(x)` by `!⟨a⟩!p(x)` */
   lazy val duald              : DependentPositionTactic = useAt("<d> dual")
 
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
@@ -181,6 +185,8 @@ trait HilbertCalculi extends UnifyUSCalculus {
   /** Dconst: c()' derives a constant `c()' = 0` */
   lazy val Dconst             : DependentPositionTactic = useAt("c()' derive constant fn")
   /** Dvariable: x' derives a variable `(x)' = x'` */
+  lazy val Dvar               : DependentPositionTactic = Dvariable
+  @deprecated("Use synonymous Dvar instead")
   lazy val Dvariable          : DependentPositionTactic =
     if (INTERNAL) useAt("x' derive var", PosInExpr(0::Nil)) else DifferentialTactics.Dvariable
   /** Dcompose: o' derives a function composition by chain rule */
@@ -229,10 +235,11 @@ trait HilbertCalculi extends UnifyUSCalculus {
     * First-order logic
     *******************************************************************/
 
-  /** vacuousAll: vacuous `\forall x p()` will be discarded and replaced by p() provided x does not occur in p(). */
-  lazy val vacuousAll          : DependentPositionTactic = useAt("vacuous all quantifier")
-  /** vacuousExists: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
-  lazy val vacuousExists       : DependentPositionTactic = useAt("vacuous exists quantifier")
+  /** allV: vacuous `\forall x p()` will be discarded and replaced by p() provided x does not occur in p(). */
+  lazy val allV               : DependentPositionTactic = useAt("vacuous all quantifier")
+  /** existsV: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
+  lazy val existsV            : DependentPositionTactic = useAt("vacuous exists quantifier")
+  lazy val allDist            : DependentPositionTactic = useAt(DerivedAxioms.allDistributeAxiom)
 
   //@todo make the other quantifier axioms accessible by useAt too
 

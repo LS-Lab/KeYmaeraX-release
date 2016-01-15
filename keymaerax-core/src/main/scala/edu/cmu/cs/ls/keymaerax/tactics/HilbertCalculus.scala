@@ -201,9 +201,9 @@ object HilbertCalculus extends UnifyUSCalculus {
     * First-order logic
     *******************************************************************/
 
-  /** vacuousAll: vacuous `\forall x p()` will be discarded and replaced by p() provided x does not occur in p(). */
+  /** allV: vacuous `\forall x p()` will be discarded and replaced by p() provided x does not occur in p(). */
   lazy val vacuousAll          : PositionTactic = useAt("vacuous all quantifier")
-  /** vacuousExists: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
+  /** existsV: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
   lazy val vacuousExists       : PositionTactic = useAt("vacuous exists quantifier")
 
   //@todo make the other quantifier axioms accessible by useAt too
