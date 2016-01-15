@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
+import akka.event.slf4j.SLF4JLogging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import akka.actor.Actor
 import spray.routing._
@@ -16,7 +17,7 @@ class RestApiActor extends Actor with RestApi {
   implicit def eh(implicit log: LoggingContext) = ExceptionHandler {
     case e: Throwable => ctx =>
       val errorJson: String = new ErrorResponse(e.getMessage, e).getJson.prettyPrint
-      log.warning("Request to {} could not be handled normally", e, ctx.request)
+      log.error(e, s"Request '${ctx.request.uri}' resulted in uncaught exception", ctx.request)
       ctx.complete(StatusCodes.InternalServerError, errorJson)
   }
 
@@ -31,7 +32,7 @@ class RestApiActor extends Actor with RestApi {
 /**
  * RestApi is the API router. See README.md for a description of the API.
  */
-trait RestApi extends HttpService {
+trait RestApi extends HttpService with SLF4JLogging {
   val database = DBAbstractionObj.defaultDatabase //SQLite //Not sure when or where to create this... (should be part of Boot?)
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -55,8 +56,14 @@ trait RestApi extends HttpService {
     item.headers.find(h => h.is("content-disposition")).get.value.split("filename=").last
   }
 
-  private def standardCompletion(r : Request) : String = {
+  private def standardCompletion(r: Request) : String = {
     val responses = r.getResultingResponses()
+    //@note log all error responses
+    responses.foreach({
+      case e: ErrorResponse => log.warn("Error response details: " + e.msg, e.exn)
+      case _ => /* nothing to do */
+    })
+
     responses match {
       case hd :: Nil => hd.getJson.prettyPrint
       case _         => JsArray(responses.map(_.getJson):_*).prettyPrint
@@ -87,7 +94,7 @@ trait RestApi extends HttpService {
       } ~
       post {
         val request = new CreateUserRequest(database, username, password)
-        complete(request.getResultingResponses().last.json.prettyPrint)
+        complete(request.getResultingResponses().last.getJson.prettyPrint)
       }
     }
   }}
@@ -106,7 +113,7 @@ trait RestApi extends HttpService {
     val request = new GetModelListRequest(database, userId)
     val responses = request.getResultingResponses()
     require(responses.length == 1, "Should only have a single response.")
-    complete(responses.last.json.prettyPrint)
+    complete(standardCompletion(request))
   }}}}
 
   //POST /users/<user id>/model/< name >/< keyFile >

@@ -35,23 +35,18 @@ import java.io.{PrintWriter, StringWriter, File}
  * See BooleanResponse for the simplest example.
  */
 sealed trait Response {
-
-
-  protected val json: JsValue
   /**
    * Should be the name of a single file within resources/js/schema.
    */
   val schema: Option[String] = None
 
-  def getJson = {
-    json
-  }
+  def getJson: JsValue
 }
 
 class BooleanResponse(flag : Boolean) extends Response {
   override val schema = Some("BooleanResponse.js")
 
-  val json = JsObject(
+  def getJson = JsObject(
     "success" -> (if(flag) JsTrue else JsFalse),
     "type" -> JsNull
   )
@@ -69,11 +64,11 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
     "hasTactic" -> JsBoolean(modelpojo.tactic.isDefined)
   ))
 
-  val json = JsArray(objects)
+  def getJson = JsArray(objects:_*)
 }
 
 class UpdateProofNameResponse(proofId : String, newName : String) extends Response {
-  val json = JsArray()
+  def getJson = JsArray()
 }
 
 /**
@@ -114,11 +109,11 @@ class ProofListResponse(proofs : List[(ProofPOJO, String)], models : Option[List
       })
   }
 
-  val json = JsArray(objects)
+  def getJson = JsArray(objects:_*)
 }
 
 class GetModelResponse(model : ModelPOJO) extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "id" -> JsString(model.modelId.toString),
     "name" -> JsString(model.name),
     "date" -> JsString(model.date),
@@ -131,7 +126,7 @@ class GetModelResponse(model : ModelPOJO) extends Response {
 }
 
 class GetModelTacticResponse(model : ModelPOJO) extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "modelId" -> JsString(model.modelId.toString),
     "modelName" -> JsString(model.name),
     "tacticBody" -> JsString(model.tactic.getOrElse(""))
@@ -139,7 +134,7 @@ class GetModelTacticResponse(model : ModelPOJO) extends Response {
 }
 
 class LoginResponse(flag:Boolean, userId:String) extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "success" -> (if(flag) JsTrue else JsFalse),
     "key" -> JsString("userId"),
     "value" -> JsString(userId),
@@ -148,55 +143,44 @@ class LoginResponse(flag:Boolean, userId:String) extends Response {
 }
 
 class CreatedIdResponse(id : String) extends Response {
-  val json = JsObject("id" -> JsString(id))
+  def getJson = JsObject("id" -> JsString(id))
 }
 
-class ErrorResponse(msg: String, exn: Throwable = null) extends Response {
+class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response {
   lazy val writer = new StringWriter
   lazy val stacktrace = if (exn != null) { exn.printStackTrace(new PrintWriter(writer)); writer.toString } else ""
-  val json = JsObject(
-        "textStatus" -> (if (msg != null) JsString(msg) else JsString("")),
-        "errorThrown" -> JsString(stacktrace),
-        "type" -> JsString("error")
-      )
+  def getJson = JsObject(
+    "textStatus" -> (if (msg != null) JsString(msg) else JsString("")),
+    "errorThrown" -> JsString(stacktrace),
+    "type" -> JsString("error")
+  )
 }
 
-class ParseErrorResponse(msg: String, expect: String, found: String, detailedMsg: String, loc: Location, exn: Throwable = null) extends Response {
-  lazy val writer = new StringWriter
-  lazy val stacktrace = if (exn != null) { exn.printStackTrace(new PrintWriter(writer)); writer.toString } else ""
-  val json = JsObject(
-    "textStatus" -> JsString(msg),
+class ParseErrorResponse(msg: String, expect: String, found: String, detailedMsg: String, loc: Location, exn: Throwable = null) extends ErrorResponse(msg, exn) {
+  override def getJson = JsObject(super.getJson.fields ++ Map(
     "details" -> JsObject(
       "expect" -> JsString(expect),
       "found" -> JsString(found),
       "detailedMsg" -> JsString(detailedMsg)
     ),
-    "errorThrown" ->  JsString(stacktrace),
-    "type" -> JsString("error"),
     "location" -> JsObject(
       "line" -> JsNumber(loc.line),
       "column" -> JsNumber(loc.column)
     )
-  )
+  ))
 }
 
 class GenericOKResponse() extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "success" -> JsTrue
   )
 }
 
-class UnimplementedResponse(callUrl : String) extends Response {
-  val json = JsObject(
-      "textStatus" -> JsString("Call unimplemented: " + callUrl),
-      "errorThrown" -> JsString("unimplemented"),
-      "type" -> JsString("error")
-  )
-}
+class UnimplementedResponse(callUrl : String) extends ErrorResponse("Call unimplemented: " + callUrl) {}
 
 class ProofStatusResponse(proofId: String, status: String, error: Option[String] = None) extends Response {
   override val schema = Some("proofstatus.js")
-  val json = JsObject(
+  def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "type" -> JsString("ProofLoadStatus"),
     "status" -> JsString(status),
@@ -216,14 +200,14 @@ class ProofVerificationResponse(proofId: String, isVerified: Boolean)
   extends ProofStatusResponse(proofId, if(isVerified) "proved" else "closed")
 
 class GetProblemResponse(proofid:String, tree:String) extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "proofid" -> JsString(proofid),
     "proofTree" -> JsonParser(tree)
   )
 }
 
 class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "nodeId" -> JsString(nodeId),
     "taskId" -> JsString(taskId),
@@ -232,7 +216,7 @@ class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) exte
 }
 
 class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status: String) extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "parentId" -> JsString(nodeId),
     "taskId" -> JsString(taskId),
@@ -242,7 +226,7 @@ class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status
 }
 
 class TaskResultResponse(parent: TreeNode, children: List[TreeNode], progress: Boolean = true) extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "parent" -> JsObject(
       "id" -> Helpers.nodeIdJson(parent.id),
       "children" -> Helpers.childrenJson(children)
@@ -254,14 +238,14 @@ class TaskResultResponse(parent: TreeNode, children: List[TreeNode], progress: B
 }
 
 class UpdateResponse(update: String) extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "type" -> JsString("update"),
     "events" -> JsonParser(update)
   )
 }
 
 class ProofTreeResponse(tree: String) extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "type" -> JsString("proof"),
     "tree" -> JsonParser(tree)
   )
@@ -269,7 +253,7 @@ class ProofTreeResponse(tree: String) extends Response {
 
 class OpenProofResponse(proof : ProofPOJO, loadStatus : String) extends Response {
   override val schema = Some("proof.js")
-  val json = JsObject(
+  def getJson = JsObject(
     "id" -> JsString(proof.proofId.toString),
     "name" -> JsString(proof.name),
     "description" -> JsString(proof.description),
@@ -289,7 +273,7 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
     "proofNode" -> JsonParser(nodeJson)
   )})
 
-  val json = JsArray(objects)
+  def getJson = JsArray(objects:_*)
 }
 
 /** JSON conversions for frequently-used response formats */
@@ -389,7 +373,7 @@ class AgendaAwesomeResponse(tree: ProofTree) extends Response {
 
   val agendaItems = JsObject(tree.leaves.map({case item => itemJson(item)}))
 
-  val json =
+  def getJson =
     JsObject (
       "proofTree" -> proofTree,
       "agendaItems" -> agendaItems
@@ -397,15 +381,15 @@ class AgendaAwesomeResponse(tree: ProofTree) extends Response {
 }
 
 class GetAgendaItemResponse(item: AgendaItemPOJO) extends Response {
-  val json = Helpers.agendaItemJson(item)
+  def getJson = Helpers.agendaItemJson(item)
 }
 
 class SetAgendaItemNameResponse(item: AgendaItemPOJO) extends Response {
-  val json = Helpers.agendaItemJson(item)
+  def getJson = Helpers.agendaItemJson(item)
 }
 
 class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: String) extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "nodeId" -> JsString(nodeId match { case Some(nId) => nId case None => "" }),
     "proofNode" -> JsonParser(nodeJson)
@@ -414,12 +398,12 @@ class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: S
 
 class ProofTaskParentResponse (parent: TreeNode) extends Response {
   import Helpers._
-  val json = singleNodeJson(parent)
+  def getJson = singleNodeJson(parent)
 }
 
 class GetPathAllResponse(path: List[TreeNode], parentsRemaining: Int) extends Response {
   import Helpers._
-  val json =
+  def getJson =
     JsObject (
       "numParentsUntilComplete" -> JsNumber(parentsRemaining),
       "path" -> new JsArray(path.map({case node => nodeJson(node)}))
@@ -427,7 +411,7 @@ class GetPathAllResponse(path: List[TreeNode], parentsRemaining: Int) extends Re
 }
 
 class GetBranchRootResponse(node: TreeNode) extends Response {
-  val json = Helpers.singleNodeJson(node)
+  def getJson = Helpers.singleNodeJson(node)
 }
 
 class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggestedInput: Option[Expression]) extends Response {
@@ -509,16 +493,16 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
       "derivation" -> derivation
     )
   }
-  val json = JsArray(derivationInfos.map({case info => derivationJson(info)}))
+  def getJson = JsArray(derivationInfos.map({case info => derivationJson(info)}):_*)
 }
 class PruneBelowResponse(item:AgendaItem) extends Response {
-  val json = JsObject (
+  def getJson = JsObject (
   "agendaItem" -> Helpers.itemJson(item)._2
   )
 }
 
 class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSymbol, Term] = Map()) extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "result" -> JsString(kind),
     "origFormula" -> JsString(fml.prettyString),
     "cexFormula" -> JsString(createCexFormula(fml, cex).prettyString),
@@ -542,22 +526,22 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
 }
 
 class KyxConfigResponse(kyxConfig: String) extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "kyxConfig" -> JsString(kyxConfig)
   )
 }
 
 class KeymaeraXVersionResponse(installedVersion: String, upToDate: Option[Boolean], latestVersion: Option[String]) extends Response {
   assert(upToDate.isDefined == latestVersion.isDefined, "upToDate and latestVersion should both be defined, or both be undefined.")
-  val json = upToDate match {
-    case Some(b) if b == true => JsObject("keymaeraXVersion" -> JsString(installedVersion), "upToDate" -> JsTrue)
-    case Some(b) if b == false => JsObject("keymaeraXVersion" -> JsString(installedVersion), "upToDate" -> JsFalse, "latestVersion" -> JsString(latestVersion.get))
+  def getJson = upToDate match {
+    case Some(b) if b => JsObject("keymaeraXVersion" -> JsString(installedVersion), "upToDate" -> JsTrue)
+    case Some(b) if !b => JsObject("keymaeraXVersion" -> JsString(installedVersion), "upToDate" -> JsFalse, "latestVersion" -> JsString(latestVersion.get))
     case None => JsObject("keymaeraXVersion" -> JsString(installedVersion))
   }
 }
 
 class ConfigureMathematicaResponse(linkNamePrefix : String, jlinkLibDirPrefix : String, success : Boolean) extends Response {
-  val json = JsObject(
+  def getJson = JsObject(
     "linkNamePrefix" -> JsString(linkNamePrefix),
     "jlinkLibDirPrefix" -> JsString(jlinkLibDirPrefix),
     "success" -> {if(success) JsTrue else JsFalse}
@@ -567,7 +551,7 @@ class ConfigureMathematicaResponse(linkNamePrefix : String, jlinkLibDirPrefix : 
 //@todo these are a mess.
 class MathematicaConfigSuggestionResponse(os: String, version: String, kernelPath: String, kernelName: String,
                                           jlinkPath: String, jlinkName: String) extends Response {
-  override protected val json: JsValue = JsObject(
+  def getJson: JsValue = JsObject(
     "os" -> JsString(os),
     "version" -> JsString(version),
     "kernelPath" -> JsString(kernelPath),
@@ -578,14 +562,14 @@ class MathematicaConfigSuggestionResponse(os: String, version: String, kernelPat
 }
 
 class MathematicaConfigurationResponse(linkName: String, jlinkLibDir: String) extends Response {
-  override protected val json: JsValue = JsObject(
+  def getJson: JsValue = JsObject(
     "linkName" -> JsString(linkName),
     "jlinkLibDir" -> JsString(jlinkLibDir)
   )
 }
 
 class MathematicaStatusResponse(configured : Boolean) extends Response {
-  override protected val json: JsValue = JsObject(
+  def getJson: JsValue = JsObject(
     "configured" -> {if(configured) JsTrue else JsFalse}
   )
 }
@@ -596,8 +580,8 @@ class MathematicaStatusResponse(configured : Boolean) extends Response {
  */
 class AngularTreeViewResponse(tree : String) extends Response {
   override val schema = Some("angular.treeview.js")
-  
-  val json = JsArray( convert(JsonParser(tree).asJsObject) )
+
+  def getJson = JsArray( convert(JsonParser(tree).asJsObject) )
 
   private def convert(node : JsObject) : JsValue = {
     //TODO switch to Jolt (https://github.com/bazaarvoice/jolt) once they can handle trees
@@ -648,7 +632,7 @@ class AngularTreeViewResponse(tree : String) extends Response {
 
 class DashInfoResponse(openProofs:Int, allModels: Int, provedModels: Int) extends Response {
   override val schema = Some("DashInfoResponse.js")
-  val json = JsObject(
+  def getJson = JsObject(
     "open_proof_count" -> JsNumber(openProofs),
     "all_models_count" -> JsNumber(allModels),
     "proved_models_count" -> JsNumber(provedModels)
@@ -659,10 +643,10 @@ class DashInfoResponse(openProofs:Int, allModels: Int, provedModels: Int) extend
 class NodeResponse(tree : String) extends Response {
   //todo add schema.
   val node = JsonParser(tree).asJsObject
-  val json = node
+  def getJson = node
 }
 
 class MockResponse(resourceName: String) extends Response {
   //@todo add schema
-  val json = scala.io.Source.fromInputStream(getClass.getResourceAsStream(resourceName)).mkString.parseJson
+  def getJson = scala.io.Source.fromInputStream(getClass.getResourceAsStream(resourceName)).mkString.parseJson
 }
