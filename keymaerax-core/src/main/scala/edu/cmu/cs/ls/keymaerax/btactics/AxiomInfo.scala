@@ -211,10 +211,10 @@ object DerivationInfo {
       , "Dexists", {case () => HilbertCalculus.Dexists}),
 
     // first-order logic quantifiers
-    new CoreAxiomInfo("all instantiate", ("∀inst","allinst"), "allinst", {case () => ???}),
-    new DerivedAxiomInfo("all distribute", ("∀→","all->"), "alldist", {case () => useAt(DerivedAxioms.allDistributeAxiom)}),
-    new CoreAxiomInfo("vacuous all quantifier", ("V∀","Vall"), "vacuousAll", {case () => HilbertCalculus.vacuousAll}),
-    new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","Vexists"), "vacuousExists", {case () => HilbertCalculus.vacuousExists}),
+    new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", {case () => ???}),
+    new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", {case () => HilbertCalculus.allDist}),
+    new CoreAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", {case () => HilbertCalculus.allV}),
+    new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", {case () => HilbertCalculus.existsV}),
 
     // more
     new CoreAxiomInfo("const congruence", "CCE", "constCongruence", {case () => ???}),

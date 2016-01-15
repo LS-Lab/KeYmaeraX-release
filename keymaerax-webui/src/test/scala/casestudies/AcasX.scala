@@ -2870,7 +2870,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                         & postCut(And(a,w0))(1) & onBranch(
                         (BranchLabels.cutShowLbl, sublabel("generalize post A()&W(w0)")
                           & hide(-3) & hide(And(w0,And(u0,i0)))(-2) & sublabel("chasing") & chase(1)
-                          & allR(1) // equivalent:  HilbertCalculus.vacuousAll(1)
+                          & allR(1) // equivalent:  HilbertCalculus.allV(1)
                           & sublabel("gen by arith") & debug("gen by arith")
                           & andR(1) & (
                           andR(1) & (

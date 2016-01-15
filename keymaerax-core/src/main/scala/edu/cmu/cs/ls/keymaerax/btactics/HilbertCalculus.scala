@@ -229,10 +229,11 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * First-order logic
     *******************************************************************/
 
-  /** vacuousAll: vacuous `\forall x p()` will be discarded and replaced by p() provided x does not occur in p(). */
-  lazy val vacuousAll          : DependentPositionTactic = useAt("vacuous all quantifier")
-  /** vacuousExists: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
-  lazy val vacuousExists       : DependentPositionTactic = useAt("vacuous exists quantifier")
+  /** allV: vacuous `\forall x p()` will be discarded and replaced by p() provided x does not occur in p(). */
+  lazy val allV               : DependentPositionTactic = useAt("vacuous all quantifier")
+  /** existsV: vacuous `\exists x p()` will be discarded and replaced by p() provided x does not occur in p(). */
+  lazy val existsV            : DependentPositionTactic = useAt("vacuous exists quantifier")
+  lazy val allDist            : DependentPositionTactic = useAt(DerivedAxioms.allDistributeAxiom)
 
   //@todo make the other quantifier axioms accessible by useAt too
 
