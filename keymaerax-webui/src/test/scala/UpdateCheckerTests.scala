@@ -11,6 +11,9 @@ class UpdateCheckerTests extends FlatSpec with Matchers {
     StringToVersion("4.0b1") > StringToVersion("4.0a99") shouldBe true
     StringToVersion("5.0") > StringToVersion("4.0") shouldBe true
     StringToVersion("4.0") > StringToVersion("4.0b99") shouldBe true
+    StringToVersion("4.1b1") > StringToVersion("4.0b1") shouldBe true
+    StringToVersion("4.1b1") >= StringToVersion("4.0b1") shouldBe true
+    StringToVersion("4.0b1") < StringToVersion("4.1b1") shouldBe true
   }
   "update checker" should "check db for updates" in {
     UpdateChecker.needDatabaseUpgrade().get shouldBe false
