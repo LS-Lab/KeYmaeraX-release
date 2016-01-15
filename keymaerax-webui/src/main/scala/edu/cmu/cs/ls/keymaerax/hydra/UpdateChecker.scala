@@ -82,7 +82,6 @@ object UpdateChecker {
         throw new Exception("version.json does not contain a version key.")
       else {
         val versionString = json.asJsObject.getFields("version").last.toString.replace("\"", "")
-        println("Got version string: " + versionString)
         Some(versionString)
       }
     }
