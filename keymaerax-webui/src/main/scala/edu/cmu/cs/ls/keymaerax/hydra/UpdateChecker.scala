@@ -25,10 +25,10 @@ import spray.json._
   */
 object UpdateChecker {
 
-  def needDatabaseUpgrade(installedVersion: String = edu.cmu.cs.ls.keymaerax.core.VERSION) : Option[Boolean] = {
+  def needDatabaseUpgrade(databaseVersion: String) : Option[Boolean] = {
     downloadDBVersion() match {
       case Some(oldestAcceptableDBVersion) =>
-        Some(StringToVersion(installedVersion) < StringToVersion(oldestAcceptableDBVersion))
+        Some(StringToVersion(databaseVersion) <= StringToVersion(oldestAcceptableDBVersion))
       case None => None
     }
   }
