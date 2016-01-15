@@ -14,9 +14,9 @@ import scala.language.postfixOps
   * Sequent Calculus for propositional and first-order logic.
   * @author Andre Platzer
   * @author Stefan Mitsch
-  * @see [[SequentCalculi]]
+  * @see [[SequentCalculus]]
   */
-object SequentCalculus extends SequentCalculi
+object SequentCalculus extends SequentCalculus
 
 /**
   * Sequent Calculus for propositional and first-order logic.
@@ -25,7 +25,7 @@ object SequentCalculus extends SequentCalculi
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
   * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
   */
-trait SequentCalculi {
+trait SequentCalculus {
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Propositional tactics

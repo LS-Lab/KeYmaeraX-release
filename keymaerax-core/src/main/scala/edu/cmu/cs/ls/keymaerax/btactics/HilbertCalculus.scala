@@ -15,9 +15,9 @@ import scala.language.postfixOps
   * Hilbert Calculus for differential dynamic logic.
   * @author Andre Platzer
   * @author Stefan Mitsch
-  * @see [[HilbertCalculi]]
+  * @see [[HilbertCalculus]]
   */
-object HilbertCalculus extends HilbertCalculi
+object HilbertCalculus extends HilbertCalculus
 
 /**
  * Hilbert Calculus for differential dynamic logic.
@@ -31,7 +31,7 @@ object HilbertCalculus extends HilbertCalculi
  * @see [[HilbertCalculus.derive()]]
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
-trait HilbertCalculi extends UnifyUSCalculus {
+trait HilbertCalculus extends UnifyUSCalculus {
 
   /** True when insisting on internal useAt technology, false when more elaborate external tactic calls are used on demand. */
   private[btactics] val INTERNAL = false
@@ -94,7 +94,7 @@ trait HilbertCalculi extends UnifyUSCalculus {
   lazy val composeb           : DependentPositionTactic = useAt("[;] compose")
   /** iterateb: [*] prove a property of a loop `[{a}*]p(x)` by unrolling it once `p(x) & [a][{a}*]p(x)` */
   lazy val iterateb           : DependentPositionTactic = useAt("[*] iterate")
-  /** dualb: [^d] handle dual game `[{a}^d]p(x)` by `![a]!p(x)` */
+  /** dualb: [^d^] handle dual game `[{a}^d^]p(x)` by `![a]!p(x)` */
   lazy val dualb              : DependentPositionTactic = useAt("[d] dual")
 
   /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */
@@ -118,7 +118,7 @@ trait HilbertCalculi extends UnifyUSCalculus {
   lazy val composed           : DependentPositionTactic = useAt("<;> compose")
   /** iterated: <*> prove a property of a loop `⟨{a}*⟩p(x)` by unrolling it once `p(x) | ⟨a⟩⟨{a}*⟩p(x)` */
   lazy val iterated           : DependentPositionTactic = useAt("<*> iterate")
-  /** duald: `<^d>` handle dual game `⟨{a}^d⟩p(x)` by `!⟨a⟩!p(x)` */
+  /** duald: `<^d^>` handle dual game `⟨{a}^d^⟩p(x)` by `!⟨a⟩!p(x)` */
   lazy val duald              : DependentPositionTactic = useAt("<d> dual")
 
 //  /** I: prove a property of a loop by induction with the given loop invariant (hybrid systems) */
