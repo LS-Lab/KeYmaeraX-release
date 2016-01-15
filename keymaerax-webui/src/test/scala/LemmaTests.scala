@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.debugT
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary.{assignb, closeId, composeb, cut, ls, onBranch}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaerax.tags.ObsoleteTest
 import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, Tool, Mathematica}
 
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
@@ -20,6 +21,7 @@ import scala.collection.immutable
  * Created by smitsch on 3/5/15.
  * @author Stefan Mitsch
  */
+@ObsoleteTest
 class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig: Map[String, String] = helper.mathematicaConfig

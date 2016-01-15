@@ -93,3 +93,4 @@ KeYmaeraX.jar
 
 .DS_Store
 keymaerax-webui/src/test/scala/casestudies/acasxhsatp
+keymaerax-webui/src/test/scala/btactics/labs/*

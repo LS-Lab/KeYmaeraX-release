@@ -102,31 +102,32 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.ante should contain only "[{y'=z}]y>0".asFormula
     result.subgoals.head.succ shouldBe empty
   }
+  import TactixLibrary._
 
   it should "diffWeaken simple" in {
     val result = proveBy("[{x'=5&x<7}]x<7".asFormula,
-      TactixLibrary.diffWeaken(1))
+      diffWeaken(1) & prop)
     println(result)
     result shouldBe 'proved
   }
 
-  it should "diffWeaken ouch" in {
-    val result = proveBy("[{x'=1}][{x'=2}]x>0".asFormula,
-      TactixLibrary.diffWeaken(1))
+  it should "diffWeaken ouch" in withMathematica { implicit qeTool =>
+  val result = proveBy("[{x'=1}][{x'=2&x>0}]x>0".asFormula,
+      diffWeaken(1) & implyR(1) & diffWeaken(1) & prop)
     println(result)
     result shouldBe 'proved
   }
 
-  it should "diffWeaken before loopy" in {
-    val result = proveBy("[{x'=1}][{x:=2;}*]x>0".asFormula,
-      TactixLibrary.diffWeaken(1))
+  it should "diffWeaken before loopy" in withMathematica { implicit qeTool =>
+    val result = proveBy("[{x'=1&x>0}][{x:=2;}*]x>0".asFormula,
+      diffWeaken(1) & implyR(1) & loop("x>0".asFormula)(1) & master())
     println(result)
     result shouldBe 'proved
   }
 
-  it should "diffWeaken before semibound" in {
-    val result = proveBy("[{x'=1}][{x:=2;++y:=2;}]x>0".asFormula,
-      TactixLibrary.diffWeaken(1))
+  it should "diffWeaken before semibound" in withMathematica { implicit qeTool =>
+  val result = proveBy("[{x'=1&x>0}][{x:=2;++y:=2;}]x>0".asFormula,
+      diffWeaken(1) & master())
     println(result)
     result shouldBe 'proved
   }

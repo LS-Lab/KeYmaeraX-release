@@ -28,8 +28,8 @@ class FooTests extends FlatSpec with Matchers with BeforeAndAfterEach {
      override def result(provable: Provable) = throw new BelleError("I don't want to compute today...")
    }
 
-   theInterpreter.apply(Idioms.nil
+   a [BelleError] shouldBe thrownBy (theInterpreter.apply(Idioms.nil
      & itFails
-     & Idioms.nil, BelleProvable(Provable.startProof("1=1".asFormula)))
+     & Idioms.nil, BelleProvable(Provable.startProof("1=1".asFormula))))
  }
 }
