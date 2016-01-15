@@ -481,7 +481,7 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
     val ren = renUMatcher(subst(e1), e2)
     //@note instead of post-hoc stapling could also add a third pass that unifies with the resulting renaming `ren` in mind.
     staple(e1, ren, subst)
-    if (DEBUG) println("\n  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  subst: " + subst + "\n  gives: " + e1s + "\n  ren:   " + ren + "\n  invren: " + renamedSubst + "\n  sum:   " + (renamedSubst ++ ren) + "\n  result: " + (renamedSubst ++ ren)(e1))
+    //if (DEBUG) println("\n  unify: " + e1.prettyString + "\n  with:  " + e2.prettyString + "\n  subst: " + subst + "\n  gives: " + subst(e1) + "\n  ren:   " + ren + "\n  invren: " + renamedSubst + "\n  sum:   " + (renamedSubst ++ ren) + "\n  result: " + (renamedSubst ++ ren)(e1))
   }
 
   private def unify(e1: Sequent, e2: Sequent): Subst = {
