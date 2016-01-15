@@ -110,24 +110,26 @@ object DerivationInfo {
     // differential equation axioms
     new CoreAxiomInfo("DW", "DW", "DWaxiom", {case () => HilbertCalculus.DW}),
     new CoreAxiomInfo("DC differential cut"
-      , AxiomDisplayInfo("DC","([x′=f(x)&q(x)]p(x)↔[x′=f(x)&q(x)∧r(x)]p(x))←[x′:=f(x)&q(x)]r(x)")
+      , AxiomDisplayInfo("DC","([{x′=f(x)&q(x)}]p(x)↔[{x′=f(x)&q(x)∧r(x)}]p(x))←[{x′:=f(x)&q(x)}]r(x)")
       , "DCaxiom", {case () => ??? }),
     new InputPositionTacticInfo("diffCut"
       , RuleDisplayInfo("DC"
-        , (List("&Gamma;"),List("[x′ = f(x) & q(x)]p(x)","&Delta;"))
-        , List((List("&Gamma;"), List("[x′ = f(x) & q(x)]r(x)", "&Delta;")),
-          (List("&Gamma;"), List("[x′ = f(x) & (q(x) ∧ r(x))]p(x)","&Delta;"))))
+        , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
+        , List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;")),
+          (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
       , List(FormulaArg("r(x)"))
       , {case () => (fml:Formula) => HilbertCalculus.DC(fml)}),
     new CoreAxiomInfo("DE differential effect"
-      , AxiomDisplayInfo("DE", "[x′=f(x)&q(x)]p(x)↔[x′=f(x)&q(x)][x′:=f(x)]p(x,x′)")
+      , AxiomDisplayInfo("DE", "[{x′=f(x)&q(x)}]P↔[x′=f(x)&q(x)][x′:=f(x)]P")
       , "DE", {case () => HilbertCalculus.DE}),
-    new CoreAxiomInfo("DE differential effect (system)", "DE", "DEs", {case () => HilbertCalculus.DE}),
+    new CoreAxiomInfo("DE differential effect (system)"
+      , AxiomDisplayInfo("DE", "[{x′=F,c&H}]P↔[{c,x′=F&H}][x′:=f(x)]P")
+      , "DEs", {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DI differential invariant"
-      , AxiomDisplayInfo("DI", "[x′=f(x)&q(x)]p(x)←(q(x)→p(x)∧[x′=f(x)&q(x)](p(x))′)")
+      , AxiomDisplayInfo("DI", "[{x′=f(x)&q(x)}]p(x)←(q(x)→p(x)∧[{x′=f(x)&q(x)}](p(x))′)")
       , "DI", {case () => HilbertCalculus.DI}),
     new CoreAxiomInfo("DG differential ghost"
-      , AxiomDisplayInfo("DG", "[x′=f(x)&q(x)]p(x)↔∃y [x′=f(x),y′=a(x)y+b(x)&q(x)]p(x)")
+      , AxiomDisplayInfo("DG", "[{x′=f(x)&q(x)}]p(x)↔∃y [{x′=f(x),y′=a(x)y+b(x)&q(x)}]p(x)")
       , "DG", {case () => (x:Variable) => (t1:Term) => (t2:Term) => HilbertCalculus.DG(x,t1,t2)},
       List(VariableArg("x"), TermArg("t1"), TermArg("t2"))),
     new CoreAxiomInfo("DG differential Lipschitz ghost system", "DG", "DGs", {case () => ???}),
