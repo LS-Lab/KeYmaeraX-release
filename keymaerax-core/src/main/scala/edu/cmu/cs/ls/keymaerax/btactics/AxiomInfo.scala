@@ -61,7 +61,7 @@ object DerivationInfo {
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond"
       , AxiomDisplayInfo(("〈·〉", "<.>"), "〈a〉P ↔ ¬[a]¬P")
-      , "diamond", {case () => HilbertCalculus.useAt("<> diamond")}),
+      , "diamond", {case () => HilbertCalculus.diamond}),
     new DerivedAxiomInfo("[] box", "[.]", "box", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom)}),
     new PositionTacticInfo("assignbTactic"
       , AxiomDisplayInfo("[:=]", "[x:=c]p(x)↔p(c)")
