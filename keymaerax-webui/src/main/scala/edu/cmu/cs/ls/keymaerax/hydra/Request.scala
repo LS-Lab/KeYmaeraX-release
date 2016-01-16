@@ -172,33 +172,41 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
     //check to make sure the indicated files exist and point to the correct files.
     val linkNameFile = new java.io.File(linkName)
     val jlinkLibFile = new java.io.File(jlinkLibFileName)
-    val jlinkLibDir : java.io.File = jlinkLibFile.getParentFile
+    val jlinkLibDir: java.io.File = jlinkLibFile.getParentFile
     val linkNameExists = isLinkNameCorrect(linkNameFile) && linkNameFile.exists()
     val jlinkLibFileExists = isJLinkLibFileCorrect(jlinkLibFile, jlinkLibDir) && jlinkLibFile.exists()
+    var linkNamePrefix = linkNameFile
+    var jlinkLibNamePrefix = jlinkLibFile
 
-    if(!linkNameExists || !jlinkLibFileExists) {
+    if (!linkNameExists) {
       // look for the largest prefix that does exist
-      var linkNamePrefix = linkNameFile
       while (!linkNamePrefix.exists && linkNamePrefix.getParent != null) {
         linkNamePrefix = new java.io.File(linkNamePrefix.getParent)
       }
-
+    }
+    if (!jlinkLibFileExists) {
+      // look for the largest prefix that does exist
+      while (!jlinkLibNamePrefix.exists && jlinkLibNamePrefix.getParent != null) {
+        jlinkLibNamePrefix = new java.io.File(jlinkLibNamePrefix.getParent)
+      }
+    }
+    if (!linkNameExists || !jlinkLibFileExists) {
       new ConfigureMathematicaResponse(
         if (linkNamePrefix.exists()) linkNamePrefix.toString else "",
-        if (jlinkLibDir.exists()) jlinkLibDir.toString else "", false) :: Nil
-    } else {
+        if (jlinkLibNamePrefix.exists()) jlinkLibNamePrefix.toString else "", false) :: Nil
+    }
+    else {
       val originalConfig = db.getConfiguration("mathematica")
-
       val configMap = scala.collection.immutable.Map("linkName" -> linkName, "jlinkLibDir" -> jlinkLibDir.getAbsolutePath)
       val newConfig = new ConfigurationPOJO("mathematica", configMap)
 
       db.updateConfiguration(newConfig)
 
       try {
-        if(!(new File(linkName).exists() || !jlinkLibFile.exists())) throw new FileNotFoundException()
         ComponentConfig.keymaeraInitializer.initMathematicaFromDB() //um.
         new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
       } catch {
+        /* @todo Is this exception ever actually raised? */
         case e : FileNotFoundException =>
           db.updateConfiguration(originalConfig)
           e.printStackTrace()
