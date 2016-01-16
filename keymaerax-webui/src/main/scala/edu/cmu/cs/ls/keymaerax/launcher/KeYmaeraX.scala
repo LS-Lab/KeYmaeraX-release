@@ -264,6 +264,7 @@ object KeYmaeraX {
         " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
         "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
 
+    //@todo this needs to be adapted to btactics
     Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
     Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
 
@@ -273,6 +274,7 @@ object KeYmaeraX {
 
   //@todo Runtime.getRuntime.addShutdownHook??
   def shutdownProver() = {
+    //@todo this needs to be adapted to btactics
     if (Tactics.KeYmaeraScheduler != null) {
       Tactics.KeYmaeraScheduler.shutdown()
       Tactics.KeYmaeraScheduler = null
