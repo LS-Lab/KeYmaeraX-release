@@ -23,7 +23,8 @@ object Main {
     launcherLog("-launch -- starting KeYmaera X Web UI server HyDRA.")
     LoadingDialogFactory() //Intialize the loading dialog.
     try {
-      LemmaDatabaseInitializer.initializeFromJAR
+//      throw new LemmbaDatabaseInitializationException("")
+//      LemmaDatabaseInitializer.initializeFromJAR
     }
     catch {
       case e: LemmbaDatabaseInitializationException => {
