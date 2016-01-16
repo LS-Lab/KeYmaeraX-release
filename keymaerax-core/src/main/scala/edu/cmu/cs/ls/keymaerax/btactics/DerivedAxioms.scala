@@ -1246,7 +1246,7 @@ object DerivedAxioms {
     * @Derived
     * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC1
     */
-  lazy val PC1F = "p_()&q() -> p_()".asFormula
+  lazy val PC1F = "p_()&q_() -> p_()".asFormula
   lazy val PC1 = derivedAxiom("PC1", Sequent(Nil, IndexedSeq(), IndexedSeq(PC1F)), prop)
   lazy val PC1T = derivedAxiomT(PC1)
 
