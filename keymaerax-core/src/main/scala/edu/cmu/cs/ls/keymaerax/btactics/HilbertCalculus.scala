@@ -67,7 +67,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   // axioms
 
   // modalities
-  /** diamond: <.> turn diamond `⟨a⟩p(x)` into double-negated box `![a]!p(x)`. */
+  /** diamond: <.> reduce double-negated box `![a]!p(x)` to a diamond `⟨a⟩p(x)`. */
   lazy val diamond            : DependentPositionTactic = useAt("<> diamond")
   /** assignb: [:=] simplify assignment `[x:=f;]p(x)` by substitution `p(f)` or equation */
   lazy val assignb            : DependentPositionTactic =
@@ -108,7 +108,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     }
   }
 
-  /** box: [.] turn box `[a]p(x)` into double-negated diamond `!⟨a⟩!p(x)`. */
+  /** box: [.] to reduce double-negated diamond `!⟨a⟩!p(x)` to a box `[a]p(x)`. */
   lazy val box                : DependentPositionTactic = useAt("[] box")
   /** randomd: <:*> simplify nondeterministic assignment `<x:=*;>p(x)` to an existential quantifier `\exists x p(x)` */
   lazy val randomd            : DependentPositionTactic = useAt("<:*> assign nondet")

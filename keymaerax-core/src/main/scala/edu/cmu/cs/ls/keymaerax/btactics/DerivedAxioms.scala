@@ -363,6 +363,15 @@ object DerivedAxioms {
   lazy val doubleNegationT = derivedAxiomT(doubleNegationAxiom)
 
   /**
+    * {{{Axiom "vacuous all quantifier".
+    *  (\forall x_ p()) <-> p()
+    * End.
+    * }}}
+    * @Derived from new axiom "p() -> (\forall x_ p())" and ""all instantiate" or "all eliminate".
+    * @todo replace by weaker axiom in AxiomBase and prove it.
+    */
+
+  /**
     * {{{Axiom "exists dual".
     *   (!\forall x (!p(??))) <-> (\exists x p(??))
     * End.
