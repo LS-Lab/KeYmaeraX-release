@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 import java.io.{InputStreamReader, BufferedReader, File, FileFilter,IOException,EOFException}
 import javax.swing.JOptionPane
 import edu.cmu.cs.ls.keymaerax.hydra.{SQLite, UpdateChecker}
-import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms
+import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms
 
 import scala.collection.JavaConversions._
 
@@ -30,7 +30,8 @@ object Main {
         println("!!! ERROR: Could not initialize database !!!)")
         e.printStackTrace()
         println("!!! ERROR RECOVERY: Trying to generate the Lemma database by proving all derived axioms")
-        DerivedAxioms.prepopulateDerivedLemmaDatabase()
+        edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms.prepopulateDerivedLemmaDatabase()
+//        edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms.prepopulateDerivedLemmaDatabase()
       }
     }
     //@todo skip -ui -launch
