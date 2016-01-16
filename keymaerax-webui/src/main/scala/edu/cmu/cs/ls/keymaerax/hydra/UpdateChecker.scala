@@ -28,7 +28,7 @@ object UpdateChecker {
   def needDatabaseUpgrade(databaseVersion: String) : Option[Boolean] = {
     downloadDBVersion() match {
       case Some(oldestAcceptableDBVersion) =>
-        Some(StringToVersion(databaseVersion) <= StringToVersion(oldestAcceptableDBVersion))
+        Some(StringToVersion(databaseVersion) < StringToVersion(oldestAcceptableDBVersion))
       case None => None
     }
   }
