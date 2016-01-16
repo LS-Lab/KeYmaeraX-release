@@ -21,7 +21,10 @@ class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionT
   override def init(config: Map[String,String]) = {
     val linkName = config.get("linkName") match {
       case Some(l) => l
-      case None => throw new IllegalArgumentException("Missing configuration parameter 'linkName'")
+      case None => throw new IllegalArgumentException("Mathematica not configured. Configure Mathematica and restart KeYmaera X.\nMissing configuration parameter 'linkName'\n")
+//        "You should configure settings in the UI and restart KeYmaera X." +
+//        "Or specify the paths explicitly from command line by running\n" +
+//        "  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink")
     }
     val libDir = config.get("libDir") // doesn't need to be defined
     initialized = jlink.init(linkName, libDir)

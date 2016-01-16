@@ -48,6 +48,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @note Unsound for hybrid games
     * @see [[monb]] with p(x)=True
     * @see [[boxTrue]]
+    * @todo should lift to a PositionTactic = cohideR(pos) & DLBySubst.G
     */
   lazy val G                  : BelleExpr         = DLBySubst.G
   /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */

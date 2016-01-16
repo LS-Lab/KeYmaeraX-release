@@ -41,7 +41,12 @@ object Boot extends App {
       initMathematicaFromDB(mathematica, database)
       assert(mathematica.isInitialized, "Mathematica should be initialized after init()")
     } catch {
+      //@todo add e to log here and in other places
       case e:Throwable => println("===> WARNING: Failed to initialize Mathematica. " + e)
+        println("You should configure settings in the UI and restart KeYmaera X.")
+        println("Or specify the paths explicitly from command line by running\n" +
+          "  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink")
+        e.printStackTrace()
     }
 
     DerivedAxioms.qeTool = mathematica
