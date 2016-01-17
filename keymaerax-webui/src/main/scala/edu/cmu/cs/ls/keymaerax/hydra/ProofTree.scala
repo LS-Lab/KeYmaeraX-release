@@ -9,21 +9,13 @@ import scala.collection.immutable
 
 /** Represents (one state of) an entire proof.
   * A ProofTree can contain steps that are inserted automatically by HyDRA for its own purposes (namely undo) in addition
-  * to steps executed by a user
-  * @todo At the moment our handlng of undo's is quite hideous. It would be much cleaner to, most of the time,
-  *  only include nodes in the tree if they're created by a human. The motivation for always-including the undo nodes
-  *  was to get the nodeIds right, but we can always use the undo's to compute the correct nodeId's even if we don't
-  *  actually include them in the tree. This would actually be very close to the previous implementation.
+  * to steps executed by a user.
   * Created by bbohrer on 12/29/15.
   */
 case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, theLeaves: List[AgendaItem]) {
-  private def realItemId(itemId: String) = findNode(itemId).get.realTowardParent.id.toString
-
   def leaves =
     theLeaves.map{case item =>
-      // @note Item id and goal id are secretly the same, need to keep them in sync.
-      val realId = realItemId(item.id)
-      AgendaItem(item.id, item.name, item.proofId, item.goal.realTowardParent)
+      AgendaItem(item.id, item.name, item.proofId, item.goal)
     }
 
   def leavesAndRoot = root :: leaves.map({case item => item.goal})
@@ -32,7 +24,7 @@ case class ProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, the
     node.id.toString == id})
 
   def goalIndex(id: String): Int = {
-    leaves.zipWithIndex.find({case (item, i) => realItemId(item.id) == realItemId(id)}).get._2
+    leaves.zipWithIndex.find({case (item, i) => item.id == id}).get._2
   }
 
   def allDescendants(id: String): List[TreeNode] = {
@@ -59,7 +51,7 @@ object ProofTree {
     }
   }
 
-  def ofTrace(trace:ExecutionTrace, agendaItems: List[AgendaItemPOJO] = Nil, proofFinished:Boolean = false): ProofTree = {
+  def ofTrace(trace:ExecutionTrace, agendaItems: List[AgendaItemPOJO] = Nil, proofFinished:Boolean = false, includeUndos:Boolean = false): ProofTree = {
     var currentNodeId = 1
 
     def treeNode(subgoal: Sequent, parent: Option[TreeNode], step:Option[ExecutionStep], isFake:Boolean = false): TreeNode = {
@@ -103,7 +95,12 @@ object ProofTree {
           val addedNodes = delta.tail.map({ case sg => treeNode(sg, Some(openGoals(branch)), Some(step)) })
           openGoals = openGoals.updated(branch, updatedNode) ++ addedNodes
           allNodes = allNodes ++ (updatedNode :: addedNodes.toList)
-        } else  {
+        } else if (!step.isUserExecuted && !includeUndos) {
+          /* Ensure that node ID's are consistent between versions of the tree that do or do not contain undo nodes
+          * by generating the same ID's in both cases.*/
+          currentNodeId = currentNodeId + 1
+        }
+        else {
           val isFake = !step.isUserExecuted
           val updatedNode = treeNode(openGoals(branch).sequent, Some(openGoals(branch)), Some(step), isFake)
           openGoals = openGoals.updated(branch, updatedNode)
@@ -119,7 +116,7 @@ object ProofTree {
       } else {
         /* Add nodes to indicate that all the leaves have been closed, then return the new leaves as our agenda so every
           branch is visible. Since we have to display a sequent, use  |- true to let the user know the branch is closed. */
-        val goals = allNodes.filter(_.theChildren.isEmpty)
+        val goals = allNodes.filter(_.children.isEmpty)
         val newNodes = goals.map{case goal =>
             treeNode(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("true".asFormula)),
               Some(goal), Some(goal.endStep.get))}
@@ -131,35 +128,13 @@ object ProofTree {
   }
 }
 
-case class TreeNode (id: Int, sequent: Sequent, theParent: Option[TreeNode], startStep:Option[ExecutionStep], var isFake:Boolean = false) {
-  var theChildren: List[TreeNode] = Nil
+case class TreeNode (id: Int, sequent: Sequent, parent: Option[TreeNode], startStep:Option[ExecutionStep], var isFake:Boolean = false) {
   var endStep: Option[ExecutionStep] = None
-  if (theParent.nonEmpty)
-    theParent.get.theChildren = this :: theParent.get.theChildren
+  var children: List[TreeNode] = Nil
+  if (parent.nonEmpty)
+    parent.get.children = this :: parent.get.children
 
-  /* Make this node real by searching parents if necessary */
-  def realTowardParent: TreeNode = {
-    if (isFake) {
-      theParent.get.realTowardParent
-    }
-    else
-      this
-  }
-
-  /* Make this node real by searching children if necessary */
-  def realTowardChildren: List[TreeNode] = {
-    if (isFake) {
-      theChildren.flatMap(_.realTowardChildren)
-    } else {
-      List(this)
-    }
-  }
-
-  def parent: Option[TreeNode] = realTowardParent.theParent.map(_.realTowardParent)
-
-  def children = theChildren.flatMap(_.realTowardChildren)
-
-  def allDescendants:List[TreeNode] = this :: theChildren.flatMap{case child => child.allDescendants}
+  def allDescendants:List[TreeNode] = this :: children.flatMap{case child => child.allDescendants}
   def rule:String = { startStep.map{case step => step.rule}.getOrElse("")}
 }
 

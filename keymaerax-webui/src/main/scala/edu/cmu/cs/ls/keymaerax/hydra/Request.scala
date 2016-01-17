@@ -726,7 +726,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
       return new ErrorResponse("Pruning not allowed on closed proofs") :: Nil
     }
     val trace = db.getExecutionTrace(proofId.toInt)
-    val tree = ProofTree.ofTrace(trace)
+    val tree = ProofTree.ofTrace(trace, includeUndos = true)
     val prunedSteps = tree.allDescendants(nodeId).flatMap{case node => node.endStep.toList}
     if(prunedSteps.isEmpty) {
       return new ErrorResponse("No steps under node. Nothing to do.") :: Nil
