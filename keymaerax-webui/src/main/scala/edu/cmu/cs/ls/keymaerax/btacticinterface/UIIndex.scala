@@ -96,7 +96,7 @@ object UIIndex {
           case _: Test => "[?] test" :: rules
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
-          case _: Dual => "[^d] dual" :: rules
+          case _: Dual => ("[^d] dual" :: alwaysApplicable) ensuring (r => r.intersect(List("G", "V vacuous")).isEmpty, "unsound for hybrid games anyhow")
           case _: Loop => "loop" :: "[*] iterate" :: rules
           case ODESystem(ode, constraint) if containsPrime => ode match {
             case _: AtomicODE => "DE differential effect" :: "DW differential weakening" :: rules
