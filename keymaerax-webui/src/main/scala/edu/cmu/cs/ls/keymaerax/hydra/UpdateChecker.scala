@@ -28,7 +28,7 @@ object UpdateChecker {
   def needDatabaseUpgrade(databaseVersion: String) : Option[Boolean] = {
     downloadDBVersion() match {
       case Some(oldestAcceptableDBVersion) =>
-        Some(StringToVersion(databaseVersion) <= StringToVersion(oldestAcceptableDBVersion))
+        Some(StringToVersion(databaseVersion) < StringToVersion(oldestAcceptableDBVersion))
       case None => None
     }
   }
@@ -62,10 +62,10 @@ object UpdateChecker {
     try {
       val json = JsonParser(scala.io.Source.fromURL("http://keymaerax.org/version.json").mkString)
       if(json.asJsObject.getFields("oldestAcceptableDB").isEmpty)
-        throw new Exception("version.json does not contain a DBVersion key.")
+        throw new Exception("Cannot retrieve oldestAcceptableDB since version.json does not contain a DBVersion key.")
       else {
         val versionString = json.asJsObject.getFields("oldestAcceptableDB").last.toString.replace("\"", "")
-        println("Got oldestAcceptableDB string: " + versionString)
+        println("Oldest compatible database version: " + versionString)
         Some(versionString)
       }
     }

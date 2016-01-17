@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 import java.io.{InputStreamReader, BufferedReader, File, FileFilter,IOException,EOFException}
 import javax.swing.JOptionPane
 import edu.cmu.cs.ls.keymaerax.hydra.{SQLite, UpdateChecker}
-import edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms
+import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms
 
 import scala.collection.JavaConversions._
 
@@ -23,17 +23,20 @@ object Main {
     launcherLog("-launch -- starting KeYmaera X Web UI server HyDRA.")
     LoadingDialogFactory() //Intialize the loading dialog.
     try {
-      LemmaDatabaseInitializer.initializeFromJAR
+//      throw new LemmbaDatabaseInitializationException("")
+//      LemmaDatabaseInitializer.initializeFromJAR
     }
     catch {
       case e: LemmbaDatabaseInitializationException => {
         println("!!! ERROR: Could not initialize database !!!)")
         e.printStackTrace()
         println("!!! ERROR RECOVERY: Trying to generate the Lemma database by proving all derived axioms")
-        DerivedAxioms.prepopulateDerivedLemmaDatabase()
+        edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms.prepopulateDerivedLemmaDatabase()
+//        edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms.prepopulateDerivedLemmaDatabase()
       }
     }
     //@todo skip -ui -launch
+    //@todo use command line arguments
     edu.cmu.cs.ls.keymaerax.hydra.Boot.main(Array[String]()) //@todo not sure.
   }
 
@@ -49,11 +52,13 @@ object Main {
       val java : String = javaLocation
       val keymaera : String = jarLocation
       println("Restarting KeYmaera X with sufficient stack space")
-      runCmd(java :: "-Xss20M" :: "-jar" :: keymaera :: "-ui" :: "-launch" :: Nil)
+      runCmd((java :: "-Xss20M" :: "-jar" :: keymaera :: "-ui" :: "-launch" :: Nil) ++ args.toList)
     }
     else {
       exitIfDeprecated()
       startServer()
+      //@todo use command line argument -mathkernel and -jlink from KeYmaeraX.main
+      //@todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
     }
   }
 
@@ -62,11 +67,14 @@ object Main {
     */
   private def exitIfDeprecated() = {
     val databaseVersion = SQLite.ProdDB.getConfiguration("version").config("version")
+    println("Current database version: " + databaseVersion)
     if(UpdateChecker.upToDate().getOrElse(false) && UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false))
     {
       //Exit if KeYmaera X is up to date but the production database belongs to a deprecated version of KeYmaera X.
       //@todo maybe it makes more sense for the JSON file to associate each KeYmaera X version to a list of database and cache versions that work with that version.
-      JOptionPane.showMessageDialog(null, "Your KeYmaera X database is not compatible with this version of KeYmaera X.\nPlease revert to an old version of KeYmaera X or else delete your current database (HOME/.keymaerax/keymaerax.sqlite)")
+      val message = "Your KeYmaera X database is not compatible with this version of KeYmaera X.\nPlease revert to an old version of KeYmaera X or else delete your current database (~/.keymaerax/keymaerax.sqlite*)"
+      println(message)
+      JOptionPane.showMessageDialog(null, message)
       System.exit(-1)
     }
     else {} //getOrElse(false) ignores cases where we couldn't download some needed information.

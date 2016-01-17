@@ -59,7 +59,7 @@ object DLBySubst {
     * @see [[monb]] with p(x)=True
     * @note Unsound for hybrid games
     */
-  lazy val G = {
+  lazy val G: BelleExpr = {
     val pattern = SequentType(Sequent(Nil, IndexedSeq(), IndexedSeq("[a_;]p_(??)".asFormula)))
     USubstPatternTactic(
       (pattern, (ru:RenUSubst) => ru.getRenamingTactic & axiomatic("Goedel", ru.substitution.usubst))::Nil
