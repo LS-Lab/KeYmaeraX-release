@@ -20,7 +20,7 @@ object Lemma {
    */
   def fromString(lemma: String): Lemma = {
     fromStringInternal(lemma)
-  } ensuring(r => KeYmaeraXExtendedLemmaParser(r.toString) == (r.name, r.fact.conclusion +: r.fact.subgoals, r.evidence.head),
+  } ensuring(r => KeYmaeraXExtendedLemmaParser(r.toStringInternal) == (r.name, r.fact.conclusion +: r.fact.subgoals, r.evidence.head),
     "Reparse of printed parse result should be original parse result")
 
   private def fromStringInternal(lemma: String): Lemma = {
@@ -66,13 +66,17 @@ final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[St
   /** A string representation of this lemma that will reparse as this lemma.
     * @see [[Lemma.fromString()]] */
   override def toString: String = {
+    toStringInternal
+    //@note soundness-critical check that reparse succeeds as expected
+  } ensuring(r => Lemma.fromStringInternal(r) == this, "Printed lemma should reparse to this original lemma")
+
+  private def toStringInternal: String = {
     "Lemma \"" + name.getOrElse("") + "\".\n" +
       sequentToString(fact.conclusion) + "\n" +
       fact.subgoals.map(sequentToString).mkString("\n") + "\n" +
       "End.\n" +
       evidence.mkString("\n\n") + "\n"
-    //@note soundness-critical check that reparse succeeds as expected
-  } ensuring(r => Lemma.fromStringInternal(r) == this, "Printed lemma should reparse to this original lemma")
+  }
 
   /** Produces a sequent block in Lemma file format */
   private def sequentToString(s: Sequent) = {
