@@ -415,7 +415,7 @@ object SQLite {
         val steps =
           Executionsteps.map({case step => (step.executionid.get, step.previousstep, step.parentstep,
             step.branchorder.get, step.branchlabel.get, step.alternativeorder.get, step.status.get, step.executableid.get,
-            step.inputprovableid.get, step.resultprovableid, step.localprovableid, step.userexecuted.get, step.childrenrecorded.get,
+            step.inputprovableid, step.resultprovableid, step.localprovableid, step.userexecuted.get, step.childrenrecorded.get,
             step.rulename.get)
           }) returning Executionsteps.map(es => es._Id.get)
         val stepId = steps
@@ -427,7 +427,7 @@ object SQLite {
       })
     }
 
-    override def addAlternative(alternativeTo: Int, trace:ExecutionTrace):Unit = {
+    override def addAlternative(alternativeTo: Int, inputProvable: Provable, trace:ExecutionTrace):Unit = {
       def get(stepId: Int) = {
         Executionsteps.filter(_._Id === stepId).list match {
           case Nil => throw new Exception("Execution step not found")
@@ -435,38 +435,33 @@ object SQLite {
         }
       }
       val oldStep = get(alternativeTo)
-      def addSteps(prev: Option[Int], globalId:Int, steps:List[ExecutionStep]): Unit = {
+      def addSteps(prev: Option[Int], globalProvable:Provable, steps:List[ExecutionStep]): Unit = {
         if(steps.isEmpty) return
         else {
           val thisStep = steps.head
           val thisPOJO = get(thisStep.stepId)
           val localProvable = loadProvable(thisPOJO.localprovableid.get)
-          val global = loadProvable(globalId)
-          val outputProvable = global(localProvable, thisStep.branch)
-          val outputProvableId = serializeProvable(outputProvable)
+          val outputProvable = globalProvable(localProvable, thisStep.branch)
           val newStep = new ExecutionStepPOJO(None, oldStep.executionid.get, prev, None, Some(thisStep.branch),
             None, oldStep.alternativeorder.get + 1, ExecutionStepStatus.fromString(thisPOJO.status.get), thisPOJO.executableid.get,
-            globalId,
-            Some(outputProvableId), thisPOJO.localprovableid, thisPOJO.userexecuted.get.toBoolean, thisPOJO.rulename.get)
+            None, None, thisPOJO.localprovableid, thisPOJO.userexecuted.get.toBoolean, thisPOJO.rulename.get)
           val newId = addExecutionStep(newStep)
-          addSteps(Some(newId), outputProvableId, steps.tail)
+          addSteps(Some(newId), outputProvable, steps.tail)
         }
       }
       if(trace.steps.isEmpty) {
         // Insert a null tactic with a higher alternative order
         val nilExecutable = addBelleExpr(TactixLibrary.nil)
+        val localConclusion = inputProvable.subgoals(0)
         // Generate a no-op local provable whose conclusion matches with the current state of the proof.
-        val input = loadProvable(oldStep.inputprovableid.get)
-        val localConclusion = input.subgoals(0)
         val localProvable = Provable.startProof(localConclusion)
         val newLocalProvableID = serializeProvable(localProvable)
         val step = new ExecutionStepPOJO(None, oldStep.executionid.get, oldStep.previousstep, None, Some(0), None,
-          oldStep.alternativeorder.get + 1, ExecutionStepStatus.Finished, nilExecutable, oldStep.inputprovableid.get,
+          oldStep.alternativeorder.get + 1, ExecutionStepStatus.Finished, nilExecutable, oldStep.inputprovableid,
           oldStep.inputprovableid, Some(newLocalProvableID), false, "nil")
         addExecutionStep(step)
       } else {
-        val inputId = oldStep.inputprovableid.get
-        addSteps(oldStep.previousstep, inputId, trace.steps)
+        addSteps(oldStep.previousstep, inputProvable, trace.steps)
       }
     }
 
@@ -576,25 +571,21 @@ object SQLite {
       * as the conclusion)
       *
       * This is only for testing purposes. If you need the last provable of an execution,trace,
-      * you should use getExecutionTrace(id).last.outputProvable.get.
+      * you should use getExecutionTrace(id).lastProvable
       * */
-    private def regenerate(executionId: Int): Provable = {
-      proofSteps(executionId) match {
-        case Nil => throw new Exception("Cannot regenerate provable for empty execution")
-        case step::steps =>
-          val inputProvable = loadProvable(step.inputProvableId)
-          val initialProvable = Provable.startProof(inputProvable.conclusion)
-          def run(p: Provable, t:BelleExpr): Provable =
-            SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
-              case BelleProvable(p, _) => p
-            }
-          def loadTactic(id: Int): BelleExpr = BTacticParser(getExecutable(id).belleExpr.get).get
-          (step::steps).foldLeft(initialProvable)({case (provable, currStep) =>
-              run(provable, loadTactic(currStep.executableId))
-            })
-          initialProvable
-      }
-
+    private def regenerate(proofId: Int): Provable = {
+      val trace = getExecutionTrace(proofId)
+      val inputProvable = Provable.startProof(trace.conclusion)
+      val initialProvable = Provable.startProof(inputProvable.conclusion)
+      def run(p: Provable, t:BelleExpr): Provable =
+        SequentialInterpreter(Nil)(t,BelleProvable(p)) match {
+          case BelleProvable(p, _) => p
+        }
+      def loadTactic(id: Int): BelleExpr = BTacticParser(getExecutable(id).belleExpr.get).get
+      trace.steps.foldLeft(initialProvable)({case (provable, currStep) =>
+          run(provable, loadTactic(currStep.executableId))
+        })
+      initialProvable
     }
 
     /** Return a string describing each step in the current state of the proof.
@@ -714,7 +705,7 @@ object SQLite {
           revResult =
             new ExecutionStepPOJO(head._Id, head.executionid.get, head.previousstep, head.parentstep,
               head.branchorder, head.branchlabel, head.alternativeorder.get, ExecutionStepStatus.fromString(head.status.get),
-              head.executableid.get, head.inputprovableid.get, head.resultprovableid, head.localprovableid, head.userexecuted.get.toBoolean,
+              head.executableid.get, head.inputprovableid, head.resultprovableid, head.localprovableid, head.userexecuted.get.toBoolean,
               head.rulename.get)::revResult
           prevId = head._Id
           steps = tailSteps
@@ -743,12 +734,13 @@ object SQLite {
           else throw new Exception("Primary keys aren't unique in executions table.")
         })
 
-    private def zipTrace(executionSteps: List[ExecutionStepPOJO], executables: List[ExecutablePOJO], provables: List[Provable]): List[ExecutionStep] = {
-      (executionSteps, executables, provables) match {
-        case (step::steps, exe:: exes, inputProvable::resultProvable::moreProvables) =>
-          ExecutionStep(step.stepId.get, inputProvable, Some(resultProvable), step.branchOrder.get, step.alternativeOrder, step.ruleName, step.userExecuted)  ::
-            (zipTrace(steps, exes, resultProvable::moreProvables))
-        case (Nil, Nil, _ :: Nil) => Nil
+    private def zipTrace(executionSteps: List[ExecutionStepPOJO], executables: List[ExecutablePOJO], inputProvable:Provable, localProvables: List[Provable]): List[ExecutionStep] = {
+      (executionSteps, executables, localProvables) match {
+        case (step::steps, exe:: exes, localProvable::moreProvables) =>
+          val output = inputProvable(localProvable, step.branchOrder.get)
+          ExecutionStep(step.stepId.get, inputProvable, Some(localProvable), step.branchOrder.get, step.alternativeOrder, step.ruleName, step.executableId, step.userExecuted)  ::
+            zipTrace(steps, exes, output, moreProvables)
+        case (Nil, Nil, Nil) => Nil
         case _ => throw new ProverException("Bug in zipTrace")
       }
     }
@@ -757,17 +749,18 @@ object SQLite {
       /* This method has proven itself to be a resource hog, so this implementation attempts to minimize the number of
          DB calls. */
       val executionId = getTacticExecution(proofId)
-      var steps = proofSteps(executionId)
+      val steps = proofSteps(executionId)
       if (steps.isEmpty) {
         val conclusion = getProofConclusion(proofId)
         ExecutionTrace(proofId.toString, executionId.toString, conclusion, Nil)
       } else {
-        val provableIds = steps.map { case step => step.inputProvableId } :+ steps.last.resultProvableId.get
+        val provableIds = steps.map { case step => step.localProvableId.get }
         val executableIds = steps.map { case step => step.executableId }
-        var provables = loadProvables(provableIds)
+        val provables = loadProvables(provableIds)
         val conclusion = provables.head.conclusion
+        val initProvable = Provable.startProof(conclusion)
         val executables = getExecutables(executableIds)
-        val traceSteps = zipTrace(steps, executables, provables)
+        val traceSteps = zipTrace(steps, executables, initProvable, provables)
         ExecutionTrace(proofId.toString, executionId.toString, conclusion, traceSteps)
       }
     }
