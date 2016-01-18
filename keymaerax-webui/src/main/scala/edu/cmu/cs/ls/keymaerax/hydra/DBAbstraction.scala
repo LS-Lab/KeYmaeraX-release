@@ -182,6 +182,9 @@ trait DBAbstraction {
     */
   def cleanup(): Unit
 
+  /** Ensures any changes which might currently reside in auxilliary files have been synced to the main file. */
+  def syncDatabase(): Unit
+
   // Configuration
   def getAllConfigurations: Set[ConfigurationPOJO]
 

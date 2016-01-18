@@ -165,6 +165,10 @@ object SQLite {
         session.withTransaction(f)
     }
 
+    override def syncDatabase():Unit = {
+      sqlu"PRAGMA wal_checkpoint(FULL)".execute(session)
+    }
+
     // Configuration
     override def getAllConfigurations: Set[ConfigurationPOJO] =
       synchronizedTransaction({
