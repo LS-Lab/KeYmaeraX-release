@@ -88,7 +88,7 @@ object SQLite {
         assert(parse._3 == lemma.evidence.head, "reparse of printed lemma's evidence should be identical to original lemma")
       }
 
-      val lemmaString = "/** KeYmaera X " + _root_.edu.cmu.cs.ls.keymaerax.core.VERSION + " */" ++  lemma.toString
+      val lemmaString = lemma.toString
 
       db.updateLemma(id, lemmaString)
       cachedLemmas = cachedLemmas.+((id, lemma))
