@@ -7,7 +7,6 @@
 
     <!-- Collapsed antecedent, also readonly -->
     <div class="col-md-2">
-        <div class="pull-right">
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante | limitTo:1" id="{{f.id}}">
             <div class="col-md-12 k4-formula">
                 <div class="k4-formula-content-abbreviate k4-abbreviate">
@@ -17,7 +16,6 @@
                                 on-input-tactic="onInputTactic(formulaId, tacticId, input)"></k4-formula>
                 </div>
             </div>
-        </div>
         </div>
     </div>
 
