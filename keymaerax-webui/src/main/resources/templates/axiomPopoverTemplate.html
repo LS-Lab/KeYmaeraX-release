@@ -10,26 +10,26 @@
     <!-- padding around content -->
     <div class="col-md-12">
 
-        <div class="well well-sm" ng-repeat="tactic in formulaAxiomsMap[formulaId] | filter:{derivation: {type: 'axiom'}}">
+        <div class="well well-sm" ng-repeat="tactic in formulaAxiomsMap[tacticPopover.formulaId()] | filter:{derivation: {type: 'axiom'}}">
             <!-- TODO transmit key from server and underline, make changeable -->
             <div class="row">
-                <div class="col-md-2"><b><a ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</a></b></div>
+                <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.id)">{{tactic.name}}</a></b></div>
                 <div class="col-md-10">{{tactic.derivation.formula}}</div>
             </div>
         </div>
-        <div class="well well-sm" ng-repeat="tactic in formulaAxiomsMap[formulaId] | filter:{derivation: {type: 'tactic'}}">
+        <div class="well well-sm" ng-repeat="tactic in formulaAxiomsMap[tacticPopover.formulaId()] | filter:{derivation: {type: 'tactic'}}">
             <div class="row">
-                <div class="col-md-2"><b><a ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</a></b></div>
+                <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.id)">{{tactic.name}}</a></b></div>
                 <div class="col-md-10">{{tactic.derivation.formula}}</div>
             </div>
         </div>
         <uib-accordion close-others="false">
-            <uib-accordion-group ng-repeat="tactic in formulaAxiomsMap[formulaId] | filter:{derivation: {type: 'sequentrule'}}" is-open="tactic.isOpen">
+            <uib-accordion-group ng-repeat="tactic in formulaAxiomsMap[tacticPopover.formulaId()] | filter:{derivation: {type: 'sequentrule'}}" is-open="tactic.isOpen">
                 <uib-accordion-heading>
                     <a ng-if="tactic.derivation.input.length === 0"
-                       ng-click="applyTactic(formulaId, tactic.id)">{{tactic.name}}</a>
+                       ng-click="applyTactic(tacticPopover.formulaId(), tactic.id)">{{tactic.name}}</a>
                     <a ng-if="tactic.derivation.input.length > 0"
-                       ng-click="applyInputTactic(formulaId, tactic)">{{tactic.name}}</a>
+                       ng-click="applyInputTactic(tacticPopover.formulaId(), tactic)">{{tactic.name}}</a>
                     <span class="pull-right fa fa-bars"></span>
                 </uib-accordion-heading>
                 <div class="col-md-12" ng-include="'templates/sequentRuleTemplate.html'"></div>
@@ -37,7 +37,7 @@
         </uib-accordion>
     </div>
 </div>
-<div ng-if="formulaAxiomsMap[formulaId] === undefined || formulaAxiomsMap[formulaId] === null || formulaAxiomsMap[formulaId].length == 0">
+<div ng-if="formulaAxiomsMap[tacticPopover.formulaId()] === undefined || formulaAxiomsMap[tacticPopover.formulaId()] === null || formulaAxiomsMap[tacticPopover.formulaId()].length == 0">
     <span class="fa fa-exclamation-triangle"> Sorry, no tactics applicable here. Try working on formulas from outside in, starting from the left.</span>
 </div>
 </div>

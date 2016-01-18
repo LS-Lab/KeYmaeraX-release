@@ -24,7 +24,6 @@ angular.module('formula')
                              'ng-click="formulaClick(\'' + id + '\', $event)"' +
                              'ng-right-click="formulaRightClick(\'' + id + '\', $event)"' +
                              // initialize formulaId for popover template, use ng-repeat for scoping
-                             'ng-repeat="formulaId in [\'' + id + '\']"' +
                              'uib-popover-template="\'templates/axiomPopoverTemplate.html\'"' +
                              'popover-is-open="tacticPopover.isOpen(\'' + id + '\')"' +
                              'popover-append-to-body="true"' +
@@ -417,6 +416,7 @@ angular.module('formula')
               openFormulaId: undefined,
               isOpen: function(formulaId) { return $scope.tacticPopover.openFormulaId !== undefined && $scope.tacticPopover.openFormulaId === formulaId; },
               open: function(formulaId) { $scope.tacticPopover.openFormulaId = formulaId; },
+              formulaId: function() { return $scope.tacticPopover.openFormulaId; },
               close: function() { $scope.tacticPopover.openFormulaId = undefined; }
             }
 
