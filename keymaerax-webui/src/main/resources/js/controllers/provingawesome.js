@@ -81,7 +81,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')
         .then(function(response) {
           if (response.data.status === 'done') $scope.runningTask.future.resolve(taskId);
-          else $timeout($scope.runningTask.poll(taskId), 500);
+          else $timeout($scope.runningTask.poll(taskId), 50);
         })
         .catch(function(error) { $scope.runningTask.future.reject(error); });
     },
