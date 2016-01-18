@@ -2,7 +2,7 @@ angular.module('formula', ['ngSanitize']);
 
 /** Renders a formula into hierarchically structured spans */
 angular.module('formula')
-  .directive('k4Formula', ['$compile', '$http', function($compile, $http) {
+  .directive('k4Formula', ['$compile', '$http', '$sce', function($compile, $http, $sce) {
     return {
         restrict: 'AE',
         scope: {
@@ -15,9 +15,9 @@ angular.module('formula')
             onTactic: '&',     // onTactic(formulaId, tacticId)
             onInputTactic: '&' // onInputTactic(formulaId, tacticId, input)
         },
-        link: function($scope, $sce) {
+        link: function(scope, element, attrs) {
             var span = function(id, content, depth) {
-                if ($scope.highlight) {
+                if (scope.highlight && (content.type === 'formula' || content.type === 'derivative')) {
                     return '<span class="hl" id="' + id + '"' +
                              'onmouseover="$(event.target).addClass(\'hlhover\');"' +
                              'onmouseout="$(event.target).removeClass(\'hlhover\');"' +
@@ -28,9 +28,9 @@ angular.module('formula')
                              'popover-is-open="tacticPopover.isOpen(\'' + id + '\')"' +
                              'popover-append-to-body="true"' +
                              'popover-trigger="none"' +
-                             'popover-placement="bottom">' + content + '</span>';
+                             'popover-placement="bottom">' + content.text + '</span>';
                 } else {
-                    return content;
+                    return content.text;
                 }
             }
 
@@ -114,102 +114,102 @@ angular.module('formula')
                     switch (json.name) {
                         case "not":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            content = "&not;" + left;
+                            content = {text: "&not;" + left, type: 'formula'};
                             break;
 
                         case "and":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + " &#8743; " + right;
+                            content = {text: left + " &#8743; " + right, type: 'formula'};
                             break;
 
                         case "or":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + " &#8744; " + right;
+                            content = {text: left + " &#8744; " + right, type: 'formula'};
                             break;
 
                         case "imply":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + (depth === 0 && !collapsed ? "<br/>" : "") + "→" + (depth === 0 && !collapsed ? "<br/>" : "") + right;
+                            content = {text: left + (depth === 0 && !collapsed ? "<br/>" : "") + "→" + (depth === 0 && !collapsed ? "<br/>" : "") + right, type: 'formula'};
                             break;
 
                         case "equiv":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + " &#8596 " + right;
+                            content = {text: left + " &#8596 " + right, type: 'formula'};
                             break;
 
                         case "lt":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + " &lt; " + right;
+                            content = {text: left + " &lt; " + right, type: 'formula'};
                             break;
 
                         case "leq":
                             var left = parseFormulaHelper(c[0], depth + 1, collapsed);
                             var right = parseFormulaHelper(c[1], depth + 1, collapsed);
-                            content = left + " &leq; " + right;
+                            content = {text: left + " &leq; " + right, type: 'formula'};
                             break;
 
                         case "equals":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + " = " + right;
+                            content = {text: left + " = " + right, type: 'formula'};
                             break;
 
                         case "notEquals":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + " &ne; " + right;
+                            content = {text: left + " &ne; " + right, type: 'formula'};
                             break;
 
                         case "geq":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + " &geq; " + right;
+                            content = {text: left + " &geq; " + right, type: 'formula'};
                             break;
 
                         case "gt":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + " &gt; " + right;
+                            content = {text: left + " &gt; " + right, type: 'formula'};
                             break;
 
                         case "neg":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            content = "-" + left;
+                            content = {text: "-" + left, type: 'formula'};
                             break;
 
                         case "add":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + " + " + right;
+                            content = {text: left + " + " + right, type: 'term'};
                             break;
 
                         case "subtract":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + " - " + right;
+                            content = {text: left + " - " + right, type: 'term'};
                             break;
 
                         case "multiply":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + " &middot; " + right;
+                            content = {text: left + " &middot; " + right, type: 'term'};
                             break;
 
                         case "divide":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + " / " + right;
+                            content = {text: left + " / " + right, type: 'term'};
                             break;
 
                         case "exp":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + "<sup>" + right + "</sup>";
+                            content = {text: left + "<sup>" + right + "</sup>", type: 'term'};
                             break;
 
                         case "forall":
@@ -217,7 +217,7 @@ angular.module('formula')
                             for (var i = 1; i < json.variables.length; i++) {
                                 vars = vars + "," + json.variables[i];
                             }
-                            content = "&forall;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1, collapsed) + ")"
+                            content = {text: "&forall;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1, collapsed) + ")", type: 'term'}
                             break;
 
                         case "exists":
@@ -225,85 +225,85 @@ angular.module('formula')
                             for (var i = 1; i < json.variables.length; i++) {
                                 vars = vars + "," + json.variables[i];
                             }
-                            content = "&exist;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1, collapsed) + ")"
+                            content = {text: "&exist;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1, collapsed) + ")", type: 'term'}
                             break;
 
                         case "boxmodality":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = "[" + left + "] " + right;
+                            content = {text: "[" + left + "] " + right, type: 'formula'};
                             break;
 
                         case "diamondmodality":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = "<" + left + "> " + right;
+                            content = {text: "<" + left + "> " + right, type: 'formula'};
                             break;
 
                         case "Assign":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + " := " + right;
+                            content = {text: left + " := " + right, type: 'program'};
                             break;
 
                         case "NDetAssign":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            content = left + ":= *";
+                            content = {text: left + ":= *", type: 'program'};
                             break;
 
                         case "Test":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            content = " ? " + left;
+                            content = {text: " ? " + left, type: 'program'};
                             break;
 
                          case "IfThen":
                             var left = parseFormulaHelper(c[0], depth+1, collapsed)
                             var right = parseFormulaHelper(c[1], depth+1, collapsed)
-                            content = "if (" + left + ") then {" + right + "} fi"
+                            content = {text: "if (" + left + ") then {" + right + "} fi", type: 'program'}
                             break;
 
                         case "IfThenElse":
                             var condT = parseFormulaHelper(c[0], depth+1, collapsed)
                             var thenT = parseFormulaHelper(c[1], depth+1, collapsed)
                             var elseT = parseFormulaHelper(c[2], depth+1, collapsed)
-                            content = "if " + condT + " then {" + thenT + "} else {" + elseT + "} fi"
+                            content = {text: "if " + condT + " then {" + thenT + "} else {" + elseT + "} fi", type: 'program'}
                             break;
 
                         case "Loop":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            content = "{" + left + "}<sup>*</sup>";
+                            content = {text: "{" + left + "}<sup>*</sup>", type: 'program'};
                             break;
 
                         case "Sequence":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + ";" + (collapsed ? " " : "<br/>") + right;
+                            content = {text: left + ";" + (collapsed ? " " : "<br/>") + right, type: 'program'};
                             break;
 
                         case "Choice":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = left + (collapsed ? " " : "<br/>") + "&#8746;" + (collapsed ? " " : "<br/>") + right;
+                            content = {text: left + (collapsed ? " " : "<br/>") + "&#8746;" + (collapsed ? " " : "<br/>") + right, type: 'program'};
                             break;
 
                         case "AtomicODE":
                             var x = parensIfNeeded(json, c[0], depth + 1, collapsed);
                             var theta = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = x + " = " + theta;
+                            content = {text: x + " = " + theta, type: 'program'};
                             break;
 
                         case "ODEProduct":
                             var left = parseFormulaHelper(c[0], depth + 1, collapsed);
                             var right = parseFormulaHelper(c[1], depth + 1, collapsed);
                             if (c[1].name != "EmptyODE") {
-                              content = left + ", " + right;
+                              content = {text: left + ", " + right, type: 'program'};
                             } else {
-                              content = left;
+                              content = {text: left, type: 'program'};
                             }
                             break;
 
                         case "EmptyODE":
-                            content = ""
+                            content = {text: "", type: 'program'}
                             break;
 
                         case "NFODEProduct":
@@ -311,36 +311,36 @@ angular.module('formula')
                             var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
                             if (c[1].name != "EmptyODE") {
                               if(c[1].name == "AtomicODE" || c[1].name == "ODEProduct") {
-                                content = left + ", " + right;
-                              } else content = left + " & " + right;
+                                content = {text: left + ", " + right, type: 'program'};
+                              } else content = {text: left + " & " + right, type: 'program'};
                             } else {
-                              content = left;
+                              content = {text: left, type: 'program'};
                             }
                             break;
 
                         case "formuladerivative":
-                            content = "(" + parseFormulaHelper(c[0], depth, collapsed) + ")'"
+                            content = {text: "(" + parseFormulaHelper(c[0], depth, collapsed) + ")'", type: 'derivative'}
                             break;
 
                         case "derivative":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            content = left + "'";
+                            content = {text: left + "'", type: 'derivative'};
                             break;
 
                         case "differentialsymbol":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            content = left + "'";
+                            content = {text: left + "'", type: 'derivative'};
                             break;
 
-                        case "Anything": content = "?"; break;
-                        case "Nothing": content = ""; break;
+                        case "Anything": content = {text: "?", type: 'symbol'}; break;
+                        case "Nothing": content = {text: "", type: 'symbol'}; break;
 
                         case "apply":
                             var name = c[0]
                             if (c[1].name != "Nothing") {
-                              content = name + parensIfNeeded(json, c[1], depth + 1, collapsed);
+                              content = {text: name + parensIfNeeded(json, c[1], depth + 1, collapsed), type: 'term'};
                             } else {
-                              content = name + "()";
+                              content = {text: name + "()", type: 'term'};
                             }
                             break;
 
@@ -349,31 +349,31 @@ angular.module('formula')
                             for (var i = 0; i < c.length; i++) {
                                 seqs.push(parseFormulaHelper(c[i], depth, collapsed));
                             }
-                            content = json.name + "(" + seqs.join(", ") + ")";
+                            content = {text: json.name + "(" + seqs.join(", ") + ")", type: 'term'};
                             break;
                     }
                     items.push(span(json.id, content, depth));
                 } else {
-                    items.push(span(json.id, json.name, depth));
+                    items.push(span(json.id, {text: json.name, type: 'symbol'}, depth));
                 }
                 return items.join("");
             }
 
-            $scope.formulaAxiomsMap = {};
+            scope.formulaAxiomsMap = {};
 
-            $scope.formulaClick = function(formulaId, event) {
+            scope.formulaClick = function(formulaId, event) {
               // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
               event.stopPropagation();
-              $scope.onTactic({formulaId: formulaId, tacticId: "StepAt"});
+              scope.onTactic({formulaId: formulaId, tacticId: "StepAt"});
             }
 
-            $scope.formulaRightClick = function(formulaId, event) {
+            scope.formulaRightClick = function(formulaId, event) {
               event.stopPropagation();
-              if ($scope.formulaAxiomsMap[formulaId] === undefined) {
+              if (scope.formulaAxiomsMap[formulaId] === undefined) {
                 // axioms not fetched yet
-                $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + $scope.nodeId + '/' + formulaId + '/list')
+                $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/list')
                   .success(function(data) {
-                    $scope.formulaAxiomsMap[formulaId] = $.map(data, function(tactic, i) {
+                    scope.formulaAxiomsMap[formulaId] = $.map(data, function(tactic, i) {
                       if (tactic.derivation.type === 'sequentrule') {
                         tactic.isOpen = (tactic.derivation.input !== undefined && tactic.derivation.input !== null &&
                           tactic.derivation.input.length > 0) || i == 0;
@@ -386,38 +386,38 @@ angular.module('formula')
                         console.log("Unknown deduction type '" + tactic.derivation.type + "'");
                       }
                     });
-                    $scope.tacticPopover.open(formulaId);
+                    scope.tacticPopover.open(formulaId);
                 });
               } else {
                 // tactic already cached
-                $scope.tacticPopover.open(formulaId);
+                scope.tacticPopover.open(formulaId);
               }
             }
 
-            $scope.applyTactic = function(formulaId, tacticId) {
-              $scope.tacticPopover.close();
-              $scope.onTactic({formulaId: formulaId, tacticId: tacticId});
+            scope.applyTactic = function(formulaId, tacticId) {
+              scope.tacticPopover.close();
+              scope.onTactic({formulaId: formulaId, tacticId: tacticId});
             }
 
-            $scope.applyInputTactic = function(formulaId, tactic) {
-              $scope.tacticPopover.close();
+            scope.applyInputTactic = function(formulaId, tactic) {
+              scope.tacticPopover.close();
               //@note have to declare local variables with exactly the names of the event arguments,
               //      otherwise the event parameters are undefined in the listener :-O
               var tacticId = tactic.id;
               var input = tactic.derivation.input;
-              $scope.onInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
+              scope.onInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
             }
 
-            $scope.input = function(formula, tactic) {
+            scope.input = function(formula, tactic) {
               return $.grep(tactic.derivation.input, function(elem, i) { return elem.param === formula; })[0].value;
             }
 
-            $scope.tacticPopover = {
+            scope.tacticPopover = {
               openFormulaId: undefined,
-              isOpen: function(formulaId) { return $scope.tacticPopover.openFormulaId !== undefined && $scope.tacticPopover.openFormulaId === formulaId; },
-              open: function(formulaId) { $scope.tacticPopover.openFormulaId = formulaId; },
-              formulaId: function() { return $scope.tacticPopover.openFormulaId; },
-              close: function() { $scope.tacticPopover.openFormulaId = undefined; }
+              isOpen: function(formulaId) { return scope.tacticPopover.openFormulaId !== undefined && scope.tacticPopover.openFormulaId === formulaId; },
+              open: function(formulaId) { scope.tacticPopover.openFormulaId = formulaId; },
+              formulaId: function() { return scope.tacticPopover.openFormulaId; },
+              close: function() { scope.tacticPopover.openFormulaId = undefined; }
             }
 
             convertSequentRuleToInput = function(tactic) {
@@ -475,12 +475,16 @@ angular.module('formula')
               };
             }
 
-            var fmlMarkup = parseFormulaHelper($scope.formula, 0, $scope.collapsed);
-            var template =
-              '<span ng-if="!collapsed">' + fmlMarkup + '</span>' +
-              '<span ng-if="collapsed" class="k4-abbreviate">' + fmlMarkup + '</span>';
+            var fmlMarkup = parseFormulaHelper(scope.formula, 0, scope.collapsed);
             // compile template, bind to scope, and add into DOM
-            $sce.append($compile(template)($scope));
+            if (scope.collapsed) {
+              //@note if collapsed we don't have any listeners, no need to compile
+              element.append('<span>' + fmlMarkup + '</span>');
+            } else {
+              var template = '<span ng-class="{k4-abbreviate: collapsed}">' + fmlMarkup + '</span>';
+              element.append($compile(template)(scope));
+            }
+
         }
     };
   }]);
