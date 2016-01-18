@@ -17,7 +17,8 @@ import org.scalatest.{Matchers, FlatSpec}
 
 /**
  * Created by aplatzer on 7/28/15.
- * @author Andre Platzer
+  *
+  * @author Andre Platzer
  */
 @SummaryTest
 @UsualTest
@@ -381,6 +382,22 @@ class UnificationMatchTest extends FlatSpec with Matchers {
         (PredOf(Function("p", None, Real, Bool), Anything), (if (semanticRenaming) "(((x_0>0&true)&true)&true->(2>=0|false)|false)" else "(((x_>0&true)&true)&true->(2>=0|false)|false)").asFormula) ::
         Nil
     ))
+  }
+
+  it should "match abstract loop against loopy ODE" in {
+    shouldMatch("[{a;}*]p(??)".asFormula,
+      "[{{x'=v,v'=A}}*](v>=0&true)".asFormula, RenUSubst(
+      (ProgramConst("a"), "{x'=v,v'=A}".asProgram) ::
+        (PredOf(Function("p", None, Real, Bool), Anything), "v>=0&true".asFormula) ::Nil
+    ))
+  }
+
+  it should "match derived powers" in {
+    shouldMatch("((f(??)^(c()))'".asTerm,
+      "(x^2)'".asTerm, RenUSubst(
+          (FuncOf(Function("f", None, Real, Bool), Anything), "x".asTerm) ::
+          (FuncOf(Function("c", None, Unit, Bool), Nothing), "2".asTerm) :: Nil
+      ))
   }
 
   //@todo this test case would need the expensive reunify to be activated in UnificationMatch again
