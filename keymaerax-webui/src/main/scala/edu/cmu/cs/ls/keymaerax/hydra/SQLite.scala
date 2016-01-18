@@ -77,12 +77,16 @@ object SQLite {
         None
     }
 
+    private val REDUNDANT_CHECKS = false
+
     private def saveLemma(lemma:Lemma, id:Int): Unit = {
-      //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
-      val parse = KeYmaeraXExtendedLemmaParser(lemma.toString)
-      assert(parse._1 == lemma.name, "reparse of printed lemma's name should be identical to original lemma")
-      assert(parse._2 == lemma.fact.conclusion +: lemma.fact.subgoals, s"reparse of printed lemma's fact ${lemma.fact.conclusion +: lemma.fact.subgoals}should be identical to original lemma ${parse._2}")
-      assert(parse._3 == lemma.evidence.head, "reparse of printed lemma's evidence should be identical to original lemma")
+      if (REDUNDANT_CHECKS) {
+        //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
+        val parse = KeYmaeraXExtendedLemmaParser(lemma.toString)
+        assert(parse._1 == lemma.name, "reparse of printed lemma's name should be identical to original lemma")
+        assert(parse._2 == lemma.fact.conclusion +: lemma.fact.subgoals, s"reparse of printed lemma's fact ${lemma.fact.conclusion +: lemma.fact.subgoals}should be identical to original lemma ${parse._2}")
+        assert(parse._3 == lemma.evidence.head, "reparse of printed lemma's evidence should be identical to original lemma")
+      }
 
       val lemmaString = "/** KeYmaera X " + _root_.edu.cmu.cs.ls.keymaerax.core.VERSION + " */" ++  lemma.toString
 
