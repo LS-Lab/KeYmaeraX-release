@@ -34,70 +34,68 @@ angular.module('formula')
                 }
             }
 
-            var needsParens = function(parent, child) {
-                var precedence =
-                  [
-                  //Terms.
-                  "add" ,
-                  "subtract" ,
-                  "multiply" ,
-                  "divide" ,
-                  "exp" ,
-                  "neg" ,
-                  "function" ,
-                  "programconstant" , //real-valued.
-                  "number"   ,
-                  //Formulas
-                  "equiv" ,
-                  "imply" ,
-                  "or" ,
-                  "and" ,
-                  "not" ,
-                  "boxmodality"  ,
-                  "diamondmodality" ,
-                  "modality" ,
-                  "forall" ,
-                  "exists" ,
-                  "equal" ,
-                  "notEqual" ,
-                  "lt"  ,
-                  "leq" ,
-                  "geq" ,
-                  "gt" ,
-                  "formuladerivative" ,
-                  "predicateconstant" ,
-                  //Programs.
-                  "Choice" ,
-                  "Sequence" ,
-                  "Loop" ,
-                  "Assign" ,
-                  "NDetAssign" ,
-                  "Test" ,
-                  "NFODEProduct" ,
-                  "ODEProduct" ,
-                  "AtomicODE" ,
-                  // Atoms
-                  "ProgramConstant" ,
-                  "ContEvolveProgramConstant",
-                  "applypredicate" ,
-                  "true" ,
-                  "false" ,
-                  "apply",
-                  "derivative" ,
-                  "differentialsymbol" ,
-                  "Variable",
-                  "Number"].reverse()
+            var precedence =
+              [
+              //Terms.
+              "add" ,
+              "subtract" ,
+              "multiply" ,
+              "divide" ,
+              "exp" ,
+              "neg" ,
+              "function" ,
+              "programconstant" , //real-valued.
+              "number"   ,
+              //Formulas
+              "equiv" ,
+              "imply" ,
+              "or" ,
+              "and" ,
+              "not" ,
+              "boxmodality"  ,
+              "diamondmodality" ,
+              "modality" ,
+              "forall" ,
+              "exists" ,
+              "equal" ,
+              "notEqual" ,
+              "lt"  ,
+              "leq" ,
+              "geq" ,
+              "gt" ,
+              "formuladerivative" ,
+              "predicateconstant" ,
+              //Programs.
+              "Choice" ,
+              "Sequence" ,
+              "Loop" ,
+              "Assign" ,
+              "NDetAssign" ,
+              "Test" ,
+              "NFODEProduct" ,
+              "ODEProduct" ,
+              "AtomicODE" ,
+              // Atoms
+              "ProgramConstant" ,
+              "ContEvolveProgramConstant",
+              "applypredicate" ,
+              "true" ,
+              "false" ,
+              "apply",
+              "derivative" ,
+              "differentialsymbol" ,
+              "Variable",
+              "Number"].reverse()
 
+            var parens = [ "(", ")" ]
+
+            var needsParens = function(parent, child) {
                 var childPrecedence = precedence.indexOf(child.name);
                 var parentPrecedence = precedence.indexOf(parent.name);
                 return childPrecedence > parentPrecedence;
             }
 
             var parensIfNeeded = function(parent, child, depth, collapsed) {
-                var parens = [ "(", ")" ]
-//                  if(child.isInstanceOf[Program]) ["{","}"]
-//                  else ["(",")"]
-
                 if(needsParens(parent, child)) {
                   return parens[0] + parseFormulaHelper(child, depth, collapsed) + parens[1]
                 } else {
@@ -481,7 +479,7 @@ angular.module('formula')
               //@note if collapsed we don't have any listeners, no need to compile
               element.append('<span>' + fmlMarkup + '</span>');
             } else {
-              var template = '<span ng-class="{k4-abbreviate: collapsed}">' + fmlMarkup + '</span>';
+              var template = '<span ng-class="{\'k4-abbreviate\': collapsed}">' + fmlMarkup + '</span>';
               element.append($compile(template)(scope));
             }
 
