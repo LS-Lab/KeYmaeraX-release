@@ -154,7 +154,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see[[DifferentialTactics.diffCut]]
     */
   def diffCut(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
-  /** DI: Differential Invariant proves a formula to be an invariant of a differential equation (plus usual steps) */
+  /** DI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant) */
   def diffInd(implicit qeTool: QETool): DependentPositionTactic = DifferentialTactics.diffInd(qeTool)
   /** DC+DI: Prove the given list of differential invariants in that order by DC+DI via [[diffCut]] followed by [[diffInd]] */
   def diffInvariant(invariants: Formula*): DependentPositionTactic =
@@ -167,7 +167,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** DA: Differential Ghost add auxiliary differential equations with extra variables y'=a*y+b and postcondition replaced by r.
     * {{{
     * G |- p(x), D   |- r(x,y) -> [x'=f(x),y'=g(x,y)&q(x)]r(x,y)
-    * ----------------------------------------------------------- DA
+    * ----------------------------------------------------------  DA using p(x) <-> \exists y. r(x,y)
     * G |- [x'=f(x)&q(x)]p(x), D
     * }}}
     * @see[[DA(Variable, Term, Term, Provable)]]
