@@ -177,7 +177,7 @@ angular.module('formula')
 
                         case "neg":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            content = {text: "-" + left, type: 'formula'};
+                            content = {text: "-" + left, type: 'term'};
                             break;
 
                         case "add":
