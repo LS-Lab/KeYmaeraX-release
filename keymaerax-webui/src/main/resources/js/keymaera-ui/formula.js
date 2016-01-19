@@ -215,7 +215,7 @@ angular.module('formula')
                             for (var i = 1; i < json.variables.length; i++) {
                                 vars = vars + "," + json.variables[i];
                             }
-                            content = {text: "&forall;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1, collapsed) + ")", type: 'term'}
+                            content = {text: "&forall;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1, collapsed) + ")", type: 'formula'}
                             break;
 
                         case "exists":
@@ -223,7 +223,7 @@ angular.module('formula')
                             for (var i = 1; i < json.variables.length; i++) {
                                 vars = vars + "," + json.variables[i];
                             }
-                            content = {text: "&exist;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1, collapsed) + ")", type: 'term'}
+                            content = {text: "&exist;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1, collapsed) + ")", type: 'formula'}
                             break;
 
                         case "boxmodality":
