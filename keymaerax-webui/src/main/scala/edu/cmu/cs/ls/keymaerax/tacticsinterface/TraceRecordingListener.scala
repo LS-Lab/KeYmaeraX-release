@@ -24,7 +24,6 @@ class TraceRecordingListener(db: DBAbstraction,
     var id: Option[Int] = None
     var parent: TraceNode = null
     var sibling: Option[Int] = None
-    var input: Provable = null
     var output: Provable = null
     var local: Provable = null
     var executable: BelleExpr = null
@@ -40,22 +39,8 @@ class TraceRecordingListener(db: DBAbstraction,
     val branchOrder: Option[Int] = Some(branch)
     val userExe = isFirstNode
 
-    var inputProvableId: Option[Int] = None
-    var outputProvableId: Option[Int] = None
     var localProvableId: Option[Int] = None
     var executableId: Option[Int] = None
-
-    def getInputProvableId:Int = {
-      if (input != null && inputProvableId.isEmpty)
-        inputProvableId = Some(db.serializeProvable(input))
-      inputProvableId.get
-    }
-
-    def getOutputProvableId:Option[Int] = {
-      if (output != null && outputProvableId.isEmpty)
-        outputProvableId = Some(db.serializeProvable(output))
-      outputProvableId
-    }
 
     def getLocalProvableId:Option[Int] = {
       if (local != null && localProvableId.isEmpty)
@@ -72,7 +57,7 @@ class TraceRecordingListener(db: DBAbstraction,
     def asPOJO: ExecutionStepPOJO = {
       val parentStep = if (parent == null) None else parent.stepId
       new ExecutionStepPOJO (stepId, executionId, sibling, parentStep, branchOrder,
-        Option(branchLabel), alternativeOrder,status, getExecutableId, getInputProvableId, getOutputProvableId,
+        Option(branchLabel), alternativeOrder,status, getExecutableId, None, None,
         getLocalProvableId, userExe, ruleName)
     }
   }
@@ -100,11 +85,6 @@ class TraceRecordingListener(db: DBAbstraction,
         parent.reverseChildren = node :: parent.reverseChildren
         if (recursive) {
           db.updateExecutionStatus(parent.stepId.get, parent.status)
-        }
-      } else {
-        // Only reconstruct provables for the top-level because the meaning of "branch" can change inside a tactic
-        node.input = v match {
-          case BelleProvable(p, _) => globalProvable(p, branch)
         }
       }
       if (parent == null || recursive) {
@@ -137,7 +117,7 @@ class TraceRecordingListener(db: DBAbstraction,
           case _ =>
         }
         if (current.output != null) {
-          db.updateResultProvables(current.stepId.get, current.getOutputProvableId, current.getLocalProvableId)
+          db.updateResultProvables(current.stepId.get, None, current.getLocalProvableId)
           if (current.output.isProved) {
             val p = db.getProofInfo(proofId)
             val provedProof = new ProofPOJO(p.proofId, p.modelId, p.name, p.description, p.date, p.stepCount, closed = true)

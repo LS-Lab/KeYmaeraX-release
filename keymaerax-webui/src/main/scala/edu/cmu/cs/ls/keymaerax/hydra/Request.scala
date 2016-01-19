@@ -602,11 +602,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, _.display.name)
             else "custom"
           val localProvable = Provable.startProof(node.sequent)
-          val globalProvable =
-            trace.steps match {
-              case Nil => localProvable
-              case steps => steps.last.output.getOrElse{throw new ProverException("Proof trace ends in unfinished step")}
-            }
+          val globalProvable = trace.lastProvable
           assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
           val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
           val executor = BellerophonTacticExecutor.defaultExecutor
@@ -714,10 +710,14 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
         } else {
           // @todo This is a messy mix of the old trace (ID, Provables) and new trace (branch numbers). Perhaps add a new
           // data structure to avoid the messiness.
-          (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder, step.rule, step.isUserExecuted) :: acc)
+          (updatedGoals, ExecutionStep(step.stepId, step.input, step.output, outputBranch, step.alternativeOrder, step.rule, step.executableId, step.isUserExecuted) :: acc)
         }
       }
     ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps.reverse)
+  }
+
+  def truncateTrace(trace: ExecutionTrace, firstDroppedStep: Int) = {
+    ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, trace.steps.filter(_.stepId < firstDroppedStep))
   }
 
   def getResultingResponses(): List[Response] = {
@@ -733,7 +733,9 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
     }
     val prunedStepIds = prunedSteps.map{case step => step.stepId}.toSet
     val prunedTrace = prune(trace, prunedStepIds)
-    db.addAlternative(prunedStepIds.min, prunedTrace)
+    val previousTrace = truncateTrace(trace, prunedStepIds.min)
+    val inputProvable = previousTrace.lastProvable
+    db.addAlternative(prunedStepIds.min, inputProvable, prunedTrace)
     val goalNode = tree.findNode(nodeId).get
     val allItems = db.agendaItemsForProof(proofId.toInt)
     val itemName = tree.agendaItemForNode(goalNode.id.toString, allItems).map(_.displayName).getOrElse("Unnamed Item")
@@ -814,7 +816,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val conclusionFormula = KeYmaeraXProblemParser(model.keyFile)
     val conclusion = Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(conclusionFormula))
     val trace = db.getExecutionTrace(proofId.toInt)
-    val provable = trace.steps.last.output.get
+    val provable = trace.lastProvable
     val isProved = provable.isProved && provable.conclusion == conclusion
     new ProofVerificationResponse(proofId, isProved) :: Nil
   }

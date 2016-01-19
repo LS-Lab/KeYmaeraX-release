@@ -20,8 +20,17 @@ object Lemma {
    */
   def fromString(lemma: String): Lemma = {
     fromStringInternal(lemma)
-  } ensuring(r => KeYmaeraXExtendedLemmaParser(r.toString) == (r.name, r.fact.conclusion +: r.fact.subgoals, r.evidence.head),
-    "Reparse of printed parse result should be original parse result")
+  } ensuring(r => matchesInput(r, lemma), "Reparse of printed parse result should be original parse result")
+
+  /* This contract turns out to be a huge bottleneck when loading proofs on the UI, so it worth checking the contract
+  * as quickly as possible. If converting the lemma back into a string already gives exactly the string we started with,
+  * then we know it was parsed correctly. If not, proceed to check that the lemma, when printed and then
+  * parsed a second time*, produces the same lemma. We consider this second condition sufficient because for lemmas that
+  * contain comments, the first check needs not succeed. */
+  private def matchesInput(result: Lemma, input:String):Boolean = {
+    val str = result.toStringInternal
+    str == input || KeYmaeraXExtendedLemmaParser(str) == (result.name, result.fact.conclusion +: result.fact.subgoals, result.evidence.head)
+  }
 
   private def fromStringInternal(lemma: String): Lemma = {
     //@note should ensure that string was indeed produced by KeYmaera X
@@ -66,13 +75,17 @@ final case class Lemma(fact: Provable, evidence: List[Evidence], name: Option[St
   /** A string representation of this lemma that will reparse as this lemma.
     * @see [[Lemma.fromString()]] */
   override def toString: String = {
+    toStringInternal
+    //@note soundness-critical check that reparse succeeds as expected
+  } ensuring(r => Lemma.fromStringInternal(r) == this, "Printed lemma should reparse to this original lemma")
+
+  private def toStringInternal: String = {
     "Lemma \"" + name.getOrElse("") + "\".\n" +
       sequentToString(fact.conclusion) + "\n" +
       fact.subgoals.map(sequentToString).mkString("\n") + "\n" +
       "End.\n" +
       evidence.mkString("\n\n") + "\n"
-    //@note soundness-critical check that reparse succeeds as expected
-  } ensuring(r => Lemma.fromStringInternal(r) == this, "Printed lemma should reparse to this original lemma")
+  }
 
   /** Produces a sequent block in Lemma file format */
   private def sequentToString(s: Sequent) = {
