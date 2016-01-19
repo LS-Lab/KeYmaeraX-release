@@ -50,10 +50,13 @@ class GraphicalLoadingDialog() extends LoadingDialog {
   private val progressBar = new JProgressBar()
   //  val progressMonitor = new ProgressMonitor(progressBar, "Initializing HyDRA..", "Binding port 8090", 0, 100)
   private val label = new JLabel(msg)
+  //@todo only show on first launch
+  private val firstLaunch = new JLabel("The first two starts might take a while to populate the local lemma database.")
 
   private var window = new JWindow()
-  window.setLayout(new GridLayout(2,1))
+  window.setLayout(new GridLayout(3,1))
   window.getContentPane.add(label)
+  window.getContentPane.add(firstLaunch)
   window.getContentPane.add(progressBar)
   window.setSize(500,100)
   window.setLocationRelativeTo(null) //needs java 1.4 or newer
@@ -70,6 +73,7 @@ class GraphicalLoadingDialog() extends LoadingDialog {
   override def close() = {
     if (window != null) {
       window.setVisible(false)
+      //window.dispose()  //@note might exit the JVM if no other window is showing up yet
       window = null
       LoadingDialogFactory.closed()
     }

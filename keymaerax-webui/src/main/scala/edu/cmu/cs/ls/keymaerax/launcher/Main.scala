@@ -36,6 +36,7 @@ object Main {
       }
     }
     //@todo skip -ui -launch
+    //@todo use command line arguments
     edu.cmu.cs.ls.keymaerax.hydra.Boot.main(Array[String]()) //@todo not sure.
   }
 
@@ -51,11 +52,13 @@ object Main {
       val java : String = javaLocation
       val keymaera : String = jarLocation
       println("Restarting KeYmaera X with sufficient stack space")
-      runCmd(java :: "-Xss20M" :: "-jar" :: keymaera :: "-ui" :: "-launch" :: Nil)
+      runCmd((java :: "-Xss20M" :: "-jar" :: keymaera :: "-ui" :: "-launch" :: Nil) ++ args.toList)
     }
     else {
       exitIfDeprecated()
       startServer()
+      //@todo use command line argument -mathkernel and -jlink from KeYmaeraX.main
+      //@todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
     }
   }
 
@@ -69,7 +72,9 @@ object Main {
     {
       //Exit if KeYmaera X is up to date but the production database belongs to a deprecated version of KeYmaera X.
       //@todo maybe it makes more sense for the JSON file to associate each KeYmaera X version to a list of database and cache versions that work with that version.
-      JOptionPane.showMessageDialog(null, "Your KeYmaera X database is not compatible with this version of KeYmaera X.\nPlease revert to an old version of KeYmaera X or else delete your current database (HOME/.keymaerax/keymaerax.sqlite)")
+      val message = "Your KeYmaera X database is not compatible with this version of KeYmaera X.\nPlease revert to an old version of KeYmaera X or else delete your current database (~/.keymaerax/keymaerax.sqlite*)"
+      println(message)
+      JOptionPane.showMessageDialog(null, message)
       System.exit(-1)
     }
     else {} //getOrElse(false) ignores cases where we couldn't download some needed information.

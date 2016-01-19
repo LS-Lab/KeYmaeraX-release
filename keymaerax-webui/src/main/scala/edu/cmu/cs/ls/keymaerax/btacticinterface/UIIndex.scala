@@ -96,12 +96,12 @@ object UIIndex {
           case _: Test => "[?] test" :: rules
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
-          case _: Dual => "[^d] dual" :: alwaysApplicable
+          case _: Dual => ("[^d] dual" :: alwaysApplicable) ensuring (r => r.intersect(List("G", "V vacuous")).isEmpty, "unsound for hybrid games anyhow")
           case _: Loop => "loop" :: "[*] iterate" :: rules
           case ODESystem(ode, constraint) if containsPrime => ode match {
-            case _: AtomicODE => "DE differential effect" :: "DW differential weakening" :: alwaysApplicable
-            case _: DifferentialProduct => "DE differential effect (system)" :: "DW differential weakening" :: alwaysApplicable
-            case _ => alwaysApplicable
+            case _: AtomicODE => "DE differential effect" :: "DW differential weakening" :: rules
+            case _: DifferentialProduct => "DE differential effect (system)" :: "DW differential weakening" :: rules
+            case _ => rules
           }
           case ODESystem(ode, constraint) =>
             val tactics: List[String] = "diffSolve" :: "diffInd" :: /*@todo "diffInvariant" with inputs instead of DC? ::*/  Nil
@@ -109,7 +109,7 @@ object UIIndex {
               tactics ++ odeList ++ rules
             else
               (tactics :+ "DW differential weakening") ++ odeList ++ rules
-          case _ => alwaysApplicable
+          case _ => rules
         }
 
       case Diamond(a, _) => a match {

@@ -110,7 +110,7 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
                              alternativeOrder: Int,
                              status: ExecutionStepStatus,
                              executableId: Int,
-                             inputProvableId: Int,
+                             inputProvableId: Option[Int],
                              resultProvableId: Option[Int],
                              localProvableId: Option[Int],
                              userExecuted: Boolean,
@@ -120,7 +120,10 @@ case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
 }
 
 /* User-friendly representation for execution traces */
-case class ExecutionStep(stepId: Int, input:Provable, output:Option[Provable], branch:Int, alternativeOrder:Int, rule:String, isUserExecuted: Boolean = true)
+case class ExecutionStep(stepId: Int, input:Provable, local:Option[Provable], branch:Int, alternativeOrder:Int, rule:String, executableId: Int, isUserExecuted: Boolean = true) {
+  def output: Option[Provable] = local.map{case localProvable => input(localProvable, branch)}
+}
+
 case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequent, steps:List[ExecutionStep]) {
   def branch = steps.lastOption.map{case step => step.branch}
 
@@ -133,6 +136,8 @@ case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequ
   def lastStepId:Option[Int] = {
     steps.lastOption.map{case step => step.stepId}
   }
+
+  def lastProvable:Provable = steps.lastOption.flatMap(_.output).getOrElse(Provable.startProof(conclusion))
 }
 
 case class ExecutablePOJO(executableId: Int, scalaTacticId: Option[Int], belleExpr: Option[String]) {
@@ -176,6 +181,9 @@ trait DBAbstraction {
     * Initializes a new database.
     */
   def cleanup(): Unit
+
+  /** Ensures any changes which might currently reside in auxilliary files have been synced to the main file. */
+  def syncDatabase(): Unit
 
   // Configuration
   def getAllConfigurations: Set[ConfigurationPOJO]
@@ -270,7 +278,7 @@ trait DBAbstraction {
   def addExecutionStep(step: ExecutionStepPOJO): Int
 
   /** Truncate the execution trace at the beginning of alternativeTo and replace in with trace. */
-  def addAlternative(alternativeTo: Int, trace:ExecutionTrace)
+  def addAlternative(alternativeTo: Int, inputProvable: Provable, trace:ExecutionTrace)
 
   /** Return the sequence of steps that led to the current state of the proof. */
   def getExecutionTrace(proofID: Int): ExecutionTrace
