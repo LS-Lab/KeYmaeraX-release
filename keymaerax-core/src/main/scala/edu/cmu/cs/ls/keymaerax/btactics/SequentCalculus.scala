@@ -5,6 +5,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -99,12 +101,19 @@ trait SequentCalculus {
   def allL(x: Variable, inst: Term) : DependentPositionTactic = FOQuantifierTactics.allInstantiate(Some(x), Some(inst))
   def allL(inst: Term)              : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, Some(inst))
   lazy val allL                     : DependentPositionTactic = FOQuantifierTactics.allInstantiate(None, None)
+  def allLPos(instPos: Position)    : DependentPositionTactic = "all instantiate pos" by ((pos, sequent) => sequent.sub(instPos) match {
+    case Some(t: Term) => allL(t)(pos)
+  })
   /** exists left: Skolemize an existential quantifier in the antecedent */
   lazy val existsL            : DependentPositionTactic = FOQuantifierTactics.existsSkolemize
   /** exists right: instantiate an existential quantifier in the succedent by a concrete instance as a witness */
   def existsR(x: Variable, inst: Term): DependentPositionTactic = FOQuantifierTactics.existsInstantiate(Some(x), Some(inst))
   def existsR(inst: Term)             : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, Some(inst))
   lazy val existsR                    : DependentPositionTactic = FOQuantifierTactics.existsInstantiate(None, None)
+  def existsRPos(instPos: Position)   : DependentPositionTactic = "exists instantiate pos" by ((pos, sequent) => sequent.sub(instPos) match {
+    case Some(t: Term) => existsR(t)(pos)
+  })
+
 
   // closing
 
