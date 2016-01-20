@@ -272,12 +272,12 @@ trait UnifyUSCalculus {
 
         case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
           //@todo assumes no more context around remainder (no other examples so far)
-          lazy val provePrereqLocally = {
+          lazy val provePrereqLocally: BelleExpr = if (remainder.isInstanceOf[Equiv]) {
             val (conclusion, commute) = remainder match {
               case Equiv(DotFormula, other) => (other, if (p.isSucc) commuteEquivR(1) else ident)
               case Equiv(other, DotFormula) => (other, if (p.isAnte) commuteEquivR(1) else ident)
-              case Equal(DotTerm, other) => (other, if (p.isSucc) TactixLibrary.useAt("= commute")(1) else ident)
-              case Equal(other, DotTerm) => (other, if (p.isAnte) TactixLibrary.useAt("= commute")(1) else ident)
+//              case Equal(DotTerm, other) => (other, if (p.isSucc) TactixLibrary.useAt("= commute")(1) else ident)
+//              case Equal(other, DotTerm) => (other, if (p.isAnte) TactixLibrary.useAt("= commute")(1) else ident)
             }
 
             // prove prereq locally
@@ -287,7 +287,8 @@ trait UnifyUSCalculus {
                 coHide2(AntePos(sequent.ante.size), p.top) & equivifyR(1) & commute & implyRi & CMon(p.inExpr) & factTactic) partial,
               /* show: prereq remains open */ hideR(p.top) partial
               )
-          }
+            //@todo do something smart about Equal and about Imply and ....
+          } else {partial}
 
           // try to prove prereq globally, if that fails preserve context and fall back to CMon and C{prereq} -> ...
           (useAt(subst, Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(1).top) <(
