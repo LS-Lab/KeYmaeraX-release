@@ -106,13 +106,16 @@ class JLinkMathematicaLink extends MathematicaLink {
         case None => if (DEBUG) println("Mathematica may not be activated or Mathematica license might be expired.\\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\\n Please check your Mathematica license manually."); true
       }
     } catch {
-      case e:UnsatisfiedLinkError => println("Mathematica J/Link native library not found or for an incompatible architecture:\n" + jlinkLibDir.getOrElse("<undefined>"));
-        throw e.initCause(new Error("Mathematica J/Link native library was not found in " + System.getProperty("com.wolfram.jlink.libdir", "(undefined)") +
-          "\nOr this path did not contain the native library for " + System.getProperties().getProperty("sun.arch.data.model") + " " + System.getProperties().getProperty("os.name") + " " + System.getProperties().getProperty("os.version") +
-          "\nJava Virtual Machine: " + System.getProperties().getProperty("sun.arch.data.model") + "-bit Java " + System.getProperties().getProperty("java.runtime.version") +
-          "\nRun from Java home:   " + System.getProperties().getProperty("java.home") + "\n" +
-          "\nOperating system:     " + System.getProperties().getProperty("os.name") + " " + System.getProperties().getProperty("os.version")
-        ))
+      case e:UnsatisfiedLinkError =>
+        val diagnostic = "\nJava Virtual Machine: " + System.getProperties().getProperty("sun.arch.data.model") + "-bit Java " + System.getProperties().getProperty("java.runtime.version") +
+          "\nJava home:            " + System.getProperties().getProperty("java.home") +
+          "\nOperating system:     " + System.getProperties().getProperty("os.name") + " " + System.getProperties().getProperty("os.version") +
+          "\nMathematica J/Link:   " + System.getProperty("com.wolfram.jlink.libdir", "(undefined)")
+        val message = "Mathematica J/Link native library was not found in:\n" + System.getProperty("com.wolfram.jlink.libdir", "(undefined)") +
+          "\nOr this path did not contain the native library compatible with " + System.getProperties().getProperty("sun.arch.data.model") + "-bit " + System.getProperties().getProperty("os.name") + " " + System.getProperties().getProperty("os.version") +
+          diagnostic
+        println(message)
+        throw e.initCause(new Error(message))
       case e:MathLinkException => println("Mathematica J/Link errored " + e); throw e
     }
   }
