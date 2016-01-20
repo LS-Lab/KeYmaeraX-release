@@ -106,10 +106,10 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
-  it should "derive (x^2)' = 0 without crashing" in withMathematica{ implicit qeTool =>
-    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x^2)' = 0".asFormula)),
-      stepAt(1, 0::Nil) & byUS("= reflexive")
-    )
+  it should "derive (x^2)' >= 7 without crashing" in withMathematica{ implicit qeTool =>
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x^2)' >= 7".asFormula)),
+      stepAt(1, 0::Nil)
+    ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("(2 * (x^(2-1))) * (x)' >= 7".asFormula)))
   }
 
   //@todo we only support optimized
