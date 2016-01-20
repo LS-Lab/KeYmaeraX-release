@@ -428,8 +428,8 @@ object DerivationInfo {
       , {case () => ProofRuleTactics.equivR}),
     new InputPositionTacticInfo("allL"
       , RuleDisplayInfo(("∀L", "allL"), (List("&Gamma;","∀x P(x)"), List("&Delta;")),
-        List((List("&Gamma;", "P(&theta;)"),List("&Delta;"))))
-      , List(TermArg("&theta"))
+        List((List("&Gamma;", "P(θ)"),List("&Delta;"))))
+      , List(TermArg("θ"))
       , {case () => (t:Term) => SequentCalculus.allL(t)}),
     new PositionTacticInfo("allR"
       , RuleDisplayInfo(("∀R", "allR"), (List("&Gamma;"), List("∀x P(x)", "&Delta;")),

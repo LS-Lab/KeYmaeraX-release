@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btacticinterface
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{Generator, DerivationInfo}
-import edu.cmu.cs.ls.keymaerax.core.{SeqPos, Formula}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Term, SeqPos, Formula}
 
 /**
   * Constructs a [[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr]] from a tactic name
@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core.{SeqPos, Formula}
   * @author Brandon Bohrer
   */
 object ReflectiveExpressionBuilder {
-  def build(info: DerivationInfo, args: List[Either[Formula, Position]], generator: Option[Generator[Formula]]): BelleExpr = {
+  def build(info: DerivationInfo, args: List[Either[Expression, Position]], generator: Option[Generator[Formula]]): BelleExpr = {
     val posArgs = args.filter{case arg => arg.isRight}.map{case arg => arg.right.get}
     val withGenerator =
       if (info.needsGenerator) {
@@ -18,9 +18,10 @@ object ReflectiveExpressionBuilder {
       } else {
         info.belleExpr
       }
-    val formulaArgs = args.filter{case arg => arg.isLeft}.map{case arg => arg.left.get}
-    val applied:Any = formulaArgs.foldLeft(withGenerator) {
-      case ((expr:(Formula => Any)), fml) => expr(fml)
+    val expressionArgs = args.filter{case arg => arg.isLeft}.map{case arg => arg.left.get}
+    val applied:Any = expressionArgs.foldLeft(withGenerator) {
+      case ((expr:(Formula => Any)), fml:Formula) => expr(fml)
+      case ((expr:(Term => Any)), term:Term) => expr(term)
       case (expr:(Any), fml) =>
         throw new Exception("Expected type Formula => Any , got " + expr.getClass.getSimpleName)
     }
@@ -42,7 +43,7 @@ object ReflectiveExpressionBuilder {
     }
   }
 
-  def apply(name: String, arguments: List[Either[Formula, Position]] = Nil, generator: Option[Generator[Formula]]) : BelleExpr =
+  def apply(name: String, arguments: List[Either[Expression, Position]] = Nil, generator: Option[Generator[Formula]]) : BelleExpr =
     try {
       build(DerivationInfo.ofCodeName(name), arguments, generator)
     }
