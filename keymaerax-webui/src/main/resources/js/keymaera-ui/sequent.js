@@ -10,7 +10,8 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             readOnly: '=?',
             collapsed: '=?',
             onApplyTactic: '&',
-            onApplyInputTactic: '&'
+            onApplyInputTactic: '&',
+            onApplyTwoPositionTactic: '&'
         },
         link: function(scope, elem, attr) {
             scope.getCounterExample = function() {
@@ -38,6 +39,10 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
 
             scope.onInputTactic = function(formulaId, tacticId, input) {
               scope.onApplyInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
+            }
+
+            scope.onTwoPositionTactic = function(fml1Id, fml2Id, tacticId) {
+              scope.onApplyTwoPositionTactic({fml1Id: fml1Id, fml2Id: fml2Id, tacticId: tacticId});
             }
         },
         templateUrl: 'partials/collapsiblesequent.html'

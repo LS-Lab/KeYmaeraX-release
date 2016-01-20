@@ -13,6 +13,7 @@ angular.module('formula')
             highlight: '=',
             collapsed: '=?',
             onTactic: '&',     // onTactic(formulaId, tacticId)
+            onTwoPositionTactic: '&',
             onInputTactic: '&' // onInputTactic(formulaId, tacticId, input)
         },
         link: function(scope, element, attrs) {
@@ -21,6 +22,7 @@ angular.module('formula')
                     return '<span class="hl" id="' + id + '"' +
                              'onmouseover="$(event.target).addClass(\'hlhover\');"' +
                              'onmouseout="$(event.target).removeClass(\'hlhover\');"' +
+                             'k4-droppable on-drop="formulaDrop(dragData)"' +
                              'ng-click="formulaClick(\'' + id + '\', $event)"' +
                              'ng-right-click="formulaRightClick(\'' + id + '\', $event)"' +
                              // initialize formulaId for popover template, use ng-repeat for scoping
@@ -416,6 +418,12 @@ angular.module('formula')
               open: function(formulaId) { scope.tacticPopover.openFormulaId = formulaId; },
               formulaId: function() { return scope.tacticPopover.openFormulaId; },
               close: function() { scope.tacticPopover.openFormulaId = undefined; }
+            }
+
+            scope.formulaDrop = function(dragData) {
+              var fml1Id = scope.formula.id;
+              var fml2Id = dragData;
+              scope.onTwoPositionTactic({fml1Id: fml1Id, fml2Id: fml2Id, tacticId: 'step'});
             }
 
             convertSequentRuleToInput = function(tactic) {

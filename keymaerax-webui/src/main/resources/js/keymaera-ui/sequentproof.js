@@ -134,6 +134,10 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         scope.onInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
       }
 
+      scope.onApplyTwoPositionTactic = function(fml1Id, fml2Id, tacticId) {
+        scope.onTwoPositionTactic({fml1Id: fml1Id, fml2Id: fml2Id, tacticId: tacticId});
+      }
+
       scope.fetchParentRightClick = function(event) {
         event.stopPropagation();
         // emulate hoverable popover (to come in later ui-bootstrap version) with hide on blur (need to focus for blur)
@@ -187,7 +191,8 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
             agenda: '=',
             readOnly: '=?',
             onTactic: '&',
-            onInputTactic: '&'
+            onInputTactic: '&',
+            onTwoPositionTactic: '&'
         },
         link: link,
         templateUrl: 'partials/singletracksequentproof.html'

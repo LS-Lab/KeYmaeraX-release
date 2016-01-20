@@ -170,6 +170,10 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         });
     }
 
+    $scope.doTwoPositionTactic = function(fml1Id, fml2Id, tacticId) {
+      //@todo call server
+    }
+
     $scope.doSearch = function(tacticId, where) {
       var proofId = $routeParams.proofId;
       var userId = $cookies.get('userId');
