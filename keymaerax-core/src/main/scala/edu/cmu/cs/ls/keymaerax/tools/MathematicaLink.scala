@@ -107,10 +107,6 @@ class JLinkMathematicaLink extends MathematicaLink {
       }
     } catch {
       case e:UnsatisfiedLinkError =>
-        val diagnostic = "\nJava Virtual Machine: " + System.getProperties().getProperty("sun.arch.data.model") + "-bit Java " + System.getProperties().getProperty("java.runtime.version") +
-          "\nJava home:            " + System.getProperties().getProperty("java.home") +
-          "\nOperating system:     " + System.getProperties().getProperty("os.name") + " " + System.getProperties().getProperty("os.version") +
-          "\nMathematica J/Link:   " + System.getProperty("com.wolfram.jlink.libdir", "(undefined)")
         val message = "Mathematica J/Link native library was not found in:\n" + System.getProperty("com.wolfram.jlink.libdir", "(undefined)") +
           "\nOr this path did not contain the native library compatible with " + System.getProperties().getProperty("sun.arch.data.model") + "-bit " + System.getProperties().getProperty("os.name") + " " + System.getProperties().getProperty("os.version") +
           diagnostic
