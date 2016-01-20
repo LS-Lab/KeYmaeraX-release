@@ -288,7 +288,7 @@ trait UnifyUSCalculus {
               /* show: prereq remains open */ hideR(p.top) partial
               )
             //@todo do something smart about Equal and about Imply and ....
-          } else {partial}
+          } else {ident}
 
           // try to prove prereq globally, if that fails preserve context and fall back to CMon and C{prereq} -> ...
           (useAt(subst, Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(1).top) <(
