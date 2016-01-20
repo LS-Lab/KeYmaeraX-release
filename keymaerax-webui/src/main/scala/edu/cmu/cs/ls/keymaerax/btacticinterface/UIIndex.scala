@@ -6,10 +6,11 @@ package edu.cmu.cs.ls.keymaerax.btacticinterface
 
 import java.lang.Number
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.Position
+import edu.cmu.cs.ls.keymaerax.bellerophon.{SuccPosition, AntePosition, Position, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, ExpressionTraversal}
-import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 
 /**
   * User-Interface Axiom/Tactic Index: Indexing data structure for all canonically applicable (derived) axioms/rules/tactics in User-Interface.
@@ -22,6 +23,8 @@ object UIIndex {
 
   /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
   def theStepAt(expr: Expression, pos: Option[Position] = None): Option[String] = allStepsAt(expr, pos).headOption
+
+  def theStepAt(pos1: Position, pos2: Position, sequent: Sequent): Option[String] = allTwoPosSteps(pos1, pos2, sequent).headOption
 
   private val odeList: List[String] = "DI differential invariant" :: "diffCut" :: "DG differential ghost" :: Nil
 
@@ -180,6 +183,18 @@ object UIIndex {
         }
     }
   })
+
+  def allTwoPosSteps(pos1: Position, pos2: Position, sequent: Sequent): List[String] = {
+    val expr1 = sequent.sub(pos1)
+    val expr2 = sequent.sub(pos2)
+    (pos1, pos2, expr1, expr2) match {
+      case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel &&  p2.isTopLevel && e1 == e2 => "close" :: Nil
+      case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel && !p2.isTopLevel && e1 == e2 => /*@todo "knownR" ::*/ Nil
+      case (_, _: AntePosition, Some(_: Term), Some(_: Forall)) => /*@todo "all instantiate pos" ::*/ Nil
+      case (_, _: SuccPosition, Some(_: Term), Some(_: Exists)) => /*@todo "exists instantiate pos" ::*/ Nil
+      //@todo more drag-and-drop support
+    }
+  }
 
   private def autoPad(pos: Option[Position], sequent: Option[Sequent], axioms: List[String]): List[String] = {
     //@note don't augment with hide since UI has a special button for it already.
