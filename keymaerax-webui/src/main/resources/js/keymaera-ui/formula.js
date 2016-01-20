@@ -421,8 +421,8 @@ angular.module('formula')
             }
 
             scope.formulaDrop = function(dragData) {
-              var fml1Id = scope.formula.id;
-              var fml2Id = dragData;
+              var fml1Id = dragData;
+              var fml2Id = scope.formula.id;
               scope.onTwoPositionTactic({fml1Id: fml1Id, fml2Id: fml2Id, tacticId: 'step'});
             }
 
