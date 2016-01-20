@@ -58,6 +58,15 @@ table .btn{
   max-width: none;
 }
 
+.k4-drag {
+  /* no special highlighting of drag source */
+}
+
+.k4-drag-over {
+  background-color: #7297A6;
+  border-color: #2F3640;
+}
+
 .k4-narrowalert {
   margin: 0 0 0 0;
   padding: 0 25px 0 0;
