@@ -540,6 +540,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
   /** Turns belleTerm into a specific tactic expression, including input arguments */
   private def fullExpr(node: TreeNode) = {
     val paramStrings = inputs.map{
+      case BelleTermInput(value, Some(_:TermArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
       case BelleTermInput(value, None) => value
     }

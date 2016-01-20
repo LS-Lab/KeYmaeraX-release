@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btacticinterface
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Generator
-import edu.cmu.cs.ls.keymaerax.core.{SuccPos, AntePos, SeqPos, Formula}
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
@@ -18,9 +18,9 @@ import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
   *   partial(e)
   *   e partial
   *   b
-  *   b({`formula`} | z, ...)
+  *   b({`expression`} | z, ...)
   * }}}
-  * where formula is a \dL formula, n a nat, z an int, T a type, and b a base tactic identifier.
+  * where expression is a \dL expression, n a nat, z an int, T a type, and b a base tactic identifier.
   * Identifiers may contain letters, numbers, and dots. Each identifier should be handled by [[ReflectiveExpressionBuilder]]
   *
   * @author Nathan Fulton
@@ -73,7 +73,7 @@ object BTacticParser extends (String => Option[BelleExpr]) {
     protected val numberPattern = """[0-9]*""".r
 
     val positionPattern = """[\-?0-9]*""".r
-    val formulaPattern = """\{`[^`}]*`}""".r
+    val expressionPattern = """\{`[^`}]*`}""".r
     val notArgumentDelimiter = """[^`}]*""".r
 //    val notDoubleQoute = """[^\"]*""".r
 
@@ -162,21 +162,21 @@ object BTacticParser extends (String => Option[BelleExpr]) {
       }
     }
 
-    /** Looks like name(formula | position, formula | position, ..., formula | position) where formula = {` formula `} */
+    /** Looks like name(expression | position, expression | position, ..., expression | position) where expression = {` expression `} */
     lazy val baseTacticWithInputs : PackratParser[BelleExpr] = {
-      lazy val formulaOrPosition = formulaPattern | positionPattern
-      lazy val pattern = ident ~ ("(" ~> (formulaOrPosition ~ ("," ~> formulaOrPosition).*) <~ ")")
-      log(pattern)("base tactic with position or formula input") ^^ {
+      lazy val expressionOrPosition = expressionPattern | positionPattern
+      lazy val pattern = ident ~ ("(" ~> (expressionOrPosition ~ ("," ~> expressionOrPosition).*) <~ ")")
+      log(pattern)("base tactic with position or expression input") ^^ {
         case name ~ args => {
-          val arguments = (args._1 +: args._2) map parseFormulaOrPosition
+          val arguments = (args._1 +: args._2) map parseExpressionOrPosition
           ReflectiveExpressionBuilder(name, arguments, generator)
         }
       }
     }
 
-    private def parseFormulaOrPosition(s : String) : Either[Formula, Position] = {
+    private def parseExpressionOrPosition(s : String) : Either[Expression, Position] = {
       if (s.startsWith("{`") && s.endsWith("`}")) {
-        Left(s.replace("{`", "").replace("`}", "").asFormula)
+        Left(s.replace("{`", "").replace("`}", "").asExpr)
       }
       else {
         val i = s.toInt
