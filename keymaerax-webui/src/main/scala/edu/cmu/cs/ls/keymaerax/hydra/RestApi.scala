@@ -268,11 +268,19 @@ trait RestApi extends HttpService with SLF4JLogging {
             val paramInfo = expectedInputs.find{case spec => spec.name == paramName}
             BelleTermInput(paramValue, paramInfo)
           })
-        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), inputs.toList)
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), None, inputs.toList)
         complete(standardCompletion(request))
       }
     }}
   }}}
+
+  val doTwoPosAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, fml1Id, fml2Id, tacticId) => { pathEnd {
+    get {
+      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId,
+        Some(Fixed(parseFormulaId(fml1Id))), Some(Fixed(parseFormulaId(fml2Id))))
+      complete(standardCompletion(request))
+    }}
+  }}
 
   val doTactic = path("proofs" / "user" / Segment / Segment / Segment / "do" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
     get {
@@ -535,6 +543,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     proofTasksBranchRoot  ::
     axiomList             ::
     doAt                  ::
+    doTwoPosAt            ::
     doInputAt             ::
     doTactic              ::
     doCustomTactic        ::

@@ -171,7 +171,16 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.doTwoPositionTactic = function(fml1Id, fml2Id, tacticId) {
-      //@todo call server
+      var proofId = $routeParams.proofId;
+      var userId = $cookies.get('userId');
+      var nodeId = sequentProofData.agenda.selectedId();
+      spinnerService.show('tacticExecutionSpinner');
+      $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/' + fml1Id + '/' + fml2Id + '/doAt/' + tacticId)
+        .then(function(response) { $scope.runningTask.start(nodeId, response.data.taskId); })
+        .catch(function(err) {
+          spinnerService.hide('tacticExecutionSpinner');
+          $rootScope.$emit("proof.message", err.data.textStatus);
+        });
     }
 
     $scope.doSearch = function(tacticId, where) {
