@@ -276,6 +276,8 @@ trait UnifyUSCalculus {
             val (conclusion, commute) = remainder match {
               case Equiv(DotFormula, other) => (other, if (p.isSucc) commuteEquivR(1) else ident)
               case Equiv(other, DotFormula) => (other, if (p.isAnte) commuteEquivR(1) else ident)
+              case Equal(DotTerm, other) => (other, if (p.isSucc) TactixLibrary.useAt("= commute")(1) else ident)
+              case Equal(other, DotTerm) => (other, if (p.isAnte) TactixLibrary.useAt("= commute")(1) else ident)
             }
 
             // prove prereq locally
