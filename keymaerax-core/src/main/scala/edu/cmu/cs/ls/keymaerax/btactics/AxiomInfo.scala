@@ -109,6 +109,7 @@ object DerivationInfo {
 
     // differential equation axioms
     new CoreAxiomInfo("DW", "DW", "DWaxiom", {case () => HilbertCalculus.DW}),
+    new PositionTacticInfo("diffWeaken", "DW", {case () => DifferentialTactics.diffWeaken}),
     new CoreAxiomInfo("DC differential cut"
       , AxiomDisplayInfo("DC","([{x′=f(x)&q(x)}]p(x)↔[{x′=f(x)&q(x)∧r(x)}]p(x))←[{x′:=f(x)&q(x)}]r(x)")
       , "DCaxiom", {case () => ??? }),

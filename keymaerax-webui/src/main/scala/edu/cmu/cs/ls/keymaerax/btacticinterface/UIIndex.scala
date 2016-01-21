@@ -102,8 +102,8 @@ object UIIndex {
           case _: Dual => ("[^d] dual" :: alwaysApplicable) ensuring (r => r.intersect(List("G", "V vacuous")).isEmpty, "unsound for hybrid games anyhow")
           case _: Loop => "loop" :: "[*] iterate" :: rules
           case ODESystem(ode, constraint) if containsPrime => ode match {
-            case _: AtomicODE => "DE differential effect" :: "DW differential weakening" :: rules
-            case _: DifferentialProduct => "DE differential effect (system)" :: "DW differential weakening" :: rules
+            case _: AtomicODE => "DE differential effect" :: "diffWeaken" :: rules
+            case _: DifferentialProduct => "DE differential effect (system)" :: "diffWeaken" :: rules
             case _ => rules
           }
           case ODESystem(ode, constraint) =>
@@ -111,7 +111,7 @@ object UIIndex {
             if (constraint == True)
               tactics ++ odeList ++ rules
             else
-              (tactics :+ "DW differential weakening") ++ odeList ++ rules
+              (tactics :+ "diffWeaken") ++ odeList ++ rules
           case _ => rules
         }
 
