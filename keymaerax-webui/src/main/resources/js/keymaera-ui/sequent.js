@@ -1,5 +1,5 @@
 angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies', 'angularSpinners'])
-  .directive('k4Sequent', ['$uibModal', '$http', 'spinnerService', function($uibModal, $http, spinnerService) {
+  .directive('k4Sequent', ['$rootScope', '$uibModal', '$http', 'spinnerService', function($rootScope, $uibModal, $http, spinnerService) {
     return {
         restrict: 'AE',
         scope: {
@@ -43,6 +43,20 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
 
             scope.onTwoPositionTactic = function(fml1Id, fml2Id, tacticId) {
               scope.onApplyTwoPositionTactic({fml1Id: fml1Id, fml2Id: fml2Id, tacticId: tacticId});
+            }
+
+            scope.formulaDrop = function(dragData) {
+              var formulas = $.grep(scope.sequent.ante, function(e, i) { return e.id === dragData; });
+              if (formulas.length == 1) {
+                var formula = formulas[0];
+                if (formula.formula.name === 'equals') {
+                  scope.onApplyTactic({formulaId: formula.id, tacticId: 'allL2R'})
+                } else {
+                  $rootScope.$emit('proof.message', 'Drop formulas of the form "lhs=rhs" only')
+                }
+              } else {
+                $rootScope.$emit('proof.message', 'Drop antecedent formulas only')
+              }
             }
         },
         templateUrl: 'partials/collapsiblesequent.html'

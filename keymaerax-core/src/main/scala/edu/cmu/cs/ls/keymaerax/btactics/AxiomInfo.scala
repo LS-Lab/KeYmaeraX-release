@@ -475,6 +475,7 @@ object DerivationInfo {
     new PositionTacticInfo("skolemize", "skolem", {case () => ProofRuleTactics.skolemize}),
     new PositionTacticInfo("coHide", "W", {case () => ProofRuleTactics.coHide}),
     new PositionTacticInfo("hide", "W", {case () => ProofRuleTactics.hide}),
+    new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}),
 
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => ProofRuleTactics.coHide2}),

@@ -88,7 +88,7 @@
     <!-- Turnstile -->
     <div class="col-md-1">
         <div class="row k4-flexrow">
-            <div class="col-md-12 k4-formula" ng-if="!readOnly">
+            <div class="col-md-12 k4-formula" k4-droppable on-drop="formulaDrop(dragData)" ng-if="!readOnly">
                 <ul>
                     <li><a ng-click="onTactic(undefined, 'master')"
                            uib-tooltip="Auto" tooltip-placement="top" tooltip-popup-delay="500">
