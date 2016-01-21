@@ -211,6 +211,8 @@ object DerivationInfo {
       ,  AxiomDisplayInfo(("∃′","exists'"), "(∃x p(x))′↔∀x (p(x))′")
       , "Dexists", {case () => HilbertCalculus.Dexists}),
 
+    new PositionTacticInfo("derive", "'", {case () => HilbertCalculus.derive}),
+
     // first-order logic quantifiers
     new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", {case () => ???}),
     new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", {case () => HilbertCalculus.allDist}),

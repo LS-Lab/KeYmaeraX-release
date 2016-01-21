@@ -38,39 +38,44 @@ object UIIndex {
     val alwaysApplicable = "cut" :: Nil
     if (DEBUG) println("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
     expr match {
-      case Differential(t) => t match {
-        case _: Variable => "DvariableTactic" :: alwaysApplicable
-        case _: Number => "c()' derive constant fn" :: alwaysApplicable
-        // optimizations
-        case t: Term if StaticSemantics.freeVars(t).isEmpty => "c()' derive constant fn" :: alwaysApplicable
-        case _: Neg => "-' derive neg" :: alwaysApplicable
-        case _: Plus => "+' derive sum" :: alwaysApplicable
-        case _: Minus => "-' derive minus" :: alwaysApplicable
-        // optimizations
-        case Times(num, _) if StaticSemantics.freeVars(num).isEmpty => "' linear" :: alwaysApplicable
-        case Times(_, num) if StaticSemantics.freeVars(num).isEmpty => "' linear right" :: alwaysApplicable
-        case _: Times => "*' derive product" :: alwaysApplicable
-        case _: Divide => "/' derive quotient" :: alwaysApplicable
-        case _: Power => "^' derive power" :: alwaysApplicable
-        case FuncOf(_, Nothing) => "c()' derive constant fn" :: alwaysApplicable
-        case _ => alwaysApplicable
-      }
+      case Differential(t) =>
+        val tactics =
+          t match {
+          case _: Variable => "DvariableTactic" :: alwaysApplicable
+          case _: Number => "c()' derive constant fn" :: alwaysApplicable
+          // optimizations
+          case t: Term if StaticSemantics.freeVars(t).isEmpty => "c()' derive constant fn" :: alwaysApplicable
+          case _: Neg => "-' derive neg" :: alwaysApplicable
+          case _: Plus => "+' derive sum" :: alwaysApplicable
+          case _: Minus => "-' derive minus" :: alwaysApplicable
+          // optimizations
+          case Times(num, _) if StaticSemantics.freeVars(num).isEmpty => "' linear" :: alwaysApplicable
+          case Times(_, num) if StaticSemantics.freeVars(num).isEmpty => "' linear right" :: alwaysApplicable
+          case _: Times => "*' derive product" :: alwaysApplicable
+          case _: Divide => "/' derive quotient" :: alwaysApplicable
+          case _: Power => "^' derive power" :: alwaysApplicable
+          case FuncOf(_, Nothing) => "c()' derive constant fn" :: alwaysApplicable
+          case _ => alwaysApplicable
+        }
+        "derive" :: tactics
 
-      case DifferentialFormula(f) => f match {
-        case _: Equal => "=' derive =" :: alwaysApplicable
-        case _: NotEqual => "!=' derive !=" :: alwaysApplicable
-        case _: Greater => ">' derive >" :: alwaysApplicable
-        case _: GreaterEqual => ">=' derive >=" :: alwaysApplicable
-        case _: Less => "<' derive <" :: alwaysApplicable
-        case _: LessEqual => "<=' derive <=" :: alwaysApplicable
-        case _: And => "&' derive and" :: alwaysApplicable
-        case _: Or => "|' derive or" :: alwaysApplicable
-        case _: Imply => "->' derive imply" :: alwaysApplicable
-        case _: Forall => "forall' derive forall" :: alwaysApplicable
-        case _: Exists => "exists' derive exists" :: alwaysApplicable
-        case _ => alwaysApplicable
-      }
-
+      case DifferentialFormula(f) =>
+        val tactics =
+          f match {
+          case _: Equal => "=' derive =" :: alwaysApplicable
+          case _: NotEqual => "!=' derive !=" :: alwaysApplicable
+          case _: Greater => ">' derive >" :: alwaysApplicable
+          case _: GreaterEqual => ">=' derive >=" :: alwaysApplicable
+          case _: Less => "<' derive <" :: alwaysApplicable
+          case _: LessEqual => "<=' derive <=" :: alwaysApplicable
+          case _: And => "&' derive and" :: alwaysApplicable
+          case _: Or => "|' derive or" :: alwaysApplicable
+          case _: Imply => "->' derive imply" :: alwaysApplicable
+          case _: Forall => "forall' derive forall" :: alwaysApplicable
+          case _: Exists => "exists' derive exists" :: alwaysApplicable
+          case _ => alwaysApplicable
+        }
+        "derive" :: tactics
       case Box(a, True) if isTop && !isAnte =>
         "dualFree" :: Nil
 
