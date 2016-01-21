@@ -531,6 +531,16 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
   }
 }
 
+class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos1: Position, pos2: Position) extends Request {
+  def getResultingResponses(): List[Response] = {
+    val closed = db.getProofInfo(proofId).closed
+    if (closed) return new ApplicableAxiomsResponse(Nil, None) :: Nil
+    val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
+    val tactics = UIIndex.allTwoPosSteps(pos1, pos2, sequent).map(DerivationInfo(_))
+    new ApplicableAxiomsResponse(tactics, None) :: Nil
+  }
+}
+
 case class BelleTermInput(value: String, spec:Option[ArgInfo])
 
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
