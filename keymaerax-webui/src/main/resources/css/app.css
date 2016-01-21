@@ -58,8 +58,13 @@ table .btn{
   max-width: none;
 }
 
+.tooltip-inner {
+  max-width: none;
+}
+
 .k4-drag {
   border-bottom: 1px dashed #000;
+  padding-bottom: 3px;
 }
 
 .k4-drag-over {
@@ -165,7 +170,11 @@ table .btn{
   display: inline-block;
 }
 
-.k4-sequentRule {
+.tooltip .k4-sequentRule {
+  width: 350px; /* @todo solve tactic popover layout problem for real */
+}
+
+.popover .k4-sequentRule {
   width: 500px; /* @todo solve tactic popover layout problem for real */
 }
 
@@ -176,7 +185,7 @@ table .btn{
 .k4-sequentRuleConclusion {
   border-style: solid;
   border-left: none;
-  border-top: thin solid black;
+  border-top: thin solid;
   border-right: none;
   border-bottom: none;
 }
