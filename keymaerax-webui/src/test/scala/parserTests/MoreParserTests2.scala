@@ -7,7 +7,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.immutable._
 
-/**
+/** More tests for KeYmaeraXParser
  */
 class MoreParserTests2 extends FlatSpec with Matchers {
   KeYmaera.init(Map.empty)
@@ -82,6 +82,52 @@ class MoreParserTests2 extends FlatSpec with Matchers {
   it should "parse [{x'=5&x>2&x>3}]x>0 as an ODESystem with one evolution domain constraint" in {
     val x = Variable("x")
     parser("[{x'=5&x>2&x>3}]x>0") shouldBe Box(ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), And(Greater(x, Number(2)), Greater(x, Number(3)))), Greater(x, Number(0)))
+  }
+
+  it should "parse [{x'=v}]x=0 as a ODESystem with one ODE" in {
+    val x = Variable("x")
+    parser("[{x'=v}]x=0") shouldBe Box(ODESystem(AtomicODE(DifferentialSymbol(x), Variable("v")), True), Equal(x, Number(0)))
+  }
+
+  it should "parse [{x'=v&x<5}]x=0 as a ODESystem with one ODE and evolution domain" in {
+    val x = Variable("x")
+    parser("[{x'=v&x<5}]x=0") shouldBe Box(ODESystem(AtomicODE(DifferentialSymbol(x), Variable("v")), Less(x, Number(5))), Equal(x, Number(0)))
+  }
+
+  it should "parse [{x'=v,v'=a}]x=0 as a ODESystem with two ODEs" in {
+    val x = Variable("x")
+    parser("[{x'=v,v'=a}]x=0") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), Variable("v")), AtomicODE(DifferentialSymbol(Variable("v")), Variable("a"))), True), Equal(x, Number(0)))
+  }
+
+  it should "parse [{x'=v,v'=a&x<5}]x=0 as a ODESystem with two ODEs" in {
+    val x = Variable("x")
+    parser("[{x'=v,v'=a&x<5}]x=0") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), Variable("v")), AtomicODE(DifferentialSymbol(Variable("v")), Variable("a"))), Less(x,Number(5))), Equal(x, Number(0)))
+  }
+
+
+  it should "program parse {{x'=v}}* as a loopy ODESystem with one ODE" in {
+    val x = Variable("x")
+    parser.programParser("{{x'=v}}*") shouldBe Loop(ODESystem(AtomicODE(DifferentialSymbol(x), Variable("v")), True))
+  }
+
+  it should "parse [{{x'=v}}*]x=0 as a loopy ODESystem with one ODE" in {
+    val x = Variable("x")
+    parser("[{{x'=v}}*]x=0") shouldBe Box(Loop(ODESystem(AtomicODE(DifferentialSymbol(x), Variable("v")), True)), Equal(x, Number(0)))
+  }
+
+  it should "parse [{{x'=v&x<5}}*]x=0 as a loopy ODESystem with one ODE and evolution domain" in {
+    val x = Variable("x")
+    parser("[{{x'=v&x<5}}*]x=0") shouldBe Box(Loop(ODESystem(AtomicODE(DifferentialSymbol(x), Variable("v")), Less(x, Number(5)))), Equal(x, Number(0)))
+  }
+
+  it should "parse [{{x'=v,v'=a}}*]x=0 as a loopy ODESystem with two ODEs" in {
+    val x = Variable("x")
+    parser("[{{x'=v,v'=a}}*]x=0") shouldBe Box(Loop(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), Variable("v")), AtomicODE(DifferentialSymbol(Variable("v")), Variable("a"))), True)), Equal(x, Number(0)))
+  }
+
+  it should "parse [{{x'=v,v'=a&x<5}}*]x=0 as a loopy ODESystem with two ODEs" in {
+    val x = Variable("x")
+    parser("[{{x'=v,v'=a&x<5}}*]x=0") shouldBe Box(Loop(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(x), Variable("v")), AtomicODE(DifferentialSymbol(Variable("v")), Variable("a"))), Less(x,Number(5)))), Equal(x, Number(0)))
   }
 
   it should "parse +- in x+-y+1>=5" in {

@@ -44,8 +44,9 @@ object Boot extends App {
       //@todo add e to log here and in other places
       case e:Throwable => println("===> WARNING: Failed to initialize Mathematica. " + e)
         println("You should configure settings in the UI and restart KeYmaera X.")
-        println("Or specify the paths explicitly from command line by running\n" +
+        println("Or specify the paths to the libraries for your system explicitly from command line by running\n" +
           "  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink")
+        println("Current configuration:\n" + edu.cmu.cs.ls.keymaerax.tools.diagnostic)
         e.printStackTrace()
     }
 
