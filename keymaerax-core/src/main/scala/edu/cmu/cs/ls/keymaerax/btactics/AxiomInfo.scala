@@ -481,7 +481,9 @@ object DerivationInfo {
     new TwoPositionTacticInfo("coHide2", "W", {case () => ProofRuleTactics.coHide2}),
     new TwoPositionTacticInfo("exchangeL", "X", {case () => ProofRuleTactics.exchangeL}),
     new TwoPositionTacticInfo("exchangeR", "X", {case () => ProofRuleTactics.exchangeR}),
-    new TwoPositionTacticInfo("close", "close", {case () => ProofRuleTactics.close}),
+    new TwoPositionTacticInfo("close",
+      RuleDisplayInfo("close", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
+      {case () => ProofRuleTactics.close}),
 
     // Proof rule input tactics
     new InputTacticInfo("cut"
