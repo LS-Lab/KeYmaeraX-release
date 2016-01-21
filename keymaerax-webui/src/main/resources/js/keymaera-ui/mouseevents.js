@@ -27,9 +27,7 @@ angular.module('keymaerax.ui.mouseevents')
           var dragData = JSON.stringify(attrs.dragData)
           event.dataTransfer.setData('dragData', dragData);
           angular.element(event.target).addClass('k4-drag');
-          scope.$apply(function() {
-            dragStart(scope, {event: event});
-          })
+          scope.$apply(dragStart(scope, {event: event}));
         });
 
         element[0].addEventListener('dragend', function(event) {
@@ -44,7 +42,9 @@ angular.module('keymaerax.ui.mouseevents')
     return {
       restrict: 'A',
       scope: {
-        onDrop: '&'
+        onDrop: '&',
+        onDragEnter: '&',
+        onDragLeave: '&'
       },
       link: function(scope, element, attrs) {
         element[0].addEventListener('dragover', function(event) {
@@ -58,11 +58,13 @@ angular.module('keymaerax.ui.mouseevents')
         element[0].addEventListener('dragenter', function(event) {
           angular.element(event.target).addClass('k4-drag-over');
           // see JavaScript spec: event.dataTransfer.getData('dragData') does not return the data set during dragstart!
+          scope.$apply(scope.onDragEnter({event: event}));
         });
 
         element[0].addEventListener('dragleave', function(event) {
           angular.element(event.target).removeClass('k4-drag-over');
           // see JavaScript spec: event.dataTransfer.getData('dragData') does not return the data set during dragstart!
+          scope.$apply(scope.onDragLeave({event: event}));
         });
 
         element[0].addEventListener('drop', function(event) {
