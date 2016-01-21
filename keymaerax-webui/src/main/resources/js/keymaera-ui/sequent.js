@@ -45,6 +45,11 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
               scope.onApplyTwoPositionTactic({fml1Id: fml1Id, fml2Id: fml2Id, tacticId: tacticId});
             }
 
+            scope.onDragStart = function(event) {
+              angular.element(event.target.firstChild.firstChild).removeClass('hlhover'); // remove hover effect on drag
+
+            }
+
             scope.formulaDrop = function(dragData) {
               var formulas = $.grep(scope.sequent.ante, function(e, i) { return e.id === dragData; });
               if (formulas.length == 1) {

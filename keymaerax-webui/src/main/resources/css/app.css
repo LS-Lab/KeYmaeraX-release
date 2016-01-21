@@ -59,12 +59,12 @@ table .btn{
 }
 
 .k4-drag {
-  /* no special highlighting of drag source */
+  border-bottom: 1px dashed #000;
 }
 
 .k4-drag-over {
-  background-color: #7297A6;
-  border-color: #2F3640;
+  border: 1px dashed #000;
+  padding: 3px;
 }
 
 .k4-narrowalert {

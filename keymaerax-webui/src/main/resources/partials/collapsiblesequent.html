@@ -67,7 +67,7 @@
                 </ul>
                 <div class="k4-formula-content">
                     <ul><li>{{f.id}}:</li></ul>
-                    <k4-formula k4-draggable drag-data="{{f.id}}"
+                    <k4-formula k4-draggable drag-data="{{f.id}}" on-drag-start="onDragStart(event)"
                             user-id="userId" proof-id="proofId" node-id="nodeId"
                             formula="f.formula" highlight="true" collapsed="false"
                             on-tactic="onTactic(formulaId, tacticId)"
@@ -88,7 +88,7 @@
     <!-- Turnstile -->
     <div class="col-md-1">
         <div class="row k4-flexrow">
-            <div class="col-md-12 k4-formula" k4-droppable on-drop="formulaDrop(dragData)" ng-if="!readOnly">
+            <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
                     <li><a ng-click="onTactic(undefined, 'master')"
                            uib-tooltip="Auto" tooltip-placement="top" tooltip-popup-delay="500">
@@ -112,7 +112,7 @@
                     </li>
                     <!--<li><a href="" ng-click="applyTacticsByName(f,'keymaerax.cut')"><span class="fa fa-pencil"></span> Cut</a></li>-->
                 </ul>
-                <div class="k4-formula-content">&#8866;</div>
+                <div class="k4-formula-content" k4-droppable on-drop="formulaDrop(dragData)">&#8866;</div>
             </div>
             <div class="col-md-12 k4-formula" ng-if="readOnly">
                 <div class="k4-formula-content">&#8866;</div>

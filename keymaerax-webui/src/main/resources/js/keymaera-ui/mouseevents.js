@@ -15,16 +15,21 @@ angular.module('keymaerax.ui.mouseevents')
   }]);
 
 angular.module('keymaerax.ui.mouseevents')
-  .directive('k4Draggable', function() {
+  .directive('k4Draggable', ['$parse', function($parse) {
     return {
       restrict: 'A',
       link: function(scope, element, attrs) {
         element[0].draggable = true;
+        var dragStart = attrs.onDragStart !== undefined ? $parse(attrs.onDragStart) : undefined;
 
         element[0].addEventListener('dragstart', function(event) {
           event.dataTransfer.effectAllowed = 'move';
-          event.dataTransfer.setData('dragData', JSON.stringify(attrs.dragData));
+          var dragData = JSON.stringify(attrs.dragData)
+          event.dataTransfer.setData('dragData', dragData);
           angular.element(event.target).addClass('k4-drag');
+          scope.$apply(function() {
+            dragStart(scope, {event: event});
+          })
         });
 
         element[0].addEventListener('dragend', function(event) {
@@ -32,7 +37,7 @@ angular.module('keymaerax.ui.mouseevents')
         });
       }
     }
-  });
+  }]);
 
 angular.module('keymaerax.ui.mouseevents')
   .directive('k4Droppable', ['$parse', function($parse) {
