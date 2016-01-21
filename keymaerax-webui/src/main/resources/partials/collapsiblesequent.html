@@ -67,7 +67,7 @@
                 </ul>
                 <div class="k4-formula-content">
                     <ul><li>{{f.id}}:</li></ul>
-                    <k4-formula k4-draggable drag-data="{{f.id}}" on-drag-start="onDragStart(event)"
+                    <k4-formula k4-draggable drag-data="{{f.formula.id}}" on-drag-start="onDragStart(event)"
                             user-id="userId" proof-id="proofId" node-id="nodeId"
                             formula="f.formula" highlight="true" collapsed="false"
                             on-tactic="onTactic(formulaId, tacticId)"
@@ -113,8 +113,8 @@
                     <!--<li><a href="" ng-click="applyTacticsByName(f,'keymaerax.cut')"><span class="fa fa-pencil"></span> Cut</a></li>-->
                 </ul>
                 <div class="k4-formula-content"
-                     k4-droppable on-drop="turnstileDrop(dragData)" on-drag-enter="turnstileDragEnter(event)"
-                     on-drag-leave="turnstileDragLeave(event)"
+                     k4-droppable on-drop="turnstileDrop(dragData)" on-drag-enter="turnstileDragEnter(dragData)"
+                     on-drag-leave="turnstileDragLeave(dragData)"
                      uib-tooltip="Rewrite all occurrences of the equality left-hand side into the right-hand side everywhere in the sequent"
                      tooltip-placement="bottom"
                      tooltip-trigger="none" tooltip-is-open="isTurnstileTooltipOpen()">&#8866;</div>

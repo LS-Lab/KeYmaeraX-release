@@ -64,12 +64,8 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             }
 
             turnstileTooltipOpen = false;
-            scope.turnstileDragEnter = function(event) {
-              turnstileTooltipOpen = true;
-            }
-            scope.turnstileDragLeave = function(event) {
-              turnstileTooltipOpen = false;
-            }
+            scope.turnstileDragEnter = function(dragData) { turnstileTooltipOpen = true; }
+            scope.turnstileDragLeave = function(dragData) { turnstileTooltipOpen = false; }
             scope.isTurnstileTooltipOpen = function() {return turnstileTooltipOpen;}
         },
         templateUrl: 'partials/collapsiblesequent.html'

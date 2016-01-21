@@ -1,0 +1,9 @@
+<div class="row" ng-if="dndTooltip.data !== undefined && dndTooltip.data.derivation.type === 'tactic'">
+    <div class="col-md-2"><b>{{dndTooltip.data.name}}</b></div>
+    <div class="col-md-10">{{dndTooltip.data.derivation.formula}}</div>
+</div>
+<div class="row" ng-repeat="tactic in [dndTooltip.data]"
+     ng-if="dndTooltip.data !== undefined && dndTooltip.data.derivation.type === 'sequentrule'">
+    <div class="col-md-12" ng-include="'templates/sequentRuleTemplate.html'"></div>
+</div>
+<div ng-if="dndTooltip.data === undefined">Sorry, no drag-and-drop tactic available here</div>

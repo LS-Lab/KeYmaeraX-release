@@ -246,6 +246,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val twoPosList = path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "twoposlist") { (userId, proofId, nodeId, fml1Id, fml2Id) => { pathEnd {
+    get {
+      val request = new GetApplicableTwoPosTacticsRequest(database, userId, proofId, nodeId, parseFormulaId(fml1Id), parseFormulaId(fml2Id))
+      complete(standardCompletion(request))
+    }
+  }}}
+
   val doAt = path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     get {
       val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))))
@@ -542,6 +549,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     proofTasksPathAll     ::
     proofTasksBranchRoot  ::
     axiomList             ::
+    twoPosList            ::
     doAt                  ::
     doTwoPosAt            ::
     doInputAt             ::
