@@ -25,7 +25,8 @@ angular.module('keymaerax.ui.mouseevents')
         element[0].addEventListener('dragstart', function(event) {
           event.dataTransfer.effectAllowed = 'move';
           var dragData = JSON.stringify(attrs.dragData)
-          event.dataTransfer.setData('dragData', dragData);
+          //@note hack to make data available in dragenter and dragleave
+          event.dataTransfer.setData('k4/dragdata/' + dragData, dragData);
           angular.element(event.target).addClass('k4-drag');
           scope.$apply(dragStart(scope, {event: event}));
         });
@@ -57,21 +58,24 @@ angular.module('keymaerax.ui.mouseevents')
 
         element[0].addEventListener('dragenter', function(event) {
           angular.element(event.target).addClass('k4-drag-over');
-          // see JavaScript spec: event.dataTransfer.getData('dragData') does not return the data set during dragstart!
-          scope.$apply(scope.onDragEnter({event: event}));
+          var data = $.grep(event.dataTransfer.types, function(e, i) { return e.substr(0, 'k4/dragdata/'.length) === 'k4/dragdata/' });
+          var dragData = data.length == 1 ? JSON.parse(data[0].substr('k4/dragdata/'.length)) : undefined;
+          scope.$apply(scope.onDragEnter({dragData: dragData}));
         });
 
         element[0].addEventListener('dragleave', function(event) {
           angular.element(event.target).removeClass('k4-drag-over');
-          // see JavaScript spec: event.dataTransfer.getData('dragData') does not return the data set during dragstart!
-          scope.$apply(scope.onDragLeave({event: event}));
+          var data = $.grep(event.dataTransfer.types, function(e, i) { return e.substr(0, 'k4/dragdata/'.length) === 'k4/dragdata/' });
+          var dragData = data.length == 1 ? JSON.parse(data[0].substr('k4/dragdata/'.length)) : undefined;
+          scope.$apply(scope.onDragLeave({dragData: dragData}));
         });
 
         element[0].addEventListener('drop', function(event) {
           // Stops some browsers from redirecting
           if (event.stopPropagation) event.stopPropagation();
           angular.element(event.target).removeClass('k4-drag-over');
-          var dragData = JSON.parse(event.dataTransfer.getData('dragData'));
+          var data = $.grep(event.dataTransfer.types, function(e, i) { return e.substr(0, 'k4/dragdata/'.length) === 'k4/dragdata/' });
+          var dragData = data.length == 1 ? JSON.parse(data[0].substr('k4/dragdata/'.length)) : undefined;
           scope.$apply(scope.onDrop({dragData: dragData}));
         });
       }
