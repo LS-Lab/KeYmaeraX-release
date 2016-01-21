@@ -449,6 +449,9 @@ object DerivationInfo {
     new TacticInfo("G"
       , RuleDisplayInfo("G", (List(""),List("[a]P")), List((List(),List("P"))))
       , {case () => DLBySubst.G}),
+    new TacticInfo("hideG"
+      , RuleDisplayInfo("G", (List("&Gamma;"), List("[a]P", "&Delta;")), List((List(),List("P"))))
+      , {case () => HilbertCalculus.hideG}),
     new PositionTacticInfo("dualFree"
       , RuleDisplayInfo(("[]⊤", "[]T"), (List("&Gamma;"),List("[a]⊤","&Delta;")),
         List())

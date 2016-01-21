@@ -51,6 +51,14 @@ trait HilbertCalculus extends UnifyUSCalculus {
     * @todo should lift to a PositionTactic = cohideR(pos) & DLBySubst.G
     */
   lazy val G                  : BelleExpr         = DLBySubst.G
+  lazy val hideG              : BelleExpr         = new DependentPositionTactic("hideG") {
+    override def factory(pos: Position): DependentTactic = new DependentTactic(name) {
+      override def computeExpr(v: BelleValue): BelleExpr = {
+        ProofRuleTactics.coHideR(SuccPos(0)) & DLBySubst.G
+      }
+    }
+  }
+
   /** allG: all generalization rule reduces a proof of `|- \forall x p(x)` to proving `|- p(x)` in isolation */
   lazy val allG               : BelleExpr         = ??? //AxiomaticRuleTactics.forallGeneralizationT
   /** CT: Term Congruence: Contextual Equivalence of terms at the indicated position to reduce an equality `c(f(x))=c(g(x))` to an equality `f(x)=g(x)` */
