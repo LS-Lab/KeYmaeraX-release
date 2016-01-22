@@ -628,7 +628,7 @@ object DerivedAxioms {
       ) & byUS("K modal modus ponens")
 
       ),
-      /* show */ cohide(2) & debug("Foo") & useAt(PC1)(1, 1::0::Nil) & debug("Bar") & useAt(implySelf)(1, 1::Nil) & debug("Zee") & V(1) & close
+      /* show */ cohide(2) & useAt(PC1)(1, 1::0::Nil) & useAt(implySelf)(1, 1::Nil) & V(1) & close
       )
   )
 
