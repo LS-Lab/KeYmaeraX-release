@@ -194,10 +194,11 @@ trait HilbertCalculus extends UnifyUSCalculus {
   /** Dconst: c()' derives a constant `c()' = 0` */
   lazy val Dconst             : DependentPositionTactic = useAt("c()' derive constant fn")
   /** Dvariable: x' derives a variable `(x)' = x'` */
-  lazy val Dvar               : DependentPositionTactic = Dvariable
-  @deprecated("Use synonymous Dvar instead")
-  lazy val Dvariable          : DependentPositionTactic =
+  lazy val Dvar               : DependentPositionTactic =
     if (INTERNAL) useAt("x' derive var", PosInExpr(0::Nil)) else DifferentialTactics.Dvariable
+  @deprecated("Use synonymous Dvar instead")
+  lazy val Dvariable          : DependentPositionTactic = Dvar
+
   /** Dcompose: o' derives a function composition by chain rule */
   //@todo lazy val Dcompose           : BuiltInPositionTactic = ???
 
