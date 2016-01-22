@@ -12,31 +12,67 @@ package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
 
-import edu.cmu.cs.ls.keymaerax.core.StaticSemantics
-
 import scala.collection.immutable
 
+import edu.cmu.cs.ls.keymaerax.core.StaticSemantics
+
 /**
- * Uniformly rename all occurrences of what and what' to repl and repl' and vice versa.
- * Uniformly rename all occurrences of variable what (and its associated DifferentialSymbol) to repl everywhere
- * and vice versa uniformly rename all occurrences of variable repl (and its associated DifferentialSymbol) to what.
- * @param what What variable to replace (along with its associated DifferentialSymbol).
- * @param repl The target variable to replace what with and vice versa.
- * @author smitsch
- * @author Andre Platzer
+  * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa.
+  * Uniformly rename all occurrences of variable `what` (and its associated DifferentialSymbol `what'`) to
+  * `repl` (and its associated DifferentialSymbol `repl'`) everywhere
+  * and vice versa uniformly rename all occurrences of variable `repl` (and its associated DifferentialSymbol) to `what` (and `what'`).
+  * @param what What variable to replace (along with its associated DifferentialSymbol).
+  * @param repl The target variable to replace `what` with and vice versa.
+  * @author Andre Platzer
+  * @author smitsch
+  */
+final case class URename(what: Variable, repl: Variable) extends Renaming {
+  /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of `what`. */
+  //@todo Code Review: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
+  //@note Andre Platzer: no for uniform renaming this can be true
+  private[core] override val semanticRenaming: Boolean = true
+}
+
+/**
+  * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa.
+  * Uniformly rename all occurrences of variable `what` (and its associated DifferentialSymbol `what'`) to
+  * `repl` (and its associated DifferentialSymbol `repl'`) everywhere
+  * and vice versa uniformly rename all occurrences of variable `repl` (and its associated DifferentialSymbol) to `what` (and `what'`).
+  * @param what What variable to replace (along with its associated DifferentialSymbol).
+  * @param repl The target variable to replace `what` with and vice versa.
+  * @author Andre Platzer
+  * @author smitsch
+  */
+final case class SyntacticURename(what: Variable, repl: Variable) extends Renaming {
+  /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of `what`. */
+  //@todo Code Review: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
+  //@note Andre Platzer: yes for bound renaming purposes this absolutely has to be false
+  private[core] override val semanticRenaming: Boolean = false
+}
+
+/**
+  * Uniformly rename all occurrences of `what` and `what'` to `repl` and `repl'` and vice versa.
+  * Uniformly rename all occurrences of variable `what` (and its associated DifferentialSymbol `what'`) to
+  * `repl` (and its associated DifferentialSymbol `repl'`) everywhere
+  * and vice versa uniformly rename all occurrences of variable `repl` (and its associated DifferentialSymbol) to `what` (and `what'`).
+  * @author Andre Platzer
+  * @author smitsch
  */
-final case class URename(what: Variable, repl: Variable) extends (Expression => Expression) {
+sealed trait Renaming extends (Expression => Expression) {
   insist(what.sort == repl.sort, "Uniform renaming only to variables of the same sort")
+  /** What variable to replace (along with its associated DifferentialSymbol). */
+  val what: Variable
+  /** The target variable to replace `what` with and vice versa */
+  val repl: Variable
 //  /** The variables that are not allowed to occur initially */
 //  private val taboo: Set[NamedSymbol] = if (repl.sort == Real) Set(repl,DifferentialSymbol(repl)) else Set(repl)
 //  /** The variables that are affected and should be gone finally */
 //  private val affected: Set[NamedSymbol] = if (what.sort == Real) Set(what,DifferentialSymbol(what)) else Set(what)
 
-  /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of what. */
-  //@todo Code Review: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
-  private val semanticRenaming: Boolean = Rule.LAX_MODE
-  /** `true` to do transpositions (replace what by repl and repl by what) or `false` to clash upon occurrences of `repl`. */
-  private val TRANSPOSITION: Boolean = true
+  /** Whether to allow semantic renaming, i.e., renaming within ProgramConst etc that do not have a syntactic representation of `what`. */
+  private[core] val semanticRenaming: Boolean
+  /** `true` for transpositions (replace `what` by `repl` and `what'` by `repl'` and, vice versa, `repl` by `what` etc) or `false` to clash upon occurrences of `repl` or `repl'`. */
+  private[core] val TRANSPOSITION: Boolean = true
 
   override def toString: String = "URename{" + what.asString + "~>" + repl.asString + "}"
 
