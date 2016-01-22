@@ -55,7 +55,7 @@ class HilbertTests extends TacticTestBase {
       implyR(1) &
         DE(1) &
         Dgreaterequal(1, 1::1::Nil) &
-        Dvariable(1, 1::1:: 0::Nil) &
+        Dvar(1, 1::1:: 0::Nil) &
         Dconst(1, 1::1:: 1::Nil) &
         Dassignb(1, 1::Nil) &
         abstractionb(1) & QE
@@ -65,9 +65,9 @@ class HilbertTests extends TacticTestBase {
   it should "prove (x+2*y)'=x'+2*y'" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x+2*y)'=x'+2*y'".asFormula)),
       Dplus(1, 0::Nil) &
-        Dvariable(1, 0::0::Nil) &
+        Dvar(1, 0::0::Nil) &
         useAt("' linear")(1, 0::1::Nil) & // Dtimes(SuccPosition(0, 0::1::Nil))
-        Dvariable(1, 0::1::1::Nil) &
+        Dvar(1, 0::1::1::Nil) &
         byUS("= reflexive")
     ) shouldBe 'proved
   }
@@ -76,10 +76,10 @@ class HilbertTests extends TacticTestBase {
     val x = Variable("y")
     proveBy(
       Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
-      Dvariable(1,0::Nil) & byUS("= reflexive")) shouldBe 'proved
+      Dvar(1,0::Nil) & byUS("= reflexive")) shouldBe 'proved
     proveBy(
       Sequent(Nil,IndexedSeq(), IndexedSeq(Equal(Differential(x), DifferentialSymbol(x)))),
-      Dvariable(1,0::Nil) & byUS("= reflexive")) shouldBe 'proved
+      Dvar(1,0::Nil) & byUS("= reflexive")) shouldBe 'proved
   }
 
   it should "derive (y)'=y'" in withMathematica { implicit qeTool =>
@@ -181,7 +181,7 @@ class HilbertTests extends TacticTestBase {
         prop,
         DE(1) &
           Dgreaterequal(1, 1::1::Nil) &
-          Dvariable(1, 1::1:: 0::Nil) &
+          Dvar(1, 1::1:: 0::Nil) &
           Dconst(1, 1::1:: 1::Nil) &
           Dassignb(1, 1::Nil) & abstractionb(1) & QE
         )
@@ -621,8 +621,8 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "use ^' derive power to forward (x^2)'=0 to 2*x^(2-1)*(x)'=0" in withMathematica { implicit qeTool =>
-    useFor("^' derive power", PosInExpr(1::Nil))(SuccPosition(1, 0::Nil)) (
+    useFor("^' derive power")(SuccPosition(1, 0::Nil)) (
       Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("(x^2)'=0".asFormula)))
-    ).conclusion shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("2*x^(2-1)*(x)'=0".asFormula))
+    ).conclusion shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("(2*x^(2-1))*(x)'=0".asFormula))
   }
 }
