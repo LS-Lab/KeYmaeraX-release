@@ -126,7 +126,7 @@ object SQLite {
   }
 
 
-  class SQLiteDB(dblocation: String) extends DBAbstraction {
+  class SQLiteDB(val dblocation: String) extends DBAbstraction {
     val sqldb = Database.forURL("jdbc:sqlite:" + dblocation, driver = "org.sqlite.JDBC")
     val lemmaDB = new SQLiteLemmaDB(this)
     private var currentSession:Session = null

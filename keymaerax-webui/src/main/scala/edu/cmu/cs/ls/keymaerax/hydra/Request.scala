@@ -9,12 +9,14 @@
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.io.{File, FileNotFoundException, FileReader}
+import java.io._
+import java.nio.file.Path
 import java.text.SimpleDateFormat
 import java.util.{Locale, Calendar}
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
+import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.btacticinterface.{UIIndex, BTacticParser}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
@@ -33,6 +35,7 @@ import scala.collection.immutable
 import scala.io.Source
 import spray.json._
 import spray.json.DefaultJsonProtocol._
+import java.io.{File,FileInputStream,FileOutputStream}
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -887,6 +890,36 @@ class RunScalaFileRequest(db: DBAbstraction, proofId: String, proof: File) exten
 
 class IsLocalInstanceRequest() extends Request {
   override def getResultingResponses(): List[Response] = new BooleanResponse(!Boot.isHosted) :: Nil
+}
+
+class ExtractDatabaseRequest() extends Request {
+  override def getResultingResponses(): List[Response] = {
+    if(Boot.isHosted)
+      throw new Exception("Cannot extract the database on a hosted instance of KeYmaera X")
+
+    val productionDatabase = edu.cmu.cs.ls.keymaerax.hydra.SQLite.ProdDB
+    productionDatabase.syncDatabase()
+
+    val today = Calendar.getInstance().getTime()
+    val fmt = new SimpleDateFormat("MDY")
+
+    val extractionPath = System.getProperty("user.home") + File.separator + s"extracted_${fmt.format(today)}.sqlite"
+    val dbPath         = productionDatabase.dblocation
+
+    val src = new File(dbPath)
+    val dest = new File(extractionPath)
+    new FileOutputStream(dest) getChannel() transferFrom(
+      new FileInputStream(src) getChannel, 0, Long.MaxValue )
+
+
+    //@todo Maybe instead do this in the production database and then have a catch all that undoes it.
+    //That way we don't have to sync twice. Actually, I'm also not sure if this sync is necessary or not...
+    val extractedDatabase = new SQLiteDB(extractionPath)
+    extractedDatabase.updateConfiguration(new ConfigurationPOJO("extractedflag", Map("extracted" -> "true")))
+    extractedDatabase.syncDatabase()
+
+    new ExtractDatabaseResponse(extractionPath) :: Nil
+  }
 }
 
 class ShutdownReqeuest() extends Request {

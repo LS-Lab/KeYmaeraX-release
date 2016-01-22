@@ -38,39 +38,44 @@ object UIIndex {
     val alwaysApplicable = "cut" :: Nil
     if (DEBUG) println("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
     expr match {
-      case Differential(t) => t match {
-        case _: Variable => "DvariableTactic" :: alwaysApplicable
-        case _: Number => "c()' derive constant fn" :: alwaysApplicable
-        // optimizations
-        case t: Term if StaticSemantics.freeVars(t).isEmpty => "c()' derive constant fn" :: alwaysApplicable
-        case _: Neg => "-' derive neg" :: alwaysApplicable
-        case _: Plus => "+' derive sum" :: alwaysApplicable
-        case _: Minus => "-' derive minus" :: alwaysApplicable
-        // optimizations
-        case Times(num, _) if StaticSemantics.freeVars(num).isEmpty => "' linear" :: alwaysApplicable
-        case Times(_, num) if StaticSemantics.freeVars(num).isEmpty => "' linear right" :: alwaysApplicable
-        case _: Times => "*' derive product" :: alwaysApplicable
-        case _: Divide => "/' derive quotient" :: alwaysApplicable
-        case _: Power => "^' derive power" :: alwaysApplicable
-        case FuncOf(_, Nothing) => "c()' derive constant fn" :: alwaysApplicable
-        case _ => alwaysApplicable
-      }
+      case Differential(t) =>
+        val tactics =
+          t match {
+          case _: Variable => "DvariableTactic" :: alwaysApplicable
+          case _: Number => "c()' derive constant fn" :: alwaysApplicable
+          // optimizations
+          case t: Term if StaticSemantics.freeVars(t).isEmpty => "c()' derive constant fn" :: alwaysApplicable
+          case _: Neg => "-' derive neg" :: alwaysApplicable
+          case _: Plus => "+' derive sum" :: alwaysApplicable
+          case _: Minus => "-' derive minus" :: alwaysApplicable
+          // optimizations
+          case Times(num, _) if StaticSemantics.freeVars(num).isEmpty => "' linear" :: alwaysApplicable
+          case Times(_, num) if StaticSemantics.freeVars(num).isEmpty => "' linear right" :: alwaysApplicable
+          case _: Times => "*' derive product" :: alwaysApplicable
+          case _: Divide => "/' derive quotient" :: alwaysApplicable
+          case _: Power => "^' derive power" :: alwaysApplicable
+          case FuncOf(_, Nothing) => "c()' derive constant fn" :: alwaysApplicable
+          case _ => alwaysApplicable
+        }
+        "derive" :: tactics
 
-      case DifferentialFormula(f) => f match {
-        case _: Equal => "=' derive =" :: alwaysApplicable
-        case _: NotEqual => "!=' derive !=" :: alwaysApplicable
-        case _: Greater => ">' derive >" :: alwaysApplicable
-        case _: GreaterEqual => ">=' derive >=" :: alwaysApplicable
-        case _: Less => "<' derive <" :: alwaysApplicable
-        case _: LessEqual => "<=' derive <=" :: alwaysApplicable
-        case _: And => "&' derive and" :: alwaysApplicable
-        case _: Or => "|' derive or" :: alwaysApplicable
-        case _: Imply => "->' derive imply" :: alwaysApplicable
-        case _: Forall => "forall' derive forall" :: alwaysApplicable
-        case _: Exists => "exists' derive exists" :: alwaysApplicable
-        case _ => alwaysApplicable
-      }
-
+      case DifferentialFormula(f) =>
+        val tactics =
+          f match {
+          case _: Equal => "=' derive =" :: alwaysApplicable
+          case _: NotEqual => "!=' derive !=" :: alwaysApplicable
+          case _: Greater => ">' derive >" :: alwaysApplicable
+          case _: GreaterEqual => ">=' derive >=" :: alwaysApplicable
+          case _: Less => "<' derive <" :: alwaysApplicable
+          case _: LessEqual => "<=' derive <=" :: alwaysApplicable
+          case _: And => "&' derive and" :: alwaysApplicable
+          case _: Or => "|' derive or" :: alwaysApplicable
+          case _: Imply => "->' derive imply" :: alwaysApplicable
+          case _: Forall => "forall' derive forall" :: alwaysApplicable
+          case _: Exists => "exists' derive exists" :: alwaysApplicable
+          case _ => alwaysApplicable
+        }
+        "derive" :: tactics
       case Box(a, True) if isTop && !isAnte =>
         "dualFree" :: Nil
 
@@ -91,7 +96,7 @@ object UIIndex {
         }
         val rules =
         // @todo Better applicability test for V
-          if (isTop && sequent.isDefined && sequent.get.ante.isEmpty && sequent.get.succ.length == 1) {"G" :: "V vacuous" :: alwaysApplicable} else { "V vacuous" :: alwaysApplicable}
+          if (isTop && !isAnte) {"hideG" :: "V vacuous" :: alwaysApplicable} else { "V vacuous" :: alwaysApplicable}
         a match {
           case _: Assign => "assignbTactic" :: rules
           case _: AssignAny => "[:*] assign nondet" :: rules
@@ -99,11 +104,11 @@ object UIIndex {
           case _: Test => "[?] test" :: rules
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
-          case _: Dual => ("[^d] dual" :: alwaysApplicable) ensuring (r => r.intersect(List("G", "V vacuous")).isEmpty, "unsound for hybrid games anyhow")
+          case _: Dual => ("[^d] dual" :: alwaysApplicable) ensuring (r => r.intersect(List("hideG", "V vacuous")).isEmpty, "unsound for hybrid games anyhow")
           case _: Loop => "loop" :: "[*] iterate" :: rules
           case ODESystem(ode, constraint) if containsPrime => ode match {
-            case _: AtomicODE => "DE differential effect" :: "DW differential weakening" :: rules
-            case _: DifferentialProduct => "DE differential effect (system)" :: "DW differential weakening" :: rules
+            case _: AtomicODE => "DE differential effect" :: "diffWeaken" :: rules
+            case _: DifferentialProduct => "DE differential effect (system)" :: "diffWeaken" :: rules
             case _ => rules
           }
           case ODESystem(ode, constraint) =>
@@ -111,7 +116,7 @@ object UIIndex {
             if (constraint == True)
               tactics ++ odeList ++ rules
             else
-              (tactics :+ "DW differential weakening") ++ odeList ++ rules
+              (tactics :+ "diffWeaken") ++ odeList ++ rules
           case _ => rules
         }
 
