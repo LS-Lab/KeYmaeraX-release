@@ -49,6 +49,36 @@ trait UnifyUSCalculus {
   type Subst = UnificationMatch.Subst
 
   /*******************************************************************
+    * Stepping auto-tactic
+    *******************************************************************/
+
+  /**
+   * Make the canonical simplifying proof step based at the indicated position
+   * except when an unknown decision needs to be made (e.g. invariants for loops or for differential equations).
+   * Using the provided [[AxiomIndex]].
+   * @author Andre Platzer
+   * @note Efficient source-level indexing implementation.
+   * @see [[AxiomIndex]]
+   */
+  def stepAt(axiomIndex: Expression => Option[String]): DependentPositionTactic = new DependentPositionTactic("stepAt") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        val sub = sequent.sub(pos)
+        if (sub.isEmpty) throw new BelleUserGeneratedError("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
+        axiomIndex(sub.get) match {
+          case Some(axiom) =>
+            DerivationInfo(axiom).belleExpr match {
+              case ap:AtPosition[_] => ap(pos)
+              case expr:BelleExpr => expr
+              case expr => throw new BelleUserGeneratedError("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")" + "\ngot " + expr)
+            }
+          case None => throw new BelleUserGeneratedError("No axioms or rules applicable for " + sub.get + " which is at position " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
+        }
+      }
+    }
+  }
+
+  /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)
     *******************************************************************/
 

@@ -41,8 +41,29 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   lazy val step               : DependentPositionTactic = "step" by (pos =>
-    //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE
-    (HilbertCalculus.stepAt(pos) partial) | (assignb(pos) partial))
+    //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
+    (stepAt(sequentStepIndex(pos.isAnte)(_))(pos) partial) | (assignb(pos) partial))
+
+  /* Axiom and tactic index for stepAt */
+  private def sequentStepIndex(isAnte: Boolean)(expr: Expression): Option[String] = (expr, isAnte) match {
+    case (True, false) => Some("closeTrue")
+    case (False, true) => Some("closeFalse")
+    case (_: Not, true) => Some("notL")
+    case (_: Not, false) => Some("notR")
+    case (_: And, true) => Some("andL")
+    case (_: And, false) => Some("andR")
+    case (_: Or, true) => Some("orL")
+    case (_: Or, false) => Some("orR")
+    case (_: Imply, true) => Some("implyL")
+    case (_: Imply, false) => Some("implyR")
+    case (_: Equiv, true) => Some("equivL")
+    case (_: Equiv, false) => Some("equivR")
+    case (_: Forall, true) => Some("allL")
+    case (_: Forall, false) => Some("allR")
+    case (_: Exists, true) => Some("existsL")
+    case (_: Exists, false) => Some("existsR")
+    case _ => AxiomIndex.axiomFor(expr) /* @note same as HilbertCalculus.stepAt(pos) */
+  }
 
     /** Normalize to sequent form, keeping branching factor down by precedence */
   lazy val normalize               : BelleExpr = DoAll(?(
