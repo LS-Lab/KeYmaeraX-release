@@ -900,7 +900,7 @@ case class ImplyRight(pos: SuccPos) extends RightRule {
  * }}}
  */
 case class ImplyLeft(pos: AntePos) extends LeftRule {
-  val name: String = "Imply Left (old)"
+  val name: String = "Imply Left"
   /** ->L Imply left */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(p,q) = s(pos)
