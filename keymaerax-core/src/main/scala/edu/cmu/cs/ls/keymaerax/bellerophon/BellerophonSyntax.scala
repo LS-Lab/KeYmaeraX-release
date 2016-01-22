@@ -85,8 +85,8 @@ object BelleDot extends BelleExpr { override def prettyString = ">>_<<" }
   *   - `t('R)` applied at the first applicable position in the [[edu.cmu.cs.ls.keymaerax.core.Sequent.succ succedent]] (right side of the sequent).
   *   - `t('_)` applied at the first applicable position in the side of the sequent to which tactic `t` applies.
   *     The side of the sequent is uniquely determined by type of tactic.
-  *   - `t('Last)` applied at the last antecedent position (left side of the sequent).
-  *   - `t('Rast)` applied at the last succedent position (right side of the sequent).
+  *   - `t('Llast)` applied at the last antecedent position (left side of the sequent).
+  *   - `t('Rlast)` applied at the last succedent position (right side of the sequent).
   *
   * In addition, the formulas expected or sought for at the respective positions identified by the locators can be provided,
   * which is useful for tactic contract and tactic documentation purposes.
