@@ -43,7 +43,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   lazy val step               : DependentPositionTactic = "step" by (pos =>
     //@note AxiomIndex (basis for HilbertCalculus.stepAt) hands out assignment axioms, but those fail in front of an ODE -> try assignb if that happens
     (if (pos.isTopLevel) stepAt(sequentStepIndex(pos.isAnte)(_))(pos) partial
-     else HilbertCalculus.stepAt partial)
+     else HilbertCalculus.stepAt(pos) partial)
     | (assignb(pos) partial))
 
   /* Axiom and tactic index for stepAt */
