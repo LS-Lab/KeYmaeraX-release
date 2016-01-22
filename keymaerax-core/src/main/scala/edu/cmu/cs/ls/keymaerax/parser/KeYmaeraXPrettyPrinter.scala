@@ -57,11 +57,11 @@ class KeYmaeraXPrinter extends PrettyPrinter {
   def apply(expr: Expression): String = stringify(expr) ensuring(
     r => LAX || expr.kind==FunctionKind || reparse(expr, r) == expr,
     "Parse of print is identity." +
-      "\nExpression: " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName +
+      "\nExpression: " + fullPrinter(expr) + "\t@ " + expr.getClass.getSimpleName +
       "\nPrinted:    " + stringify(expr) +
-      "\nReparsed:   " + reparse(expr, stringify(expr)) +
-      "\nExpression: " + fullPrinter(reparse(expr, stringify(expr))) + " @ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
-      "\nExpected:   " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName
+      "\nReparsed:   " + reparse(expr, stringify(expr)) + "\t@ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
+      "\nExpression: " + fullPrinter(reparse(expr, stringify(expr))) + "\t@ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
+      "\nExpected:   " + fullPrinter(expr) + "\t@ " + expr.getClass.getSimpleName
     )
 
   /** Pretty-print sequent to a string */
