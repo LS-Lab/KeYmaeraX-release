@@ -1139,7 +1139,8 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
   insist(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
   val name: String = "Bound Renaming"
 
-  private val renaming = URename(what, repl)
+  //@note soundness-critical: For bound renaming purposes semantic renaming would be unsound.
+  private val renaming = SyntacticURename(what, repl)
 
   override def toString: String = name + "(" + what.asString + "~>" + repl.asString + ") at " + pos
 

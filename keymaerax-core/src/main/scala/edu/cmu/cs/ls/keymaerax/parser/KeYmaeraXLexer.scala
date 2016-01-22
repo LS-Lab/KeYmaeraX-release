@@ -249,7 +249,7 @@ object TOOL_VALUE_PAT {
  * The location where a Terminal is located in an input stream.
  * @note Serializable to make sure sbt test allows Location in ParseException errors.
  */
-sealed abstract class Location extends Serializable {
+sealed trait Location extends Serializable {
   /** Beginning of this location */
   def begin: Location
   /** End of this location */

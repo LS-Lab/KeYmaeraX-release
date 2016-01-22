@@ -593,22 +593,26 @@ object KeYmaeraXParser extends Parser {
         if (firstExpression(la) && la!=EOF) shift(st) else error(st, List(FIRSTEXPRESSION))
 
 
-      case _ :+ Token(LPAREN,_) :+ Expr(t1) if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
+      case _ :+ (tok@Token(LPAREN,_)) :+ Expr(t1) if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
         if (followsExpression(t1, la) && la!=EOF) shift(st)
+        else if (la==EOF) throw ParseException.imbalancedError("Imbalanced parenthesis", tok, st)
         else error(st, List(FOLLOWSEXPRESSION))
 
-      case _ :+ Token(LBRACE,_) :+ Expr(t1:Program) =>
+      case _ :+ (tok@Token(LBRACE,_)) :+ Expr(t1:Program) =>
         if (followsProgram(la) && la!=EOF) shift(st)
+        else if (la==EOF) throw ParseException.imbalancedError("Imbalanced parenthesis", tok, st)
         else error(st, List(FOLLOWSPROGRAM))
 
-      case _ :+ Token(LBOX,_) :+ Expr(t1) =>
+      case _ :+ (tok@Token(LBOX,_)) :+ Expr(t1) =>
         if (t1.isInstanceOf[Program] && followsProgram(la) && la!=EOF) shift(st)
+        else if (la==EOF) throw ParseException.imbalancedError("Unmatched modality", tok, st)
         else if ((t1.isInstanceOf[Variable] || t1.isInstanceOf[DifferentialSymbol]) && followsIdentifier(la)) shift(st)
         else if ((elaboratable(ProgramKind, t1)!=None || elaboratable(DifferentialProgramKind, t1)!=None) && followsProgram(la)) shift(st)
         else error(st, List(FOLLOWSPROGRAM, FOLLOWSIDENT))
 
-      case _ :+ Token(LDIA,_) :+ Expr(t1)  =>
+      case _ :+ (tok@Token(LDIA,_)) :+ Expr(t1)  =>
         if (followsExpression(t1, la) && la!=EOF) shift(st)
+        else if (la==EOF) throw ParseException.imbalancedError("Unmatched suspected modality", tok, st)
         else if ((t1.isInstanceOf[Variable] || t1.isInstanceOf[DifferentialSymbol]) && followsIdentifier(la)) shift(st)
         else if ((elaboratable(ProgramKind, t1)!=None || elaboratable(DifferentialProgramKind, t1)!=None) && followsProgram(la)) shift(st)
         else error(st, List(FOLLOWSEXPRESSION, FOLLOWSIDENT))
@@ -645,16 +649,16 @@ object KeYmaeraXParser extends Parser {
         else if (la==EOF) throw ParseException("Empty input is not a well-formed expression ", st, List(FIRSTEXPRESSION)) else error(st, List(FIRSTEXPRESSION))
 
       case rest :+ (tok@Token(RPAREN,_)) if !rest.find(tok => tok.isInstanceOf[Token] && tok.asInstanceOf[Token].tok==LPAREN).isDefined =>
-        throw ParseException("Unmatched parenthesis " + tok, st)
+        throw ParseException.imbalancedError("Imbalanced parenthesis", tok, st)
 
       case rest :+ (tok@Token(RBRACE,_)) if !rest.find(tok => tok.isInstanceOf[Token] && tok.asInstanceOf[Token].tok==LBRACE).isDefined =>
-        throw ParseException("Unmatched parenthesis " + tok, st)
+        throw ParseException.imbalancedError("Imbalanced parenthesis", tok, st)
 
       case rest :+ (tok@Token(RBOX,_)) if !rest.find(tok => tok.isInstanceOf[Token] && tok.asInstanceOf[Token].tok==LBOX).isDefined =>
-        throw ParseException("Unmatched modality " + tok, st)
+        throw ParseException.imbalancedError("Unmatched modality", tok, st)
 
       case rest :+ (tok@Token(RDIA,_)) if !rest.find(tok => tok.isInstanceOf[Token] && tok.asInstanceOf[Token].tok==LDIA).isDefined =>
-        throw ParseException("Syntax error or unmatched modality " + tok, st)
+        throw ParseException.imbalancedError("Syntax error or unmatched modality", tok, st)
 
       case _ =>
         //@todo cases should be completed to complete the parser items, but it's easier to catch-all and report legible parse error.
