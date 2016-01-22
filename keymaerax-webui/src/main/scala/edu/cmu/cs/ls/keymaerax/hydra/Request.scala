@@ -900,7 +900,10 @@ class ExtractDatabaseRequest() extends Request {
     val productionDatabase = edu.cmu.cs.ls.keymaerax.hydra.SQLite.ProdDB
     productionDatabase.syncDatabase()
 
-    val extractionPath = System.getProperty("user.home") + File.separator + "extracted_INSERTDATEHERE.sqlite"
+    val today = Calendar.getInstance().getTime()
+    val fmt = new SimpleDateFormat("MDY")
+
+    val extractionPath = System.getProperty("user.home") + File.separator + s"extracted_${fmt.format(today)}.sqlite"
     val dbPath         = productionDatabase.dblocation
 
     val src = new File(dbPath)
@@ -908,10 +911,11 @@ class ExtractDatabaseRequest() extends Request {
     new FileOutputStream(dest) getChannel() transferFrom(
       new FileInputStream(src) getChannel, 0, Long.MaxValue )
 
+
     //@todo Maybe instead do this in the production database and then have a catch all that undoes it.
     //That way we don't have to sync twice. Actually, I'm also not sure if this sync is necessary or not...
     val extractedDatabase = new SQLiteDB(extractionPath)
-    extractedDatabase.updateConfiguration(new ConfigurationPOJO("extractedflag", Map("extracted", "true")))
+    extractedDatabase.updateConfiguration(new ConfigurationPOJO("extractedflag", Map("extracted" -> "true")))
     extractedDatabase.syncDatabase()
 
     new ExtractDatabaseResponse(extractionPath) :: Nil
