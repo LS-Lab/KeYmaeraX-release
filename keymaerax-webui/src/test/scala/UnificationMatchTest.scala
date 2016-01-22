@@ -418,6 +418,14 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   it should "match derived powers" in {
     shouldMatch("(f(??)^(c()))'".asTerm,
       "(x^2)'".asTerm, RenUSubst(
+        (FuncOf(Function("f", None, Real, Real), Anything), "x".asTerm) ::
+          (FuncOf(Function("c", None, Unit, Real), Nothing), "2".asTerm) :: Nil
+      ))
+  }
+
+  it should "say something about broken types" in {
+    shouldMatch("(f(??)^(c()))'".asTerm,
+      "(x^2)'".asTerm, RenUSubst(
           (FuncOf(Function("f", None, Real, Bool), Anything), "x".asTerm) ::
           (FuncOf(Function("c", None, Unit, Bool), Nothing), "2".asTerm) :: Nil
       ))

@@ -138,6 +138,38 @@ class MoreParserTests2 extends FlatSpec with Matchers {
     parser("x--y+1>=5") shouldBe GreaterEqual(Plus(Minus(x,Neg(y)),Number(1)), Number(5))
   }
 
+  it should "term parse f() as f(Nothing)" in {
+    parser.termParser("f()") shouldBe FuncOf(Function("f",None,Unit,Real), Nothing)
+  }
+
+  it should "term parse f(??) as f(Anything)" in {
+    parser.termParser("f(??)") shouldBe FuncOf(Function("f",None,Real,Real), Anything)
+  }
+
+  it should "formula parse p() as p(Nothing)" in {
+    parser.formulaParser("p()") shouldBe PredOf(Function("p",None,Unit,Bool), Nothing)
+  }
+
+  it should "formula parse p(??) as p(Anything)" in {
+    parser.formulaParser("p(??)") shouldBe PredOf(Function("p",None,Real,Bool), Anything)
+  }
+
+  it should "round trip term parse f() as f(Nothing)" in {
+    parser.termParser(parser.termParser("f()").prettyString) shouldBe FuncOf(Function("f",None,Unit,Real), Nothing)
+  }
+
+  it should "round trip term parse f(??) as f(Anything)" in {
+    parser.termParser(parser.termParser("f(??)").prettyString) shouldBe FuncOf(Function("f",None,Real,Real), Anything)
+  }
+
+  it should "round trip formula parse p() as p(Nothing)" in {
+    parser.formulaParser(parser.formulaParser("p()").prettyString) shouldBe PredOf(Function("p",None,Unit,Bool), Nothing)
+  }
+
+  it should "round trip formula parse p(??) as p(Anything)" in {
+    parser.formulaParser(parser.formulaParser("p(??)").prettyString) shouldBe PredOf(Function("p",None,Real,Bool), Anything)
+  }
+
   it should "foo" in {
     val t3 = Variable("t", Some(3))
     val B = Variable("B", None)
