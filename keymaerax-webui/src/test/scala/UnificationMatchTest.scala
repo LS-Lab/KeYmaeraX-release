@@ -23,8 +23,7 @@ import org.scalatest.{Matchers, FlatSpec}
 @SummaryTest
 @UsualTest
 class UnificationMatchTest extends FlatSpec with Matchers {
-  Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
-  Tactics.KeYmaeraScheduler.init(Map())
+  KeYmaera.init(Map.empty)
 
   private def should(e1: Expression, e2: Expression, us: Option[USubst]): Unit = {
     if (us.isDefined) {
@@ -384,12 +383,36 @@ class UnificationMatchTest extends FlatSpec with Matchers {
     ))
   }
 
-  it should "match abstract loop against loopy ODE" in {
+  it should "match abstract loop against loopy single ODE" in {
+    shouldMatch("[{a;}*]p(??)".asFormula,
+      "[{{x'=v}}*](v>=0&true)".asFormula, RenUSubst(
+        (ProgramConst("a"), "{x'=v}".asProgram) ::
+          (PredOf(Function("p", None, Real, Bool), Anything), "v>=0&true".asFormula) ::Nil
+      ))
+  }
+
+  it should "match abstract loop against loopy ODE system " in {
     shouldMatch("[{a;}*]p(??)".asFormula,
       "[{{x'=v,v'=A}}*](v>=0&true)".asFormula, RenUSubst(
       (ProgramConst("a"), "{x'=v,v'=A}".asProgram) ::
         (PredOf(Function("p", None, Real, Bool), Anything), "v>=0&true".asFormula) ::Nil
     ))
+  }
+
+  it should "match abstract loop against loopy ODE system with domain" in {
+    shouldMatch("[{a;}*]p(??)".asFormula,
+      "[{{x'=v,v'=A&v<=5}}*](v>=0&true)".asFormula, RenUSubst(
+        (ProgramConst("a"), "{x'=v,v'=A&v<=5}".asProgram) ::
+          (PredOf(Function("p", None, Real, Bool), Anything), "v>=0&true".asFormula) ::Nil
+      ))
+  }
+
+  it should "match abstract loop against loopy initialized ODE" in {
+    shouldMatch("[{a;}*]p(??)".asFormula,
+      "[{v:=5;{x'=v,v'=A}}*](v>=0&true)".asFormula, RenUSubst(
+        (ProgramConst("a"), "v:=5;{x'=v,v'=A}".asProgram) ::
+          (PredOf(Function("p", None, Real, Bool), Anything), "v>=0&true".asFormula) ::Nil
+      ))
   }
 
   it should "match derived powers" in {

@@ -12,7 +12,7 @@ import org.scalatest.{FlatSpec, Matchers}
  * Created by nfulton on 2/23/15.
  * @author Nathan Fulton
  */
-class AirthmeticParserTests extends FlatSpec with Matchers {
+class ArithmeticParserTests extends FlatSpec with Matchers {
 
   val one = Number(1)
   val two = Number(2)

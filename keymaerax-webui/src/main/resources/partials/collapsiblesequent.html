@@ -67,18 +67,18 @@
                 </ul>
                 <div class="k4-formula-content">
                     <ul><li>{{f.id}}:</li></ul>
-                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
-                                formula="f.formula" highlight="true" collapsed="false"
-                                on-tactic="onTactic(formulaId, tacticId)"
-                                on-input-tactic="onInputTactic(formulaId, tacticId, input)"></k4-formula>
+                    <k4-formula k4-draggable drag-data="{{f.formula.id}}" on-drag-start="onDragStart(event)"
+                            user-id="userId" proof-id="proofId" node-id="nodeId"
+                            formula="f.formula" highlight="true" collapsed="false"
+                            on-tactic="onTactic(formulaId, tacticId)"
+                            on-input-tactic="onInputTactic(formulaId, tacticId, input)"
+                            on-two-position-tactic="onTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-formula>
                 </div>
             </div>
             <div class="col-md-12 k4-formula" ng-if="readOnly">
                 <div class="k4-formula-content">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
-                                formula="f.formula" highlight="false" collapsed="false"
-                                on-tactic="onTactic(formulaId, tacticId)"
-                                on-input-tactic="onInputTactic(formulaId, tacticId, input)"></k4-formula>
+                                formula="f.formula" highlight="false" collapsed="false"></k4-formula>
                 </div>
             </div>
         </div>
@@ -112,7 +112,12 @@
                     </li>
                     <!--<li><a href="" ng-click="applyTacticsByName(f,'keymaerax.cut')"><span class="fa fa-pencil"></span> Cut</a></li>-->
                 </ul>
-                <div class="k4-formula-content">&#8866;</div>
+                <div class="k4-formula-content"
+                     k4-droppable on-drop="turnstileDrop(dragData)" on-drag-enter="turnstileDragEnter(dragData)"
+                     on-drag-leave="turnstileDragLeave(dragData)"
+                     uib-tooltip="Rewrite all occurrences of the equality left-hand side into the right-hand side everywhere in the sequent"
+                     tooltip-placement="bottom"
+                     tooltip-trigger="none" tooltip-is-open="isTurnstileTooltipOpen()">&#8866;</div>
             </div>
             <div class="col-md-12 k4-formula" ng-if="readOnly">
                 <div class="k4-formula-content">&#8866;</div>
@@ -139,15 +144,14 @@
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="true" collapsed="false"
                                 on-tactic="onTactic(formulaId, tacticId)"
-                                on-input-tactic="onInputTactic(formulaId, tacticId, input)"></k4-formula>
+                                on-input-tactic="onInputTactic(formulaId, tacticId, input)"
+                                on-two-position-tactic="onTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-formula>
                 </div>
             </div>
             <div class="col-md-12 k4-formula" ng-if="readOnly">
                 <div class="row k4-formula-content">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
-                                formula="f.formula" highlight="false" collapsed="false"
-                                on-tactic="onTactic(formulaId, tacticId)"
-                                on-input-tactic="onInputTactic(formulaId, tacticId, input)"></k4-formula>
+                                formula="f.formula" highlight="false" collapsed="false"></k4-formula>
                 </div>
 
             </div>

@@ -1,7 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleError, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Position, BelleError, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -102,7 +103,6 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.head.ante should contain only "[{y'=z}]y>0".asFormula
     result.subgoals.head.succ shouldBe empty
   }
-  import TactixLibrary._
 
   it should "diffWeaken simple" in {
     val result = proveBy("[{x'=5&x<7}]x<7".asFormula,
@@ -112,7 +112,7 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   it should "diffWeaken ouch" in withMathematica { implicit qeTool =>
-  val result = proveBy("[{x'=1}][{x'=2&x>0}]x>0".asFormula,
+    val result = proveBy("[{x'=1}][{x'=2&x>0}]x>0".asFormula,
       diffWeaken(1) & implyR(1) & diffWeaken(1) & prop)
     println(result)
     result shouldBe 'proved
@@ -126,7 +126,7 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   it should "diffWeaken before semibound" in withMathematica { implicit qeTool =>
-  val result = proveBy("[{x'=1&x>0}][{x:=2;++y:=2;}]x>0".asFormula,
+    val result = proveBy("[{x'=1&x>0}][{x:=2;++y:=2;}]x>0".asFormula,
       diffWeaken(1) & master())
     println(result)
     result shouldBe 'proved
@@ -212,6 +212,14 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "a=2 -> ![y:=z;][{y'=1}]y>0".asFormula
+  }
+
+  it should "instantiate by position" in {
+    val result = proveBy(Sequent(Nil, IndexedSeq("\\forall x x>0".asFormula, "y>0".asFormula), IndexedSeq()),
+      allLPos(Position(-2, 0::Nil))(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "y>0".asFormula
+    result.subgoals.head.succ shouldBe empty
   }
 
   "existsR" should "instantiate simple formula" in {

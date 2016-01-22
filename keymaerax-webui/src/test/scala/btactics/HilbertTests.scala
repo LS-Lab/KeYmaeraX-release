@@ -106,6 +106,12 @@ class HilbertTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
+  it should "derive (x^2)' >= 7 without crashing" in withMathematica{ implicit qeTool =>
+    proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(x^2)' >= 7".asFormula)),
+      stepAt(1, 0::Nil)
+    ).subgoals shouldBe List(Sequent(Nil, IndexedSeq(), IndexedSeq("(2 * (x^(2-1))) * (x)' >= 7".asFormula)))
+  }
+
   //@todo we only support optimized
   ignore should "derive (5*3+2*9)'=0*3+5*0+(0*9+2*0) unless optimized" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(5*3+2*9)'=0*3+5*0+(0*9+2*0)".asFormula)),
@@ -615,7 +621,7 @@ class HilbertTests extends TacticTestBase {
   }
 
   it should "use ^' derive power to forward (x^2)'=0 to 2*x^(2-1)*(x)'=0" in withMathematica { implicit qeTool =>
-    useFor("^' derive power", PosInExpr(1::0::Nil))(SuccPosition(1, 0::Nil)) (
+    useFor("^' derive power", PosInExpr(1::Nil))(SuccPosition(1, 0::Nil)) (
       Provable.startProof(Sequent(Nil, IndexedSeq(), IndexedSeq("(x^2)'=0".asFormula)))
     ).conclusion shouldBe Sequent(Nil, IndexedSeq(), IndexedSeq("2*x^(2-1)*(x)'=0".asFormula))
   }

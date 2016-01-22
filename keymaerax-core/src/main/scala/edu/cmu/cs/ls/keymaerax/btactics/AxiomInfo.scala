@@ -109,6 +109,7 @@ object DerivationInfo {
 
     // differential equation axioms
     new CoreAxiomInfo("DW", "DW", "DWaxiom", {case () => HilbertCalculus.DW}),
+    new PositionTacticInfo("diffWeaken", "DW", {case () => DifferentialTactics.diffWeaken}),
     new CoreAxiomInfo("DC differential cut"
       , AxiomDisplayInfo("DC","([{x′=f(x)&q(x)}]p(x)↔[{x′=f(x)&q(x)∧r(x)}]p(x))←[{x′:=f(x)&q(x)}]r(x)")
       , "DCaxiom", {case () => ??? }),
@@ -209,6 +210,8 @@ object DerivationInfo {
     new CoreAxiomInfo("exists' derive exists"
       ,  AxiomDisplayInfo(("∃′","exists'"), "(∃x p(x))′↔∀x (p(x))′")
       , "Dexists", {case () => HilbertCalculus.Dexists}),
+
+    new PositionTacticInfo("derive", "'", {case () => HilbertCalculus.derive}),
 
     // first-order logic quantifiers
     new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", {case () => ???}),
@@ -428,8 +431,8 @@ object DerivationInfo {
       , {case () => ProofRuleTactics.equivR}),
     new InputPositionTacticInfo("allL"
       , RuleDisplayInfo(("∀L", "allL"), (List("&Gamma;","∀x P(x)"), List("&Delta;")),
-        List((List("&Gamma;", "P(&theta;)"),List("&Delta;"))))
-      , List(TermArg("&theta"))
+        List((List("&Gamma;", "P(θ)"),List("&Delta;"))))
+      , List(TermArg("θ"))
       , {case () => (t:Term) => SequentCalculus.allL(t)}),
     new PositionTacticInfo("allR"
       , RuleDisplayInfo(("∀R", "allR"), (List("&Gamma;"), List("∀x P(x)", "&Delta;")),
@@ -446,6 +449,9 @@ object DerivationInfo {
     new TacticInfo("G"
       , RuleDisplayInfo("G", (List(""),List("[a]P")), List((List(),List("P"))))
       , {case () => DLBySubst.G}),
+    new TacticInfo("hideG"
+      , RuleDisplayInfo("G", (List("&Gamma;"), List("[a]P", "&Delta;")), List((List(),List("P"))))
+      , {case () => HilbertCalculus.hideG}),
     new PositionTacticInfo("dualFree"
       , RuleDisplayInfo(("[]⊤", "[]T"), (List("&Gamma;"),List("[a]⊤","&Delta;")),
         List())
@@ -475,12 +481,15 @@ object DerivationInfo {
     new PositionTacticInfo("skolemize", "skolem", {case () => ProofRuleTactics.skolemize}),
     new PositionTacticInfo("coHide", "W", {case () => ProofRuleTactics.coHide}),
     new PositionTacticInfo("hide", "W", {case () => ProofRuleTactics.hide}),
+    new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}),
 
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => ProofRuleTactics.coHide2}),
     new TwoPositionTacticInfo("exchangeL", "X", {case () => ProofRuleTactics.exchangeL}),
     new TwoPositionTacticInfo("exchangeR", "X", {case () => ProofRuleTactics.exchangeR}),
-    new TwoPositionTacticInfo("close", "close", {case () => ProofRuleTactics.close}),
+    new TwoPositionTacticInfo("close",
+      RuleDisplayInfo("close", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
+      {case () => ProofRuleTactics.close}),
 
     // Proof rule input tactics
     new InputTacticInfo("cut"

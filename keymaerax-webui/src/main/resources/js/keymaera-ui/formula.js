@@ -13,6 +13,7 @@ angular.module('formula')
             highlight: '=',
             collapsed: '=?',
             onTactic: '&',     // onTactic(formulaId, tacticId)
+            onTwoPositionTactic: '&',
             onInputTactic: '&' // onInputTactic(formulaId, tacticId, input)
         },
         link: function(scope, element, attrs) {
@@ -21,9 +22,15 @@ angular.module('formula')
                     return '<span class="hl" id="' + id + '"' +
                              'onmouseover="$(event.target).addClass(\'hlhover\');"' +
                              'onmouseout="$(event.target).removeClass(\'hlhover\');"' +
+                             'k4-droppable on-drop="formulaDrop(dragData)" on-drag-enter="formulaDragEnter(dragData)"' +
+                             'on-drag-leave="formulaDragLeave(dragData)"' +
                              'ng-click="formulaClick(\'' + id + '\', $event)"' +
                              'ng-right-click="formulaRightClick(\'' + id + '\', $event)"' +
-                             // initialize formulaId for popover template, use ng-repeat for scoping
+                             // drag-and-drop tooltip
+                             'uib-tooltip-template="\'templates/formulaDndTooltipTemplate.html\'"' +
+                             'tooltip-popup-delay="500" tooltip-placement="bottom"' +
+                             'tooltip-trigger="none" tooltip-is-open="dndTooltip.isOpen(\'' + id + '\')"' +
+                             // axiom/tactic application popover
                              'uib-popover-template="\'templates/axiomPopoverTemplate.html\'"' +
                              'popover-is-open="tacticPopover.isOpen(\'' + id + '\')"' +
                              'popover-append-to-body="true"' +
@@ -177,7 +184,7 @@ angular.module('formula')
 
                         case "neg":
                             var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            content = {text: "-" + left, type: 'formula'};
+                            content = {text: "-" + left, type: 'term'};
                             break;
 
                         case "add":
@@ -416,6 +423,47 @@ angular.module('formula')
               open: function(formulaId) { scope.tacticPopover.openFormulaId = formulaId; },
               formulaId: function() { return scope.tacticPopover.openFormulaId; },
               close: function() { scope.tacticPopover.openFormulaId = undefined; }
+            }
+
+            scope.dndTooltip = {
+              openFormulaId: undefined,
+              data: undefined,
+              isOpen: function(formulaId) { return scope.dndTooltip.openFormulaId !== undefined && scope.dndTooltip.openFormulaId === formulaId; },
+              open: function(formulaId) { scope.dndTooltip.openFormulaId = formulaId; },
+              formulaId: function() { return scope.dndTooltip.openFormulaId; },
+              close: function() { scope.dndTooltip.openFormulaId = undefined; }
+            }
+
+            scope.formulaDrop = function(dragData) {
+              if (scope.formula.id !== dragData) {
+                var fml1Id = dragData;
+                var fml2Id = scope.formula.id;
+                scope.onTwoPositionTactic({fml1Id: fml1Id, fml2Id: fml2Id, tacticId: 'step'});
+              }
+            }
+
+            scope.formulaDragEnter = function(dragData) {
+              if (scope.formula.id !== dragData) {
+                $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + dragData + '/' + scope.formula.id + '/twoposlist')
+                  .success(function(data) {
+                    if (data.length > 0) {
+                      var tactic = data[0];
+                      if (tactic.derivation.type === 'sequentrule') {
+                        //@todo open a popover if input is required
+                        scope.dndTooltip.data = convertSequentRuleToInput(tactic);
+                      } else {
+                        scope.dndTooltip.data = tactic;
+                      }
+                    } else {
+                      scope.dndTooltip.data = undefined;
+                    }
+                    scope.dndTooltip.open(scope.formula.id);
+                  });
+              }
+            }
+
+            scope.formulaDragLeave = function(dragData) {
+              scope.dndTooltip.close();
             }
 
             convertSequentRuleToInput = function(tactic) {

@@ -205,7 +205,7 @@ object KeYmaeraXParser extends Parser {
 
   // elaboration based on expected types
 
-  /** Elaborate e to the expected kind of a part of op by lifting defaulted types as needed or return None. */
+  /** Elaborate `e` to the expected `kind` of a part of op by lifting defaulted types as needed or return None. */
   private def elaboratable(kind: Kind, e: Expression): Option[Expression] = if (e.kind==kind) Some(e) else e match {
     // lift misclassified defaulted function application to predicate application when required by context type.
     case FuncOf(f, t) if kind==FormulaKind => Some(PredOf(Function(f.name,f.index,f.domain,Bool), t))
@@ -234,10 +234,10 @@ object KeYmaeraXParser extends Parser {
     case And(Equal(xp:DifferentialSymbol, e), h)
       if (kind==DifferentialProgramKind || kind==ProgramKind) && !StaticSemantics.isDifferential(h) => Some(ODESystem(AtomicODE(xp, e), h))
     case ode: ODESystem if kind==ProgramKind => Some(ode)
-    // lift differential equations without evolution domain constraints to ODESystems
-    case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => Some(ODESystem(ode))
     // whether ODESystem is classified as ProgramKind or DifferentialProgramKind
     case ode: ODESystem if kind==ProgramKind || kind==DifferentialProgramKind => Some(ode)
+    // lift differential equations without evolution domain constraints to ODESystems
+    case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => assert(!ode.isInstanceOf[ODESystem], "wrong kind"); Some(ODESystem(ode))
     case _ => None
   }
 
@@ -403,6 +403,11 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 4, OpSpec.sDifferentialFormula.const(PRIME.img, f1), r)
 
       // special notation for loops
+      case r :+ Token(LBRACE,_) :+ Expr(t1:DifferentialProgram) :+ Token(RBRACE,_) :+ (tok@Token(STAR,_)) =>
+        // special elaboration for not-yet-ODESystem Programs
+        assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "Can no longer have an IDENT on the stack")
+        if (la==INVARIANT) shift(reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, elaborate(st, tok, OpSpec.sNone, ProgramKind, t1).asInstanceOf[Program]), r))
+        else reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, elaborate(st, tok, OpSpec.sNone, ProgramKind, t1).asInstanceOf[Program]), r)
       case r :+ Token(LBRACE,_) :+ Expr(t1:Program) :+ Token(RBRACE,_) :+ (tok@Token(STAR,_)) =>
         assume(r.isEmpty || !r.top.isInstanceOf[IDENT], "Can no longer have an IDENT on the stack")
         if (la==INVARIANT) shift(reduce(st, 4, OpSpec.sLoop.const(tok.tok.img, t1), r))

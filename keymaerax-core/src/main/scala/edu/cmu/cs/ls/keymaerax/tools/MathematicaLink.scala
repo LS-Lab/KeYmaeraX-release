@@ -88,7 +88,7 @@ class JLinkMathematicaLink extends MathematicaLink {
   def init(linkName : String, jlinkLibDir : Option[String]): Boolean = {
     this.linkName = linkName
     this.jlinkLibDir = jlinkLibDir
-    if(jlinkLibDir.isDefined) {
+    if (jlinkLibDir.isDefined) {
       System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
     }
     try {
@@ -106,6 +106,12 @@ class JLinkMathematicaLink extends MathematicaLink {
         case None => if (DEBUG) println("Mathematica may not be activated or Mathematica license might be expired.\\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\\n Please check your Mathematica license manually."); true
       }
     } catch {
+      case e:UnsatisfiedLinkError =>
+        val message = "Mathematica J/Link native library was not found in:\n" + System.getProperty("com.wolfram.jlink.libdir", "(undefined)") +
+          "\nOr this path did not contain the native library compatible with " + System.getProperties().getProperty("sun.arch.data.model") + "-bit " + System.getProperties().getProperty("os.name") + " " + System.getProperties().getProperty("os.version") +
+          diagnostic
+        println(message)
+        throw e.initCause(new Error(message))
       case e:MathLinkException => println("Mathematica J/Link errored " + e); throw e
     }
   }
