@@ -16,6 +16,7 @@ import java.util.{Locale, Calendar}
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
 import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
+import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.btacticinterface.{UIIndex, BTacticParser}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
@@ -896,9 +897,8 @@ class ExtractDatabaseRequest() extends Request {
     if(Boot.isHosted)
       throw new Exception("Cannot extract the database on a hosted instance of KeYmaera X")
 
-    //@todo sync the database using Brandon's method.
-    
     val productionDatabase = edu.cmu.cs.ls.keymaerax.hydra.SQLite.ProdDB
+    productionDatabase.syncDatabase()
 
     val extractionPath = System.getProperty("user.home") + File.separator + "extracted_INSERTDATEHERE.sqlite"
     val dbPath         = productionDatabase.dblocation
@@ -908,8 +908,11 @@ class ExtractDatabaseRequest() extends Request {
     new FileOutputStream(dest) getChannel() transferFrom(
       new FileInputStream(src) getChannel, 0, Long.MaxValue )
 
-    //@todo copy extractionPath to dbPath
-    //@todo add an extracted = true flag to the extractionPath database.
+    //@todo Maybe instead do this in the production database and then have a catch all that undoes it.
+    //That way we don't have to sync twice. Actually, I'm also not sure if this sync is necessary or not...
+    val extractedDatabase = new SQLiteDB(extractionPath)
+    extractedDatabase.updateConfiguration(new ConfigurationPOJO("extractedflag", Map("extracted", "true")))
+    extractedDatabase.syncDatabase()
 
     new ExtractDatabaseResponse(extractionPath) :: Nil
   }
