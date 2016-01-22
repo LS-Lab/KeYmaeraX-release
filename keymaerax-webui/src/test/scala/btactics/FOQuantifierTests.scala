@@ -374,10 +374,10 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   it should "not rename variables bound somewhere else" in {
-    val result = proveBy(Sequent(Nil, IndexedSeq("\\forall x x>0".asFormula), IndexedSeq("\\forall x x>0".asFormula)), allSkolemize(1))
+    val result = proveBy(Sequent(Nil, IndexedSeq("\\forall x x>0".asFormula, "\\exists x x=1".asFormula), IndexedSeq("\\forall x x>0".asFormula, "<x:=2;>x=2".asFormula)), allSkolemize(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "\\forall x x>0".asFormula
-    result.subgoals.head.succ should contain only "x>0".asFormula
+    result.subgoals.head.ante should contain only ("\\forall x x>0".asFormula, "\\exists x x=1".asFormula)
+    result.subgoals.head.succ should contain only ("x>0".asFormula, "<x:=2;>x=2".asFormula)
   }
 
   it should "not rename variables bound somewhere else if not top-level" in {
