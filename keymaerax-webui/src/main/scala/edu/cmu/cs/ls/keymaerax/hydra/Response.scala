@@ -639,6 +639,11 @@ class DashInfoResponse(openProofs:Int, allModels: Int, provedModels: Int) extend
   )
 }
 
+class ExtractDatabaseResponse(path: String) extends Response {
+  def getJson = JsObject(
+    "path" -> JsString(path)
+  )
+}
 
 class NodeResponse(tree : String) extends Response {
   //todo add schema.

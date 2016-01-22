@@ -9,7 +9,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.io.{File, FileNotFoundException, FileReader}
+import java.io._
 import java.text.SimpleDateFormat
 import java.util.{Locale, Calendar}
 
@@ -866,6 +866,24 @@ class RunScalaFileRequest(db: DBAbstraction, proofId: String, proof: File) exten
 
 class IsLocalInstanceRequest() extends Request {
   override def getResultingResponses(): List[Response] = new BooleanResponse(!Boot.isHosted) :: Nil
+}
+
+class ExtractDatabaseRequest() extends Request {
+  override def getResultingResponses(): List[Response] = {
+    if(Boot.isHosted)
+      throw new Exception("Cannot extract the database on a hosted instance of KeYmaera X")
+
+    val productionDatabase = edu.cmu.cs.ls.keymaerax.hydra.SQLite.ProdDB
+
+    val extractionPath = System.getProperty("user.home") + File.separator + "extracted_INSERTDATEHERE.sqlite"
+    val dbPath         = productionDatabase.dblocation
+
+    //@todo sync the database using Brandon's method.
+    //@todo copy extractionPath to dbPath
+    //@todo add an extracted = true flag to the extractionPath database.
+
+    new ExtractDatabaseResponse(extractionPath) :: Nil
+  }
 }
 
 class ShutdownReqeuest() extends Request {

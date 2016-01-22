@@ -9,6 +9,13 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl.ShutdownDialog
   $scope.noModalForHelpDialogHack = true
 });
 
+angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', function($scope, $http, $uibModalInstance, $uibModal, $cookies, $modalInstance, path) {
+    $scope.extractedDatabaseLocation = path
+    $scope.close = function() {
+        $uibModalInstance.dismiss('cancel');
+    }
+});
+
 angular.module('keymaerax.controllers').controller('DashboardCtrl.LicenseDialog', function($scope, $http, $uibModal, $cookies, $modalInstance) {
   $scope.rejectLicense = function() {
     alert("KeYmaera X cannot be used without accepting the license -- we are now shutting down KeYmaera X. To accept the license, restart KeYmaera X and click 'Accept'");
@@ -107,6 +114,21 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', function ($s
       });
 
       $http.get("/shutdown");
+  };
+
+  $scope.extractdb = function() {
+      $http.post('/extractdb')
+          .success(function(data) {
+              var modalInstance = $uibModal.open({
+                  templateUrl: 'partials/extractdb.html',
+                  controller: 'DashboardCtrl.ExtractDB',
+                  backdrop: "static",
+                  size: 'md',
+                  resolve: {
+                      path: function () { return data.path; },
+                  }
+              });
+          })
   };
 
   $scope.$emit('routeLoaded', {theview: 'dashboard'});

@@ -486,6 +486,10 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // Server management
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+
   val isLocal = path("isLocal") { pathEnd { get {
     complete(standardCompletion(new IsLocalInstanceRequest()))
   }}}
@@ -493,6 +497,11 @@ trait RestApi extends HttpService with SLF4JLogging {
   val shutdown = path("shutdown") { pathEnd { get {
     complete(standardCompletion(new ShutdownReqeuest()))
   }}}
+
+  val extractdb = path("extractdb") { pathEnd { post {
+      complete(standardCompletion(new ExtractDatabaseRequest()))
+  }}}
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Licensing
@@ -555,7 +564,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     mathematicaConfig     ::
     mathematicaStatus     ::
     mathematicaConfigSuggestion ::
-    license :: isLocal :: shutdown ::
+    license :: isLocal :: extractdb :: shutdown ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }
