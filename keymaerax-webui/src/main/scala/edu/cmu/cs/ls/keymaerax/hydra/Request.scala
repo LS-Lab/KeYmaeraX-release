@@ -10,6 +10,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.io._
+import java.nio.file.Path
 import java.text.SimpleDateFormat
 import java.util.{Locale, Calendar}
 
@@ -33,6 +34,7 @@ import scala.collection.immutable
 import scala.io.Source
 import spray.json._
 import spray.json.DefaultJsonProtocol._
+import java.io.{File,FileInputStream,FileOutputStream}
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -873,12 +875,18 @@ class ExtractDatabaseRequest() extends Request {
     if(Boot.isHosted)
       throw new Exception("Cannot extract the database on a hosted instance of KeYmaera X")
 
+    //@todo sync the database using Brandon's method.
+    
     val productionDatabase = edu.cmu.cs.ls.keymaerax.hydra.SQLite.ProdDB
 
     val extractionPath = System.getProperty("user.home") + File.separator + "extracted_INSERTDATEHERE.sqlite"
     val dbPath         = productionDatabase.dblocation
 
-    //@todo sync the database using Brandon's method.
+    val src = new File(dbPath)
+    val dest = new File(extractionPath)
+    new FileOutputStream(dest) getChannel() transferFrom(
+      new FileInputStream(src) getChannel, 0, Long.MaxValue )
+
     //@todo copy extractionPath to dbPath
     //@todo add an extracted = true flag to the extractionPath database.
 
