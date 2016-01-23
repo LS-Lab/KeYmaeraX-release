@@ -34,6 +34,13 @@ class TactixLibraryTests extends TacticTestBase {
     )
   }
 
+  it should "prove x>=5 -> [{x'=x^2}]x>=5 by invariant" in withMathematica { implicit qeTool =>
+    proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
+      implyR(1) &
+        diffInvariant("x>=5".asFormula)(1) & diffWeaken(1) & QE
+    ) shouldBe 'proved
+  }
+
   "DoSome" should "find the right cut for x>=7 -> x>=5" in withMathematica { implicit qeTool =>
     proveBy("x>=7 -> x>=5".asFormula,
       implyR(1) &
@@ -44,14 +51,14 @@ class TactixLibraryTests extends TacticTestBase {
   it should "prove x>=5 -> [{x'=x^2}]x>=5 from one invariant" in withMathematica { implicit qeTool =>
     proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
       implyR(1) &
-        DoSome(() => ("x>=5".asFormula :: Nil).iterator, (inv:Formula) => diffInvariant(inv)(1))
+        DoSome(() => ("x>=5".asFormula :: Nil).iterator, (inv:Formula) => diffInvariant(inv)(1) & diffWeaken(1) & QE)
     ) shouldBe 'proved
   }
 
   it should "prove x>=5 -> [{x'=x^2}]x>=5 from list of invariants" in withMathematica { implicit qeTool =>
     proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
       implyR(1) &
-      DoSome(someList, (inv:Formula) => diffInvariant(inv)(1))
+      DoSome(someList, (inv:Formula) => diffInvariant(inv)(1) & diffWeaken(1) & QE)
     ) shouldBe 'proved
   }
 
