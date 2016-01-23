@@ -470,7 +470,16 @@ case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]
   */
 case class DoAll(e: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
 
-//@todo case class DoSome[A](options: Iterator[A], e: A => BelleExpr) extends BelleExpr, which runs some (usually first) generator output whose proof succeeds.
+/**
+  * DoSome(options, e)(BelleProvable(p)) proves `e(o)(p)` with some option `o` from `options` whose proof suceeds.
+  * It's usually one of the first options `o` for which `e(o)(p)` does not fail.
+  * @param options The (lazy) iterator or stream from which subsequent options `o` will be tried.
+  * @param e The tactic generator `e` that will be tried with input `o` on the Provable subsequently
+  *          for each of the options `o` in `options` until one is found for which `e(o)` does not fail.
+  * @author Andre Platzer
+  * @see [[EitherTactic]]
+  */
+case class DoSome[A](options: () => Iterator[A], e: A => BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "dosome(" + e + ")" }
 
 /**
  * Bellerophon expressions that are values.

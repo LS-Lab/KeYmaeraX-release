@@ -5,13 +5,14 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst
-import edu.cmu.cs.ls.keymaerax.core.{Sequent, Provable}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, Provable}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 
 /**
  * Sequential interpreter for Bellerophon tactic expressions.
  * @param listeners Pre- and pos-processing hooks for step-wise tactic execution.
  * @author Nathan Fulton
+ * @author Andre Platzer
  */
 case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends Interpreter {
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
@@ -172,6 +173,27 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           } catch {
             case e: BelleError => throw e.inContext(DoAll(e.context, location), "")
           }
+
+        case DoSome(options, e, location) =>
+          //@todo specialization to A=Formula should be undone
+          val opts = options().asInstanceOf[Iterator[Formula]]
+          var errors = ""
+          while (opts.hasNext) {
+            val o = opts.next()
+            if (BelleExpr.DEBUG) println("DoSome: try " + o)
+            val someResult: Option[BelleValue] = try {
+              Some(apply(e.asInstanceOf[Formula=>BelleExpr](o.asInstanceOf[Formula]), v))
+            } catch { case err: BelleError => errors += "in " + o + " " + err + "\n"; None }
+            if (BelleExpr.DEBUG) println("DoSome: try " + o + " got " + someResult)
+            (someResult, e) match {
+              case (Some(BelleProvable(p, _)), _) if p.isProved => return someResult.get
+              case (Some(_), x: PartialTactic) => return someResult.get
+              case (Some(_), _) => errors += "in " + o + " " + new BelleError("Non-partials must close proof.").inContext(DoSome(options, e, location), "Failed option in DoSome: " + o) + "\n" // throw new BelleError("Non-partials must close proof.").inContext(DoSome(options, e, location), "Failed option in DoSome: " + o)
+              case (None, _) => // option o had an error, so consider next option
+            }
+          }
+          throw new BelleError("DoSome did not succeed with any of its options").inContext(DoSome(options, e, location), "Failed all options in DoSome: " + options() + "\n" + errors)
+
         case t@USubstPatternTactic(children, location) => {
           val provable = v match {
             case BelleProvable(p, _) => p
