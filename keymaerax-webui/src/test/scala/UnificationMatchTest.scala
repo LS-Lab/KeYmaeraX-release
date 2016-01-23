@@ -424,11 +424,13 @@ class UnificationMatchTest extends FlatSpec with Matchers {
   }
 
   it should "say something about broken types" in {
-    //@todo this should throw a CoreException about incompatible types, actually. Not parse print and incompatible substitution sorts. Both are true but not the first issue.
+    //@todo in principle this should throw a CoreException about incompatible types, actually. Not parse print and incompatible substitution sorts. Both are true but not the first issue.
+    a[ProverException] shouldBe thrownBy(
     RenUSubst(
           (FuncOf(Function("f", None, Real, Bool), Anything), "x".asTerm) ::
           (FuncOf(Function("c", None, Unit, Bool), Nothing), "2".asTerm) :: Nil
       )
+    )
   }
 
   //@todo this test case would need the expensive reunify to be activated in UnificationMatch again
