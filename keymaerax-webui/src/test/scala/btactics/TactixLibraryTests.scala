@@ -41,6 +41,19 @@ class TactixLibraryTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
+  it should "prove x>=5 -> [{{x'=2}}*]x>=5 by loop invariants" in withMathematica { implicit qeTool =>
+    proveBy("x>=5 -> [{{x'=2}}*]x>=5".asFormula,
+      implyR(1) &
+        loop("x>=5".asFormula)(1) <(
+          QE
+          ,
+          QE
+          ,
+            diffSolve()(1) & DoAll(QE)
+      )
+    ) shouldBe 'proved
+  }
+
   "DoSome" should "find the right cut for x>=7 -> x>=5" in withMathematica { implicit qeTool =>
     proveBy("x>=7 -> x>=5".asFormula,
       implyR(1) &
@@ -62,4 +75,44 @@ class TactixLibraryTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
+  it should "generate and master prove x>=5 -> [{x'=x^2}]x>=5 from list of invariants" in withMathematica { implicit qeTool =>
+    proveBy("x>=5 -> [{x'=x^2}]x>=5".asFormula,
+      implyR(1) &
+        DoSome(someList, (inv:Formula) => diffInvariant(inv)(1) & master())
+    ) shouldBe 'proved
+  }
+
+
+  it should "prove x>=5 -> [{{x'=2}}*]x>=5 from one loop invariants" in withMathematica { implicit qeTool =>
+    proveBy("x>=5 -> [{{x'=2}}*]x>=5".asFormula,
+      implyR(1) &
+        DoSome(() => ("x>=5".asFormula :: Nil).iterator, (inv:Formula) => loop(inv)(1) <(
+          QE
+          ,
+          QE
+          ,
+          diffSolve()(1) & DoAll(QE)
+          ))
+    ) shouldBe 'proved
+  }
+
+  it should "prove x>=5 -> [{{x'=2}}*]x>=5 from list of loop invariants" in withMathematica { implicit qeTool =>
+    proveBy("x>=5 -> [{{x'=2}}*]x>=5".asFormula,
+      implyR(1) &
+        DoSome(someList, (inv:Formula) => loop(inv)(1) <(
+            QE
+            ,
+            QE
+            ,
+            diffSolve()(1) & DoAll(QE)
+            ))
+    ) shouldBe 'proved
+  }
+
+  it should "generate and master prove x>=5 -> [{{x'=2}}*]x>=5 from list of loop invariants" in withMathematica { implicit qeTool =>
+    proveBy("x>=5 -> [{{x'=2}}*]x>=5".asFormula,
+      implyR(1) &
+        DoSome(someList, (inv:Formula) => loop(inv)(1) & master())
+    ) shouldBe 'proved
+  }
 }
