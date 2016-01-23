@@ -188,7 +188,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             (someResult, e) match {
               case (Some(BelleProvable(p, _)), _) if p.isProved => return someResult.get
               case (Some(_), x: PartialTactic) => return someResult.get
-              case (Some(_), _) => errors += "in " + o + " " + new BelleError("Non-partials must close proof.").inContext(DoSome(options, e, location), "Failed option in DoSome: " + o) + "\n" // throw new BelleError("Non-partials must close proof.").inContext(DoSome(options, e, location), "Failed option in DoSome: " + o)
+              case (Some(_), _) => errors += "option " + o + " " + new BelleError("Non-partials must close proof.").inContext(DoSome(options, e, location), "Failed option in DoSome: " + o) + "\n" // throw new BelleError("Non-partials must close proof.").inContext(DoSome(options, e, location), "Failed option in DoSome: " + o)
               case (None, _) => // option o had an error, so consider next option
             }
           }
