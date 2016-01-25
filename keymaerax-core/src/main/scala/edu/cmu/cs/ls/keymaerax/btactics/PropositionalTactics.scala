@@ -5,9 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
-import TacticFactory._
 
-import scala.collection.immutable.{Map, List}
 import scala.language.postfixOps
 
 /**
@@ -151,26 +149,4 @@ object PropositionalTactics {
         )
     }
   }
-
-
-  /**
-    * Tactic to perform uniform substitution. In most cases this is called on a sequent that only contains a single
-    * formula in order to show that a formula is an instance of an axiom (modulo an alpha renaming of that).
-    *
-    * @param subst the substitution to perform
-    * @param delta a map with replacement for formulas in the sequent. That is, for all (f, g) in delta we will replace
-    *              every top-level occurrence of formula f in the conclusion by the respective g
-    *              in order to construct the origin of the uniform substitution.
-    * @return an instance of a tactic that performs the given uniform substitution
-    */
-  def uniformSubst(subst: List[SubstitutionPair], delta: (Map[Formula, Formula]) = Map()): DependentPositionTactic = "Uniform Substitution" by ((p:Position, sequent:Sequent) => {
-    val ante = for (f <- sequent.ante) yield delta.get(f) match {
-      case Some(frm) => frm
-      case None => f
-    }
-    val succ = for (f <- sequent.succ) yield delta.get(f) match {
-      case Some(frm) => frm
-      case None => f
-    }
-    ProofRuleTactics.applyRule(UniformSubstitutionRule(USubst(subst), Sequent(sequent.pref, ante, succ)))})
 }
