@@ -3,15 +3,18 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.PositionTactic
+import edu.cmu.cs.ls.keymaerax.tactics.{TacticLibrary, AlphaConversionHelper, AxiomaticRuleTactics, ContextTactics}
+import edu.cmu.cs.ls.keymaerax.tools.{Tool, DiffSolutionTool}
 
-import scala.collection.immutable.IndexedSeq
+import scala.collection.immutable.{List, IndexedSeq}
 import scala.language.postfixOps
 
 /**
@@ -507,7 +510,385 @@ object DifferentialTactics {
           timeTactic & createTactic(odes, sol, time, iv, diffEqPos)
         case None => throw new BelleError("No solution found")
       }
+  })
 
+  def alphaRenaming(from: Variable, to: Variable): DependentPositionTactic = "Bound Renaming" by ((p:Position, sequent:Sequent) => {
+      val fml = sequent.at(p)._1.ctx
+      val findResultProof = Provable.startProof(Sequent(sequent.pref, IndexedSeq(), IndexedSeq(fml)))
+      val desiredResult = findResultProof(new BoundRenaming(from, to, ???), 0).subgoals.head.succ.head
+      def br = ProofRuleTactics.applyRule(new BoundRenaming(from, to, ???))
+      if (p.isAnte) {
+        ProofRuleTactics.cut(sequent(p.top).replaceAt(p.inExpr, desiredResult).asInstanceOf[Formula]) <(
+          /* use */
+          hide(p.topLevel),
+          /* show */
+          cohide2(p.topLevel, SuccPos(sequent.succ.length)) &
+            ProofRuleTactics.onesidedCongruence(p.inExpr) & assertT(0, 1) & /*DebuggingTactics.assert(Equiv(fml, desiredResult))(SuccPosition(0)) & */
+            equivR(SuccPosition(0)) & br & (ProofRuleTactics.trivialCloser /*(| DebuggingTactics.assert("alpha: AxiomCloseT failed unexpectedly")*/))
+      } else {
+        ProofRuleTactics.cut(sequent(p.top).replaceAt(p.inExpr, desiredResult).asInstanceOf[Formula]) <(
+          /* use case */
+          cohide2(AntePos(sequent.ante.length), p.topLevel) &
+          ProofRuleTactics.onesidedCongruence(p.inExpr) & DebuggingTactics.assert(0, 1) /*& assert(Equiv(desiredResult, fml))(SuccPosition(0)) */&
+          equivR(SuccPosition(0)) & br & (ProofRuleTactics.trivialCloser | DebuggingTactics.debug("alpha: AxiomCloseT failed unexpectedly")),
+          /* show case */
+            hide(p.topLevel))
+      }
+  })
+
+  /**
+    * Creates a new position tactic for box assignment [x := t;], for the case when followed by ODE or loop.
+    * Alpha renaming in ODEs and loops introduces initial value assignments. This tactic is designed to handle those.
+    * @return The tactic.
+    * @author Stefan Mitsch
+    */
+  def v2vAssign: DependentPositionTactic = "[:=]/<:=> assign" by ((p:Position, sequent:Sequent) => {
+    val succLength = sequent.succ.length
+    val anteLength = sequent.ante.length
+
+    def createTactic(m: Formula, pred: Formula, v: Variable, t: Variable) = {
+      ContextTactics.cutInContext(Equiv(m, AlphaConversionHelper.replace(pred)(v, t)), p) <(
+        EqualityTactics.equivRewriting(AntePosition(anteLength))(p.topLevel),
+        // TODO does not work in mixed settings such as <x:=t>[x'=2] and [x:=t]<x'=2>
+        cohide(SuccPosition(succLength)) & assertT(0, 1) &
+          alphaRenaming(t, v)(SuccPosition(SuccPos(0), PosInExpr(1 :: p.inExpr.pos))) &
+          equivR(SuccPosition(0)) & (ProofRuleTactics.trivialCloser | debug("v2vAssign: Axiom close failed unexpectedly"))
+
+      )
+    }
+      sequent.at(p)._1.ctx match {
+        case b@Box(Assign(v: Variable, t: Variable), pred) => createTactic(b, pred, v, t)
+        case d@Diamond(Assign(v: Variable, t: Variable), pred) => createTactic(d, pred, v, t)
+      }
+    }
+  )
+
+  /*Returns a new tactic for universal/existential quantifier instantiation. The tactic performs self-instantiation
+  * with the quantified variable.
+    * @example{{{
+    *           |- x>0
+    *         ------------------instantiateT(SuccPosition(0))
+    *           |- \exists x x>0
+    * }}}
+  * @example{{{
+    *                     x>0 |-
+      *         ------------------instantiateT(AntePosition(0))
+    *           \forall x x>0 |-
+      * }}}
+  * @return The tactic.
+  */
+  def instantiate: DependentPositionTactic = "Quantifier Instantiation" by ((p:Position, sequent:Sequent) => {
+    sequent.at(p)._1.ctx match {
+        case Forall(vars, phi) => vars.map(v => instantiate(v, v)(p)).fold(TactixLibrary.nil)((a, b) => a & b)
+        case Exists(vars, phi) => vars.map(v => instantiate(v, v)(p)).fold(TactixLibrary.nil)((a, b) => a & b)
+        case _ => ???
+      }
+    })
+
+
+  /**
+    * Creates a tactic which does quantifier instantiation.
+    * @param quantified The quantified variable.
+    * @param instance The instance.
+    * @return The tactic.
+    */
+  def instantiate(quantified: Variable, instance: Term): DependentPositionTactic = "Quantifier Instantiation" by ((pos:Position, sequent:Sequent) => {
+    def withStuttering(s: Sequent, quantStillPresentAfterAround: Boolean, around: BelleExpr): BelleExpr = {
+      var stutteringAt: Set[PosInExpr] = Set.empty[PosInExpr]
+
+      // HACK don't need stuttering for dummy variable introduced in abstractionT
+      // (no longer necessary when we have the correct condition on filtering stutteringAt)
+      if (quantified.name != "$abstractiondummy") {
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+            case Box(prg, _) if /*StaticSemantics(prg).bv.contains(quantified) &&*/ !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)
+            case Diamond(prg, _) if /*StaticSemantics(prg).bv.contains(quantified) &&*/ !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)
+            case _ => Left(None)
+          }
+        }, s.at(pos)._1.ctx)
+      }
+
+      if (stutteringAt.nonEmpty) {
+        val pPos = stutteringAt.map(p => pos + p)
+        val assignPos = stutteringAt.map(p => pos + PosInExpr(p.pos.tail))
+        val alpha = pPos.foldRight(TactixLibrary.nil)((p, r) => r & (alphaRenaming(quantified, quantified) | TactixLibrary.nil))
+        val v2v =
+          if (quantStillPresentAfterAround) assignPos.foldRight(TactixLibrary.nil)((p, r) => r & v2vAssign(p + PosInExpr(0 :: p.inExpr.pos)) | TactixLibrary.nil)
+          else assignPos.foldRight(TactixLibrary.nil)((p, r) => r & (v2vAssign(p) | TactixLibrary.nil))
+        alpha & around & v2v
+      } else around
+    }
+    sequent.at(pos)._1.ctx match {
+      case Forall(vars, _) =>
+        withStuttering(sequent, vars.length > 1, instantiateUniversalQuanT(quantified, instance)(pos))
+      case Exists(vars, _) =>
+        withStuttering(sequent, vars.length > 1, instantiateExistentialQuanT(quantified, instance)(pos))
+      case _ => ???
+    }})
+
+  def instantiateUniversalQuanT(quantified: Variable, instance: Term): DependentPositionTactic = "Universal Quantifier Instantiation" by ((p: Position, sequent:Sequent) => {
+    val axiomName = "all instantiate"
+    val axiom = Axiom.axioms.get(axiomName)
+    require(axiom.isDefined)
+    def replace(f: Formula)(o: NamedSymbol, n: Variable): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+          case Forall(v, fa) => Right(Forall(v.map(name => if(name == o) n else name ), fa))
+          case Exists(v, fa) => Right(Exists(v.map(name => if(name == o) n else name ), fa))
+          case _ => Left(None)
+        }
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (e == o) Right(n) else Left(None)
+      }, f) match {
+        case Some(g) => g
+        case None => throw new IllegalStateException("Replacing one variable by another should not fail")
+      }
+
+      def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair], (Variable, Variable), (Term, Term))] = f match {
+        case Forall(x, qf) if x.contains(quantified) =>
+          def forall(h: Formula) = if (x.length > 1) Forall(x.filter(_ != quantified), h) else h
+          // construct substitution
+          val aX = Variable("x", None, Real)
+          val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
+          val aP = Function("p", None, Real, Bool)
+          val l = List(SubstitutionPair(aT, instance), SubstitutionPair(PredOf(aP, DotTerm),
+            forall(SubstitutionHelper.replaceFree(qf)(quantified, DotTerm))))
+          // construct axiom instance: \forall x. p(x) -> p(t)
+          val g = SubstitutionHelper.replaceFree(qf)(quantified, instance)
+          val axiomInstance = Imply(f, forall(g))
+          Some(axiomInstance, l, (quantified, aX), (instance, aT))
+        case Forall(x, qf) if !x.contains(quantified) => None
+        case _ => None
+      }
+
+      def decompose(d: Formula): Formula = d match {
+        case Forall(v, f) if v.length > 1 => Forall(v.take(1), Forall(v.drop(1), f))
+        case Exists(v, f) if v.length > 1 => Exists(v.take(1), Exists(v.drop(1), f))
+        case _ => d
+      }
+
+       axiom match {
+        case Some(a) =>
+          constructInstanceAndSubst(sequent.at(p)._1.ctx) match {
+            case Some((axiomInstance, subst, (quant, aX), (inst, aT))) =>
+              val eqPos = AntePosition(sequent.ante.length)
+              val branch1Tactic = SequentCalculus.modusPonens(p.checkAnte.top, eqPos.checkAnte.top)
+              // val hideAllAnte = for (i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(AntePosition(i))
+              // // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
+              // val hideAllSuccButLast = for (i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(SuccPosition(i))
+              // val hideSllAnteAllSuccButLast = (hideAllAnte ++ hideAllSuccButLast).reduce(seqT)
+              def repl(f: Formula, v: Variable):Formula = f match {
+                case Imply(Forall(vars, aa), b) =>
+                  Imply(
+                    decompose(
+                      Forall(vars.map(qv => if (qv == v) quantified else qv), SubstitutionHelper.replaceFree(aa)(v, quantified))),
+                    b)
+                case _ => throw new IllegalArgumentException("...")
+              }
+
+              val (renAxiom, alpha) =
+                if (quantified.name != aX.name || quantified.index != aX.index)
+                  (repl(a, aX), alphaRenaming(quantified, aX)(SuccPosition(SuccPos(0), PosInExpr(0::Nil))))
+                else (a, TactixLibrary.nil)
+
+              val axInstance = axiomInstance match {
+                case Imply(lhs, rhs) => Imply(decompose(lhs), rhs)
+              }
+
+              val replMap = Map[Formula, Formula](axInstance -> renAxiom)
+              def compose(t1:BelleExpr, t2: BelleExpr) = (t1 & t2) | t2
+              val branch2Tactic = compose(ProofRuleTactics.coHide(SuccPosition(sequent.succ.length)),
+                (PropositionalTactics.uniformSubst(subst, replMap) & alpha & AxiomTactic.axiom(axiomName)))
+              ProofRuleTactics.cut(axiomInstance) <( /*use*/branch1Tactic, /*show*/branch2Tactic)
+            case None => println("Giving up " + axiomName); ???
+          }
+        case None => println("Giving up because the axiom does not exist " + axiomName); ???
+      }
+    })
+
+  /**
+    * Tactic for existential quantifier generalization. Generalizes only at certain positions. All positions have to
+    * refer to the same term.
+    * @example{{{
+    *           \exists z z=a+b |-
+    *           ------------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil) :: Nil)(AntePosition(0))
+    *                 a+b = a+b |-
+    * }}}
+    * @example{{{
+    *           \exists z z=z |-
+    *           ----------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil) :: PosInExpr(1::Nil) :: Nil)(AntePosition(0))
+    *               a+b = a+b |-
+    * }}}
+    * @param x The new existentially quantified variable.
+    * @param where The term to generalize.
+    * @return The tactic.
+    */
+  def existentialGenPos(x: Variable, where: List[PosInExpr]): DependentPositionTactic = {
+    // construct axiom instance: p(t) -> \exists x. p(x)
+    def axiomInstance(fml: Formula): Formula = {
+      require(where.nonEmpty, "need at least one position to generalize")
+      require(where.map(w => fml.at(w)).toSet.size == 1, "not all positions refer to the same term")
+      val t = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+          if (where.contains(p)) Right(x)
+          else Left(None)
+      }, fml) match {
+        case Some(f) => f
+        case _ => throw new IllegalArgumentException(s"Position $where is not a term")
+      }
+      Imply(fml, Exists(x :: Nil, t))
+    }
+    AxiomTactic.uncoverAxiom("exists generalize", axiomInstance, _ => existentialGenPosBaseT(x, where))
+  }
+  /** Base tactic for existential generalization */
+  private def existentialGenPosBaseT(x: Variable, where: List[PosInExpr]): DependentPositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Imply(p, Exists(_, _)) =>
+        assert(where.map(w => p.at(w)).toSet.size == 1, "not all positions refer to the same term")
+
+        val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
+        val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
+
+        val t = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+            if (where.contains(p)) Right(DotTerm)
+            else Left(None)
+        }, p) match {
+          case Some(f) => f
+          case _ => throw new IllegalArgumentException(s"Position $where is not a term")
+        }
+
+        SubstitutionPair(aT, p.at(where.head)._1.ctx) ::
+          SubstitutionPair(aP, t) :: Nil
+    }
+
+    val aX = Variable("x", None, Real)
+    def alpha(fml: Formula): DependentPositionTactic = "Alpha" by ((p:Position, sequent:Sequent) => {
+      alphaRenaming(x, aX)(p + PosInExpr(1::Nil))})
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = {
+      val Imply(left, right) = axiom
+      if (x.name != aX.name || x.index != aX.index) Imply(left, SubstitutionHelper.replaceFree(right)(aX, x))
+      else Imply(left, right)
+    }
+
+    AxiomTactic.axiomLookupBase("exists generalize", subst, alpha, axiomInstance)
+  }
+
+  /**
+    * Returns a tactic to instantiate an existentially quantified formula that occurs in positive polarity in the
+    * succedent or in negative polarity in the antecedent.
+    * @example{{{
+    *         |- y+2>0
+    *         ----------------instantiateExistentialQuanT(Variable("x"), "y+2".asTerm)(SuccPosition(0))
+    *         |- \exists x x>0
+    * }}}
+    * @example{{{
+    *                 !(y+2>0) |-
+    *         -------------------instantiateExistentialQuanT(Variable("x"), "y+2".asTerm)(AntePosition(0, PosInExpr(0::Nil)))
+    *         !(\exists x x>0) |-
+    * }}}
+    * @example{{{
+    *         y>0 -> y>0
+    *         -----------------------instantiateExistentialQuanT(Variable("x"), Variable("y"))(AntePosition(0, PosInExpr(0::Nil)))
+    *         \exists x x>0 -> y>0 |-
+    * }}}
+    * @param quantified The variable to instantiate.
+    * @param t The instance.
+    * @return The tactic which performs the instantiation.
+    */
+  def instantiateExistentialQuanT(quantified: Variable, t: Term): DependentPositionTactic = "exists instantiate" by ((p:Position, sequent:Sequent) => {
+    def createDesired(s: Sequent) = {
+      ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
+          case Exists(_, phi) => Right(AlphaConversionHelper.replace(phi)(quantified, t))
+          case _ => Left(Some(ExpressionTraversal.stop))
+        }
+      }), s.apply(p).asInstanceOf[Term])
+    }
+    def generalize(where: List[PosInExpr]) = {
+      if (p.isTopLevel) {
+        existentialGenPos(quantified, where)(AntePosition(0)) & closeId
+      } else {
+        ProofRuleTactics.propositionalCongruence(p.inExpr) &
+          existentialGenPos(quantified, where)('Llast) &
+          (closeId | DebuggingTactics.debug("Instantiate existential: axiom close failed"))
+      }
+    }
+    sequent.at(p)._1.ctx match {
+      case Exists(vars, phi) =>
+        var varPos = List[PosInExpr]()
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+            case n: NamedSymbol if vars.contains(n) && !StaticSemanticsTools.boundAt(phi, p).contains(n) =>
+              varPos = varPos :+ p
+              Left(None)
+            case _ => Left(None)
+          }
+        }, phi)
+        val desired = createDesired(sequent)
+        val cutFrm = Imply(desired.asInstanceOf[Formula], sequent.at(p)._1.ctx)
+        cut(cutFrm) < (
+          /* use */
+          /*DebuggingTactics.assert(cutFrm, 'Llast)) & */ implyR('Llast) <(hide(p.topLevel), SequentCalculus.closeId),
+      /* show */
+      /*assertPT (cutFrm, 'Rlast) & */cohide ('Rlast) & DebuggingTactics.assert (0, 1) & /*DebuggingTactics.assert (cutFrm, SuccPosition (0) ) &*/
+      implyR (SuccPosition (0) ) & assertT (1, 1) &
+      generalize (varPos))
+      }
+    })
+
+
+  private def topLevelAbstraction: DependentPositionTactic = "Abstraction" by ((p:Position, sequent:Sequent) => {
+      assert(!p.isAnte, "no abstraction in antecedent")
+      sequent.at(p)._1.ctx match {
+        case b@Box(prg, phi) =>
+          val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.to[Seq]
+          //else throw new IllegalArgumentException("Cannot handle non-concrete programs")
+          val qPhi =
+            if (vars.isEmpty) phi //Forall(Variable("$abstractiondummy", None, Real)::Nil, phi)
+            else
+            //@todo what about DifferentialSymbols in boundVars? Decided to filter out since not soundness-critical.
+              vars.filter(v=>v.isInstanceOf[Variable]).to[scala.collection.immutable.SortedSet]. //sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
+                foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
+          cut(Imply(qPhi, Box(prg, qPhi))) <(implyL('Llast) <(
+              hide(p) /* result */ ,
+              cohide2(AntePosition(sequent.ante.length), p.topLevel)
+              & (monb | TactixLibrary.nil) &
+              instantiate('Llast)*vars.length
+            /*&
+                assertT(1, 1) & DebuggingTactics.assert(Box(prg, qPhi), 'Llast) & DebuggingTactics.assert(b, 'Rlast) & (monb | TactixLibrary.nil) &
+                assertT(1, 1) & DebuggingTactics.assert(qPhi, 'Llast) & DebuggingTactics.assert(phi, 'Rlast) & instantiate('Llast) * vars.length) &
+                assertT(1, 1) & DebuggingTactics.assert(s => s.ante.head match {
+                case Forall(_, _) => phi match {
+                  case Forall(_, _) => true
+                  case _ => false
+                }
+                case _ => true
+              }*/) &
+                (closeT | DebuggingTactics.debug("Abstraction cut use: Axiom close failed unexpectedly")),
+            hide(p) & implyR('Rlast) & HilbertCalculus.V('Rlast) &
+              (closeT | DebuggingTactics.debug("Abstraction cut show: Axiom close failed unexpectedly")))}})
+
+  lazy val diffWeakenAbstraction: DependentPositionTactic = "diffWeaken" by ((p, sequent) => sequent.sub(p) match {
+    case Some(b@Box(prg, phi)) =>
+      require(p.isTopLevel && p.isSucc, "diffWeaken only at top level in succedent")
+      val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.to[Seq]
+      val diffies = vars.filter(v=>v.isInstanceOf[DifferentialSymbol])
+      if (diffies.nonEmpty) throw new IllegalArgumentException("abstractionT: found differential symbols " + diffies + " in " + b + "\nFirst handle those")
+      //else throw new IllegalArgumentException("Cannot handle non-concrete programs")
+      val qPhi =
+        if (vars.isEmpty) phi //Forall(Variable("$abstractiondummy", None, Real)::Nil, phi)
+        else
+        //@todo what about DifferentialSymbols in boundVars? Decided to filter out since not soundness-critical.
+          vars.filter(v=>v.isInstanceOf[Variable]).to[scala.collection.immutable.SortedSet]. //sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
+            foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
+      ContextTactics.cutImplyInContext(Imply(qPhi, b), p) <(
+        implyL('Llast) <(hide(p.topLevel) /* result remains open */, TactixLibrary.close),
+        cohide('Rlast) & implyR('Rlast) & DebuggingTactics.assert(1, 1) &
+          ProofRuleTactics.propositionalCongruence(p.inExpr) &
+          DebuggingTactics.assert(1, 1) & DebuggingTactics.assert(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionT") &
+          topLevelAbstraction('Rlast) & TactixLibrary.close)
+      ???
+    case _ => ???
   })
 
   /** diffWeaken by diffCut(consts) <(diffWeakenG, V&close) */
