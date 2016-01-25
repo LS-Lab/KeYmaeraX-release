@@ -29,10 +29,11 @@
     </div>
 </div>
 <div ng-if="result === 'cex.none'" class="modal-body" style="overflow: scroll; width: auto; height: 100px;">
-    No counter-example found, formula seems valid
+    No counter-example found. Try proving it to see if it is valid.<br />
+    Some arithmetic simplifications may help reduce the complexity.
 </div>
 <div ng-if="result === 'cex.timeout'" class="modal-body" style="overflow: scroll; width: auto; height: 100px;">
-    Sorry, no counter-example found before search timeout expired
+    Sorry, no counter-example found before search timeout expired.
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="cancel()">Ok</button>
