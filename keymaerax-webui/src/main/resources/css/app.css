@@ -410,19 +410,18 @@ table .btn{
   padding: 0px 0px 0px 0px;
   margin-top: -1ex;
   text-align: center;
-  width: 10px;
+  width: 2em;
   display: block;
   position: absolute;
-  left: 0px;
+  left: -0.5em;
   top: 50%;
 }
 .k4-formula-content > ul:first-child li {
-  height: 15px;
   font-size: x-small;
   border: none;
   color: black;
   display: list-item;
-  width: 10px;
+  width: 2em;
 }
 /* TODO: does not quite work yet */
 .k4-formula.hidden .k4-formula-content {
