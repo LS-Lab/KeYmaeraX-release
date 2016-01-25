@@ -38,6 +38,8 @@ abstract class BelleExpr(val location: Array[StackTraceElement] = Thread.current
   /** case _ of {fi => ei} uniform substitution case pattern applies the first ei such that fi uniformly substitutes to current provable for which ei does not fail, fails if the ei of all matching fi fail. */
   def U(p: (SequentType, RenUSubst => BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
   /** partial: marks a tactic that is allowed to not close all its goals. */
+  def partial(label: BelleLabel)      = PartialTactic(this, Some(label))
+  /** partial: marks a tactic that is allowed to not close all its goals. */
   def partial                         = PartialTactic(this)
   //@todo Maybe support ?(e) or try(e) or optional(e) defined as this|skip
 

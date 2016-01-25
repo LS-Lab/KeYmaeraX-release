@@ -245,7 +245,7 @@ object KeYmaeraXParser extends Parser {
   private def elaborate(st: ParseState, optok: Token, op: OpSpec, kind: Kind, e: Expression): Expression = elaboratable(kind, e) match {
     case Some(e) => e
       //@todo locations are a little off in error reporting here. Would need original operator token.
-    case None => throw ParseException("Cannot elaborate " + e + " of kind " + e.kind + " to expected kind " + kind + " for use in operator " + op.op,
+    case None => throw ParseException("Impossible elaboration: Operator " + op.op + " expects a " + kind + " as argument but got the " + e.kind + " "  + e.prettyString,
       st, optok, kind.toString)
   }
 
