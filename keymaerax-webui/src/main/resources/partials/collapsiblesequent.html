@@ -52,7 +52,6 @@
 
     <!-- Antecedent -->
     <div class="col-md-2">
-        <div class="pull-right">
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
@@ -65,7 +64,7 @@
                         <span class="fa fa-eye-slash"></span></a>
                     </li>
                 </ul>
-                <div class="k4-formula-content">
+                <div class="k4-formula-content pull-right">
                     <ul><li>{{f.id}}:</li></ul>
                     <k4-formula k4-draggable drag-data="{{f.formula.id}}" on-drag-start="onDragStart(event)"
                             user-id="userId" proof-id="proofId" node-id="nodeId"
@@ -76,12 +75,11 @@
                 </div>
             </div>
             <div class="col-md-12 k4-formula" ng-if="readOnly">
-                <div class="k4-formula-content">
+                <div class="k4-formula-content pull-right">
                     <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
                                 formula="f.formula" highlight="false" collapsed="false"></k4-formula>
                 </div>
             </div>
-        </div>
         </div>
     </div>
 

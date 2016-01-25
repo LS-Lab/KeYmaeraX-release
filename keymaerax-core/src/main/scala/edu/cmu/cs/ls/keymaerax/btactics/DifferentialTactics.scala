@@ -464,16 +464,11 @@ object DifferentialTactics {
     case Some(Box(odes: DifferentialProgram, _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffSolve only at top-level in succedent")
 
-      val (time, timeTactic, timeZeroInitially) = findTimeInOdes(odes) match {
-        case Some(existingTime) => (existingTime, skip, false)
-        case None =>
-          val time: Variable = TacticHelper.freshNamedSymbol(Variable("t", None, Real), sequent)
-          val introTime =
-            DG(time, "0".asTerm, "1".asTerm)(pos) &
-              DLBySubst.assignbExists("0".asTerm)(pos) &
-              DLBySubst.assignEquational(pos)
-          (time, introTime, true)
-      }
+      val time: Variable = TacticHelper.freshNamedSymbol(Variable("t_", None, Real), sequent)
+      val introTime =
+          DG(time, "0".asTerm, "1".asTerm)(pos) &
+            DLBySubst.assignbExists("0".asTerm)(pos) &
+            DLBySubst.assignEquational(pos)
 
       def createTactic(ode: DifferentialProgram, solution: Formula, time: Variable, iv: Map[Variable, Variable],
                        diffEqPos: Position): BelleExpr = {
@@ -492,7 +487,7 @@ object DifferentialTactics {
 
       // initial values
       val iv: Map[Variable, Variable] =
-        primedSymbols(odes).map(v => v -> TacticHelper.freshNamedSymbol(v, sequent(pos.top))).toMap
+        primedSymbols(odes).map(v => v -> TacticHelper.freshNamedSymbol(v, sequent)).toMap
 
       val theSolution = solution match {
         case sol@Some(_) => sol
@@ -503,11 +498,8 @@ object DifferentialTactics {
       theSolution match {
         // add relation to initial time
         case Some(s) =>
-          val sol = And(
-            if (timeZeroInitially) s
-            else SubstitutionHelper.replaceFree(s)(time, Minus(time, iv(time))),
-            GreaterEqual(time, if (timeZeroInitially) "0".asTerm else iv(time)))
-          timeTactic & createTactic(odes, sol, time, iv, diffEqPos)
+          val sol = And(s, GreaterEqual(time, Number(0)))
+          introTime & createTactic(odes, sol, time, iv, diffEqPos)
         case None => throw new BelleError("No solution found")
       }
   })
@@ -926,20 +918,6 @@ object DifferentialTactics {
   /** Helper for diffWeaken: andL the second-to-last formula */
   private lazy val andLSecondToLast: DependentTactic = new SingleGoalDependentTactic("andL-2nd-to-last") {
     override def computeExpr(sequent: Sequent): BelleExpr = andL(-(sequent.ante.length-1))
-  }
-
-  /** Searches for a time variable (some derivative x'=1) in the specified ODEs, returns None if not found. */
-  private def findTimeInOdes(odes: DifferentialProgram): Option[Variable] = {
-    var timeInOde: Option[Variable] = None
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-      override def preP(p: PosInExpr, prg: Program): Either[Option[ExpressionTraversal.StopTraversal], Program] = prg match {
-        case AtomicODE(DifferentialSymbol(v), theta) =>
-          if(theta == Number(1)) { timeInOde = Some(v); Left(Some(ExpressionTraversal.stop)) }
-          else Left(None)
-        case _ => Left(None)
-      }
-    }, odes)
-    timeInOde
   }
 
   private def flattenConjunctions(f: Formula): List[Formula] = {

@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, NamedTactic, SequentType, USubstPatternTactic}
 import edu.cmu.cs.ls.keymaerax.core.Sequent
+import BelleLabels._
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
@@ -434,12 +435,12 @@ object DLBySubst {
           cut(Box(Loop(a), q)) <(
             /* use */
             implyRi(AntePos(sequent.ante.length), pos.checkSucc.top) & cohide('Rlast) & CMon(pos.inExpr+1) & implyR(1) &
-              (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial /* indUse */,
+              (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast, True)) partial(useCase),
             /* show */
             hide(pos, b) & useAt("I induction")('Rlast) & andR('Rlast) <(
-              andR('Rlast) <(ident /* indInit */, ((andR('Rlast) <(closeId, ident))*(consts.size-1) & closeId) | closeT) partial,
+              andR('Rlast) <(ident /* indInit */, ((andR('Rlast) <(closeId, ident))*(consts.size-1) & closeId) | closeT) partial(initCase),
               cohide('Rlast) & G & implyR(1) & splitb(1) & andR(1) <(
-                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast,True)) partial /* indStep */,
+                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hide('Llast,True)) partial(indStep),
                 andL(-1) & hide(Fixed(-1,Nil,Some(invariant)))/*hide(-1,invariant)*/ & V(1) & closeId) partial) partial)
       }
 

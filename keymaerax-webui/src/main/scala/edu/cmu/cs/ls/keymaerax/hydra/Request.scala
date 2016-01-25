@@ -572,9 +572,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(fml, pos) match {
-              case Some(step) if step != "cut" => what(DerivationInfo(step))
-              //@todo can go away when cuts are actually available in the toolbox and on the sequent
-              case Some(step) if step == "cut" => /* can't step cut */ throw new ProverException("No step possible")
+              case Some(step) => what(DerivationInfo(step))
               case None => tacticId
             }
           case _ => what(DerivationInfo.ofCodeName(tacticId))
