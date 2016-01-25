@@ -54,6 +54,10 @@ table .btn{
   color: #e1edf7;
 }
 
+.container {
+  width: auto; /* full-width proofs */
+}
+
 .popover {
   max-width: none;
 }
