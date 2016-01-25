@@ -145,7 +145,7 @@ object DerivationInfo {
       , "Dconst", {case () => HilbertCalculus.Dconst}),
     new CoreAxiomInfo("x' derive var"
       ,  AxiomDisplayInfo("x'", "(x)′=x′")
-      , "Dvar", {case () => HilbertCalculus.Dvariable}),
+      , "Dvar", {case () => HilbertCalculus.Dvar}),
     new DerivedAxiomInfo("x' derive variable"
       ,  AxiomDisplayInfo(("x′","x'"), "(x)′=x′")
       , "DvariableAxiom", {case () => HilbertCalculus.useAt(DerivedAxioms.Dvariable)}),
