@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -21,7 +22,7 @@ object ToolTactics {
     require(qeTool != null, "No QE tool available. Use implicit parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic(qeTool.getClass.getSimpleName + " QE",
       alphaRule*@TheType() &
-      exhaustiveEqL2R(hide=true)('L)*@TheType() &
+      varExhaustiveEqL2R('L)*@TheType() &
       toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & qeSuccedentHd(qeTool) &
       DebuggingTactics.assertProved
   )}
@@ -36,6 +37,12 @@ object ToolTactics {
       toSingleFormula & qeSuccedentHd(qeTool)
     )
   }
+
+  /* Rewrites equalities exhaustively with hiding, but only if left-hand side is a variable */
+  private def varExhaustiveEqL2R: DependentPositionTactic =
+    "Find Left and Replace Left with Right" by ((pos, sequent) => sequent.sub(pos) match {
+      case Some(fml@Equal(_: Variable, _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
+    })
 
   /**
    * Converts a sequent into a single formula.
