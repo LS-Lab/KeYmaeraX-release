@@ -279,7 +279,7 @@ table .btn{
   border-bottom: none;
 }
 
-.k4-proofrow > ul:last-child {
+.k4-proofrow > ul:first-child {
   list-style-type: none;
   padding: 0 0 0 0;
   margin: -1.4ex 0 0 0.5em;
@@ -289,7 +289,7 @@ table .btn{
   position: absolute;
   left: 0;
 }
-.k4-proofrow > ul:last-child li {
+.k4-proofrow > ul:first-child li {
   height: 3ex;
   font-size: x-small;
   border: none;

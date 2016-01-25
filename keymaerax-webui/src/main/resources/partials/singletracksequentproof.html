@@ -19,21 +19,6 @@
     <div ng-class="(outerIdx === deductionPath.sections.length-1 && section.path.length === 1 && section.isComplete) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'"
          ng-repeat="step in [section.path[0]]"
          ng-if="outerIdx > 0">
-        <div class="col-md-12 k4-goalwithsiblings">
-            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
-                        sequent="proofTree.nodesMap[step].sequent"
-                        read-only="true" collapsed="true"></k4-sequent>
-            <ul>
-                <!-- display siblings at fork -->
-                <li ng-repeat="sibling in siblingsWithAgendaItem(proofTree.nodesMap[step].children)">
-                    <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
-                    <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
-                       class="badge"
-                       uib-tooltip-template="'siblingSequentTooltip.html'"
-                       tooltip-placement="left">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
-                </li>
-            </ul>
-        </div>
         <ul>
             <li >
                 <!-- Full collapse if the first section contains only one element (and is not collapsed) -->
@@ -67,17 +52,27 @@
                 </span>
             </li>
         </ul>
+        <div class="col-md-12 k4-goalwithsiblings">
+            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
+                        sequent="proofTree.nodesMap[step].sequent"
+                        read-only="true" collapsed="true"></k4-sequent>
+            <ul>
+                <!-- display siblings at fork -->
+                <li ng-repeat="sibling in siblingsWithAgendaItem(proofTree.nodesMap[step].children)">
+                    <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
+                    <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
+                       class="badge"
+                       uib-tooltip-template="'siblingSequentTooltip.html'"
+                       tooltip-placement="left">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
+                </li>
+            </ul>
+        </div>
     </div>
 
     <!-- section remainder -->
     <div ng-class="(outerIdx === deductionPath.sections.length-1 && $last && section.isComplete) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'"
          ng-repeat="step in section.path.slice(1)"
          uib-collapse="section.isCollapsed">
-        <div class="col-md-12">
-            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
-                        sequent="proofTree.nodesMap[step].sequent"
-                        read-only="true" collapsed="true"></k4-sequent>
-        </div>
         <ul>
             <li>
                 <span class="k4-prooficon">
@@ -110,25 +105,14 @@
                 </span>
             </li>
         </ul>
+        <div class="col-md-12">
+            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
+                        sequent="proofTree.nodesMap[step].sequent"
+                        read-only="true" collapsed="true"></k4-sequent>
+        </div>
     </div>
     <!-- fetch parent of incomplete section (if exists), collapse/uncollapse for unfinished sections/last section-->
     <div ng-class="(outerIdx === deductionPath.sections.length-1 || (section.isComplete && !section.isCollapsed)) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'">
-        <div class="col-md-12 k4-proofrow-annotation" ng-if="hasParent(section)">
-            ...
-            <ul>
-                <li>
-                    <!-- load parent -->
-                    <a class="k4-withcontextmenu"
-                       ng-click="fetchSectionParent(deductionPath.sections[outerIdx])"
-                       uib-tooltip="Fetch parent step"
-                       tooltip-popup-delay="1000"
-                       ng-right-click="fetchParentRightClick($event)" tabindex="-1"
-                       uib-popover-template="'navigateTowardsRootPopover.html'"
-                       popover-title="Proof history" popover-placement="bottom" popover-trigger="contextmenu"
-                       ng-if="!section.isComplete && !section.isCollapsed"><span class="fa fa-plus-square-o"></span></a>
-                </li>
-            </ul>
-        </div>
         <ul>
             <li>
                 <span class="k4-prooficon">
@@ -159,14 +143,27 @@
                 <span class="k4-proofrule">&nbsp;</span>
             </li>
         </ul>
+        <div class="col-md-12 k4-proofrow-annotation" ng-if="hasParent(section)">
+            ...
+            <ul>
+                <li>
+                    <!-- load parent -->
+                    <a class="k4-withcontextmenu"
+                       ng-click="fetchSectionParent(deductionPath.sections[outerIdx])"
+                       uib-tooltip="Fetch parent step"
+                       tooltip-popup-delay="1000"
+                       ng-right-click="fetchParentRightClick($event)" tabindex="-1"
+                       uib-popover-template="'navigateTowardsRootPopover.html'"
+                       popover-title="Proof history" popover-placement="bottom" popover-trigger="contextmenu"
+                       ng-if="!section.isComplete && !section.isCollapsed"><span class="fa fa-plus-square-o"></span></a>
+                </li>
+            </ul>
+        </div>
     </div>
 </div>
 <!-- full expand -->
 <div class="row k4-proofrow k4-proofrow-last"
      ng-if="deductionPath.isCollapsed">
-    <div class="col-md-12">
-        ...
-    </div>
     <ul>
         <li>
             <span class="k4-prooficon">
@@ -177,6 +174,9 @@
             <span class="k4-proofrule">&nbsp;</span>
         </li>
     </ul>
+    <div class="col-md-12">
+        ...
+    </div>
 </div>
 <script type="text/ng-template" id="navigateTowardsRootPopover.html">
     <div class="k4-nobreak">
