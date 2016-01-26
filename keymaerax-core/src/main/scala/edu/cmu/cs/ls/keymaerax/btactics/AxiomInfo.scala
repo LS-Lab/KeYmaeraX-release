@@ -600,6 +600,8 @@ object DerivationInfo {
   def ofCodeName(codeName:String): DerivationInfo = byCodeName.getOrElse(codeName.toLowerCase,
     throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)
   )
+
+  def hasCodeName(codeName: String): Boolean = byCodeName.keySet.contains(codeName)
 }
 
 object AxiomInfo {
