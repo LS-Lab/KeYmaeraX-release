@@ -13,7 +13,10 @@ object ReflectiveExpressionBuilder {
     val posArgs = args.filter{case arg => arg.isRight}.map{case arg => arg.right.get}
     val withGenerator =
       if (info.needsGenerator) {
-        info.belleExpr.asInstanceOf[Generator[Formula] => Any](generator.get)
+        generator match {
+          case Some(theGenerator) => info.belleExpr.asInstanceOf[Generator[Formula] => Any](theGenerator)
+          case None => throw new ReflectiveExpressionBuilderExn(s"Need a generator for tactic ${info.codeName} but none was provided.")
+        }
       } else {
         info.belleExpr
       }
@@ -53,3 +56,5 @@ object ReflectiveExpressionBuilder {
     }
 }
 
+
+class ReflectiveExpressionBuilderExn(msg: String) extends Exception(msg)
