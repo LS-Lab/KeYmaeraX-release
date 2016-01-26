@@ -641,7 +641,7 @@ object DerivedAxioms {
     * }}}
     * @Derived
     */
-  lazy val diamondOrF = "<a_;>(p_(??)|q_(??)) <-> <a_;>p(??)|<a_;>q(??)".asFormula
+  lazy val diamondOrF = "<a_;>(p_(??)|q_(??)) <-> <a_;>p_(??)|<a_;>q_(??)".asFormula
   lazy val diamondOr = derivedAxiom("<> split",
     Sequent(Nil, IndexedSeq(), IndexedSeq(diamondOrF)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
