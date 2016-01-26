@@ -273,8 +273,12 @@ object DerivationInfo {
       , "notExists", {case () => useAt(DerivedAxioms.notExists)}),
     new DerivedAxiomInfo("![]", ("¬[]","![]"), "notBox", {case () => useAt(DerivedAxioms.notBox)}),
     new DerivedAxiomInfo("!<>", ("¬<>","!<>"), "notDiamond", {case () => useAt(DerivedAxioms.notDiamond)}),
-    new DerivedAxiomInfo("[] split", ("[]∧", "[]^"), "boxAnd", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAnd)}),
-    new DerivedAxiomInfo("<> split", ("<>∨","<>|"), "diamondOr", {case () => useAt(DerivedAxioms.diamondOr)}),
+    new DerivedAxiomInfo("[] split"
+      , AxiomDisplayInfo(("[]∧", "[]^"), "[a](P ∧ Q)↔[a]P ∧ [a]Q")
+      , "boxAnd", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAnd)}),
+    new DerivedAxiomInfo("<> split"
+      , AxiomDisplayInfo(("<>∨","<>|"), "<a>(P ∨ Q)↔<a>P ∨ <a>Q")
+        , "diamondOr", {case () => useAt(DerivedAxioms.diamondOr)}),
 //    new DerivedAxiomInfo("<> split left", "<>|<-", "diamondSplitLeft", {case () => useAt(DerivedAxioms.diamondSplitLeft)}),
 //    new DerivedAxiomInfo("[] split left", "[]&<-", "boxSplitLeft", {case () => useAt(DerivedAxioms.boxSplitLeft)}),
 //    new DerivedAxiomInfo("[] split right", "[]&->", "boxSplitRight", {case () => useAt(DerivedAxioms.boxSplitRight)}),
