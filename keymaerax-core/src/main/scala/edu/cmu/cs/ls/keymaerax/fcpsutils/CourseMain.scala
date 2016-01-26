@@ -1,11 +1,21 @@
 package edu.cmu.cs.ls.keymaerax.fcpsutils
 
+import java.io.File
+
+import edu.cmu.cs.ls.keymaerax.bellerophon.BTacticParser
+import edu.cmu.cs.ls.keymaerax.btactics.{NoneGenerate, TactixLibrary, DerivedAxioms}
+import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
+import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 
 /**
   * Created by nfulton on 1/17/16.
   */
 object CourseMain {
+  implicit def qeTool = new Mathematica()
+  DerivedAxioms.qeTool = qeTool
+  TactixLibrary.tool = qeTool
+
   def main(input : Array[String]) = {
     val args : Map[String, ArgValue] = GetOpt(Map(
       "bparse" -> StrArgType(),
@@ -37,7 +47,7 @@ object CourseMain {
   private def fileExistsOrFail(v : ArgValue) : String = {
     val fileName = v.asInstanceOf[StringValue].s
     assert({
-      val file = new java.io.File(fileName)
+      val file = new File(fileName)
       file.exists() && file.canRead()
     }, s"File named ${fileName} should exist and be readable.")
     fileName
@@ -45,7 +55,10 @@ object CourseMain {
 
   private def parseTacticFileOrFail(v: ArgValue) = {
     val fileName = fileExistsOrFail(v)
-    println(s"Skipping parser check for tactic file ${fileName}!")
+    BTacticParser(scala.io.Source.fromFile(new File(fileName)).mkString, false, Some(new NoneGenerate[Formula]())) match {
+      case Some(e) => //ok
+      case None => throw new Exception(s"Tactic in ${fileName} did not parse")
+    }
   }
 
   private def parseProblemFileOrFail(v: ArgValue) = {
