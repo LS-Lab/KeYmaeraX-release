@@ -9,12 +9,13 @@ import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 
 /**
-  * Created by nfulton on 1/17/16.
+  * @author Nathan Fulton
   */
 object CourseMain {
   implicit def qeTool = new Mathematica()
   DerivedAxioms.qeTool = qeTool
   TactixLibrary.tool = qeTool
+  //@todo initialize MathKernel for ohmu.
 
   PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
 
