@@ -43,16 +43,16 @@ angular.module('formula')
 
             var precedence =
               [
-              //Terms.
-              "add" ,
-              "subtract" ,
-              "multiply" ,
-              "divide" ,
-              "exp" ,
-              "neg" ,
-              "function" ,
-              "programconstant" , //real-valued.
-              "number"   ,
+              //Programs.
+              "Choice" ,
+              "Sequence" ,
+              "Loop" ,
+              "Assign" ,
+              "NDetAssign" ,
+              "Test" ,
+              "NFODEProduct" ,
+              "ODEProduct" ,
+              "AtomicODE" ,
               //Formulas
               "equiv" ,
               "imply" ,
@@ -64,7 +64,7 @@ angular.module('formula')
               "modality" ,
               "forall" ,
               "exists" ,
-              "equal" ,
+              "equals" ,
               "notEqual" ,
               "lt"  ,
               "leq" ,
@@ -72,16 +72,16 @@ angular.module('formula')
               "gt" ,
               "formuladerivative" ,
               "predicateconstant" ,
-              //Programs.
-              "Choice" ,
-              "Sequence" ,
-              "Loop" ,
-              "Assign" ,
-              "NDetAssign" ,
-              "Test" ,
-              "NFODEProduct" ,
-              "ODEProduct" ,
-              "AtomicODE" ,
+              //Terms.
+              "add" ,
+              "subtract" ,
+              "neg" ,
+              "multiply" ,
+              "divide" ,
+              "exp" ,
+              "function" ,
+              "programconstant" , //real-valued.
+              "number" ,
               // Atoms
               "ProgramConstant" ,
               "ContEvolveProgramConstant",
@@ -90,11 +90,15 @@ angular.module('formula')
               "false" ,
               "apply",
               "derivative" ,
-              "differentialsymbol" ,
-              "Variable",
-              "Number"].reverse()
+              "differentialsymbol"
+              // names of variables and numbers would be listed last -> not being contained means the same (index = -1)
+              ].reverse()
 
-            var parens = [ "(", ")" ]
+            var parens = {
+              "program": ["{","}"],
+              "term": ["(",")"],
+              "formula": ["(",")"]
+            }
 
             var needsParens = function(parent, child) {
                 var childPrecedence = precedence.indexOf(child.name);
@@ -102,9 +106,9 @@ angular.module('formula')
                 return childPrecedence > parentPrecedence;
             }
 
-            var parensIfNeeded = function(parent, child, depth, collapsed) {
+            var parensIfNeeded = function(parent, child, childType, depth, collapsed) {
                 if(needsParens(parent, child)) {
-                  return parens[0] + parseFormulaHelper(child, depth, collapsed) + parens[1]
+                  return parens[childType][0] + parseFormulaHelper(child, depth, collapsed) + parens[childType][1]
                 } else {
                   return parseFormulaHelper(child, depth, collapsed)
                 }
@@ -118,102 +122,102 @@ angular.module('formula')
                     var content;
                     switch (json.name) {
                         case "not":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
+                            var left = parensIfNeeded(json, c[0], 'formula', depth + 1, collapsed);
                             content = {text: "&not;" + left, type: 'formula'};
                             break;
 
                         case "and":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
+                            var left = parensIfNeeded(json, c[0], 'formula', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'formula', depth + 1, collapsed);
                             content = {text: left + " &#8743; " + right, type: 'formula'};
                             break;
 
                         case "or":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
+                            var left = parensIfNeeded(json, c[0], 'formula', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'formula', depth + 1, collapsed);
                             content = {text: left + " &#8744; " + right, type: 'formula'};
                             break;
 
                         case "imply":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = {text: left + (depth === 0 && !collapsed ? "<br/>" : "") + "→" + (depth === 0 && !collapsed ? "<br/>" : "") + right, type: 'formula'};
+                            var left = parensIfNeeded(json, c[0], 'formula', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'formula', depth + 1, collapsed);
+                            content = {text: collapsed ? left + " → " + right : left + "<br/>→<br/>" + right, type: 'formula'};
                             break;
 
                         case "equiv":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
+                            var left = parensIfNeeded(json, c[0], 'formula', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'formula', depth + 1, collapsed);
                             content = {text: left + " &#8596 " + right, type: 'formula'};
                             break;
 
                         case "lt":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = {text: left + " &lt; " + right, type: 'formula'};
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
+                            content = {text: left + "&lt;" + right, type: 'formula'};
                             break;
 
                         case "leq":
                             var left = parseFormulaHelper(c[0], depth + 1, collapsed);
                             var right = parseFormulaHelper(c[1], depth + 1, collapsed);
-                            content = {text: left + " &leq; " + right, type: 'formula'};
+                            content = {text: left + "&leq;" + right, type: 'formula'};
                             break;
 
                         case "equals":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = {text: left + " = " + right, type: 'formula'};
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
+                            content = {text: left + "=" + right, type: 'formula'};
                             break;
 
                         case "notEquals":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = {text: left + " &ne; " + right, type: 'formula'};
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
+                            content = {text: left + "&ne;" + right, type: 'formula'};
                             break;
 
                         case "geq":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = {text: left + " &geq; " + right, type: 'formula'};
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
+                            content = {text: left + "&geq;" + right, type: 'formula'};
                             break;
 
                         case "gt":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = {text: left + " &gt; " + right, type: 'formula'};
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
+                            content = {text: left + "&gt;" + right, type: 'formula'};
                             break;
 
                         case "neg":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
                             content = {text: "-" + left, type: 'term'};
                             break;
 
                         case "add":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = {text: left + " + " + right, type: 'term'};
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
+                            content = {text: left + "+" + right, type: 'term'};
                             break;
 
                         case "subtract":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = {text: left + " - " + right, type: 'term'};
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
+                            content = {text: left + "-" + right, type: 'term'};
                             break;
 
                         case "multiply":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = {text: left + " &middot; " + right, type: 'term'};
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
+                            content = {text: left + "&middot;" + right, type: 'term'};
                             break;
 
                         case "divide":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = {text: left + " / " + right, type: 'term'};
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
+                            content = {text: left + "/" + right, type: 'term'};
                             break;
 
                         case "exp":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
                             content = {text: left + "<sup>" + right + "</sup>", type: 'term'};
                             break;
 
@@ -222,7 +226,7 @@ angular.module('formula')
                             for (var i = 1; i < json.variables.length; i++) {
                                 vars = vars + "," + json.variables[i];
                             }
-                            content = {text: "&forall;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1, collapsed) + ")", type: 'formula'}
+                            content = {text: "&forall;" + vars + " (" + parseFormulaHelper(c[0], depth + 1, collapsed) + ")", type: 'formula'}
                             break;
 
                         case "exists":
@@ -230,35 +234,35 @@ angular.module('formula')
                             for (var i = 1; i < json.variables.length; i++) {
                                 vars = vars + "," + json.variables[i];
                             }
-                            content = {text: "&exist;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1, collapsed) + ")", type: 'formula'}
+                            content = {text: "&exist;" + vars + " (" + parseFormulaHelper(c[0], depth + 1, collapsed) + ")", type: 'formula'}
                             break;
 
                         case "boxmodality":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
+                            var left = parseFormulaHelper(c[0], depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'formula', depth + 1, collapsed);
                             content = {text: "[" + left + "] " + right, type: 'formula'};
                             break;
 
                         case "diamondmodality":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
+                            var left = parseFormulaHelper(c[0], depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'formula', depth + 1, collapsed);
                             content = {text: "<" + left + "> " + right, type: 'formula'};
                             break;
 
                         case "Assign":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
                             content = {text: left + " := " + right, type: 'program'};
                             break;
 
                         case "NDetAssign":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
                             content = {text: left + ":= *", type: 'program'};
                             break;
 
                         case "Test":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            content = {text: " ? " + left, type: 'program'};
+                            var left = parensIfNeeded(json, c[0], 'formula', depth + 1, collapsed);
+                            content = {text: " ?" + left, type: 'program'};
                             break;
 
                          case "IfThen":
@@ -275,26 +279,26 @@ angular.module('formula')
                             break;
 
                         case "Loop":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
+                            var left = parensIfNeeded(json, c[0], 'program', depth + 1, collapsed);
                             content = {text: "{" + left + "}<sup>*</sup>", type: 'program'};
                             break;
 
                         case "Sequence":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = {text: left + ";" + (collapsed ? " " : "<br/>") + right, type: 'program'};
+                            var left = parensIfNeeded(json, c[0], 'program', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'program', depth + 1, collapsed);
+                            content = {text: collapsed ? left + "; " + right : left + ";<br/>" + right, type: 'program'};
                             break;
 
                         case "Choice":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = {text: left + (collapsed ? " " : "<br/>") + "&#8746;" + (collapsed ? " " : "<br/>") + right, type: 'program'};
+                            var left = parensIfNeeded(json, c[0], 'program', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'program', depth + 1, collapsed);
+                            content = {text: collapsed ? left + " &#8746; " + right : left + "<br/>&#8746;<br/>" + right, type: 'program'};
                             break;
 
                         case "AtomicODE":
-                            var x = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var theta = parensIfNeeded(json, c[1], depth + 1, collapsed);
-                            content = {text: x + " = " + theta, type: 'program'};
+                            var x = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
+                            var theta = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
+                            content = {text: x + "=" + theta, type: 'program'};
                             break;
 
                         case "ODEProduct":
@@ -312,12 +316,12 @@ angular.module('formula')
                             break;
 
                         case "NFODEProduct":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
-                            var right = parensIfNeeded(json, c[1], depth + 1, collapsed);
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
+                            var right = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
                             if (c[1].name != "EmptyODE") {
                               if(c[1].name == "AtomicODE" || c[1].name == "ODEProduct") {
-                                content = {text: left + ", " + right, type: 'program'};
-                              } else content = {text: left + " & " + right, type: 'program'};
+                                content = {text: "{" + left + ", " + right + "}", type: 'program'};
+                              } else content = {text: "{" + left + " & " + right + "}", type: 'program'};
                             } else {
                               content = {text: left, type: 'program'};
                             }
@@ -328,12 +332,12 @@ angular.module('formula')
                             break;
 
                         case "derivative":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
                             content = {text: left + "'", type: 'derivative'};
                             break;
 
                         case "differentialsymbol":
-                            var left = parensIfNeeded(json, c[0], depth + 1, collapsed);
+                            var left = parensIfNeeded(json, c[0], 'term', depth + 1, collapsed);
                             content = {text: left + "'", type: 'derivative'};
                             break;
 
@@ -343,7 +347,7 @@ angular.module('formula')
                         case "apply":
                             var name = c[0]
                             if (c[1].name != "Nothing") {
-                              content = {text: name + parensIfNeeded(json, c[1], depth + 1, collapsed), type: 'term'};
+                              content = {text: name + parensIfNeeded(json, c[1], 'term', depth + 1, collapsed), type: 'term'};
                             } else {
                               content = {text: name + "()", type: 'term'};
                             }
