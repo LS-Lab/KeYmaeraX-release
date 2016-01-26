@@ -2,15 +2,14 @@
   * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
   * See LICENSE.txt for the conditions of this license.
   */
-package edu.cmu.cs.ls.keymaerax.btacticinterface
+package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import java.lang.Number
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{SuccPosition, AntePosition, Position, PosInExpr}
-import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, ExpressionTraversal}
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
+import edu.cmu.cs.ls.keymaerax.core._
 
 /**
   * User-Interface Axiom/Tactic Index: Indexing data structure for all canonically applicable (derived) axioms/rules/tactics in User-Interface.

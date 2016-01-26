@@ -8,6 +8,7 @@ import java.security.Permission
 
 import _root_.edu.cmu.cs.ls.keymaerax.api.TacticInputConverter
 import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.CLInterpreter
+import edu.cmu.cs.ls.keymaerax.bellerophon.BTacticParser
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.parser._
@@ -195,7 +196,7 @@ object KeYmaeraX {
 
   private def parseBelleTactic(fileName: String) = {
     val fileContents : String = scala.io.Source.fromFile(fileName).getLines().reduce(_ + "\n" + _)
-    edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser(fileContents) match {
+    BTacticParser(fileContents) match {
       case Some(_) => {
         println("Parsed file successfully");
         System.exit(0)

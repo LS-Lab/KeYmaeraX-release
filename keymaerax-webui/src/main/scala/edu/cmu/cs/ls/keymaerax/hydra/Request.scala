@@ -15,10 +15,9 @@ import java.text.SimpleDateFormat
 import java.util.{Locale, Calendar}
 
 import _root_.edu.cmu.cs.ls.keymaerax.bellerophon._
-import _root_.edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.BTacticParser
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.parser.{ParseException, KeYmaeraXParser, KeYmaeraXProblemParser}
-import edu.cmu.cs.ls.keymaerax.btacticinterface.{UIIndex, BTacticParser}
 import _root_.edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo}
 import _root_.edu.cmu.cs.ls.keymaerax.core._

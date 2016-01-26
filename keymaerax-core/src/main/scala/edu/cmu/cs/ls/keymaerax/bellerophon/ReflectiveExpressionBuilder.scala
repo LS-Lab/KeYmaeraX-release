@@ -1,8 +1,7 @@
-package edu.cmu.cs.ls.keymaerax.btacticinterface
+package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.{Generator, DerivationInfo}
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Term, SeqPos, Formula}
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, Generator}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term}
 
 /**
   * Constructs a [[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr]] from a tactic name
