@@ -4,7 +4,7 @@ import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, BTacticParser}
 import edu.cmu.cs.ls.keymaerax.btactics.{NoneGenerate, TactixLibrary, DerivedAxioms}
-import edu.cmu.cs.ls.keymaerax.core.{Provable, Formula}
+import edu.cmu.cs.ls.keymaerax.core.{PrettyPrinter, Provable, Formula}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXProblemParser, ParseException}
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 
@@ -15,6 +15,8 @@ object CourseMain {
   implicit def qeTool = new Mathematica()
   DerivedAxioms.qeTool = qeTool
   TactixLibrary.tool = qeTool
+
+  PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
 
   def main(input : Array[String]) = {
     val args : Map[String, ArgValue] = GetOpt(Map(
@@ -56,13 +58,10 @@ object CourseMain {
     val f = parseProblemFileOrFail(problem)
     val expr = parseTacticFileOrFail(solution)
 
-    val result = SequentialInterpreter(List())(expr, BelleProvable(Provable.startProof(f)))
+    val result = SequentialInterpreter(Seq())(expr, BelleProvable(Provable.startProof(f)))
     result match {
-      case BelleProvable(p) => {
-        if(p.isProved) {
-          //ok
-        }
-        else {
+      case BelleProvable(p, _) => {
+        if(!p.isProved) {
           println(s"Proof of ${fileExistsOrFail(problem)} using ${fileExistsOrFail(solution)} did not close. Remaining open goals follow:")
           println(p.prettyString)
           System.exit(-1)
