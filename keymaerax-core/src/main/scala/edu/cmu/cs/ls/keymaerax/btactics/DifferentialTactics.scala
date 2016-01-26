@@ -482,9 +482,9 @@ object DifferentialTactics {
           diffWeaken(pos)
       }
 
-      // initial values
+      // initial values (from only the formula at pos, because allR will increase index of other occurrences elsewhere in the sequent)
       val iv: Map[Variable, Variable] =
-        primedSymbols(odes).map(v => v -> TacticHelper.freshNamedSymbol(v, sequent)).toMap
+        primedSymbols(odes).map(v => v -> TacticHelper.freshNamedSymbol(v, sequent(pos.top))).toMap
 
       val theSolution = solution match {
         case sol@Some(_) => sol
