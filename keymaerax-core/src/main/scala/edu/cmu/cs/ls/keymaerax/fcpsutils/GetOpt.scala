@@ -12,7 +12,7 @@ object GetOpt extends (Map[String, ArgType] => Array[String] => Map[String, ArgV
     //Process each element of the input array.
     while(!imod.isEmpty) {
       val parameterName = imod(0).replaceAll("^--", "")
-      assert(args.keySet.contains(parameterName), s"Unkown argument ${parameterName}")
+      assert(args.keySet.contains(parameterName), s"Unknown argument ${parameterName}")
 
       if(args(parameterName).isInstanceOf[FlagType]) {
         returnValue = returnValue + (parameterName -> FlagValue(true))
