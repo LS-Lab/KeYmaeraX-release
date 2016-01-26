@@ -99,6 +99,7 @@ case class VersionString(major: Int, minor: Int, letter: Option[Char], incr: Opt
   def >(that: VersionString) = compareTo(that) == 1
   def >=(that: VersionString) = !(this < that)
   def <=(that: VersionString) = !(this > that)
+  def !=(that: VersionString) = !(this.equals(that))
 
   def compareTo(that: VersionString) = {
     if(major > that.major) 1
