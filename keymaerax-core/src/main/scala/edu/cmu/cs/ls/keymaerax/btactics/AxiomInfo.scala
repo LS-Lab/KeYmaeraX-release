@@ -63,10 +63,10 @@ object DerivationInfo {
       , AxiomDisplayInfo(("〈·〉", "<.>"), "〈a〉P ↔ ¬[a]¬P")
       , "diamond", {case () => HilbertCalculus.diamond}),
     new DerivedAxiomInfo("[] box", "[.]", "box", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom)}),
-    new PositionTacticInfo("assignbTactic"
+    new PositionTacticInfo("assignb"
       , AxiomDisplayInfo("[:=]", "[x:=c]p(x)↔p(c)")
       , {case () => TactixLibrary.assignb}),
-    new CoreAxiomInfo("[:=] assign", "[:=]", "assignb", {case () => HilbertCalculus.useAt("[:=] assign")}),
+    new CoreAxiomInfo("[:=] assign", "[:=]", "assignbAxiom", {case () => HilbertCalculus.useAt("[:=] assign")}),
     new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", {case () => HilbertCalculus.useAt("[:=] self assign")}),
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:=> assign equality", "<:=>", "assigndEquality", {case () => HilbertCalculus.useAt("<:=> assign equality")}),
