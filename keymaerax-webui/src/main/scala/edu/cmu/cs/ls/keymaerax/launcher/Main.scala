@@ -100,9 +100,14 @@ object Main {
   /** Clears the cache and creates a new cache/VERSION file */
   private def clearCache(dir: File) = {
     println("Clearing your cache because of an update.")
+    if(!dir.mkdirs()) throw new Exception("Could not reinitialize cache because cache directory could not be created.")
     dir.delete()
-    val verisonFile = new File(dir.getAbsolutePath + File.separator + "VERSION")
-    val fw = new FileWriter(verisonFile)
+    val versionFile = new File(dir.getAbsolutePath + File.separator + "VERSION")
+    if(!versionFile.exists()) {
+      if(!versionFile.createNewFile()) throw new Exception(s"Could not create ${versionFile.getAbsolutePath}")
+    }
+    assert(versionFile.exists())
+    val fw = new FileWriter(versionFile)
     fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
     fw.close()
   }
