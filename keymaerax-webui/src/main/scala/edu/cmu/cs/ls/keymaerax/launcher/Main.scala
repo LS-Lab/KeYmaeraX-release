@@ -4,9 +4,9 @@
 */
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import java.io.{InputStreamReader, BufferedReader, File, FileFilter,IOException,EOFException}
+import java.io._
 import javax.swing.JOptionPane
-import edu.cmu.cs.ls.keymaerax.hydra.{SQLite, UpdateChecker}
+import edu.cmu.cs.ls.keymaerax.hydra.{StringToVersion, SQLite, UpdateChecker}
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms
 
 import scala.collection.JavaConversions._
@@ -56,10 +56,45 @@ object Main {
     }
     else {
       exitIfDeprecated()
+      clearCacheIfDeprecated()
       startServer()
       //@todo use command line argument -mathkernel and -jlink from KeYmaeraX.main
       //@todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
     }
+  }
+
+  /** Clears the cache if the cache was created by a previous version of KeYmaera X */
+  private def clearCacheIfDeprecated(): Unit = {
+    val cacheLocation = System.getenv("HOME") + File.separator + ".keymaerax" + File.separator + "cache"
+    val cacheVersionFile = new File(cacheLocation + File.separator + "VERSION")
+    val lemmadb          = new File(cacheLocation + File.separator + "lemmadb")
+    if(!cacheVersionFile.exists()) {
+      clearCache(new File(cacheLocation))
+    }
+    else {
+      val cacheVersion = scala.io.Source.fromFile(cacheVersionFile).mkString.replace("\n", "")
+      try {
+        if (StringToVersion(cacheVersion) != StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION)) {
+          clearCache(new File(cacheLocation))
+        }
+      }
+      catch {
+        case e: NumberFormatException => {
+          println("Warning: Could not parse the cache version file, chiech contained: " + cacheVersion)
+          clearCache(new File(cacheLocation))
+        }
+      }
+    }
+  }
+
+  /** Clears the cache and creates a new cache/VERSION file */
+  private def clearCache(dir: File) = {
+    println("Clearing your cache because of an update.")
+    dir.delete()
+    val verisonFile = new File(dir.getAbsolutePath + File.separator + "VERSION")
+    val fw = new FileWriter(verisonFile)
+    fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
+    fw.close()
   }
 
   /** Kills the current process and shows an error message if the current database is deprecated.

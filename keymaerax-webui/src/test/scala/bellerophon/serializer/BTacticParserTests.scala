@@ -1,10 +1,8 @@
 package bellerophon.serializer
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{SuccPos, Provable}
-import edu.cmu.cs.ls.keymaerax.tactics.SuccPosition
+import edu.cmu.cs.ls.keymaerax.core.{Provable}
 import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 

@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BranchTactic, SeqTactic, BelleExpr}
-import edu.cmu.cs.ls.keymaerax.btacticinterface.BTacticParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BTacticParser, BranchTactic, SeqTactic, BelleExpr}
 
 import scala.annotation.tailrec
 
