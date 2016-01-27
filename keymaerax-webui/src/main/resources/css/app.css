@@ -178,8 +178,8 @@ table .btn{
   width: 350px; /* @todo solve tactic popover layout problem for real */
 }
 
-.popover .k4-sequentRule {
-  width: 500px; /* @todo solve tactic popover layout problem for real */
+.popover .k4-tactic-popover-entry {
+  width: 700px; /* @todo solve tactic popover layout problem for real */
 }
 
 .k4-sequentRulePremise {

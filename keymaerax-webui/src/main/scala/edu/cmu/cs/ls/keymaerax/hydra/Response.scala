@@ -431,14 +431,14 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
     }
   }
 
-  def inputsJson(info:TacticInfo): JsValue = {
+  def inputsJson(info:TacticInfo): JsArray = {
     info.inputs match {
       case Nil => JsArray()
       case inputs => JsArray(inputs.map{case input => inputJson(input)}:_*)
     }
   }
 
-  def axiomJson(info:DerivationInfo):JsValue = {
+  def axiomJson(info:DerivationInfo): JsObject = {
     val formulaText =
       (info, info.display) match {
         case (_, AxiomDisplayInfo(_, formulaDisplay)) => formulaDisplay
@@ -450,32 +450,34 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
     )
   }
 
-  def tacticJson(info:TacticInfo) = {
+  def tacticJson(info:TacticInfo): JsObject = {
     JsObject(
       "type" -> JsString("tactic"),
       "input" -> inputsJson(info)
     )
   }
 
-  def sequentJson(sequent:SequentDisplay):JsValue = {
+  def sequentJson(sequent:SequentDisplay): JsValue = {
     val json = JsObject (
-    "ante" -> new JsArray(sequent.ante.map{case fml => JsString(fml)}),
-    "succ" -> new JsArray(sequent.succ.map{case fml => JsString(fml)})
+    "ante" -> new JsArray(sequent.ante.map{case fml => JsString(fml)}.toVector),
+    "succ" -> new JsArray(sequent.succ.map{case fml => JsString(fml)}.toVector)
     )
    json
   }
 
-  def ruleJson(info:TacticInfo, conclusion:SequentDisplay, premises:List[SequentDisplay]) = {
+  def ruleJson(info: TacticInfo, conclusion: SequentDisplay, premises: List[SequentDisplay],
+               expertMode: List[DerivationInfo]): JsObject = {
     val conclusionJson = sequentJson(conclusion)
     val premisesJson = JsArray(premises.map{case sequent => sequentJson(sequent)}:_*)
     JsObject(
       "type" -> JsString("sequentrule"),
       "conclusion" -> conclusionJson,
       "premise" -> premisesJson,
-      "input" -> inputsJson(info))
+      "input" -> inputsJson(info),
+      "expertMode" -> JsArray(expertMode.map({case expInfo => derivationJson(expInfo)}):_*))
   }
 
-  def derivationJson(derivationInfo: DerivationInfo) = {
+  def derivationJson(derivationInfo: DerivationInfo): JsObject = {
     val derivation =
       derivationInfo match {
         case info:AxiomInfo => axiomJson(info)
@@ -483,8 +485,8 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
           info.display match {
             case _: SimpleDisplayInfo => tacticJson(info)
             case display : AxiomDisplayInfo => axiomJson(info)
-            case RuleDisplayInfo(_, conclusion, premises) =>
-              ruleJson(info, conclusion, premises)
+            case RuleDisplayInfo(_, conclusion, premises, expertMode) =>
+              ruleJson(info, conclusion, premises, expertMode)
           }
       }
     JsObject(
