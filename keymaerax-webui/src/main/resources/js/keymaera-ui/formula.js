@@ -347,7 +347,7 @@ angular.module('formula')
                         case "apply":
                             var name = c[0]
                             if (c[1].name != "Nothing") {
-                              content = {text: name + parensIfNeeded(json, c[1], 'term', depth + 1, collapsed), type: 'term'};
+                              content = {text: name + "(" + parseFormulaHelper(c[1], depth + 1, collapsed) + ")", type: 'term'};
                             } else {
                               content = {text: name + "()", type: 'term'};
                             }
