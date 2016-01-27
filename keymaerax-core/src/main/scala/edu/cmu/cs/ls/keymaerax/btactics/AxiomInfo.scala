@@ -462,6 +462,10 @@ object DerivationInfo {
     new TacticInfo("hideG"
       , RuleDisplayInfo("G", (List("&Gamma;"), List("[a]P", "&Delta;")), List((List(),List("P"))))
       , {case () => HilbertCalculus.hideG}),
+    new PositionTacticInfo("abstractionb"
+      , RuleDisplayInfo("V++", (List("&Gamma;", "[a]P"), List("&Delta;"))
+      , List((List("&Gamma; \\ a", "P"), List("&Delta;"))))
+      , {case () => TactixLibrary.abstractionb}),
     new PositionTacticInfo("dualFree"
       , RuleDisplayInfo(("[]⊤", "[]T"), (List("&Gamma;"),List("[a]⊤","&Delta;")),
         List())
@@ -611,7 +615,7 @@ object DerivationInfo {
     throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)
   )
 
-  def hasCodeName(codeName: String): Boolean = byCodeName.keySet.contains(codeName)
+  def hasCodeName(codeName: String): Boolean = byCodeName.keySet.contains(codeName.toLowerCase)
 }
 
 object AxiomInfo {
