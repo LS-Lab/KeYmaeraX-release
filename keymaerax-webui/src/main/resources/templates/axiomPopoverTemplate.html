@@ -9,32 +9,33 @@
 <div class="row">
     <!-- padding around content -->
     <div class="col-md-12">
-
-        <div class="well well-sm" ng-repeat="tactic in formulaAxiomsMap[tacticPopover.formulaId()] | filter:{derivation: {type: 'axiom'}}">
-            <!-- TODO transmit key from server and underline, make changeable -->
-            <div class="row">
-                <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.id)">{{tactic.name}}</a></b></div>
-                <div class="col-md-10">{{tactic.derivation.formula}}</div>
+        <div ng-repeat="tactic in formulaAxiomsMap[tacticPopover.formulaId()]">
+            <div class="well well-sm" ng-if="tactic.derivation.type === 'axiom'">
+                <!-- TODO transmit key from server and underline, make changeable -->
+                <div class="row">
+                    <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.id)">{{tactic.name}}</a></b></div>
+                    <div class="col-md-10">{{tactic.derivation.formula}}</div>
+                </div>
             </div>
-        </div>
-        <div class="well well-sm" ng-repeat="tactic in formulaAxiomsMap[tacticPopover.formulaId()] | filter:{derivation: {type: 'tactic'}}">
-            <div class="row">
-                <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.id)">{{tactic.name}}</a></b></div>
-                <div class="col-md-10">{{tactic.derivation.formula}}</div>
+            <div class="well well-sm" ng-if="tactic.derivation.type === 'tactic'">
+                <div class="row">
+                    <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.id)">{{tactic.name}}</a></b></div>
+                    <div class="col-md-10">{{tactic.derivation.formula}}</div>
+                </div>
             </div>
+            <uib-accordion close-others="false" ng-if="tactic.derivation.type === 'sequentrule'">
+                <uib-accordion-group is-open="tactic.isOpen">
+                    <uib-accordion-heading>
+                        <a ng-if="tactic.derivation.input.length === 0"
+                           ng-click="applyTactic(tacticPopover.formulaId(), tactic.id)">{{tactic.name}}</a>
+                        <a ng-if="tactic.derivation.input.length > 0"
+                           ng-click="applyInputTactic(tacticPopover.formulaId(), tactic)">{{tactic.name}}</a>
+                        <span class="pull-right fa fa-bars"></span>
+                    </uib-accordion-heading>
+                    <div class="col-md-12" ng-include="'templates/sequentRuleTemplate.html'"></div>
+                </uib-accordion-group>
+            </uib-accordion>
         </div>
-        <uib-accordion close-others="false">
-            <uib-accordion-group ng-repeat="tactic in formulaAxiomsMap[tacticPopover.formulaId()] | filter:{derivation: {type: 'sequentrule'}}" is-open="tactic.isOpen">
-                <uib-accordion-heading>
-                    <a ng-if="tactic.derivation.input.length === 0"
-                       ng-click="applyTactic(tacticPopover.formulaId(), tactic.id)">{{tactic.name}}</a>
-                    <a ng-if="tactic.derivation.input.length > 0"
-                       ng-click="applyInputTactic(tacticPopover.formulaId(), tactic)">{{tactic.name}}</a>
-                    <span class="pull-right fa fa-bars"></span>
-                </uib-accordion-heading>
-                <div class="col-md-12" ng-include="'templates/sequentRuleTemplate.html'"></div>
-            </uib-accordion-group>
-        </uib-accordion>
     </div>
 </div>
 <div ng-if="formulaAxiomsMap[tacticPopover.formulaId()] === undefined || formulaAxiomsMap[tacticPopover.formulaId()] === null || formulaAxiomsMap[tacticPopover.formulaId()].length == 0">
