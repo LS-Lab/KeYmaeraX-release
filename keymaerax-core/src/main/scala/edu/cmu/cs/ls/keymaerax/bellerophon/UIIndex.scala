@@ -100,14 +100,7 @@ object UIIndex {
           }, post)
           foundPrime
         }
-        val rules =
-      // @todo Better applicability test for V
-          (if (isTop && !isAnte) {
-            "hideG" :: "V vacuous" :: alwaysApplicable
-          }
-          else {
-            "V vacuous" :: alwaysApplicable
-           }) ++ maybeSplit
+        val rules = "abstractionb" :: maybeSplit
         a match {
           case _: Assign => "assignbTactic" :: rules
           case _: AssignAny => "[:*] assign nondet" :: rules
