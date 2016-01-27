@@ -114,12 +114,12 @@ object DerivationInfo {
       , AxiomDisplayInfo("DC","([{x′=f(x)&q(x)}]p(x)↔[{x′=f(x)&q(x)∧r(x)}]p(x))←[{x′:=f(x)&q(x)}]r(x)")
       , "DCaxiom", {case () => ??? }),
     new InputPositionTacticInfo("diffCut"
-      , RuleDisplayInfo("DC"
-        , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
-        , List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;")),
-          (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
-      , List(FormulaArg("r(x)"))
-      , {case () => (fml:Formula) => HilbertCalculus.DC(fml)}),
+    , RuleDisplayInfo("DC"
+      , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
+      , List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;")),
+        (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
+    , List(FormulaArg("r(x)"))
+    , {case () => (fml:Formula) => TactixLibrary.diffCut(fml)}),
     new CoreAxiomInfo("DE differential effect"
       , AxiomDisplayInfo("DE", "[{x′=f(x)&q(x)}]P↔[x′=f(x)&q(x)][x′:=f(x)]P")
       , "DE", {case () => HilbertCalculus.DE}),
