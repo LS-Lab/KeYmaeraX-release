@@ -30,7 +30,7 @@ sealed trait DisplayInfo {
   def asciiName: String
 }
 case class SimpleDisplayInfo(override val name: String, override val asciiName: String) extends DisplayInfo
-case class RuleDisplayInfo(names: SimpleDisplayInfo, conclusion: SequentDisplay, premises:List[SequentDisplay]) extends DisplayInfo {
+case class RuleDisplayInfo(names: SimpleDisplayInfo, conclusion: SequentDisplay, premises:List[SequentDisplay], expertMode: List[DerivationInfo] = Nil) extends DisplayInfo {
   override def name = names.name
   override def asciiName = names.asciiName
 }
@@ -53,6 +53,18 @@ object DerivationInfo {
   private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
 
   private def useAt(l:Lemma):BelleExpr = HilbertCalculus.useAt(l)
+
+  /** Infos that are cross-referenced from several places */
+  private val diffCut = new InputPositionTacticInfo("diffCut"
+  , RuleDisplayInfo("DC"
+    , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
+    , List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;")),
+      (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
+  , List(FormulaArg("r(x)"))
+  , {case () => (fml:Formula) => TactixLibrary.diffCut(fml)})
+
+  private val diffInd = new PositionTacticInfo("diffInd", "DI",  {case () => DifferentialTactics.diffInd}, needsTool = true)
+
   /**
     * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
     * Transferred into subsequent maps etc for efficiency reasons.
@@ -113,13 +125,7 @@ object DerivationInfo {
     new CoreAxiomInfo("DC differential cut"
       , AxiomDisplayInfo("DC","([{x′=f(x)&q(x)}]p(x)↔[{x′=f(x)&q(x)∧r(x)}]p(x))←[{x′:=f(x)&q(x)}]r(x)")
       , "DCaxiom", {case () => ??? }),
-    new InputPositionTacticInfo("diffCut"
-      , RuleDisplayInfo("DC"
-        , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
-        , List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;")),
-          (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
-      , List(FormulaArg("r(x)"))
-      , {case () => (fml:Formula) => HilbertCalculus.DC(fml)}),
+    diffCut,
     new CoreAxiomInfo("DE differential effect"
       , AxiomDisplayInfo("DE", "[{x′=f(x)&q(x)}]P↔[x′=f(x)&q(x)][x′:=f(x)]P")
       , "DE", {case () => HilbertCalculus.DE}),
@@ -456,6 +462,10 @@ object DerivationInfo {
     new TacticInfo("hideG"
       , RuleDisplayInfo("G", (List("&Gamma;"), List("[a]P", "&Delta;")), List((List(),List("P"))))
       , {case () => HilbertCalculus.hideG}),
+    new PositionTacticInfo("abstractionb"
+      , RuleDisplayInfo("V++", (List("&Gamma;", "[a]P"), List("&Delta;"))
+      , List((List("&Gamma; \\ a", "P"), List("&Delta;"))))
+      , {case () => TactixLibrary.abstractionb}),
     new PositionTacticInfo("dualFree"
       , RuleDisplayInfo(("[]⊤", "[]T"), (List("&Gamma;"),List("[a]⊤","&Delta;")),
         List())
@@ -548,10 +558,15 @@ object DerivationInfo {
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
 
     // Differential tactics
-    new PositionTacticInfo("diffInd", "diffInd",  {case () => DifferentialTactics.diffInd}, needsTool = true),
+    diffInd,
     new PositionTacticInfo("diffSolve", "diffSolve",  {case () => TactixLibrary.diffSolve(None)}, needsTool = true),
-    new InputPositionTacticInfo("diffInvariant", "DI", List(FormulaArg("f(x)"))
-      , {case () => (fml:Formula) => DifferentialTactics.diffInvariant(qeTool, fml)}, needsTool = true),
+    new InputPositionTacticInfo("diffInvariant"
+    , RuleDisplayInfo("DC+DI"
+      , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
+      , List((List("&Gamma;"), List("[{x′ = f(x) & q(x) ∧ r(x)}]p(x)","&Delta;")))
+      , List(diffCut, diffInd))
+    , List(FormulaArg("r(x)"))
+    , {case () => (fml:Formula) => TactixLibrary.diffInvariant(fml)}),
     new PositionTacticInfo("Dconstify", "Dconst", {case () => DifferentialTactics.Dconstify}),
     new PositionTacticInfo("Dvariable", "Dvar", {case () => DifferentialTactics.Dvariable}),
 
@@ -572,7 +587,6 @@ object DerivationInfo {
       (canonicals.length==canonicals.distinct.length ensuring(r=>r, "unique canonical names: " + (canonicals diff canonicals.distinct))) &
       (codeNames.length==codeNames.distinct.length ensuring(r=>r, "unique code names / identifiers: " + (codeNames diff codeNames.distinct)))
   }
-
 
   /** code name mapped to derivation information */
   private val byCodeName: Map[String, DerivationInfo] =
@@ -601,7 +615,7 @@ object DerivationInfo {
     throw new IllegalArgumentException("No such DerivationInfo of identifier " + codeName)
   )
 
-  def hasCodeName(codeName: String): Boolean = byCodeName.keySet.contains(codeName)
+  def hasCodeName(codeName: String): Boolean = byCodeName.keySet.contains(codeName.toLowerCase)
 }
 
 object AxiomInfo {
