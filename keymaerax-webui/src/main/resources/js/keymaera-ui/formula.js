@@ -383,17 +383,7 @@ angular.module('formula')
                 $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/list')
                   .success(function(data) {
                     scope.formulaAxiomsMap[formulaId] = $.map(data, function(tactic, i) {
-                      if (tactic.derivation.type === 'sequentrule') {
-                        tactic.isOpen = (tactic.derivation.input !== undefined && tactic.derivation.input !== null &&
-                          tactic.derivation.input.length > 0) || i == 0;
-                        return convertSequentRuleToInput(tactic);
-                      } else if (tactic.derivation.type === 'axiom') {
-                        return tactic;
-                      } else if (tactic.derivation.type === 'tactic') {
-                        return tactic;
-                      } else {
-                        console.log("Unknown deduction type '" + tactic.derivation.type + "'");
-                      }
+                      return convertTactic(tactic);
                     });
                     scope.tacticPopover.open(formulaId);
                 });
@@ -470,9 +460,27 @@ angular.module('formula')
               scope.dndTooltip.close();
             }
 
+            convertTactic = function(tactic) {
+              if (tactic.derivation.type === 'sequentrule') {
+                tactic.isOpen = (tactic.derivation.input !== undefined && tactic.derivation.input !== null &&
+                  tactic.derivation.input.length > 0);
+                tactic.expertMode = false;
+                return convertSequentRuleToInput(tactic);
+              } else if (tactic.derivation.type === 'axiom') {
+                return tactic;
+              } else if (tactic.derivation.type === 'tactic') {
+                return tactic;
+              } else {
+                console.log("Unknown deduction type '" + tactic.derivation.type + "'");
+              }
+            }
+
             convertSequentRuleToInput = function(tactic) {
               tactic.derivation.premise = $.map(tactic.derivation.premise, function(premise, i) {
                 return {ante: convertToInput(premise.ante, tactic), succ: convertToInput(premise.succ, tactic)};
+              });
+              tactic.derivation.expertMode = $.map(tactic.derivation.expertMode, function(expertTactic, i) {
+                return convertTactic(expertTactic);
               });
               return tactic;
             }
