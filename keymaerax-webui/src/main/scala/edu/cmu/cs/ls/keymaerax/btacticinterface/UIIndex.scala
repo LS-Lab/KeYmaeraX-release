@@ -28,7 +28,7 @@ object UIIndex {
   def theStepAt(pos1: Position, pos2: Position, sequent: Sequent): Option[String] = allTwoPosSteps(pos1, pos2, sequent).
     find(DerivationInfo(_).inputs.isEmpty)
 
-  private val odeList: List[String] = "DI differential invariant" :: "diffCut" :: "DG differential ghost" :: Nil
+  private val odeList: List[String] = "diffCut" :: "diffInd" :: "DG differential ghost" :: Nil
 
   private val unknown = Nil
 
@@ -114,7 +114,7 @@ object UIIndex {
             case _ => rules
           }
           case ODESystem(ode, constraint) =>
-            val tactics: List[String] = "diffSolve" :: "diffInd" ::  Nil
+            val tactics: List[String] = "diffSolve" :: "diffInvariant" ::  Nil
             if (constraint == True)
               tactics ++ odeList ++ rules
             else

@@ -544,10 +544,14 @@ object DerivationInfo {
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
 
     // Differential tactics
-    new PositionTacticInfo("diffInd", "diffInd",  {case () => DifferentialTactics.diffInd}, needsTool = true),
+    new PositionTacticInfo("diffInd", "DI",  {case () => DifferentialTactics.diffInd}, needsTool = true),
     new PositionTacticInfo("diffSolve", "diffSolve",  {case () => TactixLibrary.diffSolve(None)}, needsTool = true),
-    new InputPositionTacticInfo("diffInvariant", "DI", List(FormulaArg("f(x)"))
-      , {case () => (fml:Formula) => DifferentialTactics.diffInvariant(qeTool, fml)}, needsTool = true),
+    new InputPositionTacticInfo("diffInvariant"
+    , RuleDisplayInfo("DC+DI"
+      , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
+      , List((List("&Gamma;"), List("[{x′ = f(x) & q(x) ∧ r(x)}]p(x)","&Delta;"))))
+    , List(FormulaArg("r(x)"))
+    , {case () => (fml:Formula) => TactixLibrary.diffInvariant(fml)}),
     new PositionTacticInfo("Dconstify", "Dconst", {case () => DifferentialTactics.Dconstify}),
     new PositionTacticInfo("Dvariable", "Dvar", {case () => DifferentialTactics.Dvariable}),
 
