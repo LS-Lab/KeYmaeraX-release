@@ -70,9 +70,15 @@ object Main {
     val cacheVersionFile = new File(cacheLocation + File.separator + "VERSION")
     val lemmadb          = new File(cacheLocation + File.separator + "lemmadb")
 
-    if(!cacheDirectory.exists()) cacheDirectory.mkdirs()
-    
+    if(!cacheDirectory.exists()) {
+      if(!cacheDirectory.mkdirs()) {
+        throw new Exception(s"Could not create the directory ${cacheDirectory.getAbsolutePath}. Please check your file system permissions.")
+      }
+    }
+
     if(!cacheVersionFile.exists()) {
+      if(!cacheVersionFile.createNewFile())
+        throw new Exception(s"Could not create the file ${cacheVersionFile.getAbsolutePath}. Please check your file system permissions.")
       clearCache(new File(cacheLocation))
     }
     else {
