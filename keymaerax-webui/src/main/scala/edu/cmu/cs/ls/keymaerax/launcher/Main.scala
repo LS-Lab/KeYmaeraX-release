@@ -66,8 +66,12 @@ object Main {
   /** Clears the cache if the cache was created by a previous version of KeYmaera X */
   private def clearCacheIfDeprecated(): Unit = {
     val cacheLocation = System.getenv("HOME") + File.separator + ".keymaerax" + File.separator + "cache"
+    val cacheDirectory = new File(cacheLocation)
     val cacheVersionFile = new File(cacheLocation + File.separator + "VERSION")
     val lemmadb          = new File(cacheLocation + File.separator + "lemmadb")
+
+    if(!cacheDirectory.exists()) cacheDirectory.mkdirs()
+    
     if(!cacheVersionFile.exists()) {
       clearCache(new File(cacheLocation))
     }
@@ -75,13 +79,13 @@ object Main {
       val cacheVersion = scala.io.Source.fromFile(cacheVersionFile).mkString.replace("\n", "")
       try {
         if (StringToVersion(cacheVersion) != StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION)) {
-          clearCache(new File(cacheLocation))
+          clearCache(cacheDirectory)
         }
       }
       catch {
         case e: NumberFormatException => {
           println("Warning: Could not parse the cache version file, chiech contained: " + cacheVersion)
-          clearCache(new File(cacheLocation))
+          clearCache(cacheDirectory)
         }
       }
     }
