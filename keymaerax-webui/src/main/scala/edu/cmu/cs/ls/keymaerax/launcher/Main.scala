@@ -90,7 +90,7 @@ object Main {
       }
       catch {
         case e: NumberFormatException => {
-          println("Warning: Could not parse the cache version file, chiech contained: " + cacheVersion)
+          println("Warning: Could not parse the cache version file, cache contained: " + cacheVersion)
           clearCache(cacheDirectory)
         }
       }
@@ -100,8 +100,12 @@ object Main {
   /** Clears the cache and creates a new cache/VERSION file */
   private def clearCache(dir: File) = {
     println("Clearing your cache because of an update.")
-    if(!dir.mkdirs()) throw new Exception("Could not reinitialize cache because cache directory could not be created.")
-    dir.delete()
+    if(dir.exists()) {
+      if(!deleteDirectory(dir)) throw new Exception(s"Could not delete cache directory ${dir.getAbsolutePath}")
+    }
+    assert(!dir.exists(), s"Cache directory ${dir.getAbsolutePath} should not exist after being deleted.")
+    if(!dir.mkdirs()) throw new Exception(s"Could not reinitialize cache because cache directory ${dir.getAbsolutePath} could not be created.")
+
     val versionFile = new File(dir.getAbsolutePath + File.separator + "VERSION")
     if(!versionFile.exists()) {
       if(!versionFile.createNewFile()) throw new Exception(s"Could not create ${versionFile.getAbsolutePath}")
@@ -111,6 +115,23 @@ object Main {
     fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
     fw.close()
   }
+
+  /** Deletes the directory or file (recursively). Corresponds to rm -r */
+  private def deleteDirectory(f : File) : Boolean = {
+    if(!f.isDirectory) {
+      if(!f.delete()) {
+        println(s"Warning: could not delete ${f.getAbsolutePath}")
+        false
+      }
+      else true
+    }
+    else if(f.list().length == 0) f.delete()
+    else {
+      val recSuccess = f.listFiles().forall(deleteDirectory)
+      if(recSuccess) f.delete()
+      else false
+    }
+  } ensuring(r => !r || !f.exists())
 
   /** Kills the current process and shows an error message if the current database is deprecated.
     * @todo similar behavior for the cache
