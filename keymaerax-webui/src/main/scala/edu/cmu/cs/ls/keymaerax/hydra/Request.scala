@@ -289,11 +289,6 @@ class MathematicaStatusRequest(db : DBAbstraction) extends Request {
 class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : String, keyFileContents : String) extends Request {
   private var createdId : Option[String] = None
 
-  def getModelId = createdId match {
-    case Some(s) => s
-    case None => throw new IllegalStateException("Requested created model ID before calling getResultingResponses, or else an error occurred during creation.")
-  }
-
   def getResultingResponses() = {
     try {
       //Return the resulting response.
@@ -305,6 +300,11 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
     } catch {
       case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
     }
+  }
+
+  def getModelId = createdId match {
+    case Some(s) => s
+    case None => throw new IllegalStateException("Requested created model ID before calling getResultingResponses, or else an error occurred during creation.")
   }
 }
 

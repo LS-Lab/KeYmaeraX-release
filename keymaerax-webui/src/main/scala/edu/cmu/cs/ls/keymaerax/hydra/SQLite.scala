@@ -322,7 +322,7 @@ object SQLite {
                              title: Option[String] = None, tactic: Option[String] = None): Option[Int] =
       synchronizedTransaction({
         nSelects = nSelects + 1
-        if (Models.filter(_.userid === userId).filter(_.name === name).list.length == 0) {
+        if (Models.filter(_.userid === userId).filter(_.name === name).list.isEmpty) {
           nInserts = nInserts + 1
           Some((Models.map(m => (m.userid.get, m.name.get, m.filecontents.get, m.date.get, m.description, m.publink, m.title, m.tactic))
             returning Models.map(_._Id.get))
