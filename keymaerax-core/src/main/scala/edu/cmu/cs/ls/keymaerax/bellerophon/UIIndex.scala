@@ -27,8 +27,6 @@ object UIIndex {
   def theStepAt(pos1: Position, pos2: Position, sequent: Sequent): Option[String] = allTwoPosSteps(pos1, pos2, sequent).
     find(DerivationInfo(_).inputs.isEmpty)
 
-  private val odeList: List[String] = "DI differential invariant" :: "diffCut" :: "DG differential ghost" :: Nil
-
   private val unknown = Nil
 
   /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
@@ -100,16 +98,9 @@ object UIIndex {
           }, post)
           foundPrime
         }
-        val rules =
-      // @todo Better applicability test for V
-          (if (isTop && !isAnte) {
-            "hideG" :: "V vacuous" :: alwaysApplicable
-          }
-          else {
-            "V vacuous" :: alwaysApplicable
-           }) ++ maybeSplit
+        val rules = "abstractionb" :: maybeSplit
         a match {
-          case _: Assign => "assignbTactic" :: rules
+          case _: Assign => "assignb" :: rules
           case _: AssignAny => "[:*] assign nondet" :: rules
           case _: DiffAssign => "[':=] differential assign" :: rules
           case _: Test => "[?] test" :: rules
@@ -123,11 +114,11 @@ object UIIndex {
             case _ => rules
           }
           case ODESystem(ode, constraint) =>
-            val tactics: List[String] = "diffSolve" :: "diffInd" ::  Nil
+            val tactics: List[String] = "diffSolve" :: "diffInvariant" ::  Nil
             if (constraint == True)
-              tactics ++ odeList ++ rules
+              (tactics :+ "DG differential ghost") ++ rules
             else
-              (tactics :+ "diffWeaken") ++ odeList ++ rules
+              (tactics :+ "diffWeaken" :+ "DG differential ghost") ++ rules
           case _ => rules
         }
 

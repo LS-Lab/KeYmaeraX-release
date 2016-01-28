@@ -66,22 +66,32 @@ object Main {
   /** Clears the cache if the cache was created by a previous version of KeYmaera X */
   private def clearCacheIfDeprecated(): Unit = {
     val cacheLocation = System.getenv("HOME") + File.separator + ".keymaerax" + File.separator + "cache"
+    val cacheDirectory = new File(cacheLocation)
     val cacheVersionFile = new File(cacheLocation + File.separator + "VERSION")
     val lemmadb          = new File(cacheLocation + File.separator + "lemmadb")
+
+    if(!cacheDirectory.exists()) {
+      if(!cacheDirectory.mkdirs()) {
+        throw new Exception(s"Could not create the directory ${cacheDirectory.getAbsolutePath}. Please check your file system permissions.")
+      }
+    }
+
     if(!cacheVersionFile.exists()) {
+      if(!cacheVersionFile.createNewFile())
+        throw new Exception(s"Could not create the file ${cacheVersionFile.getAbsolutePath}. Please check your file system permissions.")
       clearCache(new File(cacheLocation))
     }
     else {
       val cacheVersion = scala.io.Source.fromFile(cacheVersionFile).mkString.replace("\n", "")
       try {
         if (StringToVersion(cacheVersion) != StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION)) {
-          clearCache(new File(cacheLocation))
+          clearCache(cacheDirectory)
         }
       }
       catch {
         case e: NumberFormatException => {
-          println("Warning: Could not parse the cache version file, chiech contained: " + cacheVersion)
-          clearCache(new File(cacheLocation))
+          println("Warning: Could not parse the cache version file, cache contained: " + cacheVersion)
+          clearCache(cacheDirectory)
         }
       }
     }
@@ -90,12 +100,38 @@ object Main {
   /** Clears the cache and creates a new cache/VERSION file */
   private def clearCache(dir: File) = {
     println("Clearing your cache because of an update.")
-    dir.delete()
-    val verisonFile = new File(dir.getAbsolutePath + File.separator + "VERSION")
-    val fw = new FileWriter(verisonFile)
+    if(dir.exists()) {
+      if(!deleteDirectory(dir)) throw new Exception(s"Could not delete cache directory ${dir.getAbsolutePath}")
+    }
+    assert(!dir.exists(), s"Cache directory ${dir.getAbsolutePath} should not exist after being deleted.")
+    if(!dir.mkdirs()) throw new Exception(s"Could not reinitialize cache because cache directory ${dir.getAbsolutePath} could not be created.")
+
+    val versionFile = new File(dir.getAbsolutePath + File.separator + "VERSION")
+    if(!versionFile.exists()) {
+      if(!versionFile.createNewFile()) throw new Exception(s"Could not create ${versionFile.getAbsolutePath}")
+    }
+    assert(versionFile.exists())
+    val fw = new FileWriter(versionFile)
     fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
     fw.close()
   }
+
+  /** Deletes the directory or file (recursively). Corresponds to rm -r */
+  private def deleteDirectory(f : File) : Boolean = {
+    if(!f.isDirectory) {
+      if(!f.delete()) {
+        println(s"Warning: could not delete ${f.getAbsolutePath}")
+        false
+      }
+      else true
+    }
+    else if(f.list().length == 0) f.delete()
+    else {
+      val recSuccess = f.listFiles().forall(deleteDirectory)
+      if(recSuccess) f.delete()
+      else false
+    }
+  } ensuring(r => !r || !f.exists())
 
   /** Kills the current process and shows an error message if the current database is deprecated.
     * @todo similar behavior for the cache
