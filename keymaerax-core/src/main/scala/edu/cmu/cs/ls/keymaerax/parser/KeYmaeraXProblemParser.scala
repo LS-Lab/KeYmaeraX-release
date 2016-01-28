@@ -48,7 +48,10 @@ object KeYmaeraXProblemParser {
       case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
     }
 
-    require(KeYmaeraXDeclarationsParser.typeAnalysis(decls, problem), "type analysis")
+    if(!KeYmaeraXDeclarationsParser.typeAnalysis(decls, problem)) {
+      throw ParseException("Type analysis failed.", problem)
+    }
+
     (decls, problem)
   }
 }
@@ -92,7 +95,7 @@ object KeYmaeraXDeclarationsParser {
    * Type analysis of expression according to the given type declarations decls
    * @param decls the type declarations known from the context
    * @param expr the expression parsed
-   * @return whether expr conforms to the types declared in decls.
+   * @throws [[edu.cmu.cs.ls.keymaerax.parser.ParseException]] if the type analysis fails.
    */
   def typeAnalysis(decls: Map[(String, Option[Int]), (Option[Sort], Sort)], expr: Expression): Boolean = {
     StaticSemantics.signature(expr).forall(f => f match {
@@ -101,10 +104,9 @@ object KeYmaeraXDeclarationsParser {
           case Some(d) => d
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + f, f)
         }
-        f.sort == sort && (domain match {
-          case Some(d) => f.domain == d
-          case None => throw ParseException("type analysis" + ": " + f.name + s" is declared as non-function, but used as function. Try using ${f.name} instead of ${f.name}()", f)
-        })
+        if(f.sort != sort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort ${sort} but used where sort ${f.sort} was expected.", f)
+        else if(f.domain != domain) throw ParseException(s"type analysis: ${f.prettyString} declared with domain ${domain} but used where domain ${f.domain} was expected.", f)
+        else true
       case _ => true
     }) &&
     StaticSemantics.vars(expr).toSymbolSet.forall(x => x match {
@@ -113,6 +115,7 @@ object KeYmaeraXDeclarationsParser {
           case Some((None,d)) => d
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index, x)
         }
+        if(x.sort != sort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort ${sort} but used where a ${x.sort} was expected.", x)
         x.sort == sort
       case _ => true
     })
