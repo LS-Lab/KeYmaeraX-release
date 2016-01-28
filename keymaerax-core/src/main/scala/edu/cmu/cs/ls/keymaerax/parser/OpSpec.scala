@@ -188,7 +188,7 @@ object OpSpec {
   val sExists       = BinaryOpSpec[Expression](EXISTS, 95, MixedBinary, quantfml, (x:Expression, f:Expression) => Exists(Seq(x.asInstanceOf[Variable]), f.asInstanceOf[Formula]))
   val sBox          = BinaryOpSpec[Expression](PSEUDO, 95, MixedBinary, modalfml, (_:String, a:Expression, f:Expression) => Box(a.asInstanceOf[Program], f.asInstanceOf[Formula]))
   val sDiamond      = BinaryOpSpec[Expression](PSEUDO, 95, MixedBinary, modalfml, (_:String, a:Expression, f:Expression) => Diamond(a.asInstanceOf[Program], f.asInstanceOf[Formula]))
-  val sNot          = UnaryOpSpec[Formula] (NOT,      100, PrefixFormat, unfml, Not.apply _)
+  val sNot          = UnaryOpSpec[Formula] (NOT,       99, PrefixFormat, unfml, Not.apply _)
   val sAnd          = BinaryOpSpec[Formula](AMP,      110, RightAssociative, binfml, And.apply _)
   val sOr           = BinaryOpSpec[Formula](OR,       120, RightAssociative, binfml, Or.apply _)
   val sImply        = BinaryOpSpec[Formula](IMPLY,    150, RightAssociative/*!*/, binfml, Imply.apply _)

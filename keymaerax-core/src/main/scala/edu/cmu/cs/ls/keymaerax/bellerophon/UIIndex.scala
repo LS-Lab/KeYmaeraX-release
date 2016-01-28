@@ -100,7 +100,7 @@ object UIIndex {
         }
         val rules = "abstractionb" :: maybeSplit
         a match {
-          case _: Assign => "assignbTactic" :: rules
+          case _: Assign => "assignb" :: rules
           case _: AssignAny => "[:*] assign nondet" :: rules
           case _: DiffAssign => "[':=] differential assign" :: rules
           case _: Test => "[?] test" :: rules

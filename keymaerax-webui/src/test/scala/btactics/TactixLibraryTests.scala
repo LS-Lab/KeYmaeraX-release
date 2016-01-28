@@ -27,7 +27,7 @@ class TactixLibraryTests extends TacticTestBase {
   private val someList: () => Iterator[Formula] = () =>
       ("x>=4".asFormula :: "x>=6".asFormula :: "x<2".asFormula :: "x>=5".asFormula :: "x>=0".asFormula :: Nil).iterator
 
-  "No DoSome" should "follow the right cut for x>=7 -> x>=5" in withMathematica { implicit qeTool =>
+  "DoLoneSome not DoSome" should "follow the right cut for x>=7 -> x>=5" in withMathematica { implicit qeTool =>
     proveBy("x>=7 -> x>=5".asFormula,
       implyR(1) &
         cutR("x>=6".asFormula)(SuccPosition(1).top) & DoAll(QE)
