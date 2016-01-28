@@ -308,6 +308,14 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
   }
 }
 
+class DeleteModelRequest(db: DBAbstraction, userId: String, modelId: String) extends Request {
+  //@todo check the model belongs to the user.
+  override def getResultingResponses(): List[Response] = {
+    val success = db.deleteModel(Integer.parseInt(modelId))
+    new BooleanResponse(success) :: Nil
+  }
+}
+
 class GetModelListRequest(db : DBAbstraction, userId : String) extends Request {
   def getResultingResponses() = {
     new ModelListResponse(db.getModelList(userId)) :: Nil

@@ -133,6 +133,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}}}
 
+  val deleteModel = userPrefix {userId => pathPrefix("model" / Segment / "delete") { modelId => pathEnd {
+    post {
+      val r = new DeleteModelRequest(database, userId, modelId)
+      complete(standardCompletion(r))
+    }
+  }}}
+
   //Because apparently FTP > modern web.
   val userModel2 = userPrefix {userId => {pathPrefix("modeltextupload" / Segment) {modelNameOrId =>
   {pathEnd {
@@ -542,6 +549,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     modelTactic           ::
     userModel             ::
     userModel2            ::
+    deleteModel           ::
     cookieecho            ::
     createProof           ::
     proofListForModel     ::

@@ -213,6 +213,8 @@ trait DBAbstraction {
 
   def getModel(modelId: Int): ModelPOJO
 
+  def deleteModel(modelId: Int): Boolean
+
   def getModel(modelId: String): ModelPOJO = getModel(modelId.toInt)
 
   def getModelList(userId: String): List[ModelPOJO]

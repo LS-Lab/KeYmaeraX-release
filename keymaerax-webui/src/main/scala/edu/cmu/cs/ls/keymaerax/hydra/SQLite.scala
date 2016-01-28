@@ -356,6 +356,12 @@ object SQLite {
         else throw new Exception("Primary keys aren't unique in models table.")
       })
 
+    override def deleteModel(modelId: Int): Boolean =
+      synchronizedTransaction({
+        Models.filter(_._Id === modelId).delete;
+        true
+      })
+
     override def getUsername(uid: String): String =
       uid
 
