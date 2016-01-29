@@ -17,24 +17,28 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
   });
   $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
 
-  $rootScope.$on('agenda.isEmpty', function(event) {
-    $http.get('proofs/user/' + $cookies.get('userId') + "/" + $routeParams.proofId + '/progress').success(function(data) {
-      if (data.status == 'closed') {
-        var modalInstance = $uibModal.open({
-          templateUrl: 'partials/prooffinisheddialog.html',
-          controller: 'ProofFinishedDialogCtrl',
-          size: 'md',
-          resolve: {
-            proofId: function() { return $scope.proofId; },
-            status: function() { return data.status }
-          }
-        });
-      } else {
-        // should never happen
-        showMessage($uibModal, 'Empty agenda even though proof is not closed (' + data.status + ')')
-      }
-    });
-  });
+  if(!$rootScope.agnedaIsEmptyEventIsDefined) {
+      $rootScope.$on('agenda.isEmpty', function(event) {
+          $rootScope.agnedaIsEmptyEventIsDefined = true;
+          
+          $http.get('proofs/user/' + $cookies.get('userId') + "/" + $routeParams.proofId + '/progress').success(function(data) {
+              if (data.status == 'closed') {
+                  var modalInstance = $uibModal.open({
+                      templateUrl: 'partials/prooffinisheddialog.html',
+                      controller: 'ProofFinishedDialogCtrl',
+                      size: 'md',
+                      resolve: {
+                          proofId: function() { return $scope.proofId; },
+                          status: function() { return data.status }
+                      }
+                  });
+              } else {
+                  // should never happen
+                  showMessage($uibModal, 'Empty agenda even though proof is not closed (' + data.status + ')')
+              }
+          });
+      });
+  }
 
   $scope.runningTask = {
     nodeId: undefined,

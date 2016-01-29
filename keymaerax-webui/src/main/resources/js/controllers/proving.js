@@ -67,15 +67,16 @@ angular.module('keymaerax.controllers').controller('TaskListCtrl',
                 $scope.refreshTree();
                 $http.get('proofs/user/' + userId + "/" + proofId + '/progress').success(function(data) {
                   if (data.status == 'closed') {
-                    var modalInstance = $uibModal.open({
-                      templateUrl: 'partials/prooffinisheddialog.html',
-                      controller: 'ProofFinishedDialogCtrl',
-                      size: 'md',
-                      resolve: {
-                        proofId: function() { return $scope.proofId; },
-                        status: function() { return data.status }
-                      }
-                    });
+                      $rootScope.$emit('agenda.isEmpty')
+                    //var modalInstance = $uibModal.open({
+                    //  templateUrl: 'partials/prooffinisheddialog.html',
+                    //  controller: 'ProofFinishedDialogCtrl',
+                    //  size: 'md',
+                    //  resolve: {
+                    //    proofId: function() { return $scope.proofId; },
+                    //    status: function() { return data.status }
+                    //  }
+                    //});
                   } else {
                     // should never happen
                     showClientErrorMessage($uibModal, 'Empty agenda even though proof is not closed (' + data.status + ')')
