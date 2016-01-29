@@ -279,7 +279,7 @@ angular.module('formula')
                             break;
 
                         case "Loop":
-                            var left = parensIfNeeded(json, c[0], 'program', depth + 1, collapsed);
+                            var left = parseFormulaHelper(c[0], depth + 1, collapsed);
                             content = {text: "{" + left + "}<sup>*</sup>", type: 'program'};
                             break;
 
