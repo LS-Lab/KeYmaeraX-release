@@ -382,8 +382,8 @@ angular.module('formula')
                 // axioms not fetched yet
                 $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/list')
                   .success(function(data) {
-                    scope.formulaAxiomsMap[formulaId] = $.map(data, function(tactic, i) {
-                      return convertTactic(tactic);
+                    scope.formulaAxiomsMap[formulaId] = $.map(data, function(info, i) {
+                      return convertTacticInfo(info);
                     });
                     scope.tacticPopover.open(formulaId);
                 });
@@ -460,11 +460,24 @@ angular.module('formula')
               scope.dndTooltip.close();
             }
 
+            convertTacticInfo = function(info) {
+              info.standardDerivation = convertTactic(info.standardDerivation);
+              if (info.comfortDerivation !== undefined) {
+                info.comfortDerivation = convertTactic(info.comfortDerivation);
+              }
+              info.selectedDerivation = function() {
+                return this.reduceBranching ? this.comfortDerivation : this.standardDerivation;
+              }
+              // reduce branching by default
+              info.reduceBranching = info.comfortDerivation !== undefined;
+              info.isOpen = (info.selectedDerivation().derivation.input !== undefined &&
+                info.selectedDerivation().derivation.input !== null &&
+                info.selectedDerivation().derivation.input.length > 0);
+              return info;
+            }
+
             convertTactic = function(tactic) {
               if (tactic.derivation.type === 'sequentrule') {
-                tactic.isOpen = (tactic.derivation.input !== undefined && tactic.derivation.input !== null &&
-                  tactic.derivation.input.length > 0);
-                tactic.expertMode = false;
                 return convertSequentRuleToInput(tactic);
               } else if (tactic.derivation.type === 'axiom') {
                 return tactic;
@@ -477,10 +490,7 @@ angular.module('formula')
 
             convertSequentRuleToInput = function(tactic) {
               tactic.derivation.premise = $.map(tactic.derivation.premise, function(premise, i) {
-                return {ante: convertToInput(premise.ante, tactic), succ: convertToInput(premise.succ, tactic)};
-              });
-              tactic.derivation.expertMode = $.map(tactic.derivation.expertMode, function(expertTactic, i) {
-                return convertTactic(expertTactic);
+                return {ante: convertToInput(premise.ante, tactic), succ: convertToInput(premise.succ, tactic), isClosed: premise.isClosed};
               });
               return tactic;
             }

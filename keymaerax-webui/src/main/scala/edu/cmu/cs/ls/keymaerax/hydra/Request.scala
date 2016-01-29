@@ -526,7 +526,10 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
     val proof = db.getProofInfo(proofId)
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
     val subFormula = sequent.sub(pos).get
-    val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).map{case axiom => DerivationInfo(axiom)}
+    val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).
+      map{case axiom => (
+        DerivationInfo(axiom),
+        UIIndex.comfortOf(axiom).map(DerivationInfo(_)))}
     val generator = new ConfigurableGenerate(db.getInvariants(proof.modelId))
     val suggestedInput = generator(sequent, pos)
     new ApplicableAxiomsResponse(axioms, suggestedInput) :: Nil
@@ -538,7 +541,8 @@ class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofI
     val closed = db.getProofInfo(proofId).closed
     if (closed) return new ApplicableAxiomsResponse(Nil, None) :: Nil
     val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
-    val tactics = UIIndex.allTwoPosSteps(pos1, pos2, sequent).map(DerivationInfo(_))
+    val tactics = UIIndex.allTwoPosSteps(pos1, pos2, sequent).map({case step =>
+      (DerivationInfo(step), UIIndex.comfortOf(step).map(DerivationInfo(_)))})
     new ApplicableAxiomsResponse(tactics, None) :: Nil
   }
 }
@@ -551,9 +555,10 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                          pos: Option[PositionLocator], pos2: Option[PositionLocator] = None, inputs:List[BelleTermInput] = Nil, consultAxiomInfo: Boolean = true) extends Request {
   /** Turns belleTerm into a specific tactic expression, including input arguments */
   private def fullExpr(node: TreeNode) = {
-    val paramStrings = inputs.map{
+    val paramStrings: List[String] = inputs.map{
       case BelleTermInput(value, Some(_:TermArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
+      case BelleTermInput(value, Some(ListArg(_, "formula"))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, None) => value
     }
     val specificTerm = if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, pos2, _.codeName) else belleTerm
