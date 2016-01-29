@@ -660,11 +660,22 @@ object KeYmaeraXParser extends Parser {
       case rest :+ (tok@Token(RDIA,_)) if !rest.find(tok => tok.isInstanceOf[Token] && tok.asInstanceOf[Token].tok==LDIA).isDefined =>
         throw ParseException.imbalancedError("Syntax error or unmatched modality", tok, st)
 
-      case _ =>
+      case _ => {
+        //Try to make a good error message.
+        goodErrorMessage(st) match {
+          case Some(msg) => throw ParseException(s"${msg}", st)
+          case None => throw ParseException(s"Syntax error (or incomplete parser missing an item).\nWe could not generate a nice error message for stack: ${st.stack}", st)
+        }
         //@todo cases should be completed to complete the parser items, but it's easier to catch-all and report legible parse error.
-        throw ParseException("Syntax error (or incomplete parser missing an item)", st)
+
         //throw new AssertionError("Incomplete parser missing an item, so does not yet know how to handle case.\nFound: " + la + "\nAfter: " + s)
+      }
     }
+  }
+
+  private def goodErrorMessage(st : ParseState) : Option[String] = st.stack.top match {
+    case Token(edu.cmu.cs.ls.keymaerax.parser.RBOX, _) => Some("Syntax error. Perhaps the program contained in your box modality is ill-formed or incomplete?")
+    case _ => None
   }
 
   // stack helper

@@ -322,7 +322,7 @@ object SQLite {
                              title: Option[String] = None, tactic: Option[String] = None): Option[Int] =
       synchronizedTransaction({
         nSelects = nSelects + 1
-        if (Models.filter(_.userid === userId).filter(_.name === name).list.length == 0) {
+        if (Models.filter(_.userid === userId).filter(_.name === name).list.isEmpty) {
           nInserts = nInserts + 1
           Some((Models.map(m => (m.userid.get, m.name.get, m.filecontents.get, m.date.get, m.description, m.publink, m.title, m.tactic))
             returning Models.map(_._Id.get))
@@ -354,6 +354,12 @@ object SQLite {
         if (models.length < 1) throw new Exception("getModel type should be an Option")
         else if (models.length == 1) models.head
         else throw new Exception("Primary keys aren't unique in models table.")
+      })
+
+    override def deleteModel(modelId: Int): Boolean =
+      synchronizedTransaction({
+        Models.filter(_._Id === modelId).delete;
+        true
       })
 
     override def getUsername(uid: String): String =

@@ -198,7 +198,10 @@ object LEMMA_AXIOM_NAME_PAT {
 object PERIOD extends Terminal(".") {
   override def regexp = "\\.".r
 }
-object FUNCTIONS_BLOCK extends Terminal("Functions.")
+object FUNCTIONS_BLOCK extends Terminal("Functions.") {
+  //not totally necessary -- you'll still get the right behavior because . matches \. But also allows stuff like Functions: which maybe isn't terrible.
+//  override def regexp = """Functions\.""".r
+}
 object PROGRAM_VARIABLES_BLOCK extends Terminal("ProgramVariables.")
 object VARIABLES_BLOCK extends Terminal("Variables.") //used in axioms file...
 object PROBLEM_BLOCK extends Terminal("Problem.")
@@ -321,8 +324,9 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
    * @return A stream of symbols corresponding to input.
    */
   def inMode(input: String, mode: LexerMode) = {
-    if (DEBUG) println("LEX: " + input)
-    val output = lex(input, SuffixRegion(1,1), mode)
+    val correctedInput = input.replace("\r\n", "\n").replace("\r", "\n")
+    if (DEBUG) println("LEX: " + correctedInput)
+    val output = lex(correctedInput, SuffixRegion(1,1), mode)
     require(output.last.tok.equals(EOF), "Expected EOF but found " + output.last.tok)
     output
   }

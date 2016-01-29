@@ -12,6 +12,20 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
             })
      };
 
+      $scope.deleteModel = function(modelId) {
+          $http.post("/user/" + $cookies.get('userId') + "/model/" + modelId + "/delete").success(function(data) {
+              if(data.errorThrown) {
+                  showCaughtErrorMessage($uibModal, data, "Model Deleter")
+              } else {
+                  console.log("Model " + modelId + " was deleted. Getting a new model list and reloading the route.")
+                  $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
+                      Models.addModels(data);
+                      $route.reload();
+                  });
+              }
+          })
+      };
+
      $scope.addModel = function() {
           var file = keyFile.files[0];
 

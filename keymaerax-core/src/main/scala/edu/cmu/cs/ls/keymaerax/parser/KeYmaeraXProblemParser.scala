@@ -30,6 +30,9 @@ object KeYmaeraXProblemParser {
     checkInput(remainingTokens.nonEmpty, "Problem. block expected", UnknownLocation, "kyx problem input problem block")
     checkInput(remainingTokens.head.tok.equals(PROBLEM_BLOCK), "Problem. block expected", remainingTokens.head.loc, "kyx reading problem block")
 
+    if(decls.keySet.nonEmpty && remainingTokens.head.loc.line <= 1)
+      println("WARNING: There were declarations in this file but the non-declaration portion of the file starts at line 0 or line 1. There may be off-by-n errors in location messages.")
+
     val (theProblem, eof) = remainingTokens.span(x => !x.tok.equals(END_BLOCK))
     checkInput(eof.length == 2 && eof.head.tok.equals(END_BLOCK),
       "Expected Problem block to end with 'End.' but found " + eof,
@@ -48,7 +51,8 @@ object KeYmaeraXProblemParser {
       case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
     }
 
-    require(KeYmaeraXDeclarationsParser.typeAnalysis(decls, problem), "type analysis")
+    KeYmaeraXDeclarationsParser.typeAnalysis(decls, problem) //throws ParseExceptions.
+
     (decls, problem)
   }
 }
@@ -92,7 +96,7 @@ object KeYmaeraXDeclarationsParser {
    * Type analysis of expression according to the given type declarations decls
    * @param decls the type declarations known from the context
    * @param expr the expression parsed
-   * @return whether expr conforms to the types declared in decls.
+   * @throws [[edu.cmu.cs.ls.keymaerax.parser.ParseException]] if the type analysis fails.
    */
   def typeAnalysis(decls: Map[(String, Option[Int]), (Option[Sort], Sort)], expr: Expression): Boolean = {
     StaticSemantics.signature(expr).forall(f => f match {
@@ -101,10 +105,16 @@ object KeYmaeraXDeclarationsParser {
           case Some(d) => d
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + f, f)
         }
-        f.sort == sort && (domain match {
-          case Some(d) => f.domain == d
-          case None => throw ParseException("type analysis" + ": " + f.name + s" is declared as non-function, but used as function. Try using ${f.name} instead of ${f.name}()", f)
-        })
+        if(f.sort != sort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort ${sort} but used where sort ${f.sort} was expected.", f)
+        else if(f.domain != domain) {
+          (f.domain, domain) match {
+            case (l, Some(r)) => throw ParseException(s"type analysis: ${f.prettyString} declared with domain ${domain} but used where domain ${f.domain} was expected.", f)
+            case (l, None) => throw ParseException(s"type analysis: ${f.prettyString} declared as a non-function but used as a function.", f)
+            //The other cases can't happen -- we know f is a function so we know it has a domain.
+          }
+
+        }
+        else true
       case _ => true
     }) &&
     StaticSemantics.vars(expr).toSymbolSet.forall(x => x match {
@@ -113,6 +123,7 @@ object KeYmaeraXDeclarationsParser {
           case Some((None,d)) => d
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index, x)
         }
+        if(x.sort != sort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort ${sort} but used where a ${x.sort} was expected.", x)
         x.sort == sort
       case _ => true
     })
@@ -172,24 +183,25 @@ object KeYmaeraXDeclarationsParser {
    */
   private def parseDeclaration(ts : List[Token]) : (((String, Option[Int]), (Option[Sort], Sort)), List[Token]) = {
     val sortToken = ts.head
-    val sort = parseSort(sortToken)
+    val sort = parseSort(sortToken, sortToken)
 
-    val nameToken : IDENT = ts.tail.head.tok match {
+    val nameToken = ts.tail.head
+    val nameTerminal : IDENT = ts.tail.head.tok match {
       case i : IDENT => i
-      case x => throw new Exception("Expected identifier token (IDENT) but found " + x.getClass().getCanonicalName())
+      case x => throw new Exception("Expected an identifier but found " + x.getClass().getCanonicalName())
     }
 
     val afterName = ts.tail.tail //skip over IDENT and REAL/BOOL tokens.
     if(afterName.head.tok.equals(LPAREN)) {
-      val (domainSort, remainder) = parseFunctionDomainSort(afterName)
+      val (domainSort, remainder) = parseFunctionDomainSort(afterName, nameToken)
 
       checkInput(remainder.last.tok.equals(PERIOD),
         "Expected declaration to end with . but found " + remainder.last, remainder.last.loc, "Reading a declaration")
 
-      (( (nameToken.name, nameToken.index), (Some(domainSort), sort)), remainder.tail)
+      (( (nameTerminal.name, nameTerminal.index), (Some(domainSort), sort)), remainder.tail)
     }
     else if(afterName.head.tok.equals(PERIOD)) {
-      (( (nameToken.name, nameToken.index) , (None, sort) ), afterName.tail)
+      (( (nameTerminal.name, nameTerminal.index) , (None, sort) ), afterName.tail)
     }
     else {
       throw new ParseException("Expected complete declaration but could not find terminating period", afterName.head.loc, "", "", "", "declaration parse")
@@ -199,11 +211,12 @@ object KeYmaeraXDeclarationsParser {
   /**
    *
    * @param tokens A list of tokens that begins like: (R|B, ...).
+    *@param of A meaningful token representing the thing whose type is being parsed.
    * @return A pair:
    *          _1: The sort of the entire function,
    *          _2: The reamining tokens.
    */
-  private def parseFunctionDomainSort(tokens : List[Token]) : (Sort, List[Token]) = {
+  private def parseFunctionDomainSort(tokens : List[Token], of: Token) : (Sort, List[Token]) = {
     // Parse the domain sort.
     checkInput(tokens.length > 1, "domain sort expected in declaration", if (tokens.isEmpty) UnknownLocation else tokens.head.loc, "parsing function domain sort")
     checkInput(tokens.head.tok.equals(LPAREN), "function argument parentheses expected", tokens.head.loc, "parsing function domain sorts")
@@ -217,7 +230,7 @@ object KeYmaeraXDeclarationsParser {
 
     val domain = domainElements.foldLeft(List[Sort]())((list, token) =>
       if(token.tok.equals(COMMA)) list
-      else list :+ parseSort(token))
+      else list :+ parseSort(token, of))
 
     if(domain.isEmpty) {
       (Unit, remainder)
@@ -229,7 +242,7 @@ object KeYmaeraXDeclarationsParser {
     }
   }
 
-  private def parseSort(sortToken : Token) : Sort = sortToken.tok match {
+  private def parseSort(sortToken : Token, of: Token) : Sort = sortToken.tok match {
     case edu.cmu.cs.ls.keymaerax.parser.IDENT("R", _) => edu.cmu.cs.ls.keymaerax.core.Real
     case edu.cmu.cs.ls.keymaerax.parser.IDENT("P", _) => edu.cmu.cs.ls.keymaerax.core.Trafo
     //@todo do we need a cont. trafo sort to do well-formedness checking?
@@ -243,7 +256,13 @@ object KeYmaeraXDeclarationsParser {
     case edu.cmu.cs.ls.keymaerax.parser.CP => edu.cmu.cs.ls.keymaerax.core.Trafo //@todo
     case edu.cmu.cs.ls.keymaerax.parser.MFORMULA => edu.cmu.cs.ls.keymaerax.core.Bool //@todo
     case edu.cmu.cs.ls.keymaerax.parser.TEST => edu.cmu.cs.ls.keymaerax.core.Bool //@todo this is getting stupid
-    case _ => throw ParseException("Parse sort" + " : " + "Expected sort token but found " + sortToken, sortToken.loc)
+    case _ => throw ParseException(s"Error in type declaration statement for ${identTerminalToString(of.tok)}" + ": " + "Expected a sort but found " + sortToken.toString, of.loc)
+  }
+
+  /** Turns an IDENT into a string for the sake of error messages only. This is probably replicated in the parser. */
+  private def identTerminalToString(terminal: Terminal) = terminal match {
+    case i : IDENT => i.name + {i.index match {case Some(x) => "_x" case None => ""}}
+    case _ => throw new Exception(s"Expected an IDENT terminal but found ${terminal}")
   }
 
   private def isSort(terminal: Terminal) = terminal match {

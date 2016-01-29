@@ -289,11 +289,6 @@ class MathematicaStatusRequest(db : DBAbstraction) extends Request {
 class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : String, keyFileContents : String) extends Request {
   private var createdId : Option[String] = None
 
-  def getModelId = createdId match {
-    case Some(s) => s
-    case None => throw new IllegalStateException("Requested created model ID before calling getResultingResponses, or else an error occurred during creation.")
-  }
-
   def getResultingResponses() = {
     try {
       //Return the resulting response.
@@ -305,6 +300,19 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
     } catch {
       case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
     }
+  }
+
+  def getModelId = createdId match {
+    case Some(s) => s
+    case None => throw new IllegalStateException("Requested created model ID before calling getResultingResponses, or else an error occurred during creation.")
+  }
+}
+
+class DeleteModelRequest(db: DBAbstraction, userId: String, modelId: String) extends Request {
+  //@todo check the model belongs to the user.
+  override def getResultingResponses(): List[Response] = {
+    val success = db.deleteModel(Integer.parseInt(modelId))
+    new BooleanResponse(success) :: Nil
   }
 }
 
