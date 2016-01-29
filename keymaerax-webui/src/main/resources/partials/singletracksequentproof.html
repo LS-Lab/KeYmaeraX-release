@@ -47,7 +47,7 @@
                       tooltip-placement="right"
                       ng-right-click="proofStepRightClick($event)" tabindex="-1"
                       uib-popover-template="'proofStepPopover.html'"
-                      popover-title="Proof step" popover-placement="bottom" popover-trigger="contextmenu">
+                      popover-title="Proof step" popover-placement="auto bottom" popover-trigger="contextmenu">
                     {{step | childRuleName:this}}
                 </span>
             </li>
@@ -100,7 +100,7 @@
                       tooltip-placement="right"
                       ng-right-click="proofStepRightClick($event)" tabindex="-1"
                       uib-popover-template="'proofStepPopover.html'"
-                      popover-title="Proof step" popover-placement="bottom" popover-trigger="contextmenu">
+                      popover-title="Proof step" popover-placement="auto bottom" popover-trigger="contextmenu">
                     {{step | childRuleName:this}}
                 </span>
             </li>
@@ -154,7 +154,7 @@
                        tooltip-popup-delay="1000"
                        ng-right-click="fetchParentRightClick($event)" tabindex="-1"
                        uib-popover-template="'navigateTowardsRootPopover.html'"
-                       popover-title="Proof history" popover-placement="bottom" popover-trigger="contextmenu"
+                       popover-title="Proof history" popover-placement="auto bottom" popover-trigger="contextmenu"
                        ng-if="!section.isComplete && !section.isCollapsed"><span class="fa fa-plus-square-o"></span></a>
                 </li>
             </ul>

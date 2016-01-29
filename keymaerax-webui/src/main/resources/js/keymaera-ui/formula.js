@@ -33,9 +33,8 @@ angular.module('formula')
                              // axiom/tactic application popover
                              'uib-popover-template="\'templates/axiomPopoverTemplate.html\'"' +
                              'popover-is-open="tacticPopover.isOpen(\'' + id + '\')"' +
-                             'popover-append-to-body="true"' +
                              'popover-trigger="none"' +
-                             'popover-placement="bottom">' + content.text + '</span>';
+                             'popover-placement="auto bottom">' + content.text + '</span>';
                 } else {
                     return content.text;
                 }
