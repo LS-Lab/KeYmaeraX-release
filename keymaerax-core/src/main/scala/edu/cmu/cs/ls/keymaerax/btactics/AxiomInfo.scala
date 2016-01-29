@@ -560,7 +560,18 @@ object DerivationInfo {
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
 
     // Differential tactics
-    new PositionTacticInfo("diffInd", "DI",  {case () => DifferentialTactics.diffInd}, needsTool = true),
+    new PositionTacticInfo("DIRule",
+      RuleDisplayInfo("DI",
+        (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
+        /* premises */ List((List("&Gamma;", "q(x)"), List("p(x)", "&Delta;")),
+          (List("&Gamma;", "q(x)"), List("[{x′ = f(x) & q(x)}](p(x))′","&Delta;")))),
+      {case () => DifferentialTactics.DIRule}),
+    new PositionTacticInfo("diffInd",
+    RuleDisplayInfo("DI",
+      (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
+      /* premises */ List((List("&Gamma;", "q(x)"), List("p(x)", "&Delta;"), true),
+        (List("&Gamma;", "q(x)"), List("[{x′ = f(x) & q(x)}](p(x))′","&Delta;"), true))),
+    {case () => DifferentialTactics.diffInd}, needsTool = true),
     new InputPositionTacticInfo("diffInvariant"
     , RuleDisplayInfo("DC+DI"
       , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))

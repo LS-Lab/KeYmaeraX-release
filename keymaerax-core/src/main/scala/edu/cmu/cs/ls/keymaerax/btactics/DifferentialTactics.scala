@@ -174,6 +174,7 @@ object DifferentialTactics {
   /**
    * diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE, QE)
    * @param qeTool Quantifier elimination tool for final QE step of tactic.
+   * @param auto Whether or not to automatically close and use DE, DW. Behaves as DI sequent proof rule if false.
    * @example{{{
    *         *
    *    ---------------------diffInd(qeTool)(1)
@@ -186,7 +187,7 @@ object DifferentialTactics {
    * }}}
    * @incontext
    */
-  def diffInd(implicit qeTool: QETool): DependentPositionTactic = new DependentPositionTactic("diffInd") {
+  def diffInd(implicit qeTool: QETool, auto: Boolean = true): DependentPositionTactic = new DependentPositionTactic("diffInd") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isSucc && (sequent.sub(pos) match {
@@ -196,34 +197,54 @@ object DifferentialTactics {
         if (pos.isTopLevel)
           Dconstify(pos) & DI(pos) &
             (implyR(pos) & andR(pos)) <(
-              close | QE,
+              if (auto) close | QE else ident,
               //@note derive before DE to keep positions easier
-              derive(pos + PosInExpr(1::Nil)) &
-                DE(pos) &
-                Dassignb(pos + PosInExpr(1::Nil))*getODEDim(sequent,pos) &
-                //@note DW after DE to keep positions easier
-                (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
-                abstractionb(pos) & (close | QE)
+              if (auto) {
+                derive(pos + PosInExpr(1 :: Nil)) &
+                  DE(pos) &
+                  Dassignb(pos + PosInExpr(1 :: Nil)) * getODEDim(sequent, pos) &
+                  //@note DW after DE to keep positions easier
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
+                  abstractionb(pos) & (close | QE)
+              } else ident
               )
         else
           Dconstify(pos) & DI(pos) &
             //@note derive before DE to keep positions easier
-            shift(PosInExpr(1::1::Nil), new DependentPositionTactic("Shift") {
-              override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-                override def computeExpr(sequent: Sequent): BelleExpr = {
-                  shift(PosInExpr(1::Nil), derive)(pos) &
-                    DE(pos) &
-                    (shift(PosInExpr(1::Nil), Dassignb)(pos) * getODEDim(sequent, pos)) &
-                    //@note DW after DE to keep positions easier
-                    (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
-                    abstractionb(pos)
+            (if (auto) {
+              shift(PosInExpr(1 :: 1 :: Nil), new DependentPositionTactic("Shift") {
+                override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+                  override def computeExpr(sequent: Sequent): BelleExpr = {
+                    shift(PosInExpr(1 :: Nil), derive)(pos) &
+                      DE(pos) &
+                      (shift(PosInExpr(1 :: Nil), Dassignb)(pos) * getODEDim(sequent, pos)) &
+                      //@note DW after DE to keep positions easier
+                      (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
+                      abstractionb(pos)
+                  }
                 }
               }
-            }
-            )(pos)
+              )(pos)
+            } else ident)
       }
     }
   }
+
+  /**
+   * diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE, QE)
+   * @example{{{
+   *    x>=5 |- x>=5    x>=5 |- [{x'=2}](x>=5)'
+   *    ---------------------------------------DIRule(qeTool)(1)
+   *    x>=5 |- [{x'=2}]x>=5
+   * }}}
+   * @example{{{
+   *    x>=5 |- [x:=x+1;](true->x>=5&[{x'=2}](x>=5)')
+   *    ---------------------------------------------DIRule(qeTool)(1, 1::Nil)
+   *    x>=5 |- [x:=x+1;][{x'=2}]x>=5
+   * }}}
+   * @incontext
+   */
+  def DIRule: DependentPositionTactic = diffInd(null, auto=false)
 
   /**
    * Differential cut. Use special function old(.) to introduce a ghost for the starting value of a variable that can be
