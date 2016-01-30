@@ -539,7 +539,7 @@ object DerivationInfo {
           }
         }}),
     new InputPositionTacticInfo("loop",
-      RuleDisplayInfo("ind",(List("&Gamma;"), List("[a*]P", "&Delta;")),
+      RuleDisplayInfo("loop",(List("&Gamma;"), List("[a*]P", "&Delta;")),
         List(
           (List("&Gamma;"),List("j(x)", "&Delta;")),
           (List("j(x)"),List("[a]j(x)")),
