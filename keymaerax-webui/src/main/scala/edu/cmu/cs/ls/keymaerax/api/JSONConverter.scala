@@ -64,7 +64,7 @@ object JSONConverter {
         val o = e match {
           case True => JsObject(("name" -> JsString("true")) +: cf)
           case False => JsObject(("name" -> JsString("false")) +: cf)
-          case PredOf(a, b) => JsObject(("name" -> JsString("apply")) :: ("function" -> convertNamedSymbol(a)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case PredOf(a, b) => JsObject(("name" -> JsString("apply")) :: ("fnName" -> convertNamedSymbol(a)) :: ("sort" -> JsString(a.sort.toString)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Equal(a, b) => JsObject(("name" -> JsString("equals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case NotEqual(a, b) => JsObject(("name" -> JsString("notEquals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Less(a, b) => JsObject(("name" -> JsString("lt")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
@@ -93,7 +93,7 @@ object JSONConverter {
           case x@Variable(_, _, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[Variable])) +: cf)
           case Nothing => JsObject(("name" -> JsString("Nothing")) +: cf)
           case Anything => JsObject(("name" -> JsString("Anything")) +: cf)
-          case FuncOf(a, b) => JsObject(("name" -> JsString("apply")) :: ("children" -> JsArray(convertNamedSymbol(a) :: Nil ++: jsonStack.pop())) :: Nil ++: cf)
+          case FuncOf(a, b) => JsObject(("name" -> JsString("apply")) :: ("fnName" -> convertNamedSymbol(a)) :: ("sort" -> JsString(a.sort.toString)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Differential(a) => JsObject(("name" -> JsString("derivative")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case DifferentialSymbol(a) => JsObject(("name" -> JsString("differentialsymbol")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Neg(a) => JsObject(("name" -> JsString("neg")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)

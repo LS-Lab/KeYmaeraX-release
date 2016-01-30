@@ -94,7 +94,7 @@ angular.module('formula')
               ].reverse()
 
             var parens = {
-              "program": ["{","}"],
+              "program": ["&#123;","&#125;"],
               "term": ["(",")"],
               "formula": ["(",")"]
             }
@@ -146,7 +146,7 @@ angular.module('formula')
                         case "equiv":
                             var left = parensIfNeeded(json, c[0], 'formula', depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], 'formula', depth + 1, collapsed);
-                            content = {text: left + " &#8596 " + right, type: 'formula'};
+                            content = {text: left + " &#8596; " + right, type: 'formula'};
                             break;
 
                         case "lt":
@@ -239,7 +239,7 @@ angular.module('formula')
                         case "boxmodality":
                             var left = parseFormulaHelper(c[0], depth + 1, collapsed);
                             var right = parensIfNeeded(json, c[1], 'formula', depth + 1, collapsed);
-                            content = {text: "[" + left + "] " + right, type: 'formula'};
+                            content = {text: "&#91;" + left + "&#93; " + right, type: 'formula'};
                             break;
 
                         case "diamondmodality":
@@ -267,19 +267,19 @@ angular.module('formula')
                          case "IfThen":
                             var left = parseFormulaHelper(c[0], depth+1, collapsed)
                             var right = parseFormulaHelper(c[1], depth+1, collapsed)
-                            content = {text: "if (" + left + ") then {" + right + "} fi", type: 'program'}
+                            content = {text: "if (" + left + ") then &#123;" + right + "&#125; fi", type: 'program'}
                             break;
 
                         case "IfThenElse":
                             var condT = parseFormulaHelper(c[0], depth+1, collapsed)
                             var thenT = parseFormulaHelper(c[1], depth+1, collapsed)
                             var elseT = parseFormulaHelper(c[2], depth+1, collapsed)
-                            content = {text: "if " + condT + " then {" + thenT + "} else {" + elseT + "} fi", type: 'program'}
+                            content = {text: "if " + condT + " then &#123;" + thenT + "&#125; else &#123;" + elseT + "&#125; fi", type: 'program'}
                             break;
 
                         case "Loop":
                             var left = parseFormulaHelper(c[0], depth + 1, collapsed);
-                            content = {text: "{" + left + "}<sup>*</sup>", type: 'program'};
+                            content = {text: "&#123;" + left + "&#125;<sup>*</sup>", type: 'program'};
                             break;
 
                         case "Sequence":
@@ -319,8 +319,8 @@ angular.module('formula')
                             var right = parensIfNeeded(json, c[1], 'term', depth + 1, collapsed);
                             if (c[1].name != "EmptyODE") {
                               if(c[1].name == "AtomicODE" || c[1].name == "ODEProduct") {
-                                content = {text: "{" + left + ", " + right + "}", type: 'program'};
-                              } else content = {text: "{" + left + " & " + right + "}", type: 'program'};
+                                content = {text: "&#123;" + left + ", " + right + "&#125;", type: 'program'};
+                              } else content = {text: "&#123;" + left + " &amp; " + right + "&#125;", type: 'program'};
                             } else {
                               content = {text: left, type: 'program'};
                             }
@@ -344,11 +344,15 @@ angular.module('formula')
                         case "Nothing": content = {text: "", type: 'symbol'}; break;
 
                         case "apply":
-                            var name = c[0]
-                            if (c[1].name != "Nothing") {
-                              content = {text: name + "(" + parseFormulaHelper(c[1], depth + 1, collapsed) + ")", type: 'term'};
+                            var name = json.fnName;
+                            var sort = json.sort == 'Real' ? 'term' : (json.sort == 'Bool' ? 'formula' : 'unknown');
+                            if (c.length > 0 && c[0].name != "Nothing") {
+                              var args = $.map(c, function(arg, i) {
+                                return parseFormulaHelper(arg, depth, collapsed);
+                              }).join(',');
+                              content = {text: name + "(" + args + ")", type: sort};
                             } else {
-                              content = {text: name + "()", type: 'term'};
+                              content = {text: name + "()", type: sort};
                             }
                             break;
 
