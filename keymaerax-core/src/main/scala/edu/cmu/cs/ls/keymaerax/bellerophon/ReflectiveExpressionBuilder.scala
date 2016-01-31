@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term}
   * @author Brandon Bohrer
   */
 object ReflectiveExpressionBuilder {
-  def build(info: DerivationInfo, args: List[Either[Expression, Position]], generator: Option[Generator[Formula]]): BelleExpr = {
+  def build(info: DerivationInfo, args: List[Either[Seq[Expression], Position]], generator: Option[Generator[Formula]]): BelleExpr = {
     val posArgs = args.filter{case arg => arg.isRight}.map{case arg => arg.right.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only right-inhabited elements... this exn should never be thrown."))}
     val withGenerator =
       if (info.needsGenerator) {
@@ -22,9 +22,10 @@ object ReflectiveExpressionBuilder {
       }
     val expressionArgs = args.filter{case arg => arg.isLeft}.map{case arg => arg.left.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only right-inhabited elements... this exn should never be thrown."))}
     val applied:Any = expressionArgs.foldLeft(withGenerator) {
-      case ((expr:(Formula => Any)), fml:Formula) => expr(fml)
-      case ((expr:(Term => Any)), term:Term) => expr(term)
-      case (expr:(Any), fml) =>
+      case (expr: (Formula => Any), (fml: Formula) :: Nil) => expr(fml)
+      case (expr: (Seq[Formula] => Any), fmls: Seq[Formula]) => expr(fmls)
+      case (expr: (Term => Any), (term: Term) :: Nil) => expr(term)
+      case (expr: (Any), fml) =>
         throw new Exception("Expected type Formula => Any , got " + expr.getClass.getSimpleName)
     }
 
@@ -45,7 +46,7 @@ object ReflectiveExpressionBuilder {
     }
   }
 
-  def apply(name: String, arguments: List[Either[Expression, Position]] = Nil, generator: Option[Generator[Formula]]) : BelleExpr = {
+  def apply(name: String, arguments: List[Either[Seq[Expression], Position]] = Nil, generator: Option[Generator[Formula]]) : BelleExpr = {
     if(!DerivationInfo.hasCodeName(name)) {
       throw new ReflectiveExpressionBuilderExn(s"Identifier '$name' is not recognized as a tactic identifier.")
     }

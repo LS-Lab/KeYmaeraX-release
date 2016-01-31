@@ -1,37 +1,33 @@
 <!-- Despite the name: axioms and tactics -->
 <script type="text/ng-template" id="templates/tacticPopoverEntry.html">
     <div>
-    <div class="well well-sm" ng-if="tactic.derivation.type === 'axiom'">
+    <div class="well well-sm" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
         <!-- TODO transmit key from server and underline, make changeable -->
         <div class="row">
-            <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.id)">{{tactic.name}}</a></b></div>
-            <div class="col-md-10">{{tactic.derivation.formula}}</div>
+            <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)">{{tactic.selectedDerivation().name}}</a></b></div>
+            <div class="col-md-10">{{tactic.selectedDerivation().derivation.formula}}</div>
         </div>
     </div>
-    <div class="well well-sm" ng-if="tactic.derivation.type === 'tactic'">
+    <div class="well well-sm" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
         <div class="row">
-            <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.id)">{{tactic.name}}</a></b></div>
-            <div class="col-md-10">{{tactic.derivation.formula}}</div>
+            <div class="col-md-2"><b><a ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)">{{tactic.selectedDerivation().name}}</a></b></div>
+            <div class="col-md-10">{{tactic.selectedDerivation().derivation.formula}}</div>
         </div>
     </div>
-    <div class="panel panel-default" ng-if="tactic.derivation.type === 'sequentrule'">
+    <div class="panel panel-default" ng-if="tactic.selectedDerivation().derivation.type === 'sequentrule'">
         <div class="panel-heading">
-            <a ng-if="tactic.derivation.input.length === 0 && !tactic.inExpertMode"
-               ng-click="applyTactic(tacticPopover.formulaId(), tactic.id)"><b>{{tactic.name}}</b></a>
-            <a ng-if="tactic.derivation.input.length > 0 && !tactic.inExpertMode"
-               ng-click="applyInputTactic(tacticPopover.formulaId(), tactic)"><b>{{tactic.name}}</b></a>
-            <b ng-if="tactic.inExpertMode">{{tactic.name}}</b>
+            <a ng-if="tactic.selectedDerivation().derivation.input.length === 0"
+               ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b>{{tactic.selectedDerivation().name}}</b></a>
+            <a ng-if="tactic.selectedDerivation().derivation.input.length > 0"
+               ng-click="applyInputTactic(tacticPopover.formulaId(), tactic.selectedDerivation())"><b>{{tactic.selectedDerivation().name}}</b></a>
+
             <div class="pull-right">
-                <span ng-if="tactic.derivation.expertMode.length > 0" ng-click="tactic.inExpertMode = !tactic.inExpertMode">
-                   Expert <i ng-class="{'fa fa-toggle-on': tactic.inExpertMode, 'fa fa-toggle-off': !tactic.inExpertMode}"></i>
-                </span>
-                <span class="fa fa-bars" ng-click="tactic.isOpen = !tactic.isOpen"></span>
+                <span ng-if="tactic.comfortDerivation !== undefined" ng-click="tactic.reduceBranching = !tactic.reduceBranching">Reduce branching <i ng-class="{'fa fa-toggle-off': !tactic.reduceBranching, 'fa fa-toggle-on': tactic.reduceBranching}"></i></span>
+                <span ng-click="tactic.isOpen = !tactic.isOpen"><i class="fa fa-bars"></i></span>
             </div>
         </div>
         <div class="panel-body" uib-collapse="!tactic.isOpen">
-            <div class="col-md-12" ng-if="!tactic.inExpertMode" ng-include="'templates/sequentRuleTemplate.html'"></div>
-            <div class="col-md-12" ng-if="$parent.tactic.inExpertMode" ng-repeat="tactic in tactic.derivation.expertMode"
-                 ng-include="'templates/tacticPopoverEntry.html'"></div>
+            <div class="col-md-12" ng-repeat="tactic in [tactic.selectedDerivation()]" ng-include="'templates/sequentRuleTemplate.html'"></div>
         </div>
     </div>
     </div>
@@ -49,6 +45,7 @@
         <div ng-repeat="tactic in formulaAxiomsMap[tacticPopover.formulaId()]" class="k4-tactic-popover-entry">
             <div ng-include="'templates/tacticPopoverEntry.html'"></div>
         </div>
+        <!-- TODO: link to switch to a modal dialog for expert mode: display an exhaustive list of axioms etc. there -->
     </div>
 </div>
 <div ng-if="formulaAxiomsMap[tacticPopover.formulaId()] === undefined || formulaAxiomsMap[tacticPopover.formulaId()] === null || formulaAxiomsMap[tacticPopover.formulaId()].length == 0">

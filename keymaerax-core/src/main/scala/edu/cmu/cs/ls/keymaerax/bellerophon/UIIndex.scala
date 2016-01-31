@@ -114,7 +114,7 @@ object UIIndex {
             case _ => rules
           }
           case ODESystem(ode, constraint) =>
-            val tactics: List[String] = "diffSolve" :: "diffInvariant" ::  Nil
+            val tactics: List[String] = "diffSolve" :: "diffCut" :: "DIRule" ::  Nil
             if (constraint == True)
               (tactics :+ "DG differential ghost") ++ rules
             else
@@ -205,6 +205,12 @@ object UIIndex {
       case _ => Nil
       //@todo more drag-and-drop support
     }
+  }
+
+  def comfortOf(stepName: String): Option[String] = stepName match {
+    case "diffCut" => Some("diffInvariant")
+    case "DIRule" => Some("diffInd")
+    case _ => None
   }
 
   private def autoPad(pos: Option[Position], sequent: Option[Sequent], axioms: List[String]): List[String] = {

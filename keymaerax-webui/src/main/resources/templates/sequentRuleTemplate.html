@@ -1,3 +1,38 @@
+<script type="text/ng-template" id="templates/sequentRulePremise.html">
+    <div ng-class="{'row': !premise.isClosed, 'row small': premise.isClosed}">
+        <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
+            <span ng-if="premise.isClosed"><i class="fa fa-magic"></i>&nbsp;</span>
+            <span ng-repeat="ante in premise.ante">
+                <span ng-repeat="antePart in ante">
+                    <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
+                    <span ng-if="premise.isClosed && antePart.isInput && antePart.value() !== undefined">{{antePart.value()}}</span>
+                    <span ng-if="premise.isClosed && antePart.isInput && antePart.value() === undefined">{{antePart.placeholder}}</span>
+                    <input type="text" name="{{antePart.text}}"
+                           placeholder="{{antePart.placeholder}}"
+                           ng-model="antePart.value" ng-model-options="{getterSetter: true}"
+                           ng-if="!premise.isClosed && antePart.isInput" required></input>
+                </span>
+                {{$last ? '' : ','}}
+            </span>
+        </span>
+        <span class="col-md-1">&#8866;</span>
+        <span class="col-md-7 k4-nobreak k4-sequentRuleSucc">
+            <span ng-repeat="succ in premise.succ">
+                <span ng-repeat="succPart in succ">
+                    <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
+                    <span ng-if="premise.isClosed && succPart.isInput && succPart.value() !== undefined">{{succPart.value()}}</span>
+                    <span ng-if="premise.isClosed && succPart.isInput && succPart.value() === undefined">{{succPart.placeholder}}</span>
+                    <input type="text" name="{{succPart.text}}"
+                           placeholder="{{succPart.placeholder}}"
+                           ng-model="succPart.value" ng-model-options="{getterSetter: true}"
+                           ng-if="!premise.isClosed && succPart.isInput" required></input>
+                </span>
+                {{$last ? '' : ','}}
+            </span>
+        </span>
+    </div>
+</script>
+
 <div class="k4-sequentRule">
     <div class="row k4-sequentRulePremise">
         <div class="col-md-12">
@@ -6,32 +41,12 @@
                 <span class="col-md-1"><i class="fa fa-asterisk" style="font-size:0.5em"></i></span>
                 <span class="col-md-7 k4-sequentRuleSucc"></span>
             </div>
-            <div class="row" ng-repeat="premise in tactic.derivation.premise">
-                <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
-                    <span ng-repeat="ante in premise.ante">
-                        <span ng-repeat="antePart in ante">
-                            <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
-                            <input type="text" name="{{antePart.text}}"
-                                   placeholder="{{antePart.placeholder}}"
-                                   ng-model="antePart.value" ng-model-options="{getterSetter: true}"
-                                   ng-if="antePart.isInput" required></input>
-                        </span>
-                        {{$last ? '' : ','}}
-                    </span>
-                </span>
-                <span class="col-md-1">&#8866;</span>
-                <span class="col-md-7 k4-nobreak k4-sequentRuleSucc">
-                    <span ng-repeat="succ in premise.succ">
-                        <span ng-repeat="succPart in succ">
-                            <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
-                            <input type="text" name="{{succPart.text}}"
-                                   placeholder="{{succPart.placeholder}}"
-                                   ng-model="succPart.value" ng-model-options="{getterSetter: true}"
-                                   ng-if="succPart.isInput" required></input>
-                        </span>
-                        {{$last ? '' : ','}}
-                    </span>
-                </span>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div ng-repeat="premise in tactic.derivation.premise" ng-include="'templates/sequentRulePremise.html'">
+                    </div>
+                </div>
             </div>
         </div>
     </div>

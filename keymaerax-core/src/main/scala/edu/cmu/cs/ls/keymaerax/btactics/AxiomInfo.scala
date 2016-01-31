@@ -30,12 +30,16 @@ sealed trait DisplayInfo {
   def asciiName: String
 }
 case class SimpleDisplayInfo(override val name: String, override val asciiName: String) extends DisplayInfo
-case class RuleDisplayInfo(names: SimpleDisplayInfo, conclusion: SequentDisplay, premises:List[SequentDisplay], expertMode: List[DerivationInfo] = Nil) extends DisplayInfo {
+case class RuleDisplayInfo(names: SimpleDisplayInfo, conclusion: SequentDisplay, premises:List[SequentDisplay]) extends DisplayInfo {
   override def name = names.name
   override def asciiName = names.asciiName
 }
-case class SequentDisplay(ante: List[String], succ: List[String])
+case class SequentDisplay(ante: List[String], succ: List[String], isClosed: Boolean = false)
 case class AxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String) extends DisplayInfo {
+  override def name = names.name
+  override def asciiName = names.asciiName
+}
+case class InputAxiomDisplayInfo(names: SimpleDisplayInfo, displayFormula: String, input: List[ArgInfo]) extends DisplayInfo {
   override def name = names.name
   override def asciiName = names.asciiName
 }
@@ -46,6 +50,9 @@ object DerivationInfo {
   implicit def sequentDisplay(succAcc:(List[String], List[String])): SequentDisplay = {
     SequentDisplay(succAcc._1, succAcc._2)
   }
+  implicit def sequentDisplay(succAccClosed:(List[String], List[String], Boolean)): SequentDisplay = {
+    SequentDisplay(succAccClosed._1, succAccClosed._2, succAccClosed._3)
+  }
 
   implicit def qeTool:QETool with DiffSolutionTool = DerivedAxioms.qeTool
   case class AxiomNotFoundException(axiomName: String) extends ProverException("Axiom with said name not found: " + axiomName)
@@ -53,17 +60,6 @@ object DerivationInfo {
   private val needsCodeName = "THISAXIOMSTILLNEEDSACODENAME"
 
   private def useAt(l:Lemma):BelleExpr = HilbertCalculus.useAt(l)
-
-  /** Infos that are cross-referenced from several places */
-  private val diffCut = new InputPositionTacticInfo("diffCut"
-  , RuleDisplayInfo("DC"
-    , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
-    , List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;")),
-      (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
-  , List(FormulaArg("r(x)"))
-  , {case () => (fml:Formula) => TactixLibrary.diffCut(fml)})
-
-  private val diffInd = new PositionTacticInfo("diffInd", "DI",  {case () => DifferentialTactics.diffInd}, needsTool = true)
 
   /**
     * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
@@ -123,9 +119,15 @@ object DerivationInfo {
     new CoreAxiomInfo("DW", "DW", "DWaxiom", {case () => HilbertCalculus.DW}),
     new PositionTacticInfo("diffWeaken", "DW", {case () => DifferentialTactics.diffWeaken}),
     new CoreAxiomInfo("DC differential cut"
-      , AxiomDisplayInfo("DC","([{x′=f(x)&q(x)}]p(x)↔[{x′=f(x)&q(x)∧r(x)}]p(x))←[{x′:=f(x)&q(x)}]r(x)")
-      , "DCaxiom", {case () => ??? }),
-    diffCut,
+    , InputAxiomDisplayInfo("DC","([{x′=f(x)&q(x)}]p(x)↔[{x′=f(x)&q(x)∧r(x)}]p(x))←[{x′:=f(x)&q(x)}]r(x)", List(FormulaArg("r(x)")))
+    , "DCaxiom", {case () => (fml: Formula) => HilbertCalculus.DC(fml) }),
+    new InputPositionTacticInfo("diffCut"
+    , RuleDisplayInfo("DC"
+      , /* conclusion */ (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
+      , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;")),
+        (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
+    , List(ListArg("r(x)", "formula"))
+    , {case () => (fml: Seq[Formula]) => TactixLibrary.diffCut(fml:_*)}),
     new CoreAxiomInfo("DE differential effect"
       , AxiomDisplayInfo("DE", "[{x′=f(x)&q(x)}]P↔[x′=f(x)&q(x)][x′:=f(x)]P")
       , "DE", {case () => HilbertCalculus.DE}),
@@ -537,7 +539,7 @@ object DerivationInfo {
           }
         }}),
     new InputPositionTacticInfo("loop",
-      RuleDisplayInfo("ind",(List("&Gamma;"), List("[a*]P", "&Delta;")),
+      RuleDisplayInfo("loop",(List("&Gamma;"), List("[a*]P", "&Delta;")),
         List(
           (List("&Gamma;"),List("j(x)", "&Delta;")),
           (List("j(x)"),List("[a]j(x)")),
@@ -558,15 +560,26 @@ object DerivationInfo {
     new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
 
     // Differential tactics
-    diffInd,
-    new PositionTacticInfo("diffSolve", "diffSolve",  {case () => TactixLibrary.diffSolve(None)}, needsTool = true),
+    new PositionTacticInfo("DIRule",
+      RuleDisplayInfo("DI",
+        (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
+        /* premises */ List((List("&Gamma;", "q(x)"), List("p(x)", "&Delta;")),
+          (List("&Gamma;", "q(x)"), List("[{x′ = f(x) & q(x)}](p(x))′","&Delta;")))),
+      {case () => DifferentialTactics.DIRule}),
+    new PositionTacticInfo("diffInd",
+    RuleDisplayInfo("DI",
+      (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
+      /* premises */ List((List("&Gamma;", "q(x)"), List("p(x)", "&Delta;"), true),
+        (List("&Gamma;", "q(x)"), List("[{x′ = f(x) & q(x)}](p(x))′","&Delta;"), true))),
+    {case () => DifferentialTactics.diffInd}, needsTool = true),
     new InputPositionTacticInfo("diffInvariant"
     , RuleDisplayInfo("DC+DI"
       , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
-      , List((List("&Gamma;"), List("[{x′ = f(x) & q(x) ∧ r(x)}]p(x)","&Delta;")))
-      , List(diffCut, diffInd))
-    , List(FormulaArg("r(x)"))
-    , {case () => (fml:Formula) => TactixLibrary.diffInvariant(fml)}),
+      , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;"), true),
+        (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
+    , List(ListArg("r(x)", "formula"))
+    , {case () => (fml:Seq[Formula]) => TactixLibrary.diffInvariant(fml:_*)}),
+    new PositionTacticInfo("diffSolve", "diffSolve",  {case () => TactixLibrary.diffSolve(None)}, needsTool = true),
     new PositionTacticInfo("Dconstify", "Dconst", {case () => DifferentialTactics.Dconstify}),
     new PositionTacticInfo("Dvariable", "Dvar", {case () => DifferentialTactics.Dvariable}),
 
@@ -654,6 +667,9 @@ case class VariableArg (override val name: String) extends ArgInfo {
 }
 case class TermArg (override val name: String) extends ArgInfo {
   val sort = "term"
+}
+case class ListArg (override val name: String, elementSort: String) extends ArgInfo {
+  val sort = "list"
 }
 
 /** Meta-information on a derivation step, which is an axiom, derived axiom, proof rule, or tactic. */

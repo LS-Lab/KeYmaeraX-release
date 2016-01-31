@@ -17,7 +17,7 @@ import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
   *   partial(e)
   *   e partial
   *   b
-  *   b({`expression`} | z, ...)
+  *   b({`expression`} | [{`expression_1`},...,{`expression_n`}] | z, ...)
   * }}}
   * where expression is a \dL expression, n a nat, z an int, T a type, and b a base tactic identifier.
   * Identifiers may contain letters, numbers, and dots. Each identifier should be handled by [[ReflectiveExpressionBuilder]]
@@ -73,6 +73,7 @@ object BTacticParser extends (String => Option[BelleExpr]) {
 
     val positionPattern = """[\-?0-9]*""".r
     val expressionPattern = """\{`[^`}]*`}""".r
+    val listPattern = """\[[^\]]*\]""".r
     val notArgumentDelimiter = """[^`}]*""".r
 //    val notDoubleQoute = """[^\"]*""".r
 
@@ -161,9 +162,9 @@ object BTacticParser extends (String => Option[BelleExpr]) {
       }
     }
 
-    /** Looks like name(expression | position, expression | position, ..., expression | position) where expression = {` expression `} */
+    /** Looks like name(expression | [expression_1,...,expression_n] | position, expression | position, ..., expression | position) where expression = {` expression `} */
     lazy val baseTacticWithInputs : PackratParser[BelleExpr] = {
-      lazy val expressionOrPosition = expressionPattern | positionPattern
+      lazy val expressionOrPosition = expressionPattern | listPattern | positionPattern
       lazy val pattern = ident ~ ("(" ~> (expressionOrPosition ~ ("," ~> expressionOrPosition).*) <~ ")")
       log(pattern)("base tactic with position or expression input") ^^ {
         case name ~ args => {
@@ -173,11 +174,12 @@ object BTacticParser extends (String => Option[BelleExpr]) {
       }
     }
 
-    private def parseExpressionOrPosition(s : String) : Either[Expression, Position] = {
+    private def parseExpressionOrPosition(s : String) : Either[Seq[Expression], Position] = {
       if (s.startsWith("{`") && s.endsWith("`}")) {
-        Left(s.replace("{`", "").replace("`}", "").asExpr)
-      }
-      else {
+        Left(s.replace("{`", "").replace("`}", "").asExpr :: Nil)
+      } else if (s.startsWith("[") && s.endsWith("]")) {
+        Left(s.substring(1, s.length - 1).split(",").map(_.replace("{`", "").replace("`}", "").asExpr))
+      } else {
         val i = s.toInt
         Right(Position(i))
       }

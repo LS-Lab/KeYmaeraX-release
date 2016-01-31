@@ -414,14 +414,21 @@ class GetBranchRootResponse(node: TreeNode) extends Response {
   def getJson = Helpers.singleNodeJson(node)
 }
 
-class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggestedInput: Option[Expression]) extends Response {
+class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Option[DerivationInfo])],
+                               suggestedInput: Option[Expression]) extends Response {
   def inputJson(input: ArgInfo): JsValue = {
-    (suggestedInput, input.sort.toLowerCase == "formula") match {
-      case (Some(fml), true) =>
+    (suggestedInput, input) match {
+      case (Some(fml), FormulaArg(name)) =>
         JsObject (
           "type" -> JsString(input.sort),
-          "param" -> JsString(input.name),
+          "param" -> JsString(name),
           "value" -> JsString(fml.prettyString)
+        )
+      case (_, ListArg(name, elementSort)) => //@todo suggested input for Formula*
+        JsObject(
+          "type" -> JsString(input.sort),
+          "elementType" -> JsString(elementSort),
+          "param" -> JsString(name)
         )
       case _ =>
         JsObject (
@@ -431,8 +438,8 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
     }
   }
 
-  def inputsJson(info:TacticInfo): JsArray = {
-    info.inputs match {
+  def inputsJson(info:List[ArgInfo]): JsArray = {
+    info match {
       case Nil => JsArray()
       case inputs => JsArray(inputs.map{case input => inputJson(input)}:_*)
     }
@@ -442,39 +449,40 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
     val formulaText =
       (info, info.display) match {
         case (_, AxiomDisplayInfo(_, formulaDisplay)) => formulaDisplay
+        case (_, InputAxiomDisplayInfo(_, formulaDisplay, _)) => formulaDisplay
         case (info:AxiomInfo, _) => info.formula.prettyString
       }
     JsObject (
     "type" -> JsString("axiom"),
-    "formula" -> JsString(formulaText)
+    "formula" -> JsString(formulaText),
+    "input" -> inputsJson(info.inputs)
     )
   }
 
   def tacticJson(info:TacticInfo): JsObject = {
     JsObject(
       "type" -> JsString("tactic"),
-      "input" -> inputsJson(info)
+      "input" -> inputsJson(info.inputs)
     )
   }
 
   def sequentJson(sequent:SequentDisplay): JsValue = {
     val json = JsObject (
     "ante" -> new JsArray(sequent.ante.map{case fml => JsString(fml)}.toVector),
-    "succ" -> new JsArray(sequent.succ.map{case fml => JsString(fml)}.toVector)
+    "succ" -> new JsArray(sequent.succ.map{case fml => JsString(fml)}.toVector),
+    "isClosed" -> JsBoolean(sequent.isClosed)
     )
    json
   }
 
-  def ruleJson(info: TacticInfo, conclusion: SequentDisplay, premises: List[SequentDisplay],
-               expertMode: List[DerivationInfo]): JsObject = {
+  def ruleJson(info: TacticInfo, conclusion: SequentDisplay, premises: List[SequentDisplay]): JsObject = {
     val conclusionJson = sequentJson(conclusion)
     val premisesJson = JsArray(premises.map{case sequent => sequentJson(sequent)}:_*)
     JsObject(
       "type" -> JsString("sequentrule"),
       "conclusion" -> conclusionJson,
       "premise" -> premisesJson,
-      "input" -> inputsJson(info),
-      "expertMode" -> JsArray(expertMode.map({case expInfo => derivationJson(expInfo)}):_*))
+      "input" -> inputsJson(info.inputs))
   }
 
   def derivationJson(derivationInfo: DerivationInfo): JsObject = {
@@ -485,8 +493,7 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
           info.display match {
             case _: SimpleDisplayInfo => tacticJson(info)
             case display : AxiomDisplayInfo => axiomJson(info)
-            case RuleDisplayInfo(_, conclusion, premises, expertMode) =>
-              ruleJson(info, conclusion, premises, expertMode)
+            case RuleDisplayInfo(_, conclusion, premises) => ruleJson(info, conclusion, premises)
           }
       }
     JsObject(
@@ -495,7 +502,20 @@ class ApplicableAxiomsResponse(derivationInfos : List[DerivationInfo], suggested
       "derivation" -> derivation
     )
   }
-  def getJson = JsArray(derivationInfos.map({case info => derivationJson(info)}):_*)
+
+  def derivationJson(info: (DerivationInfo, Option[DerivationInfo])): JsObject = info._2 match {
+    case Some(comfort) =>
+      JsObject(
+        "standardDerivation" -> derivationJson(info._1),
+        "comfortDerivation" -> derivationJson(comfort)
+      )
+    case None =>
+      JsObject(
+        "standardDerivation" -> derivationJson(info._1)
+      )
+  }
+
+  def getJson = JsArray(derivationInfos.map(derivationJson):_*)
 }
 class PruneBelowResponse(item:AgendaItem) extends Response {
   def getJson = JsObject (

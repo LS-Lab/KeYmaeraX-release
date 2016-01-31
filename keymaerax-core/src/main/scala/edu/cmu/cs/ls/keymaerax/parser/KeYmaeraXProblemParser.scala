@@ -106,7 +106,7 @@ object KeYmaeraXDeclarationsParser {
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + f, f)
         }
         if(f.sort != sort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort ${sort} but used where sort ${f.sort} was expected.", f)
-        else if(f.domain != domain) {
+        else if (f.domain != domain.get) {
           (f.domain, domain) match {
             case (l, Some(r)) => throw ParseException(s"type analysis: ${f.prettyString} declared with domain ${domain} but used where domain ${f.domain} was expected.", f)
             case (l, None) => throw ParseException(s"type analysis: ${f.prettyString} declared as a non-function but used as a function.", f)
