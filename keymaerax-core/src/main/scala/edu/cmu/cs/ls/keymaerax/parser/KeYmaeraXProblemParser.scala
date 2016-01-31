@@ -101,18 +101,17 @@ object KeYmaeraXDeclarationsParser {
   def typeAnalysis(decls: Map[(String, Option[Int]), (Option[Sort], Sort)], expr: Expression): Boolean = {
     StaticSemantics.signature(expr).forall(f => f match {
       case f:Function =>
-        val (domain,sort) = decls.get((f.name,f.index)) match {
+        val (declaredDomain,declaredSort) = decls.get((f.name,f.index)) match {
           case Some(d) => d
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + f, f)
         }
-        if(f.sort != sort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort ${sort} but used where sort ${f.sort} was expected.", f)
-        else if (f.domain != domain.get) {
-          (f.domain, domain) match {
-            case (l, Some(r)) => throw ParseException(s"type analysis: ${f.prettyString} declared with domain ${domain} but used where domain ${f.domain} was expected.", f)
+        if(f.sort != declaredSort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort ${declaredSort} but used where sort ${f.sort} was expected.", f)
+        else if (f.domain != declaredDomain.get) {
+          (f.domain, declaredDomain) match {
+            case (l, Some(r)) => throw ParseException(s"type analysis: ${f.prettyString} declared with domain ${r} but used where domain ${f.domain} was expected.", f)
             case (l, None) => throw ParseException(s"type analysis: ${f.prettyString} declared as a non-function but used as a function.", f)
             //The other cases can't happen -- we know f is a function so we know it has a domain.
           }
-
         }
         else true
       case _ => true
