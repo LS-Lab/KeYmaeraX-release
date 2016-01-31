@@ -40,7 +40,8 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
           error(function(data, status, headers, config) {
               console.log('Error starting new proof for model ' + $routeParams.modelId)
           });
-  }
+  };
+
   $scope.$emit('routeLoaded', {theview: '/models/:modelId/proofs/create'})
 });
 
@@ -83,6 +84,12 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function ($s
     $scope.allproofs = data;
   });
 
+  $scope.deleteProof = function(proof) {
+    $http.post('user/' + $cookies.get('userId') + "/proof/" + proof.id + "/delete").success(function(data) {
+      $route.reload();
+    });
+  };
+
   $scope.loadProof = function(proof) {
       proof.loadStatus = 'loading'
       $http.get('proofs/user/' + $cookies.get('userId') + "/" + proof.id).success(function(data) {
@@ -107,10 +114,17 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function ($s
 });
 
 /* Proof list for an individual model */
-angular.module('keymaerax.controllers').controller('ModelProofsCtrl', function ($scope, $http, $cookies,$location, $routeParams) {
+angular.module('keymaerax.controllers').controller('ModelProofsCtrl', function ($scope, $http, $cookies,$location, $routeParams, $route) {
   $scope.openPrf = function(proofId) {
       $location.path('/proofs/' + proofId)
   }
+
+
+  $scope.deleteProof = function(proof) {
+    $http.post('user/' + $cookies.get('userId') + "/proof/" + proof.id + "/delete").success(function(data) {
+       $route.reload();
+    });
+  };
 
   //Todo: should "inherit" this from the modelproofscreatectrl rather than copy/pasting here.
   $scope.createProof = function() {

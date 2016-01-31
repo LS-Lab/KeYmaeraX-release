@@ -64,7 +64,7 @@
                 <ul uib-dropdown-menu role="menu" ng-model="model">
                     <li role="menuitem"><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show Proofs</a></li>
                     <li role="menuitem"><a ng-controller="ModelProofCreateCtrl" ng-click="createDefaultProofForModel(model.id)">Start new proof</a></li>
-                    <li role="menuitem"><a ng-controller="ModelUploadCtrl" ng-click="deleteModel(model.id)">Delete this model</a></li>
+                    <li role="menuitem"><a ng-controller="ModelUploadCtrl" ng-click="deleteModel(model.id)"><span class="fa fa-trash"></span> Delete this model</a></li>
                     <!--<li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs/create">Start new proof</a></li>-->
                     <!--<li ng-if="model.tactic != ''"><a ng-click="runPreloadedProof(model)" ng-controller="ModelUploadCtrl">Prove with tactic</a></li>-->
                 </ul>

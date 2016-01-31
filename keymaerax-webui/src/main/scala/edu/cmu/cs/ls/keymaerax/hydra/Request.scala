@@ -316,6 +316,13 @@ class DeleteModelRequest(db: DBAbstraction, userId: String, modelId: String) ext
   }
 }
 
+class DeleteProofRequest(db: DBAbstraction, userId: String, proofId: String) extends Request {
+  override def getResultingResponses() : List[Response] = {
+    val success = db.deleteProof(Integer.parseInt(proofId))
+    new BooleanResponse(success) :: Nil
+  }
+}
+
 class GetModelListRequest(db : DBAbstraction, userId : String) extends Request {
   def getResultingResponses() = {
     new ModelListResponse(db.getModelList(userId)) :: Nil

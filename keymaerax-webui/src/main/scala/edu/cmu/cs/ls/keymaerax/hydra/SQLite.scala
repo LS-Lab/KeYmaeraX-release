@@ -315,6 +315,12 @@ object SQLite {
         })
       })
 
+    override def deleteProof(proofId: Int) =
+      synchronizedTransaction({
+        Tacticexecutions.filter(_.proofid === proofId).delete
+        Proofs.filter(_._Id === proofId).delete == 1
+      })
+
 
     //Models
     override def createModel(userId: String, name: String, fileContents: String, date: String,
@@ -359,6 +365,7 @@ object SQLite {
     override def deleteModel(modelId: Int): Boolean =
       synchronizedTransaction({
         Models.filter(_._Id === modelId).delete;
+        Proofs.filter(_.modelid === modelId).list.map(prf => deleteProof(prf._Id.get));
         true
       })
 
