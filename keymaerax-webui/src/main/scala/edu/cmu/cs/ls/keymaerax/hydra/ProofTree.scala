@@ -119,7 +119,7 @@ object ProofTree {
         val goals = allNodes.filter(_.children.isEmpty)
         val newNodes = goals.map{case goal =>
             treeNode(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq("true".asFormula)),
-              Some(goal), Some(goal.endStep.get))}
+              Some(goal), goal.endStep)}
         (allNodes ++ newNodes, newNodes)
       }
 
