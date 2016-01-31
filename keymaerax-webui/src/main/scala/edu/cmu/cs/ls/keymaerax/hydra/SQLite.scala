@@ -315,6 +315,11 @@ object SQLite {
         })
       })
 
+    override def deleteProof(proofId: Int) =
+      synchronizedTransaction({
+        Proofs.filter(_._Id === proofId).delete == 1
+      })
+
 
     //Models
     override def createModel(userId: String, name: String, fileContents: String, date: String,

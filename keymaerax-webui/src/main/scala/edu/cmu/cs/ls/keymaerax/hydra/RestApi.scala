@@ -140,6 +140,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val deleteProof = userPrefix {userId => pathPrefix("proof" / Segment / "delete") { proofId => pathEnd {
+    post {
+      val r = new DeleteProofRequest(database, userId, proofId)
+      complete(standardCompletion(r))
+    }
+  }}}
+
   //Because apparently FTP > modern web.
   val userModel2 = userPrefix {userId => {pathPrefix("modeltextupload" / Segment) {modelNameOrId =>
   {pathEnd {
@@ -552,6 +559,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     deleteModel           ::
     cookieecho            ::
     createProof           ::
+    deleteProof           ::
     proofListForModel     ::
     proofList             ::
     openProof             ::

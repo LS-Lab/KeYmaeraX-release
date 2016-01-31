@@ -233,6 +233,8 @@ trait DBAbstraction {
 
   def getProofsForModel(modelId: String): List[ProofPOJO] = getProofsForModel(modelId.toInt)
 
+  def deleteProof(proofId: Int) : Boolean
+
   //Proofs and Proof Nodes
   def getProofInfo(proofId: Int): ProofPOJO
 
