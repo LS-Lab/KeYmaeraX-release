@@ -1,27 +1,27 @@
-angular.module('keymaerax.controllers').controller('DashboardCtrl.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
+angular.module('keymaerax.controllers').controller('DashboardCtrl.ShutdownDialog', ['$scope', function($scope) {
   $scope.cancel = function() {
       alert("KeYmaera X is shut down. Please close the window and restart the server to continue using KeYmaera X.")
       $window.close();
   }
-});
+}]);
 
-angular.module('keymaerax.controllers').controller('DashboardCtrl.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
+angular.module('keymaerax.controllers').controller('DashboardCtrl.ShutdownDialog', ['$scope', function($scope) {
   $scope.noModalForHelpDialogHack = true
-});
+}]);
 
-angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', function($scope, $http, $uibModalInstance, $uibModal, $cookies, $modalInstance, path) {
+angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', ['$scope', '$uibModalInstance', function($scope, $uibModalInstance, path) {
     $scope.extractedDatabaseLocation = path
     $scope.close = function() {
         $uibModalInstance.dismiss('cancel');
     }
-});
+}]);
 
-angular.module('keymaerax.controllers').controller('DashboardCtrl.LicenseDialog', function($scope, $http, $uibModal, $cookies, $modalInstance) {
+angular.module('keymaerax.controllers').controller('DashboardCtrl.LicenseDialog', ['$scope', '$http', '$uibModal', '$uibModalInstance', function($scope, $http, $uibModal, $uibModalInstance) {
   $scope.rejectLicense = function() {
     alert("KeYmaera X cannot be used without accepting the license -- we are now shutting down KeYmaera X. To accept the license, restart KeYmaera X and click 'Accept'");
-    $modalInstance.dismiss('cancel')
+    $uibModalInstance.dismiss('cancel')
 
-    var modalInstance = $uibModal.open({
+    $uibModal.open({
       templateUrl: 'partials/shutdown_dialog.html',
       controller: 'DashboardCtrl.ShutdownDialog',
       backdrop: "static",
@@ -38,11 +38,11 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl.LicenseDialog'
                 showCaughtErrorMessage($uibModal, data, "License Acceptance Failed")
             }
         }) //ok
-    $modalInstance.dismiss('cancel');
+    $uibModalInstance.dismiss('cancel');
   }
-});
+}]);
 
-angular.module('keymaerax.controllers').controller('DashboardCtrl', function ($scope, $uibModal, $cookies, $http) {
+angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '$uibModal', '$cookies', '$http', function ($scope, $uibModal, $cookies, $http) {
   // Set the view for menu active class
   $scope.$on('routeLoaded', function (event, args) {
     $scope.theview = args.theview;
@@ -109,7 +109,7 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', function ($s
       var modalInstance = $uibModal.open({
         templateUrl: 'partials/shutdown_dialog.html',
         controller: 'DashboardCtrl.ShutdownDialog',
-        backdrop: "static",
+        backdrop: 'static',
         size: 'sm'
       });
 
@@ -132,4 +132,4 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', function ($s
   };
 
   $scope.$emit('routeLoaded', {theview: 'dashboard'});
-});
+}]);
