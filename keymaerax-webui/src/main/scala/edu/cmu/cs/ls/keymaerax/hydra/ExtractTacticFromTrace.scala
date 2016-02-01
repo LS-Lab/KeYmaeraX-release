@@ -12,6 +12,7 @@ import scala.annotation.tailrec
 class ExtractTacticFromTrace(db: DBAbstraction) {
   def apply(executionId: Int) = {
     val steps = db.getExecutionSteps(executionId)
+    println(steps.length)
     assert(steps.length > 0, "All proofs should have at least one step.")
     extract(steps)
   }
@@ -25,6 +26,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
   private def extract(prevExpr: Option[BelleExpr], currentStep : ExecutionStepPOJO, allSteps: List[ExecutionStepPOJO]) : BelleExpr = {
     println("Extracting step " + currentStep)
     if(isBranchingTactic(currentStep, allSteps)) {
+      println("Found branching tactic: " + currentStep)
       val (branchExpr, next) = (expressionForBranchingStep(currentStep, allSteps), nextStep(currentStep, allSteps))
 
       if(next.isEmpty) branchExpr
@@ -45,7 +47,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
         else if(linear.length == 1) exprAtStep(currentStep) & exprAtStep(linear.head)
         else {
           //Drop the right-most to prevent stuttering. It'll be added back in the recursive call.
-          linear.dropRight(1).map(exprAtStep).tail.foldLeft(exprAtStep(linear.head))((seq, next) => seq & next)
+          linear.dropRight(1).map(exprAtStep).foldLeft(exprAtStep(currentStep))((seq, next) => seq & next)
         }
       }
       val recExpr = prevExpr match {
