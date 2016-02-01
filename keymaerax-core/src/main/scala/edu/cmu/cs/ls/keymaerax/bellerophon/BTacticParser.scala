@@ -71,7 +71,7 @@ object BTacticParser extends (String => Option[BelleExpr]) {
     protected val ident = """[a-zA-Z][a-zA-Z0-9\_\.]*""".r
     protected val numberPattern = """[0-9]*""".r
 
-    val positionPattern = """[\-?0-9]*""".r
+    val positionPattern = """[\-?0-9\.?]*""".r
     val expressionPattern = """\{`[^`}]*`}""".r
     val listPattern = """\[[^\]]*\]""".r
     val notArgumentDelimiter = """[^`}]*""".r
@@ -180,9 +180,15 @@ object BTacticParser extends (String => Option[BelleExpr]) {
       } else if (s.startsWith("[") && s.endsWith("]")) {
         Left(s.substring(1, s.length - 1).split(",").map(_.replace("{`", "").replace("`}", "").asExpr))
       } else {
-        val i = s.toInt
-        Right(Position(i))
+        Right(strToPos(s))
       }
+    }
+
+    //@todo implement a parser for subpositions as well as positions.
+    private def strToPos(pos : String) = {
+      if(pos.endsWith(".") && pos.count(c => c == '.') == 1) Position(pos.replace(".", "").toInt)
+      else if(pos.count(c => c == '.') == 0) Position(pos.toInt)
+      else ??? //Need to implement subpositions.
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
