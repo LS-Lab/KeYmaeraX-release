@@ -10,7 +10,12 @@ import scala.annotation.tailrec
   * @author Nathan Fulton
   */
 class ExtractTacticFromTrace(db: DBAbstraction) {
-  def apply(executionId: Int) = db.getExecutionSteps(executionId)
+  def apply(executionId: Int) = {
+    val steps = db.getExecutionSteps(executionId)
+    assert(steps.length > 0, "All proofs should have at least one step.")
+    extract(steps)
+  }
+
 
   private def extract(steps: List[ExecutionStepPOJO]) : BelleExpr = extract(None, firstStep(steps), steps)
 
@@ -18,6 +23,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     * @note slightly convoluted so that it's tailrec. */
   @tailrec
   private def extract(prevExpr: Option[BelleExpr], currentStep : ExecutionStepPOJO, allSteps: List[ExecutionStepPOJO]) : BelleExpr = {
+    println("Extracting step " + currentStep)
     if(isBranchingTactic(currentStep, allSteps)) {
       val (branchExpr, next) = (expressionForBranchingStep(currentStep, allSteps), nextStep(currentStep, allSteps))
 
@@ -54,7 +60,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
   /** Returns the unqiue first step in the proof, or fails an assertion. */
   private def firstStep(steps: List[ExecutionStepPOJO]) = {
     val candidates = steps.filter(step => step.previousStep.isEmpty && step.parentStep.isEmpty)
-    assert(candidates.length == 1)
+    assert(candidates.length == 1, "Every proof needs a first step -- i.e. a step with no previous step and no parent step.")
     candidates.head
   }
 
@@ -91,6 +97,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
       case None    => throw new Exception("Incorrectly assumed the UI is using BelleExprs for everything.")
     }
     //@todo enforce a contract that all expressions entered into the database actually parse.
+    println("About to try parsing " + exprStr)
     BTacticParser(exprStr).get
   }
 
@@ -148,7 +155,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
   def orderedNonBranchingTransitiveSuccessors(id: Int, steps: List[ExecutionStepPOJO]) : Seq[ExecutionStepPOJO] = {
     val next = steps.find(step => step.previousStep.isDefined && step.previousStep.get == id && !isBranchingTactic(step, steps))
     next match {
-      case Some(next) => next +: orderedNonBranchingTransitiveSuccessors(next.previousStep.get, steps) //@todo assuming that there aren't any cycles in previousStep relationships... enforce on insert?
+      case Some(next) => next +: orderedNonBranchingTransitiveSuccessors(next.stepId.get, steps) //@todo assuming that there aren't any cycles in previousStep relationships... enforce on insert?
       case None       => List()
     }
   }
