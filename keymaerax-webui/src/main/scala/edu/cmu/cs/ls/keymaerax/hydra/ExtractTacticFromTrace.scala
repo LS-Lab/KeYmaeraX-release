@@ -1,104 +1,155 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BTacticParser, BranchTactic, SeqTactic, BelleExpr}
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.nil
 
 import scala.annotation.tailrec
 
 /**
-  * Extracts a tactic from a sequence of execution steps.
+  * Extracts a tactic from a sequence of execution steps. Very inefficient.
   * @author Nathan Fulton
   */
 class ExtractTacticFromTrace(db: DBAbstraction) {
-  def apply(proofId: Int) = {???}
+  def apply(executionId: Int) = db.getExecutionSteps(executionId)
 
-  /** A perfect proof is a tactic that contains no back-tracking. */
-  private def removePrunedAlternatives(steps: List[ExecutionStepPOJO]) = steps //@todo implement.
-
-
-  private def expressionFor(steps: List[ExecutionStepPOJO]) : BelleExpr = expressionFor(None, steps)
+  private def extract(steps: List[ExecutionStepPOJO]) : BelleExpr = extract(None, firstStep(steps), steps)
 
   /** Computes a [[BelleExpr]] corresponding to steps.
     * @note slightly convoluted so that it's tailrec. */
   @tailrec
-  private def expressionFor(prevExpr: Option[BelleExpr], steps: List[ExecutionStepPOJO]) : BelleExpr = {
-    if(headIsBranchingTactic(steps)) {
-      val (branchExpr, branchTail) = expressionForBranchingStep(steps)
-      val recExpr = prevExpr match {
-        case Some(prev) => prev & branchExpr
-        case None       => branchExpr
+  private def extract(prevExpr: Option[BelleExpr], currentStep : ExecutionStepPOJO, allSteps: List[ExecutionStepPOJO]) : BelleExpr = {
+    if(isBranchingTactic(currentStep, allSteps)) {
+      val (branchExpr, next) = (expressionForBranchingStep(currentStep, allSteps), nextStep(currentStep, allSteps))
+
+      if(next.isEmpty) branchExpr
+      else {
+        val recExpr = prevExpr match {
+          case Some(prev) => prev & branchExpr
+          case None => branchExpr
+        }
+        extract(Some(recExpr), next.get, allSteps)
       }
-      expressionFor(Some(recExpr), branchTail)
     }
-    else {
-      val nextExpr = expressionFor(steps.head)
-      val recExpr = prevExpr match {
-        case Some(prev) => prev & nextExpr
-        case None       => nextExpr
+    else { //this is not a branching tactic.
+      //@note if we get the list of execution steps in a given order, then we can pretty efficiently traverse that list.
+      //But I'm assuming we don't get the list of execution steps in any particular order, and that we haven't pre-sorted them, so we have to call the expensive transitive function.
+      val linear = orderedNonBranchingTransitiveSuccessors(currentStep.stepId.get, allSteps)
+      val linearSequenceFromCurrent = {
+        if(linear.length == 0) exprAtStep(currentStep)
+        else if(linear.length == 1) exprAtStep(currentStep) & exprAtStep(linear.head)
+        else {
+          //Drop the right-most to prevent stuttering. It'll be added back in the recursive call.
+          linear.dropRight(1).map(exprAtStep).tail.foldLeft(exprAtStep(linear.head))((seq, next) => seq & next)
+        }
       }
-      expressionFor(Some(recExpr), steps.tail)
+      val recExpr = prevExpr match {
+        case Some(prev) => prev & linearSequenceFromCurrent
+        case None => linearSequenceFromCurrent
+      }
+      if(linear.length != 0) extract(Some(recExpr), linear.last, allSteps)
+      else recExpr
+    }
+  }
+
+  /** Returns the unqiue first step in the proof, or fails an assertion. */
+  private def firstStep(steps: List[ExecutionStepPOJO]) = {
+    val candidates = steps.filter(step => step.previousStep.isEmpty && step.parentStep.isEmpty)
+    assert(candidates.length == 1)
+    candidates.head
+  }
+
+
+  /** Returns the step in the proof that comes after currentStep. */
+  private def nextStep(currentStep : ExecutionStepPOJO, steps : List[ExecutionStepPOJO]) : Option[ExecutionStepPOJO] = {
+    if(steps.length == 0) None
+    else {
+      assert(currentStep.stepId.isDefined)
+
+      val stepId = steps.head.stepId.get
+      val nextSteps = steps.filter(step => step.previousStep match {
+        case Some(previousStepId) => stepId == previousStepId
+        case None => false
+      })
+
+      if(nextSteps.length == 0) None
+      else {
+        val pruned = pruneAlternatives(nextSteps)
+        assert(pruned.length <= 1)
+        pruned.headOption match {
+          case Some(theHead) => Some(theHead)
+          case None => ??? //Really, there should have been something.
+        }
+      }
     }
   }
 
   /** Extracts a [[BelleExpr]] for a single step. */
-  private def expressionFor(step: ExecutionStepPOJO) : BelleExpr = {
+  private def exprAtStep(step: ExecutionStepPOJO) : BelleExpr = {
     //If steps.head isn't a branching tactic, then peel it off the list and retrieve the belle expr corresponding to its executable.
     val exprStr = db.getExecutable(step.executableId).belleExpr match {
       case Some(s) => s
-      case None    => ??? //@todo currently the UI is using belle exprs for everything anyways.
+      case None    => throw new Exception("Incorrectly assumed the UI is using BelleExprs for everything.")
     }
-    BTacticParser(exprStr).get //@todo enforce this contract when we insert into the database, rather than crying later on that we can't actually reproduce the proof.
+    //@todo enforce a contract that all expressions entered into the database actually parse.
+    BTacticParser(exprStr).get
   }
 
-  /** Returns true if this tactic has any child tactics. */
-  def headIsBranchingTactic(steps: List[ExecutionStepPOJO]) = {
+  private def headIsBranchingTactic(steps: List[ExecutionStepPOJO]) = {
     assert(steps.length >= 1)
     val head = steps(0)
-    assert(head.stepId.isDefined)
-    steps.contains((step : ExecutionStepPOJO) => head.stepId == step.previousStep)
+    isBranchingTactic(head, steps.tail)
   }
 
-  /**
-    * Returns a pair p:
-    *     p._1 is (steps.head < (e1, ..., en)) where e1 ... en are tactics for the child steps of steps.head
-    *     p._2 is all of the steps that weren't either head or involved in any of e1 ... en
-    */
-  private def expressionForBranchingStep(steps: List[ExecutionStepPOJO]) : (BelleExpr, List[ExecutionStepPOJO]) = {
-    assert(steps.head.stepId.isDefined)
+  /** Returns true if branchHead has any child steps. */
+  private def isBranchingTactic(branchHead: ExecutionStepPOJO, steps: List[ExecutionStepPOJO]) = {
+    assert(branchHead.stepId.isDefined)
+    steps.contains((step : ExecutionStepPOJO) => branchHead.stepId == step.parentStep)
+  }
 
-    val parent = steps.head
+  /** Filters out all obsolete branch alternatives. */
+  private def pruneAlternatives(steps: List[ExecutionStepPOJO]) : List[ExecutionStepPOJO] = {
+    //@note written this way so that the order isn't modified...
+    //Break the list of steps into groupings based upon their previous step.
+    val oldAlternatives =
+      steps.groupBy(_.previousStep)
+        .map(grouping => {
+          val newest = newestAlternative(grouping._2.head, grouping._2)
+          grouping._2.filter(step => step != newest)
+        }).flatten.toList
+    steps.filter(step => !oldAlternatives.contains(step))
+  }
 
-    val orderedBranches : List[List[ExecutionStepPOJO]] = {
+  private def newestAlternative(anAlternative: ExecutionStepPOJO, steps: List[ExecutionStepPOJO]) = {
+    steps.foldLeft(anAlternative)((smallestAlternative, step) => {
+      if(step.alternativeOrder < smallestAlternative.alternativeOrder) step else smallestAlternative
+    })
+  }
+
+  private def expressionForBranchingStep(parent: ExecutionStepPOJO, stepsMaybeContainingHead: List[ExecutionStepPOJO]) : BelleExpr = {
+    assert(parent.stepId.isDefined)
+
+    val steps = stepsMaybeContainingHead.filter(x => x != parent)
+
+    val branchTactics : Seq[BelleExpr] = {
       val branchHeads = steps.filter(childCandidate => childCandidate.parentStep.isDefined && childCandidate.parentStep == parent.stepId)
       assert(branchHeads.length != 0, "expressionForBranchingStep should be called only when steps.head has a child.")
 
-      val prunedBranchHeads = branchHeads //@todo prune out branches that are old alternatives.
+      val prunedBranchHeads = pruneAlternatives(branchHeads) //@todo prune out branches that are old alternatives.
 
       assert(branchHeads.forall(_.branchOrder.isDefined), "Do not currently support labeled branches.") //@todo support labeled branches.
-      val orderedAndPrunedBranchHeads = prunedBranchHeads.sortBy(branchHead => branchHead.branchOrder.get)
-
-      orderedAndPrunedBranchHeads.map(branchOf(steps.tail))
+      prunedBranchHeads
+        .sortBy(branchHead => branchHead.branchOrder.get)
+        .map(branchHead => extract(None, branchHead, steps))
     }
 
-    val orderedBranchTactics = orderedBranches.map(expressionFor)
-    val theTactic = expressionFor(parent) & BranchTactic(orderedBranchTactics.toSeq)
-
-    val allBranchSteps = orderedBranches.flatten
-    val remainingSteps = steps.tail.filter(!allBranchSteps.contains(_))
-
-    (theTactic, remainingSteps)
+    exprAtStep(parent) & BranchTactic(branchTactics.toSeq)
   }
 
-  /** Returns a list of all tactics that are transitive children or transitive successors of brancHead. */
-  def branchOf(steps: List[ExecutionStepPOJO])(branchHead: ExecutionStepPOJO) : List[ExecutionStepPOJO] = {
-    assert(branchHead.stepId.isDefined)
-    ???
-  }
-
-  def transitiveSuccessors(id: Int, steps: List[ExecutionStepPOJO]) : List[ExecutionStepPOJO] = {
-    val next = steps.find(step => step.previousStep.isDefined && step.previousStep.get == id)
+  def orderedNonBranchingTransitiveSuccessors(id: Int, steps: List[ExecutionStepPOJO]) : Seq[ExecutionStepPOJO] = {
+    val next = steps.find(step => step.previousStep.isDefined && step.previousStep.get == id && !isBranchingTactic(step, steps))
     next match {
-      case Some(next) => next +: transitiveSuccessors(next.previousStep.get, steps) //@todo assuming that there aren't any cycles in previousStep relationships... enforce on insert?
-      case None       => ???
+      case Some(next) => next +: orderedNonBranchingTransitiveSuccessors(next.previousStep.get, steps) //@todo assuming that there aren't any cycles in previousStep relationships... enforce on insert?
+      case None       => List()
     }
   }
 
