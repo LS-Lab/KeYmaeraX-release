@@ -765,6 +765,8 @@ object SQLite {
       }
     }
 
+    override def getExecutionSteps(executionId: Int): List[ExecutionStepPOJO] = proofSteps(executionId)
+
     override def getExecutionTrace(proofId: Int): ExecutionTrace = {
       /* This method has proven itself to be a resource hog, so this implementation attempts to minimize the number of
          DB calls. */
