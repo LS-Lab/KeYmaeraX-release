@@ -545,6 +545,12 @@ object DerivationInfo {
           (List("j(x)"),List("[a]j(x)")),
           (List("j(x)"),List("P"))))
       , List(FormulaArg("j(x)")), {case () => (fml:Formula) => TactixLibrary.loop(fml)}),
+    new InputPositionTacticInfo("generalizeb",
+    RuleDisplayInfo("G[]",(List("&Gamma;"), List("[a]P", "&Delta;")),
+      List(
+        (List("&Gamma;"),List("[a]Q", "&Delta;")),
+        (List("Q"),List("P"))))
+    , List(FormulaArg("Q")), {case () => (fml:Formula) => TactixLibrary.generalize(fml)}),
 
   //
     new TacticInfo("TrivialCloser", "TrivialCloser", {case () => ProofRuleTactics.trivialCloser}),

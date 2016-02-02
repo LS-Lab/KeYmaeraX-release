@@ -98,7 +98,7 @@ object UIIndex {
           }, post)
           foundPrime
         }
-        val rules = "abstractionb" :: maybeSplit
+        val rules = "abstractionb" :: "generalizeb" :: maybeSplit
         a match {
           case _: Assign => "assignb" :: rules
           case _: AssignAny => "[:*] assign nondet" :: rules
