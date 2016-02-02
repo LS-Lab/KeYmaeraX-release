@@ -29,8 +29,14 @@
     </div>
 </div>
 <div ng-if="result === 'cex.none'" class="modal-body" style="overflow: scroll; width: auto; height: 100px;">
+    <p>
     No counter-example found. Try proving it to see if it is valid.<br />
     Some arithmetic simplifications may help reduce the complexity.
+    </p>
+    <p>
+        If both proving the formula fails (<code>&#8866; false</code>) and no counter-example can be found, it sometimes
+        is an indication for a division by zero in the formula.
+    </p>
 </div>
 <div ng-if="result === 'cex.timeout'" class="modal-body" style="overflow: scroll; width: auto; height: 100px;">
     Sorry, no counter-example found before search timeout expired.
