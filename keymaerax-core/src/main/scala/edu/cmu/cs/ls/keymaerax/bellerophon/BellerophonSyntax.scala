@@ -367,7 +367,7 @@ abstract case class DependentTactic(name: String) extends BelleExpr {
     case be: BelleError => throw be
     case t: Throwable => if (DEBUG) t.printStackTrace(); throw new BelleError(t.getMessage, t)
   }
-  override def prettyString: String = "DependentTactic(" + name + ")"
+  override def prettyString: String = name
 }
 abstract class SingleGoalDependentTactic(override val name: String) extends DependentTactic(name) {
   def computeExpr(sequent: Sequent): BelleExpr
@@ -394,7 +394,7 @@ abstract case class InputPositionTactic[T](input: T, pos: Position) extends Bell
 
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, locator: PositionLocator) extends DependentTactic(pt.name) {
   import Augmentors._
-  override def prettyString: String = "AppliedDependentPositionTactic(" + pt.name + ")(" + locator.prettyString + ")"
+  override def prettyString: String = pt.name + "(" + locator.prettyString + ")"
   final override def computeExpr(v: BelleValue): BelleExpr = locator match {
     //@note interprets PositionLocator
     case Fixed(pos, shape, exact) => shape match {

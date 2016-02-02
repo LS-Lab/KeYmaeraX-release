@@ -109,9 +109,9 @@ object ArithmeticTacticsImpl {
     override def apply(tool: Tool, node: ProofNode): Unit = {
       var tacticName : String = ""
 
-      if (toolId.equals("Mathematica")) tacticName = "Mathematica QE"
-      else if (toolId.equals("Z3")) tacticName = "Z3 QE"
-      else if (toolId.equals("Polya")) tacticName = "Polya QE"
+      if (toolId.equals("Mathematica")) tacticName = "MathematicaQE"
+      else if (toolId.equals("Z3")) tacticName = "Z3QE"
+      else if (toolId.equals("Polya")) tacticName = "PolyaQE"
 
       val t: Tactic = new ConstructionTactic(tacticName) {
         override def applicable(node: ProofNode): Boolean = true
