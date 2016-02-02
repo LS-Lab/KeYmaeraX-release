@@ -114,7 +114,7 @@ object UIIndex {
             case _ => rules
           }
           case ODESystem(ode, constraint) =>
-            val tactics: List[String] = "diffSolve" :: "diffCut" :: "DIRule" ::  Nil
+            val tactics: List[String] = /*@todo diffSolve once done*/ "autoDiffSolve" :: "diffCut" :: "DIRule" ::  Nil
             if (constraint == True)
               (tactics :+ "DG differential ghost") ++ rules
             else
@@ -210,6 +210,7 @@ object UIIndex {
   def comfortOf(stepName: String): Option[String] = stepName match {
     case "diffCut" => Some("diffInvariant")
     case "DIRule" => Some("diffInd")
+    case "diffSolve" => Some("autoDiffSolve")
     case _ => None
   }
 

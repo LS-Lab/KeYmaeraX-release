@@ -579,7 +579,16 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
     , List(ListArg("r(x)", "formula"))
     , {case () => (fml:Seq[Formula]) => TactixLibrary.diffInvariant(fml:_*)}),
-    new PositionTacticInfo("diffSolve", "diffSolve",  {case () => TactixLibrary.diffSolve(None)}, needsTool = true),
+    new PositionTacticInfo("diffSolve",
+      RuleDisplayInfo("[′]R",
+        (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
+        List((List("&Gamma;"), List("∀t≥0 ( (∀0≤s≤t q(sol(s))) → [x:=sol(t)]p(x) )")))),
+      {case () => ???}, needsTool = true),
+    new PositionTacticInfo("autoDiffSolve",
+    RuleDisplayInfo("[′]R",
+      (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;")),
+      List((List("&Gamma;", "t≥0"), List("[x:=sol(t)](q(x) → p(x))")))),
+    {case () => TactixLibrary.diffSolve(None)}, needsTool = true),
     new PositionTacticInfo("Dconstify", "Dconst", {case () => DifferentialTactics.Dconstify}),
     new PositionTacticInfo("Dvariable", "Dvar", {case () => DifferentialTactics.Dvariable}),
 
