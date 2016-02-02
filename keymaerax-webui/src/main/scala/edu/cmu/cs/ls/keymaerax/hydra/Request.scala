@@ -115,10 +115,7 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
         case Some(n) => n
       }
     //@note not a tactic because we don't want to change the proof tree just by looking for counterexamples
-    val fml = Imply(
-      (node.sequent.ante ++ (True::True::Nil)).reduce(And),
-      (node.sequent.succ ++ (False::False::Nil)).reduce(Or))
-
+    val fml = node.sequent.toFormula
     try {
       TactixLibrary.tool.findCounterExample(fml) match {
         //@todo return actual sequent, use collapsiblesequentview to display counterexample
