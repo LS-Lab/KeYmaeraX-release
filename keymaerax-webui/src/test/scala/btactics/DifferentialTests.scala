@@ -200,6 +200,28 @@ class DifferentialTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
+  it should "behave as DI rule on x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
+      implyR(1) & diffInd(qeTool, 'none)(1)
+    )
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only ("x>=5".asFormula, "true".asFormula)
+    result.subgoals.head.succ should contain only "x>=5".asFormula
+    result.subgoals.last.ante should contain only ("x>=5".asFormula, "true".asFormula)
+    result.subgoals.last.succ should contain only "[{x'=2}](x>=5)'".asFormula
+  }
+
+  it should "behave as diffInd rule on x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
+      implyR(1) & diffInd(qeTool, 'diffInd)(1)
+    )
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only ("x>=5".asFormula, "true".asFormula)
+    result.subgoals.head.succ should contain only "x>=5".asFormula
+    result.subgoals.last.ante should contain only "true".asFormula
+    result.subgoals.last.succ should contain only "[x':=2;]x'>=0".asFormula
+  }
+
   it should "auto-prove x>=5 -> [{x'=2&x<=10}](5<=x)" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2&x<=10}](5<=x)".asFormula)),
       implyR(1) & diffInd(qeTool)(1)
@@ -212,6 +234,28 @@ class DifferentialTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
+  it should "behave as DI on x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8" in withMathematica { implicit qeTool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula)),
+      implyR(1) & diffInd(qeTool, 'none)(1)
+    )
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only ("x*x+y*y>=8".asFormula, "true".asFormula)
+    result.subgoals.head.succ should contain only "x*x+y*y>=8".asFormula
+    result.subgoals.last.ante should contain only ("x*x+y*y>=8".asFormula, "true".asFormula)
+    result.subgoals.last.succ should contain only "[{x'=5*y,y'=-5*x}](x*x+y*y>=8)'".asFormula
+  }
+
+  it should "behave as diffInd on x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8" in withMathematica { implicit qeTool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("x*x+y*y>=8 -> [{x'=5*y,y'=-5*x}]x*x+y*y>=8".asFormula)),
+      implyR(1) & diffInd(qeTool, 'diffInd)(1)
+    )
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only ("x*x+y*y>=8".asFormula, "true".asFormula)
+    result.subgoals.head.succ should contain only "x*x+y*y>=8".asFormula
+    result.subgoals.last.ante should contain only "true".asFormula
+    result.subgoals.last.succ should contain only "[y':=-5*x;][x':=5*y;]x'*x+x*x'+(y'*y+y*y')>=0".asFormula
+  }
+
   it should "prove x>=5 |- [x:=x+1][{x'=2}]x>=5" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq("x>=5".asFormula), IndexedSeq("[x:=x+1;][{x'=2}]x>=5".asFormula)),
       assignb(1) & diffInd(qeTool)(1)
@@ -220,7 +264,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "prove x>=5 |- [x:=x+1][{x'=2}]x>=5 in reverse" in withMathematica { implicit qeTool =>
     proveBy(Sequent(Nil, IndexedSeq("x>=5".asFormula), IndexedSeq("[x:=x+1;][{x'=2}]x>=5".asFormula)),
-      diffInd(qeTool)(1, 1::Nil) & debug("Foo") &
+      diffInd(qeTool)(1, 1::Nil) &
         assignb(1) & // handle updates
         QE
     ) shouldBe 'proved
@@ -228,7 +272,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in {
     val result = proveBy(Sequent(Nil, IndexedSeq("x>=5".asFormula), IndexedSeq("[{x'=2}]x>=5".asFormula)),
-      DifferentialTactics.diffInd(null, auto=false)(1)
+      DifferentialTactics.diffInd(null, 'none)(1)
     )
     result.subgoals should have size 2
     result.subgoals.head.ante should contain only ("x>=5".asFormula, "true".asFormula)
@@ -239,11 +283,21 @@ class DifferentialTests extends TacticTestBase {
 
   it should "x>=5 -> [{x'=2}]x>=5 in context" taggedAs KeYmaeraXTestTags.SummaryTest in {
     val result = proveBy(Sequent(Nil, IndexedSeq("x>=5".asFormula), IndexedSeq("[x:=x+1;][{x'=2}]x>=5".asFormula)),
-      DifferentialTactics.diffInd(null, auto=false)(1, 1::Nil)
+      DifferentialTactics.diffInd(null, 'none)(1, 1::Nil)
     )
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only "x>=5".asFormula
     result.subgoals.head.succ should contain only "[x:=x+1;](true->x>=5&[{x'=2}](x>=5)')".asFormula
+  }
+
+  it should "x>=5 -> [{x'=2&x>7}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { implicit qeTool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>=5".asFormula), IndexedSeq("[{x'=2 & x>7}]x>=5".asFormula)),
+      DifferentialTactics.diffInd(qeTool, 'diffInd)(1))
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain only ("x>=5".asFormula, "x>7".asFormula)
+    result.subgoals.head.succ should contain only "x>=5".asFormula
+    result.subgoals.last.ante should contain only "x>7".asFormula
+    result.subgoals.last.succ should contain only "[x':=2;]x'>=0".asFormula
   }
 
   "Dvariable" should "work when the Differential() occurs in a formula without []'s" in withMathematica { implicit qeTool =>
