@@ -104,11 +104,10 @@ object DLBySubst {
                   foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
             cut(Imply(ctx(qPhi), ctx(b))) <(
-              /* use */ (implyLOld('Llast) <(hideR(pos.topLevel) partial /* result remains open */ , closeId)) partial,
-              /* show */ cohide('Rlast) & implyR('Rlast) & assertT(1, 1) & implyRi &
-              CMon(pos.inExpr) & implyR('_) & //PropositionalTactics.propCMon(pos.inExpr) &
+              /* use */ (implyL('Llast) <(hideR(pos.topLevel) partial /* result remains open */ , closeId)) partial,
+              /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) &
               assertT(1, 1) & assertT(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionb") &
-              topAbstraction('Rlast) & closeId
+              topAbstraction(1) & closeId
               )
         }
       }
@@ -136,29 +135,48 @@ object DLBySubst {
         require(!pos.isAnte, "Abstraction only in succedent")
         sequent.sub(pos) match {
           case Some(b@Box(prg, phi)) =>
-            val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.to[Seq]
-            val qPhi =
-              if (vars.isEmpty) phi
-              else
+            val vars: scala.collection.immutable.SortedSet[Variable] = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.
               //@todo what about DifferentialSymbols in boundVars? Decided to filter out since not soundness-critical.
-                vars.filter(v=>v.isInstanceOf[Variable]).to[scala.collection.immutable.SortedSet].
-                  foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
+              filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable]).to[scala.collection.immutable.SortedSet](
+                //@note provide canBuildFrom and ordering because Scala implicit conversions won't compile
+                scala.collection.immutable.SortedSet.canBuildFrom(new Ordering[Variable] {
+                  override def compare(x: Variable, y: Variable): Int = x.compare(y)
+                }))
+
+            val qPhi = if (vars.isEmpty) phi else vars.foldRight(phi)((v, f) => Forall(v :: Nil, f))
+
+            val diffRenameStep: DependentPositionTactic = "diffRenameStep" by ((pos, sequent) => sequent(AntePos(0)) match {
+                case Equal(x: Variable, x0: Variable) if sequent(AntePos(sequent.ante.size - 1)) == phi =>
+                  selfAssign(x0)(pos) & ProofRuleTactics.boundRenaming(x0, x)(pos.topLevel) &
+                    eqR2L(-1)(pos.topLevel) & useAt("[:=] self assign")(pos.topLevel) & hide(-1)
+                case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
+              })
+
+            val diffRename: DependentPositionTactic = "diffRename" by ((pos, sequent) => {
+              if (sequent.ante.size == 1 && sequent.succ.size == 1 && sequent.ante.head == sequent.succ.head) ident
+              else if (sequent.ante.size == 1 + vars.size && sequent.succ.size == 1) sequent(AntePos(0)) match {
+                case Equal(_, _) if sequent(AntePos(sequent.ante.size - 1)) == phi => diffRenameStep(pos)*vars.size
+                case _ => throw new ProverException("Expected sequent of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
+              }
+              else throw new ProverException("Expected sequent either of the form p(x) |- p(x)\n or of the form x=x_0, ..., p(x) |- p(x_0) as created by assign equality,\n but got " + sequent)
+            })
 
             cut(Imply(qPhi, Box(prg, qPhi))) <(
-              /* use */ (implyLOld('Llast) <(
+              /* use */ (implyL('Llast) <(
                 hideR(pos.topLevel) partial /* result */,
                 cohide2(AntePosition(sequent.ante.length + 1), pos.topLevel) &
                   assertT(1, 1) & assertE(Box(prg, qPhi), "abstractionb: quantified box")('Llast) &
                   assertE(b, "abstractionb: original box")('Rlast) & ?(monb) &
                   assertT(1, 1) & assertE(qPhi, "abstractionb: quantified predicate")('Llast) &
-                  assertE(phi, "abstractionb: original predicate")('Rlast) & (allL('Llast)*vars.length) &
+                  assertE(phi, "abstractionb: original predicate")('Rlast) & (allL('Llast)*vars.size) &
+                  diffRename(1) &
                   assertT(1, 1) & assertT(s => s.ante.head match {
-                  case Forall(_, _) => phi match {
-                    case Forall(_, _) => true
-                    case _ => false
-                  }
-                  case _ => true
-                }, "abstractionb: foralls must match") & closeId
+                    case Forall(_, _) => phi match {
+                      case Forall(_, _) => true
+                      case _ => false
+                    }
+                    case _ => true
+                  }, "abstractionb: foralls must match") & closeId
                 )) partial,
               /* show */ hideR(pos.topLevel) & implyR('Rlast) & V('Rlast) & closeId
             )

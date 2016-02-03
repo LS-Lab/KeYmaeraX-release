@@ -241,11 +241,11 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
   });
 
 angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
-        function($scope, $http, $cookies, $modalInstance, proofId) {
+        function($scope, $http, $cookies, $uibModalInstance, proofId) {
     $scope.validatedProofStatus = 'closed'
 
     $scope.cancel = function() {
-        $modalInstance.dismiss('cancel');
+        $uibModalInstance.dismiss('cancel');
     };
 
     $scope.validateProof = function() {

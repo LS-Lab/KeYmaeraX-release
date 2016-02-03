@@ -23,6 +23,7 @@ object ToolTactics {
     Idioms.NamedTactic(qeTool.getClass.getSimpleName + " QE",
       alphaRule*@TheType() &
       varExhaustiveEqL2R('L)*@TheType() &
+      tryClosePredicate('L)*@TheType() & tryClosePredicate('R)*@TheType() &
       toSingleFormula & FOQuantifierTactics.universalClosure(order)(1) & qeSuccedentHd(qeTool) &
       DebuggingTactics.assertProved
   )}
@@ -43,6 +44,11 @@ object ToolTactics {
     "Find Left and Replace Left with Right" by ((pos, sequent) => sequent.sub(pos) match {
       case Some(fml@Equal(_: Variable, _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
     })
+
+  /* Tries to close predicates by identity, hide if unsuccessful (QE cannot handle predicate symbols) */
+  private def tryClosePredicate: DependentPositionTactic = "Try close predicate" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(p@PredOf(_, _)) => closeId | (hide(pos) partial)
+  })
 
   /**
    * Converts a sequent into a single formula.

@@ -174,7 +174,10 @@ object DifferentialTactics {
   /**
    * diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE, QE)
    * @param qeTool Quantifier elimination tool for final QE step of tactic.
-   * @param auto Whether or not to automatically close and use DE, DW. Behaves as DI sequent proof rule if false.
+   * @param auto One of 'none, 'diffInd, 'full. Whether or not to automatically close and use DE, DW.
+   *             'none: behaves as DI rule
+   *             'diffInd: behaves as diffInd rule
+   *             'full: closes everything after diffInd rule
    * @example{{{
    *         *
    *    ---------------------diffInd(qeTool)(1)
@@ -187,7 +190,8 @@ object DifferentialTactics {
    * }}}
    * @incontext
    */
-  def diffInd(implicit qeTool: QETool, auto: Boolean = true): DependentPositionTactic = new DependentPositionTactic("diffInd") {
+  def diffInd(implicit qeTool: QETool, auto: Symbol = 'full): DependentPositionTactic = new DependentPositionTactic("diffInd") {
+    require(auto == 'none || auto == 'diffInd || auto == 'full, "Expected one of ['none, 'diffInd, 'full] automation values, but got " + auto)
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         require(pos.isSucc && (sequent.sub(pos) match {
@@ -197,30 +201,33 @@ object DifferentialTactics {
         if (pos.isTopLevel)
           Dconstify(pos) & DI(pos) &
             (implyR(pos) & andR(pos)) <(
-              if (auto) close | QE else ident,
-              //@note derive before DE to keep positions easier
-              if (auto) {
+              if (auto == 'full) close | QE else skip,
+              if (auto != 'none) {
+                //@note derive before DE to keep positions easier
                 derive(pos + PosInExpr(1 :: Nil)) &
-                  DE(pos) &
-                  Dassignb(pos + PosInExpr(1 :: Nil)) * getODEDim(sequent, pos) &
+                DE(pos) &
+                (if (auto == 'full) Dassignb(pos + PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
-                  abstractionb(pos) & (close | QE)
-              } else ident
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & (close | QE)
+                 else { assert(auto == 'diffInd); cohide2(AntePos(sequent.ante.size), pos) &
+                  (if (hasODEDomain(sequent, pos)) cohide(1) & DW(1) else skip) &
+                  abstractionb(1) & (allR(1)*@TheType()) & ?(implyR(1)) }) partial
+              } else skip
               )
         else
           Dconstify(pos) & DI(pos) &
-            //@note derive before DE to keep positions easier
-            (if (auto) {
+            (if (auto != 'none) {
               shift(PosInExpr(1 :: 1 :: Nil), new DependentPositionTactic("Shift") {
                 override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
                   override def computeExpr(sequent: Sequent): BelleExpr = {
+                    //@note derive before DE to keep positions easier
                     shift(PosInExpr(1 :: Nil), derive)(pos) &
                       DE(pos) &
-                      (shift(PosInExpr(1 :: Nil), Dassignb)(pos) * getODEDim(sequent, pos)) &
-                      //@note DW after DE to keep positions easier
-                      (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
-                      abstractionb(pos)
+                      (if (auto == 'full) shift(PosInExpr(1 :: Nil), Dassignb)(pos)*getODEDim(sequent, pos) &
+                        //@note DW after DE to keep positions easier
+                        (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
+                        abstractionb(pos)
+                      else abstractionb(pos))
                   }
                 }
               }
@@ -244,7 +251,8 @@ object DifferentialTactics {
    * }}}
    * @incontext
    */
-  def DIRule: DependentPositionTactic = diffInd(null, auto=false)
+  lazy val DIRule: DependentPositionTactic = diffInd(null, 'none)
+  lazy val diffIndRule: DependentPositionTactic = diffInd(null, 'diffInd)
 
   /**
    * Differential cut. Use special function old(.) to introduce a ghost for the starting value of a variable that can be

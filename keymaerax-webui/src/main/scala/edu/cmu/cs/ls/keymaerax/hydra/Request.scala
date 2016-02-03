@@ -114,20 +114,34 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
         case None => throw new ProverException("Invalid node " + nodeId)
         case Some(n) => n
       }
-    //@note not a tactic because we don't want to change the proof tree just by looking for counterexamples
-    val fml = Imply(
-      (node.sequent.ante ++ (True::True::Nil)).reduce(And),
-      (node.sequent.succ ++ (False::False::Nil)).reduce(Or))
 
-    try {
-      TactixLibrary.tool.findCounterExample(fml) match {
-        //@todo return actual sequent, use collapsiblesequentview to display counterexample
-        case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
-        case None => new CounterExampleResponse("cex.none") :: Nil
+    //@note not a tactic because we don't want to change the proof tree just by looking for counterexamples
+    val fml = node.sequent.toFormula
+    if (isFO(fml)) {
+      try {
+        TactixLibrary.tool.findCounterExample(fml) match {
+          //@todo return actual sequent, use collapsiblesequentview to display counterexample
+          case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
+          case None => new CounterExampleResponse("cex.none") :: Nil
+        }
+      } catch {
+        case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
       }
-    } catch {
-      case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
+    } else {
+      new CounterExampleResponse("cex.nonfo") :: Nil
     }
+  }
+
+  private def isFO(fml: Formula): Boolean = {
+    var isFO = true
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
+        case Box(_, _) => isFO = false; Left(Some(ExpressionTraversal.stop))
+        case Diamond(_, _) => isFO = false; Left(Some(ExpressionTraversal.stop))
+        case _ => Left(None)
+      }
+    }, fml)
+    isFO
   }
 }
 
