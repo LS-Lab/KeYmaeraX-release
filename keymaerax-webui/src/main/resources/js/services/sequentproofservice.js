@@ -136,6 +136,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           } else {
             // proof might be finished
             $rootScope.$emit('agenda.isEmpty');
+            console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
           }
         })
         .catch(function(data) {
@@ -168,7 +169,10 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           theAgenda.itemsMap[newAgendaItem.id] = newAgendaItem;
         });
         delete theAgenda.itemsMap[oldAgendaItem.id];
-        if (theAgenda.itemIds().length == 0) $rootScope.$emit('agenda.isEmpty');
+        if (theAgenda.itemIds().length == 0) {
+          console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
+          $rootScope.$emit('agenda.isEmpty');
+        }
       } else {
         $rootScope.$emit('agenda.updateWithoutProgress');
       }
