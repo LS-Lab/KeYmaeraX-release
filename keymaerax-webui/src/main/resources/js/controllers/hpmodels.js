@@ -40,7 +40,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
                     showMessage($uibModal, "Error Uploading Model", response.data.errorText, "md")
                   }
                   else {
-                    showMessage($uibModal, "Unkown Error Uploading Model", "An unknown error that did not raise an uncaught exception occurred while trying to insert a model into the database. Perhaps see the server console output for more information.", "md")
+                    showMessage($uibModal, "Unknown Error Uploading Model", "An unknown error that did not raise an uncaught exception occurred while trying to insert a model into the database. Perhaps see the server console output for more information.", "md")
                   }
                 }
                 else { //Successfully uploaded model!
