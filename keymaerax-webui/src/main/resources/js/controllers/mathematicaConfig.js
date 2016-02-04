@@ -84,14 +84,14 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
     }
 });
 
-angular.module('keymaerax.controllers').controller('MathematicaConfig.FailureDialog', function($scope, $http, $cookies, $modalInstance) {
+angular.module('keymaerax.controllers').controller('MathematicaConfig.FailureDialog', function($scope, $http, $cookies, $uibModalInstance) {
   $scope.cancel = function() {
-      $modalInstance.dismiss('cancel');
+      $uibModalInstance.dismiss('cancel');
   }
 });
 
-angular.module('keymaerax.controllers').controller('MathematicaConfig.UpdateDialog', function($scope, $http, $cookies, $modalInstance) {
+angular.module('keymaerax.controllers').controller('MathematicaConfig.UpdateDialog', function($scope, $http, $cookies, $uibModalInstance) {
   $scope.cancel = function() {
-      $modalInstance.dismiss('cancel');
+      $uibModalInstance.dismiss('cancel');
   }
 });
