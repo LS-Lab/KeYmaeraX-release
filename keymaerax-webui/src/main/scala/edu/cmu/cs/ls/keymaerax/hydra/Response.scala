@@ -43,13 +43,24 @@ sealed trait Response {
   def getJson: JsValue
 }
 
-class BooleanResponse(flag : Boolean) extends Response {
+class BooleanResponse(flag : Boolean, errorText: Option[String] = None) extends Response {
   override val schema = Some("BooleanResponse.js")
 
-  def getJson = JsObject(
-    "success" -> (if(flag) JsTrue else JsFalse),
-    "type" -> JsNull
-  )
+  def getJson = errorText match {
+    case Some(s) => {
+      JsObject(
+        "success" -> (if(flag) JsTrue else JsFalse),
+        "type" -> JsNull,
+        "errorText" -> JsString(s)
+      )
+    }
+    case None => {
+      JsObject(
+        "success" -> (if(flag) JsTrue else JsFalse),
+        "type" -> JsNull
+      )
+    }
+  }
 }
 
 class ModelListResponse(models : List[ModelPOJO]) extends Response {

@@ -12,6 +12,7 @@ import scala.annotation.tailrec
 class ExtractTacticFromTrace(db: DBAbstraction) {
   def apply(executionId: Int) = {
     val steps = db.getExecutionSteps(executionId)
+    println(steps.length)
     assert(steps.length > 0, "All proofs should have at least one step.")
     extract(steps)
   }
@@ -25,6 +26,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
   private def extract(prevExpr: Option[BelleExpr], currentStep : ExecutionStepPOJO, allSteps: List[ExecutionStepPOJO]) : BelleExpr = {
     println("Extracting step " + currentStep)
     if(isBranchingTactic(currentStep, allSteps)) {
+      println("Found branching tactic: " + currentStep)
       val (branchExpr, next) = (expressionForBranchingStep(currentStep, allSteps), nextStep(currentStep, allSteps))
 
       if(next.isEmpty) branchExpr
@@ -39,13 +41,13 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     else { //this is not a branching tactic.
       //@note if we get the list of execution steps in a given order, then we can pretty efficiently traverse that list.
       //But I'm assuming we don't get the list of execution steps in any particular order, and that we haven't pre-sorted them, so we have to call the expensive transitive function.
-      val linear = orderedNonBranchingTransitiveSuccessors(currentStep.stepId.get, allSteps)
+      val linear = orderedNonBranchingTransitiveSuccessors(currentStep, allSteps)
       val linearSequenceFromCurrent = {
         if(linear.length == 0) exprAtStep(currentStep)
         else if(linear.length == 1) exprAtStep(currentStep) & exprAtStep(linear.head)
         else {
           //Drop the right-most to prevent stuttering. It'll be added back in the recursive call.
-          linear.dropRight(1).map(exprAtStep).tail.foldLeft(exprAtStep(linear.head))((seq, next) => seq & next)
+          linear.dropRight(1).map(exprAtStep).foldLeft(exprAtStep(currentStep))((seq, next) => seq & next)
         }
       }
       val recExpr = prevExpr match {
@@ -152,10 +154,11 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     exprAtStep(parent) & BranchTactic(branchTactics.toSeq)
   }
 
-  def orderedNonBranchingTransitiveSuccessors(id: Int, steps: List[ExecutionStepPOJO]) : Seq[ExecutionStepPOJO] = {
-    val next = steps.find(step => step.previousStep.isDefined && step.previousStep.get == id && !isBranchingTactic(step, steps))
+  def orderedNonBranchingTransitiveSuccessors(head: ExecutionStepPOJO, steps: List[ExecutionStepPOJO]) : Seq[ExecutionStepPOJO] = {
+    val id = head.stepId.get
+    val next = steps.find(step => step.previousStep.isDefined && step.previousStep.get == id && !isBranchingTactic(step, head +: steps))
     next match {
-      case Some(next) => next +: orderedNonBranchingTransitiveSuccessors(next.stepId.get, steps) //@todo assuming that there aren't any cycles in previousStep relationships... enforce on insert?
+      case Some(next) => next +: orderedNonBranchingTransitiveSuccessors(next, steps) //@todo assuming that there aren't any cycles in previousStep relationships... enforce on insert?
       case None       => List()
     }
   }

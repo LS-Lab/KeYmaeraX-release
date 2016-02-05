@@ -35,14 +35,24 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
             var model = e.target.result;
             $http.post("user/" + $cookies.get('userId') + "/modeltextupload/" + $scope.modelName, model)
               .then(function(response) {
-                //Update the models list -- this should result in the view being updated?
-                while (Models.getModels().length != 0) {
-                  Models.getModels().shift()
+                if(!response.data.success) {
+                  if(response.data.errorText) {
+                    showMessage($uibModal, "Error Uploading Model", response.data.errorText, "md")
+                  }
+                  else {
+                    showMessage($uibModal, "Unknown Error Uploading Model", "An unknown error that did not raise an uncaught exception occurred while trying to insert a model into the database. Perhaps see the server console output for more information.", "md")
+                  }
                 }
-                $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
-                  Models.addModels(data);
-                  $route.reload();
-                });
+                else { //Successfully uploaded model!
+                  //Update the models list -- this should result in the view being updated?
+                  while (Models.getModels().length != 0) {
+                    Models.getModels().shift()
+                  }
+                  $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
+                    Models.addModels(data);
+                    $route.reload();
+                  });
+                }
               })
               .catch(function(err) {
                 $uibModal.open({

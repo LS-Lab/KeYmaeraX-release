@@ -245,6 +245,9 @@ object ProofRuleTactics {
     }
   }
 
+  /** US(subst, origin) reduces the proof to a proof of the premise `origin`, whose uniform substitution instance under `subst` the current goal is.
+    * @see [[UniformSubstitutionRule]]
+    */
   def US(subst: USubst, origin: Sequent) = new BuiltInTactic("US") {
     override def result(provable: Provable): Provable = {
       requireOneSubgoal(provable)

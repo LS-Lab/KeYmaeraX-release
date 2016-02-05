@@ -307,9 +307,18 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
     try {
       //Return the resulting response.
       KeYmaeraXProblemParser(keyFileContents) match {
-        case f : Formula =>
-          createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate()).map(x => x.toString)
-          new BooleanResponse(createdId.isDefined) :: Nil
+        case f : Formula => {
+          if(db.getModelList(userId).map(_.name).contains(nameOfModel)) {
+            //Nope. Give a good error message.
+            new BooleanResponse(false, Some("A model with that name already exists.")) :: Nil
+          }
+          else {
+            println(s"${nameOfModel} is unique in: ${db.getModelList(userId).map(_.name).mkString(",")}")
+            createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate()).map(x => x.toString)
+            println(s"ID of model ${nameOfModel}: ${createdId}")
+            new BooleanResponse(createdId.isDefined) :: Nil
+          }
+        }
       }
     } catch {
       case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil

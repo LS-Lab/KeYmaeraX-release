@@ -5,8 +5,8 @@
         "success" : {
             "type" : "boolean"
         },
-        "type" : {
-        }
+        "type" : {},
+        "errorText": {"type": "string"}
     },
     "required" : ["success"]
 }
