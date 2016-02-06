@@ -474,6 +474,11 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
   /**
     * Apply a uniform substitution to a (locally sound!) Provable.
     * Substitutes both subgoals and conclusion with the same uniform substitution `subst`.
+    * {{{
+    *    G1 |- D1 ... Gn |- Dn              s(G1) |- s(D1) ... s(Gn) |- s(Dn)
+    *   -----------------------     =>     -----------------------------------   (USR)
+    *            G |- D                                s(G) |- s(D)
+    * }}}
     * @param subst The uniform substitution (of no free variables) to be used on the premises and conclusion of this Provable.
     * @return The Provable resulting from applying `subst` to our subgoals and conclusion.
     * @author Andre Platzer
@@ -934,7 +939,7 @@ case class ImplyLeft(pos: AntePos) extends LeftRule {
  * }}}
  * @note Surprising positioning: both positions change but at least consistent for this rule.
  */
-@deprecated("Use ImplyLeft instead.")
+@deprecated("Use ImplyLeft instead which is equivalent except for positioning.")
 private[keymaerax] case class ImplyLeftOld(pos: AntePos) extends LeftRule {
   val name: String = "Imply Left (old)"
   /** ->L Imply left (old) */
@@ -1011,6 +1016,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  * @see [[USubst]]
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+ * @see [[Provable.apply(USubst)]]
  */
 @deprecated("Soundness-critical: when using uniform substitutions on Provables, don't use uniform substitution rules")
 final case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule {
@@ -1026,7 +1032,7 @@ final case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends
    * require explicit rule applications)
    * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
    */
-  def apply(conclusion: Sequent): immutable.List[Sequent] =
+  def apply(conclusion: Sequent): immutable.List[Sequent] = if (true) throw new IllegalStateException("use Provable(USubst) instead") else
     try {
       //log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
       if (subst(origin) == conclusion) immutable.List(origin)
