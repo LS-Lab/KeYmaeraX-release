@@ -32,7 +32,7 @@ object AxiomTactic {
    * Axiom lookup imports an axiom into the antecedent.
    */
   def axiomT(id: String): Tactic = Axiom.axioms.get(id) match {
-    case Some(_) => new Tactics.ApplyRule(Axiom(id)) { override def applicable(node: ProofNode): Boolean = true }
+    case Some(_) => ??? //new Tactics.ApplyRule(Axiom(id)) { override def applicable(node: ProofNode): Boolean = true }
     case None =>
       DerivedAxioms.derivedAxiomTactic(id) match {
         case Some(t) => t
