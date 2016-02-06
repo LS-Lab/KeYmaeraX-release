@@ -519,6 +519,8 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
       new Provable(subst(conclusion), subgoals.map(s => subst(s)))
     } catch { case exc: SubstitutionClashException => throw exc.inContext(subst + " on\n" + this) }
 
+  // forward proofs (convenience)
+
   /**
    * Apply Rule Forward: Apply given proof rule forward in Hilbert style to prolong this Provable to a Provable for concludes.
    * This Provable with conclusion `G |- D` transforms as follows
@@ -548,6 +550,31 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     Provable.startProof(newConsequence)(rule, 0)(this, 0)
   } ensuring(r => r.conclusion == newConsequence, "New conclusion\n" + newConsequence + " after continuing derivations") ensuring(
     r => r.subgoals == subgoals, "Same subgoals\n" + subgoals + " after continuing derivations")
+
+  /**
+    * Substitute Subderivation Forward: Prolong this Provable with the given prolongation.
+    * This Provable with conclusion `G |- D` transforms as follows
+    * {{{
+    *     G1 |- D1 ... Gn |- Dn                  G1 |- D1 ... Gn |- Dn
+    *   -------------------------       =>     -------------------------
+    *            G |- D                                 G0 |- D0
+    * }}}
+    * provided
+    * {{{
+    *            G |- D
+    *   ------------------------- prolongation
+    *           G0 |- D0
+    * }}}
+    * @param prolongation the subderivation used to prolong this Provable.
+    *                       Where subderivation has a  subgoal equaling our conclusion.
+    * @return A Provable derivation that proves prolongation's conclusion from our subgoals.
+    * @note not soundness-critical derived function since implemented in terms of other apply functions
+    */
+  final def apply(prolongation: Provable): Provable = {
+    //@note it really already works when prolongation.subgoal(0)==conclusion but it's somewhat surprising so disallowed.
+    require(prolongation.subgoals.length==1, "Currently only for prolongations with exactly one subgoal\n" + this + "\nwith\n" + prolongation)
+    prolongation(this, 0)
+  } ensuring(r => r.conclusion == prolongation.conclusion && r.subgoals == subgoals, "Prolonging proof forward\n" + this + "\nwith\n" + prolongation)
 
   /**
    * Sub-Provable: Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
