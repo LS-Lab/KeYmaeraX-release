@@ -303,6 +303,14 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
     }
   }
 
+  /**
+    * Apply uniform substitution to a Provable (convenience method).
+    * @return `pr(this)`
+    * @see [[Provable.apply(USubst)]]
+    */
+  def apply(pr: Provable): Provable = pr.apply(this)
+
+
   /** Union of uniform substitutions, i.e., both replacement lists merged. */
   def ++(other: USubst): USubst = USubst((this.subsDefsInput ++ other.subsDefsInput).distinct)
 

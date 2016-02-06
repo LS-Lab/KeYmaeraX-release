@@ -472,6 +472,21 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     r => subderivation.subgoals.toSet.subsetOf(r.subgoals.toSet), "All premises in joined derivation are new subgoals")
 
   /**
+    * Apply a uniform substitution to a (locally sound!) Provable.
+    * Substitutes both subgoals and conclusion with the same uniform substitution `subst`.
+    * @param subst The uniform substitution (of no free variables) to be used on the premises and conclusion of this Provable.
+    * @return The Provable resulting from applying `subst` to our subgoals and conclusion.
+    * @author Andre Platzer
+    * @see "Andre Platzer. A complete uniform substitution calculus for differential dynamic logic. arXiv 1601.06183, 2016."
+    * @note soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise implementation would be more complicated).
+    */
+  def apply(subst: USubst): Provable =
+    try {
+      insist(subst.freeVars.isEmpty, "Uniform substitutions instances cannot introduce free variables " + subst.freeVars + " in\n" + this)
+      new Provable(subst(conclusion), subgoals.map(s => subst(s)))
+    } catch { case exc: SubstitutionClashException => throw exc.inContext(subst + " on\n" + this) }
+
+  /**
    * Apply Rule Forward: Apply given proof rule forward in Hilbert style to prolong this Provable to a Provable for concludes.
    * This Provable with conclusion `G |- D` transforms as follows
    * {{{
@@ -489,7 +504,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    * @param rule the proof rule to apply to concludes to reduce it to this.conclusion.
    * @return A Provable derivation that proves concludes from the same subgoals by using the given proof rule.
    * Will return a Provable with the same subgoals but an updated conclusion.
-   * @note not soundness-critical since implemented in terms of other apply functions
+   * @note not soundness-critical derived function since implemented in terms of other apply functions
    */
   final def apply(newConsequence: Sequent, rule: Rule): Provable = {
     //@note the following requirement is redundant and not soundness-critical. It just gives a better error message.
@@ -504,7 +519,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
   /**
    * Sub-Provable: Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
    * Provables resulting from the returned subgoal can be merged into this Provable to prove said subgoal.
-   * @note not soundness-critical only completeness-critical
+   * @note not soundness-critical only helpful for completeness-critical
    */
   def sub(subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Subprovable can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
@@ -996,7 +1011,9 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  */
+@deprecated("Soundness-critical: when using uniform substitutions on Provables, don't use uniform substitution rules")
 final case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule {
+  //@todo soundness-critical: disallow this globally sound rule when adding the simple implementation of Provable.apply(USubst)
   val name: String = "Uniform Substitution"
 
   //private def log(msg: =>Any): Unit = {} //println(msg)
@@ -1023,6 +1040,7 @@ object UniformSubstitutionRule {
     provable(subst(provable.conclusion), UniformSubstitutionRule(subst, provable.conclusion))
 }
 
+
 /*********************************************************************************
   * Lookup Axioms
   *********************************************************************************
@@ -1038,9 +1056,13 @@ object Axiom {
     Provable.startProof(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(axioms(id))))(Axiom(id), 0)
 }
 /**
- * Look up an axiom named id.
+ * Look up an axiom named `id`, closing any sequent in which that axiom is in the succedent.
  * Sound axioms are valid formulas of differential dynamic logic.
  * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Axiom.axioms]].
+ * {{{
+ * ----------- (axiom) if `ax` is the axiom called `id`
+ *  G |- ax, D
+ * }}}
  * @author nfulton
  * @author Andre Platzer
  * @author smitsch
@@ -1060,11 +1082,32 @@ final case class Axiom(id: String) extends Rule with ClosingRule {
   } ensuring (r => r.isEmpty, "axiom lookup should close")
 }
 
-
 /** Finite list of axiomatic rules. */
 object AxiomaticRule {
   /** immutable list of locally sound axiomatic proof rules (premise, conclusion) */
   val rules: immutable.Map[String, (Sequent, Sequent)] = AxiomBase.loadAxiomaticRules()
+  /**
+    * Obtain the axiomatic proof rule called `id`.
+    * That is, the locally sound Provable representing the axiomatic rule of name `id`.
+    * All available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
+    * @author Andre Platzer
+    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+    */
+  def apply(id: String): Provable = AxiomaticRule.rules.get(id) match {
+    case Some((rulepremise: Sequent, ruleconclusion: Sequent)) =>
+      Provable.oracle(ruleconclusion, immutable.IndexedSeq(rulepremise))
+    case _ => throw new InapplicableRuleException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"), AxiomaticRule(id, USubst(Nil)))
+  }
+
+  /**
+    * A uniform substitution instance of an axiomatic proof rule,
+    * i.e. locally sound proof rules that are represented by a pair of concrete formulas, one for the premise and one for the conclusion.
+    * Axiomatic proof rules are employed after forming their uniform substitution instances.
+    * All available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
+    * @author Andre Platzer
+    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+    */
+  //@todo add when removing old AxiomaticRule: def apply(id: String, subst: USubst): Provable = apply(id)(subst)
 }
 
 /**
@@ -1075,6 +1118,7 @@ object AxiomaticRule {
  * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  */
+@deprecated("Use the Provable resulting from AxiomaticRule(id: String)(subst: USubst) instead.")
 final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   val name: String = "Axiomatic Rule " + id + " instance"
   insist(subst.freeVars.isEmpty || Rule.LAX_MODE && id == "CQ equation congruence", "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
