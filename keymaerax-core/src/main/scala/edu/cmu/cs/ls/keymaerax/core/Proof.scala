@@ -1058,10 +1058,16 @@ object Axiom {
   /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. */
   val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms
 
-  /** A Provable proving the axiom named id (convenience) */
-  def axiom(id: String): Provable =
-    Provable.startProof(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(axioms(id))))(Axiom(id), 0)
+  /** A Provable proving the axiom named `id` */
+  //@todo Optimizable: could remember the map of Provables instead of reconstructing them
+  def apply(id: String): Provable =
+   Provable.oracle(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(axioms(id))), immutable.IndexedSeq())
+    //Provable.startProof(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(axioms(id))))(Axiom(id), 0)
+  //throw new CoreException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"))
+   
+  def axiom(id: String): Provable = apply(id)
 }
+
 /**
  * Look up an axiom named `id`, closing any sequent in which that axiom is in the succedent.
  * Sound axioms are valid formulas of differential dynamic logic.
@@ -1077,17 +1083,17 @@ object Axiom {
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  */
-final case class Axiom(id: String) extends Rule with ClosingRule {
-  val name: String = "Axiom " + id
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    Axiom.axioms.get(id) match {
-      case Some(f) =>
-        if (s.succ.contains(f)) Nil
-        else throw new InapplicableRuleException("Axiom " + f + " is not in the succedent:\n", this, s)
-      case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"), this, s)
-    }
-  } ensuring (r => r.isEmpty, "axiom lookup should close")
-}
+//final case class Axiom(id: String) extends Rule with ClosingRule {
+//  val name: String = "Axiom " + id
+//  def apply(s: Sequent): immutable.List[Sequent] = {
+//    Axiom.axioms.get(id) match {
+//      case Some(f) =>
+//        if (s.succ.contains(f)) Nil
+//        else throw new InapplicableRuleException("Axiom " + f + " is not in the succedent:\n", this, s)
+//      case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"), this, s)
+//    }
+//  } ensuring (r => r.isEmpty, "axiom lookup should close")
+//}
 
 /** Finite list of axiomatic rules. */
 object AxiomaticRule {
@@ -1103,7 +1109,7 @@ object AxiomaticRule {
   def apply(id: String): Provable = AxiomaticRule.rules.get(id) match {
     case Some((rulepremises: immutable.IndexedSeq[Sequent], ruleconclusion: Sequent)) =>
       Provable.oracle(ruleconclusion, rulepremises)
-    case _ => throw new InapplicableRuleException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"), AxiomaticRule(id, USubst(Nil)))
+    case _ => throw new CoreException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"))
   }
 
   /**
@@ -1114,7 +1120,7 @@ object AxiomaticRule {
     * @author Andre Platzer
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     */
-  //@todo add when removing old AxiomaticRule: def apply(id: String, subst: USubst): Provable = apply(id)(subst)
+  def apply(id: String, subst: USubst): Provable = apply(id)(subst)
 }
 
 /**
@@ -1125,31 +1131,31 @@ object AxiomaticRule {
  * @author Andre Platzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
  */
-@deprecated("Use the Provable resulting from AxiomaticRule(id: String)(subst: USubst) instead.")
-final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
-  val name: String = "Axiomatic Rule " + id + " instance"
-  insist(subst.freeVars.isEmpty || Rule.LAX_MODE && id == "CQ equation congruence", "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
-
-  override def toString: String = name + "(" + subst + ")"
-
-  private val (rulepremise: Sequent, ruleconclusion: Sequent) = AxiomaticRule.rules.get(id) match {
-    case Some(pair) if pair._1.length==1 => (pair._1.head, pair._2)
-    case _ => throw new InapplicableRuleException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"), this)
-  }
-
-  /**
-   * check that conclusion is indeed the indicated substitution instance from the axiomatic rule's conclusion.
-   * Leads to same substitution instance of axiomatic rule's premise.
-   * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
-   */
-  def apply(conclusion: Sequent): immutable.List[Sequent] =
-    try {
-      if (subst(ruleconclusion) == conclusion) immutable.List(subst(rulepremise))
-      else throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion +
-        "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion + "\nin " + this + " for intended conclusion\n" + conclusion)
-    } catch { case exc: SubstitutionClashException => throw exc.inContext(this + " for intended conclusion\n" + conclusion) }
-
-}
+//@deprecated("Use the Provable resulting from AxiomaticRule(id: String)(subst: USubst) instead.")
+//final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
+//  val name: String = "Axiomatic Rule " + id + " instance"
+//  insist(subst.freeVars.isEmpty || Rule.LAX_MODE && id == "CQ equation congruence", "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
+//
+//  override def toString: String = name + "(" + subst + ")"
+//
+//  private val (rulepremise: Sequent, ruleconclusion: Sequent) = AxiomaticRule.rules.get(id) match {
+//    case Some(pair) if pair._1.length==1 => (pair._1.head, pair._2)
+//    case _ => throw new InapplicableRuleException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"), this)
+//  }
+//
+//  /**
+//   * check that conclusion is indeed the indicated substitution instance from the axiomatic rule's conclusion.
+//   * Leads to same substitution instance of axiomatic rule's premise.
+//   * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
+//   */
+//  def apply(conclusion: Sequent): immutable.List[Sequent] =
+//    try {
+//      if (subst(ruleconclusion) == conclusion) immutable.List(subst(rulepremise))
+//      else throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion +
+//        "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion + "\nin " + this + " for intended conclusion\n" + conclusion)
+//    } catch { case exc: SubstitutionClashException => throw exc.inContext(this + " for intended conclusion\n" + conclusion) }
+//
+//}
 
 object UniformRenaming {
   /** Apply uniform renaming what~>repl to provable forward in Hilbert-style (convenience) */
