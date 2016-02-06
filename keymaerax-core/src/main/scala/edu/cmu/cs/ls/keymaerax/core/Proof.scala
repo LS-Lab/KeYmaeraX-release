@@ -235,6 +235,21 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
 object Provable {
   private[core] val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
 
+  /** immutable list of Provables of sound axioms, i.e., valid formulas of differential dynamic logic.
+    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+    * @note soundness-critical: only valid formulas are sound axioms.
+    */
+  val axioms: immutable.Map[String, Provable] = AxiomBase.loadAxioms.mapValues(axiom =>
+    new Provable(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(axiom)), immutable.IndexedSeq())
+  )
+
+  /** immutable list of locally sound axiomatic proof rules.
+    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+    * @note soundness-critical: only list locally sound rules. */
+  val rules: immutable.Map[String, Provable] = AxiomBase.loadAxiomaticRules().mapValues(rule =>
+    new Provable(rule._2, rule._1)
+  )
+
   /**
    * Begin a new proof for the desired conclusion goal
    * @param goal the desired conclusion.
@@ -1121,11 +1136,8 @@ object Axiom {
   val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms
 
   /** A Provable proving the axiom named `id` */
-  //@todo Optimizable: could remember the map of Provables instead of reconstructing them
-  def apply(id: String): Provable =
-   Provable.oracle(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(axioms(id))), immutable.IndexedSeq())
-    //Provable.startProof(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(axioms(id))))(Axiom(id), 0)
-  //throw new CoreException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"))
+  def apply(id: String): Provable = Provable.axioms(id)
+   //throw new CoreException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"))
    
   def axiom(id: String): Provable = apply(id)
 }
@@ -1168,11 +1180,8 @@ object AxiomaticRule {
     * @author Andre Platzer
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     */
-  def apply(id: String): Provable = AxiomaticRule.rules.get(id) match {
-    case Some((rulepremises: immutable.IndexedSeq[Sequent], ruleconclusion: Sequent)) =>
-      Provable.oracle(ruleconclusion, rulepremises)
-    case _ => throw new CoreException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"))
-  }
+  def apply(id: String): Provable = Provable.rules(id)
+  //  case _ => throw new CoreException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"))
 
   /**
     * A uniform substitution instance of an axiomatic proof rule,
