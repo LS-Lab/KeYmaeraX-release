@@ -233,9 +233,9 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
 
 /**
  * Provable(conclusion, subgoals) is the proof certificate representing certified provability of
- * conclusion from the premises in subgoals.
- * If subgoals is an empty list, conclusion is provable.
- * Otherwise conclusion is provable from the set of assumptions in subgoals.
+ * `conclusion` from the premises in `subgoals`.
+ * If `subgoals` is an empty list, then `conclusion` is provable.
+ * Otherwise `conclusion` is provable from the set of all assumptions in `subgoals`.
   * {{{
   *    G1 |- D1 ... Gn |- Dn    (subgoals)
   *   -----------------------
@@ -243,7 +243,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   * }}}
  * @param conclusion the conclusion `G |- D` that follows if all subgoals are valid.
  * @param subgoals the premises `Gi |- Di` that, if they are all valid, imply the conclusion.
- * @note soundness-critical
+ * @note soundness-critical logical framework.
  * @note Only private constructor calls for soundness
  * @note For soundness: No reflection to bybass constructor call privacy,
  *       nor reflection to bypass immutable val data structures.
@@ -570,6 +570,11 @@ object Provable {
   private[core] val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
 
   /** immutable list of Provables of sound axioms, i.e., valid formulas of differential dynamic logic.
+    * {{{
+    *       *
+    *   ---------- (axiom)
+    *    |- axiom
+    * }}}
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     * @note soundness-critical: only valid formulas are sound axioms.
     */
@@ -578,6 +583,11 @@ object Provable {
   )
 
   /** immutable list of locally sound axiomatic proof rules.
+    * {{{
+    *    Gi |- Di
+    *   ---------- (axiomatic rule)
+    *     G |- D
+    * }}}
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     * @note soundness-critical: only list locally sound rules.
     * @see [[Provable.apply(USubst)]]
