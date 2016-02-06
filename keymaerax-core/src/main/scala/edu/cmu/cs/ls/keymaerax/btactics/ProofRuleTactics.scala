@@ -258,7 +258,7 @@ object ProofRuleTactics {
 
   def axiomatic(axiomName: String, subst: USubst): DependentTactic = new DependentTactic(s"US of axiom/rule $axiomName") {
     override def computeExpr(v: BelleValue): BelleExpr =
-      if (AxiomaticRule.rules.contains(axiomName)) {
+      if (Provable.rules.contains(axiomName)) {
         TactixLibrary.by(AxiomaticRule(axiomName)(subst))
       } else if (Axiom.axioms.contains(axiomName)) {
         TactixLibrary.by(Axiom.axiom(axiomName)(subst))
