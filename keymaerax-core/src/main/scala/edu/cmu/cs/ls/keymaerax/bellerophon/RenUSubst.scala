@@ -190,7 +190,7 @@ final class USubstAboveURen(private[bellerophon] override val subsDefsInput: imm
   def toTactic(form: Sequent): SeqTactic = getRenamingTactic & ProofRuleTactics.US(usubst, form)
 
   def toForward: Provable => Provable = fact => {
-    val replaced = UniformSubstitutionRule.UniformSubstitutionRuleForward(fact, usubst)
+    val replaced = fact(usubst)  //UniformSubstitutionRule.UniformSubstitutionRuleForward(fact, usubst)
     // forward style: first US fact to get rid of program constants, then uniformly rename variables in the result
     rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
   }
@@ -237,10 +237,8 @@ final class URenAboveUSubst(private[bellerophon] override val subsDefsInput: imm
 
   /** Convert to forward tactic using the respective uniform renaming and uniform substitution rules */
   def toForward: Provable => Provable = fact => {
-    UniformSubstitutionRule.UniformSubstitutionRuleForward(
-      rens.foldLeft(fact)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
-      ,
-      usubst)
+    /*UniformSubstitutionRule.UniformSubstitutionRuleForward*/
+      (rens.foldLeft(fact)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))) (usubst)
   }
 
   private[bellerophon] def firstFlush: RenUSubst = substitution
