@@ -41,7 +41,7 @@ private[core] object AxiomBase {
    * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
    * @author Andre Platzer
    */
-  private[core] def loadAxiomaticRules() : immutable.Map[String, (Sequent, Sequent)] = {
+  private[core] def loadAxiomaticRules() : immutable.Map[String, (immutable.IndexedSeq[Sequent], Sequent)] = {
     val x = Variable("x_", None, Real)
     val pany = PredOf(Function("p_", None, Real, Bool), Anything)
     val qany = PredOf(Function("q_", None, Real, Bool), Anything)
@@ -71,7 +71,7 @@ private[core] object AxiomBase {
        * @Note generalization of p(x) to p(??) as in Theorem 14
        */
       ("all generalization",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany)),
+        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Forall(immutable.Seq(x), pany))))),
       /**
        * Rule "CT term congruence".
@@ -81,7 +81,7 @@ private[core] object AxiomBase {
        * @derived ("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
        */
       ("CT term congruence",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany))),
+        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany)))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(FuncOf(ctxt, fany), FuncOf(ctxt, gany)))))),
       /**
        * Rule "CQ equation congruence".
@@ -95,7 +95,7 @@ private[core] object AxiomBase {
        * }}}
        */
       ("CQ equation congruence",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany))),
+        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany)))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredOf(ctxf, fany), PredOf(ctxf, gany)))))),
       /**
        * Rule "CE congruence".
@@ -109,7 +109,7 @@ private[core] object AxiomBase {
        * }}}
        */
       ("CE congruence",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany))),
+        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany)))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
       /**
        * Rule "C0 one-sided congruence".
@@ -119,7 +119,7 @@ private[core] object AxiomBase {
        * @derived EquivifyRight, cut, prop
        */
       ("CO one-sided congruence",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany))),
+        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany)))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(PredicationalOf(context, pany)), immutable.IndexedSeq(PredicationalOf(context, qany))))),
       /**
        * Rule "[] monotone".
@@ -130,7 +130,7 @@ private[core] object AxiomBase {
        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
       ("[] monotone",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany)),
+        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(Box(a, pany)), immutable.IndexedSeq(Box(a, qany))))),
       /**
        * Rule "<> monotone".
@@ -140,7 +140,7 @@ private[core] object AxiomBase {
        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
       ("<> monotone",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany)),
+        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(Diamond(a, pany)), immutable.IndexedSeq(Diamond(a, qany))))),
       /**
        * Rule "ind induction".
@@ -154,7 +154,7 @@ private[core] object AxiomBase {
        * @see "André Platzer. Differential Game Logic. ACM Trans. Comput. Log. 2015"
        */
       ("ind induction",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany))),
+        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany)))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
       /* UNSOUND FOR HYBRID GAMES */
       /**
@@ -171,7 +171,7 @@ private[core] object AxiomBase {
        * @TODO Add [a;]true -> to conclusion to make it sound for hybrid games (and then equivalent to [] monotone)
        */
       ("Goedel",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany)),
+        (immutable.IndexedSeq(Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Box(a, pany)))))
     )
   }

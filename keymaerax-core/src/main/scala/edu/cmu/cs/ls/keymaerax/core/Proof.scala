@@ -1085,8 +1085,8 @@ final case class Axiom(id: String) extends Rule with ClosingRule {
 
 /** Finite list of axiomatic rules. */
 object AxiomaticRule {
-  /** immutable list of locally sound axiomatic proof rules (premise, conclusion) */
-  val rules: immutable.Map[String, (Sequent, Sequent)] = AxiomBase.loadAxiomaticRules()
+  /** immutable list of locally sound axiomatic proof rules (premises, conclusion) */
+  val rules: immutable.Map[String, (immutable.IndexedSeq[Sequent], Sequent)] = AxiomBase.loadAxiomaticRules()
   /**
     * Obtain the axiomatic proof rule called `id`.
     * That is, the locally sound Provable representing the axiomatic rule of name `id`.
@@ -1095,8 +1095,8 @@ object AxiomaticRule {
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     */
   def apply(id: String): Provable = AxiomaticRule.rules.get(id) match {
-    case Some((rulepremise: Sequent, ruleconclusion: Sequent)) =>
-      Provable.oracle(ruleconclusion, immutable.IndexedSeq(rulepremise))
+    case Some((rulepremises: immutable.IndexedSeq[Sequent], ruleconclusion: Sequent)) =>
+      Provable.oracle(ruleconclusion, rulepremises)
     case _ => throw new InapplicableRuleException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"), AxiomaticRule(id, USubst(Nil)))
   }
 
@@ -1127,7 +1127,7 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   override def toString: String = name + "(" + subst + ")"
 
   private val (rulepremise: Sequent, ruleconclusion: Sequent) = AxiomaticRule.rules.get(id) match {
-    case Some(pair) => pair
+    case Some(pair) if pair._1.length==1 => (pair._1.head, pair._2)
     case _ => throw new InapplicableRuleException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"), this)
   }
 
