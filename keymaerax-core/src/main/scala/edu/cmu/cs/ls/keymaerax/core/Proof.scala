@@ -482,7 +482,8 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     */
   def apply(subst: USubst): Provable =
     try {
-      insist(subst.freeVars.isEmpty, "Uniform substitutions instances cannot introduce free variables " + subst.freeVars + " in\n" + this)
+      //@note if isProved, uniform substitution of Provables has the same effect as the globally sound uniform substitution rule (whatever free variables), which is also locally sound if no premises.
+      insist(subst.freeVars.isEmpty || isProved, "Uniform substitutions instances cannot introduce free variables " + subst.freeVars + " in\n" + this + "\nunless the Provable is proved.")
       new Provable(subst(conclusion), subgoals.map(s => subst(s)))
     } catch { case exc: SubstitutionClashException => throw exc.inContext(subst + " on\n" + this) }
 
