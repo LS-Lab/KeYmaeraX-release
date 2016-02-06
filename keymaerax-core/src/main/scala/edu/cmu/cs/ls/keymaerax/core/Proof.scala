@@ -271,8 +271,13 @@ object Provable {
  * conclusion from the premises in subgoals.
  * If subgoals is an empty list, conclusion is provable.
  * Otherwise conclusion is provable from the set of assumptions in subgoals.
- * @param conclusion the conclusion that follows if all subgoals are valid.
- * @param subgoals the premises that, if they are all valid, imply the conclusion.
+  * {{{
+  *    G1 |- D1 ... Gn |- Dn    (subgoals)
+  *   -----------------------
+  *            G |- D           (conclusion)
+  * }}}
+ * @param conclusion the conclusion `G |- D` that follows if all subgoals are valid.
+ * @param subgoals the premises `Gi |- Di` that, if they are all valid, imply the conclusion.
  * @note soundness-critical
  * @note Only private constructor calls for soundness
  * @note For soundness: No reflection to bybass constructor call privacy,
@@ -415,6 +420,17 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
   /**
    * Apply Rule: Apply given proof rule to the indicated subgoal of this Provable, returning the resulting Provable
+   * {{{
+   *    G1 |- D1 ... Gi |- Di ... Gn |- Dn              G1 |- D1 ... Gr1 |- Dr1 ... Gn |- Dn Gr2 |- Dr2 ... Grk | Drk
+   *   ------------------------------------     =>     ---------------------------------------------------------------
+   *                  G |- D                                         G |- D
+   * }}}
+   * using the rule instance
+   * {{{
+   *   Gr1 |- Dr1  Gr2 |- Dr2 ... Grk |- Drk
+   *   ------------------------------------ (rule)
+   *                Gi |- Di
+   * }}}
    * @param rule the proof rule to apply to the indicated subgoal of this Provable derivation.
    * @param subgoal which of our subgoals to apply the given proof rule to.
    * @return A Provable derivation that proves the premise subgoal by using the given proof rule.
@@ -445,6 +461,17 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    * (with the first subgoal of subderivation in place of subgoal and all other subgoals at the end).
    *
    * This function implements the substitution principle for hypotheses.
+   * {{{
+   *    G1 |- D1 ... Gi |- Di ... Gn |- Dn              G1 |- D1 ... Gr1 |- Dr1 ... Gn |- Dn Gr2 |- Dr2 ... Grk | Drk
+   *   ------------------------------------     =>     ---------------------------------------------------------------
+   *                  G |- D                                         G |- D
+   * }}}
+   * using the given subderivation
+   * {{{
+   *   Gr1 |- Dr1  Gr2 |- Dr2 ... Grk |- Drk
+   *   ------------------------------------ (subderivation)
+   *                Gi |- Di
+   * }}}
    * @param subderivation the Provable derivation that proves premise subgoal.
    * @param subgoal the index of our subgoal that the given subderivation concludes.
    * @return A Provable derivation that joins our derivation and subderivation to a joint derivation of our conclusion using subderivation to show our subgoal.
@@ -525,6 +552,14 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
   /**
    * Sub-Provable: Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
    * Provables resulting from the returned subgoal can be merged into this Provable to prove said subgoal.
+   * @param subgoal the index of our subgoal for which to return a new open Provable.
+   * @return an initial unfinished open Provable for the subgoal `i`:
+   * {{{
+   *    Gi |- Di
+   *   ----------
+   *    Gi |- Di
+   * }}}
+   * which is suitable for being merged back into this Provable for subgoal `i` subsequently.
    * @note not soundness-critical only helpful for completeness-critical
    */
   def sub(subgoal: Subgoal): Provable = {
