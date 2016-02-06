@@ -231,56 +231,6 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   *********************************************************************************
   */
 
-/** Starting new Provables to begin a proof */
-object Provable {
-  private[core] val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
-
-  /** immutable list of Provables of sound axioms, i.e., valid formulas of differential dynamic logic.
-    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
-    * @note soundness-critical: only valid formulas are sound axioms.
-    */
-  val axioms: immutable.Map[String, Provable] = AxiomBase.loadAxioms.mapValues(axiom =>
-    new Provable(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(axiom)), immutable.IndexedSeq())
-  )
-
-  /** immutable list of locally sound axiomatic proof rules.
-    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
-    * @note soundness-critical: only list locally sound rules. */
-  val rules: immutable.Map[String, Provable] = AxiomBase.loadAxiomaticRules().mapValues(rule =>
-    new Provable(rule._2, rule._1)
-  )
-
-  /**
-   * Begin a new proof for the desired conclusion goal
-   * @param goal the desired conclusion.
-   * @return a Provable whose subgoals need to be all proved in order to prove goal.
-   * @note soundness-critical
-   */
-  def startProof(goal : Sequent): Provable = {
-    Provable(goal, immutable.IndexedSeq(goal))
-  } ensuring(
-    r => !r.isProved && r.subgoals == immutable.IndexedSeq(r.conclusion), "correct initial proof start")
-
-  /**
-   * Begin a new proof for the desired conclusion formula from no antecedent.
-   * @param goal the desired conclusion formula for the succedent.
-   * @return a Provable whose subgoals need to be all proved in order to prove goal.
-   * @note Not soundness-critical
-   */
-  def startProof(goal : Formula): Provable =
-    startProof(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(goal)))
-
-  /**
-    * Create a new provable for oracle facts provided by external tools or lemma loading.
-    * @param conclusion the desired conclusion.
-    * @param subgoals the remaining subgoals.
-    * @return a Provable of given conclusion and given subgoals.
-    * @note soundness-critical magic, only call from RCF/Lemma within core with true facts.
-    */
-  private[core] def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
-    Provable(conclusion, subgoals)
-}
-
 /**
  * Provable(conclusion, subgoals) is the proof certificate representing certified provability of
  * conclusion from the premises in subgoals.
@@ -612,6 +562,69 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
   override def toString: String = "Provable(" + conclusion + (if (isProved) " proved" else "\n  from   " + subgoals.mkString("\n  with   ")) + ")"
   def prettyString: String = "Provable(" + conclusion.prettyString + (if (isProved) " proved" else "\n  from   " + subgoals.map(_.prettyString).mkString("\n  with   ")) + ")"
+}
+
+
+/** Starting new Provables to begin a proof */
+object Provable {
+  private[core] val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
+
+  /** immutable list of Provables of sound axioms, i.e., valid formulas of differential dynamic logic.
+    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+    * @note soundness-critical: only valid formulas are sound axioms.
+    */
+  val axioms: immutable.Map[String, Provable] = AxiomBase.loadAxioms.mapValues(axiom =>
+    new Provable(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(axiom)), immutable.IndexedSeq())
+  )
+
+  /** immutable list of locally sound axiomatic proof rules.
+    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+    * @note soundness-critical: only list locally sound rules.
+    * @see [[Provable.apply(USubst)]]
+    */
+  val rules: immutable.Map[String, Provable] = AxiomBase.loadAxiomaticRules.mapValues(rule =>
+    new Provable(rule._2, rule._1)
+  )
+
+  /**
+    * Begin a new proof for the desired conclusion goal
+    * {{{
+    *    goal
+    *   ------
+    *    goal
+    * }}}
+    * @param goal the desired conclusion.
+    * @return a Provable whose subgoals need to be all proved in order to prove goal.
+    * @note soundness-critical
+    */
+  def startProof(goal : Sequent): Provable = {
+    Provable(goal, immutable.IndexedSeq(goal))
+  } ensuring(
+    r => !r.isProved && r.subgoals == immutable.IndexedSeq(r.conclusion), "correct initial proof start")
+
+  /**
+    * Begin a new proof for the desired conclusion formula from no antecedent.
+    * {{{
+    *    |- goal
+    *   ---------
+    *    |- goal
+    * }}}
+    * @param goal the desired conclusion formula for the succedent.
+    * @return a Provable whose subgoals need to be all proved in order to prove goal.
+    * @note Not soundness-critical
+    */
+  def startProof(goal : Formula): Provable =
+    startProof(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(goal)))
+
+  /**
+    * Create a new provable for oracle facts provided by external tools or lemma loading.
+    * @param conclusion the desired conclusion.
+    * @param subgoals the remaining subgoals.
+    * @return a Provable of given conclusion and given subgoals.
+    * @note soundness-critical magic, only call from RCF/Lemma within core with true facts.
+    */
+  private[core] def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
+    Provable(conclusion, subgoals)
 }
 
 
@@ -1172,7 +1185,7 @@ object Axiom {
 /** Finite list of axiomatic rules. */
 object AxiomaticRule {
   /** immutable list of locally sound axiomatic proof rules (premises, conclusion) */
-  val rules: immutable.Map[String, (immutable.IndexedSeq[Sequent], Sequent)] = AxiomBase.loadAxiomaticRules()
+  val rules: immutable.Map[String, (immutable.IndexedSeq[Sequent], Sequent)] = AxiomBase.loadAxiomaticRules
   /**
     * Obtain the axiomatic proof rule called `id`.
     * That is, the locally sound Provable representing the axiomatic rule of name `id`.

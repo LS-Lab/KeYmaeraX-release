@@ -41,7 +41,7 @@ private[core] object AxiomBase {
    * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
    * @author Andre Platzer
    */
-  private[core] def loadAxiomaticRules() : immutable.Map[String, (immutable.IndexedSeq[Sequent], Sequent)] = {
+  private[core] def loadAxiomaticRules : immutable.Map[String, (immutable.IndexedSeq[Sequent], Sequent)] = {
     val x = Variable("x_", None, Real)
     val pany = PredOf(Function("p_", None, Real, Bool), Anything)
     val qany = PredOf(Function("q_", None, Real, Bool), Anything)
