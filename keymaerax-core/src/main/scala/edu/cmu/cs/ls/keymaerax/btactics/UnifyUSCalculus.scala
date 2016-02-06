@@ -617,7 +617,6 @@ trait UnifyUSCalculus {
       case Equiv(left,right) =>
         require(C.isFormulaContext, "Formula context expected to make use of equivalences with CE " + C)
         equiv(
-          Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(left), C(right)))),
           AxiomaticRule("CE congruence",
             USubst(SubstitutionPair(PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula), C.ctx) ::
               SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), left) ::
@@ -627,7 +626,6 @@ trait UnifyUSCalculus {
       case Equal(left,right) =>
         require(C.isTermContext, "Term context expected to make use of equalities with CE " + C)
         equiv(
-          Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(left), C(right)))),
           AxiomaticRule("CQ equation congruence",
             USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
               SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), left) ::
