@@ -631,7 +631,7 @@ object Provable {
     * @param conclusion the desired conclusion.
     * @param subgoals the remaining subgoals.
     * @return a Provable of given conclusion and given subgoals.
-    * @note soundness-critical magic, only call from RCF/Lemma within core with true facts.
+    * @note soundness-critical magic/trustme, only call from RCF/Lemma within core with true facts.
     */
   private[core] def oracle(conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) =
     Provable(conclusion, subgoals)
@@ -1141,8 +1141,10 @@ final case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends
         "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))*/
     } catch { case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion) }
 }
+@deprecated("Soundness-critical: when using uniform substitutions on Provables, don't use uniform substitution rules")
 object UniformSubstitutionRule {
   /** Apply uniform substitution subst to provable forward in Hilbert-style (convenience) */
+  @deprecated("Use provable.apply(usubst) instead, especially when provable.isProved")
   def UniformSubstitutionRuleForward(provable: Provable, subst: USubst): Provable =
     provable(subst(provable.conclusion), UniformSubstitutionRule(subst, provable.conclusion))
 }
@@ -1159,9 +1161,11 @@ object Axiom {
   val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms
 
   /** A Provable proving the axiom named `id` */
+  @deprecated("May want to use Provable.axioms instead?")
   def apply(id: String): Provable = Provable.axioms(id)
    //throw new CoreException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"))
-   
+
+  @deprecated("May want to use Provable.axioms instead?")
   def axiom(id: String): Provable = apply(id)
 }
 
@@ -1195,6 +1199,7 @@ object Axiom {
 /** Finite list of axiomatic rules. */
 object AxiomaticRule {
   /** immutable list of locally sound axiomatic proof rules (premises, conclusion) */
+  @deprecated("Use Provable.rules instead")
   val rules: immutable.Map[String, (immutable.IndexedSeq[Sequent], Sequent)] = AxiomBase.loadAxiomaticRules
   /**
     * Obtain the axiomatic proof rule called `id`.
@@ -1203,6 +1208,7 @@ object AxiomaticRule {
     * @author Andre Platzer
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     */
+  @deprecated("May want to use Provable.rules instead?")
   def apply(id: String): Provable = Provable.rules(id)
   //  case _ => throw new CoreException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"))
 
