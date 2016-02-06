@@ -985,6 +985,62 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
   }
 }
 
+
+/*********************************************************************************
+ * Uniform Substitution Proof Rule
+ *********************************************************************************
+ */
+
+/**
+ * US: Uniform Substitution Rule.
+ * Applies a given uniform substitution to the given original premise (origin).
+ * Pseudo application in sequent calculus to conclusion that fits to the Hilbert calculus application (origin->conclusion).
+ * This rule interfaces forward Hilbert calculus rule application with backward sequent calculus pseudo-application
+ * US uniform substitution.
+ * {{{
+ *        G |- D
+ * -------------------- (US)
+ * subst(G) |- subst(D)
+ * }}}
+ * @param subst the uniform substitution to be applied to origin.
+ * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
+ *               In the above rule, this would be `G |- D`.
+ * @note In sequent calculus, this Hilbert-calculus rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
+ * @author Andre Platzer
+ * @see [[USubst]]
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+ * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+ */
+@deprecated("Soundness-critical: when using uniform substitutions on Provables, don't use uniform substitution rules")
+final case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule {
+  //@todo soundness-critical: disallow this globally sound rule when adding the simple implementation of Provable.apply(USubst)
+  val name: String = "Uniform Substitution"
+
+  //private def log(msg: =>Any): Unit = {} //println(msg)
+
+  override def toString: String = subst.toString   // name + "(" + subst + ")"
+
+  /**
+   * check that conclusion is indeed derived from origin via subst (note that no reordering is allowed since those operations
+   * require explicit rule applications)
+   * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
+   */
+  def apply(conclusion: Sequent): immutable.List[Sequent] =
+    try {
+      //log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
+      if (subst(origin) == conclusion) immutable.List(origin)
+      else throw new InapplicableRuleException(this + "\non premise   " + origin + "\nresulted in  " + subst(origin) + "\nbut expected " + conclusion, this, conclusion)
+      /*("From\n  " + origin + "\nuniform substitution\n  " + subst +
+        "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))*/
+    } catch { case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion) }
+}
+object UniformSubstitutionRule {
+  /** Apply uniform substitution subst to provable forward in Hilbert-style (convenience) */
+  def UniformSubstitutionRuleForward(provable: Provable, subst: USubst): Provable =
+    provable(subst(provable.conclusion), UniformSubstitutionRule(subst, provable.conclusion))
+}
+
+
 /*********************************************************************************
   * Lookup Axioms
   *********************************************************************************
