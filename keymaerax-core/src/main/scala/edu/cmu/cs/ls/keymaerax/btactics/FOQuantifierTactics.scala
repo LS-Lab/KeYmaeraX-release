@@ -168,7 +168,7 @@ object FOQuantifierTactics {
 
           cut(Imply(fml, Exists(x :: Nil, fmlRepl))) <(
             /* use */ implyLOld('Llast) <(closeId, hide(pos,fml) partial) partial,
-            /* show */ cohide('Rlast) & ProofRuleTactics.US(subst, origin) & byUS("exists generalize")
+            /* show */ cohide('Rlast) & TactixLibrary.by(DerivedAxioms.derivedAxiom("exists generalize")(subst))
             )
         case _ => throw new BelleError("Position " + pos + " must refer to a formula in sequent " + sequent)
       }

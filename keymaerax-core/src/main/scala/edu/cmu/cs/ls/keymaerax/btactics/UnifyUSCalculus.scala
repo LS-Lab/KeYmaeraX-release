@@ -1275,15 +1275,9 @@ trait UnifyUSCalculus {
         // reflexive setup corresponds to no-progress chase
         val initial: Provable = e match {
           case t: Term =>      // t=t
-            DerivedAxioms.equalReflex.fact(
-              Sequent(Nil, IndexedSeq(), IndexedSeq(Equal(t,t))),
-              UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil),
-                DerivedAxioms.equalReflex.fact.conclusion))
+            DerivedAxioms.equalReflex.fact(USubst(SubstitutionPair(FuncOf(Function("s_",None,Unit,Real),Nothing), t)::Nil))
           case f: Formula =>   // f<->f
-            DerivedAxioms.equivReflexiveAxiom.fact(
-              Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(f,f))),
-              UniformSubstitutionRule(USubst(SubstitutionPair(PredOf(Function("p_",None,Unit,Bool),Nothing), f)::Nil),
-                DerivedAxioms.equivReflexiveAxiom.fact.conclusion))
+            DerivedAxioms.equivReflexiveAxiom.fact(USubst(SubstitutionPair(PredOf(Function("p_",None,Unit,Bool),Nothing), f)::Nil))
         }
         Predef.assert(initial.isProved && initial.conclusion.ante.isEmpty && initial.conclusion.succ.length==1,
           "Proved reflexive start " + initial + " for " + e)
