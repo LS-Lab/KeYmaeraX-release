@@ -204,8 +204,9 @@ class USubstTests extends FlatSpec with Matchers {
     val conc = Box(prog, fml)
     val s = USubst(Seq(SubstitutionPair(PredOf(p1_, Anything), fml),
       SubstitutionPair(ap_, prog)))
-    AxiomaticRule("Goedel", s)(
-      Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+    val pr = AxiomaticRule("Goedel", s)
+    pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
   it should "instantiate Goedel from (-x)^2>=0 (II)" taggedAs KeYmaeraXTestTags.USubstTest in {
@@ -214,8 +215,9 @@ class USubstTests extends FlatSpec with Matchers {
     val s = USubst(
       SubstitutionPair(PredOf(p1_, Anything), fml) ::
       SubstitutionPair(ap_, prog) :: Nil)
-    AxiomaticRule("Goedel", s)(
-      Sequent(Seq(), IndexedSeq(), IndexedSeq(Box(prog, fml)))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+    val pr = AxiomaticRule("Goedel", s)
+    pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(Box(prog, fml)))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
   
   it should "instantiate nontrivial binding structures in [] congruence" taggedAs(KeYmaeraXTestTags.USubstTest,KeYmaeraXTestTags.CheckinTest) in {
@@ -230,8 +232,9 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(PredOf(pn_, Anything), "(-x)^2>=y".asFormula) ::
       SubstitutionPair(PredOf(q_, Anything), "x^2>=y".asFormula) ::
       SubstitutionPair(PredicationalOf(ctx_, DotFormula), Box("{y:=y+1;++{z:=x+z;}*}; z:=x+y*z;".asProgram, DotFormula)) :: Nil)
-      AxiomaticRule("CE congruence", s)(
-        Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
+    val pr = AxiomaticRule("CE congruence", s)
+    pr.conclusion shouldBe Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
   }
 
   it should "instantiate random programs in [] monotone" taggedAs KeYmaeraXTestTags.USubstTest in {
@@ -249,8 +252,9 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(PredOf(pn_, Anything), prem1),
         SubstitutionPair(PredOf(q_, Anything), prem2)
          ))
-        AxiomaticRule("[] monotone", s)(Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))) should contain only
-          Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
+      val pr = AxiomaticRule("[] monotone", s)
+      pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs)))
+      pr.subgoals should contain only Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
     }
   }
 
@@ -270,8 +274,9 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(PredOf(pn_, Anything), prem1) ::
         SubstitutionPair(PredOf(q_, Anything), prem2) ::
         SubstitutionPair(PredicationalOf(ctx_, DotFormula), Box(prog, DotFormula)) :: Nil)
-      AxiomaticRule("CE congruence", s)(
-        Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      val pr = AxiomaticRule("CE congruence", s)
+      pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+      pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
     }
   }
 
@@ -291,8 +296,9 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(PredOf(pn_, Anything), prem1) ::
         SubstitutionPair(PredOf(q_, Anything), prem2) ::
         SubstitutionPair(PredicationalOf(ctx_, DotFormula), Diamond(prog, DotFormula)) :: Nil)
-      AxiomaticRule("CE congruence", s)(
-        Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      val pr = AxiomaticRule("CE congruence", s)
+      pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+      pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
     }
   }
 
@@ -311,8 +317,9 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(PredOf(pn_, Anything), prem1),
         SubstitutionPair(PredOf(q_, Anything), prem2)
          ))
-        AxiomaticRule("<> monotone", s)(
-          Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))) should contain only Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
+        val pr = AxiomaticRule("<> monotone", s)
+      pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs)))
+      pr.subgoals should contain only Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
     }
   }
 
@@ -327,8 +334,9 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(ap_, prog),
         SubstitutionPair(PredOf(pn_, Anything), prem)
          ))
-        AxiomaticRule("Goedel", s)(
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      val pr = AxiomaticRule("Goedel", s)
+      pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+      pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
     }
   }
 
@@ -340,10 +348,11 @@ class USubstTests extends FlatSpec with Matchers {
           SubstitutionPair(FuncOf(f1_, Anything), term1) ::
           SubstitutionPair(FuncOf(g1_, Anything), term2) ::
           SubstitutionPair(FuncOf(ctxt, DotTerm), Minus(DotTerm, Number(5))) :: Nil)
-        AxiomaticRule("CT term congruence", s)(
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(Minus(term1, Number(5)),
+        val pr = AxiomaticRule("CT term congruence", s)
+    pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(Minus(term1, Number(5)),
           Minus(term2, Number(5)))))
-          ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+          )
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
     ignore should "instantiate CT from y+z=z+y in more context" taggedAs KeYmaeraXTestTags.USubstTest in {
@@ -354,10 +363,11 @@ class USubstTests extends FlatSpec with Matchers {
           SubstitutionPair(FuncOf(f1_, Anything), term1) ::
           SubstitutionPair(FuncOf(g1_, Anything), term2) ::
           SubstitutionPair(FuncOf(ctxt, DotTerm), Times(Power(x, Number(3)), DotTerm)) :: Nil)
-        AxiomaticRule("CT term congruence", s)(
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(Times(Power(x, Number(3)), term1),
+        val pr = AxiomaticRule("CT term congruence", s)
+      pr.conclusion shouldBe (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(Times(Power(x, Number(3)), term1),
           Times(Power(x, Number(3)), term2))
-          ))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+          )))
+      pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
       ignore should "instantiate CT from y+z=z+y in random context" taggedAs KeYmaeraXTestTags.USubstTest in {
@@ -371,9 +381,11 @@ class USubstTests extends FlatSpec with Matchers {
             SubstitutionPair(FuncOf(f1_, Anything), term1) ::
             SubstitutionPair(FuncOf(g1_, Anything), term2) ::
             SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
-          AxiomaticRule("CT term congruence", s)(
+          val pr = AxiomaticRule("CT term congruence", s)
+          pr.conclusion shouldBe (
             Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
-            ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+            )
+          pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
       }
 
@@ -388,9 +400,11 @@ class USubstTests extends FlatSpec with Matchers {
             SubstitutionPair(FuncOf(f1_, Anything), term1) ::
             SubstitutionPair(FuncOf(g1_, Anything), term2) ::
             SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
-          AxiomaticRule("CT term congruence", s)(
+          val pr = AxiomaticRule("CT term congruence", s)
+          pr.conclusion shouldBe (
             Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
-            ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+            )
+          pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
       }
 
@@ -405,9 +419,11 @@ class USubstTests extends FlatSpec with Matchers {
             SubstitutionPair(FuncOf(f1_, Anything), term1) ::
             SubstitutionPair(FuncOf(g1_, Anything), term2) ::
             SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
-          AxiomaticRule("CT term congruence", s)(
+          val pr = AxiomaticRule("CT term congruence", s)
+          pr.conclusion shouldBe (
             Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
-            ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+            )
+          pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
       }
 
@@ -420,10 +436,12 @@ class USubstTests extends FlatSpec with Matchers {
             SubstitutionPair(FuncOf(f1_, Anything), term1) ::
             SubstitutionPair(FuncOf(g1_, Anything), term2) ::
             SubstitutionPair(PredOf(ctxf, DotTerm), And(Greater(y, Number(1)), LessEqual(DotTerm, Number(5)))) :: Nil)
-          AxiomaticRule("CQ equation congruence", s)(
+          val pr = AxiomaticRule("CQ equation congruence", s)
+      pr.conclusion shouldBe (
             Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( And(Greater(y, Number(1)), LessEqual(term1, Number(5))),
             And(Greater(y, Number(1)), LessEqual(term2, Number(5)))
-            )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+            ))))
+      pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
         
         it should "instantiate CQ from y+z=z+y in context \\forall x .<=5" taggedAs KeYmaeraXTestTags.USubstTest in {
@@ -435,10 +453,12 @@ class USubstTests extends FlatSpec with Matchers {
                 SubstitutionPair(FuncOf(f1_, Anything), term1) ::
                 SubstitutionPair(FuncOf(g1_, Anything), term2) ::
                 SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y),  LessEqual(DotTerm, Number(5)))) :: Nil)
-              AxiomaticRule("CQ equation congruence", s)(
+              val pr = AxiomaticRule("CQ equation congruence", s)
+          pr.conclusion shouldBe (
                 Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y),  LessEqual(term1, Number(5))),
                 Forall(Seq(y),  LessEqual(term2, Number(5)))
-                )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+                ))))
+          pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
             }
 
         ignore should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs KeYmaeraXTestTags.OptimisticTest in {
@@ -450,10 +470,12 @@ class USubstTests extends FlatSpec with Matchers {
                 SubstitutionPair(FuncOf(f1_, Anything), term1) ::
                 SubstitutionPair(FuncOf(g1_, Anything), term2) ::
                 SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y),  LessEqual(DotTerm, Number(5)))) :: Nil)
-              AxiomaticRule("CQ equation congruence", s)(
+              val pr = AxiomaticRule("CQ equation congruence", s)
+          pr.conclusion shouldBe (
                 Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y),  LessEqual(term1, Number(5))),
                 Forall(Seq(y),  LessEqual(term2, Number(5)))
-                )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+                ))))
+          pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
             }
 
             it should "instantiate CQ from y+z=z+y in context [x:=x-1]" taggedAs KeYmaeraXTestTags.USubstTest in {
@@ -465,10 +487,12 @@ class USubstTests extends FlatSpec with Matchers {
                   SubstitutionPair(FuncOf(f1_, Anything), term1) ::
                   SubstitutionPair(FuncOf(g1_, Anything), term2) ::
                   SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
-                AxiomaticRule("CQ equation congruence", s)(
+                val pr = AxiomaticRule("CQ equation congruence", s)
+              pr.conclusion shouldBe (
                   Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Box(prog, GreaterEqual(term1, Number(0))),
                   Box(prog, GreaterEqual(term2, Number(0)))
-                  )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+                  ))))
+              pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
               }
 
   ignore should "?instantiate CQ from y+z=z+y in context [y:=y-1]" taggedAs KeYmaeraXTestTags.OptimisticTest in {
@@ -480,10 +504,12 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(FuncOf(f1_, Anything), term1) ::
         SubstitutionPair(FuncOf(g1_, Anything), term2) ::
         SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
-      AxiomaticRule("CQ equation congruence", s)(
+      val pr = AxiomaticRule("CQ equation congruence", s)
+    pr.conclusion shouldBe (
         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Box(prog, GreaterEqual(term1, Number(0))),
         Box(prog, GreaterEqual(term2, Number(0)))
-        )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+        ))))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
     }
 
 
@@ -495,10 +521,12 @@ class USubstTests extends FlatSpec with Matchers {
           SubstitutionPair(FuncOf(f1_, Anything), term1) ::
           SubstitutionPair(FuncOf(g1_, Anything), term2) ::
           SubstitutionPair(FuncOf(ctxt, DotTerm), Times(Power(x, Number(3)), DotTerm)) :: Nil)
-        AxiomaticRule("CT term congruence", s)(
+        val pr = AxiomaticRule("CT term congruence", s)
+    pr.conclusion shouldBe (
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(Times(Power(x, Number(3)), term1),
           Times(Power(x, Number(3)), term2))
-          ))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+          )))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
       ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs KeYmaeraXTestTags.OptimisticTest in {
@@ -510,10 +538,12 @@ class USubstTests extends FlatSpec with Matchers {
             SubstitutionPair(FuncOf(f1_, Anything), term1) ::
             SubstitutionPair(FuncOf(g1_, Anything), term2) ::
             SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y), GreaterEqual(DotTerm, Number(0)))) :: Nil)
-          AxiomaticRule("CQ equation congruence", s)(
+          val pr = AxiomaticRule("CQ equation congruence", s)
+        pr.conclusion shouldBe (
             Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y), GreaterEqual(term1, Number(0))),
             Forall(Seq(y), GreaterEqual(term2, Number(0)))
-            )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+            ))))
+        pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
   
     ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs KeYmaeraXTestTags.OptimisticTest in {
@@ -525,10 +555,12 @@ class USubstTests extends FlatSpec with Matchers {
           SubstitutionPair(FuncOf(f1_, Anything), term1) ::
           SubstitutionPair(FuncOf(g1_, Anything), term2) ::
           SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
-        AxiomaticRule("CQ equation congruence", s)(
+        val pr = AxiomaticRule("CQ equation congruence", s)
+      pr.conclusion shouldBe (
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Box(prog, GreaterEqual(term1, Number(0))),
           Box(prog, GreaterEqual(term2, Number(0)))
-          )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+          ))))
+      pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
   
   it should "instantiate CE from x=0 <-> x^2=0 into \\forall x context (manual test)" taggedAs KeYmaeraXTestTags.USubstTest in {
@@ -540,9 +572,11 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(PredOf(pn_, Anything), fml1) ::
       SubstitutionPair(PredOf(qn_, Anything), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-    AxiomaticRule("CE congruence", s)(
+    val pr = AxiomaticRule("CE congruence", s)
+    pr.conclusion shouldBe (
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, fml1), contextapp(context, fml2))))
-      ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      )
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
   it should "instantiate CE from x=0 <-> x^2=0 into \\forall x context (schematic test)" taggedAs KeYmaeraXTestTags.USubstTest in {
@@ -554,9 +588,11 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(PredOf(pn_, Anything), fml1) ::
       SubstitutionPair(PredOf(qn_, Anything), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-    AxiomaticRule("CE congruence", s)(
+    val pr = AxiomaticRule("CE congruence", s)
+    pr.conclusion shouldBe (
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), fml1), Forall(Seq(x), fml2))))
-      ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      )
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
   
   it should "instantiate CE from x=0 <-> x^2=0 into [x:=5] context (schematic test)" taggedAs KeYmaeraXTestTags.USubstTest in {
@@ -569,9 +605,11 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(PredOf(pn_, Anything), fml1) ::
       SubstitutionPair(PredOf(qn_, Anything), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-    AxiomaticRule("CE congruence", s)(
+    val pr = AxiomaticRule("CE congruence", s)
+    pr.conclusion shouldBe (
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Box(prog, fml1), Box(prog, fml2))))
-      ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      )
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
   it should "instantiate CE from x=0 <-> x^2=0 into [x'=5] context (schematic test)" taggedAs KeYmaeraXTestTags.USubstTest in {
@@ -584,9 +622,11 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(PredOf(pn_, Anything), fml1) ::
       SubstitutionPair(PredOf(qn_, Anything), fml2) ::
       SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-    AxiomaticRule("CE congruence", s)(
+    val pr = AxiomaticRule("CE congruence", s)
+    pr.conclusion shouldBe (
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Box(prog, fml1), Box(prog, fml2))))
-      ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      )
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
   
@@ -600,10 +640,12 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(FuncOf(f1_, Anything), term1) ::
       SubstitutionPair(FuncOf(g1_, Anything), term2) ::
       SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(u), Box(prog, GreaterEqual(DotTerm, u)))) :: Nil)
-    AxiomaticRule("CQ equation congruence", s)(
+    val pr = AxiomaticRule("CQ equation congruence", s)
+    pr.conclusion shouldBe (
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(u), Box(prog, GreaterEqual(term1, u))),
       Forall(Seq(u), Box(prog, GreaterEqual(term2, u)))
-      )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      ))))
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
      }
   
    it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in random contexts" taggedAs KeYmaeraXTestTags.USubstTest in {
@@ -616,9 +658,11 @@ class USubstTests extends FlatSpec with Matchers {
          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
          SubstitutionPair(FuncOf(g1_, Anything), term2) ::
          SubstitutionPair(PredOf(ctxf, DotTerm), context) :: Nil)
-       AxiomaticRule("CQ equation congruence", s)(
+       val pr = AxiomaticRule("CQ equation congruence", s)
+     pr.conclusion shouldBe (
          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, term1), contextapp(context, term2))))
-         ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+         )
+     pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
   
   it should "instantiate CE from z^2*y>=5 <-> (-z)^2*-y+0<=-5 in random contexts" taggedAs KeYmaeraXTestTags.USubstTest in {
@@ -631,9 +675,11 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(PredOf(pn_, Anything), fml1) ::
         SubstitutionPair(PredOf(qn_, Anything), fml2) ::
         SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
-      AxiomaticRule("CE congruence", s)(
+      val pr = AxiomaticRule("CE congruence", s)
+    pr.conclusion shouldBe (
         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, fml1), contextapp(context, fml2))))
-        ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+        )
+    pr.subgoals should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
  }
 
  // apply given context to the given argument

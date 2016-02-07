@@ -1263,6 +1263,8 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     val s = USubst(
       SubstitutionPair(PredOf(p, Anything), "(-x)^2>=0".asFormula) ::
       SubstitutionPair(a, "x:=x-1;".asProgram) :: Nil)
-    AxiomaticRule("Goedel", s)(conc) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq("(-x)^2>=0".asFormula))
+    val pr = AxiomaticRule("Goedel", s)
+    pr.conclusion shouldBe conc
+    pr.subgoals should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq("(-x)^2>=0".asFormula))
   }
 }
