@@ -1217,6 +1217,19 @@ object AxiomaticRule {
     * i.e. locally sound proof rules that are represented by a pair of concrete formulas, one for the premise and one for the conclusion.
     * Axiomatic proof rules are employed after forming their uniform substitution instances.
     * All available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
+    * Returns the instantied axiomatic rule as a Provable:
+    * {{{
+    *    s(G1) |- s(D1) ... s(Gn) |- s(Dn)
+    *   ----------------------------------
+    *               s(G) |- s(D)
+    * }}}
+    * @param id the name of the axiomatic rule to use, which identifies some rule
+    * {{{
+    *    G1 |- D1 ... Gn |- Dn
+    *   ----------------------------------
+    *            G |- D
+    * }}}
+    * @param subst the substitution `s` to use to instantiate axiomatic rule called `id`.
     * @author Andre Platzer
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     */
