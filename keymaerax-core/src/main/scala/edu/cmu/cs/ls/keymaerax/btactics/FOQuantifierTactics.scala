@@ -46,7 +46,7 @@ object FOQuantifierTactics {
             DLBySubst.selfAssign(x)(pos + PosInExpr(0::Nil)) &
             ProofRuleTactics.cutLR(ctx(Box(Assign(x, t), p)))(pos.topLevel) <(
               assignb(pos) partial,
-              cohide('Rlast) & CMon(pos.inExpr) & US(subst, orig) & byUS("all instantiate")
+              cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate")  //US(subst, orig) & byUS("all instantiate")
               )
           case (_, (f@Forall(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
             throw new BelleError("Cannot instantiate: universal quantifier " + f + " does not bind " + quantified.get)

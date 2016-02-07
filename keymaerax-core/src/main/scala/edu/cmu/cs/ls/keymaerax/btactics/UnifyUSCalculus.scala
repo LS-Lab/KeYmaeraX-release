@@ -131,7 +131,7 @@ trait UnifyUSCalculus {
   def byVerbatim(axiom: String) : BelleExpr = by(AxiomInfo(axiom).provable)
   /** byUS(provable) proves by a uniform substitution instance of provable, obtained by unification.
     * @see [[UnifyUSCalculus.US()]] */
-  def byUS(provable: Provable): BelleExpr = US(provable.conclusion) & by(provable)
+  def byUS(provable: Provable): BelleExpr = US(provable) //US(provable.conclusion) & by(provable)
   /** byUS(lemma) proves by a uniform substitution instance of lemma. */
   def byUS(lemma: Lemma)      : BelleExpr  = byUS(lemma.fact)
   /** byUS(axiom) proves by a uniform substitution instance of axiom or derived axiom. */
@@ -141,20 +141,51 @@ trait UnifyUSCalculus {
     * unification and matching based auto-tactics (backward tableaux/sequent)
     *******************************************************************/
 
+  /** US(subst, fact) reduces the proof to a proof of `fact`, whose uniform substitution instance under `subst` the current goal is.
+    * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(USubst)]]
+    */
+  def US(subst: USubst, fact: Provable) = TactixLibrary.by(fact(subst))
+
+  /**
+    * US(fact) uses a suitable uniform substitution to reduce the proof to the proof of `fact`.
+    * Unifies the current sequent with `fact.conclusion`.
+    * Use that unifier as a uniform substitution to instantiate `fact` with.
+    * {{{
+    *      fact:
+    *     g |- d
+    *   --------- US where G=s(g) and D=s(d) where s=unify(fact.conclusion, G|-D)
+    *     G |- D
+    * }}}
+    *
+    * @author Andre Platzer
+    * @param fact the proof to reduce this proof to by a suitable Uniform Substitution.
+    * @see [[byUS()]]
+    */
+  def US(fact: Provable): DependentTactic = new SingleGoalDependentTactic("US") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      if (DEBUG) println("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " ... checking")
+      val subst = UnificationMatch(fact.conclusion, sequent)
+      if (DEBUG) println("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " by " + subst)
+      Predef.assert(sequent == subst(fact.conclusion), "unification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
+      by(subst.toForward(fact)) //subst.toTactic(form)
+    }
+  }
+
   /**
    * US(form) uses a suitable uniform substitution to reduce the proof to instead proving `form`.
    * Unifies the current sequent with `form` and uses that unifier as a uniform substitution.
    * {{{
    *      form:
    *     g |- d
-   *   --------- US where G=s(g) and D=s(d) where s=unify(form, G|-d)
+   *   --------- US where G=s(g) and D=s(d) where s=unify(form, G|-D)
    *     G |- D
    * }}}
    *
    * @author Andre Platzer
-   * @param form the sequent to reduce this proof node to by a Uniform Substitution
+   * @param form the sequent to reduce this proof to by a Uniform Substitution
    * @see [[byUS()]]
    */
+  @deprecated("use US(Provable) instead at the moment")
   def US(form: Sequent): DependentTactic = new SingleGoalDependentTactic("US") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " ... checking")
