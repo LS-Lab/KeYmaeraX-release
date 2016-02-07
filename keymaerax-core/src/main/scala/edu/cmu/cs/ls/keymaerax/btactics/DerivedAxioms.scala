@@ -622,11 +622,11 @@ object DerivedAxioms {
       /* use */ cut(/*(4)*/"[a_;](p_(??)&q_(??)->p_(??)) -> ([a_;](p_(??)&q_(??)) -> [a_;]p_(??))".asFormula) <(
       /* use */ modusPonens(AntePos(0), AntePos(1)) & close,
       /* show */ cohide(2) &
+      //@todo fix
       US(USubst(SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), "p_(??)&q_(??)".asFormula) ::
         SubstitutionPair(PredOf(Function("q_", None, Real, Bool), Anything), "p_(??)".asFormula) :: Nil),
-        Sequent(Nil, IndexedSeq(), IndexedSeq("[a_;](p_(??)->q_(??)) -> (([a_;]p_(??)) -> ([a_;]q_(??)))".asFormula))
-      ) & byUS("K modal modus ponens")
-
+        //Sequent(Nil, IndexedSeq(), IndexedSeq("[a_;](p_(??)->q_(??)) -> (([a_;]p_(??)) -> ([a_;]q_(??)))".asFormula))
+        Axiom("K modal modus ponens"))
       ),
       /* show */ cohide(2) & useAt(PC1)(1, 1::0::Nil) & useAt(implySelf)(1, 1::Nil) & V(1) & close
       )
