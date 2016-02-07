@@ -18,6 +18,6 @@ scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 ////////////////////////////////////////////////////////////////////////////////
 {
   val jlinkJarLoc = scala.util.Properties.envOrElse("JLINK_JAR_LOCATION",  null);
-  if(jlinkJarLoc == null) throw new Exception("Need JLINK_JAR_LOCATION environmental variable set to location of the Mathematica JLink.jar file.");
+  if(jlinkJarLoc == null) throw new Exception("Need JLINK_JAR_LOCATION environmental variable set to location of the Mathematica JLink.jar file before building project.");
   unmanagedJars in Compile += file(jlinkJarLoc)
 }

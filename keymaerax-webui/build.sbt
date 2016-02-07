@@ -92,7 +92,8 @@ parallelExecution in Test := false
 
 fork in Test := true
 
-testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/test-reports")
+//@todo reenable once unserializable exceptions fixed:
+// testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/test-reports")
 
 testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
 
