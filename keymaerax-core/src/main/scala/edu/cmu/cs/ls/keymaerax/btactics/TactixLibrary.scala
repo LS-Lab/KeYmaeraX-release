@@ -349,6 +349,21 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   // Global Utility Functions
 
   /**
+    * Prove the new Provable by the given tactic, returning the resulting Provable
+    * @see [[SequentialInterpreter]]
+    * @see [[TactixLibrary.by(Provable)]]
+    * @see [[proveBy()]]
+    */
+  def proveBy(goal: Provable, tactic: BelleExpr): Provable = {
+    val v = BelleProvable(goal)
+    //@todo fetch from some factory
+    SequentialInterpreter()(tactic, v) match {
+      case BelleProvable(provable, _) => provable
+      case r => throw new BelleUserGeneratedError("Error in proveBy, goal\n" + goal + " was not provable but instead resulted in\n" + r)
+    }
+  }
+
+  /**
    * Prove the new goal by the given tactic, returning the resulting Provable
    * @see [[SequentialInterpreter]]
    * @see [[TactixLibrary.by(Provable)]]
@@ -359,14 +374,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
    *   val proof = TactixLibrary.proveBy(Sequent(Nil, IndexedSeq(), IndexedSeq("(p()|q()->r()) <-> (p()->r())&(q()->r())".asFormula)), prop)
    * }}}
    */
-  def proveBy(goal: Sequent, tactic: BelleExpr): Provable = {
-    val v = BelleProvable(Provable.startProof(goal))
-    //@todo fetch from some factory
-    SequentialInterpreter()(tactic, v) match {
-      case BelleProvable(provable, _) => provable
-      case r => throw new BelleUserGeneratedError("Error in proveBy, goal\n" + goal + " was not provable but instead resulted in\n" + r)
-    }
-  }
+  def proveBy(goal: Sequent, tactic: BelleExpr): Provable = proveBy(Provable.startProof(goal), tactic)
   /**
    * Prove the new goal by the given tactic, returning the resulting Provable
    * @see [[TactixLibrary.by(Provable)]]

@@ -86,18 +86,18 @@ trait UnifyUSCalculus {
   //def useAt(fact: Formula, key: PosInExpr, tactic: Tactic, inst: Subst=>Subst): PositionTactic = useAt(fact, key, tactic, inst)
   //def useAt(fact: Formula, key: PosInExpr, tactic: Tactic): PositionTactic = useAt(fact, key, tactic)
   /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(fact: Formula, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(fact, key, nil, inst)
-  def useAt(fact: Formula, key: PosInExpr): DependentPositionTactic = useAt(fact, key, nil)
+//  def useAt(fact: Formula, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(fact, key, nil, inst)
+//  def useAt(fact: Formula, key: PosInExpr): DependentPositionTactic = useAt(fact, key, nil)
   /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(fact: Provable, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = {
-    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
-    useAt(fact.conclusion.succ.head, key, byUS(fact), inst)
-  }
-  def useAt(fact: Provable, key: PosInExpr): DependentPositionTactic = {
-    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
-    require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
-    useAt(fact.conclusion.succ.head, key, byUS(fact))
-  }
+//  def useAt(fact: Provable, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = {
+//    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
+//    useAt(fact, key, inst)
+//  }
+//  def useAt(fact: Provable, key: PosInExpr): DependentPositionTactic = {
+//    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
+//    require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
+//    useAt(fact, key, inst=>inst)
+//  }
   // like useAt(fact,key) yet literally without uniform substitution of fact
 //  private[tactics] def useDirectAt(fact: Provable, key: PosInExpr): PositionTactic = {
 //    require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
@@ -223,9 +223,8 @@ trait UnifyUSCalculus {
    *   }
    * }}}
    * @author Andre Platzer
-   * @param fact the Formula to use to simplify at the indicated position of the sequent
+   * @param fact the fact to use to simplify at the indicated position of the sequent
    * @param key the part of the Formula fact to unify the indicated position of the sequent with
-   * @param factTactic the tactic to use to prove the instance of the fact obtained after unification
    * @param inst Transformation for instantiating additional unmatched symbols that do not occur in fact(key).
    *   Defaults to identity transformation, i.e., no change in substitution found by unification.
    *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
@@ -235,11 +234,11 @@ trait UnifyUSCalculus {
    * turns it into
    * [x:=1;][{x'=22}] ([x:=2*x;]x>=0 & [x:=0;]x>=0)
    * @see [[useFor()]]
-   * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
+   * @see [[edu.cmu.cs.ls.keymaerax.btactics]]
    * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
    */
-  def useAt(fact: Formula, key: PosInExpr, factTactic: BelleExpr, inst: Subst=>Subst = us=>us): DependentPositionTactic = new DependentPositionTactic("useAt") {
-    private val (keyCtx:Context[_],keyPart) = fact.at(key)
+  def useAt(fact: Provable, key: PosInExpr, inst: Subst=>Subst = us=>us): DependentPositionTactic = new DependentPositionTactic("useAt") {
+    private val (keyCtx:Context[_],keyPart) = fact.conclusion.succ.head.at(key)
 
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
@@ -248,7 +247,7 @@ trait UnifyUSCalculus {
         if (DEBUG) println("useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
         Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
-        useAt(subst, keyCtx, keyPart, pos, ctx, expr, factTactic, sequent)
+        useAt(subst, keyCtx, keyPart, pos, ctx, expr, byUS(fact), sequent)
       }
     }
     private val RECHECK = true
@@ -298,7 +297,8 @@ trait UnifyUSCalculus {
             if (other.kind==FormulaKind) CE(p.inExpr)
             else if (other.kind==TermKind) CQ(p.inExpr)
             else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-            debug("    using fact tactic") & factTactic & debug("  done fact tactic") partial
+            TactixLibrary.by(TactixLibrary.proveBy(fact, factTactic))
+              //debug("    fact")/*debug("    using fact tactic") & factTactic & debug("  done fact tactic")*/ partial
         ) & debug("end   useAt " + p) partial
       }
 
@@ -313,7 +313,7 @@ trait UnifyUSCalculus {
       K.ctx match {
         case DotFormula if p.isTopLevel =>
           //@note this should be similar to byUS(fact) using factTactic to prove fact after instantiation
-          US(Sequent(Nil, IndexedSeq(), IndexedSeq(k.asInstanceOf[Formula]))) & factTactic
+          byUS(fact) //US(Sequent(Nil, IndexedSeq(), IndexedSeq(k.asInstanceOf[Formula]))) & factTactic
 
         case DotFormula if !p.isTopLevel => equivStep(True, equivR(1) <(coHideR(1) & factTactic, closeTrue(1)))
 
