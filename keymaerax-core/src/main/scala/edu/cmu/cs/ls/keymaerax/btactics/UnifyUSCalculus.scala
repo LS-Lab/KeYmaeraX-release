@@ -120,7 +120,7 @@ trait UnifyUSCalculus {
   //@todo auto-weaken as needed (maybe even exchangeleft)
   def by(fact: Provable)  : BuiltInTactic = new BuiltInTactic("by") {
     override def result(provable: Provable): Provable = {
-      require(provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion, "Conclusion of fact " + fact + " must match sole open goal in " + provable)
+      require(provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion, "Conclusion of fact\n" + fact + "\nmust match sole open goal in\n" + provable)
       if (provable.subgoals.size == 1 && provable.subgoals.head == fact.conclusion) provable.apply(fact, 0)
       else throw new BelleError("Conclusion of fact " + fact + " does not match sole open goal of " + provable)
     }
@@ -247,7 +247,7 @@ trait UnifyUSCalculus {
         if (DEBUG) println("useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
         Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
-        useAt(subst, keyCtx, keyPart, pos, ctx, expr, byUS(fact), sequent)
+        useAt(subst, keyCtx, keyPart, pos, ctx, expr, iden, sequent)
       }
     }
     private val RECHECK = true
@@ -267,14 +267,14 @@ trait UnifyUSCalculus {
      * @author Andre Platzer
      * @note The implementation could be generalized because it sometimes fires irrelevant substitution clashes coming merely from the context embedding contracts.
      */
-    private def useAt[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: BelleExpr, sequent: Sequent): BelleExpr = {
+    private def useAt[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: ForwardTactic, sequent: Sequent): BelleExpr = {
       require(!RECHECK || subst(k) == c, "correctly matched input")
       //@note might cause some irrelevant clashes
       require(C(c).at(p.inExpr) == (C,c), "correctly split at position " + p.inExpr + "\ngiving context " + C + "\nsubexpression " + c + "\nreassembling to the same " + C(c))
       require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
       /** Equivalence rewriting step */
-      def equivStep(other: Expression, factTactic: BelleExpr): BelleExpr = {
+      def equivStep(other: Expression, factTactic: ForwardTactic): BelleExpr = {
         val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length)}
         lazy val expect = if (p.isSucc) Imply(C(subst(other)), C(subst(keyPart))) else Imply(C(subst(keyPart)), C(subst(other)))
         lazy val expectEquiv = if (p.isSucc) Equiv(C(subst(other)), C(subst(keyPart))) else Equiv(C(subst(keyPart)), C(subst(other)))
@@ -297,66 +297,69 @@ trait UnifyUSCalculus {
             if (other.kind==FormulaKind) CE(p.inExpr)
             else if (other.kind==TermKind) CQ(p.inExpr)
             else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-            TactixLibrary.byUS(fact)  //TactixLibrary.by(TactixLibrary.proveBy(fact, factTactic))
+            TactixLibrary.byUS(factTactic(fact))  //TactixLibrary.by(TactixLibrary.proveBy(fact, factTactic))
               //debug("    fact")/*debug("    using fact tactic") & factTactic & debug("  done fact tactic")*/ partial
         ) & debug("end   useAt " + p) partial
       }
 
-      def implyStep(other: Expression, factTactic: BelleExpr): BelleExpr = {
+      def implyStep(other: Expression, factTactic: ForwardTactic): BelleExpr = {
         val cohide = p match {case p: SuccPosition => coHideR(p.top) case p: AntePosition => coHideR('Rlast)}
         cutLR(C(subst(other)))(p.topLevel) <(
           /* use */ ident partial,
-          /* show */ cohide & CMon(p.inExpr) & factTactic
+          /* show */ cohide & CMon(p.inExpr) & byUS(factTactic(fact))
         )
       }
 
       K.ctx match {
         case DotFormula if p.isTopLevel =>
           //@note this should be similar to byUS(fact) using factTactic to prove fact after instantiation
-          factTactic //US(Sequent(Nil, IndexedSeq(), IndexedSeq(k.asInstanceOf[Formula]))) & factTactic
+          byUS(factTactic(fact)) //US(Sequent(Nil, IndexedSeq(), IndexedSeq(k.asInstanceOf[Formula]))) & factTactic
 
-        case DotFormula if !p.isTopLevel => equivStep(True, equivR(1) <(coHideR(1) & factTactic, closeTrue(1)))
+          //@todo uncomment again
+        case DotFormula if !p.isTopLevel => ??? //equivStep(True, equivR(1) <(coHideR(1) & factTactic, closeTrue(1)))
 
-        case Equiv(DotFormula, other) => equivStep(other, (if (p.isSucc) commuteEquivR(1) else ident) & factTactic)
+        case Equiv(DotFormula, other) => equivStep(other, seqCompose(if (p.isSucc) commuteEquivFR(SuccPos(0)) else iden , factTactic))
 
-        case Equiv(other, DotFormula) => equivStep(other, (if (p.isAnte) commuteEquivR(1) else ident) & factTactic)
+        case Equiv(other, DotFormula) => equivStep(other, seqCompose(if (p.isAnte) commuteEquivFR(SuccPos(0)) else iden , factTactic))
 
         case Equal(DotTerm, other) =>
-          equivStep(other, (if (p.isSucc) TactixLibrary.useAt(DerivedAxioms.equalCommute)(1) else ident) & factTactic)
+          equivStep(other, seqCompose(if (p.isSucc) useFor(DerivedAxioms.equalCommute.fact, PosInExpr(0::Nil))(SuccPos(0)) else iden, factTactic))
 
         case Equal(other, DotTerm) =>
-          equivStep(other, (if (p.isAnte) TactixLibrary.useAt(DerivedAxioms.equalCommute)(1) else ident) & factTactic)
+          equivStep(other, seqCompose(if (p.isAnte) useFor(DerivedAxioms.equalCommute.fact, PosInExpr(0::Nil))(SuccPos(0)) else iden , factTactic))
 
         case Imply(other, DotFormula) => implyStep(other, factTactic)
 
         case Imply(DotFormula, other) => implyStep(other, factTactic)
 
         case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
-          //@todo assumes no more context around remainder (no other examples so far)
-          lazy val provePrereqLocally: BelleExpr = if (remainder.isInstanceOf[Equiv]) {
-            val (conclusion, commute) = remainder match {
-              case Equiv(DotFormula, other) => (other, if (p.isSucc) commuteEquivR(1) else ident)
-              case Equiv(other, DotFormula) => (other, if (p.isAnte) commuteEquivR(1) else ident)
-//              case Equal(DotTerm, other) => (other, if (p.isSucc) TactixLibrary.useAt("= commute")(1) else ident)
-//              case Equal(other, DotTerm) => (other, if (p.isAnte) TactixLibrary.useAt("= commute")(1) else ident)
-            }
-
-            // prove prereq locally
-            cut(C(subst(prereq))) <(
-              /* use */ cutR(C(subst(conclusion)))(p.checkSucc.top) <(
-                hideL('Llast) partial,
-                coHide2(AntePos(sequent.ante.size), p.top) & equivifyR(1) & commute & implyRi & CMon(p.inExpr) & factTactic) partial,
-              /* show: prereq remains open */ hideR(p.top) partial
-              )
-            //@todo do something smart about Equal and about Imply and ....
-          } else {ident}
-
-          // try to prove prereq globally, if that fails preserve context and fall back to CMon and C{prereq} -> ...
-          (useAt(subst, Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(1).top) <(
-            //@note the roles of use and show are really swapped here, since the implication on show will be handled by factTactic
-            /* use: try to prove prereq globally */ TactixLibrary.QE,
-            /* show */ factTactic), sequent) partial) |
-          (provePrereqLocally partial)
+          ???
+        //@todo uncomment again
+//          //@todo assumes no more context around remainder (no other examples so far)
+//          lazy val provePrereqLocally: BelleExpr = if (remainder.isInstanceOf[Equiv]) {
+//            val (conclusion, commute) = remainder match {
+//              case Equiv(DotFormula, other) => (other, if (p.isSucc) commuteEquivR(1) else ident)
+//              case Equiv(other, DotFormula) => (other, if (p.isAnte) commuteEquivR(1) else ident)
+////              case Equal(DotTerm, other) => (other, if (p.isSucc) TactixLibrary.useAt("= commute")(1) else ident)
+////              case Equal(other, DotTerm) => (other, if (p.isAnte) TactixLibrary.useAt("= commute")(1) else ident)
+//            }
+//
+//            // prove prereq locally
+//            cut(C(subst(prereq))) <(
+//              /* use */ cutR(C(subst(conclusion)))(p.checkSucc.top) <(
+//                hideL('Llast) partial,
+//                coHide2(AntePos(sequent.ante.size), p.top) & equivifyR(1) & commute & implyRi & CMon(p.inExpr) & factTactic) partial,
+//              /* show: prereq remains open */ hideR(p.top) partial
+//              )
+//            //@todo do something smart about Equal and about Imply and ....
+//          } else {ident}
+//
+//          // try to prove prereq globally, if that fails preserve context and fall back to CMon and C{prereq} -> ...
+//          (useAt(subst, Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(1).top) <(
+//            //@note the roles of use and show are really swapped here, since the implication on show will be handled by factTactic
+//            /* use: try to prove prereq globally */ TactixLibrary.QE,
+//            /* show */ factTactic), sequent) partial) |
+//          (provePrereqLocally partial)
 
         case Forall(vars, remainder) if vars.length==1 => ???
           //useAt(subst, new Context(remainder), k, p, C, c, /*@todo instantiateQuanT(vars.head, subst(vars.head))(SuccPos(0))*/ ident, sequent)
@@ -615,6 +618,11 @@ trait UnifyUSCalculus {
   def seqComposeP(first: ForwardPositionTactic, second: ForwardPositionTactic): ForwardPositionTactic = pos => seqCompose(first(pos), second(pos))
   def eitherP(left: ForwardPositionTactic, right: ForwardPositionTactic): ForwardPositionTactic = pos => either(left(pos), right(pos))
   def ifThenElseP(cond: Position=>(Provable=>Boolean), thenT: ForwardPositionTactic, elseT: ForwardPositionTactic): ForwardPositionTactic = pos => ifThenElse(cond(pos), thenT(pos), elseT(pos))
+  def iden: ForwardTactic = pr => pr
+  def commuteEquivFR: ForwardPositionTactic = pos => pr => pr(
+    CommuteEquivRight(pos.checkSucc.checkTop.asInstanceOf[SuccPos])(pr.conclusion).head,
+    CommuteEquivRight(pos.checkSucc.checkTop.asInstanceOf[SuccPos])
+  )
 
 
   /** useFor(axiom) use the given axiom forward for the selected position in the given Provable to conclude a new Provable */

@@ -65,6 +65,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   //@todo nrf it should "prove box split" in {check(boxAnd)}
 //  it should "prove box split left" in {check(boxSplitLeft)}
 //  it should "prove box split right" in {check(boxSplitRight)}
+  it should "prove [] split" in {check(boxAnd)}
   it should "prove <> split" in {check(diamondOr)}
   it should "prove []~><> propagation" in {check{boxDiamondPropagation}}
   it should "prove <:=> assign" in {check(assigndAxiom)}
