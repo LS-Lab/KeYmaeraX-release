@@ -75,9 +75,9 @@ trait UnifyUSCalculus {
         Some(cutR(Imply(invariant, Box(Loop(a), invariant)))(p.top) & onBranch(
           (BranchLabels.cutUseLbl,
             // G |- J(x)->[a*]J(x), D by ind induction
-            cohide(p.top) & implyR(1) & new ApplyRule(AxiomaticRule("ind induction", s)) {
+            cohide(p.top) & implyR(1) & ??? /*new ApplyRule(AxiomaticRule("ind induction", s)) {
             override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-          } & label(BranchLabels.indStepLbl)),
+          }*/ & label(BranchLabels.indStepLbl)),
 
           (BranchLabels.cutShowLbl,
             // G |- (J(x)->[a*]J(x)) -> [a*]p(x), D
@@ -431,11 +431,11 @@ trait UnifyUSCalculus {
         require(ctxF.isTermContext, "Formula context expected for CQ")
         if (DEBUG) println("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
         if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty)
-          Some(new ApplyRule(AxiomaticRule("CQ equation congruence",
+          Some(??? /*new ApplyRule(AxiomaticRule("CQ equation congruence",
             USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil)
           )) {
             override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-          })
+          }*/)
         else {
           if (DEBUG) println("CQ: Split " + l + " around " + inEqPos)
           val (fmlPos,termPos) : (PosInExpr,PosInExpr) = Context.splitPos(l, inEqPos)
@@ -484,11 +484,11 @@ trait UnifyUSCalculus {
         assert(!DEBUG || ctxP == ctxQ, "same context if applicable (implied by AxiomaticRule applying successfully)")
         assert(!DEBUG || ctxP.ctx == ctxQ.ctx, "same context formula if applicable (implied by AxiomaticRule applying successfully)")
         require(ctxP.isFormulaContext, "Formula context expected for CE")
-        Some(new ApplyRule(AxiomaticRule("CE congruence",
+        Some(??? /*new ApplyRule(AxiomaticRule("CE congruence",
           USubst(SubstitutionPair(c_, ctxP.ctx) :: SubstitutionPair(p_, p) :: SubstitutionPair(q_, q) :: Nil)
         )) {
           override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
+        }*/)
     }
   }
 
@@ -720,7 +720,7 @@ trait UnifyUSCalculus {
       case Equiv(left,right) =>
         require(C.isFormulaContext, "Formula context expected to make use of equivalences with CE " + C)
         equiv(
-          Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(left), C(right)))),
+          //Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(left), C(right)))),
           AxiomaticRule("CE congruence",
             USubst(SubstitutionPair(PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula), C.ctx) ::
               SubstitutionPair(PredOf(Function("p_", None, Real, Bool), Anything), left) ::
@@ -730,7 +730,7 @@ trait UnifyUSCalculus {
       case Equal(left,right) =>
         require(C.isTermContext, "Term context expected to make use of equalities with CE " + C)
         equiv(
-          Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(left), C(right)))),
+          //Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(C(left), C(right)))),
           AxiomaticRule("CQ equation congruence",
             USubst(SubstitutionPair(PredOf(Function("ctx_", None, Real, Bool), DotTerm), C.ctx) ::
               SubstitutionPair(FuncOf(Function("f_", None, Real, Real), Anything), left) ::

@@ -25,9 +25,15 @@ import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
   * @author Nathan Fulton
   */
 object BTacticParser extends (String => Option[BelleExpr]) {
-  def apply(s: String): Option[BelleExpr] = apply(s, false)
+  var stringBeingParsed : Option[String] = None
+
+  def apply(s: String): Option[BelleExpr] = {
+    stringBeingParsed = Some(s)
+    apply(s, false)
+  }
 
   def apply(s: String, loggingOn:Boolean, generator:Option[Generator[Formula]] = None): Option[BelleExpr] = {
+    stringBeingParsed = Some(s)
     val parser = new TheParser(loggingOn, generator)
     parser.parseAll(parser.expressionParser, s) match {
       case parser.Success(result, next) => Some(result.asInstanceOf[BelleExpr])
@@ -169,7 +175,12 @@ object BTacticParser extends (String => Option[BelleExpr]) {
       log(pattern)("base tactic with position or expression input") ^^ {
         case name ~ args => {
           val arguments = (args._1 +: args._2) map parseExpressionOrPosition
-          ReflectiveExpressionBuilder(name, arguments, generator)
+          try {
+            ReflectiveExpressionBuilder(name, arguments, generator)
+          }
+          catch {
+            case e : ReflectiveExpressionBuilderExn => throw new ReflectiveExpressionBuilderExn(e.getMessage + s" Encountered while parsing ${stringBeingParsed}")
+          }
         }
       }
     }

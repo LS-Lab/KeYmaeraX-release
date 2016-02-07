@@ -128,6 +128,7 @@ object ProofTree {
   }
 }
 
+// @note isFake might be completely unnecessary.
 case class TreeNode (id: Int, sequent: Sequent, parent: Option[TreeNode], startStep:Option[ExecutionStep], var isFake:Boolean = false) {
   var endStep: Option[ExecutionStep] = None
   var children: List[TreeNode] = Nil

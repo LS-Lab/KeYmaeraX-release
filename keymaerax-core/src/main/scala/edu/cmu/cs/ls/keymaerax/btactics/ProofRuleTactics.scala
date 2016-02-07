@@ -245,6 +245,10 @@ object ProofRuleTactics {
     }
   }
 
+  /** US(subst, origin) reduces the proof to a proof of the premise `origin`, whose uniform substitution instance under `subst` the current goal is.
+    * @see [[UniformSubstitutionRule]]
+    */
+  @deprecated("Use Provable.apply(USubst) forward instead")
   def US(subst: USubst, origin: Sequent) = new BuiltInTactic("US") {
     override def result(provable: Provable): Provable = {
       requireOneSubgoal(provable)
@@ -254,16 +258,12 @@ object ProofRuleTactics {
 
   def axiomatic(axiomName: String, subst: USubst): DependentTactic = new DependentTactic(s"US of axiom/rule $axiomName") {
     override def computeExpr(v: BelleValue): BelleExpr =
-      if (AxiomaticRule.rules.contains(axiomName)) new BuiltInTactic(s"US of axiomatic rule $axiomName") {
-        override def result(provable: Provable): Provable = provable(core.AxiomaticRule(axiomName, subst), 0)
+      if (Provable.rules.contains(axiomName)) {
+        TactixLibrary.by(AxiomaticRule(axiomName)(subst))
       } else if (Axiom.axioms.contains(axiomName)) {
-        US(subst, Axiom.axiom(axiomName).conclusion) & new BuiltInTactic(s"Close by axiom $axiomName") {
-          override def result(provable: Provable): Provable = provable(core.Axiom(axiomName), 0)
-        }
+        TactixLibrary.by(Axiom.axiom(axiomName)(subst))
       } else if (DerivedAxiomInfo.locate(axiomName).isDefined) {
-        US(subst, DerivedAxioms.derivedAxiom(axiomName).conclusion) & new BuiltInTactic(s"Close by derived axiom $axiomName") {
-          override def result(provable: Provable): Provable = provable(DerivedAxioms.derivedAxiomR(axiomName), 0)
-        }
+        TactixLibrary.by(DerivedAxioms.derivedAxiom(axiomName)(subst))
       } else throw new BelleError(s"Unknown axiom/rule $axiomName")
   }
 

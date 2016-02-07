@@ -52,9 +52,9 @@ object AxiomaticRuleTactics {
           val qX = PredOf(Function("q_", None, Real, Bool), Anything)
           val cX = PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula)
           val s = USubst(SubstitutionPair(pX, p) :: SubstitutionPair(qX, q) :: SubstitutionPair(cX, ctxP.ctx) :: Nil)
-          Some(new ApplyRule(AxiomaticRule("CE congruence", s)) {
+          Some(??? /*new ApplyRule(AxiomaticRule("CE congruence", s)) {
             override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-          })
+          }*/)
         } else throw new IllegalStateException("Formula context expected")/*Some(NilT)*/
     }
   }
@@ -132,9 +132,9 @@ object AxiomaticRuleTactics {
         val qX = PredOf(Function("q_", None, Real, Bool), Anything)
         val cX = PredicationalOf(Function("ctx_", None, Bool, Bool), DotFormula)
         val s = USubst(SubstitutionPair(pX, p) :: SubstitutionPair(qX, q) :: SubstitutionPair(cX, ctxP.ctx) :: Nil)
-        Some(new ApplyRule(AxiomaticRule("CO one-sided congruence", s)) {
+        Some(??? /*new ApplyRule(AxiomaticRule("CO one-sided congruence", s)) {
           override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
+        }*/)
       } else Some(NilT)
     }
   }
@@ -161,9 +161,9 @@ object AxiomaticRuleTactics {
         val gX = FuncOf(Function("g_", None, Real, Real), Anything)
         val cX = PredOf(Function("ctx_", None, Real, Bool), DotTerm)
         val s = USubst(SubstitutionPair(fX, f) :: SubstitutionPair(gX, g) :: SubstitutionPair(cX, ctxP.ctx) :: Nil)
-        Some(new ApplyRule(AxiomaticRule("CQ equation congruence", s)) {
+        Some(??? /*new ApplyRule(AxiomaticRule("CQ equation congruence", s)) {
           override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
+        }*/)
     }
   }
 
@@ -214,9 +214,9 @@ object AxiomaticRuleTactics {
         val gX = FuncOf(Function("g_", None, Real, Real), Anything)
         val cX = FuncOf(Function("ctx_", None, Real, Real), DotTerm)
         val s = USubst(SubstitutionPair(fX, f) :: SubstitutionPair(gX, g) :: SubstitutionPair(cX, ctxF.ctx) :: Nil)
-        Some(new ApplyRule(AxiomaticRule("CT term congruence", s)) {
+        Some(??? /*new ApplyRule(AxiomaticRule("CT term congruence", s)) {
           override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
+        }*/)
     }
   }
 
@@ -244,9 +244,9 @@ object AxiomaticRuleTactics {
           val s = USubst(SubstitutionPair(aX, a) ::
             SubstitutionPair(PredOf(pX, Anything), p) ::
             SubstitutionPair(PredOf(qX, Anything), q) :: Nil)
-          Some(new ApplyRule(AxiomaticRule("[] monotone", s)) {
+          Some(??? /*new ApplyRule(AxiomaticRule("[] monotone", s)) {
             override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-          })
+          }*/)
         case _ => None
       }
       case _ => None
@@ -277,9 +277,9 @@ object AxiomaticRuleTactics {
           val s = USubst(SubstitutionPair(aX, a) ::
             SubstitutionPair(PredOf(pX, Anything), p) ::
             SubstitutionPair(PredOf(qX, Anything), q) :: Nil)
-          Some(new ApplyRule(AxiomaticRule("<> monotone", s)) {
+          Some(??? /*new ApplyRule(AxiomaticRule("<> monotone", s)) {
             override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-          })
+          }*/)
         case _ => None
       }
       case _ => None
@@ -303,9 +303,9 @@ object AxiomaticRuleTactics {
         val pX = Function("p_", None, Real, Bool)
         val s = USubst(SubstitutionPair(aX, a) ::
           SubstitutionPair(PredOf(pX, Anything), p) :: Nil)
-        Some(new ApplyRule(AxiomaticRule("Goedel", s)) {
+        Some(??? /*new ApplyRule(AxiomaticRule("Goedel", s)) {
           override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
+        }*/)
     }
   }
 
@@ -334,10 +334,10 @@ object AxiomaticRuleTactics {
 
         Some(
           globalAlphaRenamingT(x, aX) &
-          new ApplyRule(AxiomaticRule("all generalization", s)) {
+          ??? /*new ApplyRule(AxiomaticRule("all generalization", s)) {
             override def applicable(node: ProofNode): Boolean = outer.applicable(node)
           } /* TODO this step will not work, since aX not bound anymore */& globalAlphaRenamingT(aX, x)
-        )
+        */)
     }
   }
 }

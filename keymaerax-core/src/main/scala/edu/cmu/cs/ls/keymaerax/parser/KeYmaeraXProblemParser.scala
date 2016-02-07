@@ -14,15 +14,36 @@ import scala.annotation.tailrec
  * Created by nfulton on 6/12/15.
  */
 object KeYmaeraXProblemParser {
-  def apply(input : String): Formula = try {
-    if(containsNonASCII(input)) throw ParseException("Input string contains non-ASCII character", new Exception()) //@todo indicate the location of the non-ASCII character.
-      parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode()))._2
+  def apply(input : String): Formula =
+    try {
+      firstNonASCIICharacter(input) match {
+        case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
+        case None => parseProblem(KeYmaeraXLexer.inMode(input, ProblemFileMode()))._2
+      }
     }
     catch {case e: ParseException => throw e.inInput(input)}
 
+  /** Returns the location and value of the first non-ASCII character in a string. */
+  private def firstNonASCIICharacter(s : String) : Option[(Location, Char)] = {
+    val pattern = """([^\p{ASCII}])""".r
+    val matches = pattern.findAllIn(s).matchData
 
-
-  private def containsNonASCII(s : String) = !s.matches("\\A\\p{ASCII}*\\z")
+    if(matches.nonEmpty) {
+      val nonAsciiCharacter : Char = {
+        if(matches.hasNext) matches.next().group(0).toCharArray.last
+        else throw new Exception("Expected at least one match but matchData.hasNext returned false when matches.nonEmpty was true!")
+      }
+      val prefix = s.split(nonAsciiCharacter).head
+      val lines = prefix.split("\n")
+      val lineNumber = lines.length
+      val columnNumber = lines.last.length + 1
+      Some(new Region(lineNumber, columnNumber, lineNumber, columnNumber), nonAsciiCharacter)
+    }
+    else {
+      assert(s.matches("\\A\\p{ASCII}*\\z"))
+      None
+    }
+  }
 
   protected def parseProblem(tokens: List[Token]) :  (Map[(String, Option[Int]), (Option[Sort], Sort)], Formula) = {
     val parser = KeYmaeraXParser
