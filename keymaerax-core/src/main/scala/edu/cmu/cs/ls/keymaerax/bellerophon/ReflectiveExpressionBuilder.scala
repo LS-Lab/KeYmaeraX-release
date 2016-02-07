@@ -20,11 +20,11 @@ object ReflectiveExpressionBuilder {
       } else {
         info.belleExpr
       }
-    val expressionArgs = args.filter{case arg => arg.isLeft}.map{case arg => arg.left.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only right-inhabited elements... this exn should never be thrown."))}
+    val expressionArgs = args.filter{case arg => arg.isLeft}.map{case arg => arg.left.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only left-inhabited elements... this exn should never be thrown."))}
     val applied:Any = expressionArgs.foldLeft(withGenerator) {
       case (expr: (Formula => Any), (fml: Formula) :: Nil) => expr(fml)
-      case (expr: (Seq[Formula] => Any), fmls: Seq[Formula]) => expr(fmls)
       case (expr: (Term => Any), (term: Term) :: Nil) => expr(term)
+      case (expr: (Seq[Formula] => Any), fmls: Seq[Formula]) => expr(fmls)
       case (expr: (Any), fml) =>
         throw new Exception("Expected type Formula => Any , got " + expr.getClass.getSimpleName)
     }
