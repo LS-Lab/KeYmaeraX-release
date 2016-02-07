@@ -297,7 +297,7 @@ trait UnifyUSCalculus {
             if (other.kind==FormulaKind) CE(p.inExpr)
             else if (other.kind==TermKind) CQ(p.inExpr)
             else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-            TactixLibrary.by(TactixLibrary.proveBy(fact, factTactic))
+            TactixLibrary.byUS(fact)  //TactixLibrary.by(TactixLibrary.proveBy(fact, factTactic))
               //debug("    fact")/*debug("    using fact tactic") & factTactic & debug("  done fact tactic")*/ partial
         ) & debug("end   useAt " + p) partial
       }
@@ -313,7 +313,7 @@ trait UnifyUSCalculus {
       K.ctx match {
         case DotFormula if p.isTopLevel =>
           //@note this should be similar to byUS(fact) using factTactic to prove fact after instantiation
-          byUS(fact) //US(Sequent(Nil, IndexedSeq(), IndexedSeq(k.asInstanceOf[Formula]))) & factTactic
+          factTactic //US(Sequent(Nil, IndexedSeq(), IndexedSeq(k.asInstanceOf[Formula]))) & factTactic
 
         case DotFormula if !p.isTopLevel => equivStep(True, equivR(1) <(coHideR(1) & factTactic, closeTrue(1)))
 
