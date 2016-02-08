@@ -348,7 +348,8 @@ trait UnifyUSCalculus {
            */
 
           // |- subst(prereq)
-          val prereqFact = TactixLibrary.proveBy(subst(prereq), TactixLibrary.master())
+          //@note don't call master to avoid infinite proof search for ODEs
+          val prereqFact = TactixLibrary.proveBy(subst(prereq), TactixLibrary.QE)
           require(prereqFact.isProved, "only globally provable requirements currently supported. Ese useAt instead " + prereqFact)
 
           // |- subst(remainder{k})
