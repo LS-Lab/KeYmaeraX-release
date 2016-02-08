@@ -225,3 +225,5 @@ object BTacticParser extends (String => Option[BelleExpr]) {
     val MATCH = "match"
   }
 }
+
+class BParserException(msg: String) extends Exception(msg)
