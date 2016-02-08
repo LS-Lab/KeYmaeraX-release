@@ -135,8 +135,14 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
             if (theAgenda.selectedId() === undefined) theAgenda.items()[0].isSelected = true;
           } else {
             // proof might be finished
-            $rootScope.$emit('agenda.isEmpty');
-            console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
+            if(!theAgenda.proofStatusDisplayed) {
+              theAgnda.proofStatusDisplayed == true
+              $rootScope.$emit('agenda.isEmpty');
+              console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
+            }
+            else {
+              console.log("Not showing agenda.isEmpty because it was already displayed.")
+            }
           }
         })
         .catch(function(data) {
@@ -169,9 +175,13 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           theAgenda.itemsMap[newAgendaItem.id] = newAgendaItem;
         });
         delete theAgenda.itemsMap[oldAgendaItem.id];
-        if (theAgenda.itemIds().length == 0) {
+        if (theAgenda.itemIds().length == 0 && !theAgenda.proofStatusDisplayed) {
+          theAgnda.proofStatusDisplayed == true
           console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
           $rootScope.$emit('agenda.isEmpty');
+        }
+        if(theAgnda.proofStatusDisplayed == true) {
+          console.log("Not emitting agenda.isEmpty because it's already been emitted.")
         }
       } else {
         $rootScope.$emit('agenda.updateWithoutProgress');
