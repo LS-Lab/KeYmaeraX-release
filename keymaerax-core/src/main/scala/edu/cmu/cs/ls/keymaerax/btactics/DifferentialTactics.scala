@@ -96,15 +96,19 @@ object DifferentialTactics {
             val aH = PredOf(Function("H", None, Real, Bool), Anything)
             val aC = DifferentialProgramConst("c")
             val aP = PredOf(Function("p", None, Real, Bool), Anything)
+            val aX = Variable("x_")
 
-            val subst = SubstitutionPair(aF, t) :: SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) ::
-              SubstitutionPair(aH, h) :: Nil
+            val subst = USubst(SubstitutionPair(aF, t) :: SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) ::
+              SubstitutionPair(aH, h) :: Nil)
+            val uren = ProofRuleTactics.uniformRenaming(aX, x)
             val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(s"[{${d.prettyString}=f(??),c&H(??)}]p(??) <-> [{c,${d.prettyString}=f(??)&H(??)}][${d.prettyString}:=f(??);]p(??)".asFormula))
 
             cutLR(g)(pos) <(
               /* use */ skip,
               //@todo conditional commuting (if (pos.isSucc) commuteEquivR(1) else Idioms.ident) instead?
-              /* show */ cohide('Rlast) & equivifyR(1) & commuteEquivR(1) & US(USubst(subst), origin) & byUS("DE differential effect (system)"))
+              /* show */ cohide('Rlast) & equivifyR(1) & commuteEquivR(1) &
+              TactixLibrary.US(subst, TactixLibrary.uniformRenameF(aX, x)(AxiomInfo("DE differential effect (system)").provable)))
+              //TactixLibrary.US(subst, "DE differential effect (system)"))
         }
       }
     }
@@ -129,17 +133,17 @@ object DifferentialTactics {
 
             val uren = URename(x, aX)
 
-            val subst = SubstitutionPair(aF, t) :: SubstitutionPair(aC, uren(c)) :: SubstitutionPair(aP, uren(p)) ::
-              SubstitutionPair(aH, uren(h)) :: Nil
+            val subst = USubst(SubstitutionPair(aF, t) :: SubstitutionPair(aC, uren(c)) :: SubstitutionPair(aP, uren(p)) ::
+              SubstitutionPair(aH, uren(h)) :: Nil)
             //            val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(s"[{${xp.prettyString}=f(??),c&H(??)}]p(??) <-> [{c,${xp.prettyString}=f(??)&H(??)}][${xp.prettyString}:=f(??);]p(??)".asFormula))
             val origin = Sequent(Nil, IndexedSeq(), IndexedSeq(Axiom.axioms("DE differential effect (system)")))
 
-            if (true || DEBUG) println("DE: manual " + USubst(subst) + " above " + uren + " to prove " + sequent.prettyString)
+            if (true || DEBUG) println("DE: manual " + subst + " above " + uren + " to prove " + sequent.prettyString)
 
             cutLR(g)(pos) <(
               /* use */ skip,
               /* show */ cohide('Rlast) & equivifyR(1) & (if (pos.isSucc) commuteEquivR(1) else Idioms.ident) &
-              ProofRuleTactics.uniformRenaming(x, aX) & US(USubst(subst), origin) & byVerbatim("DE differential effect (system)"))
+              ProofRuleTactics.uniformRenaming(x, aX) & US(subst, "DE differential effect (system)"))
 
           case Some(f@Box(ODESystem(AtomicODE(xp@DifferentialSymbol(x), t), h), p)) =>
             val g = Box(
