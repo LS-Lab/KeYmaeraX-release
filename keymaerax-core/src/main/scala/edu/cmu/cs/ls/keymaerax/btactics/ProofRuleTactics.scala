@@ -268,6 +268,13 @@ object ProofRuleTactics {
       } else throw new BelleError(s"Unknown axiom/rule $axiomName")
   }
 
+  /**
+    * Uniform renaming `what~>repl` and vice versa.
+    * @param what
+    * @param repl
+    * @return
+    * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
+    */
   def uniformRenaming(what: Variable, repl: Variable) = new BuiltInTactic("UniformRenaming") {
     override def result(provable: Provable): Provable = {
       requireOneSubgoal(provable)
@@ -282,6 +289,7 @@ object ProofRuleTactics {
     * @param repl the new, fresh variable to be used for this bound variable instead.
     * @author Andre Platzer
     * @incontext
+    * @see [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming]]
     */
   def boundRenaming(what: Variable, repl: Variable): DependentPositionTactic = "BoundRenaming" by ((pos:Position, sequent:Sequent) =>
     if (pos.isTopLevel)

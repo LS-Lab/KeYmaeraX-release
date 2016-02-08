@@ -144,7 +144,8 @@ trait UnifyUSCalculus {
   /** US(subst, fact) reduces the proof to a proof of `fact`, whose uniform substitution instance under `subst` the current goal is.
     * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(USubst)]]
     */
-  def US(subst: USubst, fact: Provable) = TactixLibrary.by(fact(subst))
+  def US(subst: USubst, fact: Provable): BuiltInTactic = TactixLibrary.by(fact(subst))
+  def US(subst: USubst, axiom: String): BuiltInTactic = US(subst, AxiomInfo(axiom).provable)
 
   /**
     * US(fact) uses a suitable uniform substitution to reduce the proof to the proof of `fact`.
@@ -167,7 +168,7 @@ trait UnifyUSCalculus {
       val subst = UnificationMatch(fact.conclusion, sequent)
       if (DEBUG) println("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " by " + subst)
       Predef.assert(sequent == subst(fact.conclusion), "unification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
-      by(subst.toForward(fact)) //subst.toTactic(form)
+      by(subst.toForward(fact))
     }
   }
 
@@ -185,16 +186,16 @@ trait UnifyUSCalculus {
    * @param form the sequent to reduce this proof to by a Uniform Substitution
    * @see [[byUS()]]
    */
-  @deprecated("use US(Provable) instead at the moment")
-  def US(form: Sequent): DependentTactic = new SingleGoalDependentTactic("US") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " ... checking")
-      val subst = UnificationMatch(form, sequent)
-      if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " by " + subst)
-      Predef.assert(sequent == subst(form), "unification should match:\n  unify: " + sequent + "\n  gives: " + subst(form) + " when matching against\n  form:  " + form + "\n  by:    " + subst)
-      subst.toTactic(form)
-    }
-  }
+//  @deprecated("use US(Provable) instead")
+//  def US(form: Sequent): DependentTactic = new SingleGoalDependentTactic("US") {
+//    override def computeExpr(sequent: Sequent): BelleExpr = {
+//      if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " ... checking")
+//      val subst = UnificationMatch(form, sequent)
+//      if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " by " + subst)
+//      Predef.assert(sequent == subst(form), "unification should match:\n  unify: " + sequent + "\n  gives: " + subst(form) + " when matching against\n  form:  " + form + "\n  by:    " + subst)
+//      subst.toTactic(form)
+//    }
+//  }
 
   /**
    * useAt(fact)(pos) uses the given fact at the given position in the sequent.
@@ -652,6 +653,10 @@ trait UnifyUSCalculus {
   def eitherP(left: ForwardPositionTactic, right: ForwardPositionTactic): ForwardPositionTactic = pos => either(left(pos), right(pos))
   def ifThenElseP(cond: Position=>(Provable=>Boolean), thenT: ForwardPositionTactic, elseT: ForwardPositionTactic): ForwardPositionTactic = pos => ifThenElse(cond(pos), thenT(pos), elseT(pos))
   def iden: ForwardTactic = pr => pr
+  def uniformRenameF(what: Variable, repl: Variable): ForwardTactic = pr => pr(
+    UniformRenaming(what, repl)(pr.conclusion).head,
+    UniformRenaming(what, repl)
+  )
   def commuteEquivFR: ForwardPositionTactic = pos => pr => pr(
     CommuteEquivRight(pos.checkSucc.checkTop.asInstanceOf[SuccPos])(pr.conclusion).head,
     CommuteEquivRight(pos.checkSucc.checkTop.asInstanceOf[SuccPos])
