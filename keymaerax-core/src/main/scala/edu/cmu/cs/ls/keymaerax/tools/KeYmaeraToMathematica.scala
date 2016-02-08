@@ -95,6 +95,7 @@ object KeYmaeraToMathematica {
     case Not(phi) => new MExpr(MathematicaSymbols.NOT, Array[MExpr](convertFormula(phi)))
     case Exists(vs, phi) => convertExists(vs,phi)
     case Forall(vs, phi) => convertForall(vs,phi)
+    case _ => throw new ProverException("Don't know how to convert " + f + " of class " + f.getClass)
   }
 
   private def convertFnApply(fn: Function, child: Term): MExpr = child match {
