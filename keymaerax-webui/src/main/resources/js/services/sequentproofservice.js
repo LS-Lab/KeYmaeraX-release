@@ -136,7 +136,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           } else {
             // proof might be finished
             if(!theAgenda.proofStatusDisplayed) {
-              theAgnda.proofStatusDisplayed == true
+              theAgenda.proofStatusDisplayed == true
               $rootScope.$emit('agenda.isEmpty');
               console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
             }
@@ -176,11 +176,11 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         });
         delete theAgenda.itemsMap[oldAgendaItem.id];
         if (theAgenda.itemIds().length == 0 && !theAgenda.proofStatusDisplayed) {
-          theAgnda.proofStatusDisplayed == true
+          theAgenda.proofStatusDisplayed == true
           console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
           $rootScope.$emit('agenda.isEmpty');
         }
-        if(theAgnda.proofStatusDisplayed == true) {
+        if(theAgenda.proofStatusDisplayed == true) {
           console.log("Not emitting agenda.isEmpty because it's already been emitted.")
         }
       } else {
