@@ -258,7 +258,7 @@ trait UnifyUSCalculus {
      * @param subst the substitution subst=unify(k,c)
      * @param K the context of fact in which key k occurs
      * @param k the key from context K{_} to use in place of c
-     * @param p the position at which this useAt is applied to
+     * @param p the position in the sequent at which this useAt is applied to
      * @param C the context C{_} around the position p at which K{k} will be used
      * @param c the formula c at position p in context C{_} to be replaced by subst(k)
      * @param sequent the sequent in which this useAt happens.
@@ -333,7 +333,39 @@ trait UnifyUSCalculus {
         case Imply(DotFormula, other) => implyStep(other, factTactic)
 
         case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
-          ???
+          //@todo uncomment better implementation below again. Currently just from useFor without local abilities
+          // try to prove prereq globally
+          //@todo if that fails preserve context and fall back to CMon and C{prereq} -> ...
+          /* {{{
+           *                                         fact
+           *                                   prereq -> remainder
+           * ----------------master   ----------------------------- US
+           * |- subst(prereq)         |- subst(prereq -> remainder)
+           * ------------------------------------------------------ CutRight
+           *         |- subst(remainder)
+           * }}}
+           * The resulting new fact subst(remainder) is then used via useFor
+           */
+
+          // |- subst(prereq)
+          val prereqFact = TactixLibrary.proveBy(subst(prereq), TactixLibrary.master())
+          require(prereqFact.isProved, "only globally provable requirements currently supported. Ese useAt instead " + prereqFact)
+
+          // |- subst(remainder{k})
+          val remFact: Provable = (Provable.startProof(subst(Context(remainder)(k)))
+            // |- subst(prereq)      |- subst(prereq -> remainder)
+            (CutRight(subst(prereq), SuccPos(0)), 0)
+            // prove right branch   |- subst(prereq -> remainder)
+            // right branch  |- subst(prereq -> remainder)  byUS(fact)
+            (subst.toForward(fact), 1)
+            // left branch   |- subst(prereq)
+            (prereqFact, 0)
+            )
+          remFact ensuring(r => r.subgoals == fact.subgoals, "Proved / no new subgoals expected " + remFact)
+
+          val remKey: PosInExpr = key.child
+          require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
+          UnifyUSCalculus.this.useAt(remFact, remKey, inst)(p)
         //@todo uncomment again
 //          //@todo assumes no more context around remainder (no other examples so far)
 //          lazy val provePrereqLocally: BelleExpr = if (remainder.isInstanceOf[Equiv]) {
