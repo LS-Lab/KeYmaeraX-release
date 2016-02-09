@@ -66,9 +66,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
               }
             })
             .catch(function(err) {
-              console.log('Interpreting error as no tactic being applicable: ' + err);
-              //@todo send better error message, now we have to guess that probably the tactic was not applicable
-              $rootScope.$emit('proof.message', "No axiom/tactic applicable to that formula");
+              $rootScope.$emit('proof.message', err.data.textStatus);
             })
             .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
         },
