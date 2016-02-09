@@ -6,9 +6,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentTactic, DependentPositionTactic, BelleExpr}
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
-import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, Position}
 import edu.cmu.cs.ls.keymaerax.tools.DiffSolutionTool
 
 import scala.collection.immutable.HashMap
@@ -506,6 +505,7 @@ object DerivationInfo {
     new TwoPositionTacticInfo("closeId",
       RuleDisplayInfo("closeId", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
       {case () => ProofRuleTactics.trivialCloser}),
+    new TwoPositionTacticInfo("L2R", "L2R", {case () => (pos: AntePosition) => TactixLibrary.eqL2R(pos)}),
 
     // Proof rule input tactics
     new InputTacticInfo("cut"
