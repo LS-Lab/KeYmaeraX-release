@@ -76,6 +76,7 @@ object ToolTactics {
   private def qeSuccedentHd(qeTool : QETool) = new SingleGoalDependentTactic("QE") {
     override def computeExpr(sequent: Sequent): BelleExpr  = {
       assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
+      require(sequent.succ.head.isFOL, "QE only on FOL formulas")
 
       //Run QE and extract the resulting provable and equivalence
       val qeFact = core.RCF.proveArithmetic(qeTool, sequent.succ.head).fact

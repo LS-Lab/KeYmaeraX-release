@@ -112,6 +112,19 @@ object Augmentors {
       }, fml)
       pos
     }
+
+    /** Returns true if the formula is FOL, false otherwise. */
+    def isFOL: Boolean = {
+      var result = true
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+          case Box(_, _) => result = false; Left(Some(ExpressionTraversal.stop))
+          case Diamond(_, _) => result = false; Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, fml)
+      result
+    }
   }
 
   /**
