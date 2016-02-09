@@ -86,17 +86,20 @@ trait UnifyUSCalculus {
   //def useAt(fact: Formula, key: PosInExpr, tactic: Tactic, inst: Subst=>Subst): PositionTactic = useAt(fact, key, tactic, inst)
   //def useAt(fact: Formula, key: PosInExpr, tactic: Tactic): PositionTactic = useAt(fact, key, tactic)
   /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(fact: Formula, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(fact, key, nil, inst)
-  def useAt(fact: Formula, key: PosInExpr): DependentPositionTactic = useAt(fact, key, nil)
+  def useAt(fact: Formula, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(fact, key, nil, None, inst)
+  def useAt(fact: Formula, key: PosInExpr): DependentPositionTactic = useAt(fact, key, nil, None)
   /** useAt(fact)(pos) uses the given fact at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(fact: Provable, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
-    useAt(fact.conclusion.succ.head, key, byUS(fact), inst)
+    useAt(fact.conclusion.succ.head, key, byUS(fact), None, inst)
   }
-  def useAt(fact: Provable, key: PosInExpr): DependentPositionTactic = {
+  //@todo deprecate this and/or find a more serializable way of doing useAt's
+  def useAt(fact: Provable, key: PosInExpr): DependentPositionTactic = useAt(fact, key, None) //can't just make the next useAt optional b/c then there are multiple definitions of useAt with ambiguous default parameters
+
+  def useAt(fact: Provable, key: PosInExpr, codeName: Option[String]): DependentPositionTactic = {
     require(fact.conclusion.ante.isEmpty && fact.conclusion.succ.length==1)
     require(fact.isProved, "(no strict requirement, but) the best usable facts are proved " + fact)
-    useAt(fact.conclusion.succ.head, key, byUS(fact))
+    useAt(fact.conclusion.succ.head, key, byUS(fact), codeName)
   }
   // like useAt(fact,key) yet literally without uniform substitution of fact
 //  private[tactics] def useDirectAt(fact: Provable, key: PosInExpr): PositionTactic = {
@@ -106,11 +109,11 @@ trait UnifyUSCalculus {
 //  }
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(lem: Lemma, key:PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(lem.fact, key, inst)
-  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem.fact, key)
-  def useAt(lem: Lemma)               : DependentPositionTactic = useAt(lem.fact, PosInExpr(0::Nil))
+  def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem.fact, key, None)
+  def useAt(lem: Lemma)               : DependentPositionTactic = useAt(lem.fact, PosInExpr(0::Nil), None)
   /** useAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: String, key: PosInExpr, inst: Subst=>Subst): DependentPositionTactic = useAt(AxiomInfo(axiom).provable, key, inst)
-  def useAt(axiom: String, key: PosInExpr): DependentPositionTactic = useAt(AxiomInfo(axiom).provable, key)
+  def useAt(axiom: String, key: PosInExpr): DependentPositionTactic = useAt(AxiomInfo(axiom).provable, key, Some(AxiomInfo(axiom).codeName))
   def useAt(axiom: String, inst: Subst=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
   def useAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1)
 
@@ -207,7 +210,10 @@ trait UnifyUSCalculus {
    * @see [[edu.cmu.cs.ls.keymaerax.tactics]]
    * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
    */
-  def useAt(fact: Formula, key: PosInExpr, factTactic: BelleExpr, inst: Subst=>Subst = us=>us): DependentPositionTactic = new DependentPositionTactic("useAt") {
+  def useAt(fact: Formula, key: PosInExpr, factTactic: BelleExpr, codeName: Option[String], inst: Subst=>Subst = us=>us): DependentPositionTactic = new DependentPositionTactic(codeName match {
+    case Some(name) => name
+    case None => "useAt" //???
+  }) {
     private val (keyCtx:Context[_],keyPart) = fact.at(key)
 
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -476,7 +482,7 @@ trait UnifyUSCalculus {
     * @see [[UnifyUSCalculus.CE(PosInExpr)]]
     * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
-    * @example `CEat(fact)` is equivalent to `CEat(fact, Context("⎵".asFormula))``
+    * @example `CEat(fact)` is equivalent to `CEat(fact, Context("⎵".asFormula))`
     * @todo Optimization: Would direct propositional rules make CEat faster at pos.isTopLevel?
     */
   def CEat(fact: Provable): DependentPositionTactic = new DependentPositionTactic("CE(Provable)") {
