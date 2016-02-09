@@ -195,11 +195,10 @@ object BTacticParser extends (String => Option[BelleExpr]) {
       }
     }
 
-    //@todo implement a parser for subpositions as well as positions.
-    private def strToPos(pos : String) = {
-      if(pos.endsWith(".") && pos.count(c => c == '.') == 1) Position(pos.replace(".", "").toInt)
-      else if(pos.count(c => c == '.') == 0) Position(pos.toInt)
-      else ??? //Need to implement subpositions.
+    private def strToPos(pos: String) = {
+      if (!pos.contains('.')) Position(pos.toInt)
+      else Position(pos.substring(0, pos.indexOf('.')).toInt,
+        pos.substring(pos.indexOf('.')+1).split('.').filter(_.nonEmpty).map(_.toInt).toList)
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
