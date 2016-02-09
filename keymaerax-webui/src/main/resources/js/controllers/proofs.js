@@ -75,7 +75,7 @@ var pollProofStatus = function(proof, userId, http) {
 }
 
 /* Proof list for all models belonging to a user. */
-angular.module('keymaerax.controllers').controller('ProofListCtrl', function ($scope, $http, $cookies,$location, $routeParams) {
+angular.module('keymaerax.controllers').controller('ProofListCtrl', function ($scope, $http, $cookies,$location, $routeParams, $route) {
   $scope.openPrf = function(proofId) {
       $location.path('/proofs/' + proofId)
   }
