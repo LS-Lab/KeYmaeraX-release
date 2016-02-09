@@ -83,6 +83,10 @@ object KeYmaeraInterface {
       proofNodeIds += (taskId -> Map())
     }
 
+    def forceDeleteTask(taskId: String) = tasks.synchronized {
+      tasks -= taskId
+    }
+
     def addNode(tId: String, nId: String, p: ProofNode) = tasks.synchronized {
       tasks.get(tId) match {
         case Some(v) =>
