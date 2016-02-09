@@ -1003,6 +1003,15 @@ class ShutdownReqeuest() extends Request {
   }
 }
 
+class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Request {
+  private val proofId = Integer.parseInt(proofIdStr)
+
+  override def getResultingResponses(): List[Response] = {
+    val exprText = new ExtractTacticFromTrace(db).apply(proofId).prettyString
+    new ExtractTacticResponse(exprText) :: Nil
+  }
+}
+
 class MockRequest(resourceName: String) extends Request {
   override def getResultingResponses(): List[Response] = new MockResponse(resourceName) :: Nil
 }

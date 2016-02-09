@@ -684,6 +684,13 @@ class NodeResponse(tree : String) extends Response {
   def getJson = node
 }
 
+
+class ExtractTacticResponse(tacticText: String) extends Response {
+  def getJson = JsObject(
+    "tacticText" -> JsString(tacticText)
+  )
+}
+
 class MockResponse(resourceName: String) extends Response {
   //@todo add schema
   def getJson = scala.io.Source.fromInputStream(getClass.getResourceAsStream(resourceName)).mkString.parseJson

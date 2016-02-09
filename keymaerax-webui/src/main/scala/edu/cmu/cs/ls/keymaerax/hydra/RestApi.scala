@@ -163,6 +163,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}
 
+  val extractTactic = path("proofs" / "user" / Segment / Segment / "extract") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new ExtractTacticRequest(database, proofId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proofs
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -585,6 +592,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     taskStatus            ::
     taskResult            ::
     stopTask              ::
+    extractTactic         ::
     counterExample        ::
     pruneBelow            ::
     proofTask             ::
