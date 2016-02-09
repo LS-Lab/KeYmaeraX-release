@@ -600,7 +600,9 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, None) => value
     }
     val specificTerm = if (consultAxiomInfo) getSpecificName(belleTerm, node.sequent, pos, pos2, _.codeName) else belleTerm
-    if(inputs.isEmpty) specificTerm
+    if (inputs.isEmpty && pos.isEmpty) { assert(pos2.isEmpty, "Undefined pos1, but defined pos2"); specificTerm }
+    else if (inputs.isEmpty && pos.isDefined && pos2.isEmpty) { specificTerm + "(" + pos.get.prettyString + ")" }
+    else if (inputs.isEmpty && pos.isDefined && pos2.isDefined) { specificTerm + "(" + pos.get.prettyString + "," + pos2.get.prettyString + ")" }
     else specificTerm + "(" + paramStrings.mkString(",") + ")"
   }
 
@@ -659,6 +661,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
               case (Some(position), None, expr: BelleExpr) => expr
               case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
+              case (Some(_), Some(_), expr: BelleExpr) => expr
               case _ => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
             }
           val branch = tree.goalIndex(nodeId)

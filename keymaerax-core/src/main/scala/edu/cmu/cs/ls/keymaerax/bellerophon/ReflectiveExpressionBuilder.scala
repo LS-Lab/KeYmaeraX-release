@@ -37,9 +37,11 @@ object ReflectiveExpressionBuilder {
       case (expr:DependentPositionTactic, arg::Nil, 1) => new AppliedDependentPositionTactic(expr, Fixed(arg))
       case (expr:BuiltInTwoPositionTactic, arg1::arg2::Nil, 2) =>
         AppliedTwoPositionTactic(expr, arg1, arg2)
-      case (expr, posArgs, num) =>
-        if (posArgs.length > num) {
-          throw new ReflectiveExpressionBuilderExn("Expected either " + num + " or 0 position arguments, got " + posArgs.length)
+      case (expr: (Position => DependentPositionTactic), arg1::arg2::Nil, 2) =>
+        new AppliedDependentPositionTactic(expr(arg1), Fixed(arg2))
+      case (expr, pArgs, num) =>
+        if (pArgs.length > num) {
+          throw new ReflectiveExpressionBuilderExn("Expected either " + num + " or 0 position arguments, got " + pArgs.length)
         } else {
           throw new ReflectiveExpressionBuilderExn("Tactics with " + num + " arguments cannot have type " + expr.getClass.getSimpleName)
         }
