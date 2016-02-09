@@ -505,7 +505,11 @@ object DerivationInfo {
     new TwoPositionTacticInfo("closeId",
       RuleDisplayInfo("closeId", (List("&Gamma;", "P"), List("P", "&Delta;")), Nil),
       {case () => ProofRuleTactics.trivialCloser}),
-    new TwoPositionTacticInfo("L2R", "L2R", {case () => (pos: AntePosition) => TactixLibrary.eqL2R(pos)}),
+    new TwoPositionTacticInfo("L2R",
+      RuleDisplayInfo("L2R",
+        /*conclusion*/ (List("&Gamma;", "x=y", "P(x)"), List("Q(x)", "&Delta;")),
+        /*premise*/    List((List("&Gamma;", "x=y", "P(y)"), List("Q(y)", "&Delta;")))),
+      {case () => (pos: AntePosition) => TactixLibrary.eqL2R(pos)}),
 
     // Proof rule input tactics
     new InputTacticInfo("cut"
