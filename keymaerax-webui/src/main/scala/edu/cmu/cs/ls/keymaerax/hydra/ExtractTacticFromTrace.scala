@@ -2,24 +2,33 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import TacticExtractionErrors._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
 
 class ExtractTacticFromTrace(db: DBAbstraction) {
   // Additional wrappers
   def apply(proofId: Int): BelleExpr = apply(db.getExecutionTrace(proofId))
-  def apply(trace : ExecutionTrace) : BelleExpr  = apply(ProofTree.ofTrace(trace))()
+  def apply(trace : ExecutionTrace) : BelleExpr  = {
+    val tree = ProofTree.ofTrace(trace)
+    apply(tree)(tree.root)
+  }
 
   /**
     * @note this could be tailrec.
     * @param tree A proof tree
     * @return A structured Bellerophon tactic that constructs the proof tree.
     */
-  def apply(tree : ProofTree)(node: TreeNode = tree.root) : BelleExpr = {
+  def apply(tree : ProofTree)(node: TreeNode) : BelleExpr = {
     assert(tree.root.startStep.isEmpty, "Root should not have a startStep")
-    val descendants = node.allDescendants
-    if(descendants == 0) tacticAt(node)
-    else if(descendants == 1) tacticAt(node) & apply(tree)(descendants.head)
-    else tacticAt(node) & BranchTactic(descendants.map(apply(tree)))
+    val children = node.children
+//      .filter(_ != node) //@todo remove this line... seems like a bug in ProofTree.
+    assert(!children.contains(node), "A node should not be its own child.") //but apparently this happens.
+
+    val thisTactic = tacticAt(node)
+
+    if(children.length == 0) thisTactic
+    else if(children.length == 1) thisTactic & apply(tree)(children.head)
+    else thisTactic & BranchTactic(children.map(child => apply(tree)(child)))
   }
 
   private def tacticAt(node: TreeNode) : BelleExpr = node.endStep match {
@@ -36,7 +45,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
       case e : ReflectiveExpressionBuilderExn => throw TacticExtractionError(s"Could not parse Bellerophon tactic becuase a base-tactic was missing", e)
       case t : Throwable => throw TacticExtractionError(s"Could not retrieve executable ${step.executableId} from the database", t)
     }
-    case None => ??? //@todo determine if this is an error or if we end up here when there are open (closed?) leaves.
+    case None => Idioms.nil //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise.
   }
 }
 
