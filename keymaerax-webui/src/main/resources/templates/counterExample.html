@@ -34,16 +34,18 @@
     Some arithmetic simplifications may help reduce the complexity.
     </p>
     <p>
-        If both proving the formula fails (<code>&#8866; false</code>) and no counter-example can be found, it sometimes
-        is an indication for a division by zero in the formula.
+        If the formula cannot be proved (<code>&#8866; false</code>)<br />
+        and no counter-example can be found, then<br />
+        sanity check it, e.g., whether you could have divided by zero.
     </p>
 </div>
 <div ng-if="result === 'cex.timeout'" class="modal-body">
     Sorry, no counter-example found before search timeout expired.
 </div>
 <div ng-if="result === 'cex.nonfo'" class="modal-body">
-    Sorry, cannot search for counter-examples in modalities. Please use more proof steps to remove modalities, until
-    only first-order formulas remain and then try again.
+    Sorry, cannot search for counter-examples in modalities.<br />
+    Please use more proof steps to remove modalities,<br />
+    until only first-order formulas remain and then try again.
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="cancel()">Ok</button>
