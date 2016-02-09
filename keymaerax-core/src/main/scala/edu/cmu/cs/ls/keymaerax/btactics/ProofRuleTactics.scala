@@ -71,21 +71,21 @@ object ProofRuleTactics {
     }
   }
 
-  def notL = new BuiltInLeftTactic("NotL") {
+  def notL = new BuiltInLeftTactic("notL") {
     override def computeAnteResult(provable: Provable, pos: AntePosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.NotLeft(pos.top), 0)
     }
   }
 
-  def notR = new BuiltInRightTactic("NotR") {
+  def notR = new BuiltInRightTactic("notR") {
     override def computeSuccResult(provable: Provable, pos: SuccPosition): Provable = {
       requireOneSubgoal(provable)
       provable(core.NotRight(pos.top), 0)
     }
   }
 
-  def andR = new BuiltInRightTactic("AndR") {
+  def andR = new BuiltInRightTactic("andR") {
     override def computeSuccResult(provable: Provable, pos : SuccPosition) = {
       requireOneSubgoal(provable)
       //@todo how is isTopLevel ensured here and elsewhere? Call pos.checkTop.top?
@@ -93,14 +93,14 @@ object ProofRuleTactics {
     }
   }
 
-  def andL = new BuiltInLeftTactic("AndL") {
+  def andL = new BuiltInLeftTactic("andL") {
     override def computeAnteResult(provable: Provable, pos: AntePosition) = {
       requireOneSubgoal(provable)
       provable(core.AndLeft(pos.top), 0)
     }
   }
 
-  def orR = new BuiltInRightTactic("OrR") {
+  def orR = new BuiltInRightTactic("orR") {
     override def computeSuccResult(provable: Provable, pos : SuccPosition) = {
       requireOneSubgoal(provable)
       provable(core.OrRight(pos.top), 0)
