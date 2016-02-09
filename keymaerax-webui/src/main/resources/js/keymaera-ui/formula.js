@@ -432,6 +432,7 @@ angular.module('formula')
             }
 
             scope.formulaDrop = function(dragData) {
+              scope.dndTooltip.close();
               if (scope.formula.id !== dragData) {
                 var fml1Id = dragData;
                 var fml2Id = scope.formula.id;
