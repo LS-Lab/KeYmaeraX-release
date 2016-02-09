@@ -2,7 +2,7 @@ angular.module('formula', ['ngSanitize']);
 
 /** Renders a formula into hierarchically structured spans */
 angular.module('formula')
-  .directive('k4Formula', ['$compile', '$http', '$sce', function($compile, $http, $sce) {
+  .directive('k4Formula', ['$compile', '$http', '$sce', '$q', function($compile, $http, $sce, $q) {
     return {
         restrict: 'AE',
         scope: {
@@ -29,7 +29,7 @@ angular.module('formula')
                              'ng-right-click="formulaRightClick(\'' + id + '\', $event)"' +
                              // drag-and-drop tooltip
                              'uib-tooltip-template="\'templates/formulaDndTooltipTemplate.html\'"' +
-                             'tooltip-popup-delay="500" tooltip-placement="bottom"' +
+                             'tooltip-placement="bottom"' +
                              'tooltip-trigger="none" tooltip-is-open="dndTooltip.isOpen(\'' + id + '\')"' +
                              // axiom/tactic application popover
                              'uib-popover-template="\'templates/axiomPopoverTemplate.html\'"' +
@@ -426,45 +426,48 @@ angular.module('formula')
             scope.dndTooltip = {
               openFormulaId: undefined,
               data: undefined,
-              isOpen: function(formulaId) { return scope.dndTooltip.openFormulaId !== undefined && scope.dndTooltip.openFormulaId === formulaId; },
-              open: function(formulaId) { scope.dndTooltip.openFormulaId = formulaId; },
-              formulaId: function() { return scope.dndTooltip.openFormulaId; },
-              close: function() { scope.dndTooltip.openFormulaId = undefined; }
+              isOpen: function(formulaId) { return this.openFormulaId !== undefined && this.openFormulaId === formulaId; },
+              open: function(formulaId) { this.openFormulaId = formulaId; },
+              formulaId: function() { return this.openFormulaId; },
+              close: function() { this.openFormulaId = undefined; }
             }
 
+            dndSinks = {};
             scope.dndSink = function(sinkFormulaId) {
-              return {
-                formulaDrop: function(dragData) {
-                  scope.dndTooltip.close();
-                  if (sinkFormulaId !== dragData) {
-                    var fml1Id = dragData;
-                    var fml2Id = sinkFormulaId;
-                    scope.onTwoPositionTactic({fml1Id: fml1Id, fml2Id: fml2Id, tacticId: 'step'});
-                  }
-                },
-                formulaDragEnter: function(dragData) {
-                  if (sinkFormulaId !== dragData) {
-                    $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + dragData + '/' + sinkFormulaId + '/twoposlist')
-                      .success(function(data) {
-                        if (data.length > 0) {
-                          var tactic = data[0];
-                          if (tactic.derivation !== undefined && tactic.derivation.type === 'sequentrule') {
-                            //@todo open a popover if input is required
-                            scope.dndTooltip.data = convertSequentRuleToInput(tactic);
+              if (dndSinks[sinkFormulaId] === undefined) {
+                dndSinks[sinkFormulaId] = {
+                  requestTimeout: undefined,
+                  formulaDrop: function(dragData) {
+                    if (this.requestTimeout !== undefined) this.requestTimeout.resolve();
+                    scope.dndTooltip.close();
+                    if (sinkFormulaId !== dragData) {
+                      var fml1Id = dragData;
+                      var fml2Id = sinkFormulaId;
+                      scope.onTwoPositionTactic({fml1Id: fml1Id, fml2Id: fml2Id, tacticId: 'step'});
+                    }
+                  },
+                  formulaDragEnter: function(dragData) {
+                    if (!sinkFormulaId.startsWith(dragData)) {
+                      this.requestTimeout = $q.defer();
+                      $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + dragData + '/' + sinkFormulaId + '/twoposlist', {timeout: this.requestTimeout.promise})
+                        .then(function(response) {
+                          if (response.data.length > 0) {
+                            var tactic = response.data[0];
+                            scope.dndTooltip.data = convertTacticInfo(tactic);
                           } else {
-                            scope.dndTooltip.data = tactic;
+                            scope.dndTooltip.data = undefined;
                           }
-                        } else {
-                          scope.dndTooltip.data = undefined;
-                        }
-                        scope.dndTooltip.open(sinkFormulaId);
-                      });
+                          scope.dndTooltip.open(sinkFormulaId);
+                        });
+                    }
+                  },
+                  formulaDragLeave: function(dragData) {
+                    if (this.requestTimeout !== undefined) this.requestTimeout.resolve();
+                    scope.dndTooltip.close();
                   }
-                },
-                formulaDragLeave: function(dragData) {
-                  scope.dndTooltip.close();
                 }
               }
+              return dndSinks[sinkFormulaId];
             }
 
             convertTacticInfo = function(info) {
