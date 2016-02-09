@@ -42,7 +42,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
       }
     } catch {
       case e : BParserException => throw TacticExtractionError(e.getMessage, e)
-      case e : ReflectiveExpressionBuilderExn => throw TacticExtractionError(s"Could not parse Bellerophon tactic becuase a base-tactic was missing", e)
+      case e : ReflectiveExpressionBuilderExn => throw TacticExtractionError(s"Could not parse Bellerophon tactic because a base-tactic was missing", e)
       case t : Throwable => throw TacticExtractionError(s"Could not retrieve executable ${step.executableId} from the database", t)
     }
     case None => Idioms.nil //@todo this should be a "partial"/"emit" if the goal is closed and nothing otherwise.
@@ -50,7 +50,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
 }
 
 object TacticExtractionErrors {
-  class TacticExtractionError(message: String, cause: Option[Throwable]) extends Exception(message + {cause match {case Some(e) => "Caused by: " + e.printStackTrace(); case None => ""}})
+  class TacticExtractionError(message: String, cause: Option[Throwable]) extends Exception(message + {cause match {case Some(e) => ". Caused by: " + e.getMessage; case None => ""}})
   object TacticExtractionError {
     def apply(message: String, cause: Exception) = new TacticExtractionError(message, Some(cause))
     def apply(message: String, cause: Throwable) = new TacticExtractionError(message, Some(cause))
