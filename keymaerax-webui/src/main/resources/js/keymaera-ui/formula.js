@@ -18,7 +18,7 @@ angular.module('formula')
         },
         link: function(scope, element, attrs) {
             var span = function(id, content, depth) {
-                if (scope.highlight && (content.type === 'formula' || content.type === 'derivative')) {
+                if (scope.highlight && (content.type === 'formula' || content.type === 'derivative' || content.type === 'symbol')) {
                     return '<span class="hl" id="' + id + '"' +
                              'onmouseover="$(event.target).addClass(\'hlhover\');"' +
                              'onmouseout="$(event.target).removeClass(\'hlhover\');"' +
