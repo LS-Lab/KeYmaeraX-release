@@ -63,6 +63,12 @@
                            uib-tooltip="Hide" tooltip-placement="left" tooltip-popup-delay="500">
                         <span class="fa fa-eye-slash"></span></a>
                     </li>
+                    <li ng-if="f.formula.name === 'equals'">
+                        <a ng-click="onTactic(f.id,'allL2R')"
+                           uib-tooltip="Replace all occurrences of left-hand side with right-hand side"
+                           tooltip-placement="top" tooltip-popup-delay="500">
+                        <span class="fa fa-exchange"></span></a>
+                    </li>
                 </ul>
                 <div class="k4-formula-content pull-right">
                     <ul><li>{{f.id}}:</li></ul>
