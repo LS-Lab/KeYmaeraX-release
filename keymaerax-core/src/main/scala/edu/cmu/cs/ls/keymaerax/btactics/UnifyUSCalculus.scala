@@ -988,7 +988,7 @@ trait UnifyUSCalculus {
       val subst = inst(UnificationMatch(keyPart, expr))
       if (DEBUG) println("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
       if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof)
-      Predef.assert(expr == subst(keyPart), "unification matched key successfully:\n    " + expr + "\n is " + subst(keyPart) + "\n which is " + keyPart + "\ninstantiated by " + subst)
+      Predef.assert(expr == subst(keyPart), "unification matched key successfully:\nexpr     " + expr + "\nequals   " + subst(keyPart) + "\nwhich is " + keyPart + "\ninstantiated by " + subst)
 
       /** useFor(subst, K,k, p, C,c)
         *

@@ -1402,8 +1402,9 @@ object DerivedAxioms {
     */
   lazy val timesZeroF = "(f()*0) = 0".asFormula
   lazy val timesZero = derivedAxiom("*0", Sequent(Nil, IndexedSeq(), IndexedSeq(timesZeroF)),
-    useAt(timesCommutative)(1, 0::Nil) &
+    if (false) useAt(timesCommutative)(1, 0::Nil) &
       byUS(zeroTimes)
+    else QE
   )
   lazy val timesZeroT = derivedAxiomT(timesZero)
 
@@ -1427,8 +1428,9 @@ object DerivedAxioms {
     */
   lazy val plusZeroF = "(f()+0) = f()".asFormula
   lazy val plusZero = derivedAxiom("+0", Sequent(Nil, IndexedSeq(), IndexedSeq(plusZeroF)),
-    useAt(plusCommutative)(1, 0::Nil) &
+    if (false) useAt(plusCommutative)(1, 0::Nil) &
       byUS(zeroPlus)
+    else QE
   )
   lazy val plusZeroT = derivedAxiomT(plusZero)
 
