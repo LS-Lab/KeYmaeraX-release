@@ -728,7 +728,7 @@ object DerivedAxioms {
     * }}}
     * @Derived
     */
-  lazy val assigndF = "<v_:=t_();>p_(v_) <-> p_(t_())".asFormula
+  lazy val assigndF = "<x_:=f();>p(x_) <-> p(f())".asFormula
   lazy val assigndAxiom = derivedAxiom("<:=> assign",
     Sequent(Nil, IndexedSeq(), IndexedSeq(assigndF)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
@@ -746,7 +746,7 @@ object DerivedAxioms {
     * }}}
     * @Derived
     */
-  lazy val assignDualF = "<v_:=t_();>p_(v_) <-> [v_:=t_();]p_(v_)".asFormula
+  lazy val assignDualF = "<x_:=f();>p(x_) <-> [x_:=f();]p(x_)".asFormula
   lazy val assignDualAxiom = derivedAxiom(":= assign dual",
     Sequent(Nil, IndexedSeq(), IndexedSeq(assignDualF)),
     useAt(assigndAxiom)(1, 0::Nil) &
@@ -763,7 +763,7 @@ object DerivedAxioms {
     * }}}
     * @Derived
     */
-  lazy val assignbEquationalF = "[v_:=t_();]p_(v_) <-> \\forall v_ (v_=t_() -> p_(v_))".asFormula
+  lazy val assignbEquationalF = "[x_:=f();]p(x_) <-> \\forall x_ (x_=f() -> p(x_))".asFormula
   lazy val assignbEquationalAxiom = derivedAxiom("[:=] assign equational",
     Sequent(Nil, IndexedSeq(), IndexedSeq(assignbEquationalF)),
     useAt("[:=] assign")(1, 0::Nil) &
@@ -846,7 +846,7 @@ object DerivedAxioms {
     * }}}
     * @Derived
     */
-  lazy val assignDF = "<v_':=t_();>p_(v_') <-> p_(t_())".asFormula
+  lazy val assignDF = "<x_':=f();>p(x_') <-> p(f())".asFormula
   lazy val assignDAxiom = derivedAxiom("<':=> differential assign",
     Sequent(Nil, IndexedSeq(), IndexedSeq(assignDF)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
@@ -1637,7 +1637,7 @@ object DerivedAxioms {
     * End.
     * }}}
     */
-  lazy val DlinearRightF = "(f_(??)*c_())' = (f_(??))'*c_()".asFormula
+  lazy val DlinearRightF = "(f(??)*c())' = (f(??))'*c()".asFormula
   lazy val DlinearRight = derivedAxiom("' linear right",
     Sequent(Nil, IndexedSeq(), IndexedSeq(DlinearRightF)),
     useAt("*' derive product")(1, 0:: Nil) &
