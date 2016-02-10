@@ -334,9 +334,7 @@ trait UnifyUSCalculus {
         case Imply(DotFormula, other) => implyStep(other, factTactic)
 
         case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
-          //@todo uncomment better implementation below again. Currently just from useFor without local abilities
           // try to prove prereq globally
-          //@todo if that fails preserve context and fall back to CMon and C{prereq} -> ...
           /* {{{
            *                                         fact
            *                                   prereq -> remainder
@@ -370,62 +368,40 @@ trait UnifyUSCalculus {
             require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
             UnifyUSCalculus.this.useAt(remFact, remKey, inst)(p)
           } catch {
-            case err: BelleError =>
-              println("Global proof of prereq unsuccessful. Local proof needed: " + err)
-              throw err
-//              //@todo assumes no more context around remainder (no other examples so far)
-//              lazy val provePrereqLocally: BelleExpr = if (remainder.isInstanceOf[Equiv]) {
-//                val (conclusion, commute) = remainder match {
-//                  case Equiv(DotFormula, other) => (other, if (p.isSucc) commuteEquivR(1) else ident)
-//                  case Equiv(other, DotFormula) => (other, if (p.isAnte) commuteEquivR(1) else ident)
-//                  //              case Equal(DotTerm, other) => (other, if (p.isSucc) TactixLibrary.useAt("= commute")(1) else ident)
-//                  //              case Equal(other, DotTerm) => (other, if (p.isAnte) TactixLibrary.useAt("= commute")(1) else ident)
-//                }
-//
-//                // prove prereq locally
-//                cut(C(subst(prereq))) <(
-//                  /* use */ cutR(C(subst(conclusion)))(p.checkSucc.top) <(
-//                  hideL('Llast) partial,
-//                  coHide2(AntePos(sequent.ante.size), p.top) & equivifyR(1) & commute & implyRi & CMon(p.inExpr) /*@todo & factTactic*/) partial
-//                  ,
-//                  /* show: prereq remains open */ hideR(p.top) partial
-//                  )
-//                //@todo do something smart about Equal and about Imply and ....
-//              } else {ident}
-//
-////          // try to prove prereq globally, if that fails preserve context and fall back to CMon and C{prereq} -> ...
-//              //          (useAt(subst, Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(1).top) <(
-//              //            //@note the roles of use and show are really swapped here, since the implication on show will be handled by factTactic
-//              //            /* use: try to prove prereq globally */ TactixLibrary.QE,
-//              //            /* show */ factTactic), sequent) partial) |
-//              (provePrereqLocally partial)
-          }
-//          //@todo assumes no more context around remainder (no other examples so far)
-//          lazy val provePrereqLocally: BelleExpr = if (remainder.isInstanceOf[Equiv]) {
-//            val (conclusion, commute) = remainder match {
-//              case Equiv(DotFormula, other) => (other, if (p.isSucc) commuteEquivR(1) else ident)
-//              case Equiv(other, DotFormula) => (other, if (p.isAnte) commuteEquivR(1) else ident)
-//              //              case Equal(DotTerm, other) => (other, if (p.isSucc) TactixLibrary.useAt("= commute")(1) else ident)
-//              //              case Equal(other, DotTerm) => (other, if (p.isAnte) TactixLibrary.useAt("= commute")(1) else ident)
-//            }
-//
-//            // prove prereq locally
-//            cut(C(subst(prereq))) <(
-//              /* use */ cutR(C(subst(conclusion)))(p.checkSucc.top) <(
-//              hideL('Llast) partial,
-//              coHide2(AntePos(sequent.ante.size), p.top) & equivifyR(1) & commute & implyRi & CMon(p.inExpr) & factTactic) partial,
-//              /* show: prereq remains open */ hideR(p.top) partial
-//              )
-//            //@todo do something smart about Equal and about Imply and ....
-//          } else {ident}
-//
-//          // try to prove prereq globally, if that fails preserve context and fall back to CMon and C{prereq} -> ...
-//          (useAt(subst, Context(remainder), k, p, C, c, cutR(subst(prereq))(SuccPosition(1).top) <(
-//            //@note the roles of use and show are really swapped here, since the implication on show will be handled by factTactic
-//            /* use: try to prove prereq globally */ TactixLibrary.QE,
-//            /* show */ factTactic), sequent) partial) |
-//            (provePrereqLocally partial)
+            case err: Throwable =>
+              // global proof of prereq unsuccessful, local proof needed
+              /* {{{
+               *                                                                                              fact
+               *                                                                                        prereq -> remainder
+               *                                                                            --------------------------------------------- CMon
+               *                                               G |- C(subst(remL)),D          C(subst(prereq)) |- C(subst(remainder))
+               *                              -------------------------------------- Hide   --------------------------------------------- ->2<->
+               *                              G,C(subst(prereq)) |- C(subst(remL)),D        G,C(subst(prereq)) |- C(subst(remL->remR)),D
+               *                              ------------------------------------------------------------------------------------------- CutRight
+               * G |- C(subst(prereq)),D                              G,C(subst(prereq)) |- C(subst(remR)),D
+               * ------------------------------------------------------------------------------------------------------------------------ Cut
+               *                      G |- C(subst(remR)),D
+               * }}}
+               *
+               */
 
+              //@todo assumes no more context around remainder (no other examples so far)
+              val (conclusion, commute) = remainder match {
+                case Equiv(DotFormula, other) => (other, if (p.isSucc) commuteEquivR(1) else ident)
+                case Equiv(other, DotFormula) => (other, if (p.isAnte) commuteEquivR(1) else ident)
+//              case Equal(DotTerm, other) => (other, if (p.isSucc) TactixLibrary.useAt("= commute")(1) else ident)
+//              case Equal(other, DotTerm) => (other, if (p.isAnte) TactixLibrary.useAt("= commute")(1) else ident)
+              }
+
+              cut(C(subst(prereq))) <(
+                /* use: result remains open */ cutR(C(subst(conclusion)))(p.checkSucc.top) <(
+                  hideL('Llast) partial,
+                  coHide2(AntePos(sequent.ante.size), p.top) & equivifyR(1) & commute & implyRi & CMon(p.inExpr) &
+                    by(Provable.startProof(Imply(subst(prereq), subst(Context(remainder)(k))))(subst.toForward(fact), 0))
+                  ) partial,
+                /* show: prereq remains open */ hideR(p.top) partial
+                )
+          }
         case Forall(vars, remainder) if vars.length==1 => ???
           //useAt(subst, new Context(remainder), k, p, C, c, /*@todo instantiateQuanT(vars.head, subst(vars.head))(SuccPos(0))*/ ident, sequent)
 
