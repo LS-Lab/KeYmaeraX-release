@@ -226,12 +226,16 @@ class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) exte
   )
 }
 
-class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status: String) extends Response {
+class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status: String, lastStep: ExecutionStepPOJO) extends Response {
   def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "parentId" -> JsString(nodeId),
     "taskId" -> JsString(taskId),
     "status" -> JsString(status),
+    "lastStep" -> JsObject(
+      "ruleName" -> JsString(lastStep.ruleName),
+      "stepStatus" -> JsString(lastStep.status.toString)
+    ),
     "type" -> JsString("taskstatus")
   )
 }

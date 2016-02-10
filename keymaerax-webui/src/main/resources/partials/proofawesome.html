@@ -7,8 +7,9 @@
         <div class="spinner-double-bounce2"></div>
     </div>
     <div class="spinner-please-wait">
-        Tactic is executing, please wait...<br/>
-        <button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button>
+        <p>Tactic is executing, please wait...</p>
+        <p>{{runningTask.lastStep}}</p>
+        <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
     </div>
 </spinner>
 <spinner name="proofLoadingSpinner" ng-cloak="">

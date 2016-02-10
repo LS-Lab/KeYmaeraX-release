@@ -44,6 +44,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     nodeId: undefined,
     taskId: undefined,
     future: undefined,
+    lastStep: undefined,
     start: function(nodeId, taskId) {
       $scope.runningTask.nodeId = nodeId;
       $scope.runningTask.taskId = taskId;
@@ -82,6 +83,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
       var proofId = $routeParams.proofId;
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')
         .then(function(response) {
+          if (response.data.lastStep !== undefined) $scope.runningTask.lastStep = response.data.lastStep.ruleName;
           if (response.data.status === 'done') $scope.runningTask.future.resolve(taskId);
           else $timeout($scope.runningTask.poll(taskId), 50);
         })

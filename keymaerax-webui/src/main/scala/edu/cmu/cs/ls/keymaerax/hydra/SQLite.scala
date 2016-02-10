@@ -705,13 +705,13 @@ object SQLite {
       println("Updates: " + nUpdates + " Inserts: " + nInserts + " Selects: " + nSelects)
     }
 
-    def proofSteps(executionId: Int): List[ExecutionStepPOJO] = {
+    def proofSteps(executionId: Int, status: Option[ExecutionStepStatus] = Some(ExecutionStepStatus.Finished)): List[ExecutionStepPOJO] = {
       synchronizedTransaction({
-        var steps =
-          Executionsteps
-            .filter({case row => row.executionid === executionId &&
-               row.status === ExecutionStepStatus.Finished.toString})
-            .list
+        def statusFilter(row: Executionsteps): Column[Option[Boolean]] = status match {
+          case Some(s) => row.status === ExecutionStepStatus.toString(s)
+          case None => Some(true)
+        }
+        var steps = Executionsteps.filter({case row => row.executionid === executionId && statusFilter(row)}).list
         var prevId: Option[Int] = None
         var revResult: List[ExecutionStepPOJO] = Nil
         /* The Executionsteps table may contain many alternate histories for the same execution. In order to reconstruct
@@ -765,7 +765,7 @@ object SQLite {
       }
     }
 
-    override def getExecutionSteps(executionId: Int): List[ExecutionStepPOJO] = proofSteps(executionId)
+    override def getExecutionSteps(executionId: Int, status: Option[ExecutionStepStatus]): List[ExecutionStepPOJO] = proofSteps(executionId, status)
 
     override def getExecutionTrace(proofId: Int): ExecutionTrace = {
       /* This method has proven itself to be a resource hog, so this implementation attempts to minimize the number of

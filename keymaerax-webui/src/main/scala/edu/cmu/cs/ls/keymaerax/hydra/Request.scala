@@ -685,8 +685,11 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, taskId: String) extends Request {
   def getResultingResponses() = {
     val executor = BellerophonTacticExecutor.defaultExecutor
-    val isDone = executor.synchronized { !executor.contains(taskId) || executor.isDone(taskId) }
-    new TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running") :: Nil
+    val (isDone, lastStep) = executor.synchronized {
+      //@todo need intermediate step recording and query to get meaningful progress reports
+      (!executor.contains(taskId) || executor.isDone(taskId), db.getExecutionSteps(proofId.toInt, None).last)
+    }
+    new TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", lastStep) :: Nil
   }
 }
 
