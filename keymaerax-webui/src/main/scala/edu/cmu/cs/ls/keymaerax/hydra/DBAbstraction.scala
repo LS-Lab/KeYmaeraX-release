@@ -54,7 +54,7 @@ class ConfigurationPOJO(val name: String, val config: Map[String,String])
  * @param pubLink Link to additional information (paper) on the model.
  */
 class ModelPOJO(val modelId:Int, val userId:String, val name:String, val date:String, val keyFile:String,
-                val description:String, val pubLink:String, val title:String, val tactic : Option[String]) //the other guys on this linke should also be optional.
+                val description:String, val pubLink:String, val title:String, val tactic : Option[String], val numProofs: Int) //the other guys on this linke should also be optional.
 
 /**
  * Data object for proofs. A proof

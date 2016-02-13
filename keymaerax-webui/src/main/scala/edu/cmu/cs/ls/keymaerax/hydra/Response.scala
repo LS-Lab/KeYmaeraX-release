@@ -72,7 +72,8 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
     "pubLink" -> JsString(modelpojo.pubLink),
     "keyFile" -> JsString(modelpojo.keyFile),
     "title" -> JsString(modelpojo.title),
-    "hasTactic" -> JsBoolean(modelpojo.tactic.isDefined)
+    "hasTactic" -> JsBoolean(modelpojo.tactic.isDefined),
+    "numProofs" -> JsNumber(modelpojo.numProofs)
   ))
 
   def getJson = JsArray(objects:_*)

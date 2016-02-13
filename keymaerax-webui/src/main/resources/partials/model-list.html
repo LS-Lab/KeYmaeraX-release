@@ -56,13 +56,14 @@
             <td><a href="" ng-if="model.hasTactic" ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></a></td>
             <td ng-model="model">
                 <div class="btn-group" uib-dropdown>
-                <a ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show Proofs</a>
+                <a ng-href="dashboard.html?#/models/{{ model.id }}/proofs" ng-if="model.numProofs > 0">Show proofs</a>
+                <a ng-controller="ModelProofCreateCtrl" ng-click="createDefaultProofForModel(model.id)" ng-if="model.numProofs === 0">Start new proof</a>
                 <a uib-dropdown-toggle>
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
                 </a>
                 <ul uib-dropdown-menu role="menu" ng-model="model">
-                    <li role="menuitem"><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show Proofs</a></li>
+                    <li role="menuitem"><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show proofs</a></li>
                     <li role="menuitem"><a ng-controller="ModelProofCreateCtrl" ng-click="createDefaultProofForModel(model.id)">Start new proof</a></li>
                     <li role="menuitem"><a ng-controller="ModelUploadCtrl" ng-click="deleteModel(model.id)"><span class="fa fa-trash"></span> Delete this model</a></li>
                     <!--<li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs/create">Start new proof</a></li>-->

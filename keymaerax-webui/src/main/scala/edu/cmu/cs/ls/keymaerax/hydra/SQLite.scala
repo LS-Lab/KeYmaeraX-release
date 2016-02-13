@@ -185,8 +185,12 @@ object SQLite {
         nSelects = nSelects + 1
         Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element._Id.get, element.userid.get, element.name.get,
           blankOk(element.date), blankOk(element.filecontents),
-          blankOk(element.description), blankOk(element.publink), blankOk(element.title), element.tactic))
+          blankOk(element.description), blankOk(element.publink), blankOk(element.title), element.tactic, getNumProofs(element._Id.get)))
       })
+    }
+
+    private def getNumProofs(modelId: Int): Int = {
+      Proofs.filter(_.modelid === modelId).length.run
     }
 
     private def configWithDefault(config: String, subconfig: String, default: Int): Int = {
@@ -355,7 +359,8 @@ object SQLite {
           Models.filter(_._Id === modelId)
             .list
             .map(m => new ModelPOJO(
-              m._Id.get, m.userid.get, blankOk(m.name), blankOk(m.date), m.filecontents.get, blankOk(m.description), blankOk(m.publink), blankOk(m.title), m.tactic
+              m._Id.get, m.userid.get, blankOk(m.name), blankOk(m.date), m.filecontents.get, blankOk(m.description),
+              blankOk(m.publink), blankOk(m.title), m.tactic, getNumProofs(m._Id.get)
             ))
         if (models.length < 1) throw new Exception("getModel type should be an Option")
         else if (models.length == 1) models.head
