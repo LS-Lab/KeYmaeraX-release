@@ -326,8 +326,8 @@ arXiv:1205.4788
 Copyright and Licenses
 ======================
 
-Copyright (C) 2014-2015 Carnegie Mellon University. See COPYRIGHT.txt for details.
-Developed by Andre Platzer, Nathan Fulton, Ran Ji, Stefan Mitsch, Jan-David Quesel, Marcus Voelp
+Copyright (C) 2014-2016 Carnegie Mellon University. See COPYRIGHT.txt for details.
+Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Jan-David Quesel, Brandon Bohrer, Marcus Voelp, Ran Ji.
 
 See LICENSE.txt for the conditions of using this software.
 
