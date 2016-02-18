@@ -744,4 +744,11 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.ante should contain only ("x_0>0".asFormula, "x_1=b".asFormula, "t__0=0".asFormula)
     result.subgoals.head.succ should contain only "(true&t_>=0)&x=t_+x_0 -> x>0".asFormula
   }
+
+  "diffUnpackEvolutionDomainInitially" should "unpack the evolution domain of an ODE as fact at time zero" in {
+    val result = proveBy("[{x'=3&x>=0}]x>=0".asFormula, DifferentialTactics.diffUnpackEvolutionDomainInitially(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "x>=0".asFormula
+    result.subgoals.head.succ should contain only "[{x'=3&x>=0}]x>=0".asFormula
+  }
 }

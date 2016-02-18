@@ -490,6 +490,24 @@ object DifferentialTactics {
     }
   }
 
+  /**
+   * Unpacks the evolution domain of an ODE at time zero. Useful for proofs that rely on contradictions with other
+   * conditions at time zero preventing continuous evolution in the ODE.
+   * {{{
+   *  x<0, x>=0 |- [x'=3,y'=2 & x>=0]y>0
+   *  -----------------------------------diffUnpackEvolutionDomainInitially(1)
+   *        x<0 |- [x'=3,y'=2 & x>=0]y>0
+   * }}}
+   */
+  lazy val diffUnpackEvolutionDomainInitially: DependentPositionTactic = "foo" by ((pos, sequent) => sequent.sub(pos) match {
+    case Some(Box(ODESystem(_, q), _)) =>
+      require(pos.isSucc && pos.isTopLevel, "diffUnpackEvolDomain only at top-level in succedent")
+      cut(q) <(
+        /* use */ skip,
+        /* show */ DI(pos) & implyR(pos) & closeId
+        )
+  })
+
   def diffSolve(solution: Option[Formula] = None, preDITactic: BelleExpr = skip)(implicit tool: DiffSolutionTool with QETool): DependentPositionTactic = "diffSolve" by ((pos, sequent) => sequent.sub(pos) match {
     case Some(Box(odes: DifferentialProgram, _)) =>
       require(pos.isSucc && pos.isTopLevel, "diffSolve only at top-level in succedent")
