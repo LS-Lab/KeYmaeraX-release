@@ -658,7 +658,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2,t'=1}]x>b".asFormula)),
       diffSolve(Some("t=t_0+t_ & x=x_0+2*t_".asFormula))(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t__0=0".asFormula)
+    result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t__0=0".asFormula, "true".asFormula)
     result.subgoals.head.succ should contain only "((true&t_>=0)&t=t_0+t_)&x=x_0+2*t_ -> x>b".asFormula
   }
 
@@ -666,7 +666,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)),
       diffSolve(Some("x=x_0+2*t_".asFormula))(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t__0=0".asFormula)
+    result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t__0=0".asFormula, "true".asFormula)
     result.subgoals.head.succ should contain only "(true&t_>=0)&x=x_0+2*t_ -> x>b".asFormula
   }
 
@@ -674,7 +674,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2,t'=1}]x>b".asFormula)),
       diffSolve()(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t__0=0".asFormula)
+    result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t__0=0".asFormula, "true".asFormula)
     result.subgoals.head.succ should contain only "((true&t_>=0)&x=2*t_+x_0)&t=t_0+t_ -> x>b".asFormula
   }
 
@@ -682,7 +682,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(Nil, IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)),
       diffSolve(None)(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t__0=0".asFormula)
+    result.subgoals.head.ante should contain only ("x_0>b".asFormula, "t__0=0".asFormula, "true".asFormula)
     result.subgoals.head.succ should contain only "(true&t_>=0)&x=2*t_+x_0 -> x>b".asFormula
   }
 
@@ -694,7 +694,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v>=0".asFormula), IndexedSeq("[{x'=v}]x>0".asFormula)),
       diffSolve()(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x_0>0 & v>=0".asFormula, "t__0=0".asFormula)
+    result.subgoals.head.ante should contain only ("x_0>0 & v>=0".asFormula, "t__0=0".asFormula, "true".asFormula)
     result.subgoals.head.succ should contain only "(true&t_>=0)&x=t_*v+x_0 -> x>0".asFormula
   }
 
@@ -702,7 +702,7 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v>=0 & a>0".asFormula), IndexedSeq("[{x'=v,v'=a}]x>0".asFormula)),
       diffSolve(Some("v=a*t_+v_0&x=1/2*(a*t_*t_+2*t_*v_0+2*x_0)".asFormula))(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x_0>0 & v_0>=0 & a>0".asFormula, "t__0=0".asFormula)
+    result.subgoals.head.ante should contain only ("x_0>0 & v_0>=0 & a>0".asFormula, "t__0=0".asFormula, "true".asFormula)
     result.subgoals.head.succ should contain only "((true&t_>=0)&v=a*t_+v_0)&x=1/2*(a*t_*t_+2*t_*v_0+2*x_0) -> x>0".asFormula
   }
 
@@ -710,21 +710,21 @@ class DifferentialTests extends TacticTestBase {
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0 & v>=0 & a>0".asFormula), IndexedSeq("[{x'=v,v'=a}]x>0".asFormula)),
       diffSolve()(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x_0>0 & v_0>=0 & a>0".asFormula, "t__0=0".asFormula)
+    result.subgoals.head.ante should contain only ("x_0>0 & v_0>=0 & a>0".asFormula, "t__0=0".asFormula, "true".asFormula)
     result.subgoals.head.succ should contain only "((true&t_>=0)&v=a*t_+v_0)&x=1/2*(a*t_^2+2*t_*v_0+2*x_0) -> x>0".asFormula
   }
 
   it should "solve the simplest of all ODEs" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1}]x>0".asFormula)), diffSolve()(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x_0>0".asFormula, "t__0=0".asFormula)
+    result.subgoals.head.ante should contain only ("x_0>0".asFormula, "t__0=0".asFormula, "true".asFormula)
     result.subgoals.head.succ should contain only "(true&t_>=0)&x=t_+x_0 -> x>0".asFormula
   }
 
   it should "solve simple nested ODEs" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}]x>0".asFormula)), diffSolve()(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x_0>0".asFormula, "t__0=0".asFormula)
+    result.subgoals.head.ante should contain only ("x_0>0".asFormula, "t__0=0".asFormula, "true".asFormula)
     result.subgoals.head.succ should contain only "(true&t_>=0)&x=2*t_+x_0 -> [{x'=3}]x>0".asFormula
   }
 
@@ -734,15 +734,29 @@ class DifferentialTests extends TacticTestBase {
         IndexedSeq("[{x'=v,v'=a_0,t'=1&v>=0&t<=T}](t>0->\\forall a (a = (v^2/(2 *(s - x)))->[{x'=v,v'=-a,t'=1 & v>=0}](x + v^2/(2*a) <= s & (x + v^2/(2*a)) >= s)))".asFormula)),
       diffSolve()(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("v_0=0 & x_0<s & 0<T".asFormula, "t_0=0".asFormula, "a_0=(s-x_0)/T^2".asFormula, "t__0=0".asFormula)
+    result.subgoals.head.ante should contain only ("v_0=0 & x_0<s & 0<T".asFormula, "t_0=0".asFormula, "a_0=(s-x_0)/T^2".asFormula, "t__0=0".asFormula, "v_0>=0&t_0<=T".asFormula)
     result.subgoals.head.succ should contain only "((((v>=0&t<=T)&t_>=0)&t=t_0+t_)&v=a_0*t_+v_0)&x=1/2*(a_0*t_^2+2*t_*v_0+2*x_0)->t>0->\\forall a (a=v^2/(2*(s-x))->[{x'=v,v'=-a,t'=1&v>=0}](x+v^2/(2*a)<=s&x+v^2/(2*a)>=s))".asFormula
   }
 
   it should "increase index of existing other occurrences of initial values" in withMathematica { tool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula, "x_0=b".asFormula), IndexedSeq("[{x'=1}]x>0".asFormula)), diffSolve()(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x_0>0".asFormula, "x_1=b".asFormula, "t__0=0".asFormula)
+    result.subgoals.head.ante should contain only ("x_0>0".asFormula, "x_1=b".asFormula, "t__0=0".asFormula, "true".asFormula)
     result.subgoals.head.succ should contain only "(true&t_>=0)&x=t_+x_0 -> x>0".asFormula
+  }
+
+  it should "retain initial evolution domain for the sake of contradictions" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("y>0".asFormula), IndexedSeq("[{x'=1&y<=0}]x>0".asFormula)), diffSolve()(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("y>0".asFormula, "t__0=0".asFormula, "y<=0".asFormula)
+    result.subgoals.head.succ should contain only "(y<=0&t_>=0)&x=t_+x_0 -> x>0".asFormula
+  }
+
+  it should "retain initial evolution domain for the sake of contradictions (2)" in withMathematica { tool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1&x<0}]x>=0".asFormula)), diffSolve()(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x_0>0".asFormula, "x_0=b".asFormula, "t__0=0".asFormula, "x_0<0".asFormula)
+    result.subgoals.head.succ should contain only "(x<0&t_>=0)&x=t_+x_0 -> x>=0".asFormula
   }
 
   "diffUnpackEvolutionDomainInitially" should "unpack the evolution domain of an ODE as fact at time zero" in {

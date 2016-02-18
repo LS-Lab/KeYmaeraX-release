@@ -523,7 +523,9 @@ object DifferentialTactics {
         val flatSolution = flattenConjunctions(solution).
           sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
 
-        initialGhosts & diffInvariant(tool, flatSolution:_*)(pos) &
+        diffUnpackEvolutionDomainInitially(pos) &
+          initialGhosts &
+          diffInvariant(tool, flatSolution:_*)(pos) &
           // initial ghosts are at the end of the antecedent
           exhaustiveEqR2L(hide=true)('Llast)*flatSolution.size &
           diffWeaken(pos)
