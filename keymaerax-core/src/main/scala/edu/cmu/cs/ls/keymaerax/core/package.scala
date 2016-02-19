@@ -168,7 +168,7 @@ package edu.cmu.cs.ls.keymaerax
  */
 package object core {
   /** KeYmaera X version number */
-  val VERSION = "4.1b2"
+  val VERSION = "4.1b3"
 
   /** Insist on requirement being true, throwing a [[CoreException]] if false.
     *  This method is a require` coming from the prover core that cannot be disabled.
