@@ -5,12 +5,14 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.RenUSubst
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, Provable}
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 
 /**
  * Sequential interpreter for Bellerophon tactic expressions.
- * @param listeners Pre- and pos-processing hooks for step-wise tactic execution.
+  *
+  * @param listeners Pre- and pos-processing hooks for step-wise tactic execution.
  * @author Nathan Fulton
  * @author Andre Platzer
  */
@@ -194,6 +196,24 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           }
           throw new BelleError("DoSome did not succeed with any of its options").inContext(DoSome(options, e, location), "Failed all options in DoSome: " + options() + "\n" + errors)
 
+        case Let(abbr, value, inner, location) =>
+          val (provable,lbl) = v match {
+            case BelleProvable(p, lbl) => (p,lbl)
+            case _ => throw new BelleError("Cannot attempt Let with a non-Provable value.").inContext(expr, "")
+          }
+          if (provable.subgoals.length != 1)
+            throw new BelleError("Let of multiple goals is not currently supported.").inContext(expr, "")
+
+          import Augmentors.SequentAugmentor
+          //@todo sometimes may want to offer some unification for: let j(x)=x^2>0 in tactic for sequent mentioning both x^2>0 and (x+y)^2>0 so j(x) and j(x+y).
+          val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
+          val in: Provable = Provable.startProof(provable.subgoals.head.replaceFree(value, abbr))
+          //@todo should we toss the listeners over to the nested proveBy? Or reuse this interpreter instead of creating a new one?
+          val derivation: Provable = edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.proveBy(in, inner)
+          val backsubst: Provable = derivation(us)
+          BelleProvable(provable(backsubst,0), lbl)
+
+
         case t@USubstPatternTactic(children, location) => {
           val provable = v match {
             case BelleProvable(p, _) => p
@@ -239,7 +259,8 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
 
   /**
    * Replaces the nth subgoal of original with the remaining subgoals of result.
-   * @param original A Provable whose nth subgoal is equal to "result".
+    *
+    * @param original A Provable whose nth subgoal is equal to "result".
    * @param n The numerical index of the subgoal of original to rewrite (Seqs are zero-indexed)
    * @param subderivation
    * @return A pair of:

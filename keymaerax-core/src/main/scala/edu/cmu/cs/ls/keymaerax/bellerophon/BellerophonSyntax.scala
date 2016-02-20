@@ -483,6 +483,18 @@ case class DoAll(e: BelleExpr, override val location: Array[StackTraceElement] =
   */
 case class DoSome[A](options: () => Iterator[A], e: A => BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "dosome(" + e + ")" }
 
+
+/**
+  * Let(abbr, value, inner) alias `let abbr=value in inner` abbreviates `value` by `abbr` in the
+  * provable and proceeds with an internal proof by tactic `inner`, resuming to the outer proof by a
+  * uniform substitution of `value` for `abbr` of the resulting provable.
+  * @see [[Provable.apply(USubst)]]
+  * @todo generalize to Expression
+  */
+case class Let(abbr: Term, value: Term, inner: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr {
+  override def prettyString = "let(" + abbr + "=" + value + " in " + inner + ")"
+}
+
 /**
  * Bellerophon expressions that are values.
  */

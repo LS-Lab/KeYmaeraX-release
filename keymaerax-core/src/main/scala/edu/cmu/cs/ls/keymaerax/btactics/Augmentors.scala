@@ -52,6 +52,9 @@ object Augmentors {
     def at(pos: PosInExpr): (Context[Term], Expression) = Context.at(term, pos)
     /** Replace at position pos by repl */
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(term, pos, repl)
+    /** Replace all free occurrences of `what` in `term` by `repl`. */
+    def replaceFree(what: Term, repl:Term) = SubstitutionHelper.replaceFree(term)(what,repl)
+
     /**
       * Find the first (i.e., left-most) position of a subexpression satisfying `condition`, if any.
       * @param condition the condition that the subexpression sought for has to satisfy.
@@ -81,6 +84,9 @@ object Augmentors {
     def at(pos: PosInExpr): (Context[Formula], Expression) = Context.at(fml, pos)
     /** Replace at position pos by repl */
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(fml, pos, repl)
+    /** Replace all free occurrences of `what` in `fml` by `repl`. */
+    def replaceFree(what: Term, repl:Term) = SubstitutionHelper.replaceFree(fml)(what,repl)
+
     /**
       * Find the first (i.e., left-most) position of a subexpression satisfying `condition`, if any.
       * @param condition the condition that the subexpression sought for has to satisfy.
@@ -155,6 +161,8 @@ object Augmentors {
     def at(pos: Position): (Context[Formula], Expression) = FormulaAugmentor(seq(pos.top)).at(pos.inExpr)
     /** Replace at position pos by repl */
     def replaceAt(pos: Position, repl: Expression): Expression = FormulaAugmentor(seq(pos.top)).replaceAt(pos.inExpr, repl)
+    /** Replace all free occurrences of `what` in `seq` by `repl`. */
+    def replaceFree(what: Term, repl:Term) = SubstitutionHelper.replaceFree(seq)(what,repl)
     //@todo implement returning both Ante+Succ
     def zipWithPositions: List[(Formula, TopPosition)] = ???
     /** Convert a sequent to its equivalent formula `/\antes -> \/succs` */
