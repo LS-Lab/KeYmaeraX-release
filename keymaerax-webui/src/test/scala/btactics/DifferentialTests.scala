@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleError
+import edu.cmu.cs.ls.keymaerax.bellerophon.{Let, BelleError}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -550,6 +550,39 @@ class DifferentialTests extends TacticTestBase {
       Sequent(Nil, IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
       diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1))
   }
+
+  it should "let us directly prove variable x+y^2*3-z = x+y^2*3-z by abbreviation" in withMathematica { implicit qeTool =>
+    proveBy("x+y^2*3-z=x+y^2*3-z".asFormula, let(FuncOf(Function("s_",None,Unit,Real),Nothing), "x+y^2*3-z".asTerm, by(DerivedAxioms.equalReflex))) shouldBe 'proved
+  }
+
+  it should "prove const [x':=5;](x+c())'>=0 directly" in withMathematica { implicit qeTool =>
+    proveBy("[x':=5;](x+c())'>=0".asFormula, derive(1,1::0::Nil) & Dassignb(1) & QE) shouldBe 'proved
+  }
+
+  it should "probably not prove variable [x':=5;](x+y)'>=0 unless derive is too powerful" in withMathematica { implicit qeTool =>
+    proveBy("[x':=5;](x+y)'>=0".asFormula, derive(1,1::0::Nil) & Dassignb(1) & QE).proved shouldBe false
+  }
+
+  it should "let us prove variable [x':=5;](x+y)'>=0" in withMathematica { implicit qeTool =>
+    proveBy("[x':=5;](x+y)'>=0".asFormula, let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & Dassignb(1) & QE)) shouldBe 'proved
+  }
+
+  it should "prove const a()>=0 & x>=0 & v>=0 -> [{x'=v,v'=a()}]v>=0 directly" in withMathematica { implicit qeTool =>
+    proveBy("a()>=0 & x>=0 & v>=0 -> [{x'=v,v'=a()}]v>=0".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
+  }
+
+  it should "let us prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0" in withMathematica { implicit qeTool =>
+    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("a",None,Unit,Real),Nothing), Variable("a"), diffInd(qeTool)(1))) shouldBe 'proved
+  }
+
+  it should "perhaps prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0 directly if diffInd were powerful enough" in withMathematica { implicit qeTool =>
+    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
+  }
+
+  it should "let us prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0 despite silly names" in withMathematica { implicit qeTool =>
+    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("gobananas",None,Unit,Real),Nothing), Variable("a"), diffInd(qeTool)(1))) shouldBe 'proved
+  }
+
 
   "Differential introduce constants" should "replace a with a() in v'=a" in {
     val result = proveBy("[{v'=a}]v=v0()+a*t()".asFormula, Dconstify(1))

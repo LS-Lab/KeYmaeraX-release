@@ -489,7 +489,8 @@ case class DoSome[A](options: () => Iterator[A], e: A => BelleExpr, override val
   * provable and proceeds with an internal proof by tactic `inner`, resuming to the outer proof by a
   * uniform substitution of `value` for `abbr` of the resulting provable.
   * @see [[Provable.apply(USubst)]]
-  * @todo generalize to Expression
+  * @todo generalize abbr,value to Expression
+  * @todo generalize inner to also AtPosition[E]
   */
 case class Let(abbr: Term, value: Term, inner: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr {
   override def prettyString = "let(" + abbr + "=" + value + " in " + inner + ")"

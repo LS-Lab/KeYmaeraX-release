@@ -207,7 +207,10 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           import Augmentors.SequentAugmentor
           //@todo sometimes may want to offer some unification for: let j(x)=x^2>0 in tactic for sequent mentioning both x^2>0 and (x+y)^2>0 so j(x) and j(x+y).
           val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
+          //@todo this should be .replaceAll not just .replaceFree
           val in: Provable = Provable.startProof(provable.subgoals.head.replaceFree(value, abbr))
+          println("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
+          assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
           //@todo should we toss the listeners over to the nested proveBy? Or reuse this interpreter instead of creating a new one?
           val derivation: Provable = edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.proveBy(in, inner)
           val backsubst: Provable = derivation(us)
