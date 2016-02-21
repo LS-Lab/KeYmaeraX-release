@@ -560,7 +560,11 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "probably not prove variable [x':=5;](x+y)'>=0 unless derive is too powerful" in withMathematica { implicit qeTool =>
-    proveBy("[x':=5;](x+y)'>=0".asFormula, derive(1,1::0::Nil) & Dassignb(1) & QE).proved shouldBe false
+    val result = proveBy("[x':=5;](x+y)'>=0".asFormula, derive(1,1::0::Nil) & Dassignb(1))
+    result.isProved shouldBe false
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "5+y'>=0".asFormula
   }
 
   it should "let us prove variable [x':=5;](x+y)'>=0" in withMathematica { implicit qeTool =>
