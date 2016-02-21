@@ -211,12 +211,12 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           val in: Provable = Provable.startProof(provable.subgoals.head.replaceFree(value, abbr))
           println("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
           assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
-          //@todo should we toss the listeners over to the nested proveBy? Or reuse this interpreter instead of creating a new one?
-          val derivation: Provable = edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.proveBy(in, inner)
-          val backsubst: Provable = derivation(us)
-          BelleProvable(provable(backsubst,0), lbl)
-
-
+          apply(inner, new BelleProvable(in)) match {
+            case BelleProvable(derivation, _) =>
+              val backsubst: Provable = derivation(us)
+              BelleProvable(provable(backsubst,0), lbl)
+            case e: BelleError => throw e.inContext(expr, "Let expected proved sub-derivation")
+          }
         case t@USubstPatternTactic(children, location) => {
           val provable = v match {
             case BelleProvable(p, _) => p
