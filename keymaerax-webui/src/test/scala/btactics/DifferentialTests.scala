@@ -568,11 +568,17 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "let us prove variable [x':=5;](x+y)'>=0" in withMathematica { implicit qeTool =>
-    proveBy("[x':=5;](x+y)'>=0".asFormula, let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & Dassignb(1) & QE)) shouldBe 'proved
+    proveBy("[x':=5;](x+y)'>=0".asFormula,
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & Dassignb(1) & QE)) shouldBe 'proved
   }
 
   it should "prove const a()>=0 & x>=0 & v>=0 -> [{x'=v,v'=a()}]v>=0 directly" in withMathematica { implicit qeTool =>
     proveBy("a()>=0 & x>=0 & v>=0 -> [{x'=v,v'=a()}]v>=0".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
+  }
+
+  it should "let us prove variable x>=0 & v>=0 -> [{x'=v}]x>=0" in withMathematica { implicit qeTool =>
+    proveBy("x>=0 & v>=0 -> [{x'=v}]x>=0".asFormula, implyR(1) &
+      let(FuncOf(Function("v",None,Unit,Real),Nothing), Variable("v"), diffInd(qeTool)(1))) shouldBe 'proved
   }
 
   it should "let us prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0" in withMathematica { implicit qeTool =>

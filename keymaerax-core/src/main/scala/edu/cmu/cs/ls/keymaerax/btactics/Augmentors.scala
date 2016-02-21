@@ -86,6 +86,14 @@ object Augmentors {
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(fml, pos, repl)
     /** Replace all free occurrences of `what` in `fml` by `repl`. */
     def replaceFree(what: Term, repl:Term) = SubstitutionHelper.replaceFree(fml)(what,repl)
+    /** Replace all occurrences of `what` in `fml` by `repl`. */
+    def replaceAll(what: Term, repl: Term): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
+        if (t == what) Right(repl)
+        else Left(None)
+    }, fml) match {
+      case Some(f) => f
+    }
 
     /**
       * Find the first (i.e., left-most) position of a subexpression satisfying `condition`, if any.
@@ -162,7 +170,9 @@ object Augmentors {
     /** Replace at position pos by repl */
     def replaceAt(pos: Position, repl: Expression): Expression = FormulaAugmentor(seq(pos.top)).replaceAt(pos.inExpr, repl)
     /** Replace all free occurrences of `what` in `seq` by `repl`. */
-    def replaceFree(what: Term, repl:Term) = SubstitutionHelper.replaceFree(seq)(what,repl)
+    def replaceFree(what: Term, repl: Term) = SubstitutionHelper.replaceFree(seq)(what,repl)
+    /** Replace all occurrences of `what` in `seq` by `repl`. */
+    def replaceAll(what: Term, repl: Term) = Sequent(seq.pref, seq.ante.map(_.replaceAll(what, repl)), seq.succ.map(_.replaceAll(what, repl)))
     //@todo implement returning both Ante+Succ
     def zipWithPositions: List[(Formula, TopPosition)] = ???
     /** Convert a sequent to its equivalent formula `/\antes -> \/succs` */

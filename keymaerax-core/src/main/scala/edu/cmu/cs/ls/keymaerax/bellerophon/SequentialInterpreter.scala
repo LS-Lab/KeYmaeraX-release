@@ -198,7 +198,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
 
         case Let(abbr, value, inner, location) =>
           val (provable,lbl) = v match {
-            case BelleProvable(p, lbl) => (p,lbl)
+            case BelleProvable(p, l) => (p,l)
             case _ => throw new BelleError("Cannot attempt Let with a non-Provable value.").inContext(expr, "")
           }
           if (provable.subgoals.length != 1)
@@ -207,8 +207,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           import Augmentors.SequentAugmentor
           //@todo sometimes may want to offer some unification for: let j(x)=x^2>0 in tactic for sequent mentioning both x^2>0 and (x+y)^2>0 so j(x) and j(x+y).
           val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
-          //@todo this should be .replaceAll not just .replaceFree
-          val in: Provable = Provable.startProof(provable.subgoals.head.replaceFree(value, abbr))
+          val in: Provable = Provable.startProof(provable.subgoals.head.replaceAll(value, abbr))
           println("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
           assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
           apply(inner, new BelleProvable(in)) match {
