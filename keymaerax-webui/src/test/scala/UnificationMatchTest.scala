@@ -250,8 +250,20 @@ class UnificationMatchTest extends FlatSpec with Matchers {
       (Variable("x_"), Variable("y",Some(0))) :: Nil))
   }
 
+  "Dassignb unification" should "unify [u':=f();]p(u') with [u':=b();]u'>=0" in {
+    shouldMatch("[u':=f();]p(u')".asFormula, "[u':=b();]u'>=0".asFormula, RenUSubst(
+      (FuncOf(Function("f",None,Unit,Real), Nothing), FuncOf(Function("b",None,Unit,Real),Nothing)) ::
+        (PredOf(Function("p",None,Real,Bool),DotTerm), GreaterEqual(DotTerm,Number(0))) :: Nil))
+  }
 
-  it should "unify y>0 -> [x:=2;]y>0 with p() -> [a;]p()" in {
+  it should "unify [x':=f();]p(x') with [u':=b();]u'>=0" in {
+    shouldMatch("[x':=f();]p(x')".asFormula, "[u':=b();]u'>=0".asFormula, RenUSubst(
+      (Variable("x"), Variable("u")) :: (FuncOf(Function("f",None,Unit,Real), Nothing), FuncOf(Function("b",None,Unit,Real),Nothing)) ::
+        (PredOf(Function("p",None,Real,Bool),DotTerm), GreaterEqual(DotTerm,Number(0))) :: Nil))
+  }
+
+
+  "More unification" should "unify y>0 -> [x:=2;]y>0 with p() -> [a;]p()" in {
     shouldMatch("p() -> [a;]p()".asFormula, "y>0 -> [x:=2;]y>0".asFormula, RenUSubst(
       (PredOf(Function("p", None, Unit, Bool), Nothing), "y>0".asFormula) ::
         (ProgramConst("a"), Assign(Variable("x"), Number(2))) :: Nil))
