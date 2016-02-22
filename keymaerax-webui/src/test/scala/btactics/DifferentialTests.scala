@@ -202,6 +202,12 @@ class DifferentialTests extends TacticTestBase {
   }
 
   it should "assign isolated single const" in {
+    val result = proveBy("[u':=b();]u'>=0".asFormula, Dassignb(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "b()>=0".asFormula
+  }
+  it should "assign isolated single const 2" in {
     val result = proveBy("[x':=v();]x'>=0".asFormula, Dassignb(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
