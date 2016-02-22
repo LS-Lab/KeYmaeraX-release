@@ -179,17 +179,42 @@ object DifferentialTactics {
    * diffInd: Differential Invariant proves a formula to be an invariant of a differential equation (by DI, DW, DE, QE)
    * @param qeTool Quantifier elimination tool for final QE step of tactic.
    * @param auto One of 'none, 'diffInd, 'full. Whether or not to automatically close and use DE, DW.
-   *             'none: behaves as DI rule
-   *             'diffInd: behaves as diffInd rule
-   *             'full: closes everything after diffInd rule
+   *             'none: behaves as DI rule per cheat sheet
+   *                    {{{
+   *                      G, q(x) |- p(x), D    G, q(x) |- [x'=f(x)&q(x)](p(x))', D
+   *                      ---------------------------------------------------------
+   *                                  G |- [x'=f(x)&q(x)]p(x), D
+   *                    }}}
+   *             'diffInd: behaves as diffInd rule per cheat sheet
+   *                    {{{
+   *                      G, q(x) |- p(x), D     q(x) |- [x':=f(x)]p(x')    @note derive on (p(x))' already done
+   *                      ----------------------------------------------
+   *                                  G |- [x'=f(x)&q(x)]p(x), D
+   *                    }}}
+   *             'full: tries to close everything after diffInd rule
+   *                    {{{
+   *                        *
+   *                      --------------------------
+   *                      G |- [x'=f(x)&q(x)]p(x), D
+   *                    }}}
    * @example{{{
    *         *
-   *    ---------------------diffInd(qeTool)(1)
+   *    ---------------------diffInd(qeTool, 'full)(1)
+   *    x>=5 |- [{x'=2}]x>=5
+   * }}}
+   * @example{{{
+   *    x>=5, true |- x>=5    true |- [{x':=2}]x'>=0
+   *    --------------------------------------------diffInd(qeTool, 'diffInd)(1)
+   *    x>=5 |- [{x'=2}]x>=5
+   * }}}
+   * @example{{{
+   *    x>=5, true |- x>=5    x>=5, true |- [{x'=2}](x>=5)'
+   *    ---------------------------------------------------diffInd(qeTool, 'none)(1)
    *    x>=5 |- [{x'=2}]x>=5
    * }}}
    * @example{{{
    *    x>=5 |- [x:=x+1;](true -> x>=5&2>=0)
-   *    -------------------------------------diffInd(qeTool)(1, 1::Nil)
+   *    -------------------------------------diffInd(qeTool, 'full)(1, 1::Nil)
    *    x>=5 |- [x:=x+1;][{x'=2}]x>=5
    * }}}
    * @incontext
