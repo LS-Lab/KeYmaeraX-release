@@ -209,7 +209,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
           val in: Provable = Provable.startProof(provable.subgoals.head.replaceAll(value, abbr))
           println("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
-          assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
+          //assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
           apply(inner, new BelleProvable(in)) match {
             case BelleProvable(derivation, _) =>
               val backsubst: Provable = derivation(us)

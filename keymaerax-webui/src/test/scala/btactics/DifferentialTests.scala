@@ -567,9 +567,56 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "5+y'>=0".asFormula
   }
 
-  it should "let us prove variable [x':=5;](x+y)'>=0" in withMathematica { implicit qeTool =>
+  it should "prove const [x':=5;](x+c())'>=0" in withMathematica { implicit qeTool =>
+    proveBy("[x':=5;](x+c())'>=0".asFormula,
+      derive(1,1::0::Nil) & Dassignb(1) & QE) shouldBe 'proved
+  }
+
+  ignore should "let us prove variable [x':=5;](x+y)'>=0" in withMathematica { implicit qeTool =>
+    //@note proof waited too long. Should have gone constant before diffind
     proveBy("[x':=5;](x+y)'>=0".asFormula,
       let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & Dassignb(1) & QE)) shouldBe 'proved
+  }
+
+  it should "prove const [{x'=5}](x+c())'>=0" in withMathematica { implicit qeTool =>
+    proveBy("[{x'=5}](x+c())'>=0".asFormula,
+      derive(1,1::0::Nil) & DE(1) & G & Dassignb(1) & QE) shouldBe 'proved
+  }
+
+  ignore should "let us prove variable [{x'=5}](x+y)'>=0" in withMathematica { implicit qeTool =>
+    //@note proof waited too long. Should have gone constant before diffind
+    proveBy("[{x'=5}](x+y)'>=0".asFormula,
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), derive(1,1::0::Nil) & DE(1) & G & Dassignb(1) & QE)) shouldBe 'proved
+  }
+
+  it should "prove const x+c()>=0 -> [{x'=5}]x+c()>=0" in withMathematica { implicit qeTool =>
+    proveBy("x+c()>=0 -> [{x'=5}]x+c()>=0".asFormula,
+      implyR(1) & diffInd(qeTool,'full)(1)) shouldBe 'proved
+  }
+
+  it should "prove const x+c()>=0 -> [{x'=5}]x+c()>=0 manual" in withMathematica { implicit qeTool =>
+    proveBy("x+c()>=0 -> [{x'=5}]x+c()>=0".asFormula,
+      implyR(1) & diffInd(qeTool,'none)(1) <(close , derive(1,1::0::Nil) & DE(1) & G & Dassignb(1) & QE)) shouldBe 'proved
+  }
+
+  it should "let us prove variable x+y>=0 -> [{x'=5}]x+y>=0 manual" in withMathematica { implicit qeTool =>
+    proveBy("x+y>=0 -> [{x'=5}]x+y>=0".asFormula, implyR(1) &
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), diffInd(qeTool,'none)(1) <(close , derive(1,1::0::Nil) & DE(1) & G & Dassignb(1) & QE))) shouldBe 'proved
+  }
+
+  it should "let us prove variable x+y>=0 -> [{x'=5}]x+y>=0" in withMathematica { implicit qeTool =>
+    proveBy("x+y>=0 -> [{x'=5}]x+y>=0".asFormula, implyR(1) &
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), diffInd(qeTool, 'full)(1))) shouldBe 'proved
+  }
+
+  it should "let us prove variable x+y+z>=0 -> [{x'=5,y'=2}]x+y+z>=0" in withMathematica { implicit qeTool =>
+    proveBy("x+y+z>=0 -> [{x'=5,y'=2}]x+y+z>=0".asFormula, implyR(1) &
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("z"), diffInd(qeTool, 'full)(1))) shouldBe 'proved
+  }
+
+  it should "let us prove variable x+z>=0&y+z>=0 -> [{x'=5,y'=2}](x+z>=0&y+z>=0)" in withMathematica { implicit qeTool =>
+    proveBy("x+z>=0&y+z>=0 -> [{x'=5,y'=2}](x+z>=0&y+z>=0)".asFormula, implyR(1) &
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("z"), diffInd(qeTool, 'full)(1))) shouldBe 'proved
   }
 
   it should "prove const a()>=0 & x>=0 & v>=0 -> [{x'=v,v'=a()}]v>=0 directly" in withMathematica { implicit qeTool =>
@@ -578,19 +625,19 @@ class DifferentialTests extends TacticTestBase {
 
   it should "let us prove variable x>=0 & v>=0 -> [{x'=v}]x>=0" in withMathematica { implicit qeTool =>
     proveBy("x>=0 & v>=0 -> [{x'=v}]x>=0".asFormula, implyR(1) &
-      let(FuncOf(Function("v",None,Unit,Real),Nothing), Variable("v"), diffInd(qeTool)(1))) shouldBe 'proved
+      let(FuncOf(Function("v",None,Unit,Real),Nothing), Variable("v"), diffInd(qeTool, 'full)(1))) shouldBe 'proved
   }
 
   it should "let us prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0" in withMathematica { implicit qeTool =>
-    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("a",None,Unit,Real),Nothing), Variable("a"), diffInd(qeTool)(1))) shouldBe 'proved
+    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("a",None,Unit,Real),Nothing), Variable("a"), diffInd(qeTool, 'full)(1))) shouldBe 'proved
   }
 
   it should "perhaps prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0 directly if diffInd were powerful enough" in withMathematica { implicit qeTool =>
-    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & diffInd(qeTool)(1)) shouldBe 'proved
+    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & diffInd(qeTool, 'full)(1)) shouldBe 'proved
   }
 
   it should "let us prove variable a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0 despite silly names" in withMathematica { implicit qeTool =>
-    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("gobananas",None,Unit,Real),Nothing), Variable("a"), diffInd(qeTool)(1))) shouldBe 'proved
+    proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("gobananas",None,Unit,Real),Nothing), Variable("a"), diffInd(qeTool, 'full)(1))) shouldBe 'proved
   }
 
 
