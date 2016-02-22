@@ -248,7 +248,7 @@ trait UnifyUSCalculus {
         if (DEBUG) println("useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
         Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + " which is " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
-        useAt(subst, keyCtx, keyPart, pos, ctx, expr, iden, sequent)
+        useAt(subst, keyCtx, keyPart, pos, ctx, expr, sequent)
       }
     }
     private val RECHECK = true
@@ -268,14 +268,14 @@ trait UnifyUSCalculus {
      * @author Andre Platzer
      * @note The implementation could be generalized because it sometimes fires irrelevant substitution clashes coming merely from the context embedding contracts.
      */
-    private def useAt[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, factTactic: ForwardTactic, sequent: Sequent): BelleExpr = {
+    private def useAt[T <: Expression](subst: Subst, K: Context[T], k: T, p: Position, C:Context[Formula], c:Expression, sequent: Sequent): BelleExpr = {
       require(!RECHECK || subst(k) == c, "correctly matched input")
       //@note might cause some irrelevant clashes
       require(C(c).at(p.inExpr) == (C,c), "correctly split at position " + p.inExpr + "\ngiving context " + C + "\nsubexpression " + c + "\nreassembling to the same " + C(c))
       require(List((C,DotFormula),(C,DotTerm)).contains(C.ctx.at(p.inExpr)), "correctly split at position p")
 
       /** Equivalence rewriting step */
-      def equivStep(other: Expression, factTactic: ForwardTactic): BelleExpr = {
+      def equivStep(other: Expression, fact: Provable): BelleExpr = {
         val cutPos: SuccPos = p match {case p: SuccPosition => p.top case p: AntePosition => SuccPos(sequent.succ.length)}
         lazy val expect = if (p.isSucc) Imply(C(subst(other)), C(subst(keyPart))) else Imply(C(subst(keyPart)), C(subst(other)))
         lazy val expectEquiv = if (p.isSucc) Equiv(C(subst(other)), C(subst(keyPart))) else Equiv(C(subst(keyPart)), C(subst(other)))
@@ -298,40 +298,44 @@ trait UnifyUSCalculus {
             if (other.kind==FormulaKind) CE(p.inExpr)
             else if (other.kind==TermKind) CQ(p.inExpr)
             else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
-            TactixLibrary.byUS(factTactic(fact))  //TactixLibrary.by(TactixLibrary.proveBy(fact, factTactic))
-              //debug("    fact")/*debug("    using fact tactic") & factTactic & debug("  done fact tactic")*/ partial
+            by(subst.toForward(fact))
         ) & debug("end   useAt " + p) partial
       }
 
-      def implyStep(other: Expression, factTactic: ForwardTactic): BelleExpr = {
+      def implyStep(other: Expression): BelleExpr = {
         val cohide = p match {case p: SuccPosition => coHideR(p.top) case p: AntePosition => coHideR('Rlast)}
         cutLR(C(subst(other)))(p.topLevel) <(
           /* use */ ident partial,
-          /* show */ cohide & CMon(p.inExpr) & byUS(factTactic(fact))
+          /* show */ cohide & CMon(p.inExpr) & by(subst.toForward(fact))
         )
       }
 
+      /** Commute the fact l<->r or l=r */
+      def commuteFact(fact: Provable): Provable = fact.conclusion match {
+        case Sequent(_, IndexedSeq(), IndexedSeq(Equiv(l, r))) =>
+          Provable.startProof(Equiv(r, l))(CommuteEquivRight(SuccPos(0)), 0)(fact, 0)
+        case Sequent(_, IndexedSeq(), IndexedSeq(Equal(l, r))) => useFor("= commute")(SuccPos(0))(fact)
+      }
+
       K.ctx match {
-        case DotFormula if p.isTopLevel =>
-          //@note this should be similar to byUS(fact) using factTactic to prove fact after instantiation
-          byUS(factTactic(fact)) //US(Sequent(Nil, IndexedSeq(), IndexedSeq(k.asInstanceOf[Formula]))) & factTactic
+        case DotFormula if p.isTopLevel => by(subst.toForward(fact))
 
           //@todo uncomment again
         case DotFormula if !p.isTopLevel => ??? //equivStep(True, equivR(1) <(coHideR(1) & factTactic, closeTrue(1)))
 
-        case Equiv(DotFormula, other) => equivStep(other, seqCompose(if (p.isSucc) commuteEquivFR(SuccPos(0)) else iden , factTactic))
+        case Equiv(DotFormula, other) => equivStep(other, if (p.isSucc) commuteFact(fact) else fact)
 
-        case Equiv(other, DotFormula) => equivStep(other, seqCompose(if (p.isAnte) commuteEquivFR(SuccPos(0)) else iden , factTactic))
+        case Equiv(other, DotFormula) => equivStep(other, if (p.isAnte) commuteFact(fact) else fact)
 
         case Equal(DotTerm, other) =>
-          equivStep(other, seqCompose(if (p.isSucc) useFor(DerivedAxioms.equalCommute.fact, PosInExpr(0::Nil))(SuccPos(0)) else iden, factTactic))
+          equivStep(other, if (p.isSucc) commuteFact(fact) else fact)
 
         case Equal(other, DotTerm) =>
-          equivStep(other, seqCompose(if (p.isAnte) useFor(DerivedAxioms.equalCommute.fact, PosInExpr(0::Nil))(SuccPos(0)) else iden , factTactic))
+          equivStep(other, if (p.isAnte) commuteFact(fact) else fact)
 
-        case Imply(other, DotFormula) => implyStep(other, factTactic)
+        case Imply(other, DotFormula) => implyStep(other)
 
-        case Imply(DotFormula, other) => implyStep(other, factTactic)
+        case Imply(DotFormula, other) => implyStep(other)
 
         case Imply(prereq, remainder) if StaticSemantics.signature(prereq).intersect(Set(DotFormula,DotTerm)).isEmpty =>
           // try to prove prereq globally
@@ -1032,8 +1036,7 @@ trait UnifyUSCalculus {
           * }}}
           * @param o
           */
-        def equivStep(o: Expression, factTactic: BelleExpr): Provable = {
-          //@todo delete factTactic argument since unused or use factTactic turned argument into Provable=>Provable
+        def equivStep(o: Expression): Provable = {
           require(fact.isProved, "currently want proved facts as input only\n" + fact)
           require(proof.conclusion.updated(p.top, C(subst(k)))==proof.conclusion, "expected context split")
           // |- fact: k=o or k<->o, respectively
@@ -1069,16 +1072,16 @@ trait UnifyUSCalculus {
         // in which context of the fact does the key occur
         K.ctx match {
           case Equal(DotTerm, o) =>
-            equivStep(o, byUS(fact))
+            equivStep(o)
 
           case Equal(o, DotTerm) =>
-            equivStep(o, useAt(DerivedAxioms.equalCommute) & byUS(fact))
+            equivStep(o)
 
           case Equiv(DotFormula, o) =>
-            equivStep(o, byUS(fact))
+            equivStep(o)
 
           case Equiv(o, DotFormula) =>
-            equivStep(o, commuteEquivR(SuccPos(0)) & byUS(fact))
+            equivStep(o)
 
 
           case Imply(o, DotFormula) =>
