@@ -489,10 +489,10 @@ case class DoSome[A](options: () => Iterator[A], e: A => BelleExpr, override val
   * provable and proceeds with an internal proof by tactic `inner`, resuming to the outer proof by a
   * uniform substitution of `value` for `abbr` of the resulting provable.
   * @see [[Provable.apply(USubst)]]
-  * @todo generalize abbr,value to Expression
   * @todo generalize inner to also AtPosition[E]
   */
-case class Let(abbr: Term, value: Term, inner: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr {
+case class Let(abbr: Expression, value: Expression, inner: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr {
+  require(abbr.kind == value.kind, "Abbreviation and value must be of same kind, but got abbr.kind=" + abbr.kind + " and value.kind=" + value.kind)
   override def prettyString = "let(" + abbr + "=" + value + " in " + inner + ")"
 }
 

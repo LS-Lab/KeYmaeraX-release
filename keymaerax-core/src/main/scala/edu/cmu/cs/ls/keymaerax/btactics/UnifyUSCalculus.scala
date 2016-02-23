@@ -422,7 +422,7 @@ trait UnifyUSCalculus {
     * provable and proceeds with an internal proof by tactic `inner`, resuming to the outer proof by a
     * uniform substitution of `value` for `abbr` of the resulting provable.
     */
-  def let(abbr: Term, value: Term, inner: BelleExpr): BelleExpr = Let(abbr, value, inner)
+  def let(abbr: Expression, value: Expression, inner: BelleExpr): BelleExpr = Let(abbr, value, inner)
 
 
   //////////////
