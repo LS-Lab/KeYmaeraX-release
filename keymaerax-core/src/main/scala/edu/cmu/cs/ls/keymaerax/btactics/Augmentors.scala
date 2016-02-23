@@ -94,6 +94,16 @@ object Augmentors {
             override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
               if (t == what) Right(term)
               else Left(None)
+            override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
+              // do not replace with invalid abbreviations in some obvious places
+              case Forall(x, _) if x.contains(what) && !repl.isInstanceOf[Variable] => Right(f)
+              case Exists(x, _) if x.contains(what) && !repl.isInstanceOf[Variable] => Right(f)
+              case Box(Assign(x, _), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
+              case Box(AssignAny(x), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
+              case Diamond(Assign(x, _), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
+              case Diamond(AssignAny(x), _) if x == what && !repl.isInstanceOf[Variable] => Right(f)
+              case _ => Left(None)
+            }
           }, fml) match {
             case Some(f) => f
           }
