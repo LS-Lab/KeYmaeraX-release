@@ -86,13 +86,25 @@ object Augmentors {
     def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(fml, pos, repl)
     /** Replace all free occurrences of `what` in `fml` by `repl`. */
     def replaceFree(what: Term, repl:Term) = SubstitutionHelper.replaceFree(fml)(what,repl)
-    /** Replace all occurrences of `what` in `fml` by `repl`. */
-    def replaceAll(what: Term, repl: Term): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
-        if (t == what) Right(repl)
-        else Left(None)
-    }, fml) match {
-      case Some(f) => f
+    /** Replace all occurrences of `what` in `fml` by `repl`. `what` and `repl` must be of the same kind, either Term or Formula */
+    def replaceAll(what: Expression, repl: Expression): Formula = {
+      require(what.kind == repl.kind, "Replacee and replacement must be of same kind, but got what.kind=" + what.kind + " and repl.kind=" + repl.kind)
+      repl match {
+        case term: Term => ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+            override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
+              if (t == what) Right(term)
+              else Left(None)
+          }, fml) match {
+            case Some(f) => f
+          }
+        case fml: Formula => ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] =
+            if (f == what) Right(fml)
+            else Left(None)
+        }, fml) match {
+          case Some(f) => f
+        }
+      }
     }
 
     /**
@@ -172,7 +184,7 @@ object Augmentors {
     /** Replace all free occurrences of `what` in `seq` by `repl`. */
     def replaceFree(what: Term, repl: Term) = SubstitutionHelper.replaceFree(seq)(what,repl)
     /** Replace all occurrences of `what` in `seq` by `repl`. */
-    def replaceAll(what: Term, repl: Term) = Sequent(seq.pref, seq.ante.map(_.replaceAll(what, repl)), seq.succ.map(_.replaceAll(what, repl)))
+    def replaceAll(what: Expression, repl: Expression) = Sequent(seq.pref, seq.ante.map(_.replaceAll(what, repl)), seq.succ.map(_.replaceAll(what, repl)))
     //@todo implement returning both Ante+Succ
     def zipWithPositions: List[(Formula, TopPosition)] = ???
     /** Convert a sequent to its equivalent formula `/\antes -> \/succs` */
