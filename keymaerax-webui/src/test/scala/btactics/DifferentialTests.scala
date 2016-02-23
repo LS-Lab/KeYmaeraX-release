@@ -619,7 +619,23 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "x>0 -> [{x'=2 & true & x>0}]x>=0".asFormula
   }
 
+  it should "cut in single formulas with old" in withMathematica { implicit qeTool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("v>=0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
+      diffInvariant("v>=old(v)".asFormula)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("v>=0".asFormula, "x>0".asFormula, "v_0=v".asFormula)
+    result.subgoals.head.succ should contain only "[{x'=v,v'=2 & (true & v>=v_0)}]x>=0".asFormula
+  }
+
   it should "cut in multiple formulas" in withMathematica { implicit qeTool =>
+    val result = proveBy(Sequent(Nil, IndexedSeq("v>=0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
+      diffInvariant("v>=0".asFormula, "x>0".asFormula)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("v>=0".asFormula, "x>0".asFormula)
+    result.subgoals.head.succ should contain only "[{x'=v,v'=2 & (true & v>=0) & x>0}]x>=0".asFormula
+  }
+
+  it should "cut in multiple formulas with old" in withMathematica { implicit qeTool =>
     val result = proveBy(Sequent(Nil, IndexedSeq("v>=0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
       diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1))
     result.subgoals should have size 1
@@ -691,7 +707,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "let us prove variable x+y>=0 -> [{x'=5}]x+y>=0 manual" in withMathematica { implicit qeTool =>
     proveBy("x+y>=0 -> [{x'=5}]x+y>=0".asFormula, implyR(1) &
-      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), diffInd(qeTool,'none)(1) <(close , derive(1,1::0::Nil) & DE(1) & G & Dassignb(1) & QE))) shouldBe 'proved
+      let(FuncOf(Function("c",None,Unit,Real),Nothing), Variable("y"), diffInd(qeTool,'none)(1) <(close , derive(1,1::Nil) & DE(1) & cohide(1) & G & Dassignb(1) & QE))) shouldBe 'proved
   }
 
   it should "let us prove variable x+y>=0 -> [{x'=5}]x+y>=0" in withMathematica { implicit qeTool =>
