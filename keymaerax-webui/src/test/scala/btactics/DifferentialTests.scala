@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{Let, BelleError}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, SingleGoalDependentTactic, BelleError}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -747,45 +747,60 @@ class DifferentialTests extends TacticTestBase {
   }
 
 
+  private def mockTactic(expected: Sequent) = new SingleGoalDependentTactic("mock") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      sequent shouldBe expected
+      skip
+    }
+  }
+
+  private def dconstifyTest(in: Sequent, expected: Sequent) = {
+    try {
+      proveBy(in, DifferentialTactics.Dconstify(mockTactic(expected))(1))
+    } catch {
+      // proveBy may throw an expected exception sometimes -> filter the expected one
+      case ex: Throwable if ex.getCause != null && ex.getCause.getMessage.contains("Unless proved, uniform substitutions instances cannot introduce free variables") => // expected
+      case ex => throw ex
+    }
+  }
+
   "Differential introduce constants" should "replace a with a() in v'=a" in {
-    val result = proveBy("[{v'=a}]v=v0()+a*t()".asFormula, Dconstify(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "[{v'=a()}]v=v0()+a()*t()".asFormula
+    dconstifyTest(
+      Sequent(Nil, IndexedSeq(), IndexedSeq("[{v'=a}]v=v0()+a*t()".asFormula)),
+      Sequent(Nil, IndexedSeq(), IndexedSeq("[{v'=a()}]v=v0()+a()*t()".asFormula)))
   }
 
   it should "not self-replace a() with a() in v'=a()" in {
-    val result = proveBy("[{v'=a()}]v=v0()+a()*t()".asFormula, Dconstify(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "[{v'=a()}]v=v0()+a()*t()".asFormula
+    dconstifyTest(
+      Sequent(Nil, IndexedSeq(), IndexedSeq("[{v'=a()}]v=v0()+a()*t()".asFormula)),
+      Sequent(Nil, IndexedSeq(), IndexedSeq("[{v'=a()}]v=v0()+a()*t()".asFormula)))
   }
 
   it should "not replace a with a() when a is not free in p" in {
-    val result = proveBy("[{v'=a}]v>0".asFormula, Dconstify(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "[{v'=a}]v>0".asFormula
+    dconstifyTest(
+      Sequent(Nil, IndexedSeq(), IndexedSeq("[{v'=a}]v>0".asFormula)),
+      Sequent(Nil, IndexedSeq(), IndexedSeq("[{v'=a}]v>0".asFormula)))
   }
 
   it should "replace every free occurrence of a with a() everywhere in the sequent" in {
-    val s = Sequent(Nil,
-      IndexedSeq("v>=0".asFormula, "a=0".asFormula, "\\forall a a<0".asFormula),
-      IndexedSeq("[{v'=a}]v=v_0()+a*t()".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula))
-    val result = proveBy(s, Dconstify(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("v>=0".asFormula, "a()=0".asFormula, "\\forall a a<0".asFormula)
-    result.subgoals.head.succ should contain only ("[{v'=a()}]v=v_0()+a()*t()".asFormula, "a()>=0".asFormula, "[a:=2;]v>0".asFormula)
+    dconstifyTest(
+      Sequent(Nil,
+        IndexedSeq("v>=0".asFormula, "a=0".asFormula, "\\forall a a<0".asFormula),
+        IndexedSeq("[{v'=a}]v=v_0()+a*t()".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula)),
+      Sequent(Nil,
+        IndexedSeq("v>=0".asFormula, "a()=0".asFormula, "\\forall a a<0".asFormula),
+        IndexedSeq("[{v'=a()}]v=v_0()+a()*t()".asFormula, "a()>=0".asFormula, "[a:=2;]v>0".asFormula)))
   }
 
   it should "replace every free occurrence of b (only in p) with b() everywhere in the sequent" in {
-    val s = Sequent(Nil,
-      IndexedSeq("v>=0".asFormula, "a=0".asFormula, "b=2".asFormula, "\\forall b b<0".asFormula),
-      IndexedSeq("[{v'=a}](v>0 & b<0)".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula))
-    val result = proveBy(s, Dconstify(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("v>=0".asFormula, "a=0".asFormula, "b()=2".asFormula, "\\forall b b<0".asFormula)
-    result.subgoals.head.succ should contain only ("[{v'=a}](v>0& b()<0)".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula)
+    dconstifyTest(
+      Sequent(Nil,
+        IndexedSeq("v>=0".asFormula, "a=0".asFormula, "b=2".asFormula, "\\forall b b<0".asFormula),
+        IndexedSeq("[{v'=a}](v>0 & b<0)".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula)),
+      Sequent(Nil,
+        IndexedSeq("v>=0".asFormula, "a=0".asFormula, "b()=2".asFormula, "\\forall b b<0".asFormula),
+        IndexedSeq("[{v'=a}](v>0& b()<0)".asFormula, "a>=0".asFormula, "[a:=2;]v>0".asFormula))
+    )
   }
 
   "DG" should "add y'=1 to [x'=2]x>0" in {

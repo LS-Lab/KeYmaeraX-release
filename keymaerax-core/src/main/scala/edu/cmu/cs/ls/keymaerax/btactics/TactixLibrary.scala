@@ -209,10 +209,6 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
    **/
   def DA(y:Variable, a:Term, b:Term, r:Provable) : BuiltInPositionTactic = ??? //ODETactics.diffAuxiliariesRule(y,a,b,r)
 
-  /** Dconstify: substitute all non-bound occurences of variables x with constant function symbols x() */
-  lazy val Dconstify          : DependentPositionTactic = DifferentialTactics.Dconstify
-
-
   // more
 
   /**

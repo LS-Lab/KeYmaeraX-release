@@ -227,8 +227,8 @@ object DifferentialTactics {
           case Some(Box(_: ODESystem, _)) => true
           case _ => false
         }), "diffInd only at ODE system in succedent, but got " + sequent.sub(pos))
-        if (pos.isTopLevel)
-          Dconstify(pos) & DI(pos) &
+        if (pos.isTopLevel) {
+          val t = DI(pos) &
             (implyR(pos) & andR(pos)) <(
               if (auto == 'full) close | QE else skip,
               if (auto != 'none) {
@@ -243,8 +243,10 @@ object DifferentialTactics {
                   abstractionb(1) & (allR(1)*@TheType()) & ?(implyR(1)) }) partial
               } else skip
               )
-        else
-          Dconstify(pos) & DI(pos) &
+          if (auto == 'full) Dconstify(t)(pos)
+          else t
+        } else {
+          val t = DI(pos) &
             (if (auto != 'none) {
               shift(PosInExpr(1 :: 1 :: Nil), new DependentPositionTactic("Shift") {
                 override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -262,6 +264,9 @@ object DifferentialTactics {
               }
               )(pos)
             } else ident)
+          if (auto == 'full) Dconstify(t)(pos)
+          else t
+        }
       }
     }
   }
@@ -398,36 +403,19 @@ object DifferentialTactics {
    * @example Turns v>0, a>0 |- [v'=a;]v>0, a>0 into v>0, a()>0 |- [v'=a();]v>0, a()>0
    * @return The tactic.
    */
-  def Dconstify: DependentPositionTactic = new DependentPositionTactic("IDC introduce differential constants") {
+  def Dconstify(inner: BelleExpr): DependentPositionTactic = new DependentPositionTactic("IDC introduce differential constants") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(Box(ode@ODESystem(_, _), p)) =>
-          introduceConstants((StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.
-            filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable]), sequent)
+          val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.
+            filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
+          consts.foldLeft[BelleExpr](inner)((tactic, c) =>
+            let(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c, tactic))
         case Some(Diamond(ode@ODESystem(_, _), p)) =>
-          introduceConstants((StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.
-            filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable]), sequent)
-      }
-
-      /** Derives non-const current sequent by substitution from consts */
-      private def introduceConstants(cnsts: Set[Variable], sequent: Sequent): BelleExpr = {
-        if (cnsts.isEmpty) {
-          skip
-        } else {
-          val subst = cnsts.map(c => SubstitutionPair(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c)).toList
-          val origin = Sequent(Nil, sequent.ante.map(constify(_, cnsts)), sequent.succ.map(constify(_, cnsts)))
-          US(USubst(subst), origin)
-        }
-      }
-
-      /** Recursively replaces variables in consts with constant function symbols in formula f. */
-      private def constify(f: Formula, consts: Set[Variable]): Formula = {
-        if (consts.isEmpty) f
-        else {
-          val c = consts.head
-          constify(SubstitutionHelper.replaceFree(f)(c, FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing)),
-            consts.tail)
-        }
+          val consts = (StaticSemantics.freeVars(p) -- StaticSemantics.boundVars(ode)).toSet.
+            filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
+          consts.foldLeft[BelleExpr](inner)((tactic, c) =>
+            let(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c, tactic))
       }
     }
   }
