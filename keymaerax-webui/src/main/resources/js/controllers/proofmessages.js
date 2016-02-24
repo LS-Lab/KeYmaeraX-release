@@ -12,7 +12,7 @@ angular.module('keymaerax.controllers').controller('ProofMessagesCtrl',
   });
 
   $rootScope.$on('proof.message', function(event, message) {
-    $scope.proofMessage.text = message;
+    $scope.proofMessage.text = message + ": please check the JavaScript console of your browser for details";
     $scope.proofMessage.isVisible = true;
   });
 
