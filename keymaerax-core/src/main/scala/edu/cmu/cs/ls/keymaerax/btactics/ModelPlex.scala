@@ -198,9 +198,8 @@ object ModelPlex extends ModelPlexTrait {
         implyR(pos) & ((debug("Before HP") & unprog(useOptOne)(pos) & debug("After  HP"))*@TheType()) &
           debug("Done with transformation, now looking for quantifiers") &
           //?(atOutermostQuantifier(ToolTactics.partialQE)(pos)) &
-          ?(ToolTactics.partialQE) &
+          //?(ToolTactics.partialQE) &
           debug("Modelplex done")
-        null
     }
   })
 
@@ -210,24 +209,23 @@ object ModelPlex extends ModelPlexTrait {
    * @param useOptOne Indicates whether or not to use Opt. 1 at intermediate steps.
    * @return The tactic.
    */
-  def controllerMonitorT(useOptOne: Boolean): DependentPositionTactic = ???
-//    locateT(
-//      useAt("<*> approx", PosInExpr(1::Nil)) ::
-//        diamondSeqT ::
-//        useAt("DX diamond differential skip", PosInExpr(1::Nil)) :: Nil) &
-//      locateT(
-//        useAt("<*> approx", PosInExpr(1::Nil)) ::
-//          useAt("DX diamond differential skip", PosInExpr(1::Nil)) ::
-//          diamondSeqT ::
-//          diamondChoiceT ::
-//          (diamondNDetAssign & (if (useOptOne) optimizationOne() else NilPT)) ::
-//          diamondTestT ::
+  def controllerMonitorT(useOptOne: Boolean): DependentPositionTactic =
+    "Axiomatic controller monitor" by (pos =>
+      locateT(
+        useAt("<*> approx", PosInExpr(1::Nil)) ::
+        useAt("DX diamond differential skip", PosInExpr(1::Nil)) ::
+        useAt("<;> compose") ::
+        useAt("<++> choice") ::
+        ("<:*> nondet assign opt. 1" by (p => useAt("<:*> assign nondet")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
+        useAt("<?> test") ::
+        useAt("<:=> assign") ::
+        ("<:=> assign opt. 1" by (p => useAt("<:=> assign equality")(p) & (if (useOptOne) optimizationOne()(p) else skip))) ::
 //          substitutionDiamondAssignT ::
 //          v2vAssignT ::
-//          (diamondAssignEqualT & (if (useOptOne) optimizationOne() else NilPT)) ::
-//          (diamondDiffSolve2DT & (if (useOptOne) optimizationOne() else NilPT)) ::
+//          (diamondAssignEqualT & (if (useOptOne) optimizationOne() else skip)) ::
+//          (diamondDiffSolve2DT & (if (useOptOne) optimizationOne() else skip)) ::
 //          boxAssignBaseT ::
-//          Nil)
+        Nil)(pos))
 
   /**
    * Returns a backward tactic for deriving model monitors. Uses Opt. 1 immediately after nondeterministic
@@ -332,7 +330,7 @@ object ModelPlex extends ModelPlexTrait {
 
   /**
    * Performs a tactic from the list of tactics that is applicable somewhere underneath position p in sequent s,
-   * taking the outermost such sub-position of p.
+   * taking the outermost such sub-position of p. Formulas only.
    * @example{{{
    *           |- a=1 & (<x:=2;>x+y>0 & <y:=3;>x+y>0)
    *           ---------------------------------------locateT(diamondSeqT :: diamondChoiceT :: Nil)(1)
@@ -345,10 +343,13 @@ object ModelPlex extends ModelPlexTrait {
     require(tactics.nonEmpty, "At least 1 tactic required")
     val here = tactics.map(_(pos) partial).reduceRight[BelleExpr]((t, comp) => (t | comp) partial)
 
-    val leftPos = pos + PosInExpr(0::Nil)
-    val rightPos = pos + PosInExpr(1::Nil)
-    val left: BelleExpr = if (sequent.sub(leftPos).isDefined) locateT(tactics)(leftPos) partial else DebuggingTactics.error("Stop left recursion")
-    val right: BelleExpr = if (sequent.sub(rightPos).isDefined) locateT(tactics)(rightPos) partial else DebuggingTactics.error("Stop right recursion")
+    def recurseOnFormula(p: Position) = sequent.sub(p) match {
+      case Some(_: Formula) => locateT(tactics)(p) partial
+      case _ => DebuggingTactics.error("Stop recursion")
+    }
+
+    val left: BelleExpr = recurseOnFormula(pos + PosInExpr(0::Nil))
+    val right: BelleExpr = recurseOnFormula(pos + PosInExpr(1::Nil))
 
     ((here partial) | (((left partial) | (right partial)) partial)) partial
   })
