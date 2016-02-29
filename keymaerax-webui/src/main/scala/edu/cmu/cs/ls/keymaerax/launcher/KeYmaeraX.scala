@@ -2,19 +2,13 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.{FilePermission, File, PrintWriter}
 import java.lang.reflect.ReflectPermission
-import java.net.Socket
-import java.nio.file.{Paths, Files}
 import java.security.Permission
 
-import _root_.edu.cmu.cs.ls.keymaerax.api.TacticInputConverter
-import _root_.edu.cmu.cs.ls.keymaerax.tacticsinterface.CLInterpreter
-import edu.cmu.cs.ls.keymaerax.bellerophon.BTacticParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BTacticParser}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
-import edu.cmu.cs.ls.keymaerax.tactics._
-import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.tools.{ToolEvidence, Mathematica}
 import edu.cmu.cs.ls.keymaerax.codegen.{CseCGenerator, CGenerator, SpiralGenerator}
 
 
@@ -265,24 +259,28 @@ object KeYmaeraX {
         " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
         "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
 
-    //@todo this needs to be adapted to btactics
-    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
-    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
 
-    Tactics.KeYmaeraScheduler.init(Map())
-    Tactics.MathematicaScheduler.init(mathematicaConfig)
+    val generator = new ConfigurableGenerate[Formula]()
+    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
+    TactixLibrary.invGenerator = generator
+
+    val mathematica = new Mathematica()
+    mathematica.init(DefaultConfiguration.defaultMathematicaConfig)
+    DerivedAxioms.qeTool = mathematica
+    TactixLibrary.tool = mathematica
   }
 
   //@todo Runtime.getRuntime.addShutdownHook??
   def shutdownProver() = {
-    //@todo this needs to be adapted to btactics
-    if (Tactics.KeYmaeraScheduler != null) {
-      Tactics.KeYmaeraScheduler.shutdown()
-      Tactics.KeYmaeraScheduler = null
+    if (DerivedAxioms.qeTool != null) {
+      DerivedAxioms.qeTool match { case m: Mathematica => m.shutdown() }
+      DerivedAxioms.qeTool = null
     }
-    if (Tactics.MathematicaScheduler != null) {
-      Tactics.MathematicaScheduler.shutdown()
-      Tactics.MathematicaScheduler = null
+    if (TactixLibrary.tool != null) {
+      TactixLibrary.tool match { case m: Mathematica => m.shutdown() }
+      TactixLibrary.tool = null
+      TactixLibrary.invGenerator = new NoneGenerate()
     }
   }
 
@@ -313,7 +311,8 @@ object KeYmaeraX {
 
     val cm = universe.runtimeMirror(getClass.getClassLoader)
     val tb = cm.mkToolBox()
-    val tacticGenerator = tb.eval(tb.parse(tacticSource)).asInstanceOf[() => Tactic]
+    val foo = tb.parse(tacticSource)
+    val tacticGenerator = tb.eval(tb.parse(tacticSource)).asInstanceOf[() => BelleExpr]
 
     val tactic = tacticGenerator()
 
@@ -337,16 +336,14 @@ object KeYmaeraX {
 
     val proofStart: Long = Platform.currentTime
     //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
-    val rootNode = new RootNode(inputSequent)
-    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
+    val witness = TactixLibrary.proveBy(inputSequent, tactic)
     val proofDuration = Platform.currentTime - proofStart
     Console.println("[proof time " + proofDuration + "ms]")
 
-    if (rootNode.isClosed()) {
-      assert(rootNode.openGoals().isEmpty)
+    if (witness.isProved) {
+      assert(witness.subgoals.isEmpty)
       if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
         val witnessStart: Long = Platform.currentTime
-        val witness = rootNode.provableWitness
         val proved = witness.proved
         //@note assert(witness.isProved, "Successful proof certificate") already checked in line above
         assert(inputSequent == proved, "Proved the original problem and not something else")
@@ -369,16 +366,16 @@ object KeYmaeraX {
       //@note pretty-printing the result of parse ensures that the lemma states what's actually been proved.
       assert(KeYmaeraXParser(KeYmaeraXPrettyPrinter(inputModel)) == inputModel, "parse of print is identity")
       //@note check that proved conclusion is what we actually wanted to prove
-      assert(rootNode.provable.conclusion == inputSequent && rootNode.provableWitness.proved == inputSequent,
+      assert(witness.conclusion == inputSequent && witness.proved == inputSequent,
         "proved conclusion deviates from input")
 
       assert(inputFileName.lastIndexOf(File.separatorChar) < inputFileName.length, "Input file name is not an absolute path")
-      val lemma = Lemma(rootNode.provableWitness, evidence,
+      val lemma = Lemma(witness, evidence,
         Some(inputFileName.substring(inputFileName.lastIndexOf(File.separatorChar)+1)))
 
       //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
       assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "Illegal lemma form")
-      assert(KeYmaeraXExtendedLemmaParser(lemma.toString) == (lemma.name, lemma.fact.conclusion, lemma.evidence.head),
+      assert(KeYmaeraXExtendedLemmaParser(lemma.toString) == (lemma.name, lemma.fact.conclusion::Nil, lemma.evidence.head),
         "reparse of printed lemma is not original lemma")
 
       pw.write(stampHead(options))
@@ -386,17 +383,17 @@ object KeYmaeraX {
       pw.write(lemma.toString)
       pw.close()
     } else {
-      assert(!rootNode.isClosed())
-      assert(rootNode.openGoals().nonEmpty)
+      assert(!witness.isProved)
+      assert(witness.subgoals.nonEmpty)
       //@note PrintWriter above has already emptied the output file
       pw.close()
       println("==================================")
-      println("Tactic did not finish the proof    open goals: " + rootNode.openGoals().size)
+      println("Tactic did not finish the proof    open goals: " + witness.subgoals.size)
       println("==================================")
-      printOpenGoals(rootNode)
+      printOpenGoals(witness)
       println("==================================")
       if (options.getOrElse('interactive,false)==true) {
-        interactiveProver(rootNode)
+        interactiveProver(witness)
       } else {
         System.err.println("Incomplete proof: tactic did not finish the proof")
         exit(-1)
@@ -607,22 +604,24 @@ object KeYmaeraX {
   // helpers
 
   /** Print brief information about all open goals in the proof tree under node */
-  def printOpenGoals(node: ProofNode): Unit = node.openGoals().foreach(g => printNode(g))
+  def printOpenGoals(node: Provable): Unit = node.subgoals.foreach(g => printNode(g))
 
-  /** Print brief information about the given node */
-  def printNode(node: ProofNode): Unit =
-    println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " ===\n  " +
-      (if (node.isClosed) "Closed Goal: " else if (node.children.isEmpty) "Open Goal: " else "Inner Node: ") +
-      node.sequent.toString() + "\n" +
-      "  \tdebug: " + node.tacticInfo.infos.getOrElse("debug", "<none>") + "\n")
+  def printNode(node: Sequent): Unit = node.toString + "\n"
 
-  /** Print elaborate information about the given node */
-  def elaborateNode(node: ProofNode): Unit = {
-    println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " ===  " +
-      (if (node.isClosed) "Closed Goal: " else if (node.children.isEmpty) "Open Goal: " else "Inner Node: ") +
-      "\tdebug: " + node.tacticInfo.infos.getOrElse("debug", "<none>") +
-      "\n" + node.sequent.prettyString + "\n")
-  }
+//  /** Print brief information about the given node */
+//  def printNode(node: Sequent): Unit =
+//    println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " ===\n  " +
+//      (if (node.isProved) "Closed Goal: " else if (node.children.isEmpty) "Open Goal: " else "Inner Node: ") +
+//      node.toString() + "\n" +
+//      "  \tdebug: " + node.tacticInfo.infos.getOrElse("debug", "<none>") + "\n")
+//
+//  /** Print elaborate information about the given node */
+//  def elaborateNode(node: ProofNode): Unit = {
+//    println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " ===  " +
+//      (if (node.isClosed) "Closed Goal: " else if (node.children.isEmpty) "Open Goal: " else "Inner Node: ") +
+//      "\tdebug: " + node.tacticInfo.infos.getOrElse("debug", "<none>") +
+//      "\n" + node.sequent.prettyString + "\n")
+//  }
 
   /** Implements the security policy for the KeYmaera X web server.
     *
@@ -666,7 +665,7 @@ object KeYmaeraX {
     "help - will display this usage information.\n" +
     "Tactics will be reported back when a branch closes but may need cleanup.\n"
   /** KeYmaera C: A simple interactive command-line prover */
-  private def interactiveProver(root: ProofNode): ProofNode = {
+  private def interactiveProver(root: Provable): Provable = {
     val commands = io.Source.stdin.getLines()
     val cm = universe.runtimeMirror(getClass.getClassLoader)
     val tb = cm.mkToolBox()
@@ -674,38 +673,39 @@ object KeYmaeraX {
       "If you are looking for the more convenient web user interface,\nrestart with option -ui\n\n")
     println(interactiveUsage)
 
-    while (!root.isClosed()) {
-      assert(!root.openGoals().isEmpty, "proofs that are not closed must have open goals")
-      println("Open Goals: " + root.openGoals.size)
-      var node = root.openGoals().head
-      println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " ===\n")
+    while (!root.isProved) {
+      assert(root.subgoals.nonEmpty, "proofs that are not closed must have open goals")
+      println("Open Goals: " + root.subgoals.size)
+      var node = root.subgoals.head
+      var current = root
+      //println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " ===\n")
       var tacticLog = ""
-      assert(!node.isClosed, "open goals are not closed")
-      while (!node.isClosed()) {
-        elaborateNode(node) //printNode(node)
+      assert(!current.isProved, "open goals are not closed")
+      while (!current.isProved) {
+        printNode(node)
         System.out.flush()
         commands.next().trim match {
           case "" =>
           case "help" => println(interactiveUsage)
           case "exit" => exit(5)
-          case "goals" => val open = root.openGoals()
-            (1 to open.length).map(g => {println("Goal " + g); elaborateNode(open(g-1))})
+          case "goals" => val open = root.subgoals
+            (1 to open.length).map(g => {println("Goal " + g); printNode(open(g-1))})
           case it if it.startsWith("goal ") => try {
             val g = it.substring("goal ".length).toInt
-            if (1<=g&&g<=root.openGoals().size) node = root.openGoals()(g-1)
+            if (1<=g&&g<=root.subgoals.size) node = root.subgoals(g-1)
             else println("No such goal: "+ g)
           } catch {case e: NumberFormatException => println(e)}
           case "skip" =>
-            if (root.openGoals().size >= 2) {
+            if (root.subgoals.size >= 2) {
               //@todo skip to the next goal somewhere on the right of node, not to a random goal
               //@todo track this level skipping by closing and opening parentheses in the log
-              var nextGoal = new Random().nextInt(root.openGoals().length)
-              assert(0 <= nextGoal && nextGoal < root.openGoals().size, "random in range")
-              node = if (root.openGoals()(nextGoal) != node)
-                root.openGoals()(nextGoal)
+              var nextGoal = new Random().nextInt(root.subgoals.length)
+              assert(0 <= nextGoal && nextGoal < root.subgoals.size, "random in range")
+              node = if (root.subgoals(nextGoal) != node)
+                root.subgoals(nextGoal)
               else {
-                val otherGoals = (root.openGoals() diff List(node))
-                assert(otherGoals.length == root.openGoals().length - 1, "removing one open goal decreases open goal count by 1")
+                val otherGoals = root.subgoals diff List(node)
+                assert(otherGoals.length == root.subgoals.length - 1, "removing one open goal decreases open goal count by 1")
                 nextGoal = new Random().nextInt(otherGoals.length)
                 assert(0 <= nextGoal && nextGoal < otherGoals.size, "random in range")
                 otherGoals(nextGoal)
@@ -716,14 +716,14 @@ object KeYmaeraX {
           case command: String =>
             try {
               //@note security issue since executing arbitrary input unsanitized
-              val tacticGenerator = tb.eval(tb.parse(tacticParsePrefix + command + tacticParseSuffix)).asInstanceOf[() => Tactic]
+              val tacticGenerator = tb.eval(tb.parse(tacticParsePrefix + command + tacticParseSuffix)).asInstanceOf[() => BelleExpr]
               val tactic = tacticGenerator()
               tacticLog += "& " + command + "\n"
-              Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, node))
+              current = TactixLibrary.proveBy(node, tactic)
               // walk to the next open subgoal
               // continue walking if it has leaves
-              while (!node.isClosed() && !node.children.isEmpty && !node.children.head.subgoals.isEmpty)
-                node = node.children.head.subgoals(0)
+              while (!current.isProved && current.subgoals.nonEmpty)
+                node = current.subgoals.head
               //@todo make sure to walk to siblings ultimately
             }
             catch {
@@ -731,8 +731,8 @@ object KeYmaeraX {
             }
         }
       }
-      assert(node.isClosed())
-      println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " === CLOSED")
+      assert(current.isProved)
+//      println("=== " + node.tacticInfo.infos.getOrElse("branchLabel", "<none>") + " === CLOSED")
       println(tacticLog)
     }
     root
