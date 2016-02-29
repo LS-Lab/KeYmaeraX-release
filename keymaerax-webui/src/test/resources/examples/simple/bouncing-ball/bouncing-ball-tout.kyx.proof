@@ -1,0 +1,57 @@
+Lemma "bouncing-ball-tout".
+Sequent.
+
+==>
+Formula: ((((v)^(2))<=(((2)*(g()))*((H)-(h))))&(((h)>=(0))&(((g())>(0))&(((H)>=(0))&(((0)<=(c))&((c) < (1)))))))->([{{{{h'=v},{v'=-(g())}&(h)>=(0)}}{{?(h)>=(0);}++{{?(h)=(0);}{v:=-((c)*(v));}}}}*](((h)>=(0))&((h)<=(H))))
+
+End.
+Tool.
+  tool """"KeYmaera X""""
+  model """"Functions.
+  R g().
+End.
+
+ProgramVariables.
+  R h.
+  R v.
+  R t.
+  R c.
+  R V.
+  R H.
+End.
+
+
+Problem.
+    v^2<=2*g()*(H-h) & h>=0 & g()>0 & H>=0 & 0<=c & c<1
+ -> [
+      {
+        {h'=v, v'=-g() & h>=0}
+        {  ?h>=0;
+        ++ ?h=0; v := -c*v; }
+      }* /*@invariant(v^2<=2*g()*(H-h) & h>=0)*/
+    ]
+    (h>=0 & h<=H)
+End.""""
+  tactic """"import edu.cmu.cs.ls.keymaerax.bellerophon.{TheType, BelleExpr}
+
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+
+import scala.language.postfixOps
+
+class BouncingBallTacticGenerator extends (() => BelleExpr) {
+
+  def apply() = {
+    implyR(1) & andL('L)*@TheType() & loop("v^2<=2*g()*(H-h) & h>=0".asFormula)(1) <(
+      QE,
+      prop,
+      composeb(1) & choiceb(1, 1::Nil) & testb(1, 1::0::Nil) & composeb(1, 1::1::Nil) &
+        testb(1, 1::1::Nil) & assignb(1, 1::1::1::Nil) & debug("Foo") & diffSolve()(1) & QE
+      )
+  }
+
+}
+
+new BouncingBallTacticGenerator()""""
+  proof """"""""
+End.
