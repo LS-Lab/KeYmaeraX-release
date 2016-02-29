@@ -490,6 +490,7 @@ case class DoSome[A](options: () => Iterator[A], e: A => BelleExpr, override val
   * uniform substitution of `value` for `abbr` of the resulting provable.
   * @see [[Provable.apply(USubst)]]
   * @todo generalize inner to also AtPosition[E]
+  * @todo generalize to also allow value: Provable => Expression for `let j(x,y) = TBD in t` and have TBD computed from the Provable resulting after t.
   */
 case class Let(abbr: Expression, value: Expression, inner: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr {
   require(abbr.kind == value.kind, "Abbreviation and value must be of same kind, but got abbr.kind=" + abbr.kind + " and value.kind=" + value.kind)
