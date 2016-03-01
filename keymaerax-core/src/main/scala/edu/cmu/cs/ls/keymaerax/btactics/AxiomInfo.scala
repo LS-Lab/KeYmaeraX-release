@@ -126,7 +126,7 @@ object DerivationInfo {
       , /* conclusion */ (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
       , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;")),
         (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
-    , List(ListArg("r(x)", "formula"))
+    , List(FormulaArg("r(x)"))
     , {case () => (fml: Formula) => TactixLibrary.diffCut(Seq(fml):_*)}),
     new CoreAxiomInfo("DE differential effect"
       , AxiomDisplayInfo("DE", "[{x′=f(x)&q(x)}]P↔[x′=f(x)&q(x)][x′:=f(x)]P")
@@ -596,7 +596,7 @@ object DerivationInfo {
       , (List("&Gamma;"),List("[{x′ = f(x) & q(x)}]p(x)","&Delta;"))
       , /* premises */ List((List("&Gamma;"), List("[{x′ = f(x) & q(x)}]r(x)", "&Delta;"), true),
         (List("&Gamma;"), List("[{x′ = f(x) & (q(x) ∧ r(x))}]p(x)","&Delta;"))))
-    , List(ListArg("r(x)", "formula"))
+    , List(FormulaArg("r(x)"))
     , {case () => (fml:Formula) => TactixLibrary.diffInvariant(Seq(fml) : _*)}),
     new PositionTacticInfo("diffSolve",
       RuleDisplayInfo("[′]R",
