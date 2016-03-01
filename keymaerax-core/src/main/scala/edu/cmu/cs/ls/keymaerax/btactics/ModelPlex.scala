@@ -49,7 +49,7 @@ object ModelPlex extends ModelPlexTrait {
    */
   def apply(vars: List[Variable], kind: Symbol, checkProvable: Boolean): (Formula => Formula) = formula => {
     require(kind == 'ctrl || kind == 'model, "Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model")
-    val mxInputFml = createMonitorSpecificationConjecture(formula/*, vars*/)
+    val mxInputFml = createMonitorSpecificationConjecture(formula, vars:_*)
     val mxInputSequent = Sequent(Nil, immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
     val tactic = kind match {
       case 'ctrl => modelplexAxiomaticStyle(useOptOne=true)(controllerMonitorT)('R)

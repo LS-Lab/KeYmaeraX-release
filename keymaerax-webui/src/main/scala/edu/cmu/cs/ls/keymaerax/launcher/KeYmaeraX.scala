@@ -114,6 +114,9 @@ object KeYmaeraX {
           case "-vars" :: value :: tail =>
             if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
             else optionErrorReporter("-vars")
+          case "-kind" :: value :: tail =>
+            if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('kind -> Symbol(value)), tail)
+            else optionErrorReporter("-kind")
           case "-format" :: value :: tail =>
             if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('format -> value), tail)
             else optionErrorReporter("-format")
@@ -415,7 +418,7 @@ object KeYmaeraX {
       "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -modelplex! ModelPlex only handles .key file. Please use: -modelplex FILENAME.key")
     val input = scala.io.Source.fromFile(inputFileNameDotKey).mkString
     val inputModel = KeYmaeraXProblemParser(input)
-    val verifyOption = options.getOrElse('verify, true).asInstanceOf[Boolean]
+    val verifyOption = options.getOrElse('verify, false).asInstanceOf[Boolean]
     val inputFileName = inputFileNameDotKey.dropRight(4)
     var outputFileName = inputFileName
     if(options.contains('out)) {

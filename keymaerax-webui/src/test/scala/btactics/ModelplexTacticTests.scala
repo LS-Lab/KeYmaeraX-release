@@ -1,12 +1,16 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.bellerophon.{TheType, DependentPositionTactic, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.createMonitorSpecificationConjecture
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
 import scala.language.postfixOps
 
@@ -14,6 +18,7 @@ import scala.language.postfixOps
  * Created by smitsch on 3/8/15.
  * @author Stefan Mitsch
  */
+@SlowTest
 class ModelplexTacticTests extends TacticTestBase {
 
   def monitorSize(f: Formula): Int = {
@@ -179,6 +184,22 @@ class ModelplexTacticTests extends TacticTestBase {
 
     report(expected, result, "Watertank controller monitor (backward tactic)")
   }
+
+  it should "work using the command line interface" in {
+    // command line main has to initialize the prover itself, so dispose all test setup first
+    afterEach()
+
+    val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/modelplex/watertank/watertank.key"
+    val vars = "f,l,c"
+    val outputFileName = File.createTempFile("watertank", ".mx").getAbsolutePath
+    KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-kind", "ctrl", "-out", outputFileName))
+
+    val expectedFileContent = "(-1<=fpost_0()&fpost_0()<=(m-l)/ep)&(0<=l&0<=ep)&(fpost()=fpost_0()&lpost()=l)&cpost()=0".asFormula
+
+    val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
+    KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
+  }
+
 //
 //  ignore should "find correct model monitor condition" in {
 //    val s = parseToSequent(getClass.getResourceAsStream("examples/casestudies/modelplex/watertank/watertank-mx.key"))
@@ -286,7 +307,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     report(opt1Result.subgoals.head.succ.head, opt1Result, "LLC controller monitor (forward chase)")
   }
-//
+
   "ETCS safety lemma modelplex in place" should "find correct controller monitor condition" in {
     val in = getClass.getResourceAsStream("/examples/casestudies/modelplex/icfem08/safetylemma-ctrl.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
@@ -376,37 +397,22 @@ class ModelplexTacticTests extends TacticTestBase {
 
     report(expectedSucc, result, "RSS controller monitor (backward tactic)")
   }
-//
-//  ignore should "work using the command line interface" in {
-//    // command line main has to initialize the prover itself, so dispose all test setup first
-//    afterEach()
-//
-//    val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafety.key"
-//    val vars = "a,r,xo,yo,dxo,dyo,t,w"
-//    val outputFileName = File.createTempFile("passivesafety", ".mx").getAbsolutePath
-//    KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-out", outputFileName))
-//
-//    val expectedFileContent = "dxopost_0()^2+dyopost_0()^2<=V()^2&(apost()=-B&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=w|(v=0&(apost()=0&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=0)|-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&(((x-xopost_0()>=0->x-xopost_0()>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(x-xopost_0()<=0->xopost_0()-x>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))|(y-yopost_0()>=0->y-yopost_0()>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(y-yopost_0()<=0->yopost_0()-y>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))))&(apost()=apost_0()&rpost()=rpost_0()&xopost()=xopost_0()&yopost()=yopost_0()&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=wpost_0()))))))".asFormula
-//
-//    val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
-//    KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
-//  }
-//
-//  ignore should "work using the command line interface with abs function" in {
-//    // command line main has to initialize the prover itself, so dispose all test setup first
-//    afterEach()
-//
-//    val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.key"
-//    val vars = "a,r,xo,yo,dxo,dyo,t,w"
-//    val outputFileName = File.createTempFile("passivesafetyabs", ".mx").getAbsolutePath
-//    KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-out", outputFileName))
-//
-//    val expectedFileContent = "dxopost_0()^2+dyopost_0()^2<=V()^2&(apost()=-B&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=w|(v=0&(apost()=0&rpost()=r&xopost()=xo&yopost()=yo&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=0)|-B<=apost_0()&apost_0()<=A&(rpost_0()!=0&(wpost_0()*rpost_0()=v&((abs(x-xopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|abs(y-yopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(apost()=apost_0()&rpost()=rpost_0()&xopost()=xopost_0()&yopost()=yopost_0()&dxopost()=dxopost_0()&dyopost()=dyopost_0()&tpost()=0&wpost()=wpost_0()))))))".asFormula
-//
-//    val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
-//    KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
-//  }
-//
+
+  it should "work using the command line interface" in {
+    // command line main has to initialize the prover itself, so dispose all test setup first
+    afterEach()
+
+    val inputFileName = "keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.key"
+    val vars = "a,r,xo,yo,dxo,dyo,t,w,v,t,x,y,dx,dy"
+    val outputFileName = File.createTempFile("passivesafetyabs", ".mx").getAbsolutePath
+    KeYmaeraX.main(Array("-modelplex", inputFileName, "-vars", vars, "-kind", "ctrl", "-out", outputFileName))
+
+    val expectedFileContent = "dxopost_0()^2+dyopost_0()^2<=V()^2&((0<=ep&v>=0)&((((((((((((apost()=-B&rpost()=r)&xopost()=xo)&yopost()=yo)&dxopost()=dxopost_0())&dyopost()=dyopost_0())&tpost()=0)&wpost()=w)&vpost()=v)&tpost()=0)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy|v=0&(0<=ep&v>=0)&((((((((((((apost()=0&rpost()=r)&xopost()=xo)&yopost()=yo)&dxopost()=dxopost_0())&dyopost()=dyopost_0())&tpost()=0)&wpost()=0)&vpost()=v)&tpost()=0)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy|(-B<=apost_0()&apost_0()<=A)&rpost_0()!=0&wpost_0()*rpost_0()=v&(abs(x-xopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V()))|abs(y-yopost_0())>v^2/(2*B)+V()*v/B+(A/B+1)*(A/2*ep^2+ep*(v+V())))&(0<=ep&v>=0)&((((((((((((apost()=apost_0()&rpost()=rpost_0())&xopost()=xopost_0())&yopost()=yopost_0())&dxopost()=dxopost_0())&dyopost()=dyopost_0())&tpost()=0)&wpost()=wpost_0())&vpost()=v)&tpost()=0)&xpost()=x)&ypost()=y)&dxpost()=dx)&dypost()=dy)".asFormula
+
+    val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
+    KeYmaeraXParser(actualFileContent) shouldBe expectedFileContent
+  }
+
   "RSS passive orientation safety modelplex in place" should "extract the correct controller monitor by updateCalculus implicationally" in {
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/passiveorientationsafety.key")
     val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
