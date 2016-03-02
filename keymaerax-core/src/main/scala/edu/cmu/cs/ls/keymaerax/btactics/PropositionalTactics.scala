@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
@@ -146,6 +147,28 @@ object PropositionalTactics {
       implyLOld(implication) <(
         cohide2(p, SuccPos(sequent.succ.length)) & close,
         Idioms.ident
+        )
+    }
+  }
+
+  /**
+   * Converts a sequent into a single formula.
+   * Example:
+   * {{{
+   *   A, B |- S, T, U
+   * }}}
+   * is converted into:
+   * {{{
+   *   (A ^ B) -> (S \/ T \/ U)
+   * }}}
+   */
+  val toSingleFormula: DependentTactic  = new SingleGoalDependentTactic("toSingleFormula") {
+    override def computeExpr(sequent: Sequent): BelleExpr = {
+      cut(sequent.toFormula) <(
+        /* use */ implyL('Llast) <(
+          hideR(1)*sequent.succ.size & (andR(1) <(close, (close | skip) partial))*(sequent.ante.size-1) & ?(close),
+          hideL(-1)*sequent.ante.size & (orL(-1) <(close, (close | skip) partial))*(sequent.succ.size-1) & ?(close)),
+        /* show */ cohide('Rlast) partial
         )
     }
   }
