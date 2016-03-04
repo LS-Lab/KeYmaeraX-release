@@ -100,11 +100,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[UnifyUSCalculus]]
     *******************************************************************/
 
-  /** US: uniform substitution ([[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule USubst]])
-    * @see [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]]
-    * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
-    */
-  def US(subst: USubst, origin: Sequent): BuiltInTactic = ProofRuleTactics.US(subst, origin)
+//  /** US: uniform substitution ([[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule USubst]])
+//    * @see [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]]
+//    * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
+//    */
+//  def US(subst: USubst, origin: Sequent): BuiltInTactic = ProofRuleTactics.US(subst, origin)
 
   // conditional tactics
 

@@ -187,7 +187,7 @@ final class USubstAboveURen(private[bellerophon] override val subsDefsInput: imm
 
   // backwards style: compose US after renaming to get the same Hilbert proof order as in toForward: US above UR
   // rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
-  def toTactic(form: Sequent): SeqTactic = getRenamingTactic & ProofRuleTactics.US(usubst, form)
+  def toTactic(form: Sequent): SeqTactic = ??? //@todo getRenamingTactic & ProofRuleTactics.US(usubst, form)
 
   def toForward: Provable => Provable = fact => {
     val replaced = fact(usubst)  //UniformSubstitutionRule.UniformSubstitutionRuleForward(fact, usubst)
@@ -233,7 +233,7 @@ final class URenAboveUSubst(private[bellerophon] override val subsDefsInput: imm
 
   // backwards style: compose US after renaming to get the same Hilbert proof order as in toForward: US above UR
   // rens.foldLeft(replaced)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
-  def toTactic(form: Sequent): SeqTactic = ProofRuleTactics.US(usubst, RenUSubst(rens)(form)) & getRenamingTactic
+  def toTactic(form: Sequent): SeqTactic = ??? //@todo ProofRuleTactics.US(usubst, RenUSubst(rens)(form)) & getRenamingTactic
 
   /** Convert to forward tactic using the respective uniform renaming and uniform substitution rules */
   def toForward: Provable => Provable = fact => {

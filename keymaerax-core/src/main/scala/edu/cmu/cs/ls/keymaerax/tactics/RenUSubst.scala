@@ -121,7 +121,7 @@ final case class RenUSubst(subsDefsInput: immutable.Seq[(Expression,Expression)]
     })
 
   /** Get the uniform substitution tactic part to reduce to form */
-  def getUSubstTactic(form: Sequent): Tactic = ???  /*new Tactics.ApplyRule(UniformSubstitutionRule(usubst, form)) {
+  def getUSubstTactic(form: Sequent): Tactic = Tactics.errorT("???")  /*new Tactics.ApplyRule(UniformSubstitutionRule(usubst, form)) {
     override def applicable(node: ProofNode): Boolean = true
   }*/
 
