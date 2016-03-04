@@ -1118,36 +1118,36 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
  * @see [[Provable.apply(USubst)]]
  */
-@deprecated("Soundness-critical: when using uniform substitutions on Provables, don't use uniform substitution rules")
-final case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule {
-  //@todo soundness-critical: disallow this globally sound rule when adding the simple implementation of Provable.apply(USubst)
-  val name: String = "Uniform Substitution"
-
-  //private def log(msg: =>Any): Unit = {} //println(msg)
-
-  override def toString: String = subst.toString   // name + "(" + subst + ")"
-
-  /**
-   * check that conclusion is indeed derived from origin via subst (note that no reordering is allowed since those operations
-   * require explicit rule applications)
-   * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
-   */
-  def apply(conclusion: Sequent): immutable.List[Sequent] = if (true) throw new IllegalStateException("use Provable(USubst) instead") else
-    try {
-      //log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
-      if (subst(origin) == conclusion) immutable.List(origin)
-      else throw new InapplicableRuleException(this + "\non premise   " + origin + "\nresulted in  " + subst(origin) + "\nbut expected " + conclusion, this, conclusion)
-      /*("From\n  " + origin + "\nuniform substitution\n  " + subst +
-        "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))*/
-    } catch { case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion) }
-}
-@deprecated("Soundness-critical: when using uniform substitutions on Provables, don't use uniform substitution rules")
-object UniformSubstitutionRule {
-  /** Apply uniform substitution subst to provable forward in Hilbert-style (convenience) */
-  @deprecated("Use provable.apply(usubst) instead, especially when provable.isProved")
-  def UniformSubstitutionRuleForward(provable: Provable, subst: USubst): Provable =
-    provable(subst(provable.conclusion), UniformSubstitutionRule(subst, provable.conclusion))
-}
+//@deprecated("Soundness-critical: when using uniform substitutions on Provables, don't use uniform substitution rules")
+//final case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule {
+//  //@todo soundness-critical: disallow this globally sound rule when adding the simple implementation of Provable.apply(USubst)
+//  val name: String = "Uniform Substitution"
+//
+//  //private def log(msg: =>Any): Unit = {} //println(msg)
+//
+//  override def toString: String = subst.toString   // name + "(" + subst + ")"
+//
+//  /**
+//   * check that conclusion is indeed derived from origin via subst (note that no reordering is allowed since those operations
+//   * require explicit rule applications)
+//   * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
+//   */
+//  def apply(conclusion: Sequent): immutable.List[Sequent] = if (true) throw new IllegalStateException("use Provable(USubst) instead") else
+//    try {
+//      //log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
+//      if (subst(origin) == conclusion) immutable.List(origin)
+//      else throw new InapplicableRuleException(this + "\non premise   " + origin + "\nresulted in  " + subst(origin) + "\nbut expected " + conclusion, this, conclusion)
+//      /*("From\n  " + origin + "\nuniform substitution\n  " + subst +
+//        "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))*/
+//    } catch { case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion) }
+//}
+//@deprecated("Soundness-critical: when using uniform substitutions on Provables, don't use uniform substitution rules")
+//object UniformSubstitutionRule {
+//  /** Apply uniform substitution subst to provable forward in Hilbert-style (convenience) */
+//  @deprecated("Use provable.apply(usubst) instead, especially when provable.isProved")
+//  def UniformSubstitutionRuleForward(provable: Provable, subst: USubst): Provable =
+//    provable(subst(provable.conclusion), UniformSubstitutionRule(subst, provable.conclusion))
+//}
 
 
 /*********************************************************************************
