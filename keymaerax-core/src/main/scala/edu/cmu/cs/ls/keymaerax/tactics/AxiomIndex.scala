@@ -6,12 +6,14 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import java.lang.Number
 
+import edu.cmu.cs.ls.keymaerax.btactics.Axiom
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.annotation.switch
 
 /**
  * Axiom Indexing data structures for canonical proof strategies.
+ *
  * @note Could be generated automatically, yet better in a precomputation fashion, not on the fly.
  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
@@ -28,6 +30,7 @@ object AxiomIndex {
 
   /**
    * Return (derived) axiom index with key for matching and list of recursors on other sibling, i.e., for chasing after useAt/useFor.
+ *
    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chase()]]
    * @see [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus.chaseFor()]]
    * @todo copy documentation from chase

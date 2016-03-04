@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import edu.cmu.cs.ls.keymaerax.btactics.Axiom
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.EqualityRewritingImpl.equivRewriting
@@ -19,6 +20,7 @@ import edu.cmu.cs.ls.keymaerax.tools.Tool
 object AxiomTactic {
   /**
    * Looks up a formula in a sequent.
+ *
    * @param sequent The sequent.
    * @param p The position in the sequent.
    * @return The formula at that position, if found.
@@ -43,6 +45,7 @@ object AxiomTactic {
   /**
    * Creates a new tactic that uses equivalence congruence or equation congruence or monotone to uncover an axiom inside
    * a context.
+ *
    * @param axiomName The name of the axiom.
    * @param axiomInstance The axiom instance that should be used in context (an equivalence or equality).
    * @param baseT The base tactic to show the axiom instance once uncovered.
@@ -163,6 +166,7 @@ object AxiomTactic {
 
   /**
    * Creates a new tactic to show an axiom by lookup.
+ *
    * @param axiomName The name of the axiom.
    * @param subst A function fml => subst to create the substitution from the current axiom form fml (an equivalence or equality).
    * @param alpha A function fml => alpha to create tactic for alpha renaming after substitution from the current axiom form fml.

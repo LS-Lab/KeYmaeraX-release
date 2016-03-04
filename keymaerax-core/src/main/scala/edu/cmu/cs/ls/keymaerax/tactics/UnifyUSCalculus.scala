@@ -4,6 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import edu.cmu.cs.ls.keymaerax.btactics.{AxiomaticRule, Axiom}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
 import edu.cmu.cs.ls.keymaerax.tactics.TactixLibrary._
@@ -13,7 +14,8 @@ import scala.collection.immutable._
 
 /**
  * Automatic unification-based Uniform Substitution Calculus with indexing.
- * @author Andre Platzer
+  *
+  * @author Andre Platzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see [[AxiomIndex.axiomIndex()]]
@@ -35,6 +37,7 @@ trait UnifyUSCalculus {
     *   ----------- G
     *    [a;]p(??)
     * }}}
+    *
     * @see [[Monb]] with p(x)=True
     */
   lazy val G                  : Tactic         = AxiomaticRuleTactics.goedelT
@@ -216,7 +219,8 @@ trait UnifyUSCalculus {
    *     s=unify(fact.right,_) => accordingly with an extra commuteEquivRightT
    *   }
    * }}}
-   * @author Andre Platzer
+    *
+    * @author Andre Platzer
    * @param fact the Formula to use to simplify at the indicated position of the sequent
    * @param key the part of the Formula fact to unify the indicated position of the sequent with
    * @param factTactic the tactic to use to prove the instance of the fact obtained after unification
@@ -269,7 +273,8 @@ trait UnifyUSCalculus {
       /**
        * useAt(K{k})(C{c}) uses, already under the given substitution subst, the key k from context K{k}
        * in place of c at position p in context C{_}.
-       * @param subst the substitution subst=unify(k,c)
+        *
+        * @param subst the substitution subst=unify(k,c)
        * @param K the context of fact in which key k occurs
        * @param k the key from context K{_} to use in place of c
        * @param p the position at which this useAt is applied to
@@ -404,7 +409,8 @@ trait UnifyUSCalculus {
    *   --------------------- CQ
    *    c(f(x)) <-> c(g(x))
    * }}}
-   * @param inEqPos the position *within* the two sides of the equivalence at which the context DotTerm happens.
+    *
+    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotTerm happens.
    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
    */
@@ -455,7 +461,8 @@ trait UnifyUSCalculus {
    *   --------------------- CE
    *    C{p(x)} <-> C{q(x)}
    * }}}
-   * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
+    *
+    * @param inEqPos the position *within* the two sides of the equivalence at which the context DotFormula happens.
    * @see [[UnifyUSCalculus.CE(Context)]]
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
@@ -499,7 +506,8 @@ trait UnifyUSCalculus {
    *   ------------------------- for positive C{.}
    *   |- C{o} -> C{k}
    * }}}
-   * @param inEqPos the position *within* the two sides of the implication at which the context DotFormula happens.
+    *
+    * @param inEqPos the position *within* the two sides of the implication at which the context DotFormula happens.
    * @see [[UnifyUSCalculus.CQ(PosInExpr)]]
    * @see [[UnifyUSCalculus.CE(PosInExpr)]]
    * @see [[UnifyUSCalculus.CMon(Context)]]
@@ -543,6 +551,7 @@ trait UnifyUSCalculus {
     *   -------------------------------- CE(fact)
     *   C{p(x)}, G |- D
     * }}}
+    *
     * @see [[UnifyUSCalculus.CE(Provable,Context)]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
@@ -588,6 +597,7 @@ trait UnifyUSCalculus {
 
   /** CE(fact,C) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
     * reasoning in the given context C at the indicated position to replace `right` by `left` in that context (literally, no substitution).
+    *
     * @see [[UnifyUSCalculus.CE(Provable)]]
     * @see [[useAt()]]
     * @see [[CE(Context)]]
@@ -645,6 +655,7 @@ trait UnifyUSCalculus {
     *   --------------------------------------- cutAt(repl)
     *   C{c}, G |- D
     * }}}
+    *
     * @see [[UnifyUSCalculus.CE(Provable)]]
     * @see [[cutL]]
     * @see [[cutR]]
@@ -709,6 +720,7 @@ trait UnifyUSCalculus {
     *   --------------------- CQ+CE
     *    c(f(x)) <-> c(g(x))
     * }}}
+    *
     * @see [[CE(PosInExpr]]
     * @see [[CE(Provable)]]
     * @see [[CMon(Context)]]
@@ -747,6 +759,7 @@ trait UnifyUSCalculus {
     *   ------------ CMon if C{⎵} of positive polarity
     *   C{k} |- C{o}
     * }}}
+    *
     * @note The direction in the conclusion switches for negative polarity C{⎵}
     * @see [[UnifyUSCalculus.CMon(PosInExpr)]]
     * @see [[CE(Context)]]
@@ -953,6 +966,7 @@ trait UnifyUSCalculus {
     * and accordingly for facts that are `__l__->r` facts or conditional `c->(__l__<->r)` or `c->(__l__->r)` facts and so on,
     * where `__l__` indicates the key part of the fact.
     * useAt automatically tries proving the required assumptions/conditions of the fact it is using.
+    *
     * @author Andre Platzer
     * @param fact the Provable whose conclusion  to use to simplify at the indicated position of the sequent
     * @param key the part of the fact's conclusion to unify the indicated position of the sequent with
@@ -1165,7 +1179,8 @@ trait UnifyUSCalculus {
    * ----------------
    *   G, a |- b, D
    * }}}
-   * @see [[PropositionalTacticsImpl.InverseImplyRightT]]
+    *
+    * @see [[PropositionalTacticsImpl.InverseImplyRightT]]
    */
   private def inverseImplyR: ForwardTactic = pr => {
     val pos = SuccPos(0)
@@ -1200,6 +1215,7 @@ trait UnifyUSCalculus {
   lazy val chase: PositionTactic = chase(3,3)
 
   /** Chase with bounded breadth and giveUp to stop.
+    *
     * @param breadth how many alternative axioms to pursue locally, using the first applicable one.
     *                Equivalent to pruning keys so that all lists longer than giveUp are replaced by Nil,
     *                and then all lists are truncated beyond breadth.
@@ -1234,6 +1250,7 @@ trait UnifyUSCalculus {
     *
     * Chase the expression at the indicated position forward (Hilbert computation constructing the answer by proof).
     * Follows canonical axioms toward all their recursors while there is an applicable simplifier axiom according to `keys`.
+    *
     * @param keys maps expressions to a list of axiom names to be used for those expressions.
     *             First returned axioms will be favored (if applicable) over further axioms.
     * @param modifier will be notified after successful uses of axiom at a position with the result of the use.
@@ -1301,6 +1318,7 @@ trait UnifyUSCalculus {
     *
     * Chase the expression at the indicated position forward (Hilbert computation constructing the answer by proof).
     * Follows canonical axioms toward all their recursors while there is an applicable simplifier axiom according to `keys`.
+    *
     * @param keys maps expressions to a list of axiom names to be used for those expressions.
     *             First returned axioms will be favored (if applicable) over further axioms.
     * @param modifier will be notified after successful uses of axiom at a position with the result of the use.
