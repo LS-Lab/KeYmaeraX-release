@@ -118,18 +118,18 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   $scope.$emit('routeLoaded', {theview: 'models'});
 })
 
-angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function ($scope, $http, $cookies, $modalInstance, modelid) {
+angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function ($scope, $http, $cookies, $uibModalInstance, modelid) {
   $http.get("user/" + $cookies.get('userId') + "/model/" + modelid).success(function(data) {
       $scope.model = data
   });
 
-  $scope.ok = function () { $modalInstance.close(); };
+  $scope.ok = function () { $uibModalInstance.close(); };
 });
 
-angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', function ($scope, $http, $cookies, $modalInstance, modelid) {
+angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', function ($scope, $http, $cookies, $uibModalInstance, modelid) {
   $http.get("user/" + $cookies.get('userId') + "/model/" + modelid + "/tactic").success(function(data) {
       $scope.tactic = data
   });
 
-  $scope.ok = function () { $modalInstance.close(); };
+  $scope.ok = function () { $uibModalInstance.close(); };
 });
