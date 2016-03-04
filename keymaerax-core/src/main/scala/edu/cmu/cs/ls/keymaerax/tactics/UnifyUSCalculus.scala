@@ -1279,13 +1279,13 @@ trait UnifyUSCalculus {
           case t: Term =>      // t=t
             DerivedAxioms.equalReflex.fact(
               Sequent(Nil, IndexedSeq(), IndexedSeq(Equal(t,t))),
-              UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), t)::Nil),
-                DerivedAxioms.equalReflex.fact.conclusion))
+              ??? /*UniformSubstitutionRule(USubst(SubstitutionPair(FuncOf(Function("s",None,Unit,Real),Nothing), t)::Nil),
+                DerivedAxioms.equalReflex.fact.conclusion)*/)
           case f: Formula =>   // f<->f
             DerivedAxioms.equivReflexiveAxiom.fact(
               Sequent(Nil, IndexedSeq(), IndexedSeq(Equiv(f,f))),
-              UniformSubstitutionRule(USubst(SubstitutionPair(PredOf(Function("p",None,Unit,Bool),Nothing), f)::Nil),
-                DerivedAxioms.equivReflexiveAxiom.fact.conclusion))
+              ??? /*UniformSubstitutionRule(USubst(SubstitutionPair(PredOf(Function("p",None,Unit,Bool),Nothing), f)::Nil),
+                DerivedAxioms.equivReflexiveAxiom.fact.conclusion)*/)
         }
         assert(initial.isProved && initial.conclusion.ante.isEmpty && initial.conclusion.succ.length==1, "Proved reflexive start " + initial + " for " + e)
         if (DEBUG) println("chase starts at " + initial)
