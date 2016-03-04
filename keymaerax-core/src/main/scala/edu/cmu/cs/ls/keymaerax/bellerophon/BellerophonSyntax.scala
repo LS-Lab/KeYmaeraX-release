@@ -143,7 +143,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
   /*private[keymaerax]*/ final def apply(position: Position, expected: Formula): T = apply(Fixed(position, Some(expected)))
   /**
     * Applied at a fixed position, ensuring that the formula `expected` will be found at that position, verbatim.
-    * @param position The position where this tactic will be applied at.
+    * @param seqIdx The position where this tactic will be applied at (-1 based for antecedent, 1 based for succedent).
     * @param expected the formula expected at `position`. Contract fails if that expectation is not met.
     * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
     * @note Convenience wrapper
@@ -153,7 +153,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
   final def apply(seqIdx: Int, expected: Formula): T = apply(Fixed(Position(seqIdx), Some(expected)))
   /**
     * Applied at a fixed position, ensuring that the formula `expected` will be found at that position, verbatim.
-    * @param position The position where this tactic will be applied at.
+    * @param seqIdx The position where this tactic will be applied at (-1 based for antecedent, 1 based for succedent).
     * @param expected the formula expected at `position`. Contract fails if that expectation is not met.
     * @return The tactic of type `T` that can be readily applied at the specified position to any given BelleExpr.
     * @note Convenience wrapper
