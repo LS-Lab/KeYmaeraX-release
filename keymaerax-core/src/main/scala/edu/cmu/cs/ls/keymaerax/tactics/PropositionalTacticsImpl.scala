@@ -112,9 +112,9 @@ object PropositionalTacticsImpl {
       case _ => false
     } else false
 
-    def apply(pos: Position): Tactic = new Tactics.ApplyRule(ImplyLeftOld(pos)) {
+    def apply(pos: Position): Tactic = ??? /*new Tactics.ApplyRule(ImplyLeftOld(pos)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-    }
+    }*/
   }
 
   /**

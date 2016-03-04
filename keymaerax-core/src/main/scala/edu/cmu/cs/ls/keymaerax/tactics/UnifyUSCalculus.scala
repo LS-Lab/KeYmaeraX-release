@@ -825,13 +825,14 @@ trait UnifyUSCalculus {
           val (ante, succ) =
             if (polarity < 0) (IndexedSeq(C(right)), IndexedSeq(C(left))) // polarity switch so switch left/right sides
             else (IndexedSeq(C(left)), IndexedSeq(C(right)))
-          (Provable.startProof(Sequent(Nil, ante, succ))
+          ???
+          /*(Provable.startProof(Sequent(Nil, ante, succ))
             (ImplyRight(SuccPos(0)), 0)
             (ImplyLeftOld(AntePos(0)), 0)
             (Close(AntePos(0), SuccPos(1)), 0)
             // right branch
             (CoHide2(AntePos(1), SuccPos(0)), 0)
-            ) (monStep(Context(c), mon), 0)
+            ) (monStep(Context(c), mon), 0)*/
 
         case Imply(c, e) if !symbols(e).contains(DotFormula) =>
           polarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(
@@ -840,14 +841,15 @@ trait UnifyUSCalculus {
             if (polarity < 0) (IndexedSeq(C(right)), IndexedSeq(C(left))) // polarity switch so switch left/right sides
             else (IndexedSeq(C(left)), IndexedSeq(C(right)))
           println("CMon check case: " + C + " to prove " + Sequent(Nil, ante, succ) + "\nfrom " + mon)
-          (Provable.startProof(Sequent(Nil, ante, succ))
+          ???
+          /*(Provable.startProof(Sequent(Nil, ante, succ))
             (ImplyRight(SuccPos(0)), 0)
             (ImplyLeftOld(AntePos(0)), 0)
             // right branch
             (Close(AntePos(1), SuccPos(0)), 1)
             // left branch
             (CoHide2(AntePos(0), SuccPos(1)), 0)
-            ) (monStep(Context(c), mon), 0)
+            ) (monStep(Context(c), mon), 0)*/
 
         case Equiv(e, c) if !symbols(e).contains(DotFormula) =>
           //@note fallback to implication

@@ -132,9 +132,9 @@ object PropositionalTactics {
   /**
    * Modus ponens.
    * @example{{{
-   *      p, q |-
-   *   ------------ modusPonens
-   *   p, p->q |-
+   *      p, q, G |- D
+   *   ---------------- modusPonens
+   *   p, p->q, G |- D
    * }}}
    * @param assumption Position pointing to p
    * @param implication Position pointing to p->q
@@ -143,9 +143,11 @@ object PropositionalTactics {
   def modusPonens(assumption: AntePos, implication: AntePos): BelleExpr = new SingleGoalDependentTactic("Modus Ponens") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       val p = AntePos(assumption.getIndex - (if (assumption.getIndex > implication.getIndex) 1 else 0))
-      //@todo adapt implyLOld to implyL
-      implyLOld(implication) <(
-        cohide2(p, SuccPos(sequent.succ.length)) & close,
+      //@note adapted to use implyL instead of implyLOld
+      implyL(implication) <(
+        cohide2(p, SuccPos(sequent.succ.length)) & close
+        //@todo shouldn't this suffice? close(AntePosition(assumption), SuccPosition(SuccPos(sequent.succ.length)))
+        ,
         Idioms.ident
         )
     }
