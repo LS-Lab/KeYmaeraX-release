@@ -80,7 +80,7 @@ case class SuccPos private[ls] (private[core] val index: Int) extends SeqPos {
 object SeqPos {
   /**
    * Sequent position of signed index `signedPos` where positive is succedent and negative antecedent.
- *
+   *
    * @param signedPos the signed integer position of the formula in the antecedent or succedent, respectively.
    *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
    *  Positive numbers indicate succedent positions, 1, 2, 3.
@@ -121,7 +121,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
 
   /**
    * Retrieves the formula in sequent at a given position.
- *
+   *
    * @param p the position of the formula
    * @return the formula at the given position either from the antecedent or the succedent
    */
@@ -160,7 +160,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   /**
    * A copy of this sequent concatenated with given sequent s.
    * Sequent(pref, A,S) glue Sequent(pref, B,T) == Sequent(pref, A++B, S++T)
- *
+   *
    * @param s the sequent whose antecedent to append to ours and whose succedent to append to ours.
    * @return a copy of this sequent concatenated with s.
    * Results in a least upper bound with respect to subsets of this and s.
@@ -176,7 +176,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
 
   /**
    * A copy of this sequent with the indicated position replaced by the formula f.
- *
+   *
    * @param p the position of the replacement
    * @param f the replacing formula
    * @return a copy of this sequent with the formula at position p replaced by f.
@@ -192,7 +192,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
 
   /**
    * A copy of this sequent with the indicated position replaced by gluing the sequent s.
- *
+   *
    * @param p the position of the replacement
    * @param s the sequent glued / concatenated to this sequent after dropping p.
    * @return a copy of this sequent with the formula at position p removed and the sequent s appended.
@@ -219,7 +219,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   def subsequentOf(r: Sequent): Boolean = pref == r.pref && ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet)
 
   /**
-   * Check whether this sequent is a equivalent to the given sequent r (considered as sets)
+   * Check whether this sequent is the same as the given sequent r (considered as sets)
    */
   def sameSequentAs(r: Sequent): Boolean = this.subsequentOf(r) && r.subsequentOf(this)
 
@@ -245,11 +245,11 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
  * `conclusion` from the premises in `subgoals`.
  * If `subgoals` is an empty list, then `conclusion` is provable.
  * Otherwise `conclusion` is provable from the set of all assumptions in `subgoals`.
-  * {{{
-  *    G1 |- D1 ... Gn |- Dn    (subgoals)
-  *   -----------------------
-  *            G |- D           (conclusion)
-  * }}}
+ * {{{
+ *    G1 |- D1 ... Gn |- Dn    (subgoals)
+ *   -----------------------
+ *            G |- D           (conclusion)
+ * }}}
  *
  * @param conclusion the conclusion `G |- D` that follows if all subgoals are valid.
  * @param subgoals the premises `Gi |- Di` that, if they are all valid, imply the conclusion.
@@ -369,8 +369,6 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
  * }}}
  */
 final case class Provable private (conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
-  //if (Provable.DEBUG && subgoals.distinct.size != subgoals.size) print("INFO: repeated subgoals may warrant set construction or compactification in Provable " + this)
-
   /**
    * Position types for the subgoals of a Provable.
    */
@@ -378,7 +376,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
   /**
    * Checks whether this Provable proves its conclusion.
- *
+   *
    * @return true if conclusion is proved by this Provable,
    *         false if subgoals are missing that need to be proved first.
    * @note soundness-critical
@@ -387,7 +385,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
   /**
    * What conclusion this Provable proves if isProved.
- *
+   *
    * @requires(isProved)
    */
   final def proved: Sequent = {
@@ -408,13 +406,13 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *   ------------------------------------ (rule)
    *                Gi |- Di
    * }}}
- *
+   *
    * @param rule the proof rule to apply to the indicated subgoal of this Provable derivation.
    * @param subgoal which of our subgoals to apply the given proof rule to.
    * @return A Provable derivation that proves the premise subgoal by using the given proof rule.
    * Will return a Provable with the same conclusion but an updated set of premises.
    * @requires(0 <= subgoal && subgoal < subgoals.length)
-   * @note soundness-critical
+   * @note soundness-critical. And soundness needs Rule to be sealed.
    */
   final def apply(rule: Rule, subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " should be applied to an index " + subgoal + " that is within the subgoals " + subgoals)
@@ -450,7 +448,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *   ------------------------------------ (subderivation)
    *                Gi |- Di
    * }}}
- *
+   *
    * @param subderivation the Provable derivation that proves premise subgoal.
    * @param subgoal the index of our subgoal that the given subderivation concludes.
    * @return A Provable derivation that joins our derivation and subderivation to a joint derivation of our conclusion using subderivation to show our subgoal.
@@ -485,7 +483,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     *   -----------------------     =>     -----------------------------------   (USR)
     *            G |- D                                s(G) |- s(D)
     * }}}
- *
+    *
     * @param subst The uniform substitution (of no free variables) to be used on the premises and conclusion of this Provable.
     * @return The Provable resulting from applying `subst` to our subgoals and conclusion.
     * @author Andre Platzer
@@ -515,7 +513,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *   ------------------------- rule
    *         newConsequence
    * }}}
- *
+   *
    * @param newConsequence the new conclusion that the rule shows to follow from this.conclusion
    * @param rule the proof rule to apply to concludes to reduce it to this.conclusion.
    * @return A Provable derivation that proves concludes from the same subgoals by using the given proof rule.
@@ -546,7 +544,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     *   ------------------------- prolongation
     *           G0 |- D0
     * }}}
- *
+    *
     * @param prolongation the subderivation used to prolong this Provable.
     *                       Where subderivation has a  subgoal equaling our conclusion.
     * @return A Provable derivation that proves prolongation's conclusion from our subgoals.
@@ -561,7 +559,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
   /**
    * Sub-Provable: Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
    * Provables resulting from the returned subgoal can be merged into this Provable to prove said subgoal.
- *
+   *
    * @param subgoal the index of our subgoal for which to return a new open Provable.
    * @return an initial unfinished open Provable for the subgoal `i`:
    * {{{
@@ -585,8 +583,6 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
 /** Starting new Provables to begin a proof */
 object Provable {
-  //private[core] val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
-
   /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. */
   val axiom: immutable.Map[String, Formula] = AxiomBase.loadAxioms
 
@@ -596,7 +592,7 @@ object Provable {
     *   ---------- (axiom)
     *    |- axiom
     * }}}
- *
+    *
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     * @note soundness-critical: only valid formulas are sound axioms.
     */
@@ -610,7 +606,7 @@ object Provable {
     *   ---------- (axiomatic rule)
     *     G |- D
     * }}}
- *
+    *
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     * @note soundness-critical: only list locally sound rules.
     * @see [[Provable.apply(USubst)]]
@@ -626,7 +622,7 @@ object Provable {
     *   ------
     *    goal
     * }}}
- *
+    *
     * @param goal the desired conclusion.
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
     * @note soundness-critical
@@ -643,7 +639,7 @@ object Provable {
     *   ---------
     *    |- goal
     * }}}
- *
+    *
     * @param goal the desired conclusion formula for the succedent.
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
     * @note Not soundness-critical
@@ -653,7 +649,7 @@ object Provable {
 
   /**
     * Create a new provable for oracle facts provided by external tools or lemma loading.
- *
+    *
     * @param conclusion the desired conclusion.
     * @param subgoals the remaining subgoals.
     * @return a Provable of given conclusion and given subgoals.
@@ -1227,7 +1223,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
   /**
    * Check whether this renaming is admissible for expression e, i.e.
    * the new name repl does not already occur (or the renaming was the identity).
- *
+   *
    * @note identity renaming is merely allowed to enable BoundVariableRenaming to introduce stutter.
    * @note This implementation currently errors if repl.sort!=Real
    */
@@ -1296,8 +1292,8 @@ object RCF {
 
   /**
    * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
- *
-   * @param t The tool.
+   *
+   * @param t The quantifier-elimination tool.
    * @param f The formula.
    * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
    */
@@ -1424,7 +1420,7 @@ case class CoHideRight(pos: SuccPos) extends RightRule {
   * ------------- (CoHide left)
   *   p, G |- D
   * }}}
- *
+  *
   * @note Rarely useful (except for contradictory `p`)
   * @derived
   */
@@ -1524,7 +1520,7 @@ case class CommuteEquivRight(pos: SuccPos) extends RightRule {
   * -------------- (<->cL)
   * p<->q, G |-  D
   * }}}
- *
+  *
   * @derived
   */
 case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
