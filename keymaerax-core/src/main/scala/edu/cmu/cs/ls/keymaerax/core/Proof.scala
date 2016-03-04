@@ -569,6 +569,9 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 object Provable {
   private[core] val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
 
+  /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. */
+  val axiom: immutable.Map[String, Formula] = AxiomBase.loadAxioms
+
   /** immutable list of Provables of sound axioms, i.e., valid formulas of differential dynamic logic.
     * {{{
     *       *
@@ -578,7 +581,7 @@ object Provable {
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     * @note soundness-critical: only valid formulas are sound axioms.
     */
-  val axioms: immutable.Map[String, Provable] = AxiomBase.loadAxioms.mapValues(axiom =>
+  val axioms: immutable.Map[String, Provable] = axiom.mapValues(axiom =>
     new Provable(Sequent(Nil, immutable.IndexedSeq(), immutable.IndexedSeq(axiom)), immutable.IndexedSeq())
   )
 
@@ -1158,7 +1161,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
 /** Finite list of axioms. */
 object Axiom {
   /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. */
-  val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms
+  val axioms: immutable.Map[String, Formula] = Provable.axiom
 
   /** A Provable proving the axiom named `id` */
   @deprecated("May want to use Provable.axioms instead?")
