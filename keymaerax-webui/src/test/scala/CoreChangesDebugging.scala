@@ -39,7 +39,7 @@ class CoreChangesDebugging extends FlatSpec with Matchers {
       Nil
 
     //Will throw an exception if the substitution doesn't work out.
-    val result = UniformSubstitutionRule(USubst(substitution), original).apply(expected)
+    val result = ??? //UniformSubstitutionRule(USubst(substitution), original).apply(expected)
   }
   "Uniform substitution" should "no test" in {}
 
@@ -60,7 +60,7 @@ class CoreChangesDebugging extends FlatSpec with Matchers {
         Nil
 
     //Will throw an exception if the substitution doesn't work out.
-    val result = UniformSubstitutionRule(USubst(substitution), original).apply(expected)
+    val result = ??? //UniformSubstitutionRule(USubst(substitution), original).apply(expected)
   }
 
   it should "not fail $abstractiondummy ex" in {
@@ -72,7 +72,7 @@ class CoreChangesDebugging extends FlatSpec with Matchers {
 
     val expected = Forall(x :: Nil, Imply(Forall(x ::Nil, DifferentialFormula(pany)), Forall(x ::Nil, DifferentialFormula(pany))))
 
-    val result = UniformSubstitutionRule(USubst(substitution), succSeq(f)).apply(succSeq(expected))
+    val result = ??? //UniformSubstitutionRule(USubst(substitution), succSeq(f)).apply(succSeq(expected))
   }
 
 
@@ -99,7 +99,7 @@ but expected Sequent[{(),  ==> \forall $abstractiondummy.(\forall x.p(?)'<->\for
       Equiv(DifferentialFormula(Forall(x::Nil, pany)), Forall(x::Nil, DifferentialFormula(pany)))
     ))
 
-    val result = UniformSubstitutionRule(USubst(substitution), succSeq(f)).apply(succSeq(expected))
+    val result = ??? //UniformSubstitutionRule(USubst(substitution), succSeq(f)).apply(succSeq(expected))
 
     println(result)
   }

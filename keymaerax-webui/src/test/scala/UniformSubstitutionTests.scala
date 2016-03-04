@@ -1250,7 +1250,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     val s = USubst(
       SubstitutionPair(p0, f) ::
       SubstitutionPair(aA, prog) :: Nil)
-    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s, premseq)(concseq)
+    a [SubstitutionClashException] should be thrownBy ??? //UniformSubstitutionRule(s, premseq)(concseq)
   }
   
   // uniform substitution of rules

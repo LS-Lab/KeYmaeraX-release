@@ -465,12 +465,12 @@ object DerivedAxioms {
     * @todo will clash unlike the converse proof.
     */
   lazy val allEliminateF = "(\\forall x_ p_(??)) -> p_(??)".asFormula
-  lazy val allEliminateAxiom = derivedAxiom("all eliminate",
+  lazy val allEliminateAxiom = ??? /*derivedAxiom("all eliminate",
     Sequent(Nil, IndexedSeq(), IndexedSeq(allEliminateF)),
     US(
       USubst(SubstitutionPair(PredOf(Function("p",None,Real,Bool),DotTerm), PredOf(Function("p",None,Real,Bool),Anything))::Nil),
       Sequent(Nil, IndexedSeq(), IndexedSeq(allEliminateF)))
-  )
+  )*/
   lazy val allEliminateT = derivedAxiomT(allEliminateAxiom)
 
   /**

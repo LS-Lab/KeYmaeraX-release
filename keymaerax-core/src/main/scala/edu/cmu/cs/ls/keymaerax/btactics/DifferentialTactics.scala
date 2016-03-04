@@ -168,7 +168,7 @@ object DifferentialTactics {
             cutLR(g)(pos) <(
               /* use */ skip,
               /* show */ cohide('Rlast) & equivifyR(1) & (if (pos.isSucc) commuteEquivR(1) else Idioms.ident) &
-              ProofRuleTactics.uniformRenaming(x, aX) & US(USubst(subst), origin) & byVerbatim("DE differential effect"))
+              ProofRuleTactics.uniformRenaming(x, aX) & ??? /*@todo US(USubst(subst), origin)*/ & byVerbatim("DE differential effect"))
 
         }
       }
