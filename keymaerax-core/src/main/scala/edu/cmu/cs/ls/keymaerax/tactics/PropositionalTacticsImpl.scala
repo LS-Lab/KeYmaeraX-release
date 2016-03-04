@@ -380,9 +380,9 @@ object PropositionalTacticsImpl {
         case Some(frm) => frm
         case None => f
       }
-      Some(new Tactics.ApplyRule(UniformSubstitutionRule(USubst(subst), Sequent(p.sequent.pref, ante, succ))) {
+      Some(??? /*new Tactics.ApplyRule(UniformSubstitutionRule(USubst(subst), Sequent(p.sequent.pref, ante, succ))) {
         override def applicable(node: ProofNode): Boolean = true
-      })
+      }*/)
     }
 
   }

@@ -162,11 +162,11 @@ object ProofChecker {
         val phiPrimeCert = ProofChecker(e, phiPrime)
         if(phiPrimeCert.isDefined && phiPrimeCert.get.isProved) {
           val goalS = goalSequent(phi)
-          Some(
+          Some(??? /*@todo
             Provable.startProof(goalS)
             (UniformSubstitutionRule(usubst, goalSequent(phiPrime)), 0)
             (phiPrimeCert.get, 0)
-          )
+          */)
         }
         else None
       }

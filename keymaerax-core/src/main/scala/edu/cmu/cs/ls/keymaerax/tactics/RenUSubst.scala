@@ -103,14 +103,14 @@ final case class RenUSubst(subsDefsInput: immutable.Seq[(Expression,Expression)]
   def toTactic(form: Sequent): Tactic = getUSubstTactic(RenUSubst(rens)(form)) & getRenamingTactic
 
   /** Convert to forward tactic using the respective uniform renaming and uniform substitution rules */
-  def toForward: Provable => Provable = fact => {
+  def toForward: Provable => Provable = fact => fact /*fact => {
     //Predef.require(rens.isEmpty, "renaming conversion not yet implemented")
     // forward style: first rename fact, then US the result
     UniformSubstitutionRule.UniformSubstitutionRuleForward(
       rens.foldLeft(fact)((pr,sp)=>UniformRenaming.UniformRenamingForward(pr, sp._1,sp._2))
       ,
       usubst)
-  }
+  }*/
 
   /** Get the renaming tactic part */
   def getRenamingTactic: Tactic = rens.foldLeft(TactixLibrary.skip)((t,sp)=> t &
@@ -121,9 +121,9 @@ final case class RenUSubst(subsDefsInput: immutable.Seq[(Expression,Expression)]
     })
 
   /** Get the uniform substitution tactic part to reduce to form */
-  def getUSubstTactic(form: Sequent): Tactic = new Tactics.ApplyRule(UniformSubstitutionRule(usubst, form)) {
+  def getUSubstTactic(form: Sequent): Tactic = ???  /*new Tactics.ApplyRule(UniformSubstitutionRule(usubst, form)) {
     override def applicable(node: ProofNode): Boolean = true
-  }
+  }*/
 
   override def toString: String = "t.RenUSubst{" + rens.map(sp=>sp._1.prettyString + "~~>" + sp._2.prettyString).mkString(", ") + " ; " + subsDefs.mkString(", ") + "}"
 
