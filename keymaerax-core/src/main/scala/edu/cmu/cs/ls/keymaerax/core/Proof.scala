@@ -30,6 +30,7 @@ import scala.collection.immutable
 
 /**
  * Positions of formulas in a sequent, i.e. antecedent or succedent positions.
+ *
  * @see [[SeqPos.apply()]]
  */
 sealed trait SeqPos {
@@ -56,6 +57,7 @@ sealed trait SeqPos {
 
 /**
  * Antecedent Positions of formulas in a sequent.
+ *
  * @param index the position base 0 in antecedent.
  */
 case class AntePos private[ls] (private[core] val index: Int) extends SeqPos {
@@ -66,6 +68,7 @@ case class AntePos private[ls] (private[core] val index: Int) extends SeqPos {
 
 /**
  * Antecedent Positions of formulas in a sequent.
+ *
  * @param index the position base 0 in succedent.
  */
 case class SuccPos private[ls] (private[core] val index: Int) extends SeqPos {
@@ -77,6 +80,7 @@ case class SuccPos private[ls] (private[core] val index: Int) extends SeqPos {
 object SeqPos {
   /**
    * Sequent position of signed index `signedPos` where positive is succedent and negative antecedent.
+ *
    * @param signedPos the signed integer position of the formula in the antecedent or succedent, respectively.
    *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
    *  Positive numbers indicate succedent positions, 1, 2, 3.
@@ -106,6 +110,7 @@ object SeqPos {
  * }}}
  * The semantics of sequent `ante |- succ` is the conjunction of the formulas in `ante` implying
  * the disjunction of the formulas in `succ`.
+ *
  * @author Andre Platzer
  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
  */
@@ -116,6 +121,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
 
   /**
    * Retrieves the formula in sequent at a given position.
+ *
    * @param p the position of the formula
    * @return the formula at the given position either from the antecedent or the succedent
    */
@@ -154,6 +160,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   /**
    * A copy of this sequent concatenated with given sequent s.
    * Sequent(pref, A,S) glue Sequent(pref, B,T) == Sequent(pref, A++B, S++T)
+ *
    * @param s the sequent whose antecedent to append to ours and whose succedent to append to ours.
    * @return a copy of this sequent concatenated with s.
    * Results in a least upper bound with respect to subsets of this and s.
@@ -169,6 +176,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
 
   /**
    * A copy of this sequent with the indicated position replaced by the formula f.
+ *
    * @param p the position of the replacement
    * @param f the replacing formula
    * @return a copy of this sequent with the formula at position p replaced by f.
@@ -184,6 +192,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
 
   /**
    * A copy of this sequent with the indicated position replaced by gluing the sequent s.
+ *
    * @param p the position of the replacement
    * @param s the sequent glued / concatenated to this sequent after dropping p.
    * @return a copy of this sequent with the formula at position p removed and the sequent s appended.
@@ -241,6 +250,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   *   -----------------------
   *            G |- D           (conclusion)
   * }}}
+ *
  * @param conclusion the conclusion `G |- D` that follows if all subgoals are valid.
  * @param subgoals the premises `Gi |- Di` that, if they are all valid, imply the conclusion.
  * @note soundness-critical logical framework.
@@ -368,6 +378,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
   /**
    * Checks whether this Provable proves its conclusion.
+ *
    * @return true if conclusion is proved by this Provable,
    *         false if subgoals are missing that need to be proved first.
    * @note soundness-critical
@@ -376,6 +387,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
   /**
    * What conclusion this Provable proves if isProved.
+ *
    * @requires(isProved)
    */
   final def proved: Sequent = {
@@ -396,6 +408,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *   ------------------------------------ (rule)
    *                Gi |- Di
    * }}}
+ *
    * @param rule the proof rule to apply to the indicated subgoal of this Provable derivation.
    * @param subgoal which of our subgoals to apply the given proof rule to.
    * @return A Provable derivation that proves the premise subgoal by using the given proof rule.
@@ -437,6 +450,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *   ------------------------------------ (subderivation)
    *                Gi |- Di
    * }}}
+ *
    * @param subderivation the Provable derivation that proves premise subgoal.
    * @param subgoal the index of our subgoal that the given subderivation concludes.
    * @return A Provable derivation that joins our derivation and subderivation to a joint derivation of our conclusion using subderivation to show our subgoal.
@@ -471,6 +485,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     *   -----------------------     =>     -----------------------------------   (USR)
     *            G |- D                                s(G) |- s(D)
     * }}}
+ *
     * @param subst The uniform substitution (of no free variables) to be used on the premises and conclusion of this Provable.
     * @return The Provable resulting from applying `subst` to our subgoals and conclusion.
     * @author Andre Platzer
@@ -500,6 +515,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    *   ------------------------- rule
    *         newConsequence
    * }}}
+ *
    * @param newConsequence the new conclusion that the rule shows to follow from this.conclusion
    * @param rule the proof rule to apply to concludes to reduce it to this.conclusion.
    * @return A Provable derivation that proves concludes from the same subgoals by using the given proof rule.
@@ -530,6 +546,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
     *   ------------------------- prolongation
     *           G0 |- D0
     * }}}
+ *
     * @param prolongation the subderivation used to prolong this Provable.
     *                       Where subderivation has a  subgoal equaling our conclusion.
     * @return A Provable derivation that proves prolongation's conclusion from our subgoals.
@@ -544,6 +561,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
   /**
    * Sub-Provable: Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
    * Provables resulting from the returned subgoal can be merged into this Provable to prove said subgoal.
+ *
    * @param subgoal the index of our subgoal for which to return a new open Provable.
    * @return an initial unfinished open Provable for the subgoal `i`:
    * {{{
@@ -578,6 +596,7 @@ object Provable {
     *   ---------- (axiom)
     *    |- axiom
     * }}}
+ *
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     * @note soundness-critical: only valid formulas are sound axioms.
     */
@@ -591,6 +610,7 @@ object Provable {
     *   ---------- (axiomatic rule)
     *     G |- D
     * }}}
+ *
     * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
     * @note soundness-critical: only list locally sound rules.
     * @see [[Provable.apply(USubst)]]
@@ -606,6 +626,7 @@ object Provable {
     *   ------
     *    goal
     * }}}
+ *
     * @param goal the desired conclusion.
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
     * @note soundness-critical
@@ -622,6 +643,7 @@ object Provable {
     *   ---------
     *    |- goal
     * }}}
+ *
     * @param goal the desired conclusion formula for the succedent.
     * @return a Provable whose subgoals need to be all proved in order to prove goal.
     * @note Not soundness-critical
@@ -631,6 +653,7 @@ object Provable {
 
   /**
     * Create a new provable for oracle facts provided by external tools or lemma loading.
+ *
     * @param conclusion the desired conclusion.
     * @param subgoals the remaining subgoals.
     * @return a Provable of given conclusion and given subgoals.
@@ -651,6 +674,7 @@ object Provable {
  * A proof rule is ultimately a named mapping from sequents to lists of sequents.
  * The resulting list of sequents represent the subgoal/premise and-branches all of which need to be proved
  * to prove the current sequent (desired conclusion).
+ *
  * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
  */
 sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
@@ -873,6 +897,7 @@ case class CloseFalse(pos: AntePos) extends LeftRule with ClosingRule {
  * ----------------------- (cut)
  *         G |- D
  * }}}
+ *
  * @note c will be added at the end on the subgoals
  */
 case class Cut(c: Formula) extends Rule {
@@ -1040,6 +1065,7 @@ case class ImplyLeft(pos: AntePos) extends LeftRule {
  * ---------------------- (-> Imply left old)
  *   p->q, G |- D
  * }}}
+ *
  * @note Surprising positioning: both positions change but at least consistent for this rule.
  */
 @deprecated("Use ImplyLeft instead which is equivalent except for positioning.")
@@ -1111,6 +1137,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  * -------------------- (US)
  * subst(G) |- subst(D)
  * }}}
+ *
  * @param subst the uniform substitution to be applied to origin.
  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
  *               In the above rule, this would be `G |- D`.
@@ -1153,125 +1180,6 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
 //}
 
 
-/*********************************************************************************
-  * Lookup Axioms
-  *********************************************************************************
-  */
-
-/** Finite list of axioms. */
-object Axiom {
-  /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. */
-  val axioms: immutable.Map[String, Formula] = Provable.axiom
-
-  /** A Provable proving the axiom named `id` */
-  @deprecated("May want to use Provable.axioms instead?")
-  def apply(id: String): Provable = Provable.axioms(id)
-   //throw new CoreException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"))
-
-  @deprecated("May want to use Provable.axioms instead?")
-  def axiom(id: String): Provable = apply(id)
-}
-
-/**
- * Look up an axiom named `id`, closing any sequent in which that axiom is in the succedent.
- * Sound axioms are valid formulas of differential dynamic logic.
- * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Axiom.axioms]].
- * {{{
- * ----------- (axiom) if `ax` is the axiom called `id`
- *  G |- ax, D
- * }}}
- * @author nfulton
- * @author Andre Platzer
- * @author smitsch
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
- * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
- * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
- */
-//final case class Axiom(id: String) extends Rule with ClosingRule {
-//  val name: String = "Axiom " + id
-//  def apply(s: Sequent): immutable.List[Sequent] = {
-//    Axiom.axioms.get(id) match {
-//      case Some(f) =>
-//        if (s.succ.contains(f)) Nil
-//        else throw new InapplicableRuleException("Axiom " + f + " is not in the succedent:\n", this, s)
-//      case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"), this, s)
-//    }
-//  } ensuring (r => r.isEmpty, "axiom lookup should close")
-//}
-
-/** Finite list of axiomatic rules. */
-object AxiomaticRule {
-  /** immutable list of locally sound axiomatic proof rules (premises, conclusion) */
-  @deprecated("Use Provable.rules instead")
-  val rules: immutable.Map[String, (immutable.IndexedSeq[Sequent], Sequent)] = AxiomBase.loadAxiomaticRules
-  /**
-    * Obtain the axiomatic proof rule called `id`.
-    * That is, the locally sound Provable representing the axiomatic rule of name `id`.
-    * All available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
-    * @author Andre Platzer
-    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
-    */
-  @deprecated("May want to use Provable.rules instead?")
-  def apply(id: String): Provable = Provable.rules(id)
-  //  case _ => throw new CoreException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"))
-
-  /**
-    * A uniform substitution instance of an axiomatic proof rule,
-    * i.e. locally sound proof rules that are represented by a pair of concrete formulas, one for the premise and one for the conclusion.
-    * Axiomatic proof rules are employed after forming their uniform substitution instances.
-    * All available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
-    * Returns the instantied axiomatic rule as a Provable:
-    * {{{
-    *    s(G1) |- s(D1) ... s(Gn) |- s(Dn)
-    *   ----------------------------------
-    *               s(G) |- s(D)
-    * }}}
-    * @param id the name of the axiomatic rule to use, which identifies some rule
-    * {{{
-    *    G1 |- D1 ... Gn |- Dn
-    *   ----------------------------------
-    *            G |- D
-    * }}}
-    * @param subst the substitution `s` to use to instantiate axiomatic rule called `id`.
-    * @author Andre Platzer
-    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
-    */
-  def apply(id: String, subst: USubst): Provable = apply(id)(subst)
-}
-
-/**
- * Apply a uniform substitution instance of an axiomatic proof rule,
- * i.e. locally sound proof rules that are represented by a pair of concrete formulas, one for the premise and one for the conclusion.
- * Axiomatic proof rules are employed after forming their uniform substitution instances.
- * All available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
- * @author Andre Platzer
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
- */
-//@deprecated("Use the Provable resulting from AxiomaticRule(id: String)(subst: USubst) instead.")
-//final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
-//  val name: String = "Axiomatic Rule " + id + " instance"
-//  insist(subst.freeVars.isEmpty || Rule.LAX_MODE && id == "CQ equation congruence", "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
-//
-//  override def toString: String = name + "(" + subst + ")"
-//
-//  private val (rulepremise: Sequent, ruleconclusion: Sequent) = AxiomaticRule.rules.get(id) match {
-//    case Some(pair) if pair._1.length==1 => (pair._1.head, pair._2)
-//    case _ => throw new InapplicableRuleException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"), this)
-//  }
-//
-//  /**
-//   * check that conclusion is indeed the indicated substitution instance from the axiomatic rule's conclusion.
-//   * Leads to same substitution instance of axiomatic rule's premise.
-//   * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
-//   */
-//  def apply(conclusion: Sequent): immutable.List[Sequent] =
-//    try {
-//      if (subst(ruleconclusion) == conclusion) immutable.List(subst(rulepremise))
-//      else throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion +
-//        "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion + "\nin " + this + " for intended conclusion\n" + conclusion)
-//    } catch { case exc: SubstitutionClashException => throw exc.inContext(this + " for intended conclusion\n" + conclusion) }
-//
-//}
 
 object UniformRenaming {
   /** Apply uniform renaming what~>repl to provable forward in Hilbert-style (convenience) */
@@ -1282,6 +1190,7 @@ object UniformRenaming {
 /**
  * Uniformly rename all occurrences of what and what' to repl and repl' and vice versa.
  * Uniformly rename all occurrences of variable what (and its associated DifferentialSymbol) to repl.
+ *
  * @param what What variable to replace (along with its associated DifferentialSymbol).
  * @param repl The target variable to replace what with.
  * @requires repl is fresh in the sequent.
@@ -1301,6 +1210,7 @@ final case class UniformRenaming(what: Variable, repl: Variable) extends Rule {
 /**
  * Performs bound renaming renaming all occurrences of variable what
  * (and its associated DifferentialSymbol) to repl.
+ *
  * @param what What variable (and its associated DifferentialSymbol) to replace.
  * @param repl The target variable to replace what with.
  * @param pos The position at which to perform a bound renaming.
@@ -1336,6 +1246,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
   /**
    * Check whether this renaming is admissible for expression e, i.e.
    * the new name repl does not already occur (or the renaming was the identity).
+ *
    * @note identity renaming is merely allowed to enable BoundVariableRenaming to introduce stutter.
    * @note This implementation currently errors if repl.sort!=Real
    */
@@ -1363,6 +1274,7 @@ final case class BoundRenaming(what: Variable, repl: Variable, pos: SeqPos) exte
  * ------------------------ (Skolemize) provided x not in G,D
  * \exists x p(x), G |- D
  * }}}
+ *
  * @note Could in principle replace by uniform substitution rule application mechanism for rule "all generalization"
  * along with tactics expanding scope of quantifier with axiom "all quantifier scope" at the cost of propositional repacking and unpacking.
  *      p(x)
@@ -1403,6 +1315,7 @@ object RCF {
 
   /**
    * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
+ *
    * @param t The tool.
    * @param f The formula.
    * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
@@ -1431,6 +1344,7 @@ object RCF {
 
 /**
  * Lookup a lemma that has been proved previously or by an external arithmetic tool.
+ *
  * @author nfulton
  * @author Stefan Mitsch
  * @see [[edu.cmu.cs.ls.keymaerax.core.LemmaDB.get()]]
@@ -1462,6 +1376,7 @@ case class LookupLemma(lemmaDB: LemmaDB, lemmaID: String) extends Rule {
  * ------------------ (dual-free)
  *   G |- [a]true, D
  * }}}
+ *
  * @note When using hybrid games axiomatization
  */
 final case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
@@ -1509,6 +1424,7 @@ final case class DualFree(pos: SuccPos) extends RightRule with ClosingRule {
  * ------------- (CoHide right)
  *   G |- p, D
  * }}}
+ *
  * @derived
  */
 case class CoHideRight(pos: SuccPos) extends RightRule {
@@ -1526,6 +1442,7 @@ case class CoHideRight(pos: SuccPos) extends RightRule {
   * ------------- (CoHide left)
   *   p, G |- D
   * }}}
+ *
   * @note Rarely useful (except for contradictory `p`)
   * @derived
   */
@@ -1544,6 +1461,7 @@ case class CoHideLeft(pos: AntePos) extends LeftRule {
  * --------------- (CoHide2)
  *   p, G |- q, D
  * }}}
+ *
  * @derived
  */
 case class CoHide2(pos1: AntePos, pos2: SuccPos) extends TwoPositionRule {
@@ -1564,6 +1482,7 @@ case class CoHide2(pos1: AntePos, pos2: SuccPos) extends TwoPositionRule {
  * }}}
  * Forward Hilbert style rules can move further away, implicationally, from the sequent implication.
  * Backwards tableaux style sequent rules can move closer, implicationally, toward the sequent implication.
+ *
  * @derived(cut(c->p) & <(ImplyLeft & <(CloseId, HideRight), HideRight))
  */
 case class CutRight(c: Formula, pos: SuccPos) extends Rule {
@@ -1583,6 +1502,7 @@ case class CutRight(c: Formula, pos: SuccPos) extends Rule {
  * }}}
  * Forward Hilbert style rules can move further away, implicationally, from the sequent implication.
  * Backwards tableaux style sequent rules can move closer, implicationally, toward the sequent implication.
+ *
  * @note this would perhaps surprising that inconsistent posititioning within this rule, unlike in ImplyLeft?
  * @derived(cut(p->c) & <(ImplyLeft & <(HideLeft, CloseId), HideLeft))
  */
@@ -1604,6 +1524,7 @@ case class CutLeft(c: Formula, pos: AntePos) extends Rule {
  * ------------- (<->cR)
  * G |- p<->q, D
  * }}}
+ *
  * @derived
  */
 case class CommuteEquivRight(pos: SuccPos) extends RightRule {
@@ -1621,6 +1542,7 @@ case class CommuteEquivRight(pos: SuccPos) extends RightRule {
   * -------------- (<->cL)
   * p<->q, G |-  D
   * }}}
+ *
   * @derived
   */
 case class CommuteEquivLeft(pos: AntePos) extends LeftRule {
