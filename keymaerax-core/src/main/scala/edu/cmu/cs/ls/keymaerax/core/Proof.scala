@@ -369,7 +369,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
  * }}}
  */
 final case class Provable private (conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
-  if (Provable.DEBUG && subgoals.distinct.size != subgoals.size) print("INFO: repeated subgoals may warrant set construction or compactification in Provable " + this)
+  //if (Provable.DEBUG && subgoals.distinct.size != subgoals.size) print("INFO: repeated subgoals may warrant set construction or compactification in Provable " + this)
 
   /**
    * Position types for the subgoals of a Provable.
@@ -585,7 +585,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
 /** Starting new Provables to begin a proof */
 object Provable {
-  private[core] val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
+  //private[core] val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
 
   /** immutable list of sound axioms, i.e., valid formulas of differential dynamic logic. */
   val axiom: immutable.Map[String, Formula] = AxiomBase.loadAxioms
@@ -681,7 +681,7 @@ sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
   //@note If there were inherited contracts in Scala, we could augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
 
   /** Name of this proof rule */
-  def name: String
+  val name: String
 
   override def toString: String = name
 }
@@ -1059,27 +1059,6 @@ case class ImplyLeft(pos: AntePos) extends LeftRule {
 }
 
 /**
- * ->L Imply left (old).
- * {{{
- * G |- D, p    G, q |- D
- * ---------------------- (-> Imply left old)
- *   p->q, G |- D
- * }}}
- *
- * @note Surprising positioning: both positions change but at least consistent for this rule.
- */
-@deprecated("Use ImplyLeft instead which is equivalent except for positioning.")
-private[keymaerax] case class ImplyLeftOld(pos: AntePos) extends LeftRule {
-  val name: String = "Imply Left (old)"
-  /** ->L Imply left (old) */
-  def apply(s: Sequent): immutable.List[Sequent] = {
-    val Imply(p,q) = s(pos)
-    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))),
-                   s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(q), immutable.IndexedSeq())))
-  }
-}
-
-/**
  * <->R Equiv right.
  * {{{
  * G, p |- D, q    G, q |- D, p
@@ -1180,7 +1159,9 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
 //}
 
 
-
+/**
+  * Convenience for uniform renaming.
+  */
 object UniformRenaming {
   /** Apply uniform renaming what~>repl to provable forward in Hilbert-style (convenience) */
   def UniformRenamingForward(provable: Provable, what: Variable, repl: Variable): Provable =
@@ -1348,6 +1329,7 @@ object RCF {
  * @author nfulton
  * @author Stefan Mitsch
  * @see [[edu.cmu.cs.ls.keymaerax.core.LemmaDB.get()]]
+ * @see [[edu.cmu.cs.ls.keymaerax.core.Lemma.fact]]
  */
 case class LookupLemma(lemmaDB: LemmaDB, lemmaID: String) extends Rule {
   val name: String = "Lookup Lemma"
