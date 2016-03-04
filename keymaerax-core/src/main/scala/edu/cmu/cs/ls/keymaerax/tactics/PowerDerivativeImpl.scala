@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import edu.cmu.cs.ls.keymaerax.btactics.Axiom
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics._
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
@@ -26,6 +27,7 @@ import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 /**
  * Created by nfulton on 5/9/15.
+ *
  * @author Nathan Fulton
  */
 object PowerDerivativeImpl {
@@ -70,6 +72,7 @@ object PowerDerivativeImpl {
 
   /**
    * Proves [pi;] f((base^power^)') <-> f(syntactic derivative of (base^power^)')
+ *
    * @param diffTerm The original differential term. Probably (base^power^)'
    * @param base The base of diffTerm
    * @param power the power of diffTerm
@@ -143,6 +146,7 @@ object PowerDerivativeImpl {
    *    t = base
    *    c = power
    *    originalDifferentialTerm = (base^power^)'
+ *
    * @param diffTerm Should equal (base^power^)'
    * @param base Value to instantiate the base position.
    * @param power Value to instantiate the power position.
@@ -168,6 +172,7 @@ object PowerDerivativeImpl {
 
   /**
    * Label for output of proveAxiomInstance
+ *
    * @see proveAxiomInstance
    */
   private val yield_proveAxiomInstance : String = "yield_proveAxiomInstance"

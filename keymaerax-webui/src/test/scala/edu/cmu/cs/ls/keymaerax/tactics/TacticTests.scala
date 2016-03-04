@@ -84,8 +84,8 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     println(s"Nonclusion ${nonconclude.prettyString}")
     println(s"Usubst     $subst")
     //@TODO prove(nonconclude) should be (Counterexample) OR: prove(Not(nonconclude)) should be (Satisfiable)
-    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(subst,
-      Sequent(Nil, IndexedSeq(), IndexedSeq(assume))).apply(Sequent(Nil, IndexedSeq(), IndexedSeq(nonconclude)))
+    a [SubstitutionClashException] should be thrownBy ??? /*UniformSubstitutionRule(subst,
+      Sequent(Nil, IndexedSeq(), IndexedSeq(assume))).apply(Sequent(Nil, IndexedSeq(), IndexedSeq(nonconclude)))*/
     //prove(nonconclude, TacticLibrary.uniformSubstT(subst, Map(assume -> nonconclude))) // would not get us the exceptions
     val nonconcstat = prove(nonconclude, TacticLibrary.default)
     nonconcstat should not be Provable

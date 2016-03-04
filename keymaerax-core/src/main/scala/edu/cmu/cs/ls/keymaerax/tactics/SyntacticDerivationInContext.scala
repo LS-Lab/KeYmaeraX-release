@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 //@todo minimize imports
 
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
+import edu.cmu.cs.ls.keymaerax.btactics.Axiom
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.AlphaConversionHelper.replace
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
@@ -199,6 +200,7 @@ object SyntacticDerivationInContext {
 
   /**
    * Unapplies binary formula &, |, ->, <->
+ *
    * @param m The unapply method, one of &, |, ->, <->.unapply
    * @tparam T The manifest (implicit by m).
    */
@@ -315,6 +317,7 @@ object SyntacticDerivationInContext {
 
   /**
    * Unapplies binary relations <, <=, =, !=, >=, >
+ *
    * @param m The unapply method, one of <, <=, =, !=, >=, or >.unapply
    * @tparam T The manifest (implicit by m).
    */
@@ -326,6 +329,7 @@ object SyntacticDerivationInContext {
 
   /**
    * Base tactic for deriving binary relations <, <=, =, !=, >=, >.
+ *
    * @param axiomName The name of the axiom.
    * @param bin The unapply method of the relation.
    * @param derive A method to perform the syntactic derivation of the relation.
@@ -798,6 +802,7 @@ object SyntacticDerivationInContext {
    * in subexpressions of ``expression".
    *
    * This is used in the implementation of wrapper tactics.
+ *
    * @param expression
    * @param tactic
    */

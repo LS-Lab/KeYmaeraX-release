@@ -11,12 +11,14 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import java.io.File
+import edu.cmu.cs.ls.keymaerax.btactics.Axiom
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.ProofNode
 
 object LoadedKnowledgeTools {
   /**
    * LoadedKnowledge List -> String -> LoadedKnowledge List
+ *
    * @returns All evidence associated with the name.
    */
   def fromName(knowledge : List[LoadedKnowledge])(n:String) = {

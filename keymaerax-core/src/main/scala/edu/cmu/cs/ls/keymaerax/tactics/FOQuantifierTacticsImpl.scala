@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.tactics
 
 import ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
+import edu.cmu.cs.ls.keymaerax.btactics.Axiom
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tactics.AlphaConversionHelper._
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{boxMonotoneT, diamondMonotoneT}
@@ -27,6 +28,7 @@ import scala.collection.immutable.Seq
 
 /**
  * Implementation of first order quantifier tactics.
+ *
  * @author Stefan Mitsch
  */
 object FOQuantifierTacticsImpl {
@@ -70,6 +72,7 @@ object FOQuantifierTacticsImpl {
 
   /**
    * Creates a new tactic for the universal/existential duality axiom.
+ *
    * @return The newly created tactic
    */
   def forallDualT: PositionTactic = {
@@ -98,6 +101,7 @@ object FOQuantifierTacticsImpl {
 
   /**
    * Creates a new tactic for the universal/existential duality axiom.
+ *
    * @return The newly created tactic
    */
   def existsDualT: PositionTactic = {
@@ -174,6 +178,7 @@ object FOQuantifierTacticsImpl {
 
   /**
    * Creates a new tactic to eliminate a universal quantifier.
+ *
    * @return The newly created tactic
    */
   def allEliminateT: PositionTactic = new PositionTactic("All eliminate") {
@@ -248,6 +253,7 @@ object FOQuantifierTacticsImpl {
   /**
    * Returns a new tactic for universal/existential quantifier instantiation. The tactic performs self-instantiation
    * with the quantified variable.
+ *
    * @example{{{
    *           |- x>0
    *         ------------------instantiateT(SuccPosition(0))
@@ -280,6 +286,7 @@ object FOQuantifierTacticsImpl {
 
   /**
    * Creates a tactic which does quantifier instantiation.
+ *
    * @param quantified The quantified variable.
    * @param instance The instance.
    * @return The tactic.
@@ -424,6 +431,7 @@ object FOQuantifierTacticsImpl {
   /**
    * Returns a tactic to instantiate an existentially quantified formula that occurs in positive polarity in the
    * succedent or in negative polarity in the antecedent.
+ *
    * @example{{{
    *         |- y+2>0
    *         ----------------instantiateExistentialQuanT(Variable("x"), "y+2".asTerm)(SuccPosition(0))
@@ -500,6 +508,7 @@ object FOQuantifierTacticsImpl {
 
   /**
    * Returns a tactic to instantiate an existential quantifier that is known to have an equal substitute.
+ *
    * @example{{{
    *           |- z>0 & z=z
    *         --------------------------existSubstitute(1)
@@ -545,6 +554,7 @@ object FOQuantifierTacticsImpl {
 
   /**
    * Converse of all instantiate.
+ *
    * @param x The universally quantified variable to introduce.
    * @param t The term to generalize.
    * @return The position tactic.
@@ -591,6 +601,7 @@ object FOQuantifierTacticsImpl {
 
   /**
    * Tactic for existential quantifier generalization. Generalizes the specified term everywhere in a formula.
+ *
    * @example{{{
    *           \exists z z+1 < z+2 |-
    *           -----------------------existentialGenT(Variable("z"), "x+y".asTerm)(AntePosition(0))
@@ -644,6 +655,7 @@ object FOQuantifierTacticsImpl {
   /**
    * Tactic for existential quantifier generalization. Generalizes only at certain positions. All positions have to
    * refer to the same term.
+ *
    * @example{{{
    *           \exists z z=a+b |-
    *           ------------------existentialGenPosT(Variable("z"), PosInExpr(0::Nil) :: Nil)(AntePosition(0))
@@ -728,6 +740,7 @@ object FOQuantifierTacticsImpl {
 
   /**
    * Base class for vacuous quantifier elimination/introduction tactics.
+ *
    * @param x The new quantified variable. If None, the tactic eliminates a vacuous quantifier.
    * @param axiomName The name of the axiom.
    * @param quantFactory Creates the quantifier.
@@ -792,6 +805,7 @@ object FOQuantifierTacticsImpl {
 
   /**
    * Creates a tactic to decompose quantifiers.
+ *
    * @return The tactic.
    */
   @deprecated
@@ -820,6 +834,7 @@ object FOQuantifierTacticsImpl {
 
   /**
    * Creates a new tactic for skolemization.
+ *
    * @return The skolemization tactic.
    */
   def skolemizeT: PositionTactic = skolemizeT(forceUniquify = false)

@@ -4,8 +4,8 @@
  */
 package edu.cmu.cs.ls.keymaerax.tactics
 
+import edu.cmu.cs.ls.keymaerax.btactics.Axiom
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomaticRuleTactics.{boxMonotoneT, diamondMonotoneT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
@@ -24,6 +24,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
  * Derived Axioms.
+ *
  * @author Andre Platzer
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  */
@@ -231,6 +232,7 @@ object DerivedAxioms {
 
   /**
    * Looks up a tactic by name to derive an axiom.
+ *
    * @note For interface stability reasons (see [[AxiomTactic.axiomLookupBaseT()]])
    * @param name The name of the derived axiom.
    * @return The tactic to apply the derived axiom, if found. None otherwise.
@@ -242,6 +244,7 @@ object DerivedAxioms {
 
   /**
    * Looks up a derived axiom formula by name.
+ *
    * @note For interface stability reasons (see [[AxiomTactic.axiomLookupBaseT()]])
    * @param name The name of the derived axiom.
    * @return The axiom formula, if found. None otherwise.
@@ -253,6 +256,7 @@ object DerivedAxioms {
 
   /**
    * Looks up infomration about a derived axiom by name.
+ *
    * @note For interface stability reasons (see [[AxiomTactic.axiomLookupBaseT()]])
    * @param name The name of the derived axiom.
    * @return The axiom formula and tactic, if found. None otherwise.
@@ -483,6 +487,7 @@ object DerivedAxioms {
    *  p() <-> p()
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val equivReflexiveF = "p_() <-> p_()".asFormula
@@ -502,6 +507,7 @@ object DerivedAxioms {
    *  (p() -> (q()&r())) <-> ((p()->q()) & (p()->r()))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val implyDistAndF = "(p_() -> (q_()&r_())) <-> ((p_()->q_()) & (p_()->r_()))".asFormula
@@ -517,6 +523,7 @@ object DerivedAxioms {
    *  (p() -> q()) -> (p()&c() -> q())
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val implWeakenF = "(p_() -> q_()) -> ((p_()&c()) -> q_())".asFormula
@@ -532,6 +539,7 @@ object DerivedAxioms {
    *  (p() -> (q()<->r())) <-> ((p()->q()) <-> (p()->r()))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val implyDistEquivF = "(p_() -> (q_()<->r_())) <-> ((p_()->q_()) <-> (p_()->r_()))".asFormula
@@ -547,6 +555,7 @@ object DerivedAxioms {
    *  (!(!p())) <-> p()
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val doubleNegationF = "(!(!p_())) <-> p_()".asFormula
@@ -570,6 +579,7 @@ object DerivedAxioms {
    *   (!\forall x (!p(x))) <-> (\exists x p(x))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val existsDualF = "(!\\forall x_ (!p_(x_))) <-> \\exists x_ p_(x_)".asFormula
@@ -588,6 +598,7 @@ object DerivedAxioms {
    *   (!\exists x (p(x))) <-> \forall x (!p(x))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val notExistsF = "(!\\exists x_ (p_(x_))) <-> \\forall x_ (!p_(x_))".asFormula
@@ -605,6 +616,7 @@ object DerivedAxioms {
    *   (!\forall x (p(x))) <-> \exists x (!p(x))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val notAllF = "(!\\forall x_ (p_(x_))) <-> \\exists x_ (!p_(x_))".asFormula
@@ -622,6 +634,7 @@ object DerivedAxioms {
    *   ![a;]p(x) <-> <a;>!p(x)
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val notBoxF = "(![a_;]p_(x_)) <-> (<a_;>!p_(x_))".asFormula
@@ -639,6 +652,7 @@ object DerivedAxioms {
    *   !<a;>p(x) <-> [a;]!p(x)
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val notDiamondF = "(!<a_;>p_(x_)) <-> ([a_;]!p_(x_))".asFormula
@@ -656,6 +670,7 @@ object DerivedAxioms {
    *    (\forall x p(??)) -> p(??)
    * End.
    * }}}
+ *
    * @todo will clash unlike the converse proof.
    */
   lazy val allEliminateF = "(\\forall x_ p_(??)) -> p_(??)".asFormula
@@ -687,6 +702,7 @@ object DerivedAxioms {
    *    (\forall x (p(x) & q())) <-> ((\forall x p(x)) & q())
    * End.
    * }}}
+ *
    * @todo follows from "all distribute" and "all vacuous"
    */
 
@@ -696,6 +712,7 @@ object DerivedAxioms {
    *    (!<a;>(!p(??))) <-> [a;]p(??)
    * End.
    * }}}
+ *
    * @note almost same proof as "exists dual"
    * @Derived
    */
@@ -715,6 +732,7 @@ object DerivedAxioms {
    *    [a;]p(??) & <a;>q(??) -> <a;>(p(??) & q(??))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val boxDiamondPropagationF = "([a_;]p_(??) & <a_;>q_(??)) -> <a_;>(p_(??) & q_(??))".asFormula
@@ -739,6 +757,7 @@ object DerivedAxioms {
    *   [a;](p(??)&q(??)) -> [a;]p(??) & [a;]q(??)
    * End.
    * }}}
+ *
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K1 p. 26
     *@todo this and several other folks here are internal derived axioms not meant for public consumption because stronger ones exist.
@@ -759,6 +778,7 @@ object DerivedAxioms {
    *   [a;]p(??) & [a;]q(??) -> [a;](p(??)&q(??))
    * End.
    * }}}
+ *
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K2 p. 27
    */
@@ -786,6 +806,7 @@ object DerivedAxioms {
    *    [a;](p(??)&q(??)) <-> [a;]p(??)&[a;]q(??)
    * End.
    * }}}
+ *
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, K3 p. 28
    */
@@ -804,6 +825,7 @@ object DerivedAxioms {
    *    [a;](p(??)&q(??)) -> [a;]p(??)
    * End.
    * }}}
+ *
    * @Derived
    * @Note implements (1)-(5) of Cresswell, Hughes. A New Introduction to Modal Logic, K1
    */
@@ -825,6 +847,7 @@ object DerivedAxioms {
    *    <a;>(p(??)|q(??)) <-> <a;>p(??)|<a;>q(??)
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val diamondSplitF = "<a_;>(p_(??)|q_(??)) <-> <a_;>p_(??)|<a_;>q_(??)".asFormula
@@ -845,6 +868,7 @@ object DerivedAxioms {
    *    <a;>(p(??)&q(??)) -> <a;>p(??)
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val diamondSplitLeftF = "<a_;>(p_(??)&q_(??)) -> <a_;>p_(??)".asFormula
@@ -859,6 +883,7 @@ object DerivedAxioms {
    *    [a;](p(??)&q(??)) -> q(??)
    * End.
    * }}}
+ *
    * @Derived
    * @Note implements (6)-(9) of Cresswell, Hughes. A New Introduction to Modal Logic, K1
    */
@@ -880,6 +905,7 @@ object DerivedAxioms {
    *    <v:=t();>p(v) <-> p(t())
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val assigndF = "<v_:=t_();>p_(v_) <-> p(t_())".asFormula
@@ -898,6 +924,7 @@ object DerivedAxioms {
    *    <v:=t();>p(v) <-> [v:=t();]p(v)
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val assignDualF = "<v_:=t_();>p_(v_) <-> [v_:=t_();]p_(v_)".asFormula
@@ -915,6 +942,7 @@ object DerivedAxioms {
    *    [v:=t();]p(v) <-> \forall v (v=t() -> p(v))
    * End.
    * }}}
+ *
    * @Derived
    */
   @deprecated("Use axiom \"[:=] assign equality\" instead")
@@ -935,6 +963,7 @@ object DerivedAxioms {
    *    [x:=t();]p(x) <-> [x:=t();]p(x)
    * End.
    * }}}
+ *
    * @Derived
    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
    */
@@ -951,6 +980,7 @@ object DerivedAxioms {
    *    <x:=t();>p(x) <-> <x:=t();>p(x)
    * End.
    * }}}
+ *
    * @Derived
    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
    */
@@ -967,6 +997,7 @@ object DerivedAxioms {
    *    [v:=t();]p() <-> p()
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val vacuousAssignbF = "[v_:=t_();]p_() <-> p_()".asFormula
@@ -983,6 +1014,7 @@ object DerivedAxioms {
    *    <v:=t();>p() <-> p()
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val vacuousAssigndF = "<v_:=t_();>p_() <-> p_()".asFormula
@@ -1001,6 +1033,7 @@ object DerivedAxioms {
    *    <v':=t();>p(v') <-> p(t())
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val assignDF = "<v':=t_();>p(v') <-> p(t_())".asFormula
@@ -1019,6 +1052,7 @@ object DerivedAxioms {
    *    <x:=*;>p(x) <-> (\exists x p(x))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val nondetassigndF = "<x_:=*;>p_(x_) <-> (\\exists x_ p_(x_))".asFormula
@@ -1039,6 +1073,7 @@ object DerivedAxioms {
    *    <?H();>p() <-> (H() & p())
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val testdF = "<?H_();>p_() <-> (H_() & p_())".asFormula
@@ -1056,6 +1091,7 @@ object DerivedAxioms {
    *    <a;++b;>p(??) <-> (<a;>p(??) | <b;>p(??))
    * End.
    * }}}
+ *
    * @todo first show de Morgan
    */
   lazy val choicedF = "<a_;++b_;>p_(??) <-> (<a_;>p_(??) | <b_;>p_(??))".asFormula
@@ -1075,6 +1111,7 @@ object DerivedAxioms {
    *    <a;b;>p(??) <-> <a;><b;>p(??)
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val composedF = "<a_;b_;>p_(??) <-> <a_;><b_;>p_(??)".asFormula
@@ -1095,6 +1132,7 @@ object DerivedAxioms {
    *    <{a;}*>p(??) <-> (p(??) | <a;><{a;}*> p(??))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val iteratedF = "<{a_;}*>p_(??) <-> (p_(??) | <a_;><{a_;}*> p_(??))".asFormula
@@ -1118,6 +1156,7 @@ object DerivedAxioms {
    *    <a;>p(??) -> <{a;}*>p(??)
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val loopApproxdF = "<a_;>p_(??) -> <{a_;}*>p_(??)".asFormula
@@ -1139,6 +1178,7 @@ object DerivedAxioms {
    *    [{a;}*]p(??) -> [a;]p(??)
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val loopApproxbF = "[{a_;}*]p_(??) -> [a_;]p_(??)".asFormula
@@ -1162,6 +1202,7 @@ object DerivedAxioms {
    *    p(t()) -> (\exists x p(x))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val existsGeneralizeF = "p(t_()) -> (\\exists x_ p_(x_))".asFormula
@@ -1184,6 +1225,7 @@ object DerivedAxioms {
    *    p(??) -> (\exists x p(??))
    * End.
    * }}}
+ *
    * @Derived
    * @todo prove
    */
@@ -1207,6 +1249,7 @@ object DerivedAxioms {
    *    (\forall x (x=t() -> p(x))) <-> p(t())
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val allSubstituteF = "(\\forall x_ (x=t_() -> p_(x_))) <-> p(t_())".asFormula
@@ -1227,6 +1270,7 @@ object DerivedAxioms {
    *    (\exists x p()) <-> p()
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val vacuousExistsF = "(\\exists x_ p_()) <-> p_()".asFormula
@@ -1262,6 +1306,7 @@ object DerivedAxioms {
    *    <x:=*;>p() <-> p()
    * End.
    * }}}
+ *
    * @todo reorient
    * @Derived
    */
@@ -1281,6 +1326,7 @@ object DerivedAxioms {
    *    [{c & (H(??) & q(??))}]p(??) <-> [{c & (q(??) & H(??))}]p(??)
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val domainCommuteF = "[{c & (H_(??) & q_(??))}]p_(??) <-> [{c & (q_(??) & H_(??))}]p_(??)".asFormula
@@ -1297,6 +1343,7 @@ object DerivedAxioms {
    *   [a;]p(??)  ->  [a;](q(??)->p(??))
    * End.
    * }}}
+ *
    * @Derived from M (or also from K)
    */
   lazy val postconditionWeakenF = "([a_;]p_(??))  ->  [a_;](q_(??)->p_(??))".asFormula
@@ -1313,6 +1360,7 @@ object DerivedAxioms {
    *    (p() & q()) <-> (q() & p())
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val andCommuteF = "(p_() & q_()) <-> (q_() & p_())".asFormula
@@ -1328,6 +1376,7 @@ object DerivedAxioms {
    *    ((p() & q()) & r()) <-> (p() & (q() & r()))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val andAssocF = "((p_() & q_()) & r_()) <-> (p_() & (q_() & r_()))".asFormula
@@ -1363,6 +1412,7 @@ object DerivedAxioms {
    *    (!(p() & q())) <-> ((!p()) | (!q()))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val notAndF = "(!(p_() & q_())) <-> ((!p_()) | (!q_()))".asFormula
@@ -1378,6 +1428,7 @@ object DerivedAxioms {
    *    (!(p() | q())) <-> ((!p()) & (!q()))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val notOrF = "(!(p_() | q_())) <-> ((!p_()) & (!q_()))".asFormula
@@ -1393,6 +1444,7 @@ object DerivedAxioms {
    *    (!(p() -> q())) <-> ((p()) & (!q()))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val notImplyF = "(!(p_() -> q_())) <-> ((p_()) & (!q_()))".asFormula
@@ -1408,6 +1460,7 @@ object DerivedAxioms {
    *    (!(p() <-> q())) <-> (((p()) & (!q())) | ((!p()) & (q())))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val notEquivF = "(!(p_() <-> q_())) <-> (((p_()) & (!q_())) | ((!p_()) & (q_())))".asFormula
@@ -1423,6 +1476,7 @@ object DerivedAxioms {
    *    (p() -> q()) <-> ((!p()) | q())
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val implyExpandF = "(p_() -> q_()) <-> ((!p_()) | q_())".asFormula
@@ -1439,6 +1493,7 @@ object DerivedAxioms {
    *    p()&q() -> p()
    * End.
    * }}}
+ *
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC1
    */
@@ -1451,6 +1506,7 @@ object DerivedAxioms {
    *    p()&q() -> q()
    * End.
    * }}}
+ *
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC2
    */
@@ -1463,6 +1519,7 @@ object DerivedAxioms {
    *    p()&q() -> ((p()->r())->(p()->q()&r())) <-> true
    * End.
    * }}}
+ *
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC3
    */
@@ -1475,6 +1532,7 @@ object DerivedAxioms {
    *    p() -> p() | q()
    * End.
    * }}}
+ *
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC9
    */
@@ -1487,6 +1545,7 @@ object DerivedAxioms {
    *    q() -> p() | q()
    * End.
    * }}}
+ *
    * @Derived
    * @Note implements Cresswell, Hughes. A New Introduction to Modal Logic, PC10
    */
@@ -1499,6 +1558,7 @@ object DerivedAxioms {
    *    (p() -> (q() -> p()&q())) <-> true
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val implyTautologyF = "(p_() -> (q_() -> p_()&q_())) <-> true".asFormula
@@ -1514,6 +1574,7 @@ object DerivedAxioms {
    *    (p(??) -> q(??))' <-> (!p(??) | q(??))'
    * End.
    * }}}
+ *
    * @Derived by CE
    */
   lazy val DimplyF = "(p_(??) -> q_(??))' <-> (!p_(??) | q_(??))'".asFormula
@@ -1530,6 +1591,7 @@ object DerivedAxioms {
    *    (\forall x p(x)) -> (\exists x p(x))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val forallThenExistsF = "(\\forall x_ p_(x_)) -> (\\exists x_ p_(x_))".asFormula
@@ -1551,6 +1613,7 @@ object DerivedAxioms {
    *    (p()->true) <-> true
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val impliesTrueF = "(p_()->true) <-> true".asFormula
@@ -1566,6 +1629,7 @@ object DerivedAxioms {
    *    (true->p()) <-> p()
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val trueImpliesF = "(true->p_()) <-> p_()".asFormula
@@ -1581,6 +1645,7 @@ object DerivedAxioms {
    *    (p()&true) <-> p()
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val andTrueF = "(p_()&true) <-> p_()".asFormula
@@ -1596,6 +1661,7 @@ object DerivedAxioms {
    *    (true&p()) <-> p()
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val trueAndF = "(true&p_()) <-> p_()".asFormula
@@ -1611,6 +1677,7 @@ object DerivedAxioms {
    *    (0*f()) = 0
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val zeroTimesF = "(0*f_()) = 0".asFormula
@@ -1626,6 +1693,7 @@ object DerivedAxioms {
    *    (0+f()) = f()
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val zeroPlusF = "(0+f_()) = f_()".asFormula
@@ -1645,6 +1713,7 @@ object DerivedAxioms {
    *    /* [x'=f(x)&q(x);]p(x) <-> ([x'=f(x)&q(x);](q(x)->p(x))) THEORY */
    * End.
    * }}}
+ *
    * @see footnote 3 in "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, volume 9195 of LNCS, pages 467-481. Springer, 2015. arXiv 1503.01981, 2015."
    */
   lazy val DWeakeningF = "[{c_&H_(??)}]p_(??) <-> ([{c_&H_(??)}](H_(??)->p_(??)))".asFormula
@@ -1671,6 +1740,7 @@ object DerivedAxioms {
    *    <{c&H(??)}>p(??) <- H(??)&p(??)
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val DskipdF = "<{c_&H_(??)}>p_(??) <- H_(??)&p_(??)".asFormula
@@ -1690,6 +1760,7 @@ object DerivedAxioms {
    *    [{x'=c()}]p(x) <-> \forall t (t>=0 -> [x:=x+(c()*t);]p(x))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val DSnodomainF = "[{x_'=c_()}]p_(x_) <-> \\forall t_ (t_>=0 -> [x_:=x_+(c_()*t_);]p_(x_))".asFormula
@@ -1709,6 +1780,7 @@ object DerivedAxioms {
    *    <{x'=c()}>p(x) <-> \exists t (t>=0 & <x:=x+(c()*t);>p(x))
    * End.
    * }}}
+ *
    * @Derived
    */
   lazy val DSdnodomainF = "<{x_'=c_()}>p_(x_) <-> \\exists t_ (t_>=0 & <x_:=x_+(c_()*t);>p_(x_))".asFormula
@@ -1934,6 +2006,7 @@ object DerivedAxioms {
    *   (!(f() < g())) <-> (f() >= g())
    * End.
    * }}}
+ *
    * @todo derive more efficiently via flip
    */
   lazy val notLessF = "(!(f_() < g_())) <-> (f_() >= g_())".asFormula
@@ -1947,6 +2020,7 @@ object DerivedAxioms {
    *   (!(f() <= g())) <-> (f() > g())
    * End.
    * }}}
+ *
    * @todo derive more efficiently via flip
    */
   lazy val notLessEqualF = "(!(f_() <= g_())) <-> (f_() > g_())".asFormula
@@ -2175,6 +2249,7 @@ object DerivedAxioms {
    *   (abs(s()) = t()) <->  ((s()>=0 & t()=s()) | (s()<0 & t()=-s()))
    * End.
    * }}}
+ *
    * @Derived from built-in arithmetic abs in [[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]
    */
   lazy val absF = "(abs(s_()) = t_()) <->  ((s_()>=0 & t_()=s_()) | (s_()<0 & t_()=-s_()))".asFormula
@@ -2190,6 +2265,7 @@ object DerivedAxioms {
    *    (min(f(), g()) = h()) <-> ((f()<=g() & h()=f()) | (f()>g() & h()=g()))
    * End.
    * }}}
+ *
    * @Derived from built-in arithmetic abs in [[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]
    */
   lazy val minF = "(min(f_(), g_()) = h_()) <-> ((f_()<=g_() & h_()=f_()) | (f_()>g_() & h_()=g_()))".asFormula
@@ -2205,6 +2281,7 @@ object DerivedAxioms {
    *    (max(f(), g()) = h()) <-> ((f()>=g() & h()=f()) | (f()<g() & h()=g()))
    * End.
    * }}}
+ *
    * @Derived from built-in arithmetic abs in [[edu.cmu.cs.ls.keymaerax.tools.Mathematica]]
    */
   lazy val maxF = "(max(f_(), g_()) = h_()) <-> ((f_()>=g_() & h_()=f_()) | (f_()<g_() & h_()=g_()))".asFormula
@@ -2220,6 +2297,7 @@ object DerivedAxioms {
    *    <{a;}*>p(??) <-> <{a;}*>p(??)
    * End.
    * }}}
+ *
    * @Derived
    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
    */
@@ -2236,6 +2314,7 @@ object DerivedAxioms {
    *    <{c&H(??)}>p(??) <-> <{c&H(??)}>p(??)
    * End.
    * }}}
+ *
    * @Derived
    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
    */
