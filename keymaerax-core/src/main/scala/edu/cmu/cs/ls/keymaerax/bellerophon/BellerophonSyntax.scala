@@ -467,13 +467,13 @@ case class BranchTactic(children: Seq[BelleExpr], override val location: Array[S
 case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)], override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "case { " + options.mkString(", ") + " }"}
 
 /**
-  * DoAll(e)(BelleProvable(p)) == <(e, ..., e) where e occurs the appropriate number of times, which is `p.subgoals.length` times.
+  * OnAll(e)(BelleProvable(p)) == <(e, ..., e) where e occurs the appropriate number of times, which is `p.subgoals.length` times.
   * @todo eisegesis
   */
-case class DoAll(e: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
+case class OnAll(e: BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
 
 /**
-  * DoSome(options, e)(BelleProvable(p)) proves `e(o)(p)` with some option `o` from `options` whose proof suceeds.
+  * ChooseSome(options, e)(BelleProvable(p)) proves `e(o)(p)` afte choosing some option `o` from `options` whose proof with `e` succeeds after supplying argument `o` to `e`.
   * It's usually one of the first options `o` for which `e(o)(p)` does not fail.
   * @param options The (lazy) iterator or stream from which subsequent options `o` will be tried.
   * @param e The tactic generator `e` that will be tried with input `o` on the Provable subsequently
@@ -481,7 +481,7 @@ case class DoAll(e: BelleExpr, override val location: Array[StackTraceElement] =
   * @author Andre Platzer
   * @see [[EitherTactic]]
   */
-case class DoSome[A](options: () => Iterator[A], e: A => BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "dosome(" + e + ")" }
+case class ChooseSome[A](options: () => Iterator[A], e: A => BelleExpr, override val location: Array[StackTraceElement] = Thread.currentThread().getStackTrace) extends BelleExpr { override def prettyString = "dosome(" + e + ")" }
 
 
 /**
